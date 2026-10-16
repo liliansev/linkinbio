@@ -21,7 +21,7 @@ export function OngletReglages({ reglages, onChange, onDeconnexion }: { reglages
       <Carte titre="Ta page">
         <div className="flex items-center gap-2 rounded-xl bg-white/[0.06] p-1.5 pl-3.5">
           <span className="min-w-0 flex-1 truncate text-[15px] text-white">liliansevoumian.fr/liens</span>
-          <button type="button" onClick={copier} className="min-h-10 rounded-full bg-white px-4 text-[14px] font-semibold text-nuit">{copie ? 'Copié ✓' : 'Copier'}</button>
+          <button type="button" onClick={copier} className="min-h-10 rounded-full bg-white px-4 text-[14px] font-semibold text-nuit">{copie ? 'Copié' : 'Copier'}</button>
         </div>
         {qr && (
           <div className="mt-4 flex items-center gap-4">

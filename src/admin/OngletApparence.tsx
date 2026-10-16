@@ -128,10 +128,10 @@ export function OngletApparence({ reglages, onChange, envoyerImage }: { reglages
               <input className={`${classeSaisie} py-2.5`} value={r.url} aria-label={NOMS_RESEAUX[r.reseau]} placeholder={EXEMPLES[r.reseau]} inputMode={r.reseau === 'email' ? 'email' : 'url'} autoCapitalize="none"
                 onChange={e => maj({ reseaux: reglages.reseaux.map((x, j) => (j === i ? { ...x, url: e.target.value } : x)) })} />
               <div className="flex shrink-0 flex-col">
-                <button type="button" disabled={i === 0} aria-label="Monter" onClick={() => { const l = [...reglages.reseaux]; [l[i - 1], l[i]] = [l[i], l[i - 1]]; maj({ reseaux: l }); }} className="h-5 px-1.5 text-[11px] text-white/50 disabled:opacity-20">▲</button>
-                <button type="button" disabled={i === reglages.reseaux.length - 1} aria-label="Descendre" onClick={() => { const l = [...reglages.reseaux]; [l[i + 1], l[i]] = [l[i], l[i + 1]]; maj({ reseaux: l }); }} className="h-5 px-1.5 text-[11px] text-white/50 disabled:opacity-20">▼</button>
+                <button type="button" disabled={i === 0} aria-label="Monter" onClick={() => { const l = [...reglages.reseaux]; [l[i - 1], l[i]] = [l[i], l[i - 1]]; maj({ reseaux: l }); }} className="grid h-5 w-7 place-items-center text-white/50 disabled:opacity-20"><Icone nom="ui-chevron" taille={14} className="rotate-180" /></button>
+                <button type="button" disabled={i === reglages.reseaux.length - 1} aria-label="Descendre" onClick={() => { const l = [...reglages.reseaux]; [l[i + 1], l[i]] = [l[i], l[i + 1]]; maj({ reseaux: l }); }} className="grid h-5 w-7 place-items-center text-white/50 disabled:opacity-20"><Icone nom="ui-chevron" taille={14} /></button>
               </div>
-              <button type="button" aria-label={`Retirer ${NOMS_RESEAUX[r.reseau]}`} onClick={() => maj({ reseaux: reglages.reseaux.filter((_, j) => j !== i) })} className="grid h-10 w-9 shrink-0 place-items-center text-white/40 hover:text-white">✕</button>
+              <button type="button" aria-label={`Retirer ${NOMS_RESEAUX[r.reseau]}`} onClick={() => maj({ reseaux: reglages.reseaux.filter((_, j) => j !== i) })} className="grid h-10 w-9 shrink-0 place-items-center text-white/40 hover:text-white"><Icone nom="ui-fermer" taille={18} /></button>
             </li>
           ))}
         </ul>
