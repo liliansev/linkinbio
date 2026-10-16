@@ -23,6 +23,14 @@ function suivre(type: 'vue' | 'clic', bloc?: string) {
   } catch { /* les statistiques ne doivent jamais gêner la visite */ }
 }
 
+/** Un goal DataFast (voir DATAFAST-FUNNEL.md) ; la file d'attente posée dans le head le garde jusqu'au chargement du script. */
+export function goal(nom: string, props: Record<string, string> = {}) {
+  try {
+    const df = (window as unknown as { datafast?: (n: string, p: Record<string, string>) => void }).datafast;
+    if (typeof df === 'function') df(nom, Object.fromEntries(Object.entries(props).map(([k, v]) => [k, v.slice(0, 120)])));
+  } catch { /* idem */ }
+}
+
 export function PageLiens({ page, apercu = false }: { page: PagePublique; apercu?: boolean }) {
   const { reglages, blocs } = page;
   const theme = themeParId(reglages.theme);
@@ -31,7 +39,11 @@ export function PageLiens({ page, apercu = false }: { page: PagePublique; apercu
   useEffect(() => { if (!apercu) suivre('vue'); }, [apercu]);
   useEffect(() => { if (!toast) return; const t = setTimeout(() => setToast(''), 2200); return () => clearTimeout(t); }, [toast]);
 
-  const clic = (bloc: Bloc) => { if (!apercu) suivre('clic', bloc.id); };
+  const clic = (bloc: Bloc) => {
+    if (apercu) return;
+    suivre('clic', bloc.id);
+    goal('liens_click', { lien: bloc.titre || bloc.url, type: bloc.type, vedette: bloc.vedette ? 'oui' : 'non' });
+  };
   const cible = apercu ? { target: '_blank' } : {};
 
   async function partager() {
@@ -46,7 +58,7 @@ export function PageLiens({ page, apercu = false }: { page: PagePublique; apercu
   const reseaux = reglages.reseaux.some(r => r.url) && (
     <nav className="lp-reseaux" aria-label="Réseaux">
       {reglages.reseaux.filter(r => r.url).map(r => (
-        <a key={r.reseau + r.url} href={r.url} aria-label={NOMS_RESEAUX[r.reseau]} rel="me noopener" {...cible}>
+        <a key={r.reseau + r.url} href={r.url} aria-label={NOMS_RESEAUX[r.reseau]} rel="me noopener" onClick={() => { if (!apercu) goal('liens_click', { lien: NOMS_RESEAUX[r.reseau], type: 'reseau', vedette: 'non' }); }} {...cible}>
           <Icone nom={r.reseau} taille={22} />
         </a>
       ))}
@@ -233,6 +245,7 @@ function Newsletter({ bloc, apercu }: { bloc: Bloc; apercu: boolean }) {
     try {
       const r = await fetch('/api/newsletter', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, website: '' }) });
       const corps = await r.json().catch(() => ({}));
+      if (r.ok) goal('liens_newsletter');
       setEtat(r.ok ? { type: 'ok', message: corps.message ?? 'C’est noté, regardez votre boîte.' } : { type: 'erreur', message: corps.message ?? 'L’inscription n’est pas passée. Réessayez.' });
     } catch { setEtat({ type: 'erreur', message: 'L’inscription n’est pas passée. Réessayez.' }); }
   }

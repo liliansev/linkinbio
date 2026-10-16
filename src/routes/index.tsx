@@ -36,7 +36,13 @@ export const Route = createFileRoute('/')({
         { name: 'twitter:card', content: 'summary' },
       ],
       links: [{ rel: 'canonical', href: URL_PAGE }],
-      scripts: reglages.seo.indexable ? [{ type: 'application/ld+json', children: JSON.stringify(personne) }] : [],
+      scripts: [
+        ...(reglages.seo.indexable ? [{ type: 'application/ld+json', children: JSON.stringify(personne) }] : []),
+        // DataFast, comme sur le reste du site : visites, provenance et goals `liens_*`.
+        // Le back office ne charge pas ce script.
+        { children: 'window.datafast=window.datafast||function(){(window.datafast.q=window.datafast.q||[]).push(arguments)};' },
+        { defer: true, src: '/js/script.js', 'data-website-id': 'dfid_Mq8wt9KvIisuofpYWZouo', 'data-domain': 'liliansevoumian.fr', 'data-api-url': '/api/dfst-events' },
+      ],
     };
   },
   component: Page,
