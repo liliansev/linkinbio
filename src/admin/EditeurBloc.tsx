@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
-import type { Bloc, Reglages } from '../lib/types.ts';
+import type { Api, Bloc, Reglages } from '../lib/types.ts';
 import { ANIMATIONS_BLOC, idYoutube } from '../lib/types.ts';
 import { RESEAUX } from '../lib/types.ts';
 import { adresse } from '../lib/valider.ts';
@@ -8,7 +8,7 @@ import { themeParId, variablesTheme } from '../lib/themes.ts';
 import { ICONES } from '../lib/icones.ts';
 import { Icone, NOMS_RESEAUX, PICTOS } from '../components/Icone.tsx';
 import { BlocPublic } from '../components/PageLiens.tsx';
-import { BoutonPrincipal, Champ, Feuille, Interrupteur, NOMS_ANIMATIONS, classeSaisie, preparerImage, vibrer } from './ui.tsx';
+import { BoutonPrincipal, Champ, Feuille, Interrupteur, NOMS_ANIMATIONS, Segments, classeSaisie, preparerImage, vibrer } from './ui.tsx';
 import { TYPES } from './OngletLiens.tsx';
 
 /** Une date ISO vers la valeur d'un `<input type="datetime-local">`, en heure locale. */
@@ -19,7 +19,13 @@ const versLocal = (iso: string) => {
 };
 const depuisLocal = (v: string) => (v ? new Date(v).toISOString() : '');
 
-export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, onSupprimer, onDupliquer, envoyerImage, clics }: {
+const AIDE_FORMATS = {
+  bouton: 'La taille des autres boutons, à la couleur choisie.',
+  bandeau: 'Un peu plus grand : picto à gauche, flèche à droite.',
+  carte: 'Un grand visuel au-dessus : l’image du lien, ou son picto en grand.',
+} as const;
+
+export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, onSupprimer, onDupliquer, envoyerImage, apercuSite, clics }: {
   bloc: Bloc | null;
   reglages: Reglages;
   nouveau: boolean;
@@ -28,12 +34,14 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
   onSupprimer: (bloc: Bloc) => void;
   onDupliquer: (bloc: Bloc) => void;
   envoyerImage: (dataUrl: string) => Promise<string>;
+  apercuSite: Api['apercuSite'];
   clics: number;
 }) {
   const [b, setB] = useState<Bloc | null>(bloc);
   const [erreur, setErreur] = useState('');
   const [envoi, setEnvoi] = useState(false);
   const [plus, setPlus] = useState(false);
+  const [lecture, setLecture] = useState(false);
   const fichier = useRef<HTMLInputElement>(null);
   useEffect(() => { setB(bloc); setErreur(''); setPlus(!!bloc && (!!bloc.debut || !!bloc.fin)); }, [bloc]);
   if (!b) return null;
@@ -56,9 +64,30 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
   async function choisirImage(f: File | undefined) {
     if (!f) return;
     setEnvoi(true); setErreur('');
-    try { maj({ image: await envoyerImage(await preparerImage(f, b!.vedette ? 'large' : 'carre')) }); }
+    try { maj({ image: await envoyerImage(await preparerImage(f, b!.vedette && b!.format === 'carte' ? 'large' : 'carre')) }); }
     catch { setErreur('L’image n’est pas passée. Essaie une autre photo.'); }
     finally { setEnvoi(false); if (fichier.current) fichier.current.value = ''; }
+  }
+
+  /** Lit le site du lien : son image de partage (ou une capture), sa description et son titre. */
+  async function recupererApercu() {
+    const url = adresse(b!.url);
+    if (!url) { setErreur('Indique d’abord l’adresse du lien.'); return; }
+    setLecture(true); setErreur('');
+    try {
+      const site = await apercuSite(url);
+      let image = '';
+      if (site.image) image = await envoyerImage(await preparerImage(await (await fetch(site.image)).blob(), 'large'));
+      setB(avant => avant && ({
+        ...avant,
+        image: image || avant.image,
+        description: avant.description || site.description,
+        titre: avant.titre || site.titre,
+      }));
+      vibrer(10);
+      if (!image && !site.description) setErreur('Ce site ne donne ni image ni description. Ajoute-les à la main.');
+    } catch { setErreur('Impossible de lire ce site pour l’instant.'); }
+    finally { setLecture(false); }
   }
 
   return (
@@ -82,10 +111,13 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
       )}>
       <div className="flex flex-col gap-4 pt-1">
         {b.type === 'lien' && (
-          <div className="lp lp-mini -mx-1 rounded-[20px] p-4 ring-1 ring-white/[0.06]" style={variablesTheme(theme) as CSSProperties}
-            data-bouton={reglages.bouton.style} data-forme={reglages.bouton.forme} data-police={theme.police} aria-label="Aperçu du bouton">
-            <div className="pointer-events-none" inert>
-              <BlocPublic bloc={{ ...b, url: b.url || '#', titre: b.titre || 'Texte du bouton', public: true }} reglages={reglages} clic={() => {}} cible={{}} apercu />
+          // L'aperçu reste collé en haut de la feuille : chaque réglage se voit sans remonter.
+          <div className="sticky top-0 z-10 -mx-5 bg-[#121a2b] px-5 pb-3 pt-1 shadow-[0_14px_14px_-12px_#121a2b]">
+            <div className="lp lp-mini -mx-1 rounded-[20px] p-4 ring-1 ring-white/[0.06]" style={variablesTheme(theme) as CSSProperties}
+              data-bouton={reglages.bouton.style} data-forme={reglages.bouton.forme} data-police={theme.police} aria-label="Aperçu du bouton">
+              <div className="pointer-events-none" inert>
+                <BlocPublic key={`${b.format}-${b.teinte}-${b.animation}-${b.vedette}`} bloc={{ ...b, url: b.url || '#', titre: b.titre || 'Texte du bouton', public: true }} reglages={reglages} clic={() => {}} cible={{}} apercu />
+              </div>
             </div>
           </div>
         )}
@@ -117,13 +149,20 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
           </Champ>
         )}
 
+        {b.type === 'lien' && b.vedette && b.format !== 'bouton' && (
+          <Champ label="Description (facultatif)" aide={b.format === 'carte' ? 'Trois lignes au plus sous le titre de la carte.' : 'Deux lignes au plus sous le titre.'}>
+            <textarea className={`${classeSaisie} min-h-20`} value={b.description} onChange={e => maj({ description: e.target.value })} maxLength={400}
+              placeholder="Ce qu’on trouve en cliquant, en une ou deux phrases." />
+          </Champ>
+        )}
+
         {b.type === 'lien' && (
           <>
             <div>
               <span className="mb-1.5 flex items-baseline justify-between text-[13px] font-medium text-white/70">
                 Icône{b.icone && <span className="font-normal text-white/45">{NOMS_RESEAUX[b.icone] ?? PICTOS.find(p => p.nom === b.icone)?.libelle ?? ''}</span>}
               </span>
-              <div role="radiogroup" aria-label="Icône" className="grid max-h-[176px] grid-cols-[repeat(auto-fill,minmax(44px,1fr))] gap-1.5 overflow-y-auto rounded-2xl bg-white/[0.035] p-2 [scrollbar-width:thin]">
+              <div role="radiogroup" aria-label="Icône" className="grid max-h-[208px] grid-cols-[repeat(auto-fill,minmax(44px,1fr))] gap-1.5 overflow-y-auto rounded-2xl bg-white/[0.035] p-2 [scrollbar-width:thin]">
                 {[{ nom: '', libelle: 'Sans icône' }, ...RESEAUX.map(r => ({ nom: r as string, libelle: NOMS_RESEAUX[r] })), ...PICTOS].map(p => {
                   const choisi = b.icone === p.nom;
                   return (
@@ -140,6 +179,11 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
               {b.image ? <img src={b.image} alt="" className="h-14 w-14 rounded-xl object-cover" /> : <span className="grid h-14 w-14 place-items-center rounded-xl border border-dashed border-white/20 text-white/35"><Icone nom="ui-image" taille={22} /></span>}
               <div className="flex flex-1 flex-wrap gap-2">
                 <button type="button" onClick={() => fichier.current?.click()} disabled={envoi} className="min-h-10 rounded-full bg-white/[0.08] px-4 text-[14px] font-medium text-white hover:bg-white/[0.13]">{envoi ? 'Envoi…' : b.image ? 'Changer l’image' : 'Ajouter une image'}</button>
+                {b.url && (
+                  <button type="button" onClick={recupererApercu} disabled={lecture || envoi} className="inline-flex min-h-10 items-center gap-1.5 rounded-full bg-peche/15 px-4 text-[14px] font-medium text-peche hover:bg-peche/25 disabled:opacity-60">
+                    <Icone nom="sparkle" taille={16} />{lecture ? 'Lecture du site…' : 'Aperçu du site'}
+                  </button>
+                )}
                 {b.image && <button type="button" onClick={() => maj({ image: '' })} className="min-h-10 rounded-full px-3 text-[14px] text-white/55 hover:text-white">Retirer</button>}
               </div>
               <input ref={fichier} type="file" accept="image/*" hidden onChange={e => choisirImage(e.target.files?.[0])} />
@@ -150,12 +194,28 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
         <div className="divide-y divide-white/[0.06] rounded-2xl bg-white/[0.035] px-4">
           <Interrupteur label="Public" aide={b.public ? 'Visible sur ta page.' : 'Privé : gardé ici, invisible sur ta page.'} actif={b.public} onChange={v => maj({ public: v })} />
           {b.type !== 'titre' && b.type !== 'texte' && b.type !== 'newsletter' && (
-            <Interrupteur label="Mis en avant" aide="Une grande carte, plus visible que les autres." actif={b.vedette} onChange={v => maj({ vedette: v })} />
+            <Interrupteur label="Mis en avant" aide="Plus visible que les autres liens : choisis sa forme et sa couleur juste dessous." actif={b.vedette} onChange={v => maj({ vedette: v })} />
           )}
           {b.type === 'lien' && (
             <Interrupteur label="Visible par Google" aide={b.indexable ? 'Lien suivi par les moteurs de recherche.' : 'Lien en nofollow, exclu des extraits et des données structurées.'} actif={b.indexable} onChange={v => maj({ indexable: v })} />
           )}
         </div>
+
+        {b.type === 'lien' && b.vedette && (
+          <div className="grid gap-3">
+            <div>
+              <span className="mb-1.5 block text-[13px] font-medium text-white/70">Forme</span>
+              <Segments label="Forme du lien mis en avant" valeur={b.format} onChange={v => maj({ format: v })}
+                options={[{ id: 'bouton', nom: 'Bouton' }, { id: 'bandeau', nom: 'Bandeau' }, { id: 'carte', nom: 'Carte' }]} />
+              <p className="mt-1.5 text-[12.5px] leading-snug text-white/45">{AIDE_FORMATS[b.format]}</p>
+            </div>
+            <div>
+              <span className="mb-1.5 block text-[13px] font-medium text-white/70">Couleur</span>
+              <Segments label="Couleur du lien mis en avant" valeur={b.teinte} onChange={v => maj({ teinte: v })}
+                options={[{ id: 'accent', nom: 'Accent' }, { id: 'theme', nom: 'Comme les autres' }]} />
+            </div>
+          </div>
+        )}
 
         {b.type === 'lien' && (
           <div>

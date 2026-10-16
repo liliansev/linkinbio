@@ -89,7 +89,7 @@ export function OngletApparence({ reglages, onChange, envoyerImage }: { reglages
                 <li key={a}>
                   <button type="button" role="radio" aria-checked={choisi} onClick={() => { vibrer(5); maj({ animation: a }); }}
                     className={`flex w-full flex-col gap-2 rounded-[18px] p-2 pb-2.5 text-left transition duration-200 ${choisi ? 'bg-white/[0.12] ring-2 ring-peche' : 'hover:bg-white/[0.06]'}`}>
-                    <span className={`lp-carte ${a !== 'aucune' ? `lp-anim-${a}` : ''}`} style={{ minHeight: 52, justifyContent: 'center', alignItems: 'center', fontWeight: 600, fontSize: 15 }}>
+                    <span className={`lp-btn lp-btn-vedette lp-accent ${a !== 'aucune' ? `lp-anim-${a}` : ''}`} style={{ minHeight: 52, padding: '8px 12px', fontSize: 15 }}>
                       {NOMS_ANIMATIONS[a].nom}
                     </span>
                     <span className="px-1 text-[12px] leading-snug" style={{ color: 'var(--doux)' }}>{NOMS_ANIMATIONS[a].aide}</span>

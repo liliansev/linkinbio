@@ -8,7 +8,7 @@ import avatar from '../public/avatar.webp?inline';
  * plausibles. Rien de tout ça n'est dans l'application réelle.
  */
 
-const CLE = 'liens-demo-v2';
+const CLE = 'liens-demo-v3';
 let n = 0;
 const id = () => `d${Date.now().toString(36)}${n++}`;
 
@@ -64,9 +64,23 @@ export const apiDemo: Api = {
   async ordonner(ids) { await pause(); etat.blocs = ids.map(i => etat.blocs.find(b => b.id === i)).filter((b): b is Bloc => !!b); ecrire(); },
   async enregistrerReglages(reglages) { await pause(); etat.reglages = reglages; ecrire(); return reglages; },
   async envoyerImage(dataUrl) { await pause(); return dataUrl; },
+  // Dans l'aperçu, pas de serveur pour lire le site : une vignette dessinée en tient lieu.
+  async apercuSite(url) { await pause(); return { titre: '', description: 'Un aperçu de démonstration : en ligne, le serveur lit la vraie description du site.', image: vignetteDemo(url) }; },
   async stats(jours) { await pause(); return statsFictives(jours); },
   async deconnexion() { localStorage.removeItem(CLE); etat = lire(); },
 };
+
+function vignetteDemo(url: string): string {
+  const c = document.createElement('canvas'); c.width = 1200; c.height = 675;
+  const x = c.getContext('2d')!;
+  const g = x.createLinearGradient(0, 0, 1200, 675); g.addColorStop(0, '#1c2639'); g.addColorStop(1, '#4a2f3a');
+  x.fillStyle = g; x.fillRect(0, 0, 1200, 675);
+  x.fillStyle = 'rgba(255,255,255,0.08)'; x.fillRect(80, 80, 1040, 515);
+  x.fillStyle = '#ffb38a'; x.fillRect(140, 200, 420, 34); x.fillStyle = 'rgba(255,255,255,0.5)'; x.fillRect(140, 260, 640, 18); x.fillRect(140, 296, 520, 18);
+  x.fillStyle = '#ffb38a'; x.beginPath(); x.roundRect(140, 360, 220, 64, 32); x.fill();
+  x.fillStyle = '#f4f1ec'; x.font = '600 40px system-ui'; let hote = url; try { hote = new URL(url).hostname.replace(/^www\./, ''); } catch { /* adresse brute */ } x.fillText(hote, 140, 540);
+  return c.toDataURL('image/png');
+}
 
 export const etatDemo = () => apiDemo.charger();
 export const pageDemo = () => ({ reglages: etat.reglages, blocs: etat.blocs });

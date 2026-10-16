@@ -88,6 +88,11 @@ export function PageLiens({ page, apercu = false }: { page: PagePublique; apercu
   );
 }
 
+/** « exemple.fr », sans le www ni le chemin. */
+function nomDeDomaine(url: string) {
+  try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return url; }
+}
+
 function Pictogramme({ bloc }: { bloc: Bloc }) {
   if (bloc.image) return <img className="lp-vignette" src={bloc.image} alt="" width={40} height={40} loading="lazy" />;
   if (bloc.icone && ICONES[bloc.icone]) return <span className="lp-picto"><Icone nom={bloc.icone} taille={22} /></span>;
@@ -115,15 +120,54 @@ export function BlocPublic({ bloc, reglages, clic, cible, apercu }: { bloc: Bloc
     default:
       if (!bloc.url) return null;
       if (bloc.vedette) {
+        const teinte = bloc.teinte === 'accent' ? 'lp-accent' : '';
+        if (bloc.format === 'bouton') {
+          return (
+            <a className={`lp-btn lp-btn-vedette ${teinte} ${anim}`} href={bloc.url} rel={rel} onClick={clic} {...cible} {...nosnippet}>
+              <Pictogramme bloc={bloc} />
+              <span className="lp-btn-texte">
+                <span className="lp-btn-titre">{bloc.titre || bloc.url}</span>
+                {bloc.sousTitre && <span className="lp-sous">{bloc.sousTitre}</span>}
+              </span>
+            </a>
+          );
+        }
+        const picto = bloc.icone ? (ICONES[bloc.icone] ? <Icone nom={bloc.icone} taille={bloc.format === 'carte' ? 28 : 22} /> : bloc.icone) : null;
+        const hote = nomDeDomaine(bloc.url);
+        if (bloc.format === 'carte') {
+          return (
+            <a className={`lp-carte ${teinte} ${anim}`} data-format="carte" href={bloc.url} rel={rel} onClick={clic} {...cible} {...nosnippet}>
+              {bloc.image ? (
+                <span className="lp-carte-visuel">
+                  <img src={bloc.image} alt="" loading="lazy" />
+                  {picto && <span className="lp-carte-tuile" aria-hidden="true">{picto}</span>}
+                </span>
+              ) : (
+                <span className="lp-carte-visuel lp-carte-motif" aria-hidden="true">
+                  <span className="lp-carte-tuile">{picto ?? <Icone nom="lien" taille={28} />}</span>
+                </span>
+              )}
+              <span className="lp-carte-corps">
+                <span className="lp-carte-titre">{bloc.titre || hote}</span>
+                {bloc.sousTitre && <span className="lp-carte-sous">{bloc.sousTitre}</span>}
+                {bloc.description && <span className="lp-carte-description">{bloc.description}</span>}
+                <span className="lp-carte-pied">
+                  <span className="lp-carte-domaine"><Icone nom="site" taille={14} />{hote}</span>
+                  <span className="lp-carte-fleche" aria-hidden="true"><Icone nom="ui-fleche" taille={18} /></span>
+                </span>
+              </span>
+            </a>
+          );
+        }
         return (
-          <a className={`lp-carte ${anim}`} href={bloc.url} rel={rel} onClick={clic} {...cible} {...nosnippet}>
-            {bloc.image && <img className="lp-carte-image" src={bloc.image} alt="" loading="lazy" />}
-            <span className="lp-carte-corps">
-              {!bloc.image && <Pictogramme bloc={bloc} />}
-              <span className="lp-carte-titre">{bloc.titre || bloc.url}</span>
+          <a className={`lp-carte ${teinte} ${anim}`} data-format="bandeau" href={bloc.url} rel={rel} onClick={clic} {...cible} {...nosnippet}>
+            {bloc.image ? <img className="lp-carte-tuile" src={bloc.image} alt="" loading="lazy" /> : picto && <span className="lp-carte-tuile" aria-hidden="true">{picto}</span>}
+            <span className="lp-carte-texte">
+              <span className="lp-carte-titre">{bloc.titre || hote}</span>
               {bloc.sousTitre && <span className="lp-sous">{bloc.sousTitre}</span>}
+              {bloc.description && <span className="lp-carte-description">{bloc.description}</span>}
             </span>
-            <span className="lp-carte-fleche" aria-hidden="true"><Icone nom="ui-fleche" taille={20} /></span>
+            <span className="lp-carte-fleche" aria-hidden="true"><Icone nom="ui-fleche" taille={18} /></span>
           </a>
         );
       }

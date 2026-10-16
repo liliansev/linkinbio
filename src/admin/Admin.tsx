@@ -181,7 +181,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
 
       {edition && (
         <EditeurBloc bloc={edition.bloc} reglages={reglages} nouveau={edition.nouveau} clics={clics[edition.bloc.id] ?? 0} onFermer={() => setEdition(null)}
-          onEnregistrer={enregistrerBloc} onSupprimer={supprimer} onDupliquer={dupliquer} envoyerImage={d => api.envoyerImage(d)} />
+          onEnregistrer={enregistrerBloc} onSupprimer={supprimer} onDupliquer={dupliquer} envoyerImage={d => api.envoyerImage(d)} apercuSite={u => api.apercuSite(u)} />
       )}
 
       {toast && (

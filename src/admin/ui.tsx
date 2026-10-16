@@ -160,7 +160,7 @@ export function Segments<T extends string>({ valeur, options, onChange, label }:
 }
 
 /** Réduit une image choisie sur le téléphone, carrée ou en 16:9, côté navigateur. */
-export async function preparerImage(fichier: File, format: 'carre' | 'large'): Promise<string> {
+export async function preparerImage(fichier: Blob, format: 'carre' | 'large'): Promise<string> {
   const bitmap = await createImageBitmap(fichier);
   const [w, h] = format === 'carre' ? [400, 400] : [960, 540];
   const canvas = document.createElement('canvas');

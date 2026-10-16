@@ -2,7 +2,8 @@ import { createMiddleware, createServerFn } from '@tanstack/react-start';
 import { deleteCookie, getCookie, getRequestHeader, getRequestUrl, setCookie } from '@tanstack/react-start/server';
 import type { Bloc, EtatAdmin, PagePublique, Reglages, Stats } from '../lib/types.ts';
 import { estEnLigne } from '../lib/types.ts';
-import { validerBloc, validerReglages } from '../lib/valider.ts';
+import { adresse, validerBloc, validerReglages } from '../lib/valider.ts';
+import { apercuSite as lireApercu } from './apercu.ts';
 import * as db from './db.ts';
 import { COOKIE_SESSION, DUREE_SESSION, adresseAdmin, demanderConnexion, fermerSession, masquer, ouvrirSession, sessionValide } from './auth.ts';
 
@@ -105,6 +106,18 @@ export const envoyerImage = createServerFn({ method: 'POST' })
     return { octets, extension: m[1] === 'webp' ? 'webp' as const : 'jpg' as const };
   })
   .handler(async ({ data }) => `/liens/media/${db.ajouterMedia(new Uint8Array(data.octets), data.extension)}.${data.extension}`);
+
+export const apercuSite = createServerFn({ method: 'POST' })
+  .middleware([session])
+  .validator((data: unknown) => {
+    const url = adresse(String(data ?? ''));
+    if (!url) throw new Error('Adresse refusée.');
+    return url;
+  })
+  .handler(async ({ data }) => {
+    try { return await lireApercu(data); }
+    catch { throw new Error('Impossible de lire ce site.'); }
+  });
 
 export const lireStats = createServerFn({ method: 'GET' })
   .middleware([session])
