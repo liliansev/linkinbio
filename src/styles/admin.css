@@ -1,0 +1,51 @@
+/*
+ * Le back office : les mouvements que Tailwind n'écrit pas seul. Tout est
+ * court (150 à 300 ms) et décéléré : l'interface répond, elle ne se montre pas.
+ */
+:root { --adm-sortie: cubic-bezier(0.16, 1, 0.3, 1); }
+
+.adm-feuille { animation: adm-monte 0.36s var(--adm-sortie); transition: transform 0.3s var(--adm-sortie); }
+.adm-fondu { animation: adm-fondu 0.24s ease-out; }
+[data-sortie] .adm-feuille { animation: adm-descend 0.19s cubic-bezier(0.4, 0, 1, 1) forwards; }
+[data-sortie] .adm-fondu { animation: adm-fondu-sortie 0.19s ease-in forwards; }
+@keyframes adm-monte { from { transform: translateY(100%); } }
+@keyframes adm-descend { to { transform: translateY(100%); } }
+@media (min-width: 640px) {
+  @keyframes adm-monte { from { transform: translateY(16px) scale(0.97); opacity: 0; } }
+  @keyframes adm-descend { to { transform: translateY(10px) scale(0.98); opacity: 0; } }
+}
+@keyframes adm-fondu { from { opacity: 0; } }
+@keyframes adm-fondu-sortie { to { opacity: 0; } }
+
+.adm-toast { animation: adm-toast 0.32s var(--adm-sortie); }
+@keyframes adm-toast { from { transform: translateY(16px) scale(0.96); opacity: 0; } }
+
+/* Un onglet qui change : le contenu glisse à peine, sans attendre. */
+.adm-onglet { animation: adm-onglet 0.28s var(--adm-sortie); }
+@keyframes adm-onglet { from { opacity: 0; transform: translateY(6px); } }
+
+/* Les listes qui arrivent (choix d'un bloc) : une cascade courte. */
+.adm-cascade > * { animation: adm-onglet 0.34s var(--adm-sortie) both; animation-delay: calc(var(--i, 0) * 28ms + 40ms); }
+
+.adm-interrupteur { transition: background-color 0.22s ease; }
+.adm-interrupteur > span { transition: translate 0.28s var(--adm-sortie), width 0.2s var(--adm-sortie), background-color 0.22s ease; }
+/* Sous le doigt, la pastille s'étire, comme sur iOS. */
+.adm-interrupteur:active > span { width: 1.75rem; }
+.adm-interrupteur[aria-checked='true']:active > span { translate: 0.75rem 0; }
+
+/* Les barres des statistiques se remplissent à l'arrivée. */
+.adm-barre { animation: adm-barre 0.7s var(--adm-sortie) both; }
+@keyframes adm-barre { from { transform: scaleX(0); } }
+
+/* La pastille de l'onglet actif, dans la barre du bas. */
+.adm-nav-pastille { transition: background-color 0.2s ease, width 0.3s var(--adm-sortie); }
+
+@media (prefers-reduced-motion: reduce) {
+  .adm-feuille, .adm-fondu, .adm-toast, .adm-onglet, .adm-cascade > *, .adm-barre, [data-sortie] .adm-feuille, [data-sortie] .adm-fondu { animation: none; }
+  .adm-interrupteur > span { transition: none; }
+}
+
+.adm input[type='datetime-local'] { color-scheme: dark; }
+.adm ::selection { background: #ffb38a; color: #0c121f; }
+.adm { scrollbar-color: rgb(255 255 255 / 0.18) transparent; -webkit-tap-highlight-color: transparent; }
+.adm :is(button, a, input, textarea, select, summary):focus-visible { outline: 2px solid #ffb38a; outline-offset: 2px; }

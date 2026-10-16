@@ -1,0 +1,15 @@
+@import 'tailwindcss';
+@source '../';
+@import '@fontsource-variable/geist';
+@import '@fontsource-variable/eb-garamond';
+@import './page.css';
+@import './admin.css';
+
+@theme {
+  --font-sans: 'Geist Variable', ui-sans-serif, system-ui, sans-serif;
+  --color-nuit: #0c121f;
+  --color-peche: #ffb38a;
+}
+
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; }

@@ -1,0 +1,27 @@
+/// <reference types="vite/client" />
+import { HeadContent, Outlet, Scripts, createRootRoute } from '@tanstack/react-router';
+import type { ReactNode } from 'react';
+import css from '../styles/app.css?url';
+
+export const Route = createRootRoute({
+  head: () => ({
+    meta: [{ charSet: 'utf-8' }, { name: 'viewport', content: 'width=device-width, initial-scale=1, viewport-fit=cover' }],
+    links: [{ rel: 'stylesheet', href: css }, { rel: 'icon', type: 'image/png', href: '/liens/favicon.png' }],
+  }),
+  shellComponent: Coquille,
+  component: Outlet,
+  notFoundComponent: () => (
+    <main style={{ minHeight: '100dvh', display: 'grid', placeItems: 'center', background: '#0c121f', color: '#f4f1ec', fontFamily: 'Geist Variable, system-ui' }}>
+      <p>Cette page n’existe pas. <a href="/liens/" style={{ color: '#ffb38a' }}>Retour aux liens</a></p>
+    </main>
+  ),
+});
+
+function Coquille({ children }: { children: ReactNode }) {
+  return (
+    <html lang="fr">
+      <head><HeadContent /></head>
+      <body>{children}<Scripts /></body>
+    </html>
+  );
+}
