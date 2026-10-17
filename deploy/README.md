@@ -39,8 +39,17 @@ change pas le receveur installé.
    forcée vers `receive.sh`, puis `HOSTINGER_HOST`, `HOSTINGER_DEPLOY_KEY` et
    `HOSTINGER_KNOWN_HOSTS` dans ce dépôt.
 2. Premier déploiement : le conteneur démarre sur le volume existant.
-3. Dans `/opt/edge/caddy/sites/liliansevoumian.caddy`, envoyer `/liens` et
-   `/liens/*` vers `linkinbio-app:3000` avant le reste, valider, recharger Caddy.
+3. Dans `/opt/edge/caddy/sites/liliansevoumian.caddy`, ajouter dans le bloc
+   `liliansevoumian.fr`, avant le `reverse_proxy` du site :
+
+   ```
+   reverse_proxy /liens* linkinbio-app:3000 {
+           header_up X-Real-IP {remote_host}
+   }
+   ```
+
+   Caddy fait passer un `reverse_proxy` avec chemin avant celui sans chemin.
+   Valider, puis recharger Caddy.
 4. Retirer `liens/` du dépôt du site et le volume de son Compose.
 
 Le nouveau domaine viendra ensuite : `base` de `vite.config.ts` et `BASE` de
