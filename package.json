@@ -1,12 +1,13 @@
 {
-  "name": "liens",
+  "name": "linkinbio",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite dev --port 4400",
     "build": "vite build",
-    "test": "node --disable-warning=ExperimentalWarning --test src/**/*.test.ts",
-    "typecheck": "tsc --noEmit"
+    "test": "node --disable-warning=ExperimentalWarning --test src/**/*.test.ts && node --test deploy/server.test.mjs",
+    "typecheck": "tsc --noEmit",
+    "start": "node --disable-warning=ExperimentalWarning deploy/server.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "6.3.1",
@@ -30,5 +31,6 @@
     "tailwindcss": "^4.1.18",
     "typescript": "5.9.3",
     "vite": "8.3.4"
-  }
+  },
+  "packageManager": "pnpm@10.26.2"
 }

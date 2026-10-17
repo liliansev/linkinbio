@@ -1,0 +1,49 @@
+name: Deploy to Hostinger
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: linkinbio-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    # Rien ne part tant que le receveur n'est pas installé sur le VPS (deploy/README.md).
+    if: github.ref == 'refs/heads/main' && vars.HOSTINGER_HOST != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Deploy and verify application health
+        env:
+          HOSTINGER_HOST: ${{ vars.HOSTINGER_HOST }}
+          HOSTINGER_DEPLOY_KEY: ${{ secrets.HOSTINGER_DEPLOY_KEY }}
+          HOSTINGER_KNOWN_HOSTS: ${{ secrets.HOSTINGER_KNOWN_HOSTS }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$HOSTINGER_HOST"
+          test -n "$HOSTINGER_DEPLOY_KEY"
+          test -n "$HOSTINGER_KNOWN_HOSTS"
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$HOSTINGER_DEPLOY_KEY" > "$HOME/.ssh/hostinger"
+          printf '%s\n' "$HOSTINGER_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/hostinger" "$HOME/.ssh/known_hosts"
+          trap 'rm -f "$HOME/.ssh/hostinger"' EXIT
+          git archive --format=tar "$GITHUB_SHA" | ssh \
+            -i "$HOME/.ssh/hostinger" \
+            -o BatchMode=yes \
+            -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes \
+            -o ConnectTimeout=20 \
+            -o ServerAliveInterval=30 \
+            -o ServerAliveCountMax=10 \
+            "root@$HOSTINGER_HOST" "deploy $GITHUB_SHA"

@@ -1,0 +1,9 @@
+node_modules/
+dist/
+demo/dist/
+.data/
+src/routeTree.gen.ts
+.env
+.DS_Store
+*.png
+!public/*.png
