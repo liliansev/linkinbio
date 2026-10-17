@@ -75,15 +75,44 @@ export interface Reglages {
 export const MISES_EN_PAGE_BUREAU = ['colonne', 'profil', 'onepage'] as const;
 export type MiseEnPageBureau = (typeof MISES_EN_PAGE_BUREAU)[number];
 
+/** Le compte de Lilian, servi sur /liens/. Les autres comptes le sont sur /liens/<pseudo>. */
+export const PRINCIPAL = 'principal';
+
+/** Les blocs branchés sur les outils de Lilian (sa chaîne YouTube, sa newsletter) : réservés à sa page. */
+export const TYPES_PRINCIPAL: readonly TypeBloc[] = ['derniere-video', 'newsletter'];
+
+/** Qui possède la page : de quoi construire son adresse. */
+export interface ComptePage { pseudo: string; principal: boolean }
+
+export const ORIGINE_PUBLIQUE = 'https://liliansevoumian.fr';
+export const cheminPage = (c: ComptePage) => (c.principal ? '/liens/' : `/liens/${c.pseudo}`);
+export const urlPage = (c: ComptePage) => `${ORIGINE_PUBLIQUE}${cheminPage(c)}`;
+
+/** Une ligne de la liste des comptes, dans le back office de Lilian. */
+export interface CompteResume {
+  id: string;
+  email: string;
+  pseudo: string;
+  statut: 'actif' | 'suspendu';
+  cree: number;
+  connexion: number | null;
+  blocs: number;
+  /** Vues des 30 derniers jours. */
+  vues: number;
+  principal: boolean;
+}
+
 /** Ce que la page publique reçoit : jamais un bloc privé ni hors programmation. */
 export interface PagePublique {
   reglages: Reglages;
   blocs: Bloc[];
+  compte: ComptePage;
 }
 
 export interface EtatAdmin {
   reglages: Reglages;
   blocs: Bloc[];
+  compte: ComptePage & { email: string };
   /** Clics des 30 derniers jours, par bloc. */
   clics: Record<string, number>;
   /** Vrai quand la base vit en mémoire : rien ne survivra au redémarrage. */
@@ -116,6 +145,17 @@ export interface Api {
   apercuSite(url: string): Promise<{ titre: string; description: string; image: string | null }>;
   stats(jours: number): Promise<Stats>;
   deconnexion(): Promise<void>;
+  /** Seulement pour le compte principal : gérer les autres comptes. */
+  comptes?: ApiComptes;
+}
+
+export interface ApiComptes {
+  lister(): Promise<CompteResume[]>;
+  /** Crée le compte et envoie l'invitation ; renvoie le message à afficher. */
+  inviter(email: string, pseudo: string): Promise<{ ok: boolean; message: string; lienDev?: string }>;
+  renvoyer(id: string): Promise<{ ok: boolean; message: string; lienDev?: string }>;
+  changerStatut(id: string, statut: CompteResume['statut']): Promise<void>;
+  supprimer(id: string): Promise<void>;
 }
 
 export function nouveauBloc(type: TypeBloc, id: string): Bloc {

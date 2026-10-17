@@ -1,4 +1,4 @@
-import type { Api, Bloc, EtatAdmin, Reglages, Stats } from '../src/lib/types.ts';
+import type { Api, Bloc, CompteResume, EtatAdmin, Reglages, Stats } from '../src/lib/types.ts';
 import { REGLAGES_DEFAUT, blocsDefaut } from '../src/lib/defauts.ts';
 import avatar from '../public/avatar.webp?inline';
 
@@ -51,7 +51,7 @@ function statsFictives(jours: number): Stats {
 export const apiDemo: Api = {
   async charger(): Promise<EtatAdmin> {
     const s = statsFictives(30);
-    return { ...etat, clics: Object.fromEntries(s.blocs.map(b => [b.id, b.clics])), stockageEphemere: false };
+    return { ...etat, clics: Object.fromEntries(s.blocs.map(b => [b.id, b.clics])), stockageEphemere: false, compte: { pseudo: 'lilian', principal: true, email: '' } };
   },
   async enregistrerBloc(bloc) {
     await pause();
@@ -68,7 +68,28 @@ export const apiDemo: Api = {
   async apercuSite(url) { await pause(); return { titre: '', description: 'Un aperçu de démonstration : en ligne, le serveur lit la vraie description du site.', image: vignetteDemo(url) }; },
   async stats(jours) { await pause(); return statsFictives(jours); },
   async deconnexion() { localStorage.removeItem(CLE); etat = lire(); },
+  comptes: {
+    async lister() { await pause(); return comptesDemo; },
+    async inviter(email, pseudo) {
+      await pause();
+      if (comptesDemo.some(c => c.pseudo === pseudo)) return { ok: false, message: 'Ce pseudo est déjà pris.' };
+      comptesDemo.splice(1, 0, { id: id(), email, pseudo, statut: 'actif', cree: Date.now(), connexion: null, blocs: 0, vues: 0, principal: false });
+      return { ok: true, message: `Invitation envoyée à ${email} (dans l’aperçu, rien ne part vraiment).` };
+    },
+    async renvoyer() { await pause(); return { ok: true, message: '' }; },
+    async changerStatut(i, statut) { await pause(); const c = comptesDemo.find(x => x.id === i); if (c) c.statut = statut; },
+    async supprimer(i) { await pause(); const k = comptesDemo.findIndex(x => x.id === i); if (k > 0) comptesDemo.splice(k, 1); },
+  },
 };
+
+/** Des comptes inventés, pour voir l'onglet Comptes dans l'aperçu. */
+const jour = 86_400_000;
+const comptesDemo: CompteResume[] = [
+  { id: 'principal', email: '', pseudo: 'lilian', statut: 'actif', cree: Date.now() - 40 * jour, connexion: Date.now(), blocs: 8, vues: 2140, principal: true },
+  { id: 'demo1', email: 'camille@exemple.fr', pseudo: 'camille-studio', statut: 'actif', cree: Date.now() - 6 * jour, connexion: Date.now() - jour, blocs: 7, vues: 312, principal: false },
+  { id: 'demo2', email: 'hugo@exemple.fr', pseudo: 'hugo-podcast', statut: 'actif', cree: Date.now() - 4 * jour, connexion: null, blocs: 0, vues: 0, principal: false },
+  { id: 'demo3', email: 'sarah@exemple.fr', pseudo: 'sarah-coach', statut: 'suspendu', cree: Date.now() - 12 * jour, connexion: Date.now() - 9 * jour, blocs: 4, vues: 58, principal: false },
+];
 
 function vignetteDemo(url: string): string {
   const c = document.createElement('canvas'); c.width = 1200; c.height = 675;
@@ -83,4 +104,4 @@ function vignetteDemo(url: string): string {
 }
 
 export const etatDemo = () => apiDemo.charger();
-export const pageDemo = () => ({ reglages: etat.reglages, blocs: etat.blocs });
+export const pageDemo = () => ({ reglages: etat.reglages, blocs: etat.blocs, compte: { pseudo: 'lilian', principal: true } });

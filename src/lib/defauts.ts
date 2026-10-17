@@ -46,3 +46,15 @@ export function blocsDefaut(id: () => string): Bloc[] {
     bloc('newsletter', { titre: 'Ma newsletter', sousTitre: 'Ce que je teste en IA, directement dans votre boîte.' }),
   ];
 }
+
+/** La page d'un compte qui vient d'être créé : le pseudo pour nom, rien d'autre, invisible pour Google. */
+export function reglagesNouveauCompte(pseudo: string): Reglages {
+  return {
+    ...REGLAGES_DEFAUT,
+    profil: { nom: pseudo, bio: '', avatar: '', badge: false },
+    reseaux: [],
+    seo: { titre: `${pseudo} · Mes liens`, description: '', indexable: false },
+    animation: 'reflet',
+    bureau: 'colonne',
+  };
+}

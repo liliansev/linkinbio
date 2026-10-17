@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { enregistrer } from '../../server/analytique.ts';
-import { COOKIE_SESSION, lireCookie, sessionValide } from '../../server/auth.ts';
+import { COOKIE_SESSION, compteDeSession, lireCookie } from '../../server/auth.ts';
 
 /* Les vues et les clics de la page publique, envoyés par `navigator.sendBeacon`. */
 export const Route = createFileRoute('/api/evenement')({
@@ -15,8 +15,8 @@ export const Route = createFileRoute('/api/evenement')({
         let entree: Record<string, unknown> = {};
         try { entree = JSON.parse(texte); } catch { return new Response(null, { status: 400 }); }
         const ip = request.headers.get('x-real-ip') ?? '';
-        const admin = sessionValide(lireCookie(request.headers.get('cookie'), COOKIE_SESSION));
-        enregistrer({ type: entree.type, bloc: entree.bloc, utm: entree.utm, referent: entree.referent }, { ip, ua: request.headers.get('user-agent') ?? '', admin });
+        const session = compteDeSession(lireCookie(request.headers.get('cookie'), COOKIE_SESSION));
+        enregistrer({ page: entree.page, type: entree.type, bloc: entree.bloc, utm: entree.utm, referent: entree.referent }, { ip, ua: request.headers.get('user-agent') ?? '', session });
         return new Response(null, { status: 204, headers: { 'Cache-Control': 'no-store' } });
       },
     },

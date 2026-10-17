@@ -82,3 +82,21 @@ export function validerReglages(v: unknown, base: Reglages): Reglages {
     animation: parmi(o.animation, ANIMATIONS, base.animation),
   };
 }
+
+/** Les adresses déjà prises par l'application, ou qui prêteraient à confusion. */
+const PSEUDOS_RESERVES = new Set([
+  'admin', 'api', 'media', 'assets', 'liens', 'lilian', 'liliansevoumian', 'principal', 'connexion', 'inscription', 'compte', 'comptes',
+  'aide', 'support', 'contact', 'blog', 'login', 'signup', 'app', 'www', 'static', 'demo', 'root', 'null', 'undefined', 'favicon', 'robots', 'sitemap',
+]);
+
+/** Un pseudo : 3 à 30 caractères, minuscules, chiffres et tirets, ni réservé. Vide si refusé. */
+export function pseudo(v: unknown): string {
+  const s = texte(v, 40).toLowerCase();
+  return /^[a-z0-9](?:[a-z0-9-]{1,28})[a-z0-9]$/.test(s) && !s.includes('--') && !PSEUDOS_RESERVES.has(s) ? s : '';
+}
+
+/** Une adresse e-mail plausible, en minuscules. Vide si refusée. */
+export function email(v: unknown): string {
+  const s = texte(v, 200).toLowerCase();
+  return /^[^\s@<>"',;]+@[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(s) ? s : '';
+}

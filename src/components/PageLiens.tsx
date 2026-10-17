@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { CSSProperties, FormEvent, ReactNode } from 'react';
 import type { Bloc, PagePublique } from '../lib/types.ts';
-import { animationDe, idYoutube } from '../lib/types.ts';
+import { animationDe, idYoutube, urlPage } from '../lib/types.ts';
 import type { Reglages } from '../lib/types.ts';
 import { themeParId, variablesTheme } from '../lib/themes.ts';
 import { ICONES } from '../lib/icones.ts';
@@ -14,10 +14,10 @@ import { Icone, NOMS_RESEAUX } from './Icone.tsx';
  * deux attributs que `page.css` lit.
  */
 
-function suivre(type: 'vue' | 'clic', bloc?: string) {
+function suivre(page: string, type: 'vue' | 'clic', bloc?: string) {
   try {
     const params = new URLSearchParams(location.search);
-    const corps = JSON.stringify({ type, bloc, utm: params.get('utm_source') ?? params.get('s') ?? '', referent: document.referrer });
+    const corps = JSON.stringify({ page, type, bloc, utm: params.get('utm_source') ?? params.get('s') ?? '', referent: document.referrer });
     const blob = new Blob([corps], { type: 'text/plain' });
     if (!navigator.sendBeacon?.('/liens/api/evenement', blob)) fetch('/liens/api/evenement', { method: 'POST', body: corps, keepalive: true }).catch(() => {});
   } catch { /* les statistiques ne doivent jamais gêner la visite */ }
@@ -32,22 +32,24 @@ export function goal(nom: string, props: Record<string, string> = {}) {
 }
 
 export function PageLiens({ page, apercu = false }: { page: PagePublique; apercu?: boolean }) {
-  const { reglages, blocs } = page;
+  const { reglages, blocs, compte } = page;
+  // La page de Lilian s'annonce sans pseudo ; les autres avec le leur.
+  const pseudo = compte.principal ? '' : compte.pseudo;
   const theme = themeParId(reglages.theme);
   const [toast, setToast] = useState('');
 
-  useEffect(() => { if (!apercu) suivre('vue'); }, [apercu]);
+  useEffect(() => { if (!apercu) suivre(pseudo, 'vue'); }, [apercu, pseudo]);
   useEffect(() => { if (!toast) return; const t = setTimeout(() => setToast(''), 2200); return () => clearTimeout(t); }, [toast]);
 
   const clic = (bloc: Bloc) => {
     if (apercu) return;
-    suivre('clic', bloc.id);
+    suivre(pseudo, 'clic', bloc.id);
     goal('liens_click', { lien: bloc.titre || bloc.url, type: bloc.type, vedette: bloc.vedette ? 'oui' : 'non' });
   };
   const cible = apercu ? { target: '_blank' } : {};
 
   async function partager() {
-    const url = apercu ? 'https://liliansevoumian.fr/liens/' : location.href.split('?')[0];
+    const url = apercu ? urlPage(compte) : location.href.split('?')[0];
     try {
       if (navigator.share) { await navigator.share({ title: reglages.seo.titre || reglages.profil.nom, url }); return; }
       await navigator.clipboard.writeText(url);
@@ -94,7 +96,9 @@ export function PageLiens({ page, apercu = false }: { page: PagePublique; apercu
         </main>
 
         {reglages.reseauxPosition === 'bas' && <footer className="lp-pied">{reseaux}</footer>}
-        <p className="lp-signature"><a href="https://liliansevoumian.fr" {...cible}>liliansevoumian.fr</a></p>
+        <p className="lp-signature">{compte.principal
+          ? <a href="https://liliansevoumian.fr" {...cible}>liliansevoumian.fr</a>
+          : <a href="https://liliansevoumian.fr/liens/" {...cible}>Une page faite avec Mes liens</a>}</p>
       </div>
       </div>
       {toast && <div className="lp-toast" role="status">{toast}</div>}

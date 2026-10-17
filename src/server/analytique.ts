@@ -1,11 +1,12 @@
 import { createHash } from 'node:crypto';
-import { ajouterEvenement, evenementsDuJour, jourDe, lireBlocs, secret } from './db.ts';
+import { PRINCIPAL } from '../lib/types.ts';
+import { ajouterEvenement, compteParPseudo, evenementsDuJour, jourDe, lireBlocs, secret } from './db.ts';
 
 /*
  * Les statistiques intégrées, sans cookie ni donnée personnelle : un visiteur
  * est une empreinte du jour (secret + date + IP + navigateur), illisible et
- * renouvelée chaque jour. Les robots sont écartés, et les visites de Lilian
- * connecté aussi.
+ * renouvelée chaque jour. Les robots sont écartés, et les visites du
+ * propriétaire de la page, connecté, aussi.
  */
 
 const ROBOTS = /bot|crawl|spider|slurp|preview|facebookexternalhit|embedly|whatsapp|telegram|discord|curl|wget|python|headless|lighthouse/i;
@@ -48,19 +49,29 @@ function tropRapide(visiteur: string, maintenant: number) {
   return recents.length > 60;
 }
 
-export function enregistrer(entree: { type: unknown; bloc: unknown; utm: unknown; referent: unknown }, contexte: { ip: string; ua: string; admin: boolean }, maintenant = Date.now()): boolean {
-  if (contexte.admin || !contexte.ua || ROBOTS.test(contexte.ua)) return false;
+/** Le compte d'une page d'après son pseudo (vide pour la page de Lilian), s'il est en ligne. */
+function compteDePage(page: unknown): string | null {
+  if (page === '' || page === undefined || page === null) return PRINCIPAL;
+  if (typeof page !== 'string' || !/^[a-z0-9-]{3,30}$/.test(page)) return null;
+  const compte = compteParPseudo(page);
+  return compte && compte.statut === 'actif' ? compte.id : null;
+}
+
+export function enregistrer(entree: { page?: unknown; type: unknown; bloc: unknown; utm: unknown; referent: unknown }, contexte: { ip: string; ua: string; session: string | null }, maintenant = Date.now()): boolean {
+  if (!contexte.ua || ROBOTS.test(contexte.ua)) return false;
+  const compte = compteDePage(entree.page);
+  if (!compte || contexte.session === compte) return false;
   const type = entree.type === 'clic' ? 'clic' : entree.type === 'vue' ? 'vue' : null;
   if (!type) return false;
   const bloc = type === 'clic' && typeof entree.bloc === 'string' && /^[\w-]{1,40}$/.test(entree.bloc) ? entree.bloc : null;
   if (type === 'clic' && !bloc) return false;
   const visiteur = createHash('sha256').update(`${secret()}|${jourDe(maintenant)}|${contexte.ip}|${contexte.ua}`).digest('base64url').slice(0, 16);
   if (tropRapide(contexte.ip || visiteur, maintenant)) return false;
-  // Un clic vise un lien qui existe ; et un plafond par jour protège le disque d'un envoi en masse.
-  if (bloc && !lireBlocs().some(b => b.id === bloc)) return false;
-  if (evenementsDuJour(maintenant) >= 50_000) return false;
+  // Un clic vise un lien de cette page ; et un plafond par jour protège le disque d'un envoi en masse.
+  if (bloc && !lireBlocs(compte).some(b => b.id === bloc)) return false;
+  if (evenementsDuJour(maintenant) >= 50_000 || (compte !== PRINCIPAL && evenementsDuJour(maintenant, compte) >= 10_000)) return false;
   ajouterEvenement({
-    type, bloc, visiteur, ts: maintenant,
+    compte, type, bloc, visiteur, ts: maintenant,
     source: source(typeof entree.utm === 'string' ? entree.utm : '', typeof entree.referent === 'string' ? entree.referent : ''),
     appareil: appareil(contexte.ua),
   });

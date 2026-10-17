@@ -1,23 +1,30 @@
 import { createHash, randomBytes } from 'node:crypto';
-import { ajouterJeton, jetonsRecents, supprimerJeton, verifierJeton } from './db.ts';
+import { PRINCIPAL } from '../lib/types.ts';
+import { ajouterJeton, compteParEmail, jetonsRecents, noterConnexion, supprimerJeton, verifierJeton } from './db.ts';
+import type { Compte } from './db.ts';
 
 /*
- * La connexion au back office, sans mot de passe : un bouton envoie un lien à
- * l'adresse de Lilian (par Resend, déjà utilisé par le formulaire de contact),
- * le lien ouvre une session de 90 jours dans un cookie HttpOnly. On ne stocke
- * que l'empreinte des jetons. Aucune adresse ne se saisit : le lien ne part
- * jamais ailleurs que dans la boîte de Lilian.
+ * La connexion au back office, sans mot de passe : on saisit son adresse, un
+ * lien part par e-mail (Resend, déjà utilisé par le formulaire de contact), le
+ * lien ouvre une session de 90 jours dans un cookie HttpOnly. On ne stocke que
+ * l'empreinte des jetons, chacun rattaché à son compte.
+ *
+ * La réponse est la même que l'adresse ait un compte ou non : personne ne peut
+ * s'en servir pour savoir qui a une page. Les comptes autres que celui de
+ * Lilian n'existent que sur invitation (voir `inviter`).
  *
  * Variables d'environnement (facultatives) :
- *   LIENS_ADMIN_EMAIL  la boîte qui reçoit le lien, CONTACT_TO sinon,
+ *   LIENS_ADMIN_EMAIL  l'adresse du compte principal, CONTACT_TO sinon,
  *                      bonjour@liliansevoumian.fr à défaut ;
  *   CONTACT_FROM       l'expéditeur, formulaire@liliansevoumian.fr sinon ;
- *   RESEND_API_KEY     requise en production pour envoyer le lien.
+ *   RESEND_API_KEY     requise en production pour envoyer les liens.
  */
 
 export const COOKIE_SESSION = 'liens_session';
 export const DUREE_SESSION = 90 * 86_400_000;
 const DUREE_LIEN = 15 * 60_000;
+/** Une invitation attend plus longtemps qu'un lien demandé à l'instant. */
+const DUREE_INVITATION = 7 * 86_400_000;
 
 export const empreinte = (jeton: string) => createHash('sha256').update(jeton).digest('hex');
 const nouveauJeton = () => randomBytes(32).toString('base64url');
@@ -40,14 +47,23 @@ export function lireCookie(entete: string | null | undefined, nom: string): stri
   return null;
 }
 
-export function sessionValide(jeton: string | null | undefined): boolean {
-  return !!jeton && /^[\w-]{20,80}$/.test(jeton) && verifierJeton(empreinte(jeton), 'session');
+/** Le compte d'une session ouverte, ou null. */
+export function compteDeSession(jeton: string | null | undefined): string | null {
+  return jeton && /^[\w-]{20,80}$/.test(jeton) ? verifierJeton(empreinte(jeton), 'session') : null;
+}
+
+/** L'adresse à laquelle répond un compte : l'environnement pour le principal, la base pour les autres. */
+export function compteParAdresse(email: string, env: Env): string | null {
+  const e = email.trim().toLowerCase();
+  if (e && e === adresseAdmin(env).toLowerCase()) return PRINCIPAL;
+  const compte = compteParEmail(e);
+  return compte && compte.statut === 'actif' ? compte.id : null;
 }
 
 export type Reponse = { ok: true; message: string; lienDev?: string } | { ok: false; message: string };
 
 const demandesParIp = new Map<string, number[]>();
-/** Au plus 3 demandes par heure depuis une même adresse IP : un inconnu ne peut ni bombarder la boîte ni épuiser le plafond du jour. */
+/** Au plus 3 demandes par heure depuis une même adresse IP : un inconnu ne peut ni bombarder une boîte ni épuiser le plafond du jour. */
 function ipTropInsistante(ip: string, maintenant: number) {
   const recentes = (demandesParIp.get(ip) ?? []).filter(t => maintenant - t < 3_600_000);
   if (demandesParIp.size > 5000) demandesParIp.clear();
@@ -56,51 +72,88 @@ function ipTropInsistante(ip: string, maintenant: number) {
   return false;
 }
 
-export async function demanderConnexion(origine: string, env: Env, fetchImpl: typeof fetch = fetch, maintenant = Date.now(), ip = ''): Promise<Reponse> {
-  const recents = jetonsRecents(maintenant - 86_400_000);
-  if (maintenant - recents.dernier < 60_000) return { ok: false, message: 'Un lien vient de partir. Regarde ta boîte, ou réessaie dans une minute.' };
-  if (ipTropInsistante(ip, maintenant)) return { ok: false, message: 'Trop de demandes. Réessaie dans une heure.' };
-  if (recents.n >= 50) return { ok: false, message: 'Trop de demandes aujourd’hui. Réessaie demain.' };
+const bouton = (lien: string, texte: string) => `<p><a href="${lien}" style="display:inline-block;background:#ffb38a;color:#111827;padding:12px 20px;border-radius:999px;text-decoration:none;font-weight:600">${texte}</a></p>`;
+const enveloppe = (contenu: string) => `<div style="font-family:system-ui,sans-serif;font-size:16px;line-height:1.5;color:#111">${contenu}</div>`;
+
+/**
+ * Inscrit un lien de connexion pour `compte` et l'envoie à `destinataire`. Le
+ * jeton est inscrit avant l'envoi : deux demandes simultanées ne passent pas
+ * toutes deux le délai d'une minute. Il est retiré si l'envoi échoue.
+ */
+async function envoyerLien(o: {
+  origine: string; env: Env; fetchImpl: typeof fetch; compte: string; destinataire: string; duree: number;
+  sujet: string; html: (lien: string) => string; texte: (lien: string) => string;
+}): Promise<Reponse> {
   const jeton = nouveauJeton();
-  const lien = `${origine}/liens/admin/connexion?jeton=${jeton}`;
-  const destinataire = adresseAdmin(env);
-  if (!env.RESEND_API_KEY) {
-    if (env.NODE_ENV === 'production') return { ok: false, message: 'L’envoi d’e-mails n’est pas configuré sur le serveur.' };
-    ajouterJeton(empreinte(jeton), 'connexion', DUREE_LIEN);
+  const lien = `${o.origine}/liens/admin/connexion?jeton=${jeton}`;
+  if (!o.env.RESEND_API_KEY) {
+    if (o.env.NODE_ENV === 'production') return { ok: false, message: 'L’envoi d’e-mails n’est pas configuré sur le serveur.' };
+    ajouterJeton(empreinte(jeton), 'connexion', o.duree, o.compte);
     console.log(`[liens] lien de connexion (dev) : ${lien}`);
     return { ok: true, message: 'Mode développement : le lien est ci-dessous.', lienDev: lien };
   }
-  const html = `<div style="font-family:system-ui,sans-serif;font-size:16px;line-height:1.5;color:#111">
-<p>Voici ton lien pour ouvrir le back office de ta page de liens. Il marche une seule fois, pendant 15 minutes.</p>
-<p><a href="${lien}" style="display:inline-block;background:#ffb38a;color:#111827;padding:12px 20px;border-radius:999px;text-decoration:none;font-weight:600">Ouvrir mon back office</a></p>
-<p style="color:#666;font-size:14px">Tu n’as rien demandé ? Ignore ce message, personne ne peut s’en servir sans accès à ta boîte.</p></div>`;
-  // Le jeton est inscrit avant l'envoi : deux demandes simultanées ne passent pas toutes deux le délai d'une minute.
-  ajouterJeton(empreinte(jeton), 'connexion', DUREE_LIEN);
+  ajouterJeton(empreinte(jeton), 'connexion', o.duree, o.compte);
+  const echec = (detail: string) => { console.error('[liens] Resend', detail); supprimerJeton(empreinte(jeton)); return { ok: false as const, message: 'L’e-mail n’est pas parti. Réessaie dans un instant.' }; };
   try {
-    const reponse = await fetchImpl('https://api.resend.com/emails', {
+    const reponse = await o.fetchImpl('https://api.resend.com/emails', {
       method: 'POST',
-      headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+      headers: { Authorization: `Bearer ${o.env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        from: `Mes liens <${env.CONTACT_FROM?.trim() || 'formulaire@liliansevoumian.fr'}>`,
-        to: [destinataire], subject: 'Ton lien de connexion', html,
-        text: `Ouvre ton back office : ${lien}\nLe lien marche une seule fois, pendant 15 minutes.`,
+        from: `Mes liens <${o.env.CONTACT_FROM?.trim() || 'formulaire@liliansevoumian.fr'}>`,
+        to: [o.destinataire], subject: o.sujet, html: o.html(lien), text: o.texte(lien),
       }),
       signal: AbortSignal.timeout(10_000),
     });
-    if (!reponse.ok) { console.error('[liens] Resend', reponse.status); supprimerJeton(empreinte(jeton)); return { ok: false, message: 'L’e-mail n’est pas parti. Réessaie dans un instant.' }; }
-  } catch (error) {
-    console.error('[liens] Resend', (error as Error).message);
-    supprimerJeton(empreinte(jeton));
-    return { ok: false, message: 'L’e-mail n’est pas parti. Réessaie dans un instant.' };
-  }
-  return { ok: true, message: `C’est parti : ouvre le lien reçu sur ${masquer(destinataire)}.` };
+    if (!reponse.ok) return echec(String(reponse.status));
+  } catch (error) { return echec((error as Error).message); }
+  return { ok: true, message: '' };
 }
 
-/** Échange un lien de connexion (usage unique) contre un jeton de session. */
+export async function demanderConnexion(origine: string, env: Env, email: string, fetchImpl: typeof fetch = fetch, maintenant = Date.now(), ip = ''): Promise<Reponse> {
+  const adresse = email.trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(adresse)) return { ok: false, message: 'Entre l’adresse e-mail de ton compte.' };
+  if (ipTropInsistante(ip, maintenant)) return { ok: false, message: 'Trop de demandes. Réessaie dans une heure.' };
+  if (jetonsRecents(maintenant - 86_400_000).n >= 200) return { ok: false, message: 'Trop de demandes aujourd’hui. Réessaie demain.' };
+  const envoye = { ok: true as const, message: `Si ${adresse} a un compte, le lien vient de partir. Il marche une fois, pendant 15 minutes.` };
+  const compte = compteParAdresse(adresse, env);
+  if (!compte) return envoye;
+  // Par compte : un lien par minute, dix par jour. Au-delà on se tait, pour ne rien révéler.
+  const recents = jetonsRecents(maintenant - 86_400_000, compte);
+  if (maintenant - recents.dernier < 60_000 || recents.n >= 10) return envoye;
+  const r = await envoyerLien({
+    origine, env, fetchImpl, compte, destinataire: adresse, duree: DUREE_LIEN,
+    sujet: 'Ton lien de connexion',
+    html: lien => enveloppe(`<p>Voici ton lien pour ouvrir le back office de ta page de liens. Il marche une seule fois, pendant 15 minutes.</p>
+${bouton(lien, 'Ouvrir mon back office')}
+<p style="color:#666;font-size:14px">Tu n’as rien demandé ? Ignore ce message, personne ne peut s’en servir sans accès à ta boîte.</p>`),
+    texte: lien => `Ouvre ton back office : ${lien}\nLe lien marche une seule fois, pendant 15 minutes.`,
+  });
+  return r.ok ? { ...envoye, lienDev: r.lienDev } : r;
+}
+
+/** Le premier e-mail d'un compte créé par Lilian : l'adresse de sa page et un lien valable une semaine. */
+export async function inviter(origine: string, env: Env, compte: Compte, fetchImpl: typeof fetch = fetch): Promise<Reponse> {
+  const page = `${origine}/liens/${compte.pseudo}`;
+  const r = await envoyerLien({
+    origine, env, fetchImpl, compte: compte.id, destinataire: compte.email, duree: DUREE_INVITATION,
+    sujet: 'Ta page de liens est prête',
+    html: lien => enveloppe(`<p>Bonjour,</p>
+<p>Lilian Sevoumian t’a ouvert une page de liens, à l’adresse <a href="${page}">${page.replace(/^https?:\/\//, '')}</a>. Elle est vide pour l’instant : ajoute tes liens, choisis un thème, et elle est en ligne.</p>
+${bouton(lien, 'Créer ma page')}
+<p style="color:#666;font-size:14px">Ce lien marche une seule fois, pendant 7 jours. Ensuite, tu te connectes depuis ${origine.replace(/^https?:\/\//, '')}/liens/admin avec cette adresse.</p>`),
+    texte: lien => `Lilian Sevoumian t’a ouvert une page de liens : ${page}\nPour la créer : ${lien}\nLe lien marche une seule fois, pendant 7 jours.`,
+  });
+  return r.ok ? { ok: true, message: `Invitation envoyée à ${compte.email}.`, lienDev: r.lienDev } : r;
+}
+
+/** Échange un lien de connexion (usage unique) contre un jeton de session du même compte. */
 export function ouvrirSession(jetonConnexion: string): string | null {
-  if (!/^[\w-]{20,80}$/.test(jetonConnexion) || !verifierJeton(empreinte(jetonConnexion), 'connexion', true)) return null;
+  if (!/^[\w-]{20,80}$/.test(jetonConnexion)) return null;
+  const compte = verifierJeton(empreinte(jetonConnexion), 'connexion', true);
+  if (!compte) return null;
   const session = nouveauJeton();
-  ajouterJeton(empreinte(session), 'session', DUREE_SESSION);
+  ajouterJeton(empreinte(session), 'session', DUREE_SESSION, compte);
+  noterConnexion(compte);
   return session;
 }
 

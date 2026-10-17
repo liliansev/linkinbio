@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { Api, Bloc, EtatAdmin, Reglages } from '../lib/types.ts';
-import { estEnLigne } from '../lib/types.ts';
+import { TYPES_PRINCIPAL, cheminPage, estEnLigne } from '../lib/types.ts';
 import { PageLiens } from '../components/PageLiens.tsx';
 import { OngletLiens } from './OngletLiens.tsx';
 import { EditeurBloc } from './EditeurBloc.tsx';
 import { OngletApparence } from './OngletApparence.tsx';
 import { OngletStats } from './OngletStats.tsx';
-import { OngletReglages, URL_PUBLIQUE } from './OngletReglages.tsx';
+import { OngletReglages } from './OngletReglages.tsx';
+import { OngletComptes } from './OngletComptes.tsx';
 import { Icone } from '../components/Icone.tsx';
 import { vibrer } from './ui.tsx';
 
@@ -18,13 +19,14 @@ import { vibrer } from './ui.tsx';
  * téléphone) est la vraie page, rendue avec l'état en cours.
  */
 
-type Onglet = 'liens' | 'apparence' | 'stats' | 'reglages';
+type Onglet = 'liens' | 'apparence' | 'stats' | 'reglages' | 'comptes';
 type Sauvegarde = 'ok' | 'encours' | 'erreur';
 
 const ONGLETS: { id: Onglet; nom: string; icone: ReactNode }[] = [
   { id: 'liens', nom: 'Liens', icone: <path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7" /> },
   { id: 'apparence', nom: 'Apparence', icone: <><circle cx="13.5" cy="6.5" r="1.5" /><circle cx="17.5" cy="10.5" r="1.5" /><circle cx="8.5" cy="7.5" r="1.5" /><circle cx="6.5" cy="12.5" r="1.5" /><path d="M12 2a10 10 0 0 0 0 20c1 0 1.7-.8 1.7-1.7 0-.5-.2-.8-.5-1.2-.3-.3-.4-.7-.4-1.1 0-.9.8-1.7 1.7-1.7h2A5.5 5.5 0 0 0 22 10.8C22 6 17.5 2 12 2Z" /></> },
   { id: 'stats', nom: 'Stats', icone: <path d="M3 3v18h18M7 16l4-5 3 3 5-7" /> },
+  { id: 'comptes', nom: 'Comptes', icone: <><circle cx="9" cy="8" r="3.5" /><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M18 14.5a6.5 6.5 0 0 1 3.5 5.5" /></> },
   { id: 'reglages', nom: 'Réglages', icone: <><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z" /></> },
 ];
 
@@ -42,6 +44,9 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
   const [toast, setToast] = useState<{ texte: string; annuler?: () => void } | null>(null);
   const [apercu, setApercu] = useState(false);
   const enCours = useRef(0);
+  const compte = initial.compte;
+  // L'onglet Comptes n'existe que pour Lilian.
+  const onglets = ONGLETS.filter(o => o.id !== 'comptes' || api.comptes);
   const minuteur = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   /** Chaque écriture passe ici : l'indicateur suit les requêtes en vol. */
@@ -112,7 +117,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
     location.reload();
   }
 
-  const page = useMemo(() => ({ reglages, blocs: blocs.filter(b => estEnLigne(b)) }), [reglages, blocs]);
+  const page = useMemo(() => ({ reglages, blocs: blocs.filter(b => estEnLigne(b) && (compte.principal || !TYPES_PRINCIPAL.includes(b.type))), compte }), [reglages, blocs, compte]);
   const chargerStats = useCallback((jours: number) => api.stats(jours).then(s => { if (jours === 30) setClics(Object.fromEntries(s.blocs.map(b => [b.id, b.clics]))); return s; }), [api]);
 
   const indicateur = sauvegarde === 'encours' ? 'Enregistrement…' : sauvegarde === 'erreur' ? 'Non enregistré' : 'Enregistré';
@@ -129,13 +134,13 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
             </p>
           </div>
           <nav className="mr-2 hidden gap-1 rounded-full bg-white/[0.05] p-1 lg:flex" aria-label="Sections">
-            {ONGLETS.map(o => (
+            {onglets.map(o => (
               <button key={o.id} type="button" onClick={() => setOnglet(o.id)} aria-current={onglet === o.id ? 'page' : undefined}
                 className={`min-h-9 rounded-full px-4 text-[14px] font-medium transition ${onglet === o.id ? 'bg-white text-nuit' : 'text-white/65 hover:text-white'}`}>{o.nom}</button>
             ))}
           </nav>
           <button type="button" onClick={() => setApercu(true)} className="flex min-h-10 items-center gap-1.5 rounded-full bg-white/[0.08] px-4 text-[14px] font-medium transition active:scale-95 lg:hidden">Aperçu</button>
-          <a href={demo ? '#page' : URL_PUBLIQUE.replace('https://liliansevoumian.fr', '')} target={demo ? undefined : '_blank'} rel="noopener" className="hidden min-h-10 items-center gap-1.5 rounded-full bg-peche px-4 text-[14px] font-semibold text-nuit transition hover:brightness-105 sm:inline-flex">Voir ma page <Icone nom="ui-fleche" taille={16} /></a>
+          <a href={demo ? '#page' : cheminPage(compte)} target={demo ? undefined : '_blank'} rel="noopener" className="hidden min-h-10 items-center gap-1.5 rounded-full bg-peche px-4 text-[14px] font-semibold text-nuit transition hover:brightness-105 sm:inline-flex">Voir ma page <Icone nom="ui-fleche" taille={16} /></a>
         </div>
       </header>
 
@@ -146,11 +151,12 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
       <div className="mx-auto max-w-6xl px-4 lg:grid lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-10">
         <main className="mx-auto w-full max-w-xl pt-5 pb-32 lg:pb-12">
           <div key={onglet} className="adm-onglet">
-          <h1 className="mb-4 text-[28px] font-semibold tracking-[-0.025em] lg:hidden">{ONGLETS.find(o => o.id === onglet)!.nom}</h1>
-          {onglet === 'liens' && <OngletLiens blocs={blocs} clics={clics} onOrdonner={ordonner} onModifier={b => { setBlocs(l => l.map(x => (x.id === b.id ? b : x))); ecrire(() => api.enregistrerBloc(b)); }} onOuvrir={b => setEdition({ bloc: b, nouveau: false })} onAjouter={b => setEdition({ bloc: b, nouveau: true })} />}
-          {onglet === 'apparence' && <OngletApparence reglages={reglages} onChange={changerReglages} envoyerImage={d => api.envoyerImage(d)} />}
+          <h1 className="mb-4 text-[28px] font-semibold tracking-[-0.025em] lg:hidden">{onglets.find(o => o.id === onglet)!.nom}</h1>
+          {onglet === 'liens' && <OngletLiens blocs={blocs} clics={clics} onOrdonner={ordonner} onModifier={b => { setBlocs(l => l.map(x => (x.id === b.id ? b : x))); ecrire(() => api.enregistrerBloc(b)); }} onOuvrir={b => setEdition({ bloc: b, nouveau: false })} onAjouter={b => setEdition({ bloc: b, nouveau: true })} principal={compte.principal} />}
+          {onglet === 'apparence' && <OngletApparence reglages={reglages} onChange={changerReglages} envoyerImage={d => api.envoyerImage(d)} principal={compte.principal} />}
           {onglet === 'stats' && <OngletStats charger={chargerStats} />}
-          {onglet === 'reglages' && <OngletReglages reglages={reglages} onChange={changerReglages} onDeconnexion={deconnexion} />}
+          {onglet === 'reglages' && <OngletReglages reglages={reglages} compte={compte} onChange={changerReglages} onDeconnexion={deconnexion} />}
+          {onglet === 'comptes' && api.comptes && <OngletComptes api={api.comptes} />}
           </div>
         </main>
 
@@ -160,8 +166,8 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
       </div>
 
       <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-white/[0.07] bg-[#0e1524]/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl lg:hidden" aria-label="Sections">
-        <ul className="mx-auto grid max-w-md grid-cols-4">
-          {ONGLETS.map(o => (
+        <ul className={`mx-auto grid max-w-md ${onglets.length === 5 ? 'grid-cols-5' : 'grid-cols-4'}`}>
+          {onglets.map(o => (
             <li key={o.id}>
               <button type="button" onClick={() => { if (o.id !== onglet) { vibrer(5); setOnglet(o.id); scrollTo({ top: 0 }); } }} aria-current={onglet === o.id ? 'page' : undefined}
                 className={`flex h-16 w-full flex-col items-center justify-center gap-1 text-[11.5px] font-medium transition-colors duration-200 active:scale-95 ${onglet === o.id ? 'text-peche' : 'text-white/50'}`}>

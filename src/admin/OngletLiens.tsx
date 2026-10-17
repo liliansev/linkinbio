@@ -5,7 +5,7 @@ import type { DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import type { Bloc, TypeBloc } from '../lib/types.ts';
-import { estEnLigne, nouveauBloc } from '../lib/types.ts';
+import { TYPES_PRINCIPAL, estEnLigne, nouveauBloc } from '../lib/types.ts';
 import { ICONES } from '../lib/icones.ts';
 import { Icone } from '../components/Icone.tsx';
 import { Feuille, vibrer } from './ui.tsx';
@@ -20,14 +20,17 @@ export const TYPES: { type: TypeBloc; nom: string; aide: string; picto: string }
 ];
 const NOM_TYPE = Object.fromEntries(TYPES.map(t => [t.type, t.nom])) as Record<TypeBloc, string>;
 
-export function OngletLiens({ blocs, clics, onOrdonner, onModifier, onOuvrir, onAjouter }: {
+export function OngletLiens({ blocs, clics, onOrdonner, onModifier, onOuvrir, onAjouter, principal = true }: {
   blocs: Bloc[];
   clics: Record<string, number>;
   onOrdonner: (blocs: Bloc[]) => void;
   onModifier: (bloc: Bloc) => void;
   onOuvrir: (bloc: Bloc) => void;
   onAjouter: (bloc: Bloc) => void;
+  /** Les autres comptes n'ont pas les blocs branchés sur la chaîne et la newsletter de Lilian. */
+  principal?: boolean;
 }) {
+  const types = principal ? TYPES : TYPES.filter(t => !TYPES_PRINCIPAL.includes(t.type));
   const [choix, setChoix] = useState(false);
   const capteurs = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -71,7 +74,7 @@ export function OngletLiens({ blocs, clics, onOrdonner, onModifier, onOuvrir, on
       <Feuille ouverte={choix} onFermer={() => setChoix(false)} titre="Ajouter un bloc">
         {fermer => (
           <ul className="adm-cascade -mx-2 flex flex-col pb-2">
-            {TYPES.map((t, i) => (
+            {types.map((t, i) => (
               <li key={t.type} style={{ '--i': i } as CSSProperties}>
                 <button type="button" onClick={() => fermer(() => ajouter(t.type))}
                   className="group flex w-full items-center gap-3.5 rounded-2xl px-2 py-2.5 text-left transition duration-150 hover:bg-white/[0.05] active:scale-[0.985] active:bg-white/[0.07]">

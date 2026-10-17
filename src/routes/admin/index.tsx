@@ -23,7 +23,14 @@ function PageAdmin() {
     apercuSite: url => fn.apercuSite({ data: url }),
     stats: jours => fn.lireStats({ data: jours }),
     deconnexion: async () => { await fn.deconnecter(); },
-  }), []);
-  if (!acces.connecte) return <Connexion adresse={acces.adresse} demander={() => fn.demanderLien()} />;
+    comptes: acces.connecte && acces.etat.compte.principal ? {
+      lister: () => fn.listerComptes(),
+      inviter: (email, pseudo) => fn.inviterCompte({ data: { email, pseudo } }),
+      renvoyer: id => fn.renvoyerInvitation({ data: id }),
+      changerStatut: async (id, statut) => { await fn.changerStatutCompte({ data: { id, statut } }); },
+      supprimer: async id => { await fn.supprimerCompte({ data: id }); },
+    } : undefined,
+  }), [acces.connecte]);
+  if (!acces.connecte) return <Connexion demander={email => fn.demanderLien({ data: email })} />;
   return <Admin api={api} initial={acces.etat} />;
 }

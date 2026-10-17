@@ -20,7 +20,7 @@ function Demo() {
     const bureau = bureauChoisi ?? p.reglages.bureau;
     return (
       <>
-        <PageLiens page={{ reglages: { ...p.reglages, bureau }, blocs: p.blocs.filter(b => estEnLigne(b)) }} apercu />
+        <PageLiens page={{ reglages: { ...p.reglages, bureau }, blocs: p.blocs.filter(b => estEnLigne(b)), compte: p.compte }} apercu />
         <div className="fixed left-1/2 top-4 z-50 hidden -translate-x-1/2 gap-1 rounded-full bg-white/90 p-1 font-sans text-[13px] font-semibold text-[#0c121f] shadow-2xl backdrop-blur lg:flex" role="radiogroup" aria-label="Mise en page sur ordinateur">
           {([['colonne', 'Colonne'], ['profil', 'Profil'], ['onepage', 'One page']] as const).map(([id, nom]) => (
             <button key={id} type="button" role="radio" aria-checked={bureau === id} onClick={() => choisirBureau(id)} className={`rounded-full px-4 py-2 ${bureau === id ? 'bg-[#0c121f] text-white' : 'hover:bg-black/5'}`}>{nom}</button>

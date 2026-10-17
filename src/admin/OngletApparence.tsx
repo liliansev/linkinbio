@@ -17,7 +17,7 @@ const EXEMPLES: Record<Reseau, string> = {
   spotify: 'https://open.spotify.com/…', email: 'toi@exemple.fr', site: 'https://…',
 };
 
-export function OngletApparence({ reglages, onChange, envoyerImage }: { reglages: Reglages; onChange: (r: Reglages) => void; envoyerImage: (d: string) => Promise<string> }) {
+export function OngletApparence({ reglages, onChange, envoyerImage, principal = true }: { reglages: Reglages; onChange: (r: Reglages) => void; envoyerImage: (d: string) => Promise<string>; principal?: boolean }) {
   const [famille, setFamille] = useState<Famille | 'tous'>('tous');
   const [envoi, setEnvoi] = useState(false);
   const fichier = useRef<HTMLInputElement>(null);
@@ -49,7 +49,7 @@ export function OngletApparence({ reglages, onChange, envoyerImage }: { reglages
         <div className="flex flex-col gap-3">
           <Champ label="Nom"><input className={classeSaisie} value={reglages.profil.nom} maxLength={80} onChange={e => profil({ nom: e.target.value })} /></Champ>
           <Champ label="Bio"><textarea className={`${classeSaisie} min-h-24`} value={reglages.profil.bio} maxLength={300} onChange={e => profil({ bio: e.target.value })} /></Champ>
-          <Interrupteur label="Badge vérifié" aide="La petite coche à côté de ton nom." actif={reglages.profil.badge} onChange={v => profil({ badge: v })} />
+          {principal && <Interrupteur label="Badge vérifié" aide="La petite coche à côté de ton nom." actif={reglages.profil.badge} onChange={v => profil({ badge: v })} />}
         </div>
       </Carte>
 
