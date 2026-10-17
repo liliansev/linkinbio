@@ -341,3 +341,110 @@
 .lp-mini .lp-carte[data-format='carte'] .lp-carte-visuel { aspect-ratio: auto; height: 104px; }
 .adm-apercu .lp { min-height: 100%; background-attachment: scroll; }
 .adm-apercu .lp-toast { position: absolute; }
+
+/* ---- Sur un grand écran ----
+ * Trois mises en page, au choix dans l'Apparence (`data-bureau`). Elles
+ * suivent la largeur de la page et non celle de la fenêtre (requête de
+ * conteneur) : l'aperçu en téléphone du back office reste une colonne,
+ * même sur un ordinateur.
+ *   colonne : la colonne du téléphone, posée sur un panneau ;
+ *   profil  : le profil fixe à gauche, les liens sur deux colonnes ;
+ *   onepage : une page d'accueil simple, le nom en grand et la photo,
+ *             puis les liens en cartes sur trois colonnes.
+ */
+
+.lp-scene { container: lp / inline-size; position: relative; isolation: isolate; }
+
+@container lp (min-width: 960px) {
+  /* Une lumière de la couleur de vedette, en haut, pour que le grand écran ne soit pas un aplat. */
+  .lp-col::before {
+    content: ''; position: absolute; inset: -120px -40% auto; height: 520px; z-index: -1; pointer-events: none;
+    background: radial-gradient(50% 60% at 50% 0%, color-mix(in srgb, var(--vedette) 16%, transparent), transparent 70%);
+  }
+  .lp-section { text-align: left; }
+  .lp-texte { text-align: left; }
+  .lp-signature { text-align: left; }
+
+  /* ---- Colonne ---- */
+  .lp[data-bureau='colonne'] .lp-col {
+    max-width: 620px; margin: 64px auto; padding: 64px 44px 36px;
+    border-radius: 36px;
+    background: color-mix(in srgb, var(--texte) 4%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--texte) 9%, transparent), 0 40px 120px -60px rgb(0 0 0 / 0.6);
+  }
+  .lp[data-bureau='colonne'] :is(.lp-section, .lp-texte, .lp-signature) { text-align: center; }
+  .lp[data-bureau='colonne'] .lp-col::before { inset: -64px -60% auto; }
+
+  /* ---- Profil ---- */
+  .lp[data-bureau='profil'] .lp-col {
+    max-width: 1140px; padding: 104px 48px 72px;
+    display: grid; grid-template-columns: minmax(280px, 360px) minmax(0, 1fr); column-gap: clamp(48px, 7cqi, 104px);
+    grid-template-areas: 'tete blocs' 'tete pied' 'tete signature';
+    grid-template-rows: auto auto 1fr; align-items: start;
+  }
+  .lp[data-bureau='profil'] .lp-tete {
+    grid-area: tete; position: sticky; top: 104px; margin: 0;
+    text-align: left; align-items: flex-start; gap: 14px;
+  }
+  .lp[data-bureau='profil'] .lp-avatar { width: 152px; height: 152px; margin-bottom: 6px; }
+  .lp[data-bureau='profil'] .lp-nom { font-size: 2.5rem; letter-spacing: -0.035em; }
+  .lp[data-bureau='profil'] .lp-bio { font-size: 1.08rem; max-width: 30ch; text-wrap: pretty; }
+  .lp[data-bureau='profil'] .lp-reseaux { justify-content: flex-start; margin-left: -10px; }
+  .lp[data-bureau='profil'] .lp-blocs { grid-area: blocs; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+  .lp[data-bureau='profil'] .lp-bloc { grid-column: 1 / -1; }
+  .lp[data-bureau='profil'] .lp-bloc[data-type='lien']:not([data-vedette]) { grid-column: auto; }
+  .lp[data-bureau='profil'] .lp-section { margin-top: 26px; font-size: 0.95rem; }
+  .lp[data-bureau='profil'] .lp-pied { grid-area: pied; }
+  .lp[data-bureau='profil'] .lp-pied .lp-reseaux { justify-content: flex-start; }
+  .lp[data-bureau='profil'] .lp-signature { grid-area: signature; }
+
+  /* ---- One page ---- */
+  .lp[data-bureau='onepage'] .lp-col { max-width: 1180px; padding: 88px 48px 72px; }
+  .lp[data-bureau='onepage'] .lp-col::before { inset: -120px -10% auto; }
+  .lp[data-bureau='onepage'] .lp-tete {
+    display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 64px; row-gap: 18px;
+    justify-items: start; align-items: center; text-align: left;
+    margin: 0 0 56px; padding-bottom: 56px;
+    border-bottom: 1px solid color-mix(in srgb, var(--texte) 10%, transparent);
+  }
+  .lp[data-bureau='onepage'] .lp-avatar {
+    grid-column: 2; grid-row: 1 / span 4; width: 300px; height: 300px; border-radius: 44px;
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--texte) 12%, transparent), 0 50px 90px -40px rgb(0 0 0 / 0.65);
+  }
+  .lp[data-bureau='onepage'][data-forme='carre'] .lp-avatar { border-radius: 8px; }
+  .lp[data-bureau='onepage'] .lp-nom { margin: 0; align-self: end; font-size: clamp(3rem, 6cqi, 4.75rem); line-height: 1.02; letter-spacing: -0.045em; font-weight: 640; }
+  .lp[data-bureau='onepage'] .lp-badge svg { width: 0.5em; height: 0.5em; }
+  .lp[data-bureau='onepage'] .lp-bio { font-size: 1.3rem; line-height: 1.45; max-width: 32ch; text-wrap: pretty; }
+  .lp[data-bureau='onepage'] .lp-reseaux { justify-content: flex-start; margin-left: -10px; align-self: start; }
+  .lp[data-bureau='onepage'] .lp-partager { top: 24px; right: 48px; }
+
+  .lp[data-bureau='onepage'] .lp-blocs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-flow: row dense; gap: 18px; }
+  .lp[data-bureau='onepage'] .lp-bloc { grid-column: 1 / -1; }
+  .lp[data-bureau='onepage'] .lp-bloc:is([data-type='lien']:not([data-vedette]), [data-type='newsletter'], [data-vedette='carte']) { grid-column: auto; }
+  .lp[data-bureau='onepage'] .lp-bloc:is([data-type='video'], [data-type='derniere-video']):has(.lp-video) { grid-column: span 2; }
+  .lp[data-bureau='onepage'] .lp-section {
+    margin: 44px 0 2px; font-size: 1.6rem; font-weight: 620; letter-spacing: -0.025em; color: var(--texte);
+  }
+  .lp[data-bureau='onepage'] .lp-bloc:first-child .lp-section { margin-top: 0; }
+  /* Un lien simple devient une carte : le picto en haut, le titre en bas, une flèche dans le coin. */
+  .lp[data-bureau='onepage'] .lp-bloc[data-type='lien']:not([data-vedette]) .lp-btn {
+    height: 100%; min-height: 148px; padding: 22px 24px; border-radius: var(--rc);
+    flex-direction: column; align-items: flex-start; justify-content: flex-end; text-align: left;
+  }
+  .lp[data-bureau='onepage'] .lp-bloc[data-type='lien']:not([data-vedette]) .lp-btn::after {
+    content: ''; position: absolute; top: 22px; right: 22px; width: 20px; height: 20px; background: currentColor; opacity: 0.55;
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M7 17 17 7M8 7h9v9'/%3E%3C/svg%3E") center / contain no-repeat;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M7 17 17 7M8 7h9v9'/%3E%3C/svg%3E") center / contain no-repeat;
+    transition: translate 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s;
+  }
+  .lp[data-bureau='onepage'] .lp-bloc[data-type='lien']:not([data-vedette]) .lp-btn:hover::after { translate: 2px -2px; opacity: 1; }
+  .lp[data-bureau='onepage'] .lp-bloc[data-type='lien']:not([data-vedette]) :is(.lp-picto, .lp-vignette) { position: absolute; left: 20px; top: 20px; translate: none; }
+  .lp[data-bureau='onepage'] .lp-bloc[data-type='lien']:not([data-vedette]) .lp-btn-titre { font-size: 1.12rem; font-weight: 620; letter-spacing: -0.015em; }
+  .lp[data-bureau='onepage'] .lp-newsletter { height: 100%; justify-content: center; text-align: left; padding: 26px 24px; }
+  .lp[data-bureau='onepage'] .lp-video figcaption { text-align: left; padding: 0 2px; }
+  .lp[data-bureau='onepage'] .lp-carte[data-format='bandeau'] { min-height: 96px; padding: 18px 22px 18px 18px; }
+  .lp[data-bureau='onepage'] .lp-carte[data-format='bandeau'] .lp-carte-titre { font-size: 1.2rem; }
+  .lp[data-bureau='onepage'] .lp-carte[data-format='carte'] { height: 100%; }
+  .lp[data-bureau='onepage'] .lp-signature { margin-top: 64px; padding-top: 28px; border-top: 1px solid color-mix(in srgb, var(--texte) 10%, transparent); }
+  .lp[data-bureau='onepage'] .lp-pied .lp-reseaux { justify-content: flex-start; }
+}

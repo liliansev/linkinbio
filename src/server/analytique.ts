@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { ajouterEvenement, jourDe, secret } from './db.ts';
+import { ajouterEvenement, evenementsDuJour, jourDe, lireBlocs, secret } from './db.ts';
 
 /*
  * Les statistiques intégrées, sans cookie ni donnée personnelle : un visiteur
@@ -39,7 +39,7 @@ export function appareil(ua: string): string {
 }
 
 const fenetre = new Map<string, number[]>();
-/** Au plus 60 événements par minute et par visiteur. */
+/** Au plus 60 événements par minute et par adresse IP (changer de navigateur ne suffit pas à passer outre). */
 function tropRapide(visiteur: string, maintenant: number) {
   const recents = (fenetre.get(visiteur) ?? []).filter(t => maintenant - t < 60_000);
   recents.push(maintenant);
@@ -55,7 +55,10 @@ export function enregistrer(entree: { type: unknown; bloc: unknown; utm: unknown
   const bloc = type === 'clic' && typeof entree.bloc === 'string' && /^[\w-]{1,40}$/.test(entree.bloc) ? entree.bloc : null;
   if (type === 'clic' && !bloc) return false;
   const visiteur = createHash('sha256').update(`${secret()}|${jourDe(maintenant)}|${contexte.ip}|${contexte.ua}`).digest('base64url').slice(0, 16);
-  if (tropRapide(visiteur, maintenant)) return false;
+  if (tropRapide(contexte.ip || visiteur, maintenant)) return false;
+  // Un clic vise un lien qui existe ; et un plafond par jour protège le disque d'un envoi en masse.
+  if (bloc && !lireBlocs().some(b => b.id === bloc)) return false;
+  if (evenementsDuJour(maintenant) >= 50_000) return false;
   ajouterEvenement({
     type, bloc, visiteur, ts: maintenant,
     source: source(typeof entree.utm === 'string' ? entree.utm : '', typeof entree.referent === 'string' ? entree.referent : ''),

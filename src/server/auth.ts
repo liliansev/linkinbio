@@ -46,10 +46,21 @@ export function sessionValide(jeton: string | null | undefined): boolean {
 
 export type Reponse = { ok: true; message: string; lienDev?: string } | { ok: false; message: string };
 
-export async function demanderConnexion(origine: string, env: Env, fetchImpl: typeof fetch = fetch, maintenant = Date.now()): Promise<Reponse> {
+const demandesParIp = new Map<string, number[]>();
+/** Au plus 3 demandes par heure depuis une même adresse IP : un inconnu ne peut ni bombarder la boîte ni épuiser le plafond du jour. */
+function ipTropInsistante(ip: string, maintenant: number) {
+  const recentes = (demandesParIp.get(ip) ?? []).filter(t => maintenant - t < 3_600_000);
+  if (demandesParIp.size > 5000) demandesParIp.clear();
+  if (recentes.length >= 3) return true;
+  demandesParIp.set(ip, [...recentes, maintenant]);
+  return false;
+}
+
+export async function demanderConnexion(origine: string, env: Env, fetchImpl: typeof fetch = fetch, maintenant = Date.now(), ip = ''): Promise<Reponse> {
   const recents = jetonsRecents(maintenant - 86_400_000);
   if (maintenant - recents.dernier < 60_000) return { ok: false, message: 'Un lien vient de partir. Regarde ta boîte, ou réessaie dans une minute.' };
-  if (recents.n >= 10) return { ok: false, message: 'Trop de demandes aujourd’hui. Réessaie demain.' };
+  if (ipTropInsistante(ip, maintenant)) return { ok: false, message: 'Trop de demandes. Réessaie dans une heure.' };
+  if (recents.n >= 50) return { ok: false, message: 'Trop de demandes aujourd’hui. Réessaie demain.' };
   const jeton = nouveauJeton();
   const lien = `${origine}/liens/admin/connexion?jeton=${jeton}`;
   const destinataire = adresseAdmin(env);
@@ -63,6 +74,8 @@ export async function demanderConnexion(origine: string, env: Env, fetchImpl: ty
 <p>Voici ton lien pour ouvrir le back office de ta page de liens. Il marche une seule fois, pendant 15 minutes.</p>
 <p><a href="${lien}" style="display:inline-block;background:#ffb38a;color:#111827;padding:12px 20px;border-radius:999px;text-decoration:none;font-weight:600">Ouvrir mon back office</a></p>
 <p style="color:#666;font-size:14px">Tu n’as rien demandé ? Ignore ce message, personne ne peut s’en servir sans accès à ta boîte.</p></div>`;
+  // Le jeton est inscrit avant l'envoi : deux demandes simultanées ne passent pas toutes deux le délai d'une minute.
+  ajouterJeton(empreinte(jeton), 'connexion', DUREE_LIEN);
   try {
     const reponse = await fetchImpl('https://api.resend.com/emails', {
       method: 'POST',
@@ -74,12 +87,12 @@ export async function demanderConnexion(origine: string, env: Env, fetchImpl: ty
       }),
       signal: AbortSignal.timeout(10_000),
     });
-    if (!reponse.ok) { console.error('[liens] Resend', reponse.status); return { ok: false, message: 'L’e-mail n’est pas parti. Réessaie dans un instant.' }; }
+    if (!reponse.ok) { console.error('[liens] Resend', reponse.status); supprimerJeton(empreinte(jeton)); return { ok: false, message: 'L’e-mail n’est pas parti. Réessaie dans un instant.' }; }
   } catch (error) {
     console.error('[liens] Resend', (error as Error).message);
+    supprimerJeton(empreinte(jeton));
     return { ok: false, message: 'L’e-mail n’est pas parti. Réessaie dans un instant.' };
   }
-  ajouterJeton(empreinte(jeton), 'connexion', DUREE_LIEN);
   return { ok: true, message: `C’est parti : ouvre le lien reçu sur ${masquer(destinataire)}.` };
 }
 

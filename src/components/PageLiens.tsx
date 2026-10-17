@@ -66,7 +66,8 @@ export function PageLiens({ page, apercu = false }: { page: PagePublique; apercu
   );
 
   return (
-    <div className="lp" style={variablesTheme(theme) as CSSProperties} data-bouton={reglages.bouton.style} data-forme={reglages.bouton.forme} data-police={theme.police}>
+    <div className="lp" style={variablesTheme(theme) as CSSProperties} data-bouton={reglages.bouton.style} data-forme={reglages.bouton.forme} data-police={theme.police} data-bureau={reglages.bureau}>
+      <div className="lp-scene">
       <div className="lp-col">
         {reglages.partage && (
           <button type="button" className="lp-partager" onClick={partager} aria-label="Partager cette page">
@@ -85,7 +86,7 @@ export function PageLiens({ page, apercu = false }: { page: PagePublique; apercu
 
         <main className="lp-blocs">
           {blocs.map((bloc, i) => (
-            <div key={bloc.id} className="lp-bloc" style={{ '--i': i } as CSSProperties}>
+            <div key={bloc.id} className="lp-bloc" data-type={bloc.type} data-vedette={bloc.vedette ? bloc.format : undefined} style={{ '--i': i } as CSSProperties}>
               <BlocPublic bloc={bloc} reglages={reglages} clic={() => clic(bloc)} cible={cible} apercu={apercu} />
             </div>
           ))}
@@ -94,6 +95,7 @@ export function PageLiens({ page, apercu = false }: { page: PagePublique; apercu
 
         {reglages.reseauxPosition === 'bas' && <footer className="lp-pied">{reseaux}</footer>}
         <p className="lp-signature"><a href="https://liliansevoumian.fr" {...cible}>liliansevoumian.fr</a></p>
+      </div>
       </div>
       {toast && <div className="lp-toast" role="status">{toast}</div>}
     </div>

@@ -1,5 +1,5 @@
 import { lookup } from 'node:dns/promises';
-import { isIP } from 'node:net';
+import { BlockList, isIP } from 'node:net';
 
 /*
  * L'aperçu d'un site, pour habiller un lien mis en avant : son titre, sa
@@ -15,15 +15,19 @@ const LIMITE_IMAGE = 5_000_000;
 const DELAI = 8000;
 const CAPTURE = (url: string) => `https://image.thum.io/get/width/1200/crop/675/noanimate/${url}`;
 
-/** Une adresse IP du réseau local, de la machine ou réservée. */
+const RESERVEES = new BlockList();
+for (const [reseau, bits] of [['0.0.0.0', 8], ['10.0.0.0', 8], ['100.64.0.0', 10], ['127.0.0.0', 8], ['169.254.0.0', 16], ['172.16.0.0', 12], ['192.0.0.0', 24], ['192.0.2.0', 24], ['192.168.0.0', 16], ['198.18.0.0', 15], ['198.51.100.0', 24], ['203.0.113.0', 24], ['224.0.0.0', 3]] as const) RESERVEES.addSubnet(reseau, bits, 'ipv4');
+for (const [reseau, bits] of [['64:ff9b::', 96], ['100::', 64], ['2001:db8::', 32], ['2002::', 16], ['fc00::', 7], ['fe80::', 10], ['fec0::', 10], ['ff00::', 8]] as const) RESERVEES.addSubnet(reseau, bits, 'ipv6');
+RESERVEES.addAddress('::', 'ipv6');
+RESERVEES.addAddress('::1', 'ipv6');
+
+/** Une adresse IP du réseau local, de la machine ou réservée (IPv4 glissée dans une IPv6 comprise). */
 export function estPrivee(ip: string): boolean {
-  const v4 = ip.startsWith('::ffff:') ? ip.slice(7) : ip;
-  if (isIP(v4) === 4) {
-    const [a, b] = v4.split('.').map(Number);
-    return a === 0 || a === 10 || a === 127 || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 100 && b >= 64 && b <= 127) || a >= 224;
-  }
-  const v6 = ip.toLowerCase();
-  return v6 === '::' || v6 === '::1' || v6.startsWith('fc') || v6.startsWith('fd') || v6.startsWith('fe80');
+  const mappee = /^::(ffff:)?(\d+\.\d+\.\d+\.\d+)$/i.exec(ip);
+  if (mappee) return estPrivee(mappee[2]);
+  const famille = isIP(ip);
+  if (!famille) return true;
+  return RESERVEES.check(ip, famille === 4 ? 'ipv4' : 'ipv6');
 }
 
 async function verifier(url: URL) {

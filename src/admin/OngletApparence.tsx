@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
-import type { FormeBouton, Reglages, Reseau, StyleBouton } from '../lib/types.ts';
+import type { FormeBouton, MiseEnPageBureau, Reglages, Reseau, StyleBouton } from '../lib/types.ts';
 import { ANIMATIONS, RESEAUX } from '../lib/types.ts';
 import { FAMILLES, THEMES, themeParId, variablesTheme } from '../lib/themes.ts';
 import type { Famille } from '../lib/themes.ts';
@@ -120,6 +120,23 @@ export function OngletApparence({ reglages, onChange, envoyerImage }: { reglages
         </div>
       </Carte>
 
+      <Carte titre="Sur ordinateur">
+        <p className="mb-3 text-[13px] leading-snug text-white/55">Sur téléphone, ta page reste une colonne. Sur un grand écran, elle prend la mise en page choisie.</p>
+        <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Mise en page sur ordinateur">
+          {BUREAUX.map(b => {
+            const actif = reglages.bureau === b.id;
+            return (
+              <button key={b.id} type="button" role="radio" aria-checked={actif} onClick={() => { vibrer(); maj({ bureau: b.id }); }}
+                className={`flex flex-col gap-2 rounded-2xl p-2 text-left transition ${actif ? 'bg-white/[0.1] ring-2 ring-peche' : 'bg-white/[0.04] ring-1 ring-white/[0.08] hover:bg-white/[0.07]'}`}>
+                <SchemaBureau id={b.id} />
+                <span className="px-1 text-[13px] font-semibold text-white">{b.nom}</span>
+                <span className="px-1 pb-1 text-[12px] leading-snug text-white/55">{b.aide}</span>
+              </button>
+            );
+          })}
+        </div>
+      </Carte>
+
       <Carte titre="Réseaux">
         <ul className="flex flex-col gap-2">
           {reglages.reseaux.map((r, i) => (
@@ -150,5 +167,38 @@ export function OngletApparence({ reglages, onChange, envoyerImage }: { reglages
         </div>
       </Carte>
     </div>
+  );
+}
+
+const BUREAUX: { id: MiseEnPageBureau; nom: string; aide: string }[] = [
+  { id: 'colonne', nom: 'Colonne', aide: 'Comme sur téléphone, sur un panneau.' },
+  { id: 'profil', nom: 'Profil', aide: 'Profil à gauche, liens sur deux colonnes.' },
+  { id: 'onepage', nom: 'One page', aide: 'Ton nom en grand, les liens en cartes.' },
+];
+
+/** Un petit croquis de chaque mise en page, dessiné en blocs. */
+function SchemaBureau({ id }: { id: MiseEnPageBureau }) {
+  const b = 'rgb(255 255 255 / 0.16)', p = 'var(--color-peche, #ffb38a)';
+  return (
+    <svg viewBox="0 0 120 76" className="w-full rounded-xl bg-[#0c121f]" aria-hidden="true">
+      {id === 'colonne' && (<>
+        <rect x="38" y="6" width="44" height="64" rx="6" fill="rgb(255 255 255 / 0.05)" />
+        <circle cx="60" cy="17" r="5" fill={b} /><rect x="48" y="26" width="24" height="3" rx="1.5" fill={b} />
+        <rect x="44" y="34" width="32" height="7" rx="3.5" fill={p} />
+        {[44, 52, 60].map(y => <rect key={y} x="44" y={y} width="32" height="6" rx="3" fill={b} />)}
+      </>)}
+      {id === 'profil' && (<>
+        <circle cx="22" cy="20" r="8" fill={b} /><rect x="14" y="33" width="28" height="4" rx="2" fill={b} /><rect x="14" y="41" width="22" height="3" rx="1.5" fill="rgb(255 255 255 / 0.1)" />
+        <rect x="54" y="10" width="58" height="9" rx="4.5" fill={p} />
+        {[24, 34, 44, 54].map(y => [54, 85].map(x => <rect key={`${x}-${y}`} x={x} y={y} width="27" height="7" rx="3.5" fill={b} />))}
+      </>)}
+      {id === 'onepage' && (<>
+        <rect x="10" y="12" width="52" height="8" rx="2" fill="rgb(255 255 255 / 0.3)" /><rect x="10" y="24" width="38" height="3" rx="1.5" fill={b} />
+        <rect x="84" y="8" width="26" height="24" rx="6" fill={b} />
+        <rect x="10" y="38" width="100" height="1" fill="rgb(255 255 255 / 0.1)" />
+        <rect x="10" y="44" width="100" height="8" rx="4" fill={p} />
+        {[10, 44, 78].map(x => <rect key={x} x={x} y="56" width="32" height="14" rx="4" fill={b} />)}
+      </>)}
+    </svg>
   );
 }

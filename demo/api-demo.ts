@@ -13,7 +13,7 @@ let n = 0;
 const id = () => `d${Date.now().toString(36)}${n++}`;
 
 function lire(): { reglages: Reglages; blocs: Bloc[] } {
-  try { const v = localStorage.getItem(CLE); if (v) return JSON.parse(v); } catch { /* stockage indisponible */ }
+  try { const v = localStorage.getItem(CLE); if (v) { const e = JSON.parse(v); return { ...e, reglages: { ...REGLAGES_DEFAUT, ...e.reglages } }; } } catch { /* stockage indisponible */ }
   return { reglages: { ...REGLAGES_DEFAUT, profil: { ...REGLAGES_DEFAUT.profil, avatar } }, blocs: blocsDefaut(id) };
 }
 let etat = lire();

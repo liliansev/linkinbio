@@ -50,7 +50,7 @@ export const chargerEtat = createServerFn({ method: 'GET' }).middleware([session
 
 export const demanderLien = createServerFn({ method: 'POST' }).handler(async () => {
   memeOrigine();
-  return demanderConnexion(origine(), process.env);
+  return demanderConnexion(origine(), process.env, fetch, Date.now(), getRequestHeader('x-real-ip') ?? '');
 });
 
 export const connecter = createServerFn({ method: 'POST' })

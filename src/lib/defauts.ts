@@ -30,6 +30,7 @@ export const REGLAGES_DEFAUT: Reglages = {
   },
   partage: true,
   animation: 'orbite',
+  bureau: 'onepage',
 };
 
 export function blocsDefaut(id: () => string): Bloc[] {

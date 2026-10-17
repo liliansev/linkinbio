@@ -68,7 +68,12 @@ export interface Reglages {
   partage: boolean;
   /** Le mouvement des liens mis en avant (un bloc peut choisir le sien). */
   animation: Animation;
+  /** La mise en page sur un grand écran ; sur téléphone, la page reste une colonne. */
+  bureau: MiseEnPageBureau;
 }
+
+export const MISES_EN_PAGE_BUREAU = ['colonne', 'profil', 'onepage'] as const;
+export type MiseEnPageBureau = (typeof MISES_EN_PAGE_BUREAU)[number];
 
 /** Ce que la page publique reçoit : jamais un bloc privé ni hors programmation. */
 export interface PagePublique {

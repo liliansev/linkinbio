@@ -37,7 +37,7 @@ export const Route = createFileRoute('/')({
       ],
       links: [{ rel: 'canonical', href: URL_PAGE }],
       scripts: [
-        ...(reglages.seo.indexable ? [{ type: 'application/ld+json', children: JSON.stringify(personne) }] : []),
+        ...(reglages.seo.indexable ? [{ type: 'application/ld+json', children: JSON.stringify(personne).replace(/</g, '\\u003c') }] : []),
         // DataFast, comme sur le reste du site : visites, provenance et goals `liens_*`.
         // Le back office ne charge pas ce script.
         { children: 'window.datafast=window.datafast||function(){(window.datafast.q=window.datafast.q||[]).push(arguments)};' },

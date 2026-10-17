@@ -144,6 +144,10 @@ export function jetonsRecents(depuis: number): { n: number; dernier: number } {
 const formatJour = new Intl.DateTimeFormat('fr-CA', { timeZone: 'Europe/Paris', year: 'numeric', month: '2-digit', day: '2-digit' });
 export const jourDe = (ts: number) => formatJour.format(ts);
 
+export function evenementsDuJour(maintenant = Date.now()): number {
+  return (base().prepare('SELECT COUNT(*) AS n FROM evenements WHERE jour = ?').get(jourDe(maintenant)) as { n: number }).n;
+}
+
 export function ajouterEvenement(e: { type: 'vue' | 'clic'; bloc: string | null; visiteur: string; source: string; appareil: string; ts?: number }) {
   const ts = e.ts ?? Date.now();
   base().prepare('INSERT INTO evenements (type, bloc, jour, ts, visiteur, source, appareil) VALUES (?, ?, ?, ?, ?, ?, ?)')

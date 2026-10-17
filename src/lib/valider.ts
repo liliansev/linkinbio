@@ -1,4 +1,4 @@
-import { ANIMATIONS, ANIMATIONS_BLOC, FORMATS_VEDETTE, FORMES_BOUTON, RESEAUX, STYLES_BOUTON, TEINTES_VEDETTE, TYPES_BLOC } from './types.ts';
+import { ANIMATIONS, ANIMATIONS_BLOC, FORMATS_VEDETTE, FORMES_BOUTON, MISES_EN_PAGE_BUREAU, RESEAUX, STYLES_BOUTON, TEINTES_VEDETTE, TYPES_BLOC } from './types.ts';
 import type { Bloc, Reglages } from './types.ts';
 import { THEMES, THEME_DEFAUT } from './themes.ts';
 
@@ -16,7 +16,7 @@ const parmi = <T extends string>(v: unknown, liste: readonly T[], defaut: T): T 
 export function adresse(v: unknown): string {
   let s = texte(v, 2000);
   if (!s) return '';
-  if (s.startsWith('/') && !s.startsWith('//')) return s;
+  if (s.startsWith('/') && !s.startsWith('//') && !s.startsWith('/\\')) return s;
   if (/^[\w.+-]+@[\w-]+(\.[\w-]+)+$/.test(s)) s = `mailto:${s}`;
   else if (!/^[a-z][a-z0-9+.-]*:/i.test(s)) s = `https://${s}`;
   try {
@@ -78,6 +78,7 @@ export function validerReglages(v: unknown, base: Reglages): Reglages {
     bouton: { style: parmi(bouton.style, STYLES_BOUTON, 'plein'), forme: parmi(bouton.forme, FORMES_BOUTON, 'pilule') },
     seo: { titre: texte(seo.titre, 80), description: texte(seo.description, 200), indexable: bool(seo.indexable, true) },
     partage: bool(o.partage, base.partage),
+    bureau: parmi(o.bureau, MISES_EN_PAGE_BUREAU, base.bureau),
     animation: parmi(o.animation, ANIMATIONS, base.animation),
   };
 }

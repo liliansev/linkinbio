@@ -7,6 +7,9 @@ export const Route = createFileRoute('/api/evenement')({
   server: {
     handlers: {
       POST: async ({ request }) => {
+        // Seule la page elle-même envoie ses événements ; un autre site ne peut pas les faire envoyer par ses visiteurs.
+        const site = request.headers.get('sec-fetch-site');
+        if (site && site !== 'same-origin') return new Response(null, { status: 403 });
         const texte = await request.text();
         if (texte.length > 2000) return new Response(null, { status: 413 });
         let entree: Record<string, unknown> = {};
