@@ -23,12 +23,17 @@ function PageAdmin() {
     apercuSite: url => fn.apercuSite({ data: url }),
     stats: jours => fn.lireStats({ data: jours }),
     deconnexion: async () => { await fn.deconnecter(); },
+    accepterCgu: async () => { await fn.accepterCgu(); },
+    supprimerMonCompte: confirmation => fn.supprimerMonCompte({ data: confirmation }),
+    urlExport: '/liens/api/export',
     comptes: acces.connecte && acces.etat.compte.principal ? {
       lister: () => fn.listerComptes(),
       inviter: (email, pseudo) => fn.inviterCompte({ data: { email, pseudo } }),
       renvoyer: id => fn.renvoyerInvitation({ data: id }),
-      changerStatut: async (id, statut) => { await fn.changerStatutCompte({ data: { id, statut } }); },
-      supprimer: async id => { await fn.supprimerCompte({ data: id }); },
+      changerStatut: async (id, statut, motif) => { await fn.changerStatutCompte({ data: { id, statut, motif } }); },
+      supprimer: async (id, motif) => { await fn.supprimerCompte({ data: { id, motif } }); },
+      signalements: () => fn.listerSignalements(),
+      traiterSignalement: async (id, statut, decision) => { await fn.traiterSignalement({ data: { id, statut, decision } }); },
     } : undefined,
   }), [acces.connecte]);
   if (!acces.connecte) return <Connexion demander={email => fn.demanderLien({ data: email })} />;

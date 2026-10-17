@@ -9,6 +9,7 @@ import { OngletApparence } from './OngletApparence.tsx';
 import { OngletStats } from './OngletStats.tsx';
 import { OngletReglages } from './OngletReglages.tsx';
 import { OngletComptes } from './OngletComptes.tsx';
+import { AccepterCgu } from './AccepterCgu.tsx';
 import { Icone } from '../components/Icone.tsx';
 import { vibrer } from './ui.tsx';
 
@@ -43,6 +44,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
   const [sauvegarde, setSauvegarde] = useState<Sauvegarde>('ok');
   const [toast, setToast] = useState<{ texte: string; annuler?: () => void } | null>(null);
   const [apercu, setApercu] = useState(false);
+  const [cguAJour, setCguAJour] = useState(initial.cguAJour);
   const enCours = useRef(0);
   const compte = initial.compte;
   // L'onglet Comptes n'existe que pour Lilian.
@@ -120,6 +122,8 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
   const page = useMemo(() => ({ reglages, blocs: blocs.filter(b => estEnLigne(b) && (compte.principal || !TYPES_PRINCIPAL.includes(b.type))), compte }), [reglages, blocs, compte]);
   const chargerStats = useCallback((jours: number) => api.stats(jours).then(s => { if (jours === 30) setClics(Object.fromEntries(s.blocs.map(b => [b.id, b.clics]))); return s; }), [api]);
 
+  if (!cguAJour) return <AccepterCgu accepter={async () => { await api.accepterCgu(); setCguAJour(true); }} deconnexion={deconnexion} />;
+
   const indicateur = sauvegarde === 'encours' ? 'Enregistrement…' : sauvegarde === 'erreur' ? 'Non enregistré' : 'Enregistré';
 
   return (
@@ -155,7 +159,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
           {onglet === 'liens' && <OngletLiens blocs={blocs} clics={clics} onOrdonner={ordonner} onModifier={b => { setBlocs(l => l.map(x => (x.id === b.id ? b : x))); ecrire(() => api.enregistrerBloc(b)); }} onOuvrir={b => setEdition({ bloc: b, nouveau: false })} onAjouter={b => setEdition({ bloc: b, nouveau: true })} principal={compte.principal} />}
           {onglet === 'apparence' && <OngletApparence reglages={reglages} onChange={changerReglages} envoyerImage={d => api.envoyerImage(d)} principal={compte.principal} />}
           {onglet === 'stats' && <OngletStats charger={chargerStats} />}
-          {onglet === 'reglages' && <OngletReglages reglages={reglages} compte={compte} onChange={changerReglages} onDeconnexion={deconnexion} />}
+          {onglet === 'reglages' && <OngletReglages reglages={reglages} compte={compte} onChange={changerReglages} onDeconnexion={deconnexion} urlExport={api.urlExport} supprimerMonCompte={api.supprimerMonCompte} />}
           {onglet === 'comptes' && api.comptes && <OngletComptes api={api.comptes} />}
           </div>
         </main>

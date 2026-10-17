@@ -117,6 +117,8 @@ export interface EtatAdmin {
   clics: Record<string, number>;
   /** Vrai quand la base vit en mémoire : rien ne survivra au redémarrage. */
   stockageEphemere: boolean;
+  /** Faux tant que le compte n'a pas accepté la version en vigueur des CGU (toujours vrai pour le compte principal). */
+  cguAJour: boolean;
 }
 
 export interface Stats {
@@ -145,6 +147,12 @@ export interface Api {
   apercuSite(url: string): Promise<{ titre: string; description: string; image: string | null }>;
   stats(jours: number): Promise<Stats>;
   deconnexion(): Promise<void>;
+  /** Enregistre l'acceptation des CGU et de l'accord de traitement en vigueur. */
+  accepterCgu(): Promise<void>;
+  /** Supprime son propre compte ; `confirmation` est le pseudo retapé. Jamais le compte principal. */
+  supprimerMonCompte(confirmation: string): Promise<{ ok: boolean; message: string }>;
+  /** L'adresse de l'export complet (JSON), ou null dans l'aperçu. */
+  urlExport: string | null;
   /** Seulement pour le compte principal : gérer les autres comptes. */
   comptes?: ApiComptes;
 }
@@ -154,8 +162,25 @@ export interface ApiComptes {
   /** Crée le compte et envoie l'invitation ; renvoie le message à afficher. */
   inviter(email: string, pseudo: string): Promise<{ ok: boolean; message: string; lienDev?: string }>;
   renvoyer(id: string): Promise<{ ok: boolean; message: string; lienDev?: string }>;
-  changerStatut(id: string, statut: CompteResume['statut']): Promise<void>;
-  supprimer(id: string): Promise<void>;
+  /** `motif` part par e-mail à la personne (DSA, article 17) quand on suspend ou supprime. */
+  changerStatut(id: string, statut: CompteResume['statut'], motif: string): Promise<void>;
+  supprimer(id: string, motif: string): Promise<void>;
+  signalements(): Promise<SignalementResume[]>;
+  /** Classe un signalement, ou suspend la page avec `decision` pour motif. */
+  traiterSignalement(id: string, statut: 'sans-suite' | 'suspendu', decision: string): Promise<void>;
+}
+
+export interface SignalementResume {
+  id: string;
+  compte: string;
+  pseudo: string;
+  motif: string;
+  details: string;
+  /** Vrai si la personne a laissé son adresse (elle reçoit la décision). */
+  contact: boolean;
+  ts: number;
+  statut: 'ouvert' | 'sans-suite' | 'suspendu';
+  decision: string;
 }
 
 export function nouveauBloc(type: TypeBloc, id: string): Bloc {

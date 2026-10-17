@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
-import type { ApiComptes, CompteResume } from '../lib/types.ts';
+import type { ApiComptes, CompteResume, SignalementResume } from '../lib/types.ts';
+import { nomMotif } from '../lib/legal.ts';
 import { cheminPage } from '../lib/types.ts';
 import { BoutonPrincipal, Carte, Champ, classeSaisie } from './ui.tsx';
 
@@ -43,6 +44,8 @@ export function OngletComptes({ api }: { api: ApiComptes }) {
 
   return (
     <div className="flex flex-col gap-4">
+      <Signalements api={api} onChange={recharger} />
+
       <Carte titre="Inviter quelqu’un">
         <form onSubmit={inviter} className="flex flex-col gap-3">
           <Champ label="Son adresse e-mail">
@@ -76,15 +79,18 @@ export function OngletComptes({ api }: { api: ApiComptes }) {
 }
 
 function LigneCompte({ compte, api, onChange, onMessage }: { compte: CompteResume; api: ApiComptes; onChange: () => void; onMessage: (m: Message) => void }) {
-  const [confirmer, setConfirmer] = useState(false);
+  // Suspendre et supprimer demandent un motif, envoyé à la personne (DSA, article 17).
+  const [action, setAction] = useState<null | 'suspendre' | 'supprimer'>(null);
+  const [motif, setMotif] = useState('');
   const [occupe, setOccupe] = useState(false);
   const suspendu = compte.statut === 'suspendu';
 
-  async function agir(action: () => Promise<unknown>) {
+  async function agir(faire: () => Promise<unknown>) {
     setOccupe(true);
-    try { await action(); } catch { onMessage({ ok: false, texte: 'L’action n’a pas abouti. Réessaie.' }); }
+    try { await faire(); } catch (error) { onMessage({ ok: false, texte: (error as Error).message || 'L’action n’a pas abouti. Réessaie.' }); }
     setOccupe(false);
-    setConfirmer(false);
+    setAction(null);
+    setMotif('');
     onChange();
   }
 
@@ -107,25 +113,107 @@ function LigneCompte({ compte, api, onChange, onMessage }: { compte: CompteResum
       {!compte.principal && (
         <>
           <p className="text-[12.5px] text-white/45">{compte.blocs} bloc{compte.blocs > 1 ? 's' : ''} · invité le {date(compte.cree)} · dernière connexion {date(compte.connexion)}</p>
-          <div className="flex flex-wrap gap-2">
-            <a href={cheminPage({ pseudo: compte.pseudo, principal: false })} target="_blank" rel="noopener" className={`${bouton} inline-flex items-center bg-white/[0.08] text-white hover:bg-white/[0.13]`}>Voir la page</a>
-            {!suspendu && (
-              <button type="button" disabled={occupe} className={`${bouton} bg-white/[0.08] text-white hover:bg-white/[0.13]`}
-                onClick={() => agir(async () => { const r = await api.renvoyer(compte.id); onMessage({ ok: r.ok, texte: r.ok ? `Nouveau lien envoyé à ${compte.email}.` : r.message, lienDev: r.lienDev }); })}>Renvoyer un lien</button>
-            )}
-            <button type="button" disabled={occupe} className={`${bouton} bg-white/[0.08] text-white hover:bg-white/[0.13]`}
-              onClick={() => agir(() => api.changerStatut(compte.id, suspendu ? 'actif' : 'suspendu'))}>{suspendu ? 'Réactiver' : 'Suspendre'}</button>
-            {confirmer ? (
-              <>
-                <button type="button" disabled={occupe} className={`${bouton} bg-red-500 text-white hover:bg-red-400`} onClick={() => agir(() => api.supprimer(compte.id))}>Supprimer définitivement</button>
-                <button type="button" className={`${bouton} text-white/60 hover:text-white`} onClick={() => setConfirmer(false)}>Annuler</button>
-              </>
-            ) : (
-              <button type="button" disabled={occupe} className={`${bouton} text-red-300 hover:bg-red-400/10`} onClick={() => setConfirmer(true)}>Supprimer</button>
-            )}
-          </div>
-          {confirmer && <p className="text-[12.5px] text-red-200/80">Sa page, ses liens, ses images et ses statistiques seront effacés. Rien ne se récupère.</p>}
+          {action ? (
+            <div className="flex flex-col gap-2.5">
+              <Champ label={action === 'suspendre' ? 'Motif de la suspension' : 'Motif de la suppression (facultatif)'}
+                aide={action === 'suspendre' ? 'Envoyé à la personne par e-mail : les faits, la règle des CGU en cause. Elle peut contester en répondant.' : 'Laisse vide si la personne l’a demandé. Sinon, le motif lui est envoyé par e-mail.'}>
+                <textarea className={`${classeSaisie} min-h-24`} value={motif} maxLength={2000} onChange={e => setMotif(e.target.value)} />
+              </Champ>
+              {action === 'supprimer' && <p className="text-[12.5px] text-red-200/80">Sa page, ses liens, ses images et ses statistiques seront effacés. Rien ne se récupère.</p>}
+              <div className="flex flex-wrap gap-2">
+                {action === 'suspendre'
+                  ? <button type="button" disabled={occupe || !motif.trim()} className={`${bouton} bg-amber-400 text-nuit`} onClick={() => agir(() => api.changerStatut(compte.id, 'suspendu', motif))}>Suspendre et prévenir</button>
+                  : <button type="button" disabled={occupe} className={`${bouton} bg-red-500 text-white hover:bg-red-400`} onClick={() => agir(() => api.supprimer(compte.id, motif))}>Supprimer définitivement</button>}
+                <button type="button" className={`${bouton} text-white/60 hover:text-white`} onClick={() => { setAction(null); setMotif(''); }}>Annuler</button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              <a href={cheminPage({ pseudo: compte.pseudo, principal: false })} target="_blank" rel="noopener" className={`${bouton} inline-flex items-center bg-white/[0.08] text-white hover:bg-white/[0.13]`}>Voir la page</a>
+              {!suspendu && (
+                <button type="button" disabled={occupe} className={`${bouton} bg-white/[0.08] text-white hover:bg-white/[0.13]`}
+                  onClick={() => agir(async () => { const r = await api.renvoyer(compte.id); onMessage({ ok: r.ok, texte: r.ok ? `Nouveau lien envoyé à ${compte.email}.` : r.message, lienDev: r.lienDev }); })}>Renvoyer un lien</button>
+              )}
+              {suspendu
+                ? <button type="button" disabled={occupe} className={`${bouton} bg-white/[0.08] text-white hover:bg-white/[0.13]`} onClick={() => agir(() => api.changerStatut(compte.id, 'actif', ''))}>Réactiver</button>
+                : <button type="button" disabled={occupe} className={`${bouton} bg-white/[0.08] text-white hover:bg-white/[0.13]`} onClick={() => setAction('suspendre')}>Suspendre</button>}
+              <button type="button" disabled={occupe} className={`${bouton} text-red-300 hover:bg-red-400/10`} onClick={() => setAction('supprimer')}>Supprimer</button>
+            </div>
+          )}
         </>
+      )}
+    </li>
+  );
+}
+
+/** Les signalements reçus par le formulaire des pages : ouverts d'abord, puis l'historique. */
+function Signalements({ api, onChange }: { api: ApiComptes; onChange: () => void }) {
+  const [liste, setListe] = useState<SignalementResume[] | null>(null);
+  const [voirTout, setVoirTout] = useState(false);
+  const recharger = useCallback(() => api.signalements().then(setListe).catch(() => setListe([])), [api]);
+  useEffect(() => { recharger(); }, [recharger]);
+  if (!liste) return null;
+  const ouverts = liste.filter(s => s.statut === 'ouvert');
+  const traites = liste.filter(s => s.statut !== 'ouvert');
+  return (
+    <Carte titre="Signalements" action={<span className={`text-[13px] ${ouverts.length ? 'text-amber-200' : 'text-white/50'}`}>{ouverts.length ? `${ouverts.length} à traiter` : 'Rien à traiter'}</span>}>
+      {ouverts.length === 0 && <p className="text-[13.5px] text-white/50">Quand quelqu’un signale une page, le signalement arrive ici et dans ta boîte mail.</p>}
+      <ul className="-mx-1 flex flex-col divide-y divide-white/[0.06]">
+        {ouverts.map(s => <LigneSignalement key={s.id} s={s} api={api} onChange={() => { recharger(); onChange(); }} />)}
+      </ul>
+      {traites.length > 0 && (
+        <>
+          <button type="button" onClick={() => setVoirTout(v => !v)} className="mt-2 text-[13px] text-white/55 hover:text-white">{voirTout ? 'Masquer l’historique' : `Voir l’historique (${traites.length})`}</button>
+          {voirTout && (
+            <ul className="mt-2 flex flex-col gap-2">
+              {traites.map(s => (
+                <li key={s.id} className="rounded-xl bg-white/[0.03] px-3 py-2.5 text-[13px] text-white/60">
+                  <span className="text-white/85">{s.pseudo || 'compte supprimé'}</span> · {nomMotif(s.motif)} · {date(s.ts)} · {s.statut === 'suspendu' ? 'page suspendue' : 'sans suite'}
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
+      )}
+    </Carte>
+  );
+}
+
+function LigneSignalement({ s, api, onChange }: { s: SignalementResume; api: ApiComptes; onChange: () => void }) {
+  const [action, setAction] = useState<null | 'sans-suite' | 'suspendu'>(null);
+  const [decision, setDecision] = useState('');
+  const [occupe, setOccupe] = useState(false);
+  const [erreur, setErreur] = useState('');
+  async function valider() {
+    if (!action) return;
+    setOccupe(true);
+    setErreur('');
+    try { await api.traiterSignalement(s.id, action, decision); onChange(); }
+    catch (error) { setErreur((error as Error).message || 'L’action n’a pas abouti.'); setOccupe(false); }
+  }
+  const bouton = 'min-h-9 rounded-full px-3.5 text-[13.5px] font-medium transition disabled:opacity-50';
+  return (
+    <li className="flex flex-col gap-2 px-1 py-3.5">
+      <p className="text-[15px] font-semibold">{nomMotif(s.motif)} <span className="font-normal text-white/50">sur</span> <a href={cheminPage({ pseudo: s.pseudo, principal: false })} target="_blank" rel="noopener" className="underline decoration-white/30 underline-offset-2">{s.pseudo}</a></p>
+      <p className="whitespace-pre-wrap text-[14px] leading-relaxed text-white/75">{s.details}</p>
+      <p className="text-[12.5px] text-white/45">Reçu le {date(s.ts)} · {s.contact ? 'la personne recevra la décision par e-mail' : 'anonyme'}</p>
+      {action ? (
+        <div className="flex flex-col gap-2.5">
+          <Champ label={action === 'suspendu' ? 'Motif de la suspension, envoyé au compte' : 'Réponse à la personne qui a signalé (facultatif)'}
+            aide={action === 'suspendu' ? 'Les faits et la règle des CGU ou la loi en cause.' : 'Vide : « la page ne nous paraît pas enfreindre la loi ni nos conditions ».'}>
+            <textarea className={`${classeSaisie} min-h-20`} value={decision} maxLength={2000} onChange={e => setDecision(e.target.value)} />
+          </Champ>
+          <div className="flex flex-wrap gap-2">
+            <button type="button" disabled={occupe || (action === 'suspendu' && !decision.trim())} onClick={valider} className={`${bouton} ${action === 'suspendu' ? 'bg-amber-400 text-nuit' : 'bg-white text-nuit'}`}>{action === 'suspendu' ? 'Suspendre la page' : 'Classer sans suite'}</button>
+            <button type="button" onClick={() => { setAction(null); setDecision(''); }} className={`${bouton} text-white/60 hover:text-white`}>Annuler</button>
+          </div>
+          {erreur && <p role="alert" className="text-[13px] text-red-300">{erreur}</p>}
+        </div>
+      ) : (
+        <div className="flex flex-wrap gap-2">
+          <button type="button" onClick={() => setAction('sans-suite')} className={`${bouton} bg-white/[0.08] text-white hover:bg-white/[0.13]`}>Sans suite</button>
+          <button type="button" onClick={() => setAction('suspendu')} className={`${bouton} bg-amber-400/15 text-amber-100 hover:bg-amber-400/25`}>Suspendre la page</button>
+        </div>
       )}
     </li>
   );

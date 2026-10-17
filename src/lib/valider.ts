@@ -85,7 +85,7 @@ export function validerReglages(v: unknown, base: Reglages): Reglages {
 
 /** Les adresses déjà prises par l'application, ou qui prêteraient à confusion. */
 const PSEUDOS_RESERVES = new Set([
-  'admin', 'api', 'media', 'assets', 'liens', 'lilian', 'liliansevoumian', 'principal', 'connexion', 'inscription', 'compte', 'comptes',
+  'admin', 'api', 'media', 'assets', 'liens', 'legal', 'signaler', 'signalement', 'lilian', 'liliansevoumian', 'principal', 'connexion', 'inscription', 'compte', 'comptes',
   'aide', 'support', 'contact', 'blog', 'login', 'signup', 'app', 'www', 'static', 'demo', 'root', 'null', 'undefined', 'favicon', 'robots', 'sitemap',
 ]);
 

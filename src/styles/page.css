@@ -326,6 +326,7 @@
 .lp-signature { text-align: center; margin: 36px 0 0; font-size: 0.82rem; }
 .lp-signature a { color: var(--doux); text-decoration: none; }
 .lp-signature a:hover { color: var(--texte); }
+.lp-legal { display: flex; justify-content: center; gap: 14px; margin-top: 8px; font-size: 0.74rem; opacity: 0.8; }
 
 .lp-toast {
   position: fixed; left: 50%; bottom: 24px; translate: -50% 0; z-index: 10;
@@ -364,6 +365,8 @@
   .lp-section { text-align: left; }
   .lp-texte { text-align: left; }
   .lp-signature { text-align: left; }
+  .lp-legal { justify-content: flex-start; }
+  .lp[data-bureau='colonne'] .lp-legal { justify-content: center; }
 
   /* ---- Colonne ---- */
   .lp[data-bureau='colonne'] .lp-col {

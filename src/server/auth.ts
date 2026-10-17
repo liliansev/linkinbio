@@ -2,6 +2,8 @@ import { createHash, randomBytes } from 'node:crypto';
 import { PRINCIPAL } from '../lib/types.ts';
 import { ajouterJeton, compteParEmail, jetonsRecents, noterConnexion, supprimerJeton, verifierJeton } from './db.ts';
 import type { Compte } from './db.ts';
+import { bouton, envoyer, enveloppe } from './courriel.ts';
+import type { Env } from './courriel.ts';
 
 /*
  * La connexion au back office, sans mot de passe : on saisit son adresse, un
@@ -29,7 +31,6 @@ const DUREE_INVITATION = 7 * 86_400_000;
 export const empreinte = (jeton: string) => createHash('sha256').update(jeton).digest('hex');
 const nouveauJeton = () => randomBytes(32).toString('base64url');
 
-type Env = Record<string, string | undefined>;
 export const adresseAdmin = (env: Env) => env.LIENS_ADMIN_EMAIL?.trim() || env.CONTACT_TO?.trim() || 'bonjour@liliansevoumian.fr';
 
 /** `bonjour@liliansevoumian.fr` devient `b•••••r@liliansevoumian.fr`. */
@@ -72,9 +73,6 @@ function ipTropInsistante(ip: string, maintenant: number) {
   return false;
 }
 
-const bouton = (lien: string, texte: string) => `<p><a href="${lien}" style="display:inline-block;background:#ffb38a;color:#111827;padding:12px 20px;border-radius:999px;text-decoration:none;font-weight:600">${texte}</a></p>`;
-const enveloppe = (contenu: string) => `<div style="font-family:system-ui,sans-serif;font-size:16px;line-height:1.5;color:#111">${contenu}</div>`;
-
 /**
  * Inscrit un lien de connexion pour `compte` et l'envoie à `destinataire`. Le
  * jeton est inscrit avant l'envoi : deux demandes simultanées ne passent pas
@@ -86,26 +84,14 @@ async function envoyerLien(o: {
 }): Promise<Reponse> {
   const jeton = nouveauJeton();
   const lien = `${o.origine}/liens/admin/connexion?jeton=${jeton}`;
+  if (!o.env.RESEND_API_KEY && o.env.NODE_ENV === 'production') return { ok: false, message: 'L’envoi d’e-mails n’est pas configuré sur le serveur.' };
+  ajouterJeton(empreinte(jeton), 'connexion', o.duree, o.compte);
   if (!o.env.RESEND_API_KEY) {
-    if (o.env.NODE_ENV === 'production') return { ok: false, message: 'L’envoi d’e-mails n’est pas configuré sur le serveur.' };
-    ajouterJeton(empreinte(jeton), 'connexion', o.duree, o.compte);
     console.log(`[liens] lien de connexion (dev) : ${lien}`);
     return { ok: true, message: 'Mode développement : le lien est ci-dessous.', lienDev: lien };
   }
-  ajouterJeton(empreinte(jeton), 'connexion', o.duree, o.compte);
-  const echec = (detail: string) => { console.error('[liens] Resend', detail); supprimerJeton(empreinte(jeton)); return { ok: false as const, message: 'L’e-mail n’est pas parti. Réessaie dans un instant.' }; };
-  try {
-    const reponse = await o.fetchImpl('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${o.env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        from: `Mes liens <${o.env.CONTACT_FROM?.trim() || 'formulaire@liliansevoumian.fr'}>`,
-        to: [o.destinataire], subject: o.sujet, html: o.html(lien), text: o.texte(lien),
-      }),
-      signal: AbortSignal.timeout(10_000),
-    });
-    if (!reponse.ok) return echec(String(reponse.status));
-  } catch (error) { return echec((error as Error).message); }
+  const parti = await envoyer(o.env, o.fetchImpl, { to: o.destinataire, subject: o.sujet, html: o.html(lien), text: o.texte(lien) });
+  if (!parti) { supprimerJeton(empreinte(jeton)); return { ok: false, message: 'L’e-mail n’est pas parti. Réessaie dans un instant.' }; }
   return { ok: true, message: '' };
 }
 

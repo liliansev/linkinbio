@@ -205,3 +205,79 @@ test('une base d’avant les comptes est reprise telle quelle par le compte prin
     assert.deepEqual(db.lireBlocs(P).map(b => b.id), ['vieux'], 'une seconde ouverture ne change rien');
   } finally { db.fermer(); process.env.LIENS_DB = ':memory:'; }
 });
+
+test('conservation : les statistiques de plus de treize mois et les jetons expirés partent à la purge', () => {
+  const maintenant = Date.parse('2026-10-17T12:00:00Z');
+  db.ajouterEvenement({ compte: P, type: 'vue', bloc: null, visiteur: 'a', source: 'Direct', appareil: 'Mobile', ts: maintenant - 400 * 86_400_000 });
+  db.ajouterEvenement({ compte: P, type: 'vue', bloc: null, visiteur: 'b', source: 'Direct', appareil: 'Mobile', ts: maintenant - 300 * 86_400_000 });
+  db.purger(maintenant);
+  const restes = db.exporter(P).statistiques;
+  assert.equal(restes.length, 1);
+  assert.equal(restes[0].ts, new Date(maintenant - 300 * 86_400_000).toISOString());
+});
+
+test('export : tout le compte, sans l’empreinte des visiteurs', () => {
+  const zoe = db.creerCompte('zoe@exemple.fr', 'zoe');
+  db.enregistrerBloc(zoe.id, validerBloc({ type: 'lien', titre: 'Portfolio', url: 'zoe.fr' }, 'z1'));
+  db.ajouterMedia(zoe.id, new Uint8Array([1, 2, 3]), 'webp');
+  db.ajouterEvenement({ compte: zoe.id, type: 'clic', bloc: 'z1', visiteur: 'secret', source: 'Instagram', appareil: 'Mobile' });
+  db.accepterCgu(zoe.id, '2026-10-17', 1_000);
+  const e = db.exporter(zoe.id);
+  assert.equal(e.compte.pseudo, 'zoe');
+  assert.equal(e.compte.email, 'zoe@exemple.fr');
+  assert.deepEqual(e.compte.conditionsAcceptees, { version: '2026-10-17', le: new Date(1_000).toISOString() });
+  assert.deepEqual(e.blocs.map(b => b.id), ['z1']);
+  assert.equal(e.images.length, 1);
+  assert.match(e.images[0].donnees, /^data:image\/webp;base64,AQID$/);
+  assert.equal(e.statistiques.length, 1);
+  assert.ok(!JSON.stringify(e).includes('secret'));
+  assert.equal(db.exporter(P).blocs.some(b => b.id === 'z1'), false, 'l’export d’un compte ne contient que lui');
+});
+
+test('signalements : formulaire, accusé de réception, suspension motivée, décision à qui a signalé', async () => {
+  const { signaler, traiter, supprimerMotive, changerStatutMotive } = await import('./moderation.ts');
+  const envois: any[] = [];
+  const fetchFaux = (async (_: string, init: RequestInit) => { envois.push(JSON.parse(String(init.body))); return new Response('{}'); }) as typeof fetch;
+  const env = { RESEND_API_KEY: 'cle', NODE_ENV: 'production', CONTACT_TO: 'lilian@exemple.fr' };
+  const o = 'https://liliansevoumian.fr';
+  const hugo = db.creerCompte('hugo@exemple.fr', 'hugo');
+  const base = { page: 'hugo', motif: 'arnaque', details: 'Le lien mène à une fausse page Instagram.', email: 'Temoin@Exemple.fr', bonneFoi: true };
+
+  assert.equal((await signaler(env, fetchFaux, { ...base, page: '' }, '5.5.5.1', o)).ok, false, 'pas de signalement sur la page de Lilian');
+  assert.equal((await signaler(env, fetchFaux, { ...base, motif: 'rien' }, '5.5.5.1', o)).ok, false);
+  assert.equal((await signaler(env, fetchFaux, { ...base, details: 'court' }, '5.5.5.1', o)).ok, false);
+  assert.equal((await signaler(env, fetchFaux, { ...base, bonneFoi: false }, '5.5.5.1', o)).ok, false);
+  assert.equal(envois.length, 0);
+
+  const r = await signaler(env, fetchFaux, base, '5.5.5.2', o);
+  assert.equal(r.ok, true);
+  assert.deepEqual(envois.map(e => e.to[0]), ['lilian@exemple.fr', 'temoin@exemple.fr'], 'Lilian est prévenu, la personne reçoit un accusé');
+  assert.equal(envois[0].reply_to, 'temoin@exemple.fr');
+  const [s] = db.listerSignalements();
+  assert.equal(s.pseudo, 'hugo'); assert.equal(s.statut, 'ouvert');
+
+  // Cinq signalements par heure et par IP.
+  for (let i = 0; i < 5; i++) await signaler(env, fetchFaux, { ...base, email: '' }, '5.5.5.9', o);
+  assert.equal((await signaler(env, fetchFaux, { ...base, email: '' }, '5.5.5.9', o)).ok, false);
+
+  envois.length = 0;
+  await assert.rejects(() => changerStatutMotive(env, fetchFaux, hugo.id, 'suspendu', '  '), /motif/);
+  await traiter(env, fetchFaux, s.id, 'suspendu', 'Lien de hameçonnage (CGU, « Ce que tu publies »).', o);
+  assert.equal(db.compteParId(hugo.id)!.statut, 'suspendu');
+  assert.deepEqual(envois.map(e => e.to[0]), ['hugo@exemple.fr', 'temoin@exemple.fr']);
+  assert.match(envois[0].text, /hameçonnage/);
+  assert.match(envois[0].text, /contester/);
+  assert.match(envois[1].text, /suspendue/);
+  assert.equal(db.signalementParId(s.id)!.statut, 'suspendu');
+  await assert.rejects(() => traiter(env, fetchFaux, s.id, 'sans-suite', '', o), /déjà traité/);
+
+  // Une suppression à la demande de la personne part sans e-mail ; une suppression motivée, avec.
+  envois.length = 0;
+  await supprimerMotive(env, fetchFaux, hugo.id, '');
+  assert.equal(envois.length, 0);
+  assert.equal(db.compteParId(hugo.id), undefined);
+  assert.equal(db.listerSignalements().some(x => x.compte === hugo.id), false, 'les signalements du compte partent avec lui');
+  const lea = db.creerCompte('lea@exemple.fr', 'lea');
+  await supprimerMotive(env, fetchFaux, lea.id, 'Usurpation d’identité.');
+  assert.deepEqual(envois.map(e => e.to[0]), ['lea@exemple.fr']);
+});

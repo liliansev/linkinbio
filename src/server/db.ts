@@ -67,15 +67,24 @@ export function base(): DatabaseSync {
       visiteur TEXT NOT NULL, source TEXT NOT NULL, appareil TEXT NOT NULL
     );
     CREATE TABLE IF NOT EXISTS jetons (hash TEXT PRIMARY KEY, type TEXT NOT NULL, expire INTEGER NOT NULL, cree INTEGER NOT NULL);
+    CREATE TABLE IF NOT EXISTS signalements (
+      id TEXT PRIMARY KEY, compte TEXT NOT NULL, motif TEXT NOT NULL, details TEXT NOT NULL, email TEXT NOT NULL DEFAULT '',
+      ts INTEGER NOT NULL, statut TEXT NOT NULL DEFAULT 'ouvert', decision TEXT NOT NULL DEFAULT '', traite INTEGER
+    );
   `);
   // Les tables d'avant les comptes : tout ce qu'elles contiennent est à Lilian.
   for (const table of ['blocs', 'medias', 'evenements', 'jetons']) colonne(db, table, 'compte', `TEXT NOT NULL DEFAULT '${PRINCIPAL}'`);
+  // Les conditions acceptées : leur version (une date) et le moment.
+  colonne(db, 'comptes', 'cgu', "TEXT NOT NULL DEFAULT ''");
+  colonne(db, 'comptes', 'cgu_le', 'INTEGER');
   db.exec(`
     CREATE UNIQUE INDEX IF NOT EXISTS comptes_email ON comptes (email);
     CREATE INDEX IF NOT EXISTS blocs_compte ON blocs (compte, position);
     CREATE INDEX IF NOT EXISTS medias_compte ON medias (compte);
     DROP INDEX IF EXISTS evenements_jour;
     CREATE INDEX IF NOT EXISTS evenements_compte ON evenements (compte, jour, type);
+    CREATE INDEX IF NOT EXISTS evenements_ts ON evenements (ts);
+    CREATE INDEX IF NOT EXISTS signalements_statut ON signalements (statut, ts);
   `);
   if (!db.prepare('SELECT 1 FROM comptes WHERE id = ?').get(PRINCIPAL)) {
     // L'adresse du compte principal vient de l'environnement (voir auth.ts) : on n'en garde qu'un repère.
@@ -91,10 +100,24 @@ export function base(): DatabaseSync {
     const inserer = db.prepare('INSERT INTO blocs (id, position, donnees, compte) VALUES (?, ?, ?, ?)');
     blocsDefaut(nouvelId).forEach((bloc, i) => inserer.run(bloc.id, i, JSON.stringify(bloc), PRINCIPAL));
   }
-  // On garde treize mois de statistiques.
-  db.prepare('DELETE FROM evenements WHERE ts < ?').run(Date.now() - 400 * 86_400_000);
-  db.prepare('DELETE FROM jetons WHERE expire < ?').run(Date.now());
+  purger(Date.now(), db);
   return db;
+}
+
+/** Ce qu'on garde, annoncé dans la politique de confidentialité (`lib/legal.ts`). */
+export const CONSERVATION = { statistiquesJours: 395, signalementsJours: 365 };
+let derniere = 0;
+
+/**
+ * Efface ce qui a passé sa durée de conservation : les statistiques de plus de
+ * treize mois, les jetons expirés, les signalements traités depuis un an. Au
+ * démarrage, puis au plus une fois toutes les six heures (voir `ajouterEvenement`).
+ */
+export function purger(maintenant = Date.now(), d = base()) {
+  derniere = maintenant;
+  d.prepare('DELETE FROM evenements WHERE ts < ?').run(maintenant - CONSERVATION.statistiquesJours * 86_400_000);
+  d.prepare('DELETE FROM jetons WHERE expire < ?').run(maintenant);
+  d.prepare("DELETE FROM signalements WHERE statut != 'ouvert' AND traite < ?").run(maintenant - CONSERVATION.signalementsJours * 86_400_000);
 }
 
 export const stockageEphemere = () => (base(), ephemere);
@@ -110,9 +133,9 @@ export function secret(): string {
 
 /* ---- Comptes ---- */
 
-export interface Compte { id: string; email: string; pseudo: string; statut: 'actif' | 'suspendu'; cree: number; connexion: number | null }
+export interface Compte { id: string; email: string; pseudo: string; statut: 'actif' | 'suspendu'; cree: number; connexion: number | null; cgu: string; cgu_le: number | null }
 
-const LIRE_COMPTE = 'SELECT id, email, pseudo, statut, cree, connexion FROM comptes';
+const LIRE_COMPTE = 'SELECT id, email, pseudo, statut, cree, connexion, cgu, cgu_le FROM comptes';
 export const compteParId = (id: string) => base().prepare(`${LIRE_COMPTE} WHERE id = ?`).get(id) as Compte | undefined;
 export const compteParPseudo = (pseudo: string) => base().prepare(`${LIRE_COMPTE} WHERE pseudo = ?`).get(pseudo.toLowerCase()) as Compte | undefined;
 /** Jamais le compte principal : son adresse se lit dans l'environnement. */
@@ -146,12 +169,14 @@ export function supprimerCompte(id: string) {
   const d = base();
   d.exec('BEGIN');
   try {
-    for (const table of ['blocs', 'medias', 'evenements', 'jetons']) d.prepare(`DELETE FROM ${table} WHERE compte = ?`).run(id);
+    for (const table of ['blocs', 'medias', 'evenements', 'jetons', 'signalements']) d.prepare(`DELETE FROM ${table} WHERE compte = ?`).run(id);
     d.prepare('DELETE FROM pages WHERE compte = ?').run(id);
     d.prepare('DELETE FROM comptes WHERE id = ?').run(id);
     d.exec('COMMIT');
   } catch (error) { d.exec('ROLLBACK'); throw error; }
 }
+
+export const accepterCgu = (id: string, version: string, maintenant = Date.now()) => base().prepare('UPDATE comptes SET cgu = ?, cgu_le = ? WHERE id = ?').run(version, maintenant, id);
 
 export const noterConnexion = (id: string, maintenant = Date.now()) => base().prepare('UPDATE comptes SET connexion = ? WHERE id = ?').run(maintenant, id);
 
@@ -266,6 +291,7 @@ export function evenementsDuJour(maintenant = Date.now(), compte?: string): numb
 
 export function ajouterEvenement(e: { compte: string; type: 'vue' | 'clic'; bloc: string | null; visiteur: string; source: string; appareil: string; ts?: number }) {
   const ts = e.ts ?? Date.now();
+  if (Date.now() - derniere > 6 * 3_600_000) purger();
   base().prepare('INSERT INTO evenements (compte, type, bloc, jour, ts, visiteur, source, appareil) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
     .run(e.compte, e.type, e.bloc, jourDe(ts), ts, e.visiteur, e.source, e.appareil);
 }
@@ -301,5 +327,57 @@ export function stats(compte: string, jours: number, maintenant = Date.now()): S
   };
 }
 
+/* ---- Export (droit d'accès et de portabilité) ---- */
+
+/**
+ * Tout ce que le serveur garde d'un compte, lisible par un humain et par une
+ * machine. Les événements sortent sans l'empreinte du visiteur, qui ne dit
+ * rien à personne.
+ */
+export function exporter(compte: string) {
+  const d = base();
+  const c = compteParId(compte);
+  if (!c) throw new Error('Compte inconnu.');
+  const medias = (d.prepare('SELECT id, extension, octets, cree FROM medias WHERE compte = ? ORDER BY cree').all(compte) as { id: string; extension: string; octets: Uint8Array; cree: number }[])
+    .map(m => ({ fichier: `${m.id}.${m.extension}`, cree: new Date(m.cree).toISOString(), donnees: `data:image/${m.extension === 'jpg' ? 'jpeg' : 'webp'};base64,${Buffer.from(m.octets).toString('base64')}` }));
+  const evenements = d.prepare('SELECT ts, type, bloc, source, appareil FROM evenements WHERE compte = ? ORDER BY ts').all(compte) as { ts: number; type: string; bloc: string | null; source: string; appareil: string }[];
+  return {
+    exporte: new Date().toISOString(),
+    compte: {
+      pseudo: c.pseudo, email: c.email || null, statut: c.statut, cree: new Date(c.cree).toISOString(),
+      derniereConnexion: c.connexion ? new Date(c.connexion).toISOString() : null,
+      conditionsAcceptees: c.cgu ? { version: c.cgu, le: c.cgu_le ? new Date(c.cgu_le).toISOString() : null } : null,
+    },
+    reglages: lireReglages(compte),
+    blocs: lireBlocs(compte),
+    images: medias,
+    statistiques: evenements.map(e => ({ ...e, ts: new Date(e.ts).toISOString() })),
+  };
+}
+
+/* ---- Signalements (DSA, article 16) ---- */
+
+export interface Signalement { id: string; compte: string; pseudo: string; motif: string; details: string; email: string; ts: number; statut: 'ouvert' | 'sans-suite' | 'suspendu'; decision: string; traite: number | null }
+
+export function ajouterSignalement(s: { compte: string; motif: string; details: string; email: string }, maintenant = Date.now()): string {
+  const id = nouvelId();
+  base().prepare('INSERT INTO signalements (id, compte, motif, details, email, ts) VALUES (?, ?, ?, ?, ?, ?)').run(id, s.compte, s.motif, s.details, s.email, maintenant);
+  return id;
+}
+
+export const signalementsDepuis = (depuis: number) => (base().prepare('SELECT COUNT(*) AS n FROM signalements WHERE ts > ?').get(depuis) as { n: number }).n;
+
+/** Les signalements ouverts d'abord, puis les derniers traités. */
+export function listerSignalements(): Signalement[] {
+  return base().prepare(`SELECT s.id, s.compte, COALESCE(c.pseudo, '') AS pseudo, s.motif, s.details, s.email, s.ts, s.statut, s.decision, s.traite
+    FROM signalements s LEFT JOIN comptes c ON c.id = s.compte ORDER BY s.statut = 'ouvert' DESC, s.ts DESC LIMIT 100`).all() as unknown as Signalement[];
+}
+
+export const signalementParId = (id: string) => base().prepare(`SELECT s.*, COALESCE(c.pseudo, '') AS pseudo FROM signalements s LEFT JOIN comptes c ON c.id = s.compte WHERE s.id = ?`).get(id) as Signalement | undefined;
+
+export function traiterSignalement(id: string, statut: 'sans-suite' | 'suspendu', decision: string, maintenant = Date.now()) {
+  base().prepare("UPDATE signalements SET statut = ?, decision = ?, traite = ? WHERE id = ? AND statut = 'ouvert'").run(statut, decision, maintenant, id);
+}
+
 /** Pour les tests : repartir d'une base neuve. */
-export function fermer() { db?.close(); db = null; ephemere = false; }
+export function fermer() { db?.close(); db = null; ephemere = false; derniere = 0; }
