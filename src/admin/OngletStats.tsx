@@ -80,8 +80,10 @@ function Barres({ lignes, total, unite }: { lignes: { nom: string; valeur: numbe
   );
 }
 
-export function OngletStats({ charger }: { charger: (jours: number) => Promise<Stats> }) {
-  const [jours, setJours] = useState('30');
+/** `limite` : un compte gratuit ne voit que les sept derniers jours ; `onPro` mène à l'abonnement. */
+export function OngletStats({ charger, limite = false, onPro }: { charger: (jours: number) => Promise<Stats>; limite?: boolean; onPro?: () => void }) {
+  const [choix, setJours] = useState('30');
+  const jours = limite ? '7' : choix;
   const [stats, setStats] = useState<Stats | null>(null);
   const [erreur, setErreur] = useState(false);
   useEffect(() => {
@@ -93,7 +95,12 @@ export function OngletStats({ charger }: { charger: (jours: number) => Promise<S
 
   return (
     <div className="flex flex-col gap-4">
-      <Segments label="Période" valeur={jours} options={PERIODES} onChange={setJours} />
+      {limite ? (
+        <div className="flex items-center justify-between gap-3 rounded-2xl border border-peche/20 bg-peche/[0.07] px-4 py-3">
+          <p className="text-[14px] leading-snug text-white/80">Les 7 derniers jours. <span className="text-white/55">Avec Pro, jusqu’à un an d’historique : tout est déjà enregistré.</span></p>
+          {onPro && <button type="button" onClick={onPro} className="min-h-9 shrink-0 rounded-full bg-white px-4 text-[13.5px] font-semibold text-nuit">Passer en Pro</button>}
+        </div>
+      ) : <Segments label="Période" valeur={jours} options={PERIODES} onChange={setJours} />}
       {erreur && <p className="rounded-xl bg-red-500/15 px-3.5 py-2.5 text-[14px] text-red-200">Les statistiques ne se chargent pas. Réessaie dans un instant.</p>}
       {!stats ? <div className="h-64 animate-pulse rounded-2xl bg-white/[0.04]" /> : (
         <>

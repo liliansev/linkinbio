@@ -8,6 +8,9 @@ import { apercuSite as lireApercu } from './apercu.ts';
 import * as db from './db.ts';
 import { COOKIE_SESSION, DUREE_SESSION, adresseAdmin, compteDeSession, demanderConnexion, fermerSession, inviter, ouvrirSession } from './auth.ts';
 import { changerStatutMotive, signaler, supprimerMotive, traiter } from './moderation.ts';
+import * as creem from './creem.ts';
+import { JOURS_GRATUIT } from '../lib/abonnement.ts';
+import type { Periode } from '../lib/abonnement.ts';
 
 /*
  * Les fonctions serveur : les pages publiques en lecture libre, tout le reste
@@ -66,15 +69,17 @@ export const lirePagePublique = createServerFn({ method: 'GET' })
     return {
       reglages: reglagesPourCompte(compte.id, db.lireReglages(compte.id)),
       blocs: pourCompte(compte.id, db.lireBlocs(compte.id)).filter(bloc => estEnLigne(bloc, maintenant)),
-      compte: { pseudo: compte.pseudo, principal: compte.id === PRINCIPAL },
+      compte: { pseudo: compte.pseudo, principal: compte.id === PRINCIPAL, pro: db.abonnement(compte, maintenant).plan === 'pro' },
     };
   });
 
 function etat(compte: string): EtatAdmin {
   const c = db.compteParId(compte)!;
+  const abonnement = db.abonnement(c);
   return {
     reglages: db.lireReglages(compte), blocs: db.lireBlocs(compte), clics: db.clicsParBloc(compte, 30), stockageEphemere: db.stockageEphemere(),
-    compte: { pseudo: c.pseudo, principal: compte === PRINCIPAL, email: c.email }, cguAJour: cguAJour(compte),
+    compte: { pseudo: c.pseudo, principal: compte === PRINCIPAL, email: c.email, pro: abonnement.plan === 'pro' }, cguAJour: cguAJour(compte),
+    abonnement, paiement: compte !== PRINCIPAL && !!creem.config(process.env),
   };
 }
 
@@ -189,7 +194,27 @@ export const apercuSite = createServerFn({ method: 'POST' })
 export const lireStats = createServerFn({ method: 'GET' })
   .middleware([session])
   .validator((data: unknown) => ([7, 30, 90, 365].includes(Number(data)) ? Number(data) : 30))
-  .handler(async ({ data, context }): Promise<Stats> => db.stats(context.compte, data));
+  // En gratuit, l'historique visible s'arrête à sept jours (tout est gardé : passer en Pro le rend visible).
+  // Tant que le paiement n'est pas branché, il n'y a pas de Pro à proposer : rien n'est limité.
+  .handler(async ({ data, context }): Promise<Stats> => {
+    const limite = !db.compteEstPro(context.compte) && !!creem.config(process.env);
+    return db.stats(context.compte, limite ? JOURS_GRATUIT : data);
+  });
+
+/* ---- Abonnement Pro (Creem) ---- */
+
+export const ouvrirPaiement = createServerFn({ method: 'POST' })
+  .middleware([session])
+  .validator((data: unknown): Periode => (data === 'an' ? 'an' : 'mois'))
+  .handler(async ({ data, context }) => {
+    const compte = db.compteParId(context.compte)!;
+    if (db.abonnement(compte).plan === 'pro') throw new Error('Tu es déjà en Pro : gère ton abonnement depuis le portail.');
+    return creem.ouvrirPaiement(process.env, fetch, compte, data, origine());
+  });
+
+export const ouvrirPortail = createServerFn({ method: 'POST' })
+  .middleware([session])
+  .handler(async ({ context }) => creem.ouvrirPortail(process.env, fetch, db.compteParId(context.compte)!));
 
 /* ---- Les comptes, depuis le back office de Lilian ---- */
 

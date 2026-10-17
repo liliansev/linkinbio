@@ -99,7 +99,8 @@ export function PageLiens({ page, apercu = false }: { page: PagePublique; apercu
         <p className="lp-signature">{compte.principal
           ? <a href="https://liliansevoumian.fr" {...cible}>liliansevoumian.fr</a>
           : <>
-            <a href="https://liliansevoumian.fr/liens/" {...cible}>Une page faite avec Mes liens</a>
+            {/* La mention disparaît en Pro ; les liens légaux restent sur toutes les pages. */}
+            {!compte.pro && <a href="https://liliansevoumian.fr/liens/" {...cible}>Une page faite avec Mes liens</a>}
             <span className="lp-legal">
               <a href="/liens/legal/confidentialite" {...cible}>Confidentialité</a>
               <a href={`/liens/signaler?page=${compte.pseudo}`} rel="nofollow" {...cible}>Signaler</a>

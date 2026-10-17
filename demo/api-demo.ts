@@ -51,7 +51,8 @@ function statsFictives(jours: number): Stats {
 export const apiDemo: Api = {
   async charger(): Promise<EtatAdmin> {
     const s = statsFictives(30);
-    return { ...etat, clics: Object.fromEntries(s.blocs.map(b => [b.id, b.clics])), stockageEphemere: false, cguAJour: true, compte: { pseudo: 'lilian', principal: true, email: '' } };
+    return { ...etat, clics: Object.fromEntries(s.blocs.map(b => [b.id, b.clics])), stockageEphemere: false, cguAJour: true, compte: { pseudo: 'lilian', principal: true, email: '', pro: true },
+      abonnement: { plan: 'pro', statut: '', finPeriode: null, portail: false }, paiement: false };
   },
   async enregistrerBloc(bloc) {
     await pause();
@@ -71,12 +72,15 @@ export const apiDemo: Api = {
   async accepterCgu() { await pause(); },
   async supprimerMonCompte() { await pause(); return { ok: false, message: 'Le compte principal ne se supprime pas.' }; },
   urlExport: null,
+  // Le compte principal n'a pas d'abonnement : l'aperçu n'ouvre jamais de paiement.
+  async ouvrirPaiement() { throw new Error('Pas de paiement dans l’aperçu.'); },
+  async ouvrirPortail() { throw new Error('Pas de paiement dans l’aperçu.'); },
   comptes: {
     async lister() { await pause(); return comptesDemo; },
     async inviter(email, pseudo) {
       await pause();
       if (comptesDemo.some(c => c.pseudo === pseudo)) return { ok: false, message: 'Ce pseudo est déjà pris.' };
-      comptesDemo.splice(1, 0, { id: id(), email, pseudo, statut: 'actif', cree: Date.now(), connexion: null, blocs: 0, vues: 0, principal: false });
+      comptesDemo.splice(1, 0, { id: id(), email, pseudo, statut: 'actif', cree: Date.now(), connexion: null, blocs: 0, vues: 0, principal: false, pro: false });
       return { ok: true, message: `Invitation envoyée à ${email} (dans l’aperçu, rien ne part vraiment).` };
     },
     async renvoyer() { await pause(); return { ok: true, message: '' }; },
@@ -95,10 +99,10 @@ export const apiDemo: Api = {
 /** Des comptes inventés, pour voir l'onglet Comptes dans l'aperçu. */
 const jour = 86_400_000;
 const comptesDemo: CompteResume[] = [
-  { id: 'principal', email: '', pseudo: 'lilian', statut: 'actif', cree: Date.now() - 40 * jour, connexion: Date.now(), blocs: 8, vues: 2140, principal: true },
-  { id: 'demo1', email: 'camille@exemple.fr', pseudo: 'camille-studio', statut: 'actif', cree: Date.now() - 6 * jour, connexion: Date.now() - jour, blocs: 7, vues: 312, principal: false },
-  { id: 'demo2', email: 'hugo@exemple.fr', pseudo: 'hugo-podcast', statut: 'actif', cree: Date.now() - 4 * jour, connexion: null, blocs: 0, vues: 0, principal: false },
-  { id: 'demo3', email: 'sarah@exemple.fr', pseudo: 'sarah-coach', statut: 'suspendu', cree: Date.now() - 12 * jour, connexion: Date.now() - 9 * jour, blocs: 4, vues: 58, principal: false },
+  { id: 'principal', email: '', pseudo: 'lilian', statut: 'actif', cree: Date.now() - 40 * jour, connexion: Date.now(), blocs: 8, vues: 2140, principal: true, pro: true },
+  { id: 'demo1', email: 'camille@exemple.fr', pseudo: 'camille-studio', statut: 'actif', cree: Date.now() - 6 * jour, connexion: Date.now() - jour, blocs: 7, vues: 312, principal: false, pro: true },
+  { id: 'demo2', email: 'hugo@exemple.fr', pseudo: 'hugo-podcast', statut: 'actif', cree: Date.now() - 4 * jour, connexion: null, blocs: 0, vues: 0, principal: false, pro: false },
+  { id: 'demo3', email: 'sarah@exemple.fr', pseudo: 'sarah-coach', statut: 'suspendu', cree: Date.now() - 12 * jour, connexion: Date.now() - 9 * jour, blocs: 4, vues: 58, principal: false, pro: false },
 ];
 
 const signalementsDemo: SignalementResume[] = [
@@ -119,4 +123,4 @@ function vignetteDemo(url: string): string {
 }
 
 export const etatDemo = () => apiDemo.charger();
-export const pageDemo = () => ({ reglages: etat.reglages, blocs: etat.blocs, compte: { pseudo: 'lilian', principal: true } });
+export const pageDemo = () => ({ reglages: etat.reglages, blocs: etat.blocs, compte: { pseudo: 'lilian', principal: true, pro: true } });

@@ -41,6 +41,7 @@ export function OngletComptes({ api }: { api: ApiComptes }) {
 
   const autres = comptes?.filter(c => !c.principal) ?? [];
   const actifs = autres.filter(c => c.statut === 'actif').length;
+  const enPro = autres.filter(c => c.pro).length;
 
   return (
     <div className="flex flex-col gap-4">
@@ -65,7 +66,7 @@ export function OngletComptes({ api }: { api: ApiComptes }) {
         </form>
       </Carte>
 
-      <Carte titre="Les comptes" action={comptes && <span className="text-[13px] text-white/50">{autres.length ? `${actifs} actif${actifs > 1 ? 's' : ''} sur ${autres.length}` : 'Aucun invité'}</span>}>
+      <Carte titre="Les comptes" action={comptes && <span className="text-[13px] text-white/50">{autres.length ? `${actifs} actif${actifs > 1 ? 's' : ''} sur ${autres.length}${enPro ? `, ${enPro} en Pro` : ''}` : 'Aucun invité'}</span>}>
         {erreur && <p className="text-[14px] text-red-300" role="alert">{erreur}</p>}
         {!comptes && !erreur && <p className="text-[14px] text-white/50">Chargement…</p>}
         {comptes && (
@@ -101,6 +102,7 @@ function LigneCompte({ compte, api, onChange, onMessage }: { compte: CompteResum
         <div className="min-w-0">
           <p className="flex items-center gap-2 text-[15.5px] font-semibold">
             <span className="truncate">{compte.principal ? 'Toi' : compte.pseudo}</span>
+            {!compte.principal && compte.pro && <span className="rounded-full bg-peche/15 px-2 py-0.5 text-[11.5px] font-semibold text-peche">Pro</span>}
             {suspendu && <span className="rounded-full bg-amber-400/15 px-2 py-0.5 text-[11.5px] font-medium text-amber-200">Suspendu</span>}
           </p>
           <p className="truncate text-[13px] text-white/50">{compte.principal ? 'Ta page, liliansevoumian.fr/liens' : compte.email}</p>

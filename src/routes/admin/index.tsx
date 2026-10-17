@@ -26,6 +26,8 @@ function PageAdmin() {
     accepterCgu: async () => { await fn.accepterCgu(); },
     supprimerMonCompte: confirmation => fn.supprimerMonCompte({ data: confirmation }),
     urlExport: '/liens/api/export',
+    ouvrirPaiement: periode => fn.ouvrirPaiement({ data: periode }),
+    ouvrirPortail: () => fn.ouvrirPortail(),
     comptes: acces.connecte && acces.etat.compte.principal ? {
       lister: () => fn.listerComptes(),
       inviter: (email, pseudo) => fn.inviterCompte({ data: { email, pseudo } }),

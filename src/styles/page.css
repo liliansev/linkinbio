@@ -327,6 +327,7 @@
 .lp-signature a { color: var(--doux); text-decoration: none; }
 .lp-signature a:hover { color: var(--texte); }
 .lp-legal { display: flex; justify-content: center; gap: 14px; margin-top: 8px; font-size: 0.74rem; opacity: 0.8; }
+.lp-legal:first-child { margin-top: 0; }
 
 .lp-toast {
   position: fixed; left: 50%; bottom: 24px; translate: -50% 0; z-index: 10;

@@ -2,11 +2,16 @@ import { useEffect, useState } from 'react';
 import QRCode from 'qrcode';
 import type { ComptePage, Reglages } from '../lib/types.ts';
 import { urlPage } from '../lib/types.ts';
+import type { Abonnement as EtatAbonnement, Periode } from '../lib/abonnement.ts';
+import { AVANTAGES_PRO, TARIFS } from '../lib/abonnement.ts';
+import { Icone } from '../components/Icone.tsx';
 import { BoutonSecondaire, Carte, Champ, Interrupteur, classeSaisie } from './ui.tsx';
 
-export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlExport, supprimerMonCompte }: {
+export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlExport, supprimerMonCompte, abonnement, paiement, ouvrirPaiement, ouvrirPortail }: {
   reglages: Reglages; compte: ComptePage; onChange: (r: Reglages) => void; onDeconnexion: () => void;
   urlExport: string | null; supprimerMonCompte: (confirmation: string) => Promise<{ ok: boolean; message: string }>;
+  abonnement: EtatAbonnement & { pro: boolean }; paiement: boolean;
+  ouvrirPaiement: (periode: Periode) => Promise<string>; ouvrirPortail: () => Promise<string>;
 }) {
   const URL_PUBLIQUE = urlPage(compte);
   const [qr, setQr] = useState('');
@@ -37,6 +42,8 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
         )}
       </Carte>
 
+      {!compte.principal && paiement && <Abonnement abonnement={abonnement} ouvrirPaiement={ouvrirPaiement} ouvrirPortail={ouvrirPortail} />}
+
       <Carte titre="Référencement">
         <div className="flex flex-col gap-3">
           <Champ label="Titre dans Google et sur les réseaux" aide={`${reglages.seo.titre.length}/60 caractères conseillés`}>
@@ -57,6 +64,91 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
       <TesDonnees compte={compte} urlExport={urlExport} supprimerMonCompte={supprimerMonCompte} />
 
       <BoutonSecondaire onClick={onDeconnexion} className="self-center">Me déconnecter</BoutonSecondaire>
+    </div>
+  );
+}
+
+const date = (ms: number) => new Date(ms).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+
+/** L'offre Pro : la choisir (paiement chez Creem), ou gérer l'abonnement en cours (portail Creem). */
+function Abonnement({ abonnement, ouvrirPaiement, ouvrirPortail }: {
+  abonnement: EtatAbonnement & { pro: boolean }; ouvrirPaiement: (periode: Periode) => Promise<string>; ouvrirPortail: () => Promise<string>;
+}) {
+  const [periode, setPeriode] = useState<Periode>('an');
+  const [envoi, setEnvoi] = useState(false);
+  const [erreur, setErreur] = useState('');
+  async function aller(ouvrir: () => Promise<string>) {
+    setEnvoi(true);
+    setErreur('');
+    try { location.href = await ouvrir(); return; }
+    catch (error) { setErreur((error as Error).message || 'Le paiement ne répond pas. Réessaie dans un instant.'); }
+    setEnvoi(false);
+  }
+  const lien = 'text-white/60 underline decoration-white/25 underline-offset-2 hover:text-white';
+
+  if (abonnement.pro) {
+    const fin = abonnement.finPeriode ? date(abonnement.finPeriode) : '';
+    const etat = abonnement.statut === 'scheduled_cancel'
+      ? { texte: fin ? `Résilié. Ton Pro reste actif jusqu’au ${fin}, puis ta page repasse en gratuit, avec tout son contenu.` : 'Résilié. Ton Pro reste actif jusqu’à la fin de la période payée.', alerte: false }
+      : abonnement.statut === 'past_due'
+        ? { texte: 'Le dernier paiement n’est pas passé. Mets à jour ta carte pour garder le Pro.', alerte: true }
+        : { texte: fin ? `Se renouvelle le ${fin}.` : 'Ton abonnement est actif.', alerte: false };
+    return (
+      <div id="abonnement" className="scroll-mt-24">
+        <Carte titre="Ton abonnement" action={<span className="inline-flex items-center gap-1 rounded-full bg-peche px-2.5 py-1 text-[12.5px] font-semibold text-nuit"><Icone nom="sparkle" taille={13} />Pro</span>}>
+          <p className={`text-[14px] leading-snug ${etat.alerte ? 'text-amber-200' : 'text-white/75'}`}>{etat.texte}</p>
+          {abonnement.portail && (
+            <>
+              <button type="button" disabled={envoi} onClick={() => aller(ouvrirPortail)} className="mt-3 inline-flex min-h-10 items-center gap-1.5 rounded-full bg-white/[0.08] px-4 text-[14px] font-medium text-white hover:bg-white/[0.13] disabled:opacity-50">
+                {envoi ? 'Ouverture…' : 'Gérer mon abonnement'} <Icone nom="ui-ouvrir" taille={15} />
+              </button>
+              <p className="mt-2 text-[12.5px] leading-snug text-white/45">Ta carte et tes factures, sur la page sécurisée de Creem.</p>
+              {/* La loi demande une résiliation nommée comme telle, accessible sans détour. */}
+              {abonnement.statut !== 'scheduled_cancel' && (
+                <button type="button" disabled={envoi} onClick={() => aller(ouvrirPortail)} className={`mt-3 text-[13px] ${lien}`}>Résilier mon abonnement</button>
+              )}
+            </>
+          )}
+          {erreur && <p role="alert" className="mt-3 text-[13.5px] text-red-300">{erreur}</p>}
+        </Carte>
+      </div>
+    );
+  }
+
+  const termine = ['canceled', 'expired', 'unpaid', 'paused'].includes(abonnement.statut);
+  return (
+    <div id="abonnement" className="scroll-mt-24">
+      <Carte titre="Passer en Pro">
+        {termine && <p className="mb-3 text-[13.5px] leading-snug text-white/55">Ton abonnement Pro est terminé. Ta page est en gratuit, avec tout son contenu.</p>}
+        <ul className="flex flex-col gap-2">
+          {AVANTAGES_PRO.map(a => (
+            <li key={a} className="flex gap-2.5 text-[14px] leading-snug text-white/80">
+              <span className="mt-0.5 grid h-[18px] w-[18px] shrink-0 place-items-center rounded-full bg-peche/15 text-peche"><Icone nom="ui-ok" taille={12} /></span>{a}
+            </li>
+          ))}
+        </ul>
+        <div role="radiogroup" aria-label="Formule" className="mt-4 grid grid-cols-2 gap-2">
+          {(Object.keys(TARIFS) as Periode[]).map(p => {
+            const t = TARIFS[p], choisi = periode === p;
+            return (
+              <button key={p} type="button" role="radio" aria-checked={choisi} onClick={() => setPeriode(p)}
+                className={`flex flex-col items-start rounded-2xl border px-3.5 py-3 text-left transition ${choisi ? 'border-peche/70 bg-peche/[0.08]' : 'border-white/10 bg-white/[0.03] hover:border-white/20'}`}>
+                <span className="text-[13px] text-white/55">{p === 'an' ? 'Annuel' : 'Mensuel'}</span>
+                <span className="mt-0.5 text-[20px] font-semibold tracking-tight text-white tabular-nums">{t.prix} €<span className="text-[13px] font-normal text-white/50"> / {p === 'an' ? 'an' : 'mois'}</span></span>
+                {'economie' in t && <span className="mt-1 rounded-full bg-peche/15 px-2 py-0.5 text-[11.5px] font-semibold text-peche">{t.economie}</span>}
+              </button>
+            );
+          })}
+        </div>
+        <button type="button" disabled={envoi} onClick={() => aller(() => ouvrirPaiement(periode))} className="mt-3 min-h-11 w-full rounded-full bg-peche px-4 text-[15px] font-semibold text-nuit transition hover:brightness-105 disabled:opacity-60">
+          {envoi ? 'Ouverture du paiement…' : `Passer en Pro, ${TARIFS[periode].libelle}`}
+        </button>
+        {erreur && <p role="alert" className="mt-3 text-[13.5px] text-red-300">{erreur}</p>}
+        <p className="mt-3 text-[12.5px] leading-snug text-white/45">
+          Prix TTC. Paiement sécurisé par Creem, revendeur officiel de l’abonnement : il encaisse, envoie la facture et gère la TVA. Résiliable à tout moment, effet à la fin de la période payée.{' '}
+          {abonnement.portail && <button type="button" onClick={() => aller(ouvrirPortail)} className={lien}>Mes factures</button>}
+        </p>
+      </Carte>
     </div>
   );
 }

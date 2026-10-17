@@ -8,6 +8,8 @@
  * professionnel est prévue avant l'ouverture publique.
  */
 
+import { TARIFS } from './abonnement.ts';
+
 export const VERSION_CGU = '2026-10-17';
 export const CONTACT_LEGAL = 'bonjour@liliansevoumian.fr';
 
@@ -25,11 +27,17 @@ export const LEGAL: Record<NomDocument, DocumentLegal> = {
     sections: [
       { titre: 'Le service', texte: [
         'Mes liens permet de publier une page de liens personnelle à l’adresse liliansevoumian.fr/liens/<pseudo>, et de la gérer depuis un back office. Le service est édité par Lilian Sevoumian (voir les mentions légales).',
-        'Pendant la bêta, le service est gratuit et ouvert sur invitation. Il peut évoluer, s’interrompre pour maintenance ou s’arrêter : dans ce dernier cas, tu es prévenu par e-mail au moins 30 jours avant, et tu peux exporter tes données jusqu’au dernier jour.',
+        'Pendant la bêta, le service est ouvert sur invitation. Il existe en version gratuite et en offre Pro, payante (voir « L’offre Pro et son paiement »). Il peut évoluer, s’interrompre pour maintenance ou s’arrêter : dans ce dernier cas, tu es prévenu par e-mail au moins 30 jours avant, et tu peux exporter tes données jusqu’au dernier jour.',
       ] },
       { titre: 'Ton compte', texte: [
         'Tu te connectes avec ton adresse e-mail, par un lien à usage unique. Tu es responsable de l’accès à ta boîte mail : quiconque y accède peut ouvrir ton back office.',
         'Tu peux télécharger toutes tes données et supprimer ton compte à tout moment, depuis l’onglet Réglages. La suppression est immédiate et définitive.',
+      ] },
+      { titre: 'L’offre Pro et son paiement', texte: [
+        `L’offre Pro retire la mention « Une page faite avec Mes liens », montre tes statistiques sur un an au lieu de sept jours, et porte la place pour les images à 200 Mo. Elle coûte ${TARIFS.mois.prix} € par mois ou ${TARIFS.an.prix} € par an, toutes taxes comprises, et se renouvelle automatiquement à la fin de chaque période.`,
+        'Le paiement passe par Creem (creem.io), revendeur officiel de l’abonnement : c’est Creem qui te le vend, encaisse le paiement, t’envoie la facture et reverse la TVA. Ses conditions de vente s’ajoutent à celles-ci pour le paiement. Mes liens ne voit ni ne garde jamais ton numéro de carte.',
+        'Tu peux résilier à tout moment, sans frais, depuis l’onglet Réglages (« Résilier mon abonnement ») : le Pro reste actif jusqu’à la fin de la période déjà payée, puis ta page repasse en gratuit avec tout son contenu. Rien n’est effacé.',
+        'Tu disposes de 14 jours après ton premier paiement pour changer d’avis : écris à ' + CONTACT_LEGAL + ' et tu es remboursé en entier. Si le prix change, tu es prévenu par e-mail au moins 30 jours avant ; le nouveau prix ne s’applique qu’au renouvellement suivant, et tu peux résilier d’ici là.',
       ] },
       { titre: 'Ce que tu publies', texte: [
         'Tu restes propriétaire de ce que tu publies (textes, images, liens) et seul responsable de son contenu. Tu nous autorises à l’héberger et à l’afficher sur ta page, le temps que ton compte existe.',
@@ -89,13 +97,14 @@ export const LEGAL: Record<NomDocument, DocumentLegal> = {
       ] },
       { titre: 'Si tu as un compte', texte: [
         'Ton adresse e-mail, ton pseudo, la date de création et de dernière connexion, la version des conditions acceptées, et ce que tu publies (réglages, blocs, images). Base légale : l’exécution du contrat (les CGU). Ces données sont gardées tant que ton compte existe, et effacées dès que tu le supprimes.',
+        'Si tu passes en Pro : l’identifiant de client et d’abonnement que Creem nous transmet, le statut de l’abonnement et sa date de renouvellement, pour savoir si ta page est en Pro. Ton nom, ton adresse de facturation et ta carte restent chez Creem, qui en est responsable pour le paiement et la facturation.',
         'Les liens de connexion et les sessions ne sont gardés que sous forme d’empreinte, et effacés à leur expiration (15 minutes, 7 jours pour une invitation, 90 jours pour une session).',
       ] },
       { titre: 'Si tu signales une page', texte: [
         'Le motif, ton explication et, si tu la donnes, ton adresse e-mail, pour te tenir informé de la décision. Base légale : l’obligation légale de traiter les signalements (règlement sur les services numériques). Gardés un an après la décision.',
       ] },
       { titre: 'Où vont les données', texte: [
-        'Nulle part ailleurs que chez les sous-traitants listés sur la page dédiée : l’hébergeur, et le service d’envoi des e-mails. Rien n’est vendu ni partagé à des fins publicitaires.',
+        'Nulle part ailleurs que chez les sous-traitants listés sur la page dédiée : l’hébergeur, et le service d’envoi des e-mails. Pour un abonnement Pro, Creem reçoit ton adresse e-mail au moment du paiement. Rien n’est vendu ni partagé à des fins publicitaires.',
       ] },
       { titre: 'Tes droits', texte: [
         'Tu peux accéder à tes données, les corriger, les effacer, les récupérer dans un format lisible par une machine, t’opposer à un traitement ou en demander la limitation. Avec un compte, l’export et la suppression se font en un clic dans l’onglet Réglages. Pour le reste, écris à ' + CONTACT_LEGAL + ' : réponse sous un mois.',
@@ -113,6 +122,9 @@ export const LEGAL: Record<NomDocument, DocumentLegal> = {
       ] },
       { titre: 'Resend', texte: [
         'Envoi des e-mails : liens de connexion, invitations, décisions de modération. Ne reçoit que l’adresse du destinataire et le contenu du message. Resend, Inc., États-Unis ; le transfert est encadré par l’accord de traitement de Resend et les clauses contractuelles types de la Commission européenne.',
+      ] },
+      { titre: 'Creem', texte: [
+        'Paiement de l’offre Pro (creem.io). Creem n’est pas un sous-traitant au sens strict : revendeur officiel de l’abonnement, il est responsable des données de paiement et de facturation qu’il collecte. Mes liens lui transmet ton adresse e-mail et l’identifiant de ton compte au moment du paiement, et reçoit en retour l’état de l’abonnement.',
       ] },
     ],
   },

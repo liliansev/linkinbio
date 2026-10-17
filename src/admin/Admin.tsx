@@ -45,8 +45,9 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
   const [toast, setToast] = useState<{ texte: string; annuler?: () => void } | null>(null);
   const [apercu, setApercu] = useState(false);
   const [cguAJour, setCguAJour] = useState(initial.cguAJour);
+  const [abonnement, setAbonnement] = useState({ ...initial.abonnement, pro: initial.compte.pro });
   const enCours = useRef(0);
-  const compte = initial.compte;
+  const compte = useMemo(() => ({ ...initial.compte, pro: abonnement.pro }), [initial.compte, abonnement.pro]);
   // L'onglet Comptes n'existe que pour Lilian.
   const onglets = ONGLETS.filter(o => o.id !== 'comptes' || api.comptes);
   const minuteur = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -69,6 +70,33 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
 
   useEffect(() => { if (!toast) return; const t = setTimeout(() => setToast(null), toast.annuler ? 5000 : 2600); return () => clearTimeout(t); }, [toast]);
   useEffect(() => () => clearTimeout(minuteur.current), []);
+
+  // Au retour de la page de paiement : le Pro arrive par webhook, quelques secondes plus tard.
+  useEffect(() => {
+    if (demo || !new URLSearchParams(location.search).has('paiement')) return;
+    history.replaceState(null, '', location.pathname);
+    versAbonnement();
+    setToast({ texte: 'Merci ! Ton passage en Pro arrive dans un instant.' });
+    let essais = 0;
+    const t = setInterval(async () => {
+      essais++;
+      try {
+        const e = await api.charger();
+        if (e.compte.pro || essais >= 15) {
+          clearInterval(t);
+          setAbonnement({ ...e.abonnement, pro: e.compte.pro });
+          if (e.compte.pro) setToast({ texte: 'Bienvenue en Pro' });
+        }
+      } catch { if (essais >= 15) clearInterval(t); }
+    }, 2000);
+    return () => clearInterval(t);
+  }, [api, demo]);
+
+  /** L'onglet Réglages, ouvert sur la carte de l'abonnement. */
+  function versAbonnement() {
+    setOnglet('reglages');
+    setTimeout(() => document.getElementById('abonnement')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
+  }
 
   function changerReglages(r: Reglages) {
     setReglages(r);
@@ -158,8 +186,9 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
           <h1 className="mb-4 text-[28px] font-semibold tracking-[-0.025em] lg:hidden">{onglets.find(o => o.id === onglet)!.nom}</h1>
           {onglet === 'liens' && <OngletLiens blocs={blocs} clics={clics} onOrdonner={ordonner} onModifier={b => { setBlocs(l => l.map(x => (x.id === b.id ? b : x))); ecrire(() => api.enregistrerBloc(b)); }} onOuvrir={b => setEdition({ bloc: b, nouveau: false })} onAjouter={b => setEdition({ bloc: b, nouveau: true })} principal={compte.principal} />}
           {onglet === 'apparence' && <OngletApparence reglages={reglages} onChange={changerReglages} envoyerImage={d => api.envoyerImage(d)} principal={compte.principal} />}
-          {onglet === 'stats' && <OngletStats charger={chargerStats} />}
-          {onglet === 'reglages' && <OngletReglages reglages={reglages} compte={compte} onChange={changerReglages} onDeconnexion={deconnexion} urlExport={api.urlExport} supprimerMonCompte={api.supprimerMonCompte} />}
+          {onglet === 'stats' && <OngletStats charger={chargerStats} limite={initial.paiement && !compte.pro} onPro={versAbonnement} />}
+          {onglet === 'reglages' && <OngletReglages reglages={reglages} compte={compte} onChange={changerReglages} onDeconnexion={deconnexion} urlExport={api.urlExport} supprimerMonCompte={api.supprimerMonCompte}
+            abonnement={abonnement} paiement={initial.paiement} ouvrirPaiement={api.ouvrirPaiement} ouvrirPortail={api.ouvrirPortail} />}
           {onglet === 'comptes' && api.comptes && <OngletComptes api={api.comptes} />}
           </div>
         </main>
