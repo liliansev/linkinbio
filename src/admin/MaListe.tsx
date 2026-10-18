@@ -88,7 +88,7 @@ function FeuilleListe({ liste, api, onFermer, onChange }: { liste: Liste; api: P
               <Champ label={choix === 'brevo' ? 'Numéro de la liste' : 'Identifiant de l’audience'} aide={choix === 'brevo' ? 'Contacts, Listes : le numéro dans la colonne ID.' : 'Audience, Paramètres, « Audience name and defaults ».'}>
                 <input className={classeSaisie} value={id} onChange={e => setId(e.target.value)} inputMode={choix === 'brevo' ? 'numeric' : 'text'} autoCapitalize="none" spellCheck={false} />
               </Champ>
-              <p className="text-[12.5px] leading-snug text-white/45">Ta clé est chiffrée sur le serveur et ne s’affiche plus jamais. Hopla s’en sert seulement pour ajouter tes inscrits.</p>
+              <p className="text-[12.5px] leading-snug text-white/55">Ta clé est chiffrée sur le serveur et ne s’affiche plus jamais. Hopla s’en sert seulement pour ajouter tes inscrits.</p>
             </>
           )}
           {(choix !== 'hopla' || liste.integration) && (
@@ -115,15 +115,15 @@ function FeuilleListe({ liste, api, onFermer, onChange }: { liste: Liste; api: P
                 <li key={c.id} className="flex items-center gap-3 px-3.5 py-2.5">
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-[14.5px] text-white">{c.prenom ? `${c.prenom} · ` : ''}{c.email}</span>
-                    <span className="block text-[12px] text-white/45">{quand(c.ts)}{c.source && c.source !== 'Direct' ? ` · ${c.source}` : ''}{c.synchro === 'erreur' ? ' · pas envoyé' : ''}</span>
+                    <span className="block text-[12px] text-white/55">{quand(c.ts)}{c.source && c.source !== 'Direct' ? ` · ${c.source}` : ''}{c.synchro === 'erreur' ? ' · pas envoyé' : ''}</span>
                   </span>
                   <button type="button" aria-label={`Retirer ${c.email}`} onClick={async () => { await api.supprimerContact(c.id); setContacts(l => l.filter(x => x.id !== c.id)); onChange(); }}
-                    className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-white/40 hover:bg-white/[0.06] hover:text-red-300"><Icone nom="ui-corbeille" taille={17} /></button>
+                    className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-white/55 hover:bg-white/[0.06] hover:text-red-300"><Icone nom="ui-corbeille" taille={17} /></button>
                 </li>
               ))}
             </ul>
-          ) : <p className="text-[13.5px] text-white/45">Personne pour l’instant.</p>}
-          {liste.total > contacts.length && contacts.length >= 50 && <p className="mt-2 text-[12.5px] text-white/45">Les 50 derniers ; l’export CSV contient tout le monde.</p>}
+          ) : <p className="text-[13.5px] text-white/55">Personne pour l’instant.</p>}
+          {liste.total > contacts.length && contacts.length >= 50 && <p className="mt-2 text-[12.5px] text-white/55">Les 50 derniers ; l’export CSV contient tout le monde.</p>}
         </section>
       </div>
     </Feuille>

@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { ReactNode } from 'react';
 import type { Api, Bloc, EtatAdmin, Reglages } from '../lib/types.ts';
 import { TYPES_PRINCIPAL, cheminPage, urlPage } from '../lib/types.ts';
 import { composerMoment } from '../lib/moments.ts';
@@ -26,16 +25,13 @@ import { vibrer } from './ui.tsx';
 type Onglet = 'page' | 'stats' | 'reglages' | 'comptes';
 type Sauvegarde = 'ok' | 'encours' | 'erreur';
 
-const ONGLETS: { id: Onglet; nom: string; icone: ReactNode }[] = [
-  { id: 'page', nom: 'Ma page', icone: <><rect x="6" y="2.5" width="12" height="19" rx="2.5" /><path d="M9.5 8h5M9.5 12h5M9.5 16h3" /></> },
-  { id: 'stats', nom: 'Stats', icone: <path d="M3 3v18h18M7 16l4-5 3 3 5-7" /> },
-  { id: 'comptes', nom: 'Comptes', icone: <><circle cx="9" cy="8" r="3.5" /><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M18 14.5a6.5 6.5 0 0 1 3.5 5.5" /></> },
-  { id: 'reglages', nom: 'Réglages', icone: <><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z" /></> },
+// Les mêmes pictos pleins que partout ailleurs dans le back office.
+const ONGLETS: { id: Onglet; nom: string; icone: string }[] = [
+  { id: 'page', nom: 'Ma page', icone: 'document' },
+  { id: 'stats', nom: 'Stats', icone: 'courbe' },
+  { id: 'comptes', nom: 'Comptes', icone: 'equipe' },
+  { id: 'reglages', nom: 'Réglages', icone: 'reglage' },
 ];
-
-function Picto({ children, taille = 20 }: { children: ReactNode; taille?: number }) {
-  return <svg width={taille} height={taille} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{children}</svg>;
-}
 
 export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatAdmin; demo?: boolean }) {
   const [blocs, setBlocs] = useState(initial.blocs);
@@ -45,6 +41,8 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
   const [edition, setEdition] = useState<{ bloc: Bloc; nouveau: boolean } | null>(null);
   const [sauvegarde, setSauvegarde] = useState<Sauvegarde>('ok');
   const [toast, setToast] = useState<{ texte: string; annuler?: () => void } | null>(null);
+  // Le doigt ou le focus sur le message le garde affiché : « Annuler » ne file pas pendant qu'on le vise.
+  const [toastTenu, setToastTenu] = useState(false);
   const [apercu, setApercu] = useState(false);
   const [cguAJour, setCguAJour] = useState(initial.cguAJour);
   const [abonnement, setAbonnement] = useState({ ...initial.abonnement, pro: initial.compte.pro });
@@ -74,7 +72,20 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
     }
   }, []);
 
-  useEffect(() => { if (!toast) return; const t = setTimeout(() => setToast(null), toast.annuler ? 5000 : 2600); return () => clearTimeout(t); }, [toast]);
+  useEffect(() => { if (!toast) setToastTenu(false); }, [toast]);
+  // L'aperçu plein écran se comporte en fenêtre : Échap le ferme, le focus va au bouton puis revient.
+  const fermerApercu = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (!apercu) return;
+    const avant = document.activeElement as HTMLElement | null;
+    const corps = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    fermerApercu.current?.focus({ preventScroll: true });
+    const touche = (e: KeyboardEvent) => { if (e.key === 'Escape') setApercu(false); };
+    document.addEventListener('keydown', touche);
+    return () => { document.removeEventListener('keydown', touche); document.body.style.overflow = corps; avant?.focus({ preventScroll: true }); };
+  }, [apercu]);
+  useEffect(() => { if (!toast || toastTenu) return; const t = setTimeout(() => setToast(null), toast.annuler ? 5000 : 2600); return () => clearTimeout(t); }, [toast, toastTenu]);
   useEffect(() => () => clearTimeout(minuteur.current), []);
 
   // Au retour de la page de paiement : le Pro arrive par webhook, quelques secondes plus tard.
@@ -101,7 +112,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
   /** Un onglet, ouvert sur une de ses cartes. */
   function ouvrirSur(o: Onglet, ancre: string) {
     setOnglet(o);
-    setTimeout(() => document.getElementById(ancre)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
+    setTimeout(() => document.getElementById(ancre)?.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' }), 60);
   }
   function versAbonnement() { ouvrirSur('reglages', 'abonnement'); }
 
@@ -168,9 +179,9 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
   if (!cguAJour) return <AccepterCgu accepter={async () => { await api.accepterCgu(); setCguAJour(true); }} deconnexion={deconnexion} />;
 
   const bulle = toast && (
-    <div role="status" className="adm-toast fixed inset-x-4 bottom-[calc(76px+env(safe-area-inset-bottom))] z-[60] mx-auto flex max-w-sm items-center justify-between gap-3 rounded-2xl bg-white px-4 py-3 text-[14.5px] font-medium text-nuit shadow-2xl lg:bottom-6">
+    <div role="status" onPointerEnter={() => setToastTenu(true)} onPointerLeave={() => setToastTenu(false)} onFocus={() => setToastTenu(true)} onBlur={() => setToastTenu(false)} className="adm-toast fixed inset-x-4 bottom-[calc(76px+env(safe-area-inset-bottom))] z-[60] mx-auto flex max-w-sm items-center justify-between gap-3 rounded-2xl bg-white px-4 py-3 text-[14.5px] font-medium text-nuit shadow-2xl lg:bottom-6">
       <span className="flex items-center gap-2">{!toast.annuler && sauvegarde !== 'erreur' && <span className="grid h-5 w-5 place-items-center rounded-full bg-emerald-500 text-white"><Icone nom="ui-ok" taille={13} /></span>}{toast.texte}</span>
-      {toast.annuler && <button type="button" onClick={toast.annuler} className="-my-1 min-h-9 rounded-full px-3 font-semibold text-[#a3461d] hover:bg-black/5">Annuler</button>}
+      {toast.annuler && <button type="button" onClick={toast.annuler} className="-my-2 min-h-11 rounded-full px-3 font-semibold text-[#a3461d] hover:bg-black/5">Annuler</button>}
     </div>
   );
 
@@ -198,7 +209,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
           {onglets.map(o => (
             <button key={o.id} type="button" onClick={() => setOnglet(o.id)} aria-current={onglet === o.id ? 'page' : undefined}
               className={`flex min-h-9 items-center gap-2.5 rounded-lg px-2.5 text-[13.5px] font-medium transition ${onglet === o.id ? 'bg-white/[0.08] text-white' : 'text-white/55 hover:bg-white/[0.04] hover:text-white'}`}>
-              <Picto taille={18}>{o.icone}</Picto>{o.nom}
+              <Icone nom={o.icone} taille={18} />{o.nom}
             </button>
           ))}
         </nav>
@@ -211,7 +222,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
             {reglages.profil.avatar ? <img src={reglages.profil.avatar} alt="" className="h-8 w-8 rounded-full object-cover" /> : <span className="h-8 w-8 rounded-full bg-white/10" />}
             <div className="min-w-0 flex-1">
               <p className="truncate text-[13.5px] font-medium leading-tight">{reglages.profil.nom || 'Hopla'}</p>
-              <p className={`flex items-center gap-1.5 text-[11.5px] leading-tight ${sauvegarde === 'erreur' ? 'text-red-300' : 'text-white/40'}`}>
+              <p className={`flex items-center gap-1.5 text-[11.5px] leading-tight ${sauvegarde === 'erreur' ? 'text-red-300' : 'text-white/55'}`}>
                 <span className={`h-1.5 w-1.5 rounded-full ${sauvegarde === 'encours' ? 'animate-pulse bg-amber-300' : sauvegarde === 'erreur' ? 'bg-red-400' : 'bg-emerald-400'}`} />{indicateur}
               </p>
             </div>
@@ -225,7 +236,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
           {reglages.profil.avatar ? <img src={reglages.profil.avatar} alt="" className="h-9 w-9 rounded-full object-cover" /> : <span className="h-9 w-9 rounded-full bg-white/10" />}
           <div className="min-w-0 flex-1">
             <p className="truncate text-[15px] font-semibold leading-tight">{reglages.profil.nom || 'Hopla'}</p>
-            <p className={`flex items-center gap-1.5 text-[12px] leading-tight ${sauvegarde === 'erreur' ? 'text-red-300' : 'text-white/45'}`} aria-live="polite">
+            <p className={`flex items-center gap-1.5 text-[12px] leading-tight ${sauvegarde === 'erreur' ? 'text-red-300' : 'text-white/55'}`} aria-live="polite">
               <span className={`h-1.5 w-1.5 rounded-full ${sauvegarde === 'encours' ? 'animate-pulse bg-amber-300' : sauvegarde === 'erreur' ? 'bg-red-400' : 'bg-emerald-400'}`} />{indicateur}
             </p>
           </div>
@@ -265,8 +276,8 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
           {onglets.map(o => (
             <li key={o.id}>
               <button type="button" onClick={() => { if (o.id !== onglet) { vibrer(5); setOnglet(o.id); scrollTo({ top: 0 }); } }} aria-current={onglet === o.id ? 'page' : undefined}
-                className={`flex h-14 w-full flex-col items-center justify-center gap-0.5 text-[11px] font-medium transition-colors duration-200 ${onglet === o.id ? 'text-white' : 'text-white/40'}`}>
-                <span className="grid h-7 place-items-center"><Picto>{o.icone}</Picto></span>{o.nom}
+                className={`flex h-14 w-full flex-col items-center justify-center gap-0.5 text-[11px] font-medium transition-colors duration-200 ${onglet === o.id ? 'text-white' : 'text-white/55'}`}>
+                <span className="grid h-7 place-items-center"><Icone nom={o.icone} taille={22} /></span>{o.nom}
               </button>
             </li>
           ))}
@@ -278,13 +289,13 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
           <div className="adm-apercu relative min-h-0 flex-1 overflow-y-auto"><PageLiens page={page} apercu /></div>
           {/* Sous la page, pas par-dessus : le bouton ne cache jamais le bas de la page. */}
           <div className="flex shrink-0 justify-center border-t border-white/[0.08] bg-[#0b0f19] px-4 pt-3 pb-[max(12px,env(safe-area-inset-bottom))]">
-            <button type="button" onClick={() => setApercu(false)} className="min-h-12 rounded-full bg-white px-6 text-[15px] font-semibold text-nuit">Fermer l’aperçu</button>
+            <button ref={fermerApercu} type="button" onClick={() => setApercu(false)} className="min-h-12 rounded-full bg-white px-6 text-[15px] font-semibold text-nuit">Fermer l’aperçu</button>
           </div>
         </div>
       )}
 
       {edition && (
-        <EditeurBloc adressePage={urlPage(compte)} bloc={edition.bloc} reglages={reglages} nouveau={edition.nouveau} clics={clics[edition.bloc.id] ?? 0} prises={initial.places?.[edition.bloc.id] ?? 0} onFermer={() => setEdition(null)}
+        <EditeurBloc adressePage={urlPage(compte)} principal={compte.principal} bloc={edition.bloc} reglages={reglages} nouveau={edition.nouveau} clics={clics[edition.bloc.id] ?? 0} prises={initial.places?.[edition.bloc.id] ?? 0} onFermer={() => setEdition(null)}
           onEnregistrer={enregistrerBloc} onSupprimer={supprimer} onDupliquer={dupliquer} envoyerImage={d => api.envoyerImage(d)} apercuSite={u => api.apercuSite(u)} />
       )}
 

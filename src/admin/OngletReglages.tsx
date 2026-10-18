@@ -32,7 +32,7 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
     ...(pro ? [{ id: 'abonnement' as const, nom: 'Abonnement', icone: 'diamant' }] : []),
     { id: 'partage', nom: 'Google et aperçus', icone: 'globe' },
     { id: 'langues', nom: 'Langues', icone: 'message' },
-    { id: 'donnees', nom: 'Tes données', icone: 'cadenas' },
+    { id: 'donnees', nom: 'Mes données', icone: 'cadenas' },
   ];
   const bascules: { nom: string; icone: string; actif: boolean; changer: (v: boolean) => void }[] = [
     { nom: 'Ouvrir les liens dans les apps', icone: 'lienExterne', actif: reglages.ouvrirApps, changer: v => onChange({ ...reglages, ouvrirApps: v }) },
@@ -50,14 +50,17 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
       {ouverte === 'partager' && <Carte titre="Partager ma page">
         <div className="flex items-center gap-2 rounded-xl bg-white/[0.06] p-1.5 pl-3.5">
           <span className="min-w-0 flex-1 truncate text-[15px] text-white">{URL_PUBLIQUE.replace(/^https:\/\//, '').replace(/\/$/, '')}</span>
-          <button type="button" onClick={copier} className="min-h-10 rounded-full bg-white px-4 text-[14px] font-semibold text-nuit">{copie ? 'Copié' : 'Copier'}</button>
+          <button type="button" onClick={copier} className="min-h-11 rounded-full bg-white px-4 text-[14px] font-semibold text-nuit">{copie ? 'Copié' : 'Copier'}</button>
         </div>
         {qr && (
           <div className="mt-4 flex flex-col items-center gap-3">
             <img src={qr} alt="QR code vers ta page" className="h-44 w-44 rounded-2xl bg-white p-1.5" />
-            <a href={qr} download={`qr-${compte.pseudo}-hopla.png`} className="inline-flex min-h-10 items-center gap-1.5 rounded-full bg-white/[0.08] px-4 text-[14px] font-medium text-white"><Icone nom="telecharger" taille={16} /> Télécharger le QR code</a>
+            <a href={qr} download={`qr-${compte.pseudo}-hopla.png`} className="inline-flex min-h-11 items-center gap-1.5 rounded-full bg-white/[0.08] px-4 text-[14px] font-medium text-white"><Icone nom="telecharger" taille={16} /> Télécharger le QR code</a>
           </div>
         )}
+        <div className="mt-4 border-t border-white/[0.06]">
+          <Interrupteur label="Bouton Partager sur ma page" actif={reglages.partage} onChange={v => onChange({ ...reglages, partage: v })} />
+        </div>
       </Carte>}
       {ouverte === 'partage' && <Carte titre="Google et aperçus">
         <div className="flex flex-col gap-3">
@@ -71,7 +74,6 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
             {compte.principal
               ? <Interrupteur label="Page visible par Google" actif={reglages.seo.indexable} onChange={v => seo({ indexable: v })} />
               : <p className="py-3 text-[13.5px] leading-snug text-white/55">Pendant la bêta, ta page n’apparaît pas dans Google. Le titre et la description servent aux aperçus quand tu partages ton lien.</p>}
-            <Interrupteur label="Bouton Partager" actif={reglages.partage} onChange={v => onChange({ ...reglages, partage: v })} />
           </div>
         </div>
       </Carte>}
@@ -148,7 +150,7 @@ function Abonnement({ abonnement, ouvrirPaiement, ouvrirPortail }: {
               <button type="button" disabled={envoi} onClick={() => aller(ouvrirPortail)} className="mt-3 inline-flex min-h-10 items-center gap-1.5 rounded-full bg-white/[0.08] px-4 text-[14px] font-medium text-white hover:bg-white/[0.13] disabled:opacity-50">
                 {envoi ? 'Ouverture…' : 'Gérer mon abonnement'} <Icone nom="ui-ouvrir" taille={15} />
               </button>
-              <p className="mt-2 text-[12.5px] leading-snug text-white/45">Ta carte et tes factures, sur la page sécurisée de Creem.</p>
+              <p className="mt-2 text-[12.5px] leading-snug text-white/55">Ta carte et tes factures, sur la page sécurisée de Creem.</p>
               {/* La loi demande une résiliation nommée comme telle, accessible sans détour. */}
               {!estResilie(abonnement.statut) && (
                 <button type="button" disabled={envoi} onClick={() => aller(ouvrirPortail)} className={`mt-3 text-[13px] ${lien}`}>Résilier mon abonnement</button>
@@ -190,7 +192,7 @@ function Abonnement({ abonnement, ouvrirPaiement, ouvrirPortail }: {
           {envoi ? 'Ouverture du paiement…' : `Passer en Pro, ${TARIFS[periode].libelle}`}
         </button>
         {erreur && <p role="alert" className="mt-3 text-[13.5px] text-red-300">{erreur}</p>}
-        <p className="mt-3 text-[12.5px] leading-snug text-white/45">
+        <p className="mt-3 text-[12.5px] leading-snug text-white/55">
           Prix TTC. Paiement sécurisé par Creem, revendeur officiel de l’abonnement : il encaisse, envoie la facture et gère la TVA. Résiliable à tout moment, effet à la fin de la période payée.{' '}
           {abonnement.portail && <button type="button" onClick={() => aller(ouvrirPortail)} className={lien}>Mes factures</button>}
         </p>
@@ -215,13 +217,13 @@ function TesDonnees({ compte, urlExport, supprimerMonCompte }: { compte: CompteP
     } catch { setErreur('Le serveur ne répond pas. Réessaie dans un instant.'); }
     setEnvoi(false);
   }
-  const lien = 'text-white/60 underline decoration-white/25 underline-offset-2 hover:text-white';
+  const lien = 'inline-flex min-h-11 items-center text-white/60 underline decoration-white/25 underline-offset-2 hover:text-white';
   return (
-    <Carte titre="Tes données">
+    <Carte titre="Mes données">
       <p className="text-[13.5px] leading-snug text-white/60">Ta page, tes liens, tes images et tes statistiques, dans un fichier que tu peux garder ou importer ailleurs.</p>
       {urlExport
         ? <a href={urlExport} download className="mt-3 inline-flex min-h-10 items-center rounded-full bg-white/[0.08] px-4 text-[14px] font-medium text-white hover:bg-white/[0.13]">Télécharger mes données</a>
-        : <p className="mt-3 text-[13px] text-white/45">L’export n’existe pas dans l’aperçu.</p>}
+        : <p className="mt-3 text-[13px] text-white/55">L’export n’existe pas dans l’aperçu.</p>}
       {!compte.principal && (
         <div className="mt-5 border-t border-white/[0.06] pt-4">
           {ouvert ? (
@@ -239,7 +241,7 @@ function TesDonnees({ compte, urlExport, supprimerMonCompte }: { compte: CompteP
           )}
         </div>
       )}
-      <p className="mt-5 flex flex-wrap gap-x-4 gap-y-1 text-[13px]">
+      <p className="mt-3 flex flex-wrap gap-x-4 text-[13.5px]">
         <a href="/legal/cgu" target="_blank" rel="noopener" className={lien}>Conditions d’utilisation</a>
         <a href="/legal/confidentialite" target="_blank" rel="noopener" className={lien}>Confidentialité</a>
         <a href="/legal/traitement-des-donnees" target="_blank" rel="noopener" className={lien}>Accord de traitement</a>
@@ -260,7 +262,7 @@ function Langues({ reglages, onChange, adresse }: { reglages: Reglages; onChange
       <div className="mt-3 divide-y divide-white/[0.06] rounded-2xl bg-white/[0.035] px-4" role="group" aria-label="Langues proposées">
         <div className="flex items-center justify-between gap-4 py-3">
           <span className="text-[15px] font-medium text-white">Français</span>
-          <span className="text-[13px] text-white/45">Langue de ta page</span>
+          <span className="text-[13px] text-white/55">Langue de ta page</span>
         </div>
         {LANGUES.map(l => (
           <Interrupteur key={l} label={EN_FRANCAIS[l]} actif={actives.includes(l)} onChange={() => basculer(l)} />

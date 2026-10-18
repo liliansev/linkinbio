@@ -14,13 +14,7 @@ import { appDe } from '../lib/ouvrirApp.ts';
 import { ChampsPreuve, RegleAcces, RegleMoment, RegleReseaux, RegleTraductions, Repli } from './ReglesBloc.tsx';
 import { reseauxDePartage } from '../lib/provenance.ts';
 
-const AIDE_FORMATS = {
-  bouton: 'La taille des autres boutons, à la couleur choisie.',
-  bandeau: 'Un peu plus grand : picto à gauche, flèche à droite.',
-  carte: 'Un grand visuel au-dessus : l’image du lien, ou son picto en grand.',
-} as const;
-
-export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, onSupprimer, onDupliquer, envoyerImage, apercuSite, clics, adressePage, prises = 0 }: {
+export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, onSupprimer, onDupliquer, envoyerImage, apercuSite, clics, adressePage, prises = 0, principal = false }: {
   bloc: Bloc | null;
   reglages: Reglages;
   nouveau: boolean;
@@ -35,12 +29,16 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
   adressePage: string;
   /** Les places déjà prises, quand le lien est un drop. */
   prises?: number;
+  /** Le compte principal, seul visible par Google pendant la bêta. */
+  principal?: boolean;
 }) {
   const [b, setB] = useState<Bloc | null>(bloc);
   const [erreur, setErreur] = useState('');
   const [envoi, setEnvoi] = useState(false);
   const [lecture, setLecture] = useState(false);
   const [icones, setIcones] = useState(false);
+  // Un bloc neuf s'ajoute en deux champs ; le reste attend derrière « Plus de réglages ».
+  const [plus, setPlus] = useState(!nouveau);
   const fichier = useRef<HTMLInputElement>(null);
   useEffect(() => { setB(bloc); setErreur(''); }, [bloc]);
   if (!b) return null;
@@ -91,17 +89,23 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
     finally { setLecture(false); }
   }
 
-  /** Fermer d'un glissé, d'Échap ou d'un toucher à côté garde ce qui a changé, comme partout ailleurs. */
+  /**
+   * Fermer d'un glissé, d'Échap ou d'un toucher à côté garde ce qui a changé, comme partout
+   * ailleurs, y compris un bloc neuf : une adresse collée ne se perd pas d'un geste.
+   */
+  const commence = () => !!b && (nouveau ? !!b.url.trim() || !!b.titre.trim() : !!bloc && JSON.stringify(b) !== JSON.stringify(bloc));
   function fermerEnGardant() {
-    if (!nouveau && b && bloc && JSON.stringify(b) !== JSON.stringify(bloc)) {
+    if (commence()) {
       const v = valider();
       if (v) return onEnregistrer(v);
     }
     onFermer();
   }
+  /** Un bloc neuf commencé mais pas valable : la feuille reste ouverte et l'erreur dit quoi faire. */
+  const retenir = () => nouveau && commence() && !valider();
 
   return (
-    <Feuille ouverte onFermer={fermerEnGardant} titre={nouveau ? `Nouveau : ${type.nom.toLowerCase()}` : type.nom}
+    <Feuille ouverte onFermer={fermerEnGardant} retenir={retenir} titre={nouveau ? `Nouveau : ${type.nom.toLowerCase()}` : type.nom}
       pied={fermer => (
         <div className="flex items-center gap-2">
           {!nouveau && (
@@ -161,6 +165,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
           </Champ>
         )}
 
+        {plus ? (<>
         {(b.type === 'lien' || b.type === 'newsletter' || b.type === 'inscription') && (
           <Champ label="Sous-titre (facultatif)">
             <input className={classeSaisie} value={b.sousTitre} onChange={e => maj({ sousTitre: e.target.value })} maxLength={240} />
@@ -182,7 +187,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
                 <span className="text-white"><Icone nom={b.icone && ICONES[b.icone] ? b.icone : 'ui-aucun'} taille={20} /></span>
                 <span className="flex-1 text-[14.5px] font-medium text-white/85">Icône</span>
                 <span className="text-[13px] text-white/50">{b.icone ? NOMS_RESEAUX[b.icone] ?? PICTOS.find(p => p.nom === b.icone)?.libelle ?? '' : 'Aucune'}</span>
-                <Icone nom="ui-chevron" taille={16} className={`text-white/45 transition ${icones ? 'rotate-180' : ''}`} />
+                <Icone nom="ui-chevron" taille={16} className={`text-white/55 transition ${icones ? 'rotate-180' : ''}`} />
               </button>
               {icones && <div role="radiogroup" aria-label="Icône" className="mt-1.5 grid max-h-[208px] grid-cols-[repeat(auto-fill,minmax(44px,1fr))] gap-1.5 overflow-y-auto rounded-2xl bg-white/[0.035] p-2 [scrollbar-width:thin]">
                 {[{ nom: '', libelle: 'Sans icône' }, ...RESEAUX.map(r => ({ nom: r as string, libelle: NOMS_RESEAUX[r] })), ...PICTOS].map(p => {
@@ -221,7 +226,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
           {b.type !== 'titre' && b.type !== 'texte' && b.type !== 'newsletter' && b.type !== 'inscription' && b.type !== 'preuve' && (
             <Interrupteur label="Mis en avant" actif={b.vedette} onChange={v => maj({ vedette: v })} />
           )}
-          {b.type === 'lien' && (
+          {b.type === 'lien' && principal && (
             <Interrupteur label="Visible par Google" actif={b.indexable} onChange={v => maj({ indexable: v })} />
           )}
         </div>
@@ -232,7 +237,6 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
               <span className="mb-1.5 block text-[13px] font-medium text-white/70">Forme</span>
               <Segments label="Forme du lien mis en avant" valeur={b.format} onChange={v => maj({ format: v })}
                 options={[{ id: 'bouton', nom: 'Bouton' }, { id: 'bandeau', nom: 'Bandeau' }, { id: 'carte', nom: 'Carte' }]} />
-              <p className="mt-1.5 text-[12.5px] leading-snug text-white/45">{AIDE_FORMATS[b.format]}</p>
             </div>
             <div>
               <span className="mb-1.5 block text-[13px] font-medium text-white/70">Couleur</span>
@@ -256,8 +260,16 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
         <RegleMoment key={`moment-${b.id}`} b={b} maj={maj} />
         <RegleReseaux key={`reseaux-${b.id}`} b={b} maj={maj} reseaux={reseauxDePartage(reglages.vuesReseaux)} />
         <RegleTraductions key={`langues-${b.id}`} b={b} maj={maj} langues={reglages.langues ?? []} />
+        </>) : (
+          <button type="button" onClick={() => { vibrer(4); setPlus(true); }}
+            className="flex min-h-12 w-full items-center gap-3 rounded-2xl bg-white/[0.035] px-4 text-left transition hover:bg-white/[0.06]">
+            <Icone nom="reglage" taille={20} className="text-white/70" />
+            <span className="flex-1 text-[14.5px] font-medium text-white/85">Plus de réglages</span>
+            <Icone nom="ui-chevron" taille={16} className="text-white/55" />
+          </button>
+        )}
 
-        {!nouveau && b.type === 'lien' && <p className="text-center text-[13px] text-white/45">{clics} clic{clics > 1 ? 's' : ''} ces 30 derniers jours</p>}
+        {!nouveau && b.type === 'lien' && <p className="text-center text-[13px] text-white/55">{clics} clic{clics > 1 ? 's' : ''} ces 30 derniers jours</p>}
       </div>
     </Feuille>
   );

@@ -26,7 +26,7 @@ export function Champ({ label, aide, children }: { label: string; aide?: ReactNo
     <label className="block">
       <span className="mb-1.5 block text-[12.5px] font-medium text-white/60">{label}</span>
       {children}
-      {aide && <span className="mt-1.5 block text-[12.5px] leading-snug text-white/45">{aide}</span>}
+      {aide && <span className="mt-1.5 block text-[12.5px] leading-snug text-white/55">{aide}</span>}
     </label>
   );
 }
@@ -81,26 +81,43 @@ export function vibrer(ms = 8) {
  * `apercu`, sur téléphone, se pose au-dessus de la feuille : la page en direct,
  * en miniature, qui suit chaque réglage (Lilian, 18 octobre 2026).
  */
-export function Feuille({ ouverte, onFermer, titre, children, pied, cote = false, apercu }: { ouverte: boolean; onFermer: () => void; titre: string; children: Contenu; pied?: Contenu; cote?: boolean; apercu?: React.ReactNode }) {
+export function Feuille({ ouverte, onFermer, retenir, titre, children, pied, cote = false, apercu }: { ouverte: boolean; onFermer: () => void; retenir?: () => boolean; titre: string; children: Contenu; pied?: Contenu; cote?: boolean; apercu?: React.ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
   const [sortie, setSortie] = useState(false);
   const [tire, setTire] = useState(0);
   const geste = useRef<{ y: number; t: number } | null>(null);
   const fermer = useCallback<Fermer>(apres => {
+    // Un geste qui fermerait sur un travail pas valable laisse la feuille ouverte (retenir dit pourquoi).
+    if (!apres && retenir?.()) { setTire(0); vibrer(20); return; }
     setSortie(true);
     const reduit = matchMedia('(prefers-reduced-motion: reduce)').matches;
     setTimeout(() => { setSortie(false); setTire(0); (apres ?? onFermer)(); }, reduit ? 0 : 190);
-  }, [onFermer]);
+  }, [onFermer, retenir]);
 
+  // L'effet ne dépend que de l'ouverture : un parent qui se redessine ne vole pas le focus du champ en cours.
+  const fermerRef = useRef(fermer);
+  fermerRef.current = fermer;
   useEffect(() => {
     if (!ouverte) return;
-    const touche = (e: KeyboardEvent) => { if (e.key === 'Escape') fermer(); };
+    // Une vraie fenêtre : Tab tourne dans la feuille, et le focus revient d'où il venait à la fermeture.
+    const avantFocus = document.activeElement as HTMLElement | null;
+    const touche = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') fermerRef.current();
+      if (e.key !== 'Tab' || !ref.current) return;
+      const cibles = [...ref.current.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), input:not([disabled]):not([type=hidden]), select, textarea, [tabindex]:not([tabindex="-1"])')].filter(x => x.offsetParent !== null);
+      if (!cibles.length) return;
+      const premier = cibles[0], dernier = cibles[cibles.length - 1];
+      if (e.shiftKey && (document.activeElement === premier || document.activeElement === ref.current)) { e.preventDefault(); dernier.focus(); }
+      else if (!e.shiftKey && document.activeElement === dernier) { e.preventDefault(); premier.focus(); }
+      else if (!ref.current.contains(document.activeElement)) { e.preventDefault(); premier.focus(); }
+    };
     document.addEventListener('keydown', touche);
     const avant = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
-    ref.current?.focus();
-    return () => { document.removeEventListener('keydown', touche); document.body.style.overflow = avant; };
-  }, [ouverte, fermer]);
+    // Le champ qui a l'autoFocus garde la main ; sinon la feuille prend le focus.
+    if (!ref.current?.contains(document.activeElement)) ref.current?.focus();
+    return () => { document.removeEventListener('keydown', touche); document.body.style.overflow = avant; if (avantFocus?.isConnected) avantFocus.focus({ preventScroll: true }); };
+  }, [ouverte]);
   if (!ouverte) return null;
 
   const tirer = {
@@ -125,7 +142,7 @@ export function Feuille({ ouverte, onFermer, titre, children, pied, cote = false
   return (
     <div className={`fixed inset-0 z-50 flex items-end justify-center ${cote ? 'sm:items-stretch sm:justify-end sm:p-4' : 'sm:items-center'}`} role="dialog" aria-modal="true" aria-label={titre} data-sortie={sortie || undefined}>
       <button type="button" aria-label="Fermer" className={`adm-fondu absolute inset-0 ${apercu ? 'bg-[#0b0f19] sm:bg-black/10' : cote ? 'bg-black/10' : 'bg-black/60 backdrop-blur-[2px]'}`} onClick={() => fermer()} />
-      {apercu && <div className="adm-fondu pointer-events-none absolute inset-x-0 top-0 bottom-[54dvh] flex items-center justify-center px-4 pt-[max(12px,env(safe-area-inset-top))] pb-3 sm:hidden">{apercu}</div>}
+      {apercu && <div inert className="adm-fondu pointer-events-none absolute inset-x-0 top-0 bottom-[54dvh] flex items-center justify-center px-4 pt-[max(12px,env(safe-area-inset-top))] pb-3 sm:hidden">{apercu}</div>}
       <div ref={ref} tabIndex={-1}
         style={tire ? { transform: `translateY(${tire}px)`, transition: 'none' } : undefined}
         className={`adm-feuille relative flex ${apercu ? 'h-[54dvh] sm:h-auto sm:w-[400px]' : cote ? 'max-h-[58dvh] sm:max-h-none sm:w-[400px]' : 'max-h-[92dvh]'} w-full flex-col rounded-t-[20px] border border-b-0 border-white/10 bg-[#111827] shadow-[0_-20px_60px_-20px_rgba(0,0,0,0.7)] outline-none sm:max-w-lg sm:rounded-[20px] sm:border-b`}>
@@ -133,12 +150,12 @@ export function Feuille({ ouverte, onFermer, titre, children, pied, cote = false
           <div className="mx-auto mt-2 h-1 w-9 rounded-full bg-white/20 sm:hidden" />
           <header className="flex items-center justify-between gap-3 px-5 pt-2.5 pb-2 sm:pt-4">
             <h2 className="text-[15.5px] font-semibold tracking-[-0.01em] text-white">{titre}</h2>
-            <button type="button" onClick={() => fermer()} className="-mr-2 grid h-9 w-9 place-items-center rounded-full text-white/50 transition hover:bg-white/10 hover:text-white active:scale-90" aria-label="Fermer">
+            <button type="button" onClick={() => fermer()} className="-mr-3 grid h-11 w-11 place-items-center rounded-full text-white/50 transition hover:bg-white/10 hover:text-white active:scale-90" aria-label="Fermer">
               <Icone nom="ui-fermer" taille={18} />
             </button>
           </header>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-4">{rendre(children)}</div>
+        <div className={`min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 ${pied ? 'pb-4' : 'pb-[max(16px,env(safe-area-inset-bottom))]'}`}>{rendre(children)}</div>
         {pied && <footer className="shrink-0 border-t border-white/[0.07] px-5 pt-3 pb-[max(12px,env(safe-area-inset-bottom))]">{rendre(pied)}</footer>}
       </div>
     </div>
@@ -179,7 +196,7 @@ export function Segments<T extends string>({ valeur, options, onChange, label }:
     <div role="radiogroup" aria-label={label} className="flex gap-0.5 rounded-[10px] bg-white/[0.05] p-[3px]">
       {options.map(o => (
         <button key={o.id} type="button" role="radio" aria-checked={valeur === o.id} onClick={() => { vibrer(5); onChange(o.id); }}
-          className={`min-h-8 flex-1 rounded-[7px] px-2.5 text-[13px] font-medium transition duration-200 ${valeur === o.id ? 'bg-white/[0.14] text-white shadow-[0_1px_2px_rgba(0,0,0,0.3)]' : 'text-white/55 hover:text-white'}`}>
+          className={`min-h-10 flex-1 rounded-[7px] px-2.5 text-[13.5px] font-medium transition duration-200 ${valeur === o.id ? 'bg-white/[0.14] text-white shadow-[0_1px_2px_rgba(0,0,0,0.3)]' : 'text-white/55 hover:text-white'}`}>
           {o.nom}
         </button>
       ))}

@@ -46,6 +46,7 @@ export interface Edition {
 export function PageLiens({ page, apercu = false, edition }: { page: PagePublique; apercu?: boolean; edition?: Edition }) {
   if (edition) apercu = true;
   const { reglages, blocs, compte } = page;
+  const Nom = apercu ? 'h2' : 'h1';
   // La page de Lilian s'annonce sans pseudo ; les autres avec le leur.
   const pseudo = compte.principal ? '' : compte.pseudo;
   const theme = themeDe(reglages);
@@ -115,13 +116,14 @@ export function PageLiens({ page, apercu = false, edition }: { page: PagePubliqu
               <span className="lp-ed-pastille">{edition.envoiPhoto ? '…' : <Icone nom="photo" taille={16} />}</span>
             </button>
           ) : reglages.profil.avatar && <img className="lp-avatar" src={reglages.profil.avatar} alt="" width={96} height={96} />}
-          <h1 className="lp-nom">
+          {/* Dans le back office, la page n'est qu'un aperçu : son nom n'y prend pas le titre principal. */}
+          <Nom className="lp-nom">
             {edition
               ? <input className="lp-ed-saisie" value={reglages.profil.nom} maxLength={80} placeholder="Ton nom" aria-label="Ton nom"
                   style={{ width: `${Math.max(reglages.profil.nom.length, 7) + 1}ch` }} onChange={e => edition.profil({ nom: e.target.value })} />
               : reglages.profil.nom}
             {reglages.profil.badge && <span className="lp-badge" title={t.verifie}><Icone nom="badge" taille={20} /></span>}
-          </h1>
+          </Nom>
           {edition
             ? <ChampBio valeur={reglages.profil.bio} onChange={bio => edition.profil({ bio })} />
             : reglages.profil.bio && <p className="lp-bio">{reglages.profil.bio}</p>}
@@ -373,7 +375,7 @@ function Newsletter({ bloc, apercu }: { bloc: Bloc; apercu: boolean }) {
       {etat.type === 'ok' ? <p className="lp-newsletter-ok" role="status">{etat.message}</p> : (
         <form onSubmit={envoyer}>
           <input type="email" name="email" required autoComplete="email" placeholder="votre@email.fr" aria-label="Votre adresse e-mail" />
-          <button type="submit" className="lp-btn lp-btn-compact" disabled={etat.type === 'envoi'}>{etat.type === 'envoi' ? '…' : 'S’inscrire'}</button>
+          <button type="submit" className="lp-btn lp-btn-compact lp-accent" disabled={etat.type === 'envoi'}>{etat.type === 'envoi' ? '…' : 'S’inscrire'}</button>
         </form>
       )}
       {etat.type === 'erreur' && <p className="lp-newsletter-erreur" role="alert">{etat.message}</p>}
@@ -412,7 +414,7 @@ function Inscription({ bloc, apercu, pseudo, t }: { bloc: Bloc; apercu: boolean;
           <input type="email" name="email" required autoComplete="email" placeholder={t.email} aria-label={t.emailAria} />
           {/* Un champ que seuls les robots remplissent. */}
           <input name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" className="lp-piege" />
-          <button type="submit" className="lp-btn lp-btn-compact" disabled={etat.type === 'envoi'}>{etat.type === 'envoi' ? '…' : t.inscrire}</button>
+          <button type="submit" className="lp-btn lp-btn-compact lp-accent" disabled={etat.type === 'envoi'}>{etat.type === 'envoi' ? '…' : t.inscrire}</button>
         </form>
       )}
       {etat.type === 'erreur' && <p className="lp-newsletter-erreur" role="alert">{etat.message}</p>}
@@ -464,11 +466,11 @@ function Drop({ bloc, t, langue, apercu, pseudo, clic, cible }: { bloc: Bloc; t:
       {avecCode && ouvert && !url && (
         <form className="lp-drop-form" onSubmit={e => { e.preventDefault(); debloquer(String(new FormData(e.currentTarget).get('code') ?? '')); }}>
           <input name="code" required maxLength={40} autoComplete="off" autoCapitalize="none" spellCheck={false} placeholder={t.code} aria-label={t.code} autoFocus />
-          <button type="submit" className="lp-btn lp-btn-compact" disabled={etat.type === 'envoi'}>{etat.type === 'envoi' ? '…' : t.debloquer}</button>
+          <button type="submit" className="lp-btn lp-btn-compact lp-accent" disabled={etat.type === 'envoi'}>{etat.type === 'envoi' ? '…' : t.debloquer}</button>
         </form>
       )}
       {url && (
-        <a className="lp-btn lp-btn-compact lp-drop-ouvrir" href={url} rel="noopener" {...cible}>
+        <a className="lp-btn lp-btn-compact lp-accent lp-drop-ouvrir" href={url} rel="noopener" {...cible}>
           <span className="lp-btn-titre">{t.ouvrir}</span><Icone nom="ui-fleche" taille={16} />
         </a>
       )}

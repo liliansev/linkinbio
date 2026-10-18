@@ -90,7 +90,7 @@ export function RegleMoment({ b, maj }: { b: Bloc; maj: (c: Partial<Bloc>) => vo
               {c.effet === 'avant' ? `Ce bloc passe en tête de ta page, mis en avant, ${decrireCreneau(c)}.` : `Ce bloc n’apparaît que ${decrireCreneau(c)}.`} Heure de {c.fuseau.split('/').pop()?.replace(/_/g, ' ')}.
             </p>
           </div>
-        ) : <p className="mt-1.5 text-[12.5px] leading-snug text-white/45">Choisis des jours : par exemple « Réserver » mis en avant en semaine le matin, « Mon live » le dimanche soir.</p>}
+        ) : <p className="mt-1.5 text-[12.5px] leading-snug text-white/55">Choisis des jours : par exemple « Réserver » mis en avant en semaine le matin, « Mon live » le dimanche soir.</p>}
       </div>
     </Repli>
   );
@@ -162,7 +162,7 @@ export function RegleAcces({ b, maj, prises }: { b: Bloc; maj: (c: Partial<Bloc>
   };
   const resume = a ? [a.code ? `code « ${a.code} »` : '', a.places ? `${prises}/${a.places} places prises` : ''].filter(Boolean).join(', ') : '';
   return (
-    <Repli titre="Accès réservé (mode drop)" icone="cadenas" resume={resume} ouvert={!!a}>
+    <Repli titre="Accès réservé" icone="cadenas" resume={resume} ouvert={!!a}>
       <p className="text-[13px] leading-snug text-white/55">L’adresse du lien n’est jamais dans ta page : elle ne s’ouvre qu’avec le bon code, ou pour les premiers arrivés.</p>
       <Champ label="Code à taper (facultatif)" aide="Donne-le en story, en live ou dans ta newsletter. Majuscules et espaces ne comptent pas.">
         <input className={classeSaisie} value={a?.code ?? ''} maxLength={40} autoCapitalize="characters" autoComplete="off" spellCheck={false}
@@ -206,7 +206,7 @@ export function RegleTraductions({ b, maj, langues }: { b: Bloc; maj: (c: Partia
           ))}
         </div>
       ))}
-      <p className="text-[12.5px] leading-snug text-white/45">Un champ vide garde le texte en français.</p>
+      <p className="text-[12.5px] leading-snug text-white/55">Un champ vide garde le texte en français.</p>
     </Repli>
   );
 }
@@ -254,15 +254,11 @@ export function ChampsPreuve({ b, maj }: { b: Bloc; maj: (c: Partial<Bloc>) => v
         </>
       )}
       <Champ label="Où ça se passe (facultatif)">
-        <input className={classeSaisie} value={p.source} maxLength={30} onChange={e => majP({ source: e.target.value })} placeholder="Google" />
+        {/* Les sources courantes en suggestions du champ, plutôt qu'une rangée de pastilles. */}
+        <input className={classeSaisie} value={p.source} maxLength={30} onChange={e => majP({ source: e.target.value })} placeholder="Google" list="sources-preuve" />
       </Champ>
-      <div className="-mx-5 flex gap-1.5 overflow-x-auto px-5 pb-1 [scrollbar-width:none]" role="group" aria-label="Sources courantes">
-        {SOURCES_PREUVE.map(s => (
-          <button key={s} type="button" onClick={() => { vibrer(4); majP({ source: s }); }}
-            className={`min-h-9 shrink-0 rounded-full px-3.5 text-[13.5px] font-medium transition active:scale-95 ${p.source === s ? 'bg-white text-nuit' : 'bg-white/[0.07] text-white/70 hover:text-white'}`}>{s}</button>
-        ))}
-      </div>
-      <p className="text-[12.5px] leading-snug text-white/45">Montre des chiffres vrais et des avis réels, avec l’accord de leurs auteurs : c’est la loi, et c’est ce qui marche.</p>
+      <datalist id="sources-preuve">{SOURCES_PREUVE.map(s => <option key={s} value={s} />)}</datalist>
+      <p className="text-[12.5px] leading-snug text-white/55">Montre des chiffres vrais et des avis réels, avec l’accord de leurs auteurs : c’est la loi, et c’est ce qui marche.</p>
     </>
   );
 }

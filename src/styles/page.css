@@ -106,7 +106,7 @@
 .lp-btn:active, .lp-carte:active { transform: scale(0.97); transition-duration: 0.08s; }
 .lp-btn:focus-visible, .lp-carte:focus-visible, .lp-partager:focus-visible, .lp-reseaux a:focus-visible { outline: 3px solid var(--texte); outline-offset: 3px; }
 .lp-btn-texte { display: flex; flex-direction: column; gap: 2px; }
-.lp-sous { font-size: 0.84rem; font-weight: 450; opacity: 0.78; }
+.lp-sous { font-size: 0.84rem; font-weight: 450; opacity: 0.92; }
 
 .lp-picto, .lp-vignette { position: absolute; left: 10px; top: 50%; translate: 0 -50%; width: 40px; height: 40px; }
 .lp-picto { display: grid; place-items: center; }
@@ -351,7 +351,7 @@
 }
 .lp-newsletter-textes { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .lp-newsletter-titre { margin: 0; font-size: 1rem; font-weight: 620; line-height: 1.25; }
-.lp-newsletter .lp-sous { margin: 0; font-size: 0.86rem; line-height: 1.35; color: color-mix(in srgb, var(--surface-texte) 62%, transparent); }
+.lp-newsletter .lp-sous { margin: 0; opacity: 1; font-size: 0.86rem; line-height: 1.35; color: color-mix(in srgb, var(--surface-texte) 90%, transparent); }
 /* Le champ et le bouton ne font qu'une pièce : le bouton est posé dans le champ. */
 .lp-newsletter form {
   display: flex; gap: 6px; padding: 5px; flex-wrap: wrap; border-radius: var(--r);
@@ -364,15 +364,14 @@
   flex: 1 1 0; min-width: 0; min-height: 44px; padding: 0 12px; font: inherit; font-size: 16px;
   border: 0; border-radius: calc(var(--r) - 5px); color: inherit; background: transparent; outline: none;
 }
-.lp-newsletter input::placeholder { color: color-mix(in srgb, var(--surface-texte) 58%, transparent); }
-/* Le bouton d'inscription prend la couleur de la carte mise en avant. */
-[data-bouton='plein'] .lp-newsletter .lp-btn-compact { --lp-fond: var(--vedette); --lp-encre: var(--vedette-texte); }
+.lp-newsletter input::placeholder { color: color-mix(in srgb, var(--surface-texte) 94%, transparent); }
+/* Le bouton d'inscription prend l'accent (classe lp-accent), quel que soit le style des boutons : lisible sur toutes les cartes. */
 .lp-btn-compact { min-height: 44px; padding: 0 18px; border-radius: calc(var(--r) - 5px); flex: 0 0 auto; cursor: pointer; border: 0; font: inherit; font-weight: 600; }
 .lp-newsletter-ok { margin: 0; font-weight: 560; }
 .lp-newsletter-erreur { margin: -6px 0 0; font-size: 0.88rem; }
 
-.lp-signature { text-align: center; margin: 36px 0 0; font-size: 0.82rem; }
-.lp-signature a { color: var(--doux); text-decoration: none; }
+.lp-signature { text-align: center; margin: 24px 0 0; font-size: 0.82rem; }
+.lp-signature a { color: var(--doux); text-decoration: none; display: inline-block; padding: 12px 8px; }
 .lp-signature a:hover { color: var(--texte); }
 .lp-legal { display: flex; justify-content: center; gap: 14px; margin-top: 8px; font-size: 0.78rem; opacity: 0.85; }
 .lp-legal:first-child { margin-top: 0; }
@@ -638,9 +637,9 @@ button.lp-ed-zone:focus-visible { outline: 2px solid var(--vedette); outline-off
 .lp-ed-bloc[data-glisse] > :not(.lp-ed-puces) { box-shadow: 0 26px 50px -18px rgb(0 0 0 / 0.6); }
 .lp-ed-puces { position: absolute; top: -9px; right: 12px; display: flex; gap: 4px; pointer-events: none; }
 .lp-ed-puce {
-  display: inline-flex; align-items: center; gap: 4px; padding: 1px 8px; border-radius: 999px;
-  font: 600 11px/1.6 var(--police); white-space: nowrap;
-  background: var(--texte); color: var(--fond-uni);
+  /* Le picto est découpé dans le fond de la page : il se lit sur le bord du bloc sans pastille visible. */
+  display: grid; place-items: center; width: 20px; height: 20px; border-radius: 50%;
+  background: var(--fond-uni); color: var(--texte);
 }
 
 /* ---- Compte à rebours : un lien annoncé, pas encore ouvert ---- */

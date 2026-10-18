@@ -14,6 +14,7 @@ import { vibrer } from './ui.tsx';
 
 const CLE_PARTAGE = 'hopla-page-partagee';
 const CLE_MASQUE = 'hopla-demarrage-masque';
+const CLE_THEME = 'hopla-themes-vus';
 const lire = (cle: string) => { try { return localStorage.getItem(cle) === '1'; } catch { return false; } };
 const noter = (cle: string) => { try { localStorage.setItem(cle, '1'); } catch { /* stockage refusé */ } };
 
@@ -22,8 +23,9 @@ export function HautLiens({ compte, reglages, blocs, aller }: { compte: ComptePa
   const courte = adresse.replace(/^https?:\/\//, '');
   const [partagee, setPartagee] = useState(() => lire(CLE_PARTAGE));
   const [masque, setMasque] = useState(() => lire(CLE_MASQUE));
+  const [themeVu, setThemeVu] = useState(() => lire(CLE_THEME));
   const [copie, setCopie] = useState(false);
-  const etapes = etapesDemarrage(reglages, blocs, partagee);
+  const etapes = etapesDemarrage(reglages, blocs, partagee, themeVu);
   const faites = etapes.filter(e => e.faite).length;
   const peutPartager = typeof navigator !== 'undefined' && typeof navigator.share === 'function';
 
@@ -44,12 +46,12 @@ export function HautLiens({ compte, reglages, blocs, aller }: { compte: ComptePa
         </span>
         <span className="min-w-0 flex-1 truncate text-[14px] font-medium text-white" translate="no">{courte}</span>
         <button type="button" onClick={copier} aria-label="Copier l’adresse de ta page"
-          className="flex min-h-8 items-center gap-1.5 rounded-full bg-white/[0.07] px-3 text-[13px] font-medium text-white transition active:scale-95">
+          className="flex min-h-11 items-center gap-1.5 rounded-full bg-white/[0.07] px-3.5 text-[13.5px] font-medium text-white transition active:scale-95">
           <Icone nom={copie ? 'ui-ok' : 'ui-copier'} taille={16} />{copie ? 'Copié' : 'Copier'}
         </button>
         {peutPartager && (
           <button type="button" onClick={partager} aria-label="Partager ta page"
-            className="grid h-8 w-8 place-items-center rounded-full bg-white text-nuit transition active:scale-95"><Icone nom="partage" taille={18} /></button>
+            className="grid h-11 w-11 place-items-center rounded-full bg-white text-nuit transition active:scale-95"><Icone nom="partage" taille={19} /></button>
         )}
       </div>
 
@@ -58,10 +60,10 @@ export function HautLiens({ compte, reglages, blocs, aller }: { compte: ComptePa
           <div className="mb-3 flex items-start justify-between gap-3">
             <div>
               <h2 className="text-[14px] font-medium text-white">Bien démarrer</h2>
-              <p className="text-[12.5px] text-white/45">Encore {etapes.length - faites} {etapes.length - faites > 1 ? 'étapes' : 'étape'} pour une page prête à partager.</p>
+              <p className="text-[12.5px] text-white/55">Encore {etapes.length - faites} {etapes.length - faites > 1 ? 'étapes' : 'étape'} pour une page prête à partager.</p>
             </div>
             <button type="button" onClick={() => { noter(CLE_MASQUE); setMasque(true); }} aria-label="Masquer ces étapes"
-              className="-mt-1 -mr-1 grid h-9 w-9 place-items-center rounded-full text-white/45 hover:bg-white/[0.06] hover:text-white"><Icone nom="ui-fermer" taille={18} /></button>
+              className="-mt-2 -mr-2 grid h-11 w-11 place-items-center rounded-full text-white/55 hover:bg-white/[0.06] hover:text-white"><Icone nom="ui-fermer" taille={18} /></button>
           </div>
           <div className="mb-3 h-1 overflow-hidden rounded-full bg-white/[0.08]" role="progressbar" aria-valuemin={0} aria-valuemax={etapes.length} aria-valuenow={faites}>
             <div className="h-full rounded-full bg-white transition-[width] duration-500" style={{ width: `${(faites / etapes.length) * 100}%` }} />
@@ -69,8 +71,8 @@ export function HautLiens({ compte, reglages, blocs, aller }: { compte: ComptePa
           <ol className="-mx-1.5 flex flex-col">
             {etapes.filter(e => !e.faite).map(e => (
               <li key={e.id}>
-                <button type="button" onClick={() => (e.id === 'partage' ? (peutPartager ? partager() : copier()) : aller(e.id))}
-                  className="group flex w-full items-center gap-3 rounded-xl px-1.5 py-2 text-left transition hover:bg-white/[0.05] active:scale-[0.99]">
+                <button type="button" onClick={() => { if (e.id === 'theme') { noter(CLE_THEME); setThemeVu(true); } if (e.id === 'partage') { if (peutPartager) partager(); else copier(); } else aller(e.id); }}
+                  className="group flex min-h-11 w-full items-center gap-3 rounded-xl px-1.5 py-1.5 text-left transition hover:bg-white/[0.05] active:scale-[0.99]">
                   <span className="h-5 w-5 shrink-0 rounded-full border-[1.5px] border-white/25 transition group-hover:border-white/30" />
                   <span className="min-w-0 flex-1 text-[14px] font-medium text-white">{e.nom}</span>
                   <Icone nom="ui-chevron" taille={16} className="-rotate-90 text-white/30 group-hover:text-white/60" />

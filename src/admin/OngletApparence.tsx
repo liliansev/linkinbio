@@ -6,6 +6,7 @@ import { THEMES, themeDe, themeParId, variablesTheme } from '../lib/themes.ts';
 import type { Theme } from '../lib/themes.ts';
 import { Icone, NOMS_RESEAUX } from '../components/Icone.tsx';
 import { Carte, Champ, Interrupteur, NOMS_ANIMATIONS, Segments, classeSaisie, preparerImage, vibrer } from './ui.tsx';
+import { urlReseau } from '../lib/demarrage.ts';
 
 const STYLES: { id: StyleBouton; nom: string }[] = [
   { id: 'plein', nom: 'Plein' }, { id: 'contour', nom: 'Contour' }, { id: 'doux', nom: 'Doux' }, { id: 'relief', nom: 'Relief' }, { id: 'verre', nom: 'Verre' },
@@ -13,8 +14,8 @@ const STYLES: { id: StyleBouton; nom: string }[] = [
 const OMBRES: { id: OmbreBouton; nom: string }[] = [{ id: 'aucune', nom: 'Aucune' }, { id: 'subtile', nom: 'Subtile' }, { id: 'marquee', nom: 'Marquée' }];
 const FORMES: { id: FormeBouton; nom: string }[] = [{ id: 'pilule', nom: 'Pilule' }, { id: 'arrondi', nom: 'Arrondi' }, { id: 'carre', nom: 'Net' }];
 const EXEMPLES: Record<Reseau, string> = {
-  youtube: 'https://youtube.com/@…', linkedin: 'https://linkedin.com/in/…', instagram: 'https://instagram.com/…', tiktok: 'https://tiktok.com/@…',
-  x: 'https://x.com/…', github: 'https://github.com/…', facebook: 'https://facebook.com/…', threads: 'https://threads.net/@…', twitch: 'https://twitch.tv/…',
+  youtube: '@pseudo ou lien', linkedin: 'pseudo ou lien', instagram: '@pseudo ou lien', tiktok: '@pseudo ou lien',
+  x: '@pseudo ou lien', github: 'pseudo ou lien', facebook: 'pseudo ou lien', threads: '@pseudo ou lien', twitch: 'pseudo ou lien',
   spotify: 'https://open.spotify.com/…', email: 'toi@exemple.fr', site: 'https://…',
 };
 
@@ -37,6 +38,8 @@ const TOUTES: PartieApparence[] = ['profil', 'theme', 'couleurs', 'animation', '
 /** Les réglages d'apparence, en cartes. `parties` n'en garde que certaines (les feuilles de « Ma page »). */
 export function OngletApparence({ reglages, onChange, envoyerImage, principal = true, parties = TOUTES }: { reglages: Reglages; onChange: (r: Reglages) => void; envoyerImage: (d: string) => Promise<string>; principal?: boolean; parties?: PartieApparence[] }) {
   const voir = (p: PartieApparence) => parties.includes(p);
+  // Seule dans une feuille, une partie est déjà nommée par la feuille : pas de second titre.
+  const titre = (t: string) => (parties.length === 1 ? undefined : t);
   const [envoi, setEnvoi] = useState(false);
   // Un thème choisi par-dessus des couleurs à soi : elles partent, mais un toucher les rend.
   const [avantTheme, setAvantTheme] = useState<Reglages | null>(null);
@@ -54,7 +57,7 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
 
   return (
     <div className="flex flex-col gap-4">
-      {voir('profil') && <Carte titre="Profil" id="profil">
+      {voir('profil') && <Carte titre={titre('Profil')} id="profil">
         <div className="mb-4 flex items-center gap-4">
           <button type="button" onClick={() => fichier.current?.click()} className="group relative h-20 w-20 shrink-0 overflow-hidden rounded-full bg-white/10" aria-label="Changer la photo">
             {reglages.profil.avatar && <img src={reglages.profil.avatar} alt="" className="h-full w-full object-cover" />}
@@ -73,7 +76,7 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
         </div>
       </Carte>}
 
-      {voir('theme') && <Carte titre="Thème" id="theme" action={<span className="text-[13px] text-white/50">{theme.nom}</span>}>
+      {voir('theme') && <Carte titre={titre('Thème')} id="theme" action={<span className="text-[13px] text-white/50">{theme.nom}</span>}>
         {avantTheme && (
           <p role="status" className="mb-3 flex items-center justify-between gap-3 text-[13px] text-white/60">
             Tes couleurs à toi ont été retirées.
@@ -92,17 +95,14 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
               }} aria-pressed={theme.id === t.id}
                 className={`flex w-full flex-col items-center gap-1.5 rounded-2xl p-1.5 transition ${theme.id === t.id ? 'bg-white/10 ring-2 ring-white' : 'hover:bg-white/[0.05]'}`}>
                 <Pastille theme={t} />
-                <span className="flex w-full flex-col text-center leading-tight">
-                  <span className="truncate text-[12.5px] font-medium text-white/85">{t.nom}</span>
-                  <span className="truncate text-[11.5px] text-white/50">{t.humeur}</span>
-                </span>
+                <span className="w-full truncate text-center text-[12.5px] font-medium leading-tight text-white/85">{t.nom}</span>
               </button>
             </li>
           ))}
         </ul>
       </Carte>}
 
-      {voir('couleurs') && <Carte titre="Couleurs" action={reglages.couleurs.fond || reglages.couleurs.boutons || reglages.couleurs.accent
+      {voir('couleurs') && <Carte titre={titre('Couleurs')} action={reglages.couleurs.fond || reglages.couleurs.boutons || reglages.couleurs.accent
         ? <button type="button" onClick={() => maj({ couleurs: SANS_COULEURS })} className="text-[13px] font-medium text-white/60 hover:text-white">Tout remettre</button> : undefined}>
         <div className="flex flex-col gap-5">
           {CLES_COULEURS.map(c => (
@@ -112,7 +112,7 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
         </div>
       </Carte>}
 
-      {voir('animation') && <Carte titre="Liens mis en avant" action={<span className="text-[13px] text-white/50">{NOMS_ANIMATIONS[reglages.animation].nom}</span>}>
+      {voir('animation') && <Carte titre={titre('Animation')} action={<span className="text-[13px] text-white/50">{NOMS_ANIMATIONS[reglages.animation].nom}</span>}>
         <div className="lp lp-mini rounded-2xl p-2.5" style={variablesTheme(theme) as CSSProperties} data-bouton={reglages.bouton.style} data-forme={reglages.bouton.forme} data-ombre={reglages.bouton.ombre} data-police={theme.police} data-decor={theme.decor}>
           <ul role="radiogroup" aria-label="Animation des liens mis en avant" className="grid grid-cols-2 gap-2">
             {ANIMATIONS.map(a => {
@@ -132,7 +132,7 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
         </div>
       </Carte>}
 
-      {voir('boutons') && <Carte titre="Boutons">
+      {voir('boutons') && <Carte titre={titre('Boutons')}>
         <div className="lp lp-mini rounded-2xl p-3" style={variablesTheme(theme) as CSSProperties} data-forme={reglages.bouton.forme} data-ombre={reglages.bouton.ombre} data-police={theme.police} data-decor={theme.decor}>
           <ul className="grid grid-cols-1 gap-2.5">
             {STYLES.map(s => (
@@ -155,7 +155,7 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
         </div>
       </Carte>}
 
-      {voir('bureau') && <Carte titre="Sur ordinateur">
+      {voir('bureau') && <Carte titre={titre('Sur ordinateur')}>
         <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Mise en page sur ordinateur">
           {BUREAUX.map(b => {
             const actif = reglages.bureau === b.id;
@@ -170,28 +170,33 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
         </div>
       </Carte>}
 
-      {voir('reseaux') && <Carte titre="Réseaux" id="reseaux">
+      {voir('reseaux') && <Carte titre={titre('Réseaux')} id="reseaux">
         <ul className="flex flex-col gap-2">
           {reglages.reseaux.map((r, i) => (
             <li key={r.reseau} className="flex items-center gap-2">
-              <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-white/[0.07] text-white"><Icone nom={r.reseau} taille={20} /></span>
-              <input className={`${classeSaisie} py-2.5`} value={r.url} aria-label={NOMS_RESEAUX[r.reseau]} placeholder={EXEMPLES[r.reseau]} inputMode={r.reseau === 'email' ? 'email' : 'url'} autoCapitalize="none"
-                onChange={e => maj({ reseaux: reglages.reseaux.map((x, j) => (j === i ? { ...x, url: e.target.value } : x)) })} />
-              <div className="flex shrink-0 flex-col">
-                <button type="button" disabled={i === 0} aria-label="Monter" onClick={() => { const l = [...reglages.reseaux]; [l[i - 1], l[i]] = [l[i], l[i - 1]]; maj({ reseaux: l }); }} className="grid h-5 w-7 place-items-center text-white/50 disabled:opacity-20"><Icone nom="ui-chevron" taille={14} className="rotate-180" /></button>
-                <button type="button" disabled={i === reglages.reseaux.length - 1} aria-label="Descendre" onClick={() => { const l = [...reglages.reseaux]; [l[i + 1], l[i]] = [l[i], l[i + 1]]; maj({ reseaux: l }); }} className="grid h-5 w-7 place-items-center text-white/50 disabled:opacity-20"><Icone nom="ui-chevron" taille={14} /></button>
-              </div>
-              <button type="button" aria-label={`Retirer ${NOMS_RESEAUX[r.reseau]}`} onClick={() => maj({ reseaux: reglages.reseaux.filter((_, j) => j !== i) })} className="grid h-10 w-9 shrink-0 place-items-center text-white/40 hover:text-white"><Icone nom="ui-fermer" taille={18} /></button>
+              <Icone nom={r.reseau} taille={22} className="w-7 shrink-0 text-white" />
+              {/* Un pseudo suffit, comme aux premiers pas : il devient l'adresse du profil en quittant le champ. */}
+              <input className={`${classeSaisie} py-2.5`} value={r.reseau === 'email' ? r.url.replace(/^mailto:/i, '') : r.url} aria-label={NOMS_RESEAUX[r.reseau]} placeholder={EXEMPLES[r.reseau]} inputMode={r.reseau === 'email' ? 'email' : 'url'} autoCapitalize="none" autoCorrect="off"
+                onChange={e => maj({ reseaux: reglages.reseaux.map((x, j) => (j === i ? { ...x, url: e.target.value } : x)) })}
+                onBlur={e => { const u = urlReseau(r.reseau, e.target.value); if (u && u !== r.url) maj({ reseaux: reglages.reseaux.map((x, j) => (j === i ? { ...x, url: u } : x)) }); }} />
+              {/* Une seule flèche, à la taille du pouce : monter suffit pour remettre les réseaux dans n'importe quel ordre. */}
+              <button type="button" disabled={i === 0} aria-label={`Monter ${NOMS_RESEAUX[r.reseau]}`} onClick={() => { const l = [...reglages.reseaux]; [l[i - 1], l[i]] = [l[i], l[i - 1]]; maj({ reseaux: l }); }}
+                className="grid h-11 w-9 shrink-0 place-items-center text-white/50 hover:text-white disabled:invisible"><Icone nom="ui-chevron" taille={18} className="rotate-180" /></button>
+              <button type="button" aria-label={`Retirer ${NOMS_RESEAUX[r.reseau]}`} onClick={() => maj({ reseaux: reglages.reseaux.filter((_, j) => j !== i) })} className="grid h-11 w-9 shrink-0 place-items-center text-white/50 hover:text-white"><Icone nom="ui-fermer" taille={18} /></button>
             </li>
           ))}
         </ul>
         {absents.length > 0 && (
-          <div className="mt-3 flex flex-wrap gap-2">
-            {absents.map(r => (
-              <button key={r} type="button" onClick={() => maj({ reseaux: [...reglages.reseaux, { reseau: r, url: '' }] })} className="flex min-h-9 items-center gap-1.5 rounded-full bg-white/[0.06] px-3 text-[13px] text-white/75 hover:bg-white/[0.1]">
-                <Icone nom={r} taille={14} /> {NOMS_RESEAUX[r]}
-              </button>
-            ))}
+          <div className="mt-4">
+            <span className="mb-1.5 block text-[13px] font-medium text-white/70">Ajouter un réseau</span>
+            <div className="flex flex-wrap gap-1">
+              {absents.map(r => (
+                <button key={r} type="button" aria-label={`Ajouter ${NOMS_RESEAUX[r]}`} title={NOMS_RESEAUX[r]} onClick={() => { vibrer(4); maj({ reseaux: [...reglages.reseaux, { reseau: r, url: '' }] }); }}
+                  className="grid h-11 w-11 place-items-center rounded-xl text-white/75 transition hover:bg-white/[0.06] hover:text-white active:scale-90">
+                  <Icone nom={r} taille={22} />
+                </button>
+              ))}
+            </div>
           </div>
         )}
         <div className="mt-4">
@@ -248,7 +253,7 @@ export function DesignTiroirs({ reglages, onChange, envoyerImage, principal, pie
     { id: 'theme', nom: 'Thème', icone: 'palette' },
     { id: 'couleurs', nom: 'Couleurs', icone: 'pinceau' },
     { id: 'boutons', nom: 'Boutons', icone: 'bloc-lien' },
-    { id: 'animation', nom: 'Liens mis en avant', icone: 'eclair' },
+    { id: 'animation', nom: 'Animation', icone: 'eclair' },
     { id: 'bureau', nom: 'Sur ordinateur', icone: 'ordinateur' },
   ];
 
@@ -257,7 +262,7 @@ export function DesignTiroirs({ reglages, onChange, envoyerImage, principal, pie
       {/* Le retour reste collé en haut de la feuille : on le retrouve après avoir fait défiler vingt thèmes. */}
       <div className="sticky top-0 z-10 -mx-5 flex items-center bg-[#111827] px-4 pb-1">
         <button type="button" onClick={() => { vibrer(4); setOuvert(null); }} className="flex min-h-10 items-center gap-1 rounded-full pr-3 text-[14px] font-medium text-white/75 hover:text-white">
-          <Icone nom="ui-chevron" taille={18} className="rotate-90" /> Retour
+          <Icone nom="ui-chevron" taille={18} className="rotate-90" /> {lignes.find(l => l.id === ouvert)?.nom}
         </button>
       </div>
       <OngletApparence reglages={reglages} onChange={onChange} envoyerImage={envoyerImage} principal={principal} parties={[ouvert]} />
@@ -302,7 +307,7 @@ function ChoixCouleur({ nom, valeur, duTheme, onChange }: { nom: string; valeur:
     <div>
       <div className="mb-2 flex items-center justify-between gap-3">
         <span className="text-[13.5px] font-medium text-white/85">{nom}</span>
-        <span className="text-[12.5px] text-white/45">{valeur ? valeur.toUpperCase() : 'Celle du thème'}</span>
+        <span className="text-[12.5px] text-white/55">{valeur ? valeur.toUpperCase() : 'Celle du thème'}</span>
       </div>
       <div className="flex flex-wrap gap-2.5">
         {pastille(duTheme, !valeur, `${nom} : celle du thème`, () => onChange(''))}

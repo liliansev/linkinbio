@@ -95,7 +95,7 @@ function LigneCompte({ compte, api, onChange, onMessage }: { compte: CompteResum
     onChange();
   }
 
-  const bouton = 'min-h-9 rounded-full px-3.5 text-[13.5px] font-medium transition disabled:opacity-50';
+  const bouton = 'min-h-11 rounded-full px-4 text-[14px] font-medium transition disabled:opacity-50';
   return (
     <li className="flex flex-col gap-2.5 px-1 py-3.5">
       <div className="flex items-start justify-between gap-3">
@@ -109,12 +109,12 @@ function LigneCompte({ compte, api, onChange, onMessage }: { compte: CompteResum
         </div>
         <div className="shrink-0 text-right">
           <p className="text-[15px] font-semibold tabular-nums">{compte.vues}</p>
-          <p className="text-[11.5px] text-white/45">vues en 30 j</p>
+          <p className="text-[11.5px] text-white/55">vues en 30 j</p>
         </div>
       </div>
       {!compte.principal && (
         <>
-          <p className="text-[12.5px] text-white/45">{compte.blocs} bloc{compte.blocs > 1 ? 's' : ''} · invité le {date(compte.cree)} · dernière connexion {date(compte.connexion)}</p>
+          <p className="text-[12.5px] text-white/55">{compte.blocs} bloc{compte.blocs > 1 ? 's' : ''} · invité le {date(compte.cree)} · dernière connexion {date(compte.connexion)}</p>
           {action ? (
             <div className="flex flex-col gap-2.5">
               <Champ label={action === 'suspendre' ? 'Motif de la suspension' : 'Motif de la suppression (facultatif)'}
@@ -165,7 +165,7 @@ function Signalements({ api, onChange }: { api: ApiComptes; onChange: () => void
       </ul>
       {traites.length > 0 && (
         <>
-          <button type="button" onClick={() => setVoirTout(v => !v)} className="mt-2 text-[13px] text-white/55 hover:text-white">{voirTout ? 'Masquer l’historique' : `Voir l’historique (${traites.length})`}</button>
+          <button type="button" onClick={() => setVoirTout(v => !v)} className="mt-1 min-h-11 text-[13.5px] text-white/55 hover:text-white">{voirTout ? 'Masquer l’historique' : `Voir l’historique (${traites.length})`}</button>
           {voirTout && (
             <ul className="mt-2 flex flex-col gap-2">
               {traites.map(s => (
@@ -193,12 +193,12 @@ function LigneSignalement({ s, api, onChange }: { s: SignalementResume; api: Api
     try { await api.traiterSignalement(s.id, action, decision); onChange(); }
     catch (error) { setErreur((error as Error).message || 'L’action n’a pas abouti.'); setOccupe(false); }
   }
-  const bouton = 'min-h-9 rounded-full px-3.5 text-[13.5px] font-medium transition disabled:opacity-50';
+  const bouton = 'min-h-11 rounded-full px-4 text-[14px] font-medium transition disabled:opacity-50';
   return (
     <li className="flex flex-col gap-2 px-1 py-3.5">
       <p className="text-[15px] font-semibold">{nomMotif(s.motif)} <span className="font-normal text-white/50">sur</span> <a href={cheminPage({ pseudo: s.pseudo, principal: false })} target="_blank" rel="noopener" className="underline decoration-white/30 underline-offset-2">{s.pseudo}</a></p>
       <p className="whitespace-pre-wrap text-[14px] leading-relaxed text-white/75">{s.details}</p>
-      <p className="text-[12.5px] text-white/45">Reçu le {date(s.ts)} · {s.contact ? 'la personne recevra la décision par e-mail' : 'anonyme'}</p>
+      <p className="text-[12.5px] text-white/55">Reçu le {date(s.ts)} · {s.contact ? 'la personne recevra la décision par e-mail' : 'anonyme'}</p>
       {action ? (
         <div className="flex flex-col gap-2.5">
           <Champ label={action === 'suspendu' ? 'Motif de la suspension, envoyé au compte' : 'Réponse à la personne qui a signalé (facultatif)'}

@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { DndContext, KeyboardSensor, PointerSensor, TouchSensor, closestCenter, useSensor, useSensors } from '@dnd-kit/core';
 import type { DragEndEvent } from '@dnd-kit/core';
@@ -67,7 +67,7 @@ export function MaPage({ compte, reglages, blocs, clics, onReglages, onOrdonner,
     if (d === 'reseaux') return setFeuille('reseaux');
     setTimeout(() => {
       const bio = toile.current?.querySelector<HTMLTextAreaElement>('.lp-bio');
-      bio?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      bio?.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'center' });
       bio?.focus({ preventScroll: true });
     }, 60);
   }
@@ -85,23 +85,23 @@ export function MaPage({ compte, reglages, blocs, clics, onReglages, onOrdonner,
     <div className="flex flex-col gap-4">
       {/* Les deux gestes de la page, en tête, sur téléphone comme sur ordinateur : rien ne flotte au-dessus des onglets. */}
       <div className="order-0 flex items-center justify-end gap-2 pt-3 lg:pt-0">
-        <button type="button" onClick={design} className="flex min-h-9 items-center gap-1.5 rounded-full bg-white/[0.07] px-3.5 text-[13.5px] font-medium text-white transition hover:bg-white/[0.12] active:scale-95">
+        <button type="button" onClick={design} className="flex min-h-11 items-center gap-1.5 rounded-full bg-white/[0.07] px-4 text-[14px] font-medium text-white transition hover:bg-white/[0.12] active:scale-95">
           <Icone nom="palette" taille={16} /> Design
         </button>
-        <button type="button" onClick={() => { vibrer(5); setFeuille('ajout'); }} className="flex min-h-9 items-center gap-1.5 rounded-full bg-peche px-3.5 text-[13.5px] font-semibold text-nuit transition hover:brightness-105 active:scale-95">
+        <button type="button" onClick={() => { vibrer(5); setFeuille('ajout'); }} className="flex min-h-11 items-center gap-1.5 rounded-full bg-peche px-4 text-[14px] font-semibold text-nuit transition hover:brightness-105 active:scale-95">
           <Icone nom="ui-plus" taille={16} /> Ajouter
         </button>
       </div>
 
-      {/* Sur téléphone, la page vient d'abord, bord à bord ; l'adresse et « Bien démarrer » passent dessous. */}
-      <div className="order-2 lg:order-none"><HautLiens compte={compte} reglages={reglages} blocs={blocs} aller={aller} /></div>
+      {/* L'adresse et « Bien démarrer » d'abord : ce qui reste à faire se voit sans dérouler toute la page. */}
+      <div className="order-1 lg:order-none"><HautLiens compte={compte} reglages={reglages} blocs={blocs} aller={aller} /></div>
 
-      <div className="order-1 lg:order-none">
+      <div className="order-2 lg:order-none">
         <div ref={toile}
           className="adm-apercu adm-toile -mx-4 overflow-hidden lg:mx-0 lg:rounded-[30px] lg:ring-1 lg:ring-white/10 lg:shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)]">
           <PageLiens page={{ reglages, blocs: visibles, compte }} edition={edition} />
         </div>
-        <p className="mt-3 text-center text-[13px] leading-snug text-white/45">Touche un élément pour le modifier. Maintiens un bloc pour le déplacer.</p>
+        <p className="mt-3 text-center text-[13px] leading-snug text-white/55">Touche un élément pour le modifier. Maintiens un bloc pour le déplacer.</p>
       </div>
 
       <input ref={fichier} type="file" accept="image/*" hidden onChange={e => photo(e.target.files?.[0])} />
@@ -187,8 +187,11 @@ function BlocEditable({ bloc, i, clics, ouvrir, children }: { bloc: Bloc; i: num
   const regles = etiquettes(bloc);
   const programme = bloc.public && !estEnLigne(bloc) && !regles.includes('Compte à rebours');
   const nom = bloc.titre || bloc.url || 'ce bloc';
+  // Le bloc entier est un seul bouton : ses liens et champs intérieurs sortent de l'ordre de tabulation.
+  const noeud = useRef<HTMLDivElement | null>(null);
+  useEffect(() => { noeud.current?.querySelectorAll(':scope > :not(.lp-ed-puces)').forEach(x => x.setAttribute('inert', '')); });
   return (
-    <div ref={setNodeRef} {...attributes} {...listeners} aria-label={[`Modifier ${nom}`, prive && 'privé', programme && 'programmé', ...regles].filter(Boolean).join(', ')} aria-roledescription="bloc déplaçable"
+    <div ref={n => { setNodeRef(n); noeud.current = n; }} {...attributes} {...listeners} aria-label={[`Modifier ${nom}`, prive && 'privé', programme && 'programmé', ...regles].filter(Boolean).join(', ')} aria-roledescription="bloc déplaçable"
       className="lp-bloc lp-ed-bloc" data-type={bloc.type} data-vedette={bloc.vedette ? bloc.format : undefined} data-glisse={isDragging || undefined} data-prive={prive || programme || undefined}
       style={{ '--i': i, transform: CSS.Transform.toString(transform), transition } as CSSProperties}
       onClickCapture={e => { e.preventDefault(); e.stopPropagation(); ouvrir(bloc); }}
@@ -196,9 +199,10 @@ function BlocEditable({ bloc, i, clics, ouvrir, children }: { bloc: Bloc; i: num
       {children}
       {(prive || programme || regles.length > 0) && (
         <span className="lp-ed-puces" aria-hidden="true">
-          {prive && <span className="lp-ed-puce"><Icone nom="ui-masque" taille={12} /> Privé</span>}
-          {programme && <span className="lp-ed-puce"><Icone nom="ui-horloge" taille={12} /> Programmé</span>}
-          {regles.map(r => <span key={r} className="lp-ed-puce">{r}</span>)}
+          {/* Un picto par état, sans étiquette : le nom complet est dans l'aria-label du bloc. */}
+          {prive && <span className="lp-ed-puce" title="Privé"><Icone nom="ui-masque" taille={13} /></span>}
+          {programme && <span className="lp-ed-puce" title="Programmé"><Icone nom="horloge" taille={13} /></span>}
+          {regles.length > 0 && <span className="lp-ed-puce" title={regles.join(', ')}><Icone nom="reglage" taille={13} /></span>}
         </span>
       )}
     </div>

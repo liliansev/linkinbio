@@ -20,10 +20,10 @@ export function AccepterCgu({ accepter, deconnexion }: { accepter: () => Promise
   return (
     <main className="adm grid min-h-dvh place-items-center bg-nuit px-5 font-sans text-white antialiased">
       <div className="adm-onglet w-full max-w-md">
-        <span className="grid h-14 w-14 place-items-center rounded-full bg-white/10 text-white"><Icone nom="lien" taille={26} /></span>
+        <Icone nom="lien" taille={32} className="text-white" />
         <h1 className="mt-5 text-[26px] font-semibold tracking-tight">Avant de commencer</h1>
         <p className="mt-2 text-[15px] leading-relaxed text-white/65">
-          Hopla héberge ta page et mesure ses visites pour toi, sans cookie. Voici les règles du jeu, en clair : ce qui est interdit, comment marche la modération, et ce qu’on fait des données de tes visiteurs.
+          Hopla héberge ta page et mesure ses visites pour toi, sans cookie.
         </p>
         <label className="mt-6 flex cursor-pointer items-start gap-3 rounded-2xl bg-white/[0.05] p-4 text-[15px] leading-snug">
           <input type="checkbox" checked={coche} onChange={e => setCoche(e.target.checked)} className="mt-0.5 h-5 w-5 shrink-0 accent-[#ffb38a]" />
@@ -31,7 +31,7 @@ export function AccepterCgu({ accepter, deconnexion }: { accepter: () => Promise
         </label>
         <BoutonPrincipal type="button" className="mt-4 w-full" disabled={!coche || envoi} onClick={valider}>{envoi ? 'Un instant…' : 'Continuer'}</BoutonPrincipal>
         {erreur && <p role="alert" className="mt-3 text-[14px] text-red-300">{erreur}</p>}
-        <button type="button" onClick={deconnexion} className="mt-6 w-full text-center text-[14px] text-white/50 hover:text-white">Me déconnecter</button>
+        <button type="button" onClick={deconnexion} className="mt-4 min-h-11 w-full text-center text-[14px] text-white/60 hover:text-white">Me déconnecter</button>
       </div>
     </main>
   );

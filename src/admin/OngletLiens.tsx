@@ -12,7 +12,7 @@ export const TYPES: { type: TypeBloc; nom: string; aide: string; picto: string }
   { type: 'derniere-video', nom: 'Ma dernière vidéo', aide: 'Se met à jour toute seule', picto: 'bloc-derniere-video' },
   { type: 'inscription', nom: 'Rejoins ma liste', aide: 'Récolte des e-mails, export, Brevo, Mailchimp', picto: 'bloc-inscription' },
   { type: 'preuve', nom: 'Avis et preuves', aide: 'Ta note Google, un chiffre, un témoignage', picto: 'bloc-preuve' },
-  { type: 'newsletter', nom: 'Inscription newsletter', aide: 'Branchée sur Lumail', picto: 'bloc-newsletter' },
+  { type: 'newsletter', nom: 'Ma newsletter Lumail', aide: 'Branchée sur Lumail', picto: 'bloc-newsletter' },
 ];
 
 export function FeuilleAjout({ ouverte, onFermer, onChoisir, principal }: { ouverte: boolean; onFermer: () => void; onChoisir: (type: TypeBloc) => void; principal: boolean }) {
