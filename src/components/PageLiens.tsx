@@ -16,10 +16,10 @@ import { Icone, NOMS_RESEAUX } from './Icone.tsx';
  * deux attributs que `page.css` lit.
  */
 
-function suivre(page: string, type: 'vue' | 'clic', bloc?: string) {
+function suivre(page: string, type: 'vue' | 'clic', bloc?: string, app = false) {
   try {
     const params = new URLSearchParams(location.search);
-    const corps = JSON.stringify({ page, type, bloc, utm: params.get('utm_source') ?? params.get('s') ?? '', referent: document.referrer });
+    const corps = JSON.stringify({ page, type, bloc, app, utm: params.get('utm_source') ?? params.get('s') ?? '', referent: document.referrer });
     const blob = new Blob([corps], { type: 'text/plain' });
     if (!navigator.sendBeacon?.('/api/evenement', blob)) fetch('/api/evenement', { method: 'POST', body: corps, keepalive: true }).catch(() => {});
   } catch { /* les statistiques ne doivent jamais gêner la visite */ }
@@ -52,7 +52,8 @@ export function PageLiens({ page, apercu = false, edition }: { page: PagePubliqu
 
   const clic = (bloc: Bloc) => {
     if (apercu) return;
-    suivre(pseudo, 'clic', bloc.id);
+    // Le clic part avant la redirection vers l'app (`ouvrirDansApp`, plus haut dans la page) : on note s'il l'ouvrira.
+    suivre(pseudo, 'clic', bloc.id, reglages.ouvrirApps && !!bloc.url && !!lienApp(bloc.url, navigator.userAgent));
   };
   const cible = apercu ? { target: '_blank' } : {};
 

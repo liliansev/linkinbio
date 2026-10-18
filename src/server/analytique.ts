@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { PRINCIPAL } from '../lib/types.ts';
 import { NOMS_AUDIENCES, audienceDeLApp } from '../lib/provenance.ts';
+import { navigateurIntegre } from '../lib/ouvrirApp.ts';
 import { ajouterEvenement, compteParPseudo, evenementsDuJour, jourDe, lireBlocs, secret } from './db.ts';
 
 /*
@@ -61,7 +62,7 @@ function compteDePage(page: unknown): string | null {
   return compte && compte.statut === 'actif' ? compte.id : null;
 }
 
-export function enregistrer(entree: { page?: unknown; type: unknown; bloc: unknown; utm: unknown; referent: unknown }, contexte: { ip: string; ua: string; session: string | null }, maintenant = Date.now()): boolean {
+export function enregistrer(entree: { page?: unknown; type: unknown; bloc: unknown; utm: unknown; referent: unknown; app?: unknown }, contexte: { ip: string; ua: string; session: string | null }, maintenant = Date.now()): boolean {
   if (!contexte.ua || ROBOTS.test(contexte.ua)) return false;
   const compte = compteDePage(entree.page);
   if (!compte || contexte.session === compte) return false;
@@ -74,8 +75,10 @@ export function enregistrer(entree: { page?: unknown; type: unknown; bloc: unkno
   // Un clic vise un lien de cette page ; et un plafond par jour protège le disque d'un envoi en masse.
   if (bloc && !lireBlocs(compte).some(b => b.id === bloc)) return false;
   if (evenementsDuJour(maintenant) >= 50_000 || (compte !== PRINCIPAL && evenementsDuJour(maintenant, compte) >= 10_000)) return false;
+  // Le navigateur intégré d'une app se lit ici ; l'ouverture dans l'app, seule la page la sait.
+  const integre = navigateurIntegre(contexte.ua);
   ajouterEvenement({
-    compte, type, bloc, visiteur, ts: maintenant,
+    compte, type, bloc, visiteur, ts: maintenant, integre, app: integre && type === 'clic' && entree.app === true,
     source: source(typeof entree.utm === 'string' ? entree.utm : '', typeof entree.referent === 'string' ? entree.referent : '', contexte.ua),
     appareil: appareil(contexte.ua),
   });

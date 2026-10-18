@@ -11,24 +11,36 @@
 
 /** Les navigateurs intégrés des apps où se partagent les pages de liens. */
 const NAVIGATEUR_INTEGRE = /Instagram|FBAN|FBAV|FB_IAB|FBIOS|musical_ly|BytedanceWebview|TikTok|LinkedInApp|Snapchat|Pinterest|Barcelona|Threads|Line\//i;
+export const navigateurIntegre = (userAgent: string) => NAVIGATEUR_INTEGRE.test(userAgent);
 
-/** L'hôte du lien (sans `www.` ni `m.`) et le paquet Android de son app. */
-const PAQUETS: [RegExp, string][] = [
-  [/^music\.youtube\.com$/, 'com.google.android.apps.youtube.music'],
-  [/^(youtube\.com|youtu\.be)$/, 'com.google.android.youtube'],
-  [/^instagram\.com$/, 'com.instagram.android'],
-  [/^tiktok\.com$/, 'com.zhiliaoapp.musically'],
-  [/^open\.spotify\.com$/, 'com.spotify.music'],
-  [/^(x|twitter)\.com$/, 'com.twitter.android'],
-  [/^linkedin\.com$/, 'com.linkedin.android'],
-  [/^(facebook\.com|fb\.me)$/, 'com.facebook.katana'],
-  [/^threads\.(net|com)$/, 'com.instagram.barcelona'],
-  [/^twitch\.tv$/, 'tv.twitch.android.app'],
-  [/^snapchat\.com$/, 'com.snapchat.android'],
-  [/^(pinterest\.(com|fr)|pin\.it)$/, 'com.pinterest'],
-  [/^(wa\.me|whatsapp\.com|api\.whatsapp\.com)$/, 'com.whatsapp'],
-  [/^t\.me$/, 'org.telegram.messenger'],
+/** L'hôte du lien (sans `www.` ni `m.`), le paquet Android de son app et son nom. */
+const PAQUETS: [RegExp, string, string][] = [
+  [/^music\.youtube\.com$/, 'com.google.android.apps.youtube.music', 'YouTube Music'],
+  [/^(youtube\.com|youtu\.be)$/, 'com.google.android.youtube', 'YouTube'],
+  [/^instagram\.com$/, 'com.instagram.android', 'Instagram'],
+  [/^tiktok\.com$/, 'com.zhiliaoapp.musically', 'TikTok'],
+  [/^open\.spotify\.com$/, 'com.spotify.music', 'Spotify'],
+  [/^(x|twitter)\.com$/, 'com.twitter.android', 'X'],
+  [/^linkedin\.com$/, 'com.linkedin.android', 'LinkedIn'],
+  [/^(facebook\.com|fb\.me)$/, 'com.facebook.katana', 'Facebook'],
+  [/^threads\.(net|com)$/, 'com.instagram.barcelona', 'Threads'],
+  [/^twitch\.tv$/, 'tv.twitch.android.app', 'Twitch'],
+  [/^snapchat\.com$/, 'com.snapchat.android', 'Snapchat'],
+  [/^(pinterest\.(com|fr)|pin\.it)$/, 'com.pinterest', 'Pinterest'],
+  [/^(wa\.me|whatsapp\.com|api\.whatsapp\.com)$/, 'com.whatsapp', 'WhatsApp'],
+  [/^t\.me$/, 'org.telegram.messenger', 'Telegram'],
 ];
+
+const hoteDe = (u: URL) => u.hostname.toLowerCase().replace(/^(www|m|mobile)\./, '');
+
+/** Le nom de l'app qui ouvre ce lien depuis un navigateur intégré (YouTube, Spotify…), ou null. */
+export function appDe(url: string): string | null {
+  let u: URL;
+  try { u = new URL(url); } catch { return null; }
+  if (u.protocol !== 'https:' && u.protocol !== 'http:') return null;
+  const hote = hoteDe(u);
+  return PAQUETS.find(([motif]) => motif.test(hote))?.[2] ?? null;
+}
 
 /** Sur iOS, le schéma de l'app pour les liens dont on connaît la traduction. */
 function schemaIos(u: URL, hote: string): string | null {
@@ -56,7 +68,7 @@ export function lienApp(url: string, userAgent: string): { adresse: string; repl
   let u: URL;
   try { u = new URL(url); } catch { return null; }
   if (u.protocol !== 'https:' && u.protocol !== 'http:') return null;
-  const hote = u.hostname.toLowerCase().replace(/^(www|m|mobile)\./, '');
+  const hote = hoteDe(u);
   if (/Android/i.test(userAgent)) {
     const paquet = PAQUETS.find(([motif]) => motif.test(hote))?.[1];
     if (!paquet) return null;

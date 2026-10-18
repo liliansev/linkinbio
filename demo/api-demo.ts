@@ -43,6 +43,7 @@ function statsFictives(jours: number): Stats {
     serie,
     blocs: liens.map((b, i) => ({ id: b.id, titre: b.titre || b.url, clics: Math.round((clics * poids[i]) / total) })).sort((a, b) => b.clics - a.clics),
     sources: [['Instagram', 0.38], ['LinkedIn', 0.22], ['YouTube', 0.18], ['Direct', 0.12], ['QR code', 0.06], ['Google', 0.04]].map(([nom, p]) => ({ nom: String(nom), vues: Math.round(vues * Number(p)) })),
+    apps: { integres: Math.round(clics * 0.46), versApp: Math.round(clics * 0.31), ouverts: Math.round(clics * 0.29) },
     appareils: [{ nom: 'Mobile', vues: Math.round(vues * 0.81) }, { nom: 'Ordinateur', vues: Math.round(vues * 0.16) }, { nom: 'Tablette', vues: Math.round(vues * 0.03) }],
     precedent: { vues: somme(avant, 'vues'), clics: somme(avant, 'clics'), visiteurs: Math.round(somme(avant, 'vues') * 0.74) },
   };

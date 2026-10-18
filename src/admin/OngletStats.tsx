@@ -80,8 +80,32 @@ function Barres({ lignes, total, unite }: { lignes: { nom: string; valeur: numbe
   );
 }
 
+/** Le gain des liens ouverts dans leur app : la promesse de Hopla, en chiffres. */
+function OuvertsDansLApp({ apps, actif, onActiver }: { apps: Stats['apps']; actif: boolean; onActiver?: () => void }) {
+  if (!apps.integres) return null;
+  const part = apps.versApp ? Math.round((apps.ouverts / apps.versApp) * 100) : 0;
+  return (
+    <Carte titre="Ouverts dans leur app">
+      <div className="flex items-end gap-3">
+        <p className="text-[34px] font-semibold leading-none tracking-tight text-white tabular-nums">{nombre(apps.ouverts)}</p>
+        <p className="pb-1 text-[13.5px] leading-snug text-white/60">clic{apps.ouverts > 1 ? 's' : ''} ouvert{apps.ouverts > 1 ? 's' : ''} directement dans YouTube, Spotify, Instagram…</p>
+      </div>
+      <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/[0.07]"><div className="adm-barre h-full origin-left rounded-full bg-peche" style={{ width: `${part}%` }} /></div>
+      <p className="mt-2.5 text-[13px] leading-snug text-white/55">
+        {nombre(apps.integres)} clic{apps.integres > 1 ? 's' : ''} venaient du navigateur intégré d’Instagram, TikTok ou Facebook, dont {nombre(apps.versApp)} vers un lien qui a son app.
+        {actif ? ' Sans Hopla, ils seraient restés coincés dans la page web, sans compte connecté.' : ''}
+      </p>
+      {!actif && (
+        <p className="mt-2.5 rounded-xl bg-peche/[0.08] px-3 py-2.5 text-[13px] leading-snug text-white/75">
+          L’ouverture dans les apps est coupée sur ta page. {onActiver && <button type="button" onClick={onActiver} className="font-semibold text-peche underline underline-offset-2">La rallumer</button>}
+        </p>
+      )}
+    </Carte>
+  );
+}
+
 /** `limite` : un compte gratuit ne voit que les sept derniers jours ; `onPro` mène à l'abonnement. */
-export function OngletStats({ charger, limite = false, onPro }: { charger: (jours: number) => Promise<Stats>; limite?: boolean; onPro?: () => void }) {
+export function OngletStats({ charger, limite = false, onPro, ouvrirApps = true, onActiverApps }: { charger: (jours: number) => Promise<Stats>; limite?: boolean; onPro?: () => void; ouvrirApps?: boolean; onActiverApps?: () => void }) {
   const [choix, setJours] = useState('30');
   const jours = limite ? '7' : choix;
   const [stats, setStats] = useState<Stats | null>(null);
@@ -111,6 +135,7 @@ export function OngletStats({ charger, limite = false, onPro }: { charger: (jour
             <Kpi nom="Taux de clic" valeur={stats.vues ? Math.round((stats.clics / stats.vues) * 100) : 0} suffixe=" %" />
           </div>
           <Carte><Courbe serie={stats.serie} /></Carte>
+          <OuvertsDansLApp apps={stats.apps} actif={ouvrirApps} onActiver={onActiverApps} />
           <Carte titre="Liens les plus cliqués"><Barres lignes={stats.blocs.map(b => ({ nom: b.titre, valeur: b.clics }))} total={stats.clics} unite="clics" /></Carte>
           <Carte titre="D’où viennent les visiteurs"><Barres lignes={stats.sources.map(s => ({ nom: s.nom, valeur: s.vues }))} total={stats.vues} unite="vues" /></Carte>
           <Carte titre="Appareils"><Barres lignes={stats.appareils.map(s => ({ nom: s.nom, valeur: s.vues }))} total={stats.vues} unite="vues" /></Carte>

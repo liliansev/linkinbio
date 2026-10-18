@@ -8,6 +8,7 @@ import { REGLAGES_DEFAUT, blocsDefaut, reglagesNouveauCompte } from '../lib/defa
 import { validerBloc, validerReglages } from '../lib/valider.ts';
 import type { Abonnement } from '../lib/abonnement.ts';
 import { QUOTA_GRATUIT, QUOTA_PRO, estPro } from '../lib/abonnement.ts';
+import { appDe } from '../lib/ouvrirApp.ts';
 
 /*
  * Toutes les pages tiennent dans un fichier SQLite (`node:sqlite`, rien à
@@ -86,6 +87,9 @@ export function base(): DatabaseSync {
   colonne(db, 'comptes', 'abonnement_statut', "TEXT NOT NULL DEFAULT ''");
   colonne(db, 'comptes', 'fin_periode', 'INTEGER');
   colonne(db, 'comptes', 'abonnement_maj', 'INTEGER NOT NULL DEFAULT 0');
+  // Vu depuis le navigateur intégré d'une app (Instagram, TikTok…), et pour un clic, ouvert dans l'app visée.
+  colonne(db, 'evenements', 'integre', 'INTEGER NOT NULL DEFAULT 0');
+  colonne(db, 'evenements', 'app', 'INTEGER NOT NULL DEFAULT 0');
   db.exec(`
     CREATE UNIQUE INDEX IF NOT EXISTS comptes_email ON comptes (email);
     CREATE INDEX IF NOT EXISTS blocs_compte ON blocs (compte, position);
@@ -350,11 +354,11 @@ export function evenementsDuJour(maintenant = Date.now(), compte?: string): numb
   return (base().prepare(`SELECT COUNT(*) AS n FROM evenements WHERE jour = ?${filtre}`).get(...(compte ? [jourDe(maintenant), compte] : [jourDe(maintenant)])) as { n: number }).n;
 }
 
-export function ajouterEvenement(e: { compte: string; type: 'vue' | 'clic'; bloc: string | null; visiteur: string; source: string; appareil: string; ts?: number }) {
+export function ajouterEvenement(e: { compte: string; type: 'vue' | 'clic'; bloc: string | null; visiteur: string; source: string; appareil: string; ts?: number; integre?: boolean; app?: boolean }) {
   const ts = e.ts ?? Date.now();
   if (Date.now() - derniere > 6 * 3_600_000) purger();
-  base().prepare('INSERT INTO evenements (compte, type, bloc, jour, ts, visiteur, source, appareil) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
-    .run(e.compte, e.type, e.bloc, jourDe(ts), ts, e.visiteur, e.source, e.appareil);
+  base().prepare('INSERT INTO evenements (compte, type, bloc, jour, ts, visiteur, source, appareil, integre, app) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+    .run(e.compte, e.type, e.bloc, jourDe(ts), ts, e.visiteur, e.source, e.appareil, e.integre ? 1 : 0, e.app ? 1 : 0);
 }
 
 export function clicsParBloc(compte: string, jours = 30): Record<string, number> {
@@ -377,13 +381,22 @@ export function stats(compte: string, jours: number, maintenant = Date.now()): S
   const titres = new Map(lireBlocs(compte).map(b => [b.id, b.titre || b.url]));
   const blocs = (d.prepare(`SELECT bloc, COUNT(*) AS n FROM evenements WHERE compte = ? AND type = 'clic' AND jour BETWEEN ? AND ? GROUP BY bloc ORDER BY n DESC LIMIT 20`).all(compte, debut, fin) as { bloc: string; n: number }[])
     .map(l => ({ id: l.bloc, titre: titres.get(l.bloc) ?? 'Bloc supprimé', clics: l.n }));
+  // Les clics venus du navigateur intégré d'une app : vers un lien qui a son app, et ouverts dedans.
+  const urls = new Map(lireBlocs(compte).map(b => [b.id, b.url]));
+  const integres = d.prepare(`SELECT bloc, SUM(app) AS ouverts, COUNT(*) AS n FROM evenements WHERE compte = ? AND type = 'clic' AND integre = 1 AND jour BETWEEN ? AND ? GROUP BY bloc`).all(compte, debut, fin) as { bloc: string; ouverts: number; n: number }[];
+  const apps = { integres: 0, versApp: 0, ouverts: 0 };
+  for (const l of integres) {
+    apps.integres += l.n;
+    apps.ouverts += l.ouverts;
+    if (appDe(urls.get(l.bloc) ?? '')) apps.versApp += l.n;
+  }
   const groupe = (colonne: 'source' | 'appareil') => (d.prepare(`SELECT ${colonne} AS nom, COUNT(*) AS n FROM evenements WHERE compte = ? AND type = 'vue' AND jour BETWEEN ? AND ? GROUP BY ${colonne} ORDER BY n DESC LIMIT 8`).all(compte, debut, fin) as { nom: string; n: number }[])
     .map(l => ({ nom: l.nom, vues: l.n }));
   return {
     jours,
     vues: actuel.vues ?? 0, visiteurs: actuel.visiteurs ?? 0, clics: actuel.clics ?? 0,
     serie: jourListe.map(jour => ({ jour, vues: parJour.get(jour)?.vues ?? 0, clics: parJour.get(jour)?.clics ?? 0 })),
-    blocs, sources: groupe('source'), appareils: groupe('appareil'),
+    blocs, sources: groupe('source'), appareils: groupe('appareil'), apps,
     precedent: { vues: avant.vues ?? 0, visiteurs: avant.visiteurs ?? 0, clics: avant.clics ?? 0 },
   };
 }

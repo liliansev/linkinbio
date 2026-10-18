@@ -158,6 +158,8 @@ export interface Stats {
   blocs: { id: string; titre: string; clics: number }[];
   sources: { nom: string; vues: number }[];
   appareils: { nom: string; vues: number }[];
+  /** Les clics depuis le navigateur intégré d'Instagram, TikTok… : en tout, vers un lien qui a son app, et ouverts dans l'app. */
+  apps: { integres: number; versApp: number; ouverts: number };
   /** Mêmes totaux sur la période précédente, pour la tendance. */
   precedent: { vues: number; visiteurs: number; clics: number };
 }

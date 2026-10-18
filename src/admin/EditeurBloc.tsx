@@ -10,6 +10,7 @@ import { Icone, NOMS_RESEAUX, PICTOS } from '../components/Icone.tsx';
 import { BlocPublic } from '../components/PageLiens.tsx';
 import { BoutonPrincipal, Champ, Feuille, Interrupteur, NOMS_ANIMATIONS, Segments, classeSaisie, preparerImage, vibrer } from './ui.tsx';
 import { TYPES } from './OngletLiens.tsx';
+import { appDe } from '../lib/ouvrirApp.ts';
 import { RegleAudience, RegleMoment } from './ReglesBloc.tsx';
 
 const AIDE_FORMATS = {
@@ -118,7 +119,8 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
         {erreur && <p role="alert" className="rounded-xl bg-red-500/15 px-3.5 py-2.5 text-[14px] text-red-200">{erreur}</p>}
 
         {avecUrl && (
-          <Champ label={b.type === 'video' ? 'Adresse de la vidéo YouTube' : 'Adresse'}>
+          <Champ label={b.type === 'video' ? 'Adresse de la vidéo YouTube' : 'Adresse'}
+            aide={b.type === 'lien' && reglages.ouvrirApps && appDe(adresse(b.url)) ? <span className="inline-flex items-center gap-1.5 text-peche/90"><Icone nom="ui-ok" taille={13} />Depuis Instagram ou TikTok, ce lien s’ouvre dans l’app {appDe(adresse(b.url))}.</span> : undefined}>
             <input className={classeSaisie} type="url" inputMode="url" autoCapitalize="none" autoCorrect="off" placeholder={b.type === 'video' ? 'https://youtu.be/…' : 'https://…'}
               value={b.url} onChange={e => maj({ url: e.target.value })} autoFocus={nouveau} />
           </Champ>

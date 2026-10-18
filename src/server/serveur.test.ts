@@ -404,3 +404,14 @@ test('statistiques : un navigateur intégré sans référent est rangé sous son
   assert.equal(source('', 'https://www.linkedin.com/', tiktok), 'LinkedIn', 'le site d’origine passe avant');
   assert.equal(source('', '', 'Mozilla/5.0 (Macintosh) Safari/605'), 'Direct');
 });
+
+test('statistiques : les clics ouverts dans leur app, depuis un navigateur intégré', () => {
+  const insta = 'Mozilla/5.0 (Linux; Android 14) Chrome/129.0 Mobile Safari/537.36 Instagram 350.0.0.0 Android';
+  db.enregistrerBloc(P, validerBloc({ type: 'lien', titre: 'YouTube', url: 'https://youtube.com/@moi' }, 'yt'));
+  db.enregistrerBloc(P, validerBloc({ type: 'lien', titre: 'Site', url: 'https://exemple.fr' }, 'site'));
+  const ctx = (ip: string, ua: string) => ({ ip, ua, session: null });
+  enregistrer({ type: 'clic', bloc: 'yt', utm: '', referent: '', app: true }, ctx('9.9.9.1', insta));
+  enregistrer({ type: 'clic', bloc: 'site', utm: '', referent: '', app: false }, ctx('9.9.9.2', insta));
+  enregistrer({ type: 'clic', bloc: 'yt', utm: '', referent: '', app: true }, ctx('9.9.9.3', 'Mozilla/5.0 (Macintosh) Safari/605'));
+  assert.deepEqual(db.stats(P, 7).apps, { integres: 2, versApp: 1, ouverts: 1 }, 'un navigateur ordinaire ne compte pas, même s’il le prétend');
+});
