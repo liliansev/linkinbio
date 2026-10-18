@@ -66,7 +66,7 @@
 
 .lp-blocs { display: flex; flex-direction: column; gap: 14px; }
 
-.lp-section { margin: 18px 0 2px; text-align: center; font-size: 0.86rem; font-weight: 560; letter-spacing: 0.01em; color: var(--doux); }
+.lp-section { margin: 18px 0 2px; text-align: center; font-size: 0.86rem; font-weight: 560; letter-spacing: 0.01em; color: var(--titre-section, var(--doux)); }
 .lp-texte { margin: 0; text-align: center; color: var(--doux); line-height: 1.55; white-space: pre-line; }
 
 /* ---- Boutons ---- */
@@ -107,11 +107,6 @@
 
 [data-bouton]:not([data-bouton='plein']) :is(.lp-btn, .lp-carte) { --lp-encre: var(--texte); --lp-halo: var(--texte); --lp-trait: var(--texte); }
 .lp-accent { --lp-fond: var(--vedette); --lp-encre: var(--vedette-texte); }
-/* Hors du style plein, l'accent devient un liseré et un halo de la couleur de vedette. */
-[data-bouton]:not([data-bouton='plein']) .lp-accent { --lp-halo: var(--vedette); }
-.lp[data-bouton='contour'] .lp-accent { box-shadow: inset 0 0 0 2px var(--vedette); }
-.lp:is([data-bouton='doux'], [data-bouton='verre']) .lp-accent { background: color-mix(in srgb, var(--vedette) 22%, transparent); }
-.lp[data-bouton='relief'] .lp-accent { background: color-mix(in srgb, var(--vedette) 16%, var(--fond-uni)); }
 
 [data-bouton='contour'] :is(.lp-btn, .lp-carte) { background: transparent; color: var(--texte); box-shadow: inset 0 0 0 2px var(--texte); }
 [data-bouton='contour'] :is(.lp-btn, .lp-carte):hover { background: color-mix(in srgb, var(--texte) 8%, transparent); }
@@ -120,8 +115,10 @@
 [data-bouton='doux'] :is(.lp-btn, .lp-carte):hover { background: color-mix(in srgb, var(--texte) 16%, transparent); }
 
 [data-bouton='relief'] :is(.lp-btn, .lp-carte) {
-  background: color-mix(in srgb, var(--surface) 14%, var(--fond-uni));
-  color: var(--texte);
+  /* Le relief garde la couleur des boutons : seuls le trait et l'ombre portée changent. */
+  --lp-encre: var(--surface-texte);
+  background: var(--surface);
+  color: var(--surface-texte);
   border: 2px solid var(--texte);
   box-shadow: 4px 4px 0 var(--texte);
 }
@@ -136,6 +133,23 @@
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--texte) 22%, transparent), 0 10px 30px -16px rgb(0 0 0 / 0.5);
 }
 [data-bouton='verre'] :is(.lp-btn, .lp-carte):hover { background: color-mix(in srgb, var(--texte) 17%, transparent); }
+
+/*
+ * La carte mise en avant garde sa couleur pleine dans tous les styles : c'est
+ * elle que le visiteur doit voir d'abord. Le style ne change que son trait.
+ */
+.lp[data-bouton] :is(.lp-btn, .lp-carte).lp-accent { background: var(--vedette); color: var(--vedette-texte); --lp-encre: var(--vedette-texte); --lp-halo: var(--vedette); }
+.lp[data-bouton='contour'] :is(.lp-btn, .lp-carte).lp-accent { box-shadow: none; }
+.lp[data-bouton='verre'] :is(.lp-btn, .lp-carte).lp-accent { box-shadow: inset 0 0 0 1px color-mix(in srgb, white 30%, transparent), 0 14px 34px -16px var(--vedette); }
+
+/* L'accent au-delà d'un seul bouton : les titres de section et une lueur derrière le portrait. */
+.lp-tete { position: relative; }
+.lp-tete::before {
+  content: ''; position: absolute; z-index: -1; left: 50%; top: -40px; width: 300px; height: 220px; translate: -50% 0;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--vedette) 26%, transparent), transparent);
+  pointer-events: none;
+}
+.lp-avatar { box-shadow: 0 0 0 3px var(--fond-uni), 0 0 0 5px var(--vedette), 0 18px 40px -18px rgb(0 0 0 / 0.55); }
 
 /* ---- Liens mis en avant ----
  * Trois formats. Le bouton : un bouton comme les autres, à la couleur
@@ -421,7 +435,8 @@
 @media (prefers-reduced-motion: reduce) { [data-decor]::before { animation: none; } }
 
 /* Sur un fond clair, une ombre légère détache les cartes blanches. */
-.lp[data-bouton='plein'] :is(.lp-btn, .lp-carte) { box-shadow: 0 1px 2px rgb(0 0 0 / 0.06), 0 8px 24px -14px rgb(0 0 0 / 0.35); }
+.lp[data-bouton='plein'] :is(.lp-btn, .lp-carte):not(.lp-accent) { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--surface-texte) 12%, transparent), 0 1px 2px rgb(0 0 0 / 0.06), 0 8px 24px -14px rgb(0 0 0 / 0.35); }
+.lp[data-bouton='plein'] :is(.lp-btn, .lp-carte).lp-accent { box-shadow: 0 14px 34px -16px var(--vedette); }
 
 /* L'échantillon d'un thème dans le choix des thèmes. */
 .lp-pastille { position: relative; isolation: isolate; overflow: hidden; background: var(--fond-uni); background-image: var(--fond); color: var(--texte); }

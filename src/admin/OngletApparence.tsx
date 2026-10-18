@@ -64,10 +64,10 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
           {THEMES.filter(t => famille === 'tous' || t.famille === famille).map(t => (
             <li key={t.id}>
               {/* Choisir un thème pose aussi les boutons qui vont avec ; on peut les changer ensuite. */}
-              <button type="button" onClick={() => maj({ theme: t.id, ...(t.conseil ? { bouton: t.conseil } : {}) })} aria-pressed={reglages.theme === t.id}
-                className={`flex w-full flex-col items-center gap-1.5 rounded-2xl p-1.5 transition ${reglages.theme === t.id ? 'bg-peche/15 ring-2 ring-peche' : 'hover:bg-white/[0.05]'}`}>
+              <button type="button" onClick={() => maj({ theme: t.id, bouton: t.conseil })} aria-pressed={theme.id === t.id}
+                className={`flex w-full flex-col items-center gap-1.5 rounded-2xl p-1.5 transition ${theme.id === t.id ? 'bg-peche/15 ring-2 ring-peche' : 'hover:bg-white/[0.05]'}`}>
                 <span className="lp-pastille flex aspect-[4/5] w-full flex-col items-center gap-[6%] rounded-xl pt-[13%] shadow-inner ring-1 ring-white/10"
-                  style={variablesTheme(t) as CSSProperties} data-decor={t.decor} data-police={t.police} data-bouton={t.conseil?.style ?? 'plein'} data-forme={t.conseil?.forme ?? 'pilule'}>
+                  style={variablesTheme(t) as CSSProperties} data-decor={t.decor} data-police={t.police} data-bouton={t.conseil.style} data-forme={t.conseil.forme}>
                   <span className="lp-pastille-aa" aria-hidden="true">Aa</span>
                   <span className="lp-pastille-barre vedette mt-[6%]" />
                   <span className="lp-pastille-barre" />
