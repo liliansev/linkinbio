@@ -3,6 +3,8 @@ import QRCode from 'qrcode';
 import type { ComptePage, Reglages } from '../lib/types.ts';
 import { LANGUES, urlPage } from '../lib/types.ts';
 import { NOMS_LANGUES } from '../lib/langues.ts';
+import { AUDIENCES, NOMS_AUDIENCES } from '../lib/provenance.ts';
+import type { Audience } from '../lib/provenance.ts';
 import type { Abonnement as EtatAbonnement, Periode } from '../lib/abonnement.ts';
 import { AVANTAGES_PRO, TARIFS, estResilie, euros } from '../lib/abonnement.ts';
 import { Icone } from '../components/Icone.tsx';
@@ -61,6 +63,7 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
             <Interrupteur label="Vouvoyer mes visiteurs" aide={reglages.vouvoiement ? '« Votre adresse e-mail », « Votre place est gardée ».' : '« Ton adresse e-mail », « Ta place est gardée ». À changer si ta page parle en « vous ».'} actif={!!reglages.vouvoiement} onChange={v => onChange({ ...reglages, vouvoiement: v })} />
             <Interrupteur label="Le résumé de ma semaine" aide="Chaque lundi matin, par e-mail : ce qui a marché sur ta page, en quelques phrases." actif={reglages.resumeHebdo} onChange={v => onChange({ ...reglages, resumeHebdo: v })} />
             <Interrupteur label="Ouvrir les liens dans les apps" aide="Depuis Instagram, TikTok ou Facebook, un lien YouTube, Spotify ou Instagram s’ouvre dans son app plutôt que dans leur navigateur intégré." actif={reglages.ouvrirApps} onChange={v => onChange({ ...reglages, ouvrirApps: v })} />
+            <VuesReseaux reglages={reglages} onChange={onChange} />
           </div>
         </div>
       </Carte>
@@ -237,5 +240,36 @@ function Langues({ reglages, onChange, adresse }: { reglages: Reglages; onChange
         </div>
       )}
     </Carte>
+  );
+}
+
+/** L'option « une vue par réseau » : dans « Ma page », un onglet par réseau pour cacher ce qui ne le concerne pas. */
+function VuesReseaux({ reglages, onChange }: { reglages: Reglages; onChange: (r: Reglages) => void }) {
+  const vues = reglages.vuesReseaux;
+  const actif = vues.length > 0;
+  // À l'ouverture : les réseaux déjà en tête de page, sinon Instagram et TikTok.
+  const depart = (): Audience[] => {
+    const siens = AUDIENCES.filter(a => reglages.reseaux.some(r => r.reseau === a));
+    return siens.length ? siens : ['instagram', 'tiktok'];
+  };
+  const basculer = (a: Audience) => {
+    const suite = vues.includes(a) ? vues.filter(x => x !== a) : AUDIENCES.filter(x => x === a || vues.includes(x));
+    onChange({ ...reglages, vuesReseaux: suite });
+  };
+  return (
+    <div>
+      <Interrupteur label="Une vue par réseau" aide="Dans « Ma page », un onglet par réseau : tu caches d’un toucher ce que ceux qui arrivent d’Instagram, de TikTok ou de LinkedIn n’ont pas besoin de voir."
+        actif={actif} onChange={v => onChange({ ...reglages, vuesReseaux: v ? depart() : [] })} />
+      {actif && (
+        <div className="grid grid-cols-3 gap-1.5 pb-3" role="group" aria-label="Réseaux qui ont leur vue">
+          {AUDIENCES.map(a => (
+            <button key={a} type="button" aria-pressed={vues.includes(a)} onClick={() => basculer(a)}
+              className={`min-h-9 rounded-lg px-2 text-[13px] font-medium transition ${vues.includes(a) ? 'bg-white/[0.14] text-white ring-1 ring-white/30' : 'bg-white/[0.04] text-white/55 hover:bg-white/[0.08]'}`}>
+              {NOMS_AUDIENCES[a]}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }

@@ -56,6 +56,9 @@ export function creneau(v: unknown): Creneau | null {
 }
 
 /** Les provenances visées par un bloc, ou null s'il n'en vise aucune. */
+/** Une liste de provenances connues, sans doublon, dans l'ordre de `AUDIENCES`. */
+const provenances = (v: unknown): Audience[] => (Array.isArray(v) ? AUDIENCES.filter(a => v.includes(a)) : []);
+
 export function audience(v: unknown): { sources: Audience[]; effet: EffetAudience } | null {
   if (!v || typeof v !== 'object') return null;
   const o = v as Record<string, unknown>;
@@ -123,6 +126,7 @@ export function validerBloc(v: unknown, id: string): Bloc {
     compteARebours: bool(o.compteARebours, false),
     creneau: creneau(o.creneau),
     audience: audience(o.audience),
+    cache: provenances(o.cache),
     demanderPrenom: bool(o.demanderPrenom, false),
     acces: type === 'lien' ? acces(o.acces) : null,
     preuve: type === 'preuve' ? preuve(o.preuve) ?? { genre: 'note', note: 5, nombre: 0, source: '' } : null,
@@ -154,6 +158,7 @@ export function validerReglages(v: unknown, base: Reglages): Reglages {
     langues: Array.isArray(o.langues) ? LANGUES.filter(l => o.langues.includes(l)) : base.langues ?? [],
     bioTraduite: o.bioTraduite && typeof o.bioTraduite === 'object' ? Object.fromEntries(LANGUES.map(l => [l, texte(o.bioTraduite[l], 300)]).filter(([, b]) => b)) : base.bioTraduite ?? {},
     bureau: parmi(o.bureau, MISES_EN_PAGE_BUREAU, base.bureau),
+    vuesReseaux: provenances(o.vuesReseaux ?? base.vuesReseaux),
     animation: parmi(o.animation, ANIMATIONS, base.animation),
   };
 }

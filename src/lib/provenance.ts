@@ -60,11 +60,22 @@ export type EffetAudience = (typeof EFFETS_AUDIENCE)[number];
 
 /** Ce qu'un bloc devient pour ce visiteur : retiré, laissé, ou mis en avant. */
 export function selonAudience(bloc: Bloc, audience: Audience | ''): 'retire' | 'normal' | 'avant' {
+  if (audience && bloc.cache?.includes(audience)) return 'retire';
   const a = bloc.audience;
   if (!a || !a.sources.length) return 'normal';
   const vise = !!audience && a.sources.includes(audience);
   if (a.effet === 'seulement') return vise ? 'normal' : 'retire';
   return vise ? 'avant' : 'normal';
+}
+
+/** Montrer ou cacher un bloc pour une provenance (l'œil de la vue par réseau). */
+export function basculerPour(bloc: Bloc, audience: Audience, visible: boolean): Pick<Bloc, 'cache' | 'audience'> {
+  const cache = (bloc.cache ?? []).filter(a => a !== audience);
+  if (!visible) return { cache: [...cache, audience], audience: bloc.audience };
+  // Un bloc réservé à d'autres réseaux s'ouvre aussi à celui-ci.
+  const a = bloc.audience;
+  const ouvert = a?.effet === 'seulement' && !a.sources.includes(audience) ? { ...a, sources: [...a.sources, audience] } : a;
+  return { cache, audience: ouvert };
 }
 
 /** Les blocs pour ce visiteur : ceux qui visent sa provenance passent en tête, mis en avant. */

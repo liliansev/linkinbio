@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { composerAudience, provenance } from './provenance.ts';
+import { basculerPour, composerAudience, provenance } from './provenance.ts';
 import { nouveauBloc } from './types.ts';
 import { validerBloc } from './valider.ts';
 
@@ -27,4 +27,19 @@ test('un bloc passe en tête, ou n’apparaît que, pour son public', () => {
   assert.deepEqual(composerAudience(blocs, '').map(b => b.id), ['a', 'tiktok']);
   assert.deepEqual(validerBloc({ audience: { sources: ['tiktok', 'myspace'], effet: 'rien' } }, 'x').audience, { sources: ['tiktok'], effet: 'avant' });
   assert.equal(validerBloc({ audience: { sources: [] } }, 'x').audience, null);
+});
+
+test('la vue par réseau : un bloc caché pour Instagram disparaît pour Instagram seulement', () => {
+  const b = { ...nouveauBloc('lien', 'a'), url: 'https://exemple.fr', titre: 'A' };
+  const cache = { ...b, ...basculerPour(b, 'instagram', false) };
+  assert.deepEqual(cache.cache, ['instagram']);
+  assert.equal(composerAudience([cache], 'instagram').length, 0);
+  assert.equal(composerAudience([cache], 'tiktok').length, 1);
+  assert.equal(composerAudience([cache], '').length, 1);
+  const remis = { ...cache, ...basculerPour(cache, 'instagram', true) };
+  assert.deepEqual(remis.cache, []);
+  // Un bloc réservé à TikTok, rendu visible depuis la vue Instagram, s'ouvre aussi à Instagram.
+  const reserve = { ...b, audience: { sources: ['tiktok' as const], effet: 'seulement' as const } };
+  const ouvert = { ...reserve, ...basculerPour(reserve, 'instagram', true) };
+  assert.equal(composerAudience([ouvert], 'instagram').length, 1);
 });

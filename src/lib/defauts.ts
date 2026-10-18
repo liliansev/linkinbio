@@ -37,6 +37,7 @@ export const REGLAGES_DEFAUT: Reglages = {
   vouvoiement: false,
   animation: 'orbite',
   bureau: 'onepage',
+  vuesReseaux: [],
 };
 
 export function blocsDefaut(id: () => string): Bloc[] {

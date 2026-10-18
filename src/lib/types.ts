@@ -51,6 +51,8 @@ export interface Bloc {
   creneau: Creneau | null;
   /** Les provenances visées (Instagram, TikTok…) : le bloc passe en tête pour elles, ou ne s'affiche que pour elles. */
   audience: { sources: Audience[]; effet: EffetAudience } | null;
+  /** Les provenances pour qui le bloc est caché (la vue par réseau de « Ma page »). */
+  cache: Audience[];
   /** « Rejoins ma liste » : demander aussi le prénom. */
   demanderPrenom: boolean;
   /** Le mode drop : un code à taper, des places comptées, ou les deux. L'adresse ne part qu'une fois le lien débloqué. */
@@ -132,6 +134,8 @@ export interface Reglages {
   vouvoiement: boolean;
   /** Le mouvement des liens mis en avant (un bloc peut choisir le sien). */
   animation: Animation;
+  /** Les réseaux qui ont leur vue dans « Ma page » (vide : l'option est coupée). */
+  vuesReseaux: Audience[];
   /** La mise en page sur un grand écran ; sur téléphone, la page reste une colonne. */
   bureau: MiseEnPageBureau;
 }
@@ -307,7 +311,7 @@ export function nouveauBloc(type: TypeBloc, id: string): Bloc {
   return {
     id, type, titre: titres[type], url: '', sousTitre: type === 'newsletter' || type === 'inscription' ? 'Un e-mail de temps en temps, rien de plus.' : '', description: '', icone: '', image: '',
     public: true, indexable: true, vedette: false, format: 'bandeau', teinte: 'accent', animation: 'auto', debut: '', fin: '',
-    compteARebours: false, creneau: null, audience: null, demanderPrenom: false, acces: null,
+    compteARebours: false, creneau: null, audience: null, cache: [], demanderPrenom: false, acces: null,
     preuve: type === 'preuve' ? { genre: 'note', note: 5, nombre: 0, source: 'Google' } : null, traductions: {},
   };
 }
