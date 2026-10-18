@@ -49,3 +49,9 @@
 .adm ::selection { background: #ffb38a; color: #0c121f; }
 .adm { scrollbar-color: rgb(255 255 255 / 0.18) transparent; -webkit-tap-highlight-color: transparent; }
 .adm :is(button, a, input, textarea, select, summary):focus-visible { outline: 2px solid #ffb38a; outline-offset: 2px; }
+
+/* Les premiers pas : la vraie page en miniature, à la largeur d'un téléphone. */
+.adm-miroir { --z: 0.62; width: calc(390px * var(--z)); flex-shrink: 0; }
+.adm-miroir-page { width: 390px; zoom: var(--z); }
+@media (min-width: 1024px) { .adm-miroir { --z: 0.86; } }
+.adm-miroir-fin { box-shadow: 0 0 0 1.5px rgb(255 179 138 / 0.55), 0 30px 90px -24px rgb(255 179 138 / 0.4); }

@@ -5,16 +5,19 @@ import type { EtatAdmin, MiseEnPageBureau } from '../src/lib/types.ts';
 import { estEnLigne } from '../src/lib/types.ts';
 import { Admin } from '../src/admin/Admin.tsx';
 import { PageLiens } from '../src/components/PageLiens.tsx';
-import { apiDemo, pageDemo } from './api-demo.ts';
+import { apiDemo, apiNouveau, pageDemo, recommencerNouveau } from './api-demo.ts';
 
 /* L'aperçu navigable : le vrai back office et la vraie page, sans serveur. */
 function Demo() {
-  const [vue, setVue] = useState(location.hash === '#page' ? 'page' : 'admin');
+  const lireVue = () => (location.hash === '#page' ? 'page' : location.hash === '#nouveau' ? 'nouveau' : 'admin');
+  const [vue, setVue] = useState(lireVue);
   const [etat, setEtat] = useState<EtatAdmin | null>(null);
+  // Chaque « Recommencer » remonte le back office du nouvel inscrit à zéro.
+  const [tour, setTour] = useState(0);
   // Dans l'aperçu, on passe d'une mise en page à l'autre sans repasser par le back office.
   const [bureauChoisi, choisirBureau] = useState<MiseEnPageBureau | null>(null);
-  useEffect(() => { const f = () => setVue(location.hash === '#page' ? 'page' : 'admin'); addEventListener('hashchange', f); return () => removeEventListener('hashchange', f); }, []);
-  useEffect(() => { if (vue === 'admin') apiDemo.charger().then(setEtat); }, [vue]);
+  useEffect(() => { const f = () => { setEtat(null); setVue(lireVue()); }; addEventListener('hashchange', f); return () => removeEventListener('hashchange', f); }, []);
+  useEffect(() => { if (vue !== 'page') (vue === 'nouveau' ? apiNouveau : apiDemo).charger().then(setEtat); }, [vue, tour]);
   if (vue === 'page') {
     const p = pageDemo();
     const bureau = bureauChoisi ?? p.reglages.bureau;
@@ -31,9 +34,21 @@ function Demo() {
     );
   }
   if (!etat) return null;
+  if (vue === 'nouveau') {
+    return (
+      <>
+        <p className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 bg-peche px-4 py-2 text-center font-sans text-[13px] font-medium text-nuit">
+          <span>L’arrivée d’un nouvel inscrit, juste après son lien d’invitation.</span>
+          <button type="button" className="underline" onClick={() => { recommencerNouveau(); setEtat(null); setTour(t => t + 1); }}>Recommencer</button>
+          <a href="#" className="underline">Retour à la démo</a>
+        </p>
+        <Admin key={tour} api={apiNouveau} initial={etat} demo />
+      </>
+    );
+  }
   return (
     <>
-      <p className="bg-peche px-4 py-2 text-center font-sans text-[13px] font-medium text-nuit">Aperçu de démonstration : tes modifications restent dans ce navigateur, les statistiques sont fictives.</p>
+      <p className="bg-peche px-4 py-2 text-center font-sans text-[13px] font-medium text-nuit">Aperçu de démonstration : tes modifications restent dans ce navigateur, les statistiques sont fictives. <a href="#nouveau" className="underline">Voir l’arrivée d’un nouvel inscrit</a></p>
       <Admin api={apiDemo} initial={etat} demo />
     </>
   );

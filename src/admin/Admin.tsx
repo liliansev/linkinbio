@@ -9,6 +9,8 @@ import { OngletStats } from './OngletStats.tsx';
 import { OngletReglages } from './OngletReglages.tsx';
 import { OngletComptes } from './OngletComptes.tsx';
 import { AccepterCgu } from './AccepterCgu.tsx';
+import { PremiersPas, premiersPasFaits } from './PremiersPas.tsx';
+import { pageNeuve } from '../lib/demarrage.ts';
 import { Icone } from '../components/Icone.tsx';
 import { vibrer } from './ui.tsx';
 
@@ -44,6 +46,10 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
   const [apercu, setApercu] = useState(false);
   const [cguAJour, setCguAJour] = useState(initial.cguAJour);
   const [abonnement, setAbonnement] = useState({ ...initial.abonnement, pro: initial.compte.pro });
+  // Un compte neuf arrive sur ses premiers pas, une seule fois, et seulement tant que sa page est vide.
+  const [premiersPas, setPremiersPas] = useState(() => !initial.compte.principal && pageNeuve(initial.reglages, initial.blocs));
+  // Remis à plus tard sur cet appareil : lu après l'hydratation, le serveur n'en sait rien.
+  useEffect(() => { if (premiersPasFaits()) setPremiersPas(false); }, []);
   const enCours = useRef(0);
   const compte = useMemo(() => ({ ...initial.compte, pro: abonnement.pro }), [initial.compte, abonnement.pro]);
   // L'onglet Comptes n'existe que pour Lilian.
@@ -112,6 +118,14 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
     if (nouveau) setToast({ texte: 'Ajouté en haut de ta page' });
   }
 
+  /** Plusieurs liens d'un coup (les premiers pas) : les nouveaux en tête, dans l'ordre donné ; les autres mis à jour sur place. */
+  function poserBlocs(liste: Bloc[]) {
+    const nouveaux = liste.filter(b => !blocs.some(x => x.id === b.id));
+    setBlocs(l => [...nouveaux, ...l.map(b => liste.find(x => x.id === b.id) ?? b)]);
+    // Le serveur pose chaque nouveau bloc en tête : on les envoie du dernier au premier.
+    ecrire(async () => { for (const b of [...liste].reverse()) await api.enregistrerBloc(b); });
+  }
+
   function ordonner(liste: Bloc[]) {
     setBlocs(liste);
     ecrire(() => api.ordonner(liste.map(b => b.id)));
@@ -150,6 +164,23 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
   const chargerStats = useCallback((jours: number) => api.stats(jours).then(s => { if (jours === 30) setClics(Object.fromEntries(s.blocs.map(b => [b.id, b.clics]))); return s; }), [api]);
 
   if (!cguAJour) return <AccepterCgu accepter={async () => { await api.accepterCgu(); setCguAJour(true); }} deconnexion={deconnexion} />;
+
+  const bulle = toast && (
+    <div role="status" className="adm-toast fixed inset-x-4 bottom-[calc(76px+env(safe-area-inset-bottom))] z-[60] mx-auto flex max-w-sm items-center justify-between gap-3 rounded-2xl bg-white px-4 py-3 text-[14.5px] font-medium text-nuit shadow-2xl lg:bottom-6">
+      <span className="flex items-center gap-2">{!toast.annuler && sauvegarde !== 'erreur' && <span className="grid h-5 w-5 place-items-center rounded-full bg-emerald-500 text-white"><Icone nom="ui-ok" taille={13} /></span>}{toast.texte}</span>
+      {toast.annuler && <button type="button" onClick={toast.annuler} className="-my-1 min-h-9 rounded-full px-3 font-semibold text-[#a3461d] hover:bg-black/5">Annuler</button>}
+    </div>
+  );
+
+  if (premiersPas) {
+    return (
+      <>
+        <PremiersPas compte={compte} reglages={reglages} blocs={blocs} onReglages={changerReglages} onPoserBlocs={poserBlocs}
+          envoyerImage={d => api.envoyerImage(d)} apercuSite={u => api.apercuSite(u)} onFin={() => { setPremiersPas(false); setOnglet('page'); scrollTo({ top: 0 }); }} />
+        {bulle}
+      </>
+    );
+  }
 
   const indicateur = sauvegarde === 'encours' ? 'Enregistrement…' : sauvegarde === 'erreur' ? 'Non enregistré' : 'Enregistré';
 
@@ -225,12 +256,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
           onEnregistrer={enregistrerBloc} onSupprimer={supprimer} onDupliquer={dupliquer} envoyerImage={d => api.envoyerImage(d)} apercuSite={u => api.apercuSite(u)} />
       )}
 
-      {toast && (
-        <div role="status" className="adm-toast fixed inset-x-4 bottom-[calc(76px+env(safe-area-inset-bottom))] z-[60] mx-auto flex max-w-sm items-center justify-between gap-3 rounded-2xl bg-white px-4 py-3 text-[14.5px] font-medium text-nuit shadow-2xl lg:bottom-6">
-          <span className="flex items-center gap-2">{!toast.annuler && sauvegarde !== 'erreur' && <span className="grid h-5 w-5 place-items-center rounded-full bg-emerald-500 text-white"><Icone nom="ui-ok" taille={13} /></span>}{toast.texte}</span>
-          {toast.annuler && <button type="button" onClick={toast.annuler} className="-my-1 min-h-9 rounded-full px-3 font-semibold text-[#a3461d] hover:bg-black/5">Annuler</button>}
-        </div>
-      )}
+      {bulle}
     </div>
   );
 }
