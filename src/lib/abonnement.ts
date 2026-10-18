@@ -4,9 +4,14 @@
  * abonnement. Le compte principal (Lilian) est toujours Pro, sans abonnement.
  */
 
+/** Un prix en euros à la française : « 9 € », « 86,40 € » (espace insécable avant le symbole). */
+export const euros = (n: number) =>
+  `${n.toLocaleString('fr-FR', { minimumFractionDigits: Number.isInteger(n) ? 0 : 2, maximumFractionDigits: 2 })}\u00a0€`;
+
+/** Prix TTC. L'annuel vaut douze mois moins 20 % : 9 × 12 = 108 €, soit 86,40 €. */
 export const TARIFS = {
-  mois: { prix: 4, libelle: '4 € par mois' },
-  an: { prix: 36, libelle: '36 € par an', economie: '3 mois offerts' },
+  mois: { prix: 9, libelle: `${euros(9)} par mois` },
+  an: { prix: 86.4, libelle: `${euros(86.4)} par an`, economie: '-20\u00a0%' },
 } as const;
 export type Periode = keyof typeof TARIFS;
 
