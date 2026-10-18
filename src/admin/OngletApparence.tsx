@@ -230,7 +230,7 @@ export function DesignTiroirs({ reglages, onChange, envoyerImage, principal, pie
   const theme = themeParId(reglages.theme);
   const nom = <T extends string>(liste: { id: T; nom: string }[], id: T) => liste.find(x => x.id === id)?.nom ?? '';
   const lignes: { id: Tiroir; nom: string; valeur: string; vignette?: ReactNode }[] = [
-    { id: 'theme', nom: 'Thème', valeur: theme.nom, vignette: <span className="block w-8"><Pastille theme={theme} /></span> },
+    { id: 'theme', nom: 'Thème', valeur: theme.nom, vignette: <span className="block w-7"><Pastille theme={theme} /></span> },
     { id: 'boutons', nom: 'Boutons', valeur: [nom(STYLES, reglages.bouton.style), nom(FORMES, reglages.bouton.forme), `ombre ${nom(OMBRES, reglages.bouton.ombre).toLowerCase()}`].join(', ') },
     { id: 'animation', nom: 'Liens mis en avant', valeur: NOMS_ANIMATIONS[reglages.animation].nom },
     { id: 'bureau', nom: 'Sur ordinateur', valeur: nom(BUREAUX, reglages.bureau) },
@@ -247,16 +247,16 @@ export function DesignTiroirs({ reglages, onChange, envoyerImage, principal, pie
 
   return (
     <div className="flex flex-col gap-4">
-      <ul className="overflow-hidden rounded-2xl bg-white/[0.04] ring-1 ring-white/[0.08]">
+      <ul className="overflow-hidden rounded-xl bg-white/[0.03] ring-1 ring-white/[0.07]">
         {lignes.map((l, i) => (
           <li key={l.id} className={i > 0 ? 'border-t border-white/[0.07]' : ''}>
-            <button type="button" onClick={() => { vibrer(4); setOuvert(l.id); }} className="flex min-h-[60px] w-full items-center gap-3 px-4 py-2.5 text-left transition hover:bg-white/[0.04] active:bg-white/[0.06]">
+            <button type="button" onClick={() => { vibrer(4); setOuvert(l.id); }} className="flex min-h-[52px] w-full items-center gap-3 px-3.5 py-2 text-left transition hover:bg-white/[0.04] active:bg-white/[0.06]">
               {l.vignette}
               <span className="flex min-w-0 flex-1 flex-col">
-                <span className="text-[15px] font-medium text-white">{l.nom}</span>
-                <span className="truncate text-[13px] text-white/50">{l.valeur}</span>
+                <span className="text-[14px] font-medium text-white">{l.nom}</span>
+                <span className="truncate text-[12.5px] text-white/45">{l.valeur}</span>
               </span>
-              <Icone nom="ui-chevron" taille={18} className="-rotate-90 text-white/35" />
+              <Icone nom="ui-chevron" taille={16} className="-rotate-90 text-white/30" />
             </button>
           </li>
         ))}

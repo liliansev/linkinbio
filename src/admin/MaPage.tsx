@@ -37,7 +37,6 @@ export function MaPage({ compte, reglages, blocs, clics, onReglages, onOrdonner,
 }) {
   const [feuille, setFeuille] = useState<'design' | 'reseaux' | 'ajout' | null>(null);
   const [envoi, setEnvoi] = useState(false);
-  const [saisie, setSaisie] = useState(false);
   const fichier = useRef<HTMLInputElement>(null);
   const toile = useRef<HTMLDivElement>(null);
   const principal = compte.principal;
@@ -82,13 +81,13 @@ export function MaPage({ compte, reglages, blocs, clics, onReglages, onOrdonner,
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Sur ordinateur, les deux gestes en tête ; sur téléphone, ils sont sous le pouce. */}
-      <div className="hidden items-center justify-end gap-2 lg:flex">
-        <button type="button" onClick={() => setFeuille('ajout')} className="flex min-h-11 items-center gap-2 rounded-full bg-peche px-4 text-[14.5px] font-semibold text-nuit transition hover:brightness-105 active:scale-95">
-          <Icone nom="ui-plus" taille={18} /> Ajouter
+      {/* Les deux gestes de la page, en tête, sur téléphone comme sur ordinateur : rien ne flotte au-dessus des onglets. */}
+      <div className="order-0 flex items-center justify-end gap-2 pt-3 lg:pt-0">
+        <button type="button" onClick={design} className="flex min-h-9 items-center gap-1.5 rounded-full bg-white/[0.07] px-3.5 text-[13.5px] font-medium text-white transition hover:bg-white/[0.12] active:scale-95">
+          <Icone nom="palette" taille={16} /> Design
         </button>
-        <button type="button" onClick={design} className="flex min-h-11 items-center gap-2 rounded-full bg-white/[0.08] px-4 text-[14.5px] font-medium text-white transition hover:bg-white/[0.13] active:scale-95">
-          <Icone nom="palette" taille={18} /> Design
+        <button type="button" onClick={() => { vibrer(5); setFeuille('ajout'); }} className="flex min-h-9 items-center gap-1.5 rounded-full bg-peche px-3.5 text-[13.5px] font-semibold text-nuit transition hover:brightness-105 active:scale-95">
+          <Icone nom="ui-plus" taille={16} /> Ajouter
         </button>
       </div>
 
@@ -96,26 +95,12 @@ export function MaPage({ compte, reglages, blocs, clics, onReglages, onOrdonner,
       <div className="order-2 lg:order-none"><HautLiens compte={compte} reglages={reglages} blocs={blocs} aller={aller} /></div>
 
       <div className="order-1 lg:order-none">
-        <div ref={toile} onFocus={e => setSaisie(e.target.matches('input, textarea'))} onBlur={() => setSaisie(false)}
+        <div ref={toile}
           className="adm-apercu adm-toile -mx-4 overflow-hidden lg:mx-0 lg:rounded-[30px] lg:ring-1 lg:ring-white/10 lg:shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)]">
           <PageLiens page={{ reglages, blocs: visibles, compte }} edition={edition} />
         </div>
         <p className="mt-3 text-center text-[13px] leading-snug text-white/45">Touche un élément pour le modifier. Maintiens un bloc pour le déplacer.</p>
       </div>
-
-      {/* Les gestes de la page, sous le pouce, au-dessus de la barre d'onglets. Ils s'effacent pendant la frappe. */}
-      {!saisie && (
-        <div className="adm-dock fixed inset-x-0 bottom-[calc(76px+env(safe-area-inset-bottom))] z-20 flex justify-center px-4 lg:hidden">
-          <div className="flex items-center gap-1 rounded-full border border-white/10 bg-[#141c2e]/92 p-1.5 shadow-[0_18px_40px_-14px_rgba(0,0,0,0.8)] backdrop-blur-xl">
-            <button type="button" onClick={() => { vibrer(5); setFeuille('ajout'); }} className="flex min-h-11 items-center gap-1.5 rounded-full bg-peche px-4 text-[14.5px] font-semibold text-nuit active:scale-95">
-              <Icone nom="ui-plus" taille={18} /> Ajouter
-            </button>
-            <button type="button" onClick={design} className="flex min-h-11 items-center gap-1.5 rounded-full px-4 text-[14.5px] font-medium text-white active:scale-95 active:bg-white/10">
-              <Icone nom="palette" taille={18} /> Design
-            </button>
-          </div>
-        </div>
-      )}
 
       <input ref={fichier} type="file" accept="image/*" hidden onChange={e => photo(e.target.files?.[0])} />
       <FeuilleAjout ouverte={feuille === 'ajout'} onFermer={() => setFeuille(null)} onChoisir={ajouter} principal={principal} />

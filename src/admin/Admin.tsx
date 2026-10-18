@@ -33,8 +33,8 @@ const ONGLETS: { id: Onglet; nom: string; icone: ReactNode }[] = [
   { id: 'reglages', nom: 'Réglages', icone: <><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z" /></> },
 ];
 
-function Picto({ children, taille = 22 }: { children: ReactNode; taille?: number }) {
-  return <svg width={taille} height={taille} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{children}</svg>;
+function Picto({ children, taille = 20 }: { children: ReactNode; taille?: number }) {
+  return <svg width={taille} height={taille} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{children}</svg>;
 }
 
 export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatAdmin; demo?: boolean }) {
@@ -203,7 +203,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
                 className={`min-h-9 rounded-full px-4 text-[14px] font-medium transition ${onglet === o.id ? 'bg-white text-nuit' : 'text-white/65 hover:text-white'}`}>{o.nom}</button>
             ))}
           </nav>
-          <button type="button" onClick={() => setApercu(true)} className="flex min-h-10 items-center gap-1.5 rounded-full bg-white/[0.08] px-4 text-[14px] font-medium transition active:scale-95 lg:hidden">Aperçu</button>
+          <button type="button" onClick={() => setApercu(true)} className="flex min-h-9 items-center gap-1.5 rounded-full bg-white/[0.07] px-3.5 text-[13.5px] font-medium transition active:scale-95 lg:hidden">Aperçu</button>
           <a href={demo ? '#page' : cheminPage(compte)} target={demo ? undefined : '_blank'} rel="noopener" className="hidden min-h-10 items-center gap-1.5 rounded-full bg-white px-4 text-[14px] font-semibold text-nuit transition hover:brightness-105 sm:inline-flex">Voir ma page <Icone nom="ui-fleche" taille={16} /></a>
         </div>
       </header>
@@ -213,9 +213,9 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
       )}
 
       <div className={`mx-auto max-w-6xl px-4 ${onglet === 'page' ? '' : 'lg:grid lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-10'}`}>
-        <main className={`mx-auto w-full max-w-xl lg:pb-12 ${onglet === 'page' ? 'pb-48 lg:pt-5' : 'pt-5 pb-32'}`}>
+        <main className={`mx-auto w-full max-w-xl lg:pb-12 ${onglet === 'page' ? 'pb-28 lg:pt-5' : 'pt-5 pb-28'}`}>
           <div key={onglet} className="adm-onglet">
-          <h1 className={`mb-4 text-[28px] font-semibold tracking-[-0.025em] lg:hidden ${onglet === 'page' ? 'sr-only' : ''}`}>{onglets.find(o => o.id === onglet)!.nom}</h1>
+          <h1 className={`mb-4 text-[22px] font-semibold tracking-[-0.02em] lg:hidden ${onglet === 'page' ? 'sr-only' : ''}`}>{onglets.find(o => o.id === onglet)!.nom}</h1>
           {onglet === 'page' && <MaPage compte={compte} reglages={reglages} blocs={blocs} clics={clics} onReglages={changerReglages} onOrdonner={ordonner}
             onOuvrir={b => setEdition({ bloc: b, nouveau: false })} onAjouter={b => setEdition({ bloc: b, nouveau: true })} envoyerImage={d => api.envoyerImage(d)} />}
           {onglet === 'stats' && <OngletStats charger={chargerStats} limite={initial.paiement && !compte.pro} onPro={versAbonnement}
@@ -233,13 +233,13 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
         )}
       </div>
 
-      <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-white/[0.07] bg-[#0e1524]/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl lg:hidden" aria-label="Sections">
+      <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-white/[0.07] bg-nuit/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl lg:hidden" aria-label="Sections">
         <ul className={`mx-auto grid max-w-md ${onglets.length === 4 ? 'grid-cols-4' : 'grid-cols-3'}`}>
           {onglets.map(o => (
             <li key={o.id}>
               <button type="button" onClick={() => { if (o.id !== onglet) { vibrer(5); setOnglet(o.id); scrollTo({ top: 0 }); } }} aria-current={onglet === o.id ? 'page' : undefined}
-                className={`flex h-16 w-full flex-col items-center justify-center gap-1 text-[11.5px] font-medium transition-colors duration-200 active:scale-95 ${onglet === o.id ? 'text-white' : 'text-white/50'}`}>
-                <span className={`adm-nav-pastille grid h-8 place-items-center rounded-full ${onglet === o.id ? 'w-14 bg-white/10' : 'w-10 bg-transparent'}`}><Picto>{o.icone}</Picto></span>{o.nom}
+                className={`flex h-14 w-full flex-col items-center justify-center gap-0.5 text-[11px] font-medium transition-colors duration-200 ${onglet === o.id ? 'text-white' : 'text-white/40'}`}>
+                <span className="grid h-7 place-items-center"><Picto>{o.icone}</Picto></span>{o.nom}
               </button>
             </li>
           ))}
