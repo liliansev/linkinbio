@@ -17,7 +17,12 @@ const EXEMPLES: Record<Reseau, string> = {
   spotify: 'https://open.spotify.com/…', email: 'toi@exemple.fr', site: 'https://…',
 };
 
-export function OngletApparence({ reglages, onChange, envoyerImage, principal = true }: { reglages: Reglages; onChange: (r: Reglages) => void; envoyerImage: (d: string) => Promise<string>; principal?: boolean }) {
+export type PartieApparence = 'profil' | 'theme' | 'animation' | 'boutons' | 'bureau' | 'reseaux';
+const TOUTES: PartieApparence[] = ['profil', 'theme', 'animation', 'boutons', 'bureau', 'reseaux'];
+
+/** Les réglages d'apparence, en cartes. `parties` n'en garde que certaines (les feuilles de « Ma page »). */
+export function OngletApparence({ reglages, onChange, envoyerImage, principal = true, parties = TOUTES }: { reglages: Reglages; onChange: (r: Reglages) => void; envoyerImage: (d: string) => Promise<string>; principal?: boolean; parties?: PartieApparence[] }) {
+  const voir = (p: PartieApparence) => parties.includes(p);
   const [famille, setFamille] = useState<Famille | 'tous'>('tous');
   const [envoi, setEnvoi] = useState(false);
   const fichier = useRef<HTMLInputElement>(null);
@@ -34,7 +39,7 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
 
   return (
     <div className="flex flex-col gap-4">
-      <Carte titre="Profil" id="profil">
+      {voir('profil') && <Carte titre="Profil" id="profil">
         <div className="mb-4 flex items-center gap-4">
           <button type="button" onClick={() => fichier.current?.click()} className="group relative h-20 w-20 shrink-0 overflow-hidden rounded-full bg-white/10" aria-label="Changer la photo">
             {reglages.profil.avatar && <img src={reglages.profil.avatar} alt="" className="h-full w-full object-cover" />}
@@ -51,9 +56,9 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
           <Champ label="Bio"><textarea className={`${classeSaisie} min-h-24`} value={reglages.profil.bio} maxLength={300} onChange={e => profil({ bio: e.target.value })} /></Champ>
           {principal && <Interrupteur label="Badge vérifié" aide="La petite coche à côté de ton nom." actif={reglages.profil.badge} onChange={v => profil({ badge: v })} />}
         </div>
-      </Carte>
+      </Carte>}
 
-      <Carte titre="Thème" id="theme" action={<span className="text-[13px] text-white/50">{theme.nom}</span>}>
+      {voir('theme') && <Carte titre="Thème" id="theme" action={<span className="text-[13px] text-white/50">{theme.nom}</span>}>
         <div className="-mx-1 mb-3 flex gap-1.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none]">
           {[{ id: 'tous' as const, nom: `Tous · ${THEMES.length}` }, ...FAMILLES].map(f => (
             <button key={f.id} type="button" onClick={() => setFamille(f.id)}
@@ -78,9 +83,9 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
             </li>
           ))}
         </ul>
-      </Carte>
+      </Carte>}
 
-      <Carte titre="Liens mis en avant" action={<span className="text-[13px] text-white/50">{NOMS_ANIMATIONS[reglages.animation].nom}</span>}>
+      {voir('animation') && <Carte titre="Liens mis en avant" action={<span className="text-[13px] text-white/50">{NOMS_ANIMATIONS[reglages.animation].nom}</span>}>
         <p className="-mt-1 mb-3 text-[13px] leading-snug text-white/55">Le mouvement qui attire l’œil sur tes liens en avant. Un lien peut aussi choisir le sien.</p>
         <div className="lp lp-mini rounded-2xl p-2.5" style={variablesTheme(theme) as CSSProperties} data-bouton={reglages.bouton.style} data-forme={reglages.bouton.forme} data-police={theme.police} data-decor={theme.decor}>
           <ul role="radiogroup" aria-label="Animation des liens mis en avant" className="grid grid-cols-2 gap-2">
@@ -100,9 +105,9 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
             })}
           </ul>
         </div>
-      </Carte>
+      </Carte>}
 
-      <Carte titre="Boutons">
+      {voir('boutons') && <Carte titre="Boutons">
         <div className="lp lp-mini rounded-2xl p-3" style={variablesTheme(theme) as CSSProperties} data-forme={reglages.bouton.forme} data-police={theme.police} data-decor={theme.decor}>
           <ul className="grid grid-cols-1 gap-2.5">
             {STYLES.map(s => (
@@ -119,9 +124,9 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
           <span className="mb-1.5 block text-[13px] font-medium text-white/70">Forme</span>
           <Segments label="Forme des boutons" valeur={reglages.bouton.forme} options={FORMES} onChange={v => maj({ bouton: { ...reglages.bouton, forme: v } })} />
         </div>
-      </Carte>
+      </Carte>}
 
-      <Carte titre="Sur ordinateur">
+      {voir('bureau') && <Carte titre="Sur ordinateur">
         <p className="mb-3 text-[13px] leading-snug text-white/55">Sur téléphone, ta page reste une colonne. Sur un grand écran, elle prend la mise en page choisie.</p>
         <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Mise en page sur ordinateur">
           {BUREAUX.map(b => {
@@ -136,9 +141,9 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
             );
           })}
         </div>
-      </Carte>
+      </Carte>}
 
-      <Carte titre="Réseaux" id="reseaux">
+      {voir('reseaux') && <Carte titre="Réseaux" id="reseaux">
         <ul className="flex flex-col gap-2">
           {reglages.reseaux.map((r, i) => (
             <li key={r.reseau} className="flex items-center gap-2">
@@ -166,7 +171,7 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
           <span className="mb-1.5 block text-[13px] font-medium text-white/70">Emplacement des icônes</span>
           <Segments label="Emplacement des icônes" valeur={reglages.reseauxPosition} options={[{ id: 'haut', nom: 'Sous la bio' }, { id: 'bas', nom: 'En bas' }]} onChange={v => maj({ reseauxPosition: v })} />
         </div>
-      </Carte>
+      </Carte>}
     </div>
   );
 }

@@ -30,7 +30,6 @@ export function OngletLiens({ blocs, clics, onOrdonner, onModifier, onOuvrir, on
   /** Les autres comptes n'ont pas les blocs branchés sur la chaîne et la newsletter de Lilian. */
   principal?: boolean;
 }) {
-  const types = principal ? TYPES : TYPES.filter(t => !TYPES_PRINCIPAL.includes(t.type));
   const [choix, setChoix] = useState(false);
   const capteurs = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -71,28 +70,36 @@ export function OngletLiens({ blocs, clics, onOrdonner, onModifier, onOuvrir, on
       )}
       {blocs.length > 1 && <p className="text-center text-[13px] text-white/40">Maintiens la poignée à gauche pour déplacer un bloc.</p>}
 
-      <Feuille ouverte={choix} onFermer={() => setChoix(false)} titre="Ajouter un bloc">
-        {fermer => (
-          <ul className="adm-cascade -mx-2 flex flex-col pb-2">
-            {types.map((t, i) => (
-              <li key={t.type} style={{ '--i': i } as CSSProperties}>
-                <button type="button" onClick={() => fermer(() => ajouter(t.type))}
-                  className="group flex w-full items-center gap-3.5 rounded-2xl px-2 py-2.5 text-left transition duration-150 hover:bg-white/[0.05] active:scale-[0.985] active:bg-white/[0.07]">
-                  <span className={`grid h-12 w-12 shrink-0 place-items-center rounded-[14px] transition ${t.type === 'lien' ? 'bg-peche text-nuit' : 'bg-white/[0.07] text-peche group-hover:bg-white/[0.1]'}`}>
-                    <Icone nom={t.picto} taille={22} />
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-[16px] font-semibold text-white">{t.nom}</span>
-                    <span className="block text-[13.5px] leading-snug text-white/55">{t.aide}</span>
-                  </span>
-                  <Icone nom="ui-chevron" taille={18} className="-rotate-90 text-white/30" />
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </Feuille>
+      <FeuilleAjout ouverte={choix} onFermer={() => setChoix(false)} onChoisir={ajouter} principal={principal} />
     </div>
+  );
+}
+
+/** Le choix du type de bloc à ajouter. */
+export function FeuilleAjout({ ouverte, onFermer, onChoisir, principal }: { ouverte: boolean; onFermer: () => void; onChoisir: (type: TypeBloc) => void; principal: boolean }) {
+  const types = principal ? TYPES : TYPES.filter(t => !TYPES_PRINCIPAL.includes(t.type));
+  return (
+    <Feuille ouverte={ouverte} onFermer={onFermer} titre="Ajouter un bloc">
+      {fermer => (
+        <ul className="adm-cascade -mx-2 flex flex-col pb-2">
+          {types.map((t, i) => (
+            <li key={t.type} style={{ '--i': i } as CSSProperties}>
+              <button type="button" onClick={() => fermer(() => onChoisir(t.type))}
+                className="group flex w-full items-center gap-3.5 rounded-2xl px-2 py-2.5 text-left transition duration-150 hover:bg-white/[0.05] active:scale-[0.985] active:bg-white/[0.07]">
+                <span className={`grid h-12 w-12 shrink-0 place-items-center rounded-[14px] transition ${t.type === 'lien' ? 'bg-peche text-nuit' : 'bg-white/[0.07] text-peche group-hover:bg-white/[0.1]'}`}>
+                  <Icone nom={t.picto} taille={22} />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[16px] font-semibold text-white">{t.nom}</span>
+                  <span className="block text-[13.5px] leading-snug text-white/55">{t.aide}</span>
+                </span>
+                <Icone nom="ui-chevron" taille={18} className="-rotate-90 text-white/30" />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Feuille>
   );
 }
 

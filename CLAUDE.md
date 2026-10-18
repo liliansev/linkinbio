@@ -45,9 +45,12 @@ embarque tout : l'image n'a pas de `node_modules`.
   webhooks signés), `server/apercu.ts` (aperçu de site, anti-SSRF).
 - `lib/` : `types.ts` (origines, `cheminPage`, `urlPage`), `valider.ts`, `themes.ts`, `legal.ts` (`VERSION_CGU`),
   `abonnement.ts` (prix, `estPro()`).
-- `admin/` : onglets Liens, Apparence, Stats, Comptes (principal seulement), Réglages.
-  En tête des Liens, `BienDemarrer.tsx` : l'adresse à copier ou partager, et les étapes
-  d'une page prête (`lib/demarrage.ts`), qui se cochent seules.
+- `admin/` : onglets Ma page, Stats, Comptes (principal seulement), Réglages.
+  `MaPage.tsx` édite la page elle-même : `PageLiens` reçoit `edition` (nom et bio
+  tapés en place, photo, réseaux et blocs ouverts d'un toucher, blocs déplacés en
+  les maintenant), le design s'ouvre dans une feuille `cote` qui laisse voir la page,
+  et la liste d'avant (`OngletLiens`) reste à un toucher. En tête, `BienDemarrer.tsx` :
+  l'adresse à copier ou partager, et les étapes d'une page prête (`lib/demarrage.ts`).
 - `components/PageLiens.tsx` : la page publique ; `routes/index.tsx` : l'accueil de hopla.page.
 - `demo/` : aperçu statique avec une API simulée, publié en Artifact.
 

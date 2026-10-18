@@ -559,3 +559,70 @@
   .lp[data-bureau='onepage'] .lp-signature { margin-top: 64px; padding-top: 28px; border-top: 1px solid color-mix(in srgb, var(--texte) 10%, transparent); }
   .lp[data-bureau='onepage'] .lp-pied .lp-reseaux { justify-content: flex-start; }
 }
+
+/* ---- Édition sur la page ----
+ * Dans « Ma page » du back office, la page elle-même sert d'éditeur : un
+ * pointillé discret montre ce qui se modifie, l'accent du thème marque ce
+ * qu'on touche. Rien de tout cela n'existe sur la page publique.
+ */
+.adm-toile .lp { min-height: 0; }
+.lp-ed-saisie {
+  font: inherit; color: inherit; letter-spacing: inherit; text-align: center;
+  background: transparent; border: 0; margin: 0; padding: 2px 8px; border-radius: 10px; max-width: 100%;
+  outline: 1.5px dashed color-mix(in srgb, var(--texte) 22%, transparent); outline-offset: 2px;
+  transition: outline-color 0.15s, background-color 0.15s;
+}
+.lp-ed-saisie:hover { outline-color: color-mix(in srgb, var(--texte) 45%, transparent); }
+.lp-ed-saisie:focus { outline: 2px solid var(--vedette); background: color-mix(in srgb, var(--texte) 6%, transparent); }
+.lp-ed-saisie::placeholder { color: inherit; opacity: 0.45; }
+@supports (field-sizing: content) {
+  input.lp-ed-saisie { field-sizing: content; width: auto !important; min-width: 6ch; }
+  textarea.lp-ed-saisie { field-sizing: content; }
+}
+textarea.lp-bio.lp-ed-saisie { display: block; width: 100%; resize: none; overflow: hidden; color: var(--doux); }
+
+.lp-ed-photo { position: relative; padding: 0; border: 0; background: none; border-radius: 999px; cursor: pointer; color: inherit; }
+.lp-ed-sans-photo { display: block; background: color-mix(in srgb, var(--texte) 9%, transparent); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--texte) 30%, transparent); }
+.lp-ed-pastille {
+  position: absolute; right: 0; bottom: 2px; width: 34px; height: 34px; border-radius: 999px;
+  display: grid; place-items: center; font-weight: 700;
+  background: var(--vedette); color: var(--vedette-texte); box-shadow: 0 0 0 3px var(--fond-uni);
+  transition: scale 0.15s;
+}
+.lp-ed-photo:hover .lp-ed-pastille { scale: 1.08; }
+
+button.lp-ed-zone {
+  font: inherit; color: var(--texte); background: none; border: 0; cursor: pointer;
+  padding: 2px 6px; border-radius: 999px;
+  outline: 1.5px dashed color-mix(in srgb, var(--texte) 22%, transparent); outline-offset: 2px;
+}
+button.lp-ed-zone:hover { outline-color: color-mix(in srgb, var(--texte) 45%, transparent); }
+.lp-ed-reseau { width: 40px; height: 40px; display: grid; place-items: center; }
+.lp-ed-vide { padding: 9px 12px; font-size: 0.92rem; font-weight: 520; color: var(--doux); }
+
+.lp-ed-ajout {
+  display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 52px; width: 100%;
+  border-radius: var(--r); border: 1.5px dashed color-mix(in srgb, var(--texte) 35%, transparent);
+  background: transparent; color: var(--texte); font: inherit; font-weight: 580; cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s;
+}
+.lp-ed-ajout:hover { background: color-mix(in srgb, var(--texte) 6%, transparent); border-color: color-mix(in srgb, var(--texte) 60%, transparent); }
+
+.lp-ed-bloc {
+  position: relative; cursor: pointer; border-radius: calc(var(--rc) + 6px);
+  outline: 2px solid transparent; outline-offset: 4px;
+  -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+  transition: outline-color 0.15s;
+}
+/* Le bloc entier répond : ses liens, sa vidéo et son formulaire restent inertes pendant l'édition. */
+.lp-ed-bloc > :not(.lp-ed-puces) { pointer-events: none; }
+.lp-ed-bloc:hover, .lp-ed-bloc:focus-visible { outline-color: color-mix(in srgb, var(--vedette) 75%, transparent); }
+.lp-ed-bloc[data-prive] > :not(.lp-ed-puces) { opacity: 0.42; }
+.lp-ed-bloc[data-glisse] { z-index: 5; cursor: grabbing; outline-color: var(--vedette); }
+.lp-ed-bloc[data-glisse] > :not(.lp-ed-puces) { box-shadow: 0 26px 50px -18px rgb(0 0 0 / 0.6); }
+.lp-ed-puces { position: absolute; top: -9px; right: 12px; display: flex; gap: 4px; pointer-events: none; }
+.lp-ed-puce {
+  display: inline-flex; align-items: center; gap: 4px; padding: 1px 8px; border-radius: 999px;
+  font: 600 11px/1.6 var(--police); white-space: nowrap;
+  background: var(--texte); color: var(--fond-uni);
+}
