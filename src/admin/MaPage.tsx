@@ -189,18 +189,17 @@ function BlocEditable({ bloc, i, clics, ouvrir, children }: { bloc: Bloc; i: num
   const programme = bloc.public && !estEnLigne(bloc) && !regles.includes('Compte à rebours');
   const nom = bloc.titre || bloc.url || 'ce bloc';
   return (
-    <div ref={setNodeRef} {...attributes} {...listeners} aria-label={`Modifier ${nom}`} aria-roledescription="bloc déplaçable"
+    <div ref={setNodeRef} {...attributes} {...listeners} aria-label={[`Modifier ${nom}`, prive && 'privé', programme && 'programmé', ...regles].filter(Boolean).join(', ')} aria-roledescription="bloc déplaçable"
       className="lp-bloc lp-ed-bloc" data-type={bloc.type} data-vedette={bloc.vedette ? bloc.format : undefined} data-glisse={isDragging || undefined} data-prive={prive || programme || undefined}
       style={{ '--i': i, transform: CSS.Transform.toString(transform), transition } as CSSProperties}
       onClickCapture={e => { e.preventDefault(); e.stopPropagation(); ouvrir(bloc); }}
       onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); ouvrir(bloc); } else listeners?.onKeyDown?.(e); }}>
       {children}
-      {(prive || programme || regles.length > 0 || (bloc.type === 'lien' && clics !== undefined)) && (
+      {(prive || programme || regles.length > 0) && (
         <span className="lp-ed-puces" aria-hidden="true">
           {prive && <span className="lp-ed-puce"><Icone nom="ui-masque" taille={12} /> Privé</span>}
           {programme && <span className="lp-ed-puce"><Icone nom="ui-horloge" taille={12} /> Programmé</span>}
           {regles.map(r => <span key={r} className="lp-ed-puce">{r}</span>)}
-          {bloc.type === 'lien' && clics !== undefined && <span className="lp-ed-puce">{clics} clics</span>}
         </span>
       )}
     </div>

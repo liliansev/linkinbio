@@ -364,7 +364,7 @@
   flex: 1 1 0; min-width: 0; min-height: 44px; padding: 0 12px; font: inherit; font-size: 16px;
   border: 0; border-radius: calc(var(--r) - 5px); color: inherit; background: transparent; outline: none;
 }
-.lp-newsletter input::placeholder { color: color-mix(in srgb, var(--surface-texte) 45%, transparent); }
+.lp-newsletter input::placeholder { color: color-mix(in srgb, var(--surface-texte) 58%, transparent); }
 /* Le bouton d'inscription prend la couleur de la carte mise en avant. */
 [data-bouton='plein'] .lp-newsletter .lp-btn-compact { --lp-fond: var(--vedette); --lp-encre: var(--vedette-texte); }
 .lp-btn-compact { min-height: 44px; padding: 0 18px; border-radius: calc(var(--r) - 5px); flex: 0 0 auto; cursor: pointer; border: 0; font: inherit; font-weight: 600; }

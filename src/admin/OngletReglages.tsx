@@ -30,9 +30,7 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
   const sections: { id: Section; nom: string; resume: string }[] = [
     ...(pro ? [{ id: 'abonnement' as const, nom: 'Abonnement', resume: abonnement.pro ? 'Pro' : 'Gratuit' }] : []),
     { id: 'partage', nom: 'Partage et Google', resume: reglages.seo.titre || 'Titre, description, bouton Partager' },
-    { id: 'reseaux', nom: 'Ouvrir dans les apps', resume: reglages.ouvrirApps ? 'Activé' : 'Désactivé' },
     { id: 'langues', nom: 'Langues', resume: ['Français', ...reglages.langues.map(l => NOMS_LANGUES[l])].join(', ') },
-    { id: 'emails', nom: 'E-mails', resume: reglages.resumeHebdo ? 'Le résumé du lundi' : 'Aucun' },
     { id: 'donnees', nom: 'Tes données', resume: 'Exporter, supprimer ton compte' },
   ];
 
@@ -60,15 +58,7 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
           </div>
         </div>
       </Carte>}
-      {ouverte === 'reseaux' && <Carte titre="Ouvrir dans les apps">
-        <div>
-          <Interrupteur label="Ouvrir les liens dans les apps" aide="Depuis Instagram, TikTok ou Facebook, un lien YouTube, Spotify ou Instagram s’ouvre dans son app plutôt que dans leur navigateur intégré." actif={reglages.ouvrirApps} onChange={v => onChange({ ...reglages, ouvrirApps: v })} />
-        </div>
-      </Carte>}
       {ouverte === 'langues' && <Langues reglages={reglages} onChange={onChange} adresse={URL_PUBLIQUE} />}
-      {ouverte === 'emails' && <Carte titre="E-mails">
-        <Interrupteur label="Le résumé de ma semaine" aide="Chaque lundi matin : ce qui a marché sur ta page, en quelques phrases." actif={reglages.resumeHebdo} onChange={v => onChange({ ...reglages, resumeHebdo: v })} />
-      </Carte>}
       {ouverte === 'donnees' && <TesDonnees compte={compte} urlExport={urlExport} supprimerMonCompte={supprimerMonCompte} />}
     </div>
   );
@@ -106,12 +96,18 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
         ))}
       </ul>
 
+      {/* Les réglages d'un seul interrupteur restent dans la liste : rien à ouvrir. */}
+      <div className="divide-y divide-white/[0.07] rounded-xl bg-white/[0.03] px-4 ring-1 ring-white/[0.07]">
+        <Interrupteur label="Ouvrir les liens dans les apps" aide="Depuis Instagram ou TikTok, un lien YouTube, Spotify ou Instagram s’ouvre dans son app." actif={reglages.ouvrirApps} onChange={v => onChange({ ...reglages, ouvrirApps: v })} />
+        <Interrupteur label="Le résumé du lundi" aide="Chaque lundi matin, par e-mail : ce qui a marché sur ta page." actif={reglages.resumeHebdo} onChange={v => onChange({ ...reglages, resumeHebdo: v })} />
+      </div>
+
       <BoutonSecondaire onClick={onDeconnexion} className="self-center">Me déconnecter</BoutonSecondaire>
     </div>
   );
 }
 
-type Section = 'abonnement' | 'partage' | 'reseaux' | 'langues' | 'emails' | 'donnees';
+type Section = 'abonnement' | 'partage' | 'langues' | 'donnees';
 
 const date = (ms: number) => new Date(ms).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
 
@@ -268,7 +264,7 @@ function Langues({ reglages, onChange, adresse }: { reglages: Reglages; onChange
       {actives.length > 0 && (
         <div className="mt-4 flex flex-col gap-3">
           {actives.map(l => (
-            <Champ key={l} label={`Ta bio en ${NOMS_LANGUES[l].toLowerCase()}`} aide={l === actives[0] ? `Pour vérifier : ${adresse.replace(/^https:\/\//, '')}?lang=${l}` : undefined}>
+            <Champ key={l} label={`Ta bio en ${NOMS_LANGUES[l].toLowerCase()}`} aide={<a href={`${adresse}?lang=${l}`} target="_blank" rel="noopener" className="underline decoration-white/25 underline-offset-2 hover:text-white">Voir ma page en {NOMS_LANGUES[l].toLowerCase()}</a>}>
               <textarea className={`${classeSaisie} min-h-16`} lang={l} maxLength={300} value={reglages.bioTraduite?.[l] ?? ''} placeholder={reglages.profil.bio}
                 onChange={e => onChange({ ...reglages, bioTraduite: { ...reglages.bioTraduite, [l]: e.target.value } })} />
             </Champ>
