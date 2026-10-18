@@ -2,7 +2,8 @@
  * La page publique. Toutes les couleurs viennent du thème (variables posées
  * par `PageLiens`) ; les cinq styles de bouton et les trois formes se lisent
  * sur `data-bouton` et `data-forme`, si bien que chaque combinaison marche
- * avec chacun des trente thèmes.
+ * avec chacun des quarante-quatre thèmes. La matière du fond (`data-decor`)
+ * et la police des titres (`--police-titre`) viennent aussi du thème.
  */
 
 .lp {
@@ -20,6 +21,19 @@
 .lp[data-forme='arrondi'] { --r: 16px; --rc: 20px; }
 .lp[data-forme='carre'] { --r: 4px; --rc: 6px; }
 .lp[data-police='serif'] { font-size: 1.06em; }
+
+/* Les titres prennent la police de caractère du thème. */
+.lp :is(.lp-nom, .lp-section, .lp-carte-titre) { font-family: var(--police-titre); }
+.lp[data-police='editoriale'] .lp-nom { font-weight: 400; font-size: 2.15rem; letter-spacing: -0.01em; }
+.lp[data-police='editoriale'] .lp-section { font-size: 1.12rem; font-weight: 400; font-style: italic; letter-spacing: 0; }
+.lp[data-police='editoriale'] .lp-carte-titre { font-weight: 400; font-size: 1.22rem; letter-spacing: 0; }
+.lp[data-police='display'] .lp-nom { font-size: 1.45rem; font-weight: 700; letter-spacing: -0.01em; }
+.lp[data-police='display'] .lp-section { font-size: 0.78rem; font-weight: 600; letter-spacing: 0.04em; }
+.lp[data-police='display'] .lp-carte-titre { font-weight: 600; letter-spacing: -0.005em; }
+.lp[data-police='elegante'] .lp-nom { font-weight: 560; font-size: 1.85rem; letter-spacing: -0.02em; }
+.lp[data-police='elegante'] .lp-section { font-style: italic; font-weight: 450; font-size: 0.98rem; }
+.lp[data-police='grotesque'] .lp-nom { font-weight: 760; font-size: 1.75rem; letter-spacing: -0.035em; }
+.lp[data-police='grotesque'] .lp-btn { font-weight: 620; }
 
 .lp-col {
   max-width: 580px;
@@ -343,6 +357,84 @@
 .lp-mini .lp-carte[data-format='carte'] .lp-carte-visuel { aspect-ratio: auto; height: 104px; }
 .adm-apercu .lp { min-height: 100%; background-attachment: scroll; }
 .adm-apercu .lp-toast { position: absolute; }
+
+/* ---- La matière du fond ----
+ * Un calque sous le contenu, dessiné en CSS, que le thème choisit
+ * (`data-decor`). Il ne capte aucun clic et ne bouge que pour la lampe à
+ * lave, à l'arrêt si l'appareil demande moins de mouvement.
+ */
+[data-decor] { --decor-encre: color-mix(in srgb, var(--texte) 10%, transparent); }
+[data-decor]::before { content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0; }
+.lp[data-decor] > :not(.lp-toast) { position: relative; z-index: 1; }
+.lp-mini[data-decor], .adm-apercu .lp[data-decor] { overflow: hidden; }
+:is(.lp-mini, .lp-pastille, .adm-apercu .lp)[data-decor]::before { position: absolute; }
+.lp-toast { z-index: 10; }
+
+[data-decor='grain']::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 0.55 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
+  opacity: 0.22; mix-blend-mode: overlay;
+}
+[data-decor='grille']::before {
+  background-image: linear-gradient(var(--decor-encre) 1px, transparent 1px), linear-gradient(90deg, var(--decor-encre) 1px, transparent 1px);
+  background-size: 28px 28px;
+  mask-image: linear-gradient(180deg, #000 0%, rgb(0 0 0 / 0.35) 70%, transparent 100%);
+}
+[data-decor='points']::before {
+  background-image: radial-gradient(color-mix(in srgb, var(--texte) 16%, transparent) 1.4px, transparent 1.6px);
+  background-size: 18px 18px;
+  mask-image: radial-gradient(120% 80% at 50% 0%, #000 30%, transparent 85%);
+}
+[data-decor='damier']::before {
+  background-image: conic-gradient(var(--decor-encre) 25%, transparent 0 50%, var(--decor-encre) 0 75%, transparent 0);
+  background-size: 56px 56px;
+  mask-image: linear-gradient(180deg, #000 0%, transparent 55%, transparent 70%, #000 100%);
+}
+[data-decor='scanlines']::before {
+  background-image: repeating-linear-gradient(180deg, rgb(0 0 0 / 0.28) 0 1px, transparent 1px 3px), radial-gradient(120% 90% at 50% 40%, transparent 55%, rgb(0 0 0 / 0.55) 100%);
+}
+[data-decor='etoiles']::before {
+  background-image:
+    radial-gradient(1.4px 1.4px at 12% 18%, var(--texte) 50%, transparent 100%),
+    radial-gradient(1px 1px at 72% 9%, var(--texte) 50%, transparent 100%),
+    radial-gradient(1.6px 1.6px at 38% 62%, var(--vedette) 50%, transparent 100%),
+    radial-gradient(1px 1px at 86% 44%, var(--texte) 50%, transparent 100%),
+    radial-gradient(1.2px 1.2px at 22% 84%, var(--texte) 50%, transparent 100%),
+    radial-gradient(1px 1px at 58% 31%, var(--texte) 50%, transparent 100%),
+    radial-gradient(1.4px 1.4px at 92% 78%, var(--vedette) 50%, transparent 100%),
+    radial-gradient(1px 1px at 5% 50%, var(--texte) 50%, transparent 100%);
+  background-size: 340px 340px;
+  opacity: 0.75;
+  animation: lp-scintille 5s ease-in-out infinite alternate;
+}
+@keyframes lp-scintille { to { opacity: 0.4; } }
+[data-decor='lave']::before {
+  inset: -20%;
+  background:
+    radial-gradient(28% 22% at 25% 30%, color-mix(in srgb, var(--vedette) 70%, transparent), transparent 70%),
+    radial-gradient(24% 26% at 75% 60%, color-mix(in srgb, var(--vedette) 45%, #ff2d55), transparent 70%),
+    radial-gradient(30% 20% at 40% 85%, color-mix(in srgb, var(--vedette) 55%, transparent), transparent 70%);
+  filter: blur(40px);
+  opacity: 0.8;
+  animation: lp-lave 18s ease-in-out infinite alternate;
+}
+@keyframes lp-lave { 50% { transform: translate(4%, -6%) scale(1.08) rotate(6deg); } to { transform: translate(-5%, 4%) scale(0.96) rotate(-4deg); } }
+@media (prefers-reduced-motion: reduce) { [data-decor]::before { animation: none; } }
+
+/* Sur un fond clair, une ombre légère détache les cartes blanches. */
+.lp[data-bouton='plein'] :is(.lp-btn, .lp-carte) { box-shadow: 0 1px 2px rgb(0 0 0 / 0.06), 0 8px 24px -14px rgb(0 0 0 / 0.35); }
+
+/* L'échantillon d'un thème dans le choix des thèmes. */
+.lp-pastille { position: relative; isolation: isolate; overflow: hidden; background: var(--fond-uni); background-image: var(--fond); color: var(--texte); }
+.lp-pastille > * { position: relative; z-index: 1; }
+.lp-pastille-aa { font-family: var(--police-titre); font-size: 1.15rem; line-height: 1; font-weight: 600; }
+.lp-pastille[data-police='editoriale'] .lp-pastille-aa { font-weight: 400; font-size: 1.3rem; }
+.lp-pastille-barre { width: 76%; height: 11%; border-radius: var(--r, 999px); background: var(--surface); }
+.lp-pastille-barre.vedette { background: var(--vedette); }
+.lp-pastille[data-bouton='contour'] .lp-pastille-barre:not(.vedette) { background: transparent; box-shadow: inset 0 0 0 1.5px var(--texte); }
+.lp-pastille[data-bouton='relief'] .lp-pastille-barre { box-shadow: 2px 2px 0 var(--texte); outline: 1.5px solid var(--texte); }
+.lp-pastille[data-bouton='verre'] .lp-pastille-barre:not(.vedette) { background: color-mix(in srgb, var(--texte) 16%, transparent); }
+.lp-pastille[data-forme='arrondi'] { --r: 4px; }
+.lp-pastille[data-forme='carre'] { --r: 1px; }
 
 /* ---- Sur un grand écran ----
  * Trois mises en page, au choix dans l'Apparence (`data-bureau`). Elles

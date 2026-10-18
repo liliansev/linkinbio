@@ -59,7 +59,7 @@ export function PageLiens({ page, apercu = false }: { page: PagePublique; apercu
   );
 
   return (
-    <div className="lp" style={variablesTheme(theme) as CSSProperties} data-bouton={reglages.bouton.style} data-forme={reglages.bouton.forme} data-police={theme.police} data-bureau={reglages.bureau}>
+    <div className="lp" style={variablesTheme(theme) as CSSProperties} data-bouton={reglages.bouton.style} data-forme={reglages.bouton.forme} data-police={theme.police} data-decor={theme.decor} data-bureau={reglages.bureau}>
       <div className="lp-scene">
       <div className="lp-col">
         {reglages.partage && (

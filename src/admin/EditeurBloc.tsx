@@ -114,7 +114,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
           // L'aperçu reste collé en haut de la feuille : chaque réglage se voit sans remonter.
           <div className="sticky top-0 z-10 -mx-5 bg-[#121a2b] px-5 pb-3 pt-1 shadow-[0_14px_14px_-12px_#121a2b]">
             <div className="lp lp-mini -mx-1 rounded-[20px] p-4 ring-1 ring-white/[0.06]" style={variablesTheme(theme) as CSSProperties}
-              data-bouton={reglages.bouton.style} data-forme={reglages.bouton.forme} data-police={theme.police} aria-label="Aperçu du bouton">
+              data-bouton={reglages.bouton.style} data-forme={reglages.bouton.forme} data-police={theme.police} data-decor={theme.decor} aria-label="Aperçu du bouton">
               <div className="pointer-events-none" inert>
                 <BlocPublic key={`${b.format}-${b.teinte}-${b.animation}-${b.vedette}`} bloc={{ ...b, url: b.url || '#', titre: b.titre || 'Texte du bouton', public: true }} reglages={reglages} clic={() => {}} cible={{}} apercu />
               </div>

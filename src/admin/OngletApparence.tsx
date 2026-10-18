@@ -63,14 +63,15 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
         <ul className="grid grid-cols-3 gap-2.5 sm:grid-cols-4">
           {THEMES.filter(t => famille === 'tous' || t.famille === famille).map(t => (
             <li key={t.id}>
-              <button type="button" onClick={() => maj({ theme: t.id })} aria-pressed={reglages.theme === t.id}
+              {/* Choisir un thème pose aussi les boutons qui vont avec ; on peut les changer ensuite. */}
+              <button type="button" onClick={() => maj({ theme: t.id, ...(t.conseil ? { bouton: t.conseil } : {}) })} aria-pressed={reglages.theme === t.id}
                 className={`flex w-full flex-col items-center gap-1.5 rounded-2xl p-1.5 transition ${reglages.theme === t.id ? 'bg-peche/15 ring-2 ring-peche' : 'hover:bg-white/[0.05]'}`}>
-                <span className="relative flex aspect-[4/5] w-full flex-col items-center gap-[6%] overflow-hidden rounded-xl pt-[12%] shadow-inner ring-1 ring-white/10" style={{ background: t.fond }}>
-                  <span className="h-[18%] w-[26%] rounded-full" style={{ background: t.doux, opacity: 0.6 }} />
-                  <span className="h-[5%] w-[44%] rounded-full" style={{ background: t.texte }} />
-                  <span className="mt-[4%] h-[11%] w-[76%] rounded-full" style={{ background: t.vedette }} />
-                  <span className="h-[11%] w-[76%] rounded-full" style={{ background: t.surface }} />
-                  <span className="h-[11%] w-[76%] rounded-full" style={{ background: t.surface, opacity: 0.85 }} />
+                <span className="lp-pastille flex aspect-[4/5] w-full flex-col items-center gap-[6%] rounded-xl pt-[13%] shadow-inner ring-1 ring-white/10"
+                  style={variablesTheme(t) as CSSProperties} data-decor={t.decor} data-police={t.police} data-bouton={t.conseil?.style ?? 'plein'} data-forme={t.conseil?.forme ?? 'pilule'}>
+                  <span className="lp-pastille-aa" aria-hidden="true">Aa</span>
+                  <span className="lp-pastille-barre vedette mt-[6%]" />
+                  <span className="lp-pastille-barre" />
+                  <span className="lp-pastille-barre" />
                 </span>
                 <span className="w-full truncate text-center text-[12.5px] text-white/75">{t.nom}</span>
               </button>
@@ -81,7 +82,7 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
 
       <Carte titre="Liens mis en avant" action={<span className="text-[13px] text-white/50">{NOMS_ANIMATIONS[reglages.animation].nom}</span>}>
         <p className="-mt-1 mb-3 text-[13px] leading-snug text-white/55">Le mouvement qui attire l’œil sur tes liens en avant. Un lien peut aussi choisir le sien.</p>
-        <div className="lp lp-mini rounded-2xl p-2.5" style={variablesTheme(theme) as CSSProperties} data-bouton={reglages.bouton.style} data-forme={reglages.bouton.forme} data-police={theme.police}>
+        <div className="lp lp-mini rounded-2xl p-2.5" style={variablesTheme(theme) as CSSProperties} data-bouton={reglages.bouton.style} data-forme={reglages.bouton.forme} data-police={theme.police} data-decor={theme.decor}>
           <ul role="radiogroup" aria-label="Animation des liens mis en avant" className="grid grid-cols-2 gap-2">
             {ANIMATIONS.map(a => {
               const choisi = reglages.animation === a;
@@ -102,7 +103,7 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
       </Carte>
 
       <Carte titre="Boutons">
-        <div className="lp lp-mini rounded-2xl p-3" style={variablesTheme(theme) as CSSProperties} data-forme={reglages.bouton.forme} data-police={theme.police}>
+        <div className="lp lp-mini rounded-2xl p-3" style={variablesTheme(theme) as CSSProperties} data-forme={reglages.bouton.forme} data-police={theme.police} data-decor={theme.decor}>
           <ul className="grid grid-cols-1 gap-2.5">
             {STYLES.map(s => (
               <li key={s.id} data-bouton={s.id} className="lp-style">
