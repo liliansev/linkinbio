@@ -185,7 +185,6 @@ export function OngletStats({ charger, limite = false, onPro, ouvrirApps = true,
           <Carte titre="Appareils"><Barres lignes={stats.appareils.map(s => ({ nom: s.nom, valeur: s.vues }))} total={stats.vues} unite="vues" /></Carte>
           <p className="px-2 text-center text-[12.5px] leading-snug text-white/40">
             Sans cookie : un visiteur est compté une fois par jour. Tes propres visites, une fois connecté, ne comptent pas.
-            Ajoute <span className="text-white/70">?s=instagram</span> à ton lien pour suivre une source précise.
           </p>
         </>
       )}

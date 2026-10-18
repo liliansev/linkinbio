@@ -11,7 +11,8 @@ import { BlocPublic } from '../components/PageLiens.tsx';
 import { BoutonPrincipal, Champ, Feuille, Interrupteur, ListeChoix, NOMS_ANIMATIONS, Segments, classeSaisie, preparerImage, vibrer } from './ui.tsx';
 import { TYPES } from './OngletLiens.tsx';
 import { appDe } from '../lib/ouvrirApp.ts';
-import { ChampsPreuve, RegleAcces, RegleAudience, RegleMoment, RegleTraductions } from './ReglesBloc.tsx';
+import { ChampsPreuve, RegleAcces, RegleMoment, RegleReseaux, RegleTraductions, Repli } from './ReglesBloc.tsx';
+import { reseauxDePartage } from '../lib/provenance.ts';
 
 const AIDE_FORMATS = {
   bouton: 'La taille des autres boutons, à la couleur choisie.',
@@ -39,6 +40,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
   const [erreur, setErreur] = useState('');
   const [envoi, setEnvoi] = useState(false);
   const [lecture, setLecture] = useState(false);
+  const [icones, setIcones] = useState(false);
   const fichier = useRef<HTMLInputElement>(null);
   useEffect(() => { setB(bloc); setErreur(''); }, [bloc]);
   if (!b) return null;
@@ -89,8 +91,17 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
     finally { setLecture(false); }
   }
 
+  /** Fermer d'un glissé, d'Échap ou d'un toucher à côté garde ce qui a changé, comme partout ailleurs. */
+  function fermerEnGardant() {
+    if (!nouveau && b && bloc && JSON.stringify(b) !== JSON.stringify(bloc)) {
+      const v = valider();
+      if (v) return onEnregistrer(v);
+    }
+    onFermer();
+  }
+
   return (
-    <Feuille ouverte onFermer={onFermer} titre={nouveau ? `Nouveau : ${type.nom.toLowerCase()}` : type.nom}
+    <Feuille ouverte onFermer={fermerEnGardant} titre={nouveau ? `Nouveau : ${type.nom.toLowerCase()}` : type.nom}
       pied={fermer => (
         <div className="flex items-center gap-2">
           {!nouveau && (
@@ -104,7 +115,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
             </>
           )}
           <BoutonPrincipal className="flex-1" disabled={envoi} onClick={() => { const v = valider(); if (v) { vibrer(12); fermer(() => onEnregistrer(v)); } }}>
-            {nouveau ? 'Ajouter à ma page' : 'Enregistrer'}
+            {nouveau ? 'Ajouter à ma page' : 'Terminé'}
           </BoutonPrincipal>
         </div>
       )}>
@@ -166,21 +177,25 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
         {b.type === 'lien' && (
           <>
             <div>
-              <span className="mb-1.5 flex items-baseline justify-between text-[13px] font-medium text-white/70">
-                Icône{b.icone && <span className="font-normal text-white/45">{NOMS_RESEAUX[b.icone] ?? PICTOS.find(p => p.nom === b.icone)?.libelle ?? ''}</span>}
-              </span>
-              <div role="radiogroup" aria-label="Icône" className="grid max-h-[208px] grid-cols-[repeat(auto-fill,minmax(44px,1fr))] gap-1.5 overflow-y-auto rounded-2xl bg-white/[0.035] p-2 [scrollbar-width:thin]">
+              <button type="button" onClick={() => setIcones(!icones)} aria-expanded={icones}
+                className="flex min-h-12 w-full items-center gap-3 rounded-2xl bg-white/[0.035] px-4 text-left">
+                <span className="text-white"><Icone nom={b.icone && ICONES[b.icone] ? b.icone : 'ui-aucun'} taille={20} /></span>
+                <span className="flex-1 text-[14.5px] font-medium text-white/85">Icône</span>
+                <span className="text-[13px] text-white/50">{b.icone ? NOMS_RESEAUX[b.icone] ?? PICTOS.find(p => p.nom === b.icone)?.libelle ?? '' : 'Aucune'}</span>
+                <Icone nom="ui-chevron" taille={16} className={`text-white/45 transition ${icones ? 'rotate-180' : ''}`} />
+              </button>
+              {icones && <div role="radiogroup" aria-label="Icône" className="mt-1.5 grid max-h-[208px] grid-cols-[repeat(auto-fill,minmax(44px,1fr))] gap-1.5 overflow-y-auto rounded-2xl bg-white/[0.035] p-2 [scrollbar-width:thin]">
                 {[{ nom: '', libelle: 'Sans icône' }, ...RESEAUX.map(r => ({ nom: r as string, libelle: NOMS_RESEAUX[r] })), ...PICTOS].map(p => {
                   const choisi = b.icone === p.nom;
                   return (
-                    <button key={p.nom || 'sans'} type="button" role="radio" aria-checked={choisi} aria-label={p.libelle} title={p.libelle} onClick={() => { vibrer(4); maj({ icone: p.nom }); }}
+                    <button key={p.nom || 'sans'} type="button" role="radio" aria-checked={choisi} aria-label={p.libelle} title={p.libelle} onClick={() => { vibrer(4); maj({ icone: p.nom }); setIcones(false); }}
                       className={`grid aspect-square place-items-center rounded-xl transition duration-150 active:scale-90 ${choisi ? 'bg-white text-nuit' : 'text-white/80 hover:bg-white/[0.08]'}`}>
                       <Icone nom={p.nom || 'ui-aucun'} taille={20} />
                     </button>
                   );
                 })}
                 {b.icone && !ICONES[b.icone] && <span className="grid aspect-square place-items-center rounded-xl bg-white text-xl" aria-label="Emoji actuel">{b.icone}</span>}
-              </div>
+              </div>}
             </div>
             <div className="flex items-center gap-3">
               {b.image ? <img src={b.image} alt="" className="h-14 w-14 rounded-xl object-cover" /> : <span className="grid h-14 w-14 place-items-center rounded-xl bg-white/[0.06] text-white/35"><Icone nom="ui-image" taille={22} /></span>}
@@ -228,19 +243,18 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
         )}
 
         {b.type === 'lien' && (
-          <div>
-            <span className="mb-1.5 block text-[13px] font-medium text-white/70">Animation pour attirer l’œil</span>
+          <Repli key={`animation-${b.id}`} titre="Animation" icone="sparkle" resume={b.animation === 'auto' ? '' : NOMS_ANIMATIONS[b.animation].nom} ouvert={false}>
             {/* Une liste, pas une rangée de pastilles : l'aperçu en haut de la feuille joue l'animation choisie. */}
             <ListeChoix label="Animation" valeur={b.animation} onChange={a => maj({ animation: a })}
               options={ANIMATIONS_BLOC.map(a => a === 'auto'
                 ? { id: a, nom: nomAuto, aide: b.vedette ? `Comme tes autres liens en avant : ${NOMS_ANIMATIONS[reglages.animation].nom.toLowerCase()}.` : 'Immobile, sauf si tu mets ce lien en avant.' }
                 : { id: a, nom: NOMS_ANIMATIONS[a].nom, aide: NOMS_ANIMATIONS[a].aide })} />
-          </div>
+          </Repli>
         )}
 
         {b.type === 'lien' && <RegleAcces key={`acces-${b.id}`} b={b} maj={maj} prises={prises} />}
         <RegleMoment key={`moment-${b.id}`} b={b} maj={maj} />
-        <RegleAudience key={`audience-${b.id}`} b={b} maj={maj} adressePage={adressePage} />
+        <RegleReseaux key={`reseaux-${b.id}`} b={b} maj={maj} reseaux={reseauxDePartage(reglages.vuesReseaux)} />
         <RegleTraductions key={`langues-${b.id}`} b={b} maj={maj} langues={reglages.langues ?? []} />
 
         {!nouveau && b.type === 'lien' && <p className="text-center text-[13px] text-white/45">{clics} clic{clics > 1 ? 's' : ''} ces 30 derniers jours</p>}

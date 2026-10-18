@@ -3,8 +3,6 @@ import QRCode from 'qrcode';
 import type { ComptePage, Reglages } from '../lib/types.ts';
 import { LANGUES, urlPage } from '../lib/types.ts';
 import { NOMS_LANGUES } from '../lib/langues.ts';
-import { AUDIENCES, NOMS_AUDIENCES } from '../lib/provenance.ts';
-import type { Audience } from '../lib/provenance.ts';
 import type { Abonnement as EtatAbonnement, Periode } from '../lib/abonnement.ts';
 import { AVANTAGES_PRO, TARIFS, estResilie, euros } from '../lib/abonnement.ts';
 import { Icone } from '../components/Icone.tsx';
@@ -19,6 +17,7 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
   const URL_PUBLIQUE = urlPage(compte);
   const [qr, setQr] = useState('');
   const [copie, setCopie] = useState(false);
+  const [ouverte, setOuverte] = useState<Section | null>(null);
   const seo = (champs: Partial<Reglages['seo']>) => onChange({ ...reglages, seo: { ...reglages.seo, ...champs } });
   useEffect(() => {
     QRCode.toDataURL(`${URL_PUBLIQUE}?s=qr`, { width: 720, margin: 2, color: { dark: '#0c121f', light: '#ffffff' }, errorCorrectionLevel: 'M' }).then(setQr).catch(() => setQr(''));
@@ -27,27 +26,23 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
     try { await navigator.clipboard.writeText(URL_PUBLIQUE); setCopie(true); setTimeout(() => setCopie(false), 1800); } catch { /* presse-papiers refusé */ }
   }
 
-  return (
-    <div className="flex flex-col gap-4">
-      <Carte titre="Ta page">
-        <div className="flex items-center gap-2 rounded-xl bg-white/[0.06] p-1.5 pl-3.5">
-          <span className="min-w-0 flex-1 truncate text-[15px] text-white">{URL_PUBLIQUE.replace(/^https:\/\//, '').replace(/\/$/, '')}</span>
-          <button type="button" onClick={copier} className="min-h-10 rounded-full bg-white px-4 text-[14px] font-semibold text-nuit">{copie ? 'Copié' : 'Copier'}</button>
-        </div>
-        {qr && (
-          <div className="mt-4 flex items-center gap-4">
-            <img src={qr} alt="QR code vers ta page" className="h-28 w-28 rounded-xl bg-white p-1" />
-            <div className="flex flex-col gap-2">
-              <p className="text-[13.5px] leading-snug text-white/60">À imprimer sur une carte ou à projeter en fin de conférence. Les scans apparaissent dans tes stats, source « QR code ».</p>
-              <a href={qr} download={`qr-${compte.pseudo}-hopla.png`} className="inline-flex min-h-10 w-fit items-center rounded-full bg-white/[0.08] px-4 text-[14px] font-medium text-white">Télécharger le QR code</a>
-            </div>
-          </div>
-        )}
-      </Carte>
+  const pro = !compte.principal && paiement;
+  const sections: { id: Section; nom: string; resume: string }[] = [
+    ...(pro ? [{ id: 'abonnement' as const, nom: 'Abonnement', resume: abonnement.pro ? 'Pro' : 'Gratuit' }] : []),
+    { id: 'partage', nom: 'Partage et Google', resume: reglages.seo.titre || 'Titre, description, bouton Partager' },
+    { id: 'langues', nom: 'Langues', resume: ['Français', ...reglages.langues.map(l => NOMS_LANGUES[l])].join(', ') },
+    { id: 'donnees', nom: 'Tes données', resume: 'Exporter, supprimer ton compte' },
+  ];
 
-      {!compte.principal && paiement && <Abonnement abonnement={abonnement} ouvrirPaiement={ouvrirPaiement} ouvrirPortail={ouvrirPortail} />}
-
-      <Carte titre="Référencement">
+  if (ouverte) return (
+    <div className="flex flex-col gap-3">
+      <div className="sticky top-14 z-10 -mx-4 bg-nuit/95 px-3 py-1 backdrop-blur lg:top-0">
+        <button type="button" onClick={() => setOuverte(null)} className="flex min-h-10 items-center gap-1 rounded-full pr-3 text-[14px] font-medium text-white/75 hover:text-white">
+          <Icone nom="ui-chevron" taille={18} className="rotate-90" /> Tous les réglages
+        </button>
+      </div>
+      {ouverte === 'abonnement' && <Abonnement abonnement={abonnement} ouvrirPaiement={ouvrirPaiement} ouvrirPortail={ouvrirPortail} />}
+      {ouverte === 'partage' && <Carte titre="Partage et Google">
         <div className="flex flex-col gap-3">
           <Champ label="Titre dans Google et sur les réseaux" aide={`${reglages.seo.titre.length}/60 caractères conseillés`}>
             <input className={classeSaisie} value={reglages.seo.titre} maxLength={80} onChange={e => seo({ titre: e.target.value })} />
@@ -60,22 +55,59 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
               ? <Interrupteur label="Page visible par Google" aide={reglages.seo.indexable ? 'La page peut apparaître dans les résultats de recherche.' : 'La page demande aux moteurs de ne pas l’indexer.'} actif={reglages.seo.indexable} onChange={v => seo({ indexable: v })} />
               : <p className="py-3 text-[13.5px] leading-snug text-white/55">Pendant la bêta, ta page n’apparaît pas dans Google. Le titre et la description servent aux aperçus quand tu partages ton lien.</p>}
             <Interrupteur label="Bouton Partager" aide="En haut à droite de ta page." actif={reglages.partage} onChange={v => onChange({ ...reglages, partage: v })} />
-            <Interrupteur label="Vouvoyer mes visiteurs" aide={reglages.vouvoiement ? '« Votre adresse e-mail », « Votre place est gardée ».' : '« Ton adresse e-mail », « Ta place est gardée ». À changer si ta page parle en « vous ».'} actif={!!reglages.vouvoiement} onChange={v => onChange({ ...reglages, vouvoiement: v })} />
-            <Interrupteur label="Le résumé de ma semaine" aide="Chaque lundi matin, par e-mail : ce qui a marché sur ta page, en quelques phrases." actif={reglages.resumeHebdo} onChange={v => onChange({ ...reglages, resumeHebdo: v })} />
-            <Interrupteur label="Ouvrir les liens dans les apps" aide="Depuis Instagram, TikTok ou Facebook, un lien YouTube, Spotify ou Instagram s’ouvre dans son app plutôt que dans leur navigateur intégré." actif={reglages.ouvrirApps} onChange={v => onChange({ ...reglages, ouvrirApps: v })} />
-            <VuesReseaux reglages={reglages} onChange={onChange} />
           </div>
         </div>
+      </Carte>}
+      {ouverte === 'langues' && <Langues reglages={reglages} onChange={onChange} adresse={URL_PUBLIQUE} />}
+      {ouverte === 'donnees' && <TesDonnees compte={compte} urlExport={urlExport} supprimerMonCompte={supprimerMonCompte} />}
+    </div>
+  );
+
+  return (
+    <div className="flex flex-col gap-4">
+      <Carte titre="Ta page">
+        <div className="flex items-center gap-2 rounded-xl bg-white/[0.06] p-1.5 pl-3.5">
+          <span className="min-w-0 flex-1 truncate text-[15px] text-white">{URL_PUBLIQUE.replace(/^https:\/\//, '').replace(/\/$/, '')}</span>
+          <button type="button" onClick={copier} className="min-h-10 rounded-full bg-white px-4 text-[14px] font-semibold text-nuit">{copie ? 'Copié' : 'Copier'}</button>
+        </div>
+        {qr && (
+          <div className="mt-4 flex items-center gap-4">
+            <img src={qr} alt="QR code vers ta page" className="h-24 w-24 rounded-xl bg-white p-1" />
+            <div className="flex flex-col gap-2">
+              <p className="text-[13px] leading-snug text-white/55">Les scans apparaissent dans tes stats, source « QR code ».</p>
+              <a href={qr} download={`qr-${compte.pseudo}-hopla.png`} className="inline-flex min-h-10 w-fit items-center rounded-full bg-white/[0.08] px-4 text-[14px] font-medium text-white">Télécharger le QR code</a>
+            </div>
+          </div>
+        )}
       </Carte>
 
-      <Langues reglages={reglages} onChange={onChange} adresse={URL_PUBLIQUE} />
+      {/* Une ligne par sujet, qui s'ouvre à la place de la liste (Lilian, 18 octobre 2026 : trop d'options d'un coup). */}
+      <ul className="overflow-hidden rounded-xl bg-white/[0.03] ring-1 ring-white/[0.07]">
+        {sections.map((l, i) => (
+          <li key={l.id} className={i > 0 ? 'border-t border-white/[0.07]' : ''}>
+            <button type="button" onClick={() => { setOuverte(l.id); scrollTo({ top: 0 }); }} className="flex min-h-[56px] w-full items-center gap-3 px-4 py-2 text-left transition hover:bg-white/[0.04] active:bg-white/[0.06]">
+              <span className="flex min-w-0 flex-1 flex-col">
+                <span className="text-[14.5px] font-medium text-white">{l.nom}</span>
+                <span className="truncate text-[12.5px] text-white/45">{l.resume}</span>
+              </span>
+              <Icone nom="ui-chevron" taille={16} className="-rotate-90 text-white/30" />
+            </button>
+          </li>
+        ))}
+      </ul>
 
-      <TesDonnees compte={compte} urlExport={urlExport} supprimerMonCompte={supprimerMonCompte} />
+      {/* Les réglages d'un seul interrupteur restent dans la liste : rien à ouvrir. */}
+      <div className="divide-y divide-white/[0.07] rounded-xl bg-white/[0.03] px-4 ring-1 ring-white/[0.07]">
+        <Interrupteur label="Ouvrir les liens dans les apps" aide="Depuis Instagram ou TikTok, un lien YouTube, Spotify ou Instagram s’ouvre dans son app." actif={reglages.ouvrirApps} onChange={v => onChange({ ...reglages, ouvrirApps: v })} />
+        <Interrupteur label="Le résumé du lundi" aide="Chaque lundi matin, par e-mail : ce qui a marché sur ta page." actif={reglages.resumeHebdo} onChange={v => onChange({ ...reglages, resumeHebdo: v })} />
+      </div>
 
       <BoutonSecondaire onClick={onDeconnexion} className="self-center">Me déconnecter</BoutonSecondaire>
     </div>
   );
 }
+
+type Section = 'abonnement' | 'partage' | 'langues' | 'donnees';
 
 const date = (ms: number) => new Date(ms).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
 
@@ -232,7 +264,7 @@ function Langues({ reglages, onChange, adresse }: { reglages: Reglages; onChange
       {actives.length > 0 && (
         <div className="mt-4 flex flex-col gap-3">
           {actives.map(l => (
-            <Champ key={l} label={`Ta bio en ${NOMS_LANGUES[l].toLowerCase()}`} aide={l === actives[0] ? `Pour vérifier : ${adresse.replace(/^https:\/\//, '')}?lang=${l}` : undefined}>
+            <Champ key={l} label={`Ta bio en ${NOMS_LANGUES[l].toLowerCase()}`} aide={<a href={`${adresse}?lang=${l}`} target="_blank" rel="noopener" className="underline decoration-white/25 underline-offset-2 hover:text-white">Voir ma page en {NOMS_LANGUES[l].toLowerCase()}</a>}>
               <textarea className={`${classeSaisie} min-h-16`} lang={l} maxLength={300} value={reglages.bioTraduite?.[l] ?? ''} placeholder={reglages.profil.bio}
                 onChange={e => onChange({ ...reglages, bioTraduite: { ...reglages.bioTraduite, [l]: e.target.value } })} />
             </Champ>
@@ -243,33 +275,3 @@ function Langues({ reglages, onChange, adresse }: { reglages: Reglages; onChange
   );
 }
 
-/** L'option « une vue par réseau » : dans « Ma page », un onglet par réseau pour cacher ce qui ne le concerne pas. */
-function VuesReseaux({ reglages, onChange }: { reglages: Reglages; onChange: (r: Reglages) => void }) {
-  const vues = reglages.vuesReseaux;
-  const actif = vues.length > 0;
-  // À l'ouverture : les réseaux déjà en tête de page, sinon Instagram et TikTok.
-  const depart = (): Audience[] => {
-    const siens = AUDIENCES.filter(a => reglages.reseaux.some(r => r.reseau === a));
-    return siens.length ? siens : ['instagram', 'tiktok'];
-  };
-  const basculer = (a: Audience) => {
-    const suite = vues.includes(a) ? vues.filter(x => x !== a) : AUDIENCES.filter(x => x === a || vues.includes(x));
-    onChange({ ...reglages, vuesReseaux: suite });
-  };
-  return (
-    <div>
-      <Interrupteur label="Une vue par réseau" aide="Dans « Ma page », un onglet par réseau : tu caches d’un toucher ce que ceux qui arrivent d’Instagram, de TikTok ou de LinkedIn n’ont pas besoin de voir. Un seul lien dans toutes tes bios : Hopla reconnaît d’où vient le visiteur."
-        actif={actif} onChange={v => onChange({ ...reglages, vuesReseaux: v ? depart() : [] })} />
-      {actif && (
-        <div className="grid grid-cols-3 gap-1.5 pb-3" role="group" aria-label="Réseaux qui ont leur vue">
-          {AUDIENCES.map(a => (
-            <button key={a} type="button" aria-pressed={vues.includes(a)} onClick={() => basculer(a)}
-              className={`min-h-9 rounded-lg px-2 text-[13px] font-medium transition ${vues.includes(a) ? 'bg-white/[0.14] text-white ring-1 ring-white/30' : 'bg-white/[0.04] text-white/55 hover:bg-white/[0.08]'}`}>
-              {NOMS_AUDIENCES[a]}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}

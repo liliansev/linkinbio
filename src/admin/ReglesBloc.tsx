@@ -5,7 +5,7 @@ import { NOMS_LANGUES } from '../lib/langues.ts';
 import type { Creneau } from '../lib/moments.ts';
 import { FUSEAU_DEFAUT, decrireCreneau } from '../lib/moments.ts';
 import { Icone } from '../components/Icone.tsx';
-import { AUDIENCES, NOMS_AUDIENCES } from '../lib/provenance.ts';
+import { NOMS_AUDIENCES, RESEAUX_SOCIAUX, basculerPour, enTetePour } from '../lib/provenance.ts';
 import type { Audience } from '../lib/provenance.ts';
 import { Champ, Interrupteur, Segments, classeSaisie, vibrer } from './ui.tsx';
 
@@ -96,39 +96,57 @@ export function RegleMoment({ b, maj }: { b: Bloc; maj: (c: Partial<Bloc>) => vo
   );
 }
 
-/** Pour qui le bloc change : les visiteurs venus d'un réseau précis. */
-export function RegleAudience({ b, maj, adressePage }: { b: Bloc; maj: (c: Partial<Bloc>) => void; adressePage: string }) {
-  const a = b.audience;
-  const basculer = (s: Audience) => {
-    vibrer(4);
-    const sources = a?.sources.includes(s) ? a.sources.filter(x => x !== s) : [...(a?.sources ?? []), s];
-    maj({ audience: sources.length ? { sources, effet: a?.effet ?? 'avant' } : null });
-  };
-  const noms = a?.sources.map(s => NOMS_AUDIENCES[s]).join(', ') ?? '';
-  const exemple = a?.sources[0] ?? 'tiktok';
+/** Sur quels réseaux le bloc s'affiche (tout coché par défaut), et pour lesquels il passe en tête. */
+export function RegleReseaux({ b, maj, reseaux }: { b: Bloc; maj: (c: Partial<Bloc>) => void; reseaux: Audience[] }) {
+  const cache = b.cache ?? [];
+  const reserve = b.audience?.effet === 'seulement' ? b.audience.sources : null;
+  const visible = (s: Audience) => !cache.includes(s) && (!reserve || reserve.includes(s));
+  const tete = (s: Audience) => b.audience?.effet === 'avant' && b.audience.sources.includes(s);
+  const autres = RESEAUX_SOCIAUX.filter(s => !reseaux.includes(s));
+  const [plus, setPlus] = useState(() => autres.some(s => !visible(s) || tete(s)));
+  const liste = plus ? [...reseaux, ...autres] : reseaux;
+  const tous = [...reseaux, ...autres];
+  const caches = tous.filter(s => !visible(s));
+  const enTete = tous.filter(tete);
+  const noms = (l: Audience[]) => l.map(s => NOMS_AUDIENCES[s]).join(', ');
+  const resume = [caches.length ? `Pas sur ${noms(caches)}` : 'Partout', enTete.length ? `en tête sur ${noms(enTete)}` : ''].filter(Boolean).join(', ');
   return (
-    <Repli titre="Selon d’où vient le visiteur" icone="cible" resume={a ? `${a.effet === 'avant' ? 'En tête' : 'Seulement'} pour ${noms}` : ''} ouvert={!!a}>
-      <div role="group" aria-label="Provenances" className="flex flex-wrap gap-1.5">
-        {AUDIENCES.map(s => {
-          const actif = !!a?.sources.includes(s);
+    <Repli titre="Afficher sur" icone="cible" resume={resume} ouvert={false}>
+      <ul className="-my-1 divide-y divide-white/[0.06]" aria-label="Réseaux où ce bloc s’affiche">
+        {liste.map(s => {
+          const vu = visible(s);
           return (
-            <button key={s} type="button" aria-pressed={actif} onClick={() => basculer(s)}
-              className={`inline-flex min-h-10 items-center gap-1.5 rounded-full px-3.5 text-[14px] font-medium transition active:scale-95 ${actif ? 'bg-white text-nuit' : 'bg-white/[0.07] text-white/75'}`}>
-              {ICONE_AUDIENCE[s] && <Icone nom={ICONE_AUDIENCE[s]} taille={15} />}{NOMS_AUDIENCES[s]}
-            </button>
+            <li key={s} className="flex min-h-12 items-center gap-3">
+              <span className="flex w-4 justify-center text-white/75">{ICONE_AUDIENCE[s] && <Icone nom={ICONE_AUDIENCE[s]} taille={16} />}</span>
+              <span className="flex-1 text-[14.5px] font-medium text-white">{NOMS_AUDIENCES[s]}</span>
+              <button type="button" role="switch" aria-checked={vu} aria-label={`Afficher sur ${NOMS_AUDIENCES[s]}`}
+                onClick={() => { vibrer(); maj(basculerPour({ ...b, ...(vu ? enTetePour(b, s, false) : {}) }, s, !vu)); }}
+                className={`adm-interrupteur relative h-6 w-10 shrink-0 rounded-full before:absolute before:-inset-2 before:content-[''] ${vu ? 'bg-white' : 'bg-white/15'}`}>
+                <span className={`absolute top-[3px] left-[3px] h-[18px] w-[18px] rounded-full shadow-[0_1px_3px_rgba(0,0,0,0.3)] ${vu ? 'translate-x-4 bg-nuit' : 'bg-white'}`} />
+              </button>
+            </li>
           );
         })}
-      </div>
-      {a ? (
-        <>
-          <Segments label="Ce que change la provenance" valeur={a.effet} onChange={effet => maj({ audience: { ...a, effet } })}
-            options={[{ id: 'avant', nom: 'Mis en avant' }, { id: 'seulement', nom: 'Visible seulement' }]} />
-          <p className="text-[12.5px] leading-snug text-white/50">
-            {a.effet === 'avant' ? `Pour un visiteur venu de ${noms}, ce bloc passe en tête de ta page, mis en avant.` : `Seuls les visiteurs venus de ${noms} voient ce bloc.`}
-            {' '}Pour être sûr du résultat, mets dans ta bio l’adresse <span className="text-white/80">{adressePage.replace(/^https:\/\//, '')}?s={exemple}</span>.
-          </p>
-        </>
-      ) : <p className="text-[12.5px] leading-snug text-white/45">Par exemple « Mon dernier TikTok » en tête pour ceux qui arrivent de TikTok, « Mon CV » pour ceux de LinkedIn.</p>}
+      </ul>
+      {!plus && autres.length > 0 && (
+        <button type="button" onClick={() => setPlus(true)} className="self-start text-[13.5px] font-medium text-white/55 hover:text-white">Autres réseaux</button>
+      )}
+      {!reserve && (
+        <div className="border-t border-white/[0.06] pt-3">
+          <p className="text-[14px] font-medium text-white">En premier pour ceux qui viennent de</p>
+          <p className="mt-0.5 text-[12.5px] leading-snug text-white/50">Facultatif. Ce bloc passe en tête de ta page, mis en avant, pour ces visiteurs.</p>
+          <div className="mt-2 flex flex-wrap gap-1" role="group" aria-label="En premier pour">
+            {liste.filter(visible).map(s => (
+              <button key={s} type="button" aria-pressed={tete(s)} title={NOMS_AUDIENCES[s]}
+                aria-label={tete(s) ? `En premier sur ${NOMS_AUDIENCES[s]}, toucher pour retirer` : `Mettre en premier sur ${NOMS_AUDIENCES[s]}`}
+                onClick={() => { vibrer(4); maj(enTetePour(b, s, !tete(s))); }}
+                className={`grid h-11 w-11 place-items-center rounded-full transition active:scale-90 ${tete(s) ? 'text-white ring-2 ring-white' : 'text-white/35 hover:text-white/70'}`}>
+                {ICONE_AUDIENCE[s] ? <Icone nom={ICONE_AUDIENCE[s]} taille={20} /> : <span className="text-[12px] font-semibold">{NOMS_AUDIENCES[s].slice(0, 2)}</span>}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </Repli>
   );
 }
@@ -161,7 +179,7 @@ export function RegleAcces({ b, maj, prises }: { b: Bloc; maj: (c: Partial<Bloc>
 
 /** Le texte du bloc dans les langues que la page propose. */
 export function RegleTraductions({ b, maj, langues }: { b: Bloc; maj: (c: Partial<Bloc>) => void; langues: Langue[] }) {
-  if (!langues.length) return <p className="px-1 text-[12.5px] leading-snug text-white/45">Ta page peut aussi parler anglais, espagnol, allemand ou italien : active les langues dans Réglages, puis traduis ce bloc ici.</p>;
+  if (!langues.length) return null;
   const champs: { cle: keyof Traduction; label: string; long?: boolean }[] = b.type === 'preuve' && b.preuve?.genre === 'temoignage'
     ? [{ cle: 'description', label: 'Témoignage', long: true }, { cle: 'sousTitre', label: 'Qui le dit' }]
     : [{ cle: 'titre', label: b.type === 'lien' ? 'Texte du bouton' : b.type === 'texte' ? 'Texte' : 'Titre', long: b.type === 'texte' },

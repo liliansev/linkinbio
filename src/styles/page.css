@@ -364,7 +364,7 @@
   flex: 1 1 0; min-width: 0; min-height: 44px; padding: 0 12px; font: inherit; font-size: 16px;
   border: 0; border-radius: calc(var(--r) - 5px); color: inherit; background: transparent; outline: none;
 }
-.lp-newsletter input::placeholder { color: color-mix(in srgb, var(--surface-texte) 45%, transparent); }
+.lp-newsletter input::placeholder { color: color-mix(in srgb, var(--surface-texte) 58%, transparent); }
 /* Le bouton d'inscription prend la couleur de la carte mise en avant. */
 [data-bouton='plein'] .lp-newsletter .lp-btn-compact { --lp-fond: var(--vedette); --lp-encre: var(--vedette-texte); }
 .lp-btn-compact { min-height: 44px; padding: 0 18px; border-radius: calc(var(--r) - 5px); flex: 0 0 auto; cursor: pointer; border: 0; font: inherit; font-weight: 600; }
@@ -621,14 +621,6 @@ button.lp-ed-zone:focus-visible { outline: 2px solid var(--vedette); outline-off
 .lp-ed-reseau { width: 40px; height: 40px; display: grid; place-items: center; }
 .lp-ed-vide { padding: 9px 12px; font-size: 0.92rem; font-weight: 520; color: var(--doux); }
 
-.lp-ed-ajout {
-  display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; width: 100%;
-  border-radius: var(--r); border: 1px solid color-mix(in srgb, var(--texte) 14%, transparent);
-  background: transparent; color: color-mix(in srgb, var(--texte) 75%, transparent); font: inherit; font-size: 0.9rem; font-weight: 520; cursor: pointer;
-  transition: background-color 0.15s;
-}
-.lp-ed-ajout:hover { background: color-mix(in srgb, var(--texte) 6%, transparent); color: var(--texte); }
-.lp-ed-ajout:focus-visible { outline: 2px solid var(--vedette); outline-offset: 2px; }
 
 .lp-ed-bloc {
   position: relative; cursor: pointer; border-radius: calc(var(--rc) + 6px);
@@ -637,22 +629,13 @@ button.lp-ed-zone:focus-visible { outline: 2px solid var(--vedette); outline-off
   transition: outline-color 0.15s, background-color 0.15s, box-shadow 0.15s;
 }
 /* Le bloc entier répond : ses liens, sa vidéo et son formulaire restent inertes pendant l'édition. */
-.lp-ed-bloc > :not(.lp-ed-puces, .lp-ed-oeil) { pointer-events: none; }
+.lp-ed-bloc > :not(.lp-ed-puces) { pointer-events: none; }
 /* Au survol, un voile léger autour du bloc, de la couleur du texte : pas de trait, quelle que soit la teinte de l'accent. */
 .lp-ed-bloc:hover { background: color-mix(in srgb, var(--texte) 6%, transparent); box-shadow: 0 0 0 6px color-mix(in srgb, var(--texte) 6%, transparent); }
 .lp-ed-bloc:focus-visible { outline-color: var(--texte); }
-.lp-ed-bloc[data-prive] > :not(.lp-ed-puces, .lp-ed-oeil) { opacity: 0.42; }
+.lp-ed-bloc[data-prive] > :not(.lp-ed-puces) { opacity: 0.42; }
 .lp-ed-bloc[data-glisse] { z-index: 5; cursor: grabbing; outline-color: var(--vedette); }
 .lp-ed-bloc[data-glisse] > :not(.lp-ed-puces) { box-shadow: 0 26px 50px -18px rgb(0 0 0 / 0.6); }
-/* L'œil de la vue par réseau : cacher ou montrer le bloc pour ce réseau, sans ouvrir le bloc. */
-.lp-ed-oeil {
-  position: absolute; top: -11px; left: 10px; z-index: 2; display: grid; place-items: center;
-  width: 30px; height: 30px; border-radius: 999px; cursor: pointer;
-  background: var(--texte); color: var(--fond-uni);
-  box-shadow: 0 4px 12px -4px rgb(0 0 0 / 0.45); transition: transform 0.15s;
-}
-.lp-ed-oeil:active { transform: scale(0.9); }
-.lp-ed-oeil[data-cache] { background: var(--fond-uni); color: var(--texte); box-shadow: inset 0 0 0 1.5px var(--texte); }
 .lp-ed-puces { position: absolute; top: -9px; right: 12px; display: flex; gap: 4px; pointer-events: none; }
 .lp-ed-puce {
   display: inline-flex; align-items: center; gap: 4px; padding: 1px 8px; border-radius: 999px;

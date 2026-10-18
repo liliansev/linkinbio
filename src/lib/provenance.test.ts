@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { basculerPour, composerAudience, provenance } from './provenance.ts';
+import { basculerPour, composerAudience, enTetePour, provenance, reseauxDePartage } from './provenance.ts';
 import { nouveauBloc } from './types.ts';
 import { validerBloc } from './valider.ts';
 
@@ -42,4 +42,17 @@ test('la vue par réseau : un bloc caché pour Instagram disparaît pour Instagr
   const reserve = { ...b, audience: { sources: ['tiktok' as const], effet: 'seulement' as const } };
   const ouvert = { ...reserve, ...basculerPour(reserve, 'instagram', true) };
   assert.equal(composerAudience([ouvert], 'instagram').length, 1);
+});
+
+test('en tête sur un réseau : le bloc passe premier pour ce réseau seulement', () => {
+  const a = { ...nouveauBloc('lien', 'a'), titre: 'A' }, b = { ...nouveauBloc('lien', 'b'), titre: 'B' };
+  const cv = { ...b, ...enTetePour(b, 'linkedin', true) };
+  assert.deepEqual(composerAudience([a, cv], 'linkedin').map(x => x.id), ['b', 'a']);
+  assert.deepEqual(composerAudience([a, cv], 'tiktok').map(x => x.id), ['a', 'b']);
+  assert.equal({ ...cv, ...enTetePour(cv, 'linkedin', false) }.audience, null);
+});
+
+test('sans choix aux premiers pas, les réseaux les plus connus', () => {
+  assert.ok(reseauxDePartage([]).includes('instagram'));
+  assert.deepEqual(reseauxDePartage(['tiktok']), ['tiktok']);
 });
