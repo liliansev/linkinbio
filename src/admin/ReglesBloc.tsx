@@ -65,7 +65,7 @@ export function RegleMoment({ b, maj }: { b: Bloc; maj: (c: Partial<Bloc>) => vo
 
       <div className="border-t border-white/[0.06] pt-3">
         <span className="mb-1.5 block text-[13px] font-medium text-white/70">Chaque semaine</span>
-        <div role="group" aria-label="Jours" className="grid grid-cols-7 gap-1.5">
+        <div role="group" aria-label="Jours" className="grid grid-cols-7 gap-0.5 rounded-[10px] bg-white/[0.05] p-[3px]">
           {JOURS.map((j, i) => {
             const actif = !!c?.jours.includes(i + 1);
             return (
@@ -73,7 +73,7 @@ export function RegleMoment({ b, maj }: { b: Bloc; maj: (c: Partial<Bloc>) => vo
                 vibrer(4);
                 const jours = actif ? c!.jours.filter(n => n !== i + 1) : [...(c?.jours ?? []), i + 1];
                 if (!jours.length) maj({ creneau: null }); else majCreneau({ jours: jours.sort() });
-              }} className={`grid aspect-square place-items-center rounded-full text-[14px] font-semibold transition active:scale-90 ${actif ? 'bg-white text-nuit' : 'bg-white/[0.07] text-white/70'}`}>{j}</button>
+              }} className={`min-h-11 rounded-[7px] text-[14px] font-semibold transition duration-200 active:scale-95 ${actif ? 'bg-white/[0.14] text-white shadow-[0_1px_2px_rgba(0,0,0,0.3)]' : 'text-white/55 hover:text-white'}`}>{j}</button>
             );
           })}
         </div>
@@ -112,6 +112,7 @@ export function RegleReseaux({ b, maj, reseaux }: { b: Bloc; maj: (c: Partial<Bl
   const [premier, setPremier] = useState(enTete.length > 0);
   return (
     <Repli titre="Afficher sur" icone="cible" resume={resume} ouvert={false}>
+      <p className="text-[12.5px] leading-snug text-white/55">Hopla reconnaît d’où vient chaque visiteur. Décoché, ce bloc ne s’affiche pas pour ceux qui arrivent de ce réseau.</p>
       <ul className="-my-1 divide-y divide-white/[0.06]" aria-label="Réseaux où ce bloc s’affiche">
         {liste.map(s => {
           const vu = visible(s);
@@ -137,7 +138,7 @@ export function RegleReseaux({ b, maj, reseaux }: { b: Bloc; maj: (c: Partial<Bl
           <button type="button" onClick={() => setPremier(!premier)} aria-expanded={premier}
             className="flex min-h-12 w-full items-center gap-3 text-left text-[14.5px] font-medium text-white">
             <span className="flex-1">En premier pour</span>
-            <span className="min-w-0 truncate text-[13px] font-normal text-white/55">{!premier && (enTete.length ? noms(enTete) : 'Personne')}</span>
+            <span className="min-w-0 truncate text-[13px] font-normal text-white/55">{!premier && (enTete.length ? noms(enTete) : 'Aucun réseau')}</span>
             <Icone nom="ui-chevron" taille={18} className={`shrink-0 text-white/75 transition-transform duration-300 ${premier ? 'rotate-180' : ''}`} />
           </button>
           {premier && (

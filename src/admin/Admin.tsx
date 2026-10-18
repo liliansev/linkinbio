@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Api, Bloc, EtatAdmin, Reglages } from '../lib/types.ts';
 import { TYPES_PRINCIPAL, cheminPage, urlPage } from '../lib/types.ts';
+import { themeDe } from '../lib/themes.ts';
 import { composerMoment } from '../lib/moments.ts';
 import { PageLiens } from '../components/PageLiens.tsx';
 import { MaPage } from './MaPage.tsx';
@@ -142,12 +143,35 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
     minuteur.current = setTimeout(() => { ecrire(() => api.enregistrerReglages(r)); }, 650);
   }
 
+  /** Depuis Ma page : un changement de thème se défait d'un toucher, le temps du message. */
+  const avantTheme = useRef<Reglages | null>(null);
+  function changerDepuisPage(r: Reglages) {
+    if (r.theme !== reglages.theme) {
+      const avant = avantTheme.current ?? reglages;
+      avantTheme.current = avant;
+      setToast({ texte: `Thème : ${themeDe(r).nom}`, annuler: () => { avantTheme.current = null; setToast(null); changerReglages(avant); } });
+    }
+    changerReglages(r);
+  }
+  useEffect(() => { if (!toast) avantTheme.current = null; }, [toast]);
+
+  /** Un bloc qui vient d'arriver se montre : la page défile jusqu'à lui et il s'éclaire un instant. */
+  function montrer(id: string) {
+    setTimeout(() => {
+      const el = document.querySelector<HTMLElement>(`.adm-toile [data-id="${CSS.escape(id)}"]`);
+      if (!el) return;
+      el.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'center' });
+      el.setAttribute('data-neuf', '');
+      setTimeout(() => el.removeAttribute('data-neuf'), 1800);
+    }, 260);
+  }
+
   function enregistrerBloc(bloc: Bloc) {
     const nouveau = !blocs.some(b => b.id === bloc.id);
     setBlocs(liste => (nouveau ? [bloc, ...liste] : liste.map(b => (b.id === bloc.id ? bloc : b))));
     setEdition(null);
     ecrire(() => api.enregistrerBloc(bloc));
-    if (nouveau) setToast({ texte: 'Ajouté en haut de ta page' });
+    if (nouveau) { setToast({ texte: 'Ajouté en haut de ta page' }); montrer(bloc.id); }
   }
 
   /** Plusieurs liens d'un coup (les premiers pas) : les nouveaux en tête, dans l'ordre donné ; les autres mis à jour sur place. */
@@ -184,6 +208,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
     const liste = [...blocs.slice(0, i + 1), copie, ...blocs.slice(i + 1)];
     setBlocs(liste);
     setEdition({ bloc: copie, nouveau: false });
+    montrer(copie.id);
     ecrire(async () => { await api.enregistrerBloc(copie); await api.ordonner(liste.map(b => b.id)); });
   }
 
@@ -273,7 +298,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
         <main className={`mx-auto w-full max-w-xl lg:pb-12 ${onglet === 'page' ? 'pb-28 lg:pt-8' : 'pt-5 pb-28 lg:pt-8'}`}>
           <div key={onglet} className="adm-onglet">
           <h1 className={`mb-4 text-[22px] font-semibold tracking-[-0.02em] ${onglet === 'page' ? 'sr-only' : ''}`}>{onglets.find(o => o.id === onglet)!.nom}</h1>
-          {onglet === 'page' && <MaPage compte={compte} reglages={reglages} blocs={blocs} clics={clics} onReglages={changerReglages} onOrdonner={ordonner}
+          {onglet === 'page' && <MaPage compte={compte} reglages={reglages} blocs={blocs} clics={clics} onReglages={changerDepuisPage} onOrdonner={ordonner}
             onOuvrir={b => setEdition({ bloc: b, nouveau: false })} onAjouter={b => setEdition({ bloc: b, nouveau: true })} envoyerImage={d => api.envoyerImage(d)} />}
           {onglet === 'stats' && <OngletStats charger={chargerStats} limite={initial.paiement && !compte.pro} onPro={versAbonnement}
             ouvrirApps={reglages.ouvrirApps} onActiverApps={() => changerReglages({ ...reglages, ouvrirApps: true })} liste={<MaListe api={api} />} />}

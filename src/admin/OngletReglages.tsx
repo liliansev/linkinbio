@@ -21,7 +21,7 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
   const retour = useRef<HTMLButtonElement>(null);
   const derniere = useRef<Section | null>(null);
   useEffect(() => {
-    if (ouverte) { derniere.current = ouverte; retour.current?.focus({ preventScroll: true }); }
+    if (ouverte) { derniere.current = ouverte; retour.current?.focus({ preventScroll: true, focusVisible: false } as FocusOptions); }
     else if (derniere.current) document.getElementById(`reglage-${derniere.current}`)?.focus({ preventScroll: true });
   }, [ouverte]);
   const seo = (champs: Partial<Reglages['seo']>) => onChange({ ...reglages, seo: { ...reglages.seo, ...champs } });
@@ -34,13 +34,13 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
   const sections: { id: Section; nom: string; icone: string }[] = [
     { id: 'partager', nom: 'Partager ma page', icone: 'partage' },
     ...(pro ? [{ id: 'abonnement' as const, nom: 'Abonnement', icone: 'diamant' }] : []),
-    { id: 'partage', nom: 'Google et partage', icone: 'globe' },
+    { id: 'partage', nom: 'Aperçu dans Google', icone: 'globe' },
     { id: 'langues', nom: 'Langues', icone: 'message' },
     { id: 'donnees', nom: 'Mes données', icone: 'cadenas' },
   ];
   const bascules: { nom: string; icone: string; actif: boolean; changer: (v: boolean) => void }[] = [
-    { nom: 'Ouvrir les liens dans les apps', icone: 'lienExterne', actif: reglages.ouvrirApps, changer: v => onChange({ ...reglages, ouvrirApps: v }) },
-    { nom: 'Le résumé du lundi par e-mail', icone: 'courrier', actif: reglages.resumeHebdo, changer: v => onChange({ ...reglages, resumeHebdo: v }) },
+    { nom: 'Ouvrir YouTube, Spotify… dans leur app', icone: 'lienExterne', actif: reglages.ouvrirApps, changer: v => onChange({ ...reglages, ouvrirApps: v }) },
+    { nom: 'Mes stats par e-mail chaque lundi', icone: 'courrier', actif: reglages.resumeHebdo, changer: v => onChange({ ...reglages, resumeHebdo: v }) },
   ];
 
   if (ouverte) return (
@@ -156,7 +156,7 @@ function Abonnement({ abonnement, ouvrirPaiement, ouvrirPortail }: {
         : { texte: fin ? `Se renouvelle le ${fin}.` : 'Ton abonnement est actif.', alerte: false };
     return (
       <div id="abonnement" className="scroll-mt-24">
-        <Carte titre="Ton abonnement" action={<span className="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1 text-[12.5px] font-semibold text-nuit"><Icone nom="sparkle" taille={13} />Pro</span>}>
+        <Carte titre="Ton abonnement" action={<span className="inline-flex items-center gap-1 text-[13px] font-semibold text-white"><Icone nom="sparkle" taille={14} />Pro</span>}>
           <p className={`text-[14px] leading-snug ${etat.alerte ? 'text-amber-200' : 'text-white/75'}`}>{etat.texte}</p>
           {abonnement.portail && (
             <>
@@ -196,7 +196,7 @@ function Abonnement({ abonnement, ouvrirPaiement, ouvrirPortail }: {
                 className={`flex flex-col items-start rounded-2xl border px-3.5 py-3 text-left transition ${choisi ? 'border-white/30 bg-white/10' : 'border-white/10 bg-white/[0.03] hover:border-white/20'}`}>
                 <span className="text-[13px] text-white/55">{p === 'an' ? 'Annuel' : 'Mensuel'}</span>
                 <span className="mt-0.5 text-[20px] font-semibold tracking-tight text-white tabular-nums">{euros(t.prix)}<span className="text-[13px] font-normal text-white/50"> / {p === 'an' ? 'an' : 'mois'}</span></span>
-                {'economie' in t && <span className="mt-1 rounded-full bg-white/10 px-2 py-0.5 text-[11.5px] font-semibold text-white">{t.economie}</span>}
+                {'economie' in t && <span className="mt-1 text-[12.5px] font-semibold text-emerald-300">{t.economie}</span>}
               </button>
             );
           })}
@@ -271,7 +271,7 @@ function Langues({ reglages, onChange, adresse }: { reglages: Reglages; onChange
   const basculer = (l: (typeof LANGUES)[number]) => onChange({ ...reglages, langues: actives.includes(l) ? actives.filter(x => x !== l) : LANGUES.filter(x => x === l || actives.includes(x)) });
   return (
     <Carte>
-      <p className="text-[13.5px] leading-snug text-white/60">Ta page s’affiche dans la langue du visiteur. Les boutons, le formulaire et les dates sont traduits tout seuls ; tes textes, tu les traduis dans chaque bloc (Traductions).</p>
+      <p className="text-[13.5px] leading-snug text-white/60">Ta page s’affiche dans la langue du visiteur. Les boutons, le formulaire et les dates sont traduits tout seuls ; tes textes se traduisent en touchant un bloc de ta page, dans « Plus de réglages ».</p>
       <div className="mt-3 divide-y divide-white/[0.06] rounded-2xl bg-white/[0.035] px-4" role="group" aria-label="Langues proposées">
         <div className="flex items-center justify-between gap-4 py-3">
           <span className="text-[15px] font-medium text-white">Français</span>

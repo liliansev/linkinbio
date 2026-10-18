@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { THEMES_ACCUEIL, etapesDemarrage, nomSite, pageNeuve, urlReseau } from './demarrage.ts';
+import { THEMES_ACCUEIL, etapesDemarrage, nomSite, pageNeuve, pseudoReseau, urlReseau } from './demarrage.ts';
 import { REGLAGES_DEFAUT, reglagesNouveauCompte } from './defauts.ts';
 import { THEMES } from './themes.ts';
 import { nouveauBloc } from './types.ts';
@@ -54,4 +54,12 @@ test('les thèmes proposés à l’arrivée existent tous', () => {
   for (const id of THEMES_ACCUEIL) assert.ok(THEMES.some(t => t.id === id), id);
   assert.equal(nomSite('https://www.atelier-marie.fr/boutique'), 'atelier-marie.fr');
   assert.equal(nomSite('pas une adresse'), '');
+});
+
+test('une adresse de profil se relit en pseudo, et le pseudo redonne la même adresse', () => {
+  assert.equal(pseudoReseau('instagram', 'https://instagram.com/marie.ceramique'), '@marie.ceramique');
+  assert.equal(pseudoReseau('tiktok', 'https://www.tiktok.com/@marie'), '@marie');
+  assert.equal(urlReseau('tiktok', pseudoReseau('tiktok', 'https://tiktok.com/@marie')), 'https://tiktok.com/@marie');
+  assert.equal(pseudoReseau('youtube', 'https://youtube.com/channel/UC123'), 'https://youtube.com/channel/UC123');
+  assert.equal(pseudoReseau('email', 'mailto:a@b.fr'), 'a@b.fr');
 });

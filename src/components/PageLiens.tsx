@@ -105,7 +105,7 @@ export function PageLiens({ page, apercu = false, edition }: { page: PagePubliqu
       <div className="lp-scene">
       <div className="lp-col">
         {reglages.partage && (
-          <button type="button" className="lp-partager" onClick={partager} aria-label={t.partager}>
+          <button type="button" className="lp-partager" onClick={partager} aria-label={t.partager} {...(edition ? { inert: true, tabIndex: -1 } : {})}>
             <Icone nom="partage" taille={18} />
           </button>
         )}

@@ -116,6 +116,8 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
   function suivant() {
     vibrer(8);
     if (etape === 'liens') poserLiens();
+    // Une ambiance choisie ici compte pour l'étape « Choisis ton thème » de Bien démarrer.
+    if (etape === 'style') noter('hopla-themes-vus');
     // Où mettre le lien : on part des réseaux qu'on vient de relier, pas d'une liste toute cochée.
     if (etape === 'reseaux' && !reglages.vuesReseaux.length) {
       const relies = OU_PARTAGER.filter(a => reglages.reseaux.some(r => r.reseau === a && r.url));
@@ -244,7 +246,7 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
     },
     partage: {
       titre: 'Où vas-tu mettre ton lien ?',
-      aide: 'Tes liens pourront s’adapter à chacun. Tu régleras ça lien par lien.',
+      aide: 'Chaque lien pourra se montrer, ou passer en tête, selon le réseau d’où l’on vient. Il en faut au moins un.',
       corps: (
         <ul className="flex flex-col divide-y divide-white/[0.06] rounded-2xl bg-white/[0.04] px-3.5">
           {OU_PARTAGER.map(a => {
@@ -342,7 +344,7 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
         <div className="flex shrink-0 flex-col gap-2 px-5 pt-4 pb-[max(16px,env(safe-area-inset-bottom))] lg:px-8 lg:pb-8">
           {etape === 'fin' ? (
             <>
-              <BoutonPrincipal className="w-full" onClick={partager}><Icone nom="partage" taille={18} /> {peutPartager ? 'Partager ma page' : copie ? 'Adresse copiée' : 'Copier l’adresse'}</BoutonPrincipal>
+              <BoutonPrincipal className="w-full" onClick={partager}><Icone nom={peutPartager ? 'partage' : copie ? 'ui-ok' : 'ui-copier'} taille={18} /> {peutPartager ? 'Partager ma page' : copie ? 'Adresse copiée' : 'Copier l’adresse'}</BoutonPrincipal>
               <div className="grid grid-cols-2 gap-2">
                 <a href={urlPage(compte)} target="_blank" rel="noopener" className="flex min-h-12 items-center justify-center gap-1.5 rounded-full bg-white/[0.07] text-[15px] font-medium text-white transition hover:bg-white/[0.12]">Voir ma page<Icone nom="ui-ouvrir" taille={16} /></a>
                 <button type="button" onClick={terminer} className="min-h-12 rounded-full text-[15px] font-medium text-white/75 transition hover:bg-white/[0.06] hover:text-white">Peaufiner ma page</button>

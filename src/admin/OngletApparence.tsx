@@ -6,7 +6,7 @@ import { THEMES, themeDe, themeParId, variablesTheme } from '../lib/themes.ts';
 import type { Theme } from '../lib/themes.ts';
 import { Icone, NOMS_RESEAUX } from '../components/Icone.tsx';
 import { Carte, Champ, Interrupteur, NOMS_ANIMATIONS, Segments, classeSaisie, flechesRadio, preparerImage, vibrer } from './ui.tsx';
-import { urlReseau } from '../lib/demarrage.ts';
+import { pseudoReseau, urlReseau } from '../lib/demarrage.ts';
 
 const STYLES: { id: StyleBouton; nom: string }[] = [
   { id: 'plein', nom: 'Plein' }, { id: 'contour', nom: 'Contour' }, { id: 'doux', nom: 'Doux' }, { id: 'relief', nom: 'Relief' }, { id: 'verre', nom: 'Verre' },
@@ -176,7 +176,7 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
             <li key={r.reseau} className="flex items-center gap-2">
               <Icone nom={r.reseau} taille={22} className="w-7 shrink-0 text-white" />
               {/* Un pseudo suffit, comme aux premiers pas : il devient l'adresse du profil en quittant le champ. */}
-              <input className={`${classeSaisie} py-2.5`} value={r.reseau === 'email' ? r.url.replace(/^mailto:/i, '') : r.url} aria-label={NOMS_RESEAUX[r.reseau]} placeholder={EXEMPLES[r.reseau]} inputMode={r.reseau === 'email' ? 'email' : 'url'} autoCapitalize="none" autoCorrect="off"
+              <input className={`${classeSaisie} py-2.5`} value={pseudoReseau(r.reseau, r.url)} aria-label={NOMS_RESEAUX[r.reseau]} placeholder={EXEMPLES[r.reseau]} inputMode={r.reseau === 'email' ? 'email' : 'url'} autoCapitalize="none" autoCorrect="off"
                 onChange={e => maj({ reseaux: reglages.reseaux.map((x, j) => (j === i ? { ...x, url: e.target.value } : x)) })}
                 onBlur={e => { const u = urlReseau(r.reseau, e.target.value); if (u && u !== r.url) maj({ reseaux: reglages.reseaux.map((x, j) => (j === i ? { ...x, url: u } : x)) }); }} />
               {/* Une seule flèche, à la taille du pouce : monter suffit pour remettre les réseaux dans n'importe quel ordre. */}
@@ -253,7 +253,7 @@ export function DesignTiroirs({ reglages, onChange, envoyerImage, principal, pie
   const retour = useRef<HTMLButtonElement>(null);
   const dernier = useRef<Tiroir | null>(null);
   useEffect(() => {
-    if (ouvert) { dernier.current = ouvert; retour.current?.focus({ preventScroll: true }); }
+    if (ouvert) { dernier.current = ouvert; retour.current?.focus({ preventScroll: true, focusVisible: false } as FocusOptions); }
     else if (dernier.current) document.getElementById(`design-${dernier.current}`)?.focus({ preventScroll: true });
   }, [ouvert]);
   const lignes: { id: Tiroir; nom: string; icone: string }[] = [

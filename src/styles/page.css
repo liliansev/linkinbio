@@ -643,6 +643,10 @@ button.lp-ed-ajout {
 /* Sur un écran tactile, pas de survol : le même voile, plus léger, reste posé pour dire que le bloc se touche. */
 @media (hover: none) { .lp-ed-bloc { box-shadow: 0 0 0 6px color-mix(in srgb, var(--texte) 4%, transparent); background: color-mix(in srgb, var(--texte) 4%, transparent); } }
 .lp-ed-bloc[data-prive] > :not(.lp-ed-puces) { opacity: 0.42; }
+/* Un bloc qui vient d'être ajouté s'éclaire un instant, de l'accent du thème. */
+.lp-ed-bloc[data-neuf] { animation: lp-ed-neuf 1.8s ease-out; }
+@keyframes lp-ed-neuf { 0%, 40% { outline-color: var(--vedette); box-shadow: 0 0 0 8px color-mix(in srgb, var(--vedette) 22%, transparent); } 100% { outline-color: transparent; } }
+@media (prefers-reduced-motion: reduce) { .lp-ed-bloc[data-neuf] { animation: none; outline-color: var(--vedette); } }
 .lp-ed-bloc[data-glisse] { z-index: 5; cursor: grabbing; outline-color: var(--vedette); }
 .lp-ed-bloc[data-glisse] > :not(.lp-ed-puces) { box-shadow: 0 26px 50px -18px rgb(0 0 0 / 0.6); }
 .lp-ed-puces { position: absolute; top: -9px; right: 12px; display: flex; gap: 4px; pointer-events: none; }

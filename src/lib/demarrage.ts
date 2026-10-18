@@ -62,6 +62,21 @@ export function urlReseau(reseau: Reseau, saisie: string): string {
   return profil && /^[\w.-]{1,60}$/.test(pseudo) ? profil(pseudo) : '';
 }
 
+/**
+ * L'inverse d'`urlReseau` pour l'affichage : l'adresse d'un profil se relit en
+ * pseudo (« @marie »). Une autre adresse reste telle quelle.
+ */
+export function pseudoReseau(reseau: Reseau, url: string): string {
+  if (reseau === 'email') return url.replace(/^mailto:/i, '');
+  const profil = PROFILS[reseau];
+  if (!profil) return url;
+  const [avant, apres] = profil('\u0000').split('\u0000');
+  const sans = url.replace(/^https?:\/\/(www\.)?/i, 'https://').replace(/\/$/, '');
+  if (!sans.toLowerCase().startsWith(avant.toLowerCase()) || apres) return url;
+  const pseudo = sans.slice(avant.length);
+  return /^[\w.-]{1,60}$/.test(pseudo) ? `@${pseudo}` : url;
+}
+
 /** Le nom d'un site d'après son adresse, quand il ne donne pas le sien : `https://www.atelier-marie.fr/x` devient `atelier-marie.fr`. */
 export function nomSite(url: string): string {
   try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return ''; }

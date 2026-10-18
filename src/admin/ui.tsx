@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useRef, useState } from 'react';
+import { cloneElement, isValidElement, useCallback, useEffect, useId, useRef, useState } from 'react';
 import { Icone } from '../components/Icone.tsx';
 import type { Animation } from '../lib/types.ts';
 import type { ReactNode } from 'react';
@@ -21,17 +21,23 @@ export function Interrupteur({ actif, onChange, label, aide, disabled }: { actif
   );
 }
 
-export function Champ({ label, aide, children }: { label: string; aide?: ReactNode; children: ReactNode }) {
+/** Un champ et son nom ; `erreur` s'affiche dessous, rattachée au champ (aria-invalid, aria-describedby). */
+export function Champ({ label, aide, erreur, children }: { label: string; aide?: ReactNode; erreur?: string; children: ReactNode }) {
+  const id = useId();
+  const champ = erreur && isValidElement(children)
+    ? cloneElement(children as React.ReactElement<Record<string, unknown>>, { 'aria-invalid': true, 'aria-describedby': id })
+    : children;
   return (
     <label className="block">
       <span className="mb-1.5 block text-[12.5px] font-medium text-white/60">{label}</span>
-      {children}
-      {aide && <span className="mt-1.5 block text-[12.5px] leading-snug text-white/55">{aide}</span>}
+      {champ}
+      {erreur && <span id={id} role="alert" className="mt-1.5 block text-[13px] font-medium leading-snug text-red-300">{erreur}</span>}
+      {aide && !erreur && <span className="mt-1.5 block text-[12.5px] leading-snug text-white/55">{aide}</span>}
     </label>
   );
 }
 
-export const classeSaisie = 'w-full rounded-lg border border-white/10 bg-white/[0.05] px-3 py-2.5 text-[16px] text-white placeholder:text-white/50 outline-none transition focus:border-white/40 focus:bg-white/[0.09]';
+export const classeSaisie = 'w-full rounded-lg border border-white/10 bg-white/[0.05] px-3 py-2.5 text-[16px] text-white placeholder:text-white/50 outline-none transition focus:border-white/40 focus:bg-white/[0.09] aria-[invalid=true]:border-red-400/70';
 
 export function Carte({ titre, action, children, className = '', id }: { titre?: string; action?: ReactNode; children: ReactNode; className?: string; id?: string }) {
   return (

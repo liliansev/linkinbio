@@ -1,14 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import type { Api, Bloc, Reglages } from '../lib/types.ts';
-import { ANIMATIONS_BLOC, idYoutube } from '../lib/types.ts';
+import { ANIMATIONS_BLOC, estEnLigne, idYoutube } from '../lib/types.ts';
 import { RESEAUX } from '../lib/types.ts';
 import { adresse } from '../lib/valider.ts';
+import { nomSite } from '../lib/demarrage.ts';
 import { themeDe, variablesTheme } from '../lib/themes.ts';
 import { ICONES } from '../lib/icones.ts';
 import { Icone, NOMS_RESEAUX, PICTOS } from '../components/Icone.tsx';
 import { BlocPublic } from '../components/PageLiens.tsx';
-import { BoutonPrincipal, Champ, Feuille, Interrupteur, ListeChoix, NOMS_ANIMATIONS, Segments, classeSaisie, flechesRadio, preparerImage, vibrer } from './ui.tsx';
+import { BoutonPrincipal, BoutonSecondaire, Champ, Feuille, Interrupteur, ListeChoix, NOMS_ANIMATIONS, Segments, classeSaisie, flechesRadio, preparerImage, vibrer } from './ui.tsx';
 import { TYPES } from './OngletLiens.tsx';
 import { appDe } from '../lib/ouvrirApp.ts';
 import { ChampsPreuve, RegleAcces, RegleMoment, RegleReseaux, RegleTraductions, Repli } from './ReglesBloc.tsx';
@@ -33,16 +34,19 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
   principal?: boolean;
 }) {
   const [b, setB] = useState<Bloc | null>(bloc);
-  const [erreur, setErreur] = useState('');
+  // Une erreur dit sur quel champ elle porte : elle s'affiche dessous, et part dès qu'on y touche.
+  const [erreur, setErreurBrute] = useState<{ texte: string; champ: 'url' | 'titre' | 'description' | 'dates' | 'image' } | null>(null);
+  const setErreur = (texte: string, champ: 'url' | 'titre' | 'description' | 'dates' | 'image' = 'url') => setErreurBrute(texte ? { texte, champ } : null);
+  const erreurDe = (champ: string) => (erreur?.champ === champ ? erreur.texte : undefined);
   const [envoi, setEnvoi] = useState(false);
   const [lecture, setLecture] = useState(false);
   const [icones, setIcones] = useState(false);
-  // Un bloc neuf s'ajoute en deux champs ; le reste attend derrière « Plus de réglages ».
-  const [plus, setPlus] = useState(!nouveau);
+  // L'essentiel d'abord, neuf ou pas ; le reste attend derrière « Plus de réglages », sauf ce qui est déjà réglé.
+  const [plus, setPlus] = useState(false);
   const fichier = useRef<HTMLInputElement>(null);
   useEffect(() => { setB(bloc); setErreur(''); }, [bloc]);
   if (!b) return null;
-  const maj = (champs: Partial<Bloc>) => setB({ ...b, ...champs });
+  const maj = (champs: Partial<Bloc>) => { setB({ ...b, ...champs }); if (erreur) setErreurBrute(null); };
   const type = TYPES.find(t => t.type === b.type)!;
   const avecUrl = b.type === 'lien' || b.type === 'video';
 
@@ -52,19 +56,23 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
     const url = adresse(b.url);
     if (b.type === 'lien' && !url) { setErreur('Indique l’adresse du lien.'); return null; }
     if (b.type === 'video' && !idYoutube(url)) { setErreur('Colle l’adresse d’une vidéo YouTube.'); return null; }
-    if ((b.type === 'titre' || b.type === 'texte') && !b.titre.trim()) { setErreur('Écris le texte du bloc.'); return null; }
-    if (b.type === 'preuve' && b.preuve?.genre === 'temoignage' && !b.description.trim()) { setErreur('Écris le témoignage.'); return null; }
-    if (b.type === 'preuve' && b.preuve?.genre === 'compteur' && !b.preuve.nombre) { setErreur('Indique le chiffre à montrer.'); return null; }
-    return { ...b, url };
+    if ((b.type === 'titre' || b.type === 'texte') && !b.titre.trim()) { setErreur('Écris le texte.', 'titre'); return null; }
+    if (b.type === 'preuve' && b.preuve?.genre === 'temoignage' && !b.description.trim()) { setErreur('Écris le témoignage.', 'description'); return null; }
+    if (b.type === 'preuve' && b.preuve?.genre === 'compteur' && !b.preuve.nombre) { setErreur('Indique le chiffre à montrer.', 'description'); return null; }
+    if (b.debut && b.fin && new Date(b.fin) <= new Date(b.debut)) { setPlus(true); setErreur('La fin doit venir après le début.', 'dates'); return null; }
+    // Un lien sans texte prend le nom du site, comme dans les premiers pas : jamais une adresse brute sur la page.
+    return { ...b, url, titre: b.type === 'lien' && !b.titre.trim() ? (nomSite(url) || b.titre) : b.titre };
   }
   const theme = themeDe(reglages);
-  const nomAuto = 'Par défaut';
+  // Ce qui est réglé derrière « Plus de réglages » : un compte, lu à droite de la ligne.
+  const reglees = [!b.public, b.vedette, !!b.sousTitre, !!b.icone, !!b.image, b.vedette && b.animation !== 'auto', !!b.acces, !!(b.debut || b.fin || b.creneau), !!(b.cache.length || b.audience), Object.keys(b.traductions ?? {}).length > 0].filter(Boolean).length;
+  const nomAuto = `Comme ma page (${NOMS_ANIMATIONS[reglages.animation].nom})`;
 
   async function choisirImage(f: File | undefined) {
     if (!f) return;
     setEnvoi(true); setErreur('');
     try { maj({ image: await envoyerImage(await preparerImage(f, b!.vedette && b!.format === 'carte' ? 'large' : 'carre')) }); }
-    catch { setErreur('L’image n’est pas passée. Essaie une autre photo.'); }
+    catch { setErreur('L’image n’est pas passée. Essaie une autre photo.', 'image'); }
     finally { setEnvoi(false); if (fichier.current) fichier.current.value = ''; }
   }
 
@@ -84,9 +92,22 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
         titre: avant.titre || site.titre,
       }));
       vibrer(10);
-      if (!image && !site.description) setErreur('Ce site ne donne ni image ni description. Ajoute-les à la main.');
-    } catch { setErreur('Impossible de lire ce site pour l’instant.'); }
+      if (!image && !site.description) setErreur('Ce site ne donne ni image ni description. Ajoute-les à la main.', 'image');
+    } catch { setErreur('Impossible de lire ce site pour l’instant.', 'image'); }
     finally { setLecture(false); }
+  }
+
+  /** En quittant l'adresse d'un lien sans texte, le texte se remplit du nom du site, puis de son vrai titre. */
+  async function titreDepuisSite() {
+    if (b?.type !== 'lien' || b.titre.trim()) return;
+    const url = adresse(b.url);
+    const repli = url && nomSite(url);
+    if (!repli) return;
+    setB(avant => avant && (avant.titre.trim() ? avant : { ...avant, titre: repli }));
+    try {
+      const site = await apercuSite(url);
+      if (site.titre) setB(avant => avant && (avant.titre === repli ? { ...avant, titre: site.titre.slice(0, 80) } : avant));
+    } catch { /* le nom du site suffit */ }
   }
 
   /**
@@ -105,9 +126,13 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
   const retenir = () => nouveau && commence() && !valider();
 
   return (
-    <Feuille ouverte onFermer={fermerEnGardant} retenir={retenir} titre={nouveau ? `Nouveau : ${type.nom.toLowerCase()}` : type.nom}
+    <Feuille ouverte onFermer={fermerEnGardant} retenir={retenir} titre={nouveau ? `Nouveau : ${type.nom.toLowerCase()}` : [type.nom, !b.public && 'privé', b.public && !estEnLigne(b) && 'programmé'].filter(Boolean).join(' · ')}
       pied={fermer => (
         <div className="flex items-center gap-2">
+          {/* Fermer garde les changements ; ce bouton est la seule façon de les oublier. */}
+          {!nouveau && commence() && (
+            <BoutonSecondaire onClick={() => fermer(() => onFermer())}>Annuler</BoutonSecondaire>
+          )}
           <BoutonPrincipal className="flex-1" disabled={envoi} onClick={() => { const v = valider(); if (v) { vibrer(12); fermer(() => onEnregistrer(v)); } }}>
             {nouveau ? 'Ajouter à ma page' : 'Terminé'}
           </BoutonPrincipal>
@@ -125,17 +150,16 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
             </div>
           </div>
         )}
-        {erreur && <p role="alert" className="rounded-xl bg-red-500/15 px-3.5 py-2.5 text-[14px] text-red-200">{erreur}</p>}
-
         {avecUrl && (
-          <Champ label={b.type === 'video' ? 'Adresse de la vidéo YouTube' : 'Adresse'}
+          <Champ label={b.type === 'video' ? 'Adresse de la vidéo YouTube' : 'Adresse'} erreur={erreurDe('url')}
             aide={b.type === 'lien' && reglages.ouvrirApps && appDe(adresse(b.url)) ? <span className="inline-flex items-center gap-1.5 text-white/75"><Icone nom="ui-ok" taille={13} />Depuis Instagram ou TikTok, ce lien s’ouvre dans l’app {appDe(adresse(b.url))}.</span> : undefined}>
             <input className={classeSaisie} type="url" inputMode="url" autoCapitalize="none" autoCorrect="off" placeholder={b.type === 'video' ? 'https://youtu.be/…' : 'https://…'}
-              value={b.url} onChange={e => maj({ url: e.target.value })} autoFocus={nouveau} />
+              value={b.url} onChange={e => maj({ url: e.target.value })} onBlur={titreDepuisSite} autoFocus={nouveau} />
           </Champ>
         )}
 
         {b.type === 'preuve' && <ChampsPreuve b={b} maj={maj} />}
+        {erreurDe('description') && <p role="alert" className="-mt-2 text-[13px] font-medium text-red-300">{erreurDe('description')}</p>}
         {b.type === 'preuve' && (
           <Champ label="Lien vers les avis (facultatif)" aide="Ta fiche Google, ta page Trustpilot : le bloc devient cliquable, et la preuve vérifiable.">
             <input className={classeSaisie} type="url" inputMode="url" autoCapitalize="none" autoCorrect="off" placeholder="https://…" value={b.url} onChange={e => maj({ url: e.target.value })} />
@@ -143,7 +167,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
         )}
 
         {b.type !== 'derniere-video' && !(b.type === 'preuve' && b.preuve?.genre === 'temoignage') && (
-          <Champ label={b.type === 'lien' ? 'Texte du bouton' : b.type === 'texte' ? 'Texte' : b.type === 'preuve' ? (b.preuve?.genre === 'compteur' ? 'Ce que compte ce chiffre' : 'Petit titre (facultatif)') : 'Titre'}>
+          <Champ erreur={erreurDe('titre')} label={b.type === 'lien' ? 'Texte du bouton' : b.type === 'texte' ? 'Texte' : b.type === 'preuve' ? (b.preuve?.genre === 'compteur' ? 'Ce que compte ce chiffre' : 'Petit titre (facultatif)') : 'Titre'}>
             {b.type === 'texte'
               ? <textarea className={`${classeSaisie} min-h-28`} value={b.titre} onChange={e => maj({ titre: e.target.value })} maxLength={1000} autoFocus={nouveau} />
               : <input className={classeSaisie} value={b.titre} onChange={e => maj({ titre: e.target.value })} maxLength={160} placeholder={b.type === 'lien' ? 'Mon super lien' : b.type === 'preuve' && b.preuve?.genre === 'compteur' ? 'abonnés sur YouTube' : ''} autoFocus={nouveau && !avecUrl} />}
@@ -205,11 +229,12 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
               </div>
               <input ref={fichier} type="file" accept="image/*" hidden onChange={e => choisirImage(e.target.files?.[0])} />
             </div>
+            {erreurDe('image') && <p role="alert" className="-mt-2 text-[13px] font-medium text-red-300">{erreurDe('image')}</p>}
           </>
         )}
 
         <div className="divide-y divide-white/[0.06] rounded-2xl bg-white/[0.035] px-4">
-          <Interrupteur label="Public" actif={b.public} onChange={v => maj({ public: v })} />
+          <Interrupteur label="Visible sur ma page" actif={b.public} onChange={v => maj({ public: v })} />
           {b.type === 'inscription' && (
             <Interrupteur label="Demander le prénom" actif={b.demanderPrenom} onChange={v => maj({ demanderPrenom: v })} />
           )}
@@ -220,6 +245,9 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
             <Interrupteur label="Visible par Google" actif={b.indexable} onChange={v => maj({ indexable: v })} />
           )}
         </div>
+        {b.type !== 'titre' && b.type !== 'texte' && b.type !== 'newsletter' && b.type !== 'inscription' && b.type !== 'preuve' && (
+          <p className="-mt-2 px-1 text-[12.5px] leading-snug text-white/55">Mis en avant, le lien passe en plus grand, de la couleur d’accent de ta page.</p>
+        )}
 
         {b.type === 'lien' && b.vedette && (
           <div className="grid gap-3">
@@ -236,7 +264,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
           </div>
         )}
 
-        {b.type === 'lien' && (
+        {b.type === 'lien' && b.vedette && (
           <Repli key={`animation-${b.id}`} titre="Animation" icone="sparkle" resume={b.animation === 'auto' ? '' : NOMS_ANIMATIONS[b.animation].nom} ouvert={false}>
             {/* Une liste, pas une rangée de pastilles : l'aperçu en haut de la feuille joue l'animation choisie. */}
             <ListeChoix label="Animation" valeur={b.animation} onChange={a => maj({ animation: a })}
@@ -248,6 +276,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
 
         {b.type === 'lien' && <RegleAcces key={`acces-${b.id}`} b={b} maj={maj} prises={prises} />}
         <RegleMoment key={`moment-${b.id}`} b={b} maj={maj} />
+        {erreurDe('dates') && <p role="alert" className="-mt-2 text-[13px] font-medium text-red-300">{erreurDe('dates')}</p>}
         <RegleReseaux key={`reseaux-${b.id}`} b={b} maj={maj} reseaux={reseauxDePartage(reglages.vuesReseaux)} />
         <RegleTraductions key={`langues-${b.id}`} b={b} maj={maj} langues={reglages.langues ?? []} />
         </>) : (
@@ -255,6 +284,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
             className="flex min-h-12 w-full items-center gap-3 rounded-2xl bg-white/[0.035] px-4 text-left transition hover:bg-white/[0.06]">
             <Icone nom="reglage" taille={20} className="text-white/70" />
             <span className="flex-1 text-[14.5px] font-medium text-white/85">Plus de réglages</span>
+            {reglees > 0 && <span className="text-[13px] text-white/55">{reglees} réglé{reglees > 1 ? 's' : ''}</span>}
             <Icone nom="ui-chevron" taille={16} className="text-white/55" />
           </button>
         )}

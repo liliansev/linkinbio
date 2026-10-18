@@ -11,6 +11,7 @@ import type { Destination } from '../lib/demarrage.ts';
 import { PageLiens } from '../components/PageLiens.tsx';
 import type { Edition } from '../components/PageLiens.tsx';
 import { Icone } from '../components/Icone.tsx';
+import { themeDe, variablesTheme } from '../lib/themes.ts';
 import { HautLiens } from './BienDemarrer.tsx';
 import { FeuilleAjout } from './OngletLiens.tsx';
 import { DesignTiroirs, OngletApparence } from './OngletApparence.tsx';
@@ -37,9 +38,10 @@ export function MaPage({ compte, reglages, blocs, clics, onReglages, onOrdonner,
 }) {
   const [feuille, setFeuille] = useState<'design' | 'reseaux' | 'ajout' | null>(null);
   const [envoi, setEnvoi] = useState(false);
-  // Le geste s'explique au-dessus de la page jusqu'au premier bloc ouvert, puis se tait.
-  const [astuce, setAstuce] = useState(() => { try { return localStorage.getItem('hopla-astuce-vue') !== '1'; } catch { return true; } });
-  const ouvrirBloc = (bloc: Bloc) => { if (astuce) { setAstuce(false); try { localStorage.setItem('hopla-astuce-vue', '1'); } catch { /* stockage refusé */ } } onOuvrir(bloc); };
+  // Le geste s'explique au-dessus de la page tant que deux blocs n'ont pas été ouverts, puis se tait.
+  const [ouverts, setOuverts] = useState(() => { try { return Number(localStorage.getItem('hopla-blocs-ouverts')) || 0; } catch { return 0; } });
+  const astuce = ouverts < 2;
+  const ouvrirBloc = (bloc: Bloc) => { if (astuce) { setOuverts(ouverts + 1); try { localStorage.setItem('hopla-blocs-ouverts', String(ouverts + 1)); } catch { /* stockage refusé */ } } onOuvrir(bloc); };
   const fichier = useRef<HTMLInputElement>(null);
   const toile = useRef<HTMLDivElement>(null);
   const principal = compte.principal;
@@ -101,10 +103,11 @@ export function MaPage({ compte, reglages, blocs, clics, onReglages, onOrdonner,
 
       {/* Sur ordinateur, la feuille de design se pose à droite : la page glisse à gauche pour rester visible en entier. */}
       <div className={`order-2 transition-transform duration-300 motion-reduce:transition-none lg:order-none ${feuille === 'design' || feuille === 'reseaux' ? 'lg:-translate-x-[200px]' : ''}`}>
-        {astuce && <p className="mb-3 text-center text-[13px] leading-snug text-white/55">Touche un élément pour le modifier. Maintiens un bloc pour le déplacer.</p>}
         <div ref={toile}
-          className="adm-apercu adm-toile -mx-4 overflow-hidden lg:mx-0 lg:rounded-[30px] lg:ring-1 lg:ring-white/10 lg:shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)]">
+          className="adm-apercu adm-toile relative -mx-4 overflow-hidden lg:mx-0 lg:rounded-[30px] lg:ring-1 lg:ring-white/10 lg:shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)]">
           <PageLiens page={{ reglages, blocs: visibles, compte }} edition={edition} />
+          {/* Le geste s'écrit sur la page même, dans sa couleur, en haut à gauche : pas une ligne de plus au-dessus d'elle. */}
+          {astuce && <p className="pointer-events-none absolute top-4 left-4 right-16 text-[13px] font-medium leading-snug lg:left-6" style={{ color: variablesTheme(themeDe(reglages))['--doux'] }}>Touche pour modifier, maintiens pour déplacer.</p>}
         </div>
       </div>
 
@@ -198,7 +201,7 @@ function BlocEditable({ bloc, i, clics, ouvrir, children }: { bloc: Bloc; i: num
   useEffect(() => { noeud.current?.querySelectorAll(':scope > :not(.lp-ed-puces)').forEach(x => x.setAttribute('inert', '')); });
   return (
     <div ref={n => { setNodeRef(n); noeud.current = n; }} {...attributes} {...listeners} aria-label={[`Modifier ${nom}`, prive && 'privé', programme && 'programmé', ...regles].filter(Boolean).join(', ')} aria-roledescription="bloc déplaçable"
-      className="lp-bloc lp-ed-bloc" data-type={bloc.type} data-vedette={bloc.vedette ? bloc.format : undefined} data-glisse={isDragging || undefined} data-prive={prive || programme || undefined}
+      className="lp-bloc lp-ed-bloc" data-id={bloc.id} data-type={bloc.type} data-vedette={bloc.vedette ? bloc.format : undefined} data-glisse={isDragging || undefined} data-prive={prive || programme || undefined}
       style={{ '--i': i, transform: CSS.Transform.toString(transform), transition } as CSSProperties}
       onClickCapture={e => { e.preventDefault(); e.stopPropagation(); ouvrir(bloc); }}
       onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); ouvrir(bloc); } else listeners?.onKeyDown?.(e); }}>
