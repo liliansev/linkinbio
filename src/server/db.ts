@@ -75,6 +75,7 @@ export function base(): DatabaseSync {
       id TEXT PRIMARY KEY, compte TEXT NOT NULL, email TEXT NOT NULL, prenom TEXT NOT NULL DEFAULT '', ts INTEGER NOT NULL,
       source TEXT NOT NULL DEFAULT '', bloc TEXT NOT NULL DEFAULT '', synchro TEXT NOT NULL DEFAULT '', UNIQUE (compte, email)
     );
+    CREATE TABLE IF NOT EXISTS resumes (compte TEXT NOT NULL, semaine TEXT NOT NULL, envoye INTEGER NOT NULL, PRIMARY KEY (compte, semaine));
     CREATE TABLE IF NOT EXISTS integrations (
       compte TEXT PRIMARY KEY, fournisseur TEXT NOT NULL, cle TEXT NOT NULL, liste TEXT NOT NULL, nom TEXT NOT NULL DEFAULT '', maj INTEGER NOT NULL
     );
@@ -143,6 +144,7 @@ export function purger(maintenant = Date.now(), d = base()) {
   d.prepare('DELETE FROM jetons WHERE expire < ?').run(maintenant);
   d.prepare("DELETE FROM signalements WHERE statut != 'ouvert' AND traite < ?").run(maintenant - CONSERVATION.signalementsJours * 86_400_000);
   d.prepare('DELETE FROM webhooks WHERE recu < ?').run(maintenant - 30 * 86_400_000);
+  d.prepare('DELETE FROM resumes WHERE envoye < ?').run(maintenant - 60 * 86_400_000);
 }
 
 export const stockageEphemere = () => (base(), ephemere);
@@ -197,7 +199,7 @@ export function supprimerCompte(id: string) {
   const d = base();
   d.exec('BEGIN');
   try {
-    for (const table of ['blocs', 'medias', 'evenements', 'jetons', 'signalements', 'contacts', 'integrations']) d.prepare(`DELETE FROM ${table} WHERE compte = ?`).run(id);
+    for (const table of ['blocs', 'medias', 'evenements', 'jetons', 'signalements', 'contacts', 'integrations', 'resumes']) d.prepare(`DELETE FROM ${table} WHERE compte = ?`).run(id);
     d.prepare('DELETE FROM pages WHERE compte = ?').run(id);
     d.prepare('DELETE FROM comptes WHERE id = ?').run(id);
     d.exec('COMMIT');
@@ -386,8 +388,13 @@ export function stats(compte: string, jours: number, maintenant = Date.now()): S
   const avant = totaux(debutPrecedent, jourListe.length > 1 ? jourDe(maintenant - jours * 86_400_000) : debutPrecedent);
   const parJour = new Map((d.prepare(`SELECT jour, SUM(type = 'vue') AS vues, SUM(type = 'clic') AS clics FROM evenements WHERE compte = ? AND jour BETWEEN ? AND ? GROUP BY jour`).all(compte, debut, fin) as { jour: string; vues: number; clics: number }[]).map(l => [l.jour, l]));
   const titres = new Map(lireBlocs(compte).map(b => [b.id, b.titre || b.url]));
+  const finPrecedent = jourListe.length > 1 ? jourDe(maintenant - jours * 86_400_000) : debutPrecedent;
+  // La période d'avant, pour dire ce qui monte : « ton lien YouTube a fait +40 % ».
+  const avantPar = (sql: string) => new Map((d.prepare(sql).all(compte, debutPrecedent, finPrecedent) as { cle: string; n: number }[]).map(l => [l.cle, l.n]));
+  const clicsAvant = avantPar(`SELECT bloc AS cle, COUNT(*) AS n FROM evenements WHERE compte = ? AND type = 'clic' AND jour BETWEEN ? AND ? GROUP BY bloc`);
+  const vuesAvant = avantPar(`SELECT source AS cle, COUNT(*) AS n FROM evenements WHERE compte = ? AND type = 'vue' AND jour BETWEEN ? AND ? GROUP BY source`);
   const blocs = (d.prepare(`SELECT bloc, COUNT(*) AS n FROM evenements WHERE compte = ? AND type = 'clic' AND jour BETWEEN ? AND ? GROUP BY bloc ORDER BY n DESC LIMIT 20`).all(compte, debut, fin) as { bloc: string; n: number }[])
-    .map(l => ({ id: l.bloc, titre: titres.get(l.bloc) ?? 'Bloc supprimé', clics: l.n }));
+    .map(l => ({ id: l.bloc, titre: titres.get(l.bloc) ?? 'Bloc supprimé', clics: l.n, avant: clicsAvant.get(l.bloc) ?? 0 }));
   // Les clics venus du navigateur intégré d'une app : vers un lien qui a son app, et ouverts dedans.
   const urls = new Map(lireBlocs(compte).map(b => [b.id, b.url]));
   const integres = d.prepare(`SELECT bloc, SUM(app) AS ouverts, COUNT(*) AS n FROM evenements WHERE compte = ? AND type = 'clic' AND integre = 1 AND jour BETWEEN ? AND ? GROUP BY bloc`).all(compte, debut, fin) as { bloc: string; ouverts: number; n: number }[];
@@ -398,7 +405,7 @@ export function stats(compte: string, jours: number, maintenant = Date.now()): S
     if (appDe(urls.get(l.bloc) ?? '')) apps.versApp += l.n;
   }
   const groupe = (colonne: 'source' | 'appareil') => (d.prepare(`SELECT ${colonne} AS nom, COUNT(*) AS n FROM evenements WHERE compte = ? AND type = 'vue' AND jour BETWEEN ? AND ? GROUP BY ${colonne} ORDER BY n DESC LIMIT 8`).all(compte, debut, fin) as { nom: string; n: number }[])
-    .map(l => ({ nom: l.nom, vues: l.n }));
+    .map(l => ({ nom: l.nom, vues: l.n, avant: colonne === 'source' ? vuesAvant.get(l.nom) ?? 0 : 0 }));
   return {
     jours,
     vues: actuel.vues ?? 0, visiteurs: actuel.visiteurs ?? 0, clics: actuel.clics ?? 0,
@@ -443,6 +450,10 @@ export function ecrireIntegration(compte: string, i: Integration | null, mainten
   // Une autre liste : tous les inscrits sont à y envoyer.
   d.prepare("UPDATE contacts SET synchro = '' WHERE compte = ?").run(compte);
 }
+
+/** Réserve le résumé de la semaine d'un compte : faux s'il est déjà parti. */
+export const reserverResume = (compte: string, semaine: string, maintenant = Date.now()) =>
+  Number(base().prepare('INSERT OR IGNORE INTO resumes (compte, semaine, envoye) VALUES (?, ?, ?)').run(compte, semaine, maintenant).changes) > 0;
 
 /* ---- Export (droit d'accès et de portabilité) ---- */
 

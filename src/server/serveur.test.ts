@@ -447,3 +447,21 @@ test('Rejoins ma liste : inscrit gardé, envoyé chez Brevo, export CSV sans for
   assert.match(liste.csv(P), /camille@exemple\.fr;"'=HYPERLINK\(""x""\)"/, 'une formule devient du texte');
   assert.equal(db.exporter(P).inscrits.length, 1);
 });
+
+test('le résumé de la semaine part le lundi matin, une fois, seulement après des visites', async () => {
+  const { envoyerResumes, heureDuResume } = await import('./resume.ts');
+  const lundi10h = Date.parse('2026-10-19T08:00:00Z');
+  assert.equal(heureDuResume(lundi10h), true);
+  assert.equal(heureDuResume(Date.parse('2026-10-19T06:00:00Z')), false, '8 h, trop tôt');
+  assert.equal(heureDuResume(Date.parse('2026-10-20T08:00:00Z')), false, 'mardi');
+  const envois: any[] = [];
+  const fetchFaux = (async (_: string, init: RequestInit) => { envois.push(JSON.parse(String(init.body))); return new Response('{}'); }) as typeof fetch;
+  const env = { RESEND_API_KEY: 'cle', LIENS_ADMIN_EMAIL: 'moi@exemple.fr' };
+  assert.equal(await envoyerResumes(env, fetchFaux, lundi10h), 0, 'pas de visite, pas d’e-mail');
+  db.fermer();
+  db.ajouterEvenement({ compte: P, type: 'vue', bloc: null, visiteur: 'v', source: 'TikTok', appareil: 'Mobile', ts: lundi10h - 86_400_000 });
+  assert.equal(await envoyerResumes(env, fetchFaux, lundi10h), 1);
+  assert.deepEqual(envois[0].to, ['moi@exemple.fr']);
+  assert.match(envois[0].subject, /^Ta semaine sur Hopla/);
+  assert.equal(await envoyerResumes(env, fetchFaux, lundi10h + 3_600_000), 0, 'une fois par semaine');
+});

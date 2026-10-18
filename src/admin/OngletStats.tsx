@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import type { Stats } from '../lib/types.ts';
 import { Carte, Segments } from './ui.tsx';
 import { Icone } from '../components/Icone.tsx';
+import { resumer } from '../lib/resume.ts';
 
 const PERIODES = [{ id: '7', nom: '7 j' }, { id: '30', nom: '30 j' }, { id: '90', nom: '90 j' }, { id: '365', nom: '1 an' }];
 const nombre = (n: number) => n.toLocaleString('fr-FR');
@@ -81,6 +82,23 @@ function Barres({ lignes, total, unite }: { lignes: { nom: string; valeur: numbe
   );
 }
 
+/** L'essentiel en quelques phrases, avant les chiffres. */
+function EnBref({ stats }: { stats: Stats }) {
+  const phrases = resumer(stats);
+  return (
+    <section aria-label="En bref" className="rounded-[22px] bg-gradient-to-br from-peche/[0.13] to-white/[0.03] p-4 ring-1 ring-peche/15">
+      <p className="mb-2 flex items-center gap-1.5 text-[13px] font-semibold text-peche"><Icone nom="sparkle" taille={15} />En bref</p>
+      <ul className="flex flex-col gap-2">
+        {phrases.map(p => (
+          <li key={p.texte} className="flex gap-2.5 text-[15px] leading-snug text-white/90">
+            <span className={`mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full ${p.ton === 'hausse' ? 'bg-emerald-300' : p.ton === 'baisse' ? 'bg-red-300' : 'bg-white/40'}`} />{p.texte}
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 /** Le gain des liens ouverts dans leur app : la promesse de Hopla, en chiffres. */
 function OuvertsDansLApp({ apps, actif, onActiver }: { apps: Stats['apps']; actif: boolean; onActiver?: () => void }) {
   if (!apps.integres) return null;
@@ -129,6 +147,7 @@ export function OngletStats({ charger, limite = false, onPro, ouvrirApps = true,
       {erreur && <p className="rounded-xl bg-red-500/15 px-3.5 py-2.5 text-[14px] text-red-200">Les statistiques ne se chargent pas. Réessaie dans un instant.</p>}
       {!stats ? <div className="h-64 animate-pulse rounded-2xl bg-white/[0.04]" /> : (
         <>
+          <EnBref stats={stats} />
           <div className="grid grid-cols-2 gap-2.5">
             <Kpi nom="Vues" valeur={stats.vues} avant={stats.precedent.vues} />
             <Kpi nom="Visiteurs" valeur={stats.visiteurs} avant={stats.precedent.visiteurs} />

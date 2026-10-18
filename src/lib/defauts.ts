@@ -30,6 +30,7 @@ export const REGLAGES_DEFAUT: Reglages = {
   },
   partage: true,
   ouvrirApps: true,
+  resumeHebdo: true,
   animation: 'orbite',
   bureau: 'onepage',
 };

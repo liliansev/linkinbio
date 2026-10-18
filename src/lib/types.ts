@@ -80,6 +80,8 @@ export interface Reglages {
   partage: boolean;
   /** Depuis le navigateur intégré d'Instagram, TikTok…, ouvrir les liens dans leur app (YouTube, Spotify…). */
   ouvrirApps: boolean;
+  /** Le lundi matin, le résumé de la semaine par e-mail. */
+  resumeHebdo: boolean;
   /** Le mouvement des liens mis en avant (un bloc peut choisir le sien). */
   animation: Animation;
   /** La mise en page sur un grand écran ; sur téléphone, la page reste une colonne. */
@@ -157,8 +159,9 @@ export interface Stats {
   clics: number;
   /** Une entrée par jour, du plus ancien au plus récent. */
   serie: { jour: string; vues: number; clics: number }[];
-  blocs: { id: string; titre: string; clics: number }[];
-  sources: { nom: string; vues: number }[];
+  /** `avant` : le même chiffre sur la période précédente. */
+  blocs: { id: string; titre: string; clics: number; avant: number }[];
+  sources: { nom: string; vues: number; avant: number }[];
   appareils: { nom: string; vues: number }[];
   /** Les clics depuis le navigateur intégré d'Instagram, TikTok… : en tout, vers un lien qui a son app, et ouverts dans l'app. */
   apps: { integres: number; versApp: number; ouverts: number };

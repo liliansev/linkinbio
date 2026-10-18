@@ -108,6 +108,7 @@ export function validerReglages(v: unknown, base: Reglages): Reglages {
     seo: { titre: texte(seo.titre, 80), description: texte(seo.description, 200), indexable: bool(seo.indexable, true) },
     partage: bool(o.partage, base.partage),
     ouvrirApps: bool(o.ouvrirApps, base.ouvrirApps ?? true),
+    resumeHebdo: bool(o.resumeHebdo, base.resumeHebdo ?? true),
     bureau: parmi(o.bureau, MISES_EN_PAGE_BUREAU, base.bureau),
     animation: parmi(o.animation, ANIMATIONS, base.animation),
   };

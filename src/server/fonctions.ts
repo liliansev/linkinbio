@@ -3,6 +3,7 @@ import { deleteCookie, getCookie, getRequestHeader, getRequestUrl, setCookie } f
 import type { Bloc, CompteResume, EtatAdmin, Liste, Origines, PagePublique, Reglages, SignalementResume, Stats } from '../lib/types.ts';
 import { FOURNISSEURS_LISTE } from '../lib/types.ts';
 import * as liste from './liste.ts';
+import { planifierResumes } from './resume.ts';
 import { VERSION_CGU } from '../lib/legal.ts';
 import { ORIGINE_ADMIN, ORIGINE_PUBLIQUE, PRINCIPAL, TYPES_PRINCIPAL } from '../lib/types.ts';
 import { composerMoment } from '../lib/moments.ts';
@@ -22,6 +23,9 @@ import type { Periode } from '../lib/abonnement.ts';
  * (middleware) et ne touche qu'à ce qui lui appartient ; la gestion des comptes
  * est réservée au compte principal.
  */
+
+// Le résumé de la semaine part le lundi matin (voir resume.ts).
+planifierResumes();
 
 const enProduction = () => process.env.NODE_ENV === 'production';
 /** Les pages sur hopla.page, le back office sur app.hopla.page ; en dev, tout sur l'adresse de la requête. */
