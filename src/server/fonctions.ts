@@ -1,8 +1,15 @@
 import { createMiddleware, createServerFn } from '@tanstack/react-start';
 import { deleteCookie, getCookie, getRequestHeader, getRequestUrl, setCookie } from '@tanstack/react-start/server';
-import type { Bloc, CompteResume, EtatAdmin, Origines, PagePublique, Reglages, SignalementResume, Stats } from '../lib/types.ts';
+import type { Bloc, CompteResume, EtatAdmin, Liste, Origines, PagePublique, Reglages, SignalementResume, Stats } from '../lib/types.ts';
+import { FOURNISSEURS_LISTE } from '../lib/types.ts';
+import * as liste from './liste.ts';
+import { planifierResumes } from './resume.ts';
 import { VERSION_CGU } from '../lib/legal.ts';
-import { ORIGINE_ADMIN, ORIGINE_PUBLIQUE, PRINCIPAL, TYPES_PRINCIPAL, estEnLigne } from '../lib/types.ts';
+import { ORIGINE_ADMIN, ORIGINE_PUBLIQUE, PRINCIPAL, TYPES_PRINCIPAL } from '../lib/types.ts';
+import { masquerAcces } from '../lib/acces.ts';
+import { langueDuVisiteur, traduirePage } from '../lib/langues.ts';
+import { composerMoment } from '../lib/moments.ts';
+import { composerAudience, provenance } from '../lib/provenance.ts';
 import { adresse, email, pseudo, validerBloc, validerReglages } from '../lib/valider.ts';
 import { apercuSite as lireApercu } from './apercu.ts';
 import * as db from './db.ts';
@@ -18,6 +25,9 @@ import type { Periode } from '../lib/abonnement.ts';
  * (middleware) et ne touche qu'à ce qui lui appartient ; la gestion des comptes
  * est réservée au compte principal.
  */
+
+// Le résumé de la semaine part le lundi matin (voir resume.ts).
+planifierResumes();
 
 const enProduction = () => process.env.NODE_ENV === 'production';
 /** Les pages sur hopla.page, le back office sur app.hopla.page ; en dev, tout sur l'adresse de la requête. */
@@ -66,23 +76,33 @@ function reglagesPourCompte(compte: string, r: Reglages): Reglages {
 
 /** La page de Lilian sans pseudo, celle d'un autre compte avec. Null si elle n'existe pas ou est suspendue. */
 export const lirePagePublique = createServerFn({ method: 'GET' })
-  .validator((data: unknown) => (typeof data === 'string' ? data.toLowerCase().slice(0, 40) : ''))
+  .validator((data: unknown) => {
+    const o = (typeof data === 'string' ? { pseudo: data } : data ?? {}) as { pseudo?: unknown; s?: unknown; lang?: unknown };
+    const court = (v: unknown, n: number) => (typeof v === 'string' ? v.slice(0, n) : '');
+    return { pseudo: court(o.pseudo, 40).toLowerCase(), s: court(o.s, 40), lang: court(o.lang, 5) };
+  })
   .handler(async ({ data }): Promise<PagePublique | null> => {
-    const compte = data ? db.compteParPseudo(data) : db.compteParId(PRINCIPAL);
+    const compte = data.pseudo ? db.compteParPseudo(data.pseudo) : db.compteParId(PRINCIPAL);
     if (!compte || compte.statut !== 'actif') return null;
     const maintenant = Date.now();
-    return {
-      reglages: reglagesPourCompte(compte.id, db.lireReglages(compte.id)),
-      blocs: pourCompte(compte.id, db.lireBlocs(compte.id)).filter(bloc => estEnLigne(bloc, maintenant)),
+    const reglages = reglagesPourCompte(compte.id, db.lireReglages(compte.id));
+    // Le référent d'une page qui se recharge elle-même (hopla.page) ne dit rien de la provenance.
+    const blocs = composerAudience(composerMoment(pourCompte(compte.id, db.lireBlocs(compte.id)), maintenant), provenance({ s: data.s, ua: getRequestHeader('user-agent') ?? '', referent: getRequestHeader('referer') ?? '' }));
+    const prises = db.placesParBloc(compte.id);
+    const page: PagePublique = {
+      reglages,
+      blocs: masquerAcces(blocs, id => prises[id] ?? 0),
       compte: { pseudo: compte.pseudo, principal: compte.id === PRINCIPAL, pro: db.abonnement(compte, maintenant).plan === 'pro' },
+      maintenant,
     };
+    return traduirePage(page, langueDuVisiteur(getRequestHeader('accept-language') ?? '', reglages.langues, data.lang));
   });
 
 function etat(compte: string): EtatAdmin {
   const c = db.compteParId(compte)!;
   const abonnement = db.abonnement(c);
   return {
-    reglages: db.lireReglages(compte), blocs: db.lireBlocs(compte), clics: db.clicsParBloc(compte, 30), stockageEphemere: db.stockageEphemere(),
+    reglages: db.lireReglages(compte), blocs: db.lireBlocs(compte), clics: db.clicsParBloc(compte, 30), places: db.placesParBloc(compte), stockageEphemere: db.stockageEphemere(),
     compte: { pseudo: c.pseudo, principal: compte === PRINCIPAL, email: c.email, pro: abonnement.plan === 'pro' }, cguAJour: cguAJour(compte),
     abonnement, paiement: compte !== PRINCIPAL && !!creem.config(process.env),
   };
@@ -204,6 +224,47 @@ export const lireStats = createServerFn({ method: 'GET' })
   .handler(async ({ data, context }): Promise<Stats> => {
     const limite = !db.compteEstPro(context.compte) && !!creem.config(process.env);
     return db.stats(context.compte, limite ? JOURS_GRATUIT : data);
+  });
+
+/* ---- « Rejoins ma liste » ---- */
+
+export const lireListe = createServerFn({ method: 'GET' })
+  .middleware([session])
+  .handler(async ({ context }): Promise<Liste> => ({ ...db.resumeContacts(context.compte), integration: liste.resumeIntegration(process.env, context.compte) }));
+
+export const brancherListe = createServerFn({ method: 'POST' })
+  .middleware([session])
+  .validator((data: unknown) => {
+    if (data === null) return null;
+    const o = (data ?? {}) as { fournisseur?: unknown; cle?: unknown; liste?: unknown };
+    return {
+      fournisseur: FOURNISSEURS_LISTE.includes(o.fournisseur as never) ? o.fournisseur as (typeof FOURNISSEURS_LISTE)[number] : 'brevo',
+      cle: String(o.cle ?? '').trim().slice(0, 200), liste: String(o.liste ?? '').trim().slice(0, 40),
+    };
+  })
+  .handler(async ({ data, context }) => {
+    if (!data) { db.ecrireIntegration(context.compte, null); return { ok: true, message: 'Ta liste reste chez Hopla seulement.' }; }
+    // Une clé laissée vide garde celle déjà enregistrée (le navigateur ne la connaît pas).
+    const avant = db.lireIntegration(context.compte);
+    const cle = data.cle || (avant && avant.fournisseur === data.fournisseur ? liste.dechiffrer(process.env, avant.cle) : '');
+    if (!cle) return { ok: false, message: 'Colle ta clé d’API.' };
+    const v = await liste.verifier(data.fournisseur, cle, data.liste, fetch);
+    if (!v.ok) return v;
+    db.ecrireIntegration(context.compte, { fournisseur: data.fournisseur, cle: liste.chiffrer(process.env, cle), liste: data.liste, nom: v.nom ?? '' });
+    return { ok: true, message: v.message };
+  });
+
+export const supprimerContact = createServerFn({ method: 'POST' })
+  .middleware([session])
+  .validator((data: unknown) => String(data ?? '').slice(0, 40))
+  .handler(async ({ data, context }) => { db.supprimerContact(context.compte, data); return { ok: true }; });
+
+export const resynchroniser = createServerFn({ method: 'POST' })
+  .middleware([session])
+  .handler(async ({ context }) => {
+    let envoyes = 0, erreurs = 0;
+    for (const c of db.contactsAEnvoyer(context.compte)) (await liste.pousser(process.env, context.compte, c, fetch)) ? envoyes++ : erreurs++;
+    return { envoyes, erreurs };
   });
 
 /* ---- Abonnement Pro (Creem) ---- */

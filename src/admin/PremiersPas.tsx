@@ -162,19 +162,19 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
           {lignes.map((l, n) => {
             const valide = !!adresse(l.url);
             return (
-              <li key={l.id} className="rounded-2xl bg-white/[0.04] p-1.5 transition focus-within:bg-white/[0.07] focus-within:ring-2 focus-within:ring-peche/70">
+              <li key={l.id} className="rounded-2xl bg-white/[0.04] p-1.5 transition focus-within:bg-white/[0.07] focus-within:ring-2 focus-within:ring-white/30">
                 <div className="flex items-center gap-2">
-                  <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-full text-[14px] font-semibold ${valide ? 'bg-peche text-nuit' : 'bg-white/[0.07] text-white/55'}`}>
+                  <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-full text-[14px] font-semibold ${valide ? 'bg-white text-nuit' : 'bg-white/[0.07] text-white/55'}`}>
                     {valide ? <Icone nom="ui-ok" taille={16} /> : n + 1}
                   </span>
-                  <input aria-label={`Adresse du lien ${n + 1}`} className="min-h-11 min-w-0 flex-1 bg-transparent px-1 text-[16px] text-white outline-none placeholder:text-white/30 focus-visible:!outline-none"
+                  <input aria-label={`Adresse du lien ${n + 1}`} className="min-h-11 min-w-0 flex-1 bg-transparent px-1 text-[16px] text-white outline-none placeholder:text-white/45 focus-visible:!outline-none"
                     type="url" inputMode="url" autoCapitalize="off" autoCorrect="off" spellCheck={false} placeholder={['ton-site.fr', 'calendly.com/toi', 'ta-boutique.fr'][n]}
                     value={l.url} onChange={e => majLigne(l.id, { url: e.target.value })} onBlur={() => lireSite(l)} />
                 </div>
                 {valide && (
                   <label className="mt-1 flex items-center gap-2 border-t border-white/[0.06] pt-1">
                     <span className="w-9 shrink-0 text-center text-[12px] text-white/45">Titre</span>
-                    <input className="min-h-10 min-w-0 flex-1 bg-transparent px-1 text-[15px] text-white outline-none placeholder:text-white/30 focus-visible:!outline-none" maxLength={80}
+                    <input className="min-h-10 min-w-0 flex-1 bg-transparent px-1 text-[15px] text-white outline-none placeholder:text-white/45 focus-visible:!outline-none" maxLength={80}
                       placeholder={l.lecture ? 'Lecture du site…' : nomSite(adresse(l.url))} value={l.titre} onChange={e => majLigne(l.id, { titre: e.target.value })} />
                   </label>
                 )}
@@ -194,9 +194,9 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
               {ouverts.map(r => {
                 const ok = !!urlReseau(r, saisies[r] ?? '');
                 return (
-                  <li key={r} className="flex items-center gap-2 rounded-2xl bg-white/[0.04] p-1.5 pl-3 transition focus-within:bg-white/[0.07] focus-within:ring-2 focus-within:ring-peche/70">
-                    <span className={ok ? 'text-peche' : 'text-white/60'}><Icone nom={r} taille={20} /></span>
-                    <input id={`reseau-${r}`} aria-label={`Ton ${NOMS_RESEAUX[r]}`} className="min-h-11 min-w-0 flex-1 bg-transparent px-1 text-[16px] text-white outline-none placeholder:text-white/30 focus-visible:!outline-none"
+                  <li key={r} className="flex items-center gap-2 rounded-2xl bg-white/[0.04] p-1.5 pl-3 transition focus-within:bg-white/[0.07] focus-within:ring-2 focus-within:ring-white/30">
+                    <span className={ok ? 'text-white' : 'text-white/60'}><Icone nom={r} taille={20} /></span>
+                    <input id={`reseau-${r}`} aria-label={`Ton ${NOMS_RESEAUX[r]}`} className="min-h-11 min-w-0 flex-1 bg-transparent px-1 text-[16px] text-white outline-none placeholder:text-white/45 focus-visible:!outline-none"
                       autoCapitalize="off" autoCorrect="off" spellCheck={false} inputMode={r === 'email' ? 'email' : 'text'}
                       placeholder={r === 'email' ? 'toi@exemple.fr' : r === 'spotify' ? 'Adresse de ta page Spotify' : `Ton pseudo ${NOMS_RESEAUX[r]}`}
                       value={saisies[r] ?? ''} onChange={e => majReseau(r, e.target.value)} />
@@ -223,13 +223,13 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
       titre: 'Choisis une ambiance',
       aide: 'Les couleurs, la police et les boutons suivent. Vingt-six thèmes t’attendent ensuite dans Design.',
       corps: (
-        <ul className="-mx-5 flex snap-x gap-2.5 overflow-x-auto px-5 pb-1 [scrollbar-width:none] lg:mx-0 lg:grid lg:grid-cols-4 lg:px-0" role="radiogroup" aria-label="Thème">
+        <ul className="-mx-5 flex snap-x scroll-px-5 gap-2.5 overflow-x-auto px-5 pb-1 [scrollbar-width:none] lg:mx-0 lg:grid lg:grid-cols-4 lg:px-0" role="radiogroup" aria-label="Thème">
           {THEMES_ACCUEIL.map(id => THEMES.find(t => t.id === id)!).map(t => {
             const choisi = reglages.theme === t.id;
             return (
               <li key={t.id} className="w-[84px] shrink-0 snap-start lg:w-auto">
                 <button type="button" role="radio" aria-checked={choisi} onClick={() => { vibrer(5); onReglages({ ...reglages, theme: t.id, bouton: t.conseil }); }}
-                  className={`flex w-full flex-col items-center gap-1.5 rounded-2xl p-1.5 transition ${choisi ? 'bg-peche/15 ring-2 ring-peche' : 'hover:bg-white/[0.05]'}`}>
+                  className={`flex w-full flex-col items-center gap-1.5 rounded-2xl p-1.5 transition ${choisi ? 'bg-white/10 ring-2 ring-white' : 'hover:bg-white/[0.05]'}`}>
                   <Pastille theme={t} />
                   <span className="w-full truncate text-center text-[12px] text-white/75">{t.nom}</span>
                 </button>
@@ -268,7 +268,7 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
         <div className="flex flex-1 justify-center gap-1.5" role="progressbar" aria-label="Premiers pas" aria-valuemin={0} aria-valuemax={QUESTIONS} aria-valuenow={Math.min(i, QUESTIONS)}>
           {Array.from({ length: QUESTIONS }, (_, n) => (
             <span key={n} className="h-1.5 w-9 overflow-hidden rounded-full bg-white/[0.1]">
-              <span className="block h-full rounded-full bg-peche transition-[width] duration-500" style={{ width: n < i ? '100%' : n === i ? '40%' : '0%' }} />
+              <span className="block h-full rounded-full bg-white transition-[width] duration-500" style={{ width: n < i ? '100%' : n === i ? '40%' : '0%' }} />
             </span>
           ))}
         </div>
@@ -276,14 +276,14 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
       </header>
 
       {/* L'aperçu : la vraie page, en petit, qui se remplit à chaque réponse. */}
-      <div className="flex min-h-[20dvh] flex-1 justify-center px-6 pt-1 pb-4 lg:order-last lg:min-h-0 lg:items-center lg:p-8" aria-hidden="true">
+      <div className="flex min-h-[16dvh] flex-1 justify-center px-6 pt-1 pb-4 lg:order-last lg:min-h-0 lg:items-center lg:p-8" aria-hidden="true">
         <div className={`adm-miroir adm-apercu adm-toile pointer-events-none relative max-h-[640px] select-none lg:h-[min(640px,calc(100dvh-8rem))] overflow-hidden rounded-[26px] ring-1 ring-white/10 shadow-[0_30px_70px_-30px_rgba(0,0,0,0.9)] transition-shadow duration-700 ${etape === 'fin' ? 'adm-miroir-fin' : ''}`}>
           <div className="adm-miroir-page"><PageLiens page={{ reglages, blocs: visibles, compte }} apercu /></div>
         </div>
       </div>
 
       {/* Les questions, sous le pouce. Le bouton reste visible ; c'est le contenu qui défile s'il déborde. */}
-      <section key={etape} className="adm-onglet flex max-h-[78dvh] shrink-0 flex-col rounded-t-[28px] border-t border-white/[0.08] bg-[#121a2b] lg:max-h-none lg:min-h-0 lg:rounded-none lg:border-t-0 lg:border-r lg:bg-transparent"
+      <section key={etape} className="adm-onglet flex max-h-[72dvh] shrink-0 flex-col rounded-t-[28px] border-t border-white/[0.08] bg-[#121a2b] lg:max-h-none lg:min-h-0 lg:rounded-none lg:border-t-0 lg:border-r lg:bg-transparent"
         aria-labelledby="premiers-pas-titre">
         <div className="min-h-0 overflow-y-auto overscroll-contain px-5 pt-5 lg:px-8 lg:pt-10">
           {etape === 'fin' && <span className="mb-3 grid h-11 w-11 place-items-center rounded-full bg-emerald-400/15 text-emerald-300"><Icone nom="ui-ok" taille={22} /></span>}
@@ -295,7 +295,10 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
           {etape === 'fin' ? (
             <>
               <BoutonPrincipal className="w-full" onClick={partager}><Icone nom="partage" taille={18} /> {peutPartager ? 'Partager ma page' : copie ? 'Adresse copiée' : 'Copier l’adresse'}</BoutonPrincipal>
-              <button type="button" onClick={terminer} className="min-h-12 rounded-full text-[15px] font-medium text-white/75 transition hover:bg-white/[0.06] hover:text-white">Peaufiner ma page</button>
+              <div className="grid grid-cols-2 gap-2">
+                <a href={urlPage(compte)} target="_blank" rel="noopener" className="flex min-h-12 items-center justify-center gap-1.5 rounded-full bg-white/[0.07] text-[15px] font-medium text-white transition hover:bg-white/[0.12]">Voir ma page<Icone nom="ui-ouvrir" taille={16} /></a>
+                <button type="button" onClick={terminer} className="min-h-12 rounded-full text-[15px] font-medium text-white/75 transition hover:bg-white/[0.06] hover:text-white">Peaufiner ma page</button>
+              </div>
             </>
           ) : (
             <BoutonPrincipal className={`w-full ${rempli ? '' : '!bg-white/[0.09] !text-white'}`} onClick={suivant}>{libelle}</BoutonPrincipal>

@@ -1,22 +1,29 @@
 /*
- * Vingt-six thèmes prêts à l'emploi, chacun en trois rôles : un fond, des
- * boutons d'une valeur nette, et un accent d'une autre teinte pour la carte
- * mise en avant, les titres de section et la lueur derrière le portrait.
- * Chacun est vérifié pour le contraste (voir `themes.test.ts`). Les cinq styles
- * de bouton se déduisent de ces couleurs (voir `page.css`) ; `conseil` dit
- * celui qui va avec le thème, appliqué quand on le choisit.
+ * Dix thèmes, travaillés un par un (18 octobre 2026, à la demande de Lilian :
+ * peu de thèmes, mais très soignés, et un pour chaque goût). Chacun a trois
+ * rôles de couleur : un fond, des boutons d'une valeur nette, et un accent
+ * d'une autre teinte pour la carte mise en avant, les titres de section et la
+ * lueur derrière le portrait. Chacun a aussi sa typographie réglée à la main
+ * (taille, graisse, approche du nom, des sections et des boutons), sa matière,
+ * et ses boutons conseillés, ombre comprise. Contrastes vérifiés dans
+ * `themes.test.ts`. Les styles de bouton se déduisent des couleurs (`page.css`).
  */
 
-import type { FormeBouton, StyleBouton } from './types.ts';
+import type { FormeBouton, OmbreBouton, StyleBouton } from './types.ts';
 
-export type Police = 'geist' | 'serif' | 'rond' | 'mono' | 'grotesque' | 'display' | 'elegante' | 'editoriale';
+export type Police = 'geist' | 'serif' | 'rond' | 'mono' | 'grotesque' | 'condensee' | 'display' | 'elegante' | 'editoriale';
 export type Famille = 'sombre' | 'clair' | 'couleur' | 'degrade' | 'premium' | 'decale';
 /** Une matière posée sur le fond, sous le contenu (voir `page.css`, `data-decor`). */
 export type Decor = 'grain' | 'grille' | 'points' | 'damier' | 'scanlines' | 'etoiles' | 'lave';
 
+/** Un rôle typographique : taille (rem), graisse, approche (em), et l'italique pour les sections. */
+interface Role { taille?: number; graisse: number; approche: number; italique?: boolean }
+
 export interface Theme {
   id: string;
   nom: string;
+  /** Ce que le thème raconte, en un mot, sous son nom dans le choix. */
+  humeur: string;
   famille: Famille;
   /** Une couleur ou un dégradé CSS. */
   fond: string;
@@ -30,69 +37,111 @@ export interface Theme {
   /** L'accent : la carte mise en avant, dans tous les styles de bouton. */
   vedette: string;
   vedetteTexte: string;
+  /** La teinte des ombres portées : une ombre prend la couleur du fond, jamais un gris. */
+  ombre: string;
   police: Police;
+  typo: { nom: Role; section: Role; bouton: Role; carte: Role };
   decor?: Decor;
   /** Les boutons qui vont avec : appliqués quand on choisit le thème, modifiables ensuite. */
-  conseil: { style: StyleBouton; forme: FormeBouton };
+  conseil: { style: StyleBouton; forme: FormeBouton; ombre: OmbreBouton };
 }
-
-interface Options { police?: Police; fondUni?: string; decor?: Decor; conseil?: [StyleBouton, FormeBouton] }
-
-const t = (id: string, nom: string, famille: Famille, fond: string, texte: string, doux: string, surface: [string, string], vedette: [string, string], o: Options = {}): Theme => ({
-  id, nom, famille, fond, fondUni: o.fondUni ?? fond, texte, doux, surface: surface[0], surfaceTexte: surface[1],
-  vedette: vedette[0], vedetteTexte: vedette[1], police: o.police ?? 'geist',
-  ...(o.decor ? { decor: o.decor } : {}),
-  conseil: { style: o.conseil?.[0] ?? 'plein', forme: o.conseil?.[1] ?? 'pilule' },
-});
 
 /** Une lumière douce en haut de page, sur un fond uni. */
 const lueur = (haut: string, bas: string) => `radial-gradient(120% 65% at 50% -8%, ${haut} 0%, ${bas} 62%)`;
 
 export const THEMES: Theme[] = [
-  // Premium : de la matière, des polices de caractère, peu de couleurs mais justes.
-  t('onyx', 'Onyx et or', 'premium', lueur('#2a261f', '#0b0b0a'), '#f3efe6', '#b5ad9c', ['#1e1c19', '#f3efe6'], ['#d8b56a', '#17130a'], { fondUni: '#0b0b0a', police: 'elegante', decor: 'grain', conseil: ['plein', 'arrondi'] }),
-  t('champagne', 'Champagne', 'premium', '#f4efe6', '#1d1a15', '#6b6255', ['#fffdf8', '#1d1a15'], ['#6e1f2b', '#fbf3ea'], { police: 'editoriale', decor: 'grain', conseil: ['plein', 'arrondi'] }),
-  t('velours', 'Velours', 'premium', lueur('#17544a', '#06201c'), '#eef6f1', '#9fc2b5', ['#0f3a32', '#eef6f1'], ['#e9d8a6', '#0b231e'], { fondUni: '#06201c', police: 'elegante', decor: 'grain', conseil: ['verre', 'pilule'] }),
-  t('studio', 'Studio', 'premium', '#0e0e0e', '#f2f2f2', '#9a9a9a', ['#f2f2f2', '#0e0e0e'], ['#ff4d00', '#0e0e0e'], { police: 'grotesque', conseil: ['plein', 'carre'] }),
-
-  // Décalés : pour les pages qui veulent qu'on s'en souvienne.
-  t('brutal', 'Brutaliste', 'decale', '#f2f0e6', '#0a0a0a', '#4a4a44', ['#ffe14d', '#0a0a0a'], ['#ff4fd8', '#0a0a0a'], { police: 'grotesque', decor: 'grille', conseil: ['relief', 'carre'] }),
-  t('y2k', 'Y2K', 'decale', 'linear-gradient(180deg, #c9d6ff 0%, #f0c9ff 50%, #c9fff1 100%)', '#1a0f3d', '#4a3d70', ['#1a0f3d', '#ffffff'], ['#b8009b', '#ffffff'], { fondUni: '#f0c9ff', police: 'display', decor: 'points' }),
-  t('arcade', 'Arcade', 'decale', '#0d0221', '#f8f4ff', '#b7a6e0', ['#ff2a6d', '#0d0221'], ['#05d9e8', '#0d0221'], { police: 'display', decor: 'scanlines', conseil: ['relief', 'carre'] }),
-  t('acide', 'Acide', 'decale', '#c6ff00', '#0a0a0a', '#2f3a00', ['#0a0a0a', '#c6ff00'], ['#6b00e0', '#ffffff'], { police: 'display', decor: 'points', conseil: ['plein', 'carre'] }),
-  t('cosmos', 'Cosmos', 'decale', 'radial-gradient(120% 80% at 50% 0%, #2a1660 0%, #090418 70%)', '#f4f0ff', '#b9aee0', ['#1f1440', '#f4f0ff'], ['#ffd23f', '#1a0f00'], { fondUni: '#090418', police: 'display', decor: 'etoiles', conseil: ['verre', 'pilule'] }),
-  t('lave', 'Lampe à lave', 'decale', '#1a0500', '#fff1e6', '#e0b9a0', ['#2e0d03', '#fff1e6'], ['#ff6a00', '#1a0500'], { police: 'grotesque', decor: 'lave', conseil: ['verre', 'pilule'] }),
-  t('terminal', 'Terminal', 'decale', '#0a0f0a', '#b8f5c4', '#7cb487', ['#0f1f12', '#b8f5c4'], ['#3ddc84', '#052010'], { police: 'mono', decor: 'scanlines', conseil: ['contour', 'carre'] }),
-
-  // Sombres : des boutons qui se détachent du fond, un accent chaud ou lumineux.
-  t('nuit-peche', 'Nuit et pêche', 'sombre', lueur('#3a2733', '#0c121f'), '#f4f1ec', '#aab2c5', ['#1f2a40', '#f4f1ec'], ['#ffb38a', '#111827'], { fondUni: '#0c121f', decor: 'grain' }),
-  t('minuit', 'Minuit', 'sombre', lueur('#1b2233', '#07090f'), '#f5f7fb', '#9aa3b5', ['#1c2130', '#f5f7fb'], ['#c7c9ff', '#07090f'], { fondUni: '#07090f', decor: 'grain' }),
-  t('encre', 'Encre et papier', 'sombre', lueur('#17306b', '#0b1d3a'), '#eef3ff', '#a9bce0', ['#f3ead7', '#0b1d3a'], ['#ff7a59', '#0b1d3a'], { fondUni: '#0b1d3a', police: 'serif', conseil: ['plein', 'arrondi'] }),
-  t('foret', 'Forêt', 'sombre', lueur('#1f4a33', '#0f1f17'), '#ecf5ee', '#9fbca9', ['#1c3a2b', '#ecf5ee'], ['#f2b84b', '#1a1200'], { fondUni: '#0f1f17', decor: 'grain', conseil: ['plein', 'arrondi'] }),
-  t('bordeaux', 'Bordeaux', 'sombre', lueur('#5a1a30', '#2a0d14'), '#fbeff1', '#d8aeb6', ['#451a26', '#fbeff1'], ['#e9c46a', '#2a0d14'], { fondUni: '#2a0d14', police: 'serif' }),
-
-  // Clairs : des boutons francs sur un fond doux, et un accent d'une autre famille.
-  t('neige', 'Neige', 'clair', '#ffffff', '#111111', '#5b6270', ['#111111', '#ffffff'], ['#2f5bff', '#ffffff']),
-  t('papier', 'Papier', 'clair', '#f7f4ee', '#1b1b1b', '#5f5a54', ['#1b1b1b', '#f7f4ee'], ['#c2410c', '#ffffff'], { police: 'serif', decor: 'grain', conseil: ['plein', 'arrondi'] }),
-  t('menthe', 'Menthe et corail', 'clair', '#e8f6ef', '#0f3d2e', '#46705f', ['#0f3d2e', '#e8f6ef'], ['#ff6f59', '#2a0a00']),
-  t('rose', 'Rose', 'clair', '#fde8ef', '#4a1028', '#86475e', ['#ffffff', '#4a1028'], ['#1f6f50', '#ffffff'], { police: 'rond' }),
-
-  // Couleurs franches : la couleur au fond, des boutons noirs ou blancs, un accent contraire.
-  t('orange', 'Orange franc', 'couleur', '#ff5f1f', '#1a0a00', '#3a1505', ['#1a0a00', '#fff1e6'], ['#fff1e6', '#1a0a00'], { decor: 'grain' }),
-  t('jaune', 'Jaune et bleu', 'couleur', '#ffe27a', '#111111', '#4a4210', ['#111111', '#ffffff'], ['#1b2bd1', '#ffffff'], { police: 'rond' }),
-  t('klein', 'Bleu Klein', 'couleur', '#1f3bff', '#ffffff', '#dfe3ff', ['#ffffff', '#1f3bff'], ['#ffd400', '#111111'], { decor: 'grain' }),
-
-  // Dégradés : des boutons de verre, un accent plein.
-  t('aurore', 'Aurore', 'degrade', 'linear-gradient(165deg, #1a1033 0%, #4b1d6b 50%, #a8445e 100%)', '#ffffff', '#f0dcf6', ['#ffffff', '#2a0f3d'], ['#ffd27a', '#2a0f3d'], { fondUni: '#3a1758', decor: 'grain', conseil: ['verre', 'pilule'] }),
-  t('ocean', 'Océan', 'degrade', 'linear-gradient(180deg, #02203a 0%, #03516b 60%, #087f86 100%)', '#f0fbff', '#bfe3ec', ['#f0fbff', '#02203a'], ['#ff9e7a', '#02203a'], { fondUni: '#03415c', decor: 'grain', conseil: ['verre', 'arrondi'] }),
-  t('coucher', 'Coucher de soleil', 'degrade', 'linear-gradient(170deg, #ffc49e 0%, #ff8fa6 55%, #c7a2f0 100%)', '#1c0b1f', '#4a2b45', ['#ffffff', '#1c0b1f'], ['#1c0b1f', '#ffffff'], { police: 'rond', fondUni: '#ff9fa8', decor: 'grain' }),
+  {
+    id: 'nuit-peche', nom: 'Nuit et pêche', humeur: 'Sobre', famille: 'sombre',
+    fond: lueur('#35283b', '#0c121f'), fondUni: '#0c121f', texte: '#f4f1ec', doux: '#aab2c5',
+    surface: '#1b2438', surfaceTexte: '#f4f1ec', vedette: '#ffb38a', vedetteTexte: '#111827', ombre: '#02040a',
+    police: 'geist', decor: 'grain',
+    typo: { nom: { taille: 1.75, graisse: 640, approche: -0.032 }, section: { taille: 0.9, graisse: 560, approche: 0 }, bouton: { graisse: 580, approche: -0.005 }, carte: { graisse: 650, approche: -0.014 } },
+    conseil: { style: 'plein', forme: 'pilule', ombre: 'subtile' },
+  },
+  {
+    id: 'onyx', nom: 'Onyx et or', humeur: 'Luxe', famille: 'premium',
+    fond: lueur('#2c261c', '#0b0a08'), fondUni: '#0b0a08', texte: '#f5efe2', doux: '#b8ad97',
+    surface: '#29241c', surfaceTexte: '#f5efe2', vedette: '#d9b46a', vedetteTexte: '#16110a', ombre: '#000000',
+    police: 'elegante', decor: 'grain',
+    typo: { nom: { taille: 2.15, graisse: 440, approche: -0.02 }, section: { taille: 1.02, graisse: 400, approche: 0, italique: true }, bouton: { graisse: 500, approche: 0.005 }, carte: { graisse: 520, approche: -0.01 } },
+    conseil: { style: 'plein', forme: 'arrondi', ombre: 'marquee' },
+  },
+  {
+    id: 'champagne', nom: 'Champagne', humeur: 'Éditorial', famille: 'premium',
+    fond: '#f3ede2', fondUni: '#f3ede2', texte: '#1c1915', doux: '#665d50',
+    surface: '#fffdf9', surfaceTexte: '#1c1915', vedette: '#7a1f2e', vedetteTexte: '#fbf3ea', ombre: '#5a4630',
+    police: 'editoriale', decor: 'grain',
+    typo: { nom: { taille: 2.5, graisse: 400, approche: -0.012 }, section: { taille: 1.22, graisse: 400, approche: 0, italique: true }, bouton: { graisse: 540, approche: -0.005 }, carte: { taille: 1.3, graisse: 400, approche: 0 } },
+    conseil: { style: 'plein', forme: 'arrondi', ombre: 'subtile' },
+  },
+  {
+    id: 'neige', nom: 'Neige', humeur: 'Minimal', famille: 'clair',
+    fond: lueur('#ffffff', '#eef1f5'), fondUni: '#eef1f5', texte: '#0e1116', doux: '#565d69',
+    surface: '#ffffff', surfaceTexte: '#0e1116', vedette: '#2b4dff', vedetteTexte: '#ffffff', ombre: '#1b2a4a',
+    police: 'geist',
+    typo: { nom: { taille: 1.8, graisse: 700, approche: -0.04 }, section: { taille: 0.86, graisse: 600, approche: -0.005 }, bouton: { graisse: 600, approche: -0.012 }, carte: { graisse: 680, approche: -0.02 } },
+    conseil: { style: 'plein', forme: 'pilule', ombre: 'marquee' },
+  },
+  {
+    id: 'foret', nom: 'Forêt', humeur: 'Nature', famille: 'sombre',
+    fond: lueur('#1e4a36', '#0b1a13'), fondUni: '#0b1a13', texte: '#eef4ec', doux: '#a3bdaa',
+    surface: '#efe6d2', surfaceTexte: '#0b1a13', vedette: '#f0a64a', vedetteTexte: '#1a0f00', ombre: '#000000',
+    police: 'serif', decor: 'grain',
+    typo: { nom: { taille: 2.2, graisse: 520, approche: -0.015 }, section: { taille: 1.1, graisse: 450, approche: 0, italique: true }, bouton: { graisse: 560, approche: 0 }, carte: { taille: 1.12, graisse: 600, approche: -0.005 } },
+    conseil: { style: 'plein', forme: 'arrondi', ombre: 'subtile' },
+  },
+  {
+    id: 'klein', nom: 'Bleu Klein', humeur: 'Graphique', famille: 'couleur',
+    fond: '#1f35ff', fondUni: '#1f35ff', texte: '#ffffff', doux: '#dde2ff',
+    surface: '#ffffff', surfaceTexte: '#1f35ff', vedette: '#ffd400', vedetteTexte: '#111111', ombre: '#050c5c',
+    police: 'grotesque', decor: 'grain',
+    typo: { nom: { taille: 2.05, graisse: 800, approche: -0.04 }, section: { taille: 0.96, graisse: 700, approche: -0.01 }, bouton: { graisse: 680, approche: -0.015 }, carte: { graisse: 760, approche: -0.025 } },
+    conseil: { style: 'plein', forme: 'pilule', ombre: 'marquee' },
+  },
+  {
+    id: 'brutal', nom: 'Brutaliste', humeur: 'Brut', famille: 'decale',
+    fond: '#f1eee3', fondUni: '#f1eee3', texte: '#0a0a0a', doux: '#46443d',
+    surface: '#ffe14d', surfaceTexte: '#0a0a0a', vedette: '#ff4fd8', vedetteTexte: '#0a0a0a', ombre: '#0a0a0a',
+    police: 'condensee', decor: 'grille',
+    typo: { nom: { taille: 2.75, graisse: 800, approche: -0.02 }, section: { taille: 1.05, graisse: 760, approche: 0.005 }, bouton: { graisse: 720, approche: 0.01 }, carte: { taille: 1.2, graisse: 800, approche: -0.005 } },
+    conseil: { style: 'relief', forme: 'carre', ombre: 'aucune' },
+  },
+  {
+    id: 'aurore', nom: 'Aurore', humeur: 'Lumineux', famille: 'degrade',
+    fond: 'linear-gradient(165deg, #1a1033 0%, #4b1d6b 50%, #a8445e 100%)', fondUni: '#3a1758', texte: '#ffffff', doux: '#f0dcf6',
+    surface: '#ffffff', surfaceTexte: '#2a0f3d', vedette: '#ffd27a', vedetteTexte: '#2a0f3d', ombre: '#12051f',
+    police: 'geist', decor: 'grain',
+    typo: { nom: { taille: 2.1, graisse: 340, approche: -0.035 }, section: { taille: 0.92, graisse: 500, approche: 0.005 }, bouton: { graisse: 540, approche: -0.005 }, carte: { graisse: 600, approche: -0.015 } },
+    conseil: { style: 'verre', forme: 'pilule', ombre: 'subtile' },
+  },
+  {
+    id: 'coucher', nom: 'Coucher de soleil', humeur: 'Pop', famille: 'degrade',
+    fond: 'linear-gradient(170deg, #ffc49e 0%, #ff8fa6 55%, #c7a2f0 100%)', fondUni: '#ff9fa8', texte: '#1c0b1f', doux: '#44263f',
+    surface: '#ffffff', surfaceTexte: '#1c0b1f', vedette: '#1c0b1f', vedetteTexte: '#ffffff', ombre: '#7a2e4a',
+    police: 'rond', decor: 'grain',
+    typo: { nom: { taille: 2.05, graisse: 620, approche: -0.012 }, section: { taille: 1, graisse: 600, approche: 0 }, bouton: { graisse: 560, approche: 0 }, carte: { graisse: 620, approche: -0.005 } },
+    conseil: { style: 'plein', forme: 'pilule', ombre: 'marquee' },
+  },
+  {
+    id: 'arcade', nom: 'Arcade', humeur: 'Néon', famille: 'decale',
+    fond: '#0d0221', fondUni: '#0d0221', texte: '#f8f4ff', doux: '#b7a6e0',
+    surface: '#ff2a6d', surfaceTexte: '#0d0221', vedette: '#05d9e8', vedetteTexte: '#0d0221', ombre: '#000000',
+    police: 'display', decor: 'scanlines',
+    typo: { nom: { taille: 1.55, graisse: 700, approche: -0.01 }, section: { taille: 0.8, graisse: 600, approche: 0.04 }, bouton: { graisse: 600, approche: 0.005 }, carte: { taille: 0.94, graisse: 640, approche: -0.005 } },
+    conseil: { style: 'relief', forme: 'carre', ombre: 'aucune' },
+  },
 ];
 
-/** Les thèmes retirés le 18 octobre 2026, et celui qui les remplace : une page enregistrée garde un thème proche. */
+/** Les thèmes retirés (le 18 octobre 2026, deux fois), et celui qui les remplace : une page enregistrée garde un thème proche. */
 export const REMPLACES: Record<string, string> = {
-  ardoise: 'minuit', givre: 'minuit', aubergine: 'cosmos', cafe: 'onyx', neon: 'arcade', 'peche-nuit': 'nuit-peche',
-  ivoire: 'champagne', sable: 'champagne', marbre: 'champagne', ciel: 'neige', lavande: 'neige', citron: 'papier',
-  abricot: 'rose', bonbon: 'rose', rouge: 'orange', pomme: 'acide', holo: 'y2k', damier: 'brutal',
+  // Retirés au matin.
+  ardoise: 'nuit-peche', givre: 'neige', aubergine: 'aurore', cafe: 'onyx', neon: 'arcade', 'peche-nuit': 'nuit-peche',
+  ivoire: 'champagne', sable: 'champagne', marbre: 'champagne', ciel: 'neige', lavande: 'neige', citron: 'coucher',
+  abricot: 'coucher', bonbon: 'coucher', rouge: 'klein', pomme: 'brutal', holo: 'coucher', damier: 'brutal',
+  // Retirés le soir, quand le catalogue est passé à dix.
+  minuit: 'nuit-peche', encre: 'nuit-peche', bordeaux: 'onyx', velours: 'foret', studio: 'neige',
+  papier: 'champagne', menthe: 'neige', rose: 'coucher', orange: 'klein', jaune: 'klein',
+  y2k: 'coucher', acide: 'brutal', cosmos: 'aurore', lave: 'aurore', terminal: 'arcade', ocean: 'aurore',
 };
 
 export const THEME_DEFAUT = 'nuit-peche';
@@ -108,7 +157,8 @@ export const FAMILLES: { id: Famille; nom: string }[] = [
 
 const GEIST = "'Geist Variable', ui-sans-serif, system-ui, sans-serif";
 const GARAMOND = "'EB Garamond Variable', ui-serif, Georgia, serif";
-const ROND = "ui-rounded, 'SF Pro Rounded', 'Nunito', 'Geist Variable', system-ui, sans-serif";
+const ROND = "'Fredoka Variable', ui-rounded, 'Geist Variable', system-ui, sans-serif";
+const BRICOLAGE = "'Bricolage Grotesque Variable', " + GEIST;
 const MONO = "ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, monospace";
 
 /** La police du texte et celle des titres (le nom, les sections, les cartes). */
@@ -117,7 +167,8 @@ export const POLICES: Record<Police, { corps: string; titre: string }> = {
   serif: { corps: GARAMOND, titre: GARAMOND },
   rond: { corps: ROND, titre: ROND },
   mono: { corps: MONO, titre: MONO },
-  grotesque: { corps: "'Bricolage Grotesque Variable', " + GEIST, titre: "'Bricolage Grotesque Variable', " + GEIST },
+  grotesque: { corps: BRICOLAGE, titre: BRICOLAGE },
+  condensee: { corps: GEIST, titre: BRICOLAGE },
   display: { corps: GEIST, titre: "'Unbounded Variable', " + GEIST },
   elegante: { corps: "'Fraunces Variable', " + GARAMOND, titre: "'Fraunces Variable', " + GARAMOND },
   editoriale: { corps: GEIST, titre: "'Instrument Serif', " + GARAMOND },
@@ -133,11 +184,20 @@ export const contraste = (a: string, b: string) => { const [x, y] = [luminance(a
 /** Les titres de section prennent l'accent quand il se lit sur le fond, sinon le texte doux. */
 export const titreSection = (theme: Theme) => (contraste(theme.vedette, theme.fondUni) >= 4.5 ? theme.vedette : theme.doux);
 
+const role = (nom: string, r: Role): Record<string, string> => ({
+  ...(r.taille ? { [`--${nom}-taille`]: `${r.taille}rem` } : {}),
+  [`--${nom}-graisse`]: String(r.graisse), [`--${nom}-approche`]: `${r.approche}em`,
+  ...(r.italique ? { [`--${nom}-style`]: 'italic' } : {}),
+});
+
 /** Les variables CSS d'un thème, posées sur l'enveloppe de la page. */
 export function variablesTheme(theme: Theme): Record<string, string> {
   return {
     '--fond': theme.fond, '--fond-uni': theme.fondUni, '--texte': theme.texte, '--doux': theme.doux, '--titre-section': titreSection(theme),
     '--surface': theme.surface, '--surface-texte': theme.surfaceTexte, '--vedette': theme.vedette, '--vedette-texte': theme.vedetteTexte,
-    '--police': POLICES[theme.police].corps, '--police-titre': POLICES[theme.police].titre,
+    '--police': POLICES[theme.police].corps, '--police-titre': POLICES[theme.police].titre, '--ombre-teinte': theme.ombre,
+    // La typographie réglée du thème : la page la lit sur le nom, les sections, les boutons et les cartes.
+    ...role('nom', theme.typo.nom), ...role('section', theme.typo.section), ...role('btn', theme.typo.bouton), ...role('carte', theme.typo.carte),
+    '--titre-chasse': theme.police === 'condensee' ? '75%' : '100%',
   };
 }

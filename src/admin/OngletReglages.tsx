@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import QRCode from 'qrcode';
 import type { ComptePage, Reglages } from '../lib/types.ts';
-import { urlPage } from '../lib/types.ts';
+import { LANGUES, urlPage } from '../lib/types.ts';
+import { NOMS_LANGUES } from '../lib/langues.ts';
 import type { Abonnement as EtatAbonnement, Periode } from '../lib/abonnement.ts';
 import { AVANTAGES_PRO, TARIFS, estResilie, euros } from '../lib/abonnement.ts';
 import { Icone } from '../components/Icone.tsx';
@@ -57,10 +58,14 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
               ? <Interrupteur label="Page visible par Google" aide={reglages.seo.indexable ? 'La page peut apparaître dans les résultats de recherche.' : 'La page demande aux moteurs de ne pas l’indexer.'} actif={reglages.seo.indexable} onChange={v => seo({ indexable: v })} />
               : <p className="py-3 text-[13.5px] leading-snug text-white/55">Pendant la bêta, ta page n’apparaît pas dans Google. Le titre et la description servent aux aperçus quand tu partages ton lien.</p>}
             <Interrupteur label="Bouton Partager" aide="En haut à droite de ta page." actif={reglages.partage} onChange={v => onChange({ ...reglages, partage: v })} />
+            <Interrupteur label="Vouvoyer mes visiteurs" aide={reglages.vouvoiement ? '« Votre adresse e-mail », « Votre place est gardée ».' : '« Ton adresse e-mail », « Ta place est gardée ». À changer si ta page parle en « vous ».'} actif={!!reglages.vouvoiement} onChange={v => onChange({ ...reglages, vouvoiement: v })} />
+            <Interrupteur label="Le résumé de ma semaine" aide="Chaque lundi matin, par e-mail : ce qui a marché sur ta page, en quelques phrases." actif={reglages.resumeHebdo} onChange={v => onChange({ ...reglages, resumeHebdo: v })} />
             <Interrupteur label="Ouvrir les liens dans les apps" aide="Depuis Instagram, TikTok ou Facebook, un lien YouTube, Spotify ou Instagram s’ouvre dans son app plutôt que dans leur navigateur intégré." actif={reglages.ouvrirApps} onChange={v => onChange({ ...reglages, ouvrirApps: v })} />
           </div>
         </div>
       </Carte>
+
+      <Langues reglages={reglages} onChange={onChange} adresse={URL_PUBLIQUE} />
 
       <TesDonnees compte={compte} urlExport={urlExport} supprimerMonCompte={supprimerMonCompte} />
 
@@ -96,7 +101,7 @@ function Abonnement({ abonnement, ouvrirPaiement, ouvrirPortail }: {
         : { texte: fin ? `Se renouvelle le ${fin}.` : 'Ton abonnement est actif.', alerte: false };
     return (
       <div id="abonnement" className="scroll-mt-24">
-        <Carte titre="Ton abonnement" action={<span className="inline-flex items-center gap-1 rounded-full bg-peche px-2.5 py-1 text-[12.5px] font-semibold text-nuit"><Icone nom="sparkle" taille={13} />Pro</span>}>
+        <Carte titre="Ton abonnement" action={<span className="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1 text-[12.5px] font-semibold text-nuit"><Icone nom="sparkle" taille={13} />Pro</span>}>
           <p className={`text-[14px] leading-snug ${etat.alerte ? 'text-amber-200' : 'text-white/75'}`}>{etat.texte}</p>
           {abonnement.portail && (
             <>
@@ -124,7 +129,7 @@ function Abonnement({ abonnement, ouvrirPaiement, ouvrirPortail }: {
         <ul className="flex flex-col gap-2">
           {AVANTAGES_PRO.map(a => (
             <li key={a} className="flex gap-2.5 text-[14px] leading-snug text-white/80">
-              <span className="mt-0.5 grid h-[18px] w-[18px] shrink-0 place-items-center rounded-full bg-peche/15 text-peche"><Icone nom="ui-ok" taille={12} /></span>{a}
+              <span className="mt-0.5 grid h-[18px] w-[18px] shrink-0 place-items-center rounded-full bg-white/10 text-white"><Icone nom="ui-ok" taille={12} /></span>{a}
             </li>
           ))}
         </ul>
@@ -133,15 +138,15 @@ function Abonnement({ abonnement, ouvrirPaiement, ouvrirPortail }: {
             const t = TARIFS[p], choisi = periode === p;
             return (
               <button key={p} type="button" role="radio" aria-checked={choisi} onClick={() => setPeriode(p)}
-                className={`flex flex-col items-start rounded-2xl border px-3.5 py-3 text-left transition ${choisi ? 'border-peche/70 bg-peche/[0.08]' : 'border-white/10 bg-white/[0.03] hover:border-white/20'}`}>
+                className={`flex flex-col items-start rounded-2xl border px-3.5 py-3 text-left transition ${choisi ? 'border-white/30 bg-white/10' : 'border-white/10 bg-white/[0.03] hover:border-white/20'}`}>
                 <span className="text-[13px] text-white/55">{p === 'an' ? 'Annuel' : 'Mensuel'}</span>
                 <span className="mt-0.5 text-[20px] font-semibold tracking-tight text-white tabular-nums">{euros(t.prix)}<span className="text-[13px] font-normal text-white/50"> / {p === 'an' ? 'an' : 'mois'}</span></span>
-                {'economie' in t && <span className="mt-1 rounded-full bg-peche/15 px-2 py-0.5 text-[11.5px] font-semibold text-peche">{t.economie}</span>}
+                {'economie' in t && <span className="mt-1 rounded-full bg-white/10 px-2 py-0.5 text-[11.5px] font-semibold text-white">{t.economie}</span>}
               </button>
             );
           })}
         </div>
-        <button type="button" disabled={envoi} onClick={() => aller(() => ouvrirPaiement(periode))} className="mt-3 min-h-11 w-full rounded-full bg-peche px-4 text-[15px] font-semibold text-nuit transition hover:brightness-105 disabled:opacity-60">
+        <button type="button" disabled={envoi} onClick={() => aller(() => ouvrirPaiement(periode))} className="mt-3 min-h-11 w-full rounded-full bg-white px-4 text-[15px] font-semibold text-nuit transition hover:brightness-105 disabled:opacity-60">
           {envoi ? 'Ouverture du paiement…' : `Passer en Pro, ${TARIFS[periode].libelle}`}
         </button>
         {erreur && <p role="alert" className="mt-3 text-[13.5px] text-red-300">{erreur}</p>}
@@ -199,6 +204,38 @@ function TesDonnees({ compte, urlExport, supprimerMonCompte }: { compte: CompteP
         <a href="/legal/confidentialite" target="_blank" rel="noopener" className={lien}>Confidentialité</a>
         <a href="/legal/traitement-des-donnees" target="_blank" rel="noopener" className={lien}>Accord de traitement</a>
       </p>
+    </Carte>
+  );
+}
+
+const EN_FRANCAIS = { en: 'Anglais', es: 'Espagnol', de: 'Allemand', it: 'Italien' } as const;
+
+/** Les langues de la page : le visiteur la voit dans la sienne, là où les textes sont traduits. */
+function Langues({ reglages, onChange, adresse }: { reglages: Reglages; onChange: (r: Reglages) => void; adresse: string }) {
+  const actives = reglages.langues ?? [];
+  const basculer = (l: (typeof LANGUES)[number]) => onChange({ ...reglages, langues: actives.includes(l) ? actives.filter(x => x !== l) : LANGUES.filter(x => x === l || actives.includes(x)) });
+  return (
+    <Carte titre="Langues de ta page">
+      <p className="text-[13.5px] leading-snug text-white/60">Ta page s’affiche dans la langue du visiteur. Les boutons, le formulaire et les dates sont traduits tout seuls ; tes textes, tu les traduis dans chaque bloc (Traductions).</p>
+      <div className="mt-3 divide-y divide-white/[0.06] rounded-2xl bg-white/[0.035] px-4" role="group" aria-label="Langues proposées">
+        <div className="flex items-center justify-between gap-4 py-3">
+          <span className="text-[15px] font-medium text-white">Français</span>
+          <span className="text-[13px] text-white/45">Langue de ta page</span>
+        </div>
+        {LANGUES.map(l => (
+          <Interrupteur key={l} label={NOMS_LANGUES[l]} aide={EN_FRANCAIS[l]} actif={actives.includes(l)} onChange={() => basculer(l)} />
+        ))}
+      </div>
+      {actives.length > 0 && (
+        <div className="mt-4 flex flex-col gap-3">
+          {actives.map(l => (
+            <Champ key={l} label={`Ta bio en ${NOMS_LANGUES[l].toLowerCase()}`} aide={l === actives[0] ? `Pour vérifier : ${adresse.replace(/^https:\/\//, '')}?lang=${l}` : undefined}>
+              <textarea className={`${classeSaisie} min-h-16`} lang={l} maxLength={300} value={reglages.bioTraduite?.[l] ?? ''} placeholder={reglages.profil.bio}
+                onChange={e => onChange({ ...reglages, bioTraduite: { ...reglages.bioTraduite, [l]: e.target.value } })} />
+            </Champ>
+          ))}
+        </div>
+      )}
     </Carte>
   );
 }

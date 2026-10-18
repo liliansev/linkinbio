@@ -34,3 +34,11 @@ test('iOS : le schéma de l’app quand on sait le construire', () => {
   assert.equal(lienApp('https://t.me/hopla', IOS_TIKTOK)!.adresse, 'tg://resolve?domain=hopla');
   assert.equal(lienApp('https://www.linkedin.com/in/lilian', IOS_TIKTOK), null);
 });
+
+test('le nom de l’app d’un lien, pour le back office et les stats', async () => {
+  const { appDe } = await import('./ouvrirApp.ts');
+  assert.equal(appDe('https://www.youtube.com/watch?v=abc'), 'YouTube');
+  assert.equal(appDe('https://open.spotify.com/track/1'), 'Spotify');
+  assert.equal(appDe('https://exemple.fr/'), null);
+  assert.equal(appDe('mailto:a@b.fr'), null);
+});

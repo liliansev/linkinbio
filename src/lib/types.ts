@@ -5,8 +5,10 @@
  */
 
 import type { Abonnement, Periode } from './abonnement.ts';
+import type { Creneau } from './moments.ts';
+import type { Audience, EffetAudience } from './provenance.ts';
 
-export const TYPES_BLOC = ['lien', 'titre', 'texte', 'video', 'derniere-video', 'newsletter'] as const;
+export const TYPES_BLOC = ['lien', 'titre', 'texte', 'video', 'derniere-video', 'newsletter', 'inscription', 'preuve'] as const;
 export type TypeBloc = (typeof TYPES_BLOC)[number];
 
 /** Les mouvements qui attirent l'œil sur un bouton. */
@@ -43,7 +45,48 @@ export interface Bloc {
   /** Programmation (ISO), vide = pas de borne. */
   debut: string;
   fin: string;
+  /** Avant `debut`, montrer un compte à rebours (sans l'adresse) plutôt que rien. */
+  compteARebours: boolean;
+  /** Un créneau qui revient chaque semaine : visible, ou mis en avant, à ces heures-là. */
+  creneau: Creneau | null;
+  /** Les provenances visées (Instagram, TikTok…) : le bloc passe en tête pour elles, ou ne s'affiche que pour elles. */
+  audience: { sources: Audience[]; effet: EffetAudience } | null;
+  /** « Rejoins ma liste » : demander aussi le prénom. */
+  demanderPrenom: boolean;
+  /** Le mode drop : un code à taper, des places comptées, ou les deux. L'adresse ne part qu'une fois le lien débloqué. */
+  acces: Acces | null;
+  /** Sur la page publique seulement : les places qui restent d'un drop (null = sans limite). */
+  restantes?: number | null;
+  /** Un avis, un chiffre, un témoignage (bloc `preuve`). */
+  preuve: Preuve | null;
+  /** Le titre, le sous-titre et la description dans d'autres langues. */
+  traductions: Partial<Record<Langue, Traduction>>;
 }
+
+export interface Acces {
+  /** Le code à taper, vide = pas de code. Jamais envoyé à la page publique (seulement `•` s'il y en a un). */
+  code: string;
+  /** Le nombre de places, 0 = sans limite. */
+  places: number;
+}
+
+export const GENRES_PREUVE = ['note', 'compteur', 'temoignage'] as const;
+export type GenrePreuve = (typeof GENRES_PREUVE)[number];
+export interface Preuve {
+  genre: GenrePreuve;
+  /** Note sur 5 (`note`). */
+  note: number;
+  /** Le nombre d'avis (`note`) ou le chiffre affiché (`compteur`). */
+  nombre: number;
+  /** Où vit la preuve : Google, Trustpilot, Malt, YouTube… */
+  source: string;
+}
+
+/** Les langues dans lesquelles une page peut se traduire, en plus du français. */
+export const LANGUES = ['en', 'es', 'de', 'it'] as const;
+export type Langue = (typeof LANGUES)[number];
+export type LangueVisiteur = Langue | 'fr';
+export interface Traduction { titre: string; sousTitre: string; description: string }
 
 export const FORMATS_VEDETTE = ['bouton', 'bandeau', 'carte'] as const;
 export type FormatVedette = (typeof FORMATS_VEDETTE)[number];
@@ -54,6 +97,9 @@ export const STYLES_BOUTON = ['plein', 'contour', 'doux', 'relief', 'verre'] as 
 export type StyleBouton = (typeof STYLES_BOUTON)[number];
 export const FORMES_BOUTON = ['pilule', 'arrondi', 'carre'] as const;
 export type FormeBouton = (typeof FORMES_BOUTON)[number];
+/** L'ombre portée sous les boutons, au choix : aucune, subtile ou marquée. */
+export const OMBRES_BOUTON = ['aucune', 'subtile', 'marquee'] as const;
+export type OmbreBouton = (typeof OMBRES_BOUTON)[number];
 
 export const RESEAUX = ['youtube', 'linkedin', 'instagram', 'tiktok', 'x', 'github', 'facebook', 'threads', 'twitch', 'spotify', 'email', 'site'] as const;
 export type Reseau = (typeof RESEAUX)[number];
@@ -64,12 +110,20 @@ export interface Reglages {
   /** Les icônes des réseaux en haut (sous la bio) ou en bas de page. */
   reseauxPosition: 'haut' | 'bas';
   theme: string;
-  bouton: { style: StyleBouton; forme: FormeBouton };
+  bouton: { style: StyleBouton; forme: FormeBouton; ombre: OmbreBouton };
   seo: { titre: string; description: string; indexable: boolean };
   /** Le bouton « Partager » en haut de la page publique. */
   partage: boolean;
   /** Depuis le navigateur intégré d'Instagram, TikTok…, ouvrir les liens dans leur app (YouTube, Spotify…). */
   ouvrirApps: boolean;
+  /** Le lundi matin, le résumé de la semaine par e-mail. */
+  resumeHebdo: boolean;
+  /** Les langues proposées en plus du français : la page parle celle du visiteur. */
+  langues: Langue[];
+  /** La bio dans ces langues. */
+  bioTraduite: Partial<Record<Langue, string>>;
+  /** Les mots de la page (formulaires, drops) vouvoient le visiteur plutôt que de le tutoyer. */
+  vouvoiement: boolean;
   /** Le mouvement des liens mis en avant (un bloc peut choisir le sien). */
   animation: Animation;
   /** La mise en page sur un grand écran ; sur téléphone, la page reste une colonne. */
@@ -121,6 +175,10 @@ export interface PagePublique {
   blocs: Bloc[];
   /** `pro` retire la mention « Une page faite avec Hopla ». */
   compte: ComptePage & { pro: boolean };
+  /** L'instant où la page a été composée : le compte à rebours part de là, au serveur comme au navigateur. */
+  maintenant?: number;
+  /** La langue dans laquelle la page s'affiche (celle du visiteur, si la page la propose). */
+  langue?: LangueVisiteur;
 }
 
 export interface EtatAdmin {
@@ -132,6 +190,8 @@ export interface EtatAdmin {
   paiement: boolean;
   /** Clics des 30 derniers jours, par bloc. */
   clics: Record<string, number>;
+  /** Les places prises de chaque drop. */
+  places: Record<string, number>;
   /** Vrai quand la base vit en mémoire : rien ne survivra au redémarrage. */
   stockageEphemere: boolean;
   /** Faux tant que le compte n'a pas accepté la version en vigueur des CGU (toujours vrai pour le compte principal). */
@@ -145,11 +205,33 @@ export interface Stats {
   clics: number;
   /** Une entrée par jour, du plus ancien au plus récent. */
   serie: { jour: string; vues: number; clics: number }[];
-  blocs: { id: string; titre: string; clics: number }[];
-  sources: { nom: string; vues: number }[];
+  /** `avant` : le même chiffre sur la période précédente. */
+  blocs: { id: string; titre: string; clics: number; avant: number }[];
+  sources: { nom: string; vues: number; avant: number }[];
   appareils: { nom: string; vues: number }[];
+  /** Les clics depuis le navigateur intégré d'Instagram, TikTok… : en tout, vers un lien qui a son app, et ouverts dans l'app. */
+  apps: { integres: number; versApp: number; ouverts: number };
   /** Mêmes totaux sur la période précédente, pour la tendance. */
   precedent: { vues: number; visiteurs: number; clics: number };
+}
+
+export const FOURNISSEURS_LISTE = ['brevo', 'mailchimp'] as const;
+export type FournisseurListe = (typeof FOURNISSEURS_LISTE)[number];
+
+/** Le fournisseur branché, sans jamais la clé (seulement ses quatre derniers caractères). */
+export interface IntegrationListe { fournisseur: FournisseurListe; liste: string; nom: string; cle: string }
+
+export interface Contact { id: string; email: string; prenom: string; ts: number; source: string; synchro: '' | 'ok' | 'erreur' }
+
+/** Les inscrits de « Rejoins ma liste ». */
+export interface Liste {
+  total: number;
+  /** Inscrits des 7 derniers jours. */
+  semaine: number;
+  derniers: Contact[];
+  integration: IntegrationListe | null;
+  /** Inscrits pas encore partis chez le fournisseur (erreur, ou arrivés avant le branchement). */
+  enAttente: number;
 }
 
 /** Ce que le back office demande au serveur (ou à la démo, dans l'aperçu). */
@@ -174,6 +256,14 @@ export interface Api {
   ouvrirPaiement(periode: Periode): Promise<string>;
   /** L'adresse du portail client Creem : carte, factures, résiliation. */
   ouvrirPortail(): Promise<string>;
+  liste(): Promise<Liste>;
+  /** Branche Brevo ou Mailchimp (la clé est vérifiée chez eux), ou débranche avec `null`. */
+  brancherListe(i: { fournisseur: FournisseurListe; cle: string; liste: string } | null): Promise<{ ok: boolean; message: string }>;
+  supprimerContact(id: string): Promise<void>;
+  /** Renvoie chez le fournisseur les inscrits qui n'y sont pas encore. */
+  resynchroniser(): Promise<{ envoyes: number; erreurs: number }>;
+  /** L'adresse du CSV des inscrits, ou null dans l'aperçu. */
+  urlContacts: string | null;
   /** Seulement pour le compte principal : gérer les autres comptes. */
   comptes?: ApiComptes;
 }
@@ -206,11 +296,13 @@ export interface SignalementResume {
 
 export function nouveauBloc(type: TypeBloc, id: string): Bloc {
   const titres: Record<TypeBloc, string> = {
-    lien: '', titre: 'Nouvelle section', texte: '', video: 'Ma vidéo', 'derniere-video': 'Ma dernière vidéo', newsletter: 'Ma newsletter',
+    lien: '', titre: 'Nouvelle section', texte: '', video: 'Ma vidéo', 'derniere-video': 'Ma dernière vidéo', newsletter: 'Ma newsletter', inscription: 'Rejoins ma liste', preuve: 'Ce qu’ils en disent',
   };
   return {
-    id, type, titre: titres[type], url: '', sousTitre: type === 'newsletter' ? 'Un e-mail de temps en temps, rien de plus.' : '', description: '', icone: '', image: '',
+    id, type, titre: titres[type], url: '', sousTitre: type === 'newsletter' || type === 'inscription' ? 'Un e-mail de temps en temps, rien de plus.' : '', description: '', icone: '', image: '',
     public: true, indexable: true, vedette: false, format: 'bandeau', teinte: 'accent', animation: 'auto', debut: '', fin: '',
+    compteARebours: false, creneau: null, audience: null, demanderPrenom: false, acces: null,
+    preuve: type === 'preuve' ? { genre: 'note', note: 5, nombre: 0, source: 'Google' } : null, traductions: {},
   };
 }
 

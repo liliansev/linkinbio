@@ -29,8 +29,8 @@ export function etapesDemarrage(reglages: Reglages, blocs: Bloc[], partagee: boo
 export const pageNeuve = (r: Reglages, blocs: Bloc[]) =>
   blocs.length === 0 && !r.profil.avatar && !r.profil.bio.trim() && !r.reseaux.some(x => x.url.trim());
 
-/** Une ambiance par famille, et quelques voisines : assez pour choisir, pas trop pour hésiter. */
-export const THEMES_ACCUEIL = ['nuit-peche', 'neige', 'champagne', 'onyx', 'foret', 'rose', 'jaune', 'klein', 'aurore', 'coucher', 'brutal', 'y2k'];
+/** Les dix thèmes, du plus sobre au plus affirmé : assez pour choisir, pas trop pour hésiter. */
+export const THEMES_ACCUEIL = ['nuit-peche', 'neige', 'champagne', 'onyx', 'foret', 'aurore', 'coucher', 'klein', 'brutal', 'arcade'];
 
 /** Les réseaux proposés d'abord, puis les autres. */
 export const RESEAUX_ACCUEIL: Reseau[] = ['instagram', 'tiktok', 'youtube', 'linkedin', 'x', 'threads', 'facebook', 'twitch', 'spotify', 'github', 'email'];

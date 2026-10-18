@@ -60,7 +60,7 @@ export function OngletComptes({ api }: { api: ApiComptes }) {
           {message && (
             <p role={message.ok ? 'status' : 'alert'} className={`rounded-xl px-3.5 py-2.5 text-[14px] ${message.ok ? 'bg-emerald-400/10 text-emerald-100' : 'bg-red-400/10 text-red-200'}`}>
               {message.texte}
-              {message.lienDev && <a href={message.lienDev} className="mt-2 block break-all text-[12.5px] text-peche underline">{message.lienDev}</a>}
+              {message.lienDev && <a href={message.lienDev} className="mt-2 block break-all text-[12.5px] text-white underline">{message.lienDev}</a>}
             </p>
           )}
         </form>
@@ -102,7 +102,7 @@ function LigneCompte({ compte, api, onChange, onMessage }: { compte: CompteResum
         <div className="min-w-0">
           <p className="flex items-center gap-2 text-[15.5px] font-semibold">
             <span className="truncate">{compte.principal ? 'Toi' : compte.pseudo}</span>
-            {!compte.principal && compte.pro && <span className="rounded-full bg-peche/15 px-2 py-0.5 text-[11.5px] font-semibold text-peche">Pro</span>}
+            {!compte.principal && compte.pro && <span className="rounded-full bg-white/10 px-2 py-0.5 text-[11.5px] font-semibold text-white">Pro</span>}
             {suspendu && <span className="rounded-full bg-amber-400/15 px-2 py-0.5 text-[11.5px] font-medium text-amber-200">Suspendu</span>}
           </p>
           <p className="truncate text-[13px] text-white/50">{compte.principal ? 'Ta page, hopla.page/lilian' : compte.email}</p>

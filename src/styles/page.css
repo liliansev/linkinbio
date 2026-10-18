@@ -1,15 +1,19 @@
 /*
  * La page publique. Toutes les couleurs viennent du thème (variables posées
  * par `PageLiens`) ; les cinq styles de bouton et les trois formes se lisent
- * sur `data-bouton` et `data-forme`, si bien que chaque combinaison marche
- * avec chacun des quarante-quatre thèmes. La matière du fond (`data-decor`)
- * et la police des titres (`--police-titre`) viennent aussi du thème.
+ * sur `data-bouton`, `data-forme` et `data-ombre`, si bien que chaque
+ * combinaison marche avec chacun des dix thèmes. La matière du fond
+ * (`data-decor`), la police des titres (`--police-titre`) et la typographie
+ * réglée de chaque rôle (`--nom-*`, `--section-*`, `--btn-*`, `--carte-*`)
+ * viennent aussi du thème.
  */
 
 .lp {
   --r: 999px;
   --rc: 24px;
   min-height: 100dvh;
+  /* Les halos du décor débordent : jamais de défilement de côté. */
+  overflow-x: clip;
   background: var(--fond-uni);
   background-image: var(--fond);
   background-attachment: fixed;
@@ -22,18 +26,10 @@
 .lp[data-forme='carre'] { --r: 4px; --rc: 6px; }
 .lp[data-police='serif'] { font-size: 1.06em; }
 
-/* Les titres prennent la police de caractère du thème. */
-.lp :is(.lp-nom, .lp-section, .lp-carte-titre) { font-family: var(--police-titre); }
-.lp[data-police='editoriale'] .lp-nom { font-weight: 400; font-size: 2.15rem; letter-spacing: -0.01em; }
-.lp[data-police='editoriale'] .lp-section { font-size: 1.12rem; font-weight: 400; font-style: italic; letter-spacing: 0; }
-.lp[data-police='editoriale'] .lp-carte-titre { font-weight: 400; font-size: 1.22rem; letter-spacing: 0; }
-.lp[data-police='display'] .lp-nom { font-size: 1.45rem; font-weight: 700; letter-spacing: -0.01em; }
-.lp[data-police='display'] .lp-section { font-size: 0.78rem; font-weight: 600; letter-spacing: 0.04em; }
-.lp[data-police='display'] .lp-carte-titre { font-weight: 600; letter-spacing: -0.005em; }
-.lp[data-police='elegante'] .lp-nom { font-weight: 560; font-size: 1.85rem; letter-spacing: -0.02em; }
-.lp[data-police='elegante'] .lp-section { font-style: italic; font-weight: 450; font-size: 0.98rem; }
-.lp[data-police='grotesque'] .lp-nom { font-weight: 760; font-size: 1.75rem; letter-spacing: -0.035em; }
-.lp[data-police='grotesque'] .lp-btn { font-weight: 620; }
+/* Les titres prennent la police de caractère du thème, et sa chasse (le Brutaliste est condensé). */
+.lp :is(.lp-nom, .lp-section, .lp-carte-titre) { font-family: var(--police-titre); font-stretch: var(--titre-chasse, 100%); }
+/* Sur fond sombre, le texte clair gagne une pointe d'approche pour respirer. */
+.lp { font-optical-sizing: auto; }
 
 .lp-col {
   max-width: 580px;
@@ -44,7 +40,7 @@
 
 .lp-partager {
   position: absolute; top: 14px; right: 16px;
-  width: 40px; height: 40px; border-radius: 999px; border: 0;
+  width: 44px; height: 44px; border-radius: 999px; border: 0;
   display: grid; place-items: center; cursor: pointer;
   color: var(--texte);
   background: color-mix(in srgb, var(--texte) 10%, transparent);
@@ -54,7 +50,7 @@
 
 .lp-tete { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 10px; margin-bottom: 28px; }
 .lp-avatar { width: 104px; height: 104px; border-radius: 999px; object-fit: cover; box-shadow: 0 0 0 1px color-mix(in srgb, var(--texte) 14%, transparent), 0 18px 40px -18px rgb(0 0 0 / 0.55); }
-.lp-nom { font-size: 1.6rem; font-weight: 620; letter-spacing: -0.025em; margin: 8px 0 0; display: inline-flex; align-items: center; gap: 6px; line-height: 1.15; text-wrap: balance; }
+.lp-nom { font-size: var(--nom-taille, 1.6rem); font-weight: var(--nom-graisse, 620); letter-spacing: var(--nom-approche, -0.025em); font-style: var(--nom-style, normal); margin: 8px 0 0; display: inline-flex; align-items: center; gap: 6px; line-height: 1.15; text-wrap: balance; }
 .lp-badge { display: inline-flex; color: var(--vedette); }
 .lp-badge svg { color: inherit; }
 .lp-bio { margin: 0; color: var(--doux); font-size: 1rem; line-height: 1.5; max-width: 36ch; text-wrap: balance; }
@@ -66,7 +62,7 @@
 
 .lp-blocs { display: flex; flex-direction: column; gap: 14px; }
 
-.lp-section { margin: 18px 0 2px; text-align: center; font-size: 0.86rem; font-weight: 560; letter-spacing: 0.01em; color: var(--titre-section, var(--doux)); }
+.lp-section { margin: 18px 0 2px; text-align: center; font-size: var(--section-taille, 0.86rem); font-weight: var(--section-graisse, 560); letter-spacing: var(--section-approche, 0.01em); font-style: var(--section-style, normal); color: var(--titre-section, var(--doux)); }
 .lp-texte { margin: 0; text-align: center; color: var(--doux); line-height: 1.55; white-space: pre-line; }
 
 /* ---- Boutons ---- */
@@ -84,14 +80,27 @@
   position: relative;
   overflow: hidden;
   isolation: isolate;
+  /* L'ombre choisie (`data-ombre`), que chaque style de bouton ajoute à ses propres traits. */
+  box-shadow: var(--lp-ombre);
   transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease, background-color 0.2s ease;
   -webkit-tap-highlight-color: transparent;
 }
+.lp { --lp-ombre: 0 0 #0000; --lp-ombre-survol: 0 0 #0000; }
+/* Deux ombres, teintées par le fond du thème : un contact net sous le bouton, et une portée douce. */
+.lp[data-ombre='subtile'] {
+  --lp-ombre: 0 1px 2px color-mix(in srgb, var(--ombre-teinte, #000) 14%, transparent), 0 6px 16px -6px color-mix(in srgb, var(--ombre-teinte, #000) 30%, transparent);
+  --lp-ombre-survol: 0 2px 4px color-mix(in srgb, var(--ombre-teinte, #000) 16%, transparent), 0 12px 24px -8px color-mix(in srgb, var(--ombre-teinte, #000) 36%, transparent);
+}
+.lp[data-ombre='marquee'] {
+  --lp-ombre: 0 2px 3px color-mix(in srgb, var(--ombre-teinte, #000) 24%, transparent), 0 14px 30px -10px color-mix(in srgb, var(--ombre-teinte, #000) 58%, transparent);
+  --lp-ombre-survol: 0 3px 6px color-mix(in srgb, var(--ombre-teinte, #000) 26%, transparent), 0 22px 40px -12px color-mix(in srgb, var(--ombre-teinte, #000) 64%, transparent);
+}
+.lp-btn:hover, .lp-carte:hover { box-shadow: var(--lp-ombre-survol); }
 .lp-btn {
   display: flex; align-items: center; justify-content: center;
   min-height: 60px; padding: 10px 60px;
   border-radius: var(--r);
-  font-weight: 560; font-size: 1rem; line-height: 1.25; text-align: center;
+  font-weight: var(--btn-graisse, 560); letter-spacing: var(--btn-approche, 0); font-size: 1rem; line-height: 1.25; text-align: center;
 }
 .lp-btn:hover { transform: translateY(-2px); }
 .lp-btn:active, .lp-carte:active { transform: scale(0.97); transition-duration: 0.08s; }
@@ -108,8 +117,8 @@
 [data-bouton]:not([data-bouton='plein']) :is(.lp-btn, .lp-carte) { --lp-encre: var(--texte); --lp-halo: var(--texte); --lp-trait: var(--texte); }
 .lp-accent { --lp-fond: var(--vedette); --lp-encre: var(--vedette-texte); }
 
-[data-bouton='contour'] :is(.lp-btn, .lp-carte) { background: transparent; color: var(--texte); box-shadow: inset 0 0 0 2px var(--texte); }
-[data-bouton='contour'] :is(.lp-btn, .lp-carte):hover { background: color-mix(in srgb, var(--texte) 8%, transparent); }
+[data-bouton='contour'] :is(.lp-btn, .lp-carte) { background: transparent; color: var(--texte); box-shadow: inset 0 0 0 2px var(--texte), var(--lp-ombre); }
+[data-bouton='contour'] :is(.lp-btn, .lp-carte):hover { background: color-mix(in srgb, var(--texte) 8%, transparent); box-shadow: inset 0 0 0 2px var(--texte), var(--lp-ombre-survol); }
 
 [data-bouton='doux'] :is(.lp-btn, .lp-carte) { background: color-mix(in srgb, var(--texte) 10%, transparent); color: var(--texte); }
 [data-bouton='doux'] :is(.lp-btn, .lp-carte):hover { background: color-mix(in srgb, var(--texte) 16%, transparent); }
@@ -130,17 +139,17 @@
   color: var(--texte);
   backdrop-filter: blur(16px) saturate(1.5);
   -webkit-backdrop-filter: blur(16px) saturate(1.5);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--texte) 22%, transparent), 0 10px 30px -16px rgb(0 0 0 / 0.5);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--texte) 22%, transparent), var(--lp-ombre);
 }
-[data-bouton='verre'] :is(.lp-btn, .lp-carte):hover { background: color-mix(in srgb, var(--texte) 17%, transparent); }
+[data-bouton='verre'] :is(.lp-btn, .lp-carte):hover { background: color-mix(in srgb, var(--texte) 17%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--texte) 28%, transparent), var(--lp-ombre-survol); }
 
 /*
  * La carte mise en avant garde sa couleur pleine dans tous les styles : c'est
  * elle que le visiteur doit voir d'abord. Le style ne change que son trait.
  */
 .lp[data-bouton] :is(.lp-btn, .lp-carte).lp-accent { background: var(--vedette); color: var(--vedette-texte); --lp-encre: var(--vedette-texte); --lp-halo: var(--vedette); }
-.lp[data-bouton='contour'] :is(.lp-btn, .lp-carte).lp-accent { box-shadow: none; }
-.lp[data-bouton='verre'] :is(.lp-btn, .lp-carte).lp-accent { box-shadow: inset 0 0 0 1px color-mix(in srgb, white 30%, transparent), 0 14px 34px -16px var(--vedette); }
+.lp[data-bouton='contour'] :is(.lp-btn, .lp-carte).lp-accent { box-shadow: var(--lp-ombre); }
+.lp[data-bouton='verre'] :is(.lp-btn, .lp-carte).lp-accent { box-shadow: inset 0 0 0 1px color-mix(in srgb, white 30%, transparent), var(--lp-ombre); }
 
 /* L'accent au-delà d'un seul bouton : les titres de section et une lueur derrière le portrait. */
 .lp-tete { position: relative; }
@@ -159,12 +168,12 @@
  * motif autour du picto), puis titre, description et le domaine en pied.
  */
 
-.lp-btn-vedette { font-weight: 620; }
+.lp-btn-vedette { font-weight: calc(var(--btn-graisse, 560) + 60); }
 
 .lp-carte { display: flex; border-radius: var(--r); text-align: left; }
 .lp-carte:hover { transform: translateY(-2px); }
 .lp-carte-texte { display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 0; }
-.lp-carte-titre { font-size: 1.04rem; font-weight: 650; letter-spacing: -0.014em; line-height: 1.25; }
+.lp-carte-titre { font-size: var(--carte-taille, 1.04rem); font-weight: var(--carte-graisse, 650); letter-spacing: var(--carte-approche, -0.014em); line-height: 1.25; }
 .lp-carte-description {
   font-size: 0.86rem; line-height: 1.42; opacity: 0.74;
   display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden;
@@ -330,31 +339,42 @@
 /* ---- Newsletter ---- */
 
 .lp-newsletter {
-  border-radius: var(--rc); padding: 20px 18px; text-align: center;
-  background: color-mix(in srgb, var(--texte) 7%, transparent);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--texte) 12%, transparent);
-  display: flex; flex-direction: column; gap: 6px;
+  border-radius: var(--rc); padding: 16px; text-align: left;
+  background: var(--surface); color: var(--surface-texte);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--surface-texte) 9%, transparent), var(--lp-ombre);
+  display: flex; flex-direction: column; gap: 14px;
 }
-.lp-newsletter-titre { margin: 0; font-size: 1.05rem; font-weight: 620; }
-.lp-newsletter form { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+.lp-newsletter-tete { display: flex; align-items: center; gap: 12px; }
+.lp-newsletter-picto {
+  display: grid; place-items: center; flex: none; width: 42px; height: 42px; border-radius: 50%;
+  color: var(--vedette); background: color-mix(in srgb, var(--vedette) 16%, transparent);
+}
+.lp-newsletter-textes { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.lp-newsletter-titre { margin: 0; font-size: 1rem; font-weight: 620; line-height: 1.25; }
+.lp-newsletter .lp-sous { margin: 0; font-size: 0.86rem; line-height: 1.35; color: color-mix(in srgb, var(--surface-texte) 62%, transparent); }
+/* Le champ et le bouton ne font qu'une pièce : le bouton est posé dans le champ. */
+.lp-newsletter form {
+  display: flex; gap: 6px; padding: 5px; flex-wrap: wrap; border-radius: var(--r);
+  background: color-mix(in srgb, var(--surface-texte) 7%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--surface-texte) 12%, transparent);
+  transition: box-shadow 0.15s;
+}
+.lp-newsletter form:focus-within { box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--vedette) 70%, transparent); }
 .lp-newsletter input {
-  flex: 1 1 0; min-width: 0; min-height: 50px; padding: 0 18px; font: inherit; font-size: 16px;
-  border-radius: var(--r); border: 0; color: var(--texte);
-  background: color-mix(in srgb, var(--texte) 9%, transparent);
-  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--texte) 22%, transparent);
+  flex: 1 1 0; min-width: 0; min-height: 44px; padding: 0 12px; font: inherit; font-size: 16px;
+  border: 0; border-radius: calc(var(--r) - 5px); color: inherit; background: transparent; outline: none;
 }
-.lp-newsletter input::placeholder { color: var(--doux); }
-.lp-newsletter input:focus { outline: 2px solid var(--texte); outline-offset: 1px; }
+.lp-newsletter input::placeholder { color: color-mix(in srgb, var(--surface-texte) 45%, transparent); }
 /* Le bouton d'inscription prend la couleur de la carte mise en avant. */
 [data-bouton='plein'] .lp-newsletter .lp-btn-compact { --lp-fond: var(--vedette); --lp-encre: var(--vedette-texte); }
-.lp-btn-compact { min-height: 50px; padding: 0 22px; flex: 0 0 auto; cursor: pointer; border: 0; font: inherit; font-weight: 600; }
-.lp-newsletter-ok { margin: 8px 0 0; font-weight: 560; }
-.lp-newsletter-erreur { margin: 4px 0 0; font-size: 0.88rem; }
+.lp-btn-compact { min-height: 44px; padding: 0 18px; border-radius: calc(var(--r) - 5px); flex: 0 0 auto; cursor: pointer; border: 0; font: inherit; font-weight: 600; }
+.lp-newsletter-ok { margin: 0; font-weight: 560; }
+.lp-newsletter-erreur { margin: -6px 0 0; font-size: 0.88rem; }
 
 .lp-signature { text-align: center; margin: 36px 0 0; font-size: 0.82rem; }
 .lp-signature a { color: var(--doux); text-decoration: none; }
 .lp-signature a:hover { color: var(--texte); }
-.lp-legal { display: flex; justify-content: center; gap: 14px; margin-top: 8px; font-size: 0.74rem; opacity: 0.8; }
+.lp-legal { display: flex; justify-content: center; gap: 14px; margin-top: 8px; font-size: 0.78rem; opacity: 0.85; }
 .lp-legal:first-child { margin-top: 0; }
 
 .lp-toast {
@@ -442,7 +462,8 @@
 .lp-pastille { position: relative; isolation: isolate; overflow: hidden; background: var(--fond-uni); background-image: var(--fond); color: var(--texte); }
 .lp-pastille > * { position: relative; z-index: 1; }
 .lp-pastille-aa { font-family: var(--police-titre); font-size: 1.15rem; line-height: 1; font-weight: 600; }
-.lp-pastille[data-police='editoriale'] .lp-pastille-aa { font-weight: 400; font-size: 1.3rem; }
+.lp-pastille .lp-pastille-aa { font-weight: var(--nom-graisse, 600); font-style: var(--nom-style, normal); font-stretch: var(--titre-chasse, 100%); letter-spacing: var(--nom-approche, 0); }
+.lp-pastille[data-police='editoriale'] .lp-pastille-aa { font-size: 1.35rem; }
 .lp-pastille-barre { width: 76%; height: 11%; border-radius: var(--r, 999px); background: var(--surface); }
 .lp-pastille-barre.vedette { background: var(--vedette); }
 .lp-pastille[data-bouton='contour'] .lp-pastille-barre:not(.vedette) { background: transparent; box-shadow: inset 0 0 0 1.5px var(--texte); }
@@ -498,7 +519,7 @@
     text-align: left; align-items: flex-start; gap: 14px;
   }
   .lp[data-bureau='profil'] .lp-avatar { width: 152px; height: 152px; margin-bottom: 6px; }
-  .lp[data-bureau='profil'] .lp-nom { font-size: 2.5rem; letter-spacing: -0.035em; }
+  .lp[data-bureau='profil'] .lp-nom { font-size: calc(var(--nom-taille, 1.6rem) * 1.45); }
   .lp[data-bureau='profil'] .lp-bio { font-size: 1.08rem; max-width: 30ch; text-wrap: pretty; }
   .lp[data-bureau='profil'] .lp-reseaux { justify-content: flex-start; margin-left: -10px; }
   .lp[data-bureau='profil'] .lp-blocs { grid-area: blocs; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
@@ -523,7 +544,7 @@
     box-shadow: 0 0 0 1px color-mix(in srgb, var(--texte) 12%, transparent), 0 50px 90px -40px rgb(0 0 0 / 0.65);
   }
   .lp[data-bureau='onepage'][data-forme='carre'] .lp-avatar { border-radius: 8px; }
-  .lp[data-bureau='onepage'] .lp-nom { margin: 0; align-self: end; font-size: clamp(3rem, 6cqi, 4.75rem); line-height: 1.02; letter-spacing: -0.045em; font-weight: 640; }
+  .lp[data-bureau='onepage'] .lp-nom { margin: 0; align-self: end; font-size: clamp(3rem, 6cqi, 4.75rem); line-height: 1.02; letter-spacing: min(var(--nom-approche, -0.04em), -0.02em); }
   .lp[data-bureau='onepage'] .lp-badge svg { width: 0.5em; height: 0.5em; }
   .lp[data-bureau='onepage'] .lp-bio { font-size: 1.3rem; line-height: 1.45; max-width: 32ch; text-wrap: pretty; }
   .lp[data-bureau='onepage'] .lp-reseaux { justify-content: flex-start; margin-left: -10px; align-self: start; }
@@ -601,23 +622,25 @@ button.lp-ed-zone:focus-visible { outline: 2px solid var(--vedette); outline-off
 .lp-ed-vide { padding: 9px 12px; font-size: 0.92rem; font-weight: 520; color: var(--doux); }
 
 .lp-ed-ajout {
-  display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 52px; width: 100%;
-  border-radius: var(--r); border: 0;
-  background: color-mix(in srgb, var(--texte) 8%, transparent); color: var(--texte); font: inherit; font-weight: 580; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; width: 100%;
+  border-radius: var(--r); border: 1px solid color-mix(in srgb, var(--texte) 14%, transparent);
+  background: transparent; color: color-mix(in srgb, var(--texte) 75%, transparent); font: inherit; font-size: 0.9rem; font-weight: 520; cursor: pointer;
   transition: background-color 0.15s;
 }
-.lp-ed-ajout:hover { background: color-mix(in srgb, var(--texte) 13%, transparent); }
+.lp-ed-ajout:hover { background: color-mix(in srgb, var(--texte) 6%, transparent); color: var(--texte); }
 .lp-ed-ajout:focus-visible { outline: 2px solid var(--vedette); outline-offset: 2px; }
 
 .lp-ed-bloc {
   position: relative; cursor: pointer; border-radius: calc(var(--rc) + 6px);
   outline: 2px solid transparent; outline-offset: 4px;
   -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
-  transition: outline-color 0.15s;
+  transition: outline-color 0.15s, background-color 0.15s, box-shadow 0.15s;
 }
 /* Le bloc entier répond : ses liens, sa vidéo et son formulaire restent inertes pendant l'édition. */
 .lp-ed-bloc > :not(.lp-ed-puces) { pointer-events: none; }
-.lp-ed-bloc:hover, .lp-ed-bloc:focus-visible { outline-color: color-mix(in srgb, var(--vedette) 75%, transparent); }
+/* Au survol, un voile léger autour du bloc, de la couleur du texte : pas de trait, quelle que soit la teinte de l'accent. */
+.lp-ed-bloc:hover { background: color-mix(in srgb, var(--texte) 6%, transparent); box-shadow: 0 0 0 6px color-mix(in srgb, var(--texte) 6%, transparent); }
+.lp-ed-bloc:focus-visible { outline-color: var(--texte); }
 .lp-ed-bloc[data-prive] > :not(.lp-ed-puces) { opacity: 0.42; }
 .lp-ed-bloc[data-glisse] { z-index: 5; cursor: grabbing; outline-color: var(--vedette); }
 .lp-ed-bloc[data-glisse] > :not(.lp-ed-puces) { box-shadow: 0 26px 50px -18px rgb(0 0 0 / 0.6); }
@@ -627,3 +650,83 @@ button.lp-ed-zone:focus-visible { outline: 2px solid var(--vedette); outline-off
   font: 600 11px/1.6 var(--police); white-space: nowrap;
   background: var(--texte); color: var(--fond-uni);
 }
+
+/* ---- Compte à rebours : un lien annoncé, pas encore ouvert ---- */
+.lp-rebours { cursor: default; }
+.lp-rebours:hover { transform: none; }
+.lp-rebours-chrono {
+  flex: none; font-variant-numeric: tabular-nums; font-size: 0.95rem; letter-spacing: 0.01em; opacity: 0.85;
+  padding: 6px 12px; border-radius: 999px; background: color-mix(in srgb, var(--lp-encre) 12%, transparent);
+}
+.lp-rebours-chrono b { font-weight: 700; font-size: 1.05rem; }
+
+/* ---- « Rejoins ma liste » ---- */
+.lp-inscription form[data-prenom] input[name='prenom'] {
+  flex: 1 1 100%; border-bottom: 1px solid color-mix(in srgb, var(--surface-texte) 12%, transparent); border-radius: 0;
+}
+/* Avec le prénom, le bloc passe sur deux lignes : des coins plus doux qu'une pilule. */
+.lp-inscription form[data-prenom] { border-radius: min(var(--r), 18px); }
+.lp-piege { position: absolute !important; left: -9999px; width: 1px; height: 1px; opacity: 0; }
+.lp-mention { margin: -4px 0 0; font-size: 0.78rem; line-height: 1.4; color: color-mix(in srgb, var(--surface-texte) 55%, transparent); }
+.lp-mention a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+
+/* ---- Mode drop : un lien à débloquer ---- */
+.lp-drop { display: flex; flex-direction: column; gap: 10px; }
+.lp-drop-tete { width: 100%; border: 0; font: inherit; text-align: left; cursor: pointer; }
+.lp-drop-tete:disabled { cursor: default; }
+.lp-drop[data-complet] .lp-drop-tete { opacity: 0.6; }
+.lp-drop[data-debloque] .lp-drop-tete:hover, .lp-drop[data-complet] .lp-drop-tete:hover { transform: none; }
+.lp-drop-places {
+  align-self: flex-start; margin-top: 6px; padding: 4px 10px; border-radius: 999px; font-size: 0.78rem; font-weight: 640; white-space: nowrap;
+  background: color-mix(in srgb, var(--lp-encre) 13%, transparent);
+}
+.lp-drop-form { display: flex; gap: 8px; }
+.lp-drop-form input {
+  flex: 1 1 0; min-width: 0; min-height: 50px; padding: 0 18px; font: inherit; font-size: 16px; letter-spacing: 0.04em;
+  border-radius: var(--r); border: 0; color: var(--texte);
+  background: color-mix(in srgb, var(--texte) 9%, transparent);
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--texte) 22%, transparent);
+}
+.lp-drop-form input::placeholder { color: var(--doux); letter-spacing: 0; }
+.lp-drop-form input:focus { outline: 2px solid var(--texte); outline-offset: 1px; }
+/* Un seul aplat d'accent par drop : le bouton qui débloque. Le lien ouvert reprend la couleur des autres boutons. */
+[data-bouton='plein'] .lp-drop .lp-drop-form .lp-btn-compact { --lp-fond: var(--vedette); --lp-encre: var(--vedette-texte); }
+.lp-drop-ouvrir { gap: 8px; padding: 0 22px; animation: lp-drop-ouvre 0.45s cubic-bezier(0.16, 1, 0.3, 1); }
+.lp-drop .lp-newsletter-erreur { margin: 0; text-align: center; }
+@keyframes lp-drop-ouvre { from { opacity: 0; translate: 0 -6px; } }
+
+/* ---- Avis et preuves ---- */
+.lp-preuve {
+  display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center;
+  border-radius: var(--rc); padding: 18px 18px; color: var(--texte); text-decoration: none;
+  background: color-mix(in srgb, var(--texte) 7%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--texte) 12%, transparent);
+  transition: background-color 0.2s ease;
+}
+a.lp-preuve:hover { background: color-mix(in srgb, var(--texte) 11%, transparent); }
+a.lp-preuve:focus-visible { outline: 3px solid var(--texte); outline-offset: 3px; }
+.lp-preuve-titre { font-size: 0.9rem; font-weight: 560; color: var(--doux); }
+.lp-preuve-ligne { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.lp-preuve-note { font-size: 1rem; }
+.lp-preuve-note b { font-size: 1.35rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.lp-etoiles { position: relative; display: inline-flex; line-height: 0; }
+.lp-etoiles span { display: inline-flex; gap: 2px; flex: none; }
+.lp-etoiles svg { fill: currentColor; flex: none; }
+.lp-etoiles-fond { color: color-mix(in srgb, var(--texte) 18%, transparent); }
+.lp-etoiles-plein { position: absolute; inset: 0 auto 0 0; overflow: hidden; white-space: nowrap; color: var(--vedette); }
+.lp-preuve-chiffre { font-size: 2.1rem; font-weight: 720; line-height: 1.05; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.lp-preuve-libelle { font-size: 0.95rem; font-weight: 520; }
+.lp-preuve-temoignage { align-items: flex-start; text-align: left; padding: 20px 20px 18px; }
+.lp-preuve-citation { margin: 0; font-size: 1.02rem; line-height: 1.5; font-weight: 470; white-space: pre-line; }
+.lp-preuve-citation::before { content: '“'; display: block; font-size: 2.4rem; line-height: 0.6; margin-bottom: 6px; color: var(--vedette); font-weight: 700; }
+.lp-preuve-auteur { font-size: 0.86rem; font-weight: 600; }
+
+/* ---- Langues ---- */
+.lp-langues { display: flex; justify-content: center; flex-wrap: wrap; gap: 6px; margin: 28px 0 0; }
+.lp-langues a {
+  min-height: 44px; display: inline-flex; align-items: center; padding: 0 14px; border-radius: 999px;
+  font-size: 0.8rem; font-weight: 560; color: var(--doux); text-decoration: none;
+}
+.lp-langues a:hover { color: var(--texte); }
+.lp-langues a[aria-current] { color: var(--texte); background: color-mix(in srgb, var(--texte) 10%, transparent); }
+.lp-langues a:focus-visible { outline: 3px solid var(--texte); outline-offset: 2px; }

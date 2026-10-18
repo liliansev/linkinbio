@@ -108,7 +108,7 @@ test('comptes : chaque page est isolée des autres', async () => {
   assert.throws(() => db.creerCompte('camille@exemple.fr', 'autre'), /déjà un compte/);
   assert.throws(() => db.creerCompte('autre@exemple.fr', 'camille'), /déjà pris/);
   assert.equal(db.lireBlocs(camille.id).length, 0, 'une page neuve est vide');
-  assert.equal(db.lireReglages(camille.id).profil.nom, 'camille');
+  assert.equal(db.lireReglages(camille.id).profil.nom, 'Camille');
   assert.equal(db.lireReglages(camille.id).seo.indexable, false);
 
   // Un bloc de Lilian ne se lit, ne se modifie, ne se déplace ni ne se supprime depuis un autre compte.
@@ -396,4 +396,126 @@ test('offre Pro : la page de paiement et le portail passent par l’API Creem', 
   db.appliquerAbonnement(noa.id, { client: 'cust_9', abonnement: 'sub_9', statut: 'active', finPeriode: null, maj: 1 });
   assert.equal(await creem.ouvrirPortail(env, fetchFaux, db.compteParId(noa.id)!), 'https://creem.io/portal/x');
   assert.deepEqual(appels.at(-1)!.corps, { customer_id: 'cust_9' });
+});
+
+test('statistiques : un navigateur intégré sans référent est rangé sous son app', () => {
+  const tiktok = 'Mozilla/5.0 (iPhone) Mobile/15E148 musical_ly_36.0 BytedanceWebview/d8a21c6';
+  assert.equal(source('', '', tiktok), 'TikTok');
+  assert.equal(source('', 'https://www.linkedin.com/', tiktok), 'LinkedIn', 'le site d’origine passe avant');
+  assert.equal(source('', '', 'Mozilla/5.0 (Macintosh) Safari/605'), 'Direct');
+});
+
+test('statistiques : les clics ouverts dans leur app, depuis un navigateur intégré', () => {
+  const insta = 'Mozilla/5.0 (Linux; Android 14) Chrome/129.0 Mobile Safari/537.36 Instagram 350.0.0.0 Android';
+  db.enregistrerBloc(P, validerBloc({ type: 'lien', titre: 'YouTube', url: 'https://youtube.com/@moi' }, 'yt'));
+  db.enregistrerBloc(P, validerBloc({ type: 'lien', titre: 'Site', url: 'https://exemple.fr' }, 'site'));
+  const ctx = (ip: string, ua: string) => ({ ip, ua, session: null });
+  enregistrer({ type: 'clic', bloc: 'yt', utm: '', referent: '', app: true }, ctx('9.9.9.1', insta));
+  enregistrer({ type: 'clic', bloc: 'site', utm: '', referent: '', app: false }, ctx('9.9.9.2', insta));
+  enregistrer({ type: 'clic', bloc: 'yt', utm: '', referent: '', app: true }, ctx('9.9.9.3', 'Mozilla/5.0 (Macintosh) Safari/605'));
+  assert.deepEqual(db.stats(P, 7).apps, { integres: 2, versApp: 1, ouverts: 1 }, 'un navigateur ordinaire ne compte pas, même s’il le prétend');
+});
+
+test('Rejoins ma liste : inscrit gardé, envoyé chez Brevo, export CSV sans formule', async () => {
+  const liste = await import('./liste.ts');
+  const env = { LIENS_CLE_INTEGRATIONS: 'test' };
+  const chiffre = liste.chiffrer(env, 'xkeysib-secret');
+  assert.notEqual(chiffre, 'xkeysib-secret');
+  assert.equal(liste.dechiffrer(env, chiffre), 'xkeysib-secret');
+  assert.equal(liste.dechiffrer({ LIENS_CLE_INTEGRATIONS: 'autre' }, chiffre), '', 'une autre clé ne lit rien');
+  db.enregistrerBloc(P, validerBloc({ type: 'inscription', titre: 'Rejoins ma liste', demanderPrenom: true }, 'liste'));
+  const appels: { url: string; corps: any; headers: any }[] = [];
+  const fetchFaux = (async (url: string, init: RequestInit) => { appels.push({ url, corps: init.body ? JSON.parse(String(init.body)) : null, headers: init.headers }); return new Response('{"name":"Ma liste"}', { status: url.includes('/lists/') ? 200 : 201 }); }) as typeof fetch;
+  assert.equal((await liste.verifier('brevo', 'xkeysib-secret', '7', fetchFaux)).nom, 'Ma liste');
+  assert.equal((await liste.verifier('brevo', 'xkeysib-secret', '../7', fetchFaux)).ok, false, 'un identifiant de liste farfelu ne part pas');
+  assert.equal((await liste.verifier('mailchimp', 'cle-sans-centre', 'abc123', fetchFaux)).ok, false);
+  db.ecrireIntegration(P, { fournisseur: 'brevo', cle: liste.chiffrer(env, 'xkeysib-secret'), liste: '7', nom: 'Ma liste' });
+  const ctx = { ip: '5.5.5.5', ua: 'Mozilla/5.0', referent: '' };
+  const r = await liste.inscrire(env, fetchFaux, { page: '', bloc: 'liste', email: 'Camille@Exemple.fr', prenom: '=HYPERLINK("x")' }, ctx);
+  assert.equal(r.status, 200);
+  const envoi = appels.at(-1)!;
+  assert.equal(envoi.url, 'https://api.brevo.com/v3/contacts');
+  assert.deepEqual(envoi.corps.listIds, [7]);
+  assert.equal(envoi.corps.email, 'camille@exemple.fr');
+  assert.equal(db.resumeContacts(P).total, 1);
+  assert.equal(db.resumeContacts(P).enAttente, 0, 'envoyé chez Brevo');
+  await liste.inscrire(env, fetchFaux, { page: '', bloc: 'liste', email: 'camille@exemple.fr' }, ctx);
+  assert.equal(db.resumeContacts(P).total, 1, 'pas de doublon');
+  assert.equal((await liste.inscrire(env, fetchFaux, { page: '', bloc: 'liste', email: 'robot@exemple.fr', website: 'spam' }, ctx)).status, 200);
+  assert.equal(db.resumeContacts(P).total, 1, 'le champ piège écarte le robot');
+  assert.equal((await liste.inscrire(env, fetchFaux, { page: '', bloc: 'inconnu', email: 'a@exemple.fr' }, ctx)).status, 404);
+  assert.match(liste.csv(P), /camille@exemple\.fr;"'=HYPERLINK\(""x""\)"/, 'une formule devient du texte');
+  assert.equal(db.exporter(P).inscrits.length, 1);
+});
+
+test('le résumé de la semaine part le lundi matin, une fois, seulement après des visites', async () => {
+  const { envoyerResumes, heureDuResume } = await import('./resume.ts');
+  const lundi10h = Date.parse('2026-10-19T08:00:00Z');
+  assert.equal(heureDuResume(lundi10h), true);
+  assert.equal(heureDuResume(Date.parse('2026-10-19T06:00:00Z')), false, '8 h, trop tôt');
+  assert.equal(heureDuResume(Date.parse('2026-10-20T08:00:00Z')), false, 'mardi');
+  const envois: any[] = [];
+  const fetchFaux = (async (_: string, init: RequestInit) => { envois.push(JSON.parse(String(init.body))); return new Response('{}'); }) as typeof fetch;
+  const env = { RESEND_API_KEY: 'cle', LIENS_ADMIN_EMAIL: 'moi@exemple.fr' };
+  assert.equal(await envoyerResumes(env, fetchFaux, lundi10h), 0, 'pas de visite, pas d’e-mail');
+  db.fermer();
+  db.ajouterEvenement({ compte: P, type: 'vue', bloc: null, visiteur: 'v', source: 'TikTok', appareil: 'Mobile', ts: lundi10h - 86_400_000 });
+  assert.equal(await envoyerResumes(env, fetchFaux, lundi10h), 1);
+  assert.deepEqual(envois[0].to, ['moi@exemple.fr']);
+  assert.match(envois[0].subject, /^Ta semaine sur Hopla/);
+  assert.equal(await envoyerResumes(env, fetchFaux, lundi10h + 3_600_000), 0, 'une fois par semaine');
+});
+
+test('mode drop : le bon code, une place par visiteur, puis complet', async () => {
+  const { debloquer } = await import('./acces.ts');
+  const { masquerAcces } = await import('../lib/acces.ts');
+  db.enregistrerBloc(P, validerBloc({ type: 'lien', titre: 'Prévente', url: 'https://secret.exemple/billet', acces: { code: 'VIP 2026', places: 2 } }, 'drop'));
+  const publie = masquerAcces(db.lireBlocs(P), id => db.placesParBloc(P)[id] ?? 0).find(b => b.id === 'drop')!;
+  // La page ne reçoit ni l'adresse ni le code.
+  assert.equal(publie.url, ''); assert.equal(publie.acces?.code, '•'); assert.equal(publie.restantes, 2);
+  assert.ok(!JSON.stringify(publie).includes('secret.exemple') && !JSON.stringify(publie).includes('VIP'));
+  const a = { ip: '1.1.1.1', ua: 'Mozilla/5.0 A' }, b = { ip: '2.2.2.2', ua: 'Mozilla/5.0 B' }, c = { ip: '3.3.3.3', ua: 'Mozilla/5.0 C' };
+  assert.equal(debloquer({ page: '', bloc: 'drop', code: 'mauvais' }, a).status, 403);
+  const ok = debloquer({ page: '', bloc: 'drop', code: ' vip 2026 ' }, a);
+  assert.equal(ok.status, 200); assert.equal(ok.url, 'https://secret.exemple/billet'); assert.equal(ok.restantes, 1);
+  // Le même visiteur retrouve son lien sans reprendre de place.
+  assert.equal(debloquer({ page: '', bloc: 'drop', code: 'VIP 2026' }, a).restantes, 1);
+  assert.equal(debloquer({ page: '', bloc: 'drop', code: 'VIP 2026' }, b).restantes, 0);
+  const plein = debloquer({ page: '', bloc: 'drop', code: 'VIP 2026' }, c);
+  assert.equal(plein.status, 410); assert.equal(plein.url, undefined);
+  // Un lien sans drop ne passe pas par là, et les essais à la chaîne sont freinés.
+  assert.equal(debloquer({ page: '', bloc: 'inconnu' }, a).status, 404);
+  let dernier = 0;
+  for (let i = 0; i < 12; i++) dernier = debloquer({ page: '', bloc: 'drop', code: 'x' }, { ip: '9.9.9.9', ua: 'z' }).status;
+  assert.equal(dernier, 429);
+});
+
+test('page en plusieurs langues : la langue du visiteur, les textes traduits', async () => {
+  const { langueDuVisiteur, traduirePage } = await import('../lib/langues.ts');
+  assert.equal(langueDuVisiteur('en-US,en;q=0.9', []), 'fr');
+  assert.equal(langueDuVisiteur('en-US,en;q=0.9', ['en']), 'en');
+  assert.equal(langueDuVisiteur('fr-FR,en;q=0.8', ['en']), 'fr');
+  assert.equal(langueDuVisiteur('de;q=0.5,es;q=0.9', ['en', 'de', 'es']), 'es');
+  assert.equal(langueDuVisiteur('ja', ['en']), 'en');
+  assert.equal(langueDuVisiteur('ja', ['es']), 'fr');
+  assert.equal(langueDuVisiteur('en', ['en', 'it'], 'it'), 'it');
+  assert.equal(langueDuVisiteur('en', ['en'], 'fr'), 'fr');
+  const bloc = validerBloc({ type: 'lien', titre: 'Mon cours', url: 'x.fr', traductions: { en: { titre: 'My course' }, xx: { titre: 'non' }, es: { titre: '' } } }, 't');
+  assert.deepEqual(Object.keys(bloc.traductions), ['en']);
+  const reglages = validerReglages({ ...REGLAGES_DEFAUT, langues: ['en', 'zz'], bioTraduite: { en: 'Hi', zz: 'x' } }, REGLAGES_DEFAUT);
+  assert.deepEqual(reglages.langues, ['en']); assert.deepEqual(reglages.bioTraduite, { en: 'Hi' });
+  const page = traduirePage({ reglages, blocs: [bloc], compte: { pseudo: 'x', principal: false, pro: false } }, 'en');
+  assert.equal(page.blocs[0].titre, 'My course'); assert.equal(page.reglages.profil.bio, 'Hi'); assert.equal(page.langue, 'en');
+  // En français, la page reste telle que la personne l'a écrite.
+  assert.equal(traduirePage({ reglages, blocs: [bloc], compte: { pseudo: 'x', principal: false, pro: false } }, 'fr').blocs[0].titre, 'Mon cours');
+});
+
+test('avis et preuves : la note bornée, le genre vérifié', () => {
+  const p = validerBloc({ type: 'preuve', titre: 'Avis', preuve: { genre: 'note', note: 7.26, nombre: -3, source: 'Google'.repeat(10) } }, 'p').preuve!;
+  assert.equal(p.note, 5); assert.equal(p.nombre, 0); assert.equal(p.source.length, 30);
+  assert.equal(validerBloc({ type: 'preuve', preuve: { genre: 'faux', note: 4.44 } }, 'q').preuve?.genre, 'note');
+  assert.equal(validerBloc({ type: 'preuve', preuve: { note: 4.44 } }, 'q').preuve?.note, 4.4);
+  // Un drop n'existe que sur un lien.
+  assert.equal(validerBloc({ type: 'texte', titre: 'x', acces: { code: 'a' } }, 'r').acces, null);
+  assert.equal(validerBloc({ type: 'lien', url: 'x.fr', acces: { code: '', places: 0 } }, 'r').acces, null);
 });

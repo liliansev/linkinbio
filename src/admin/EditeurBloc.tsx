@@ -8,16 +8,10 @@ import { themeParId, variablesTheme } from '../lib/themes.ts';
 import { ICONES } from '../lib/icones.ts';
 import { Icone, NOMS_RESEAUX, PICTOS } from '../components/Icone.tsx';
 import { BlocPublic } from '../components/PageLiens.tsx';
-import { BoutonPrincipal, Champ, Feuille, Interrupteur, NOMS_ANIMATIONS, Segments, classeSaisie, preparerImage, vibrer } from './ui.tsx';
+import { BoutonPrincipal, Champ, Feuille, Interrupteur, ListeChoix, NOMS_ANIMATIONS, Segments, classeSaisie, preparerImage, vibrer } from './ui.tsx';
 import { TYPES } from './OngletLiens.tsx';
-
-/** Une date ISO vers la valeur d'un `<input type="datetime-local">`, en heure locale. */
-const versLocal = (iso: string) => {
-  if (!iso) return '';
-  const d = new Date(iso);
-  return new Date(d.getTime() - d.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
-};
-const depuisLocal = (v: string) => (v ? new Date(v).toISOString() : '');
+import { appDe } from '../lib/ouvrirApp.ts';
+import { ChampsPreuve, RegleAcces, RegleAudience, RegleMoment, RegleTraductions } from './ReglesBloc.tsx';
 
 const AIDE_FORMATS = {
   bouton: 'La taille des autres boutons, à la couleur choisie.',
@@ -25,7 +19,7 @@ const AIDE_FORMATS = {
   carte: 'Un grand visuel au-dessus : l’image du lien, ou son picto en grand.',
 } as const;
 
-export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, onSupprimer, onDupliquer, envoyerImage, apercuSite, clics }: {
+export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, onSupprimer, onDupliquer, envoyerImage, apercuSite, clics, adressePage, prises = 0 }: {
   bloc: Bloc | null;
   reglages: Reglages;
   nouveau: boolean;
@@ -36,14 +30,17 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
   envoyerImage: (dataUrl: string) => Promise<string>;
   apercuSite: Api['apercuSite'];
   clics: number;
+  /** L'adresse publique de la page, pour les astuces (`?s=tiktok`). */
+  adressePage: string;
+  /** Les places déjà prises, quand le lien est un drop. */
+  prises?: number;
 }) {
   const [b, setB] = useState<Bloc | null>(bloc);
   const [erreur, setErreur] = useState('');
   const [envoi, setEnvoi] = useState(false);
-  const [plus, setPlus] = useState(false);
   const [lecture, setLecture] = useState(false);
   const fichier = useRef<HTMLInputElement>(null);
-  useEffect(() => { setB(bloc); setErreur(''); setPlus(!!bloc && (!!bloc.debut || !!bloc.fin)); }, [bloc]);
+  useEffect(() => { setB(bloc); setErreur(''); }, [bloc]);
   if (!b) return null;
   const maj = (champs: Partial<Bloc>) => setB({ ...b, ...champs });
   const type = TYPES.find(t => t.type === b.type)!;
@@ -56,6 +53,8 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
     if (b.type === 'lien' && !url) { setErreur('Indique l’adresse du lien.'); return null; }
     if (b.type === 'video' && !idYoutube(url)) { setErreur('Colle l’adresse d’une vidéo YouTube.'); return null; }
     if ((b.type === 'titre' || b.type === 'texte') && !b.titre.trim()) { setErreur('Écris le texte du bloc.'); return null; }
+    if (b.type === 'preuve' && b.preuve?.genre === 'temoignage' && !b.description.trim()) { setErreur('Écris le témoignage.'); return null; }
+    if (b.type === 'preuve' && b.preuve?.genre === 'compteur' && !b.preuve.nombre) { setErreur('Indique le chiffre à montrer.'); return null; }
     return { ...b, url };
   }
   const theme = themeParId(reglages.theme);
@@ -110,13 +109,13 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
         </div>
       )}>
       <div className="flex flex-col gap-4 pt-1">
-        {b.type === 'lien' && (
+        {(b.type === 'lien' || b.type === 'preuve') && (
           // L'aperçu reste collé en haut de la feuille : chaque réglage se voit sans remonter.
           <div className="sticky top-0 z-10 -mx-5 bg-[#121a2b] px-5 pb-3 pt-1 shadow-[0_14px_14px_-12px_#121a2b]">
             <div className="lp lp-mini -mx-1 rounded-[20px] p-4 ring-1 ring-white/[0.06]" style={variablesTheme(theme) as CSSProperties}
-              data-bouton={reglages.bouton.style} data-forme={reglages.bouton.forme} data-police={theme.police} data-decor={theme.decor} aria-label="Aperçu du bouton">
+              data-bouton={reglages.bouton.style} data-forme={reglages.bouton.forme} data-ombre={reglages.bouton.ombre} data-police={theme.police} data-decor={theme.decor} aria-label="Aperçu du bouton">
               <div className="pointer-events-none" inert>
-                <BlocPublic key={`${b.format}-${b.teinte}-${b.animation}-${b.vedette}`} bloc={{ ...b, url: b.url || '#', titre: b.titre || 'Texte du bouton', public: true }} reglages={reglages} clic={() => {}} cible={{}} apercu />
+                <BlocPublic key={`${b.format}-${b.teinte}-${b.animation}-${b.vedette}`} bloc={{ ...b, url: b.type === 'preuve' ? b.url : b.url || '#', titre: b.titre || (b.type === 'lien' ? 'Texte du bouton' : ''), public: true, restantes: b.acces?.places ? Math.max(0, b.acces.places - prises) : null }} reglages={reglages} clic={() => {}} cible={{}} apercu />
               </div>
             </div>
           </div>
@@ -124,17 +123,25 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
         {erreur && <p role="alert" className="rounded-xl bg-red-500/15 px-3.5 py-2.5 text-[14px] text-red-200">{erreur}</p>}
 
         {avecUrl && (
-          <Champ label={b.type === 'video' ? 'Adresse de la vidéo YouTube' : 'Adresse'}>
+          <Champ label={b.type === 'video' ? 'Adresse de la vidéo YouTube' : 'Adresse'}
+            aide={b.type === 'lien' && reglages.ouvrirApps && appDe(adresse(b.url)) ? <span className="inline-flex items-center gap-1.5 text-white/75"><Icone nom="ui-ok" taille={13} />Depuis Instagram ou TikTok, ce lien s’ouvre dans l’app {appDe(adresse(b.url))}.</span> : undefined}>
             <input className={classeSaisie} type="url" inputMode="url" autoCapitalize="none" autoCorrect="off" placeholder={b.type === 'video' ? 'https://youtu.be/…' : 'https://…'}
               value={b.url} onChange={e => maj({ url: e.target.value })} autoFocus={nouveau} />
           </Champ>
         )}
 
-        {b.type !== 'derniere-video' && (
-          <Champ label={b.type === 'lien' ? 'Texte du bouton' : b.type === 'texte' ? 'Texte' : 'Titre'}>
+        {b.type === 'preuve' && <ChampsPreuve b={b} maj={maj} />}
+        {b.type === 'preuve' && (
+          <Champ label="Lien vers les avis (facultatif)" aide="Ta fiche Google, ta page Trustpilot : le bloc devient cliquable, et la preuve vérifiable.">
+            <input className={classeSaisie} type="url" inputMode="url" autoCapitalize="none" autoCorrect="off" placeholder="https://…" value={b.url} onChange={e => maj({ url: e.target.value })} />
+          </Champ>
+        )}
+
+        {b.type !== 'derniere-video' && !(b.type === 'preuve' && b.preuve?.genre === 'temoignage') && (
+          <Champ label={b.type === 'lien' ? 'Texte du bouton' : b.type === 'texte' ? 'Texte' : b.type === 'preuve' ? (b.preuve?.genre === 'compteur' ? 'Ce que compte ce chiffre' : 'Petit titre (facultatif)') : 'Titre'}>
             {b.type === 'texte'
               ? <textarea className={`${classeSaisie} min-h-28`} value={b.titre} onChange={e => maj({ titre: e.target.value })} maxLength={1000} autoFocus={nouveau} />
-              : <input className={classeSaisie} value={b.titre} onChange={e => maj({ titre: e.target.value })} maxLength={160} placeholder={b.type === 'lien' ? 'Mon super lien' : ''} autoFocus={nouveau && !avecUrl} />}
+              : <input className={classeSaisie} value={b.titre} onChange={e => maj({ titre: e.target.value })} maxLength={160} placeholder={b.type === 'lien' ? 'Mon super lien' : b.type === 'preuve' && b.preuve?.genre === 'compteur' ? 'abonnés sur YouTube' : ''} autoFocus={nouveau && !avecUrl} />}
           </Champ>
         )}
         {b.type === 'derniere-video' && (
@@ -143,7 +150,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
           </Champ>
         )}
 
-        {(b.type === 'lien' || b.type === 'newsletter') && (
+        {(b.type === 'lien' || b.type === 'newsletter' || b.type === 'inscription') && (
           <Champ label="Sous-titre (facultatif)">
             <input className={classeSaisie} value={b.sousTitre} onChange={e => maj({ sousTitre: e.target.value })} maxLength={240} />
           </Champ>
@@ -167,12 +174,12 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
                   const choisi = b.icone === p.nom;
                   return (
                     <button key={p.nom || 'sans'} type="button" role="radio" aria-checked={choisi} aria-label={p.libelle} title={p.libelle} onClick={() => { vibrer(4); maj({ icone: p.nom }); }}
-                      className={`grid aspect-square place-items-center rounded-xl transition duration-150 active:scale-90 ${choisi ? 'bg-peche text-nuit' : 'text-white/80 hover:bg-white/[0.08]'}`}>
+                      className={`grid aspect-square place-items-center rounded-xl transition duration-150 active:scale-90 ${choisi ? 'bg-white text-nuit' : 'text-white/80 hover:bg-white/[0.08]'}`}>
                       <Icone nom={p.nom || 'ui-aucun'} taille={20} />
                     </button>
                   );
                 })}
-                {b.icone && !ICONES[b.icone] && <span className="grid aspect-square place-items-center rounded-xl bg-peche text-xl" aria-label="Emoji actuel">{b.icone}</span>}
+                {b.icone && !ICONES[b.icone] && <span className="grid aspect-square place-items-center rounded-xl bg-white text-xl" aria-label="Emoji actuel">{b.icone}</span>}
               </div>
             </div>
             <div className="flex items-center gap-3">
@@ -180,7 +187,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
               <div className="flex flex-1 flex-wrap gap-2">
                 <button type="button" onClick={() => fichier.current?.click()} disabled={envoi} className="min-h-10 rounded-full bg-white/[0.08] px-4 text-[14px] font-medium text-white hover:bg-white/[0.13]">{envoi ? 'Envoi…' : b.image ? 'Changer l’image' : 'Ajouter une image'}</button>
                 {b.url && (
-                  <button type="button" onClick={recupererApercu} disabled={lecture || envoi} className="inline-flex min-h-10 items-center gap-1.5 rounded-full bg-peche/15 px-4 text-[14px] font-medium text-peche hover:bg-peche/25 disabled:opacity-60">
+                  <button type="button" onClick={recupererApercu} disabled={lecture || envoi} className="inline-flex min-h-10 items-center gap-1.5 rounded-full bg-white/10 px-4 text-[14px] font-medium text-white hover:bg-white/10 disabled:opacity-60">
                     <Icone nom="sparkle" taille={16} />{lecture ? 'Lecture du site…' : 'Aperçu du site'}
                   </button>
                 )}
@@ -193,7 +200,10 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
 
         <div className="divide-y divide-white/[0.06] rounded-2xl bg-white/[0.035] px-4">
           <Interrupteur label="Public" aide={b.public ? 'Visible sur ta page.' : 'Privé : gardé ici, invisible sur ta page.'} actif={b.public} onChange={v => maj({ public: v })} />
-          {b.type !== 'titre' && b.type !== 'texte' && b.type !== 'newsletter' && (
+          {b.type === 'inscription' && (
+            <Interrupteur label="Demander le prénom" aide="Pour écrire « Salut Camille » dans tes e-mails." actif={b.demanderPrenom} onChange={v => maj({ demanderPrenom: v })} />
+          )}
+          {b.type !== 'titre' && b.type !== 'texte' && b.type !== 'newsletter' && b.type !== 'inscription' && b.type !== 'preuve' && (
             <Interrupteur label="Mis en avant" aide="Plus visible que les autres liens : choisis sa forme et sa couleur juste dessous." actif={b.vedette} onChange={v => maj({ vedette: v })} />
           )}
           {b.type === 'lien' && (
@@ -220,35 +230,18 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
         {b.type === 'lien' && (
           <div>
             <span className="mb-1.5 block text-[13px] font-medium text-white/70">Animation pour attirer l’œil</span>
-            <div role="radiogroup" aria-label="Animation" className="-mx-5 flex gap-1.5 overflow-x-auto px-5 pb-1 [scrollbar-width:none]">
-              {ANIMATIONS_BLOC.map(a => (
-                <button key={a} type="button" role="radio" aria-checked={b.animation === a} onClick={() => { vibrer(4); maj({ animation: a }); }}
-                  className={`min-h-10 shrink-0 rounded-full px-4 text-[14px] font-medium transition duration-150 active:scale-95 ${b.animation === a ? 'bg-white text-nuit' : 'bg-white/[0.07] text-white/70 hover:text-white'}`}>
-                  {a === 'auto' ? nomAuto : NOMS_ANIMATIONS[a].nom}
-                </button>
-              ))}
-            </div>
-            <p className="mt-1.5 text-[12.5px] leading-snug text-white/45">
-              {b.animation === 'auto' ? (b.vedette ? `Comme tous les liens mis en avant : ${NOMS_ANIMATIONS[reglages.animation].nom.toLowerCase()} (à changer dans Apparence).` : 'Immobile, sauf si tu mets ce lien en avant.') : NOMS_ANIMATIONS[b.animation].aide}
-            </p>
+            {/* Une liste, pas une rangée de pastilles : l'aperçu en haut de la feuille joue l'animation choisie. */}
+            <ListeChoix label="Animation" valeur={b.animation} onChange={a => maj({ animation: a })}
+              options={ANIMATIONS_BLOC.map(a => a === 'auto'
+                ? { id: a, nom: nomAuto, aide: b.vedette ? `Comme tes autres liens en avant : ${NOMS_ANIMATIONS[reglages.animation].nom.toLowerCase()}.` : 'Immobile, sauf si tu mets ce lien en avant.' }
+                : { id: a, nom: NOMS_ANIMATIONS[a].nom, aide: NOMS_ANIMATIONS[a].aide })} />
           </div>
         )}
 
-        <button type="button" onClick={() => setPlus(!plus)} aria-expanded={plus} className="flex min-h-11 items-center justify-between rounded-xl px-1 text-[14px] font-medium text-white/70">
-          <span className="flex items-center gap-2"><Icone nom="ui-horloge" taille={17} />Programmer l’affichage</span>
-          <Icone nom="ui-chevron" taille={18} className={`transition-transform duration-300 ${plus ? 'rotate-180' : ''}`} />
-        </button>
-        {plus && (
-          <div className="grid gap-3 sm:grid-cols-2">
-            <Champ label="Afficher à partir du">
-              <input type="datetime-local" className={classeSaisie} value={versLocal(b.debut)} onChange={e => maj({ debut: depuisLocal(e.target.value) })} />
-            </Champ>
-            <Champ label="Masquer à partir du">
-              <input type="datetime-local" className={classeSaisie} value={versLocal(b.fin)} onChange={e => maj({ fin: depuisLocal(e.target.value) })} />
-            </Champ>
-            {(b.debut || b.fin) && <button type="button" onClick={() => maj({ debut: '', fin: '' })} className="text-left text-[13px] text-white/55 underline">Retirer la programmation</button>}
-          </div>
-        )}
+        {b.type === 'lien' && <RegleAcces key={`acces-${b.id}`} b={b} maj={maj} prises={prises} />}
+        <RegleMoment key={`moment-${b.id}`} b={b} maj={maj} />
+        <RegleAudience key={`audience-${b.id}`} b={b} maj={maj} adressePage={adressePage} />
+        <RegleTraductions key={`langues-${b.id}`} b={b} maj={maj} langues={reglages.langues ?? []} />
 
         {!nouveau && b.type === 'lien' && <p className="text-center text-[13px] text-white/45">{clics} clic{clics > 1 ? 's' : ''} ces 30 derniers jours</p>}
       </div>

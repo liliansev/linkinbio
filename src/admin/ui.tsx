@@ -3,19 +3,19 @@ import { Icone } from '../components/Icone.tsx';
 import type { Animation } from '../lib/types.ts';
 import type { ReactNode } from 'react';
 
-/* Les petites pièces du back office, pensées pour le pouce : 44 px au moins. */
+/* Les petites pièces du back office : fines et sobres, 40 px de cible au moins pour le pouce. */
 
 export function Interrupteur({ actif, onChange, label, aide, disabled }: { actif: boolean; onChange: (v: boolean) => void; label: string; aide?: ReactNode; disabled?: boolean }) {
   const id = useId();
   return (
-    <div className="flex items-center justify-between gap-4 py-3">
+    <div className="flex items-center justify-between gap-4 py-2.5">
       <label htmlFor={id} className="min-w-0 flex-1 cursor-pointer">
-        <span className="block text-[15px] font-medium text-white">{label}</span>
-        {aide && <span className="mt-0.5 block text-[13px] leading-snug text-white/55">{aide}</span>}
+        <span className="block text-[14.5px] font-medium text-white">{label}</span>
+        {aide && <span className="mt-0.5 block text-[12.5px] leading-snug text-white/50">{aide}</span>}
       </label>
       <button id={id} type="button" role="switch" aria-checked={actif} disabled={disabled} onClick={() => { vibrer(); onChange(!actif); }}
-        className={`adm-interrupteur relative h-8 w-[52px] shrink-0 rounded-full disabled:opacity-40 ${actif ? 'bg-peche' : 'bg-white/15'}`}>
-        <span className={`absolute top-1 left-1 h-6 w-6 rounded-full shadow-[0_2px_6px_rgba(0,0,0,0.3)] ${actif ? 'translate-x-5 bg-nuit' : 'bg-white'}`} />
+        className={`adm-interrupteur relative h-6 w-10 shrink-0 rounded-full before:absolute before:-inset-2 before:content-[''] disabled:opacity-40 ${actif ? 'bg-white' : 'bg-white/15'}`}>
+        <span className={`absolute top-[3px] left-[3px] h-[18px] w-[18px] rounded-full shadow-[0_1px_3px_rgba(0,0,0,0.3)] ${actif ? 'translate-x-4 bg-nuit' : 'bg-white'}`} />
       </button>
     </div>
   );
@@ -24,21 +24,21 @@ export function Interrupteur({ actif, onChange, label, aide, disabled }: { actif
 export function Champ({ label, aide, children }: { label: string; aide?: ReactNode; children: ReactNode }) {
   return (
     <label className="block">
-      <span className="mb-1.5 block text-[13px] font-medium text-white/70">{label}</span>
+      <span className="mb-1.5 block text-[12.5px] font-medium text-white/60">{label}</span>
       {children}
       {aide && <span className="mt-1.5 block text-[12.5px] leading-snug text-white/45">{aide}</span>}
     </label>
   );
 }
 
-export const classeSaisie = 'w-full rounded-xl border border-white/10 bg-white/[0.06] px-3.5 py-3 text-[16px] text-white placeholder:text-white/30 outline-none transition focus:border-peche/70 focus:bg-white/[0.09]';
+export const classeSaisie = 'w-full rounded-lg border border-white/10 bg-white/[0.05] px-3 py-2.5 text-[16px] text-white placeholder:text-white/45 outline-none transition focus:border-white/40 focus:bg-white/[0.09]';
 
 export function Carte({ titre, action, children, className = '', id }: { titre?: string; action?: ReactNode; children: ReactNode; className?: string; id?: string }) {
   return (
-    <section id={id} className={`scroll-mt-20 rounded-2xl border border-white/[0.07] bg-white/[0.035] p-4 ${className}`}>
+    <section id={id} className={`scroll-mt-20 rounded-xl border border-white/[0.07] bg-white/[0.03] p-4 ${className}`}>
       {(titre || action) && (
         <div className="mb-3 flex items-center justify-between gap-3">
-          {titre && <h2 className="text-[15px] font-semibold text-white">{titre}</h2>}
+          {titre && <h2 className="text-[14px] font-medium text-white">{titre}</h2>}
           {action}
         </div>
       )}
@@ -125,13 +125,13 @@ export function Feuille({ ouverte, onFermer, titre, children, pied, cote = false
       <button type="button" aria-label="Fermer" className={`adm-fondu absolute inset-0 ${cote ? 'bg-black/10' : 'bg-black/60 backdrop-blur-[2px]'}`} onClick={() => fermer()} />
       <div ref={ref} tabIndex={-1}
         style={tire ? { transform: `translateY(${tire}px)`, transition: 'none' } : undefined}
-        className={`adm-feuille relative flex ${cote ? 'max-h-[58dvh] sm:max-h-none sm:w-[400px]' : 'max-h-[92dvh]'} w-full flex-col rounded-t-[28px] border border-b-0 border-white/10 bg-[#121a2b] shadow-[0_-20px_60px_-20px_rgba(0,0,0,0.7)] outline-none sm:max-w-lg sm:rounded-[28px] sm:border-b`}>
+        className={`adm-feuille relative flex ${cote ? 'max-h-[58dvh] sm:max-h-none sm:w-[400px]' : 'max-h-[92dvh]'} w-full flex-col rounded-t-[20px] border border-b-0 border-white/10 bg-[#111827] shadow-[0_-20px_60px_-20px_rgba(0,0,0,0.7)] outline-none sm:max-w-lg sm:rounded-[20px] sm:border-b`}>
         <div {...tirer} className="shrink-0 touch-none select-none">
-          <div className="mx-auto mt-2.5 h-1.5 w-10 rounded-full bg-white/25 sm:hidden" />
-          <header className="flex items-center justify-between gap-3 px-5 pt-3 pb-2 sm:pt-5">
-            <h2 className="text-[18px] font-semibold tracking-[-0.01em] text-white">{titre}</h2>
-            <button type="button" onClick={() => fermer()} className="-mr-2 grid h-10 w-10 place-items-center rounded-full text-white/55 transition hover:bg-white/10 hover:text-white active:scale-90" aria-label="Fermer">
-              <Icone nom="ui-fermer" taille={20} />
+          <div className="mx-auto mt-2 h-1 w-9 rounded-full bg-white/20 sm:hidden" />
+          <header className="flex items-center justify-between gap-3 px-5 pt-2.5 pb-2 sm:pt-4">
+            <h2 className="text-[15.5px] font-semibold tracking-[-0.01em] text-white">{titre}</h2>
+            <button type="button" onClick={() => fermer()} className="-mr-2 grid h-9 w-9 place-items-center rounded-full text-white/50 transition hover:bg-white/10 hover:text-white active:scale-90" aria-label="Fermer">
+              <Icone nom="ui-fermer" taille={18} />
             </button>
           </header>
         </div>
@@ -143,20 +143,43 @@ export function Feuille({ ouverte, onFermer, titre, children, pied, cote = false
 }
 
 export function BoutonPrincipal({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) {
-  return <button type="button" {...props} className={`inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-peche px-6 text-[15px] font-semibold text-nuit transition hover:brightness-105 active:scale-[0.98] disabled:opacity-50 ${props.className ?? ''}`}>{children}</button>;
+  return <button type="button" {...props} className={`inline-flex min-h-10 items-center justify-center gap-2 rounded-full bg-white px-5 text-[14px] font-semibold text-nuit transition hover:brightness-105 active:scale-[0.98] disabled:opacity-50 ${props.className ?? ''}`}>{children}</button>;
 }
 
 export function BoutonSecondaire({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) {
-  return <button type="button" {...props} className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-white/[0.08] px-5 text-[15px] font-medium text-white transition hover:bg-white/[0.13] active:scale-[0.98] disabled:opacity-50 ${props.className ?? ''}`}>{children}</button>;
+  return <button type="button" {...props} className={`inline-flex min-h-10 items-center justify-center gap-2 rounded-full bg-white/[0.07] px-4 text-[14px] font-medium text-white transition hover:bg-white/[0.13] active:scale-[0.98] disabled:opacity-50 ${props.className ?? ''}`}>{children}</button>;
 }
 
 /** Un choix parmi quelques options, en pastilles. */
+/** Un choix parmi plusieurs, en liste : un nom, une ligne d'aide, une coche sur celui qui est pris. */
+export function ListeChoix<T extends string>({ valeur, options, onChange, label }: { valeur: T; options: { id: T; nom: string; aide?: string }[]; onChange: (v: T) => void; label: string }) {
+  return (
+    <div role="radiogroup" aria-label={label} className="divide-y divide-white/[0.06] overflow-hidden rounded-xl bg-white/[0.03]">
+      {options.map(o => {
+        const pris = valeur === o.id;
+        return (
+          <button key={o.id} type="button" role="radio" aria-checked={pris} onClick={() => { vibrer(4); onChange(o.id); }}
+            className="flex w-full items-center gap-3 px-3.5 py-2.5 text-left transition-colors duration-150 hover:bg-white/[0.04]">
+            <span className="min-w-0 flex-1">
+              <span className={`block text-[14px] font-medium ${pris ? 'text-white' : 'text-white/80'}`}>{o.nom}</span>
+              {o.aide && <span className="mt-0.5 block text-[12.5px] leading-snug text-white/45">{o.aide}</span>}
+            </span>
+            <span className={`grid h-5 w-5 shrink-0 place-items-center rounded-full transition duration-150 ${pris ? 'bg-white text-nuit' : 'ring-[1.5px] ring-inset ring-white/20'}`} aria-hidden="true">
+              {pris && <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2.5 6.2 5 8.6l4.5-5" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" /></svg>}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 export function Segments<T extends string>({ valeur, options, onChange, label }: { valeur: T; options: { id: T; nom: string }[]; onChange: (v: T) => void; label: string }) {
   return (
-    <div role="radiogroup" aria-label={label} className="flex gap-1 rounded-full bg-white/[0.06] p-1">
+    <div role="radiogroup" aria-label={label} className="flex gap-0.5 rounded-[10px] bg-white/[0.05] p-[3px]">
       {options.map(o => (
         <button key={o.id} type="button" role="radio" aria-checked={valeur === o.id} onClick={() => { vibrer(5); onChange(o.id); }}
-          className={`min-h-10 flex-1 rounded-full px-3 text-[14px] font-medium transition duration-200 ${valeur === o.id ? 'bg-white text-nuit shadow-[0_2px_8px_rgba(0,0,0,0.25)]' : 'text-white/65 hover:text-white'}`}>
+          className={`min-h-8 flex-1 rounded-[7px] px-2.5 text-[13px] font-medium transition duration-200 ${valeur === o.id ? 'bg-white/[0.14] text-white shadow-[0_1px_2px_rgba(0,0,0,0.3)]' : 'text-white/55 hover:text-white'}`}>
           {o.nom}
         </button>
       ))}

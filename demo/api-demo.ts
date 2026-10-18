@@ -43,6 +43,7 @@ function statsFictives(jours: number): Stats {
     serie,
     blocs: liens.map((b, i) => ({ id: b.id, titre: b.titre || b.url, clics: Math.round((clics * poids[i]) / total) })).sort((a, b) => b.clics - a.clics),
     sources: [['Instagram', 0.38], ['LinkedIn', 0.22], ['YouTube', 0.18], ['Direct', 0.12], ['QR code', 0.06], ['Google', 0.04]].map(([nom, p]) => ({ nom: String(nom), vues: Math.round(vues * Number(p)) })),
+    apps: { integres: Math.round(clics * 0.46), versApp: Math.round(clics * 0.31), ouverts: Math.round(clics * 0.29) },
     appareils: [{ nom: 'Mobile', vues: Math.round(vues * 0.81) }, { nom: 'Ordinateur', vues: Math.round(vues * 0.16) }, { nom: 'Tablette', vues: Math.round(vues * 0.03) }],
     precedent: { vues: somme(avant, 'vues'), clics: somme(avant, 'clics'), visiteurs: Math.round(somme(avant, 'vues') * 0.74) },
   };
@@ -51,7 +52,7 @@ function statsFictives(jours: number): Stats {
 export const apiDemo: Api = {
   async charger(): Promise<EtatAdmin> {
     const s = statsFictives(30);
-    return { ...etat, clics: Object.fromEntries(s.blocs.map(b => [b.id, b.clics])), stockageEphemere: false, cguAJour: true, compte: { pseudo: 'lilian', principal: true, email: '', pro: true },
+    return { ...etat, clics: Object.fromEntries(s.blocs.map(b => [b.id, b.clics])), places: {}, stockageEphemere: false, cguAJour: true, compte: { pseudo: 'lilian', principal: true, email: '', pro: true },
       abonnement: { plan: 'pro', statut: '', finPeriode: null, portail: false }, paiement: false };
   },
   async enregistrerBloc(bloc) {
@@ -75,6 +76,16 @@ export const apiDemo: Api = {
   // Le compte principal n'a pas d'abonnement : l'aperçu n'ouvre jamais de paiement.
   async ouvrirPaiement() { throw new Error('Pas de paiement dans l’aperçu.'); },
   async ouvrirPortail() { throw new Error('Pas de paiement dans l’aperçu.'); },
+  async liste() {
+    await pause();
+    const prenoms = ['Camille', 'Hugo', 'Sarah', 'Léa', 'Malik', 'Inès', 'Tom', 'Jade'];
+    const derniers = prenoms.map((p, i) => ({ id: `c${i}`, email: `${p.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')}@exemple.fr`, prenom: p, ts: Date.now() - i * 7_200_000, source: ['Instagram', 'TikTok', 'LinkedIn'][i % 3], synchro: 'ok' as const }));
+    return { total: 184, semaine: 23, derniers, integration: { fournisseur: 'brevo', liste: '7', nom: 'Newsletter', cle: '•••• a91f' }, enAttente: 0 };
+  },
+  async brancherListe(i) { await pause(); return { ok: true, message: i ? 'Dans l’aperçu, rien n’est branché pour de vrai.' : 'Ta liste reste chez Hopla seulement.' }; },
+  async supprimerContact() { await pause(); },
+  async resynchroniser() { await pause(); return { envoyes: 0, erreurs: 0 }; },
+  urlContacts: null,
   comptes: {
     async lister() { await pause(); return comptesDemo; },
     async inviter(email, pseudo) {
@@ -146,7 +157,7 @@ export function recommencerNouveau() {
 export const apiNouveau: Api = {
   ...apiDemo,
   async charger(): Promise<EtatAdmin> {
-    return { reglages: nouveau.reglages, blocs: nouveau.blocs, clics: {}, stockageEphemere: false, cguAJour: nouveau.cgu, compte: { pseudo: 'camille', principal: false, email: 'camille@exemple.fr', pro: false },
+    return { reglages: nouveau.reglages, blocs: nouveau.blocs, clics: {}, places: {}, stockageEphemere: false, cguAJour: nouveau.cgu, compte: { pseudo: 'camille', principal: false, email: 'camille@exemple.fr', pro: false },
       abonnement: { plan: 'gratuit', statut: '', finPeriode: null, portail: false }, paiement: false };
   },
   async enregistrerBloc(bloc) {

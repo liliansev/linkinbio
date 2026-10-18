@@ -1,15 +1,16 @@
 import { useRef, useState } from 'react';
-import type { CSSProperties } from 'react';
-import type { FormeBouton, MiseEnPageBureau, Reglages, Reseau, StyleBouton } from '../lib/types.ts';
+import type { CSSProperties, ReactNode } from 'react';
+import type { FormeBouton, MiseEnPageBureau, OmbreBouton, Reglages, Reseau, StyleBouton } from '../lib/types.ts';
 import { ANIMATIONS, RESEAUX } from '../lib/types.ts';
-import { FAMILLES, THEMES, themeParId, variablesTheme } from '../lib/themes.ts';
-import type { Famille, Theme } from '../lib/themes.ts';
+import { THEMES, themeParId, variablesTheme } from '../lib/themes.ts';
+import type { Theme } from '../lib/themes.ts';
 import { Icone, NOMS_RESEAUX } from '../components/Icone.tsx';
 import { Carte, Champ, Interrupteur, NOMS_ANIMATIONS, Segments, classeSaisie, preparerImage, vibrer } from './ui.tsx';
 
 const STYLES: { id: StyleBouton; nom: string }[] = [
   { id: 'plein', nom: 'Plein' }, { id: 'contour', nom: 'Contour' }, { id: 'doux', nom: 'Doux' }, { id: 'relief', nom: 'Relief' }, { id: 'verre', nom: 'Verre' },
 ];
+const OMBRES: { id: OmbreBouton; nom: string }[] = [{ id: 'aucune', nom: 'Aucune' }, { id: 'subtile', nom: 'Subtile' }, { id: 'marquee', nom: 'Marquée' }];
 const FORMES: { id: FormeBouton; nom: string }[] = [{ id: 'pilule', nom: 'Pilule' }, { id: 'arrondi', nom: 'Arrondi' }, { id: 'carre', nom: 'Net' }];
 const EXEMPLES: Record<Reseau, string> = {
   youtube: 'https://youtube.com/@…', linkedin: 'https://linkedin.com/in/…', instagram: 'https://instagram.com/…', tiktok: 'https://tiktok.com/@…',
@@ -21,7 +22,7 @@ const EXEMPLES: Record<Reseau, string> = {
 export function Pastille({ theme }: { theme: Theme }) {
   return (
     <span className="lp-pastille flex aspect-[4/5] w-full flex-col items-center gap-[6%] rounded-xl pt-[13%] shadow-inner ring-1 ring-white/10"
-      style={variablesTheme(theme) as CSSProperties} data-decor={theme.decor} data-police={theme.police} data-bouton={theme.conseil.style} data-forme={theme.conseil.forme}>
+      style={variablesTheme(theme) as CSSProperties} data-decor={theme.decor} data-police={theme.police} data-bouton={theme.conseil.style} data-forme={theme.conseil.forme} data-ombre={theme.conseil.ombre}>
       <span className="lp-pastille-aa" aria-hidden="true">Aa</span>
       <span className="lp-pastille-barre vedette mt-[6%]" />
       <span className="lp-pastille-barre" />
@@ -36,7 +37,6 @@ const TOUTES: PartieApparence[] = ['profil', 'theme', 'animation', 'boutons', 'b
 /** Les réglages d'apparence, en cartes. `parties` n'en garde que certaines (les feuilles de « Ma page »). */
 export function OngletApparence({ reglages, onChange, envoyerImage, principal = true, parties = TOUTES }: { reglages: Reglages; onChange: (r: Reglages) => void; envoyerImage: (d: string) => Promise<string>; principal?: boolean; parties?: PartieApparence[] }) {
   const voir = (p: PartieApparence) => parties.includes(p);
-  const [famille, setFamille] = useState<Famille | 'tous'>('tous');
   const [envoi, setEnvoi] = useState(false);
   const fichier = useRef<HTMLInputElement>(null);
   const theme = themeParId(reglages.theme);
@@ -72,20 +72,17 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
       </Carte>}
 
       {voir('theme') && <Carte titre="Thème" id="theme" action={<span className="text-[13px] text-white/50">{theme.nom}</span>}>
-        <div className="-mx-1 mb-3 flex gap-1.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none]">
-          {[{ id: 'tous' as const, nom: `Tous · ${THEMES.length}` }, ...FAMILLES].map(f => (
-            <button key={f.id} type="button" onClick={() => setFamille(f.id)}
-              className={`min-h-9 shrink-0 rounded-full px-3.5 text-[13.5px] font-medium transition ${famille === f.id ? 'bg-white text-nuit' : 'bg-white/[0.07] text-white/70'}`}>{f.nom}</button>
-          ))}
-        </div>
         <ul className="grid grid-cols-3 gap-2.5 sm:grid-cols-4">
-          {THEMES.filter(t => famille === 'tous' || t.famille === famille).map(t => (
+          {THEMES.map(t => (
             <li key={t.id}>
               {/* Choisir un thème pose aussi les boutons qui vont avec ; on peut les changer ensuite. */}
               <button type="button" onClick={() => maj({ theme: t.id, bouton: t.conseil })} aria-pressed={theme.id === t.id}
-                className={`flex w-full flex-col items-center gap-1.5 rounded-2xl p-1.5 transition ${theme.id === t.id ? 'bg-peche/15 ring-2 ring-peche' : 'hover:bg-white/[0.05]'}`}>
+                className={`flex w-full flex-col items-center gap-1.5 rounded-2xl p-1.5 transition ${theme.id === t.id ? 'bg-white/10 ring-2 ring-white' : 'hover:bg-white/[0.05]'}`}>
                 <Pastille theme={t} />
-                <span className="w-full truncate text-center text-[12.5px] text-white/75">{t.nom}</span>
+                <span className="flex w-full flex-col text-center leading-tight">
+                  <span className="truncate text-[12.5px] font-medium text-white/85">{t.nom}</span>
+                  <span className="truncate text-[11.5px] text-white/50">{t.humeur}</span>
+                </span>
               </button>
             </li>
           ))}
@@ -94,14 +91,14 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
 
       {voir('animation') && <Carte titre="Liens mis en avant" action={<span className="text-[13px] text-white/50">{NOMS_ANIMATIONS[reglages.animation].nom}</span>}>
         <p className="-mt-1 mb-3 text-[13px] leading-snug text-white/55">Le mouvement qui attire l’œil sur tes liens en avant. Un lien peut aussi choisir le sien.</p>
-        <div className="lp lp-mini rounded-2xl p-2.5" style={variablesTheme(theme) as CSSProperties} data-bouton={reglages.bouton.style} data-forme={reglages.bouton.forme} data-police={theme.police} data-decor={theme.decor}>
+        <div className="lp lp-mini rounded-2xl p-2.5" style={variablesTheme(theme) as CSSProperties} data-bouton={reglages.bouton.style} data-forme={reglages.bouton.forme} data-ombre={reglages.bouton.ombre} data-police={theme.police} data-decor={theme.decor}>
           <ul role="radiogroup" aria-label="Animation des liens mis en avant" className="grid grid-cols-2 gap-2">
             {ANIMATIONS.map(a => {
               const choisi = reglages.animation === a;
               return (
                 <li key={a}>
                   <button type="button" role="radio" aria-checked={choisi} onClick={() => { vibrer(5); maj({ animation: a }); }}
-                    className={`flex w-full flex-col gap-2 rounded-[18px] p-2 pb-2.5 text-left transition duration-200 ${choisi ? 'bg-white/[0.12] ring-2 ring-peche' : 'hover:bg-white/[0.06]'}`}>
+                    className={`flex w-full flex-col gap-2 rounded-[18px] p-2 pb-2.5 text-left transition duration-200 ${choisi ? 'bg-white/[0.12] ring-2 ring-white' : 'hover:bg-white/[0.06]'}`}>
                     <span className={`lp-btn lp-btn-vedette lp-accent ${a !== 'aucune' ? `lp-anim-${a}` : ''}`} style={{ minHeight: 52, padding: '8px 12px', fontSize: 15 }}>
                       {NOMS_ANIMATIONS[a].nom}
                     </span>
@@ -115,12 +112,12 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
       </Carte>}
 
       {voir('boutons') && <Carte titre="Boutons">
-        <div className="lp lp-mini rounded-2xl p-3" style={variablesTheme(theme) as CSSProperties} data-forme={reglages.bouton.forme} data-police={theme.police} data-decor={theme.decor}>
+        <div className="lp lp-mini rounded-2xl p-3" style={variablesTheme(theme) as CSSProperties} data-forme={reglages.bouton.forme} data-ombre={reglages.bouton.ombre} data-police={theme.police} data-decor={theme.decor}>
           <ul className="grid grid-cols-1 gap-2.5">
             {STYLES.map(s => (
               <li key={s.id} data-bouton={s.id} className="lp-style">
                 <button type="button" onClick={() => maj({ bouton: { ...reglages.bouton, style: s.id } })} aria-pressed={reglages.bouton.style === s.id}
-                  className={`w-full rounded-[calc(var(--rc)+6px)] p-1.5 transition ${reglages.bouton.style === s.id ? 'ring-2 ring-peche' : ''}`}>
+                  className={`w-full rounded-[calc(var(--rc)+6px)] p-1.5 transition ${reglages.bouton.style === s.id ? 'ring-2 ring-white' : ''}`}>
                   <span className="lp-btn" style={{ minHeight: 48 }}><span className="lp-btn-texte"><span className="lp-btn-titre">{s.nom}</span></span></span>
                 </button>
               </li>
@@ -131,6 +128,11 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
           <span className="mb-1.5 block text-[13px] font-medium text-white/70">Forme</span>
           <Segments label="Forme des boutons" valeur={reglages.bouton.forme} options={FORMES} onChange={v => maj({ bouton: { ...reglages.bouton, forme: v } })} />
         </div>
+        <div className="mt-4">
+          <span className="mb-1.5 block text-[13px] font-medium text-white/70">Ombre</span>
+          <Segments label="Ombre des boutons" valeur={reglages.bouton.ombre} options={OMBRES} onChange={v => maj({ bouton: { ...reglages.bouton, ombre: v } })} />
+          {reglages.bouton.style === 'relief' && <p className="mt-1.5 text-[12.5px] leading-snug text-white/50">Le style Relief garde son ombre franche, dessinée au trait.</p>}
+        </div>
       </Carte>}
 
       {voir('bureau') && <Carte titre="Sur ordinateur">
@@ -140,7 +142,7 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
             const actif = reglages.bureau === b.id;
             return (
               <button key={b.id} type="button" role="radio" aria-checked={actif} onClick={() => { vibrer(); maj({ bureau: b.id }); }}
-                className={`flex flex-col gap-2 rounded-2xl p-2 text-left transition ${actif ? 'bg-white/[0.1] ring-2 ring-peche' : 'bg-white/[0.04] ring-1 ring-white/[0.08] hover:bg-white/[0.07]'}`}>
+                className={`flex flex-col gap-2 rounded-2xl p-2 text-left transition ${actif ? 'bg-white/[0.1] ring-2 ring-white' : 'bg-white/[0.04] ring-1 ring-white/[0.08] hover:bg-white/[0.07]'}`}>
                 <SchemaBureau id={b.id} />
                 <span className="px-1 text-[13px] font-semibold text-white">{b.nom}</span>
                 <span className="px-1 pb-1 text-[12px] leading-snug text-white/55">{b.aide}</span>
@@ -213,5 +215,53 @@ function SchemaBureau({ id }: { id: MiseEnPageBureau }) {
         {[10, 44, 78].map(x => <rect key={x} x={x} y="56" width="32" height="14" rx="4" fill={b} />)}
       </>)}
     </svg>
+  );
+}
+
+type Tiroir = 'theme' | 'boutons' | 'animation' | 'bureau';
+
+/**
+ * Le design en liste à tiroirs : chaque ligne dit ce qui est choisi, un toucher
+ * l'ouvre à la place de la liste, la flèche ramène. On voit tout d'un coup
+ * d'œil sans dérouler quatre cartes.
+ */
+export function DesignTiroirs({ reglages, onChange, envoyerImage, principal, pied }: { reglages: Reglages; onChange: (r: Reglages) => void; envoyerImage: (d: string) => Promise<string>; principal: boolean; pied?: ReactNode }) {
+  const [ouvert, setOuvert] = useState<Tiroir | null>(null);
+  const theme = themeParId(reglages.theme);
+  const nom = <T extends string>(liste: { id: T; nom: string }[], id: T) => liste.find(x => x.id === id)?.nom ?? '';
+  const lignes: { id: Tiroir; nom: string; valeur: string; vignette?: ReactNode }[] = [
+    { id: 'theme', nom: 'Thème', valeur: theme.nom, vignette: <span className="block w-7"><Pastille theme={theme} /></span> },
+    { id: 'boutons', nom: 'Boutons', valeur: [nom(STYLES, reglages.bouton.style), nom(FORMES, reglages.bouton.forme), `ombre ${nom(OMBRES, reglages.bouton.ombre).toLowerCase()}`].join(', ') },
+    { id: 'animation', nom: 'Liens mis en avant', valeur: NOMS_ANIMATIONS[reglages.animation].nom },
+    { id: 'bureau', nom: 'Sur ordinateur', valeur: nom(BUREAUX, reglages.bureau) },
+  ];
+
+  if (ouvert) return (
+    <div className="flex flex-col gap-3">
+      <button type="button" onClick={() => { vibrer(4); setOuvert(null); }} className="-ml-1 flex min-h-10 items-center gap-1 self-start rounded-full pr-3 text-[14px] font-medium text-white/70 hover:text-white">
+        <Icone nom="ui-chevron" taille={18} className="rotate-90" /> Retour
+      </button>
+      <OngletApparence reglages={reglages} onChange={onChange} envoyerImage={envoyerImage} principal={principal} parties={[ouvert]} />
+    </div>
+  );
+
+  return (
+    <div className="flex flex-col gap-4">
+      <ul className="overflow-hidden rounded-xl bg-white/[0.03] ring-1 ring-white/[0.07]">
+        {lignes.map((l, i) => (
+          <li key={l.id} className={i > 0 ? 'border-t border-white/[0.07]' : ''}>
+            <button type="button" onClick={() => { vibrer(4); setOuvert(l.id); }} className="flex min-h-[52px] w-full items-center gap-3 px-3.5 py-2 text-left transition hover:bg-white/[0.04] active:bg-white/[0.06]">
+              {l.vignette}
+              <span className="flex min-w-0 flex-1 flex-col">
+                <span className="text-[14px] font-medium text-white">{l.nom}</span>
+                <span className="truncate text-[12.5px] text-white/45">{l.valeur}</span>
+              </span>
+              <Icone nom="ui-chevron" taille={16} className="-rotate-90 text-white/30" />
+            </button>
+          </li>
+        ))}
+      </ul>
+      {pied}
+    </div>
   );
 }
