@@ -148,12 +148,15 @@ export function OngletStats({ charger, limite = false, onPro, ouvrirApps = true,
   const jours = limite ? '7' : choix;
   const [stats, setStats] = useState<Stats | null>(null);
   const [erreur, setErreur] = useState(false);
+  // Pendant qu'une autre période se charge, les chiffres d'avant pâlissent : on voit qu'ils vont changer.
+  const [charge, setCharge] = useState(true);
+  const [essai, setEssai] = useState(0);
   useEffect(() => {
     let annule = false;
-    setErreur(false);
-    charger(Number(jours)).then(s => { if (!annule) setStats(s); }).catch(() => { if (!annule) setErreur(true); });
+    setErreur(false); setCharge(true);
+    charger(Number(jours)).then(s => { if (!annule) setStats(s); }).catch(() => { if (!annule) setErreur(true); }).finally(() => { if (!annule) setCharge(false); });
     return () => { annule = true; };
-  }, [jours, charger]);
+  }, [jours, charger, essai]);
 
   return (
     <div className="flex flex-col gap-4">
@@ -163,9 +166,14 @@ export function OngletStats({ charger, limite = false, onPro, ouvrirApps = true,
           {onPro && <button type="button" onClick={onPro} className="min-h-11 shrink-0 rounded-full bg-white px-4 text-[13.5px] font-semibold text-nuit">Passer en Pro</button>}
         </div>
       ) : <Segments label="Période" valeur={jours} options={PERIODES} onChange={setJours} />}
-      {erreur && <p className="rounded-xl bg-red-500/15 px-3.5 py-2.5 text-[14px] text-red-200">Les statistiques ne se chargent pas. Réessaie dans un instant.</p>}
-      {!stats ? <div className="h-64 animate-pulse rounded-2xl bg-white/[0.04]" /> : (
-        <>
+      {erreur && (
+        <div role="alert" className="flex items-center justify-between gap-3 rounded-xl bg-red-500/15 py-1.5 pr-1.5 pl-3.5 text-[14px] text-red-200">
+          Les statistiques ne se chargent pas.
+          <button type="button" onClick={() => setEssai(n => n + 1)} className="min-h-11 shrink-0 rounded-full px-4 font-semibold text-white hover:bg-white/10">Réessayer</button>
+        </div>
+      )}
+      {!stats ? (!erreur && <div className="h-64 animate-pulse rounded-2xl bg-white/[0.04] motion-reduce:animate-none" aria-label="Chargement des statistiques" />) : (
+        <div className={`flex flex-col gap-4 transition-opacity duration-200 ${charge ? 'opacity-50' : ''}`} aria-busy={charge}>
           <EnBref stats={stats} />
           <div className="grid grid-cols-2 gap-2.5">
             <Kpi nom="Vues" valeur={stats.vues} avant={stats.precedent.vues} />
@@ -182,7 +190,7 @@ export function OngletStats({ charger, limite = false, onPro, ouvrirApps = true,
           <p className="px-2 text-center text-[12.5px] leading-snug text-white/55">
             Sans cookie : un visiteur compte une fois par jour, toi jamais.
           </p>
-        </>
+        </div>
       )}
     </div>
   );

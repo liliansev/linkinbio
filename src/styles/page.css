@@ -592,6 +592,9 @@
   outline: 2px solid transparent; outline-offset: 2px;
   transition: outline-color 0.15s, background-color 0.15s;
 }
+/* Un trait plein et discret sous le nom et la bio : ils se tapent, même une fois l'astuce partie. */
+.lp-ed-saisie { box-shadow: inset 0 -1.5px 0 color-mix(in srgb, var(--texte) 20%, transparent); }
+.lp-ed-saisie:focus { box-shadow: none; }
 .lp-ed-saisie:hover { background: color-mix(in srgb, var(--texte) 7%, transparent); }
 .lp-ed-saisie:focus { outline: 2px solid var(--vedette); background: color-mix(in srgb, var(--texte) 6%, transparent); }
 .lp-ed-saisie::placeholder { color: inherit; opacity: 0.68; }

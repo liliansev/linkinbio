@@ -38,7 +38,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
   const [reglages, setReglages] = useState(initial.reglages);
   const [clics, setClics] = useState(initial.clics);
   const [onglet, setOnglet] = useState<Onglet>('page');
-  const [edition, setEdition] = useState<{ bloc: Bloc; nouveau: boolean } | null>(null);
+  const [edition, setEdition] = useState<{ bloc: Bloc; nouveau: boolean; enBas?: boolean } | null>(null);
   const [sauvegarde, setSauvegarde] = useState<Sauvegarde>('ok');
   const [toast, setToast] = useState<{ texte: string; annuler?: () => void; action?: string } | null>(null);
   // Le doigt ou le focus sur le message le garde affiché : « Annuler » ne file pas pendant qu'on le vise.
@@ -142,7 +142,6 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
     minuteur.current = setTimeout(() => { ecrire(() => api.enregistrerReglages(r)); }, 650);
   }
 
-  /** Depuis Ma page : un changement de thème se défait d'un toucher, le temps du message. */
   /** Un bloc qui vient d'arriver se montre : la page défile jusqu'à lui et il s'éclaire un instant. */
   function montrer(id: string) {
     setTimeout(() => {
@@ -156,10 +155,17 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
 
   function enregistrerBloc(bloc: Bloc) {
     const nouveau = !blocs.some(b => b.id === bloc.id);
-    setBlocs(liste => (nouveau ? [bloc, ...liste] : liste.map(b => (b.id === bloc.id ? bloc : b))));
+    const enBas = nouveau && !!edition?.enBas;
+    const liste = nouveau ? (enBas ? [...blocs, bloc] : [bloc, ...blocs]) : blocs.map(b => (b.id === bloc.id ? bloc : b));
+    setBlocs(liste);
     setEdition(null);
-    ecrire(() => api.enregistrerBloc(bloc));
-    if (nouveau) { setToast({ texte: 'Ajouté en haut de ta page' }); montrer(bloc.id); }
+    // Le serveur pose un bloc neuf en tête : ajouté par le bas, il est rangé à la fin juste après.
+    ecrire(async () => { await api.enregistrerBloc(bloc); if (enBas) await api.ordonner(liste.map(b => b.id)); });
+    if (nouveau) {
+      const avant = blocs;
+      setToast({ texte: enBas ? 'Ajouté en bas de ta page' : 'Ajouté en haut de ta page', annuler: () => { setBlocs(avant); setToast(null); ecrire(() => api.supprimerBloc(bloc.id)); } });
+      montrer(bloc.id);
+    }
   }
 
   /** Plusieurs liens d'un coup (les premiers pas) : les nouveaux en tête, dans l'ordre donné ; les autres mis à jour sur place. */
@@ -239,7 +245,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
         </div>
         <nav className="flex flex-col gap-0.5" aria-label="Sections">
           {onglets.map(o => (
-            <button key={o.id} type="button" onClick={() => setOnglet(o.id)} aria-current={onglet === o.id ? 'page' : undefined}
+            <button key={o.id} type="button" onClick={() => { if (o.id !== onglet) { setOnglet(o.id); scrollTo({ top: 0 }); } }} aria-current={onglet === o.id ? 'page' : undefined}
               className={`flex min-h-9 items-center gap-2.5 rounded-lg px-2.5 text-[13.5px] font-medium transition ${onglet === o.id ? 'bg-white/[0.08] text-white' : 'text-white/55 hover:bg-white/[0.04] hover:text-white'}`}>
               <Icone nom={o.icone} taille={18} />{o.nom}
             </button>
@@ -287,7 +293,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
           <div key={onglet} className="adm-onglet">
           <h1 className={`mb-4 text-[22px] font-semibold tracking-[-0.02em] ${onglet === 'page' ? 'sr-only' : ''}`}>{onglets.find(o => o.id === onglet)!.nom}</h1>
           {onglet === 'page' && <MaPage compte={compte} reglages={reglages} blocs={blocs} clics={clics} onReglages={changerReglages} onOrdonner={ordonner}
-            onOuvrir={b => setEdition({ bloc: b, nouveau: false })} onAjouter={b => setEdition({ bloc: b, nouveau: true })} envoyerImage={d => api.envoyerImage(d)} />}
+            onOuvrir={b => setEdition({ bloc: b, nouveau: false })} onAjouter={(b, enBas) => setEdition({ bloc: b, nouveau: true, enBas })} envoyerImage={d => api.envoyerImage(d)} annoncer={t => setToast(t)} />}
           {onglet === 'stats' && <OngletStats charger={chargerStats} limite={initial.paiement && !compte.pro} onPro={versAbonnement}
             ouvrirApps={reglages.ouvrirApps} onActiverApps={() => changerReglages({ ...reglages, ouvrirApps: true })} liste={<MaListe api={api} />} />}
           {onglet === 'reglages' && <OngletReglages reglages={reglages} compte={compte} onChange={changerReglages} onDeconnexion={deconnexion} urlExport={api.urlExport} supprimerMonCompte={api.supprimerMonCompte}

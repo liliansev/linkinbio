@@ -175,11 +175,30 @@ export function Feuille({ ouverte, onFermer, retenir, titre, children, pied, cot
   );
 }
 
+/**
+ * Copie un texte. Si le presse-papiers est refusé, l'ancienne méthode prend le relais ; si elle échoue
+ * aussi, l'adresse s'affiche, sélectionnée, pour être copiée à la main : une copie ne rate jamais en silence.
+ */
+export async function copierTexte(texte: string): Promise<boolean> {
+  try { await navigator.clipboard.writeText(texte); return true; } catch { /* on essaie autrement */ }
+  try {
+    const zone = document.createElement('textarea');
+    zone.value = texte; zone.setAttribute('readonly', ''); zone.style.position = 'fixed'; zone.style.opacity = '0';
+    document.body.appendChild(zone); zone.select();
+    const ok = document.execCommand('copy');
+    zone.remove();
+    if (ok) return true;
+  } catch { /* on montre l'adresse */ }
+  window.prompt('Copie cette adresse :', texte);
+  return false;
+}
+
 /** Le même bouton Copier partout : il copie, vibre, dit « Copié » un instant, puis prévient (`onCopie`). */
 export function BoutonCopier({ texte, onCopie, label, compact = false }: { texte: string; onCopie?: () => void; label?: string; compact?: boolean }) {
   const [copie, setCopie] = useState(false);
   async function copier() {
-    try { await navigator.clipboard.writeText(texte); vibrer(8); setCopie(true); onCopie?.(); setTimeout(() => setCopie(false), 1800); } catch { /* presse-papiers refusé */ }
+    if (!(await copierTexte(texte))) return;
+    vibrer(8); setCopie(true); onCopie?.(); setTimeout(() => setCopie(false), 1800);
   }
   if (compact) return (
     <button type="button" onClick={copier} aria-label={copie ? 'Adresse copiée' : label ?? 'Copier'}

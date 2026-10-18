@@ -26,7 +26,7 @@ export function AccepterCgu({ accepter, deconnexion }: { accepter: () => Promise
           Hopla héberge ta page et mesure ses visites pour toi, sans cookie.
         </p>
         <label className="mt-6 flex cursor-pointer items-start gap-3 rounded-2xl bg-white/[0.05] p-4 text-[15px] leading-snug">
-          <input type="checkbox" checked={coche} onChange={e => setCoche(e.target.checked)} className="mt-0.5 h-5 w-5 shrink-0 accent-[#ffb38a]" />
+          <input type="checkbox" checked={coche} onChange={e => setCoche(e.target.checked)} className="mt-0.5 h-5 w-5 shrink-0 accent-white" />
           <span>J’accepte les {lien('cgu', 'conditions d’utilisation')} et l’{lien('traitement-des-donnees', 'accord de traitement des données')}, et j’ai lu la {lien('confidentialite', 'politique de confidentialité')}.</span>
         </label>
         <BoutonPrincipal type="button" className="mt-4 w-full" disabled={!coche || envoi} onClick={valider}>{envoi ? 'Un instant…' : 'Continuer'}</BoutonPrincipal>

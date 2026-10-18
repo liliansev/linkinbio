@@ -4,7 +4,7 @@ import { urlPage } from '../lib/types.ts';
 import { etapesDemarrage } from '../lib/demarrage.ts';
 import type { Destination } from '../lib/demarrage.ts';
 import { Icone } from '../components/Icone.tsx';
-import { BoutonCopier, vibrer } from './ui.tsx';
+import { BoutonCopier, copierTexte, vibrer } from './ui.tsx';
 
 /*
  * Le haut de l'onglet Liens : l'adresse de la page, à copier ou partager en un
@@ -32,7 +32,7 @@ export function HautLiens({ compte, reglages, blocs, aller }: { compte: ComptePa
 
   function marquerPartagee() { noter(CLE_PARTAGE); setPartagee(true); }
   async function copier() {
-    try { await navigator.clipboard.writeText(adresse); vibrer(8); marquerPartagee(); } catch { /* presse-papiers refusé */ }
+    if (await copierTexte(adresse)) { vibrer(8); marquerPartagee(); }
   }
   async function partager() {
     try { await navigator.share({ title: reglages.profil.nom || 'Ma page', url: adresse }); marquerPartagee(); } catch { /* partage annulé */ }

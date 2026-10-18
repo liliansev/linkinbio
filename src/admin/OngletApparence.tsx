@@ -94,7 +94,7 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
               className="min-h-11 shrink-0 font-medium text-white underline decoration-white/30 underline-offset-2">Les garder</button>
           </p>
         )}
-        <ul className="grid grid-cols-3 gap-2.5 sm:grid-cols-4">
+        <ul role="radiogroup" aria-label="Thème" onKeyDown={e => flechesRadio(e)} className="grid grid-cols-3 gap-2.5">
           {THEMES.map(t => (
             <li key={t.id}>
               {/* Choisir un thème pose aussi ses boutons et ses couleurs ; on peut les changer ensuite. */}
@@ -102,10 +102,10 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
                 const perso = Object.values(reglages.couleurs).some(Boolean);
                 setAvantTheme(perso ? reglages : null);
                 maj({ theme: t.id, bouton: t.conseil, couleurs: SANS_COULEURS });
-              }} aria-pressed={theme.id === t.id}
+              }} role="radio" aria-checked={theme.id === t.id}
                 className={`flex w-full flex-col items-center gap-1.5 rounded-2xl p-1.5 transition ${theme.id === t.id ? 'bg-white/10 ring-2 ring-white' : 'hover:bg-white/[0.05]'}`}>
                 <Pastille theme={t} />
-                <span className="w-full truncate text-center text-[12.5px] font-medium leading-tight text-white/85">{t.nom}</span>
+                <span className="line-clamp-2 w-full text-center text-[12.5px] font-medium leading-tight text-balance text-white/85">{t.nom}</span>
               </button>
             </li>
           ))}
@@ -136,7 +136,7 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
                       {NOMS_ANIMATIONS[a].nom}
                     </span>
                     {/* La coche dit le choix, comme dans les listes : pas un anneau qu'on confondrait avec un style de bouton. */}
-                    <span className="absolute -top-1 -right-1"><span className={`grid h-5 w-5 shrink-0 place-items-center rounded-full transition duration-150 ${choisi ? 'bg-white text-nuit' : 'ring-[1.5px] ring-inset ring-white/25'}`} aria-hidden="true">{choisi && <Icone nom="ui-ok" taille={12} />}</span></span>
+                    <span className="flex justify-center"><span className={`grid h-5 w-5 shrink-0 place-items-center rounded-full transition duration-150 ${choisi ? 'bg-white text-nuit' : 'ring-[1.5px] ring-inset ring-white/25'}`} aria-hidden="true">{choisi && <Icone nom="ui-ok" taille={12} />}</span></span>
                   </button>
                 </li>
               );
@@ -201,9 +201,11 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
                 aria-invalid={faux || undefined} aria-describedby={faux ? `reseau-faux-${r.reseau}` : undefined} aria-label={NOMS_RESEAUX[r.reseau]} placeholder={EXEMPLES[r.reseau]} inputMode={r.reseau === 'email' ? 'email' : 'url'} autoCapitalize="none" autoCorrect="off"
                 onChange={e => maj({ reseaux: reglages.reseaux.map((x, j) => (j === i ? { ...x, url: e.target.value } : x)) })}
                 onBlur={e => { setEnSaisie(null); const u = urlReseau(r.reseau, e.target.value); if (u && u !== r.url) maj({ reseaux: reglages.reseaux.map((x, j) => (j === i ? { ...x, url: u } : x)) }); }} />
-              {/* Une seule flèche, à la taille du pouce : monter suffit pour remettre les réseaux dans n'importe quel ordre. */}
+              {/* Monter et descendre, à la taille du pouce : l'ordre se règle sans glisser. */}
               <button type="button" disabled={i === 0} aria-label={`Monter ${NOMS_RESEAUX[r.reseau]}`} onClick={() => { const l = [...reglages.reseaux]; [l[i - 1], l[i]] = [l[i], l[i - 1]]; maj({ reseaux: l }); }}
                 className="grid h-11 w-9 shrink-0 place-items-center text-white/50 hover:text-white disabled:invisible"><Icone nom="ui-chevron" taille={18} className="rotate-180" /></button>
+              <button type="button" disabled={i === reglages.reseaux.length - 1} aria-label={`Descendre ${NOMS_RESEAUX[r.reseau]}`} onClick={() => { const l = [...reglages.reseaux]; [l[i + 1], l[i]] = [l[i], l[i + 1]]; maj({ reseaux: l }); }}
+                className="grid h-11 w-9 shrink-0 place-items-center text-white/50 hover:text-white disabled:invisible"><Icone nom="ui-chevron" taille={18} /></button>
               <button type="button" aria-label={`Retirer ${NOMS_RESEAUX[r.reseau]}`} onClick={() => maj({ reseaux: reglages.reseaux.filter((_, j) => j !== i) })} className="grid h-11 w-9 shrink-0 place-items-center text-white/50 hover:text-white"><Icone nom="ui-fermer" taille={18} /></button>
               {faux && <p id={`reseau-faux-${r.reseau}`} role="alert" className="w-full pl-9 text-[13px] font-medium text-red-300">{r.reseau === 'email' ? 'Une adresse e-mail, par exemple toi@exemple.fr' : 'Un pseudo sans espace, ou l’adresse de ton profil'}</p>}
             </li>
@@ -235,7 +237,7 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
 const BUREAUX: { id: MiseEnPageBureau; nom: string; aide: string }[] = [
   { id: 'colonne', nom: 'Colonne', aide: 'Comme sur téléphone, sur un panneau.' },
   { id: 'profil', nom: 'Profil', aide: 'Profil à gauche, liens sur deux colonnes.' },
-  { id: 'onepage', nom: 'One page', aide: 'Ton nom en grand, les liens en cartes.' },
+  { id: 'onepage', nom: 'Pleine page', aide: 'Ton nom en grand, les liens en cartes.' },
 ];
 
 /** Un petit croquis de chaque mise en page, dessiné en blocs. */
@@ -283,7 +285,7 @@ export function DesignTiroirs({ reglages, onChange, envoyerImage, principal, pie
   const lignes: { id: Tiroir; nom: string; icone: string }[] = [
     { id: 'theme', nom: 'Thème', icone: 'palette' },
     { id: 'couleurs', nom: 'Couleurs', icone: 'pinceau' },
-    { id: 'boutons', nom: 'Boutons', icone: 'bloc-lien' },
+    { id: 'boutons', nom: 'Boutons', icone: 'lien' },
     { id: 'animation', nom: 'Animation', icone: 'eclair' },
     { id: 'bureau', nom: 'Sur ordinateur', icone: 'ordinateur' },
   ];
@@ -326,6 +328,11 @@ const CLES_COULEURS: { id: keyof Couleurs; nom: string; duTheme: (t: Theme) => s
 ];
 /** Une palette courte, des neutres aux couleurs franches ; le sélecteur donne tout le reste. */
 const PALETTE = ['#0c121f', '#111111', '#ffffff', '#f4ece1', '#e3e9de', '#e9e2f6', '#1f35ff', '#d62e1f', '#ff8a5c', '#ffd400', '#23704f', '#ff6fae'];
+/** Leurs noms, lus à voix haute et sous le nom du réglage : jamais un code hexadécimal. */
+const NOMS_PALETTE: Record<string, string> = {
+  '#0c121f': 'Nuit', '#111111': 'Noir', '#ffffff': 'Blanc', '#f4ece1': 'Crème', '#e3e9de': 'Sauge pâle', '#e9e2f6': 'Lilas pâle',
+  '#1f35ff': 'Bleu Klein', '#d62e1f': 'Rouge', '#ff8a5c': 'Corail', '#ffd400': 'Jaune', '#23704f': 'Vert sapin', '#ff6fae': 'Rose',
+};
 
 /** Une couleur : celle du thème, une de la palette, ou n'importe laquelle au sélecteur. */
 function ChoixCouleur({ nom, valeur, duTheme, onChange }: { nom: string; valeur: string; duTheme: string; onChange: (v: string) => void }) {
@@ -338,12 +345,12 @@ function ChoixCouleur({ nom, valeur, duTheme, onChange }: { nom: string; valeur:
     <div>
       <div className="mb-2 flex items-center justify-between gap-3">
         <span className="text-[13.5px] font-medium text-white/85">{nom}</span>
-        <span className="text-[12.5px] text-white/55">{valeur ? valeur.toUpperCase() : 'Celle du thème'}</span>
+        <span className="text-[12.5px] text-white/55">{valeur ? NOMS_PALETTE[valeur] ?? 'Couleur choisie' : 'Celle du thème'}</span>
       </div>
       <div className="flex flex-wrap gap-2.5">
         {pastille(duTheme, !valeur, `${nom} : celle du thème`, () => onChange(''))}
         <span className="mx-0.5 h-8 w-px self-center bg-white/10" aria-hidden="true" />
-        {PALETTE.filter(c => c !== duTheme.toLowerCase()).map(c => pastille(c, valeur === c, `${nom} : ${c}`, () => onChange(c)))}
+        {PALETTE.filter(c => c !== duTheme.toLowerCase()).map(c => pastille(c, valeur === c, `${nom} : ${NOMS_PALETTE[c]}`, () => onChange(c)))}
         <label className={`relative grid h-8 w-8 shrink-0 cursor-pointer place-items-center rounded-full bg-white/[0.08] text-white/80 ring-1 ring-inset ring-white/20 transition hover:bg-white/[0.14] ${valeur && !PALETTE.includes(valeur) ? 'outline-2 outline-offset-2 outline-white' : ''}`}
           title="Une autre couleur" style={valeur && !PALETTE.includes(valeur) ? { background: valeur } : undefined}>
           <Icone nom="ui-plus" taille={16} />

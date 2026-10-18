@@ -37,9 +37,11 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
   const [b, setB] = useState<Bloc | null>(bloc);
   // Une erreur dit sur quel champ elle porte : elle s'affiche dessous, et part dès qu'on y touche.
   type ChampErreur = 'url' | 'titre' | 'description' | 'dates' | 'image' | 'note' | 'nombre' | 'source';
-  const [erreur, setErreurBrute] = useState<{ texte: string; champ: ChampErreur } | null>(null);
-  const setErreur = (texte: string, champ: ChampErreur = 'url') => setErreurBrute(texte ? { texte, champ } : null);
-  const erreurDe = (champ: string) => (erreur?.champ === champ ? erreur.texte : undefined);
+  // Plusieurs champs peuvent manquer à la fois (une note, son nombre d'avis, sa source) : chacun dit le sien.
+  const [erreurs, setErreurs] = useState<Partial<Record<ChampErreur, string>>>({});
+  const setErreur = (texte: string, champ: ChampErreur = 'url') => setErreurs(texte ? { [champ]: texte } : {});
+  const erreurDe = (champ: string) => erreurs[champ as ChampErreur];
+  const erreur = Object.keys(erreurs).length > 0;
   const [envoi, setEnvoi] = useState(false);
   const [lecture, setLecture] = useState(false);
   const [icones, setIcones] = useState(false);
@@ -48,7 +50,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
   const fichier = useRef<HTMLInputElement>(null);
   useEffect(() => { setB(bloc); setErreur(''); }, [bloc]);
   if (!b) return null;
-  const maj = (champs: Partial<Bloc>) => { setB({ ...b, ...champs }); if (erreur) setErreurBrute(null); };
+  const maj = (champs: Partial<Bloc>) => { setB({ ...b, ...champs }); if (erreur) setErreurs({}); };
   const type = TYPES.find(t => t.type === b.type)!;
   const avecUrl = b.type === 'lien' || b.type === 'video';
 
@@ -63,9 +65,12 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
     if (b.type === 'preuve' && b.preuve?.genre === 'compteur' && !b.preuve.nombre) { setErreur('Indique le chiffre à montrer.', 'nombre'); return null; }
     // Une note n'est jamais inventée : elle se tape, avec son nombre d'avis et sa source.
     if (b.type === 'preuve' && b.preuve?.genre === 'note') {
-      if (!b.preuve.note) { setErreur('Indique ta note, par exemple 4,8.', 'note'); return null; }
-      if (!b.preuve.nombre) { setErreur('Indique le nombre d’avis.', 'nombre'); return null; }
-      if (!b.preuve.source.trim()) { setErreur('Indique où les avis sont publiés, par exemple Google.', 'source'); return null; }
+      const manque: Partial<Record<ChampErreur, string>> = {};
+      if (!b.preuve.note) manque.note = 'Indique ta note, par exemple 4,8.';
+      else if (b.preuve.note > 5) manque.note = 'La note va de 0 à 5. Sur 10, divise-la par deux.';
+      if (!b.preuve.nombre) manque.nombre = 'Indique le nombre d’avis.';
+      if (!b.preuve.source.trim()) manque.source = 'Indique où les avis sont publiés, par exemple Google.';
+      if (Object.keys(manque).length) { setErreurs(manque); return null; }
     }
     if (b.debut && b.fin && new Date(b.fin) <= new Date(b.debut)) {
       setPlus(true); setErreur('La fin doit venir après le début.', 'dates');
@@ -169,7 +174,8 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
           <Champ label={b.type === 'video' ? 'Adresse de la vidéo YouTube' : 'Adresse'} erreur={erreurDe('url')}
             aide={b.type === 'lien' && reglages.ouvrirApps && appDe(adresse(b.url)) ? <span className="inline-flex items-center gap-1.5 text-white/75"><Icone nom="ui-ok" taille={13} />Depuis Instagram ou TikTok, ce lien s’ouvre dans l’app {appDe(adresse(b.url))}.</span> : undefined}>
             <input className={classeSaisie} type="url" inputMode="url" autoCapitalize="none" autoCorrect="off" placeholder={b.type === 'video' ? 'https://youtu.be/…' : 'https://…'}
-              value={b.url} onChange={e => maj({ url: e.target.value })} onBlur={titreDepuisSite} autoFocus={nouveau} />
+              value={b.url} onChange={e => maj({ url: e.target.value })} onBlur={titreDepuisSite} autoFocus={nouveau}
+              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); document.getElementById('bloc-titre')?.focus(); } }} />
           </Champ>
         )}
 
@@ -184,7 +190,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
           <Champ erreur={erreurDe('titre')} label={b.type === 'lien' ? 'Texte du bouton' : b.type === 'texte' ? 'Texte' : b.type === 'preuve' ? (b.preuve?.genre === 'compteur' ? 'Ce que compte ce chiffre' : 'Petit titre (facultatif)') : 'Titre'}>
             {b.type === 'texte'
               ? <textarea className={`${classeSaisie} min-h-28`} value={b.titre} onChange={e => maj({ titre: e.target.value })} maxLength={1000} autoFocus={nouveau} />
-              : <input className={classeSaisie} value={b.titre} onChange={e => maj({ titre: e.target.value })} maxLength={160} placeholder={b.type === 'lien' ? 'Mon super lien' : b.type === 'preuve' && b.preuve?.genre === 'compteur' ? 'abonnés sur YouTube' : ''} autoFocus={nouveau && !avecUrl && b.type !== 'preuve'} />}
+              : <input id="bloc-titre" className={classeSaisie} value={b.titre} onChange={e => maj({ titre: e.target.value })} maxLength={160} placeholder={b.type === 'lien' ? 'Mon super lien' : b.type === 'preuve' && b.preuve?.genre === 'compteur' ? 'abonnés sur YouTube' : ''} autoFocus={nouveau && !avecUrl && b.type !== 'preuve'} />}
           </Champ>
         )}
         {b.type === 'derniere-video' && (

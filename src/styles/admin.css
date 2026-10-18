@@ -46,9 +46,9 @@
 }
 
 .adm input[type='datetime-local'] { color-scheme: dark; }
-.adm ::selection { background: #ffb38a; color: #0c121f; }
+.adm ::selection { background: rgb(255 255 255 / 0.85); color: #0c121f; }
 .adm { scrollbar-color: rgb(255 255 255 / 0.18) transparent; -webkit-tap-highlight-color: transparent; }
-.adm :is(button, a, input, textarea, select, summary):focus-visible { outline: 2px solid #ffb38a; outline-offset: 2px; }
+.adm :is(button, a, input, textarea, select, summary):focus-visible { outline: 2px solid rgb(255 255 255 / 0.9); outline-offset: 2px; }
 
 /* Les premiers pas : la vraie page en miniature, à la largeur d'un téléphone. */
 .adm-miroir { --z: 0.62; width: calc(390px * var(--z)); flex-shrink: 0; }

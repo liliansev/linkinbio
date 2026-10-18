@@ -8,9 +8,11 @@ import type { Bloc, PagePublique, Reglages, TypeBloc } from '../lib/types.ts';
 import { TYPES_PRINCIPAL, estEnLigne, nouveauBloc } from '../lib/types.ts';
 import { etiquettes } from '../lib/etiquettes.ts';
 import type { Destination } from '../lib/demarrage.ts';
+import { urlReseau } from '../lib/demarrage.ts';
+import { adresseSaisie } from '../lib/valider.ts';
 import { PageLiens } from '../components/PageLiens.tsx';
 import type { Edition } from '../components/PageLiens.tsx';
-import { Icone } from '../components/Icone.tsx';
+import { Icone, NOMS_RESEAUX } from '../components/Icone.tsx';
 import { themeDe, variablesTheme } from '../lib/themes.ts';
 import { HautLiens } from './BienDemarrer.tsx';
 import { FeuilleAjout } from './OngletLiens.tsx';
@@ -25,7 +27,7 @@ import { BoutonSecondaire, Feuille, Interrupteur, preparerImage, vibrer } from '
  * choisir (Lilian, 18 octobre 2026).
  */
 
-export function MaPage({ compte, reglages, blocs, clics, onReglages, onOrdonner, onOuvrir, onAjouter, envoyerImage }: {
+export function MaPage({ compte, reglages, blocs, clics, onReglages, onOrdonner, onOuvrir, onAjouter, envoyerImage, annoncer }: {
   compte: PagePublique['compte'];
   reglages: Reglages;
   blocs: Bloc[];
@@ -33,15 +35,26 @@ export function MaPage({ compte, reglages, blocs, clics, onReglages, onOrdonner,
   onReglages: (r: Reglages) => void;
   onOrdonner: (blocs: Bloc[]) => void;
   onOuvrir: (bloc: Bloc) => void;
-  onAjouter: (bloc: Bloc) => void;
+  /** `enBas` : ajouté depuis le bas de la page, le bloc se pose en dernier. */
+  onAjouter: (bloc: Bloc, enBas?: boolean) => void;
   envoyerImage: (d: string) => Promise<string>;
+  /** Un message en bas de l'écran, avec son Annuler. */
+  annoncer: (t: { texte: string; annuler?: () => void }) => void;
 }) {
   const [feuille, setFeuilleBrute] = useState<'design' | 'reseaux' | 'ajout' | null>(null);
   // Les réglages au moment où la feuille de design ou des réseaux s'ouvre : « Annuler » y revient.
   const depart = useRef<Reglages | null>(null);
-  const setFeuille = (f: typeof feuille) => {
+  const setFeuille = (f: typeof feuille, annule = false) => {
     // En refermant le design, la page revient en vue : on a pu descendre loin en la regardant changer.
     if (!f && (feuille === 'design' || feuille === 'reseaux')) {
+      const avant = depart.current;
+      if (annule) annoncer({ texte: 'Changements annulés' });
+      else if (avant && JSON.stringify(avant) !== JSON.stringify(reglages)) {
+        // Les réseaux se rangent en partant : un pseudo devient l'adresse du profil, une ligne vide s'en va.
+        const propres = feuille === 'reseaux' ? reglages.reseaux.filter(r => r.url.trim()).map(r => ({ ...r, url: urlReseau(r.reseau, r.url) || r.url })) : reglages.reseaux;
+        if (JSON.stringify(propres) !== JSON.stringify(reglages.reseaux)) onReglages({ ...reglages, reseaux: propres });
+        annoncer({ texte: feuille === 'design' ? 'Design mis à jour' : 'Réseaux mis à jour', annuler: () => { onReglages(avant); annoncer({ texte: 'Changements annulés' }); } });
+      }
       const haut = toile.current?.getBoundingClientRect().top ?? 0;
       if (haut < 0) toile.current?.scrollIntoView({ block: 'start', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
     }
@@ -49,7 +62,7 @@ export function MaPage({ compte, reglages, blocs, clics, onReglages, onOrdonner,
   };
   const change = depart.current !== null && JSON.stringify(depart.current) !== JSON.stringify(reglages);
   const piedAnnuler = change ? (fermer: (apres?: () => void) => void) => (
-    <BoutonSecondaire className="w-full" onClick={() => { const avant = depart.current; fermer(() => { if (avant) onReglages(avant); setFeuille(null); }); }}>Annuler les changements</BoutonSecondaire>
+    <BoutonSecondaire className="w-full" onClick={() => { const avant = depart.current; fermer(() => { if (avant) onReglages(avant); setFeuille(null, true); }); }}>Annuler les changements</BoutonSecondaire>
   ) : undefined;
   const [envoi, setEnvoi] = useState(false);
   // Le geste s'explique au-dessus de la page tant que deux blocs n'ont pas été ouverts, puis se tait.
@@ -75,7 +88,16 @@ export function MaPage({ compte, reglages, blocs, clics, onReglages, onOrdonner,
     setFeuille('design');
   }
   const direct = <ApercuDirect page={{ reglages, blocs: visibles, compte }} />;
-  const ajouter = (type: TypeBloc) => { setFeuille(null); onAjouter(nouveauBloc(type, `n${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`)); };
+  // Le bouton du bas de la page pose le bloc en bas ; celui du haut, en haut.
+  const enBas = useRef(false);
+  const ajouter = (type: TypeBloc) => { setFeuille(null); onAjouter(nouveauBloc(type, `n${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`), enBas.current); enBas.current = false; };
+  /** Un réseau rempli qui ne mène nulle part garde la feuille ouverte, sur son champ. */
+  const reseauFaux = () => {
+    const faux = reglages.reseaux.find(r => r.url.trim() && !adresseSaisie(r.url) && !urlReseau(r.reseau, r.url));
+    // Le champ se montre, son erreur dessous : il n'est pas refocalisé, sans quoi l'erreur se tairait pendant la saisie.
+    if (faux) { (document.activeElement as HTMLElement | null)?.blur(); setTimeout(() => document.querySelector<HTMLInputElement>(`[aria-label="${NOMS_RESEAUX[faux.reseau]}"]`)?.scrollIntoView({ block: 'center' }), 40); }
+    return !!faux;
+  };
 
   /** Une étape de « Bien démarrer » mène à l'endroit de la page où elle se fait. */
   function aller(d: Destination) {
@@ -97,7 +119,7 @@ export function MaPage({ compte, reglages, blocs, clics, onReglages, onOrdonner,
     envoiPhoto: envoi,
     reseaux: () => setFeuille('reseaux'),
     liste: (liste, rendu) => <BlocsEditables blocs={liste} rendu={rendu} clics={clics} onOrdonner={onOrdonner} onOuvrir={ouvrirBloc}
-      onAjouter={() => { vibrer(5); setFeuille('ajout'); }} />,
+      onAjouter={() => { vibrer(5); enBas.current = true; setFeuille('ajout'); }} />,
   };
 
   return (
@@ -126,8 +148,8 @@ export function MaPage({ compte, reglages, blocs, clics, onReglages, onOrdonner,
       </div>
 
       <input ref={fichier} type="file" accept="image/*" hidden onChange={e => photo(e.target.files?.[0])} />
-      <FeuilleAjout ouverte={feuille === 'ajout'} onFermer={() => setFeuille(null)} onChoisir={ajouter} principal={principal} />
-      <Feuille ouverte={feuille === 'reseaux'} onFermer={() => setFeuille(null)} titre="Réseaux" cote apercu={direct} pied={piedAnnuler}>
+      <FeuilleAjout ouverte={feuille === 'ajout'} onFermer={() => { enBas.current = false; setFeuille(null); }} onChoisir={ajouter} principal={principal} />
+      <Feuille ouverte={feuille === 'reseaux'} onFermer={() => setFeuille(null)} retenir={reseauFaux} titre="Réseaux" cote apercu={direct} pied={piedAnnuler}>
         <OngletApparence reglages={reglages} onChange={onReglages} envoyerImage={envoyerImage} principal={principal} parties={['reseaux']} />
       </Feuille>
       <Feuille ouverte={feuille === 'design'} onFermer={() => setFeuille(null)} titre="Design" cote apercu={direct} pied={piedAnnuler}>

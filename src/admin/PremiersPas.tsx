@@ -10,7 +10,7 @@ import { NOMS_AUDIENCES, reseauxDePartage } from '../lib/provenance.ts';
 import type { Audience } from '../lib/provenance.ts';
 import { Icone, NOMS_RESEAUX } from '../components/Icone.tsx';
 import { Pastille } from './OngletApparence.tsx';
-import { BoutonCopier, BoutonPrincipal, classeSaisie, flechesRadio, preparerImage, vibrer } from './ui.tsx';
+import { BoutonCopier, BoutonPrincipal, copierTexte, classeSaisie, flechesRadio, preparerImage, vibrer } from './ui.tsx';
 
 /*
  * L'arrivée d'un compte neuf, juste après les CGU : cinq questions, et la
@@ -154,7 +154,7 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
     onFin();
   }
   async function copier() {
-    try { await navigator.clipboard.writeText(adressePage); vibrer(8); setCopie(true); noter(CLE_PARTAGE); setTimeout(() => setCopie(false), 1800); } catch { /* presse-papiers refusé */ }
+    if (await copierTexte(adressePage)) { vibrer(8); setCopie(true); noter(CLE_PARTAGE); setTimeout(() => setCopie(false), 1800); }
   }
   async function partager() {
     if (!peutPartager) return copier();
@@ -217,7 +217,7 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
                     {valide ? <Icone nom="ui-ok" taille={16} /> : n + 1}
                   </span>
                   <input id={`lien-${l.id}`} aria-label={`Adresse du lien ${n + 1}`} className="min-h-11 min-w-0 flex-1 bg-transparent px-1 text-[16px] text-white outline-none placeholder:text-white/55 focus-visible:!outline-none"
-                    type="url" inputMode="url" autoCapitalize="off" autoCorrect="off" spellCheck={false} placeholder={['ton-site.fr', 'calendly.com/toi', 'ta-boutique.fr'][n]}
+                    type="url" inputMode="url" autoCapitalize="off" autoCorrect="off" spellCheck={false} placeholder={['Ex. ton-site.fr', 'Ex. calendly.com/toi', 'Ex. ta-boutique.fr'][n]}
                     value={l.url} aria-invalid={fausse || undefined} aria-describedby={fausse ? `erreur-${l.id}` : undefined}
                     onChange={e => majLigne(l.id, { url: e.target.value })} onBlur={() => { setQuittes(q => new Set(q).add(l.id)); lireSite(l); }}
                     onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); (e.currentTarget.closest('li')?.nextElementSibling?.querySelector('input') as HTMLInputElement | null)?.focus(); } }} />
@@ -276,7 +276,7 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
     },
     partage: {
       titre: 'Où vas-tu mettre ton lien ?',
-      aide: 'Chaque lien pourra passer en tête selon le réseau d’où l’on vient : ta boutique en premier pour ceux qui arrivent d’Instagram, par exemple. Les autres réseaux restent à un toucher, lien par lien.',
+      aide: 'Tes liens pourront passer en tête selon le réseau d’où l’on vient : ta boutique en premier pour ceux qui arrivent d’Instagram, par exemple.',
       corps: (<>
         <ul className="flex flex-col divide-y divide-white/[0.06] rounded-2xl bg-white/[0.04] px-3.5">
           {OU_PARTAGER.map(a => {
@@ -296,7 +296,7 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
             );
           })}
         </ul>
-      {dernierSeul && <p id="au-moins-un" role="alert" className="mt-2 px-1 text-[13px] font-medium text-white/75">Il en faut au moins un : coche d’abord un autre réseau.</p>}
+      {dernierSeul && <p id="au-moins-un" role="alert" className="mt-2 px-1 text-[13px] font-medium text-white/75">Il en faut au moins un, pour savoir où ton lien sera vu : coche d’abord un autre réseau.</p>}
       </>),
     },
     style: {

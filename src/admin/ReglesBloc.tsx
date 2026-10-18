@@ -112,7 +112,7 @@ export function RegleReseaux({ b, maj, reseaux }: { b: Bloc; maj: (c: Partial<Bl
   const [premier, setPremier] = useState(enTete.length > 0);
   return (
     <Repli titre="Afficher sur" icone="cible" resume={resume} ouvert={false}>
-      <p className="text-[12.5px] leading-snug text-white/55">Hopla reconnaît d’où vient chaque visiteur. Décoché, ce bloc ne s’affiche pas pour ceux qui arrivent de ce réseau. Les autres visiteurs (lien direct, QR code, Google) le voient toujours.</p>
+      <p className="text-[12.5px] leading-snug text-white/55">Décoché, ce bloc se cache pour ceux qui arrivent de ce réseau par le lien de ta bio. Hopla le reconnaît tout seul ; les autres visiteurs le voient toujours.</p>
       <ul className="-my-1 divide-y divide-white/[0.06]" aria-label="Réseaux où ce bloc s’affiche">
         {liste.map(s => {
           const vu = visible(s);
@@ -204,7 +204,7 @@ export function RegleTraductions({ b, maj, langues }: { b: Bloc; maj: (c: Partia
     maj({ traductions: suite });
   };
   return (
-    <Repli titre="Traductions" icone="globe" resume={traduites.length ? traduites.map(l => NOMS_LANGUES[l]).join(', ') : 'Pas encore traduit : le français s’affiche'} ouvert={false}>
+    <Repli titre="Traductions" icone="globe" resume={traduites.length === langues.length ? 'Tout est traduit' : `À traduire : ${langues.filter(l => !b.traductions[l]).map(l => NOMS_LANGUES[l]).join(', ')}`} ouvert={false}>
       {langues.map(l => (
         <div key={l} className="flex flex-col gap-2.5 rounded-xl bg-white/[0.035] p-3">
           <span className="text-[13px] font-semibold text-white/80">{NOMS_LANGUES[l]}</span>
@@ -230,11 +230,11 @@ export function ChampsPreuve({ b, maj, erreurDe = () => undefined }: { b: Bloc; 
   const majP = (champs: Partial<Preuve>) => maj({ preuve: { ...p, ...champs } });
   // La note se tape comme on l'écrit (« 4,8 ») et ne se lit qu'en quittant le champ : rien ne s'arrondit sous les doigts.
   const [note, setNote] = useState(p.note ? String(p.note).replace('.', ',') : '');
-  const lireNote = (v: string) => { const n = Math.round(Number(v.replace(',', '.')) * 10) / 10; return Number.isFinite(n) ? Math.max(0, Math.min(5, n)) : 0; };
+  const lireNote = (v: string) => { const n = Math.round(Number(v.replace(',', '.')) * 10) / 10; return Number.isFinite(n) ? Math.max(0, n) : 0; };
   return (
     <>
       <div>
-        <span className="mb-1.5 block text-[13px] font-medium text-white/70">Ce que tu montres</span>
+        <span className="mb-1.5 block text-[13px] font-medium text-white/70">Type de preuve</span>
         <Segments label="Genre de preuve" valeur={p.genre} onChange={genre => majP({ genre })}
           options={[{ id: 'note', nom: 'Note' }, { id: 'compteur', nom: 'Chiffre' }, { id: 'temoignage', nom: 'Témoignage' }]} />
       </div>
@@ -270,7 +270,7 @@ export function ChampsPreuve({ b, maj, erreurDe = () => undefined }: { b: Bloc; 
       )}
       <Champ label={p.genre === 'note' ? 'Où sont publiés les avis' : 'Où ça se passe (facultatif)'} erreur={erreurDe('source')}>
         {/* Les sources courantes en suggestions du champ, plutôt qu'une rangée de pastilles. */}
-        <input className={classeSaisie} value={p.source} maxLength={30} onChange={e => majP({ source: e.target.value })} placeholder="Google" list="sources-preuve" />
+        <input className={classeSaisie} value={p.source} maxLength={30} onChange={e => majP({ source: e.target.value })} placeholder="Ex. Google" list="sources-preuve" />
       </Champ>
       <datalist id="sources-preuve">{SOURCES_PREUVE.map(s => <option key={s} value={s} />)}</datalist>
       <p className="text-[12.5px] leading-snug text-white/55">Montre des chiffres vrais et des avis réels, avec l’accord de leurs auteurs : c’est la loi, et c’est ce qui marche.</p>
