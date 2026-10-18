@@ -42,8 +42,16 @@ export interface Abonnement {
   portail: boolean;
 }
 
+/**
+ * Résilié mais payé jusqu'à la fin de la période : `scheduled_cancel`, ou
+ * `canceled` tel que Creem le note quand on résilie depuis son portail.
+ */
+export const estResilie = (statut: string) => statut === 'scheduled_cancel' || statut === 'canceled';
+
 /** Pro ou pas, d'après ce que Creem a dit et la date : un abonnement résilié s'éteint de lui-même après sa période. */
 export function estPro(a: { statut: string; finPeriode: number | null }, maintenant = Date.now()): boolean {
+  // Résilié depuis le portail : le Pro tient jusqu'à la fin payée, sans grâce, et seulement si on la connaît.
+  if (a.statut === 'canceled') return !!a.finPeriode && maintenant <= a.finPeriode;
   if (!(STATUTS_PRO as readonly string[]).includes(a.statut)) return false;
   // Une résiliation s'arrête à la fin de la période ; un renouvellement dont on n'a pas eu de nouvelles garde quelques jours de grâce.
   const grace = a.statut === 'scheduled_cancel' ? 0 : GRACE_JOURS * 86_400_000;
