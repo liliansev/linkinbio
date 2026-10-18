@@ -38,6 +38,8 @@ const TOUTES: PartieApparence[] = ['profil', 'theme', 'couleurs', 'animation', '
 export function OngletApparence({ reglages, onChange, envoyerImage, principal = true, parties = TOUTES }: { reglages: Reglages; onChange: (r: Reglages) => void; envoyerImage: (d: string) => Promise<string>; principal?: boolean; parties?: PartieApparence[] }) {
   const voir = (p: PartieApparence) => parties.includes(p);
   const [envoi, setEnvoi] = useState(false);
+  // Un thème choisi par-dessus des couleurs à soi : elles partent, mais un toucher les rend.
+  const [avantTheme, setAvantTheme] = useState<Reglages | null>(null);
   const fichier = useRef<HTMLInputElement>(null);
   const theme = themeDe(reglages);
   const maj = (champs: Partial<Reglages>) => onChange({ ...reglages, ...champs });
@@ -72,11 +74,22 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
       </Carte>}
 
       {voir('theme') && <Carte titre="Thème" id="theme" action={<span className="text-[13px] text-white/50">{theme.nom}</span>}>
+        {avantTheme && (
+          <p role="status" className="mb-3 flex items-center justify-between gap-3 text-[13px] text-white/60">
+            Tes couleurs à toi ont été retirées.
+            <button type="button" onClick={() => { onChange({ ...reglages, couleurs: avantTheme.couleurs, bouton: avantTheme.bouton }); setAvantTheme(null); }}
+              className="min-h-9 shrink-0 font-medium text-white underline decoration-white/30 underline-offset-2">Les garder</button>
+          </p>
+        )}
         <ul className="grid grid-cols-3 gap-2.5 sm:grid-cols-4">
           {THEMES.map(t => (
             <li key={t.id}>
               {/* Choisir un thème pose aussi ses boutons et ses couleurs ; on peut les changer ensuite. */}
-              <button type="button" onClick={() => maj({ theme: t.id, bouton: t.conseil, couleurs: SANS_COULEURS })} aria-pressed={theme.id === t.id}
+              <button type="button" onClick={() => {
+                const perso = Object.values(reglages.couleurs).some(Boolean);
+                setAvantTheme(perso ? reglages : null);
+                maj({ theme: t.id, bouton: t.conseil, couleurs: SANS_COULEURS });
+              }} aria-pressed={theme.id === t.id}
                 className={`flex w-full flex-col items-center gap-1.5 rounded-2xl p-1.5 transition ${theme.id === t.id ? 'bg-white/10 ring-2 ring-white' : 'hover:bg-white/[0.05]'}`}>
                 <Pastille theme={t} />
                 <span className="flex w-full flex-col text-center leading-tight">

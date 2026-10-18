@@ -621,14 +621,6 @@ button.lp-ed-zone:focus-visible { outline: 2px solid var(--vedette); outline-off
 .lp-ed-reseau { width: 40px; height: 40px; display: grid; place-items: center; }
 .lp-ed-vide { padding: 9px 12px; font-size: 0.92rem; font-weight: 520; color: var(--doux); }
 
-.lp-ed-ajout {
-  display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; width: 100%;
-  border-radius: var(--r); border: 1px solid color-mix(in srgb, var(--texte) 14%, transparent);
-  background: transparent; color: color-mix(in srgb, var(--texte) 75%, transparent); font: inherit; font-size: 0.9rem; font-weight: 520; cursor: pointer;
-  transition: background-color 0.15s;
-}
-.lp-ed-ajout:hover { background: color-mix(in srgb, var(--texte) 6%, transparent); color: var(--texte); }
-.lp-ed-ajout:focus-visible { outline: 2px solid var(--vedette); outline-offset: 2px; }
 
 .lp-ed-bloc {
   position: relative; cursor: pointer; border-radius: calc(var(--rc) + 6px);

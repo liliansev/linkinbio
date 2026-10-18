@@ -77,7 +77,7 @@ export function MaPage({ compte, reglages, blocs, clics, onReglages, onOrdonner,
     photo: () => fichier.current?.click(),
     envoiPhoto: envoi,
     reseaux: () => setFeuille('reseaux'),
-    liste: (liste, rendu) => <BlocsEditables blocs={liste} rendu={rendu} clics={clics} onOrdonner={onOrdonner} onOuvrir={onOuvrir} onAjouter={() => setFeuille('ajout')}
+    liste: (liste, rendu) => <BlocsEditables blocs={liste} rendu={rendu} clics={clics} onOrdonner={onOrdonner} onOuvrir={onOuvrir}
       />,
   };
 
@@ -152,9 +152,9 @@ function ApercuDirect({ page }: { page: PagePublique }) {
   );
 }
 
-function BlocsEditables({ blocs, rendu, clics, onOrdonner, onOuvrir, onAjouter }: {
+function BlocsEditables({ blocs, rendu, clics, onOrdonner, onOuvrir }: {
   blocs: Bloc[]; rendu: (bloc: Bloc) => ReactNode; clics: Record<string, number>;
-  onOrdonner: (blocs: Bloc[]) => void; onOuvrir: (bloc: Bloc) => void; onAjouter: () => void;
+  onOrdonner: (blocs: Bloc[]) => void; onOuvrir: (bloc: Bloc) => void;
 }) {
   // Un glisser se termine par un clic : il ne doit pas ouvrir le bloc lâché.
   const glisse = useRef(0);
@@ -172,7 +172,6 @@ function BlocsEditables({ blocs, rendu, clics, onOrdonner, onOuvrir, onAjouter }
   const ouvrir = (bloc: Bloc) => { if (Date.now() - glisse.current > 250) onOuvrir(bloc); };
   return (
     <>
-      <button type="button" className="lp-ed-ajout" onClick={onAjouter}><Icone nom="ui-plus" taille={18} /> Ajouter un bloc</button>
       <DndContext sensors={capteurs} collisionDetection={closestCenter} onDragStart={() => vibrer(6)} onDragEnd={deplacer} onDragCancel={() => { glisse.current = Date.now(); }}>
         <SortableContext items={blocs.map(b => b.id)} strategy={verticalListSortingStrategy}>
           {blocs.map((bloc, i) => <BlocEditable key={bloc.id} bloc={bloc} i={i} clics={clics[bloc.id]} ouvrir={ouvrir}>{rendu(bloc)}</BlocEditable>)}
