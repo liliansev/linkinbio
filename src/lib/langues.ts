@@ -53,6 +53,7 @@ export function traduirePage(page: PagePublique, langue: LangueVisiteur): PagePu
 }
 
 const fr = {
+  j: 'j', h: 'h', ouTrouver: 'Le code est donné en story, en live ou dans la newsletter.',
   rien: 'Rien ici pour l’instant.',
   partager: 'Partager cette page', copie: 'Lien copié', reseaux: 'Réseaux', verifie: 'Compte vérifié',
   confidentialite: 'Confidentialité', signaler: 'Signaler', hopla: 'Une page faite avec Hopla', langue: 'Langue',
@@ -69,6 +70,7 @@ const fr = {
 export type Textes = typeof fr;
 
 const en: Textes = {
+  j: 'd', h: 'h', ouTrouver: 'The code is shared in stories, lives or the newsletter.',
   rien: 'Nothing here yet.',
   partager: 'Share this page', copie: 'Link copied', reseaux: 'Socials', verifie: 'Verified account',
   confidentialite: 'Privacy', signaler: 'Report', hopla: 'A page made with Hopla', langue: 'Language',
@@ -84,6 +86,7 @@ const en: Textes = {
 };
 
 const es: Textes = {
+  j: 'd', h: 'h', ouTrouver: 'El código se comparte en stories, directos o en la newsletter.',
   rien: 'Nada por aquí todavía.',
   partager: 'Compartir esta página', copie: 'Enlace copiado', reseaux: 'Redes', verifie: 'Cuenta verificada',
   confidentialite: 'Privacidad', signaler: 'Denunciar', hopla: 'Una página hecha con Hopla', langue: 'Idioma',
@@ -99,6 +102,7 @@ const es: Textes = {
 };
 
 const de: Textes = {
+  j: 'T', h: 'Std', ouTrouver: 'Den Code gibt es in Storys, Lives oder im Newsletter.',
   rien: 'Hier gibt es noch nichts.',
   partager: 'Seite teilen', copie: 'Link kopiert', reseaux: 'Netzwerke', verifie: 'Verifiziertes Konto',
   confidentialite: 'Datenschutz', signaler: 'Melden', hopla: 'Eine Seite gemacht mit Hopla', langue: 'Sprache',
@@ -114,6 +118,7 @@ const de: Textes = {
 };
 
 const it: Textes = {
+  j: 'g', h: 'h', ouTrouver: 'Il codice si trova nelle storie, nelle dirette o nella newsletter.',
   rien: 'Ancora niente qui.',
   partager: 'Condividi questa pagina', copie: 'Link copiato', reseaux: 'Social', verifie: 'Account verificato',
   confidentialite: 'Privacy', signaler: 'Segnala', hopla: 'Una pagina fatta con Hopla', langue: 'Lingua',
@@ -128,5 +133,14 @@ const it: Textes = {
   avis: (n, source) => `${n} recensioni${source ? ` su ${source}` : ''}`, sur5: 'su 5', noteAria: note => `Valutato ${note} su 5`,
 };
 
+/** Le français au « vous », pour une page qui vouvoie ses visiteurs. */
+const frVous: Textes = {
+  ...fr,
+  prenomAria: 'Votre prénom', email: 'votre@email.fr', emailAria: 'Votre adresse e-mail', inscrire: 'Je m’inscris',
+  mention: 'Votre adresse sert seulement à recevoir ces e-mails. Désinscription en un clic, quand vous voulez.',
+  tropDEssais: 'Trop d’essais. Réessayez dans quelques minutes.', echec: 'Ça n’est pas passé. Réessayez.',
+  garde: 'Votre place est gardée.', reserver: 'Réserver ma place',
+};
+
 export const TEXTES: Record<LangueVisiteur, Textes> = { fr, en, es, de, it };
-export const textes = (langue?: LangueVisiteur) => TEXTES[langue ?? 'fr'] ?? fr;
+export const textes = (langue?: LangueVisiteur, vous = false) => (langue ?? 'fr') === 'fr' && vous ? frVous : TEXTES[langue ?? 'fr'] ?? fr;

@@ -33,6 +33,7 @@ export const REGLAGES_DEFAUT: Reglages = {
   resumeHebdo: true,
   langues: [],
   bioTraduite: {},
+  vouvoiement: false,
   animation: 'orbite',
   bureau: 'onepage',
 };
@@ -53,11 +54,13 @@ export function blocsDefaut(id: () => string): Bloc[] {
 
 /** La page d'un compte qui vient d'être créé : le pseudo pour nom, rien d'autre, invisible pour Google. */
 export function reglagesNouveauCompte(pseudo: string): Reglages {
+  // « camille-dupont » devient « Camille Dupont » : un nom, pas une adresse.
+  const nom = pseudo.split('-').filter(Boolean).map(m => m.charAt(0).toUpperCase() + m.slice(1)).join(' ') || pseudo;
   return {
     ...REGLAGES_DEFAUT,
-    profil: { nom: pseudo, bio: '', avatar: '', badge: false },
+    profil: { nom, bio: '', avatar: '', badge: false },
     reseaux: [],
-    seo: { titre: `${pseudo} · Hopla`, description: '', indexable: false },
+    seo: { titre: `${nom} · Hopla`, description: '', indexable: false },
     animation: 'reflet',
     bureau: 'colonne',
   };

@@ -50,7 +50,7 @@ export function PageLiens({ page, apercu = false, edition }: { page: PagePubliqu
   const pseudo = compte.principal ? '' : compte.pseudo;
   const theme = themeParId(reglages.theme);
   const langue = page.langue ?? 'fr';
-  const t = textes(langue);
+  const t = textes(langue, reglages.vouvoiement);
   const [toast, setToast] = useState('');
 
   useEffect(() => { if (!apercu) suivre(pseudo, 'vue'); }, [apercu, pseudo]);
@@ -295,14 +295,14 @@ function CompteARebours({ bloc, depart, apercu, t, langue }: { bloc: Bloc; depar
   const s = Math.floor(reste / 1000), j = Math.floor(s / 86_400), h = Math.floor((s % 86_400) / 3600), m = Math.floor((s % 3600) / 60);
   const quand = new Date(ouverture).toLocaleString(LOCALES[langue], { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
   return (
-    <div className={`lp-carte lp-rebours ${bloc.teinte === 'accent' ? 'lp-accent' : ''}`} data-format="bandeau" role="timer" aria-label={`${bloc.titre} : ${t.ouvreLe(quand)}`}>
+    <div className={`lp-carte lp-rebours ${bloc.vedette && bloc.teinte === 'accent' ? 'lp-accent' : ''}`} data-format="bandeau" role="timer" aria-label={`${bloc.titre} : ${t.ouvreLe(quand)}`}>
       <span className="lp-carte-tuile" aria-hidden="true"><Icone nom={bloc.icone && ICONES[bloc.icone] ? bloc.icone : 'horloge'} taille={22} /></span>
       <span className="lp-carte-texte">
         <span className="lp-carte-titre">{bloc.titre || t.bientot}</span>
         <span className="lp-sous">{reste === 0 ? t.ouvert : t.ouvreLe(quand)}</span>
       </span>
       <span className="lp-rebours-chrono" aria-hidden="true">
-        {j > 0 ? <><b>{j}</b>j <b>{deux(h)}</b>h</> : <><b>{deux(h)}</b>:<b>{deux(m)}</b>:<b>{deux(s % 60)}</b></>}
+        {j > 0 ? <><b>{j}</b>{t.j} <b>{deux(h)}</b>{t.h}</> : <><b>{deux(h)}</b>:<b>{deux(m)}</b>:<b>{deux(s % 60)}</b></>}
       </span>
     </div>
   );
@@ -422,6 +422,7 @@ function Drop({ bloc, t, langue, apercu, pseudo, clic, cible }: { bloc: Bloc; t:
   const [restantes, setRestantes] = useState(bloc.restantes ?? null);
   const [ouvert, setOuvert] = useState(false);
   const [url, setUrl] = useState('');
+  const [garde, setGarde] = useState(false);
   const [etat, setEtat] = useState<{ type: 'repos' | 'envoi' | 'erreur'; message?: string }>({ type: 'repos' });
   const complet = places > 0 && restantes !== null && restantes <= 0 && !url;
   const badge = url ? '' : etatPlaces(restantes, places, t, LOCALES[langue]);
@@ -434,7 +435,7 @@ function Drop({ bloc, t, langue, apercu, pseudo, clic, cible }: { bloc: Bloc; t:
       const r = await fetch('/api/acces', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ page: pseudo, bloc: bloc.id, code }) });
       const corps = await r.json().catch(() => ({})) as { url?: string; restantes?: number | null };
       if (typeof corps.restantes === 'number') setRestantes(corps.restantes);
-      if (r.ok && corps.url) { setUrl(corps.url); setEtat({ type: 'repos' }); clic(); return; }
+      if (r.ok && corps.url) { setUrl(corps.url); setGarde(places > 0); setEtat({ type: 'repos' }); clic(); return; }
       setEtat({ type: 'erreur', message: r.status === 403 ? t.mauvaisCode : r.status === 410 ? t.complet : r.status === 429 ? t.tropDEssais : r.status === 404 ? t.indisponible : t.echec });
     } catch { setEtat({ type: 'erreur', message: t.echec }); }
   }
@@ -446,7 +447,7 @@ function Drop({ bloc, t, langue, apercu, pseudo, clic, cible }: { bloc: Bloc; t:
         <span className="lp-carte-tuile" aria-hidden="true"><Icone nom={url ? 'check' : bloc.icone && ICONES[bloc.icone] ? bloc.icone : 'cadenas'} taille={22} /></span>
         <span className="lp-carte-texte">
           <span className="lp-carte-titre">{bloc.titre || t.reserve}</span>
-          <span className="lp-sous">{url ? t.debloque : bloc.sousTitre || (avecCode ? t.reserve : t.reserver)}</span>
+          <span className="lp-sous">{url ? (garde ? t.garde : t.debloque) : bloc.sousTitre || (avecCode ? t.reserve : t.reserver)}</span>
           {badge && <span className="lp-drop-places">{badge}</span>}
         </span>
       </button>
@@ -461,7 +462,7 @@ function Drop({ bloc, t, langue, apercu, pseudo, clic, cible }: { bloc: Bloc; t:
           <span className="lp-btn-titre">{t.ouvrir}</span><Icone nom="ui-fleche" taille={16} />
         </a>
       )}
-      {etat.type === 'erreur' && <p className="lp-newsletter-erreur" role="alert">{etat.message}</p>}
+      {etat.type === 'erreur' && <p className="lp-newsletter-erreur" role="alert">{etat.message}{etat.message === t.mauvaisCode ? ` ${t.ouTrouver}` : ''}</p>}
     </div>
   );
 }

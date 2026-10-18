@@ -44,7 +44,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
   if (!b) return null;
   const maj = (champs: Partial<Bloc>) => setB({ ...b, ...champs });
   const type = TYPES.find(t => t.type === b.type)!;
-  const avecUrl = b.type === 'lien' || b.type === 'video' || b.type === 'preuve';
+  const avecUrl = b.type === 'lien' || b.type === 'video';
 
   /** Vérifie le bloc ; renvoie la version à enregistrer, ou rien si un champ manque. */
   function valider(): Bloc | null {
@@ -123,7 +123,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
         {erreur && <p role="alert" className="rounded-xl bg-red-500/15 px-3.5 py-2.5 text-[14px] text-red-200">{erreur}</p>}
 
         {avecUrl && (
-          <Champ label={b.type === 'video' ? 'Adresse de la vidéo YouTube' : b.type === 'preuve' ? 'Lien vers les avis (facultatif)' : 'Adresse'}
+          <Champ label={b.type === 'video' ? 'Adresse de la vidéo YouTube' : 'Adresse'}
             aide={b.type === 'lien' && reglages.ouvrirApps && appDe(adresse(b.url)) ? <span className="inline-flex items-center gap-1.5 text-peche/90"><Icone nom="ui-ok" taille={13} />Depuis Instagram ou TikTok, ce lien s’ouvre dans l’app {appDe(adresse(b.url))}.</span> : undefined}>
             <input className={classeSaisie} type="url" inputMode="url" autoCapitalize="none" autoCorrect="off" placeholder={b.type === 'video' ? 'https://youtu.be/…' : 'https://…'}
               value={b.url} onChange={e => maj({ url: e.target.value })} autoFocus={nouveau} />
@@ -131,6 +131,11 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
         )}
 
         {b.type === 'preuve' && <ChampsPreuve b={b} maj={maj} />}
+        {b.type === 'preuve' && (
+          <Champ label="Lien vers les avis (facultatif)" aide="Ta fiche Google, ta page Trustpilot : le bloc devient cliquable, et la preuve vérifiable.">
+            <input className={classeSaisie} type="url" inputMode="url" autoCapitalize="none" autoCorrect="off" placeholder="https://…" value={b.url} onChange={e => maj({ url: e.target.value })} />
+          </Champ>
+        )}
 
         {b.type !== 'derniere-video' && !(b.type === 'preuve' && b.preuve?.genre === 'temoignage') && (
           <Champ label={b.type === 'lien' ? 'Texte du bouton' : b.type === 'texte' ? 'Texte' : b.type === 'preuve' ? (b.preuve?.genre === 'compteur' ? 'Ce que compte ce chiffre' : 'Petit titre (facultatif)') : 'Titre'}>

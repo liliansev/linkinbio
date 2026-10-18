@@ -31,7 +31,7 @@ export function Champ({ label, aide, children }: { label: string; aide?: ReactNo
   );
 }
 
-export const classeSaisie = 'w-full rounded-xl border border-white/10 bg-white/[0.06] px-3.5 py-3 text-[16px] text-white placeholder:text-white/30 outline-none transition focus:border-peche/70 focus:bg-white/[0.09]';
+export const classeSaisie = 'w-full rounded-xl border border-white/10 bg-white/[0.06] px-3.5 py-3 text-[16px] text-white placeholder:text-white/45 outline-none transition focus:border-peche/70 focus:bg-white/[0.09]';
 
 export function Carte({ titre, action, children, className = '', id }: { titre?: string; action?: ReactNode; children: ReactNode; className?: string; id?: string }) {
   return (

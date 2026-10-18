@@ -146,6 +146,7 @@ export function validerReglages(v: unknown, base: Reglages): Reglages {
     partage: bool(o.partage, base.partage),
     ouvrirApps: bool(o.ouvrirApps, base.ouvrirApps ?? true),
     resumeHebdo: bool(o.resumeHebdo, base.resumeHebdo ?? true),
+    vouvoiement: bool(o.vouvoiement, base.vouvoiement ?? false),
     langues: Array.isArray(o.langues) ? LANGUES.filter(l => o.langues.includes(l)) : base.langues ?? [],
     bioTraduite: o.bioTraduite && typeof o.bioTraduite === 'object' ? Object.fromEntries(LANGUES.map(l => [l, texte(o.bioTraduite[l], 300)]).filter(([, b]) => b)) : base.bioTraduite ?? {},
     bureau: parmi(o.bureau, MISES_EN_PAGE_BUREAU, base.bureau),

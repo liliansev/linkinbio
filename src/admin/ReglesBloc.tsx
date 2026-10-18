@@ -161,7 +161,7 @@ export function RegleAcces({ b, maj, prises }: { b: Bloc; maj: (c: Partial<Bloc>
 
 /** Le texte du bloc dans les langues que la page propose. */
 export function RegleTraductions({ b, maj, langues }: { b: Bloc; maj: (c: Partial<Bloc>) => void; langues: Langue[] }) {
-  if (!langues.length) return null;
+  if (!langues.length) return <p className="px-1 text-[12.5px] leading-snug text-white/45">Ta page peut aussi parler anglais, espagnol, allemand ou italien : active les langues dans Réglages, puis traduis ce bloc ici.</p>;
   const champs: { cle: keyof Traduction; label: string; long?: boolean }[] = b.type === 'preuve' && b.preuve?.genre === 'temoignage'
     ? [{ cle: 'description', label: 'Témoignage', long: true }, { cle: 'sousTitre', label: 'Qui le dit' }]
     : [{ cle: 'titre', label: b.type === 'lien' ? 'Texte du bouton' : b.type === 'texte' ? 'Texte' : 'Titre', long: b.type === 'texte' },
@@ -204,7 +204,7 @@ export function ChampsPreuve({ b, maj }: { b: Bloc; maj: (c: Partial<Bloc>) => v
       <div>
         <span className="mb-1.5 block text-[13px] font-medium text-white/70">Ce que tu montres</span>
         <Segments label="Genre de preuve" valeur={p.genre} onChange={genre => majP({ genre })}
-          options={[{ id: 'note', nom: 'Une note' }, { id: 'compteur', nom: 'Un chiffre' }, { id: 'temoignage', nom: 'Un témoignage' }]} />
+          options={[{ id: 'note', nom: 'Note' }, { id: 'compteur', nom: 'Chiffre' }, { id: 'temoignage', nom: 'Témoignage' }]} />
       </div>
       {p.genre === 'note' && (
         <div className="grid grid-cols-2 gap-3">
@@ -213,14 +213,14 @@ export function ChampsPreuve({ b, maj }: { b: Bloc; maj: (c: Partial<Bloc>) => v
               onChange={e => majP({ note: Math.max(0, Math.min(5, Math.round(Number(e.target.value.replace(',', '.')) * 10) / 10 || 0)) })} />
           </Champ>
           <Champ label="Nombre d’avis">
-            <input className={classeSaisie} type="number" inputMode="numeric" min={0} value={p.nombre || ''} placeholder="132"
+            <input className={classeSaisie} type="number" inputMode="numeric" min={0} value={p.nombre || ''} placeholder="Ex. 132"
               onChange={e => majP({ nombre: Math.max(0, Math.round(Number(e.target.value) || 0)) })} />
           </Champ>
         </div>
       )}
       {p.genre === 'compteur' && (
         <Champ label="Le chiffre">
-          <input className={classeSaisie} type="number" inputMode="numeric" min={0} value={p.nombre || ''} placeholder="12400"
+          <input className={classeSaisie} type="number" inputMode="numeric" min={0} value={p.nombre || ''} placeholder="Ex. 12400"
             onChange={e => majP({ nombre: Math.max(0, Math.round(Number(e.target.value) || 0)) })} />
         </Champ>
       )}

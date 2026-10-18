@@ -108,7 +108,7 @@ test('comptes : chaque page est isolée des autres', async () => {
   assert.throws(() => db.creerCompte('camille@exemple.fr', 'autre'), /déjà un compte/);
   assert.throws(() => db.creerCompte('autre@exemple.fr', 'camille'), /déjà pris/);
   assert.equal(db.lireBlocs(camille.id).length, 0, 'une page neuve est vide');
-  assert.equal(db.lireReglages(camille.id).profil.nom, 'camille');
+  assert.equal(db.lireReglages(camille.id).profil.nom, 'Camille');
   assert.equal(db.lireReglages(camille.id).seo.indexable, false);
 
   // Un bloc de Lilian ne se lit, ne se modifie, ne se déplace ni ne se supprime depuis un autre compte.

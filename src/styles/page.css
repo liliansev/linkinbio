@@ -10,6 +10,8 @@
   --r: 999px;
   --rc: 24px;
   min-height: 100dvh;
+  /* Les halos du décor débordent : jamais de défilement de côté. */
+  overflow-x: clip;
   background: var(--fond-uni);
   background-image: var(--fond);
   background-attachment: fixed;
@@ -44,7 +46,7 @@
 
 .lp-partager {
   position: absolute; top: 14px; right: 16px;
-  width: 40px; height: 40px; border-radius: 999px; border: 0;
+  width: 44px; height: 44px; border-radius: 999px; border: 0;
   display: grid; place-items: center; cursor: pointer;
   color: var(--texte);
   background: color-mix(in srgb, var(--texte) 10%, transparent);
@@ -354,7 +356,7 @@
 .lp-signature { text-align: center; margin: 36px 0 0; font-size: 0.82rem; }
 .lp-signature a { color: var(--doux); text-decoration: none; }
 .lp-signature a:hover { color: var(--texte); }
-.lp-legal { display: flex; justify-content: center; gap: 14px; margin-top: 8px; font-size: 0.74rem; opacity: 0.8; }
+.lp-legal { display: flex; justify-content: center; gap: 14px; margin-top: 8px; font-size: 0.78rem; opacity: 0.85; }
 .lp-legal:first-child { margin-top: 0; }
 
 .lp-toast {
@@ -640,7 +642,7 @@ button.lp-ed-zone:focus-visible { outline: 2px solid var(--vedette); outline-off
 /* ---- « Rejoins ma liste » ---- */
 .lp-inscription form[data-prenom] input[name='prenom'] { flex: 1 1 100%; }
 .lp-piege { position: absolute !important; left: -9999px; width: 1px; height: 1px; opacity: 0; }
-.lp-mention { margin: 10px 0 0; font-size: 0.74rem; line-height: 1.4; color: var(--doux); }
+.lp-mention { margin: 10px 0 0; font-size: 0.78rem; line-height: 1.4; color: var(--doux); }
 .lp-mention a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
 
 /* ---- Mode drop : un lien à débloquer ---- */
@@ -662,7 +664,8 @@ button.lp-ed-zone:focus-visible { outline: 2px solid var(--vedette); outline-off
 }
 .lp-drop-form input::placeholder { color: var(--doux); letter-spacing: 0; }
 .lp-drop-form input:focus { outline: 2px solid var(--texte); outline-offset: 1px; }
-.lp-drop .lp-btn-compact, .lp-drop-ouvrir { --lp-fond: var(--vedette); --lp-encre: var(--vedette-texte); }
+/* Un seul aplat d'accent par drop : le bouton qui débloque. Le lien ouvert reprend la couleur des autres boutons. */
+[data-bouton='plein'] .lp-drop .lp-drop-form .lp-btn-compact { --lp-fond: var(--vedette); --lp-encre: var(--vedette-texte); }
 .lp-drop-ouvrir { gap: 8px; padding: 0 22px; animation: lp-drop-ouvre 0.45s cubic-bezier(0.16, 1, 0.3, 1); }
 .lp-drop .lp-newsletter-erreur { margin: 0; text-align: center; }
 @keyframes lp-drop-ouvre { from { opacity: 0; translate: 0 -6px; } }
@@ -696,7 +699,7 @@ a.lp-preuve:focus-visible { outline: 3px solid var(--texte); outline-offset: 3px
 /* ---- Langues ---- */
 .lp-langues { display: flex; justify-content: center; flex-wrap: wrap; gap: 6px; margin: 28px 0 0; }
 .lp-langues a {
-  min-height: 36px; display: inline-flex; align-items: center; padding: 0 12px; border-radius: 999px;
+  min-height: 44px; display: inline-flex; align-items: center; padding: 0 14px; border-radius: 999px;
   font-size: 0.8rem; font-weight: 560; color: var(--doux); text-decoration: none;
 }
 .lp-langues a:hover { color: var(--texte); }

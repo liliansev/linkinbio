@@ -119,6 +119,8 @@ export interface Reglages {
   langues: Langue[];
   /** La bio dans ces langues. */
   bioTraduite: Partial<Record<Langue, string>>;
+  /** Les mots de la page (formulaires, drops) vouvoient le visiteur plutôt que de le tutoyer. */
+  vouvoiement: boolean;
   /** Le mouvement des liens mis en avant (un bloc peut choisir le sien). */
   animation: Animation;
   /** La mise en page sur un grand écran ; sur téléphone, la page reste une colonne. */
