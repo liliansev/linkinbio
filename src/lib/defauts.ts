@@ -11,7 +11,7 @@ export const REGLAGES_DEFAUT: Reglages = {
   profil: {
     nom: 'Lilian Sevoumian',
     bio: 'J’automatise le travail des PME avec l’IA, n8n et Make. Vidéos, newsletter et formations.',
-    avatar: '/liens/avatar.webp',
+    avatar: '/avatar.webp',
     badge: true,
   },
   reseaux: [
@@ -53,7 +53,7 @@ export function reglagesNouveauCompte(pseudo: string): Reglages {
     ...REGLAGES_DEFAUT,
     profil: { nom: pseudo, bio: '', avatar: '', badge: false },
     reseaux: [],
-    seo: { titre: `${pseudo} · Mes liens`, description: '', indexable: false },
+    seo: { titre: `${pseudo} · Hopla`, description: '', indexable: false },
     animation: 'reflet',
     bureau: 'colonne',
   };

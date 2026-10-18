@@ -6,13 +6,13 @@ import css from '../styles/app.css?url';
 export const Route = createRootRoute({
   head: () => ({
     meta: [{ charSet: 'utf-8' }, { name: 'viewport', content: 'width=device-width, initial-scale=1, viewport-fit=cover' }],
-    links: [{ rel: 'stylesheet', href: css }, { rel: 'icon', type: 'image/png', href: '/liens/favicon.png' }],
+    links: [{ rel: 'stylesheet', href: css }, { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' }],
   }),
   shellComponent: Coquille,
   component: Outlet,
   notFoundComponent: () => (
     <main style={{ minHeight: '100dvh', display: 'grid', placeItems: 'center', background: '#0c121f', color: '#f4f1ec', fontFamily: 'Geist Variable, system-ui' }}>
-      <p>Cette page n’existe pas. <a href="/liens/" style={{ color: '#ffb38a' }}>Retour aux liens</a></p>
+      <p>Cette page n’existe pas. <a href="/" style={{ color: '#ffb38a' }}>Retour à Hopla</a></p>
     </main>
   ),
 });

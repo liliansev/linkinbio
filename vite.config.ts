@@ -4,7 +4,7 @@ import viteReact from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
-  base: '/liens/',
+  base: '/',
   server: { port: 4400 },
   resolve: { tsconfigPaths: true },
   ssr: { noExternal: true },

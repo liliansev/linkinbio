@@ -7,7 +7,7 @@ import * as fn from '../../server/fonctions.ts';
 
 export const Route = createFileRoute('/admin/')({
   loader: () => fn.lireAdmin(),
-  head: () => ({ meta: [{ title: 'Mes liens · back office' }, { name: 'robots', content: 'noindex, nofollow' }, { name: 'theme-color', content: '#0c121f' }] }),
+  head: () => ({ meta: [{ title: 'Hopla · back office' }, { name: 'robots', content: 'noindex, nofollow' }, { name: 'theme-color', content: '#0c121f' }] }),
   component: PageAdmin,
 });
 
@@ -25,7 +25,7 @@ function PageAdmin() {
     deconnexion: async () => { await fn.deconnecter(); },
     accepterCgu: async () => { await fn.accepterCgu(); },
     supprimerMonCompte: confirmation => fn.supprimerMonCompte({ data: confirmation }),
-    urlExport: '/liens/api/export',
+    urlExport: '/api/export',
     ouvrirPaiement: periode => fn.ouvrirPaiement({ data: periode }),
     ouvrirPortail: () => fn.ouvrirPortail(),
     comptes: acces.connecte && acces.etat.compte.principal ? {

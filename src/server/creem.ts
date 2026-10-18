@@ -61,7 +61,7 @@ export async function ouvrirPaiement(env: Env, fetchImpl: typeof fetch, compte: 
   const r = await appeler(c, fetchImpl, '/v1/checkouts', {
     product_id: c.produits[periode],
     request_id: `${compte.id}-${maintenant}`,
-    success_url: `${origine}/liens/admin?paiement=ok`,
+    success_url: `${origine}/admin?paiement=ok`,
     customer: { email: compte.email },
     metadata: { compte: compte.id },
   });

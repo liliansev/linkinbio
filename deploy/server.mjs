@@ -4,12 +4,25 @@ import { resolve, sep, extname } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { isIP } from 'node:net';
 import { createHash } from 'node:crypto';
-/* Le serveur de production de la page de liens. L'app (TanStack Start) est un
-   simple `fetch(Request)`, chargée à la première visite ; ses fichiers statiques
-   (scripts, styles, avatar) se servent directement. Tout vit sous BASE, comme
-   le `base` de vite.config.ts. */
-const BASE = '/liens';
-const origin = process.env.LIENS_ORIGINE ?? 'https://liliansevoumian.fr';
+/* Le serveur de production de Hopla. L'app (TanStack Start) est un simple
+   `fetch(Request)`, chargée à la première visite ; ses fichiers statiques
+   (scripts, styles, avatar) se servent directement. Deux noms, une seule app :
+   les pages sur l'origine publique (hopla.page), le back office sur celle de
+   l'admin (app.hopla.page). Chacun renvoie vers l'autre ce qui ne le concerne
+   pas. Sur un autre nom (localhost en dev), tout est servi tel quel. */
+const origin = process.env.LIENS_ORIGINE ?? 'https://hopla.page';
+const originAdmin = process.env.LIENS_ORIGINE_ADMIN ?? 'https://app.hopla.page';
+const hostPublic = new URL(origin).host;
+const hostAdmin = new URL(originAdmin).host;
+const STATIQUE = /^\/(assets\/[\w.-]+|[\w-]+\.(webp|png|svg|ico))$/;
+/* Les blocs « dernière vidéo » et « newsletter » de la page de Lilian lisent
+   l'API de son site. Elle est relayée par le réseau interne (LIENS_SITE, par
+   exemple http://liliansevoumian-app:3000) : la page reste sur une seule
+   origine, et l'inscription, qui n'accepte que l'origine du site, la reçoit. */
+const SITE_PUBLIC = 'https://liliansevoumian.fr';
+const DU_SITE = /^\/api\/(newsletter|derniere-video(\/vignette)?)$/;
+/** Ce que le back office sert lui-même ; le reste (pages, textes légaux) vit sur l'origine publique. */
+const DU_BACK_OFFICE = /^\/(admin(\/|$)|_serverFn\/|api\/|assets\/|media\/)/;
 const appRoot = fileURLToPath(new URL('../dist', import.meta.url));
 const mime = { html: 'text/html; charset=utf-8', css: 'text/css', js: 'text/javascript', mjs: 'text/javascript', json: 'application/json', svg: 'image/svg+xml', png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', avif: 'image/avif', gif: 'image/gif', ico: 'image/x-icon', woff: 'font/woff', woff2: 'font/woff2' };
 const etagOf = bytes => `"${createHash('sha1').update(bytes).digest('base64url').slice(0, 27)}"`;
@@ -21,11 +34,11 @@ async function readBody(req, limit) {
   return Buffer.concat(chunks);
 }
 /** À n'exposer que derrière Caddy, qui doit écraser X-Real-IP avec l'IP du visiteur. */
-export function createLiensServer({ appDir = appRoot } = {}) {
+export function createLiensServer({ appDir = appRoot, site = process.env.LIENS_SITE } = {}) {
   let appPromise;
   async function liens(req, url, ip, send) {
-    const local = url.pathname.slice(BASE.length);
-    if (/^\/(assets\/[\w.-]+|[\w-]+\.(webp|png|svg|ico))$/.test(local)) {
+    const local = url.pathname;
+    if (STATIQUE.test(local)) {
       const base = await realpath(resolve(appDir, 'client'));
       try {
         const filename = await realpath(resolve(base, `.${local}`));
@@ -56,6 +69,20 @@ export function createLiensServer({ appDir = appRoot } = {}) {
     out['Referrer-Policy'] ??= local.startsWith('/admin') ? 'no-referrer' : 'strict-origin-when-cross-origin';
     return send(response.status, Buffer.from(await response.arrayBuffer()), out);
   }
+  async function relaisSite(req, url, ip, send) {
+    if (!site) return send(404, 'Not found', { 'Cache-Control': 'no-store' });
+    const headers = new Headers();
+    for (const key of ['user-agent', 'content-type']) if (typeof req.headers[key] === 'string') headers.set(key, req.headers[key]);
+    if (req.headers.origin) headers.set('origin', req.headers.origin === origin ? SITE_PUBLIC : req.headers.origin);
+    if (ip) headers.set('x-real-ip', ip);
+    const body = ['GET', 'HEAD'].includes(req.method) ? undefined : await readBody(req, 4096);
+    let response;
+    try { response = await fetch(`${site}${url.pathname}${url.search}`, { method: req.method, headers, body, redirect: 'manual', signal: AbortSignal.timeout(10_000) }); }
+    catch { throw new HttpError(502); }
+    const out = {};
+    for (const key of ['content-type', 'cache-control', 'etag', 'allow']) { const v = response.headers.get(key); if (v) out[key.replace(/(^|-)\w/g, c => c.toUpperCase())] = v; }
+    return send(response.status, Buffer.from(await response.arrayBuffer()), out);
+  }
   const server = createServer((req, res) => {
     function send(status, value = '', headers = {}) {
       const bytes = Buffer.isBuffer(value) ? value : Buffer.from(value);
@@ -69,10 +96,18 @@ export function createLiensServer({ appDir = appRoot } = {}) {
       if (decoded.includes('\0') || decoded.includes('\\') || decoded.split('/').some(p => p === '..' || p === '.')) throw new HttpError(400);
       const url = new URL(req.url, origin);
       const ip = typeof req.headers['x-real-ip'] === 'string' && isIP(req.headers['x-real-ip']) ? req.headers['x-real-ip'] : null;
-      if (url.pathname === '/healthz') return send(200, 'ok', { 'Cache-Control': 'no-store' });
-      if (url.pathname === '/' || url.pathname === BASE) return send(308, '', { Location: `${BASE}/${url.search}` });
-      if (url.pathname.startsWith(`${BASE}/`)) return liens(req, url, ip, send);
-      return send(404, 'Not found', { 'Cache-Control': 'no-store' });
+      const chemin = url.pathname;
+      if (chemin === '/healthz') return send(200, 'ok', { 'Cache-Control': 'no-store' });
+      // Les anciennes adresses, liliansevoumian.fr/liens/... : la page de Lilian est /lilian, le reste garde son chemin.
+      if (chemin === '/liens' || chemin === '/liens/') return send(308, '', { Location: `/lilian${url.search}` });
+      if (chemin.startsWith('/liens/')) return send(308, '', { Location: `${chemin.slice(6)}${url.search}` });
+      // Un seul nom pour les deux (un essai en local) : rien à renvoyer d'un côté à l'autre.
+      const host = hostPublic === hostAdmin ? '' : (req.headers.host ?? '').toLowerCase();
+      if (host === hostPublic && /^\/admin(\/|$)/.test(chemin)) return send(308, '', { Location: `${originAdmin}${chemin}${url.search}` });
+      if (host === hostAdmin && chemin === '/') return send(302, '', { Location: '/admin', 'Cache-Control': 'no-store' });
+      if (host === hostAdmin && !DU_BACK_OFFICE.test(chemin) && !STATIQUE.test(chemin)) return send(308, '', { Location: `${origin}${chemin}${url.search}` });
+      if (DU_SITE.test(chemin)) return relaisSite(req, url, ip, send);
+      return liens(req, url, ip, send);
     }
     handle().catch(error => { if (!res.headersSent) send(error instanceof HttpError ? error.status : 500, error instanceof HttpError ? error.message : 'Internal server error', { 'Cache-Control': 'no-store' }); else res.destroy(); if (!(error instanceof HttpError)) console.error(error); });
   });

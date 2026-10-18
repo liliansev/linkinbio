@@ -43,7 +43,7 @@ async function telecharger(depart: string, limite: number, accepte: string) {
     await verifier(url);
     const reponse = await fetch(url, {
       redirect: 'manual', signal: AbortSignal.timeout(DELAI),
-      headers: { accept: accepte, 'user-agent': 'Mozilla/5.0 (compatible; liliansevoumian-liens/1.0; +https://liliansevoumian.fr/liens/)' },
+      headers: { accept: accepte, 'user-agent': 'Mozilla/5.0 (compatible; Hopla/1.0; +https://hopla.page)' },
     });
     if (reponse.status >= 300 && reponse.status < 400 && reponse.headers.get('location')) {
       url = new URL(reponse.headers.get('location')!, url);

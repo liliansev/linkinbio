@@ -33,7 +33,7 @@ for ((i=0;i<40;i++)); do
   sleep 2
 done
 [[ $healthy == 1 ]]
-docker exec "$candidate" node -e "fetch('http://localhost:3000/liens/').then(async r=>{if(r.status!==200||!(await r.text()).includes('</html>'))process.exit(1)}).catch(()=>process.exit(1))"
+docker exec "$candidate" node -e "fetch('http://localhost:3000/lilian').then(async r=>{if(r.status!==200||!(await r.text()).includes('</html>'))process.exit(1)}).catch(()=>process.exit(1))"
 cutover=1
 run_compose "$config" up -d --wait --wait-timeout 90
 curl --fail --silent http://127.0.0.1:3101/healthz >/dev/null

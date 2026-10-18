@@ -27,7 +27,7 @@ export interface Bloc {
   description: string;
   /** Le nom d'un picto ou d'un réseau (`fusee`, `youtube`...), voir `icones.ts`. */
   icone: string;
-  /** Vignette : une URL `/liens/media/...` ou https. */
+  /** Vignette : une URL `/media/...` ou https. */
   image: string;
   /** Visible sur la page publique. Privé = seulement dans le back office. */
   public: boolean;
@@ -77,7 +77,7 @@ export interface Reglages {
 export const MISES_EN_PAGE_BUREAU = ['colonne', 'profil', 'onepage'] as const;
 export type MiseEnPageBureau = (typeof MISES_EN_PAGE_BUREAU)[number];
 
-/** Le compte de Lilian, servi sur /liens/. Les autres comptes le sont sur /liens/<pseudo>. */
+/** Le compte de Lilian, servi sur hopla.page/lilian comme les autres sur hopla.page/<pseudo>. */
 export const PRINCIPAL = 'principal';
 
 /** Les blocs branchés sur les outils de Lilian (sa chaîne YouTube, sa newsletter) : réservés à sa page. */
@@ -86,9 +86,16 @@ export const TYPES_PRINCIPAL: readonly TypeBloc[] = ['derniere-video', 'newslett
 /** Qui possède la page : de quoi construire son adresse. */
 export interface ComptePage { pseudo: string; principal: boolean }
 
-export const ORIGINE_PUBLIQUE = 'https://liliansevoumian.fr';
-export const cheminPage = (c: ComptePage) => (c.principal ? '/liens/' : `/liens/${c.pseudo}`);
+/** Les pages publiques, et le back office sur son propre nom (son cookie n'est jamais envoyé aux pages). */
+export const ORIGINE_PUBLIQUE = 'https://hopla.page';
+export const ORIGINE_ADMIN = 'https://app.hopla.page';
+export interface Origines { page: string; admin: string }
+/** Le site de Lilian, l'éditeur du service. */
+export const SITE_LILIAN = 'https://liliansevoumian.fr';
+export const cheminPage = (c: ComptePage) => `/${c.pseudo}`;
 export const urlPage = (c: ComptePage) => `${ORIGINE_PUBLIQUE}${cheminPage(c)}`;
+/** `https://hopla.page/camille` devient `hopla.page/camille`. */
+export const sansSchema = (url: string) => url.replace(/^https?:\/\//, '');
 
 /** Une ligne de la liste des comptes, dans le back office de Lilian. */
 export interface CompteResume {
@@ -110,7 +117,7 @@ export interface CompteResume {
 export interface PagePublique {
   reglages: Reglages;
   blocs: Bloc[];
-  /** `pro` retire la mention « Une page faite avec Mes liens ». */
+  /** `pro` retire la mention « Une page faite avec Hopla ». */
   compte: ComptePage & { pro: boolean };
 }
 

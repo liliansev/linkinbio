@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { CSSProperties, FormEvent, ReactNode } from 'react';
 import type { Bloc, PagePublique } from '../lib/types.ts';
-import { animationDe, idYoutube, urlPage } from '../lib/types.ts';
+import { ORIGINE_PUBLIQUE, animationDe, idYoutube, urlPage } from '../lib/types.ts';
 import type { Reglages } from '../lib/types.ts';
 import { themeParId, variablesTheme } from '../lib/themes.ts';
 import { ICONES } from '../lib/icones.ts';
@@ -19,16 +19,8 @@ function suivre(page: string, type: 'vue' | 'clic', bloc?: string) {
     const params = new URLSearchParams(location.search);
     const corps = JSON.stringify({ page, type, bloc, utm: params.get('utm_source') ?? params.get('s') ?? '', referent: document.referrer });
     const blob = new Blob([corps], { type: 'text/plain' });
-    if (!navigator.sendBeacon?.('/liens/api/evenement', blob)) fetch('/liens/api/evenement', { method: 'POST', body: corps, keepalive: true }).catch(() => {});
+    if (!navigator.sendBeacon?.('/api/evenement', blob)) fetch('/api/evenement', { method: 'POST', body: corps, keepalive: true }).catch(() => {});
   } catch { /* les statistiques ne doivent jamais gêner la visite */ }
-}
-
-/** Un goal DataFast (voir DATAFAST-FUNNEL.md) ; la file d'attente posée dans le head le garde jusqu'au chargement du script. */
-export function goal(nom: string, props: Record<string, string> = {}) {
-  try {
-    const df = (window as unknown as { datafast?: (n: string, p: Record<string, string>) => void }).datafast;
-    if (typeof df === 'function') df(nom, Object.fromEntries(Object.entries(props).map(([k, v]) => [k, v.slice(0, 120)])));
-  } catch { /* idem */ }
 }
 
 export function PageLiens({ page, apercu = false }: { page: PagePublique; apercu?: boolean }) {
@@ -44,7 +36,6 @@ export function PageLiens({ page, apercu = false }: { page: PagePublique; apercu
   const clic = (bloc: Bloc) => {
     if (apercu) return;
     suivre(pseudo, 'clic', bloc.id);
-    goal('liens_click', { lien: bloc.titre || bloc.url, type: bloc.type, vedette: bloc.vedette ? 'oui' : 'non' });
   };
   const cible = apercu ? { target: '_blank' } : {};
 
@@ -60,7 +51,7 @@ export function PageLiens({ page, apercu = false }: { page: PagePublique; apercu
   const reseaux = reglages.reseaux.some(r => r.url) && (
     <nav className="lp-reseaux" aria-label="Réseaux">
       {reglages.reseaux.filter(r => r.url).map(r => (
-        <a key={r.reseau + r.url} href={r.url} aria-label={NOMS_RESEAUX[r.reseau]} rel="me noopener" onClick={() => { if (!apercu) goal('liens_click', { lien: NOMS_RESEAUX[r.reseau], type: 'reseau', vedette: 'non' }); }} {...cible}>
+        <a key={r.reseau + r.url} href={r.url} aria-label={NOMS_RESEAUX[r.reseau]} rel="me noopener" {...cible}>
           <Icone nom={r.reseau} taille={22} />
         </a>
       ))}
@@ -100,10 +91,10 @@ export function PageLiens({ page, apercu = false }: { page: PagePublique; apercu
           ? <a href="https://liliansevoumian.fr" {...cible}>liliansevoumian.fr</a>
           : <>
             {/* La mention disparaît en Pro ; les liens légaux restent sur toutes les pages. */}
-            {!compte.pro && <a href="https://liliansevoumian.fr/liens/" {...cible}>Une page faite avec Mes liens</a>}
+            {!compte.pro && <a href={ORIGINE_PUBLIQUE} {...cible}>Une page faite avec Hopla</a>}
             <span className="lp-legal">
-              <a href="/liens/legal/confidentialite" {...cible}>Confidentialité</a>
-              <a href={`/liens/signaler?page=${compte.pseudo}`} rel="nofollow" {...cible}>Signaler</a>
+              <a href="/legal/confidentialite" {...cible}>Confidentialité</a>
+              <a href={`/signaler?page=${compte.pseudo}`} rel="nofollow" {...cible}>Signaler</a>
             </span>
           </>}</p>
       </div>
@@ -258,7 +249,6 @@ function Newsletter({ bloc, apercu }: { bloc: Bloc; apercu: boolean }) {
     try {
       const r = await fetch('/api/newsletter', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, website: '' }) });
       const corps = await r.json().catch(() => ({}));
-      if (r.ok) goal('liens_newsletter');
       setEtat(r.ok ? { type: 'ok', message: corps.message ?? 'C’est noté, regardez votre boîte.' } : { type: 'erreur', message: corps.message ?? 'L’inscription n’est pas passée. Réessayez.' });
     } catch { setEtat({ type: 'erreur', message: 'L’inscription n’est pas passée. Réessayez.' }); }
   }

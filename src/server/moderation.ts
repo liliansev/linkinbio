@@ -1,4 +1,5 @@
-import { PRINCIPAL } from '../lib/types.ts';
+import { PRINCIPAL, sansSchema } from '../lib/types.ts';
+import type { Origines } from '../lib/types.ts';
 import { CONTACT_LEGAL, MOTIFS_SIGNALEMENT, nomMotif } from '../lib/legal.ts';
 import { ajouterSignalement, changerStatut, compteParId, compteParPseudo, signalementParId, signalementsDepuis, supprimerCompte, traiterSignalement } from './db.ts';
 import { adresseAdmin } from './auth.ts';
@@ -28,7 +29,7 @@ function tropDeSignalements(ip: string, maintenant: number) {
 export async function signaler(
   env: Env, fetchImpl: typeof fetch,
   entree: { page: unknown; motif: unknown; details: unknown; email: unknown; bonneFoi: unknown },
-  ip: string, origine: string, maintenant = Date.now(),
+  ip: string, origines: Origines, maintenant = Date.now(),
 ): Promise<Reponse> {
   const page = typeof entree.page === 'string' ? entree.page.toLowerCase().slice(0, 40) : '';
   const compte = page ? compteParPseudo(page) : undefined;
@@ -43,18 +44,18 @@ export async function signaler(
   if (tropDeSignalements(ip, maintenant) || signalementsDepuis(maintenant - 86_400_000) >= 200) return { ok: false, message: 'Trop de signalements. Réessaie plus tard, ou écris à ' + CONTACT_LEGAL + '.' };
 
   ajouterSignalement({ compte: compte.id, motif, details, email }, maintenant);
-  const lienPage = `${origine}/liens/${compte.pseudo}`;
+  const lienPage = `${origines.page}/${compte.pseudo}`;
   await envoyer(env, fetchImpl, {
     to: adresseAdmin(env), replyTo: email || undefined,
     subject: `Signalement : ${compte.pseudo} (${nomMotif(motif)})`,
-    html: enveloppe(`<p>Nouveau signalement sur <a href="${lienPage}">${echapper(compte.pseudo)}</a>.</p><p><strong>${echapper(nomMotif(motif))}</strong></p><p style="white-space:pre-wrap">${echapper(details)}</p><p>À traiter dans l’onglet Comptes du back office : <a href="${origine}/liens/admin">${origine.replace(/^https?:\/\//, '')}/liens/admin</a>.</p>`),
-    text: `Nouveau signalement sur ${lienPage}\n${nomMotif(motif)}\n\n${details}\n\nÀ traiter dans l’onglet Comptes : ${origine}/liens/admin`,
+    html: enveloppe(`<p>Nouveau signalement sur <a href="${lienPage}">${echapper(compte.pseudo)}</a>.</p><p><strong>${echapper(nomMotif(motif))}</strong></p><p style="white-space:pre-wrap">${echapper(details)}</p><p>À traiter dans l’onglet Comptes du back office : <a href="${origines.admin}/admin">${sansSchema(origines.admin)}</a>.</p>`),
+    text: `Nouveau signalement sur ${lienPage}\n${nomMotif(motif)}\n\n${details}\n\nÀ traiter dans l’onglet Comptes : ${origines.admin}/admin`,
   });
   if (email) {
     await envoyer(env, fetchImpl, {
       to: email, replyTo: CONTACT_LEGAL,
       subject: 'Ton signalement est bien reçu',
-      html: enveloppe(`<p>Bonjour,</p><p>Ton signalement de la page <a href="${lienPage}">${echapper(lienPage.replace(/^https?:\/\//, ''))}</a> (${echapper(nomMotif(motif))}) est bien reçu. Il sera examiné par une personne, et tu recevras la décision à cette adresse.</p>`),
+      html: enveloppe(`<p>Bonjour,</p><p>Ton signalement de la page <a href="${lienPage}">${echapper(sansSchema(lienPage))}</a> (${echapper(nomMotif(motif))}) est bien reçu. Il sera examiné par une personne, et tu recevras la décision à cette adresse.</p>`),
       text: `Ton signalement de ${lienPage} (${nomMotif(motif)}) est bien reçu. Il sera examiné par une personne, et tu recevras la décision à cette adresse.`,
     });
   }
@@ -64,15 +65,15 @@ export async function signaler(
 /** La motivation envoyée au compte (DSA, article 17) : ce qui a été décidé, pourquoi, et comment contester. */
 export async function motiver(env: Env, fetchImpl: typeof fetch, compte: { email: string; pseudo: string }, action: 'suspendu' | 'supprime', motif: string): Promise<boolean> {
   if (!compte.email || !motif.trim()) return false;
-  const quoi = action === 'suspendu' ? 'Ta page de liens est suspendue' : 'Ton compte Mes liens est supprimé';
+  const quoi = action === 'suspendu' ? 'Ta page Hopla est suspendue' : 'Ton compte Hopla est supprimé';
   const suite = action === 'suspendu'
     ? 'Ta page n’est plus visible et tu ne peux plus te connecter au back office. Tes données sont conservées : si la décision est levée, tout revient tel quel.'
     : 'Ta page, tes liens, tes images et tes statistiques sont effacés.';
   return envoyer(env, fetchImpl, {
     to: compte.email, replyTo: CONTACT_LEGAL,
     subject: quoi,
-    html: enveloppe(`<p>Bonjour,</p><p>${quoi} (pseudo « ${echapper(compte.pseudo)} »).</p><p><strong>Motif :</strong></p><p style="white-space:pre-wrap">${echapper(motif.trim())}</p><p>${suite}</p><p>Cette décision a été prise par une personne, au regard des conditions générales d’utilisation de Mes liens. Tu peux la contester en répondant simplement à ce message : ta réponse sera examinée et tu recevras une décision motivée.</p>`),
-    text: `${quoi} (pseudo « ${compte.pseudo} »).\n\nMotif :\n${motif.trim()}\n\n${suite}\n\nCette décision a été prise par une personne, au regard des conditions générales d’utilisation de Mes liens. Tu peux la contester en répondant à ce message.`,
+    html: enveloppe(`<p>Bonjour,</p><p>${quoi} (pseudo « ${echapper(compte.pseudo)} »).</p><p><strong>Motif :</strong></p><p style="white-space:pre-wrap">${echapper(motif.trim())}</p><p>${suite}</p><p>Cette décision a été prise par une personne, au regard des conditions générales d’utilisation de Hopla. Tu peux la contester en répondant simplement à ce message : ta réponse sera examinée et tu recevras une décision motivée.</p>`),
+    text: `${quoi} (pseudo « ${compte.pseudo} »).\n\nMotif :\n${motif.trim()}\n\n${suite}\n\nCette décision a été prise par une personne, au regard des conditions générales d’utilisation de Hopla. Tu peux la contester en répondant à ce message.`,
   });
 }
 
@@ -105,8 +106,8 @@ export async function traiter(env: Env, fetchImpl: typeof fetch, id: string, sta
     await envoyer(env, fetchImpl, {
       to: s.email, replyTo: CONTACT_LEGAL,
       subject: 'La décision sur ton signalement',
-      html: enveloppe(`<p>Bonjour,</p><p>Ton signalement de la page ${echapper(`${origine.replace(/^https?:\/\//, '')}/liens/${s.pseudo}`)} a été examiné. ${issue}</p>${texte ? `<p style="white-space:pre-wrap">${echapper(texte)}</p>` : ''}<p>Tu peux contester cette décision en répondant à ce message.</p>`),
-      text: `Ton signalement de ${origine}/liens/${s.pseudo} a été examiné. ${issue}\n\n${texte}\n\nTu peux contester cette décision en répondant à ce message.`,
+      html: enveloppe(`<p>Bonjour,</p><p>Ton signalement de la page ${echapper(`${sansSchema(origine)}/${s.pseudo}`)} a été examiné. ${issue}</p>${texte ? `<p style="white-space:pre-wrap">${echapper(texte)}</p>` : ''}<p>Tu peux contester cette décision en répondant à ce message.</p>`),
+      text: `Ton signalement de ${origine}/${s.pseudo} a été examiné. ${issue}\n\n${texte}\n\nTu peux contester cette décision en répondant à ce message.`,
     });
   }
 }
