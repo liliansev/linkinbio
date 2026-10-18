@@ -188,7 +188,39 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
 
   return (
     <div className="adm min-h-dvh bg-nuit font-sans text-white antialiased">
-      <header className="sticky top-0 z-30 border-b border-white/[0.06] bg-nuit/85 backdrop-blur-xl">
+      {/* Sur ordinateur, une barre latérale comme dans tout SaaS : la marque, les sections, l'état de l'enregistrement, la page en ligne. */}
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-60 flex-col border-r border-white/[0.06] bg-[#0a0f1a] px-3 py-4 lg:flex" aria-label="Navigation">
+        <div className="flex items-center gap-2.5 px-2 pb-5">
+          <svg viewBox="0 0 256 256" className="h-7 w-7" aria-hidden="true"><rect width="256" height="256" rx="64" fill="#ffb38a" /><g fill="#0c121f" transform="translate(40 40) scale(0.6875)"><path d="M165.66,90.34a8,8,0,0,1,0,11.32l-64,64a8,8,0,0,1-11.32-11.32l64-64A8,8,0,0,1,165.66,90.34ZM215.6,40.4a56,56,0,0,0-79.2,0L106.34,70.45a8,8,0,0,0,11.32,11.32l30.06-30a40,40,0,0,1,56.57,56.56l-30.07,30.06a8,8,0,0,0,11.31,11.32L215.6,119.6a56,56,0,0,0,0-79.2ZM138.34,174.22l-30.06,30.06a40,40,0,1,1-56.56-56.57l30.05-30.05a8,8,0,0,0-11.32-11.32L40.4,136.4a56,56,0,0,0,79.2,79.2l30.06-30.07a8,8,0,0,0-11.32-11.31Z" /></g></svg>
+          <span className="text-[15px] font-semibold tracking-[-0.01em]">Hopla</span>
+        </div>
+        <nav className="flex flex-col gap-0.5" aria-label="Sections">
+          {onglets.map(o => (
+            <button key={o.id} type="button" onClick={() => setOnglet(o.id)} aria-current={onglet === o.id ? 'page' : undefined}
+              className={`flex min-h-9 items-center gap-2.5 rounded-lg px-2.5 text-[13.5px] font-medium transition ${onglet === o.id ? 'bg-white/[0.08] text-white' : 'text-white/55 hover:bg-white/[0.04] hover:text-white'}`}>
+              <Picto taille={18}>{o.icone}</Picto>{o.nom}
+            </button>
+          ))}
+        </nav>
+        <div className="mt-auto flex flex-col gap-3">
+          <a href={demo ? '#page' : cheminPage(compte)} target={demo ? undefined : '_blank'} rel="noopener"
+            className="flex min-h-9 items-center justify-between gap-2 rounded-lg px-2.5 text-[13px] text-white/60 transition hover:bg-white/[0.04] hover:text-white">
+            <span className="truncate" translate="no">{urlPage(compte).replace(/^https?:\/\//, '')}</span><Icone nom="ui-fleche" taille={14} />
+          </a>
+          <div className="flex items-center gap-2.5 border-t border-white/[0.06] px-1 pt-3">
+            {reglages.profil.avatar ? <img src={reglages.profil.avatar} alt="" className="h-8 w-8 rounded-full object-cover" /> : <span className="h-8 w-8 rounded-full bg-white/10" />}
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[13.5px] font-medium leading-tight">{reglages.profil.nom || 'Hopla'}</p>
+              <p className={`flex items-center gap-1.5 text-[11.5px] leading-tight ${sauvegarde === 'erreur' ? 'text-red-300' : 'text-white/40'}`}>
+                <span className={`h-1.5 w-1.5 rounded-full ${sauvegarde === 'encours' ? 'animate-pulse bg-amber-300' : sauvegarde === 'erreur' ? 'bg-red-400' : 'bg-emerald-400'}`} />{indicateur}
+              </p>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <div className="lg:pl-60">
+      <header className="sticky top-0 z-30 border-b border-white/[0.06] bg-nuit/85 backdrop-blur-xl lg:hidden">
         <div className="mx-auto flex h-16 max-w-6xl items-center gap-3 px-4">
           {reglages.profil.avatar ? <img src={reglages.profil.avatar} alt="" className="h-9 w-9 rounded-full object-cover" /> : <span className="h-9 w-9 rounded-full bg-white/10" />}
           <div className="min-w-0 flex-1">
@@ -197,14 +229,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
               <span className={`h-1.5 w-1.5 rounded-full ${sauvegarde === 'encours' ? 'animate-pulse bg-amber-300' : sauvegarde === 'erreur' ? 'bg-red-400' : 'bg-emerald-400'}`} />{indicateur}
             </p>
           </div>
-          <nav className="mr-2 hidden gap-1 rounded-full bg-white/[0.05] p-1 lg:flex" aria-label="Sections">
-            {onglets.map(o => (
-              <button key={o.id} type="button" onClick={() => setOnglet(o.id)} aria-current={onglet === o.id ? 'page' : undefined}
-                className={`min-h-9 rounded-full px-4 text-[14px] font-medium transition ${onglet === o.id ? 'bg-white text-nuit' : 'text-white/65 hover:text-white'}`}>{o.nom}</button>
-            ))}
-          </nav>
           <button type="button" onClick={() => setApercu(true)} className="flex min-h-9 items-center gap-1.5 rounded-full bg-white/[0.07] px-3.5 text-[13.5px] font-medium transition active:scale-95 lg:hidden">Aperçu</button>
-          <a href={demo ? '#page' : cheminPage(compte)} target={demo ? undefined : '_blank'} rel="noopener" className="hidden min-h-10 items-center gap-1.5 rounded-full bg-white px-4 text-[14px] font-semibold text-nuit transition hover:brightness-105 sm:inline-flex">Voir ma page <Icone nom="ui-fleche" taille={16} /></a>
         </div>
       </header>
 
@@ -213,9 +238,9 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
       )}
 
       <div className={`mx-auto max-w-6xl px-4 ${onglet === 'page' ? '' : 'lg:grid lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-10'}`}>
-        <main className={`mx-auto w-full max-w-xl lg:pb-12 ${onglet === 'page' ? 'pb-28 lg:pt-5' : 'pt-5 pb-28'}`}>
+        <main className={`mx-auto w-full max-w-xl lg:pb-12 ${onglet === 'page' ? 'pb-28 lg:pt-8' : 'pt-5 pb-28 lg:pt-8'}`}>
           <div key={onglet} className="adm-onglet">
-          <h1 className={`mb-4 text-[22px] font-semibold tracking-[-0.02em] lg:hidden ${onglet === 'page' ? 'sr-only' : ''}`}>{onglets.find(o => o.id === onglet)!.nom}</h1>
+          <h1 className={`mb-4 text-[22px] font-semibold tracking-[-0.02em] ${onglet === 'page' ? 'sr-only' : ''}`}>{onglets.find(o => o.id === onglet)!.nom}</h1>
           {onglet === 'page' && <MaPage compte={compte} reglages={reglages} blocs={blocs} clics={clics} onReglages={changerReglages} onOrdonner={ordonner}
             onOuvrir={b => setEdition({ bloc: b, nouveau: false })} onAjouter={b => setEdition({ bloc: b, nouveau: true })} envoyerImage={d => api.envoyerImage(d)} />}
           {onglet === 'stats' && <OngletStats charger={chargerStats} limite={initial.paiement && !compte.pro} onPro={versAbonnement}
@@ -227,10 +252,12 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
         </main>
 
         {onglet !== 'page' && (
-          <aside className="sticky top-16 hidden h-[calc(100dvh-4rem)] items-center justify-center lg:flex" aria-label="Aperçu de ta page">
+          <aside className="sticky top-0 hidden h-dvh items-center justify-center lg:flex" aria-label="Aperçu de ta page">
             <Telephone page={page} />
           </aside>
         )}
+      </div>
+
       </div>
 
       <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-white/[0.07] bg-nuit/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl lg:hidden" aria-label="Sections">
