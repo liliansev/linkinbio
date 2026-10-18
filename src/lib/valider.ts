@@ -86,6 +86,7 @@ export function validerBloc(v: unknown, id: string): Bloc {
     compteARebours: bool(o.compteARebours, false),
     creneau: creneau(o.creneau),
     audience: audience(o.audience),
+    demanderPrenom: bool(o.demanderPrenom, false),
   };
 }
 

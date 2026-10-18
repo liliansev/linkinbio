@@ -415,3 +415,35 @@ test('statistiques : les clics ouverts dans leur app, depuis un navigateur inté
   enregistrer({ type: 'clic', bloc: 'yt', utm: '', referent: '', app: true }, ctx('9.9.9.3', 'Mozilla/5.0 (Macintosh) Safari/605'));
   assert.deepEqual(db.stats(P, 7).apps, { integres: 2, versApp: 1, ouverts: 1 }, 'un navigateur ordinaire ne compte pas, même s’il le prétend');
 });
+
+test('Rejoins ma liste : inscrit gardé, envoyé chez Brevo, export CSV sans formule', async () => {
+  const liste = await import('./liste.ts');
+  const env = { LIENS_CLE_INTEGRATIONS: 'test' };
+  const chiffre = liste.chiffrer(env, 'xkeysib-secret');
+  assert.notEqual(chiffre, 'xkeysib-secret');
+  assert.equal(liste.dechiffrer(env, chiffre), 'xkeysib-secret');
+  assert.equal(liste.dechiffrer({ LIENS_CLE_INTEGRATIONS: 'autre' }, chiffre), '', 'une autre clé ne lit rien');
+  db.enregistrerBloc(P, validerBloc({ type: 'inscription', titre: 'Rejoins ma liste', demanderPrenom: true }, 'liste'));
+  const appels: { url: string; corps: any; headers: any }[] = [];
+  const fetchFaux = (async (url: string, init: RequestInit) => { appels.push({ url, corps: init.body ? JSON.parse(String(init.body)) : null, headers: init.headers }); return new Response('{"name":"Ma liste"}', { status: url.includes('/lists/') ? 200 : 201 }); }) as typeof fetch;
+  assert.equal((await liste.verifier('brevo', 'xkeysib-secret', '7', fetchFaux)).nom, 'Ma liste');
+  assert.equal((await liste.verifier('brevo', 'xkeysib-secret', '../7', fetchFaux)).ok, false, 'un identifiant de liste farfelu ne part pas');
+  assert.equal((await liste.verifier('mailchimp', 'cle-sans-centre', 'abc123', fetchFaux)).ok, false);
+  db.ecrireIntegration(P, { fournisseur: 'brevo', cle: liste.chiffrer(env, 'xkeysib-secret'), liste: '7', nom: 'Ma liste' });
+  const ctx = { ip: '5.5.5.5', ua: 'Mozilla/5.0', referent: '' };
+  const r = await liste.inscrire(env, fetchFaux, { page: '', bloc: 'liste', email: 'Camille@Exemple.fr', prenom: '=HYPERLINK("x")' }, ctx);
+  assert.equal(r.status, 200);
+  const envoi = appels.at(-1)!;
+  assert.equal(envoi.url, 'https://api.brevo.com/v3/contacts');
+  assert.deepEqual(envoi.corps.listIds, [7]);
+  assert.equal(envoi.corps.email, 'camille@exemple.fr');
+  assert.equal(db.resumeContacts(P).total, 1);
+  assert.equal(db.resumeContacts(P).enAttente, 0, 'envoyé chez Brevo');
+  await liste.inscrire(env, fetchFaux, { page: '', bloc: 'liste', email: 'camille@exemple.fr' }, ctx);
+  assert.equal(db.resumeContacts(P).total, 1, 'pas de doublon');
+  assert.equal((await liste.inscrire(env, fetchFaux, { page: '', bloc: 'liste', email: 'robot@exemple.fr', website: 'spam' }, ctx)).status, 200);
+  assert.equal(db.resumeContacts(P).total, 1, 'le champ piège écarte le robot');
+  assert.equal((await liste.inscrire(env, fetchFaux, { page: '', bloc: 'inconnu', email: 'a@exemple.fr' }, ctx)).status, 404);
+  assert.match(liste.csv(P), /camille@exemple\.fr;"'=HYPERLINK\(""x""\)"/, 'une formule devient du texte');
+  assert.equal(db.exporter(P).inscrits.length, 1);
+});

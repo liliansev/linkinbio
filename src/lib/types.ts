@@ -8,7 +8,7 @@ import type { Abonnement, Periode } from './abonnement.ts';
 import type { Creneau } from './moments.ts';
 import type { Audience, EffetAudience } from './provenance.ts';
 
-export const TYPES_BLOC = ['lien', 'titre', 'texte', 'video', 'derniere-video', 'newsletter'] as const;
+export const TYPES_BLOC = ['lien', 'titre', 'texte', 'video', 'derniere-video', 'newsletter', 'inscription'] as const;
 export type TypeBloc = (typeof TYPES_BLOC)[number];
 
 /** Les mouvements qui attirent l'œil sur un bouton. */
@@ -51,6 +51,8 @@ export interface Bloc {
   creneau: Creneau | null;
   /** Les provenances visées (Instagram, TikTok…) : le bloc passe en tête pour elles, ou ne s'affiche que pour elles. */
   audience: { sources: Audience[]; effet: EffetAudience } | null;
+  /** « Rejoins ma liste » : demander aussi le prénom. */
+  demanderPrenom: boolean;
 }
 
 export const FORMATS_VEDETTE = ['bouton', 'bandeau', 'carte'] as const;
@@ -164,6 +166,25 @@ export interface Stats {
   precedent: { vues: number; visiteurs: number; clics: number };
 }
 
+export const FOURNISSEURS_LISTE = ['brevo', 'mailchimp'] as const;
+export type FournisseurListe = (typeof FOURNISSEURS_LISTE)[number];
+
+/** Le fournisseur branché, sans jamais la clé (seulement ses quatre derniers caractères). */
+export interface IntegrationListe { fournisseur: FournisseurListe; liste: string; nom: string; cle: string }
+
+export interface Contact { id: string; email: string; prenom: string; ts: number; source: string; synchro: '' | 'ok' | 'erreur' }
+
+/** Les inscrits de « Rejoins ma liste ». */
+export interface Liste {
+  total: number;
+  /** Inscrits des 7 derniers jours. */
+  semaine: number;
+  derniers: Contact[];
+  integration: IntegrationListe | null;
+  /** Inscrits pas encore partis chez le fournisseur (erreur, ou arrivés avant le branchement). */
+  enAttente: number;
+}
+
 /** Ce que le back office demande au serveur (ou à la démo, dans l'aperçu). */
 export interface Api {
   charger(): Promise<EtatAdmin>;
@@ -186,6 +207,14 @@ export interface Api {
   ouvrirPaiement(periode: Periode): Promise<string>;
   /** L'adresse du portail client Creem : carte, factures, résiliation. */
   ouvrirPortail(): Promise<string>;
+  liste(): Promise<Liste>;
+  /** Branche Brevo ou Mailchimp (la clé est vérifiée chez eux), ou débranche avec `null`. */
+  brancherListe(i: { fournisseur: FournisseurListe; cle: string; liste: string } | null): Promise<{ ok: boolean; message: string }>;
+  supprimerContact(id: string): Promise<void>;
+  /** Renvoie chez le fournisseur les inscrits qui n'y sont pas encore. */
+  resynchroniser(): Promise<{ envoyes: number; erreurs: number }>;
+  /** L'adresse du CSV des inscrits, ou null dans l'aperçu. */
+  urlContacts: string | null;
   /** Seulement pour le compte principal : gérer les autres comptes. */
   comptes?: ApiComptes;
 }
@@ -218,12 +247,12 @@ export interface SignalementResume {
 
 export function nouveauBloc(type: TypeBloc, id: string): Bloc {
   const titres: Record<TypeBloc, string> = {
-    lien: '', titre: 'Nouvelle section', texte: '', video: 'Ma vidéo', 'derniere-video': 'Ma dernière vidéo', newsletter: 'Ma newsletter',
+    lien: '', titre: 'Nouvelle section', texte: '', video: 'Ma vidéo', 'derniere-video': 'Ma dernière vidéo', newsletter: 'Ma newsletter', inscription: 'Rejoins ma liste',
   };
   return {
-    id, type, titre: titres[type], url: '', sousTitre: type === 'newsletter' ? 'Un e-mail de temps en temps, rien de plus.' : '', description: '', icone: '', image: '',
+    id, type, titre: titres[type], url: '', sousTitre: type === 'newsletter' || type === 'inscription' ? 'Un e-mail de temps en temps, rien de plus.' : '', description: '', icone: '', image: '',
     public: true, indexable: true, vedette: false, format: 'bandeau', teinte: 'accent', animation: 'auto', debut: '', fin: '',
-    compteARebours: false, creneau: null, audience: null,
+    compteARebours: false, creneau: null, audience: null, demanderPrenom: false,
   };
 }
 

@@ -139,7 +139,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
           </Champ>
         )}
 
-        {(b.type === 'lien' || b.type === 'newsletter') && (
+        {(b.type === 'lien' || b.type === 'newsletter' || b.type === 'inscription') && (
           <Champ label="Sous-titre (facultatif)">
             <input className={classeSaisie} value={b.sousTitre} onChange={e => maj({ sousTitre: e.target.value })} maxLength={240} />
           </Champ>
@@ -189,7 +189,10 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
 
         <div className="divide-y divide-white/[0.06] rounded-2xl bg-white/[0.035] px-4">
           <Interrupteur label="Public" aide={b.public ? 'Visible sur ta page.' : 'Privé : gardé ici, invisible sur ta page.'} actif={b.public} onChange={v => maj({ public: v })} />
-          {b.type !== 'titre' && b.type !== 'texte' && b.type !== 'newsletter' && (
+          {b.type === 'inscription' && (
+            <Interrupteur label="Demander le prénom" aide="Pour écrire « Salut Camille » dans tes e-mails." actif={b.demanderPrenom} onChange={v => maj({ demanderPrenom: v })} />
+          )}
+          {b.type !== 'titre' && b.type !== 'texte' && b.type !== 'newsletter' && b.type !== 'inscription' && (
             <Interrupteur label="Mis en avant" aide="Plus visible que les autres liens : choisis sa forme et sa couleur juste dessous." actif={b.vedette} onChange={v => maj({ vedette: v })} />
           )}
           {b.type === 'lien' && (

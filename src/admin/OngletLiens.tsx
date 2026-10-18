@@ -17,6 +17,7 @@ export const TYPES: { type: TypeBloc; nom: string; aide: string; picto: string }
   { type: 'texte', nom: 'Texte', aide: 'Un court paragraphe', picto: 'ui-texte' },
   { type: 'video', nom: 'Vidéo YouTube', aide: 'Lue directement dans la page', picto: 'ui-video' },
   { type: 'derniere-video', nom: 'Ma dernière vidéo', aide: 'Se met à jour toute seule', picto: 'ui-nouveau' },
+  { type: 'inscription', nom: 'Rejoins ma liste', aide: 'Récolte des e-mails, export, Brevo, Mailchimp', picto: 'courrier' },
   { type: 'newsletter', nom: 'Inscription newsletter', aide: 'Branchée sur Lumail', picto: 'courrier' },
 ];
 const NOM_TYPE = Object.fromEntries(TYPES.map(t => [t.type, t.nom])) as Record<TypeBloc, string>;

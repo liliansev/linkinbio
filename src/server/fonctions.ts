@@ -1,6 +1,8 @@
 import { createMiddleware, createServerFn } from '@tanstack/react-start';
 import { deleteCookie, getCookie, getRequestHeader, getRequestUrl, setCookie } from '@tanstack/react-start/server';
-import type { Bloc, CompteResume, EtatAdmin, Origines, PagePublique, Reglages, SignalementResume, Stats } from '../lib/types.ts';
+import type { Bloc, CompteResume, EtatAdmin, Liste, Origines, PagePublique, Reglages, SignalementResume, Stats } from '../lib/types.ts';
+import { FOURNISSEURS_LISTE } from '../lib/types.ts';
+import * as liste from './liste.ts';
 import { VERSION_CGU } from '../lib/legal.ts';
 import { ORIGINE_ADMIN, ORIGINE_PUBLIQUE, PRINCIPAL, TYPES_PRINCIPAL } from '../lib/types.ts';
 import { composerMoment } from '../lib/moments.ts';
@@ -211,6 +213,47 @@ export const lireStats = createServerFn({ method: 'GET' })
   .handler(async ({ data, context }): Promise<Stats> => {
     const limite = !db.compteEstPro(context.compte) && !!creem.config(process.env);
     return db.stats(context.compte, limite ? JOURS_GRATUIT : data);
+  });
+
+/* ---- « Rejoins ma liste » ---- */
+
+export const lireListe = createServerFn({ method: 'GET' })
+  .middleware([session])
+  .handler(async ({ context }): Promise<Liste> => ({ ...db.resumeContacts(context.compte), integration: liste.resumeIntegration(process.env, context.compte) }));
+
+export const brancherListe = createServerFn({ method: 'POST' })
+  .middleware([session])
+  .validator((data: unknown) => {
+    if (data === null) return null;
+    const o = (data ?? {}) as { fournisseur?: unknown; cle?: unknown; liste?: unknown };
+    return {
+      fournisseur: FOURNISSEURS_LISTE.includes(o.fournisseur as never) ? o.fournisseur as (typeof FOURNISSEURS_LISTE)[number] : 'brevo',
+      cle: String(o.cle ?? '').trim().slice(0, 200), liste: String(o.liste ?? '').trim().slice(0, 40),
+    };
+  })
+  .handler(async ({ data, context }) => {
+    if (!data) { db.ecrireIntegration(context.compte, null); return { ok: true, message: 'Ta liste reste chez Hopla seulement.' }; }
+    // Une clé laissée vide garde celle déjà enregistrée (le navigateur ne la connaît pas).
+    const avant = db.lireIntegration(context.compte);
+    const cle = data.cle || (avant && avant.fournisseur === data.fournisseur ? liste.dechiffrer(process.env, avant.cle) : '');
+    if (!cle) return { ok: false, message: 'Colle ta clé d’API.' };
+    const v = await liste.verifier(data.fournisseur, cle, data.liste, fetch);
+    if (!v.ok) return v;
+    db.ecrireIntegration(context.compte, { fournisseur: data.fournisseur, cle: liste.chiffrer(process.env, cle), liste: data.liste, nom: v.nom ?? '' });
+    return { ok: true, message: v.message };
+  });
+
+export const supprimerContact = createServerFn({ method: 'POST' })
+  .middleware([session])
+  .validator((data: unknown) => String(data ?? '').slice(0, 40))
+  .handler(async ({ data, context }) => { db.supprimerContact(context.compte, data); return { ok: true }; });
+
+export const resynchroniser = createServerFn({ method: 'POST' })
+  .middleware([session])
+  .handler(async ({ context }) => {
+    let envoyes = 0, erreurs = 0;
+    for (const c of db.contactsAEnvoyer(context.compte)) (await liste.pousser(process.env, context.compte, c, fetch)) ? envoyes++ : erreurs++;
+    return { envoyes, erreurs };
   });
 
 /* ---- Abonnement Pro (Creem) ---- */

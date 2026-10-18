@@ -10,7 +10,7 @@
 
 import { TARIFS, euros } from './abonnement.ts';
 
-export const VERSION_CGU = '2026-10-18.3';
+export const VERSION_CGU = '2026-10-18.4';
 export const CONTACT_LEGAL = 'bonjour@liliansevoumian.fr';
 
 export interface DocumentLegal { titre: string; resume: string; sections: { titre: string; texte: string[] }[] }
@@ -66,10 +66,11 @@ export const LEGAL: Record<NomDocument, DocumentLegal> = {
     resume: `L’accord de sous-traitance prévu par l’article 28 du RGPD, entre toi (responsable de traitement) et Hopla (sous-traitant), pour les données des visiteurs de ta page. Version ${VERSION_CGU}.`,
     sections: [
       { titre: 'Objet', texte: [
-        'Hopla mesure l’audience de ta page pour toi : nombre de vues, de visiteurs et de clics, provenance et type d’appareil. Il ne fait rien d’autre de ces données et ne les utilise pas pour son propre compte.',
+        'Hopla mesure l’audience de ta page pour toi : nombre de vues, de visiteurs et de clics, provenance et type d’appareil. Si tu ajoutes le bloc « Rejoins ma liste », Hopla recueille aussi pour toi les adresses des personnes qui s’y inscrivent. Il ne fait rien d’autre de ces données et ne les utilise pas pour son propre compte.',
       ] },
       { titre: 'Données traitées', texte: [
         'Pour chaque visite ou clic : la date, le lien cliqué, la provenance (site d’origine ou paramètre de campagne), le type d’appareil (mobile, ordinateur, tablette), et une empreinte anonyme du visiteur, recalculée chaque jour à partir d’un secret du serveur, de l’adresse IP et du navigateur. L’adresse IP elle-même n’est jamais enregistrée, aucun cookie n’est déposé chez le visiteur, et l’empreinte ne permet pas de le suivre d’un jour à l’autre ni d’un site à l’autre.',
+        'Pour le bloc « Rejoins ma liste » : l’adresse e-mail, le prénom s’il est demandé, la date d’inscription et la provenance. Ces inscrits sont gardés tant que tu ne les retires pas, ou que ton compte existe. Si tu branches Brevo ou Mailchimp, chaque inscrit leur est transmis sur ton instruction : ce fournisseur, que tu choisis, agit alors pour toi, sous ton propre contrat avec lui. Ta clé d’API est chiffrée sur le serveur.',
       ] },
       { titre: 'Durée', texte: [
         'Les données sont gardées 13 mois au plus, puis effacées automatiquement. Elles sont effacées immédiatement si tu supprimes ton compte.',
@@ -78,7 +79,7 @@ export const LEGAL: Record<NomDocument, DocumentLegal> = {
         'Traiter les données uniquement sur tes instructions, c’est-à-dire pour afficher tes statistiques. Garantir la confidentialité des personnes qui y ont accès. Mettre en œuvre des mesures de sécurité adaptées : connexion sans mot de passe par lien à usage unique, sessions protégées, limites anti-abus. N’employer que les sous-traitants listés sur la page « Sous-traitants », et te prévenir de tout changement. T’aider à répondre aux demandes des personnes concernées. Te prévenir sans délai, et au plus tard sous 48 heures, de toute violation de données touchant ta page. Effacer les données à la fin du service, et te permettre de les exporter avant.',
       ] },
       { titre: 'Tes engagements', texte: [
-        'Informer les visiteurs de ta page de la mesure d’audience (le lien « Confidentialité » en bas de ta page le fait pour toi), et ne pas ajouter à ta page de données personnelles de tiers sans base légale.',
+        'Informer les visiteurs de ta page de la mesure d’audience (le lien « Confidentialité » en bas de ta page le fait pour toi), et ne pas ajouter à ta page de données personnelles de tiers sans base légale. Pour une liste d’inscrits : n’écrire aux personnes que pour ce qu’annonce ton bloc, et permettre la désinscription dans chaque e-mail.',
       ] },
     ],
   },
@@ -93,6 +94,7 @@ export const LEGAL: Record<NomDocument, DocumentLegal> = {
       { titre: 'Si tu visites une page', texte: [
         'Aucun cookie n’est déposé, aucune publicité, aucun traceur d’un site à l’autre. Le serveur compte les vues et les clics de la page pour son propriétaire, avec une empreinte anonyme renouvelée chaque jour ; ton adresse IP n’est pas enregistrée. Ces statistiques sont gardées 13 mois. C’est une mesure d’audience strictement limitée, qui entre dans l’exemption de consentement prévue par la CNIL.',
         'Tu peux t’y opposer : un navigateur qui bloque les requêtes vers hopla.page/api/evenement (la plupart des bloqueurs de contenus le permettent) n’est pas compté, sans que la page cesse de fonctionner. Le propriétaire de la page est responsable de ces statistiques ; Hopla les traite pour lui.',
+        'Si tu t’inscris à la liste d’une page (« Rejoins ma liste »), ton adresse et, s’il est demandé, ton prénom vont à son propriétaire, qui seul décide des e-mails qu’il t’envoie ; il peut les transmettre à son outil d’envoi (Brevo ou Mailchimp). Pour te désinscrire ou faire effacer ton adresse, écris-lui, ou à ' + CONTACT_LEGAL + '.',
       ] },
       { titre: 'Si tu as un compte', texte: [
         'Ton adresse e-mail, ton pseudo, la date de création et de dernière connexion, la version des conditions acceptées, et ce que tu publies (réglages, blocs, images). Base légale : l’exécution du contrat (les CGU). Ces données sont gardées tant que ton compte existe, et effacées dès que tu le supprimes.',

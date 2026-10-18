@@ -636,3 +636,9 @@ button.lp-ed-zone:focus-visible { outline: 2px solid var(--vedette); outline-off
   padding: 6px 12px; border-radius: 999px; background: color-mix(in srgb, var(--lp-encre) 12%, transparent);
 }
 .lp-rebours-chrono b { font-weight: 700; font-size: 1.05rem; }
+
+/* ---- « Rejoins ma liste » ---- */
+.lp-inscription form[data-prenom] input[name='prenom'] { flex: 1 1 100%; }
+.lp-piege { position: absolute !important; left: -9999px; width: 1px; height: 1px; opacity: 0; }
+.lp-mention { margin: 10px 0 0; font-size: 0.74rem; line-height: 1.4; color: var(--doux); }
+.lp-mention a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }

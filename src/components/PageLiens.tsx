@@ -126,7 +126,7 @@ export function PageLiens({ page, apercu = false, edition }: { page: PagePubliqu
           {edition ? edition.liste(blocs, bloc => <BlocPublic bloc={bloc} reglages={reglages} clic={() => {}} cible={cible} apercu />) : <>
             {blocs.map((bloc, i) => (
               <div key={bloc.id} className="lp-bloc" data-type={bloc.type} data-vedette={bloc.vedette ? bloc.format : undefined} style={{ '--i': i } as CSSProperties}>
-                <BlocPublic bloc={bloc} reglages={reglages} clic={() => clic(bloc)} cible={cible} apercu={apercu} maintenant={page.maintenant} />
+                <BlocPublic bloc={bloc} reglages={reglages} clic={() => clic(bloc)} cible={cible} apercu={apercu} maintenant={page.maintenant} pseudo={pseudo} />
               </div>
             ))}
             {blocs.length === 0 && <p className="lp-texte">Rien ici pour l’instant.</p>}
@@ -177,7 +177,7 @@ function Pictogramme({ bloc }: { bloc: Bloc }) {
   return null;
 }
 
-export function BlocPublic({ bloc, reglages, clic, cible, apercu, maintenant }: { bloc: Bloc; reglages: Reglages; clic: () => void; cible: object; apercu: boolean; maintenant?: number }) {
+export function BlocPublic({ bloc, reglages, clic, cible, apercu, maintenant, pseudo }: { bloc: Bloc; reglages: Reglages; clic: () => void; cible: object; apercu: boolean; maintenant?: number; pseudo?: string }) {
   if (bloc.type === 'lien' && enAttente(bloc, maintenant ?? Date.now())) return <CompteARebours bloc={bloc} depart={maintenant ?? Date.now()} apercu={apercu} />;
   const rel = bloc.indexable ? 'noopener' : 'nofollow noopener';
   const nosnippet = bloc.indexable ? {} : { 'data-nosnippet': true };
@@ -194,6 +194,8 @@ export function BlocPublic({ bloc, reglages, clic, cible, apercu, maintenant }: 
       return <DerniereVideo titre={bloc.titre} clic={clic} />;
     case 'newsletter':
       return <Newsletter bloc={bloc} apercu={apercu} />;
+    case 'inscription':
+      return <Inscription bloc={bloc} apercu={apercu} pseudo={pseudo ?? ''} />;
     default:
       if (!bloc.url) return null;
       if (bloc.vedette) {
@@ -354,6 +356,41 @@ function Newsletter({ bloc, apercu }: { bloc: Bloc; apercu: boolean }) {
         </form>
       )}
       {etat.type === 'erreur' && <p className="lp-newsletter-erreur" role="alert">{etat.message}</p>}
+    </section>
+  );
+}
+
+/** « Rejoins ma liste » : l'inscrit reste chez la personne (et part chez Brevo ou Mailchimp si elle l'a branché). */
+function Inscription({ bloc, apercu, pseudo }: { bloc: Bloc; apercu: boolean; pseudo: string }) {
+  const [etat, setEtat] = useState<{ type: 'repos' | 'envoi' | 'ok' | 'erreur'; message?: string }>({ type: 'repos' });
+  async function envoyer(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (apercu) { setEtat({ type: 'ok', message: 'Dans l’aperçu, rien n’est envoyé.' }); return; }
+    const f = new FormData(event.currentTarget);
+    setEtat({ type: 'envoi' });
+    try {
+      const params = new URLSearchParams(location.search);
+      const r = await fetch('/api/inscription', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ page: pseudo, bloc: bloc.id, email: f.get('email'), prenom: f.get('prenom') ?? '', website: f.get('website') ?? '', utm: params.get('utm_source') ?? params.get('s') ?? '', referent: document.referrer }) });
+      const corps = await r.json().catch(() => ({}));
+      setEtat(r.ok ? { type: 'ok', message: corps.message ?? 'C’est noté, merci !' } : { type: 'erreur', message: corps.message ?? 'L’inscription n’est pas passée. Réessaie.' });
+    } catch { setEtat({ type: 'erreur', message: 'L’inscription n’est pas passée. Réessaie.' }); }
+  }
+  return (
+    <section className="lp-newsletter lp-inscription">
+      <h2 className="lp-newsletter-titre">{bloc.titre}</h2>
+      {bloc.sousTitre && <p className="lp-sous">{bloc.sousTitre}</p>}
+      {etat.type === 'ok' ? <p className="lp-newsletter-ok" role="status">{etat.message}</p> : (
+        <form onSubmit={envoyer} data-prenom={bloc.demanderPrenom || undefined}>
+          {bloc.demanderPrenom && <input name="prenom" autoComplete="given-name" placeholder="Prénom" aria-label="Ton prénom" maxLength={60} />}
+          <input type="email" name="email" required autoComplete="email" placeholder="ton@email.fr" aria-label="Ton adresse e-mail" />
+          {/* Un champ que seuls les robots remplissent. */}
+          <input name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" className="lp-piege" />
+          <button type="submit" className="lp-btn lp-btn-compact" disabled={etat.type === 'envoi'}>{etat.type === 'envoi' ? '…' : 'Je m’inscris'}</button>
+        </form>
+      )}
+      {etat.type === 'erreur' && <p className="lp-newsletter-erreur" role="alert">{etat.message}</p>}
+      <p className="lp-mention">Ton adresse sert seulement à recevoir ces e-mails. Désinscription en un clic, quand tu veux. <a href="/legal/confidentialite" target="_blank" rel="noopener">Confidentialité</a></p>
     </section>
   );
 }

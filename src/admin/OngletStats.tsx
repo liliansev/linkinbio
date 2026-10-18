@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import type { ReactNode } from 'react';
 import type { Stats } from '../lib/types.ts';
 import { Carte, Segments } from './ui.tsx';
 import { Icone } from '../components/Icone.tsx';
@@ -105,7 +106,7 @@ function OuvertsDansLApp({ apps, actif, onActiver }: { apps: Stats['apps']; acti
 }
 
 /** `limite` : un compte gratuit ne voit que les sept derniers jours ; `onPro` mène à l'abonnement. */
-export function OngletStats({ charger, limite = false, onPro, ouvrirApps = true, onActiverApps }: { charger: (jours: number) => Promise<Stats>; limite?: boolean; onPro?: () => void; ouvrirApps?: boolean; onActiverApps?: () => void }) {
+export function OngletStats({ charger, limite = false, onPro, ouvrirApps = true, onActiverApps, liste }: { charger: (jours: number) => Promise<Stats>; limite?: boolean; onPro?: () => void; ouvrirApps?: boolean; onActiverApps?: () => void; liste?: ReactNode }) {
   const [choix, setJours] = useState('30');
   const jours = limite ? '7' : choix;
   const [stats, setStats] = useState<Stats | null>(null);
@@ -135,6 +136,7 @@ export function OngletStats({ charger, limite = false, onPro, ouvrirApps = true,
             <Kpi nom="Taux de clic" valeur={stats.vues ? Math.round((stats.clics / stats.vues) * 100) : 0} suffixe=" %" />
           </div>
           <Carte><Courbe serie={stats.serie} /></Carte>
+          {liste}
           <OuvertsDansLApp apps={stats.apps} actif={ouvrirApps} onActiver={onActiverApps} />
           <Carte titre="Liens les plus cliqués"><Barres lignes={stats.blocs.map(b => ({ nom: b.titre, valeur: b.clics }))} total={stats.clics} unite="clics" /></Carte>
           <Carte titre="D’où viennent les visiteurs"><Barres lignes={stats.sources.map(s => ({ nom: s.nom, valeur: s.vues }))} total={stats.vues} unite="vues" /></Carte>

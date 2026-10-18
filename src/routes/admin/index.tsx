@@ -28,6 +28,11 @@ function PageAdmin() {
     urlExport: '/api/export',
     ouvrirPaiement: periode => fn.ouvrirPaiement({ data: periode }),
     ouvrirPortail: () => fn.ouvrirPortail(),
+    liste: () => fn.lireListe(),
+    brancherListe: i => fn.brancherListe({ data: i }),
+    supprimerContact: async id => { await fn.supprimerContact({ data: id }); },
+    resynchroniser: () => fn.resynchroniser(),
+    urlContacts: '/api/contacts',
     comptes: acces.connecte && acces.etat.compte.principal ? {
       lister: () => fn.listerComptes(),
       inviter: (email, pseudo) => fn.inviterCompte({ data: { email, pseudo } }),

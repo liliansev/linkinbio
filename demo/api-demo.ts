@@ -76,6 +76,16 @@ export const apiDemo: Api = {
   // Le compte principal n'a pas d'abonnement : l'aperçu n'ouvre jamais de paiement.
   async ouvrirPaiement() { throw new Error('Pas de paiement dans l’aperçu.'); },
   async ouvrirPortail() { throw new Error('Pas de paiement dans l’aperçu.'); },
+  async liste() {
+    await pause();
+    const prenoms = ['Camille', 'Hugo', 'Sarah', 'Léa', 'Malik', 'Inès', 'Tom', 'Jade'];
+    const derniers = prenoms.map((p, i) => ({ id: `c${i}`, email: `${p.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')}@exemple.fr`, prenom: p, ts: Date.now() - i * 7_200_000, source: ['Instagram', 'TikTok', 'LinkedIn'][i % 3], synchro: 'ok' as const }));
+    return { total: 184, semaine: 23, derniers, integration: { fournisseur: 'brevo', liste: '7', nom: 'Newsletter', cle: '•••• a91f' }, enAttente: 0 };
+  },
+  async brancherListe(i) { await pause(); return { ok: true, message: i ? 'Dans l’aperçu, rien n’est branché pour de vrai.' : 'Ta liste reste chez Hopla seulement.' }; },
+  async supprimerContact() { await pause(); },
+  async resynchroniser() { await pause(); return { envoyes: 0, erreurs: 0 }; },
+  urlContacts: null,
   comptes: {
     async lister() { await pause(); return comptesDemo; },
     async inviter(email, pseudo) {

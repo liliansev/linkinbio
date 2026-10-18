@@ -2,7 +2,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { randomBytes, randomUUID } from 'node:crypto';
-import type { Bloc, CompteResume, Reglages, Stats } from '../lib/types.ts';
+import type { Bloc, CompteResume, Contact, FournisseurListe, Reglages, Stats } from '../lib/types.ts';
 import { PRINCIPAL } from '../lib/types.ts';
 import { REGLAGES_DEFAUT, blocsDefaut, reglagesNouveauCompte } from '../lib/defauts.ts';
 import { validerBloc, validerReglages } from '../lib/valider.ts';
@@ -71,6 +71,13 @@ export function base(): DatabaseSync {
     );
     CREATE TABLE IF NOT EXISTS jetons (hash TEXT PRIMARY KEY, type TEXT NOT NULL, expire INTEGER NOT NULL, cree INTEGER NOT NULL);
     CREATE TABLE IF NOT EXISTS webhooks (id TEXT PRIMARY KEY, recu INTEGER NOT NULL);
+    CREATE TABLE IF NOT EXISTS contacts (
+      id TEXT PRIMARY KEY, compte TEXT NOT NULL, email TEXT NOT NULL, prenom TEXT NOT NULL DEFAULT '', ts INTEGER NOT NULL,
+      source TEXT NOT NULL DEFAULT '', bloc TEXT NOT NULL DEFAULT '', synchro TEXT NOT NULL DEFAULT '', UNIQUE (compte, email)
+    );
+    CREATE TABLE IF NOT EXISTS integrations (
+      compte TEXT PRIMARY KEY, fournisseur TEXT NOT NULL, cle TEXT NOT NULL, liste TEXT NOT NULL, nom TEXT NOT NULL DEFAULT '', maj INTEGER NOT NULL
+    );
     CREATE TABLE IF NOT EXISTS signalements (
       id TEXT PRIMARY KEY, compte TEXT NOT NULL, motif TEXT NOT NULL, details TEXT NOT NULL, email TEXT NOT NULL DEFAULT '',
       ts INTEGER NOT NULL, statut TEXT NOT NULL DEFAULT 'ouvert', decision TEXT NOT NULL DEFAULT '', traite INTEGER
@@ -190,7 +197,7 @@ export function supprimerCompte(id: string) {
   const d = base();
   d.exec('BEGIN');
   try {
-    for (const table of ['blocs', 'medias', 'evenements', 'jetons', 'signalements']) d.prepare(`DELETE FROM ${table} WHERE compte = ?`).run(id);
+    for (const table of ['blocs', 'medias', 'evenements', 'jetons', 'signalements', 'contacts', 'integrations']) d.prepare(`DELETE FROM ${table} WHERE compte = ?`).run(id);
     d.prepare('DELETE FROM pages WHERE compte = ?').run(id);
     d.prepare('DELETE FROM comptes WHERE id = ?').run(id);
     d.exec('COMMIT');
@@ -401,6 +408,42 @@ export function stats(compte: string, jours: number, maintenant = Date.now()): S
   };
 }
 
+/* ---- « Rejoins ma liste » : les inscrits et le fournisseur branché ---- */
+
+/** Un nouvel inscrit, ou null s'il l'était déjà. */
+export function ajouterContact(compte: string, c: { email: string; prenom: string; source: string; bloc: string }, maintenant = Date.now()): { id: string; email: string; prenom: string } | null {
+  const id = nouvelId();
+  const r = base().prepare('INSERT OR IGNORE INTO contacts (id, compte, email, prenom, ts, source, bloc) VALUES (?, ?, ?, ?, ?, ?, ?)').run(id, compte, c.email.toLowerCase(), c.prenom, maintenant, c.source, c.bloc);
+  return Number(r.changes) ? { id, email: c.email.toLowerCase(), prenom: c.prenom } : null;
+}
+
+export const contactsDuJour = (compte: string, maintenant = Date.now()) => (base().prepare('SELECT COUNT(*) AS n FROM contacts WHERE compte = ? AND ts > ?').get(compte, maintenant - 86_400_000) as { n: number }).n;
+export const noterSynchro = (id: string, etat: 'ok' | 'erreur') => base().prepare('UPDATE contacts SET synchro = ? WHERE id = ?').run(etat, id);
+export const supprimerContact = (compte: string, id: string) => base().prepare('DELETE FROM contacts WHERE id = ? AND compte = ?').run(id, compte);
+
+const LIRE_CONTACT = 'SELECT id, email, prenom, ts, source, synchro FROM contacts WHERE compte = ?';
+export const tousLesContacts = (compte: string) => base().prepare(`${LIRE_CONTACT} ORDER BY ts DESC`).all(compte) as unknown as Contact[];
+
+export function resumeContacts(compte: string, maintenant = Date.now()) {
+  const d = base();
+  const { total, semaine, attente } = d.prepare(`SELECT COUNT(*) AS total, SUM(ts > ?) AS semaine, SUM(synchro != 'ok') AS attente FROM contacts WHERE compte = ?`).get(maintenant - 7 * 86_400_000, compte) as { total: number; semaine: number | null; attente: number | null };
+  return { total, semaine: semaine ?? 0, enAttente: attente ?? 0, derniers: d.prepare(`${LIRE_CONTACT} ORDER BY ts DESC LIMIT 50`).all(compte) as unknown as Contact[] };
+}
+
+/** Les inscrits pas encore chez le fournisseur, du plus ancien au plus récent. */
+export const contactsAEnvoyer = (compte: string, limite = 200) => base().prepare(`SELECT id, email, prenom FROM contacts WHERE compte = ? AND synchro != 'ok' ORDER BY ts LIMIT ?`).all(compte, limite) as { id: string; email: string; prenom: string }[];
+
+export interface Integration { fournisseur: FournisseurListe; cle: string; liste: string; nom: string }
+export const lireIntegration = (compte: string) => base().prepare('SELECT fournisseur, cle, liste, nom FROM integrations WHERE compte = ?').get(compte) as Integration | undefined;
+export function ecrireIntegration(compte: string, i: Integration | null, maintenant = Date.now()) {
+  const d = base();
+  if (!i) { d.prepare('DELETE FROM integrations WHERE compte = ?').run(compte); return; }
+  d.prepare('INSERT INTO integrations (compte, fournisseur, cle, liste, nom, maj) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT (compte) DO UPDATE SET fournisseur = excluded.fournisseur, cle = excluded.cle, liste = excluded.liste, nom = excluded.nom, maj = excluded.maj')
+    .run(compte, i.fournisseur, i.cle, i.liste, i.nom, maintenant);
+  // Une autre liste : tous les inscrits sont à y envoyer.
+  d.prepare("UPDATE contacts SET synchro = '' WHERE compte = ?").run(compte);
+}
+
 /* ---- Export (droit d'accès et de portabilité) ---- */
 
 /**
@@ -427,6 +470,8 @@ export function exporter(compte: string) {
     blocs: lireBlocs(compte),
     images: medias,
     statistiques: evenements.map(e => ({ ...e, ts: new Date(e.ts).toISOString() })),
+    inscrits: tousLesContacts(compte).map(c => ({ ...c, ts: new Date(c.ts).toISOString() })),
+    listeBranchee: lireIntegration(compte) ? { fournisseur: lireIntegration(compte)!.fournisseur, liste: lireIntegration(compte)!.liste } : null,
   };
 }
 
