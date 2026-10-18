@@ -3,7 +3,7 @@ import type { CSSProperties } from 'react';
 import type { FormeBouton, MiseEnPageBureau, Reglages, Reseau, StyleBouton } from '../lib/types.ts';
 import { ANIMATIONS, RESEAUX } from '../lib/types.ts';
 import { FAMILLES, THEMES, themeParId, variablesTheme } from '../lib/themes.ts';
-import type { Famille } from '../lib/themes.ts';
+import type { Famille, Theme } from '../lib/themes.ts';
 import { Icone, NOMS_RESEAUX } from '../components/Icone.tsx';
 import { Carte, Champ, Interrupteur, NOMS_ANIMATIONS, Segments, classeSaisie, preparerImage, vibrer } from './ui.tsx';
 
@@ -16,6 +16,19 @@ const EXEMPLES: Record<Reseau, string> = {
   x: 'https://x.com/…', github: 'https://github.com/…', facebook: 'https://facebook.com/…', threads: 'https://threads.net/@…', twitch: 'https://twitch.tv/…',
   spotify: 'https://open.spotify.com/…', email: 'toi@exemple.fr', site: 'https://…',
 };
+
+/** Un thème en miniature : sa police, son accent et ses boutons, dans leur vrai style. */
+export function Pastille({ theme }: { theme: Theme }) {
+  return (
+    <span className="lp-pastille flex aspect-[4/5] w-full flex-col items-center gap-[6%] rounded-xl pt-[13%] shadow-inner ring-1 ring-white/10"
+      style={variablesTheme(theme) as CSSProperties} data-decor={theme.decor} data-police={theme.police} data-bouton={theme.conseil.style} data-forme={theme.conseil.forme}>
+      <span className="lp-pastille-aa" aria-hidden="true">Aa</span>
+      <span className="lp-pastille-barre vedette mt-[6%]" />
+      <span className="lp-pastille-barre" />
+      <span className="lp-pastille-barre" />
+    </span>
+  );
+}
 
 export type PartieApparence = 'profil' | 'theme' | 'animation' | 'boutons' | 'bureau' | 'reseaux';
 const TOUTES: PartieApparence[] = ['profil', 'theme', 'animation', 'boutons', 'bureau', 'reseaux'];
@@ -71,13 +84,7 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
               {/* Choisir un thème pose aussi les boutons qui vont avec ; on peut les changer ensuite. */}
               <button type="button" onClick={() => maj({ theme: t.id, bouton: t.conseil })} aria-pressed={theme.id === t.id}
                 className={`flex w-full flex-col items-center gap-1.5 rounded-2xl p-1.5 transition ${theme.id === t.id ? 'bg-peche/15 ring-2 ring-peche' : 'hover:bg-white/[0.05]'}`}>
-                <span className="lp-pastille flex aspect-[4/5] w-full flex-col items-center gap-[6%] rounded-xl pt-[13%] shadow-inner ring-1 ring-white/10"
-                  style={variablesTheme(t) as CSSProperties} data-decor={t.decor} data-police={t.police} data-bouton={t.conseil.style} data-forme={t.conseil.forme}>
-                  <span className="lp-pastille-aa" aria-hidden="true">Aa</span>
-                  <span className="lp-pastille-barre vedette mt-[6%]" />
-                  <span className="lp-pastille-barre" />
-                  <span className="lp-pastille-barre" />
-                </span>
+                <Pastille theme={t} />
                 <span className="w-full truncate text-center text-[12.5px] text-white/75">{t.nom}</span>
               </button>
             </li>
