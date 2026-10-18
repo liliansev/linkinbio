@@ -3,7 +3,7 @@ import type { CSSProperties } from 'react';
 import type { Api, Bloc, Reglages } from '../lib/types.ts';
 import { ANIMATIONS_BLOC, estEnLigne, idYoutube } from '../lib/types.ts';
 import { RESEAUX } from '../lib/types.ts';
-import { adresse } from '../lib/valider.ts';
+import { adresse, adresseSaisie } from '../lib/valider.ts';
 import { nomSite } from '../lib/demarrage.ts';
 import { themeDe, variablesTheme } from '../lib/themes.ts';
 import { ICONES } from '../lib/icones.ts';
@@ -14,6 +14,7 @@ import { TYPES } from './OngletLiens.tsx';
 import { appDe } from '../lib/ouvrirApp.ts';
 import { ChampsPreuve, RegleAcces, RegleMoment, RegleReseaux, RegleTraductions, Repli } from './ReglesBloc.tsx';
 import { reseauxDePartage } from '../lib/provenance.ts';
+import { etiquettes } from '../lib/etiquettes.ts';
 
 export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, onSupprimer, onDupliquer, envoyerImage, apercuSite, clics, adressePage, prises = 0, principal = false }: {
   bloc: Bloc | null;
@@ -53,13 +54,19 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
   /** Vérifie le bloc ; renvoie la version à enregistrer, ou rien si un champ manque. */
   function valider(): Bloc | null {
     if (!b) return null;
-    const url = adresse(b.url);
-    if (b.type === 'lien' && !url) { setErreur('Indique l’adresse du lien.'); return null; }
+    const url = b.type === 'lien' ? adresseSaisie(b.url) : adresse(b.url);
+    if (b.type === 'lien' && !url) { setErreur(b.url.trim() ? 'Ce n’est pas une adresse. Exemple : ton-site.fr' : 'Indique l’adresse du lien.'); return null; }
     if (b.type === 'video' && !idYoutube(url)) { setErreur('Colle l’adresse d’une vidéo YouTube.'); return null; }
     if ((b.type === 'titre' || b.type === 'texte') && !b.titre.trim()) { setErreur('Écris le texte.', 'titre'); return null; }
     if (b.type === 'preuve' && b.preuve?.genre === 'temoignage' && !b.description.trim()) { setErreur('Écris le témoignage.', 'description'); return null; }
     if (b.type === 'preuve' && b.preuve?.genre === 'compteur' && !b.preuve.nombre) { setErreur('Indique le chiffre à montrer.', 'description'); return null; }
-    if (b.debut && b.fin && new Date(b.fin) <= new Date(b.debut)) { setPlus(true); setErreur('La fin doit venir après le début.', 'dates'); return null; }
+    // Une note n'est jamais inventée : elle se tape, avec son nombre d'avis et sa source.
+    if (b.type === 'preuve' && b.preuve?.genre === 'note' && (!b.preuve.note || !b.preuve.nombre || !b.preuve.source.trim())) { setErreur('Indique ta note, le nombre d’avis et où ils sont publiés.', 'description'); return null; }
+    if (b.debut && b.fin && new Date(b.fin) <= new Date(b.debut)) {
+      setPlus(true); setErreur('La fin doit venir après le début.', 'dates');
+      setTimeout(() => { const f = document.getElementById('bloc-fin'); f?.scrollIntoView({ block: 'center' }); f?.focus({ preventScroll: true }); }, 60);
+      return null;
+    }
     // Un lien sans texte prend le nom du site, comme dans les premiers pas : jamais une adresse brute sur la page.
     return { ...b, url, titre: b.type === 'lien' && !b.titre.trim() ? (nomSite(url) || b.titre) : b.titre };
   }
@@ -78,7 +85,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
 
   /** Lit le site du lien : son image de partage (ou une capture), sa description et son titre. */
   async function recupererApercu() {
-    const url = adresse(b!.url);
+    const url = adresseSaisie(b!.url);
     if (!url) { setErreur('Indique d’abord l’adresse du lien.'); return; }
     setLecture(true); setErreur('');
     try {
@@ -100,7 +107,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
   /** En quittant l'adresse d'un lien sans texte, le texte se remplit du nom du site, puis de son vrai titre. */
   async function titreDepuisSite() {
     if (b?.type !== 'lien' || b.titre.trim()) return;
-    const url = adresse(b.url);
+    const url = adresseSaisie(b.url);
     const repli = url && nomSite(url);
     if (!repli) return;
     setB(avant => avant && (avant.titre.trim() ? avant : { ...avant, titre: repli }));
@@ -159,6 +166,8 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
         )}
 
         {b.type === 'preuve' && <ChampsPreuve b={b} maj={maj} />}
+        {/* Ce que le bloc a de particulier, en clair : les pictos du coin de la page ne se lisent pas au toucher. */}
+        {!nouveau && etiquettes(b).length > 0 && <p className="-mt-1 text-[13px] leading-snug text-white/60">{etiquettes(b).join(' · ')}</p>}
         {erreurDe('description') && <p role="alert" className="-mt-2 text-[13px] font-medium text-red-300">{erreurDe('description')}</p>}
         {b.type === 'preuve' && (
           <Champ label="Lien vers les avis (facultatif)" aide="Ta fiche Google, ta page Trustpilot : le bloc devient cliquable, et la preuve vérifiable.">
@@ -170,7 +179,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
           <Champ erreur={erreurDe('titre')} label={b.type === 'lien' ? 'Texte du bouton' : b.type === 'texte' ? 'Texte' : b.type === 'preuve' ? (b.preuve?.genre === 'compteur' ? 'Ce que compte ce chiffre' : 'Petit titre (facultatif)') : 'Titre'}>
             {b.type === 'texte'
               ? <textarea className={`${classeSaisie} min-h-28`} value={b.titre} onChange={e => maj({ titre: e.target.value })} maxLength={1000} autoFocus={nouveau} />
-              : <input className={classeSaisie} value={b.titre} onChange={e => maj({ titre: e.target.value })} maxLength={160} placeholder={b.type === 'lien' ? 'Mon super lien' : b.type === 'preuve' && b.preuve?.genre === 'compteur' ? 'abonnés sur YouTube' : ''} autoFocus={nouveau && !avecUrl} />}
+              : <input className={classeSaisie} value={b.titre} onChange={e => maj({ titre: e.target.value })} maxLength={160} placeholder={b.type === 'lien' ? 'Mon super lien' : b.type === 'preuve' && b.preuve?.genre === 'compteur' ? 'abonnés sur YouTube' : ''} autoFocus={nouveau && !avecUrl && b.type !== 'preuve'} />}
           </Champ>
         )}
         {b.type === 'derniere-video' && (
@@ -275,10 +284,13 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
         )}
 
         {b.type === 'lien' && <RegleAcces key={`acces-${b.id}`} b={b} maj={maj} prises={prises} />}
-        <RegleMoment key={`moment-${b.id}`} b={b} maj={maj} />
-        {erreurDe('dates') && <p role="alert" className="-mt-2 text-[13px] font-medium text-red-300">{erreurDe('dates')}</p>}
+        <RegleMoment key={`moment-${b.id}`} b={b} maj={maj} erreur={erreurDe('dates')} />
         <RegleReseaux key={`reseaux-${b.id}`} b={b} maj={maj} reseaux={reseauxDePartage(reglages.vuesReseaux)} />
         <RegleTraductions key={`langues-${b.id}`} b={b} maj={maj} langues={reglages.langues ?? []} />
+        <button type="button" onClick={() => { vibrer(4); setPlus(false); }}
+          className="flex min-h-11 items-center justify-center gap-1.5 text-[14px] font-medium text-white/60 hover:text-white">
+          <Icone nom="ui-chevron" taille={16} className="rotate-180" /> Moins de réglages
+        </button>
         </>) : (
           <button type="button" onClick={() => { vibrer(4); setPlus(true); }}
             className="flex min-h-12 w-full items-center gap-3 rounded-2xl bg-white/[0.035] px-4 text-left transition hover:bg-white/[0.06]">

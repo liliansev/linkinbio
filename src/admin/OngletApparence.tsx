@@ -7,6 +7,7 @@ import type { Theme } from '../lib/themes.ts';
 import { Icone, NOMS_RESEAUX } from '../components/Icone.tsx';
 import { Carte, Champ, Interrupteur, NOMS_ANIMATIONS, Segments, classeSaisie, flechesRadio, preparerImage, vibrer } from './ui.tsx';
 import { pseudoReseau, urlReseau } from '../lib/demarrage.ts';
+import { adresseSaisie } from '../lib/valider.ts';
 
 const STYLES: { id: StyleBouton; nom: string }[] = [
   { id: 'plein', nom: 'Plein' }, { id: 'contour', nom: 'Contour' }, { id: 'doux', nom: 'Doux' }, { id: 'relief', nom: 'Relief' }, { id: 'verre', nom: 'Verre' },
@@ -41,6 +42,9 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
   // Seule dans une feuille, une partie est déjà nommée par la feuille : pas de second titre.
   const titre = (t: string) => (parties.length === 1 ? undefined : t);
   const [envoi, setEnvoi] = useState(false);
+  const [enSaisie, setEnSaisie] = useState<Reseau | null>(null);
+  // Seule dans une feuille, la partie n'a pas de cadre : la feuille en est déjà un.
+  const nu = parties.length === 1;
   // Un thème choisi par-dessus des couleurs à soi : elles partent, mais un toucher les rend.
   const [avantTheme, setAvantTheme] = useState<Reglages | null>(null);
   const fichier = useRef<HTMLInputElement>(null);
@@ -57,7 +61,7 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
 
   return (
     <div className="flex flex-col gap-4">
-      {voir('profil') && <Carte titre={titre('Profil')} id="profil">
+      {voir('profil') && <Carte nu={nu} titre={titre('Profil')} id="profil">
         <div className="mb-4 flex items-center gap-4">
           <button type="button" onClick={() => fichier.current?.click()} className="group relative h-20 w-20 shrink-0 overflow-hidden rounded-full bg-white/10" aria-label="Changer la photo">
             {reglages.profil.avatar && <img src={reglages.profil.avatar} alt="" className="h-full w-full object-cover" />}
@@ -76,7 +80,7 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
         </div>
       </Carte>}
 
-      {voir('theme') && <Carte titre={titre('Thème')} id="theme" action={titre('Thème') ? <span className="text-[13px] text-white/50">{theme.nom}</span> : undefined}>
+      {voir('theme') && <Carte nu={nu} titre={titre('Thème')} id="theme" action={titre('Thème') ? <span className="text-[13px] text-white/50">{theme.nom}</span> : undefined}>
         {avantTheme && (
           <p role="status" className="mb-3 flex items-center justify-between gap-3 text-[13px] text-white/60">
             Tes couleurs à toi ont été retirées.
@@ -102,7 +106,7 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
         </ul>
       </Carte>}
 
-      {voir('couleurs') && <Carte titre={titre('Couleurs')} action={reglages.couleurs.fond || reglages.couleurs.boutons || reglages.couleurs.accent
+      {voir('couleurs') && <Carte nu={nu} titre={titre('Couleurs')} action={reglages.couleurs.fond || reglages.couleurs.boutons || reglages.couleurs.accent
         ? <button type="button" onClick={() => maj({ couleurs: SANS_COULEURS })} className="text-[13px] font-medium text-white/60 hover:text-white">Tout remettre</button> : undefined}>
         <div className="flex flex-col gap-5">
           {CLES_COULEURS.map(c => (
@@ -112,7 +116,8 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
         </div>
       </Carte>}
 
-      {voir('animation') && <Carte titre={titre('Animation')} action={<span className="text-[13px] text-white/50">{NOMS_ANIMATIONS[reglages.animation].nom}</span>}>
+      {voir('animation') && <Carte nu={nu} titre={titre('Animation')} action={titre('Animation') ? <span className="text-[13px] text-white/50">{NOMS_ANIMATIONS[reglages.animation].nom}</span> : undefined}>
+        <p className="mb-3 text-[13px] leading-snug text-white/60">Pour les liens mis en avant. Chaque lien peut aussi choisir la sienne.</p>
         <div className="lp lp-mini rounded-2xl p-2.5" style={variablesTheme(theme) as CSSProperties} data-bouton={reglages.bouton.style} data-forme={reglages.bouton.forme} data-ombre={reglages.bouton.ombre} data-police={theme.police} data-decor={theme.decor}>
           <ul role="radiogroup" onKeyDown={e => flechesRadio(e)} aria-label="Animation des liens mis en avant" className="grid grid-cols-2 gap-2">
             {ANIMATIONS.map(a => {
@@ -120,10 +125,12 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
               return (
                 <li key={a}>
                   <button type="button" role="radio" aria-checked={choisi} onClick={() => { vibrer(5); maj({ animation: a }); }}
-                    className={`flex w-full flex-col gap-2 rounded-[18px] p-2 pb-2.5 text-left transition duration-200 ${choisi ? 'bg-white/[0.12] ring-2 ring-white' : 'hover:bg-white/[0.06]'}`}>
+                    className={`relative flex w-full flex-col gap-2 rounded-[18px] p-2 pb-2.5 text-left transition duration-200 ${choisi ? 'bg-white/[0.12]' : 'hover:bg-white/[0.06]'}`}>
                     <span className={`lp-btn lp-btn-vedette lp-accent ${a !== 'aucune' ? `lp-anim-${a}` : ''}`} style={{ minHeight: 52, padding: '8px 12px', fontSize: 15 }}>
                       {NOMS_ANIMATIONS[a].nom}
                     </span>
+                    {/* La coche dit le choix, comme dans les listes : pas un anneau qu'on confondrait avec un style de bouton. */}
+                    <span className="absolute -top-1 -right-1"><span className={`grid h-5 w-5 shrink-0 place-items-center rounded-full transition duration-150 ${choisi ? 'bg-white text-nuit' : 'ring-[1.5px] ring-inset ring-white/25'}`} aria-hidden="true">{choisi && <Icone nom="ui-ok" taille={12} />}</span></span>
                   </button>
                 </li>
               );
@@ -132,17 +139,21 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
         </div>
       </Carte>}
 
-      {voir('boutons') && <Carte titre={titre('Boutons')}>
+      {voir('boutons') && <Carte nu={nu} titre={titre('Boutons')}>
         <div className="lp lp-mini rounded-2xl p-3" style={variablesTheme(theme) as CSSProperties} data-forme={reglages.bouton.forme} data-ombre={reglages.bouton.ombre} data-police={theme.police} data-decor={theme.decor}>
-          <ul className="grid grid-cols-1 gap-2.5">
-            {STYLES.map(s => (
+          <ul className="grid grid-cols-1 gap-2.5" role="radiogroup" aria-label="Style des boutons" onKeyDown={e => flechesRadio(e)}>
+            {STYLES.map(s => {
+              const choisi = reglages.bouton.style === s.id;
+              return (
               <li key={s.id} data-bouton={s.id} className="lp-style">
-                <button type="button" onClick={() => maj({ bouton: { ...reglages.bouton, style: s.id } })} aria-pressed={reglages.bouton.style === s.id}
-                  className={`w-full rounded-[calc(var(--rc)+6px)] p-1.5 transition ${reglages.bouton.style === s.id ? 'ring-2 ring-white' : ''}`}>
-                  <span className="lp-btn" style={{ minHeight: 48 }}><span className="lp-btn-texte"><span className="lp-btn-titre">{s.nom}</span></span></span>
+                <button type="button" role="radio" aria-checked={choisi} onClick={() => { vibrer(4); maj({ bouton: { ...reglages.bouton, style: s.id } }); }}
+                  className={`flex w-full items-center gap-3 rounded-[calc(var(--rc)+6px)] p-1.5 pr-2 transition ${choisi ? 'bg-white/[0.08]' : ''}`}>
+                  <span className="lp-btn flex-1" style={{ minHeight: 48 }}><span className="lp-btn-texte"><span className="lp-btn-titre">{s.nom}</span></span></span>
+                  <span className={`grid h-5 w-5 shrink-0 place-items-center rounded-full transition duration-150 ${choisi ? 'bg-white text-nuit' : 'ring-[1.5px] ring-inset ring-white/25'}`} aria-hidden="true">{choisi && <Icone nom="ui-ok" taille={12} />}</span>
                 </button>
               </li>
-            ))}
+              );
+            })}
           </ul>
         </div>
         <div className="mt-4">
@@ -155,7 +166,7 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
         </div>
       </Carte>}
 
-      {voir('bureau') && <Carte titre={titre('Sur ordinateur')}>
+      {voir('bureau') && <Carte nu={nu} titre={titre('Sur ordinateur')}>
         <div className="grid grid-cols-3 gap-2" role="radiogroup" onKeyDown={e => flechesRadio(e)} aria-label="Mise en page sur ordinateur">
           {BUREAUX.map(b => {
             const actif = reglages.bureau === b.id;
@@ -168,23 +179,30 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
             );
           })}
         </div>
+        <p className="mt-3 text-[13px] leading-snug text-white/60">{BUREAUX.find(b => b.id === reglages.bureau)?.aide} Sur téléphone, ta page reste en colonne.</p>
       </Carte>}
 
-      {voir('reseaux') && <Carte titre={titre('Réseaux')} id="reseaux">
+      {voir('reseaux') && <Carte nu={nu} titre={titre('Réseaux')} id="reseaux">
         <ul className="flex flex-col gap-2">
-          {reglages.reseaux.map((r, i) => (
-            <li key={r.reseau} className="flex items-center gap-2">
+          {reglages.reseaux.map((r, i) => {
+            // Un pseudo qui ne mène nulle part se dit sous le champ, une fois quitté ; il ne s'affiche pas sur la page.
+            const faux = enSaisie !== r.reseau && !!r.url.trim() && !adresseSaisie(r.url);
+            return (
+            <li key={r.reseau} className="flex flex-wrap items-center gap-2">
               <Icone nom={r.reseau} taille={22} className="w-7 shrink-0 text-white" />
               {/* Un pseudo suffit, comme aux premiers pas : il devient l'adresse du profil en quittant le champ. */}
-              <input className={`${classeSaisie} py-2.5`} value={pseudoReseau(r.reseau, r.url)} aria-label={NOMS_RESEAUX[r.reseau]} placeholder={EXEMPLES[r.reseau]} inputMode={r.reseau === 'email' ? 'email' : 'url'} autoCapitalize="none" autoCorrect="off"
+              <input className={`${classeSaisie} min-w-0 flex-1 py-2.5`} value={pseudoReseau(r.reseau, r.url)} onFocus={() => setEnSaisie(r.reseau)}
+                aria-invalid={faux || undefined} aria-describedby={faux ? `reseau-faux-${r.reseau}` : undefined} aria-label={NOMS_RESEAUX[r.reseau]} placeholder={EXEMPLES[r.reseau]} inputMode={r.reseau === 'email' ? 'email' : 'url'} autoCapitalize="none" autoCorrect="off"
                 onChange={e => maj({ reseaux: reglages.reseaux.map((x, j) => (j === i ? { ...x, url: e.target.value } : x)) })}
-                onBlur={e => { const u = urlReseau(r.reseau, e.target.value); if (u && u !== r.url) maj({ reseaux: reglages.reseaux.map((x, j) => (j === i ? { ...x, url: u } : x)) }); }} />
+                onBlur={e => { setEnSaisie(null); const u = urlReseau(r.reseau, e.target.value); if (u && u !== r.url) maj({ reseaux: reglages.reseaux.map((x, j) => (j === i ? { ...x, url: u } : x)) }); }} />
               {/* Une seule flèche, à la taille du pouce : monter suffit pour remettre les réseaux dans n'importe quel ordre. */}
               <button type="button" disabled={i === 0} aria-label={`Monter ${NOMS_RESEAUX[r.reseau]}`} onClick={() => { const l = [...reglages.reseaux]; [l[i - 1], l[i]] = [l[i], l[i - 1]]; maj({ reseaux: l }); }}
                 className="grid h-11 w-9 shrink-0 place-items-center text-white/50 hover:text-white disabled:invisible"><Icone nom="ui-chevron" taille={18} className="rotate-180" /></button>
               <button type="button" aria-label={`Retirer ${NOMS_RESEAUX[r.reseau]}`} onClick={() => maj({ reseaux: reglages.reseaux.filter((_, j) => j !== i) })} className="grid h-11 w-9 shrink-0 place-items-center text-white/50 hover:text-white"><Icone nom="ui-fermer" taille={18} /></button>
+              {faux && <p id={`reseau-faux-${r.reseau}`} role="alert" className="w-full pl-9 text-[13px] font-medium text-red-300">{r.reseau === 'email' ? 'Une adresse e-mail, par exemple toi@exemple.fr' : 'Un pseudo sans espace, ou l’adresse de ton profil'}</p>}
             </li>
-          ))}
+            );
+          })}
         </ul>
         {absents.length > 0 && (
           <div className="mt-4">

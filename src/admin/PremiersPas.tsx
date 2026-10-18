@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { Api, Bloc, PagePublique, Reglages, Reseau } from '../lib/types.ts';
 import { SANS_COULEURS, nouveauBloc, sansSchema, urlPage } from '../lib/types.ts';
-import { adresse } from '../lib/valider.ts';
+import { adresseSaisie } from '../lib/valider.ts';
 import { THEMES } from '../lib/themes.ts';
 import { RESEAUX_ACCUEIL, THEMES_ACCUEIL, nomSite, urlReseau } from '../lib/demarrage.ts';
 import { PageLiens } from '../components/PageLiens.tsx';
@@ -61,6 +61,9 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
   // Les réseaux ouverts, et ce qui a été tapé pour chacun (un pseudo ou une adresse).
   const [saisies, setSaisies] = useState<Partial<Record<Reseau, string>>>({});
   const [envoi, setEnvoi] = useState(false);
+  const [dernierSeul, setDernierSeul] = useState(false);
+  // Les champs qu'on a quittés : une adresse ou un pseudo qui ne mène nulle part le dit seulement là.
+  const [quittes, setQuittes] = useState<Set<string>>(() => new Set());
   const [copie, setCopie] = useState(false);
   const [tous, setTous] = useState(false);
   const fichier = useRef<HTMLInputElement>(null);
@@ -77,12 +80,12 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
 
   /* ---- Les liens : l'adresse collée, le titre se remplit tout seul ---- */
   const brouillons = useMemo(() => lignes.flatMap(l => {
-    const url = adresse(l.url);
+    const url = adresseSaisie(l.url);
     return url ? [{ ...nouveauBloc('lien', l.id), ...blocs.find(b => b.id === l.id), url, titre: l.titre.trim() || nomSite(url) }] : [];
   }), [lignes, blocs]);
   const majLigne = (id: string, champs: Partial<Ligne>) => setLignes(ls => ls.map(l => (l.id === id ? { ...l, ...champs } : l)));
   async function lireSite(l: Ligne) {
-    const url = adresse(l.url);
+    const url = adresseSaisie(l.url);
     if (!url || l.titre.trim()) return;
     const repli = nomSite(url);
     majLigne(l.id, { titre: repli, lecture: true });
@@ -185,22 +188,26 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
       corps: (
         <ol className="flex flex-col gap-2.5">
           {lignes.map((l, n) => {
-            const valide = !!adresse(l.url);
+            const valide = !!adresseSaisie(l.url);
+            const fausse = quittes.has(l.id) && !!l.url.trim() && !valide;
             return (
               <li key={l.id} className="rounded-2xl bg-white/[0.04] p-1.5 transition focus-within:bg-white/[0.07] focus-within:ring-2 focus-within:ring-white/30">
                 <div className="flex items-center gap-2">
-                  <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-full text-[14px] font-semibold ${valide ? 'bg-white text-nuit' : 'bg-white/[0.07] text-white/55'}`}>
+                  <span className={`grid h-9 w-9 shrink-0 place-items-center text-[14px] font-semibold ${valide ? 'text-white' : 'text-white/55'}`}>
                     {valide ? <Icone nom="ui-ok" taille={16} /> : n + 1}
                   </span>
                   <input aria-label={`Adresse du lien ${n + 1}`} className="min-h-11 min-w-0 flex-1 bg-transparent px-1 text-[16px] text-white outline-none placeholder:text-white/55 focus-visible:!outline-none"
                     type="url" inputMode="url" autoCapitalize="off" autoCorrect="off" spellCheck={false} placeholder={['ton-site.fr', 'calendly.com/toi', 'ta-boutique.fr'][n]}
-                    value={l.url} onChange={e => majLigne(l.id, { url: e.target.value })} onBlur={() => lireSite(l)} />
+                    value={l.url} aria-invalid={fausse || undefined} aria-describedby={fausse ? `erreur-${l.id}` : undefined}
+                    onChange={e => majLigne(l.id, { url: e.target.value })} onBlur={() => { setQuittes(q => new Set(q).add(l.id)); lireSite(l); }}
+                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); (e.currentTarget.closest('li')?.nextElementSibling?.querySelector('input') as HTMLInputElement | null)?.focus(); } }} />
                 </div>
+                {fausse && <p id={`erreur-${l.id}`} role="alert" className="px-2 pb-1.5 text-[13px] font-medium text-red-300">Ce n’est pas une adresse. Exemple : ton-site.fr</p>}
                 {valide && (
                   <label className="mt-1 flex items-center gap-2 border-t border-white/[0.06] pt-1">
                     <span className="w-9 shrink-0 text-center text-[12px] text-white/55">Titre</span>
                     <input className="min-h-10 min-w-0 flex-1 bg-transparent px-1 text-[15px] text-white outline-none placeholder:text-white/55 focus-visible:!outline-none" maxLength={80}
-                      placeholder={l.lecture ? 'Lecture du site…' : nomSite(adresse(l.url))} value={l.titre} onChange={e => majLigne(l.id, { titre: e.target.value })} />
+                      placeholder={l.lecture ? 'Lecture du site…' : nomSite(adresseSaisie(l.url))} value={l.titre} onChange={e => majLigne(l.id, { titre: e.target.value })} />
                   </label>
                 )}
               </li>
@@ -218,15 +225,18 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
             <ul className="flex flex-col gap-2">
               {ouverts.map(r => {
                 const ok = !!urlReseau(r, saisies[r] ?? '');
+                const faux = quittes.has(r) && !!(saisies[r] ?? '').trim() && !ok;
                 return (
-                  <li key={r} className="flex items-center gap-2 rounded-2xl bg-white/[0.04] p-1.5 pl-3 transition focus-within:bg-white/[0.07] focus-within:ring-2 focus-within:ring-white/30">
+                  <li key={r} className="flex flex-wrap items-center gap-2 rounded-2xl bg-white/[0.04] p-1.5 pl-3 transition focus-within:bg-white/[0.07] focus-within:ring-2 focus-within:ring-white/30">
                     <span className={ok ? 'text-white' : 'text-white/60'}><Icone nom={r} taille={20} /></span>
                     <input id={`reseau-${r}`} aria-label={`Ton ${NOMS_RESEAUX[r]}`} className="min-h-11 min-w-0 flex-1 bg-transparent px-1 text-[16px] text-white outline-none placeholder:text-white/55 focus-visible:!outline-none"
                       autoCapitalize="off" autoCorrect="off" spellCheck={false} inputMode={r === 'email' ? 'email' : 'text'}
                       placeholder={r === 'email' ? 'toi@exemple.fr' : r === 'spotify' ? 'Adresse de ta page Spotify' : `Ton pseudo ${NOMS_RESEAUX[r]}`}
-                      value={saisies[r] ?? ''} onChange={e => majReseau(r, e.target.value)} />
+                      value={saisies[r] ?? ''} onChange={e => majReseau(r, e.target.value)} onBlur={() => setQuittes(q => new Set(q).add(r))}
+                      aria-invalid={faux || undefined} aria-describedby={faux ? `erreur-${r}` : undefined} />
                     <button type="button" onClick={() => majReseau(r, null)} aria-label={`Retirer ${NOMS_RESEAUX[r]}`}
                       className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-white/55 transition hover:bg-white/[0.06] hover:text-white"><Icone nom="ui-fermer" taille={16} /></button>
+                    {faux && <p id={`erreur-${r}`} role="alert" className="w-full pr-2 pb-1 text-[13px] font-medium text-red-300">{r === 'email' ? 'Une adresse e-mail, par exemple toi@exemple.fr' : 'Un pseudo sans espace, ou l’adresse de ton profil'}</p>}
                   </li>
                 );
               })}
@@ -247,7 +257,7 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
     partage: {
       titre: 'Où vas-tu mettre ton lien ?',
       aide: 'Chaque lien pourra se montrer, ou passer en tête, selon le réseau d’où l’on vient. Il en faut au moins un.',
-      corps: (
+      corps: (<>
         <ul className="flex flex-col divide-y divide-white/[0.06] rounded-2xl bg-white/[0.04] px-3.5">
           {OU_PARTAGER.map(a => {
             const choisis = reseauxDePartage(reglages.vuesReseaux);
@@ -257,16 +267,17 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
               <li key={a} className="flex min-h-12 items-center gap-3">
                 <span className="flex w-5 justify-center text-white/75"><Icone nom={a} taille={18} /></span>
                 <span className="flex-1 text-[15px] font-medium text-white">{NOMS_AUDIENCES[a]}</span>
-                <button type="button" role="switch" aria-checked={coche} aria-label={`Mon lien sur ${NOMS_AUDIENCES[a]}`} disabled={seul}
-                  onClick={() => { vibrer(4); onReglages({ ...reglages, vuesReseaux: OU_PARTAGER.filter(x => (x === a ? !coche : choisis.includes(x))) }); }}
-                  className={`adm-interrupteur relative h-6 w-10 shrink-0 rounded-full before:absolute before:-inset-2 before:content-[''] disabled:opacity-60 ${coche ? 'bg-white' : 'bg-white/15'}`}>
+                <button type="button" role="switch" aria-checked={coche} aria-label={`Mon lien sur ${NOMS_AUDIENCES[a]}`} aria-describedby={seul && dernierSeul ? 'au-moins-un' : undefined}
+                  onClick={() => { if (seul) { vibrer(20); setDernierSeul(true); return; } setDernierSeul(false); vibrer(4); onReglages({ ...reglages, vuesReseaux: OU_PARTAGER.filter(x => (x === a ? !coche : choisis.includes(x))) }); }}
+                  className={`adm-interrupteur relative h-6 w-10 shrink-0 rounded-full before:absolute before:-inset-2 before:content-[''] ${coche ? 'bg-white' : 'bg-white/15'}`}>
                   <span className={`absolute top-[3px] left-[3px] h-[18px] w-[18px] rounded-full shadow-[0_1px_3px_rgba(0,0,0,0.3)] ${coche ? 'translate-x-4 bg-nuit' : 'bg-white'}`} />
                 </button>
               </li>
             );
           })}
         </ul>
-      ),
+      {dernierSeul && <p id="au-moins-un" role="alert" className="mt-2 px-1 text-[13px] font-medium text-white/75">Il en faut au moins un : coche d’abord un autre réseau.</p>}
+      </>),
     },
     style: {
       titre: 'Choisis une ambiance',
@@ -315,7 +326,7 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
       <header className="flex h-14 shrink-0 items-center gap-2 px-3 lg:col-span-2 lg:px-6">
         <button type="button" onClick={() => setI(n => n - 1)} aria-label="Étape précédente" disabled={i === 0 || etape === 'fin'}
           className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-white/70 transition hover:bg-white/[0.07] disabled:invisible"><Icone nom="ui-chevron" taille={20} className="rotate-90" /></button>
-        <div className="flex flex-1 justify-center gap-1.5" role="progressbar" aria-label="Premiers pas" aria-valuemin={0} aria-valuemax={QUESTIONS} aria-valuenow={Math.min(i, QUESTIONS)}>
+        <div className="flex flex-1 justify-center gap-1.5" role="progressbar" aria-label="Premiers pas" aria-valuemin={0} aria-valuemax={QUESTIONS} aria-valuenow={Math.min(i, QUESTIONS)} aria-valuetext={i < QUESTIONS ? `Question ${i + 1} sur ${QUESTIONS}` : 'Terminé'}>
           {Array.from({ length: QUESTIONS }, (_, n) => (
             <span key={n} className="h-1.5 min-w-3 max-w-9 flex-1 overflow-hidden rounded-full bg-white/[0.1]">
               <span className="block h-full rounded-full bg-white transition-[width] duration-500" style={{ width: n < i ? '100%' : n === i ? '40%' : '0%' }} />

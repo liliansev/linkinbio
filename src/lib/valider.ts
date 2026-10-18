@@ -32,6 +32,18 @@ export function adresse(v: unknown): string {
   } catch { return ''; }
 }
 
+/**
+ * Une adresse tapée dans le back office : plus stricte qu'`adresse`, elle refuse
+ * ce qui n'a pas l'air d'un site (« ma boutique », un mot sans point). Vide si
+ * la saisie ne mène nulle part.
+ */
+export function adresseSaisie(v: unknown): string {
+  const url = adresse(v);
+  if (!url || url.startsWith('/') || !/^https?:/i.test(url)) return url;
+  const hote = new URL(url).hostname;
+  return /^[a-z0-9-]+(\.[a-z0-9-]+)+$/i.test(hote) || hote === 'localhost' ? url : '';
+}
+
 /** Une image : seulement nos médias, l'avatar livré, ou https. */
 export function image(v: unknown): string {
   const s = texte(v, 2000);

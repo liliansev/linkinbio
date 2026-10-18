@@ -34,7 +34,7 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
   const sections: { id: Section; nom: string; icone: string }[] = [
     { id: 'partager', nom: 'Partager ma page', icone: 'partage' },
     ...(pro ? [{ id: 'abonnement' as const, nom: 'Abonnement', icone: 'diamant' }] : []),
-    { id: 'partage', nom: 'Aperçu dans Google', icone: 'globe' },
+    { id: 'partage', nom: 'Titre et description', icone: 'globe' },
     { id: 'langues', nom: 'Langues', icone: 'message' },
     { id: 'donnees', nom: 'Mes données', icone: 'cadenas' },
   ];

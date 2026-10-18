@@ -9,7 +9,7 @@ export const TYPES: { type: TypeBloc; nom: string; aide: string; picto: string }
   { type: 'titre', nom: 'Titre de section', aide: 'Pour regrouper les liens', picto: 'bloc-titre' },
   { type: 'texte', nom: 'Texte', aide: 'Un court paragraphe', picto: 'bloc-texte' },
   { type: 'video', nom: 'Vidéo YouTube', aide: 'La vidéo s’affiche dans la page', picto: 'bloc-video' },
-  { type: 'derniere-video', nom: 'Ma dernière vidéo', aide: 'Se met à jour toute seule', picto: 'bloc-derniere-video' },
+  { type: 'derniere-video', nom: 'Ma dernière vidéo YouTube', aide: 'Se met à jour toute seule', picto: 'bloc-derniere-video' },
   { type: 'inscription', nom: 'Ma liste d’inscrits', aide: 'Récolte des e-mails, export, Brevo, Mailchimp', picto: 'bloc-inscription' },
   { type: 'preuve', nom: 'Avis et preuves', aide: 'Ta note Google, un chiffre, un témoignage', picto: 'bloc-preuve' },
   { type: 'newsletter', nom: 'Ma newsletter Lumail', aide: 'Branchée sur Lumail', picto: 'bloc-newsletter' },

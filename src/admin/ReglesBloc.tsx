@@ -44,18 +44,18 @@ const NOMS = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dima
 const fuseauNavigateur = () => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || FUSEAU_DEFAUT; } catch { return FUSEAU_DEFAUT; } };
 
 /** Quand le bloc s'affiche : des dates, un compte à rebours, un créneau qui revient chaque semaine. */
-export function RegleMoment({ b, maj }: { b: Bloc; maj: (c: Partial<Bloc>) => void }) {
+export function RegleMoment({ b, maj, erreur }: { b: Bloc; maj: (c: Partial<Bloc>) => void; erreur?: string }) {
   const c = b.creneau;
   const majCreneau = (champs: Partial<Creneau>) => maj({ creneau: { ...(c ?? { jours: [1, 2, 3, 4, 5], de: '09:00', a: '12:00', fuseau: fuseauNavigateur(), effet: 'avant' }), ...champs, fuseau: fuseauNavigateur() } });
   const resume = [b.debut || b.fin ? 'Dates' : '', b.compteARebours && b.debut ? 'compte à rebours' : '', c ? decrireCreneau(c) : ''].filter(Boolean).join(', ');
   return (
-    <Repli titre="Quand l’afficher" icone="ui-horloge" resume={resume} ouvert={!!(b.debut || b.fin || c)}>
+    <Repli key={erreur ? 'erreur' : 'calme'} titre="Quand l’afficher" icone="ui-horloge" resume={resume} ouvert={!!(b.debut || b.fin || c || erreur)}>
       <div className="grid gap-3 sm:grid-cols-2">
         <Champ label="À partir du">
           <input type="datetime-local" className={classeSaisie} value={versLocal(b.debut)} onChange={e => maj({ debut: depuisLocal(e.target.value) })} />
         </Champ>
-        <Champ label="Jusqu’au">
-          <input type="datetime-local" className={classeSaisie} value={versLocal(b.fin)} onChange={e => maj({ fin: depuisLocal(e.target.value) })} />
+        <Champ label="Jusqu’au" erreur={erreur}>
+          <input id="bloc-fin" type="datetime-local" className={classeSaisie} min={versLocal(b.debut) || undefined} value={versLocal(b.fin)} onChange={e => maj({ fin: depuisLocal(e.target.value) })} />
         </Champ>
       </div>
       {b.type === 'lien' && b.debut && (
@@ -112,7 +112,7 @@ export function RegleReseaux({ b, maj, reseaux }: { b: Bloc; maj: (c: Partial<Bl
   const [premier, setPremier] = useState(enTete.length > 0);
   return (
     <Repli titre="Afficher sur" icone="cible" resume={resume} ouvert={false}>
-      <p className="text-[12.5px] leading-snug text-white/55">Hopla reconnaît d’où vient chaque visiteur. Décoché, ce bloc ne s’affiche pas pour ceux qui arrivent de ce réseau.</p>
+      <p className="text-[12.5px] leading-snug text-white/55">Hopla reconnaît d’où vient chaque visiteur. Décoché, ce bloc ne s’affiche pas pour ceux qui arrivent de ce réseau. Les autres visiteurs (lien direct, QR code, Google) le voient toujours.</p>
       <ul className="-my-1 divide-y divide-white/[0.06]" aria-label="Réseaux où ce bloc s’affiche">
         {liste.map(s => {
           const vu = visible(s);
@@ -226,7 +226,7 @@ const SOURCES_PREUVE = ['Google', 'Trustpilot', 'Malt', 'Avis Vérifiés', 'YouT
 
 /** Un avis, un chiffre, un témoignage : ce que le bloc `preuve` montre. */
 export function ChampsPreuve({ b, maj }: { b: Bloc; maj: (c: Partial<Bloc>) => void }) {
-  const p = b.preuve ?? { genre: 'note' as const, note: 5, nombre: 0, source: '' };
+  const p = b.preuve ?? { genre: 'note' as const, note: 0, nombre: 0, source: '' };
   const majP = (champs: Partial<Preuve>) => maj({ preuve: { ...p, ...champs } });
   return (
     <>
@@ -238,7 +238,7 @@ export function ChampsPreuve({ b, maj }: { b: Bloc; maj: (c: Partial<Bloc>) => v
       {p.genre === 'note' && (
         <div className="grid grid-cols-2 gap-3">
           <Champ label="Note sur 5">
-            <input className={classeSaisie} type="number" inputMode="decimal" min={0} max={5} step={0.1} value={p.note}
+            <input className={classeSaisie} type="number" inputMode="decimal" min={0} max={5} step={0.1} value={p.note || ''} placeholder="Ex. 4,8"
               onChange={e => majP({ note: Math.max(0, Math.min(5, Math.round(Number(e.target.value.replace(',', '.')) * 10) / 10 || 0)) })} />
           </Champ>
           <Champ label="Nombre d’avis">

@@ -8,6 +8,7 @@ import { ICONES } from '../lib/icones.ts';
 import { lienApp } from '../lib/ouvrirApp.ts';
 import { enAttente } from '../lib/moments.ts';
 import { etatPlaces } from '../lib/acces.ts';
+import { adresseSaisie } from '../lib/valider.ts';
 import { LOCALES, NOMS_LANGUES, textes } from '../lib/langues.ts';
 import type { Textes } from '../lib/langues.ts';
 import type { LangueVisiteur } from '../lib/types.ts';
@@ -87,12 +88,12 @@ export function PageLiens({ page, apercu = false, edition }: { page: PagePubliqu
 
   const reseaux = edition ? (
     <button type="button" className="lp-reseaux lp-ed-zone" onClick={edition.reseaux} aria-label="Modifier les réseaux">
-      {reglages.reseaux.filter(r => r.url).map(r => <span key={r.reseau + r.url} className="lp-ed-reseau"><Icone nom={r.reseau} taille={22} /></span>)}
-      {!reglages.reseaux.some(r => r.url) && <span className="lp-ed-vide">Ajouter tes réseaux</span>}
+      {reglages.reseaux.filter(r => adresseSaisie(r.url)).map(r => <span key={r.reseau + r.url} className="lp-ed-reseau"><Icone nom={r.reseau} taille={22} /></span>)}
+      {!reglages.reseaux.some(r => adresseSaisie(r.url)) && <span className="lp-ed-vide">Ajouter tes réseaux</span>}
     </button>
-  ) : reglages.reseaux.some(r => r.url) && (
+  ) : reglages.reseaux.some(r => adresseSaisie(r.url)) && (
     <nav className="lp-reseaux" aria-label={t.reseaux}>
-      {reglages.reseaux.filter(r => r.url).map(r => (
+      {reglages.reseaux.filter(r => adresseSaisie(r.url)).map(r => (
         <a key={r.reseau + r.url} href={r.url} aria-label={NOMS_RESEAUX[r.reseau]} rel="me noopener" {...cible}>
           <Icone nom={r.reseau} taille={22} />
         </a>
@@ -104,7 +105,7 @@ export function PageLiens({ page, apercu = false, edition }: { page: PagePubliqu
     <div className="lp" lang={langue} onClick={ouvrirDansApp} style={variablesTheme(theme) as CSSProperties} data-bouton={reglages.bouton.style} data-forme={reglages.bouton.forme} data-ombre={reglages.bouton.ombre} data-police={theme.police} data-decor={theme.decor} data-bureau={reglages.bureau}>
       <div className="lp-scene">
       <div className="lp-col">
-        {reglages.partage && (
+        {reglages.partage && !edition && (
           <button type="button" className="lp-partager" onClick={partager} aria-label={t.partager} {...(edition ? { inert: true, tabIndex: -1 } : {})}>
             <Icone nom="partage" taille={18} />
           </button>

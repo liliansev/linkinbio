@@ -15,7 +15,7 @@ import { themeDe, variablesTheme } from '../lib/themes.ts';
 import { HautLiens } from './BienDemarrer.tsx';
 import { FeuilleAjout } from './OngletLiens.tsx';
 import { DesignTiroirs, OngletApparence } from './OngletApparence.tsx';
-import { Feuille, Interrupteur, preparerImage, vibrer } from './ui.tsx';
+import { BoutonSecondaire, Feuille, Interrupteur, preparerImage, vibrer } from './ui.tsx';
 
 /*
  * « Ma page » : on édite la page elle-même. Le nom et la bio se tapent en
@@ -36,7 +36,14 @@ export function MaPage({ compte, reglages, blocs, clics, onReglages, onOrdonner,
   onAjouter: (bloc: Bloc) => void;
   envoyerImage: (d: string) => Promise<string>;
 }) {
-  const [feuille, setFeuille] = useState<'design' | 'reseaux' | 'ajout' | null>(null);
+  const [feuille, setFeuilleBrute] = useState<'design' | 'reseaux' | 'ajout' | null>(null);
+  // Les réglages au moment où la feuille de design ou des réseaux s'ouvre : « Annuler » y revient.
+  const depart = useRef<Reglages | null>(null);
+  const setFeuille = (f: typeof feuille) => { depart.current = f === 'design' || f === 'reseaux' ? reglages : null; setFeuilleBrute(f); };
+  const change = depart.current !== null && JSON.stringify(depart.current) !== JSON.stringify(reglages);
+  const piedAnnuler = change ? (fermer: (apres?: () => void) => void) => (
+    <BoutonSecondaire className="w-full" onClick={() => { const avant = depart.current; fermer(() => { if (avant) onReglages(avant); setFeuille(null); }); }}>Annuler les changements</BoutonSecondaire>
+  ) : undefined;
   const [envoi, setEnvoi] = useState(false);
   // Le geste s'explique au-dessus de la page tant que deux blocs n'ont pas été ouverts, puis se tait.
   const [ouverts, setOuverts] = useState(() => { try { return Number(localStorage.getItem('hopla-blocs-ouverts')) || 0; } catch { return 0; } });
@@ -113,10 +120,10 @@ export function MaPage({ compte, reglages, blocs, clics, onReglages, onOrdonner,
 
       <input ref={fichier} type="file" accept="image/*" hidden onChange={e => photo(e.target.files?.[0])} />
       <FeuilleAjout ouverte={feuille === 'ajout'} onFermer={() => setFeuille(null)} onChoisir={ajouter} principal={principal} />
-      <Feuille ouverte={feuille === 'reseaux'} onFermer={() => setFeuille(null)} titre="Réseaux" cote apercu={direct}>
+      <Feuille ouverte={feuille === 'reseaux'} onFermer={() => setFeuille(null)} titre="Réseaux" cote apercu={direct} pied={piedAnnuler}>
         <OngletApparence reglages={reglages} onChange={onReglages} envoyerImage={envoyerImage} principal={principal} parties={['reseaux']} />
       </Feuille>
-      <Feuille ouverte={feuille === 'design'} onFermer={() => setFeuille(null)} titre="Design" cote apercu={direct}>
+      <Feuille ouverte={feuille === 'design'} onFermer={() => setFeuille(null)} titre="Design" cote apercu={direct} pied={piedAnnuler}>
         <DesignTiroirs reglages={reglages} onChange={onReglages} envoyerImage={envoyerImage} principal={principal}
           pied={principal && <Interrupteur label="Badge vérifié" actif={reglages.profil.badge} onChange={v => profil({ badge: v })} />} />
       </Feuille>

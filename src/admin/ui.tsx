@@ -39,9 +39,9 @@ export function Champ({ label, aide, erreur, children }: { label: string; aide?:
 
 export const classeSaisie = 'w-full rounded-lg border border-white/10 bg-white/[0.05] px-3 py-2.5 text-[16px] text-white placeholder:text-white/50 outline-none transition focus:border-white/40 focus:bg-white/[0.09] aria-[invalid=true]:border-red-400/70';
 
-export function Carte({ titre, action, children, className = '', id }: { titre?: string; action?: ReactNode; children: ReactNode; className?: string; id?: string }) {
+export function Carte({ titre, action, children, className = '', id, nu = false }: { titre?: string; action?: ReactNode; children: ReactNode; className?: string; id?: string; nu?: boolean }) {
   return (
-    <section id={id} className={`scroll-mt-20 rounded-xl border border-white/[0.07] bg-white/[0.03] p-4 ${className}`}>
+    <section id={id} className={`scroll-mt-20 ${nu ? '' : 'rounded-xl border border-white/[0.07] bg-white/[0.03] p-4'} ${className}`}>
       {(titre || action) && (
         <div className="mb-3 flex items-center justify-between gap-3">
           {titre && <h2 className="text-[14px] font-medium text-white">{titre}</h2>}

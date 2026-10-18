@@ -59,3 +59,6 @@
 .adm-miroir-page > * { flex: 1 0 auto; }
 @media (min-width: 1024px) { .adm-miroir { --z: 0.86; } }
 .adm-miroir-fin { box-shadow: 0 0 0 1.5px rgb(255 179 138 / 0.55), 0 30px 90px -24px rgb(255 179 138 / 0.4); }
+
+/* Une feuille ouverte occupe le bas de l'écran : le message passe en haut, sans couvrir ce qu'on touche. */
+body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); bottom: auto; }
