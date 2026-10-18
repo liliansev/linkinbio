@@ -54,7 +54,7 @@ export function HautLiens({ compte, reglages, blocs, aller }: { compte: ComptePa
       </div>
 
       {!masque && faites < etapes.length && (
-        <section className="adm-cascade rounded-2xl border border-peche/20 bg-[linear-gradient(160deg,rgba(255,179,138,0.10),rgba(255,179,138,0.02)_55%)] p-4" aria-label="Bien démarrer">
+        <section className="adm-cascade rounded-2xl border border-white/10 bg-white/[0.035] p-4" aria-label="Bien démarrer">
           <div className="mb-3 flex items-start justify-between gap-3">
             <div>
               <h2 className="text-[16px] font-semibold text-white">Bien démarrer</h2>
@@ -64,14 +64,14 @@ export function HautLiens({ compte, reglages, blocs, aller }: { compte: ComptePa
               className="-mt-1 -mr-1 grid h-9 w-9 place-items-center rounded-full text-white/45 hover:bg-white/[0.06] hover:text-white"><Icone nom="ui-fermer" taille={18} /></button>
           </div>
           <div className="mb-3 h-1.5 overflow-hidden rounded-full bg-white/[0.08]" role="progressbar" aria-valuemin={0} aria-valuemax={etapes.length} aria-valuenow={faites}>
-            <div className="h-full rounded-full bg-peche transition-[width] duration-500" style={{ width: `${(faites / etapes.length) * 100}%` }} />
+            <div className="h-full rounded-full bg-white transition-[width] duration-500" style={{ width: `${(faites / etapes.length) * 100}%` }} />
           </div>
           <ol className="-mx-1.5 flex flex-col">
             {etapes.filter(e => !e.faite).map(e => (
               <li key={e.id}>
                 <button type="button" onClick={() => (e.id === 'partage' ? (peutPartager ? partager() : copier()) : aller(e.id))}
                   className="group flex w-full items-center gap-3 rounded-xl px-1.5 py-2 text-left transition hover:bg-white/[0.05] active:scale-[0.99]">
-                  <span className="h-7 w-7 shrink-0 rounded-full border-[1.5px] border-white/25 transition group-hover:border-peche/70" />
+                  <span className="h-7 w-7 shrink-0 rounded-full border-[1.5px] border-white/25 transition group-hover:border-white/30" />
                   <span className="min-w-0 flex-1">
                     <span className="block text-[15px] font-medium text-white">{e.nom}</span>
                     <span className="block text-[13px] leading-snug text-white/50">{e.aide}</span>

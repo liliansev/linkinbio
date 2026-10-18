@@ -77,7 +77,7 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
             <li key={t.id}>
               {/* Choisir un thème pose aussi les boutons qui vont avec ; on peut les changer ensuite. */}
               <button type="button" onClick={() => maj({ theme: t.id, bouton: t.conseil })} aria-pressed={theme.id === t.id}
-                className={`flex w-full flex-col items-center gap-1.5 rounded-2xl p-1.5 transition ${theme.id === t.id ? 'bg-peche/15 ring-2 ring-peche' : 'hover:bg-white/[0.05]'}`}>
+                className={`flex w-full flex-col items-center gap-1.5 rounded-2xl p-1.5 transition ${theme.id === t.id ? 'bg-white/10 ring-2 ring-white' : 'hover:bg-white/[0.05]'}`}>
                 <Pastille theme={t} />
                 <span className="flex w-full flex-col text-center leading-tight">
                   <span className="truncate text-[12.5px] font-medium text-white/85">{t.nom}</span>
@@ -98,7 +98,7 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
               return (
                 <li key={a}>
                   <button type="button" role="radio" aria-checked={choisi} onClick={() => { vibrer(5); maj({ animation: a }); }}
-                    className={`flex w-full flex-col gap-2 rounded-[18px] p-2 pb-2.5 text-left transition duration-200 ${choisi ? 'bg-white/[0.12] ring-2 ring-peche' : 'hover:bg-white/[0.06]'}`}>
+                    className={`flex w-full flex-col gap-2 rounded-[18px] p-2 pb-2.5 text-left transition duration-200 ${choisi ? 'bg-white/[0.12] ring-2 ring-white' : 'hover:bg-white/[0.06]'}`}>
                     <span className={`lp-btn lp-btn-vedette lp-accent ${a !== 'aucune' ? `lp-anim-${a}` : ''}`} style={{ minHeight: 52, padding: '8px 12px', fontSize: 15 }}>
                       {NOMS_ANIMATIONS[a].nom}
                     </span>
@@ -117,7 +117,7 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
             {STYLES.map(s => (
               <li key={s.id} data-bouton={s.id} className="lp-style">
                 <button type="button" onClick={() => maj({ bouton: { ...reglages.bouton, style: s.id } })} aria-pressed={reglages.bouton.style === s.id}
-                  className={`w-full rounded-[calc(var(--rc)+6px)] p-1.5 transition ${reglages.bouton.style === s.id ? 'ring-2 ring-peche' : ''}`}>
+                  className={`w-full rounded-[calc(var(--rc)+6px)] p-1.5 transition ${reglages.bouton.style === s.id ? 'ring-2 ring-white' : ''}`}>
                   <span className="lp-btn" style={{ minHeight: 48 }}><span className="lp-btn-texte"><span className="lp-btn-titre">{s.nom}</span></span></span>
                 </button>
               </li>
@@ -142,7 +142,7 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
             const actif = reglages.bureau === b.id;
             return (
               <button key={b.id} type="button" role="radio" aria-checked={actif} onClick={() => { vibrer(); maj({ bureau: b.id }); }}
-                className={`flex flex-col gap-2 rounded-2xl p-2 text-left transition ${actif ? 'bg-white/[0.1] ring-2 ring-peche' : 'bg-white/[0.04] ring-1 ring-white/[0.08] hover:bg-white/[0.07]'}`}>
+                className={`flex flex-col gap-2 rounded-2xl p-2 text-left transition ${actif ? 'bg-white/[0.1] ring-2 ring-white' : 'bg-white/[0.04] ring-1 ring-white/[0.08] hover:bg-white/[0.07]'}`}>
                 <SchemaBureau id={b.id} />
                 <span className="px-1 text-[13px] font-semibold text-white">{b.nom}</span>
                 <span className="px-1 pb-1 text-[12px] leading-snug text-white/55">{b.aide}</span>

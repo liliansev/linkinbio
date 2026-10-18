@@ -204,7 +204,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
             ))}
           </nav>
           <button type="button" onClick={() => setApercu(true)} className="flex min-h-10 items-center gap-1.5 rounded-full bg-white/[0.08] px-4 text-[14px] font-medium transition active:scale-95 lg:hidden">Aperçu</button>
-          <a href={demo ? '#page' : cheminPage(compte)} target={demo ? undefined : '_blank'} rel="noopener" className="hidden min-h-10 items-center gap-1.5 rounded-full bg-peche px-4 text-[14px] font-semibold text-nuit transition hover:brightness-105 sm:inline-flex">Voir ma page <Icone nom="ui-fleche" taille={16} /></a>
+          <a href={demo ? '#page' : cheminPage(compte)} target={demo ? undefined : '_blank'} rel="noopener" className="hidden min-h-10 items-center gap-1.5 rounded-full bg-white px-4 text-[14px] font-semibold text-nuit transition hover:brightness-105 sm:inline-flex">Voir ma page <Icone nom="ui-fleche" taille={16} /></a>
         </div>
       </header>
 
@@ -238,8 +238,8 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
           {onglets.map(o => (
             <li key={o.id}>
               <button type="button" onClick={() => { if (o.id !== onglet) { vibrer(5); setOnglet(o.id); scrollTo({ top: 0 }); } }} aria-current={onglet === o.id ? 'page' : undefined}
-                className={`flex h-16 w-full flex-col items-center justify-center gap-1 text-[11.5px] font-medium transition-colors duration-200 active:scale-95 ${onglet === o.id ? 'text-peche' : 'text-white/50'}`}>
-                <span className={`adm-nav-pastille grid h-8 place-items-center rounded-full ${onglet === o.id ? 'w-14 bg-peche/15' : 'w-10 bg-transparent'}`}><Picto>{o.icone}</Picto></span>{o.nom}
+                className={`flex h-16 w-full flex-col items-center justify-center gap-1 text-[11.5px] font-medium transition-colors duration-200 active:scale-95 ${onglet === o.id ? 'text-white' : 'text-white/50'}`}>
+                <span className={`adm-nav-pastille grid h-8 place-items-center rounded-full ${onglet === o.id ? 'w-14 bg-white/10' : 'w-10 bg-transparent'}`}><Picto>{o.icone}</Picto></span>{o.nom}
               </button>
             </li>
           ))}

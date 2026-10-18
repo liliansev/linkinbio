@@ -124,7 +124,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
 
         {avecUrl && (
           <Champ label={b.type === 'video' ? 'Adresse de la vidéo YouTube' : 'Adresse'}
-            aide={b.type === 'lien' && reglages.ouvrirApps && appDe(adresse(b.url)) ? <span className="inline-flex items-center gap-1.5 text-peche/90"><Icone nom="ui-ok" taille={13} />Depuis Instagram ou TikTok, ce lien s’ouvre dans l’app {appDe(adresse(b.url))}.</span> : undefined}>
+            aide={b.type === 'lien' && reglages.ouvrirApps && appDe(adresse(b.url)) ? <span className="inline-flex items-center gap-1.5 text-white/75"><Icone nom="ui-ok" taille={13} />Depuis Instagram ou TikTok, ce lien s’ouvre dans l’app {appDe(adresse(b.url))}.</span> : undefined}>
             <input className={classeSaisie} type="url" inputMode="url" autoCapitalize="none" autoCorrect="off" placeholder={b.type === 'video' ? 'https://youtu.be/…' : 'https://…'}
               value={b.url} onChange={e => maj({ url: e.target.value })} autoFocus={nouveau} />
           </Champ>
@@ -174,12 +174,12 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
                   const choisi = b.icone === p.nom;
                   return (
                     <button key={p.nom || 'sans'} type="button" role="radio" aria-checked={choisi} aria-label={p.libelle} title={p.libelle} onClick={() => { vibrer(4); maj({ icone: p.nom }); }}
-                      className={`grid aspect-square place-items-center rounded-xl transition duration-150 active:scale-90 ${choisi ? 'bg-peche text-nuit' : 'text-white/80 hover:bg-white/[0.08]'}`}>
+                      className={`grid aspect-square place-items-center rounded-xl transition duration-150 active:scale-90 ${choisi ? 'bg-white text-nuit' : 'text-white/80 hover:bg-white/[0.08]'}`}>
                       <Icone nom={p.nom || 'ui-aucun'} taille={20} />
                     </button>
                   );
                 })}
-                {b.icone && !ICONES[b.icone] && <span className="grid aspect-square place-items-center rounded-xl bg-peche text-xl" aria-label="Emoji actuel">{b.icone}</span>}
+                {b.icone && !ICONES[b.icone] && <span className="grid aspect-square place-items-center rounded-xl bg-white text-xl" aria-label="Emoji actuel">{b.icone}</span>}
               </div>
             </div>
             <div className="flex items-center gap-3">
@@ -187,7 +187,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
               <div className="flex flex-1 flex-wrap gap-2">
                 <button type="button" onClick={() => fichier.current?.click()} disabled={envoi} className="min-h-10 rounded-full bg-white/[0.08] px-4 text-[14px] font-medium text-white hover:bg-white/[0.13]">{envoi ? 'Envoi…' : b.image ? 'Changer l’image' : 'Ajouter une image'}</button>
                 {b.url && (
-                  <button type="button" onClick={recupererApercu} disabled={lecture || envoi} className="inline-flex min-h-10 items-center gap-1.5 rounded-full bg-peche/15 px-4 text-[14px] font-medium text-peche hover:bg-peche/25 disabled:opacity-60">
+                  <button type="button" onClick={recupererApercu} disabled={lecture || envoi} className="inline-flex min-h-10 items-center gap-1.5 rounded-full bg-white/10 px-4 text-[14px] font-medium text-white hover:bg-white/10 disabled:opacity-60">
                     <Icone nom="sparkle" taille={16} />{lecture ? 'Lecture du site…' : 'Aperçu du site'}
                   </button>
                 )}

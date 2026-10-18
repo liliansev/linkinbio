@@ -98,7 +98,7 @@ function FeuilleListe({ liste, api, onFermer, onChange }: { liste: Liste; api: P
           )}
           {message && <p role="status" className={`rounded-xl px-3.5 py-2.5 text-[13.5px] ${message.ok ? 'bg-emerald-400/10 text-emerald-200' : 'bg-red-500/15 text-red-200'}`}>{message.texte}</p>}
           {liste.integration && liste.enAttente > 0 && (
-            <button type="button" disabled={envoi} onClick={renvoyer} className="self-start text-[13.5px] font-medium text-peche underline underline-offset-2">
+            <button type="button" disabled={envoi} onClick={renvoyer} className="self-start text-[13.5px] font-medium text-white underline underline-offset-2">
               Envoyer les {nombre(liste.enAttente)} inscrit{liste.enAttente > 1 ? 's' : ''} pas encore chez {NOMS[liste.integration.fournisseur]}
             </button>
           )}

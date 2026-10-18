@@ -31,7 +31,7 @@ export function Repli({ titre, icone, resume, ouvert: depart, children }: { titr
         <Icone nom={icone} taille={17} />
         <span className="min-w-0 flex-1">
           {titre}
-          {resume && !ouvert && <span className="block truncate text-[12.5px] font-normal text-peche/85">{resume}</span>}
+          {resume && !ouvert && <span className="block truncate text-[12.5px] font-normal text-white/75">{resume}</span>}
         </span>
         <Icone nom="ui-chevron" taille={18} className={`shrink-0 transition-transform duration-300 ${ouvert ? 'rotate-180' : ''}`} />
       </button>
@@ -74,7 +74,7 @@ export function RegleMoment({ b, maj }: { b: Bloc; maj: (c: Partial<Bloc>) => vo
                 vibrer(4);
                 const jours = actif ? c!.jours.filter(n => n !== i + 1) : [...(c?.jours ?? []), i + 1];
                 if (!jours.length) maj({ creneau: null }); else majCreneau({ jours: jours.sort() });
-              }} className={`grid aspect-square place-items-center rounded-full text-[14px] font-semibold transition active:scale-90 ${actif ? 'bg-peche text-nuit' : 'bg-white/[0.07] text-white/70'}`}>{j}</button>
+              }} className={`grid aspect-square place-items-center rounded-full text-[14px] font-semibold transition active:scale-90 ${actif ? 'bg-white text-nuit' : 'bg-white/[0.07] text-white/70'}`}>{j}</button>
             );
           })}
         </div>
@@ -113,7 +113,7 @@ export function RegleAudience({ b, maj, adressePage }: { b: Bloc; maj: (c: Parti
           const actif = !!a?.sources.includes(s);
           return (
             <button key={s} type="button" aria-pressed={actif} onClick={() => basculer(s)}
-              className={`inline-flex min-h-10 items-center gap-1.5 rounded-full px-3.5 text-[14px] font-medium transition active:scale-95 ${actif ? 'bg-peche text-nuit' : 'bg-white/[0.07] text-white/75'}`}>
+              className={`inline-flex min-h-10 items-center gap-1.5 rounded-full px-3.5 text-[14px] font-medium transition active:scale-95 ${actif ? 'bg-white text-nuit' : 'bg-white/[0.07] text-white/75'}`}>
               {ICONE_AUDIENCE[s] && <Icone nom={ICONE_AUDIENCE[s]} taille={15} />}{NOMS_AUDIENCES[s]}
             </button>
           );

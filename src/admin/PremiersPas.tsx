@@ -162,9 +162,9 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
           {lignes.map((l, n) => {
             const valide = !!adresse(l.url);
             return (
-              <li key={l.id} className="rounded-2xl bg-white/[0.04] p-1.5 transition focus-within:bg-white/[0.07] focus-within:ring-2 focus-within:ring-peche/70">
+              <li key={l.id} className="rounded-2xl bg-white/[0.04] p-1.5 transition focus-within:bg-white/[0.07] focus-within:ring-2 focus-within:ring-white/30">
                 <div className="flex items-center gap-2">
-                  <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-full text-[14px] font-semibold ${valide ? 'bg-peche text-nuit' : 'bg-white/[0.07] text-white/55'}`}>
+                  <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-full text-[14px] font-semibold ${valide ? 'bg-white text-nuit' : 'bg-white/[0.07] text-white/55'}`}>
                     {valide ? <Icone nom="ui-ok" taille={16} /> : n + 1}
                   </span>
                   <input aria-label={`Adresse du lien ${n + 1}`} className="min-h-11 min-w-0 flex-1 bg-transparent px-1 text-[16px] text-white outline-none placeholder:text-white/45 focus-visible:!outline-none"
@@ -194,8 +194,8 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
               {ouverts.map(r => {
                 const ok = !!urlReseau(r, saisies[r] ?? '');
                 return (
-                  <li key={r} className="flex items-center gap-2 rounded-2xl bg-white/[0.04] p-1.5 pl-3 transition focus-within:bg-white/[0.07] focus-within:ring-2 focus-within:ring-peche/70">
-                    <span className={ok ? 'text-peche' : 'text-white/60'}><Icone nom={r} taille={20} /></span>
+                  <li key={r} className="flex items-center gap-2 rounded-2xl bg-white/[0.04] p-1.5 pl-3 transition focus-within:bg-white/[0.07] focus-within:ring-2 focus-within:ring-white/30">
+                    <span className={ok ? 'text-white' : 'text-white/60'}><Icone nom={r} taille={20} /></span>
                     <input id={`reseau-${r}`} aria-label={`Ton ${NOMS_RESEAUX[r]}`} className="min-h-11 min-w-0 flex-1 bg-transparent px-1 text-[16px] text-white outline-none placeholder:text-white/45 focus-visible:!outline-none"
                       autoCapitalize="off" autoCorrect="off" spellCheck={false} inputMode={r === 'email' ? 'email' : 'text'}
                       placeholder={r === 'email' ? 'toi@exemple.fr' : r === 'spotify' ? 'Adresse de ta page Spotify' : `Ton pseudo ${NOMS_RESEAUX[r]}`}
@@ -229,7 +229,7 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
             return (
               <li key={t.id} className="w-[84px] shrink-0 snap-start lg:w-auto">
                 <button type="button" role="radio" aria-checked={choisi} onClick={() => { vibrer(5); onReglages({ ...reglages, theme: t.id, bouton: t.conseil }); }}
-                  className={`flex w-full flex-col items-center gap-1.5 rounded-2xl p-1.5 transition ${choisi ? 'bg-peche/15 ring-2 ring-peche' : 'hover:bg-white/[0.05]'}`}>
+                  className={`flex w-full flex-col items-center gap-1.5 rounded-2xl p-1.5 transition ${choisi ? 'bg-white/10 ring-2 ring-white' : 'hover:bg-white/[0.05]'}`}>
                   <Pastille theme={t} />
                   <span className="w-full truncate text-center text-[12px] text-white/75">{t.nom}</span>
                 </button>
@@ -268,7 +268,7 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
         <div className="flex flex-1 justify-center gap-1.5" role="progressbar" aria-label="Premiers pas" aria-valuemin={0} aria-valuemax={QUESTIONS} aria-valuenow={Math.min(i, QUESTIONS)}>
           {Array.from({ length: QUESTIONS }, (_, n) => (
             <span key={n} className="h-1.5 w-9 overflow-hidden rounded-full bg-white/[0.1]">
-              <span className="block h-full rounded-full bg-peche transition-[width] duration-500" style={{ width: n < i ? '100%' : n === i ? '40%' : '0%' }} />
+              <span className="block h-full rounded-full bg-white transition-[width] duration-500" style={{ width: n < i ? '100%' : n === i ? '40%' : '0%' }} />
             </span>
           ))}
         </div>

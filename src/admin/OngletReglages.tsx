@@ -101,7 +101,7 @@ function Abonnement({ abonnement, ouvrirPaiement, ouvrirPortail }: {
         : { texte: fin ? `Se renouvelle le ${fin}.` : 'Ton abonnement est actif.', alerte: false };
     return (
       <div id="abonnement" className="scroll-mt-24">
-        <Carte titre="Ton abonnement" action={<span className="inline-flex items-center gap-1 rounded-full bg-peche px-2.5 py-1 text-[12.5px] font-semibold text-nuit"><Icone nom="sparkle" taille={13} />Pro</span>}>
+        <Carte titre="Ton abonnement" action={<span className="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1 text-[12.5px] font-semibold text-nuit"><Icone nom="sparkle" taille={13} />Pro</span>}>
           <p className={`text-[14px] leading-snug ${etat.alerte ? 'text-amber-200' : 'text-white/75'}`}>{etat.texte}</p>
           {abonnement.portail && (
             <>
@@ -129,7 +129,7 @@ function Abonnement({ abonnement, ouvrirPaiement, ouvrirPortail }: {
         <ul className="flex flex-col gap-2">
           {AVANTAGES_PRO.map(a => (
             <li key={a} className="flex gap-2.5 text-[14px] leading-snug text-white/80">
-              <span className="mt-0.5 grid h-[18px] w-[18px] shrink-0 place-items-center rounded-full bg-peche/15 text-peche"><Icone nom="ui-ok" taille={12} /></span>{a}
+              <span className="mt-0.5 grid h-[18px] w-[18px] shrink-0 place-items-center rounded-full bg-white/10 text-white"><Icone nom="ui-ok" taille={12} /></span>{a}
             </li>
           ))}
         </ul>
@@ -138,15 +138,15 @@ function Abonnement({ abonnement, ouvrirPaiement, ouvrirPortail }: {
             const t = TARIFS[p], choisi = periode === p;
             return (
               <button key={p} type="button" role="radio" aria-checked={choisi} onClick={() => setPeriode(p)}
-                className={`flex flex-col items-start rounded-2xl border px-3.5 py-3 text-left transition ${choisi ? 'border-peche/70 bg-peche/[0.08]' : 'border-white/10 bg-white/[0.03] hover:border-white/20'}`}>
+                className={`flex flex-col items-start rounded-2xl border px-3.5 py-3 text-left transition ${choisi ? 'border-white/30 bg-white/10' : 'border-white/10 bg-white/[0.03] hover:border-white/20'}`}>
                 <span className="text-[13px] text-white/55">{p === 'an' ? 'Annuel' : 'Mensuel'}</span>
                 <span className="mt-0.5 text-[20px] font-semibold tracking-tight text-white tabular-nums">{euros(t.prix)}<span className="text-[13px] font-normal text-white/50"> / {p === 'an' ? 'an' : 'mois'}</span></span>
-                {'economie' in t && <span className="mt-1 rounded-full bg-peche/15 px-2 py-0.5 text-[11.5px] font-semibold text-peche">{t.economie}</span>}
+                {'economie' in t && <span className="mt-1 rounded-full bg-white/10 px-2 py-0.5 text-[11.5px] font-semibold text-white">{t.economie}</span>}
               </button>
             );
           })}
         </div>
-        <button type="button" disabled={envoi} onClick={() => aller(() => ouvrirPaiement(periode))} className="mt-3 min-h-11 w-full rounded-full bg-peche px-4 text-[15px] font-semibold text-nuit transition hover:brightness-105 disabled:opacity-60">
+        <button type="button" disabled={envoi} onClick={() => aller(() => ouvrirPaiement(periode))} className="mt-3 min-h-11 w-full rounded-full bg-white px-4 text-[15px] font-semibold text-nuit transition hover:brightness-105 disabled:opacity-60">
           {envoi ? 'Ouverture du paiement…' : `Passer en Pro, ${TARIFS[periode].libelle}`}
         </button>
         {erreur && <p role="alert" className="mt-3 text-[13.5px] text-red-300">{erreur}</p>}

@@ -16,11 +16,11 @@ export function AccepterCgu({ accepter, deconnexion }: { accepter: () => Promise
     setErreur('');
     try { await accepter(); } catch { setErreur('Pas enregistré. Vérifie ta connexion et réessaie.'); setEnvoi(false); }
   }
-  const lien = (doc: string, texte: string) => <a href={`/legal/${doc}`} target="_blank" rel="noopener" className="text-peche underline">{texte}</a>;
+  const lien = (doc: string, texte: string) => <a href={`/legal/${doc}`} target="_blank" rel="noopener" className="text-white underline">{texte}</a>;
   return (
     <main className="adm grid min-h-dvh place-items-center bg-nuit px-5 font-sans text-white antialiased">
       <div className="adm-onglet w-full max-w-md">
-        <span className="grid h-14 w-14 place-items-center rounded-full bg-peche/15 text-peche"><Icone nom="lien" taille={26} /></span>
+        <span className="grid h-14 w-14 place-items-center rounded-full bg-white/10 text-white"><Icone nom="lien" taille={26} /></span>
         <h1 className="mt-5 text-[26px] font-semibold tracking-tight">Avant de commencer</h1>
         <p className="mt-2 text-[15px] leading-relaxed text-white/65">
           Hopla héberge ta page et mesure ses visites pour toi, sans cookie. Voici les règles du jeu, en clair : ce qui est interdit, comment marche la modération, et ce qu’on fait des données de tes visiteurs.

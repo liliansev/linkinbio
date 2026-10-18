@@ -44,7 +44,7 @@ function Courbe({ serie }: { serie: Stats['serie'] }) {
     <div>
       <div className="mb-2 flex items-center justify-between text-[12.5px]">
         <span className="flex gap-3 text-white/60">
-          <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-peche" />Vues</span>
+          <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-white" />Vues</span>
           <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-sky-300" />Clics</span>
         </span>
         <span className="text-white/70 tabular-nums">{point ? `${date(point.jour)} · ${point.vues} vues · ${point.clics} clics` : ''}</span>
@@ -71,7 +71,7 @@ function Barres({ lignes, total, unite }: { lignes: { nom: string; valeur: numbe
     <ul className="flex flex-col gap-2">
       {lignes.map(l => (
         <li key={l.nom} className="relative overflow-hidden rounded-xl bg-white/[0.035] px-3 py-2.5">
-          <span className="adm-barre absolute inset-y-0 left-0 origin-left bg-peche/15" style={{ width: `${(l.valeur / max) * 100}%` }} />
+          <span className="adm-barre absolute inset-y-0 left-0 origin-left bg-white/10" style={{ width: `${(l.valeur / max) * 100}%` }} />
           <span className="relative flex items-center justify-between gap-3 text-[14px]">
             <span className="truncate text-white">{l.nom}</span>
             <span className="shrink-0 tabular-nums text-white/70">{nombre(l.valeur)} {unite}{total ? <span className="ml-1.5 text-white/40">{Math.round((l.valeur / total) * 100)} %</span> : null}</span>
@@ -86,8 +86,8 @@ function Barres({ lignes, total, unite }: { lignes: { nom: string; valeur: numbe
 function EnBref({ stats }: { stats: Stats }) {
   const phrases = resumer(stats);
   return (
-    <section aria-label="En bref" className="rounded-[22px] bg-gradient-to-br from-peche/[0.13] to-white/[0.03] p-4 ring-1 ring-peche/15">
-      <p className="mb-2 flex items-center gap-1.5 text-[13px] font-semibold text-peche"><Icone nom="sparkle" taille={15} />En bref</p>
+    <section aria-label="En bref" className="rounded-[22px] bg-white/[0.05] p-4 ring-1 ring-white/10">
+      <p className="mb-2 flex items-center gap-1.5 text-[13px] font-semibold text-white"><Icone nom="sparkle" taille={15} />En bref</p>
       <ul className="flex flex-col gap-2">
         {phrases.map(p => (
           <li key={p.texte} className="flex gap-2.5 text-[15px] leading-snug text-white/90">
@@ -109,14 +109,14 @@ function OuvertsDansLApp({ apps, actif, onActiver }: { apps: Stats['apps']; acti
         <p className="text-[34px] font-semibold leading-none tracking-tight text-white tabular-nums">{nombre(apps.ouverts)}</p>
         <p className="pb-1 text-[13.5px] leading-snug text-white/60">clic{apps.ouverts > 1 ? 's' : ''} ouvert{apps.ouverts > 1 ? 's' : ''} directement dans YouTube, Spotify, Instagram…</p>
       </div>
-      <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/[0.07]"><div className="adm-barre h-full origin-left rounded-full bg-peche" style={{ width: `${part}%` }} /></div>
+      <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/[0.07]"><div className="adm-barre h-full origin-left rounded-full bg-white" style={{ width: `${part}%` }} /></div>
       <p className="mt-2.5 text-[13px] leading-snug text-white/55">
         {nombre(apps.integres)} clic{apps.integres > 1 ? 's' : ''} venaient du navigateur intégré d’Instagram, TikTok ou Facebook, dont {nombre(apps.versApp)} vers un lien qui a son app.
         {actif ? ' Sans Hopla, ils seraient restés coincés dans la page web, sans compte connecté.' : ''}
       </p>
       {!actif && (
-        <p className="mt-2.5 rounded-xl bg-peche/[0.08] px-3 py-2.5 text-[13px] leading-snug text-white/75">
-          L’ouverture dans les apps est coupée sur ta page. {onActiver && <button type="button" onClick={onActiver} className="font-semibold text-peche underline underline-offset-2">La rallumer</button>}
+        <p className="mt-2.5 rounded-xl bg-white/10 px-3 py-2.5 text-[13px] leading-snug text-white/75">
+          L’ouverture dans les apps est coupée sur ta page. {onActiver && <button type="button" onClick={onActiver} className="font-semibold text-white underline underline-offset-2">La rallumer</button>}
         </p>
       )}
     </Carte>
@@ -139,7 +139,7 @@ export function OngletStats({ charger, limite = false, onPro, ouvrirApps = true,
   return (
     <div className="flex flex-col gap-4">
       {limite ? (
-        <div className="flex items-center justify-between gap-3 rounded-2xl border border-peche/20 bg-peche/[0.07] px-4 py-3">
+        <div className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3">
           <p className="text-[14px] leading-snug text-white/80">Les 7 derniers jours. <span className="text-white/55">Avec Pro, jusqu’à un an d’historique : tout est déjà enregistré.</span></p>
           {onPro && <button type="button" onClick={onPro} className="min-h-9 shrink-0 rounded-full bg-white px-4 text-[13.5px] font-semibold text-nuit">Passer en Pro</button>}
         </div>

@@ -14,7 +14,7 @@ export function Interrupteur({ actif, onChange, label, aide, disabled }: { actif
         {aide && <span className="mt-0.5 block text-[13px] leading-snug text-white/55">{aide}</span>}
       </label>
       <button id={id} type="button" role="switch" aria-checked={actif} disabled={disabled} onClick={() => { vibrer(); onChange(!actif); }}
-        className={`adm-interrupteur relative h-8 w-[52px] shrink-0 rounded-full disabled:opacity-40 ${actif ? 'bg-peche' : 'bg-white/15'}`}>
+        className={`adm-interrupteur relative h-8 w-[52px] shrink-0 rounded-full disabled:opacity-40 ${actif ? 'bg-white' : 'bg-white/15'}`}>
         <span className={`absolute top-1 left-1 h-6 w-6 rounded-full shadow-[0_2px_6px_rgba(0,0,0,0.3)] ${actif ? 'translate-x-5 bg-nuit' : 'bg-white'}`} />
       </button>
     </div>
@@ -31,7 +31,7 @@ export function Champ({ label, aide, children }: { label: string; aide?: ReactNo
   );
 }
 
-export const classeSaisie = 'w-full rounded-xl border border-white/10 bg-white/[0.06] px-3.5 py-3 text-[16px] text-white placeholder:text-white/45 outline-none transition focus:border-peche/70 focus:bg-white/[0.09]';
+export const classeSaisie = 'w-full rounded-xl border border-white/10 bg-white/[0.06] px-3.5 py-3 text-[16px] text-white placeholder:text-white/45 outline-none transition focus:border-white/40 focus:bg-white/[0.09]';
 
 export function Carte({ titre, action, children, className = '', id }: { titre?: string; action?: ReactNode; children: ReactNode; className?: string; id?: string }) {
   return (
@@ -143,7 +143,7 @@ export function Feuille({ ouverte, onFermer, titre, children, pied, cote = false
 }
 
 export function BoutonPrincipal({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) {
-  return <button type="button" {...props} className={`inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-peche px-6 text-[15px] font-semibold text-nuit transition hover:brightness-105 active:scale-[0.98] disabled:opacity-50 ${props.className ?? ''}`}>{children}</button>;
+  return <button type="button" {...props} className={`inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-white px-6 text-[15px] font-semibold text-nuit transition hover:brightness-105 active:scale-[0.98] disabled:opacity-50 ${props.className ?? ''}`}>{children}</button>;
 }
 
 export function BoutonSecondaire({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) {
@@ -164,7 +164,7 @@ export function ListeChoix<T extends string>({ valeur, options, onChange, label 
               <span className={`block text-[15px] font-medium ${pris ? 'text-white' : 'text-white/80'}`}>{o.nom}</span>
               {o.aide && <span className="mt-0.5 block text-[13px] leading-snug text-white/50">{o.aide}</span>}
             </span>
-            <span className={`grid h-6 w-6 shrink-0 place-items-center rounded-full transition duration-150 ${pris ? 'bg-peche text-nuit' : 'ring-[1.5px] ring-inset ring-white/20'}`} aria-hidden="true">
+            <span className={`grid h-6 w-6 shrink-0 place-items-center rounded-full transition duration-150 ${pris ? 'bg-white text-nuit' : 'ring-[1.5px] ring-inset ring-white/20'}`} aria-hidden="true">
               {pris && <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2.5 6.2 5 8.6l4.5-5" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" /></svg>}
             </span>
           </button>
