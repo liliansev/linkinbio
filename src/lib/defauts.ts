@@ -1,5 +1,5 @@
 import type { Bloc, Reglages } from './types.ts';
-import { nouveauBloc } from './types.ts';
+import { SANS_COULEURS, nouveauBloc } from './types.ts';
 import { THEME_DEFAUT } from './themes.ts';
 
 /*
@@ -22,6 +22,7 @@ export const REGLAGES_DEFAUT: Reglages = {
   ],
   reseauxPosition: 'haut',
   theme: THEME_DEFAUT,
+  couleurs: SANS_COULEURS,
   bouton: { style: 'plein', forme: 'pilule', ombre: 'subtile' },
   seo: {
     titre: 'Lilian Sevoumian · Tous mes liens',

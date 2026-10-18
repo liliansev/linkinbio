@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { Api, Bloc, PagePublique, Reglages, Reseau } from '../lib/types.ts';
-import { nouveauBloc, sansSchema, urlPage } from '../lib/types.ts';
+import { SANS_COULEURS, nouveauBloc, sansSchema, urlPage } from '../lib/types.ts';
 import { adresse } from '../lib/valider.ts';
 import { THEMES } from '../lib/themes.ts';
 import { RESEAUX_ACCUEIL, THEMES_ACCUEIL, nomSite, urlReseau } from '../lib/demarrage.ts';
@@ -228,7 +228,7 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
             const choisi = reglages.theme === t.id;
             return (
               <li key={t.id} className="w-[84px] shrink-0 snap-start lg:w-auto">
-                <button type="button" role="radio" aria-checked={choisi} onClick={() => { vibrer(5); onReglages({ ...reglages, theme: t.id, bouton: t.conseil }); }}
+                <button type="button" role="radio" aria-checked={choisi} onClick={() => { vibrer(5); onReglages({ ...reglages, theme: t.id, bouton: t.conseil, couleurs: SANS_COULEURS }); }}
                   className={`flex w-full flex-col items-center gap-1.5 rounded-2xl p-1.5 transition ${choisi ? 'bg-white/10 ring-2 ring-white' : 'hover:bg-white/[0.05]'}`}>
                   <Pastille theme={t} />
                   <span className="w-full truncate text-center text-[12px] text-white/75">{t.nom}</span>

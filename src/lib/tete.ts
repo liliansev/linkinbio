@@ -1,6 +1,6 @@
 import type { PagePublique } from './types.ts';
 import { ORIGINE_PUBLIQUE, SITE_LILIAN, urlPage } from './types.ts';
-import { themeParId } from './themes.ts';
+import { themeDe } from './themes.ts';
 
 /*
  * Le <head> d'une page publique. La page de Lilian garde ses données
@@ -32,7 +32,7 @@ export function tetePage(page: PagePublique | null | undefined) {
       { title: titre },
       { name: 'description', content: description },
       { name: 'robots', content: indexable ? 'index, follow' : 'noindex, nofollow' },
-      { name: 'theme-color', content: themeParId(reglages.theme).fondUni },
+      { name: 'theme-color', content: themeDe(reglages).fondUni },
       { property: 'og:type', content: 'profile' },
       { property: 'og:title', content: titre },
       { property: 'og:description', content: description },

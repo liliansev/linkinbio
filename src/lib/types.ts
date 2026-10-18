@@ -104,12 +104,18 @@ export type OmbreBouton = (typeof OMBRES_BOUTON)[number];
 export const RESEAUX = ['youtube', 'linkedin', 'instagram', 'tiktok', 'x', 'github', 'facebook', 'threads', 'twitch', 'spotify', 'email', 'site'] as const;
 export type Reseau = (typeof RESEAUX)[number];
 
+/** Le fond, les boutons et l'accent qu'on peut changer après avoir choisi un thème. */
+export interface Couleurs { fond: string; boutons: string; accent: string }
+export const SANS_COULEURS: Couleurs = { fond: '', boutons: '', accent: '' };
+
 export interface Reglages {
   profil: { nom: string; bio: string; avatar: string; badge: boolean };
   reseaux: { reseau: Reseau; url: string }[];
   /** Les icônes des réseaux en haut (sous la bio) ou en bas de page. */
   reseauxPosition: 'haut' | 'bas';
   theme: string;
+  /** Les couleurs changées par-dessus le thème (`#rrggbb`) ; vide, c'est celle du thème. */
+  couleurs: Couleurs;
   bouton: { style: StyleBouton; forme: FormeBouton; ombre: OmbreBouton };
   seo: { titre: string; description: string; indexable: boolean };
   /** Le bouton « Partager » en haut de la page publique. */

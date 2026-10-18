@@ -10,7 +10,7 @@
  * `themes.test.ts`. Les styles de bouton se déduisent des couleurs (`page.css`).
  */
 
-import type { FormeBouton, OmbreBouton, StyleBouton } from './types.ts';
+import type { Couleurs, FormeBouton, OmbreBouton, StyleBouton } from './types.ts';
 
 export type Police = 'geist' | 'serif' | 'geometrique' | 'expressive' | 'technique' | 'mono' | 'grotesque' | 'condensee' | 'display' | 'elegante' | 'editoriale';
 export type Famille = 'sombre' | 'clair' | 'couleur' | 'degrade' | 'premium' | 'decale';
@@ -268,6 +268,47 @@ export const contraste = (a: string, b: string) => { const [x, y] = [luminance(a
 
 /** Les titres de section prennent l'accent quand il se lit sur le fond, sinon le texte doux. */
 export const titreSection = (theme: Theme) => (contraste(theme.vedette, theme.fondUni) >= 4.5 ? theme.vedette : theme.doux);
+
+const enHex = (n: number) => Math.round(Math.min(255, Math.max(0, n))).toString(16).padStart(2, '0');
+/** `a` mêlé de `b` dans la proportion `t` (0 : `a`, 1 : `b`). */
+export const meler = (a: string, b: string, t: number) =>
+  '#' + [1, 3, 5].map(i => enHex(parseInt(a.slice(i, i + 2), 16) * (1 - t) + parseInt(b.slice(i, i + 2), 16) * t)).join('');
+/** Le texte qui se lit sur `fond` : le premier proposé qui passe 4,5, sinon le blanc ou le presque noir. */
+const lisibleSur = (fond: string, ...choix: string[]) =>
+  choix.find(c => contraste(c, fond) >= 4.5) ?? (contraste('#ffffff', fond) >= contraste('#111111', fond) ? '#ffffff' : '#111111');
+const estCouleur = (c: string | undefined): c is string => !!c && /^#[0-9a-f]{6}$/i.test(c);
+
+/**
+ * Le thème avec les couleurs changées par-dessus (Lilian, 18 octobre 2026 :
+ * on part d'un thème, puis on change le fond, les boutons ou l'accent). Les
+ * textes qui vont dessus se recalculent pour rester lisibles ; la police, la
+ * matière et la typographie restent celles du thème.
+ */
+export function personnaliser(theme: Theme, couleurs?: Partial<Couleurs>): Theme {
+  const t = { ...theme };
+  if (estCouleur(couleurs?.fond)) {
+    const fond = couleurs.fond.toLowerCase();
+    t.texte = lisibleSur(fond, theme.texte, '#ffffff', '#111111');
+    t.fond = lueur(meler(fond, t.texte, 0.06), fond);
+    t.fondUni = fond;
+    // Le texte doux : le texte un peu fondu dans le fond, sans passer sous 3,5 de contraste.
+    let part = 0.34;
+    while (part > 0 && contraste(meler(t.texte, fond, part), fond) < 3.5) part -= 0.04;
+    t.doux = meler(t.texte, fond, Math.max(0, part));
+    t.ombre = meler(fond, '#000000', 0.7);
+  }
+  if (estCouleur(couleurs?.boutons)) {
+    t.surface = couleurs.boutons.toLowerCase();
+    t.surfaceTexte = lisibleSur(t.surface, theme.surfaceTexte, '#ffffff', '#111111');
+  }
+  if (estCouleur(couleurs?.accent)) {
+    t.vedette = couleurs.accent.toLowerCase();
+    t.vedetteTexte = lisibleSur(t.vedette, theme.vedetteTexte, '#ffffff', '#111111');
+  }
+  return t;
+}
+/** Le thème d'une page, avec ses couleurs à elle. */
+export const themeDe = (r: { theme: string; couleurs?: Partial<Couleurs> }) => personnaliser(themeParId(r.theme), r.couleurs);
 
 const role = (nom: string, r: Role): Record<string, string> => ({
   ...(r.taille ? { [`--${nom}-taille`]: `${r.taille}rem` } : {}),

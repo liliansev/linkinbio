@@ -1,8 +1,8 @@
 import { useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
-import type { FormeBouton, MiseEnPageBureau, OmbreBouton, Reglages, Reseau, StyleBouton } from '../lib/types.ts';
-import { ANIMATIONS, RESEAUX } from '../lib/types.ts';
-import { THEMES, themeParId, variablesTheme } from '../lib/themes.ts';
+import type { Couleurs, FormeBouton, MiseEnPageBureau, OmbreBouton, Reglages, Reseau, StyleBouton } from '../lib/types.ts';
+import { ANIMATIONS, RESEAUX, SANS_COULEURS } from '../lib/types.ts';
+import { THEMES, themeDe, themeParId, variablesTheme } from '../lib/themes.ts';
 import type { Theme } from '../lib/themes.ts';
 import { Icone, NOMS_RESEAUX } from '../components/Icone.tsx';
 import { Carte, Champ, Interrupteur, NOMS_ANIMATIONS, Segments, classeSaisie, preparerImage, vibrer } from './ui.tsx';
@@ -31,15 +31,15 @@ export function Pastille({ theme }: { theme: Theme }) {
   );
 }
 
-export type PartieApparence = 'profil' | 'theme' | 'animation' | 'boutons' | 'bureau' | 'reseaux';
-const TOUTES: PartieApparence[] = ['profil', 'theme', 'animation', 'boutons', 'bureau', 'reseaux'];
+export type PartieApparence = 'profil' | 'theme' | 'couleurs' | 'animation' | 'boutons' | 'bureau' | 'reseaux';
+const TOUTES: PartieApparence[] = ['profil', 'theme', 'couleurs', 'animation', 'boutons', 'bureau', 'reseaux'];
 
 /** Les réglages d'apparence, en cartes. `parties` n'en garde que certaines (les feuilles de « Ma page »). */
 export function OngletApparence({ reglages, onChange, envoyerImage, principal = true, parties = TOUTES }: { reglages: Reglages; onChange: (r: Reglages) => void; envoyerImage: (d: string) => Promise<string>; principal?: boolean; parties?: PartieApparence[] }) {
   const voir = (p: PartieApparence) => parties.includes(p);
   const [envoi, setEnvoi] = useState(false);
   const fichier = useRef<HTMLInputElement>(null);
-  const theme = themeParId(reglages.theme);
+  const theme = themeDe(reglages);
   const maj = (champs: Partial<Reglages>) => onChange({ ...reglages, ...champs });
   const profil = (champs: Partial<Reglages['profil']>) => maj({ profil: { ...reglages.profil, ...champs } });
   const absents = RESEAUX.filter(r => !reglages.reseaux.some(x => x.reseau === r));
@@ -75,8 +75,8 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
         <ul className="grid grid-cols-3 gap-2.5 sm:grid-cols-4">
           {THEMES.map(t => (
             <li key={t.id}>
-              {/* Choisir un thème pose aussi les boutons qui vont avec ; on peut les changer ensuite. */}
-              <button type="button" onClick={() => maj({ theme: t.id, bouton: t.conseil })} aria-pressed={theme.id === t.id}
+              {/* Choisir un thème pose aussi ses boutons et ses couleurs ; on peut les changer ensuite. */}
+              <button type="button" onClick={() => maj({ theme: t.id, bouton: t.conseil, couleurs: SANS_COULEURS })} aria-pressed={theme.id === t.id}
                 className={`flex w-full flex-col items-center gap-1.5 rounded-2xl p-1.5 transition ${theme.id === t.id ? 'bg-white/10 ring-2 ring-white' : 'hover:bg-white/[0.05]'}`}>
                 <Pastille theme={t} />
                 <span className="flex w-full flex-col text-center leading-tight">
@@ -87,6 +87,17 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
             </li>
           ))}
         </ul>
+      </Carte>}
+
+      {voir('couleurs') && <Carte titre="Couleurs" action={reglages.couleurs.fond || reglages.couleurs.boutons || reglages.couleurs.accent
+        ? <button type="button" onClick={() => maj({ couleurs: SANS_COULEURS })} className="text-[13px] font-medium text-white/60 hover:text-white">Tout remettre</button> : undefined}>
+        <p className="-mt-1 mb-4 text-[13px] leading-snug text-white/55">Pars de {themeParId(reglages.theme).nom} et change ce que tu veux. Les textes s’ajustent pour rester lisibles.</p>
+        <div className="flex flex-col gap-5">
+          {CLES_COULEURS.map(c => (
+            <ChoixCouleur key={c.id} nom={c.nom} valeur={reglages.couleurs[c.id]} duTheme={c.duTheme(themeParId(reglages.theme))}
+              onChange={v => maj({ couleurs: { ...reglages.couleurs, [c.id]: v } })} />
+          ))}
+        </div>
       </Carte>}
 
       {voir('animation') && <Carte titre="Liens mis en avant" action={<span className="text-[13px] text-white/50">{NOMS_ANIMATIONS[reglages.animation].nom}</span>}>
@@ -218,7 +229,7 @@ function SchemaBureau({ id }: { id: MiseEnPageBureau }) {
   );
 }
 
-type Tiroir = 'theme' | 'boutons' | 'animation' | 'bureau';
+type Tiroir = 'theme' | 'couleurs' | 'boutons' | 'animation' | 'bureau';
 
 /**
  * Le design en liste à tiroirs : chaque ligne dit ce qui est choisi, un toucher
@@ -227,10 +238,11 @@ type Tiroir = 'theme' | 'boutons' | 'animation' | 'bureau';
  */
 export function DesignTiroirs({ reglages, onChange, envoyerImage, principal, pied }: { reglages: Reglages; onChange: (r: Reglages) => void; envoyerImage: (d: string) => Promise<string>; principal: boolean; pied?: ReactNode }) {
   const [ouvert, setOuvert] = useState<Tiroir | null>(null);
-  const theme = themeParId(reglages.theme);
+  const theme = themeDe(reglages);
   const nom = <T extends string>(liste: { id: T; nom: string }[], id: T) => liste.find(x => x.id === id)?.nom ?? '';
   const lignes: { id: Tiroir; nom: string; valeur: string; vignette?: ReactNode }[] = [
     { id: 'theme', nom: 'Thème', valeur: theme.nom, vignette: <span className="block w-7"><Pastille theme={theme} /></span> },
+    { id: 'couleurs', nom: 'Couleurs', valeur: resumeCouleurs(reglages.couleurs), vignette: <span className="flex w-7 -space-x-1.5" aria-hidden="true">{[theme.fondUni, theme.surface, theme.vedette].map((c, i) => <span key={i} className="h-4 w-4 shrink-0 rounded-full ring-1 ring-white/25" style={{ background: c }} />)}</span> },
     { id: 'boutons', nom: 'Boutons', valeur: [nom(STYLES, reglages.bouton.style), nom(FORMES, reglages.bouton.forme), `ombre ${nom(OMBRES, reglages.bouton.ombre).toLowerCase()}`].join(', ') },
     { id: 'animation', nom: 'Liens mis en avant', valeur: NOMS_ANIMATIONS[reglages.animation].nom },
     { id: 'bureau', nom: 'Sur ordinateur', valeur: nom(BUREAUX, reglages.bureau) },
@@ -262,6 +274,47 @@ export function DesignTiroirs({ reglages, onChange, envoyerImage, principal, pie
         ))}
       </ul>
       {pied}
+    </div>
+  );
+}
+
+/** Les trois couleurs qu'on change par-dessus un thème, et où les lire dans le thème. */
+const CLES_COULEURS: { id: keyof Couleurs; nom: string; duTheme: (t: Theme) => string }[] = [
+  { id: 'fond', nom: 'Fond', duTheme: t => t.fondUni },
+  { id: 'boutons', nom: 'Boutons', duTheme: t => t.surface },
+  { id: 'accent', nom: 'Lien mis en avant', duTheme: t => t.vedette },
+];
+/** Une palette courte, des neutres aux couleurs franches ; le sélecteur donne tout le reste. */
+const PALETTE = ['#0c121f', '#111111', '#ffffff', '#f4ece1', '#e3e9de', '#e9e2f6', '#1f35ff', '#d62e1f', '#ff8a5c', '#ffd400', '#23704f', '#ff6fae'];
+
+function resumeCouleurs(c: Couleurs) {
+  const changes = CLES_COULEURS.filter(k => c[k.id]).map(k => k.nom.toLowerCase());
+  return changes.length ? `${changes.join(', ').replace(/^./, m => m.toUpperCase())} à ton goût` : 'Celles du thème';
+}
+
+/** Une couleur : celle du thème, une de la palette, ou n'importe laquelle au sélecteur. */
+function ChoixCouleur({ nom, valeur, duTheme, onChange }: { nom: string; valeur: string; duTheme: string; onChange: (v: string) => void }) {
+  const actuelle = valeur || duTheme;
+  const pastille = (c: string, choisie: boolean, etiquette: string, action: () => void) => (
+    <button type="button" onClick={() => { vibrer(4); action(); }} aria-pressed={choisie} aria-label={etiquette} title={etiquette}
+      className={`h-8 w-8 shrink-0 rounded-full ring-1 ring-inset ring-white/20 transition active:scale-90 ${choisie ? 'outline-2 outline-offset-2 outline-white' : ''}`} style={{ background: c }} />
+  );
+  return (
+    <div>
+      <div className="mb-2 flex items-center justify-between gap-3">
+        <span className="text-[13.5px] font-medium text-white/85">{nom}</span>
+        <span className="text-[12.5px] text-white/45">{valeur ? valeur.toUpperCase() : 'Celle du thème'}</span>
+      </div>
+      <div className="flex flex-wrap gap-2.5">
+        {pastille(duTheme, !valeur, `${nom} : celle du thème`, () => onChange(''))}
+        <span className="mx-0.5 h-8 w-px self-center bg-white/10" aria-hidden="true" />
+        {PALETTE.filter(c => c !== duTheme.toLowerCase()).map(c => pastille(c, valeur === c, `${nom} : ${c}`, () => onChange(c)))}
+        <label className={`relative grid h-8 w-8 shrink-0 cursor-pointer place-items-center rounded-full bg-white/[0.08] text-white/80 ring-1 ring-inset ring-white/20 transition hover:bg-white/[0.14] ${valeur && !PALETTE.includes(valeur) ? 'outline-2 outline-offset-2 outline-white' : ''}`}
+          title="Une autre couleur" style={valeur && !PALETTE.includes(valeur) ? { background: valeur } : undefined}>
+          <Icone nom="ui-plus" taille={16} />
+          <input type="color" value={actuelle} onChange={e => onChange(e.target.value.toLowerCase())} className="absolute inset-0 h-full w-full cursor-pointer opacity-0" aria-label={`${nom} : une autre couleur`} />
+        </label>
+      </div>
     </div>
   );
 }

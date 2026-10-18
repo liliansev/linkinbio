@@ -13,6 +13,9 @@ import type { Audience, EffetAudience } from './provenance.ts';
  */
 
 const texte = (v: unknown, max: number) => (typeof v === 'string' ? v.replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, '').trim().slice(0, max) : '');
+/** Une couleur `#rrggbb`, en minuscules ; vide sinon (la couleur du thème). */
+const couleur = (v: unknown) => (typeof v === 'string' && /^#[0-9a-f]{6}$/i.test(v) ? v.toLowerCase() : '');
+const couleurs = (v: any) => ({ fond: couleur(v?.fond), boutons: couleur(v?.boutons), accent: couleur(v?.accent) });
 const bool = (v: unknown, defaut: boolean) => (typeof v === 'boolean' ? v : defaut);
 const parmi = <T extends string>(v: unknown, liste: readonly T[], defaut: T): T => (liste.includes(v as T) ? (v as T) : defaut);
 
@@ -141,6 +144,7 @@ export function validerReglages(v: unknown, base: Reglages): Reglages {
     reseaux: reseaux.slice(0, 12).map((r: any) => ({ reseau: parmi(r?.reseau, RESEAUX, 'site'), url: adresse(r?.url) })).filter((r: { url: string }) => r.url),
     reseauxPosition: parmi(o.reseauxPosition, ['haut', 'bas'] as const, base.reseauxPosition),
     theme: idTheme(o.theme),
+    couleurs: couleurs(o.couleurs ?? base.couleurs),
     bouton: { style: parmi(bouton.style, STYLES_BOUTON, 'plein'), forme: parmi(bouton.forme, FORMES_BOUTON, 'pilule'), ombre: parmi(bouton.ombre, OMBRES_BOUTON, 'aucune') },
     seo: { titre: texte(seo.titre, 80), description: texte(seo.description, 200), indexable: bool(seo.indexable, true) },
     partage: bool(o.partage, base.partage),

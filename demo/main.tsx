@@ -24,7 +24,7 @@ function Demo() {
     const bureau = bureauChoisi ?? p.reglages.bureau;
     // `#page=klein` montre la page dans un autre thème, avec ses boutons conseillés : pour revoir chaque thème d'un coup d'œil.
     const autre = THEMES.find(t => t.id === location.hash.split('=')[1]);
-    if (autre) p.reglages = { ...p.reglages, theme: autre.id, bouton: { ...p.reglages.bouton, ...autre.conseil } };
+    if (autre) p.reglages = { ...p.reglages, theme: autre.id, couleurs: { fond: '', boutons: '', accent: '' }, bouton: { ...p.reglages.bouton, ...autre.conseil } };
     return (
       <>
         <PageLiens page={{ reglages: { ...p.reglages, bureau }, blocs: p.blocs.filter(b => estEnLigne(b)), compte: p.compte }} apercu />
