@@ -447,8 +447,8 @@ function Drop({ bloc, t, langue, apercu, pseudo, clic, cible }: { bloc: Bloc; t:
         <span className="lp-carte-texte">
           <span className="lp-carte-titre">{bloc.titre || t.reserve}</span>
           <span className="lp-sous">{url ? t.debloque : bloc.sousTitre || (avecCode ? t.reserve : t.reserver)}</span>
+          {badge && <span className="lp-drop-places">{badge}</span>}
         </span>
-        {badge && <span className="lp-drop-places">{badge}</span>}
       </button>
       {avecCode && ouvert && !url && (
         <form className="lp-drop-form" onSubmit={e => { e.preventDefault(); debloquer(String(new FormData(e.currentTarget).get('code') ?? '')); }}>
