@@ -276,7 +276,10 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
       {apercu && (
         <div className="adm-fondu fixed inset-0 z-40 flex flex-col bg-black/80 backdrop-blur-sm lg:hidden" role="dialog" aria-modal="true" aria-label="Aperçu de ta page">
           <div className="adm-apercu relative min-h-0 flex-1 overflow-y-auto"><PageLiens page={page} apercu /></div>
-          <button type="button" onClick={() => setApercu(false)} className="absolute bottom-[max(20px,env(safe-area-inset-bottom))] left-1/2 min-h-12 -translate-x-1/2 rounded-full bg-white px-6 text-[15px] font-semibold text-nuit shadow-2xl">Fermer l’aperçu</button>
+          {/* Sous la page, pas par-dessus : le bouton ne cache jamais le bas de la page. */}
+          <div className="flex shrink-0 justify-center border-t border-white/[0.08] bg-[#0b0f19] px-4 pt-3 pb-[max(12px,env(safe-area-inset-bottom))]">
+            <button type="button" onClick={() => setApercu(false)} className="min-h-12 rounded-full bg-white px-6 text-[15px] font-semibold text-nuit">Fermer l’aperçu</button>
+          </div>
         </div>
       )}
 
