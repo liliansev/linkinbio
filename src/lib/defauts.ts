@@ -22,7 +22,7 @@ export const REGLAGES_DEFAUT: Reglages = {
   ],
   reseauxPosition: 'haut',
   theme: THEME_DEFAUT,
-  bouton: { style: 'plein', forme: 'pilule' },
+  bouton: { style: 'plein', forme: 'pilule', ombre: 'subtile' },
   seo: {
     titre: 'Lilian Sevoumian · Tous mes liens',
     description: 'Mes vidéos, ma newsletter, mes formations et mes projets, au même endroit.',

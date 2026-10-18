@@ -1,9 +1,11 @@
 /*
  * La page publique. Toutes les couleurs viennent du thème (variables posées
  * par `PageLiens`) ; les cinq styles de bouton et les trois formes se lisent
- * sur `data-bouton` et `data-forme`, si bien que chaque combinaison marche
- * avec chacun des quarante-quatre thèmes. La matière du fond (`data-decor`)
- * et la police des titres (`--police-titre`) viennent aussi du thème.
+ * sur `data-bouton`, `data-forme` et `data-ombre`, si bien que chaque
+ * combinaison marche avec chacun des dix thèmes. La matière du fond
+ * (`data-decor`), la police des titres (`--police-titre`) et la typographie
+ * réglée de chaque rôle (`--nom-*`, `--section-*`, `--btn-*`, `--carte-*`)
+ * viennent aussi du thème.
  */
 
 .lp {
@@ -24,18 +26,10 @@
 .lp[data-forme='carre'] { --r: 4px; --rc: 6px; }
 .lp[data-police='serif'] { font-size: 1.06em; }
 
-/* Les titres prennent la police de caractère du thème. */
-.lp :is(.lp-nom, .lp-section, .lp-carte-titre) { font-family: var(--police-titre); }
-.lp[data-police='editoriale'] .lp-nom { font-weight: 400; font-size: 2.15rem; letter-spacing: -0.01em; }
-.lp[data-police='editoriale'] .lp-section { font-size: 1.12rem; font-weight: 400; font-style: italic; letter-spacing: 0; }
-.lp[data-police='editoriale'] .lp-carte-titre { font-weight: 400; font-size: 1.22rem; letter-spacing: 0; }
-.lp[data-police='display'] .lp-nom { font-size: 1.45rem; font-weight: 700; letter-spacing: -0.01em; }
-.lp[data-police='display'] .lp-section { font-size: 0.78rem; font-weight: 600; letter-spacing: 0.04em; }
-.lp[data-police='display'] .lp-carte-titre { font-weight: 600; letter-spacing: -0.005em; }
-.lp[data-police='elegante'] .lp-nom { font-weight: 560; font-size: 1.85rem; letter-spacing: -0.02em; }
-.lp[data-police='elegante'] .lp-section { font-style: italic; font-weight: 450; font-size: 0.98rem; }
-.lp[data-police='grotesque'] .lp-nom { font-weight: 760; font-size: 1.75rem; letter-spacing: -0.035em; }
-.lp[data-police='grotesque'] .lp-btn { font-weight: 620; }
+/* Les titres prennent la police de caractère du thème, et sa chasse (le Brutaliste est condensé). */
+.lp :is(.lp-nom, .lp-section, .lp-carte-titre) { font-family: var(--police-titre); font-stretch: var(--titre-chasse, 100%); }
+/* Sur fond sombre, le texte clair gagne une pointe d'approche pour respirer. */
+.lp { font-optical-sizing: auto; }
 
 .lp-col {
   max-width: 580px;
@@ -56,7 +50,7 @@
 
 .lp-tete { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 10px; margin-bottom: 28px; }
 .lp-avatar { width: 104px; height: 104px; border-radius: 999px; object-fit: cover; box-shadow: 0 0 0 1px color-mix(in srgb, var(--texte) 14%, transparent), 0 18px 40px -18px rgb(0 0 0 / 0.55); }
-.lp-nom { font-size: 1.6rem; font-weight: 620; letter-spacing: -0.025em; margin: 8px 0 0; display: inline-flex; align-items: center; gap: 6px; line-height: 1.15; text-wrap: balance; }
+.lp-nom { font-size: var(--nom-taille, 1.6rem); font-weight: var(--nom-graisse, 620); letter-spacing: var(--nom-approche, -0.025em); font-style: var(--nom-style, normal); margin: 8px 0 0; display: inline-flex; align-items: center; gap: 6px; line-height: 1.15; text-wrap: balance; }
 .lp-badge { display: inline-flex; color: var(--vedette); }
 .lp-badge svg { color: inherit; }
 .lp-bio { margin: 0; color: var(--doux); font-size: 1rem; line-height: 1.5; max-width: 36ch; text-wrap: balance; }
@@ -68,7 +62,7 @@
 
 .lp-blocs { display: flex; flex-direction: column; gap: 14px; }
 
-.lp-section { margin: 18px 0 2px; text-align: center; font-size: 0.86rem; font-weight: 560; letter-spacing: 0.01em; color: var(--titre-section, var(--doux)); }
+.lp-section { margin: 18px 0 2px; text-align: center; font-size: var(--section-taille, 0.86rem); font-weight: var(--section-graisse, 560); letter-spacing: var(--section-approche, 0.01em); font-style: var(--section-style, normal); color: var(--titre-section, var(--doux)); }
 .lp-texte { margin: 0; text-align: center; color: var(--doux); line-height: 1.55; white-space: pre-line; }
 
 /* ---- Boutons ---- */
@@ -86,14 +80,27 @@
   position: relative;
   overflow: hidden;
   isolation: isolate;
+  /* L'ombre choisie (`data-ombre`), que chaque style de bouton ajoute à ses propres traits. */
+  box-shadow: var(--lp-ombre);
   transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease, background-color 0.2s ease;
   -webkit-tap-highlight-color: transparent;
 }
+.lp { --lp-ombre: 0 0 #0000; --lp-ombre-survol: 0 0 #0000; }
+/* Deux ombres, teintées par le fond du thème : un contact net sous le bouton, et une portée douce. */
+.lp[data-ombre='subtile'] {
+  --lp-ombre: 0 1px 2px color-mix(in srgb, var(--ombre-teinte, #000) 14%, transparent), 0 6px 16px -6px color-mix(in srgb, var(--ombre-teinte, #000) 30%, transparent);
+  --lp-ombre-survol: 0 2px 4px color-mix(in srgb, var(--ombre-teinte, #000) 16%, transparent), 0 12px 24px -8px color-mix(in srgb, var(--ombre-teinte, #000) 36%, transparent);
+}
+.lp[data-ombre='marquee'] {
+  --lp-ombre: 0 2px 3px color-mix(in srgb, var(--ombre-teinte, #000) 24%, transparent), 0 14px 30px -10px color-mix(in srgb, var(--ombre-teinte, #000) 58%, transparent);
+  --lp-ombre-survol: 0 3px 6px color-mix(in srgb, var(--ombre-teinte, #000) 26%, transparent), 0 22px 40px -12px color-mix(in srgb, var(--ombre-teinte, #000) 64%, transparent);
+}
+.lp-btn:hover, .lp-carte:hover { box-shadow: var(--lp-ombre-survol); }
 .lp-btn {
   display: flex; align-items: center; justify-content: center;
   min-height: 60px; padding: 10px 60px;
   border-radius: var(--r);
-  font-weight: 560; font-size: 1rem; line-height: 1.25; text-align: center;
+  font-weight: var(--btn-graisse, 560); letter-spacing: var(--btn-approche, 0); font-size: 1rem; line-height: 1.25; text-align: center;
 }
 .lp-btn:hover { transform: translateY(-2px); }
 .lp-btn:active, .lp-carte:active { transform: scale(0.97); transition-duration: 0.08s; }
@@ -110,8 +117,8 @@
 [data-bouton]:not([data-bouton='plein']) :is(.lp-btn, .lp-carte) { --lp-encre: var(--texte); --lp-halo: var(--texte); --lp-trait: var(--texte); }
 .lp-accent { --lp-fond: var(--vedette); --lp-encre: var(--vedette-texte); }
 
-[data-bouton='contour'] :is(.lp-btn, .lp-carte) { background: transparent; color: var(--texte); box-shadow: inset 0 0 0 2px var(--texte); }
-[data-bouton='contour'] :is(.lp-btn, .lp-carte):hover { background: color-mix(in srgb, var(--texte) 8%, transparent); }
+[data-bouton='contour'] :is(.lp-btn, .lp-carte) { background: transparent; color: var(--texte); box-shadow: inset 0 0 0 2px var(--texte), var(--lp-ombre); }
+[data-bouton='contour'] :is(.lp-btn, .lp-carte):hover { background: color-mix(in srgb, var(--texte) 8%, transparent); box-shadow: inset 0 0 0 2px var(--texte), var(--lp-ombre-survol); }
 
 [data-bouton='doux'] :is(.lp-btn, .lp-carte) { background: color-mix(in srgb, var(--texte) 10%, transparent); color: var(--texte); }
 [data-bouton='doux'] :is(.lp-btn, .lp-carte):hover { background: color-mix(in srgb, var(--texte) 16%, transparent); }
@@ -132,17 +139,17 @@
   color: var(--texte);
   backdrop-filter: blur(16px) saturate(1.5);
   -webkit-backdrop-filter: blur(16px) saturate(1.5);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--texte) 22%, transparent), 0 10px 30px -16px rgb(0 0 0 / 0.5);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--texte) 22%, transparent), var(--lp-ombre);
 }
-[data-bouton='verre'] :is(.lp-btn, .lp-carte):hover { background: color-mix(in srgb, var(--texte) 17%, transparent); }
+[data-bouton='verre'] :is(.lp-btn, .lp-carte):hover { background: color-mix(in srgb, var(--texte) 17%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--texte) 28%, transparent), var(--lp-ombre-survol); }
 
 /*
  * La carte mise en avant garde sa couleur pleine dans tous les styles : c'est
  * elle que le visiteur doit voir d'abord. Le style ne change que son trait.
  */
 .lp[data-bouton] :is(.lp-btn, .lp-carte).lp-accent { background: var(--vedette); color: var(--vedette-texte); --lp-encre: var(--vedette-texte); --lp-halo: var(--vedette); }
-.lp[data-bouton='contour'] :is(.lp-btn, .lp-carte).lp-accent { box-shadow: none; }
-.lp[data-bouton='verre'] :is(.lp-btn, .lp-carte).lp-accent { box-shadow: inset 0 0 0 1px color-mix(in srgb, white 30%, transparent), 0 14px 34px -16px var(--vedette); }
+.lp[data-bouton='contour'] :is(.lp-btn, .lp-carte).lp-accent { box-shadow: var(--lp-ombre); }
+.lp[data-bouton='verre'] :is(.lp-btn, .lp-carte).lp-accent { box-shadow: inset 0 0 0 1px color-mix(in srgb, white 30%, transparent), var(--lp-ombre); }
 
 /* L'accent au-delà d'un seul bouton : les titres de section et une lueur derrière le portrait. */
 .lp-tete { position: relative; }
@@ -161,12 +168,12 @@
  * motif autour du picto), puis titre, description et le domaine en pied.
  */
 
-.lp-btn-vedette { font-weight: 620; }
+.lp-btn-vedette { font-weight: calc(var(--btn-graisse, 560) + 60); }
 
 .lp-carte { display: flex; border-radius: var(--r); text-align: left; }
 .lp-carte:hover { transform: translateY(-2px); }
 .lp-carte-texte { display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 0; }
-.lp-carte-titre { font-size: 1.04rem; font-weight: 650; letter-spacing: -0.014em; line-height: 1.25; }
+.lp-carte-titre { font-size: var(--carte-taille, 1.04rem); font-weight: var(--carte-graisse, 650); letter-spacing: var(--carte-approche, -0.014em); line-height: 1.25; }
 .lp-carte-description {
   font-size: 0.86rem; line-height: 1.42; opacity: 0.74;
   display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden;
@@ -444,7 +451,8 @@
 .lp-pastille { position: relative; isolation: isolate; overflow: hidden; background: var(--fond-uni); background-image: var(--fond); color: var(--texte); }
 .lp-pastille > * { position: relative; z-index: 1; }
 .lp-pastille-aa { font-family: var(--police-titre); font-size: 1.15rem; line-height: 1; font-weight: 600; }
-.lp-pastille[data-police='editoriale'] .lp-pastille-aa { font-weight: 400; font-size: 1.3rem; }
+.lp-pastille .lp-pastille-aa { font-weight: var(--nom-graisse, 600); font-style: var(--nom-style, normal); font-stretch: var(--titre-chasse, 100%); letter-spacing: var(--nom-approche, 0); }
+.lp-pastille[data-police='editoriale'] .lp-pastille-aa { font-size: 1.35rem; }
 .lp-pastille-barre { width: 76%; height: 11%; border-radius: var(--r, 999px); background: var(--surface); }
 .lp-pastille-barre.vedette { background: var(--vedette); }
 .lp-pastille[data-bouton='contour'] .lp-pastille-barre:not(.vedette) { background: transparent; box-shadow: inset 0 0 0 1.5px var(--texte); }
@@ -500,7 +508,7 @@
     text-align: left; align-items: flex-start; gap: 14px;
   }
   .lp[data-bureau='profil'] .lp-avatar { width: 152px; height: 152px; margin-bottom: 6px; }
-  .lp[data-bureau='profil'] .lp-nom { font-size: 2.5rem; letter-spacing: -0.035em; }
+  .lp[data-bureau='profil'] .lp-nom { font-size: calc(var(--nom-taille, 1.6rem) * 1.45); }
   .lp[data-bureau='profil'] .lp-bio { font-size: 1.08rem; max-width: 30ch; text-wrap: pretty; }
   .lp[data-bureau='profil'] .lp-reseaux { justify-content: flex-start; margin-left: -10px; }
   .lp[data-bureau='profil'] .lp-blocs { grid-area: blocs; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
@@ -525,7 +533,7 @@
     box-shadow: 0 0 0 1px color-mix(in srgb, var(--texte) 12%, transparent), 0 50px 90px -40px rgb(0 0 0 / 0.65);
   }
   .lp[data-bureau='onepage'][data-forme='carre'] .lp-avatar { border-radius: 8px; }
-  .lp[data-bureau='onepage'] .lp-nom { margin: 0; align-self: end; font-size: clamp(3rem, 6cqi, 4.75rem); line-height: 1.02; letter-spacing: -0.045em; font-weight: 640; }
+  .lp[data-bureau='onepage'] .lp-nom { margin: 0; align-self: end; font-size: clamp(3rem, 6cqi, 4.75rem); line-height: 1.02; letter-spacing: min(var(--nom-approche, -0.04em), -0.02em); }
   .lp[data-bureau='onepage'] .lp-badge svg { width: 0.5em; height: 0.5em; }
   .lp[data-bureau='onepage'] .lp-bio { font-size: 1.3rem; line-height: 1.45; max-width: 32ch; text-wrap: pretty; }
   .lp[data-bureau='onepage'] .lp-reseaux { justify-content: flex-start; margin-left: -10px; align-self: start; }

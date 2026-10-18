@@ -2,10 +2,14 @@
 @source '../';
 @import '@fontsource-variable/geist';
 @import '@fontsource-variable/eb-garamond';
-@import '@fontsource-variable/bricolage-grotesque';
+@import '@fontsource-variable/eb-garamond/wght-italic.css';
+@import '@fontsource-variable/bricolage-grotesque/wdth.css';
 @import '@fontsource-variable/unbounded';
-@import '@fontsource-variable/fraunces';
+@import '@fontsource-variable/fraunces/opsz.css';
+@import '@fontsource-variable/fraunces/opsz-italic.css';
+@import '@fontsource-variable/fredoka';
 @import '@fontsource/instrument-serif';
+@import '@fontsource/instrument-serif/400-italic.css';
 @import './page.css';
 @import './admin.css';
 

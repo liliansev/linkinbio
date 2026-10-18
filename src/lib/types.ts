@@ -97,6 +97,9 @@ export const STYLES_BOUTON = ['plein', 'contour', 'doux', 'relief', 'verre'] as 
 export type StyleBouton = (typeof STYLES_BOUTON)[number];
 export const FORMES_BOUTON = ['pilule', 'arrondi', 'carre'] as const;
 export type FormeBouton = (typeof FORMES_BOUTON)[number];
+/** L'ombre portée sous les boutons, au choix : aucune, subtile ou marquée. */
+export const OMBRES_BOUTON = ['aucune', 'subtile', 'marquee'] as const;
+export type OmbreBouton = (typeof OMBRES_BOUTON)[number];
 
 export const RESEAUX = ['youtube', 'linkedin', 'instagram', 'tiktok', 'x', 'github', 'facebook', 'threads', 'twitch', 'spotify', 'email', 'site'] as const;
 export type Reseau = (typeof RESEAUX)[number];
@@ -107,7 +110,7 @@ export interface Reglages {
   /** Les icônes des réseaux en haut (sous la bio) ou en bas de page. */
   reseauxPosition: 'haut' | 'bas';
   theme: string;
-  bouton: { style: StyleBouton; forme: FormeBouton };
+  bouton: { style: StyleBouton; forme: FormeBouton; ombre: OmbreBouton };
   seo: { titre: string; description: string; indexable: boolean };
   /** Le bouton « Partager » en haut de la page publique. */
   partage: boolean;

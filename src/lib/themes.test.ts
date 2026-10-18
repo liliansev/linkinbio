@@ -4,14 +4,14 @@ import { FAMILLES, REMPLACES, THEMES, contraste, idTheme, themeParId, variablesT
 
 const couleurs = (fond: string) => fond.match(/#[0-9a-f]{6}/gi) ?? [];
 
-test('vingt-six thèmes, identifiants uniques, chaque famille garnie', () => {
-  assert.equal(THEMES.length, 26);
-  assert.equal(new Set(THEMES.map(t => t.id)).size, 26);
+test('dix thèmes, identifiants uniques, chaque famille garnie', () => {
+  assert.equal(THEMES.length, 10);
+  assert.equal(new Set(THEMES.map(t => t.id)).size, 10);
   for (const f of FAMILLES) assert.ok(THEMES.some(t => t.famille === f.id), `famille vide : ${f.id}`);
 });
 
 test('les anciens identifiants restent : une page enregistrée garde son thème ou passe sur le plus proche', () => {
-  const anciens = ['nuit-peche', 'minuit', 'encre', 'foret', 'bordeaux', 'aubergine', 'cafe', 'terminal', 'ardoise', 'neon', 'papier', 'neige', 'ivoire', 'sable', 'menthe', 'ciel', 'lavande', 'abricot', 'rose', 'citron', 'orange', 'jaune', 'klein', 'pomme', 'rouge', 'aurore', 'ocean', 'coucher', 'peche-nuit', 'holo', 'onyx', 'champagne', 'velours', 'marbre', 'studio', 'givre', 'brutal', 'y2k', 'arcade', 'acide', 'damier', 'cosmos', 'bonbon', 'lave'];
+  const anciens = ['nuit-peche', 'minuit', 'encre', 'foret', 'bordeaux', 'aubergine', 'cafe', 'terminal', 'ardoise', 'neon', 'papier', 'neige', 'ivoire', 'sable', 'menthe', 'ciel', 'lavande', 'abricot', 'rose', 'citron', 'orange', 'jaune', 'klein', 'pomme', 'rouge', 'aurore', 'ocean', 'coucher', 'peche-nuit', 'holo', 'onyx', 'champagne', 'velours', 'marbre', 'studio', 'givre', 'brutal', 'y2k', 'arcade', 'acide', 'damier', 'cosmos', 'bonbon', 'lave', 'velours', 'studio', 'y2k', 'menthe', 'jaune', 'ocean'];
   for (const id of anciens) assert.equal(themeParId(id).id, REMPLACES[id] ?? id, id);
   for (const id of Object.values(REMPLACES)) assert.ok(THEMES.some(t => t.id === id), `remplaçant inconnu : ${id}`);
   assert.equal(idTheme('inconnu'), 'nuit-peche');
@@ -22,7 +22,8 @@ test('chaque thème a sa police de titre, ses variables et ses boutons', () => {
   for (const t of THEMES) {
     const v = variablesTheme(t);
     assert.ok(v['--police'] && v['--police-titre'] && v['--titre-section'], t.id);
-    assert.ok(t.conseil.style && t.conseil.forme, t.id);
+    assert.ok(t.conseil.style && t.conseil.forme && t.conseil.ombre, t.id);
+    assert.ok(v['--nom-graisse'] && v['--btn-graisse'] && v['--ombre-teinte'], t.id);
   }
 });
 
