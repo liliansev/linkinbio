@@ -50,7 +50,7 @@
 
 .lp-tete { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 10px; margin-bottom: 28px; }
 .lp-avatar { width: 104px; height: 104px; border-radius: 999px; object-fit: cover; box-shadow: 0 0 0 1px color-mix(in srgb, var(--texte) 14%, transparent), 0 18px 40px -18px rgb(0 0 0 / 0.55); }
-.lp-nom { font-size: var(--nom-taille, 1.6rem); font-weight: var(--nom-graisse, 620); letter-spacing: var(--nom-approche, -0.025em); font-style: var(--nom-style, normal); margin: 8px 0 0; display: inline-flex; align-items: center; gap: 6px; line-height: 1.15; text-wrap: balance; }
+.lp-nom { font-size: var(--nom-taille, 1.6rem); font-weight: var(--nom-graisse, 620); letter-spacing: var(--nom-approche, -0.025em); font-style: var(--nom-style, normal); margin: 8px 0 0; display: inline-flex; align-items: center; gap: 6px; line-height: 1.15; text-wrap: balance; max-width: 100%; overflow-wrap: anywhere; }
 .lp-badge { display: inline-flex; color: var(--vedette); }
 .lp-badge svg { color: inherit; }
 .lp-bio { margin: 0; color: var(--doux); font-size: 1rem; line-height: 1.5; max-width: 36ch; text-wrap: balance; }
@@ -594,7 +594,9 @@
 }
 .lp-ed-saisie:hover { background: color-mix(in srgb, var(--texte) 7%, transparent); }
 .lp-ed-saisie:focus { outline: 2px solid var(--vedette); background: color-mix(in srgb, var(--texte) 6%, transparent); }
-.lp-ed-saisie::placeholder { color: inherit; opacity: 0.45; }
+.lp-ed-saisie::placeholder { color: inherit; opacity: 0.68; }
+/* Un nom très long ne sort pas de la page : le champ s'arrête au bord et défile. */
+.lp-nom > input.lp-ed-saisie { min-width: 0; flex: 0 1 auto; }
 @supports (field-sizing: content) {
   input.lp-ed-saisie { field-sizing: content; width: auto !important; min-width: 6ch; }
   textarea.lp-ed-saisie { field-sizing: content; }
@@ -619,6 +621,12 @@ button.lp-ed-zone:hover { background: color-mix(in srgb, var(--texte) 7%, transp
 button.lp-ed-zone:focus-visible { outline: 2px solid var(--vedette); outline-offset: 2px; }
 .lp-ed-reseau { width: 40px; height: 40px; display: grid; place-items: center; }
 .lp-ed-vide { padding: 9px 12px; font-size: 0.92rem; font-weight: 520; color: var(--doux); }
+/* La ligne « Ajouter à ma page » sous le dernier bloc : un geste de l'éditeur, pas un bouton de la page. */
+button.lp-ed-ajout {
+  display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 52px;
+  border-radius: calc(var(--rc) + 6px); font-size: 0.95rem; font-weight: 560; color: var(--doux);
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--texte) 18%, transparent);
+}
 
 
 .lp-ed-bloc {
@@ -632,6 +640,8 @@ button.lp-ed-zone:focus-visible { outline: 2px solid var(--vedette); outline-off
 /* Au survol, un voile léger autour du bloc, de la couleur du texte : pas de trait, quelle que soit la teinte de l'accent. */
 .lp-ed-bloc:hover { background: color-mix(in srgb, var(--texte) 6%, transparent); box-shadow: 0 0 0 6px color-mix(in srgb, var(--texte) 6%, transparent); }
 .lp-ed-bloc:focus-visible { outline-color: var(--texte); }
+/* Sur un écran tactile, pas de survol : le même voile, plus léger, reste posé pour dire que le bloc se touche. */
+@media (hover: none) { .lp-ed-bloc { box-shadow: 0 0 0 6px color-mix(in srgb, var(--texte) 4%, transparent); background: color-mix(in srgb, var(--texte) 4%, transparent); } }
 .lp-ed-bloc[data-prive] > :not(.lp-ed-puces) { opacity: 0.42; }
 .lp-ed-bloc[data-glisse] { z-index: 5; cursor: grabbing; outline-color: var(--vedette); }
 .lp-ed-bloc[data-glisse] > :not(.lp-ed-puces) { box-shadow: 0 26px 50px -18px rgb(0 0 0 / 0.6); }

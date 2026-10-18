@@ -1,11 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import QRCode from 'qrcode';
+import { CONTACT_LEGAL } from '../lib/legal.ts';
 import type { ComptePage, Reglages } from '../lib/types.ts';
 import { LANGUES, urlPage } from '../lib/types.ts';
 import type { Abonnement as EtatAbonnement, Periode } from '../lib/abonnement.ts';
 import { AVANTAGES_PRO, TARIFS, estResilie, euros } from '../lib/abonnement.ts';
 import { Icone } from '../components/Icone.tsx';
-import { BoutonSecondaire, Carte, Champ, Interrupteur, classeSaisie, vibrer } from './ui.tsx';
+import { BoutonCopier, BoutonSecondaire, Carte, Champ, Interrupteur, classeSaisie, flechesRadio, vibrer } from './ui.tsx';
 
 export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlExport, supprimerMonCompte, abonnement, paiement, ouvrirPaiement, ouvrirPortail }: {
   reglages: Reglages; compte: ComptePage; onChange: (r: Reglages) => void; onDeconnexion: () => void;
@@ -15,22 +16,25 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
 }) {
   const URL_PUBLIQUE = urlPage(compte);
   const [qr, setQr] = useState('');
-  const [copie, setCopie] = useState(false);
   const [ouverte, setOuverte] = useState<Section | null>(null);
+  // Ouvrir ou quitter une section déplace le focus : sur son retour en entrant, sur sa ligne en sortant.
+  const retour = useRef<HTMLButtonElement>(null);
+  const derniere = useRef<Section | null>(null);
+  useEffect(() => {
+    if (ouverte) { derniere.current = ouverte; retour.current?.focus({ preventScroll: true }); }
+    else if (derniere.current) document.getElementById(`reglage-${derniere.current}`)?.focus({ preventScroll: true });
+  }, [ouverte]);
   const seo = (champs: Partial<Reglages['seo']>) => onChange({ ...reglages, seo: { ...reglages.seo, ...champs } });
   useEffect(() => {
     QRCode.toDataURL(`${URL_PUBLIQUE}?s=qr`, { width: 720, margin: 2, color: { dark: '#0c121f', light: '#ffffff' }, errorCorrectionLevel: 'M' }).then(setQr).catch(() => setQr(''));
   }, [URL_PUBLIQUE]);
-  async function copier() {
-    try { await navigator.clipboard.writeText(URL_PUBLIQUE); setCopie(true); setTimeout(() => setCopie(false), 1800); } catch { /* presse-papiers refusé */ }
-  }
 
   const pro = !compte.principal && paiement;
   // Un titre et une icône par ligne, sans sous-titre (Lilian, 18 octobre 2026).
   const sections: { id: Section; nom: string; icone: string }[] = [
     { id: 'partager', nom: 'Partager ma page', icone: 'partage' },
     ...(pro ? [{ id: 'abonnement' as const, nom: 'Abonnement', icone: 'diamant' }] : []),
-    { id: 'partage', nom: 'Google et aperçus', icone: 'globe' },
+    { id: 'partage', nom: 'Google et partage', icone: 'globe' },
     { id: 'langues', nom: 'Langues', icone: 'message' },
     { id: 'donnees', nom: 'Mes données', icone: 'cadenas' },
   ];
@@ -42,15 +46,17 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
   if (ouverte) return (
     <div className="flex flex-col gap-3">
       <div className="sticky top-14 z-10 -mx-4 bg-nuit/95 px-3 py-1 backdrop-blur lg:top-0">
-        <button type="button" onClick={() => setOuverte(null)} className="flex min-h-10 items-center gap-1 rounded-full pr-3 text-[14px] font-medium text-white/75 hover:text-white">
-          <Icone nom="ui-chevron" taille={18} className="rotate-90" /> Tous les réglages
+        {/* Un seul titre : le retour porte le nom de la section, la carte dessous n'en répète pas. */}
+        <button ref={retour} type="button" onClick={() => setOuverte(null)} aria-label={`${sections.find(x => x.id === ouverte)?.nom ?? ''}, revenir à tous les réglages`}
+          className="flex min-h-11 items-center gap-1 rounded-full pr-3 text-[15px] font-medium text-white hover:text-white/80">
+          <Icone nom="ui-chevron" taille={18} className="rotate-90 text-white/60" /> {sections.find(x => x.id === ouverte)?.nom}
         </button>
       </div>
       {ouverte === 'abonnement' && <Abonnement abonnement={abonnement} ouvrirPaiement={ouvrirPaiement} ouvrirPortail={ouvrirPortail} />}
-      {ouverte === 'partager' && <Carte titre="Partager ma page">
+      {ouverte === 'partager' && <Carte>
         <div className="flex items-center gap-2 rounded-xl bg-white/[0.06] p-1.5 pl-3.5">
           <span className="min-w-0 flex-1 truncate text-[15px] text-white">{URL_PUBLIQUE.replace(/^https:\/\//, '').replace(/\/$/, '')}</span>
-          <button type="button" onClick={copier} className="min-h-11 rounded-full bg-white px-4 text-[14px] font-semibold text-nuit">{copie ? 'Copié' : 'Copier'}</button>
+          <BoutonCopier texte={URL_PUBLIQUE} />
         </div>
         {qr && (
           <div className="mt-4 flex flex-col items-center gap-3">
@@ -62,7 +68,7 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
           <Interrupteur label="Bouton Partager sur ma page" actif={reglages.partage} onChange={v => onChange({ ...reglages, partage: v })} />
         </div>
       </Carte>}
-      {ouverte === 'partage' && <Carte titre="Google et aperçus">
+      {ouverte === 'partage' && <Carte>
         <div className="flex flex-col gap-3">
           <Champ label="Titre dans Google et sur les réseaux" aide={`${reglages.seo.titre.length}/60 caractères conseillés`}>
             <input className={classeSaisie} value={reglages.seo.titre} maxLength={80} onChange={e => seo({ titre: e.target.value })} />
@@ -88,7 +94,7 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
       <ul className="overflow-hidden rounded-xl bg-white/[0.03] ring-1 ring-white/[0.07]">
         {sections.map((l, i) => (
           <li key={l.id} className={i > 0 ? 'border-t border-white/[0.07]' : ''}>
-            <button type="button" onClick={() => { setOuverte(l.id); scrollTo({ top: 0 }); }} className="flex min-h-14 w-full items-center gap-3.5 px-4 text-left transition hover:bg-white/[0.04] active:bg-white/[0.06]">
+            <button id={`reglage-${l.id}`} type="button" onClick={() => { setOuverte(l.id); scrollTo({ top: 0 }); }} className="flex min-h-14 w-full items-center gap-3.5 px-4 text-left transition hover:bg-white/[0.04] active:bg-white/[0.06]">
               <Icone nom={l.icone} taille={20} className="shrink-0 text-white/80" />
               <span className="min-w-0 flex-1 truncate text-[15px] font-medium text-white">{l.nom}</span>
               <Icone nom="ui-chevron" taille={16} className="-rotate-90 text-white/30" />
@@ -108,6 +114,13 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
           </li>
         ))}
       </ul>
+
+      <a href={`mailto:${CONTACT_LEGAL}?subject=${encodeURIComponent('Hopla : une question')}`}
+        className="flex min-h-14 items-center gap-3.5 rounded-xl border border-white/[0.07] bg-white/[0.03] px-4 text-[15px] font-medium text-white transition hover:bg-white/[0.05]">
+        <Icone nom="courrier" taille={20} className="shrink-0 text-white/80" />
+        <span className="flex-1">Une question ? Écris-nous</span>
+        <Icone nom="ui-chevron" taille={16} className="-rotate-90 text-white/30" />
+      </a>
 
       <BoutonSecondaire onClick={onDeconnexion} className="self-center">Me déconnecter</BoutonSecondaire>
     </div>
@@ -147,7 +160,7 @@ function Abonnement({ abonnement, ouvrirPaiement, ouvrirPortail }: {
           <p className={`text-[14px] leading-snug ${etat.alerte ? 'text-amber-200' : 'text-white/75'}`}>{etat.texte}</p>
           {abonnement.portail && (
             <>
-              <button type="button" disabled={envoi} onClick={() => aller(ouvrirPortail)} className="mt-3 inline-flex min-h-10 items-center gap-1.5 rounded-full bg-white/[0.08] px-4 text-[14px] font-medium text-white hover:bg-white/[0.13] disabled:opacity-50">
+              <button type="button" disabled={envoi} onClick={() => aller(ouvrirPortail)} className="mt-3 inline-flex min-h-11 items-center gap-1.5 rounded-full bg-white/[0.08] px-4 text-[14px] font-medium text-white hover:bg-white/[0.13] disabled:opacity-50">
                 {envoi ? 'Ouverture…' : 'Gérer mon abonnement'} <Icone nom="ui-ouvrir" taille={15} />
               </button>
               <p className="mt-2 text-[12.5px] leading-snug text-white/55">Ta carte et tes factures, sur la page sécurisée de Creem.</p>
@@ -175,7 +188,7 @@ function Abonnement({ abonnement, ouvrirPaiement, ouvrirPortail }: {
             </li>
           ))}
         </ul>
-        <div role="radiogroup" aria-label="Formule" className="mt-4 grid grid-cols-2 gap-2">
+        <div role="radiogroup" onKeyDown={e => flechesRadio(e)} aria-label="Formule" className="mt-4 grid grid-cols-2 gap-2">
           {(Object.keys(TARIFS) as Periode[]).map(p => {
             const t = TARIFS[p], choisi = periode === p;
             return (
@@ -219,10 +232,10 @@ function TesDonnees({ compte, urlExport, supprimerMonCompte }: { compte: CompteP
   }
   const lien = 'inline-flex min-h-11 items-center text-white/60 underline decoration-white/25 underline-offset-2 hover:text-white';
   return (
-    <Carte titre="Mes données">
+    <Carte>
       <p className="text-[13.5px] leading-snug text-white/60">Ta page, tes liens, tes images et tes statistiques, dans un fichier que tu peux garder ou importer ailleurs.</p>
       {urlExport
-        ? <a href={urlExport} download className="mt-3 inline-flex min-h-10 items-center rounded-full bg-white/[0.08] px-4 text-[14px] font-medium text-white hover:bg-white/[0.13]">Télécharger mes données</a>
+        ? <a href={urlExport} download className="mt-3 inline-flex min-h-11 items-center rounded-full bg-white/[0.08] px-4 text-[14px] font-medium text-white hover:bg-white/[0.13]">Télécharger mes données</a>
         : <p className="mt-3 text-[13px] text-white/55">L’export n’existe pas dans l’aperçu.</p>}
       {!compte.principal && (
         <div className="mt-5 border-t border-white/[0.06] pt-4">
@@ -231,13 +244,13 @@ function TesDonnees({ compte, urlExport, supprimerMonCompte }: { compte: CompteP
               <p className="text-[13.5px] leading-snug text-red-200/90">Ta page disparaît tout de suite, avec tes liens, tes images et tes statistiques. Rien ne se récupère. Pour confirmer, tape ton pseudo, <strong className="text-white">{compte.pseudo}</strong>.</p>
               <input className={classeSaisie} value={saisie} onChange={e => setSaisie(e.target.value)} autoCapitalize="none" autoComplete="off" spellCheck={false} aria-label="Ton pseudo, pour confirmer" />
               <div className="flex flex-wrap gap-2">
-                <button type="button" disabled={envoi || saisie.trim().toLowerCase() !== compte.pseudo} onClick={supprimer} className="min-h-10 rounded-full bg-red-500 px-4 text-[14px] font-medium text-white disabled:opacity-40">{envoi ? 'Suppression…' : 'Supprimer définitivement'}</button>
-                <button type="button" onClick={() => { setOuvert(false); setSaisie(''); }} className="min-h-10 rounded-full px-4 text-[14px] text-white/60 hover:text-white">Annuler</button>
+                <button type="button" disabled={envoi || saisie.trim().toLowerCase() !== compte.pseudo} onClick={supprimer} className="min-h-11 rounded-full bg-red-500 px-4 text-[14px] font-medium text-white disabled:opacity-40">{envoi ? 'Suppression…' : 'Supprimer définitivement'}</button>
+                <button type="button" onClick={() => { setOuvert(false); setSaisie(''); }} className="min-h-11 rounded-full px-4 text-[14px] text-white/60 hover:text-white">Annuler</button>
               </div>
               {erreur && <p role="alert" className="text-[13.5px] text-red-300">{erreur}</p>}
             </div>
           ) : (
-            <button type="button" onClick={() => setOuvert(true)} className="min-h-10 rounded-full px-1 text-[14px] font-medium text-red-300 hover:text-red-200">Supprimer mon compte</button>
+            <button type="button" onClick={() => setOuvert(true)} className="min-h-11 rounded-full px-1 text-[14px] font-medium text-red-300 hover:text-red-200">Supprimer mon compte</button>
           )}
         </div>
       )}
@@ -257,7 +270,7 @@ function Langues({ reglages, onChange, adresse }: { reglages: Reglages; onChange
   const actives = reglages.langues ?? [];
   const basculer = (l: (typeof LANGUES)[number]) => onChange({ ...reglages, langues: actives.includes(l) ? actives.filter(x => x !== l) : LANGUES.filter(x => x === l || actives.includes(x)) });
   return (
-    <Carte titre="Langues de ta page">
+    <Carte>
       <p className="text-[13.5px] leading-snug text-white/60">Ta page s’affiche dans la langue du visiteur. Les boutons, le formulaire et les dates sont traduits tout seuls ; tes textes, tu les traduis dans chaque bloc (Traductions).</p>
       <div className="mt-3 divide-y divide-white/[0.06] rounded-2xl bg-white/[0.035] px-4" role="group" aria-label="Langues proposées">
         <div className="flex items-center justify-between gap-4 py-3">

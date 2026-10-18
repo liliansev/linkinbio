@@ -29,10 +29,9 @@ export function Repli({ titre, icone, resume, ouvert: depart, children }: { titr
     <div className="rounded-2xl bg-white/[0.035]">
       <button type="button" onClick={() => setOuvert(!ouvert)} aria-expanded={ouvert} className="flex min-h-12 w-full items-center gap-2.5 px-4 text-left text-[14.5px] font-medium text-white/85">
         <Icone nom={icone} taille={17} />
-        <span className="min-w-0 flex-1">
-          {titre}
-          {resume && !ouvert && <span className="block truncate text-[12.5px] font-normal text-white/75">{resume}</span>}
-        </span>
+        <span className="shrink-0">{titre}</span>
+        {/* Ce qui est réglé se lit à droite, comme une valeur, jamais en sous-titre sous le nom. */}
+        <span className="min-w-0 flex-1 truncate text-right text-[13px] font-normal text-white/55">{!ouvert && resume}</span>
         <Icone nom="ui-chevron" taille={18} className={`shrink-0 transition-transform duration-300 ${ouvert ? 'rotate-180' : ''}`} />
       </button>
       {ouvert && <div className="flex flex-col gap-3 px-4 pb-4">{children}</div>}
@@ -110,6 +109,7 @@ export function RegleReseaux({ b, maj, reseaux }: { b: Bloc; maj: (c: Partial<Bl
   const enTete = tous.filter(tete);
   const noms = (l: Audience[]) => l.map(s => NOMS_AUDIENCES[s]).join(', ');
   const resume = [caches.length ? `Pas sur ${noms(caches)}` : 'Partout', enTete.length ? `en tête sur ${noms(enTete)}` : ''].filter(Boolean).join(', ');
+  const [premier, setPremier] = useState(enTete.length > 0);
   return (
     <Repli titre="Afficher sur" icone="cible" resume={resume} ouvert={false}>
       <ul className="-my-1 divide-y divide-white/[0.06]" aria-label="Réseaux où ce bloc s’affiche">
@@ -132,19 +132,29 @@ export function RegleReseaux({ b, maj, reseaux }: { b: Bloc; maj: (c: Partial<Bl
         <button type="button" onClick={() => setPlus(true)} className="self-start text-[13.5px] font-medium text-white/55 hover:text-white">Autres réseaux</button>
       )}
       {!reserve && (
-        <div className="border-t border-white/[0.06] pt-3">
-          <p className="text-[14px] font-medium text-white">En premier pour ceux qui viennent de</p>
-          <p className="mt-0.5 text-[12.5px] leading-snug text-white/50">Facultatif. Ce bloc passe en tête de ta page, mis en avant, pour ces visiteurs.</p>
-          <div className="mt-2 flex flex-wrap gap-1" role="group" aria-label="En premier pour">
-            {liste.filter(visible).map(s => (
-              <button key={s} type="button" aria-pressed={tete(s)} title={NOMS_AUDIENCES[s]}
-                aria-label={tete(s) ? `En premier sur ${NOMS_AUDIENCES[s]}, toucher pour retirer` : `Mettre en premier sur ${NOMS_AUDIENCES[s]}`}
-                onClick={() => { vibrer(4); maj(enTetePour(b, s, !tete(s))); }}
-                className={`grid h-11 w-11 place-items-center rounded-full transition active:scale-90 ${tete(s) ? 'text-white ring-2 ring-white' : 'text-white/35 hover:text-white/70'}`}>
-                {ICONE_AUDIENCE[s] ? <Icone nom={ICONE_AUDIENCE[s]} taille={20} /> : <span className="text-[12px] font-semibold">{NOMS_AUDIENCES[s].slice(0, 2)}</span>}
-              </button>
-            ))}
-          </div>
+        <div className="border-t border-white/[0.06] pt-1">
+          {/* Le même rang que la liste du dessus (picto, nom, interrupteur), replié tant qu'on ne s'en sert pas. */}
+          <button type="button" onClick={() => setPremier(!premier)} aria-expanded={premier}
+            className="flex min-h-12 w-full items-center gap-3 text-left text-[14.5px] font-medium text-white">
+            <span className="flex-1">En premier pour</span>
+            <span className="min-w-0 truncate text-[13px] font-normal text-white/55">{!premier && (enTete.length ? noms(enTete) : 'Personne')}</span>
+            <Icone nom="ui-chevron" taille={18} className={`shrink-0 text-white/75 transition-transform duration-300 ${premier ? 'rotate-180' : ''}`} />
+          </button>
+          {premier && (
+            <ul className="-mt-1 divide-y divide-white/[0.06]" aria-label="En premier pour ces visiteurs">
+              {liste.filter(visible).map(s => (
+                <li key={s} className="flex min-h-12 items-center gap-3">
+                  <span className="flex w-4 justify-center text-white/75">{ICONE_AUDIENCE[s] && <Icone nom={ICONE_AUDIENCE[s]} taille={16} />}</span>
+                  <span className="flex-1 text-[14.5px] font-medium text-white">{NOMS_AUDIENCES[s]}</span>
+                  <button type="button" role="switch" aria-checked={tete(s)} aria-label={`En premier pour ceux qui viennent de ${NOMS_AUDIENCES[s]}`}
+                    onClick={() => { vibrer(4); maj(enTetePour(b, s, !tete(s))); }}
+                    className={`adm-interrupteur relative h-6 w-10 shrink-0 rounded-full before:absolute before:-inset-2 before:content-[''] ${tete(s) ? 'bg-white' : 'bg-white/15'}`}>
+                    <span className={`absolute top-[3px] left-[3px] h-[18px] w-[18px] rounded-full shadow-[0_1px_3px_rgba(0,0,0,0.3)] ${tete(s) ? 'translate-x-4 bg-nuit' : 'bg-white'}`} />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       )}
     </Repli>

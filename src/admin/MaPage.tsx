@@ -37,6 +37,9 @@ export function MaPage({ compte, reglages, blocs, clics, onReglages, onOrdonner,
 }) {
   const [feuille, setFeuille] = useState<'design' | 'reseaux' | 'ajout' | null>(null);
   const [envoi, setEnvoi] = useState(false);
+  // Le geste s'explique au-dessus de la page jusqu'au premier bloc ouvert, puis se tait.
+  const [astuce, setAstuce] = useState(() => { try { return localStorage.getItem('hopla-astuce-vue') !== '1'; } catch { return true; } });
+  const ouvrirBloc = (bloc: Bloc) => { if (astuce) { setAstuce(false); try { localStorage.setItem('hopla-astuce-vue', '1'); } catch { /* stockage refusé */ } } onOuvrir(bloc); };
   const fichier = useRef<HTMLInputElement>(null);
   const toile = useRef<HTMLDivElement>(null);
   const principal = compte.principal;
@@ -77,8 +80,8 @@ export function MaPage({ compte, reglages, blocs, clics, onReglages, onOrdonner,
     photo: () => fichier.current?.click(),
     envoiPhoto: envoi,
     reseaux: () => setFeuille('reseaux'),
-    liste: (liste, rendu) => <BlocsEditables blocs={liste} rendu={rendu} clics={clics} onOrdonner={onOrdonner} onOuvrir={onOuvrir}
-      />,
+    liste: (liste, rendu) => <BlocsEditables blocs={liste} rendu={rendu} clics={clics} onOrdonner={onOrdonner} onOuvrir={ouvrirBloc}
+      onAjouter={() => { vibrer(5); setFeuille('ajout'); }} />,
   };
 
   return (
@@ -96,12 +99,13 @@ export function MaPage({ compte, reglages, blocs, clics, onReglages, onOrdonner,
       {/* L'adresse et « Bien démarrer » d'abord : ce qui reste à faire se voit sans dérouler toute la page. */}
       <div className="order-1 lg:order-none"><HautLiens compte={compte} reglages={reglages} blocs={blocs} aller={aller} /></div>
 
-      <div className="order-2 lg:order-none">
+      {/* Sur ordinateur, la feuille de design se pose à droite : la page glisse à gauche pour rester visible en entier. */}
+      <div className={`order-2 transition-transform duration-300 motion-reduce:transition-none lg:order-none ${feuille === 'design' || feuille === 'reseaux' ? 'lg:-translate-x-[200px]' : ''}`}>
+        {astuce && <p className="mb-3 text-center text-[13px] leading-snug text-white/55">Touche un élément pour le modifier. Maintiens un bloc pour le déplacer.</p>}
         <div ref={toile}
           className="adm-apercu adm-toile -mx-4 overflow-hidden lg:mx-0 lg:rounded-[30px] lg:ring-1 lg:ring-white/10 lg:shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)]">
           <PageLiens page={{ reglages, blocs: visibles, compte }} edition={edition} />
         </div>
-        <p className="mt-3 text-center text-[13px] leading-snug text-white/55">Touche un élément pour le modifier. Maintiens un bloc pour le déplacer.</p>
       </div>
 
       <input ref={fichier} type="file" accept="image/*" hidden onChange={e => photo(e.target.files?.[0])} />
@@ -152,9 +156,9 @@ function ApercuDirect({ page }: { page: PagePublique }) {
   );
 }
 
-function BlocsEditables({ blocs, rendu, clics, onOrdonner, onOuvrir }: {
+function BlocsEditables({ blocs, rendu, clics, onOrdonner, onOuvrir, onAjouter }: {
   blocs: Bloc[]; rendu: (bloc: Bloc) => ReactNode; clics: Record<string, number>;
-  onOrdonner: (blocs: Bloc[]) => void; onOuvrir: (bloc: Bloc) => void;
+  onOrdonner: (blocs: Bloc[]) => void; onOuvrir: (bloc: Bloc) => void; onAjouter: () => void;
 }) {
   // Un glisser se termine par un clic : il ne doit pas ouvrir le bloc lâché.
   const glisse = useRef(0);
@@ -177,6 +181,8 @@ function BlocsEditables({ blocs, rendu, clics, onOrdonner, onOuvrir }: {
           {blocs.map((bloc, i) => <BlocEditable key={bloc.id} bloc={bloc} i={i} clics={clics[bloc.id]} ouvrir={ouvrir}>{rendu(bloc)}</BlocEditable>)}
         </SortableContext>
       </DndContext>
+      {/* Sous le dernier bloc, à portée du pouce : le même geste que le bouton Ajouter du haut. */}
+      <button type="button" onClick={onAjouter} className="lp-ed-zone lp-ed-ajout"><Icone nom="ui-plus" taille={18} /> Ajouter à ma page</button>
     </>
   );
 }

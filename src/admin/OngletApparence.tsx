@@ -1,11 +1,11 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import type { Couleurs, FormeBouton, MiseEnPageBureau, OmbreBouton, Reglages, Reseau, StyleBouton } from '../lib/types.ts';
 import { ANIMATIONS, RESEAUX, SANS_COULEURS } from '../lib/types.ts';
 import { THEMES, themeDe, themeParId, variablesTheme } from '../lib/themes.ts';
 import type { Theme } from '../lib/themes.ts';
 import { Icone, NOMS_RESEAUX } from '../components/Icone.tsx';
-import { Carte, Champ, Interrupteur, NOMS_ANIMATIONS, Segments, classeSaisie, preparerImage, vibrer } from './ui.tsx';
+import { Carte, Champ, Interrupteur, NOMS_ANIMATIONS, Segments, classeSaisie, flechesRadio, preparerImage, vibrer } from './ui.tsx';
 import { urlReseau } from '../lib/demarrage.ts';
 
 const STYLES: { id: StyleBouton; nom: string }[] = [
@@ -64,7 +64,7 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
             <span className="absolute inset-0 grid place-items-center bg-black/45 text-[12px] font-medium text-white opacity-0 transition group-hover:opacity-100">{envoi ? '…' : 'Changer'}</span>
           </button>
           <div className="flex flex-col items-start gap-1">
-            <button type="button" onClick={() => fichier.current?.click()} className="min-h-10 rounded-full bg-white/[0.08] px-4 text-[14px] font-medium text-white">{envoi ? 'Envoi…' : 'Changer la photo'}</button>
+            <button type="button" onClick={() => fichier.current?.click()} className="min-h-11 rounded-full bg-white/[0.08] px-4 text-[14px] font-medium text-white">{envoi ? 'Envoi…' : 'Changer la photo'}</button>
             {reglages.profil.avatar && <button type="button" onClick={() => profil({ avatar: '' })} className="px-1 text-[13px] text-white/50">Sans photo</button>}
           </div>
           <input ref={fichier} type="file" accept="image/*" hidden onChange={e => avatar(e.target.files?.[0])} />
@@ -76,12 +76,12 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
         </div>
       </Carte>}
 
-      {voir('theme') && <Carte titre={titre('Thème')} id="theme" action={<span className="text-[13px] text-white/50">{theme.nom}</span>}>
+      {voir('theme') && <Carte titre={titre('Thème')} id="theme" action={titre('Thème') ? <span className="text-[13px] text-white/50">{theme.nom}</span> : undefined}>
         {avantTheme && (
           <p role="status" className="mb-3 flex items-center justify-between gap-3 text-[13px] text-white/60">
             Tes couleurs à toi ont été retirées.
             <button type="button" onClick={() => { onChange({ ...reglages, couleurs: avantTheme.couleurs, bouton: avantTheme.bouton }); setAvantTheme(null); }}
-              className="min-h-9 shrink-0 font-medium text-white underline decoration-white/30 underline-offset-2">Les garder</button>
+              className="min-h-11 shrink-0 font-medium text-white underline decoration-white/30 underline-offset-2">Les garder</button>
           </p>
         )}
         <ul className="grid grid-cols-3 gap-2.5 sm:grid-cols-4">
@@ -114,7 +114,7 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
 
       {voir('animation') && <Carte titre={titre('Animation')} action={<span className="text-[13px] text-white/50">{NOMS_ANIMATIONS[reglages.animation].nom}</span>}>
         <div className="lp lp-mini rounded-2xl p-2.5" style={variablesTheme(theme) as CSSProperties} data-bouton={reglages.bouton.style} data-forme={reglages.bouton.forme} data-ombre={reglages.bouton.ombre} data-police={theme.police} data-decor={theme.decor}>
-          <ul role="radiogroup" aria-label="Animation des liens mis en avant" className="grid grid-cols-2 gap-2">
+          <ul role="radiogroup" onKeyDown={e => flechesRadio(e)} aria-label="Animation des liens mis en avant" className="grid grid-cols-2 gap-2">
             {ANIMATIONS.map(a => {
               const choisi = reglages.animation === a;
               return (
@@ -156,7 +156,7 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
       </Carte>}
 
       {voir('bureau') && <Carte titre={titre('Sur ordinateur')}>
-        <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Mise en page sur ordinateur">
+        <div className="grid grid-cols-3 gap-2" role="radiogroup" onKeyDown={e => flechesRadio(e)} aria-label="Mise en page sur ordinateur">
           {BUREAUX.map(b => {
             const actif = reglages.bureau === b.id;
             return (
@@ -249,6 +249,13 @@ type Tiroir = 'theme' | 'couleurs' | 'boutons' | 'animation' | 'bureau';
  */
 export function DesignTiroirs({ reglages, onChange, envoyerImage, principal, pied }: { reglages: Reglages; onChange: (r: Reglages) => void; envoyerImage: (d: string) => Promise<string>; principal: boolean; pied?: ReactNode }) {
   const [ouvert, setOuvert] = useState<Tiroir | null>(null);
+  // Le focus suit le tiroir : sur son retour en entrant, sur sa ligne en revenant.
+  const retour = useRef<HTMLButtonElement>(null);
+  const dernier = useRef<Tiroir | null>(null);
+  useEffect(() => {
+    if (ouvert) { dernier.current = ouvert; retour.current?.focus({ preventScroll: true }); }
+    else if (dernier.current) document.getElementById(`design-${dernier.current}`)?.focus({ preventScroll: true });
+  }, [ouvert]);
   const lignes: { id: Tiroir; nom: string; icone: string }[] = [
     { id: 'theme', nom: 'Thème', icone: 'palette' },
     { id: 'couleurs', nom: 'Couleurs', icone: 'pinceau' },
@@ -261,7 +268,7 @@ export function DesignTiroirs({ reglages, onChange, envoyerImage, principal, pie
     <div className="flex flex-col gap-3">
       {/* Le retour reste collé en haut de la feuille : on le retrouve après avoir fait défiler vingt thèmes. */}
       <div className="sticky top-0 z-10 -mx-5 flex items-center bg-[#111827] px-4 pb-1">
-        <button type="button" onClick={() => { vibrer(4); setOuvert(null); }} className="flex min-h-10 items-center gap-1 rounded-full pr-3 text-[14px] font-medium text-white/75 hover:text-white">
+        <button ref={retour} type="button" onClick={() => { vibrer(4); setOuvert(null); }} aria-label={`${lignes.find(l => l.id === ouvert)?.nom ?? ''}, revenir au design`} className="flex min-h-11 items-center gap-1 rounded-full pr-3 text-[14px] font-medium text-white/75 hover:text-white">
           <Icone nom="ui-chevron" taille={18} className="rotate-90" /> {lignes.find(l => l.id === ouvert)?.nom}
         </button>
       </div>
@@ -274,7 +281,7 @@ export function DesignTiroirs({ reglages, onChange, envoyerImage, principal, pie
       <ul className="overflow-hidden rounded-xl bg-white/[0.03] ring-1 ring-white/[0.07]">
         {lignes.map((l, i) => (
           <li key={l.id} className={i > 0 ? 'border-t border-white/[0.07]' : ''}>
-            <button type="button" onClick={() => { vibrer(4); setOuvert(l.id); }} className="flex min-h-[52px] w-full items-center gap-3 px-3.5 py-2 text-left transition hover:bg-white/[0.04] active:bg-white/[0.06]">
+            <button id={`design-${l.id}`} type="button" onClick={() => { vibrer(4); setOuvert(l.id); }} className="flex min-h-[52px] w-full items-center gap-3 px-3.5 py-2 text-left transition hover:bg-white/[0.04] active:bg-white/[0.06]">
               <Icone nom={l.icone} taille={20} className="shrink-0 text-white/70" />
               <span className="min-w-0 flex-1 truncate text-[14px] font-medium text-white">{l.nom}</span>
               <Icone nom="ui-chevron" taille={16} className="-rotate-90 text-white/30" />

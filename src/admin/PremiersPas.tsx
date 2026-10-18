@@ -10,7 +10,7 @@ import { NOMS_AUDIENCES, reseauxDePartage } from '../lib/provenance.ts';
 import type { Audience } from '../lib/provenance.ts';
 import { Icone, NOMS_RESEAUX } from '../components/Icone.tsx';
 import { Pastille } from './OngletApparence.tsx';
-import { BoutonPrincipal, classeSaisie, preparerImage, vibrer } from './ui.tsx';
+import { BoutonCopier, BoutonPrincipal, classeSaisie, flechesRadio, preparerImage, vibrer } from './ui.tsx';
 
 /*
  * L'arrivée d'un compte neuf, juste après les CGU : cinq questions, et la
@@ -29,6 +29,7 @@ const OU_PARTAGER: Audience[] = ['instagram', 'tiktok', 'youtube', 'linkedin', '
 /** Ce que le navigateur retient : les premiers pas sont faits (ou remis à plus tard). */
 export const CLE_PREMIERS_PAS = 'hopla-premiers-pas';
 const CLE_PARTAGE = 'hopla-page-partagee';
+const CLE_ETAPE = 'hopla-premiers-pas-etape';
 const noter = (cle: string) => { try { localStorage.setItem(cle, '1'); } catch { /* stockage refusé */ } };
 export const premiersPasFaits = () => { try { return localStorage.getItem(CLE_PREMIERS_PAS) === '1'; } catch { return false; } };
 
@@ -48,7 +49,9 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
   apercuSite: Api['apercuSite'];
   onFin: () => void;
 }) {
-  const [i, setI] = useState(0);
+  // L'étape survit à un rechargement ou à un passage par une autre app : ce qui est tapé est déjà enregistré, la place aussi.
+  const [i, setI] = useState(() => { try { const n = Number(sessionStorage.getItem(CLE_ETAPE)); return n > 0 && n < ETAPES.length ? n : 0; } catch { return 0; } });
+  useEffect(() => { try { sessionStorage.setItem(CLE_ETAPE, String(i)); } catch { /* stockage refusé */ } }, [i]);
   const etape = ETAPES[i];
   // À chaque étape, le focus va à sa question : un lecteur d'écran l'annonce, Tab repart de là.
   const titre = useRef<HTMLHeadingElement>(null);
@@ -113,12 +116,18 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
   function suivant() {
     vibrer(8);
     if (etape === 'liens') poserLiens();
+    // Où mettre le lien : on part des réseaux qu'on vient de relier, pas d'une liste toute cochée.
+    if (etape === 'reseaux' && !reglages.vuesReseaux.length) {
+      const relies = OU_PARTAGER.filter(a => reglages.reseaux.some(r => r.reseau === a && r.url));
+      if (relies.length) onReglages({ ...reglages, vuesReseaux: relies });
+    }
     setI(n => Math.min(n + 1, ETAPES.length - 1));
     scrollTo({ top: 0 });
   }
   function terminer() {
     if (etape === 'liens') poserLiens();
     noter(CLE_PREMIERS_PAS);
+    try { sessionStorage.removeItem(CLE_ETAPE); } catch { /* stockage refusé */ }
     onFin();
   }
   async function copier() {
@@ -138,6 +147,9 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
   const rempli = etape === 'profil' ? true : etape === 'liens' ? brouillons.length > 0 : etape === 'reseaux' ? reglages.reseaux.some(r => r.url) : true;
   const libelle = etape === 'style' ? 'C’est parti' : rempli ? 'Continuer' : 'Passer cette étape';
 
+  // Le dernier écran nomme le réseau choisi à l'étape d'avant.
+  const ou = reseauxDePartage(reglages.vuesReseaux);
+  const bioOu = ou.slice(0, 2).map(a => NOMS_AUDIENCES[a]).join(' ou ');
   const contenu: Record<Etape, { titre: string; aide: string; corps: ReactNode }> = {
     profil: {
       titre: 'Ta page, à ton nom',
@@ -145,10 +157,12 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
       corps: (
         <div className="flex flex-col gap-3">
           <div className="flex items-center gap-3">
-            <button type="button" onClick={() => fichier.current?.click()} aria-label={reglages.profil.avatar ? 'Changer ta photo' : 'Ajouter ta photo'}
-              className="relative grid h-[60px] w-[60px] shrink-0 place-items-center overflow-hidden rounded-full bg-white/[0.08] text-white/70 transition active:scale-95">
-              {reglages.profil.avatar ? <img src={reglages.profil.avatar} alt="" className="h-full w-full object-cover" /> : <Icone nom="photo" taille={24} />}
-              {envoi && <span className="absolute inset-0 grid place-items-center bg-black/55 text-[12px] text-white">…</span>}
+            <button type="button" onClick={() => fichier.current?.click()} className="flex shrink-0 flex-col items-center gap-1 self-start transition active:scale-95">
+              <span className="relative grid h-[60px] w-[60px] place-items-center overflow-hidden rounded-full bg-white/[0.08] text-white/70">
+                {reglages.profil.avatar ? <img src={reglages.profil.avatar} alt="" className="h-full w-full object-cover" /> : <Icone nom="photo" taille={24} />}
+                {envoi && <span className="absolute inset-0 grid place-items-center bg-black/55 text-[12px] text-white">…</span>}
+              </span>
+              <span className="text-[12.5px] font-medium text-white/60">{reglages.profil.avatar ? 'Changer' : 'Ta photo'}</span>
             </button>
             <label className="min-w-0 flex-1">
               <span className="mb-1 block text-[13px] font-medium text-white/60">Ton nom</span>
@@ -210,7 +224,7 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
                       placeholder={r === 'email' ? 'toi@exemple.fr' : r === 'spotify' ? 'Adresse de ta page Spotify' : `Ton pseudo ${NOMS_RESEAUX[r]}`}
                       value={saisies[r] ?? ''} onChange={e => majReseau(r, e.target.value)} />
                     <button type="button" onClick={() => majReseau(r, null)} aria-label={`Retirer ${NOMS_RESEAUX[r]}`}
-                      className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-white/55 transition hover:bg-white/[0.06] hover:text-white"><Icone nom="ui-fermer" taille={16} /></button>
+                      className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-white/55 transition hover:bg-white/[0.06] hover:text-white"><Icone nom="ui-fermer" taille={16} /></button>
                   </li>
                 );
               })}
@@ -230,7 +244,7 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
     },
     partage: {
       titre: 'Où vas-tu mettre ton lien ?',
-      aide: 'Le même lien partout.',
+      aide: 'Tes liens pourront s’adapter à chacun. Tu régleras ça lien par lien.',
       corps: (
         <ul className="flex flex-col divide-y divide-white/[0.06] rounded-2xl bg-white/[0.04] px-3.5">
           {OU_PARTAGER.map(a => {
@@ -254,9 +268,9 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
     },
     style: {
       titre: 'Choisis une ambiance',
-      aide: 'Les couleurs, la police et les boutons suivent. Vingt thèmes t’attendent ensuite dans Design.',
+      aide: 'Les couleurs, la police et les boutons suivent. Une vingtaine d’autres t’attendent dans Design.',
       corps: (
-        <ul className="-mx-5 flex snap-x scroll-px-5 gap-2.5 overflow-x-auto px-5 pb-1 [scrollbar-width:none] lg:mx-0 lg:grid lg:grid-cols-4 lg:px-0" role="radiogroup" aria-label="Thème">
+        <ul onKeyDown={e => flechesRadio(e)} className="-mx-5 flex snap-x scroll-px-5 gap-2.5 overflow-x-auto px-5 pb-1 [scrollbar-width:none] lg:mx-0 lg:grid lg:grid-cols-4 lg:px-0" role="radiogroup" aria-label="Thème">
           {THEMES_ACCUEIL.map(id => THEMES.find(t => t.id === id)!).map(t => {
             const choisi = reglages.theme === t.id;
             return (
@@ -274,7 +288,7 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
     },
     fin: {
       titre: 'Ta page est en ligne',
-      aide: 'Colle son adresse dans ta bio Instagram ou TikTok : tout ce que tu y changes ensuite s’affiche aussitôt.',
+      aide: `Colle son adresse dans ta bio ${bioOu} : tout ce que tu changes sur ta page s’affiche aussitôt.`,
       corps: (
         <div className="flex flex-col gap-3">
           <div className="flex items-center gap-2 rounded-2xl bg-white/[0.05] p-1.5 pl-4">
@@ -285,9 +299,7 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
             <span className="min-w-0 flex-1 truncate text-[16px] font-semibold text-white" translate="no">{sansSchema(adressePage)}</span>
             {/* Sans partage natif, le grand bouton copie déjà : pas de second « Copier ». */}
             {peutPartager && (
-              <button type="button" onClick={copier} className="flex min-h-11 items-center gap-1.5 rounded-full bg-white/[0.08] px-3.5 text-[14px] font-medium text-white transition active:scale-95">
-                <Icone nom={copie ? 'ui-ok' : 'ui-copier'} taille={16} />{copie ? 'Copié' : 'Copier'}
-              </button>
+              <BoutonCopier texte={adressePage} onCopie={() => noter(CLE_PARTAGE)} />
             )}
           </div>
         </div>
@@ -300,7 +312,7 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
     <div className="adm flex h-dvh flex-col overflow-hidden bg-nuit font-sans text-white antialiased lg:grid lg:grid-cols-[minmax(0,460px)_1fr] lg:grid-rows-[auto_1fr]">
       <header className="flex h-14 shrink-0 items-center gap-2 px-3 lg:col-span-2 lg:px-6">
         <button type="button" onClick={() => setI(n => n - 1)} aria-label="Étape précédente" disabled={i === 0 || etape === 'fin'}
-          className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-white/70 transition hover:bg-white/[0.07] disabled:invisible"><Icone nom="ui-chevron" taille={20} className="rotate-90" /></button>
+          className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-white/70 transition hover:bg-white/[0.07] disabled:invisible"><Icone nom="ui-chevron" taille={20} className="rotate-90" /></button>
         <div className="flex flex-1 justify-center gap-1.5" role="progressbar" aria-label="Premiers pas" aria-valuemin={0} aria-valuemax={QUESTIONS} aria-valuenow={Math.min(i, QUESTIONS)}>
           {Array.from({ length: QUESTIONS }, (_, n) => (
             <span key={n} className="h-1.5 min-w-3 max-w-9 flex-1 overflow-hidden rounded-full bg-white/[0.1]">
@@ -308,7 +320,7 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
             </span>
           ))}
         </div>
-        <button type="button" onClick={terminer} className={`min-h-10 shrink-0 rounded-full px-3.5 text-[14px] font-medium text-white/60 transition hover:bg-white/[0.07] hover:text-white ${etape === 'fin' ? 'invisible' : ''}`}>Plus tard</button>
+        <button type="button" onClick={terminer} className={`min-h-11 shrink-0 rounded-full px-3.5 text-[14px] font-medium text-white/60 transition hover:bg-white/[0.07] hover:text-white ${etape === 'fin' ? 'invisible' : ''}`}>Plus tard</button>
       </header>
 
       {/* L'aperçu : la vraie page, en petit, qui se remplit à chaque réponse. */}

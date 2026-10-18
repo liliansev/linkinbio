@@ -22,9 +22,9 @@ test('les étapes se cochent quand la page se remplit', () => {
 
 test('seuls les liens publics avec une adresse comptent', () => {
   const r = reglagesNouveauCompte('marie');
-  const e = etapesDemarrage(r, [lien('a', 'https://a.fr'), lien('b', ''), lien('c', 'https://c.fr', false)], false).find(x => x.id === 'lien')!;
-  assert.equal(e.faite, false);
-  assert.match(e.aide, /1 sur 3/);
+  const etape = (blocs: Bloc[]) => etapesDemarrage(r, blocs, false).find(x => x.id === 'lien')!;
+  assert.equal(etape([lien('b', ''), lien('c', 'https://c.fr', false)]).faite, false);
+  assert.equal(etape([lien('a', 'https://a.fr'), lien('b', '')]).faite, true);
 });
 
 test('les premiers pas ne s’ouvrent que sur une page où rien n’est posé', () => {

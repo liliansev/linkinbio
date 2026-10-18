@@ -25,7 +25,7 @@ export function MaListe({ api }: { api: Pick<Api, 'liste' | 'brancherListe' | 's
   if (!liste) return null;
   return (
     <>
-      <Carte titre="Ta liste" action={<button type="button" onClick={() => setOuverte(true)} className="min-h-9 rounded-full bg-white/[0.08] px-3.5 text-[13.5px] font-medium text-white hover:bg-white/[0.13]">Gérer</button>}>
+      <Carte titre="Ta liste" action={<button type="button" onClick={() => setOuverte(true)} className="min-h-11 rounded-full bg-white/[0.08] px-3.5 text-[13.5px] font-medium text-white hover:bg-white/[0.13]">Gérer</button>}>
         {liste.total ? (
           <>
             <div className="flex items-end gap-3">
@@ -37,7 +37,7 @@ export function MaListe({ api }: { api: Pick<Api, 'liste' | 'brancherListe' | 's
               {liste.integration ? `Envoyés aussi chez ${NOMS[liste.integration.fournisseur]}${liste.integration.nom ? `, liste « ${liste.integration.nom} »` : ''}.` : 'Gardés ici. Exporte-les en CSV, ou branche Brevo ou Mailchimp.'}
             </p>
           </>
-        ) : <p className="text-[14px] leading-snug text-white/60">Ajoute le bloc « Rejoins ma liste » à ta page : chaque adresse arrive ici, et chez Brevo ou Mailchimp si tu les branches. Inclus dans l’offre gratuite.</p>}
+        ) : <p className="text-[14px] leading-snug text-white/60">Ajoute « Ma liste d’inscrits » à ta page : chaque adresse arrive ici, et chez Brevo ou Mailchimp si tu les branches. Inclus dans l’offre gratuite.</p>}
       </Carte>
       {ouverte && <FeuilleListe liste={liste} api={api} onFermer={() => setOuverte(false)} onChange={recharger} />}
     </>
@@ -107,7 +107,7 @@ function FeuilleListe({ liste, api, onFermer, onChange }: { liste: Liste; api: P
         <section>
           <div className="mb-2 flex items-center justify-between">
             <span className="text-[13px] font-medium text-white/70">{nombre(liste.total)} inscrit{liste.total > 1 ? 's' : ''}</span>
-            {api.urlContacts && liste.total > 0 && <a href={api.urlContacts} download className="inline-flex min-h-9 items-center gap-1.5 rounded-full bg-white/[0.08] px-3.5 text-[13.5px] font-medium text-white">Exporter en CSV</a>}
+            {api.urlContacts && liste.total > 0 && <a href={api.urlContacts} download className="inline-flex min-h-11 items-center gap-1.5 rounded-full bg-white/[0.08] px-3.5 text-[13.5px] font-medium text-white">Exporter en CSV</a>}
           </div>
           {contacts.length ? (
             <ul className="divide-y divide-white/[0.06] rounded-2xl bg-white/[0.035]">
@@ -118,7 +118,7 @@ function FeuilleListe({ liste, api, onFermer, onChange }: { liste: Liste; api: P
                     <span className="block text-[12px] text-white/55">{quand(c.ts)}{c.source && c.source !== 'Direct' ? ` · ${c.source}` : ''}{c.synchro === 'erreur' ? ' · pas envoyé' : ''}</span>
                   </span>
                   <button type="button" aria-label={`Retirer ${c.email}`} onClick={async () => { await api.supprimerContact(c.id); setContacts(l => l.filter(x => x.id !== c.id)); onChange(); }}
-                    className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-white/55 hover:bg-white/[0.06] hover:text-red-300"><Icone nom="ui-corbeille" taille={17} /></button>
+                    className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-white/55 hover:bg-white/[0.06] hover:text-red-300"><Icone nom="ui-corbeille" taille={17} /></button>
                 </li>
               ))}
             </ul>

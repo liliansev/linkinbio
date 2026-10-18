@@ -4,7 +4,7 @@ import { urlPage } from '../lib/types.ts';
 import { etapesDemarrage } from '../lib/demarrage.ts';
 import type { Destination } from '../lib/demarrage.ts';
 import { Icone } from '../components/Icone.tsx';
-import { vibrer } from './ui.tsx';
+import { BoutonCopier, vibrer } from './ui.tsx';
 
 /*
  * Le haut de l'onglet Liens : l'adresse de la page, à copier ou partager en un
@@ -24,14 +24,14 @@ export function HautLiens({ compte, reglages, blocs, aller }: { compte: ComptePa
   const [partagee, setPartagee] = useState(() => lire(CLE_PARTAGE));
   const [masque, setMasque] = useState(() => lire(CLE_MASQUE));
   const [themeVu, setThemeVu] = useState(() => lire(CLE_THEME));
-  const [copie, setCopie] = useState(false);
+  const [ouvert, setOuvert] = useState(false);
   const etapes = etapesDemarrage(reglages, blocs, partagee, themeVu);
   const faites = etapes.filter(e => e.faite).length;
   const peutPartager = typeof navigator !== 'undefined' && typeof navigator.share === 'function';
 
   function marquerPartagee() { noter(CLE_PARTAGE); setPartagee(true); }
   async function copier() {
-    try { await navigator.clipboard.writeText(adresse); vibrer(8); setCopie(true); marquerPartagee(); setTimeout(() => setCopie(false), 1800); } catch { /* presse-papiers refusé */ }
+    try { await navigator.clipboard.writeText(adresse); vibrer(8); marquerPartagee(); } catch { /* presse-papiers refusé */ }
   }
   async function partager() {
     try { await navigator.share({ title: reglages.profil.nom || 'Ma page', url: adresse }); marquerPartagee(); } catch { /* partage annulé */ }
@@ -39,47 +39,54 @@ export function HautLiens({ compte, reglages, blocs, aller }: { compte: ComptePa
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex items-center gap-2 rounded-xl border border-white/[0.07] bg-white/[0.03] p-1 pl-3">
+      {/* Sur téléphone, l'adresse et Copier sont dans l'en-tête ; ici, seulement sur ordinateur. */}
+      <div className="hidden items-center gap-2 rounded-xl border border-white/[0.07] bg-white/[0.03] p-1 pl-3 lg:flex">
         <span className="relative flex h-2 w-2 shrink-0" title="En ligne">
           <span className="absolute inset-0 animate-ping rounded-full bg-emerald-400/60 motion-reduce:hidden" />
           <span className="relative h-2 w-2 rounded-full bg-emerald-400" />
         </span>
         <span className="min-w-0 flex-1 truncate text-[14px] font-medium text-white" translate="no">{courte}</span>
-        <button type="button" onClick={copier} aria-label="Copier l’adresse de ta page"
-          className="flex min-h-11 items-center gap-1.5 rounded-full bg-white/[0.07] px-3.5 text-[13.5px] font-medium text-white transition active:scale-95">
-          <Icone nom={copie ? 'ui-ok' : 'ui-copier'} taille={16} />{copie ? 'Copié' : 'Copier'}
-        </button>
+        <BoutonCopier texte={adresse} onCopie={marquerPartagee} label="Copier l’adresse de ta page" />
         {peutPartager && (
           <button type="button" onClick={partager} aria-label="Partager ta page"
             className="grid h-11 w-11 place-items-center rounded-full bg-white text-nuit transition active:scale-95"><Icone nom="partage" taille={19} /></button>
         )}
       </div>
 
+      {/* Une seule ligne tant qu'on ne l'ouvre pas : la page qu'on modifie reste dans le premier écran du téléphone. */}
       {!masque && faites < etapes.length && (
-        <section className="adm-cascade rounded-xl border border-white/[0.07] bg-white/[0.03] p-3.5" aria-label="Bien démarrer">
-          <div className="mb-3 flex items-start justify-between gap-3">
-            <div>
-              <h2 className="text-[14px] font-medium text-white">Bien démarrer</h2>
-              <p className="text-[12.5px] text-white/55">Encore {etapes.length - faites} {etapes.length - faites > 1 ? 'étapes' : 'étape'} pour une page prête à partager.</p>
-            </div>
+        <section className="adm-cascade rounded-xl border border-white/[0.07] bg-white/[0.03]" aria-label="Bien démarrer">
+          <div className="flex items-center">
+            <button type="button" onClick={() => setOuvert(o => !o)} aria-expanded={ouvert}
+              className="flex min-h-12 min-w-0 flex-1 items-center gap-3 rounded-xl pl-3.5 text-left">
+              <span className="relative grid h-6 w-6 shrink-0 place-items-center">
+                <svg viewBox="0 0 24 24" className="absolute inset-0 -rotate-90" aria-hidden="true">
+                  <circle cx="12" cy="12" r="10" fill="none" stroke="rgb(255 255 255 / 0.12)" strokeWidth="2.5" />
+                  <circle cx="12" cy="12" r="10" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"
+                    strokeDasharray={`${(faites / etapes.length) * 62.8} 62.8`} />
+                </svg>
+              </span>
+              <h2 className="min-w-0 flex-1 text-[14px] font-medium text-white">Bien démarrer</h2>
+              <span className="shrink-0 text-[13px] text-white/55">{faites} sur {etapes.length}</span>
+              <Icone nom="ui-chevron" taille={16} className={`shrink-0 text-white/55 transition ${ouvert ? 'rotate-180' : ''}`} />
+            </button>
             <button type="button" onClick={() => { noter(CLE_MASQUE); setMasque(true); }} aria-label="Masquer ces étapes"
-              className="-mt-2 -mr-2 grid h-11 w-11 place-items-center rounded-full text-white/55 hover:bg-white/[0.06] hover:text-white"><Icone nom="ui-fermer" taille={18} /></button>
+              className="grid h-12 w-11 shrink-0 place-items-center rounded-full text-white/55 hover:text-white"><Icone nom="ui-fermer" taille={18} /></button>
           </div>
-          <div className="mb-3 h-1 overflow-hidden rounded-full bg-white/[0.08]" role="progressbar" aria-valuemin={0} aria-valuemax={etapes.length} aria-valuenow={faites}>
-            <div className="h-full rounded-full bg-white transition-[width] duration-500" style={{ width: `${(faites / etapes.length) * 100}%` }} />
-          </div>
-          <ol className="-mx-1.5 flex flex-col">
-            {etapes.filter(e => !e.faite).map(e => (
-              <li key={e.id}>
-                <button type="button" onClick={() => { if (e.id === 'theme') { noter(CLE_THEME); setThemeVu(true); } if (e.id === 'partage') { if (peutPartager) partager(); else copier(); } else aller(e.id); }}
-                  className="group flex min-h-11 w-full items-center gap-3 rounded-xl px-1.5 py-1.5 text-left transition hover:bg-white/[0.05] active:scale-[0.99]">
-                  <span className="h-5 w-5 shrink-0 rounded-full border-[1.5px] border-white/25 transition group-hover:border-white/30" />
-                  <span className="min-w-0 flex-1 text-[14px] font-medium text-white">{e.nom}</span>
-                  <Icone nom="ui-chevron" taille={16} className="-rotate-90 text-white/30 group-hover:text-white/60" />
-                </button>
-              </li>
-            ))}
-          </ol>
+          {ouvert && (
+            <ol className="flex flex-col px-2 pb-2">
+              {etapes.filter(e => !e.faite).map(e => (
+                <li key={e.id}>
+                  <button type="button" onClick={() => { if (e.id === 'theme') { noter(CLE_THEME); setThemeVu(true); } if (e.id === 'partage') { if (peutPartager) partager(); else copier(); } else aller(e.id); }}
+                    className="group flex min-h-11 w-full items-center gap-3 rounded-xl px-1.5 py-1.5 text-left transition hover:bg-white/[0.05] active:scale-[0.99]">
+                    <span className="h-5 w-5 shrink-0 rounded-full border-[1.5px] border-white/25 transition group-hover:border-white/30" />
+                    <span className="min-w-0 flex-1 text-[14px] font-medium text-white">{e.nom}</span>
+                    <Icone nom="ui-chevron" taille={16} className="-rotate-90 text-white/30 group-hover:text-white/60" />
+                  </button>
+                </li>
+              ))}
+            </ol>
+          )}
         </section>
       )}
     </div>

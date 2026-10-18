@@ -13,7 +13,7 @@ import { AccepterCgu } from './AccepterCgu.tsx';
 import { PremiersPas, premiersPasFaits } from './PremiersPas.tsx';
 import { pageNeuve } from '../lib/demarrage.ts';
 import { Icone } from '../components/Icone.tsx';
-import { vibrer } from './ui.tsx';
+import { BoutonCopier, vibrer } from './ui.tsx';
 
 /*
  * Le back office. Tout s'enregistre tout seul : un bloc quand on valide sa
@@ -40,7 +40,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
   const [onglet, setOnglet] = useState<Onglet>('page');
   const [edition, setEdition] = useState<{ bloc: Bloc; nouveau: boolean } | null>(null);
   const [sauvegarde, setSauvegarde] = useState<Sauvegarde>('ok');
-  const [toast, setToast] = useState<{ texte: string; annuler?: () => void } | null>(null);
+  const [toast, setToast] = useState<{ texte: string; annuler?: () => void; action?: string } | null>(null);
   // Le doigt ou le focus sur le message le garde affiché : « Annuler » ne file pas pendant qu'on le vise.
   const [toastTenu, setToastTenu] = useState(false);
   const [apercu, setApercu] = useState(false);
@@ -67,21 +67,40 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
     } catch (error) {
       enCours.current--;
       setSauvegarde('erreur');
-      setToast({ texte: (error as Error).message?.includes('Session') ? 'Ta session a expiré. Recharge la page pour te reconnecter.' : 'Pas enregistré. Vérifie ta connexion.' });
+      // Un échec se rejoue d'un toucher : la même écriture repart.
+      setToast((error as Error).message?.includes('Session')
+        ? { texte: 'Ta session a expiré. Recharge la page pour te reconnecter.' }
+        : { texte: 'Pas enregistré. Vérifie ta connexion.', action: 'Réessayer', annuler: () => { setToast(null); void ecrireRef.current(action); } });
       return undefined;
     }
   }, []);
 
+  const ecrireRef = useRef(ecrire);
+  ecrireRef.current = ecrire;
   useEffect(() => { if (!toast) setToastTenu(false); }, [toast]);
+  // Après un retrait, le bloc qui avait le focus n'existe plus : le focus va à « Annuler » plutôt qu'au vide.
+  const actionToast = useRef<HTMLButtonElement>(null);
+  useEffect(() => { if (toast?.annuler && (document.activeElement === document.body || !document.activeElement)) actionToast.current?.focus({ preventScroll: true }); }, [toast]);
   // L'aperçu plein écran se comporte en fenêtre : Échap le ferme, le focus va au bouton puis revient.
   const fermerApercu = useRef<HTMLButtonElement>(null);
+  const fenetreApercu = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!apercu) return;
     const avant = document.activeElement as HTMLElement | null;
     const corps = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     fermerApercu.current?.focus({ preventScroll: true });
-    const touche = (e: KeyboardEvent) => { if (e.key === 'Escape') setApercu(false); };
+    const touche = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') return setApercu(false);
+      if (e.key !== 'Tab' || !fenetreApercu.current) return;
+      // Tab tourne dans la fenêtre : rien derrière l'aperçu ne prend le focus.
+      const f = [...fenetreApercu.current.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), input, textarea, [tabindex]:not([tabindex="-1"])')];
+      if (!f.length) return;
+      const [premier, dernier] = [f[0], f[f.length - 1]];
+      const dedans = fenetreApercu.current.contains(document.activeElement);
+      if (e.shiftKey && (document.activeElement === premier || !dedans)) { e.preventDefault(); dernier.focus(); }
+      else if (!e.shiftKey && (document.activeElement === dernier || !dedans)) { e.preventDefault(); premier.focus(); }
+    };
     document.addEventListener('keydown', touche);
     return () => { document.removeEventListener('keydown', touche); document.body.style.overflow = corps; avant?.focus({ preventScroll: true }); };
   }, [apercu]);
@@ -150,7 +169,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
     setEdition(null);
     ecrire(() => api.supprimerBloc(bloc.id));
     setToast({
-      texte: 'Bloc supprimé',
+      texte: 'Retiré de ta page',
       annuler: () => {
         setBlocs(avant);
         setToast(null);
@@ -181,7 +200,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
   const bulle = toast && (
     <div role="status" onPointerEnter={() => setToastTenu(true)} onPointerLeave={() => setToastTenu(false)} onFocus={() => setToastTenu(true)} onBlur={() => setToastTenu(false)} className="adm-toast fixed inset-x-4 bottom-[calc(76px+env(safe-area-inset-bottom))] z-[60] mx-auto flex max-w-sm items-center justify-between gap-3 rounded-2xl bg-white px-4 py-3 text-[14.5px] font-medium text-nuit shadow-2xl lg:bottom-6">
       <span className="flex items-center gap-2">{!toast.annuler && sauvegarde !== 'erreur' && <span className="grid h-5 w-5 place-items-center rounded-full bg-emerald-500 text-white"><Icone nom="ui-ok" taille={13} /></span>}{toast.texte}</span>
-      {toast.annuler && <button type="button" onClick={toast.annuler} className="-my-2 min-h-11 rounded-full px-3 font-semibold text-[#a3461d] hover:bg-black/5">Annuler</button>}
+      {toast.annuler && <button ref={actionToast} type="button" onClick={toast.annuler} className="-my-2 min-h-11 rounded-full px-3 font-semibold text-[#a3461d] hover:bg-black/5">{toast.action ?? 'Annuler'}</button>}
     </div>
   );
 
@@ -223,7 +242,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
             <div className="min-w-0 flex-1">
               <p className="truncate text-[13.5px] font-medium leading-tight">{reglages.profil.nom || 'Hopla'}</p>
               <p className={`flex items-center gap-1.5 text-[11.5px] leading-tight ${sauvegarde === 'erreur' ? 'text-red-300' : 'text-white/55'}`}>
-                <span className={`h-1.5 w-1.5 rounded-full ${sauvegarde === 'encours' ? 'animate-pulse bg-amber-300' : sauvegarde === 'erreur' ? 'bg-red-400' : 'bg-emerald-400'}`} />{indicateur}
+                <span className={`h-1.5 w-1.5 rounded-full ${sauvegarde === 'encours' ? 'animate-pulse bg-amber-300 motion-reduce:animate-none' : sauvegarde === 'erreur' ? 'bg-red-400' : 'bg-emerald-400'}`} />{indicateur}
               </p>
             </div>
           </div>
@@ -235,12 +254,14 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
         <div className="mx-auto flex h-16 max-w-6xl items-center gap-3 px-4">
           {reglages.profil.avatar ? <img src={reglages.profil.avatar} alt="" className="h-9 w-9 rounded-full object-cover" /> : <span className="h-9 w-9 rounded-full bg-white/10" />}
           <div className="min-w-0 flex-1">
-            <p className="truncate text-[15px] font-semibold leading-tight">{reglages.profil.nom || 'Hopla'}</p>
+            {/* Sur téléphone, l'en-tête porte l'adresse de la page : la copier ne prend plus une ligne au-dessus de la page. */}
+            <p className="truncate text-[15px] font-semibold leading-tight" translate="no">{urlPage(compte).replace(/^https?:\/\//, '')}</p>
             <p className={`flex items-center gap-1.5 text-[12px] leading-tight ${sauvegarde === 'erreur' ? 'text-red-300' : 'text-white/55'}`} aria-live="polite">
-              <span className={`h-1.5 w-1.5 rounded-full ${sauvegarde === 'encours' ? 'animate-pulse bg-amber-300' : sauvegarde === 'erreur' ? 'bg-red-400' : 'bg-emerald-400'}`} />{indicateur}
+              <span className={`h-1.5 w-1.5 rounded-full ${sauvegarde === 'encours' ? 'animate-pulse bg-amber-300 motion-reduce:animate-none' : sauvegarde === 'erreur' ? 'bg-red-400' : 'bg-emerald-400'}`} />{indicateur}
             </p>
           </div>
-          <button type="button" onClick={() => setApercu(true)} className="flex min-h-9 items-center gap-1.5 rounded-full bg-white/[0.07] px-3.5 text-[13.5px] font-medium transition active:scale-95 lg:hidden">Aperçu</button>
+          <BoutonCopier compact texte={urlPage(compte)} label="Copier l’adresse de ta page" onCopie={() => { try { localStorage.setItem('hopla-page-partagee', '1'); } catch { /* stockage refusé */ } }} />
+          <button type="button" onClick={() => setApercu(true)} className="flex min-h-11 items-center gap-1.5 rounded-full bg-white/[0.07] px-3.5 text-[13.5px] font-medium transition active:scale-95 lg:hidden">Aperçu</button>
         </div>
       </header>
 
@@ -285,7 +306,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
       </nav>
 
       {apercu && (
-        <div className="adm-fondu fixed inset-0 z-40 flex flex-col bg-black/80 backdrop-blur-sm lg:hidden" role="dialog" aria-modal="true" aria-label="Aperçu de ta page">
+        <div ref={fenetreApercu} className="adm-fondu fixed inset-0 z-40 flex flex-col bg-black/80 backdrop-blur-sm lg:hidden" role="dialog" aria-modal="true" aria-label="Aperçu de ta page">
           <div className="adm-apercu relative min-h-0 flex-1 overflow-y-auto"><PageLiens page={page} apercu /></div>
           {/* Sous la page, pas par-dessus : le bouton ne cache jamais le bas de la page. */}
           <div className="flex shrink-0 justify-center border-t border-white/[0.08] bg-[#0b0f19] px-4 pt-3 pb-[max(12px,env(safe-area-inset-bottom))]">

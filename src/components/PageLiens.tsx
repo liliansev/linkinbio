@@ -122,7 +122,7 @@ export function PageLiens({ page, apercu = false, edition }: { page: PagePubliqu
               ? <input className="lp-ed-saisie" value={reglages.profil.nom} maxLength={80} placeholder="Ton nom" aria-label="Ton nom"
                   style={{ width: `${Math.max(reglages.profil.nom.length, 7) + 1}ch` }} onChange={e => edition.profil({ nom: e.target.value })} />
               : reglages.profil.nom}
-            {reglages.profil.badge && <span className="lp-badge" title={t.verifie}><Icone nom="badge" taille={20} /></span>}
+            {reglages.profil.badge && <span className="lp-badge" title={t.verifie} role="img" aria-label={t.verifie}><Icone nom="badge" taille={20} /></span>}
           </Nom>
           {edition
             ? <ChampBio valeur={reglages.profil.bio} onChange={bio => edition.profil({ bio })} />

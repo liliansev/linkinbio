@@ -67,7 +67,7 @@ function Courbe({ serie }: { serie: Stats['serie'] }) {
     <div>
       <div className="mb-2 flex items-center justify-between text-[12.5px]">
         <span className="flex gap-3 text-white/60">
-          <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-[#ffb38a]" />Vues</span>
+          <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-white" />Vues</span>
           <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-sky-300" />Clics</span>
         </span>
         <span className="text-white/70 tabular-nums">{point ? `${date(point.jour)} · ${point.vues} vues · ${point.clics} clics` : ''}</span>
@@ -75,10 +75,10 @@ function Courbe({ serie }: { serie: Stats['serie'] }) {
       <svg viewBox={`0 0 ${w} ${h}`} className="h-44 w-full touch-none" preserveAspectRatio="none" role="img" aria-label="Vues et clics par jour"
         onPointerMove={e => { const r = e.currentTarget.getBoundingClientRect(); setSurvol(Math.round(((e.clientX - r.left) / r.width) * (serie.length - 1))); }}
         onPointerLeave={() => setSurvol(null)}>
-        <defs><linearGradient id="adm-aire" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stopColor="#ffb38a" stopOpacity="0.35" /><stop offset="1" stopColor="#ffb38a" stopOpacity="0" /></linearGradient></defs>
+        <defs><linearGradient id="adm-aire" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stopColor="#ffffff" stopOpacity="0.22" /><stop offset="1" stopColor="#ffffff" stopOpacity="0" /></linearGradient></defs>
         {[0.25, 0.5, 0.75].map(f => <line key={f} x1={0} x2={w} y1={h * f} y2={h * f} stroke="white" strokeOpacity="0.06" vectorEffect="non-scaling-stroke" />)}
         <path d={aire} fill="url(#adm-aire)" />
-        <path d={ligne('vues')} fill="none" stroke="#ffb38a" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinejoin="round" strokeLinecap="round" />
+        <path d={ligne('vues')} fill="none" stroke="#ffffff" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinejoin="round" strokeLinecap="round" />
         <path d={ligne('clics')} fill="none" stroke="#7dd3fc" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinejoin="round" strokeLinecap="round" />
         {survol !== null && <line x1={x(survol)} x2={x(survol)} y1={0} y2={h} stroke="white" strokeOpacity="0.3" vectorEffect="non-scaling-stroke" />}
       </svg>
@@ -160,7 +160,7 @@ export function OngletStats({ charger, limite = false, onPro, ouvrirApps = true,
       {limite ? (
         <div className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3">
           <p className="text-[14px] leading-snug text-white/80">Les 7 derniers jours. <span className="text-white/55">Avec Pro, jusqu’à un an d’historique : tout est déjà enregistré.</span></p>
-          {onPro && <button type="button" onClick={onPro} className="min-h-9 shrink-0 rounded-full bg-white px-4 text-[13.5px] font-semibold text-nuit">Passer en Pro</button>}
+          {onPro && <button type="button" onClick={onPro} className="min-h-11 shrink-0 rounded-full bg-white px-4 text-[13.5px] font-semibold text-nuit">Passer en Pro</button>}
         </div>
       ) : <Segments label="Période" valeur={jours} options={PERIODES} onChange={setJours} />}
       {erreur && <p className="rounded-xl bg-red-500/15 px-3.5 py-2.5 text-[14px] text-red-200">Les statistiques ne se chargent pas. Réessaie dans un instant.</p>}

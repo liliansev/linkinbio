@@ -85,6 +85,8 @@ export function Feuille({ ouverte, onFermer, retenir, titre, children, pied, cot
   const ref = useRef<HTMLDivElement>(null);
   const [sortie, setSortie] = useState(false);
   const [tire, setTire] = useState(0);
+  // La hauteur visible quand le clavier est ouvert (iOS ne réduit ni la fenêtre ni les dvh) : la feuille s'y tient.
+  const [visible, setVisible] = useState<{ h: number; haut: number } | null>(null);
   const geste = useRef<{ y: number; t: number } | null>(null);
   const fermer = useCallback<Fermer>(apres => {
     // Un geste qui fermerait sur un travail pas valable laisse la feuille ouverte (retenir dit pourquoi).
@@ -112,11 +114,15 @@ export function Feuille({ ouverte, onFermer, retenir, titre, children, pied, cot
       else if (!ref.current.contains(document.activeElement)) { e.preventDefault(); premier.focus(); }
     };
     document.addEventListener('keydown', touche);
+    const vv = window.visualViewport;
+    const suivre = () => { if (vv) setVisible(innerHeight - vv.height > 120 ? { h: vv.height, haut: vv.offsetTop } : null); };
+    vv?.addEventListener('resize', suivre);
+    vv?.addEventListener('scroll', suivre);
     const avant = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     // Le champ qui a l'autoFocus garde la main ; sinon la feuille prend le focus.
     if (!ref.current?.contains(document.activeElement)) ref.current?.focus();
-    return () => { document.removeEventListener('keydown', touche); document.body.style.overflow = avant; if (avantFocus?.isConnected) avantFocus.focus({ preventScroll: true }); };
+    return () => { vv?.removeEventListener('resize', suivre); vv?.removeEventListener('scroll', suivre); setVisible(null); document.removeEventListener('keydown', touche); document.body.style.overflow = avant; if (avantFocus?.isConnected) avantFocus.focus({ preventScroll: true }); };
   }, [ouverte]);
   if (!ouverte) return null;
 
@@ -140,11 +146,12 @@ export function Feuille({ ouverte, onFermer, retenir, titre, children, pied, cot
   const rendre = (c: Contenu) => (typeof c === 'function' ? c(fermer) : c);
 
   return (
-    <div className={`fixed inset-0 z-50 flex items-end justify-center ${cote ? 'sm:items-stretch sm:justify-end sm:p-4' : 'sm:items-center'}`} role="dialog" aria-modal="true" aria-label={titre} data-sortie={sortie || undefined}>
-      <button type="button" aria-label="Fermer" className={`adm-fondu absolute inset-0 ${apercu ? 'bg-[#0b0f19] sm:bg-black/10' : cote ? 'bg-black/10' : 'bg-black/60 backdrop-blur-[2px]'}`} onClick={() => fermer()} />
+    <div className={`fixed inset-0 z-50 flex items-end justify-center ${cote ? 'sm:items-stretch sm:justify-end sm:p-4' : 'sm:items-center'}`} role="dialog" aria-modal="true" aria-label={titre} data-sortie={sortie || undefined}
+      style={visible ? { top: visible.haut, height: visible.h, bottom: 'auto' } : undefined}>
+      <button type="button" tabIndex={-1} aria-hidden="true" className={`adm-fondu absolute inset-0 ${apercu ? 'bg-[#0b0f19] sm:bg-black/10' : cote ? 'bg-black/10' : 'bg-black/60 backdrop-blur-[2px]'}`} onClick={() => fermer()} />
       {apercu && <div inert className="adm-fondu pointer-events-none absolute inset-x-0 top-0 bottom-[54dvh] flex items-center justify-center px-4 pt-[max(12px,env(safe-area-inset-top))] pb-3 sm:hidden">{apercu}</div>}
       <div ref={ref} tabIndex={-1}
-        style={tire ? { transform: `translateY(${tire}px)`, transition: 'none' } : undefined}
+        style={{ ...(tire ? { transform: `translateY(${tire}px)`, transition: 'none' } : {}), ...(visible ? { maxHeight: visible.h - 8, height: 'auto' } : {}) }}
         className={`adm-feuille relative flex ${apercu ? 'h-[54dvh] sm:h-auto sm:w-[400px]' : cote ? 'max-h-[58dvh] sm:max-h-none sm:w-[400px]' : 'max-h-[92dvh]'} w-full flex-col rounded-t-[20px] border border-b-0 border-white/10 bg-[#111827] shadow-[0_-20px_60px_-20px_rgba(0,0,0,0.7)] outline-none sm:max-w-lg sm:rounded-[20px] sm:border-b`}>
         <div {...tirer} className="shrink-0 touch-none select-none">
           <div className="mx-auto mt-2 h-1 w-9 rounded-full bg-white/20 sm:hidden" />
@@ -162,23 +169,61 @@ export function Feuille({ ouverte, onFermer, retenir, titre, children, pied, cot
   );
 }
 
+/** Le même bouton Copier partout : il copie, vibre, dit « Copié » un instant, puis prévient (`onCopie`). */
+export function BoutonCopier({ texte, onCopie, label, compact = false }: { texte: string; onCopie?: () => void; label?: string; compact?: boolean }) {
+  const [copie, setCopie] = useState(false);
+  async function copier() {
+    try { await navigator.clipboard.writeText(texte); vibrer(8); setCopie(true); onCopie?.(); setTimeout(() => setCopie(false), 1800); } catch { /* presse-papiers refusé */ }
+  }
+  if (compact) return (
+    <button type="button" onClick={copier} aria-label={copie ? 'Adresse copiée' : label ?? 'Copier'}
+      className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-white/[0.07] text-white transition hover:bg-white/[0.13] active:scale-95">
+      <Icone nom={copie ? 'ui-ok' : 'ui-copier'} taille={18} />
+    </button>
+  );
+  return (
+    <button type="button" onClick={copier} aria-label={label}
+      className="flex min-h-11 shrink-0 items-center gap-1.5 rounded-full bg-white/[0.08] px-3.5 text-[14px] font-medium text-white transition hover:bg-white/[0.13] active:scale-95">
+      <Icone nom={copie ? 'ui-ok' : 'ui-copier'} taille={16} />{copie ? 'Copié' : 'Copier'}
+    </button>
+  );
+}
+
 export function BoutonPrincipal({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) {
-  return <button type="button" {...props} className={`inline-flex min-h-10 items-center justify-center gap-2 rounded-full bg-white px-5 text-[14px] font-semibold text-nuit transition hover:brightness-105 active:scale-[0.98] disabled:opacity-50 ${props.className ?? ''}`}>{children}</button>;
+  return <button type="button" {...props} className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-white px-5 text-[14px] font-semibold text-nuit transition hover:brightness-105 active:scale-[0.98] disabled:opacity-50 ${props.className ?? ''}`}>{children}</button>;
 }
 
 export function BoutonSecondaire({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) {
-  return <button type="button" {...props} className={`inline-flex min-h-10 items-center justify-center gap-2 rounded-full bg-white/[0.07] px-4 text-[14px] font-medium text-white transition hover:bg-white/[0.13] active:scale-[0.98] disabled:opacity-50 ${props.className ?? ''}`}>{children}</button>;
+  return <button type="button" {...props} className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-white/[0.07] px-4 text-[14px] font-medium text-white transition hover:bg-white/[0.13] active:scale-[0.98] disabled:opacity-50 ${props.className ?? ''}`}>{children}</button>;
 }
 
 /** Un choix parmi quelques options, en pastilles. */
+/**
+ * Les flèches dans un groupe de boutons radio (motif ARIA) : elles passent au
+ * voisin et, si `choisir`, le prennent. À poser sur le conteneur `radiogroup`.
+ */
+export function flechesRadio(e: React.KeyboardEvent<HTMLElement>, choisir = true) {
+  const pas = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1, Home: -Infinity, End: Infinity }[e.key];
+  if (pas === undefined) return;
+  const radios = [...e.currentTarget.querySelectorAll<HTMLElement>('[role=radio]:not([disabled])')];
+  const i = radios.indexOf(document.activeElement as HTMLElement);
+  if (i < 0) return;
+  e.preventDefault();
+  const n = pas === -Infinity ? 0 : pas === Infinity ? radios.length - 1 : (i + pas + radios.length) % radios.length;
+  radios[n].focus();
+  if (choisir) radios[n].click();
+}
+/** Un seul arrêt de tabulation par groupe : le choix en cours, ou le premier. */
+export const arretRadio = (pris: boolean, premier: boolean, aucun: boolean) => (pris || (aucun && premier) ? 0 : -1);
+
 /** Un choix parmi plusieurs, en liste : un nom, une coche sur celui qui est pris. */
 export function ListeChoix<T extends string>({ valeur, options, onChange, label }: { valeur: T; options: { id: T; nom: string }[]; onChange: (v: T) => void; label: string }) {
   return (
-    <div role="radiogroup" aria-label={label} className="divide-y divide-white/[0.06] overflow-hidden rounded-xl bg-white/[0.03]">
-      {options.map(o => {
+    <div role="radiogroup" aria-label={label} onKeyDown={e => flechesRadio(e)} className="divide-y divide-white/[0.06] overflow-hidden rounded-xl bg-white/[0.03]">
+      {options.map((o, i) => {
         const pris = valeur === o.id;
         return (
-          <button key={o.id} type="button" role="radio" aria-checked={pris} onClick={() => { vibrer(4); onChange(o.id); }}
+          <button key={o.id} type="button" role="radio" aria-checked={pris} tabIndex={arretRadio(pris, i === 0, !options.some(x => x.id === valeur))} onClick={() => { vibrer(4); onChange(o.id); }}
             className="flex w-full items-center gap-3 px-3.5 py-2.5 text-left transition-colors duration-150 hover:bg-white/[0.04]">
             <span className={`min-w-0 flex-1 text-[14px] font-medium ${pris ? 'text-white' : 'text-white/80'}`}>{o.nom}</span>
             <span className={`grid h-5 w-5 shrink-0 place-items-center rounded-full transition duration-150 ${pris ? 'bg-white text-nuit' : 'ring-[1.5px] ring-inset ring-white/20'}`} aria-hidden="true">
@@ -193,9 +238,9 @@ export function ListeChoix<T extends string>({ valeur, options, onChange, label 
 
 export function Segments<T extends string>({ valeur, options, onChange, label }: { valeur: T; options: { id: T; nom: string }[]; onChange: (v: T) => void; label: string }) {
   return (
-    <div role="radiogroup" aria-label={label} className="flex gap-0.5 rounded-[10px] bg-white/[0.05] p-[3px]">
-      {options.map(o => (
-        <button key={o.id} type="button" role="radio" aria-checked={valeur === o.id} onClick={() => { vibrer(5); onChange(o.id); }}
+    <div role="radiogroup" aria-label={label} onKeyDown={e => flechesRadio(e)} className="flex gap-0.5 rounded-[10px] bg-white/[0.05] p-[3px]">
+      {options.map((o, i) => (
+        <button key={o.id} type="button" role="radio" aria-checked={valeur === o.id} tabIndex={arretRadio(valeur === o.id, i === 0, !options.some(x => x.id === valeur))} onClick={() => { vibrer(5); onChange(o.id); }}
           className={`min-h-10 flex-1 rounded-[7px] px-2.5 text-[13.5px] font-medium transition duration-200 ${valeur === o.id ? 'bg-white/[0.14] text-white shadow-[0_1px_2px_rgba(0,0,0,0.3)]' : 'text-white/55 hover:text-white'}`}>
           {o.nom}
         </button>
