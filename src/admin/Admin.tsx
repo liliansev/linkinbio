@@ -180,9 +180,9 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
       )}
 
       <div className={`mx-auto max-w-6xl px-4 ${onglet === 'page' ? '' : 'lg:grid lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-10'}`}>
-        <main className="mx-auto w-full max-w-xl pt-5 pb-32 lg:pb-12">
+        <main className={`mx-auto w-full max-w-xl lg:pb-12 ${onglet === 'page' ? 'pb-48 lg:pt-5' : 'pt-5 pb-32'}`}>
           <div key={onglet} className="adm-onglet">
-          <h1 className="mb-4 text-[28px] font-semibold tracking-[-0.025em] lg:hidden">{onglets.find(o => o.id === onglet)!.nom}</h1>
+          <h1 className={`mb-4 text-[28px] font-semibold tracking-[-0.025em] lg:hidden ${onglet === 'page' ? 'sr-only' : ''}`}>{onglets.find(o => o.id === onglet)!.nom}</h1>
           {onglet === 'page' && <MaPage compte={compte} reglages={reglages} blocs={blocs} clics={clics} onReglages={changerReglages} onOrdonner={ordonner}
             onModifier={b => { setBlocs(l => l.map(x => (x.id === b.id ? b : x))); ecrire(() => api.enregistrerBloc(b)); }}
             onOuvrir={b => setEdition({ bloc: b, nouveau: false })} onAjouter={b => setEdition({ bloc: b, nouveau: true })} envoyerImage={d => api.envoyerImage(d)} />}

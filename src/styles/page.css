@@ -561,18 +561,18 @@
 }
 
 /* ---- Édition sur la page ----
- * Dans « Ma page » du back office, la page elle-même sert d'éditeur : un
- * pointillé discret montre ce qui se modifie, l'accent du thème marque ce
- * qu'on touche. Rien de tout cela n'existe sur la page publique.
+ * Dans « Ma page » du back office, la page elle-même sert d'éditeur. Au
+ * repos elle ressemble à la page publique ; un voile léger montre ce qui se
+ * modifie au survol, l'accent du thème marque ce qu'on touche.
  */
 .adm-toile .lp { min-height: 0; }
 .lp-ed-saisie {
   font: inherit; color: inherit; letter-spacing: inherit; text-align: center;
   background: transparent; border: 0; margin: 0; padding: 2px 8px; border-radius: 10px; max-width: 100%;
-  outline: 1.5px dashed color-mix(in srgb, var(--texte) 22%, transparent); outline-offset: 2px;
+  outline: 2px solid transparent; outline-offset: 2px;
   transition: outline-color 0.15s, background-color 0.15s;
 }
-.lp-ed-saisie:hover { outline-color: color-mix(in srgb, var(--texte) 45%, transparent); }
+.lp-ed-saisie:hover { background: color-mix(in srgb, var(--texte) 7%, transparent); }
 .lp-ed-saisie:focus { outline: 2px solid var(--vedette); background: color-mix(in srgb, var(--texte) 6%, transparent); }
 .lp-ed-saisie::placeholder { color: inherit; opacity: 0.45; }
 @supports (field-sizing: content) {
@@ -593,20 +593,21 @@ textarea.lp-bio.lp-ed-saisie { display: block; width: 100%; resize: none; overfl
 
 button.lp-ed-zone {
   font: inherit; color: var(--texte); background: none; border: 0; cursor: pointer;
-  padding: 2px 6px; border-radius: 999px;
-  outline: 1.5px dashed color-mix(in srgb, var(--texte) 22%, transparent); outline-offset: 2px;
+  padding: 2px 6px; border-radius: 999px; transition: background-color 0.15s;
 }
-button.lp-ed-zone:hover { outline-color: color-mix(in srgb, var(--texte) 45%, transparent); }
+button.lp-ed-zone:hover { background: color-mix(in srgb, var(--texte) 7%, transparent); }
+button.lp-ed-zone:focus-visible { outline: 2px solid var(--vedette); outline-offset: 2px; }
 .lp-ed-reseau { width: 40px; height: 40px; display: grid; place-items: center; }
 .lp-ed-vide { padding: 9px 12px; font-size: 0.92rem; font-weight: 520; color: var(--doux); }
 
 .lp-ed-ajout {
   display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 52px; width: 100%;
-  border-radius: var(--r); border: 1.5px dashed color-mix(in srgb, var(--texte) 35%, transparent);
-  background: transparent; color: var(--texte); font: inherit; font-weight: 580; cursor: pointer;
-  transition: background-color 0.15s, border-color 0.15s;
+  border-radius: var(--r); border: 0;
+  background: color-mix(in srgb, var(--texte) 8%, transparent); color: var(--texte); font: inherit; font-weight: 580; cursor: pointer;
+  transition: background-color 0.15s;
 }
-.lp-ed-ajout:hover { background: color-mix(in srgb, var(--texte) 6%, transparent); border-color: color-mix(in srgb, var(--texte) 60%, transparent); }
+.lp-ed-ajout:hover { background: color-mix(in srgb, var(--texte) 13%, transparent); }
+.lp-ed-ajout:focus-visible { outline: 2px solid var(--vedette); outline-offset: 2px; }
 
 .lp-ed-bloc {
   position: relative; cursor: pointer; border-radius: calc(var(--rc) + 6px);

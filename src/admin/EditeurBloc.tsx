@@ -176,7 +176,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
               </div>
             </div>
             <div className="flex items-center gap-3">
-              {b.image ? <img src={b.image} alt="" className="h-14 w-14 rounded-xl object-cover" /> : <span className="grid h-14 w-14 place-items-center rounded-xl border border-dashed border-white/20 text-white/35"><Icone nom="ui-image" taille={22} /></span>}
+              {b.image ? <img src={b.image} alt="" className="h-14 w-14 rounded-xl object-cover" /> : <span className="grid h-14 w-14 place-items-center rounded-xl bg-white/[0.06] text-white/35"><Icone nom="ui-image" taille={22} /></span>}
               <div className="flex flex-1 flex-wrap gap-2">
                 <button type="button" onClick={() => fichier.current?.click()} disabled={envoi} className="min-h-10 rounded-full bg-white/[0.08] px-4 text-[14px] font-medium text-white hover:bg-white/[0.13]">{envoi ? 'Envoi…' : b.image ? 'Changer l’image' : 'Ajouter une image'}</button>
                 {b.url && (

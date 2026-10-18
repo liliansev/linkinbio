@@ -62,7 +62,7 @@ export function OngletLiens({ blocs, clics, onOrdonner, onModifier, onOuvrir, on
         </SortableContext>
       </DndContext>
       {blocs.length === 0 && (
-        <div className="flex flex-col items-center gap-2 rounded-[20px] border border-dashed border-white/12 px-6 py-10 text-center">
+        <div className="flex flex-col items-center gap-2 rounded-[20px] bg-white/[0.03] px-6 py-10 text-center">
           <span className="mb-1 grid h-12 w-12 place-items-center rounded-full bg-white/[0.06] text-peche"><Icone nom="lien" taille={22} /></span>
           <p className="text-[16px] font-semibold text-white">Ta page est vide</p>
           <p className="max-w-[30ch] text-[14px] leading-snug text-white/55">Ajoute un lien, un titre ou ta dernière vidéo : tout apparaît aussitôt sur ta page.</p>
@@ -113,7 +113,7 @@ function Ligne({ bloc, clics, onModifier, onOuvrir }: { bloc: Bloc; clics: numbe
   const section = bloc.type === 'titre';
   return (
     <li ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition }}
-      className={`relative flex items-stretch rounded-[20px] border transition-[box-shadow,border-color,scale] duration-200 ${section ? 'mt-2 border-dashed bg-transparent' : 'bg-[#141c2e]'} ${isDragging ? 'z-10 scale-[1.02] border-peche/60 bg-[#141c2e] shadow-[0_24px_50px_-16px_rgba(0,0,0,0.75)]' : section ? 'border-white/[0.12]' : 'border-white/[0.07]'}`}>
+      className={`relative flex items-stretch rounded-[20px] border transition-[box-shadow,border-color,scale] duration-200 ${section ? 'mt-2 bg-transparent' : 'bg-[#141c2e]'} ${isDragging ? 'z-10 scale-[1.02] border-peche/60 bg-[#141c2e] shadow-[0_24px_50px_-16px_rgba(0,0,0,0.75)]' : section ? 'border-white/[0.12]' : 'border-white/[0.07]'}`}>
       <button ref={setActivatorNodeRef} type="button" {...attributes} {...listeners} aria-label={`Déplacer ${titre}`}
         className="flex w-10 shrink-0 cursor-grab touch-none items-center justify-center rounded-l-2xl text-white/35 hover:text-white/70 active:cursor-grabbing">
         <svg width="14" height="20" viewBox="0 0 14 20" fill="currentColor" aria-hidden="true"><circle cx="4" cy="4" r="1.7" /><circle cx="10" cy="4" r="1.7" /><circle cx="4" cy="10" r="1.7" /><circle cx="10" cy="10" r="1.7" /><circle cx="4" cy="16" r="1.7" /><circle cx="10" cy="16" r="1.7" /></svg>
