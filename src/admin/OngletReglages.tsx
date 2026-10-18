@@ -208,6 +208,8 @@ function TesDonnees({ compte, urlExport, supprimerMonCompte }: { compte: CompteP
   );
 }
 
+const EN_FRANCAIS = { en: 'Anglais', es: 'Espagnol', de: 'Allemand', it: 'Italien' } as const;
+
 /** Les langues de la page : le visiteur la voit dans la sienne, là où les textes sont traduits. */
 function Langues({ reglages, onChange, adresse }: { reglages: Reglages; onChange: (r: Reglages) => void; adresse: string }) {
   const actives = reglages.langues ?? [];
@@ -215,13 +217,13 @@ function Langues({ reglages, onChange, adresse }: { reglages: Reglages; onChange
   return (
     <Carte titre="Langues de ta page">
       <p className="text-[13.5px] leading-snug text-white/60">Ta page s’affiche dans la langue du visiteur. Les boutons, le formulaire et les dates sont traduits tout seuls ; tes textes, tu les traduis dans chaque bloc (Traductions).</p>
-      <div className="mt-3 flex flex-wrap gap-1.5" role="group" aria-label="Langues proposées">
-        <span className="inline-flex min-h-10 items-center rounded-full bg-white px-4 text-[14px] font-medium text-nuit">Français</span>
+      <div className="mt-3 divide-y divide-white/[0.06] rounded-2xl bg-white/[0.035] px-4" role="group" aria-label="Langues proposées">
+        <div className="flex items-center justify-between gap-4 py-3">
+          <span className="text-[15px] font-medium text-white">Français</span>
+          <span className="text-[13px] text-white/45">Langue de ta page</span>
+        </div>
         {LANGUES.map(l => (
-          <button key={l} type="button" aria-pressed={actives.includes(l)} onClick={() => basculer(l)}
-            className={`min-h-10 rounded-full px-4 text-[14px] font-medium transition active:scale-95 ${actives.includes(l) ? 'bg-white text-nuit' : 'bg-white/[0.07] text-white/70 hover:text-white'}`}>
-            {NOMS_LANGUES[l]}
-          </button>
+          <Interrupteur key={l} label={NOMS_LANGUES[l]} aide={EN_FRANCAIS[l]} actif={actives.includes(l)} onChange={() => basculer(l)} />
         ))}
       </div>
       {actives.length > 0 && (

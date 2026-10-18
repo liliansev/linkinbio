@@ -8,7 +8,7 @@ import { themeParId, variablesTheme } from '../lib/themes.ts';
 import { ICONES } from '../lib/icones.ts';
 import { Icone, NOMS_RESEAUX, PICTOS } from '../components/Icone.tsx';
 import { BlocPublic } from '../components/PageLiens.tsx';
-import { BoutonPrincipal, Champ, Feuille, Interrupteur, NOMS_ANIMATIONS, Segments, classeSaisie, preparerImage, vibrer } from './ui.tsx';
+import { BoutonPrincipal, Champ, Feuille, Interrupteur, ListeChoix, NOMS_ANIMATIONS, Segments, classeSaisie, preparerImage, vibrer } from './ui.tsx';
 import { TYPES } from './OngletLiens.tsx';
 import { appDe } from '../lib/ouvrirApp.ts';
 import { ChampsPreuve, RegleAcces, RegleAudience, RegleMoment, RegleTraductions } from './ReglesBloc.tsx';
@@ -230,17 +230,11 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
         {b.type === 'lien' && (
           <div>
             <span className="mb-1.5 block text-[13px] font-medium text-white/70">Animation pour attirer l’œil</span>
-            <div role="radiogroup" aria-label="Animation" className="-mx-5 flex gap-1.5 overflow-x-auto px-5 pb-1 [scrollbar-width:none]">
-              {ANIMATIONS_BLOC.map(a => (
-                <button key={a} type="button" role="radio" aria-checked={b.animation === a} onClick={() => { vibrer(4); maj({ animation: a }); }}
-                  className={`min-h-10 shrink-0 rounded-full px-4 text-[14px] font-medium transition duration-150 active:scale-95 ${b.animation === a ? 'bg-white text-nuit' : 'bg-white/[0.07] text-white/70 hover:text-white'}`}>
-                  {a === 'auto' ? nomAuto : NOMS_ANIMATIONS[a].nom}
-                </button>
-              ))}
-            </div>
-            <p className="mt-1.5 text-[12.5px] leading-snug text-white/45">
-              {b.animation === 'auto' ? (b.vedette ? `Comme tous les liens mis en avant : ${NOMS_ANIMATIONS[reglages.animation].nom.toLowerCase()} (à changer dans Apparence).` : 'Immobile, sauf si tu mets ce lien en avant.') : NOMS_ANIMATIONS[b.animation].aide}
-            </p>
+            {/* Une liste, pas une rangée de pastilles : l'aperçu en haut de la feuille joue l'animation choisie. */}
+            <ListeChoix label="Animation" valeur={b.animation} onChange={a => maj({ animation: a })}
+              options={ANIMATIONS_BLOC.map(a => a === 'auto'
+                ? { id: a, nom: nomAuto, aide: b.vedette ? `Comme tes autres liens en avant : ${NOMS_ANIMATIONS[reglages.animation].nom.toLowerCase()}.` : 'Immobile, sauf si tu mets ce lien en avant.' }
+                : { id: a, nom: NOMS_ANIMATIONS[a].nom, aide: NOMS_ANIMATIONS[a].aide })} />
           </div>
         )}
 
