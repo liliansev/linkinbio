@@ -72,10 +72,7 @@ export function HautLiens({ compte, reglages, blocs, aller }: { compte: ComptePa
                 <button type="button" onClick={() => (e.id === 'partage' ? (peutPartager ? partager() : copier()) : aller(e.id))}
                   className="group flex w-full items-center gap-3 rounded-xl px-1.5 py-2 text-left transition hover:bg-white/[0.05] active:scale-[0.99]">
                   <span className="h-5 w-5 shrink-0 rounded-full border-[1.5px] border-white/25 transition group-hover:border-white/30" />
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-[14px] font-medium text-white">{e.nom}</span>
-                    <span className="block text-[12.5px] leading-snug text-white/45">{e.aide}</span>
-                  </span>
+                  <span className="min-w-0 flex-1 text-[14px] font-medium text-white">{e.nom}</span>
                   <Icone nom="ui-chevron" taille={16} className="-rotate-90 text-white/30 group-hover:text-white/60" />
                 </button>
               </li>

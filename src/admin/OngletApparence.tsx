@@ -69,7 +69,7 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
         <div className="flex flex-col gap-3">
           <Champ label="Nom"><input className={classeSaisie} value={reglages.profil.nom} maxLength={80} onChange={e => profil({ nom: e.target.value })} /></Champ>
           <Champ label="Bio"><textarea className={`${classeSaisie} min-h-24`} value={reglages.profil.bio} maxLength={300} onChange={e => profil({ bio: e.target.value })} /></Champ>
-          {principal && <Interrupteur label="Badge vérifié" aide="La petite coche à côté de ton nom." actif={reglages.profil.badge} onChange={v => profil({ badge: v })} />}
+          {principal && <Interrupteur label="Badge vérifié" actif={reglages.profil.badge} onChange={v => profil({ badge: v })} />}
         </div>
       </Carte>}
 
@@ -104,7 +104,6 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
 
       {voir('couleurs') && <Carte titre="Couleurs" action={reglages.couleurs.fond || reglages.couleurs.boutons || reglages.couleurs.accent
         ? <button type="button" onClick={() => maj({ couleurs: SANS_COULEURS })} className="text-[13px] font-medium text-white/60 hover:text-white">Tout remettre</button> : undefined}>
-        <p className="-mt-1 mb-4 text-[13px] leading-snug text-white/55">Pars de {themeParId(reglages.theme).nom} et change ce que tu veux. Les textes s’ajustent pour rester lisibles.</p>
         <div className="flex flex-col gap-5">
           {CLES_COULEURS.map(c => (
             <ChoixCouleur key={c.id} nom={c.nom} valeur={reglages.couleurs[c.id]} duTheme={c.duTheme(themeParId(reglages.theme))}
@@ -114,7 +113,6 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
       </Carte>}
 
       {voir('animation') && <Carte titre="Liens mis en avant" action={<span className="text-[13px] text-white/50">{NOMS_ANIMATIONS[reglages.animation].nom}</span>}>
-        <p className="-mt-1 mb-3 text-[13px] leading-snug text-white/55">Le mouvement qui attire l’œil sur tes liens en avant. Un lien peut aussi choisir le sien.</p>
         <div className="lp lp-mini rounded-2xl p-2.5" style={variablesTheme(theme) as CSSProperties} data-bouton={reglages.bouton.style} data-forme={reglages.bouton.forme} data-ombre={reglages.bouton.ombre} data-police={theme.police} data-decor={theme.decor}>
           <ul role="radiogroup" aria-label="Animation des liens mis en avant" className="grid grid-cols-2 gap-2">
             {ANIMATIONS.map(a => {
@@ -126,7 +124,6 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
                     <span className={`lp-btn lp-btn-vedette lp-accent ${a !== 'aucune' ? `lp-anim-${a}` : ''}`} style={{ minHeight: 52, padding: '8px 12px', fontSize: 15 }}>
                       {NOMS_ANIMATIONS[a].nom}
                     </span>
-                    <span className="px-1 text-[12px] leading-snug" style={{ color: 'var(--doux)' }}>{NOMS_ANIMATIONS[a].aide}</span>
                   </button>
                 </li>
               );
@@ -155,12 +152,10 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
         <div className="mt-4">
           <span className="mb-1.5 block text-[13px] font-medium text-white/70">Ombre</span>
           <Segments label="Ombre des boutons" valeur={reglages.bouton.ombre} options={OMBRES} onChange={v => maj({ bouton: { ...reglages.bouton, ombre: v } })} />
-          {reglages.bouton.style === 'relief' && <p className="mt-1.5 text-[12.5px] leading-snug text-white/50">Le style Relief garde son ombre franche, dessinée au trait.</p>}
         </div>
       </Carte>}
 
       {voir('bureau') && <Carte titre="Sur ordinateur">
-        <p className="mb-3 text-[13px] leading-snug text-white/55">Sur téléphone, ta page reste une colonne. Sur un grand écran, elle prend la mise en page choisie.</p>
         <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Mise en page sur ordinateur">
           {BUREAUX.map(b => {
             const actif = reglages.bureau === b.id;
@@ -168,8 +163,7 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
               <button key={b.id} type="button" role="radio" aria-checked={actif} onClick={() => { vibrer(); maj({ bureau: b.id }); }}
                 className={`flex flex-col gap-2 rounded-2xl p-2 text-left transition ${actif ? 'bg-white/[0.1] ring-2 ring-white' : 'bg-white/[0.04] ring-1 ring-white/[0.08] hover:bg-white/[0.07]'}`}>
                 <SchemaBureau id={b.id} />
-                <span className="px-1 text-[13px] font-semibold text-white">{b.nom}</span>
-                <span className="px-1 pb-1 text-[12px] leading-snug text-white/55">{b.aide}</span>
+                <span className="px-1 pb-1 text-[13px] font-semibold text-white">{b.nom}</span>
               </button>
             );
           })}
@@ -245,20 +239,17 @@ function SchemaBureau({ id }: { id: MiseEnPageBureau }) {
 type Tiroir = 'theme' | 'couleurs' | 'boutons' | 'animation' | 'bureau';
 
 /**
- * Le design en liste à tiroirs : chaque ligne dit ce qui est choisi, un toucher
- * l'ouvre à la place de la liste, la flèche ramène. On voit tout d'un coup
- * d'œil sans dérouler quatre cartes.
+ * Le design en liste à tiroirs : une icône et un titre par ligne, un toucher
+ * l'ouvre à la place de la liste, la flèche ramène.
  */
 export function DesignTiroirs({ reglages, onChange, envoyerImage, principal, pied }: { reglages: Reglages; onChange: (r: Reglages) => void; envoyerImage: (d: string) => Promise<string>; principal: boolean; pied?: ReactNode }) {
   const [ouvert, setOuvert] = useState<Tiroir | null>(null);
-  const theme = themeDe(reglages);
-  const nom = <T extends string>(liste: { id: T; nom: string }[], id: T) => liste.find(x => x.id === id)?.nom ?? '';
-  const lignes: { id: Tiroir; nom: string; valeur: string; vignette?: ReactNode }[] = [
-    { id: 'theme', nom: 'Thème', valeur: theme.nom, vignette: <span className="block w-7"><Pastille theme={theme} /></span> },
-    { id: 'couleurs', nom: 'Couleurs', valeur: resumeCouleurs(reglages.couleurs), vignette: <span className="flex w-7 -space-x-1.5" aria-hidden="true">{[theme.fondUni, theme.surface, theme.vedette].map((c, i) => <span key={i} className="h-4 w-4 shrink-0 rounded-full ring-1 ring-white/25" style={{ background: c }} />)}</span> },
-    { id: 'boutons', nom: 'Boutons', valeur: [nom(STYLES, reglages.bouton.style), nom(FORMES, reglages.bouton.forme), `ombre ${nom(OMBRES, reglages.bouton.ombre).toLowerCase()}`].join(', ') },
-    { id: 'animation', nom: 'Liens mis en avant', valeur: NOMS_ANIMATIONS[reglages.animation].nom },
-    { id: 'bureau', nom: 'Sur ordinateur', valeur: nom(BUREAUX, reglages.bureau) },
+  const lignes: { id: Tiroir; nom: string; icone: string }[] = [
+    { id: 'theme', nom: 'Thème', icone: 'palette' },
+    { id: 'couleurs', nom: 'Couleurs', icone: 'pinceau' },
+    { id: 'boutons', nom: 'Boutons', icone: 'bloc-lien' },
+    { id: 'animation', nom: 'Liens mis en avant', icone: 'eclair' },
+    { id: 'bureau', nom: 'Sur ordinateur', icone: 'ordinateur' },
   ];
 
   if (ouvert) return (
@@ -279,11 +270,8 @@ export function DesignTiroirs({ reglages, onChange, envoyerImage, principal, pie
         {lignes.map((l, i) => (
           <li key={l.id} className={i > 0 ? 'border-t border-white/[0.07]' : ''}>
             <button type="button" onClick={() => { vibrer(4); setOuvert(l.id); }} className="flex min-h-[52px] w-full items-center gap-3 px-3.5 py-2 text-left transition hover:bg-white/[0.04] active:bg-white/[0.06]">
-              {l.vignette}
-              <span className="flex min-w-0 flex-1 flex-col">
-                <span className="text-[14px] font-medium text-white">{l.nom}</span>
-                <span className="truncate text-[12.5px] text-white/45">{l.valeur}</span>
-              </span>
+              <Icone nom={l.icone} taille={20} className="shrink-0 text-white/70" />
+              <span className="min-w-0 flex-1 truncate text-[14px] font-medium text-white">{l.nom}</span>
               <Icone nom="ui-chevron" taille={16} className="-rotate-90 text-white/30" />
             </button>
           </li>
@@ -302,11 +290,6 @@ const CLES_COULEURS: { id: keyof Couleurs; nom: string; duTheme: (t: Theme) => s
 ];
 /** Une palette courte, des neutres aux couleurs franches ; le sélecteur donne tout le reste. */
 const PALETTE = ['#0c121f', '#111111', '#ffffff', '#f4ece1', '#e3e9de', '#e9e2f6', '#1f35ff', '#d62e1f', '#ff8a5c', '#ffd400', '#23704f', '#ff6fae'];
-
-function resumeCouleurs(c: Couleurs) {
-  const changes = CLES_COULEURS.filter(k => c[k.id]).map(k => k.nom.toLowerCase());
-  return changes.length ? `${changes.join(', ').replace(/^./, m => m.toUpperCase())} à ton goût` : 'Celles du thème';
-}
 
 /** Une couleur : celle du thème, une de la palette, ou n'importe laquelle au sélecteur. */
 function ChoixCouleur({ nom, valeur, duTheme, onChange }: { nom: string; valeur: string; duTheme: string; onChange: (v: string) => void }) {

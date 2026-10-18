@@ -2,11 +2,10 @@ import { useEffect, useState } from 'react';
 import QRCode from 'qrcode';
 import type { ComptePage, Reglages } from '../lib/types.ts';
 import { LANGUES, urlPage } from '../lib/types.ts';
-import { NOMS_LANGUES } from '../lib/langues.ts';
 import type { Abonnement as EtatAbonnement, Periode } from '../lib/abonnement.ts';
 import { AVANTAGES_PRO, TARIFS, estResilie, euros } from '../lib/abonnement.ts';
 import { Icone } from '../components/Icone.tsx';
-import { BoutonSecondaire, Carte, Champ, Interrupteur, classeSaisie } from './ui.tsx';
+import { BoutonSecondaire, Carte, Champ, Interrupteur, classeSaisie, vibrer } from './ui.tsx';
 
 export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlExport, supprimerMonCompte, abonnement, paiement, ouvrirPaiement, ouvrirPortail }: {
   reglages: Reglages; compte: ComptePage; onChange: (r: Reglages) => void; onDeconnexion: () => void;
@@ -27,11 +26,17 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
   }
 
   const pro = !compte.principal && paiement;
-  const sections: { id: Section; nom: string; resume: string }[] = [
-    ...(pro ? [{ id: 'abonnement' as const, nom: 'Abonnement', resume: abonnement.pro ? 'Pro' : 'Gratuit' }] : []),
-    { id: 'partage', nom: 'Partage et Google', resume: reglages.seo.titre || 'Titre, description, bouton Partager' },
-    { id: 'langues', nom: 'Langues', resume: ['Français', ...reglages.langues.map(l => NOMS_LANGUES[l])].join(', ') },
-    { id: 'donnees', nom: 'Tes données', resume: 'Exporter, supprimer ton compte' },
+  // Un titre et une icône par ligne, sans sous-titre (Lilian, 18 octobre 2026).
+  const sections: { id: Section; nom: string; icone: string }[] = [
+    { id: 'partager', nom: 'Partager ma page', icone: 'partage' },
+    ...(pro ? [{ id: 'abonnement' as const, nom: 'Abonnement', icone: 'diamant' }] : []),
+    { id: 'partage', nom: 'Google et aperçus', icone: 'globe' },
+    { id: 'langues', nom: 'Langues', icone: 'message' },
+    { id: 'donnees', nom: 'Tes données', icone: 'cadenas' },
+  ];
+  const bascules: { nom: string; icone: string; actif: boolean; changer: (v: boolean) => void }[] = [
+    { nom: 'Ouvrir les liens dans les apps', icone: 'lienExterne', actif: reglages.ouvrirApps, changer: v => onChange({ ...reglages, ouvrirApps: v }) },
+    { nom: 'Le résumé du lundi par e-mail', icone: 'courrier', actif: reglages.resumeHebdo, changer: v => onChange({ ...reglages, resumeHebdo: v }) },
   ];
 
   if (ouverte) return (
@@ -42,7 +47,19 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
         </button>
       </div>
       {ouverte === 'abonnement' && <Abonnement abonnement={abonnement} ouvrirPaiement={ouvrirPaiement} ouvrirPortail={ouvrirPortail} />}
-      {ouverte === 'partage' && <Carte titre="Partage et Google">
+      {ouverte === 'partager' && <Carte titre="Partager ma page">
+        <div className="flex items-center gap-2 rounded-xl bg-white/[0.06] p-1.5 pl-3.5">
+          <span className="min-w-0 flex-1 truncate text-[15px] text-white">{URL_PUBLIQUE.replace(/^https:\/\//, '').replace(/\/$/, '')}</span>
+          <button type="button" onClick={copier} className="min-h-10 rounded-full bg-white px-4 text-[14px] font-semibold text-nuit">{copie ? 'Copié' : 'Copier'}</button>
+        </div>
+        {qr && (
+          <div className="mt-4 flex flex-col items-center gap-3">
+            <img src={qr} alt="QR code vers ta page" className="h-44 w-44 rounded-2xl bg-white p-1.5" />
+            <a href={qr} download={`qr-${compte.pseudo}-hopla.png`} className="inline-flex min-h-10 items-center gap-1.5 rounded-full bg-white/[0.08] px-4 text-[14px] font-medium text-white"><Icone nom="telecharger" taille={16} /> Télécharger le QR code</a>
+          </div>
+        )}
+      </Carte>}
+      {ouverte === 'partage' && <Carte titre="Google et aperçus">
         <div className="flex flex-col gap-3">
           <Champ label="Titre dans Google et sur les réseaux" aide={`${reglages.seo.titre.length}/60 caractères conseillés`}>
             <input className={classeSaisie} value={reglages.seo.titre} maxLength={80} onChange={e => seo({ titre: e.target.value })} />
@@ -52,9 +69,9 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
           </Champ>
           <div className="divide-y divide-white/[0.06]">
             {compte.principal
-              ? <Interrupteur label="Page visible par Google" aide={reglages.seo.indexable ? 'La page peut apparaître dans les résultats de recherche.' : 'La page demande aux moteurs de ne pas l’indexer.'} actif={reglages.seo.indexable} onChange={v => seo({ indexable: v })} />
+              ? <Interrupteur label="Page visible par Google" actif={reglages.seo.indexable} onChange={v => seo({ indexable: v })} />
               : <p className="py-3 text-[13.5px] leading-snug text-white/55">Pendant la bêta, ta page n’apparaît pas dans Google. Le titre et la description servent aux aperçus quand tu partages ton lien.</p>}
-            <Interrupteur label="Bouton Partager" aide="En haut à droite de ta page." actif={reglages.partage} onChange={v => onChange({ ...reglages, partage: v })} />
+            <Interrupteur label="Bouton Partager" actif={reglages.partage} onChange={v => onChange({ ...reglages, partage: v })} />
           </div>
         </div>
       </Carte>}
@@ -65,49 +82,37 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
 
   return (
     <div className="flex flex-col gap-4">
-      <Carte titre="Ta page">
-        <div className="flex items-center gap-2 rounded-xl bg-white/[0.06] p-1.5 pl-3.5">
-          <span className="min-w-0 flex-1 truncate text-[15px] text-white">{URL_PUBLIQUE.replace(/^https:\/\//, '').replace(/\/$/, '')}</span>
-          <button type="button" onClick={copier} className="min-h-10 rounded-full bg-white px-4 text-[14px] font-semibold text-nuit">{copie ? 'Copié' : 'Copier'}</button>
-        </div>
-        {qr && (
-          <div className="mt-4 flex items-center gap-4">
-            <img src={qr} alt="QR code vers ta page" className="h-24 w-24 rounded-xl bg-white p-1" />
-            <div className="flex flex-col gap-2">
-              <p className="text-[13px] leading-snug text-white/55">Les scans apparaissent dans tes stats, source « QR code ».</p>
-              <a href={qr} download={`qr-${compte.pseudo}-hopla.png`} className="inline-flex min-h-10 w-fit items-center rounded-full bg-white/[0.08] px-4 text-[14px] font-medium text-white">Télécharger le QR code</a>
-            </div>
-          </div>
-        )}
-      </Carte>
-
-      {/* Une ligne par sujet, qui s'ouvre à la place de la liste (Lilian, 18 octobre 2026 : trop d'options d'un coup). */}
+      {/* Une ligne par sujet, qui s'ouvre à la place de la liste ; les réglages d'un seul interrupteur restent dans la liste. */}
       <ul className="overflow-hidden rounded-xl bg-white/[0.03] ring-1 ring-white/[0.07]">
         {sections.map((l, i) => (
           <li key={l.id} className={i > 0 ? 'border-t border-white/[0.07]' : ''}>
-            <button type="button" onClick={() => { setOuverte(l.id); scrollTo({ top: 0 }); }} className="flex min-h-[56px] w-full items-center gap-3 px-4 py-2 text-left transition hover:bg-white/[0.04] active:bg-white/[0.06]">
-              <span className="flex min-w-0 flex-1 flex-col">
-                <span className="text-[14.5px] font-medium text-white">{l.nom}</span>
-                <span className="truncate text-[12.5px] text-white/45">{l.resume}</span>
-              </span>
+            <button type="button" onClick={() => { setOuverte(l.id); scrollTo({ top: 0 }); }} className="flex min-h-14 w-full items-center gap-3.5 px-4 text-left transition hover:bg-white/[0.04] active:bg-white/[0.06]">
+              <Icone nom={l.icone} taille={20} className="shrink-0 text-white/80" />
+              <span className="min-w-0 flex-1 truncate text-[15px] font-medium text-white">{l.nom}</span>
               <Icone nom="ui-chevron" taille={16} className="-rotate-90 text-white/30" />
             </button>
           </li>
         ))}
+        {bascules.map(l => (
+          <li key={l.nom} className="border-t border-white/[0.07]">
+            <div className="flex min-h-14 items-center gap-3.5 px-4">
+              <Icone nom={l.icone} taille={20} className="shrink-0 text-white/80" />
+              <span className="min-w-0 flex-1 text-[15px] font-medium text-white">{l.nom}</span>
+              <button type="button" role="switch" aria-checked={l.actif} aria-label={l.nom} onClick={() => { vibrer(); l.changer(!l.actif); }}
+                className={`adm-interrupteur relative h-6 w-10 shrink-0 rounded-full before:absolute before:-inset-2 before:content-[''] ${l.actif ? 'bg-white' : 'bg-white/15'}`}>
+                <span className={`absolute top-[3px] left-[3px] h-[18px] w-[18px] rounded-full shadow-[0_1px_3px_rgba(0,0,0,0.3)] ${l.actif ? 'translate-x-4 bg-nuit' : 'bg-white'}`} />
+              </button>
+            </div>
+          </li>
+        ))}
       </ul>
-
-      {/* Les réglages d'un seul interrupteur restent dans la liste : rien à ouvrir. */}
-      <div className="divide-y divide-white/[0.07] rounded-xl bg-white/[0.03] px-4 ring-1 ring-white/[0.07]">
-        <Interrupteur label="Ouvrir les liens dans les apps" aide="Depuis Instagram ou TikTok, un lien YouTube, Spotify ou Instagram s’ouvre dans son app." actif={reglages.ouvrirApps} onChange={v => onChange({ ...reglages, ouvrirApps: v })} />
-        <Interrupteur label="Le résumé du lundi" aide="Chaque lundi matin, par e-mail : ce qui a marché sur ta page." actif={reglages.resumeHebdo} onChange={v => onChange({ ...reglages, resumeHebdo: v })} />
-      </div>
 
       <BoutonSecondaire onClick={onDeconnexion} className="self-center">Me déconnecter</BoutonSecondaire>
     </div>
   );
 }
 
-type Section = 'abonnement' | 'partage' | 'langues' | 'donnees';
+type Section = 'partager' | 'abonnement' | 'partage' | 'langues' | 'donnees';
 
 const date = (ms: number) => new Date(ms).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
 
@@ -258,13 +263,13 @@ function Langues({ reglages, onChange, adresse }: { reglages: Reglages; onChange
           <span className="text-[13px] text-white/45">Langue de ta page</span>
         </div>
         {LANGUES.map(l => (
-          <Interrupteur key={l} label={NOMS_LANGUES[l]} aide={EN_FRANCAIS[l]} actif={actives.includes(l)} onChange={() => basculer(l)} />
+          <Interrupteur key={l} label={EN_FRANCAIS[l]} actif={actives.includes(l)} onChange={() => basculer(l)} />
         ))}
       </div>
       {actives.length > 0 && (
         <div className="mt-4 flex flex-col gap-3">
           {actives.map(l => (
-            <Champ key={l} label={`Ta bio en ${NOMS_LANGUES[l].toLowerCase()}`} aide={<a href={`${adresse}?lang=${l}`} target="_blank" rel="noopener" className="underline decoration-white/25 underline-offset-2 hover:text-white">Voir ma page en {NOMS_LANGUES[l].toLowerCase()}</a>}>
+            <Champ key={l} label={`Ta bio en ${EN_FRANCAIS[l].toLowerCase()}`} aide={<a href={`${adresse}?lang=${l}`} target="_blank" rel="noopener" className="underline decoration-white/25 underline-offset-2 hover:text-white">Voir ma page en {EN_FRANCAIS[l].toLowerCase()}</a>}>
               <textarea className={`${classeSaisie} min-h-16`} lang={l} maxLength={300} value={reglages.bioTraduite?.[l] ?? ''} placeholder={reglages.profil.bio}
                 onChange={e => onChange({ ...reglages, bioTraduite: { ...reglages.bioTraduite, [l]: e.target.value } })} />
             </Champ>

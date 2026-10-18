@@ -111,7 +111,7 @@ export function MaPage({ compte, reglages, blocs, clics, onReglages, onOrdonner,
       </Feuille>
       <Feuille ouverte={feuille === 'design'} onFermer={() => setFeuille(null)} titre="Design" cote apercu={direct}>
         <DesignTiroirs reglages={reglages} onChange={onReglages} envoyerImage={envoyerImage} principal={principal}
-          pied={principal && <Interrupteur label="Badge vérifié" aide="La petite coche à côté de ton nom." actif={reglages.profil.badge} onChange={v => profil({ badge: v })} />} />
+          pied={principal && <Interrupteur label="Badge vérifié" actif={reglages.profil.badge} onChange={v => profil({ badge: v })} />} />
       </Feuille>
     </div>
   );

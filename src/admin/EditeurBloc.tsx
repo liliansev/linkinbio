@@ -214,15 +214,15 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
         )}
 
         <div className="divide-y divide-white/[0.06] rounded-2xl bg-white/[0.035] px-4">
-          <Interrupteur label="Public" aide={b.public ? 'Visible sur ta page.' : 'Privé : gardé ici, invisible sur ta page.'} actif={b.public} onChange={v => maj({ public: v })} />
+          <Interrupteur label="Public" actif={b.public} onChange={v => maj({ public: v })} />
           {b.type === 'inscription' && (
-            <Interrupteur label="Demander le prénom" aide="Pour écrire « Salut Camille » dans tes e-mails." actif={b.demanderPrenom} onChange={v => maj({ demanderPrenom: v })} />
+            <Interrupteur label="Demander le prénom" actif={b.demanderPrenom} onChange={v => maj({ demanderPrenom: v })} />
           )}
           {b.type !== 'titre' && b.type !== 'texte' && b.type !== 'newsletter' && b.type !== 'inscription' && b.type !== 'preuve' && (
-            <Interrupteur label="Mis en avant" aide="Plus visible que les autres liens : choisis sa forme et sa couleur juste dessous." actif={b.vedette} onChange={v => maj({ vedette: v })} />
+            <Interrupteur label="Mis en avant" actif={b.vedette} onChange={v => maj({ vedette: v })} />
           )}
           {b.type === 'lien' && (
-            <Interrupteur label="Visible par Google" aide={b.indexable ? 'Lien suivi par les moteurs de recherche.' : 'Lien en nofollow, exclu des extraits et des données structurées.'} actif={b.indexable} onChange={v => maj({ indexable: v })} />
+            <Interrupteur label="Visible par Google" actif={b.indexable} onChange={v => maj({ indexable: v })} />
           )}
         </div>
 
@@ -247,8 +247,8 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
             {/* Une liste, pas une rangée de pastilles : l'aperçu en haut de la feuille joue l'animation choisie. */}
             <ListeChoix label="Animation" valeur={b.animation} onChange={a => maj({ animation: a })}
               options={ANIMATIONS_BLOC.map(a => a === 'auto'
-                ? { id: a, nom: nomAuto, aide: b.vedette ? `Comme tes autres liens en avant : ${NOMS_ANIMATIONS[reglages.animation].nom.toLowerCase()}.` : 'Immobile, sauf si tu mets ce lien en avant.' }
-                : { id: a, nom: NOMS_ANIMATIONS[a].nom, aide: NOMS_ANIMATIONS[a].aide })} />
+                ? { id: a, nom: nomAuto }
+                : { id: a, nom: NOMS_ANIMATIONS[a].nom })} />
           </Repli>
         )}
 

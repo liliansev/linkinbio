@@ -154,8 +154,8 @@ export function BoutonSecondaire({ children, ...props }: React.ButtonHTMLAttribu
 }
 
 /** Un choix parmi quelques options, en pastilles. */
-/** Un choix parmi plusieurs, en liste : un nom, une ligne d'aide, une coche sur celui qui est pris. */
-export function ListeChoix<T extends string>({ valeur, options, onChange, label }: { valeur: T; options: { id: T; nom: string; aide?: string }[]; onChange: (v: T) => void; label: string }) {
+/** Un choix parmi plusieurs, en liste : un nom, une coche sur celui qui est pris. */
+export function ListeChoix<T extends string>({ valeur, options, onChange, label }: { valeur: T; options: { id: T; nom: string }[]; onChange: (v: T) => void; label: string }) {
   return (
     <div role="radiogroup" aria-label={label} className="divide-y divide-white/[0.06] overflow-hidden rounded-xl bg-white/[0.03]">
       {options.map(o => {
@@ -163,10 +163,7 @@ export function ListeChoix<T extends string>({ valeur, options, onChange, label 
         return (
           <button key={o.id} type="button" role="radio" aria-checked={pris} onClick={() => { vibrer(4); onChange(o.id); }}
             className="flex w-full items-center gap-3 px-3.5 py-2.5 text-left transition-colors duration-150 hover:bg-white/[0.04]">
-            <span className="min-w-0 flex-1">
-              <span className={`block text-[14px] font-medium ${pris ? 'text-white' : 'text-white/80'}`}>{o.nom}</span>
-              {o.aide && <span className="mt-0.5 block text-[12.5px] leading-snug text-white/45">{o.aide}</span>}
-            </span>
+            <span className={`min-w-0 flex-1 text-[14px] font-medium ${pris ? 'text-white' : 'text-white/80'}`}>{o.nom}</span>
             <span className={`grid h-5 w-5 shrink-0 place-items-center rounded-full transition duration-150 ${pris ? 'bg-white text-nuit' : 'ring-[1.5px] ring-inset ring-white/20'}`} aria-hidden="true">
               {pris && <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2.5 6.2 5 8.6l4.5-5" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" /></svg>}
             </span>
