@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { Api, Bloc, EtatAdmin, Reglages } from '../lib/types.ts';
-import { TYPES_PRINCIPAL, cheminPage, estEnLigne } from '../lib/types.ts';
+import { TYPES_PRINCIPAL, cheminPage } from '../lib/types.ts';
+import { composerMoment } from '../lib/moments.ts';
 import { PageLiens } from '../components/PageLiens.tsx';
 import { MaPage } from './MaPage.tsx';
 import { EditeurBloc } from './EditeurBloc.tsx';
@@ -160,7 +161,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
     location.reload();
   }
 
-  const page = useMemo(() => ({ reglages, blocs: blocs.filter(b => estEnLigne(b) && (compte.principal || !TYPES_PRINCIPAL.includes(b.type))), compte }), [reglages, blocs, compte]);
+  const page = useMemo(() => { const maintenant = Date.now(); return { reglages, blocs: composerMoment(blocs.filter(b => compte.principal || !TYPES_PRINCIPAL.includes(b.type)), maintenant), compte, maintenant }; }, [reglages, blocs, compte]);
   const chargerStats = useCallback((jours: number) => api.stats(jours).then(s => { if (jours === 30) setClics(Object.fromEntries(s.blocs.map(b => [b.id, b.clics]))); return s; }), [api]);
 
   if (!cguAJour) return <AccepterCgu accepter={async () => { await api.accepterCgu(); setCguAJour(true); }} deconnexion={deconnexion} />;

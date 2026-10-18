@@ -627,3 +627,12 @@ button.lp-ed-zone:focus-visible { outline: 2px solid var(--vedette); outline-off
   font: 600 11px/1.6 var(--police); white-space: nowrap;
   background: var(--texte); color: var(--fond-uni);
 }
+
+/* ---- Compte à rebours : un lien annoncé, pas encore ouvert ---- */
+.lp-rebours { cursor: default; }
+.lp-rebours:hover { transform: none; }
+.lp-rebours-chrono {
+  flex: none; font-variant-numeric: tabular-nums; font-size: 0.95rem; letter-spacing: 0.01em; opacity: 0.85;
+  padding: 6px 12px; border-radius: 999px; background: color-mix(in srgb, var(--lp-encre) 12%, transparent);
+}
+.lp-rebours-chrono b { font-weight: 700; font-size: 1.05rem; }

@@ -1,6 +1,8 @@
 import { ANIMATIONS, ANIMATIONS_BLOC, FORMATS_VEDETTE, FORMES_BOUTON, MISES_EN_PAGE_BUREAU, RESEAUX, STYLES_BOUTON, TEINTES_VEDETTE, TYPES_BLOC } from './types.ts';
 import type { Bloc, Reglages } from './types.ts';
 import { idTheme } from './themes.ts';
+import { EFFETS_CRENEAU, fuseauValide } from './moments.ts';
+import type { Creneau } from './moments.ts';
 
 /*
  * Tout ce qui arrive du navigateur passe ici avant la base : chaque champ est
@@ -37,6 +39,17 @@ export function image(v: unknown): string {
 
 const date = (v: unknown) => { const s = texte(v, 40); return s && !Number.isNaN(Date.parse(s)) ? new Date(s).toISOString() : ''; };
 
+const heure = (v: unknown, defaut: string) => (typeof v === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(v) ? v : defaut);
+
+/** Un créneau hebdomadaire, ou null s'il ne vise aucun jour. */
+export function creneau(v: unknown): Creneau | null {
+  if (!v || typeof v !== 'object') return null;
+  const o = v as Record<string, unknown>;
+  const jours = Array.isArray(o.jours) ? [...new Set(o.jours.map(Number).filter(n => Number.isInteger(n) && n >= 1 && n <= 7))].sort() : [];
+  if (!jours.length) return null;
+  return { jours, de: heure(o.de, '09:00'), a: heure(o.a, '18:00'), fuseau: fuseauValide(o.fuseau), effet: parmi(o.effet, EFFETS_CRENEAU, 'avant') };
+}
+
 /** Les noms d'avant le 16 octobre 2026, gardés pour les blocs déjà enregistrés. */
 const ANCIENNES: Record<string, string> = { brille: 'reflet', pulse: 'respiration', secoue: 'secousse' };
 
@@ -60,6 +73,8 @@ export function validerBloc(v: unknown, id: string): Bloc {
     animation: parmi(ANCIENNES[o.animation as string] ?? o.animation, ANIMATIONS_BLOC, 'auto'),
     debut: date(o.debut),
     fin: date(o.fin),
+    compteARebours: bool(o.compteARebours, false),
+    creneau: creneau(o.creneau),
   };
 }
 

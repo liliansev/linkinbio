@@ -2,7 +2,8 @@ import { createMiddleware, createServerFn } from '@tanstack/react-start';
 import { deleteCookie, getCookie, getRequestHeader, getRequestUrl, setCookie } from '@tanstack/react-start/server';
 import type { Bloc, CompteResume, EtatAdmin, Origines, PagePublique, Reglages, SignalementResume, Stats } from '../lib/types.ts';
 import { VERSION_CGU } from '../lib/legal.ts';
-import { ORIGINE_ADMIN, ORIGINE_PUBLIQUE, PRINCIPAL, TYPES_PRINCIPAL, estEnLigne } from '../lib/types.ts';
+import { ORIGINE_ADMIN, ORIGINE_PUBLIQUE, PRINCIPAL, TYPES_PRINCIPAL } from '../lib/types.ts';
+import { composerMoment } from '../lib/moments.ts';
 import { adresse, email, pseudo, validerBloc, validerReglages } from '../lib/valider.ts';
 import { apercuSite as lireApercu } from './apercu.ts';
 import * as db from './db.ts';
@@ -73,8 +74,9 @@ export const lirePagePublique = createServerFn({ method: 'GET' })
     const maintenant = Date.now();
     return {
       reglages: reglagesPourCompte(compte.id, db.lireReglages(compte.id)),
-      blocs: pourCompte(compte.id, db.lireBlocs(compte.id)).filter(bloc => estEnLigne(bloc, maintenant)),
+      blocs: composerMoment(pourCompte(compte.id, db.lireBlocs(compte.id)), maintenant),
       compte: { pseudo: compte.pseudo, principal: compte.id === PRINCIPAL, pro: db.abonnement(compte, maintenant).plan === 'pro' },
+      maintenant,
     };
   });
 

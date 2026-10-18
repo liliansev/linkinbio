@@ -6,6 +6,7 @@ import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, v
 import { CSS } from '@dnd-kit/utilities';
 import type { Bloc, PagePublique, Reglages, TypeBloc } from '../lib/types.ts';
 import { TYPES_PRINCIPAL, estEnLigne, nouveauBloc } from '../lib/types.ts';
+import { etiquettes } from '../lib/etiquettes.ts';
 import type { Destination } from '../lib/demarrage.ts';
 import { PageLiens } from '../components/PageLiens.tsx';
 import type { Edition } from '../components/PageLiens.tsx';
@@ -184,7 +185,8 @@ function BlocsEditables({ blocs, rendu, clics, onOrdonner, onOuvrir, onAjouter }
 function BlocEditable({ bloc, i, clics, ouvrir, children }: { bloc: Bloc; i: number; clics?: number; ouvrir: (b: Bloc) => void; children: ReactNode }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: bloc.id });
   const prive = !bloc.public;
-  const programme = bloc.public && !estEnLigne(bloc);
+  const regles = etiquettes(bloc);
+  const programme = bloc.public && !estEnLigne(bloc) && !regles.includes('Compte à rebours');
   const nom = bloc.titre || bloc.url || 'ce bloc';
   return (
     <div ref={setNodeRef} {...attributes} {...listeners} aria-label={`Modifier ${nom}`} aria-roledescription="bloc déplaçable"
@@ -193,10 +195,11 @@ function BlocEditable({ bloc, i, clics, ouvrir, children }: { bloc: Bloc; i: num
       onClickCapture={e => { e.preventDefault(); e.stopPropagation(); ouvrir(bloc); }}
       onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); ouvrir(bloc); } else listeners?.onKeyDown?.(e); }}>
       {children}
-      {(prive || programme || (bloc.type === 'lien' && clics !== undefined)) && (
+      {(prive || programme || regles.length > 0 || (bloc.type === 'lien' && clics !== undefined)) && (
         <span className="lp-ed-puces" aria-hidden="true">
           {prive && <span className="lp-ed-puce"><Icone nom="ui-masque" taille={12} /> Privé</span>}
           {programme && <span className="lp-ed-puce"><Icone nom="ui-horloge" taille={12} /> Programmé</span>}
+          {regles.map(r => <span key={r} className="lp-ed-puce">{r}</span>)}
           {bloc.type === 'lien' && clics !== undefined && <span className="lp-ed-puce">{clics} clics</span>}
         </span>
       )}

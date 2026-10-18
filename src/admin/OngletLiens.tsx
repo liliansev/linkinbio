@@ -6,6 +6,7 @@ import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, v
 import { CSS } from '@dnd-kit/utilities';
 import type { Bloc, TypeBloc } from '../lib/types.ts';
 import { TYPES_PRINCIPAL, estEnLigne, nouveauBloc } from '../lib/types.ts';
+import { etiquettes } from '../lib/etiquettes.ts';
 import { ICONES } from '../lib/icones.ts';
 import { Icone } from '../components/Icone.tsx';
 import { Feuille, vibrer } from './ui.tsx';
@@ -132,6 +133,7 @@ function Ligne({ bloc, clics, onModifier, onOuvrir }: { bloc: Bloc; clics: numbe
           <span className="mt-0.5 flex items-center gap-2 text-[12.5px] text-white/45">
             <span className="truncate">{!bloc.public ? 'Privé' : sousLigne}</span>
             {programme && <span className="flex shrink-0 items-center gap-1 text-amber-200/85"><Icone nom="ui-horloge" taille={13} />Programmé</span>}
+            {etiquettes(bloc).map(r => <span key={r} className="shrink-0 text-peche/80">{r}</span>)}
             {!bloc.indexable && bloc.public && <span className="flex shrink-0 items-center" title="Masqué pour Google"><Icone nom="ui-masque" taille={13} /></span>}
           </span>
         </span>

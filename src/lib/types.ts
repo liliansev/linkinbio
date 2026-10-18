@@ -5,6 +5,7 @@
  */
 
 import type { Abonnement, Periode } from './abonnement.ts';
+import type { Creneau } from './moments.ts';
 
 export const TYPES_BLOC = ['lien', 'titre', 'texte', 'video', 'derniere-video', 'newsletter'] as const;
 export type TypeBloc = (typeof TYPES_BLOC)[number];
@@ -43,6 +44,10 @@ export interface Bloc {
   /** Programmation (ISO), vide = pas de borne. */
   debut: string;
   fin: string;
+  /** Avant `debut`, montrer un compte à rebours (sans l'adresse) plutôt que rien. */
+  compteARebours: boolean;
+  /** Un créneau qui revient chaque semaine : visible, ou mis en avant, à ces heures-là. */
+  creneau: Creneau | null;
 }
 
 export const FORMATS_VEDETTE = ['bouton', 'bandeau', 'carte'] as const;
@@ -121,6 +126,8 @@ export interface PagePublique {
   blocs: Bloc[];
   /** `pro` retire la mention « Une page faite avec Hopla ». */
   compte: ComptePage & { pro: boolean };
+  /** L'instant où la page a été composée : le compte à rebours part de là, au serveur comme au navigateur. */
+  maintenant?: number;
 }
 
 export interface EtatAdmin {
@@ -211,6 +218,7 @@ export function nouveauBloc(type: TypeBloc, id: string): Bloc {
   return {
     id, type, titre: titres[type], url: '', sousTitre: type === 'newsletter' ? 'Un e-mail de temps en temps, rien de plus.' : '', description: '', icone: '', image: '',
     public: true, indexable: true, vedette: false, format: 'bandeau', teinte: 'accent', animation: 'auto', debut: '', fin: '',
+    compteARebours: false, creneau: null,
   };
 }
 

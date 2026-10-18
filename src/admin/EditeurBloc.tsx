@@ -10,14 +10,7 @@ import { Icone, NOMS_RESEAUX, PICTOS } from '../components/Icone.tsx';
 import { BlocPublic } from '../components/PageLiens.tsx';
 import { BoutonPrincipal, Champ, Feuille, Interrupteur, NOMS_ANIMATIONS, Segments, classeSaisie, preparerImage, vibrer } from './ui.tsx';
 import { TYPES } from './OngletLiens.tsx';
-
-/** Une date ISO vers la valeur d'un `<input type="datetime-local">`, en heure locale. */
-const versLocal = (iso: string) => {
-  if (!iso) return '';
-  const d = new Date(iso);
-  return new Date(d.getTime() - d.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
-};
-const depuisLocal = (v: string) => (v ? new Date(v).toISOString() : '');
+import { RegleMoment } from './ReglesBloc.tsx';
 
 const AIDE_FORMATS = {
   bouton: 'La taille des autres boutons, à la couleur choisie.',
@@ -40,10 +33,9 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
   const [b, setB] = useState<Bloc | null>(bloc);
   const [erreur, setErreur] = useState('');
   const [envoi, setEnvoi] = useState(false);
-  const [plus, setPlus] = useState(false);
   const [lecture, setLecture] = useState(false);
   const fichier = useRef<HTMLInputElement>(null);
-  useEffect(() => { setB(bloc); setErreur(''); setPlus(!!bloc && (!!bloc.debut || !!bloc.fin)); }, [bloc]);
+  useEffect(() => { setB(bloc); setErreur(''); }, [bloc]);
   if (!b) return null;
   const maj = (champs: Partial<Bloc>) => setB({ ...b, ...champs });
   const type = TYPES.find(t => t.type === b.type)!;
@@ -234,21 +226,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
           </div>
         )}
 
-        <button type="button" onClick={() => setPlus(!plus)} aria-expanded={plus} className="flex min-h-11 items-center justify-between rounded-xl px-1 text-[14px] font-medium text-white/70">
-          <span className="flex items-center gap-2"><Icone nom="ui-horloge" taille={17} />Programmer l’affichage</span>
-          <Icone nom="ui-chevron" taille={18} className={`transition-transform duration-300 ${plus ? 'rotate-180' : ''}`} />
-        </button>
-        {plus && (
-          <div className="grid gap-3 sm:grid-cols-2">
-            <Champ label="Afficher à partir du">
-              <input type="datetime-local" className={classeSaisie} value={versLocal(b.debut)} onChange={e => maj({ debut: depuisLocal(e.target.value) })} />
-            </Champ>
-            <Champ label="Masquer à partir du">
-              <input type="datetime-local" className={classeSaisie} value={versLocal(b.fin)} onChange={e => maj({ fin: depuisLocal(e.target.value) })} />
-            </Champ>
-            {(b.debut || b.fin) && <button type="button" onClick={() => maj({ debut: '', fin: '' })} className="text-left text-[13px] text-white/55 underline">Retirer la programmation</button>}
-          </div>
-        )}
+        <RegleMoment key={`moment-${b.id}`} b={b} maj={maj} />
 
         {!nouveau && b.type === 'lien' && <p className="text-center text-[13px] text-white/45">{clics} clic{clics > 1 ? 's' : ''} ces 30 derniers jours</p>}
       </div>

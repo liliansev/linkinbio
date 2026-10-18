@@ -6,6 +6,7 @@ import type { Reglages } from '../lib/types.ts';
 import { themeParId, variablesTheme } from '../lib/themes.ts';
 import { ICONES } from '../lib/icones.ts';
 import { lienApp } from '../lib/ouvrirApp.ts';
+import { enAttente } from '../lib/moments.ts';
 import { Icone, NOMS_RESEAUX } from './Icone.tsx';
 
 /*
@@ -124,7 +125,7 @@ export function PageLiens({ page, apercu = false, edition }: { page: PagePubliqu
           {edition ? edition.liste(blocs, bloc => <BlocPublic bloc={bloc} reglages={reglages} clic={() => {}} cible={cible} apercu />) : <>
             {blocs.map((bloc, i) => (
               <div key={bloc.id} className="lp-bloc" data-type={bloc.type} data-vedette={bloc.vedette ? bloc.format : undefined} style={{ '--i': i } as CSSProperties}>
-                <BlocPublic bloc={bloc} reglages={reglages} clic={() => clic(bloc)} cible={cible} apercu={apercu} />
+                <BlocPublic bloc={bloc} reglages={reglages} clic={() => clic(bloc)} cible={cible} apercu={apercu} maintenant={page.maintenant} />
               </div>
             ))}
             {blocs.length === 0 && <p className="lp-texte">Rien ici pour l’instant.</p>}
@@ -175,7 +176,8 @@ function Pictogramme({ bloc }: { bloc: Bloc }) {
   return null;
 }
 
-export function BlocPublic({ bloc, reglages, clic, cible, apercu }: { bloc: Bloc; reglages: Reglages; clic: () => void; cible: object; apercu: boolean }) {
+export function BlocPublic({ bloc, reglages, clic, cible, apercu, maintenant }: { bloc: Bloc; reglages: Reglages; clic: () => void; cible: object; apercu: boolean; maintenant?: number }) {
+  if (bloc.type === 'lien' && enAttente(bloc, maintenant ?? Date.now())) return <CompteARebours bloc={bloc} depart={maintenant ?? Date.now()} apercu={apercu} />;
   const rel = bloc.indexable ? 'noopener' : 'nofollow noopener';
   const nosnippet = bloc.indexable ? {} : { 'data-nosnippet': true };
   const mouvement = animationDe(bloc, reglages);
@@ -255,6 +257,36 @@ export function BlocPublic({ bloc, reglages, clic, cible, apercu }: { bloc: Bloc
         </a>
       );
   }
+}
+
+const deux = (n: number) => String(n).padStart(2, '0');
+
+/** Un lien pas encore ouvert : son titre et le temps qui reste. Son adresse n'arrive qu'à l'ouverture. */
+function CompteARebours({ bloc, depart, apercu }: { bloc: Bloc; depart: number; apercu: boolean }) {
+  const [maintenant, setMaintenant] = useState(depart);
+  const ouverture = Date.parse(bloc.debut);
+  useEffect(() => {
+    setMaintenant(Date.now());
+    const t = setInterval(() => setMaintenant(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+  const reste = Math.max(0, ouverture - maintenant);
+  // À l'heure dite, la page se recharge : le serveur donne alors l'adresse du lien.
+  useEffect(() => { if (!apercu && reste === 0) { const t = setTimeout(() => location.reload(), 800); return () => clearTimeout(t); } }, [reste, apercu]);
+  const s = Math.floor(reste / 1000), j = Math.floor(s / 86_400), h = Math.floor((s % 86_400) / 3600), m = Math.floor((s % 3600) / 60);
+  const quand = new Date(ouverture).toLocaleString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
+  return (
+    <div className={`lp-carte lp-rebours ${bloc.teinte === 'accent' ? 'lp-accent' : ''}`} data-format="bandeau" role="timer" aria-label={`${bloc.titre} : ouvre le ${quand}`}>
+      <span className="lp-carte-tuile" aria-hidden="true"><Icone nom={bloc.icone && ICONES[bloc.icone] ? bloc.icone : 'horloge'} taille={22} /></span>
+      <span className="lp-carte-texte">
+        <span className="lp-carte-titre">{bloc.titre || 'Bientôt'}</span>
+        <span className="lp-sous">{reste === 0 ? 'C’est ouvert' : `Ouvre le ${quand}`}</span>
+      </span>
+      <span className="lp-rebours-chrono" aria-hidden="true">
+        {j > 0 ? <><b>{j}</b>j <b>{deux(h)}</b>h</> : <><b>{deux(h)}</b>:<b>{deux(m)}</b>:<b>{deux(s % 60)}</b></>}
+      </span>
+    </div>
+  );
 }
 
 function Lecteur({ id, titre, vignette, clic, legende }: { id: string; titre: string; vignette: string; clic: () => void; legende?: ReactNode }) {
