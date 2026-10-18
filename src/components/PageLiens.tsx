@@ -363,8 +363,13 @@ function Newsletter({ bloc, apercu }: { bloc: Bloc; apercu: boolean }) {
   }
   return (
     <section className="lp-newsletter">
-      <h2 className="lp-newsletter-titre">{bloc.titre}</h2>
-      {bloc.sousTitre && <p className="lp-sous">{bloc.sousTitre}</p>}
+      <div className="lp-newsletter-tete">
+        <span className="lp-newsletter-picto" aria-hidden="true"><Icone nom="bloc-newsletter" taille={20} /></span>
+        <span className="lp-newsletter-textes">
+          <h2 className="lp-newsletter-titre">{bloc.titre}</h2>
+          {bloc.sousTitre && <p className="lp-sous">{bloc.sousTitre}</p>}
+        </span>
+      </div>
       {etat.type === 'ok' ? <p className="lp-newsletter-ok" role="status">{etat.message}</p> : (
         <form onSubmit={envoyer}>
           <input type="email" name="email" required autoComplete="email" placeholder="votre@email.fr" aria-label="Votre adresse e-mail" />
@@ -394,8 +399,13 @@ function Inscription({ bloc, apercu, pseudo, t }: { bloc: Bloc; apercu: boolean;
   }
   return (
     <section className="lp-newsletter lp-inscription">
-      <h2 className="lp-newsletter-titre">{bloc.titre}</h2>
-      {bloc.sousTitre && <p className="lp-sous">{bloc.sousTitre}</p>}
+      <div className="lp-newsletter-tete">
+        <span className="lp-newsletter-picto" aria-hidden="true"><Icone nom="bloc-inscription" taille={20} /></span>
+        <span className="lp-newsletter-textes">
+          <h2 className="lp-newsletter-titre">{bloc.titre}</h2>
+          {bloc.sousTitre && <p className="lp-sous">{bloc.sousTitre}</p>}
+        </span>
+      </div>
       {etat.type === 'ok' ? <p className="lp-newsletter-ok" role="status">{etat.message}</p> : (
         <form onSubmit={envoyer} data-prenom={bloc.demanderPrenom || undefined}>
           {bloc.demanderPrenom && <input name="prenom" autoComplete="given-name" placeholder={t.prenom} aria-label={t.prenomAria} maxLength={60} />}

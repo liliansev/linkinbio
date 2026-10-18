@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { DndContext, KeyboardSensor, PointerSensor, TouchSensor, closestCenter, useSensor, useSensors } from '@dnd-kit/core';
 import type { DragEndEvent } from '@dnd-kit/core';
@@ -12,37 +12,29 @@ import { PageLiens } from '../components/PageLiens.tsx';
 import type { Edition } from '../components/PageLiens.tsx';
 import { Icone } from '../components/Icone.tsx';
 import { HautLiens } from './BienDemarrer.tsx';
-import { FeuilleAjout, OngletLiens } from './OngletLiens.tsx';
+import { FeuilleAjout } from './OngletLiens.tsx';
 import { DesignTiroirs, OngletApparence } from './OngletApparence.tsx';
-import { Feuille, Interrupteur, Segments, preparerImage, vibrer } from './ui.tsx';
+import { Feuille, Interrupteur, preparerImage, vibrer } from './ui.tsx';
 
 /*
  * « Ma page » : on édite la page elle-même. Le nom et la bio se tapent en
  * place ; la photo, les réseaux et chaque bloc s'ouvrent d'un toucher ; un
  * bloc maintenu se déplace. Le thème et les boutons s'ouvrent dans une feuille
- * qui laisse voir la page. La liste d'avant reste à un toucher, pour ceux qui
- * veulent leurs clics et leurs interrupteurs en colonne.
+ * qui laisse voir la page. Une seule façon d'éditer : pas de vue en liste à
+ * choisir (Lilian, 18 octobre 2026).
  */
 
-export type Vue = 'page' | 'liste';
-const CLE_VUE = 'hopla-vue-ma-page';
-const lireVue = (): Vue => { try { return localStorage.getItem(CLE_VUE) === 'liste' ? 'liste' : 'page'; } catch { return 'page'; } };
-
-export function MaPage({ compte, reglages, blocs, clics, onVue, onReglages, onOrdonner, onModifier, onOuvrir, onAjouter, envoyerImage }: {
+export function MaPage({ compte, reglages, blocs, clics, onReglages, onOrdonner, onOuvrir, onAjouter, envoyerImage }: {
   compte: PagePublique['compte'];
   reglages: Reglages;
   blocs: Bloc[];
   clics: Record<string, number>;
-  /** En liste, l'ordinateur garde la page en aperçu à droite : le parent doit savoir laquelle est montrée. */
-  onVue?: (v: Vue) => void;
   onReglages: (r: Reglages) => void;
   onOrdonner: (blocs: Bloc[]) => void;
-  onModifier: (bloc: Bloc) => void;
   onOuvrir: (bloc: Bloc) => void;
   onAjouter: (bloc: Bloc) => void;
   envoyerImage: (d: string) => Promise<string>;
 }) {
-  const [vue, setVue] = useState<Vue>(lireVue);
   const [feuille, setFeuille] = useState<'design' | 'reseaux' | 'ajout' | null>(null);
   const [envoi, setEnvoi] = useState(false);
   const [saisie, setSaisie] = useState(false);
@@ -50,12 +42,7 @@ export function MaPage({ compte, reglages, blocs, clics, onVue, onReglages, onOr
   const toile = useRef<HTMLDivElement>(null);
   const principal = compte.principal;
   const visibles = blocs.filter(b => principal || !TYPES_PRINCIPAL.includes(b.type));
-  useEffect(() => { onVue?.(vue); }, [vue, onVue]);
 
-  function changerVue(v: Vue) {
-    setVue(v);
-    try { localStorage.setItem(CLE_VUE, v); } catch { /* le choix vaut pour cette visite */ }
-  }
   const profil = (champs: Partial<Reglages['profil']>) => onReglages({ ...reglages, profil: { ...reglages.profil, ...champs } });
 
   async function photo(f: File | undefined) {
@@ -78,7 +65,6 @@ export function MaPage({ compte, reglages, blocs, clics, onVue, onReglages, onOr
     if (d === 'photo') return fichier.current?.click();
     if (d === 'theme') return design();
     if (d === 'reseaux') return setFeuille('reseaux');
-    changerVue('page');
     setTimeout(() => {
       const bio = toile.current?.querySelector<HTMLTextAreaElement>('.lp-bio');
       bio?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -94,33 +80,27 @@ export function MaPage({ compte, reglages, blocs, clics, onVue, onReglages, onOr
     liste: (liste, rendu) => <BlocsEditables blocs={liste} rendu={rendu} clics={clics} onOrdonner={onOrdonner} onOuvrir={onOuvrir} onAjouter={() => setFeuille('ajout')} />,
   };
 
-  const bascule = vue === 'page' ? 'liste' : 'page';
   return (
     <div className="flex flex-col gap-4">
-      {/* Sur téléphone, la page vient d'abord, bord à bord ; l'adresse et « Bien démarrer » passent dessous. */}
-      <div className="order-2 lg:order-none"><HautLiens compte={compte} reglages={reglages} blocs={blocs} aller={aller} /></div>
-
-      <div className="hidden items-center gap-3 lg:flex">
-        <div className="flex-1"><Segments label="Affichage" valeur={vue} options={[{ id: 'page', nom: 'Sur la page' }, { id: 'liste', nom: 'En liste' }]} onChange={changerVue} /></div>
-        <button type="button" onClick={design} className="flex min-h-12 shrink-0 items-center gap-2 rounded-full bg-white/[0.08] px-4 text-[14.5px] font-medium text-white transition hover:bg-white/[0.13] active:scale-95">
+      {/* Sur ordinateur, les deux gestes en tête ; sur téléphone, ils sont sous le pouce. */}
+      <div className="hidden items-center justify-end gap-2 lg:flex">
+        <button type="button" onClick={() => setFeuille('ajout')} className="flex min-h-11 items-center gap-2 rounded-full bg-peche px-4 text-[14.5px] font-semibold text-nuit transition hover:brightness-105 active:scale-95">
+          <Icone nom="ui-plus" taille={18} /> Ajouter
+        </button>
+        <button type="button" onClick={design} className="flex min-h-11 items-center gap-2 rounded-full bg-white/[0.08] px-4 text-[14.5px] font-medium text-white transition hover:bg-white/[0.13] active:scale-95">
           <Icone nom="palette" taille={18} /> Design
         </button>
       </div>
 
+      {/* Sur téléphone, la page vient d'abord, bord à bord ; l'adresse et « Bien démarrer » passent dessous. */}
+      <div className="order-2 lg:order-none"><HautLiens compte={compte} reglages={reglages} blocs={blocs} aller={aller} /></div>
+
       <div className="order-1 lg:order-none">
-        {vue === 'page' ? (
-          <>
-            <div ref={toile} onFocus={e => setSaisie(e.target.matches('input, textarea'))} onBlur={() => setSaisie(false)}
-              className="adm-apercu adm-toile -mx-4 overflow-hidden lg:mx-0 lg:rounded-[30px] lg:ring-1 lg:ring-white/10 lg:shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)]">
-              <PageLiens page={{ reglages, blocs: visibles, compte }} edition={edition} />
-            </div>
-            <p className="mt-3 text-center text-[13px] leading-snug text-white/45">Touche un élément pour le modifier. Maintiens un bloc pour le déplacer.</p>
-          </>
-        ) : (
-          <div className="pt-5 lg:pt-0">
-            <OngletLiens blocs={blocs} clics={clics} onOrdonner={onOrdonner} onModifier={onModifier} onOuvrir={onOuvrir} onAjouter={onAjouter} principal={principal} />
-          </div>
-        )}
+        <div ref={toile} onFocus={e => setSaisie(e.target.matches('input, textarea'))} onBlur={() => setSaisie(false)}
+          className="adm-apercu adm-toile -mx-4 overflow-hidden lg:mx-0 lg:rounded-[30px] lg:ring-1 lg:ring-white/10 lg:shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)]">
+          <PageLiens page={{ reglages, blocs: visibles, compte }} edition={edition} />
+        </div>
+        <p className="mt-3 text-center text-[13px] leading-snug text-white/45">Touche un élément pour le modifier. Maintiens un bloc pour le déplacer.</p>
       </div>
 
       {/* Les gestes de la page, sous le pouce, au-dessus de la barre d'onglets. Ils s'effacent pendant la frappe. */}
@@ -132,9 +112,6 @@ export function MaPage({ compte, reglages, blocs, clics, onVue, onReglages, onOr
             </button>
             <button type="button" onClick={design} className="flex min-h-11 items-center gap-1.5 rounded-full px-4 text-[14.5px] font-medium text-white active:scale-95 active:bg-white/10">
               <Icone nom="palette" taille={18} /> Design
-            </button>
-            <button type="button" onClick={() => { vibrer(5); changerVue(bascule); }} className="flex min-h-11 items-center gap-1.5 rounded-full px-4 text-[14.5px] font-medium text-white/80 active:scale-95 active:bg-white/10">
-              {bascule === 'liste' ? 'Liste' : 'Page'}
             </button>
           </div>
         </div>

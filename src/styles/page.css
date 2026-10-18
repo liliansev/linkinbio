@@ -339,26 +339,37 @@
 /* ---- Newsletter ---- */
 
 .lp-newsletter {
-  border-radius: var(--rc); padding: 20px 18px; text-align: center;
-  background: color-mix(in srgb, var(--texte) 7%, transparent);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--texte) 12%, transparent);
-  display: flex; flex-direction: column; gap: 6px;
+  border-radius: var(--rc); padding: 16px; text-align: left;
+  background: var(--surface); color: var(--surface-texte);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--surface-texte) 9%, transparent), var(--lp-ombre);
+  display: flex; flex-direction: column; gap: 14px;
 }
-.lp-newsletter-titre { margin: 0; font-size: 1.05rem; font-weight: 620; }
-.lp-newsletter form { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+.lp-newsletter-tete { display: flex; align-items: center; gap: 12px; }
+.lp-newsletter-picto {
+  display: grid; place-items: center; flex: none; width: 42px; height: 42px; border-radius: 50%;
+  color: var(--vedette); background: color-mix(in srgb, var(--vedette) 16%, transparent);
+}
+.lp-newsletter-textes { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.lp-newsletter-titre { margin: 0; font-size: 1rem; font-weight: 620; line-height: 1.25; }
+.lp-newsletter .lp-sous { margin: 0; font-size: 0.86rem; line-height: 1.35; color: color-mix(in srgb, var(--surface-texte) 62%, transparent); }
+/* Le champ et le bouton ne font qu'une pièce : le bouton est posé dans le champ. */
+.lp-newsletter form {
+  display: flex; gap: 6px; padding: 5px; flex-wrap: wrap; border-radius: var(--r);
+  background: color-mix(in srgb, var(--surface-texte) 7%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--surface-texte) 12%, transparent);
+  transition: box-shadow 0.15s;
+}
+.lp-newsletter form:focus-within { box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--vedette) 70%, transparent); }
 .lp-newsletter input {
-  flex: 1 1 0; min-width: 0; min-height: 50px; padding: 0 18px; font: inherit; font-size: 16px;
-  border-radius: var(--r); border: 0; color: var(--texte);
-  background: color-mix(in srgb, var(--texte) 9%, transparent);
-  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--texte) 22%, transparent);
+  flex: 1 1 0; min-width: 0; min-height: 44px; padding: 0 12px; font: inherit; font-size: 16px;
+  border: 0; border-radius: calc(var(--r) - 5px); color: inherit; background: transparent; outline: none;
 }
-.lp-newsletter input::placeholder { color: var(--doux); }
-.lp-newsletter input:focus { outline: 2px solid var(--texte); outline-offset: 1px; }
+.lp-newsletter input::placeholder { color: color-mix(in srgb, var(--surface-texte) 45%, transparent); }
 /* Le bouton d'inscription prend la couleur de la carte mise en avant. */
 [data-bouton='plein'] .lp-newsletter .lp-btn-compact { --lp-fond: var(--vedette); --lp-encre: var(--vedette-texte); }
-.lp-btn-compact { min-height: 50px; padding: 0 22px; flex: 0 0 auto; cursor: pointer; border: 0; font: inherit; font-weight: 600; }
-.lp-newsletter-ok { margin: 8px 0 0; font-weight: 560; }
-.lp-newsletter-erreur { margin: 4px 0 0; font-size: 0.88rem; }
+.lp-btn-compact { min-height: 44px; padding: 0 18px; border-radius: calc(var(--r) - 5px); flex: 0 0 auto; cursor: pointer; border: 0; font: inherit; font-weight: 600; }
+.lp-newsletter-ok { margin: 0; font-weight: 560; }
+.lp-newsletter-erreur { margin: -6px 0 0; font-size: 0.88rem; }
 
 .lp-signature { text-align: center; margin: 36px 0 0; font-size: 0.82rem; }
 .lp-signature a { color: var(--doux); text-decoration: none; }
@@ -650,9 +661,13 @@ button.lp-ed-zone:focus-visible { outline: 2px solid var(--vedette); outline-off
 .lp-rebours-chrono b { font-weight: 700; font-size: 1.05rem; }
 
 /* ---- « Rejoins ma liste » ---- */
-.lp-inscription form[data-prenom] input[name='prenom'] { flex: 1 1 100%; }
+.lp-inscription form[data-prenom] input[name='prenom'] {
+  flex: 1 1 100%; border-bottom: 1px solid color-mix(in srgb, var(--surface-texte) 12%, transparent); border-radius: 0;
+}
+/* Avec le prénom, le bloc passe sur deux lignes : des coins plus doux qu'une pilule. */
+.lp-inscription form[data-prenom] { border-radius: min(var(--r), 18px); }
 .lp-piege { position: absolute !important; left: -9999px; width: 1px; height: 1px; opacity: 0; }
-.lp-mention { margin: 10px 0 0; font-size: 0.78rem; line-height: 1.4; color: var(--doux); }
+.lp-mention { margin: -4px 0 0; font-size: 0.78rem; line-height: 1.4; color: color-mix(in srgb, var(--surface-texte) 55%, transparent); }
 .lp-mention a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
 
 /* ---- Mode drop : un lien à débloquer ---- */
