@@ -121,6 +121,10 @@ export function traiterWebhook(env: Env, corps: string, signature: string | null
   else if (type === 'checkout.completed' && o.subscription) abonnement = typeof o.subscription === 'string' ? { id: o.subscription, status: 'active' } : objet(o.subscription);
   else return { status: 200, message: `ignoré : ${type}` };
 
+  // La boutique Creem vend aussi d'autres produits (des formations) : un abonnement à l'un d'eux ne regarde pas Hopla.
+  const produit = idDe(abonnement.product) || idDe(o.product);
+  if (produit && !Object.values(c.produits).includes(produit)) return { status: 200, message: `ignoré : autre produit (${produit})` };
+
   const idAbonnement = idDe(abonnement.id);
   const client = idDe(abonnement.customer) || idDe(o.customer);
   const statut = texte(abonnement.status) || (type === 'checkout.completed' ? 'active' : '');
