@@ -8,9 +8,9 @@
  * professionnel est prévue avant l'ouverture publique.
  */
 
-import { TARIFS } from './abonnement.ts';
+import { TARIFS, euros } from './abonnement.ts';
 
-export const VERSION_CGU = '2026-10-18';
+export const VERSION_CGU = '2026-10-18.2';
 export const CONTACT_LEGAL = 'bonjour@liliansevoumian.fr';
 
 export interface DocumentLegal { titre: string; resume: string; sections: { titre: string; texte: string[] }[] }
@@ -34,7 +34,7 @@ export const LEGAL: Record<NomDocument, DocumentLegal> = {
         'Tu peux télécharger toutes tes données et supprimer ton compte à tout moment, depuis l’onglet Réglages. La suppression est immédiate et définitive.',
       ] },
       { titre: 'L’offre Pro et son paiement', texte: [
-        `L’offre Pro retire la mention « Une page faite avec Hopla », montre tes statistiques sur un an au lieu de sept jours, et porte la place pour les images à 200 Mo. Elle coûte ${TARIFS.mois.prix} € par mois ou ${TARIFS.an.prix} € par an, toutes taxes comprises, et se renouvelle automatiquement à la fin de chaque période.`,
+        `L’offre Pro retire la mention « Une page faite avec Hopla », montre tes statistiques sur un an au lieu de sept jours, et porte la place pour les images à 200 Mo. Elle coûte ${euros(TARIFS.mois.prix)} par mois ou ${euros(TARIFS.an.prix)} par an, toutes taxes comprises, et se renouvelle automatiquement à la fin de chaque période.`,
         'Le paiement passe par Creem (creem.io), revendeur officiel de l’abonnement : c’est Creem qui te le vend, encaisse le paiement, t’envoie la facture et reverse la TVA. Ses conditions de vente s’ajoutent à celles-ci pour le paiement. Hopla ne voit ni ne garde jamais ton numéro de carte.',
         'Tu peux résilier à tout moment, sans frais, depuis l’onglet Réglages (« Résilier mon abonnement ») : le Pro reste actif jusqu’à la fin de la période déjà payée, puis ta page repasse en gratuit avec tout son contenu. Rien n’est effacé.',
         'Tu disposes de 14 jours après ton premier paiement pour changer d’avis : écris à ' + CONTACT_LEGAL + ' et tu es remboursé en entier. Si le prix change, tu es prévenu par e-mail au moins 30 jours avant ; le nouveau prix ne s’applique qu’au renouvellement suivant, et tu peux résilier d’ici là.',

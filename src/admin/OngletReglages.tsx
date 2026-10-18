@@ -3,7 +3,7 @@ import QRCode from 'qrcode';
 import type { ComptePage, Reglages } from '../lib/types.ts';
 import { urlPage } from '../lib/types.ts';
 import type { Abonnement as EtatAbonnement, Periode } from '../lib/abonnement.ts';
-import { AVANTAGES_PRO, TARIFS } from '../lib/abonnement.ts';
+import { AVANTAGES_PRO, TARIFS, euros } from '../lib/abonnement.ts';
 import { Icone } from '../components/Icone.tsx';
 import { BoutonSecondaire, Carte, Champ, Interrupteur, classeSaisie } from './ui.tsx';
 
@@ -134,7 +134,7 @@ function Abonnement({ abonnement, ouvrirPaiement, ouvrirPortail }: {
               <button key={p} type="button" role="radio" aria-checked={choisi} onClick={() => setPeriode(p)}
                 className={`flex flex-col items-start rounded-2xl border px-3.5 py-3 text-left transition ${choisi ? 'border-peche/70 bg-peche/[0.08]' : 'border-white/10 bg-white/[0.03] hover:border-white/20'}`}>
                 <span className="text-[13px] text-white/55">{p === 'an' ? 'Annuel' : 'Mensuel'}</span>
-                <span className="mt-0.5 text-[20px] font-semibold tracking-tight text-white tabular-nums">{t.prix} €<span className="text-[13px] font-normal text-white/50"> / {p === 'an' ? 'an' : 'mois'}</span></span>
+                <span className="mt-0.5 text-[20px] font-semibold tracking-tight text-white tabular-nums">{euros(t.prix)}<span className="text-[13px] font-normal text-white/50"> / {p === 'an' ? 'an' : 'mois'}</span></span>
                 {'economie' in t && <span className="mt-1 rounded-full bg-peche/15 px-2 py-0.5 text-[11.5px] font-semibold text-peche">{t.economie}</span>}
               </button>
             );
