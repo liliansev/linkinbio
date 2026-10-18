@@ -160,7 +160,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
         <div className="mx-auto flex h-16 max-w-6xl items-center gap-3 px-4">
           {reglages.profil.avatar ? <img src={reglages.profil.avatar} alt="" className="h-9 w-9 rounded-full object-cover" /> : <span className="h-9 w-9 rounded-full bg-white/10" />}
           <div className="min-w-0 flex-1">
-            <p className="truncate text-[15px] font-semibold leading-tight">Mes liens</p>
+            <p className="truncate text-[15px] font-semibold leading-tight">Hopla</p>
             <p className={`flex items-center gap-1.5 text-[12px] leading-tight ${sauvegarde === 'erreur' ? 'text-red-300' : 'text-white/45'}`} aria-live="polite">
               <span className={`h-1.5 w-1.5 rounded-full ${sauvegarde === 'encours' ? 'animate-pulse bg-amber-300' : sauvegarde === 'erreur' ? 'bg-red-400' : 'bg-emerald-400'}`} />{indicateur}
             </p>

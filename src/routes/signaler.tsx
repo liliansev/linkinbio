@@ -11,7 +11,7 @@ import { BoutonPrincipal, Champ, classeSaisie } from '../admin/ui.tsx';
  */
 export const Route = createFileRoute('/signaler')({
   validateSearch: (s: Record<string, unknown>) => ({ page: typeof s.page === 'string' ? s.page.toLowerCase().slice(0, 40) : '' }),
-  head: () => ({ meta: [{ title: 'Signaler une page · Mes liens' }, { name: 'robots', content: 'noindex, nofollow' }, { name: 'theme-color', content: '#0c121f' }] }),
+  head: () => ({ meta: [{ title: 'Signaler une page · Hopla' }, { name: 'robots', content: 'noindex, nofollow' }, { name: 'theme-color', content: '#0c121f' }] }),
   component: PageSignaler,
 });
 
@@ -37,7 +37,7 @@ function PageSignaler() {
       <main className="mx-auto max-w-lg px-5 py-12">
         <h1 className="text-[28px] font-semibold tracking-[-0.025em]">Signaler une page</h1>
         <p className="mt-2 text-[15px] leading-relaxed text-white/60">
-          {page ? <>Page <a href={`/liens/${page}`} className="text-white underline">liliansevoumian.fr/liens/{page}</a>. </> : null}
+          {page ? <>Page <a href={`/${page}`} className="text-white underline">hopla.page/{page}</a>. </> : null}
           Chaque signalement est lu par une personne. Pour un contenu qui menace quelqu’un, préviens aussi les autorités (17 ou internet-signalement.gouv.fr).
         </p>
         {resultat?.ok ? (
@@ -68,7 +68,7 @@ function PageSignaler() {
             {resultat && <p role="alert" className="text-[14px] text-red-300">{resultat.message}</p>}
           </form>
         )}
-        <p className="mt-10 text-[13px] text-white/45"><a href="/liens/legal/cgu" className="hover:text-white">Conditions d’utilisation</a> · <a href="/liens/legal/confidentialite" className="hover:text-white">Confidentialité</a></p>
+        <p className="mt-10 text-[13px] text-white/45"><a href="/legal/cgu" className="hover:text-white">Conditions d’utilisation</a> · <a href="/legal/confidentialite" className="hover:text-white">Confidentialité</a></p>
       </main>
     </div>
   );

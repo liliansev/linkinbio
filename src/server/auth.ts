@@ -1,5 +1,6 @@
 import { createHash, randomBytes } from 'node:crypto';
-import { PRINCIPAL } from '../lib/types.ts';
+import { PRINCIPAL, sansSchema } from '../lib/types.ts';
+import type { Origines } from '../lib/types.ts';
 import { ajouterJeton, compteParEmail, jetonsRecents, noterConnexion, supprimerJeton, verifierJeton } from './db.ts';
 import type { Compte } from './db.ts';
 import { bouton, envoyer, enveloppe } from './courriel.ts';
@@ -18,7 +19,7 @@ import type { Env } from './courriel.ts';
  * Variables d'environnement (facultatives) :
  *   LIENS_ADMIN_EMAIL  l'adresse du compte principal, CONTACT_TO sinon,
  *                      bonjour@liliansevoumian.fr à défaut ;
- *   CONTACT_FROM       l'expéditeur, formulaire@liliansevoumian.fr sinon ;
+ *   CONTACT_FROM       l'expéditeur, Hopla <connexion@hopla.page> en production ;
  *   RESEND_API_KEY     requise en production pour envoyer les liens.
  */
 
@@ -79,11 +80,11 @@ function ipTropInsistante(ip: string, maintenant: number) {
  * toutes deux le délai d'une minute. Il est retiré si l'envoi échoue.
  */
 async function envoyerLien(o: {
-  origine: string; env: Env; fetchImpl: typeof fetch; compte: string; destinataire: string; duree: number;
+  origines: Origines; env: Env; fetchImpl: typeof fetch; compte: string; destinataire: string; duree: number;
   sujet: string; html: (lien: string) => string; texte: (lien: string) => string;
 }): Promise<Reponse> {
   const jeton = nouveauJeton();
-  const lien = `${o.origine}/liens/admin/connexion?jeton=${jeton}`;
+  const lien = `${o.origines.admin}/admin/connexion?jeton=${jeton}`;
   if (!o.env.RESEND_API_KEY && o.env.NODE_ENV === 'production') return { ok: false, message: 'L’envoi d’e-mails n’est pas configuré sur le serveur.' };
   ajouterJeton(empreinte(jeton), 'connexion', o.duree, o.compte);
   if (!o.env.RESEND_API_KEY) {
@@ -95,7 +96,7 @@ async function envoyerLien(o: {
   return { ok: true, message: '' };
 }
 
-export async function demanderConnexion(origine: string, env: Env, email: string, fetchImpl: typeof fetch = fetch, maintenant = Date.now(), ip = ''): Promise<Reponse> {
+export async function demanderConnexion(origines: Origines, env: Env, email: string, fetchImpl: typeof fetch = fetch, maintenant = Date.now(), ip = ''): Promise<Reponse> {
   const adresse = email.trim().toLowerCase();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(adresse)) return { ok: false, message: 'Entre l’adresse e-mail de ton compte.' };
   if (ipTropInsistante(ip, maintenant)) return { ok: false, message: 'Trop de demandes. Réessaie dans une heure.' };
@@ -107,9 +108,9 @@ export async function demanderConnexion(origine: string, env: Env, email: string
   const recents = jetonsRecents(maintenant - 86_400_000, compte);
   if (maintenant - recents.dernier < 60_000 || recents.n >= 10) return envoye;
   const r = await envoyerLien({
-    origine, env, fetchImpl, compte, destinataire: adresse, duree: DUREE_LIEN,
+    origines, env, fetchImpl, compte, destinataire: adresse, duree: DUREE_LIEN,
     sujet: 'Ton lien de connexion',
-    html: lien => enveloppe(`<p>Voici ton lien pour ouvrir le back office de ta page de liens. Il marche une seule fois, pendant 15 minutes.</p>
+    html: lien => enveloppe(`<p>Voici ton lien pour ouvrir le back office de ta page Hopla. Il marche une seule fois, pendant 15 minutes.</p>
 ${bouton(lien, 'Ouvrir mon back office')}
 <p style="color:#666;font-size:14px">Tu n’as rien demandé ? Ignore ce message, personne ne peut s’en servir sans accès à ta boîte.</p>`),
     texte: lien => `Ouvre ton back office : ${lien}\nLe lien marche une seule fois, pendant 15 minutes.`,
@@ -118,16 +119,16 @@ ${bouton(lien, 'Ouvrir mon back office')}
 }
 
 /** Le premier e-mail d'un compte créé par Lilian : l'adresse de sa page et un lien valable une semaine. */
-export async function inviter(origine: string, env: Env, compte: Compte, fetchImpl: typeof fetch = fetch): Promise<Reponse> {
-  const page = `${origine}/liens/${compte.pseudo}`;
+export async function inviter(origines: Origines, env: Env, compte: Compte, fetchImpl: typeof fetch = fetch): Promise<Reponse> {
+  const page = `${origines.page}/${compte.pseudo}`;
   const r = await envoyerLien({
-    origine, env, fetchImpl, compte: compte.id, destinataire: compte.email, duree: DUREE_INVITATION,
-    sujet: 'Ta page de liens est prête',
+    origines, env, fetchImpl, compte: compte.id, destinataire: compte.email, duree: DUREE_INVITATION,
+    sujet: 'Ta page Hopla est prête',
     html: lien => enveloppe(`<p>Bonjour,</p>
-<p>Lilian Sevoumian t’a ouvert une page de liens, à l’adresse <a href="${page}">${page.replace(/^https?:\/\//, '')}</a>. Elle est vide pour l’instant : ajoute tes liens, choisis un thème, et elle est en ligne.</p>
+<p>Lilian Sevoumian t’a ouvert une page sur Hopla, à l’adresse <a href="${page}">${sansSchema(page)}</a>. Elle est vide pour l’instant : ajoute tes liens, choisis un thème, et elle est en ligne.</p>
 ${bouton(lien, 'Créer ma page')}
-<p style="color:#666;font-size:14px">Ce lien marche une seule fois, pendant 7 jours. Ensuite, tu te connectes depuis ${origine.replace(/^https?:\/\//, '')}/liens/admin avec cette adresse.</p>`),
-    texte: lien => `Lilian Sevoumian t’a ouvert une page de liens : ${page}\nPour la créer : ${lien}\nLe lien marche une seule fois, pendant 7 jours.`,
+<p style="color:#666;font-size:14px">Ce lien marche une seule fois, pendant 7 jours. Ensuite, tu te connectes depuis ${sansSchema(origines.admin)} avec cette adresse.</p>`),
+    texte: lien => `Lilian Sevoumian t’a ouvert une page sur Hopla : ${page}\nPour la créer : ${lien}\nLe lien marche une seule fois, pendant 7 jours. Ensuite, tu te connectes depuis ${origines.admin} avec cette adresse.`,
   });
   return r.ok ? { ok: true, message: `Invitation envoyée à ${compte.email}.`, lienDev: r.lienDev } : r;
 }

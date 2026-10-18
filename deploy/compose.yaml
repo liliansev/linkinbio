@@ -12,6 +12,8 @@ services:
     environment:
       NODE_ENV: production
       PORT: '3000'
+      # L'API du site de Lilian (dernière vidéo, newsletter), par le réseau `edge`.
+      LIENS_SITE: http://liliansevoumian-app:3000
     # La base SQLite : seul endroit inscriptible. On reprend le volume du site
     # pour garder les comptes, les blocs et les stats (voir deploy/README.md).
     volumes:

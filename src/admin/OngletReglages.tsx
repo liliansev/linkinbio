@@ -36,7 +36,7 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
             <img src={qr} alt="QR code vers ta page" className="h-28 w-28 rounded-xl bg-white p-1" />
             <div className="flex flex-col gap-2">
               <p className="text-[13.5px] leading-snug text-white/60">À imprimer sur une carte ou à projeter en fin de conférence. Les scans apparaissent dans tes stats, source « QR code ».</p>
-              <a href={qr} download={`qr-${compte.principal ? 'liliansevoumian' : compte.pseudo}-liens.png`} className="inline-flex min-h-10 w-fit items-center rounded-full bg-white/[0.08] px-4 text-[14px] font-medium text-white">Télécharger le QR code</a>
+              <a href={qr} download={`qr-${compte.pseudo}-hopla.png`} className="inline-flex min-h-10 w-fit items-center rounded-full bg-white/[0.08] px-4 text-[14px] font-medium text-white">Télécharger le QR code</a>
             </div>
           </div>
         )}
@@ -164,7 +164,7 @@ function TesDonnees({ compte, urlExport, supprimerMonCompte }: { compte: CompteP
     setErreur('');
     try {
       const r = await supprimerMonCompte(saisie);
-      if (r.ok) { location.replace('/liens/'); return; }
+      if (r.ok) { location.replace('/'); return; }
       setErreur(r.message);
     } catch { setErreur('Le serveur ne répond pas. Réessaie dans un instant.'); }
     setEnvoi(false);
@@ -194,9 +194,9 @@ function TesDonnees({ compte, urlExport, supprimerMonCompte }: { compte: CompteP
         </div>
       )}
       <p className="mt-5 flex flex-wrap gap-x-4 gap-y-1 text-[13px]">
-        <a href="/liens/legal/cgu" target="_blank" rel="noopener" className={lien}>Conditions d’utilisation</a>
-        <a href="/liens/legal/confidentialite" target="_blank" rel="noopener" className={lien}>Confidentialité</a>
-        <a href="/liens/legal/traitement-des-donnees" target="_blank" rel="noopener" className={lien}>Accord de traitement</a>
+        <a href="/legal/cgu" target="_blank" rel="noopener" className={lien}>Conditions d’utilisation</a>
+        <a href="/legal/confidentialite" target="_blank" rel="noopener" className={lien}>Confidentialité</a>
+        <a href="/legal/traitement-des-donnees" target="_blank" rel="noopener" className={lien}>Accord de traitement</a>
       </p>
     </Carte>
   );

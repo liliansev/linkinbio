@@ -18,8 +18,8 @@ import { QUOTA_GRATUIT, QUOTA_PRO, estPro } from '../lib/abonnement.ts';
  *
  * Plusieurs comptes : chaque page, bloc, média, événement et jeton porte le
  * `compte` qui le possède, et chaque fonction ci-dessous le prend en premier
- * argument. Le compte `principal` est celui de Lilian, servi sur /liens/ ; les
- * autres sur /liens/<pseudo>.
+ * argument. Le compte `principal` est celui de Lilian ; chaque page est servie
+ * sur hopla.page/<pseudo> (la sienne sur /lilian).
  */
 
 let db: DatabaseSync | null = null;
@@ -108,6 +108,10 @@ export function base(): DatabaseSync {
     db.prepare('INSERT INTO pages (compte, valeur) VALUES (?, ?)').run(PRINCIPAL, JSON.stringify(REGLAGES_DEFAUT));
     const inserer = db.prepare('INSERT INTO blocs (id, position, donnees, compte) VALUES (?, ?, ?, ?)');
     blocsDefaut(nouvelId).forEach((bloc, i) => inserer.run(bloc.id, i, JSON.stringify(bloc), PRINCIPAL));
+  }
+  // Le passage sur hopla.page (18 octobre 2026) : l'app quitte /liens, les images aussi. Sans effet ensuite.
+  for (const [table, col] of [['blocs', 'donnees'], ['pages', 'valeur']]) {
+    db.prepare(`UPDATE ${table} SET ${col} = REPLACE(REPLACE(${col}, '"/liens/media/', '"/media/'), '"/liens/avatar.webp"', '"/avatar.webp"') WHERE ${col} LIKE '%"/liens/%'`).run();
   }
   purger(Date.now(), db);
   return db;

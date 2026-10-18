@@ -18,7 +18,7 @@ function PageConnexion() {
   const [erreur, setErreur] = useState('');
   useEffect(() => {
     connecter({ data: { jeton } })
-      .then(r => { if (r.ok) location.replace('/liens/admin'); else setErreur(r.message); })
+      .then(r => { if (r.ok) location.replace('/admin'); else setErreur(r.message); })
       .catch(() => setErreur('Le serveur ne répond pas. Réessaie dans un instant.'));
   }, [jeton]);
   return (
@@ -26,7 +26,7 @@ function PageConnexion() {
       {erreur ? (
         <div className="max-w-sm">
           <p className="text-[16px]">{erreur}</p>
-          <a href="/liens/admin" className="mt-6 inline-flex min-h-12 items-center rounded-full bg-peche px-6 font-semibold text-nuit">Demander un nouveau lien</a>
+          <a href="/admin" className="mt-6 inline-flex min-h-12 items-center rounded-full bg-peche px-6 font-semibold text-nuit">Demander un nouveau lien</a>
         </div>
       ) : <p className="text-white/60">Connexion…</p>}
     </main>

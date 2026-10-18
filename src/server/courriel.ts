@@ -8,7 +8,11 @@ export type Env = Record<string, string | undefined>;
 
 export interface Courriel { to: string; subject: string; html: string; text: string; replyTo?: string }
 
-export const expediteur = (env: Env) => env.CONTACT_FROM?.trim() || 'formulaire@liliansevoumian.fr';
+/** `connexion@hopla.page` part sous le nom Hopla ; une valeur déjà nommée (`Hopla <...>`) est reprise telle quelle. */
+export const expediteur = (env: Env) => {
+  const valeur = env.CONTACT_FROM?.trim() || 'connexion@hopla.page';
+  return valeur.includes('<') ? valeur : `Hopla <${valeur}>`;
+};
 
 /** Vrai si le message est parti (ou, en développement, s'il est écrit dans la console). */
 export async function envoyer(env: Env, fetchImpl: typeof fetch, c: Courriel): Promise<boolean> {
@@ -21,7 +25,7 @@ export async function envoyer(env: Env, fetchImpl: typeof fetch, c: Courriel): P
     const reponse = await fetchImpl('https://api.resend.com/emails', {
       method: 'POST',
       headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from: `Mes liens <${expediteur(env)}>`, to: [c.to], subject: c.subject, html: c.html, text: c.text, ...(c.replyTo ? { reply_to: c.replyTo } : {}) }),
+      body: JSON.stringify({ from: expediteur(env), to: [c.to], subject: c.subject, html: c.html, text: c.text, ...(c.replyTo ? { reply_to: c.replyTo } : {}) }),
       signal: AbortSignal.timeout(10_000),
     });
     if (!reponse.ok) console.error('[liens] Resend', reponse.status);

@@ -11,9 +11,8 @@ VPS srv1870777 (147.93.52.144), le même que le site. Projet Compose
 - `deploy.sh` et `receive.sh` : le receveur SSH à commande forcée, copie de celui
   du site. Il construit l'image, vérifie un conteneur candidat, bascule, et
   revient à l'image précédente si la bascule échoue.
-- `.github/workflows/deploy-hostinger.yml` : ne part que si la variable
-  `HOSTINGER_HOST` est définie dans le dépôt. Tant qu'elle ne l'est pas, le site
-  sert toujours `/liens/` depuis le dépôt `liliansevoumian`.
+- `.github/workflows/deploy-hostinger.yml` : part à chaque push sur `main`, si
+  la variable `HOSTINGER_HOST` est définie dans le dépôt.
 
 Ces scripts et le Compose sont installés à la main sur le VPS : un commit ne
 change pas le receveur installé.
@@ -21,10 +20,16 @@ change pas le receveur installé.
 ## Secrets
 
 `/opt/linkinbio/secrets/runtime.env` : `RESEND_API_KEY`, `CONTACT_TO`,
-`LIENS_ADMIN_EMAIL` (facultatif), `LIENS_ORIGINE`, et pour l'offre Pro
-`CREEM_API_KEY`, `CREEM_WEBHOOK_SECRET`, `CREEM_PRODUIT_MOIS`,
+`LIENS_ADMIN_EMAIL` (facultatif), `LIENS_ORIGINE` (`https://hopla.page` par
+défaut), `LIENS_ORIGINE_ADMIN` (`https://app.hopla.page` par défaut),
+`CONTACT_FROM` (`connexion@hopla.page` par défaut, envoyé sous le nom Hopla), et
+pour l'offre Pro `CREEM_API_KEY`, `CREEM_WEBHOOK_SECRET`, `CREEM_PRODUIT_MOIS`,
 `CREEM_PRODUIT_AN` (plus `CREEM_TEST=1` avec une clé de test). Webhook Creem :
-`<origine>/liens/api/creem`, événements `checkout.completed` et `subscription.*`.
+`https://app.hopla.page/api/creem`, événements `checkout.completed` et
+`subscription.*`.
+
+`LIENS_SITE` (dans `compose.yaml`, rien de secret) : l'adresse interne du site de
+Lilian, dont l'API sert les blocs « dernière vidéo » et « newsletter » de sa page.
 
 ## Base
 
@@ -32,7 +37,24 @@ change pas le receveur installé.
 (déclaré `external` dans `compose.yaml`). Deux conteneurs ne doivent jamais
 écrire en même temps dans la même base : la bascule se fait en une fois.
 
-## Bascule depuis le site
+## Adresses
+
+Caddy (`/opt/edge/caddy/sites/hopla.caddy`) envoie `hopla.page` et
+`app.hopla.page` au conteneur, et redirige `www.hopla.page`. `server.mjs` range
+le reste : `/admin` sur hopla.page part vers app.hopla.page, les pages demandées
+à app.hopla.page repartent vers hopla.page, et les anciennes adresses `/liens/...`
+mènent à leur équivalent (`/liens/` à `/lilian`). Le cookie de session n'a pas
+de `domain` : il reste sur app.hopla.page.
+
+Dans `liliansevoumian.caddy`, l'ancienne route vers l'app est remplacée par une
+redirection, qui garde le chemin et la requête :
+
+```
+@liens path /liens /liens/*
+redir @liens https://hopla.page{uri} permanent
+```
+
+## Historique : la sortie du site (17 octobre 2026)
 
 1. Installer `/opt/linkinbio` (secrets, `bin/deploy.sh`, `bin/receive.sh`,
    `releases/`), le Compose dans `/docker/linkinbio`, une clé SSH à commande
@@ -52,8 +74,7 @@ change pas le receveur installé.
    Valider, puis recharger Caddy.
 4. Retirer `liens/` du dépôt du site et le volume de son Compose.
 
-Le nouveau domaine viendra ensuite : `base` de `vite.config.ts` et `BASE` de
-`server.mjs` passeront à `/`, avec une redirection depuis liliansevoumian.fr/liens.
+Le 18 octobre 2026, l'app est passée à la racine de hopla.page (voir « Adresses »).
 
 ## Reste à faire
 

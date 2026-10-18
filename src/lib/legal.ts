@@ -1,5 +1,5 @@
 /*
- * Les textes légaux de Mes liens, servis sur /liens/legal/<document>. Toute
+ * Les textes légaux de Hopla, servis sur hopla.page/legal/<document>. Toute
  * modification des CGU ou de l'accord de traitement change `VERSION_CGU` : les
  * comptes invités les acceptent à nouveau à leur prochaine connexion.
  *
@@ -10,7 +10,7 @@
 
 import { TARIFS } from './abonnement.ts';
 
-export const VERSION_CGU = '2026-10-17';
+export const VERSION_CGU = '2026-10-18';
 export const CONTACT_LEGAL = 'bonjour@liliansevoumian.fr';
 
 export interface DocumentLegal { titre: string; resume: string; sections: { titre: string; texte: string[] }[] }
@@ -23,10 +23,10 @@ const HEBERGEUR = 'Hostinger International Limited, 61 Lordou Vironos Street, 60
 export const LEGAL: Record<NomDocument, DocumentLegal> = {
   cgu: {
     titre: 'Conditions générales d’utilisation',
-    resume: `Les règles du service Mes liens, en vigueur depuis le 17 octobre 2026 (version ${VERSION_CGU}).`,
+    resume: `Les règles du service Hopla, en vigueur depuis le 18 octobre 2026 (version ${VERSION_CGU}).`,
     sections: [
       { titre: 'Le service', texte: [
-        'Mes liens permet de publier une page de liens personnelle à l’adresse liliansevoumian.fr/liens/<pseudo>, et de la gérer depuis un back office. Le service est édité par Lilian Sevoumian (voir les mentions légales).',
+        'Hopla permet de publier une page de liens personnelle à l’adresse hopla.page/<pseudo>, et de la gérer depuis un back office, sur app.hopla.page. Le service est édité par Lilian Sevoumian (voir les mentions légales).',
         'Pendant la bêta, le service est ouvert sur invitation. Il existe en version gratuite et en offre Pro, payante (voir « L’offre Pro et son paiement »). Il peut évoluer, s’interrompre pour maintenance ou s’arrêter : dans ce dernier cas, tu es prévenu par e-mail au moins 30 jours avant, et tu peux exporter tes données jusqu’au dernier jour.',
       ] },
       { titre: 'Ton compte', texte: [
@@ -34,8 +34,8 @@ export const LEGAL: Record<NomDocument, DocumentLegal> = {
         'Tu peux télécharger toutes tes données et supprimer ton compte à tout moment, depuis l’onglet Réglages. La suppression est immédiate et définitive.',
       ] },
       { titre: 'L’offre Pro et son paiement', texte: [
-        `L’offre Pro retire la mention « Une page faite avec Mes liens », montre tes statistiques sur un an au lieu de sept jours, et porte la place pour les images à 200 Mo. Elle coûte ${TARIFS.mois.prix} € par mois ou ${TARIFS.an.prix} € par an, toutes taxes comprises, et se renouvelle automatiquement à la fin de chaque période.`,
-        'Le paiement passe par Creem (creem.io), revendeur officiel de l’abonnement : c’est Creem qui te le vend, encaisse le paiement, t’envoie la facture et reverse la TVA. Ses conditions de vente s’ajoutent à celles-ci pour le paiement. Mes liens ne voit ni ne garde jamais ton numéro de carte.',
+        `L’offre Pro retire la mention « Une page faite avec Hopla », montre tes statistiques sur un an au lieu de sept jours, et porte la place pour les images à 200 Mo. Elle coûte ${TARIFS.mois.prix} € par mois ou ${TARIFS.an.prix} € par an, toutes taxes comprises, et se renouvelle automatiquement à la fin de chaque période.`,
+        'Le paiement passe par Creem (creem.io), revendeur officiel de l’abonnement : c’est Creem qui te le vend, encaisse le paiement, t’envoie la facture et reverse la TVA. Ses conditions de vente s’ajoutent à celles-ci pour le paiement. Hopla ne voit ni ne garde jamais ton numéro de carte.',
         'Tu peux résilier à tout moment, sans frais, depuis l’onglet Réglages (« Résilier mon abonnement ») : le Pro reste actif jusqu’à la fin de la période déjà payée, puis ta page repasse en gratuit avec tout son contenu. Rien n’est effacé.',
         'Tu disposes de 14 jours après ton premier paiement pour changer d’avis : écris à ' + CONTACT_LEGAL + ' et tu es remboursé en entier. Si le prix change, tu es prévenu par e-mail au moins 30 jours avant ; le nouveau prix ne s’applique qu’au renouvellement suivant, et tu peux résilier d’ici là.',
       ] },
@@ -49,10 +49,10 @@ export const LEGAL: Record<NomDocument, DocumentLegal> = {
         'En cas de contenu laissant craindre une infraction menaçant la vie ou la sécurité de quelqu’un, les autorités compétentes sont prévenues.',
       ] },
       { titre: 'Données personnelles', texte: [
-        'Pour les données de ton compte, Mes liens est responsable de traitement (voir la politique de confidentialité). Pour les statistiques de visite de ta page, Mes liens agit pour ton compte, comme sous-traitant : l’accord de traitement des données fait partie de ces conditions.',
+        'Pour les données de ton compte, Hopla est responsable de traitement (voir la politique de confidentialité). Pour les statistiques de visite de ta page, Hopla agit pour ton compte, comme sous-traitant : l’accord de traitement des données fait partie de ces conditions.',
       ] },
       { titre: 'Responsabilité', texte: [
-        'Le service est fourni tel quel, avec soin mais sans garantie de disponibilité permanente. Mes liens n’est pas responsable des sites vers lesquels pointent les liens publiés par les utilisateurs.',
+        'Le service est fourni tel quel, avec soin mais sans garantie de disponibilité permanente. Hopla n’est pas responsable des sites vers lesquels pointent les liens publiés par les utilisateurs.',
       ] },
       { titre: 'Modifications et droit applicable', texte: [
         'Si ces conditions changent, tu es prévenu et tu les acceptes à nouveau à ta connexion suivante ; tu peux aussi supprimer ton compte.',
@@ -63,10 +63,10 @@ export const LEGAL: Record<NomDocument, DocumentLegal> = {
 
   'traitement-des-donnees': {
     titre: 'Accord de traitement des données',
-    resume: `L’accord de sous-traitance prévu par l’article 28 du RGPD, entre toi (responsable de traitement) et Mes liens (sous-traitant), pour les données des visiteurs de ta page. Version ${VERSION_CGU}.`,
+    resume: `L’accord de sous-traitance prévu par l’article 28 du RGPD, entre toi (responsable de traitement) et Hopla (sous-traitant), pour les données des visiteurs de ta page. Version ${VERSION_CGU}.`,
     sections: [
       { titre: 'Objet', texte: [
-        'Mes liens mesure l’audience de ta page pour toi : nombre de vues, de visiteurs et de clics, provenance et type d’appareil. Il ne fait rien d’autre de ces données et ne les utilise pas pour son propre compte.',
+        'Hopla mesure l’audience de ta page pour toi : nombre de vues, de visiteurs et de clics, provenance et type d’appareil. Il ne fait rien d’autre de ces données et ne les utilise pas pour son propre compte.',
       ] },
       { titre: 'Données traitées', texte: [
         'Pour chaque visite ou clic : la date, le lien cliqué, la provenance (site d’origine ou paramètre de campagne), le type d’appareil (mobile, ordinateur, tablette), et une empreinte anonyme du visiteur, recalculée chaque jour à partir d’un secret du serveur, de l’adresse IP et du navigateur. L’adresse IP elle-même n’est jamais enregistrée, aucun cookie n’est déposé chez le visiteur, et l’empreinte ne permet pas de le suivre d’un jour à l’autre ni d’un site à l’autre.',
@@ -74,7 +74,7 @@ export const LEGAL: Record<NomDocument, DocumentLegal> = {
       { titre: 'Durée', texte: [
         'Les données sont gardées 13 mois au plus, puis effacées automatiquement. Elles sont effacées immédiatement si tu supprimes ton compte.',
       ] },
-      { titre: 'Engagements de Mes liens', texte: [
+      { titre: 'Engagements de Hopla', texte: [
         'Traiter les données uniquement sur tes instructions, c’est-à-dire pour afficher tes statistiques. Garantir la confidentialité des personnes qui y ont accès. Mettre en œuvre des mesures de sécurité adaptées : connexion sans mot de passe par lien à usage unique, sessions protégées, limites anti-abus. N’employer que les sous-traitants listés sur la page « Sous-traitants », et te prévenir de tout changement. T’aider à répondre aux demandes des personnes concernées. Te prévenir sans délai, et au plus tard sous 48 heures, de toute violation de données touchant ta page. Effacer les données à la fin du service, et te permettre de les exporter avant.',
       ] },
       { titre: 'Tes engagements', texte: [
@@ -85,15 +85,14 @@ export const LEGAL: Record<NomDocument, DocumentLegal> = {
 
   confidentialite: {
     titre: 'Politique de confidentialité',
-    resume: 'Ce que Mes liens sait de toi, pourquoi, combien de temps, et comment exercer tes droits.',
+    resume: 'Ce que Hopla sait de toi, pourquoi, combien de temps, et comment exercer tes droits.',
     sections: [
       { titre: 'Qui est responsable', texte: [
-        `Lilian Sevoumian, éditeur de Mes liens (voir les mentions légales). Pour toute question ou demande : ${CONTACT_LEGAL}.`,
+        `Lilian Sevoumian, éditeur de Hopla (voir les mentions légales). Pour toute question ou demande : ${CONTACT_LEGAL}.`,
       ] },
       { titre: 'Si tu visites une page', texte: [
         'Aucun cookie n’est déposé, aucune publicité, aucun traceur d’un site à l’autre. Le serveur compte les vues et les clics de la page pour son propriétaire, avec une empreinte anonyme renouvelée chaque jour ; ton adresse IP n’est pas enregistrée. Ces statistiques sont gardées 13 mois. C’est une mesure d’audience strictement limitée, qui entre dans l’exemption de consentement prévue par la CNIL.',
-        'Tu peux t’y opposer : un navigateur qui bloque les requêtes vers /liens/api/evenement (la plupart des bloqueurs de contenus le permettent) n’est pas compté, sans que la page cesse de fonctionner. Le propriétaire de la page est responsable de ces statistiques ; Mes liens les traite pour lui.',
-        'La page de Lilian Sevoumian (liliansevoumian.fr/liens/) utilise aussi DataFast, une mesure d’audience sans cookie. Les autres pages ne l’utilisent pas.',
+        'Tu peux t’y opposer : un navigateur qui bloque les requêtes vers hopla.page/api/evenement (la plupart des bloqueurs de contenus le permettent) n’est pas compté, sans que la page cesse de fonctionner. Le propriétaire de la page est responsable de ces statistiques ; Hopla les traite pour lui.',
       ] },
       { titre: 'Si tu as un compte', texte: [
         'Ton adresse e-mail, ton pseudo, la date de création et de dernière connexion, la version des conditions acceptées, et ce que tu publies (réglages, blocs, images). Base légale : l’exécution du contrat (les CGU). Ces données sont gardées tant que ton compte existe, et effacées dès que tu le supprimes.',
@@ -115,7 +114,7 @@ export const LEGAL: Record<NomDocument, DocumentLegal> = {
 
   'sous-traitants': {
     titre: 'Sous-traitants',
-    resume: 'Les seules sociétés qui traitent des données pour Mes liens. Tout ajout est annoncé par e-mail aux comptes avant d’entrer en vigueur.',
+    resume: 'Les seules sociétés qui traitent des données pour Hopla. Tout ajout est annoncé par e-mail aux comptes avant d’entrer en vigueur.',
     sections: [
       { titre: 'Hostinger', texte: [
         `Hébergement du serveur et de la base de données. ${HEBERGEUR} : société établie dans l’Union européenne.`,
@@ -124,21 +123,21 @@ export const LEGAL: Record<NomDocument, DocumentLegal> = {
         'Envoi des e-mails : liens de connexion, invitations, décisions de modération. Ne reçoit que l’adresse du destinataire et le contenu du message. Resend, Inc., États-Unis ; le transfert est encadré par l’accord de traitement de Resend et les clauses contractuelles types de la Commission européenne.',
       ] },
       { titre: 'Creem', texte: [
-        'Paiement de l’offre Pro (creem.io). Creem n’est pas un sous-traitant au sens strict : revendeur officiel de l’abonnement, il est responsable des données de paiement et de facturation qu’il collecte. Mes liens lui transmet ton adresse e-mail et l’identifiant de ton compte au moment du paiement, et reçoit en retour l’état de l’abonnement.',
+        'Paiement de l’offre Pro (creem.io). Creem n’est pas un sous-traitant au sens strict : revendeur officiel de l’abonnement, il est responsable des données de paiement et de facturation qu’il collecte. Hopla lui transmet ton adresse e-mail et l’identifiant de ton compte au moment du paiement, et reçoit en retour l’état de l’abonnement.',
       ] },
     ],
   },
 
   'mentions-legales': {
     titre: 'Mentions légales',
-    resume: 'Qui édite et héberge Mes liens.',
+    resume: 'Qui édite et héberge Hopla.',
     sections: [
       { titre: 'Éditeur', texte: [
         `Lilian Sevoumian, entrepreneur individuel. Contact : ${CONTACT_LEGAL}. Directeur de la publication : Lilian Sevoumian.`,
       ] },
       { titre: 'Hébergeur', texte: [HEBERGEUR + ', www.hostinger.com.'] },
       { titre: 'Contenus des utilisateurs', texte: [
-        'Les pages publiées sur liliansevoumian.fr/liens/<pseudo> sont écrites par leurs auteurs, sous leur responsabilité. Pour signaler un contenu, utilise le lien « Signaler » en bas de la page concernée, ou écris à ' + CONTACT_LEGAL + '. Ce point de contact vaut aussi pour les autorités (règlement sur les services numériques, articles 11 et 12), en français ou en anglais.',
+        'Les pages publiées sur hopla.page/<pseudo> sont écrites par leurs auteurs, sous leur responsabilité. Pour signaler un contenu, utilise le lien « Signaler » en bas de la page concernée, ou écris à ' + CONTACT_LEGAL + '. Ce point de contact vaut aussi pour les autorités (règlement sur les services numériques, articles 11 et 12), en français ou en anglais.',
       ] },
     ],
   },

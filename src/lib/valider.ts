@@ -28,7 +28,9 @@ export function adresse(v: unknown): string {
 /** Une image : seulement nos médias, l'avatar livré, ou https. */
 export function image(v: unknown): string {
   const s = texte(v, 2000);
-  if (/^\/liens\/(media\/[\w-]+\.(webp|jpg)|avatar\.webp)$/.test(s)) return s;
+  // `/liens/...` : les adresses d'avant hopla.page, dans un back office ouvert avant la mise à jour.
+  const m = /^(?:\/liens)?(\/(media\/[\w-]+\.(webp|jpg)|avatar\.webp))$/.exec(s);
+  if (m) return m[1];
   if (s.startsWith('https://')) { try { return new URL(s).href; } catch { return ''; } }
   return '';
 }
@@ -85,7 +87,7 @@ export function validerReglages(v: unknown, base: Reglages): Reglages {
 
 /** Les adresses déjà prises par l'application, ou qui prêteraient à confusion. */
 const PSEUDOS_RESERVES = new Set([
-  'admin', 'api', 'media', 'assets', 'liens', 'legal', 'signaler', 'signalement', 'lilian', 'liliansevoumian', 'principal', 'connexion', 'inscription', 'compte', 'comptes',
+  'admin', 'api', 'media', 'assets', 'liens', 'hopla', 'avatar', 'healthz', 'mentions-legales', 'cgu', 'tarifs', 'prix', 'pro', 'legal', 'signaler', 'signalement', 'lilian', 'liliansevoumian', 'principal', 'connexion', 'inscription', 'compte', 'comptes',
   'aide', 'support', 'contact', 'blog', 'login', 'signup', 'app', 'www', 'static', 'demo', 'root', 'null', 'undefined', 'favicon', 'robots', 'sitemap',
 ]);
 

@@ -52,7 +52,7 @@ export function OngletComptes({ api }: { api: ApiComptes }) {
           <Champ label="Son adresse e-mail">
             <input type="email" required className={classeSaisie} value={email} onChange={e => setEmail(e.target.value)} placeholder="prenom@exemple.fr" autoComplete="off" />
           </Champ>
-          <Champ label="Son pseudo" aide={<>Sa page : liliansevoumian.fr/liens/<span className="text-white">{pseudo || 'pseudo'}</span></>}>
+          <Champ label="Son pseudo" aide={<>Sa page : hopla.page/<span className="text-white">{pseudo || 'pseudo'}</span></>}>
             <input required className={classeSaisie} value={pseudo} maxLength={30} placeholder="prenom-nom" autoComplete="off" autoCapitalize="none" spellCheck={false}
               onChange={e => setPseudo(e.target.value.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9-]/g, '-').replace(/-{2,}/g, '-'))} />
           </Champ>
@@ -105,7 +105,7 @@ function LigneCompte({ compte, api, onChange, onMessage }: { compte: CompteResum
             {!compte.principal && compte.pro && <span className="rounded-full bg-peche/15 px-2 py-0.5 text-[11.5px] font-semibold text-peche">Pro</span>}
             {suspendu && <span className="rounded-full bg-amber-400/15 px-2 py-0.5 text-[11.5px] font-medium text-amber-200">Suspendu</span>}
           </p>
-          <p className="truncate text-[13px] text-white/50">{compte.principal ? 'Ta page, liliansevoumian.fr/liens' : compte.email}</p>
+          <p className="truncate text-[13px] text-white/50">{compte.principal ? 'Ta page, hopla.page/lilian' : compte.email}</p>
         </div>
         <div className="shrink-0 text-right">
           <p className="text-[15px] font-semibold tabular-nums">{compte.vues}</p>

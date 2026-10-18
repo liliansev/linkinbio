@@ -1,12 +1,12 @@
 import type { PagePublique } from './types.ts';
-import { ORIGINE_PUBLIQUE, urlPage } from './types.ts';
+import { ORIGINE_PUBLIQUE, SITE_LILIAN, urlPage } from './types.ts';
 import { themeParId } from './themes.ts';
 
 /*
  * Le <head> d'une page publique. La page de Lilian garde ses données
- * structurées et DataFast ; les pages des autres comptes restent hors de Google
- * pendant la bêta (elles vivent sous le domaine de Lilian) et ne chargent aucun
- * suivi tiers.
+ * structurées ; les pages des autres comptes restent hors de Google pendant la
+ * bêta. Aucune page ne charge de suivi tiers (DataFast est coupé sur Hopla
+ * tant qu'il n'a pas son propre site).
  */
 
 const absolue = (chemin: string) => (chemin.startsWith('/') ? `${ORIGINE_PUBLIQUE}${chemin}` : chemin);
@@ -23,7 +23,7 @@ export function tetePage(page: PagePublique | null | undefined) {
   const personne = {
     '@context': 'https://schema.org', '@type': 'ProfilePage', url, name: titre,
     mainEntity: {
-      '@type': 'Person', name: reglages.profil.nom, description: reglages.profil.bio, image, url: ORIGINE_PUBLIQUE,
+      '@type': 'Person', name: reglages.profil.nom, description: reglages.profil.bio, image, url: SITE_LILIAN,
       sameAs: [...reglages.reseaux.filter(r => r.url.startsWith('http')).map(r => r.url), ...blocs.filter(b => b.type === 'lien' && b.indexable && b.url.startsWith('http')).map(b => b.url)],
     },
   };
@@ -41,12 +41,6 @@ export function tetePage(page: PagePublique | null | undefined) {
       { name: 'twitter:card', content: 'summary' },
     ],
     links: [{ rel: 'canonical', href: url }],
-    scripts: compte.principal ? [
-      ...(indexable ? [{ type: 'application/ld+json', children: JSON.stringify(personne).replace(/</g, '\\u003c') }] : []),
-      // DataFast, comme sur le reste du site : visites, provenance et goals `liens_*`.
-      // Le back office ne charge pas ce script.
-      { children: 'window.datafast=window.datafast||function(){(window.datafast.q=window.datafast.q||[]).push(arguments)};' },
-      { defer: true, src: '/js/script.js', 'data-website-id': 'dfid_Mq8wt9KvIisuofpYWZouo', 'data-domain': 'liliansevoumian.fr', 'data-api-url': '/api/dfst-events' },
-    ] : [],
+    scripts: indexable ? [{ type: 'application/ld+json', children: JSON.stringify(personne).replace(/</g, '\\u003c') }] : [],
   };
 }

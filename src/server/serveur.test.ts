@@ -7,6 +7,7 @@ const auth = await import('./auth.ts');
 const { source, appareil, enregistrer } = await import('./analytique.ts');
 const { validerBloc, validerReglages, adresse, pseudo, email } = await import('../lib/valider.ts');
 const P = 'principal';
+const O = { page: 'https://hopla.page', admin: 'https://app.hopla.page' };
 const { REGLAGES_DEFAUT } = await import('../lib/defauts.ts');
 
 test.beforeEach(() => { db.fermer(); });
@@ -38,6 +39,10 @@ test('les adresses dangereuses sont refusées, les raccourcis complétés', () =
   assert.equal(b.type, 'lien'); assert.equal(b.titre.length, 160); assert.equal(b.public, true); assert.equal(b.image, ''); assert.equal(b.animation, 'auto');
   // Les noms d'avant gardent leur mouvement.
   assert.equal(validerBloc({ animation: 'brille' }, 'id').animation, 'reflet');
+  assert.equal(validerBloc({ image: '/liens/media/ab-1.webp' }, 'id').image, '/media/ab-1.webp', 'une ancienne adresse d’image est reprise');
+  assert.equal(validerBloc({ image: '/media/ab-1.webp' }, 'id').image, '/media/ab-1.webp');
+  assert.equal(validerBloc({ image: '/ailleurs/ab.webp' }, 'id').image, '');
+  assert.equal(pseudo('hopla'), ''); assert.equal(pseudo('admin'), '');
   const r = validerReglages({ theme: 'inconnu', bouton: { style: 'rien' }, reseaux: [{ reseau: 'youtube', url: '' }, { reseau: 'x', url: 'x.com/moi' }] }, REGLAGES_DEFAUT);
   assert.equal(r.theme, 'nuit-peche'); assert.equal(r.bouton.style, 'plein'); assert.deepEqual(r.reseaux, [{ reseau: 'x', url: 'https://x.com/moi' }]);
 });
@@ -46,14 +51,16 @@ test('connexion par lien : envoi par Resend, usage unique, limite d’envoi', as
   const envois: { url: string; corps: any }[] = [];
   const fetchFaux = (async (url: string, init: RequestInit) => { envois.push({ url, corps: JSON.parse(String(init.body)) }); return new Response('{}', { status: 200 }); }) as typeof fetch;
   const env = { RESEND_API_KEY: 'cle', NODE_ENV: 'production' };
-  const r = await auth.demanderConnexion('https://liliansevoumian.fr', env, 'Bonjour@liliansevoumian.fr', fetchFaux, 1_000_000, '1.1.1.1');
+  const r = await auth.demanderConnexion(O, env, 'Bonjour@liliansevoumian.fr', fetchFaux, 1_000_000, '1.1.1.1');
   assert.equal(r.ok, true);
   assert.deepEqual(envois[0].corps.to, ['bonjour@liliansevoumian.fr']);
+  assert.equal(envois[0].corps.from, 'Hopla <connexion@hopla.page>');
+  assert.match(envois[0].corps.text, /https:\/\/app\.hopla\.page\/admin\/connexion\?jeton=/, 'le lien ouvre le back office, sur son propre nom');
   const jeton = /jeton=([\w-]+)/.exec(envois[0].corps.text)![1];
-  const encore = await auth.demanderConnexion('https://liliansevoumian.fr', env, 'bonjour@liliansevoumian.fr', fetchFaux, 1_030_000, '1.1.1.2');
+  const encore = await auth.demanderConnexion(O, env, 'bonjour@liliansevoumian.fr', fetchFaux, 1_030_000, '1.1.1.2');
   assert.equal(encore.ok, true, 'même réponse…');
   assert.equal(envois.length, 1, '… mais un seul lien par minute');
-  const inconnu = await auth.demanderConnexion('https://liliansevoumian.fr', env, 'personne@exemple.fr', fetchFaux, 1_100_000, '1.1.1.3');
+  const inconnu = await auth.demanderConnexion(O, env, 'personne@exemple.fr', fetchFaux, 1_100_000, '1.1.1.3');
   assert.equal(inconnu.message, `Si personne@exemple.fr a un compte, le lien vient de partir. Il marche une fois, pendant 15 minutes.`, 'une adresse inconnue reçoit la même réponse');
   assert.equal(envois.length, 1, 'et rien ne part');
   const session = auth.ouvrirSession(jeton);
@@ -63,7 +70,7 @@ test('connexion par lien : envoi par Resend, usage unique, limite d’envoi', as
   auth.fermerSession(session);
   assert.equal(auth.compteDeSession(session), null);
   assert.equal(auth.compteDeSession('n’importe quoi'), null);
-  const sansCle = await auth.demanderConnexion('https://liliansevoumian.fr', { NODE_ENV: 'production' }, 'bonjour@liliansevoumian.fr', fetchFaux, 9_000_000, '1.1.1.4');
+  const sansCle = await auth.demanderConnexion(O, { NODE_ENV: 'production' }, 'bonjour@liliansevoumian.fr', fetchFaux, 9_000_000, '1.1.1.4');
   assert.equal(sansCle.ok, false);
   assert.equal(auth.masquer('bonjour@liliansevoumian.fr'), 'b•••••r@liliansevoumian.fr');
   assert.equal(auth.adresseAdmin({ CONTACT_TO: 'a@b.fr' }), 'a@b.fr');
@@ -137,16 +144,17 @@ test('comptes : chaque page est isolée des autres', async () => {
   const envois: any[] = [];
   const fetchFaux = (async (_: string, init: RequestInit) => { envois.push(JSON.parse(String(init.body))); return new Response('{}'); }) as typeof fetch;
   const env = { RESEND_API_KEY: 'cle', NODE_ENV: 'production' };
-  await auth.demanderConnexion('https://liliansevoumian.fr', env, 'camille@exemple.fr', fetchFaux, Date.now(), '9.9.9.4');
+  await auth.demanderConnexion(O, env, 'camille@exemple.fr', fetchFaux, Date.now(), '9.9.9.4');
   assert.deepEqual(envois[0].to, ['camille@exemple.fr']);
   const session = auth.ouvrirSession(/jeton=([\w-]+)/.exec(envois[0].text)![1])!;
   assert.equal(auth.compteDeSession(session), camille.id);
   assert.ok(db.compteParId(camille.id)!.connexion);
 
   // L'invitation part à la bonne adresse avec l'adresse de la page.
-  const inv = await auth.inviter('https://liliansevoumian.fr', env, camille, fetchFaux);
+  const inv = await auth.inviter(O, env, camille, fetchFaux);
   assert.equal(inv.ok, true);
-  assert.match(envois[1].text, /liliansevoumian\.fr\/liens\/camille/);
+  assert.match(envois[1].text, /https:\/\/hopla\.page\/camille\n/);
+  assert.match(envois[1].text, /https:\/\/app\.hopla\.page\/admin\/connexion\?jeton=/);
 
   // Suspendu : plus de session, plus de connexion, plus de page.
   db.changerStatut(camille.id, 'suspendu');
@@ -191,8 +199,9 @@ test('une base d’avant les comptes est reprise telle quelle par le compte prin
     CREATE TABLE evenements (id INTEGER PRIMARY KEY, type TEXT NOT NULL, bloc TEXT, jour TEXT NOT NULL, ts INTEGER NOT NULL, visiteur TEXT NOT NULL, source TEXT NOT NULL, appareil TEXT NOT NULL);
     CREATE INDEX evenements_jour ON evenements (jour, type);
     CREATE TABLE jetons (hash TEXT PRIMARY KEY, type TEXT NOT NULL, expire INTEGER NOT NULL, cree INTEGER NOT NULL);`);
-  ancienne.prepare('INSERT INTO reglages VALUES (?, ?)').run('page', JSON.stringify({ ...REGLAGES_DEFAUT, profil: { ...REGLAGES_DEFAUT.profil, nom: 'Ancien nom' } }));
-  ancienne.prepare('INSERT INTO blocs VALUES (?, ?, ?)').run('vieux', 0, JSON.stringify(validerBloc({ type: 'lien', titre: 'Vieux lien', url: 'a.fr' }, 'vieux')));
+  ancienne.prepare('INSERT INTO reglages VALUES (?, ?)').run('page', JSON.stringify({ ...REGLAGES_DEFAUT, profil: { ...REGLAGES_DEFAUT.profil, nom: 'Ancien nom', avatar: '/liens/avatar.webp' } }));
+  // Les images d'avant hopla.page, sous /liens.
+  ancienne.prepare('INSERT INTO blocs VALUES (?, ?, ?)').run('vieux', 0, JSON.stringify({ ...validerBloc({ type: 'lien', titre: 'Vieux lien', url: 'a.fr' }, 'vieux'), image: '/liens/media/abc123.webp' }));
   ancienne.prepare('INSERT INTO jetons VALUES (?, ?, ?, ?)').run(auth.empreinte('session-d-avant-les-comptes-0000'), 'session', Date.now() + 86_400_000, Date.now());
   ancienne.close();
   process.env.LIENS_DB = fichier;
@@ -200,6 +209,8 @@ test('une base d’avant les comptes est reprise telle quelle par le compte prin
   try {
     assert.equal(db.lireReglages(P).profil.nom, 'Ancien nom');
     assert.deepEqual(db.lireBlocs(P).map(b => b.id), ['vieux']);
+    assert.equal(db.lireBlocs(P)[0].image, '/media/abc123.webp', 'les images quittent /liens');
+    assert.equal(db.lireReglages(P).profil.avatar, '/avatar.webp');
     assert.equal(auth.compteDeSession('session-d-avant-les-comptes-0000'), P, 'la session ouverte reste valable');
     db.fermer();
     assert.deepEqual(db.lireBlocs(P).map(b => b.id), ['vieux'], 'une seconde ouverture ne change rien');
@@ -239,17 +250,16 @@ test('signalements : formulaire, accusé de réception, suspension motivée, dé
   const envois: any[] = [];
   const fetchFaux = (async (_: string, init: RequestInit) => { envois.push(JSON.parse(String(init.body))); return new Response('{}'); }) as typeof fetch;
   const env = { RESEND_API_KEY: 'cle', NODE_ENV: 'production', CONTACT_TO: 'lilian@exemple.fr' };
-  const o = 'https://liliansevoumian.fr';
   const hugo = db.creerCompte('hugo@exemple.fr', 'hugo');
   const base = { page: 'hugo', motif: 'arnaque', details: 'Le lien mène à une fausse page Instagram.', email: 'Temoin@Exemple.fr', bonneFoi: true };
 
-  assert.equal((await signaler(env, fetchFaux, { ...base, page: '' }, '5.5.5.1', o)).ok, false, 'pas de signalement sur la page de Lilian');
-  assert.equal((await signaler(env, fetchFaux, { ...base, motif: 'rien' }, '5.5.5.1', o)).ok, false);
-  assert.equal((await signaler(env, fetchFaux, { ...base, details: 'court' }, '5.5.5.1', o)).ok, false);
-  assert.equal((await signaler(env, fetchFaux, { ...base, bonneFoi: false }, '5.5.5.1', o)).ok, false);
+  assert.equal((await signaler(env, fetchFaux, { ...base, page: '' }, '5.5.5.1', O)).ok, false, 'pas de signalement sur la page de Lilian');
+  assert.equal((await signaler(env, fetchFaux, { ...base, motif: 'rien' }, '5.5.5.1', O)).ok, false);
+  assert.equal((await signaler(env, fetchFaux, { ...base, details: 'court' }, '5.5.5.1', O)).ok, false);
+  assert.equal((await signaler(env, fetchFaux, { ...base, bonneFoi: false }, '5.5.5.1', O)).ok, false);
   assert.equal(envois.length, 0);
 
-  const r = await signaler(env, fetchFaux, base, '5.5.5.2', o);
+  const r = await signaler(env, fetchFaux, base, '5.5.5.2', O);
   assert.equal(r.ok, true);
   assert.deepEqual(envois.map(e => e.to[0]), ['lilian@exemple.fr', 'temoin@exemple.fr'], 'Lilian est prévenu, la personne reçoit un accusé');
   assert.equal(envois[0].reply_to, 'temoin@exemple.fr');
@@ -257,19 +267,20 @@ test('signalements : formulaire, accusé de réception, suspension motivée, dé
   assert.equal(s.pseudo, 'hugo'); assert.equal(s.statut, 'ouvert');
 
   // Cinq signalements par heure et par IP.
-  for (let i = 0; i < 5; i++) await signaler(env, fetchFaux, { ...base, email: '' }, '5.5.5.9', o);
-  assert.equal((await signaler(env, fetchFaux, { ...base, email: '' }, '5.5.5.9', o)).ok, false);
+  for (let i = 0; i < 5; i++) await signaler(env, fetchFaux, { ...base, email: '' }, '5.5.5.9', O);
+  assert.equal((await signaler(env, fetchFaux, { ...base, email: '' }, '5.5.5.9', O)).ok, false);
 
   envois.length = 0;
   await assert.rejects(() => changerStatutMotive(env, fetchFaux, hugo.id, 'suspendu', '  '), /motif/);
-  await traiter(env, fetchFaux, s.id, 'suspendu', 'Lien de hameçonnage (CGU, « Ce que tu publies »).', o);
+  await traiter(env, fetchFaux, s.id, 'suspendu', 'Lien de hameçonnage (CGU, « Ce que tu publies »).', O.page);
   assert.equal(db.compteParId(hugo.id)!.statut, 'suspendu');
   assert.deepEqual(envois.map(e => e.to[0]), ['hugo@exemple.fr', 'temoin@exemple.fr']);
   assert.match(envois[0].text, /hameçonnage/);
   assert.match(envois[0].text, /contester/);
   assert.match(envois[1].text, /suspendue/);
+  assert.match(envois[1].text, /https:\/\/hopla\.page\/hugo a été examiné/);
   assert.equal(db.signalementParId(s.id)!.statut, 'suspendu');
-  await assert.rejects(() => traiter(env, fetchFaux, s.id, 'sans-suite', '', o), /déjà traité/);
+  await assert.rejects(() => traiter(env, fetchFaux, s.id, 'sans-suite', '', O.page), /déjà traité/);
 
   // Une suppression à la demande de la personne part sans e-mail ; une suppression motivée, avec.
   envois.length = 0;
@@ -358,10 +369,10 @@ test('offre Pro : la page de paiement et le portail passent par l’API Creem', 
     return Response.json(url.endsWith('/checkouts') ? { checkout_url: 'https://checkout.creem.io/ch_1' } : { customer_portal_link: 'https://creem.io/portal/x' });
   }) as typeof fetch;
   const noa = db.creerCompte('noa@exemple.fr', 'noa');
-  assert.equal(await creem.ouvrirPaiement(env, fetchFaux, noa, 'an', 'https://liliansevoumian.fr', 5), 'https://checkout.creem.io/ch_1');
+  assert.equal(await creem.ouvrirPaiement(env, fetchFaux, noa, 'an', O.admin, 5), 'https://checkout.creem.io/ch_1');
   assert.equal(appels[0].url, 'https://test-api.creem.io/v1/checkouts');
   assert.equal(appels[0].cle, 'creem_test_x');
-  assert.deepEqual(appels[0].corps, { product_id: 'prod_an', request_id: `${noa.id}-5`, success_url: 'https://liliansevoumian.fr/liens/admin?paiement=ok', customer: { email: 'noa@exemple.fr' }, metadata: { compte: noa.id } });
+  assert.deepEqual(appels[0].corps, { product_id: 'prod_an', request_id: `${noa.id}-5`, success_url: 'https://app.hopla.page/admin?paiement=ok', customer: { email: 'noa@exemple.fr' }, metadata: { compte: noa.id } });
   await assert.rejects(creem.ouvrirPortail(env, fetchFaux, noa), /Aucun abonnement/);
   await assert.rejects(creem.ouvrirPaiement({}, fetchFaux, noa, 'mois', 'https://x.fr'), /pas encore branché/);
   await assert.rejects(creem.ouvrirPaiement(env, fetchFaux, db.compteParId(P)!, 'mois', 'https://x.fr'), /principal/);

@@ -3,40 +3,83 @@ import assert from 'node:assert/strict';
 import { mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { request } from 'node:http';
+import { createServer, request } from 'node:http';
 import { createLiensServer } from './server.mjs';
-async function fixture(t) {
-  const dir = await mkdtemp(join(tmpdir(), 'linkinbio-'));
-  await mkdir(join(dir, 'client/assets'), { recursive: true }); await mkdir(join(dir, 'server'));
-  await writeFile(join(dir, 'client/assets/a.js'), 'js'); await writeFile(join(dir, 'client/avatar.webp'), 'image');
-  await writeFile(join(dir, 'server/server.js'), "export default { fetch: async r => new Response('app ' + new URL(r.url).pathname + ' ' + (r.headers.get('x-real-ip') ?? '-') + ' ' + (r.body ? await r.text() : ''), { headers: { 'content-type': 'text/html', 'set-cookie': 'a=1; Path=/liens' } }) };");
-  const server = createLiensServer({ appDir: dir });
+async function ecouter(t, server) {
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
-  t.after(async () => { server.closeAllConnections(); await new Promise(resolve => server.close(resolve)); await rm(dir, { recursive: true, force: true }); });
+  t.after(async () => { server.closeAllConnections(); await new Promise(resolve => server.close(resolve)); });
   return `http://127.0.0.1:${server.address().port}`;
 }
-test('la racine et /liens mènent à /liens/, /healthz répond', async t => {
+async function fixture(t, options = {}) {
+  const dir = await mkdtemp(join(tmpdir(), 'linkinbio-'));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  await mkdir(join(dir, 'client/assets'), { recursive: true }); await mkdir(join(dir, 'server'));
+  await writeFile(join(dir, 'client/assets/a.js'), 'js'); await writeFile(join(dir, 'client/avatar.webp'), 'image');
+  await writeFile(join(dir, 'server/server.js'), "export default { fetch: async r => new Response('app ' + new URL(r.url).pathname + ' ' + (r.headers.get('x-real-ip') ?? '-') + ' ' + (r.body ? await r.text() : ''), { headers: { 'content-type': 'text/html', 'set-cookie': 'a=1; Path=/' } }) };");
+  return ecouter(t, createLiensServer({ appDir: dir, ...options }));
+}
+/** Une requête telle quelle : fetch() normaliserait le chemin et refuserait l'en-tête Host. */
+function brut(url, path, headers = {}, method = 'GET') {
+  return new Promise((ok, ko) => request(url, { path, headers, method }, r => { let body = ''; r.on('data', c => { body += c; }); r.on('end', () => ok({ status: r.statusCode, location: r.headers.location, body })); }).on('error', ko).end());
+}
+test('les anciennes adresses /liens mènent à la racine, /healthz répond', async t => {
   const url = await fixture(t);
-  for (const path of ['/?s=qr', '/liens?s=qr']) { const r = await fetch(url + path, { redirect: 'manual' }); assert.equal(r.status, 308); assert.equal(r.headers.get('location'), '/liens/?s=qr'); }
+  for (const [path, location] of [['/liens?s=qr', '/lilian?s=qr'], ['/liens/?s=qr', '/lilian?s=qr'], ['/liens/camille', '/camille'], ['/liens/admin/connexion?jeton=abc', '/admin/connexion?jeton=abc'], ['/liens/media/x.webp', '/media/x.webp']]) {
+    const r = await fetch(url + path, { redirect: 'manual' }); assert.equal(r.status, 308, path); assert.equal(r.headers.get('location'), location);
+  }
   assert.equal(await (await fetch(`${url}/healthz`)).text(), 'ok');
-  assert.equal((await fetch(`${url}/ailleurs`)).status, 404);
+});
+test('les pages sur hopla.page, le back office sur app.hopla.page', async t => {
+  const url = await fixture(t);
+  const pub = { host: 'hopla.page' }, adm = { host: 'app.hopla.page' };
+  assert.deepEqual(await brut(url, '/admin?paiement=ok', pub), { status: 308, location: 'https://app.hopla.page/admin?paiement=ok', body: '' });
+  assert.equal((await brut(url, '/admin/connexion?jeton=abc', pub)).location, 'https://app.hopla.page/admin/connexion?jeton=abc');
+  assert.equal((await brut(url, '/camille', pub)).body, 'app /camille - ');
+  assert.equal((await brut(url, '/', pub)).body, 'app / - ');
+  assert.equal((await brut(url, '/administrateur', pub)).body, 'app /administrateur - ');
+  assert.deepEqual(await brut(url, '/', adm), { status: 302, location: '/admin', body: '' });
+  assert.equal((await brut(url, '/camille?s=qr', adm)).location, 'https://hopla.page/camille?s=qr');
+  assert.equal((await brut(url, '/legal/cgu', adm)).location, 'https://hopla.page/legal/cgu');
+  for (const path of ['/admin', '/admin/connexion', '/_serverFn/abc', '/api/export', '/media/x.webp']) assert.equal((await brut(url, path, adm)).status, 200, path);
+  assert.equal((await brut(url, '/avatar.webp', adm)).body, 'image');
+  // Un autre nom (localhost en dev) : tout est servi tel quel.
+  assert.equal((await brut(url, '/admin', { host: 'localhost:4400' })).body, 'app /admin - ');
 });
 test("l'app reçoit l'IP, ses cookies passent, les en-têtes anti-iframe sont posés", async t => {
   const url = await fixture(t);
-  const page = await fetch(`${url}/liens/`, { headers: { 'X-Real-IP': '9.9.9.9' } });
-  assert.equal(await page.text(), 'app /liens/ 9.9.9.9 '); assert.equal(page.headers.get('set-cookie'), 'a=1; Path=/liens');
+  const page = await fetch(`${url}/camille`, { headers: { 'X-Real-IP': '9.9.9.9' } });
+  assert.equal(await page.text(), 'app /camille 9.9.9.9 '); assert.equal(page.headers.get('set-cookie'), 'a=1; Path=/');
   assert.equal(page.headers.get('cache-control'), 'no-store'); assert.equal(page.headers.get('x-frame-options'), 'DENY');
   assert.match(page.headers.get('content-security-policy'), /frame-ancestors 'none'/);
-  assert.equal(await (await fetch(`${url}/liens/admin`, { headers: { 'X-Real-IP': 'pas une ip' } })).text(), 'app /liens/admin - ');
-  assert.equal(await (await fetch(`${url}/liens/api/evenement`, { method: 'POST', body: 'x' })).text(), 'app /liens/api/evenement - x');
+  const admin = await fetch(`${url}/admin`, { headers: { 'X-Real-IP': 'pas une ip' } });
+  assert.equal(await admin.text(), 'app /admin - '); assert.equal(admin.headers.get('referrer-policy'), 'no-referrer');
+  assert.equal(await (await fetch(`${url}/api/evenement`, { method: 'POST', body: 'x' })).text(), 'app /api/evenement - x');
 });
 test('les fichiers statiques sont servis, sans sortir du dossier', async t => {
   const url = await fixture(t);
-  const asset = await fetch(`${url}/liens/assets/a.js`); assert.equal(await asset.text(), 'js'); assert.match(asset.headers.get('cache-control'), /immutable/);
-  assert.equal(await (await fetch(`${url}/liens/avatar.webp`)).text(), 'image');
-  assert.equal((await fetch(`${url}/liens/assets/absent.js`)).status, 404);
-  // fetch() normaliserait le chemin : la requête part telle quelle.
-  const raw = await new Promise((ok, ko) => request(url, { path: "/liens/%2e%2e/package.json" }, r => { r.resume(); ok(r.statusCode); }).on('error', ko).end());
-  assert.equal(raw, 400);
-  assert.equal((await fetch(`${url}/liens/api/evenement`, { method: 'POST', body: 'a'.repeat(3_000_001) })).status, 413);
+  const asset = await fetch(`${url}/assets/a.js`); assert.equal(await asset.text(), 'js'); assert.match(asset.headers.get('cache-control'), /immutable/);
+  assert.equal(await (await fetch(`${url}/avatar.webp`)).text(), 'image');
+  assert.equal((await fetch(`${url}/assets/absent.js`)).status, 404);
+  assert.equal((await brut(url, '/%2e%2e/package.json')).status, 400);
+  assert.equal((await fetch(`${url}/api/evenement`, { method: 'POST', body: 'a'.repeat(3_000_001) })).status, 413);
+});
+test("l'API du site de Lilian est relayée, avec l'origine du site pour la page publique", async t => {
+  const recues = [];
+  const site = await ecouter(t, createServer((req, res) => {
+    let body = ''; req.on('data', c => { body += c; });
+    req.on('end', () => { recues.push({ url: req.url, origin: req.headers.origin, ip: req.headers['x-real-ip'], body }); res.writeHead(200, { 'Content-Type': 'application/json', 'Set-Cookie': 'pas=1' }); res.end('{"ok":true}'); });
+  }));
+  const url = await fixture(t, { site });
+  const video = await fetch(`${url}/api/derniere-video`, { headers: { 'X-Real-IP': '9.9.9.9' } });
+  assert.equal(await video.text(), '{"ok":true}'); assert.equal(video.headers.get('content-type'), 'application/json'); assert.equal(video.headers.get('set-cookie'), null);
+  await fetch(`${url}/api/newsletter`, { method: 'POST', headers: { Origin: 'https://hopla.page', 'Content-Type': 'application/json' }, body: '{"email":"a@b.fr"}' });
+  await fetch(`${url}/api/newsletter`, { method: 'POST', headers: { Origin: 'https://ailleurs.example' }, body: '{}' });
+  assert.deepEqual(recues.map(r => [r.url, r.origin ?? '', r.ip ?? '']), [['/api/derniere-video', '', '9.9.9.9'], ['/api/newsletter', 'https://liliansevoumian.fr', ''], ['/api/newsletter', 'https://ailleurs.example', '']]);
+  assert.equal(recues[1].body, '{"email":"a@b.fr"}');
+  assert.equal((await fetch(`${url}/api/derniere-video/vignette?v=abc`)).status, 200);
+  assert.equal(recues.at(-1).url, '/api/derniere-video/vignette?v=abc');
+});
+test("sans LIENS_SITE, l'API du site n'existe pas", async t => {
+  const url = await fixture(t, { site: undefined });
+  assert.equal((await fetch(`${url}/api/derniere-video`)).status, 404);
 });

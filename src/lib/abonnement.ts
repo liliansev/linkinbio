@@ -12,7 +12,7 @@ export type Periode = keyof typeof TARIFS;
 
 /** Ce que Pro change, dit une seule fois pour l'écran d'abonnement. */
 export const AVANTAGES_PRO = [
-  'Plus de mention « Une page faite avec Mes liens » en bas de ta page',
+  'Plus de mention « Une page faite avec Hopla » en bas de ta page',
   'Tes statistiques sur 30 jours, 90 jours et un an (7 jours en gratuit)',
   '200 Mo d’images au lieu de 25 Mo',
 ];

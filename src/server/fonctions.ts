@@ -1,8 +1,8 @@
 import { createMiddleware, createServerFn } from '@tanstack/react-start';
 import { deleteCookie, getCookie, getRequestHeader, getRequestUrl, setCookie } from '@tanstack/react-start/server';
-import type { Bloc, CompteResume, EtatAdmin, PagePublique, Reglages, SignalementResume, Stats } from '../lib/types.ts';
+import type { Bloc, CompteResume, EtatAdmin, Origines, PagePublique, Reglages, SignalementResume, Stats } from '../lib/types.ts';
 import { VERSION_CGU } from '../lib/legal.ts';
-import { PRINCIPAL, TYPES_PRINCIPAL, estEnLigne } from '../lib/types.ts';
+import { ORIGINE_ADMIN, ORIGINE_PUBLIQUE, PRINCIPAL, TYPES_PRINCIPAL, estEnLigne } from '../lib/types.ts';
 import { adresse, email, pseudo, validerBloc, validerReglages } from '../lib/valider.ts';
 import { apercuSite as lireApercu } from './apercu.ts';
 import * as db from './db.ts';
@@ -20,14 +20,19 @@ import type { Periode } from '../lib/abonnement.ts';
  */
 
 const enProduction = () => process.env.NODE_ENV === 'production';
-const origine = () => (enProduction() ? process.env.LIENS_ORIGINE || 'https://liliansevoumian.fr' : getRequestUrl().origin);
+/** Les pages sur hopla.page, le back office sur app.hopla.page ; en dev, tout sur l'adresse de la requête. */
+const origines = (): Origines => (enProduction()
+  ? { page: process.env.LIENS_ORIGINE || ORIGINE_PUBLIQUE, admin: process.env.LIENS_ORIGINE_ADMIN || ORIGINE_ADMIN }
+  : { page: getRequestUrl().origin, admin: getRequestUrl().origin });
 
-const cookieSession = () => ({ httpOnly: true, secure: enProduction(), sameSite: 'lax' as const, path: '/liens' });
+/** Sans `domain`, le cookie reste sur le nom qui l'a posé (app.hopla.page) : les pages publiques ne le reçoivent jamais. */
+const cookieSession = () => ({ httpOnly: true, secure: enProduction(), sameSite: 'lax' as const, path: '/' });
 
-/** Une requête qui écrit doit venir de la page elle-même. */
+/** Une requête qui écrit doit venir de Hopla lui-même. */
 function memeOrigine() {
   const recue = getRequestHeader('origin');
-  if (recue && recue !== origine() && recue !== getRequestUrl().origin) throw new Error('Origine refusée');
+  const o = origines();
+  if (recue && recue !== o.page && recue !== o.admin && recue !== getRequestUrl().origin) throw new Error('Origine refusée');
 }
 
 /** Une session ouverte, conditions acceptées ou non : de quoi les accepter, exporter ses données ou partir. */
@@ -96,7 +101,7 @@ export const demanderLien = createServerFn({ method: 'POST' })
   .validator((data: unknown) => String(data ?? '').slice(0, 200))
   .handler(async ({ data }) => {
     memeOrigine();
-    return demanderConnexion(origine(), process.env, data, fetch, Date.now(), getRequestHeader('x-real-ip') ?? '');
+    return demanderConnexion(origines(), process.env, data, fetch, Date.now(), getRequestHeader('x-real-ip') ?? '');
   });
 
 export const connecter = createServerFn({ method: 'POST' })
@@ -177,7 +182,7 @@ export const envoyerImage = createServerFn({ method: 'POST' })
     if (m[1] === 'webp' ? !webp : !jpeg) throw new Error('Image refusée.');
     return { octets, extension: m[1] === 'webp' ? 'webp' as const : 'jpg' as const };
   })
-  .handler(async ({ data, context }) => `/liens/media/${db.ajouterMedia(context.compte, new Uint8Array(data.octets), data.extension)}.${data.extension}`);
+  .handler(async ({ data, context }) => `/media/${db.ajouterMedia(context.compte, new Uint8Array(data.octets), data.extension)}.${data.extension}`);
 
 export const apercuSite = createServerFn({ method: 'POST' })
   .middleware([session])
@@ -209,7 +214,7 @@ export const ouvrirPaiement = createServerFn({ method: 'POST' })
   .handler(async ({ data, context }) => {
     const compte = db.compteParId(context.compte)!;
     if (db.abonnement(compte).plan === 'pro') throw new Error('Tu es déjà en Pro : gère ton abonnement depuis le portail.');
-    return creem.ouvrirPaiement(process.env, fetch, compte, data, origine());
+    return creem.ouvrirPaiement(process.env, fetch, compte, data, origines().admin);
   });
 
 export const ouvrirPortail = createServerFn({ method: 'POST' })
@@ -234,7 +239,7 @@ export const inviterCompte = createServerFn({ method: 'POST' })
     if (data.email === adresseAdmin(process.env).toLowerCase()) return { ok: false, message: 'C’est l’adresse de ton propre compte.' };
     let compte: db.Compte;
     try { compte = db.creerCompte(data.email, data.pseudo); } catch (error) { return { ok: false, message: (error as Error).message }; }
-    const r = await inviter(origine(), process.env, compte);
+    const r = await inviter(origines(), process.env, compte);
     return r.ok ? r : { ok: false, message: `Compte créé, mais l’invitation n’est pas partie : ${r.message} Renvoie-la depuis la liste.` };
   });
 
@@ -245,7 +250,7 @@ export const renvoyerInvitation = createServerFn({ method: 'POST' })
     const compte = db.compteParId(data);
     if (!compte || compte.id === PRINCIPAL) return { ok: false, message: 'Compte introuvable.' };
     if (compte.statut !== 'actif') return { ok: false, message: 'Réactive le compte avant de lui renvoyer un lien.' };
-    return inviter(origine(), process.env, compte);
+    return inviter(origines(), process.env, compte);
   });
 
 const motif = (v: unknown) => String(v ?? '').slice(0, 2000);
@@ -273,7 +278,7 @@ export const envoyerSignalement = createServerFn({ method: 'POST' })
   .validator((data: unknown) => (data ?? {}) as Record<string, unknown>)
   .handler(async ({ data }) => {
     memeOrigine();
-    return signaler(process.env, fetch, { page: data.page, motif: data.motif, details: data.details, email: data.email, bonneFoi: data.bonneFoi }, getRequestHeader('x-real-ip') ?? '', origine());
+    return signaler(process.env, fetch, { page: data.page, motif: data.motif, details: data.details, email: data.email, bonneFoi: data.bonneFoi }, getRequestHeader('x-real-ip') ?? '', origines());
   });
 
 export const listerSignalements = createServerFn({ method: 'GET' })
@@ -286,4 +291,4 @@ export const traiterSignalement = createServerFn({ method: 'POST' })
     const o = (data ?? {}) as { id?: unknown; statut?: unknown; decision?: unknown };
     return { id: String(o.id ?? '').slice(0, 40), statut: o.statut === 'suspendu' ? 'suspendu' as const : 'sans-suite' as const, decision: motif(o.decision) };
   })
-  .handler(async ({ data }) => { await traiter(process.env, fetch, data.id, data.statut, data.decision, origine()); return { ok: true }; });
+  .handler(async ({ data }) => { await traiter(process.env, fetch, data.id, data.statut, data.decision, origines().page); return { ok: true }; });
