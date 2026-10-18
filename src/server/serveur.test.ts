@@ -356,6 +356,13 @@ test('offre Pro : webhooks Creem signés, idempotents, dans le désordre', async
   assert.equal(envoyer({ id: 'evt_4', eventType: 'subscription.expired', created_at: t + 41 * jour, object: { id: 'sub_1', status: 'expired', customer: 'cust_1' } }).message, 'ancien abonnement');
   assert.equal(db.compteEstPro(lea.id, t + 41 * jour), true);
 
+  // Un autre produit de la boutique, payé par le même client, ne touche pas à son Pro.
+  const autre = { id: 'sub_f', status: 'active', customer: 'cust_1', product: { id: 'prod_formation' } };
+  assert.equal(envoyer({ id: 'evt_f1', eventType: 'subscription.active', created_at: t + 42 * jour, object: autre }).message, 'ignoré : autre produit (prod_formation)');
+  assert.equal(envoyer({ id: 'evt_f2', eventType: 'checkout.completed', created_at: t + 42 * jour, object: { product: 'prod_formation', customer: 'cust_1', subscription: { ...autre, product: undefined } } }).message, 'ignoré : autre produit (prod_formation)');
+  assert.equal(db.compteParId(lea.id)!.creem_abonnement, 'sub_2');
+  assert.equal(envoyer({ id: 'evt_f3', eventType: 'subscription.paid', created_at: t + 42 * jour, object: { id: 'sub_2', status: 'active', customer: 'cust_1', product: 'prod_an' } }).status, 200, 'les produits Hopla passent');
+
   // Des métadonnées qui visent le compte principal ou un compte inconnu n'accordent rien.
   assert.equal(envoyer({ id: 'evt_5', eventType: 'subscription.active', created_at: t, object: { id: 'sub_x', status: 'active', customer: 'cust_x', metadata: { compte: P } } }).message, 'aucun compte');
   assert.equal(envoyer({ id: 'evt_6', eventType: 'refund.created', created_at: t, object: {} }).message, 'ignoré : refund.created');
