@@ -255,7 +255,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
       )}
 
       {edition && (
-        <EditeurBloc adressePage={urlPage(compte)} bloc={edition.bloc} reglages={reglages} nouveau={edition.nouveau} clics={clics[edition.bloc.id] ?? 0} onFermer={() => setEdition(null)}
+        <EditeurBloc adressePage={urlPage(compte)} bloc={edition.bloc} reglages={reglages} nouveau={edition.nouveau} clics={clics[edition.bloc.id] ?? 0} prises={initial.places?.[edition.bloc.id] ?? 0} onFermer={() => setEdition(null)}
           onEnregistrer={enregistrerBloc} onSupprimer={supprimer} onDupliquer={dupliquer} envoyerImage={d => api.envoyerImage(d)} apercuSite={u => api.apercuSite(u)} />
       )}
 

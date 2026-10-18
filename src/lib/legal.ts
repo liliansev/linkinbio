@@ -10,7 +10,7 @@
 
 import { TARIFS, euros } from './abonnement.ts';
 
-export const VERSION_CGU = '2026-10-18.4';
+export const VERSION_CGU = '2026-10-18.5';
 export const CONTACT_LEGAL = 'bonjour@liliansevoumian.fr';
 
 export interface DocumentLegal { titre: string; resume: string; sections: { titre: string; texte: string[] }[] }
@@ -41,7 +41,7 @@ export const LEGAL: Record<NomDocument, DocumentLegal> = {
       ] },
       { titre: 'Ce que tu publies', texte: [
         'Tu restes propriétaire de ce que tu publies (textes, images, liens) et seul responsable de son contenu. Tu nous autorises à l’héberger et à l’afficher sur ta page, le temps que ton compte existe.',
-        'Sont interdits : les contenus illégaux, les arnaques et le hameçonnage, les liens vers des logiciels malveillants, l’incitation à la haine ou à la violence, le harcèlement, les contenus pornographiques ou impliquant des mineurs, l’usurpation d’identité, et la reproduction d’œuvres ou d’images sans en avoir les droits.',
+        'Sont interdits : les contenus illégaux, les arnaques et le hameçonnage, les liens vers des logiciels malveillants, l’incitation à la haine ou à la violence, le harcèlement, les contenus pornographiques ou impliquant des mineurs, l’usurpation d’identité, les faux avis, les témoignages inventés et les chiffres trompeurs (bloc « Avis et preuves »), et la reproduction d’œuvres ou d’images sans en avoir les droits.',
       ] },
       { titre: 'Signalements et modération', texte: [
         'Chaque page porte un lien « Signaler ». Tout signalement est lu par une personne, pas par un algorithme, et traité dans les meilleurs délais.',
@@ -95,6 +95,7 @@ export const LEGAL: Record<NomDocument, DocumentLegal> = {
         'Aucun cookie n’est déposé, aucune publicité, aucun traceur d’un site à l’autre. Le serveur compte les vues et les clics de la page pour son propriétaire, avec une empreinte anonyme renouvelée chaque jour ; ton adresse IP n’est pas enregistrée. Ces statistiques sont gardées 13 mois. C’est une mesure d’audience strictement limitée, qui entre dans l’exemption de consentement prévue par la CNIL.',
         'Tu peux t’y opposer : un navigateur qui bloque les requêtes vers hopla.page/api/evenement (la plupart des bloqueurs de contenus le permettent) n’est pas compté, sans que la page cesse de fonctionner. Le propriétaire de la page est responsable de ces statistiques ; Hopla les traite pour lui.',
         'Si tu t’inscris à la liste d’une page (« Rejoins ma liste »), ton adresse et, s’il est demandé, ton prénom vont à son propriétaire, qui seul décide des e-mails qu’il t’envoie ; il peut les transmettre à son outil d’envoi (Brevo ou Mailchimp). Pour te désinscrire ou faire effacer ton adresse, écris-lui, ou à ' + CONTACT_LEGAL + '.',
+        'Pour un lien à accès réservé (mode drop), Hopla garde, pour compter les places, une empreinte chiffrée propre à ce lien, tirée de ton adresse IP et de ton navigateur : elle ne sert qu’à ça, ne permet pas de te suivre d’un lien à l’autre, et s’efface au bout de treize mois.',
       ] },
       { titre: 'Si tu as un compte', texte: [
         'Ton adresse e-mail, ton pseudo, la date de création et de dernière connexion, la version des conditions acceptées, et ce que tu publies (réglages, blocs, images). Base légale : l’exécution du contrat (les CGU). Ces données sont gardées tant que ton compte existe, et effacées dès que tu le supprimes.',

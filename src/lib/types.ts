@@ -8,7 +8,7 @@ import type { Abonnement, Periode } from './abonnement.ts';
 import type { Creneau } from './moments.ts';
 import type { Audience, EffetAudience } from './provenance.ts';
 
-export const TYPES_BLOC = ['lien', 'titre', 'texte', 'video', 'derniere-video', 'newsletter', 'inscription'] as const;
+export const TYPES_BLOC = ['lien', 'titre', 'texte', 'video', 'derniere-video', 'newsletter', 'inscription', 'preuve'] as const;
 export type TypeBloc = (typeof TYPES_BLOC)[number];
 
 /** Les mouvements qui attirent l'œil sur un bouton. */
@@ -53,7 +53,40 @@ export interface Bloc {
   audience: { sources: Audience[]; effet: EffetAudience } | null;
   /** « Rejoins ma liste » : demander aussi le prénom. */
   demanderPrenom: boolean;
+  /** Le mode drop : un code à taper, des places comptées, ou les deux. L'adresse ne part qu'une fois le lien débloqué. */
+  acces: Acces | null;
+  /** Sur la page publique seulement : les places qui restent d'un drop (null = sans limite). */
+  restantes?: number | null;
+  /** Un avis, un chiffre, un témoignage (bloc `preuve`). */
+  preuve: Preuve | null;
+  /** Le titre, le sous-titre et la description dans d'autres langues. */
+  traductions: Partial<Record<Langue, Traduction>>;
 }
+
+export interface Acces {
+  /** Le code à taper, vide = pas de code. Jamais envoyé à la page publique (seulement `•` s'il y en a un). */
+  code: string;
+  /** Le nombre de places, 0 = sans limite. */
+  places: number;
+}
+
+export const GENRES_PREUVE = ['note', 'compteur', 'temoignage'] as const;
+export type GenrePreuve = (typeof GENRES_PREUVE)[number];
+export interface Preuve {
+  genre: GenrePreuve;
+  /** Note sur 5 (`note`). */
+  note: number;
+  /** Le nombre d'avis (`note`) ou le chiffre affiché (`compteur`). */
+  nombre: number;
+  /** Où vit la preuve : Google, Trustpilot, Malt, YouTube… */
+  source: string;
+}
+
+/** Les langues dans lesquelles une page peut se traduire, en plus du français. */
+export const LANGUES = ['en', 'es', 'de', 'it'] as const;
+export type Langue = (typeof LANGUES)[number];
+export type LangueVisiteur = Langue | 'fr';
+export interface Traduction { titre: string; sousTitre: string; description: string }
 
 export const FORMATS_VEDETTE = ['bouton', 'bandeau', 'carte'] as const;
 export type FormatVedette = (typeof FORMATS_VEDETTE)[number];
@@ -82,6 +115,10 @@ export interface Reglages {
   ouvrirApps: boolean;
   /** Le lundi matin, le résumé de la semaine par e-mail. */
   resumeHebdo: boolean;
+  /** Les langues proposées en plus du français : la page parle celle du visiteur. */
+  langues: Langue[];
+  /** La bio dans ces langues. */
+  bioTraduite: Partial<Record<Langue, string>>;
   /** Le mouvement des liens mis en avant (un bloc peut choisir le sien). */
   animation: Animation;
   /** La mise en page sur un grand écran ; sur téléphone, la page reste une colonne. */
@@ -135,6 +172,8 @@ export interface PagePublique {
   compte: ComptePage & { pro: boolean };
   /** L'instant où la page a été composée : le compte à rebours part de là, au serveur comme au navigateur. */
   maintenant?: number;
+  /** La langue dans laquelle la page s'affiche (celle du visiteur, si la page la propose). */
+  langue?: LangueVisiteur;
 }
 
 export interface EtatAdmin {
@@ -146,6 +185,8 @@ export interface EtatAdmin {
   paiement: boolean;
   /** Clics des 30 derniers jours, par bloc. */
   clics: Record<string, number>;
+  /** Les places prises de chaque drop. */
+  places: Record<string, number>;
   /** Vrai quand la base vit en mémoire : rien ne survivra au redémarrage. */
   stockageEphemere: boolean;
   /** Faux tant que le compte n'a pas accepté la version en vigueur des CGU (toujours vrai pour le compte principal). */
@@ -250,12 +291,13 @@ export interface SignalementResume {
 
 export function nouveauBloc(type: TypeBloc, id: string): Bloc {
   const titres: Record<TypeBloc, string> = {
-    lien: '', titre: 'Nouvelle section', texte: '', video: 'Ma vidéo', 'derniere-video': 'Ma dernière vidéo', newsletter: 'Ma newsletter', inscription: 'Rejoins ma liste',
+    lien: '', titre: 'Nouvelle section', texte: '', video: 'Ma vidéo', 'derniere-video': 'Ma dernière vidéo', newsletter: 'Ma newsletter', inscription: 'Rejoins ma liste', preuve: 'Ce qu’ils en disent',
   };
   return {
     id, type, titre: titres[type], url: '', sousTitre: type === 'newsletter' || type === 'inscription' ? 'Un e-mail de temps en temps, rien de plus.' : '', description: '', icone: '', image: '',
     public: true, indexable: true, vedette: false, format: 'bandeau', teinte: 'accent', animation: 'auto', debut: '', fin: '',
-    compteARebours: false, creneau: null, audience: null, demanderPrenom: false,
+    compteARebours: false, creneau: null, audience: null, demanderPrenom: false, acces: null,
+    preuve: type === 'preuve' ? { genre: 'note', note: 5, nombre: 0, source: 'Google' } : null, traductions: {},
   };
 }
 

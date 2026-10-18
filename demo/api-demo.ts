@@ -52,7 +52,7 @@ function statsFictives(jours: number): Stats {
 export const apiDemo: Api = {
   async charger(): Promise<EtatAdmin> {
     const s = statsFictives(30);
-    return { ...etat, clics: Object.fromEntries(s.blocs.map(b => [b.id, b.clics])), stockageEphemere: false, cguAJour: true, compte: { pseudo: 'lilian', principal: true, email: '', pro: true },
+    return { ...etat, clics: Object.fromEntries(s.blocs.map(b => [b.id, b.clics])), places: {}, stockageEphemere: false, cguAJour: true, compte: { pseudo: 'lilian', principal: true, email: '', pro: true },
       abonnement: { plan: 'pro', statut: '', finPeriode: null, portail: false }, paiement: false };
   },
   async enregistrerBloc(bloc) {
@@ -157,7 +157,7 @@ export function recommencerNouveau() {
 export const apiNouveau: Api = {
   ...apiDemo,
   async charger(): Promise<EtatAdmin> {
-    return { reglages: nouveau.reglages, blocs: nouveau.blocs, clics: {}, stockageEphemere: false, cguAJour: nouveau.cgu, compte: { pseudo: 'camille', principal: false, email: 'camille@exemple.fr', pro: false },
+    return { reglages: nouveau.reglages, blocs: nouveau.blocs, clics: {}, places: {}, stockageEphemere: false, cguAJour: nouveau.cgu, compte: { pseudo: 'camille', principal: false, email: 'camille@exemple.fr', pro: false },
       abonnement: { plan: 'gratuit', statut: '', finPeriode: null, portail: false }, paiement: false };
   },
   async enregistrerBloc(bloc) {

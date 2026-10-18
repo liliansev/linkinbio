@@ -6,6 +6,8 @@ import * as liste from './liste.ts';
 import { planifierResumes } from './resume.ts';
 import { VERSION_CGU } from '../lib/legal.ts';
 import { ORIGINE_ADMIN, ORIGINE_PUBLIQUE, PRINCIPAL, TYPES_PRINCIPAL } from '../lib/types.ts';
+import { masquerAcces } from '../lib/acces.ts';
+import { langueDuVisiteur, traduirePage } from '../lib/langues.ts';
 import { composerMoment } from '../lib/moments.ts';
 import { composerAudience, provenance } from '../lib/provenance.ts';
 import { adresse, email, pseudo, validerBloc, validerReglages } from '../lib/valider.ts';
@@ -75,27 +77,32 @@ function reglagesPourCompte(compte: string, r: Reglages): Reglages {
 /** La page de Lilian sans pseudo, celle d'un autre compte avec. Null si elle n'existe pas ou est suspendue. */
 export const lirePagePublique = createServerFn({ method: 'GET' })
   .validator((data: unknown) => {
-    const o = (typeof data === 'string' ? { pseudo: data } : data ?? {}) as { pseudo?: unknown; s?: unknown };
-    return { pseudo: typeof o.pseudo === 'string' ? o.pseudo.toLowerCase().slice(0, 40) : '', s: typeof o.s === 'string' ? o.s.slice(0, 40) : '' };
+    const o = (typeof data === 'string' ? { pseudo: data } : data ?? {}) as { pseudo?: unknown; s?: unknown; lang?: unknown };
+    const court = (v: unknown, n: number) => (typeof v === 'string' ? v.slice(0, n) : '');
+    return { pseudo: court(o.pseudo, 40).toLowerCase(), s: court(o.s, 40), lang: court(o.lang, 5) };
   })
   .handler(async ({ data }): Promise<PagePublique | null> => {
     const compte = data.pseudo ? db.compteParPseudo(data.pseudo) : db.compteParId(PRINCIPAL);
     if (!compte || compte.statut !== 'actif') return null;
     const maintenant = Date.now();
-    return {
-      reglages: reglagesPourCompte(compte.id, db.lireReglages(compte.id)),
-      // Le référent d'une page qui se recharge elle-même (hopla.page) ne dit rien de la provenance.
-      blocs: composerAudience(composerMoment(pourCompte(compte.id, db.lireBlocs(compte.id)), maintenant), provenance({ s: data.s, ua: getRequestHeader('user-agent') ?? '', referent: getRequestHeader('referer') ?? '' })),
+    const reglages = reglagesPourCompte(compte.id, db.lireReglages(compte.id));
+    // Le référent d'une page qui se recharge elle-même (hopla.page) ne dit rien de la provenance.
+    const blocs = composerAudience(composerMoment(pourCompte(compte.id, db.lireBlocs(compte.id)), maintenant), provenance({ s: data.s, ua: getRequestHeader('user-agent') ?? '', referent: getRequestHeader('referer') ?? '' }));
+    const prises = db.placesParBloc(compte.id);
+    const page: PagePublique = {
+      reglages,
+      blocs: masquerAcces(blocs, id => prises[id] ?? 0),
       compte: { pseudo: compte.pseudo, principal: compte.id === PRINCIPAL, pro: db.abonnement(compte, maintenant).plan === 'pro' },
       maintenant,
     };
+    return traduirePage(page, langueDuVisiteur(getRequestHeader('accept-language') ?? '', reglages.langues, data.lang));
   });
 
 function etat(compte: string): EtatAdmin {
   const c = db.compteParId(compte)!;
   const abonnement = db.abonnement(c);
   return {
-    reglages: db.lireReglages(compte), blocs: db.lireBlocs(compte), clics: db.clicsParBloc(compte, 30), stockageEphemere: db.stockageEphemere(),
+    reglages: db.lireReglages(compte), blocs: db.lireBlocs(compte), clics: db.clicsParBloc(compte, 30), places: db.placesParBloc(compte), stockageEphemere: db.stockageEphemere(),
     compte: { pseudo: c.pseudo, principal: compte === PRINCIPAL, email: c.email, pro: abonnement.plan === 'pro' }, cguAJour: cguAJour(compte),
     abonnement, paiement: compte !== PRINCIPAL && !!creem.config(process.env),
   };

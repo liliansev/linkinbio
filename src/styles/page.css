@@ -642,3 +642,63 @@ button.lp-ed-zone:focus-visible { outline: 2px solid var(--vedette); outline-off
 .lp-piege { position: absolute !important; left: -9999px; width: 1px; height: 1px; opacity: 0; }
 .lp-mention { margin: 10px 0 0; font-size: 0.74rem; line-height: 1.4; color: var(--doux); }
 .lp-mention a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+
+/* ---- Mode drop : un lien à débloquer ---- */
+.lp-drop { display: flex; flex-direction: column; gap: 10px; }
+.lp-drop-tete { width: 100%; border: 0; font: inherit; text-align: left; cursor: pointer; }
+.lp-drop-tete:disabled { cursor: default; }
+.lp-drop[data-complet] .lp-drop-tete { opacity: 0.6; }
+.lp-drop[data-debloque] .lp-drop-tete:hover, .lp-drop[data-complet] .lp-drop-tete:hover { transform: none; }
+.lp-drop-places {
+  flex: none; padding: 6px 12px; border-radius: 999px; font-size: 0.8rem; font-weight: 640; white-space: nowrap;
+  background: color-mix(in srgb, var(--lp-encre) 13%, transparent);
+}
+.lp-drop-form { display: flex; gap: 8px; }
+.lp-drop-form input {
+  flex: 1 1 0; min-width: 0; min-height: 50px; padding: 0 18px; font: inherit; font-size: 16px; letter-spacing: 0.04em;
+  border-radius: var(--r); border: 0; color: var(--texte);
+  background: color-mix(in srgb, var(--texte) 9%, transparent);
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--texte) 22%, transparent);
+}
+.lp-drop-form input::placeholder { color: var(--doux); letter-spacing: 0; }
+.lp-drop-form input:focus { outline: 2px solid var(--texte); outline-offset: 1px; }
+.lp-drop .lp-btn-compact, .lp-drop-ouvrir { --lp-fond: var(--vedette); --lp-encre: var(--vedette-texte); }
+.lp-drop-ouvrir { gap: 8px; padding: 0 22px; animation: lp-drop-ouvre 0.45s cubic-bezier(0.16, 1, 0.3, 1); }
+.lp-drop .lp-newsletter-erreur { margin: 0; text-align: center; }
+@keyframes lp-drop-ouvre { from { opacity: 0; translate: 0 -6px; } }
+
+/* ---- Avis et preuves ---- */
+.lp-preuve {
+  display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center;
+  border-radius: var(--rc); padding: 18px 18px; color: var(--texte); text-decoration: none;
+  background: color-mix(in srgb, var(--texte) 7%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--texte) 12%, transparent);
+  transition: background-color 0.2s ease;
+}
+a.lp-preuve:hover { background: color-mix(in srgb, var(--texte) 11%, transparent); }
+a.lp-preuve:focus-visible { outline: 3px solid var(--texte); outline-offset: 3px; }
+.lp-preuve-titre { font-size: 0.9rem; font-weight: 560; color: var(--doux); }
+.lp-preuve-ligne { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.lp-preuve-note { font-size: 1rem; }
+.lp-preuve-note b { font-size: 1.35rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.lp-etoiles { position: relative; display: inline-flex; line-height: 0; }
+.lp-etoiles > span { display: inline-flex; gap: 2px; }
+.lp-etoiles svg { fill: currentColor; flex: none; }
+.lp-etoiles-fond { color: color-mix(in srgb, var(--texte) 18%, transparent); }
+.lp-etoiles-plein { position: absolute; inset: 0 auto 0 0; overflow: hidden; color: var(--vedette); }
+.lp-preuve-chiffre { font-size: 2.1rem; font-weight: 720; line-height: 1.05; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.lp-preuve-libelle { font-size: 0.95rem; font-weight: 520; }
+.lp-preuve-temoignage { align-items: flex-start; text-align: left; padding: 20px 20px 18px; }
+.lp-preuve-citation { margin: 0; font-size: 1.02rem; line-height: 1.5; font-weight: 470; white-space: pre-line; }
+.lp-preuve-citation::before { content: '“'; display: block; font-size: 2.4rem; line-height: 0.6; margin-bottom: 6px; color: var(--vedette); font-weight: 700; }
+.lp-preuve-auteur { font-size: 0.86rem; font-weight: 600; }
+
+/* ---- Langues ---- */
+.lp-langues { display: flex; justify-content: center; flex-wrap: wrap; gap: 6px; margin: 28px 0 0; }
+.lp-langues a {
+  min-height: 36px; display: inline-flex; align-items: center; padding: 0 12px; border-radius: 999px;
+  font-size: 0.8rem; font-weight: 560; color: var(--doux); text-decoration: none;
+}
+.lp-langues a:hover { color: var(--texte); }
+.lp-langues a[aria-current] { color: var(--texte); background: color-mix(in srgb, var(--texte) 10%, transparent); }
+.lp-langues a:focus-visible { outline: 3px solid var(--texte); outline-offset: 2px; }

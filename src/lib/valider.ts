@@ -1,5 +1,5 @@
-import { ANIMATIONS, ANIMATIONS_BLOC, FORMATS_VEDETTE, FORMES_BOUTON, MISES_EN_PAGE_BUREAU, RESEAUX, STYLES_BOUTON, TEINTES_VEDETTE, TYPES_BLOC } from './types.ts';
-import type { Bloc, Reglages } from './types.ts';
+import { ANIMATIONS, ANIMATIONS_BLOC, FORMATS_VEDETTE, FORMES_BOUTON, GENRES_PREUVE, LANGUES, MISES_EN_PAGE_BUREAU, RESEAUX, STYLES_BOUTON, TEINTES_VEDETTE, TYPES_BLOC } from './types.ts';
+import type { Acces, Bloc, Langue, Preuve, Reglages, Traduction } from './types.ts';
 import { idTheme } from './themes.ts';
 import { EFFETS_CRENEAU, fuseauValide } from './moments.ts';
 import type { Creneau } from './moments.ts';
@@ -60,6 +60,40 @@ export function audience(v: unknown): { sources: Audience[]; effet: EffetAudienc
   return sources.length ? { sources, effet: parmi(o.effet, EFFETS_AUDIENCE, 'avant') } : null;
 }
 
+const nombreEntre = (v: unknown, min: number, max: number, defaut: number) => { const n = Number(v); return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : defaut; };
+
+/** Le mode drop d'un lien : un code, des places, ou null s'il n'y a ni l'un ni l'autre. */
+export function acces(v: unknown): Acces | null {
+  if (!v || typeof v !== 'object') return null;
+  const o = v as Record<string, unknown>;
+  const code = texte(o.code, 40), places = Math.round(nombreEntre(o.places, 0, 100_000, 0));
+  return code || places ? { code, places } : null;
+}
+
+export function preuve(v: unknown): Preuve | null {
+  if (!v || typeof v !== 'object') return null;
+  const o = v as Record<string, unknown>;
+  return {
+    genre: parmi(o.genre, GENRES_PREUVE, 'note'),
+    note: Math.round(nombreEntre(o.note, 0, 5, 5) * 10) / 10,
+    nombre: Math.round(nombreEntre(o.nombre, 0, 1e10, 0)),
+    source: texte(o.source, 30),
+  };
+}
+
+/** Les traductions d'un bloc : seulement les langues connues, seulement les champs remplis. */
+export function traductions(v: unknown): Partial<Record<Langue, Traduction>> {
+  if (!v || typeof v !== 'object') return {};
+  const r: Partial<Record<Langue, Traduction>> = {};
+  for (const l of LANGUES) {
+    const t = (v as Record<string, unknown>)[l] as Record<string, unknown> | undefined;
+    if (!t || typeof t !== 'object') continue;
+    const tr = { titre: texte(t.titre, 1000), sousTitre: texte(t.sousTitre, 240), description: texte(t.description, 400) };
+    if (tr.titre || tr.sousTitre || tr.description) r[l] = tr;
+  }
+  return r;
+}
+
 /** Les noms d'avant le 16 octobre 2026, gardés pour les blocs déjà enregistrés. */
 const ANCIENNES: Record<string, string> = { brille: 'reflet', pulse: 'respiration', secoue: 'secousse' };
 
@@ -87,6 +121,9 @@ export function validerBloc(v: unknown, id: string): Bloc {
     creneau: creneau(o.creneau),
     audience: audience(o.audience),
     demanderPrenom: bool(o.demanderPrenom, false),
+    acces: type === 'lien' ? acces(o.acces) : null,
+    preuve: type === 'preuve' ? preuve(o.preuve) ?? { genre: 'note', note: 5, nombre: 0, source: '' } : null,
+    traductions: traductions(o.traductions),
   };
 }
 
@@ -109,6 +146,8 @@ export function validerReglages(v: unknown, base: Reglages): Reglages {
     partage: bool(o.partage, base.partage),
     ouvrirApps: bool(o.ouvrirApps, base.ouvrirApps ?? true),
     resumeHebdo: bool(o.resumeHebdo, base.resumeHebdo ?? true),
+    langues: Array.isArray(o.langues) ? LANGUES.filter(l => o.langues.includes(l)) : base.langues ?? [],
+    bioTraduite: o.bioTraduite && typeof o.bioTraduite === 'object' ? Object.fromEntries(LANGUES.map(l => [l, texte(o.bioTraduite[l], 300)]).filter(([, b]) => b)) : base.bioTraduite ?? {},
     bureau: parmi(o.bureau, MISES_EN_PAGE_BUREAU, base.bureau),
     animation: parmi(o.animation, ANIMATIONS, base.animation),
   };

@@ -11,7 +11,7 @@ import { BlocPublic } from '../components/PageLiens.tsx';
 import { BoutonPrincipal, Champ, Feuille, Interrupteur, NOMS_ANIMATIONS, Segments, classeSaisie, preparerImage, vibrer } from './ui.tsx';
 import { TYPES } from './OngletLiens.tsx';
 import { appDe } from '../lib/ouvrirApp.ts';
-import { RegleAudience, RegleMoment } from './ReglesBloc.tsx';
+import { ChampsPreuve, RegleAcces, RegleAudience, RegleMoment, RegleTraductions } from './ReglesBloc.tsx';
 
 const AIDE_FORMATS = {
   bouton: 'La taille des autres boutons, à la couleur choisie.',
@@ -19,7 +19,7 @@ const AIDE_FORMATS = {
   carte: 'Un grand visuel au-dessus : l’image du lien, ou son picto en grand.',
 } as const;
 
-export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, onSupprimer, onDupliquer, envoyerImage, apercuSite, clics, adressePage }: {
+export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, onSupprimer, onDupliquer, envoyerImage, apercuSite, clics, adressePage, prises = 0 }: {
   bloc: Bloc | null;
   reglages: Reglages;
   nouveau: boolean;
@@ -32,6 +32,8 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
   clics: number;
   /** L'adresse publique de la page, pour les astuces (`?s=tiktok`). */
   adressePage: string;
+  /** Les places déjà prises, quand le lien est un drop. */
+  prises?: number;
 }) {
   const [b, setB] = useState<Bloc | null>(bloc);
   const [erreur, setErreur] = useState('');
@@ -42,7 +44,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
   if (!b) return null;
   const maj = (champs: Partial<Bloc>) => setB({ ...b, ...champs });
   const type = TYPES.find(t => t.type === b.type)!;
-  const avecUrl = b.type === 'lien' || b.type === 'video';
+  const avecUrl = b.type === 'lien' || b.type === 'video' || b.type === 'preuve';
 
   /** Vérifie le bloc ; renvoie la version à enregistrer, ou rien si un champ manque. */
   function valider(): Bloc | null {
@@ -51,6 +53,8 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
     if (b.type === 'lien' && !url) { setErreur('Indique l’adresse du lien.'); return null; }
     if (b.type === 'video' && !idYoutube(url)) { setErreur('Colle l’adresse d’une vidéo YouTube.'); return null; }
     if ((b.type === 'titre' || b.type === 'texte') && !b.titre.trim()) { setErreur('Écris le texte du bloc.'); return null; }
+    if (b.type === 'preuve' && b.preuve?.genre === 'temoignage' && !b.description.trim()) { setErreur('Écris le témoignage.'); return null; }
+    if (b.type === 'preuve' && b.preuve?.genre === 'compteur' && !b.preuve.nombre) { setErreur('Indique le chiffre à montrer.'); return null; }
     return { ...b, url };
   }
   const theme = themeParId(reglages.theme);
@@ -105,13 +109,13 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
         </div>
       )}>
       <div className="flex flex-col gap-4 pt-1">
-        {b.type === 'lien' && (
+        {(b.type === 'lien' || b.type === 'preuve') && (
           // L'aperçu reste collé en haut de la feuille : chaque réglage se voit sans remonter.
           <div className="sticky top-0 z-10 -mx-5 bg-[#121a2b] px-5 pb-3 pt-1 shadow-[0_14px_14px_-12px_#121a2b]">
             <div className="lp lp-mini -mx-1 rounded-[20px] p-4 ring-1 ring-white/[0.06]" style={variablesTheme(theme) as CSSProperties}
               data-bouton={reglages.bouton.style} data-forme={reglages.bouton.forme} data-police={theme.police} data-decor={theme.decor} aria-label="Aperçu du bouton">
               <div className="pointer-events-none" inert>
-                <BlocPublic key={`${b.format}-${b.teinte}-${b.animation}-${b.vedette}`} bloc={{ ...b, url: b.url || '#', titre: b.titre || 'Texte du bouton', public: true }} reglages={reglages} clic={() => {}} cible={{}} apercu />
+                <BlocPublic key={`${b.format}-${b.teinte}-${b.animation}-${b.vedette}`} bloc={{ ...b, url: b.type === 'preuve' ? b.url : b.url || '#', titre: b.titre || (b.type === 'lien' ? 'Texte du bouton' : ''), public: true, restantes: b.acces?.places ? Math.max(0, b.acces.places - prises) : null }} reglages={reglages} clic={() => {}} cible={{}} apercu />
               </div>
             </div>
           </div>
@@ -119,18 +123,20 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
         {erreur && <p role="alert" className="rounded-xl bg-red-500/15 px-3.5 py-2.5 text-[14px] text-red-200">{erreur}</p>}
 
         {avecUrl && (
-          <Champ label={b.type === 'video' ? 'Adresse de la vidéo YouTube' : 'Adresse'}
+          <Champ label={b.type === 'video' ? 'Adresse de la vidéo YouTube' : b.type === 'preuve' ? 'Lien vers les avis (facultatif)' : 'Adresse'}
             aide={b.type === 'lien' && reglages.ouvrirApps && appDe(adresse(b.url)) ? <span className="inline-flex items-center gap-1.5 text-peche/90"><Icone nom="ui-ok" taille={13} />Depuis Instagram ou TikTok, ce lien s’ouvre dans l’app {appDe(adresse(b.url))}.</span> : undefined}>
             <input className={classeSaisie} type="url" inputMode="url" autoCapitalize="none" autoCorrect="off" placeholder={b.type === 'video' ? 'https://youtu.be/…' : 'https://…'}
               value={b.url} onChange={e => maj({ url: e.target.value })} autoFocus={nouveau} />
           </Champ>
         )}
 
-        {b.type !== 'derniere-video' && (
-          <Champ label={b.type === 'lien' ? 'Texte du bouton' : b.type === 'texte' ? 'Texte' : 'Titre'}>
+        {b.type === 'preuve' && <ChampsPreuve b={b} maj={maj} />}
+
+        {b.type !== 'derniere-video' && !(b.type === 'preuve' && b.preuve?.genre === 'temoignage') && (
+          <Champ label={b.type === 'lien' ? 'Texte du bouton' : b.type === 'texte' ? 'Texte' : b.type === 'preuve' ? (b.preuve?.genre === 'compteur' ? 'Ce que compte ce chiffre' : 'Petit titre (facultatif)') : 'Titre'}>
             {b.type === 'texte'
               ? <textarea className={`${classeSaisie} min-h-28`} value={b.titre} onChange={e => maj({ titre: e.target.value })} maxLength={1000} autoFocus={nouveau} />
-              : <input className={classeSaisie} value={b.titre} onChange={e => maj({ titre: e.target.value })} maxLength={160} placeholder={b.type === 'lien' ? 'Mon super lien' : ''} autoFocus={nouveau && !avecUrl} />}
+              : <input className={classeSaisie} value={b.titre} onChange={e => maj({ titre: e.target.value })} maxLength={160} placeholder={b.type === 'lien' ? 'Mon super lien' : b.type === 'preuve' && b.preuve?.genre === 'compteur' ? 'abonnés sur YouTube' : ''} autoFocus={nouveau && !avecUrl} />}
           </Champ>
         )}
         {b.type === 'derniere-video' && (
@@ -192,7 +198,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
           {b.type === 'inscription' && (
             <Interrupteur label="Demander le prénom" aide="Pour écrire « Salut Camille » dans tes e-mails." actif={b.demanderPrenom} onChange={v => maj({ demanderPrenom: v })} />
           )}
-          {b.type !== 'titre' && b.type !== 'texte' && b.type !== 'newsletter' && b.type !== 'inscription' && (
+          {b.type !== 'titre' && b.type !== 'texte' && b.type !== 'newsletter' && b.type !== 'inscription' && b.type !== 'preuve' && (
             <Interrupteur label="Mis en avant" aide="Plus visible que les autres liens : choisis sa forme et sa couleur juste dessous." actif={b.vedette} onChange={v => maj({ vedette: v })} />
           )}
           {b.type === 'lien' && (
@@ -233,8 +239,10 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
           </div>
         )}
 
+        {b.type === 'lien' && <RegleAcces key={`acces-${b.id}`} b={b} maj={maj} prises={prises} />}
         <RegleMoment key={`moment-${b.id}`} b={b} maj={maj} />
         <RegleAudience key={`audience-${b.id}`} b={b} maj={maj} adressePage={adressePage} />
+        <RegleTraductions key={`langues-${b.id}`} b={b} maj={maj} langues={reglages.langues ?? []} />
 
         {!nouveau && b.type === 'lien' && <p className="text-center text-[13px] text-white/45">{clics} clic{clics > 1 ? 's' : ''} ces 30 derniers jours</p>}
       </div>

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { ReactNode } from 'react';
-import type { Bloc } from '../lib/types.ts';
+import type { Acces, Bloc, Langue, Preuve, Traduction } from '../lib/types.ts';
+import { NOMS_LANGUES } from '../lib/langues.ts';
 import type { Creneau } from '../lib/moments.ts';
 import { FUSEAU_DEFAUT, decrireCreneau } from '../lib/moments.ts';
 import { Icone } from '../components/Icone.tsx';
@@ -133,3 +134,117 @@ export function RegleAudience({ b, maj, adressePage }: { b: Bloc; maj: (c: Parti
 }
 
 const ICONE_AUDIENCE: Partial<Record<Audience, string>> = { instagram: 'instagram', tiktok: 'tiktok', youtube: 'youtube', linkedin: 'linkedin', x: 'x', facebook: 'facebook', threads: 'threads', email: 'email' };
+
+/** Le mode drop : un code à taper, des places comptées, ou les deux. */
+export function RegleAcces({ b, maj, prises }: { b: Bloc; maj: (c: Partial<Bloc>) => void; prises: number }) {
+  const a = b.acces;
+  const majAcces = (champs: Partial<Acces>) => {
+    const suite = { code: a?.code ?? '', places: a?.places ?? 0, ...champs };
+    maj({ acces: suite.code || suite.places ? suite : null });
+  };
+  const resume = a ? [a.code ? `code « ${a.code} »` : '', a.places ? `${prises}/${a.places} places prises` : ''].filter(Boolean).join(', ') : '';
+  return (
+    <Repli titre="Accès réservé (mode drop)" icone="cadenas" resume={resume} ouvert={!!a}>
+      <p className="text-[13px] leading-snug text-white/55">L’adresse du lien n’est jamais dans ta page : elle ne s’ouvre qu’avec le bon code, ou pour les premiers arrivés.</p>
+      <Champ label="Code à taper (facultatif)" aide="Donne-le en story, en live ou dans ta newsletter. Majuscules et espaces ne comptent pas.">
+        <input className={classeSaisie} value={a?.code ?? ''} maxLength={40} autoCapitalize="characters" autoComplete="off" spellCheck={false}
+          placeholder="VIP2026" onChange={e => majAcces({ code: e.target.value })} />
+      </Champ>
+      <Champ label="Nombre de places (facultatif)" aide={a?.places ? `${prises} prise${prises > 1 ? 's' : ''} pour l’instant. Ta page affiche « Plus que 3 places », puis « Complet ».` : 'Vide : pas de limite. Une place par personne.'}>
+        <input className={classeSaisie} type="number" inputMode="numeric" min={0} max={100000} value={a?.places || ''} placeholder="Sans limite"
+          onChange={e => majAcces({ places: Math.max(0, Math.min(100_000, Math.round(Number(e.target.value) || 0))) })} />
+      </Champ>
+      {a && <button type="button" onClick={() => { vibrer(6); maj({ acces: null }); }} className="self-start text-[13.5px] font-medium text-white/55 hover:text-white">Retirer l’accès réservé</button>}
+    </Repli>
+  );
+}
+
+/** Le texte du bloc dans les langues que la page propose. */
+export function RegleTraductions({ b, maj, langues }: { b: Bloc; maj: (c: Partial<Bloc>) => void; langues: Langue[] }) {
+  if (!langues.length) return null;
+  const champs: { cle: keyof Traduction; label: string; long?: boolean }[] = b.type === 'preuve' && b.preuve?.genre === 'temoignage'
+    ? [{ cle: 'description', label: 'Témoignage', long: true }, { cle: 'sousTitre', label: 'Qui le dit' }]
+    : [{ cle: 'titre', label: b.type === 'lien' ? 'Texte du bouton' : b.type === 'texte' ? 'Texte' : 'Titre', long: b.type === 'texte' },
+      ...(['lien', 'newsletter', 'inscription'].includes(b.type) ? [{ cle: 'sousTitre' as const, label: 'Sous-titre' }] : []),
+      ...(b.type === 'lien' && b.vedette ? [{ cle: 'description' as const, label: 'Description', long: true }] : [])];
+  const traduites = langues.filter(l => b.traductions[l]);
+  const majLangue = (l: Langue, cle: keyof Traduction, v: string) => {
+    const t = { titre: '', sousTitre: '', description: '', ...b.traductions[l], [cle]: v };
+    const suite = { ...b.traductions };
+    if (t.titre || t.sousTitre || t.description) suite[l] = t; else delete suite[l];
+    maj({ traductions: suite });
+  };
+  return (
+    <Repli titre="Traductions" icone="globe" resume={traduites.length ? traduites.map(l => NOMS_LANGUES[l]).join(', ') : 'Pas encore traduit : le français s’affiche'} ouvert={false}>
+      {langues.map(l => (
+        <div key={l} className="flex flex-col gap-2.5 rounded-xl bg-white/[0.035] p-3">
+          <span className="text-[13px] font-semibold text-white/80">{NOMS_LANGUES[l]}</span>
+          {champs.map(c => (
+            <Champ key={c.cle} label={c.label}>
+              {c.long
+                ? <textarea className={`${classeSaisie} min-h-20`} lang={l} value={b.traductions[l]?.[c.cle] ?? ''} placeholder={b[c.cle]} onChange={e => majLangue(l, c.cle, e.target.value)} />
+                : <input className={classeSaisie} lang={l} value={b.traductions[l]?.[c.cle] ?? ''} placeholder={b[c.cle]} onChange={e => majLangue(l, c.cle, e.target.value)} />}
+            </Champ>
+          ))}
+        </div>
+      ))}
+      <p className="text-[12.5px] leading-snug text-white/45">Un champ vide garde le texte en français.</p>
+    </Repli>
+  );
+}
+
+const SOURCES_PREUVE = ['Google', 'Trustpilot', 'Malt', 'Avis Vérifiés', 'YouTube', 'Instagram', 'TikTok', 'LinkedIn'];
+
+/** Un avis, un chiffre, un témoignage : ce que le bloc `preuve` montre. */
+export function ChampsPreuve({ b, maj }: { b: Bloc; maj: (c: Partial<Bloc>) => void }) {
+  const p = b.preuve ?? { genre: 'note' as const, note: 5, nombre: 0, source: '' };
+  const majP = (champs: Partial<Preuve>) => maj({ preuve: { ...p, ...champs } });
+  return (
+    <>
+      <div>
+        <span className="mb-1.5 block text-[13px] font-medium text-white/70">Ce que tu montres</span>
+        <Segments label="Genre de preuve" valeur={p.genre} onChange={genre => majP({ genre })}
+          options={[{ id: 'note', nom: 'Une note' }, { id: 'compteur', nom: 'Un chiffre' }, { id: 'temoignage', nom: 'Un témoignage' }]} />
+      </div>
+      {p.genre === 'note' && (
+        <div className="grid grid-cols-2 gap-3">
+          <Champ label="Note sur 5">
+            <input className={classeSaisie} type="number" inputMode="decimal" min={0} max={5} step={0.1} value={p.note}
+              onChange={e => majP({ note: Math.max(0, Math.min(5, Math.round(Number(e.target.value.replace(',', '.')) * 10) / 10 || 0)) })} />
+          </Champ>
+          <Champ label="Nombre d’avis">
+            <input className={classeSaisie} type="number" inputMode="numeric" min={0} value={p.nombre || ''} placeholder="132"
+              onChange={e => majP({ nombre: Math.max(0, Math.round(Number(e.target.value) || 0)) })} />
+          </Champ>
+        </div>
+      )}
+      {p.genre === 'compteur' && (
+        <Champ label="Le chiffre">
+          <input className={classeSaisie} type="number" inputMode="numeric" min={0} value={p.nombre || ''} placeholder="12400"
+            onChange={e => majP({ nombre: Math.max(0, Math.round(Number(e.target.value) || 0)) })} />
+        </Champ>
+      )}
+      {p.genre === 'temoignage' && (
+        <>
+          <Champ label="Le témoignage">
+            <textarea className={`${classeSaisie} min-h-24`} value={b.description} maxLength={400} onChange={e => maj({ description: e.target.value })}
+              placeholder="« Grâce à Camille, j’ai lancé ma boutique en deux semaines. »" />
+          </Champ>
+          <Champ label="Qui le dit">
+            <input className={classeSaisie} value={b.sousTitre} maxLength={240} onChange={e => maj({ sousTitre: e.target.value })} placeholder="Marie, fondatrice de Bloom" />
+          </Champ>
+        </>
+      )}
+      <Champ label="Où ça se passe (facultatif)">
+        <input className={classeSaisie} value={p.source} maxLength={30} onChange={e => majP({ source: e.target.value })} placeholder="Google" />
+      </Champ>
+      <div className="-mx-5 flex gap-1.5 overflow-x-auto px-5 pb-1 [scrollbar-width:none]" role="group" aria-label="Sources courantes">
+        {SOURCES_PREUVE.map(s => (
+          <button key={s} type="button" onClick={() => { vibrer(4); majP({ source: s }); }}
+            className={`min-h-9 shrink-0 rounded-full px-3.5 text-[13.5px] font-medium transition active:scale-95 ${p.source === s ? 'bg-white text-nuit' : 'bg-white/[0.07] text-white/70 hover:text-white'}`}>{s}</button>
+        ))}
+      </div>
+      <p className="text-[12.5px] leading-snug text-white/45">Montre des chiffres vrais et des avis réels, avec l’accord de leurs auteurs : c’est la loi, et c’est ce qui marche.</p>
+    </>
+  );
+}

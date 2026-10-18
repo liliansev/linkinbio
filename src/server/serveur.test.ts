@@ -465,3 +465,57 @@ test('le résumé de la semaine part le lundi matin, une fois, seulement après 
   assert.match(envois[0].subject, /^Ta semaine sur Hopla/);
   assert.equal(await envoyerResumes(env, fetchFaux, lundi10h + 3_600_000), 0, 'une fois par semaine');
 });
+
+test('mode drop : le bon code, une place par visiteur, puis complet', async () => {
+  const { debloquer } = await import('./acces.ts');
+  const { masquerAcces } = await import('../lib/acces.ts');
+  db.enregistrerBloc(P, validerBloc({ type: 'lien', titre: 'Prévente', url: 'https://secret.exemple/billet', acces: { code: 'VIP 2026', places: 2 } }, 'drop'));
+  const publie = masquerAcces(db.lireBlocs(P), id => db.placesParBloc(P)[id] ?? 0).find(b => b.id === 'drop')!;
+  // La page ne reçoit ni l'adresse ni le code.
+  assert.equal(publie.url, ''); assert.equal(publie.acces?.code, '•'); assert.equal(publie.restantes, 2);
+  assert.ok(!JSON.stringify(publie).includes('secret.exemple') && !JSON.stringify(publie).includes('VIP'));
+  const a = { ip: '1.1.1.1', ua: 'Mozilla/5.0 A' }, b = { ip: '2.2.2.2', ua: 'Mozilla/5.0 B' }, c = { ip: '3.3.3.3', ua: 'Mozilla/5.0 C' };
+  assert.equal(debloquer({ page: '', bloc: 'drop', code: 'mauvais' }, a).status, 403);
+  const ok = debloquer({ page: '', bloc: 'drop', code: ' vip 2026 ' }, a);
+  assert.equal(ok.status, 200); assert.equal(ok.url, 'https://secret.exemple/billet'); assert.equal(ok.restantes, 1);
+  // Le même visiteur retrouve son lien sans reprendre de place.
+  assert.equal(debloquer({ page: '', bloc: 'drop', code: 'VIP 2026' }, a).restantes, 1);
+  assert.equal(debloquer({ page: '', bloc: 'drop', code: 'VIP 2026' }, b).restantes, 0);
+  const plein = debloquer({ page: '', bloc: 'drop', code: 'VIP 2026' }, c);
+  assert.equal(plein.status, 410); assert.equal(plein.url, undefined);
+  // Un lien sans drop ne passe pas par là, et les essais à la chaîne sont freinés.
+  assert.equal(debloquer({ page: '', bloc: 'inconnu' }, a).status, 404);
+  let dernier = 0;
+  for (let i = 0; i < 12; i++) dernier = debloquer({ page: '', bloc: 'drop', code: 'x' }, { ip: '9.9.9.9', ua: 'z' }).status;
+  assert.equal(dernier, 429);
+});
+
+test('page en plusieurs langues : la langue du visiteur, les textes traduits', async () => {
+  const { langueDuVisiteur, traduirePage } = await import('../lib/langues.ts');
+  assert.equal(langueDuVisiteur('en-US,en;q=0.9', []), 'fr');
+  assert.equal(langueDuVisiteur('en-US,en;q=0.9', ['en']), 'en');
+  assert.equal(langueDuVisiteur('fr-FR,en;q=0.8', ['en']), 'fr');
+  assert.equal(langueDuVisiteur('de;q=0.5,es;q=0.9', ['en', 'de', 'es']), 'es');
+  assert.equal(langueDuVisiteur('ja', ['en']), 'en');
+  assert.equal(langueDuVisiteur('ja', ['es']), 'fr');
+  assert.equal(langueDuVisiteur('en', ['en', 'it'], 'it'), 'it');
+  assert.equal(langueDuVisiteur('en', ['en'], 'fr'), 'fr');
+  const bloc = validerBloc({ type: 'lien', titre: 'Mon cours', url: 'x.fr', traductions: { en: { titre: 'My course' }, xx: { titre: 'non' }, es: { titre: '' } } }, 't');
+  assert.deepEqual(Object.keys(bloc.traductions), ['en']);
+  const reglages = validerReglages({ ...REGLAGES_DEFAUT, langues: ['en', 'zz'], bioTraduite: { en: 'Hi', zz: 'x' } }, REGLAGES_DEFAUT);
+  assert.deepEqual(reglages.langues, ['en']); assert.deepEqual(reglages.bioTraduite, { en: 'Hi' });
+  const page = traduirePage({ reglages, blocs: [bloc], compte: { pseudo: 'x', principal: false, pro: false } }, 'en');
+  assert.equal(page.blocs[0].titre, 'My course'); assert.equal(page.reglages.profil.bio, 'Hi'); assert.equal(page.langue, 'en');
+  // En français, la page reste telle que la personne l'a écrite.
+  assert.equal(traduirePage({ reglages, blocs: [bloc], compte: { pseudo: 'x', principal: false, pro: false } }, 'fr').blocs[0].titre, 'Mon cours');
+});
+
+test('avis et preuves : la note bornée, le genre vérifié', () => {
+  const p = validerBloc({ type: 'preuve', titre: 'Avis', preuve: { genre: 'note', note: 7.26, nombre: -3, source: 'Google'.repeat(10) } }, 'p').preuve!;
+  assert.equal(p.note, 5); assert.equal(p.nombre, 0); assert.equal(p.source.length, 30);
+  assert.equal(validerBloc({ type: 'preuve', preuve: { genre: 'faux', note: 4.44 } }, 'q').preuve?.genre, 'note');
+  assert.equal(validerBloc({ type: 'preuve', preuve: { note: 4.44 } }, 'q').preuve?.note, 4.4);
+  // Un drop n'existe que sur un lien.
+  assert.equal(validerBloc({ type: 'texte', titre: 'x', acces: { code: 'a' } }, 'r').acces, null);
+  assert.equal(validerBloc({ type: 'lien', url: 'x.fr', acces: { code: '', places: 0 } }, 'r').acces, null);
+});

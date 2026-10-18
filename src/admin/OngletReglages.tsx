@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import QRCode from 'qrcode';
 import type { ComptePage, Reglages } from '../lib/types.ts';
-import { urlPage } from '../lib/types.ts';
+import { LANGUES, urlPage } from '../lib/types.ts';
+import { NOMS_LANGUES } from '../lib/langues.ts';
 import type { Abonnement as EtatAbonnement, Periode } from '../lib/abonnement.ts';
 import { AVANTAGES_PRO, TARIFS, estResilie, euros } from '../lib/abonnement.ts';
 import { Icone } from '../components/Icone.tsx';
@@ -62,6 +63,8 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
           </div>
         </div>
       </Carte>
+
+      <Langues reglages={reglages} onChange={onChange} adresse={URL_PUBLIQUE} />
 
       <TesDonnees compte={compte} urlExport={urlExport} supprimerMonCompte={supprimerMonCompte} />
 
@@ -200,6 +203,36 @@ function TesDonnees({ compte, urlExport, supprimerMonCompte }: { compte: CompteP
         <a href="/legal/confidentialite" target="_blank" rel="noopener" className={lien}>Confidentialité</a>
         <a href="/legal/traitement-des-donnees" target="_blank" rel="noopener" className={lien}>Accord de traitement</a>
       </p>
+    </Carte>
+  );
+}
+
+/** Les langues de la page : le visiteur la voit dans la sienne, là où les textes sont traduits. */
+function Langues({ reglages, onChange, adresse }: { reglages: Reglages; onChange: (r: Reglages) => void; adresse: string }) {
+  const actives = reglages.langues ?? [];
+  const basculer = (l: (typeof LANGUES)[number]) => onChange({ ...reglages, langues: actives.includes(l) ? actives.filter(x => x !== l) : LANGUES.filter(x => x === l || actives.includes(x)) });
+  return (
+    <Carte titre="Langues de ta page">
+      <p className="text-[13.5px] leading-snug text-white/60">Ta page s’affiche dans la langue du visiteur. Les boutons, le formulaire et les dates sont traduits tout seuls ; tes textes, tu les traduis dans chaque bloc (Traductions).</p>
+      <div className="mt-3 flex flex-wrap gap-1.5" role="group" aria-label="Langues proposées">
+        <span className="inline-flex min-h-10 items-center rounded-full bg-white px-4 text-[14px] font-medium text-nuit">Français</span>
+        {LANGUES.map(l => (
+          <button key={l} type="button" aria-pressed={actives.includes(l)} onClick={() => basculer(l)}
+            className={`min-h-10 rounded-full px-4 text-[14px] font-medium transition active:scale-95 ${actives.includes(l) ? 'bg-white text-nuit' : 'bg-white/[0.07] text-white/70 hover:text-white'}`}>
+            {NOMS_LANGUES[l]}
+          </button>
+        ))}
+      </div>
+      {actives.length > 0 && (
+        <div className="mt-4 flex flex-col gap-3">
+          {actives.map(l => (
+            <Champ key={l} label={`Ta bio en ${NOMS_LANGUES[l].toLowerCase()}`} aide={l === actives[0] ? `Pour vérifier : ${adresse.replace(/^https:\/\//, '')}?lang=${l}` : undefined}>
+              <textarea className={`${classeSaisie} min-h-16`} lang={l} maxLength={300} value={reglages.bioTraduite?.[l] ?? ''} placeholder={reglages.profil.bio}
+                onChange={e => onChange({ ...reglages, bioTraduite: { ...reglages.bioTraduite, [l]: e.target.value } })} />
+            </Champ>
+          ))}
+        </div>
+      )}
     </Carte>
   );
 }

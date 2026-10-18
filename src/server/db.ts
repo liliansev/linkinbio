@@ -75,6 +75,7 @@ export function base(): DatabaseSync {
       id TEXT PRIMARY KEY, compte TEXT NOT NULL, email TEXT NOT NULL, prenom TEXT NOT NULL DEFAULT '', ts INTEGER NOT NULL,
       source TEXT NOT NULL DEFAULT '', bloc TEXT NOT NULL DEFAULT '', synchro TEXT NOT NULL DEFAULT '', UNIQUE (compte, email)
     );
+    CREATE TABLE IF NOT EXISTS acces (bloc TEXT NOT NULL, compte TEXT NOT NULL, visiteur TEXT NOT NULL, ts INTEGER NOT NULL, PRIMARY KEY (bloc, visiteur));
     CREATE TABLE IF NOT EXISTS resumes (compte TEXT NOT NULL, semaine TEXT NOT NULL, envoye INTEGER NOT NULL, PRIMARY KEY (compte, semaine));
     CREATE TABLE IF NOT EXISTS integrations (
       compte TEXT PRIMARY KEY, fournisseur TEXT NOT NULL, cle TEXT NOT NULL, liste TEXT NOT NULL, nom TEXT NOT NULL DEFAULT '', maj INTEGER NOT NULL
@@ -145,6 +146,7 @@ export function purger(maintenant = Date.now(), d = base()) {
   d.prepare("DELETE FROM signalements WHERE statut != 'ouvert' AND traite < ?").run(maintenant - CONSERVATION.signalementsJours * 86_400_000);
   d.prepare('DELETE FROM webhooks WHERE recu < ?').run(maintenant - 30 * 86_400_000);
   d.prepare('DELETE FROM resumes WHERE envoye < ?').run(maintenant - 60 * 86_400_000);
+  d.prepare('DELETE FROM acces WHERE ts < ?').run(maintenant - CONSERVATION.statistiquesJours * 86_400_000);
 }
 
 export const stockageEphemere = () => (base(), ephemere);
@@ -199,7 +201,7 @@ export function supprimerCompte(id: string) {
   const d = base();
   d.exec('BEGIN');
   try {
-    for (const table of ['blocs', 'medias', 'evenements', 'jetons', 'signalements', 'contacts', 'integrations', 'resumes']) d.prepare(`DELETE FROM ${table} WHERE compte = ?`).run(id);
+    for (const table of ['blocs', 'medias', 'evenements', 'jetons', 'signalements', 'contacts', 'integrations', 'resumes', 'acces']) d.prepare(`DELETE FROM ${table} WHERE compte = ?`).run(id);
     d.prepare('DELETE FROM pages WHERE compte = ?').run(id);
     d.prepare('DELETE FROM comptes WHERE id = ?').run(id);
     d.exec('COMMIT');
@@ -512,3 +514,22 @@ export function traiterSignalement(id: string, statut: 'sans-suite' | 'suspendu'
 
 /** Pour les tests : repartir d'une base neuve. */
 export function fermer() { db?.close(); db = null; ephemere = false; derniere = 0; }
+
+/* Le mode drop : une place par visiteur (une empreinte propre au bloc, voir `server/acces.ts`). */
+export function placesParBloc(compte: string): Record<string, number> {
+  const lignes = base().prepare('SELECT bloc, COUNT(*) AS n FROM acces WHERE compte = ? GROUP BY bloc').all(compte) as { bloc: string; n: number }[];
+  return Object.fromEntries(lignes.map(l => [l.bloc, l.n]));
+}
+
+export function prendrePlace(compte: string, bloc: string, visiteur: string, places: number, maintenant = Date.now()): 'ok' | 'deja' | 'complet' {
+  const d = base();
+  if (d.prepare('SELECT 1 FROM acces WHERE bloc = ? AND visiteur = ?').get(bloc, visiteur)) return 'deja';
+  if (places) {
+    const { n } = d.prepare('SELECT COUNT(*) AS n FROM acces WHERE bloc = ?').get(bloc) as { n: number };
+    if (n >= places) return 'complet';
+  }
+  d.prepare('INSERT OR IGNORE INTO acces (bloc, compte, visiteur, ts) VALUES (?, ?, ?, ?)').run(bloc, compte, visiteur, maintenant);
+  return 'ok';
+}
+
+export const remettrePlaces = (compte: string, bloc: string) => base().prepare('DELETE FROM acces WHERE compte = ? AND bloc = ?').run(compte, bloc);
