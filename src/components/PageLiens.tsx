@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { CSSProperties, FormEvent, MouseEvent, ReactNode } from 'react';
 import type { Bloc, PagePublique } from '../lib/types.ts';
 import { ORIGINE_PUBLIQUE, animationDe, idYoutube, urlPage } from '../lib/types.ts';
@@ -24,7 +24,22 @@ function suivre(page: string, type: 'vue' | 'clic', bloc?: string) {
   } catch { /* les statistiques ne doivent jamais gêner la visite */ }
 }
 
-export function PageLiens({ page, apercu = false }: { page: PagePublique; apercu?: boolean }) {
+/**
+ * L'édition sur la page, dans « Ma page » du back office : le nom et la bio se
+ * tapent en place, la photo, les réseaux et chaque bloc s'ouvrent d'un toucher.
+ * La liste des blocs est confiée au back office (`liste`), qui y ajoute le
+ * glisser-déposer sans l'embarquer dans la page publique.
+ */
+export interface Edition {
+  profil: (champs: Partial<Reglages['profil']>) => void;
+  photo: () => void;
+  envoiPhoto: boolean;
+  reseaux: () => void;
+  liste: (blocs: Bloc[], rendu: (bloc: Bloc) => ReactNode) => ReactNode;
+}
+
+export function PageLiens({ page, apercu = false, edition }: { page: PagePublique; apercu?: boolean; edition?: Edition }) {
+  if (edition) apercu = true;
   const { reglages, blocs, compte } = page;
   // La page de Lilian s'annonce sans pseudo ; les autres avec le leur.
   const pseudo = compte.principal ? '' : compte.pseudo;
@@ -61,7 +76,12 @@ export function PageLiens({ page, apercu = false }: { page: PagePublique; apercu
     } catch { /* partage annulé */ }
   }
 
-  const reseaux = reglages.reseaux.some(r => r.url) && (
+  const reseaux = edition ? (
+    <button type="button" className="lp-reseaux lp-ed-zone" onClick={edition.reseaux} aria-label="Modifier les réseaux">
+      {reglages.reseaux.filter(r => r.url).map(r => <span key={r.reseau + r.url} className="lp-ed-reseau"><Icone nom={r.reseau} taille={22} /></span>)}
+      {!reglages.reseaux.some(r => r.url) && <span className="lp-ed-vide">Ajouter tes réseaux</span>}
+    </button>
+  ) : reglages.reseaux.some(r => r.url) && (
     <nav className="lp-reseaux" aria-label="Réseaux">
       {reglages.reseaux.filter(r => r.url).map(r => (
         <a key={r.reseau + r.url} href={r.url} aria-label={NOMS_RESEAUX[r.reseau]} rel="me noopener" {...cible}>
@@ -72,7 +92,7 @@ export function PageLiens({ page, apercu = false }: { page: PagePublique; apercu
   );
 
   return (
-    <div className="lp" onClick={ouvrirDansApp} style={variablesTheme(theme) as CSSProperties} data-bouton={reglages.bouton.style} data-forme={reglages.bouton.forme} data-police={theme.police} data-bureau={reglages.bureau}>
+    <div className="lp" onClick={ouvrirDansApp} style={variablesTheme(theme) as CSSProperties} data-bouton={reglages.bouton.style} data-forme={reglages.bouton.forme} data-police={theme.police} data-decor={theme.decor} data-bureau={reglages.bureau}>
       <div className="lp-scene">
       <div className="lp-col">
         {reglages.partage && (
@@ -81,22 +101,34 @@ export function PageLiens({ page, apercu = false }: { page: PagePublique; apercu
           </button>
         )}
         <header className="lp-tete">
-          {reglages.profil.avatar && <img className="lp-avatar" src={reglages.profil.avatar} alt="" width={96} height={96} />}
+          {edition ? (
+            <button type="button" className="lp-ed-photo" onClick={edition.photo} aria-label={reglages.profil.avatar ? 'Changer la photo' : 'Ajouter une photo'}>
+              {reglages.profil.avatar ? <img className="lp-avatar" src={reglages.profil.avatar} alt="" width={96} height={96} /> : <span className="lp-avatar lp-ed-sans-photo" />}
+              <span className="lp-ed-pastille">{edition.envoiPhoto ? '…' : <Icone nom="photo" taille={16} />}</span>
+            </button>
+          ) : reglages.profil.avatar && <img className="lp-avatar" src={reglages.profil.avatar} alt="" width={96} height={96} />}
           <h1 className="lp-nom">
-            {reglages.profil.nom}
+            {edition
+              ? <input className="lp-ed-saisie" value={reglages.profil.nom} maxLength={80} placeholder="Ton nom" aria-label="Ton nom"
+                  style={{ width: `${Math.max(reglages.profil.nom.length, 7) + 1}ch` }} onChange={e => edition.profil({ nom: e.target.value })} />
+              : reglages.profil.nom}
             {reglages.profil.badge && <span className="lp-badge" title="Compte vérifié"><Icone nom="badge" taille={20} /></span>}
           </h1>
-          {reglages.profil.bio && <p className="lp-bio">{reglages.profil.bio}</p>}
+          {edition
+            ? <ChampBio valeur={reglages.profil.bio} onChange={bio => edition.profil({ bio })} />
+            : reglages.profil.bio && <p className="lp-bio">{reglages.profil.bio}</p>}
           {reglages.reseauxPosition === 'haut' && reseaux}
         </header>
 
         <main className="lp-blocs">
-          {blocs.map((bloc, i) => (
-            <div key={bloc.id} className="lp-bloc" data-type={bloc.type} data-vedette={bloc.vedette ? bloc.format : undefined} style={{ '--i': i } as CSSProperties}>
-              <BlocPublic bloc={bloc} reglages={reglages} clic={() => clic(bloc)} cible={cible} apercu={apercu} />
-            </div>
-          ))}
-          {blocs.length === 0 && <p className="lp-texte">Rien ici pour l’instant.</p>}
+          {edition ? edition.liste(blocs, bloc => <BlocPublic bloc={bloc} reglages={reglages} clic={() => {}} cible={cible} apercu />) : <>
+            {blocs.map((bloc, i) => (
+              <div key={bloc.id} className="lp-bloc" data-type={bloc.type} data-vedette={bloc.vedette ? bloc.format : undefined} style={{ '--i': i } as CSSProperties}>
+                <BlocPublic bloc={bloc} reglages={reglages} clic={() => clic(bloc)} cible={cible} apercu={apercu} />
+              </div>
+            ))}
+            {blocs.length === 0 && <p className="lp-texte">Rien ici pour l’instant.</p>}
+          </>}
         </main>
 
         {reglages.reseauxPosition === 'bas' && <footer className="lp-pied">{reseaux}</footer>}
@@ -115,6 +147,19 @@ export function PageLiens({ page, apercu = false }: { page: PagePublique; apercu
       {toast && <div className="lp-toast" role="status">{toast}</div>}
     </div>
   );
+}
+
+/** La bio, tapée en place : le champ grandit avec le texte. */
+function ChampBio({ valeur, onChange }: { valeur: string; onChange: (v: string) => void }) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+  // À chaque rendu : le texte, mais aussi la police du thème, changent la hauteur.
+  useLayoutEffect(() => {
+    const t = ref.current;
+    if (!t || CSS.supports('field-sizing', 'content')) return;
+    t.style.height = 'auto';
+    t.style.height = `${t.scrollHeight}px`;
+  });
+  return <textarea ref={ref} className="lp-bio lp-ed-saisie" rows={1} value={valeur} maxLength={300} placeholder="Une phrase sur toi" aria-label="Ta bio" onChange={e => onChange(e.target.value)} />;
 }
 
 /** « exemple.fr », sans le www ni le chemin. */

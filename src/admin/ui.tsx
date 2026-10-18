@@ -33,9 +33,9 @@ export function Champ({ label, aide, children }: { label: string; aide?: ReactNo
 
 export const classeSaisie = 'w-full rounded-xl border border-white/10 bg-white/[0.06] px-3.5 py-3 text-[16px] text-white placeholder:text-white/30 outline-none transition focus:border-peche/70 focus:bg-white/[0.09]';
 
-export function Carte({ titre, action, children, className = '' }: { titre?: string; action?: ReactNode; children: ReactNode; className?: string }) {
+export function Carte({ titre, action, children, className = '', id }: { titre?: string; action?: ReactNode; children: ReactNode; className?: string; id?: string }) {
   return (
-    <section className={`rounded-2xl border border-white/[0.07] bg-white/[0.035] p-4 ${className}`}>
+    <section id={id} className={`scroll-mt-20 rounded-2xl border border-white/[0.07] bg-white/[0.035] p-4 ${className}`}>
       {(titre || action) && (
         <div className="mb-3 flex items-center justify-between gap-3">
           {titre && <h2 className="text-[15px] font-semibold text-white">{titre}</h2>}
@@ -74,7 +74,12 @@ export function vibrer(ms = 8) {
  * peuvent être des fonctions qui reçoivent `fermer(apres)`, pour qu'une action
  * (enregistrer) laisse la feuille sortir avant d'agir.
  */
-export function Feuille({ ouverte, onFermer, titre, children, pied }: { ouverte: boolean; onFermer: () => void; titre: string; children: Contenu; pied?: Contenu }) {
+/**
+ * Une feuille qui monte du bas (téléphone) ou s'ouvre au centre (ordinateur).
+ * `cote` la laisse voir la page derrière : voile transparent, moins haute sur
+ * téléphone, posée à droite sur ordinateur. Pour les réglages qu'on juge sur la page.
+ */
+export function Feuille({ ouverte, onFermer, titre, children, pied, cote = false }: { ouverte: boolean; onFermer: () => void; titre: string; children: Contenu; pied?: Contenu; cote?: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
   const [sortie, setSortie] = useState(false);
   const [tire, setTire] = useState(0);
@@ -116,11 +121,11 @@ export function Feuille({ ouverte, onFermer, titre, children, pied }: { ouverte:
   const rendre = (c: Contenu) => (typeof c === 'function' ? c(fermer) : c);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center" role="dialog" aria-modal="true" aria-label={titre} data-sortie={sortie || undefined}>
-      <button type="button" aria-label="Fermer" className="adm-fondu absolute inset-0 bg-black/60 backdrop-blur-[2px]" onClick={() => fermer()} />
+    <div className={`fixed inset-0 z-50 flex items-end justify-center ${cote ? 'sm:items-stretch sm:justify-end sm:p-4' : 'sm:items-center'}`} role="dialog" aria-modal="true" aria-label={titre} data-sortie={sortie || undefined}>
+      <button type="button" aria-label="Fermer" className={`adm-fondu absolute inset-0 ${cote ? 'bg-black/10' : 'bg-black/60 backdrop-blur-[2px]'}`} onClick={() => fermer()} />
       <div ref={ref} tabIndex={-1}
         style={tire ? { transform: `translateY(${tire}px)`, transition: 'none' } : undefined}
-        className="adm-feuille relative flex max-h-[92dvh] w-full flex-col rounded-t-[28px] border border-b-0 border-white/10 bg-[#121a2b] shadow-[0_-20px_60px_-20px_rgba(0,0,0,0.7)] outline-none sm:max-w-lg sm:rounded-[28px] sm:border-b">
+        className={`adm-feuille relative flex ${cote ? 'max-h-[58dvh] sm:max-h-none sm:w-[400px]' : 'max-h-[92dvh]'} w-full flex-col rounded-t-[28px] border border-b-0 border-white/10 bg-[#121a2b] shadow-[0_-20px_60px_-20px_rgba(0,0,0,0.7)] outline-none sm:max-w-lg sm:rounded-[28px] sm:border-b`}>
         <div {...tirer} className="shrink-0 touch-none select-none">
           <div className="mx-auto mt-2.5 h-1.5 w-10 rounded-full bg-white/25 sm:hidden" />
           <header className="flex items-center justify-between gap-3 px-5 pt-3 pb-2 sm:pt-5">

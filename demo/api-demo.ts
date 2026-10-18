@@ -1,5 +1,5 @@
 import type { Api, Bloc, CompteResume, EtatAdmin, Reglages, SignalementResume, Stats } from '../src/lib/types.ts';
-import { REGLAGES_DEFAUT, blocsDefaut } from '../src/lib/defauts.ts';
+import { REGLAGES_DEFAUT, blocsDefaut, reglagesNouveauCompte } from '../src/lib/defauts.ts';
 import avatar from '../public/avatar.webp?inline';
 
 /*
@@ -124,3 +124,44 @@ function vignetteDemo(url: string): string {
 
 export const etatDemo = () => apiDemo.charger();
 export const pageDemo = () => ({ reglages: etat.reglages, blocs: etat.blocs, compte: { pseudo: 'lilian', principal: true, pro: true } });
+
+/* ---- L'arrivée d'un nouvel inscrit : un compte vide, ses CGU à accepter ---- */
+
+const CLE_NOUVEAU = 'liens-demo-nouveau-v1';
+// Les marques que le back office pose dans le navigateur, effacées quand on recommence.
+const MARQUES = ['hopla-premiers-pas', 'hopla-page-partagee', 'hopla-demarrage-masque', 'hopla-vue-ma-page'];
+const neuf = () => ({ reglages: reglagesNouveauCompte('camille'), blocs: [] as Bloc[], cgu: false });
+function lireNouveau(): ReturnType<typeof neuf> {
+  try { const v = localStorage.getItem(CLE_NOUVEAU); if (v) return JSON.parse(v); } catch { /* stockage indisponible */ }
+  return neuf();
+}
+let nouveau = lireNouveau();
+const ecrireNouveau = () => { try { localStorage.setItem(CLE_NOUVEAU, JSON.stringify(nouveau)); } catch { /* idem */ } };
+
+export function recommencerNouveau() {
+  nouveau = neuf();
+  try { localStorage.removeItem(CLE_NOUVEAU); for (const m of MARQUES) localStorage.removeItem(m); } catch { /* idem */ }
+}
+
+export const apiNouveau: Api = {
+  ...apiDemo,
+  async charger(): Promise<EtatAdmin> {
+    return { reglages: nouveau.reglages, blocs: nouveau.blocs, clics: {}, stockageEphemere: false, cguAJour: nouveau.cgu, compte: { pseudo: 'camille', principal: false, email: 'camille@exemple.fr', pro: false },
+      abonnement: { plan: 'gratuit', statut: '', finPeriode: null, portail: false }, paiement: false };
+  },
+  async enregistrerBloc(bloc) {
+    await pause();
+    const existe = nouveau.blocs.some(b => b.id === bloc.id);
+    nouveau.blocs = existe ? nouveau.blocs.map(b => (b.id === bloc.id ? bloc : b)) : [bloc, ...nouveau.blocs];
+    ecrireNouveau();
+    return bloc;
+  },
+  async supprimerBloc(i) { await pause(); nouveau.blocs = nouveau.blocs.filter(b => b.id !== i); ecrireNouveau(); },
+  async ordonner(ids) { await pause(); nouveau.blocs = ids.map(i => nouveau.blocs.find(b => b.id === i)).filter((b): b is Bloc => !!b); ecrireNouveau(); },
+  async enregistrerReglages(reglages) { await pause(); nouveau.reglages = reglages; ecrireNouveau(); return reglages; },
+  async deconnexion() { recommencerNouveau(); },
+  async accepterCgu() { await pause(); nouveau.cgu = true; ecrireNouveau(); },
+  async supprimerMonCompte() { await pause(); return { ok: false, message: 'Pas de suppression dans l’aperçu.' }; },
+  comptes: undefined,
+};
+export const pageNouveau = () => ({ reglages: nouveau.reglages, blocs: nouveau.blocs, compte: { pseudo: 'camille', principal: false, pro: false } });

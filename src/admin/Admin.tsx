@@ -3,13 +3,14 @@ import type { ReactNode } from 'react';
 import type { Api, Bloc, EtatAdmin, Reglages } from '../lib/types.ts';
 import { TYPES_PRINCIPAL, cheminPage, estEnLigne } from '../lib/types.ts';
 import { PageLiens } from '../components/PageLiens.tsx';
-import { OngletLiens } from './OngletLiens.tsx';
+import { MaPage } from './MaPage.tsx';
 import { EditeurBloc } from './EditeurBloc.tsx';
-import { OngletApparence } from './OngletApparence.tsx';
 import { OngletStats } from './OngletStats.tsx';
 import { OngletReglages } from './OngletReglages.tsx';
 import { OngletComptes } from './OngletComptes.tsx';
 import { AccepterCgu } from './AccepterCgu.tsx';
+import { PremiersPas, premiersPasFaits } from './PremiersPas.tsx';
+import { pageNeuve } from '../lib/demarrage.ts';
 import { Icone } from '../components/Icone.tsx';
 import { vibrer } from './ui.tsx';
 
@@ -20,12 +21,11 @@ import { vibrer } from './ui.tsx';
  * téléphone) est la vraie page, rendue avec l'état en cours.
  */
 
-type Onglet = 'liens' | 'apparence' | 'stats' | 'reglages' | 'comptes';
+type Onglet = 'page' | 'stats' | 'reglages' | 'comptes';
 type Sauvegarde = 'ok' | 'encours' | 'erreur';
 
 const ONGLETS: { id: Onglet; nom: string; icone: ReactNode }[] = [
-  { id: 'liens', nom: 'Liens', icone: <path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7" /> },
-  { id: 'apparence', nom: 'Apparence', icone: <><circle cx="13.5" cy="6.5" r="1.5" /><circle cx="17.5" cy="10.5" r="1.5" /><circle cx="8.5" cy="7.5" r="1.5" /><circle cx="6.5" cy="12.5" r="1.5" /><path d="M12 2a10 10 0 0 0 0 20c1 0 1.7-.8 1.7-1.7 0-.5-.2-.8-.5-1.2-.3-.3-.4-.7-.4-1.1 0-.9.8-1.7 1.7-1.7h2A5.5 5.5 0 0 0 22 10.8C22 6 17.5 2 12 2Z" /></> },
+  { id: 'page', nom: 'Ma page', icone: <><rect x="6" y="2.5" width="12" height="19" rx="2.5" /><path d="M9.5 8h5M9.5 12h5M9.5 16h3" /></> },
   { id: 'stats', nom: 'Stats', icone: <path d="M3 3v18h18M7 16l4-5 3 3 5-7" /> },
   { id: 'comptes', nom: 'Comptes', icone: <><circle cx="9" cy="8" r="3.5" /><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M18 14.5a6.5 6.5 0 0 1 3.5 5.5" /></> },
   { id: 'reglages', nom: 'Réglages', icone: <><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z" /></> },
@@ -39,13 +39,17 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
   const [blocs, setBlocs] = useState(initial.blocs);
   const [reglages, setReglages] = useState(initial.reglages);
   const [clics, setClics] = useState(initial.clics);
-  const [onglet, setOnglet] = useState<Onglet>('liens');
+  const [onglet, setOnglet] = useState<Onglet>('page');
   const [edition, setEdition] = useState<{ bloc: Bloc; nouveau: boolean } | null>(null);
   const [sauvegarde, setSauvegarde] = useState<Sauvegarde>('ok');
   const [toast, setToast] = useState<{ texte: string; annuler?: () => void } | null>(null);
   const [apercu, setApercu] = useState(false);
   const [cguAJour, setCguAJour] = useState(initial.cguAJour);
   const [abonnement, setAbonnement] = useState({ ...initial.abonnement, pro: initial.compte.pro });
+  // Un compte neuf arrive sur ses premiers pas, une seule fois, et seulement tant que sa page est vide.
+  const [premiersPas, setPremiersPas] = useState(() => !initial.compte.principal && pageNeuve(initial.reglages, initial.blocs));
+  // Remis à plus tard sur cet appareil : lu après l'hydratation, le serveur n'en sait rien.
+  useEffect(() => { if (premiersPasFaits()) setPremiersPas(false); }, []);
   const enCours = useRef(0);
   const compte = useMemo(() => ({ ...initial.compte, pro: abonnement.pro }), [initial.compte, abonnement.pro]);
   // L'onglet Comptes n'existe que pour Lilian.
@@ -92,11 +96,12 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
     return () => clearInterval(t);
   }, [api, demo]);
 
-  /** L'onglet Réglages, ouvert sur la carte de l'abonnement. */
-  function versAbonnement() {
-    setOnglet('reglages');
-    setTimeout(() => document.getElementById('abonnement')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
+  /** Un onglet, ouvert sur une de ses cartes. */
+  function ouvrirSur(o: Onglet, ancre: string) {
+    setOnglet(o);
+    setTimeout(() => document.getElementById(ancre)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
   }
+  function versAbonnement() { ouvrirSur('reglages', 'abonnement'); }
 
   function changerReglages(r: Reglages) {
     setReglages(r);
@@ -111,6 +116,14 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
     setEdition(null);
     ecrire(() => api.enregistrerBloc(bloc));
     if (nouveau) setToast({ texte: 'Ajouté en haut de ta page' });
+  }
+
+  /** Plusieurs liens d'un coup (les premiers pas) : les nouveaux en tête, dans l'ordre donné ; les autres mis à jour sur place. */
+  function poserBlocs(liste: Bloc[]) {
+    const nouveaux = liste.filter(b => !blocs.some(x => x.id === b.id));
+    setBlocs(l => [...nouveaux, ...l.map(b => liste.find(x => x.id === b.id) ?? b)]);
+    // Le serveur pose chaque nouveau bloc en tête : on les envoie du dernier au premier.
+    ecrire(async () => { for (const b of [...liste].reverse()) await api.enregistrerBloc(b); });
   }
 
   function ordonner(liste: Bloc[]) {
@@ -152,6 +165,23 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
 
   if (!cguAJour) return <AccepterCgu accepter={async () => { await api.accepterCgu(); setCguAJour(true); }} deconnexion={deconnexion} />;
 
+  const bulle = toast && (
+    <div role="status" className="adm-toast fixed inset-x-4 bottom-[calc(76px+env(safe-area-inset-bottom))] z-[60] mx-auto flex max-w-sm items-center justify-between gap-3 rounded-2xl bg-white px-4 py-3 text-[14.5px] font-medium text-nuit shadow-2xl lg:bottom-6">
+      <span className="flex items-center gap-2">{!toast.annuler && sauvegarde !== 'erreur' && <span className="grid h-5 w-5 place-items-center rounded-full bg-emerald-500 text-white"><Icone nom="ui-ok" taille={13} /></span>}{toast.texte}</span>
+      {toast.annuler && <button type="button" onClick={toast.annuler} className="-my-1 min-h-9 rounded-full px-3 font-semibold text-[#a3461d] hover:bg-black/5">Annuler</button>}
+    </div>
+  );
+
+  if (premiersPas) {
+    return (
+      <>
+        <PremiersPas compte={compte} reglages={reglages} blocs={blocs} onReglages={changerReglages} onPoserBlocs={poserBlocs}
+          envoyerImage={d => api.envoyerImage(d)} apercuSite={u => api.apercuSite(u)} onFin={() => { setPremiersPas(false); setOnglet('page'); scrollTo({ top: 0 }); }} />
+        {bulle}
+      </>
+    );
+  }
+
   const indicateur = sauvegarde === 'encours' ? 'Enregistrement…' : sauvegarde === 'erreur' ? 'Non enregistré' : 'Enregistré';
 
   return (
@@ -160,7 +190,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
         <div className="mx-auto flex h-16 max-w-6xl items-center gap-3 px-4">
           {reglages.profil.avatar ? <img src={reglages.profil.avatar} alt="" className="h-9 w-9 rounded-full object-cover" /> : <span className="h-9 w-9 rounded-full bg-white/10" />}
           <div className="min-w-0 flex-1">
-            <p className="truncate text-[15px] font-semibold leading-tight">Hopla</p>
+            <p className="truncate text-[15px] font-semibold leading-tight">{reglages.profil.nom || 'Hopla'}</p>
             <p className={`flex items-center gap-1.5 text-[12px] leading-tight ${sauvegarde === 'erreur' ? 'text-red-300' : 'text-white/45'}`} aria-live="polite">
               <span className={`h-1.5 w-1.5 rounded-full ${sauvegarde === 'encours' ? 'animate-pulse bg-amber-300' : sauvegarde === 'erreur' ? 'bg-red-400' : 'bg-emerald-400'}`} />{indicateur}
             </p>
@@ -180,12 +210,13 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
         <p className="mx-auto mt-3 max-w-6xl px-4"><span className="block rounded-xl bg-amber-400/15 px-3.5 py-2.5 text-[13.5px] text-amber-100">Le stockage n’est pas encore branché sur le serveur : tes changements seront perdus au prochain redémarrage.</span></p>
       )}
 
-      <div className="mx-auto max-w-6xl px-4 lg:grid lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-10">
-        <main className="mx-auto w-full max-w-xl pt-5 pb-32 lg:pb-12">
+      <div className={`mx-auto max-w-6xl px-4 ${onglet === 'page' ? '' : 'lg:grid lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-10'}`}>
+        <main className={`mx-auto w-full max-w-xl lg:pb-12 ${onglet === 'page' ? 'pb-48 lg:pt-5' : 'pt-5 pb-32'}`}>
           <div key={onglet} className="adm-onglet">
-          <h1 className="mb-4 text-[28px] font-semibold tracking-[-0.025em] lg:hidden">{onglets.find(o => o.id === onglet)!.nom}</h1>
-          {onglet === 'liens' && <OngletLiens blocs={blocs} clics={clics} onOrdonner={ordonner} onModifier={b => { setBlocs(l => l.map(x => (x.id === b.id ? b : x))); ecrire(() => api.enregistrerBloc(b)); }} onOuvrir={b => setEdition({ bloc: b, nouveau: false })} onAjouter={b => setEdition({ bloc: b, nouveau: true })} principal={compte.principal} />}
-          {onglet === 'apparence' && <OngletApparence reglages={reglages} onChange={changerReglages} envoyerImage={d => api.envoyerImage(d)} principal={compte.principal} />}
+          <h1 className={`mb-4 text-[28px] font-semibold tracking-[-0.025em] lg:hidden ${onglet === 'page' ? 'sr-only' : ''}`}>{onglets.find(o => o.id === onglet)!.nom}</h1>
+          {onglet === 'page' && <MaPage compte={compte} reglages={reglages} blocs={blocs} clics={clics} onReglages={changerReglages} onOrdonner={ordonner}
+            onModifier={b => { setBlocs(l => l.map(x => (x.id === b.id ? b : x))); ecrire(() => api.enregistrerBloc(b)); }}
+            onOuvrir={b => setEdition({ bloc: b, nouveau: false })} onAjouter={b => setEdition({ bloc: b, nouveau: true })} envoyerImage={d => api.envoyerImage(d)} />}
           {onglet === 'stats' && <OngletStats charger={chargerStats} limite={initial.paiement && !compte.pro} onPro={versAbonnement} />}
           {onglet === 'reglages' && <OngletReglages reglages={reglages} compte={compte} onChange={changerReglages} onDeconnexion={deconnexion} urlExport={api.urlExport} supprimerMonCompte={api.supprimerMonCompte}
             abonnement={abonnement} paiement={initial.paiement} ouvrirPaiement={api.ouvrirPaiement} ouvrirPortail={api.ouvrirPortail} />}
@@ -193,13 +224,15 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
           </div>
         </main>
 
-        <aside className="sticky top-16 hidden h-[calc(100dvh-4rem)] items-center justify-center lg:flex" aria-label="Aperçu de ta page">
-          <Telephone page={page} />
-        </aside>
+        {onglet !== 'page' && (
+          <aside className="sticky top-16 hidden h-[calc(100dvh-4rem)] items-center justify-center lg:flex" aria-label="Aperçu de ta page">
+            <Telephone page={page} />
+          </aside>
+        )}
       </div>
 
       <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-white/[0.07] bg-[#0e1524]/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl lg:hidden" aria-label="Sections">
-        <ul className={`mx-auto grid max-w-md ${onglets.length === 5 ? 'grid-cols-5' : 'grid-cols-4'}`}>
+        <ul className={`mx-auto grid max-w-md ${onglets.length === 4 ? 'grid-cols-4' : 'grid-cols-3'}`}>
           {onglets.map(o => (
             <li key={o.id}>
               <button type="button" onClick={() => { if (o.id !== onglet) { vibrer(5); setOnglet(o.id); scrollTo({ top: 0 }); } }} aria-current={onglet === o.id ? 'page' : undefined}
@@ -223,12 +256,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
           onEnregistrer={enregistrerBloc} onSupprimer={supprimer} onDupliquer={dupliquer} envoyerImage={d => api.envoyerImage(d)} apercuSite={u => api.apercuSite(u)} />
       )}
 
-      {toast && (
-        <div role="status" className="adm-toast fixed inset-x-4 bottom-[calc(76px+env(safe-area-inset-bottom))] z-[60] mx-auto flex max-w-sm items-center justify-between gap-3 rounded-2xl bg-white px-4 py-3 text-[14.5px] font-medium text-nuit shadow-2xl lg:bottom-6">
-          <span className="flex items-center gap-2">{!toast.annuler && sauvegarde !== 'erreur' && <span className="grid h-5 w-5 place-items-center rounded-full bg-emerald-500 text-white"><Icone nom="ui-ok" taille={13} /></span>}{toast.texte}</span>
-          {toast.annuler && <button type="button" onClick={toast.annuler} className="-my-1 min-h-9 rounded-full px-3 font-semibold text-[#a3461d] hover:bg-black/5">Annuler</button>}
-        </div>
-      )}
+      {bulle}
     </div>
   );
 }

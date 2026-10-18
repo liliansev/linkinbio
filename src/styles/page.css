@@ -2,7 +2,8 @@
  * La page publique. Toutes les couleurs viennent du thème (variables posées
  * par `PageLiens`) ; les cinq styles de bouton et les trois formes se lisent
  * sur `data-bouton` et `data-forme`, si bien que chaque combinaison marche
- * avec chacun des trente thèmes.
+ * avec chacun des quarante-quatre thèmes. La matière du fond (`data-decor`)
+ * et la police des titres (`--police-titre`) viennent aussi du thème.
  */
 
 .lp {
@@ -20,6 +21,19 @@
 .lp[data-forme='arrondi'] { --r: 16px; --rc: 20px; }
 .lp[data-forme='carre'] { --r: 4px; --rc: 6px; }
 .lp[data-police='serif'] { font-size: 1.06em; }
+
+/* Les titres prennent la police de caractère du thème. */
+.lp :is(.lp-nom, .lp-section, .lp-carte-titre) { font-family: var(--police-titre); }
+.lp[data-police='editoriale'] .lp-nom { font-weight: 400; font-size: 2.15rem; letter-spacing: -0.01em; }
+.lp[data-police='editoriale'] .lp-section { font-size: 1.12rem; font-weight: 400; font-style: italic; letter-spacing: 0; }
+.lp[data-police='editoriale'] .lp-carte-titre { font-weight: 400; font-size: 1.22rem; letter-spacing: 0; }
+.lp[data-police='display'] .lp-nom { font-size: 1.45rem; font-weight: 700; letter-spacing: -0.01em; }
+.lp[data-police='display'] .lp-section { font-size: 0.78rem; font-weight: 600; letter-spacing: 0.04em; }
+.lp[data-police='display'] .lp-carte-titre { font-weight: 600; letter-spacing: -0.005em; }
+.lp[data-police='elegante'] .lp-nom { font-weight: 560; font-size: 1.85rem; letter-spacing: -0.02em; }
+.lp[data-police='elegante'] .lp-section { font-style: italic; font-weight: 450; font-size: 0.98rem; }
+.lp[data-police='grotesque'] .lp-nom { font-weight: 760; font-size: 1.75rem; letter-spacing: -0.035em; }
+.lp[data-police='grotesque'] .lp-btn { font-weight: 620; }
 
 .lp-col {
   max-width: 580px;
@@ -52,7 +66,7 @@
 
 .lp-blocs { display: flex; flex-direction: column; gap: 14px; }
 
-.lp-section { margin: 18px 0 2px; text-align: center; font-size: 0.86rem; font-weight: 560; letter-spacing: 0.01em; color: var(--doux); }
+.lp-section { margin: 18px 0 2px; text-align: center; font-size: 0.86rem; font-weight: 560; letter-spacing: 0.01em; color: var(--titre-section, var(--doux)); }
 .lp-texte { margin: 0; text-align: center; color: var(--doux); line-height: 1.55; white-space: pre-line; }
 
 /* ---- Boutons ---- */
@@ -93,11 +107,6 @@
 
 [data-bouton]:not([data-bouton='plein']) :is(.lp-btn, .lp-carte) { --lp-encre: var(--texte); --lp-halo: var(--texte); --lp-trait: var(--texte); }
 .lp-accent { --lp-fond: var(--vedette); --lp-encre: var(--vedette-texte); }
-/* Hors du style plein, l'accent devient un liseré et un halo de la couleur de vedette. */
-[data-bouton]:not([data-bouton='plein']) .lp-accent { --lp-halo: var(--vedette); }
-.lp[data-bouton='contour'] .lp-accent { box-shadow: inset 0 0 0 2px var(--vedette); }
-.lp:is([data-bouton='doux'], [data-bouton='verre']) .lp-accent { background: color-mix(in srgb, var(--vedette) 22%, transparent); }
-.lp[data-bouton='relief'] .lp-accent { background: color-mix(in srgb, var(--vedette) 16%, var(--fond-uni)); }
 
 [data-bouton='contour'] :is(.lp-btn, .lp-carte) { background: transparent; color: var(--texte); box-shadow: inset 0 0 0 2px var(--texte); }
 [data-bouton='contour'] :is(.lp-btn, .lp-carte):hover { background: color-mix(in srgb, var(--texte) 8%, transparent); }
@@ -106,8 +115,10 @@
 [data-bouton='doux'] :is(.lp-btn, .lp-carte):hover { background: color-mix(in srgb, var(--texte) 16%, transparent); }
 
 [data-bouton='relief'] :is(.lp-btn, .lp-carte) {
-  background: color-mix(in srgb, var(--surface) 14%, var(--fond-uni));
-  color: var(--texte);
+  /* Le relief garde la couleur des boutons : seuls le trait et l'ombre portée changent. */
+  --lp-encre: var(--surface-texte);
+  background: var(--surface);
+  color: var(--surface-texte);
   border: 2px solid var(--texte);
   box-shadow: 4px 4px 0 var(--texte);
 }
@@ -122,6 +133,23 @@
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--texte) 22%, transparent), 0 10px 30px -16px rgb(0 0 0 / 0.5);
 }
 [data-bouton='verre'] :is(.lp-btn, .lp-carte):hover { background: color-mix(in srgb, var(--texte) 17%, transparent); }
+
+/*
+ * La carte mise en avant garde sa couleur pleine dans tous les styles : c'est
+ * elle que le visiteur doit voir d'abord. Le style ne change que son trait.
+ */
+.lp[data-bouton] :is(.lp-btn, .lp-carte).lp-accent { background: var(--vedette); color: var(--vedette-texte); --lp-encre: var(--vedette-texte); --lp-halo: var(--vedette); }
+.lp[data-bouton='contour'] :is(.lp-btn, .lp-carte).lp-accent { box-shadow: none; }
+.lp[data-bouton='verre'] :is(.lp-btn, .lp-carte).lp-accent { box-shadow: inset 0 0 0 1px color-mix(in srgb, white 30%, transparent), 0 14px 34px -16px var(--vedette); }
+
+/* L'accent au-delà d'un seul bouton : les titres de section et une lueur derrière le portrait. */
+.lp-tete { position: relative; }
+.lp-tete::before {
+  content: ''; position: absolute; z-index: -1; left: 50%; top: -40px; width: 300px; height: 220px; translate: -50% 0;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--vedette) 26%, transparent), transparent);
+  pointer-events: none;
+}
+.lp-avatar { box-shadow: 0 0 0 3px var(--fond-uni), 0 0 0 5px var(--vedette), 0 18px 40px -18px rgb(0 0 0 / 0.55); }
 
 /* ---- Liens mis en avant ----
  * Trois formats. Le bouton : un bouton comme les autres, à la couleur
@@ -344,6 +372,85 @@
 .adm-apercu .lp { min-height: 100%; background-attachment: scroll; }
 .adm-apercu .lp-toast { position: absolute; }
 
+/* ---- La matière du fond ----
+ * Un calque sous le contenu, dessiné en CSS, que le thème choisit
+ * (`data-decor`). Il ne capte aucun clic et ne bouge que pour la lampe à
+ * lave, à l'arrêt si l'appareil demande moins de mouvement.
+ */
+[data-decor] { --decor-encre: color-mix(in srgb, var(--texte) 10%, transparent); }
+[data-decor]::before { content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0; }
+.lp[data-decor] > :not(.lp-toast) { position: relative; z-index: 1; }
+.lp-mini[data-decor], .adm-apercu .lp[data-decor] { overflow: hidden; }
+:is(.lp-mini, .lp-pastille, .adm-apercu .lp)[data-decor]::before { position: absolute; }
+.lp-toast { z-index: 10; }
+
+[data-decor='grain']::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 0.55 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
+  opacity: 0.22; mix-blend-mode: overlay;
+}
+[data-decor='grille']::before {
+  background-image: linear-gradient(var(--decor-encre) 1px, transparent 1px), linear-gradient(90deg, var(--decor-encre) 1px, transparent 1px);
+  background-size: 28px 28px;
+  mask-image: linear-gradient(180deg, #000 0%, rgb(0 0 0 / 0.35) 70%, transparent 100%);
+}
+[data-decor='points']::before {
+  background-image: radial-gradient(color-mix(in srgb, var(--texte) 16%, transparent) 1.4px, transparent 1.6px);
+  background-size: 18px 18px;
+  mask-image: radial-gradient(120% 80% at 50% 0%, #000 30%, transparent 85%);
+}
+[data-decor='damier']::before {
+  background-image: conic-gradient(var(--decor-encre) 25%, transparent 0 50%, var(--decor-encre) 0 75%, transparent 0);
+  background-size: 56px 56px;
+  mask-image: linear-gradient(180deg, #000 0%, transparent 55%, transparent 70%, #000 100%);
+}
+[data-decor='scanlines']::before {
+  background-image: repeating-linear-gradient(180deg, rgb(0 0 0 / 0.28) 0 1px, transparent 1px 3px), radial-gradient(120% 90% at 50% 40%, transparent 55%, rgb(0 0 0 / 0.55) 100%);
+}
+[data-decor='etoiles']::before {
+  background-image:
+    radial-gradient(1.4px 1.4px at 12% 18%, var(--texte) 50%, transparent 100%),
+    radial-gradient(1px 1px at 72% 9%, var(--texte) 50%, transparent 100%),
+    radial-gradient(1.6px 1.6px at 38% 62%, var(--vedette) 50%, transparent 100%),
+    radial-gradient(1px 1px at 86% 44%, var(--texte) 50%, transparent 100%),
+    radial-gradient(1.2px 1.2px at 22% 84%, var(--texte) 50%, transparent 100%),
+    radial-gradient(1px 1px at 58% 31%, var(--texte) 50%, transparent 100%),
+    radial-gradient(1.4px 1.4px at 92% 78%, var(--vedette) 50%, transparent 100%),
+    radial-gradient(1px 1px at 5% 50%, var(--texte) 50%, transparent 100%);
+  background-size: 340px 340px;
+  opacity: 0.75;
+  animation: lp-scintille 5s ease-in-out infinite alternate;
+}
+@keyframes lp-scintille { to { opacity: 0.4; } }
+[data-decor='lave']::before {
+  inset: -20%;
+  background:
+    radial-gradient(28% 22% at 25% 30%, color-mix(in srgb, var(--vedette) 70%, transparent), transparent 70%),
+    radial-gradient(24% 26% at 75% 60%, color-mix(in srgb, var(--vedette) 45%, #ff2d55), transparent 70%),
+    radial-gradient(30% 20% at 40% 85%, color-mix(in srgb, var(--vedette) 55%, transparent), transparent 70%);
+  filter: blur(40px);
+  opacity: 0.8;
+  animation: lp-lave 18s ease-in-out infinite alternate;
+}
+@keyframes lp-lave { 50% { transform: translate(4%, -6%) scale(1.08) rotate(6deg); } to { transform: translate(-5%, 4%) scale(0.96) rotate(-4deg); } }
+@media (prefers-reduced-motion: reduce) { [data-decor]::before { animation: none; } }
+
+/* Sur un fond clair, une ombre légère détache les cartes blanches. */
+.lp[data-bouton='plein'] :is(.lp-btn, .lp-carte):not(.lp-accent) { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--surface-texte) 12%, transparent), 0 1px 2px rgb(0 0 0 / 0.06), 0 8px 24px -14px rgb(0 0 0 / 0.35); }
+.lp[data-bouton='plein'] :is(.lp-btn, .lp-carte).lp-accent { box-shadow: 0 14px 34px -16px var(--vedette); }
+
+/* L'échantillon d'un thème dans le choix des thèmes. */
+.lp-pastille { position: relative; isolation: isolate; overflow: hidden; background: var(--fond-uni); background-image: var(--fond); color: var(--texte); }
+.lp-pastille > * { position: relative; z-index: 1; }
+.lp-pastille-aa { font-family: var(--police-titre); font-size: 1.15rem; line-height: 1; font-weight: 600; }
+.lp-pastille[data-police='editoriale'] .lp-pastille-aa { font-weight: 400; font-size: 1.3rem; }
+.lp-pastille-barre { width: 76%; height: 11%; border-radius: var(--r, 999px); background: var(--surface); }
+.lp-pastille-barre.vedette { background: var(--vedette); }
+.lp-pastille[data-bouton='contour'] .lp-pastille-barre:not(.vedette) { background: transparent; box-shadow: inset 0 0 0 1.5px var(--texte); }
+.lp-pastille[data-bouton='relief'] .lp-pastille-barre { box-shadow: 2px 2px 0 var(--texte); outline: 1.5px solid var(--texte); }
+.lp-pastille[data-bouton='verre'] .lp-pastille-barre:not(.vedette) { background: color-mix(in srgb, var(--texte) 16%, transparent); }
+.lp-pastille[data-forme='arrondi'] { --r: 4px; }
+.lp-pastille[data-forme='carre'] { --r: 1px; }
+
 /* ---- Sur un grand écran ----
  * Trois mises en page, au choix dans l'Apparence (`data-bureau`). Elles
  * suivent la largeur de la page et non celle de la fenêtre (requête de
@@ -451,4 +558,72 @@
   .lp[data-bureau='onepage'] .lp-carte[data-format='carte'] { height: 100%; }
   .lp[data-bureau='onepage'] .lp-signature { margin-top: 64px; padding-top: 28px; border-top: 1px solid color-mix(in srgb, var(--texte) 10%, transparent); }
   .lp[data-bureau='onepage'] .lp-pied .lp-reseaux { justify-content: flex-start; }
+}
+
+/* ---- Édition sur la page ----
+ * Dans « Ma page » du back office, la page elle-même sert d'éditeur. Au
+ * repos elle ressemble à la page publique ; un voile léger montre ce qui se
+ * modifie au survol, l'accent du thème marque ce qu'on touche.
+ */
+.adm-toile .lp { min-height: 0; }
+.lp-ed-saisie {
+  font: inherit; color: inherit; letter-spacing: inherit; text-align: center;
+  background: transparent; border: 0; margin: 0; padding: 2px 8px; border-radius: 10px; max-width: 100%;
+  outline: 2px solid transparent; outline-offset: 2px;
+  transition: outline-color 0.15s, background-color 0.15s;
+}
+.lp-ed-saisie:hover { background: color-mix(in srgb, var(--texte) 7%, transparent); }
+.lp-ed-saisie:focus { outline: 2px solid var(--vedette); background: color-mix(in srgb, var(--texte) 6%, transparent); }
+.lp-ed-saisie::placeholder { color: inherit; opacity: 0.45; }
+@supports (field-sizing: content) {
+  input.lp-ed-saisie { field-sizing: content; width: auto !important; min-width: 6ch; }
+  textarea.lp-ed-saisie { field-sizing: content; }
+}
+textarea.lp-bio.lp-ed-saisie { display: block; width: 100%; resize: none; overflow: hidden; color: var(--doux); }
+
+.lp-ed-photo { position: relative; padding: 0; border: 0; background: none; border-radius: 999px; cursor: pointer; color: inherit; }
+.lp-ed-sans-photo { display: block; background: color-mix(in srgb, var(--texte) 9%, transparent); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--texte) 30%, transparent); }
+.lp-ed-pastille {
+  position: absolute; right: 0; bottom: 2px; width: 34px; height: 34px; border-radius: 999px;
+  display: grid; place-items: center; font-weight: 700;
+  background: var(--vedette); color: var(--vedette-texte); box-shadow: 0 0 0 3px var(--fond-uni);
+  transition: scale 0.15s;
+}
+.lp-ed-photo:hover .lp-ed-pastille { scale: 1.08; }
+
+button.lp-ed-zone {
+  font: inherit; color: var(--texte); background: none; border: 0; cursor: pointer;
+  padding: 2px 6px; border-radius: 999px; transition: background-color 0.15s;
+}
+button.lp-ed-zone:hover { background: color-mix(in srgb, var(--texte) 7%, transparent); }
+button.lp-ed-zone:focus-visible { outline: 2px solid var(--vedette); outline-offset: 2px; }
+.lp-ed-reseau { width: 40px; height: 40px; display: grid; place-items: center; }
+.lp-ed-vide { padding: 9px 12px; font-size: 0.92rem; font-weight: 520; color: var(--doux); }
+
+.lp-ed-ajout {
+  display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 52px; width: 100%;
+  border-radius: var(--r); border: 0;
+  background: color-mix(in srgb, var(--texte) 8%, transparent); color: var(--texte); font: inherit; font-weight: 580; cursor: pointer;
+  transition: background-color 0.15s;
+}
+.lp-ed-ajout:hover { background: color-mix(in srgb, var(--texte) 13%, transparent); }
+.lp-ed-ajout:focus-visible { outline: 2px solid var(--vedette); outline-offset: 2px; }
+
+.lp-ed-bloc {
+  position: relative; cursor: pointer; border-radius: calc(var(--rc) + 6px);
+  outline: 2px solid transparent; outline-offset: 4px;
+  -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+  transition: outline-color 0.15s;
+}
+/* Le bloc entier répond : ses liens, sa vidéo et son formulaire restent inertes pendant l'édition. */
+.lp-ed-bloc > :not(.lp-ed-puces) { pointer-events: none; }
+.lp-ed-bloc:hover, .lp-ed-bloc:focus-visible { outline-color: color-mix(in srgb, var(--vedette) 75%, transparent); }
+.lp-ed-bloc[data-prive] > :not(.lp-ed-puces) { opacity: 0.42; }
+.lp-ed-bloc[data-glisse] { z-index: 5; cursor: grabbing; outline-color: var(--vedette); }
+.lp-ed-bloc[data-glisse] > :not(.lp-ed-puces) { box-shadow: 0 26px 50px -18px rgb(0 0 0 / 0.6); }
+.lp-ed-puces { position: absolute; top: -9px; right: 12px; display: flex; gap: 4px; pointer-events: none; }
+.lp-ed-puce {
+  display: inline-flex; align-items: center; gap: 4px; padding: 1px 8px; border-radius: 999px;
+  font: 600 11px/1.6 var(--police); white-space: nowrap;
+  background: var(--texte); color: var(--fond-uni);
 }
