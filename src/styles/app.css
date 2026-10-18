@@ -2,6 +2,10 @@
 @source '../';
 @import '@fontsource-variable/geist';
 @import '@fontsource-variable/eb-garamond';
+@import '@fontsource-variable/bricolage-grotesque';
+@import '@fontsource-variable/unbounded';
+@import '@fontsource-variable/fraunces';
+@import '@fontsource/instrument-serif';
 @import './page.css';
 @import './admin.css';
 
