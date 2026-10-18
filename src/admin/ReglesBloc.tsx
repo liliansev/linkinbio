@@ -4,6 +4,8 @@ import type { Bloc } from '../lib/types.ts';
 import type { Creneau } from '../lib/moments.ts';
 import { FUSEAU_DEFAUT, decrireCreneau } from '../lib/moments.ts';
 import { Icone } from '../components/Icone.tsx';
+import { AUDIENCES, NOMS_AUDIENCES } from '../lib/provenance.ts';
+import type { Audience } from '../lib/provenance.ts';
 import { Champ, Interrupteur, Segments, classeSaisie, vibrer } from './ui.tsx';
 
 /*
@@ -92,3 +94,42 @@ export function RegleMoment({ b, maj }: { b: Bloc; maj: (c: Partial<Bloc>) => vo
     </Repli>
   );
 }
+
+/** Pour qui le bloc change : les visiteurs venus d'un réseau précis. */
+export function RegleAudience({ b, maj, adressePage }: { b: Bloc; maj: (c: Partial<Bloc>) => void; adressePage: string }) {
+  const a = b.audience;
+  const basculer = (s: Audience) => {
+    vibrer(4);
+    const sources = a?.sources.includes(s) ? a.sources.filter(x => x !== s) : [...(a?.sources ?? []), s];
+    maj({ audience: sources.length ? { sources, effet: a?.effet ?? 'avant' } : null });
+  };
+  const noms = a?.sources.map(s => NOMS_AUDIENCES[s]).join(', ') ?? '';
+  const exemple = a?.sources[0] ?? 'tiktok';
+  return (
+    <Repli titre="Selon d’où vient le visiteur" icone="cible" resume={a ? `${a.effet === 'avant' ? 'En tête' : 'Seulement'} pour ${noms}` : ''} ouvert={!!a}>
+      <div role="group" aria-label="Provenances" className="flex flex-wrap gap-1.5">
+        {AUDIENCES.map(s => {
+          const actif = !!a?.sources.includes(s);
+          return (
+            <button key={s} type="button" aria-pressed={actif} onClick={() => basculer(s)}
+              className={`inline-flex min-h-10 items-center gap-1.5 rounded-full px-3.5 text-[14px] font-medium transition active:scale-95 ${actif ? 'bg-peche text-nuit' : 'bg-white/[0.07] text-white/75'}`}>
+              {ICONE_AUDIENCE[s] && <Icone nom={ICONE_AUDIENCE[s]} taille={15} />}{NOMS_AUDIENCES[s]}
+            </button>
+          );
+        })}
+      </div>
+      {a ? (
+        <>
+          <Segments label="Ce que change la provenance" valeur={a.effet} onChange={effet => maj({ audience: { ...a, effet } })}
+            options={[{ id: 'avant', nom: 'Mis en avant' }, { id: 'seulement', nom: 'Visible seulement' }]} />
+          <p className="text-[12.5px] leading-snug text-white/50">
+            {a.effet === 'avant' ? `Pour un visiteur venu de ${noms}, ce bloc passe en tête de ta page, mis en avant.` : `Seuls les visiteurs venus de ${noms} voient ce bloc.`}
+            {' '}Pour être sûr du résultat, mets dans ta bio l’adresse <span className="text-white/80">{adressePage.replace(/^https:\/\//, '')}?s={exemple}</span>.
+          </p>
+        </>
+      ) : <p className="text-[12.5px] leading-snug text-white/45">Par exemple « Mon dernier TikTok » en tête pour ceux qui arrivent de TikTok, « Mon CV » pour ceux de LinkedIn.</p>}
+    </Repli>
+  );
+}
+
+const ICONE_AUDIENCE: Partial<Record<Audience, string>> = { instagram: 'instagram', tiktok: 'tiktok', youtube: 'youtube', linkedin: 'linkedin', x: 'x', facebook: 'facebook', threads: 'threads', email: 'email' };

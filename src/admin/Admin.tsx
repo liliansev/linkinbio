@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { Api, Bloc, EtatAdmin, Reglages } from '../lib/types.ts';
-import { TYPES_PRINCIPAL, cheminPage } from '../lib/types.ts';
+import { TYPES_PRINCIPAL, cheminPage, urlPage } from '../lib/types.ts';
 import { composerMoment } from '../lib/moments.ts';
 import { PageLiens } from '../components/PageLiens.tsx';
 import { MaPage } from './MaPage.tsx';
@@ -253,7 +253,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
       )}
 
       {edition && (
-        <EditeurBloc bloc={edition.bloc} reglages={reglages} nouveau={edition.nouveau} clics={clics[edition.bloc.id] ?? 0} onFermer={() => setEdition(null)}
+        <EditeurBloc adressePage={urlPage(compte)} bloc={edition.bloc} reglages={reglages} nouveau={edition.nouveau} clics={clics[edition.bloc.id] ?? 0} onFermer={() => setEdition(null)}
           onEnregistrer={enregistrerBloc} onSupprimer={supprimer} onDupliquer={dupliquer} envoyerImage={d => api.envoyerImage(d)} apercuSite={u => api.apercuSite(u)} />
       )}
 

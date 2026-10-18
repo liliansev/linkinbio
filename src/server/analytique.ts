@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { PRINCIPAL } from '../lib/types.ts';
+import { NOMS_AUDIENCES, audienceDeLApp } from '../lib/provenance.ts';
 import { ajouterEvenement, compteParPseudo, evenementsDuJour, jourDe, lireBlocs, secret } from './db.ts';
 
 /*
@@ -18,8 +19,8 @@ const SOURCES: [RegExp, string][] = [
   [/(^|\.)liliansevoumian\.fr$/, 'Mon site'], [/(^|\.)(mail\.google\.com|outlook\.[a-z.]+)$/, 'E-mail'], [/(^|\.)google\.[a-z.]+$/, 'Google'],
 ];
 
-/** Le nom lisible d'une provenance : `?utm_source=` d'abord, sinon le référent. */
-export function source(utm: string, referent: string): string {
+/** Le nom lisible d'une provenance : `?utm_source=` d'abord, sinon le référent, sinon l'app dont le navigateur intégré ouvre la page. */
+export function source(utm: string, referent: string, ua = ''): string {
   const u = utm.trim().toLowerCase().slice(0, 40);
   const alias: Record<string, string> = { qr: 'QR code', ig: 'Instagram', yt: 'YouTube', li: 'LinkedIn', tt: 'TikTok', nl: 'Newsletter' };
   if (alias[u]) return alias[u];
@@ -28,8 +29,11 @@ export function source(utm: string, referent: string): string {
     return u.charAt(0).toUpperCase() + u.slice(1);
   }
   let hote = '';
-  try { hote = new URL(referent).hostname.replace(/^www\./, ''); } catch { return 'Direct'; }
-  for (const [motif, nom] of SOURCES) if (motif.test(hote)) return nom;
+  try { hote = new URL(referent).hostname.replace(/^www\./, ''); } catch { /* pas de référent */ }
+  for (const [motif, nom] of SOURCES) if (hote && motif.test(hote)) return nom;
+  // TikTok, Instagram… taisent souvent le référent, mais leur navigateur se nomme.
+  const app = audienceDeLApp(ua);
+  if (app) return NOMS_AUDIENCES[app];
   return hote.slice(0, 60) || 'Direct';
 }
 
@@ -72,7 +76,7 @@ export function enregistrer(entree: { page?: unknown; type: unknown; bloc: unkno
   if (evenementsDuJour(maintenant) >= 50_000 || (compte !== PRINCIPAL && evenementsDuJour(maintenant, compte) >= 10_000)) return false;
   ajouterEvenement({
     compte, type, bloc, visiteur, ts: maintenant,
-    source: source(typeof entree.utm === 'string' ? entree.utm : '', typeof entree.referent === 'string' ? entree.referent : ''),
+    source: source(typeof entree.utm === 'string' ? entree.utm : '', typeof entree.referent === 'string' ? entree.referent : '', contexte.ua),
     appareil: appareil(contexte.ua),
   });
   return true;

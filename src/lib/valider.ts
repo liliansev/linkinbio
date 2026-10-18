@@ -3,6 +3,8 @@ import type { Bloc, Reglages } from './types.ts';
 import { idTheme } from './themes.ts';
 import { EFFETS_CRENEAU, fuseauValide } from './moments.ts';
 import type { Creneau } from './moments.ts';
+import { AUDIENCES, EFFETS_AUDIENCE } from './provenance.ts';
+import type { Audience, EffetAudience } from './provenance.ts';
 
 /*
  * Tout ce qui arrive du navigateur passe ici avant la base : chaque champ est
@@ -50,6 +52,14 @@ export function creneau(v: unknown): Creneau | null {
   return { jours, de: heure(o.de, '09:00'), a: heure(o.a, '18:00'), fuseau: fuseauValide(o.fuseau), effet: parmi(o.effet, EFFETS_CRENEAU, 'avant') };
 }
 
+/** Les provenances visées par un bloc, ou null s'il n'en vise aucune. */
+export function audience(v: unknown): { sources: Audience[]; effet: EffetAudience } | null {
+  if (!v || typeof v !== 'object') return null;
+  const o = v as Record<string, unknown>;
+  const sources = Array.isArray(o.sources) ? AUDIENCES.filter(a => (o.sources as unknown[]).includes(a)) : [];
+  return sources.length ? { sources, effet: parmi(o.effet, EFFETS_AUDIENCE, 'avant') } : null;
+}
+
 /** Les noms d'avant le 16 octobre 2026, gardés pour les blocs déjà enregistrés. */
 const ANCIENNES: Record<string, string> = { brille: 'reflet', pulse: 'respiration', secoue: 'secousse' };
 
@@ -75,6 +85,7 @@ export function validerBloc(v: unknown, id: string): Bloc {
     fin: date(o.fin),
     compteARebours: bool(o.compteARebours, false),
     creneau: creneau(o.creneau),
+    audience: audience(o.audience),
   };
 }
 

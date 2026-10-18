@@ -4,6 +4,7 @@ import type { Bloc, CompteResume, EtatAdmin, Origines, PagePublique, Reglages, S
 import { VERSION_CGU } from '../lib/legal.ts';
 import { ORIGINE_ADMIN, ORIGINE_PUBLIQUE, PRINCIPAL, TYPES_PRINCIPAL } from '../lib/types.ts';
 import { composerMoment } from '../lib/moments.ts';
+import { composerAudience, provenance } from '../lib/provenance.ts';
 import { adresse, email, pseudo, validerBloc, validerReglages } from '../lib/valider.ts';
 import { apercuSite as lireApercu } from './apercu.ts';
 import * as db from './db.ts';
@@ -67,14 +68,18 @@ function reglagesPourCompte(compte: string, r: Reglages): Reglages {
 
 /** La page de Lilian sans pseudo, celle d'un autre compte avec. Null si elle n'existe pas ou est suspendue. */
 export const lirePagePublique = createServerFn({ method: 'GET' })
-  .validator((data: unknown) => (typeof data === 'string' ? data.toLowerCase().slice(0, 40) : ''))
+  .validator((data: unknown) => {
+    const o = (typeof data === 'string' ? { pseudo: data } : data ?? {}) as { pseudo?: unknown; s?: unknown };
+    return { pseudo: typeof o.pseudo === 'string' ? o.pseudo.toLowerCase().slice(0, 40) : '', s: typeof o.s === 'string' ? o.s.slice(0, 40) : '' };
+  })
   .handler(async ({ data }): Promise<PagePublique | null> => {
-    const compte = data ? db.compteParPseudo(data) : db.compteParId(PRINCIPAL);
+    const compte = data.pseudo ? db.compteParPseudo(data.pseudo) : db.compteParId(PRINCIPAL);
     if (!compte || compte.statut !== 'actif') return null;
     const maintenant = Date.now();
     return {
       reglages: reglagesPourCompte(compte.id, db.lireReglages(compte.id)),
-      blocs: composerMoment(pourCompte(compte.id, db.lireBlocs(compte.id)), maintenant),
+      // Le référent d'une page qui se recharge elle-même (hopla.page) ne dit rien de la provenance.
+      blocs: composerAudience(composerMoment(pourCompte(compte.id, db.lireBlocs(compte.id)), maintenant), provenance({ s: data.s, ua: getRequestHeader('user-agent') ?? '', referent: getRequestHeader('referer') ?? '' })),
       compte: { pseudo: compte.pseudo, principal: compte.id === PRINCIPAL, pro: db.abonnement(compte, maintenant).plan === 'pro' },
       maintenant,
     };

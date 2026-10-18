@@ -10,7 +10,7 @@ import { Icone, NOMS_RESEAUX, PICTOS } from '../components/Icone.tsx';
 import { BlocPublic } from '../components/PageLiens.tsx';
 import { BoutonPrincipal, Champ, Feuille, Interrupteur, NOMS_ANIMATIONS, Segments, classeSaisie, preparerImage, vibrer } from './ui.tsx';
 import { TYPES } from './OngletLiens.tsx';
-import { RegleMoment } from './ReglesBloc.tsx';
+import { RegleAudience, RegleMoment } from './ReglesBloc.tsx';
 
 const AIDE_FORMATS = {
   bouton: 'La taille des autres boutons, à la couleur choisie.',
@@ -18,7 +18,7 @@ const AIDE_FORMATS = {
   carte: 'Un grand visuel au-dessus : l’image du lien, ou son picto en grand.',
 } as const;
 
-export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, onSupprimer, onDupliquer, envoyerImage, apercuSite, clics }: {
+export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, onSupprimer, onDupliquer, envoyerImage, apercuSite, clics, adressePage }: {
   bloc: Bloc | null;
   reglages: Reglages;
   nouveau: boolean;
@@ -29,6 +29,8 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
   envoyerImage: (dataUrl: string) => Promise<string>;
   apercuSite: Api['apercuSite'];
   clics: number;
+  /** L'adresse publique de la page, pour les astuces (`?s=tiktok`). */
+  adressePage: string;
 }) {
   const [b, setB] = useState<Bloc | null>(bloc);
   const [erreur, setErreur] = useState('');
@@ -227,6 +229,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
         )}
 
         <RegleMoment key={`moment-${b.id}`} b={b} maj={maj} />
+        <RegleAudience key={`audience-${b.id}`} b={b} maj={maj} adressePage={adressePage} />
 
         {!nouveau && b.type === 'lien' && <p className="text-center text-[13px] text-white/45">{clics} clic{clics > 1 ? 's' : ''} ces 30 derniers jours</p>}
       </div>

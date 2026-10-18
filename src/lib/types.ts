@@ -6,6 +6,7 @@
 
 import type { Abonnement, Periode } from './abonnement.ts';
 import type { Creneau } from './moments.ts';
+import type { Audience, EffetAudience } from './provenance.ts';
 
 export const TYPES_BLOC = ['lien', 'titre', 'texte', 'video', 'derniere-video', 'newsletter'] as const;
 export type TypeBloc = (typeof TYPES_BLOC)[number];
@@ -48,6 +49,8 @@ export interface Bloc {
   compteARebours: boolean;
   /** Un créneau qui revient chaque semaine : visible, ou mis en avant, à ces heures-là. */
   creneau: Creneau | null;
+  /** Les provenances visées (Instagram, TikTok…) : le bloc passe en tête pour elles, ou ne s'affiche que pour elles. */
+  audience: { sources: Audience[]; effet: EffetAudience } | null;
 }
 
 export const FORMATS_VEDETTE = ['bouton', 'bandeau', 'carte'] as const;
@@ -218,7 +221,7 @@ export function nouveauBloc(type: TypeBloc, id: string): Bloc {
   return {
     id, type, titre: titres[type], url: '', sousTitre: type === 'newsletter' ? 'Un e-mail de temps en temps, rien de plus.' : '', description: '', icone: '', image: '',
     public: true, indexable: true, vedette: false, format: 'bandeau', teinte: 'accent', animation: 'auto', debut: '', fin: '',
-    compteARebours: false, creneau: null,
+    compteARebours: false, creneau: null, audience: null,
   };
 }
 

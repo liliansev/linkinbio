@@ -397,3 +397,10 @@ test('offre Pro : la page de paiement et le portail passent par l’API Creem', 
   assert.equal(await creem.ouvrirPortail(env, fetchFaux, db.compteParId(noa.id)!), 'https://creem.io/portal/x');
   assert.deepEqual(appels.at(-1)!.corps, { customer_id: 'cust_9' });
 });
+
+test('statistiques : un navigateur intégré sans référent est rangé sous son app', () => {
+  const tiktok = 'Mozilla/5.0 (iPhone) Mobile/15E148 musical_ly_36.0 BytedanceWebview/d8a21c6';
+  assert.equal(source('', '', tiktok), 'TikTok');
+  assert.equal(source('', 'https://www.linkedin.com/', tiktok), 'LinkedIn', 'le site d’origine passe avant');
+  assert.equal(source('', '', 'Mozilla/5.0 (Macintosh) Safari/605'), 'Direct');
+});
