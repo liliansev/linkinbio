@@ -10,7 +10,7 @@
 
 import { TARIFS, euros } from './abonnement.ts';
 
-export const VERSION_CGU = '2026-10-18.2';
+export const VERSION_CGU = '2026-10-18.3';
 export const CONTACT_LEGAL = 'bonjour@liliansevoumian.fr';
 
 export interface DocumentLegal { titre: string; resume: string; sections: { titre: string; texte: string[] }[] }
@@ -35,7 +35,7 @@ export const LEGAL: Record<NomDocument, DocumentLegal> = {
       ] },
       { titre: 'L’offre Pro et son paiement', texte: [
         `L’offre Pro retire la mention « Une page faite avec Hopla », montre tes statistiques sur un an au lieu de sept jours, et porte la place pour les images à 200 Mo. Elle coûte ${euros(TARIFS.mois.prix)} par mois ou ${euros(TARIFS.an.prix)} par an, toutes taxes comprises, et se renouvelle automatiquement à la fin de chaque période.`,
-        'Le paiement passe par Creem (creem.io), revendeur officiel de l’abonnement : c’est Creem qui te le vend, encaisse le paiement, t’envoie la facture et reverse la TVA. Ses conditions de vente s’ajoutent à celles-ci pour le paiement. Hopla ne voit ni ne garde jamais ton numéro de carte.',
+        'Le paiement passe par Creem (creem.io), service de la société Armitage Labs OÜ (registre estonien n° 16977866, Rotermanni 14, 10111 Tallinn, Estonie), revendeur officiel de l’abonnement : c’est Creem qui te le vend, encaisse le paiement, t’envoie la facture et reverse la TVA. Ses conditions de vente s’ajoutent à celles-ci pour le paiement. Hopla ne voit ni ne garde jamais ton numéro de carte.',
         'Tu peux résilier à tout moment, sans frais, depuis l’onglet Réglages (« Résilier mon abonnement ») : le Pro reste actif jusqu’à la fin de la période déjà payée, puis ta page repasse en gratuit avec tout son contenu. Rien n’est effacé.',
         'Tu disposes de 14 jours après ton premier paiement pour changer d’avis : écris à ' + CONTACT_LEGAL + ' et tu es remboursé en entier. Si le prix change, tu es prévenu par e-mail au moins 30 jours avant ; le nouveau prix ne s’applique qu’au renouvellement suivant, et tu peux résilier d’ici là.',
       ] },
@@ -123,7 +123,7 @@ export const LEGAL: Record<NomDocument, DocumentLegal> = {
         'Envoi des e-mails : liens de connexion, invitations, décisions de modération. Ne reçoit que l’adresse du destinataire et le contenu du message. Resend, Inc., États-Unis ; le transfert est encadré par l’accord de traitement de Resend et les clauses contractuelles types de la Commission européenne.',
       ] },
       { titre: 'Creem', texte: [
-        'Paiement de l’offre Pro (creem.io). Creem n’est pas un sous-traitant au sens strict : revendeur officiel de l’abonnement, il est responsable des données de paiement et de facturation qu’il collecte. Hopla lui transmet ton adresse e-mail et l’identifiant de ton compte au moment du paiement, et reçoit en retour l’état de l’abonnement.',
+        'Paiement de l’offre Pro (creem.io), par Armitage Labs OÜ, Rotermanni 14, 10111 Tallinn, Estonie. Creem n’est pas un sous-traitant au sens strict : revendeur officiel de l’abonnement, il est responsable des données de paiement et de facturation qu’il collecte. Hopla lui transmet ton adresse e-mail et l’identifiant de ton compte au moment du paiement, et reçoit en retour l’état de l’abonnement.',
       ] },
     ],
   },
