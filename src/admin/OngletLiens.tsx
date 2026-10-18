@@ -12,14 +12,14 @@ import { Icone } from '../components/Icone.tsx';
 import { Feuille, vibrer } from './ui.tsx';
 
 export const TYPES: { type: TypeBloc; nom: string; aide: string; picto: string }[] = [
-  { type: 'lien', nom: 'Lien', aide: 'Un bouton vers n’importe quelle adresse', picto: 'lien' },
-  { type: 'titre', nom: 'Titre de section', aide: 'Pour regrouper les liens', picto: 'ui-titre' },
-  { type: 'texte', nom: 'Texte', aide: 'Un court paragraphe', picto: 'ui-texte' },
-  { type: 'video', nom: 'Vidéo YouTube', aide: 'Lue directement dans la page', picto: 'ui-video' },
-  { type: 'derniere-video', nom: 'Ma dernière vidéo', aide: 'Se met à jour toute seule', picto: 'ui-nouveau' },
-  { type: 'inscription', nom: 'Rejoins ma liste', aide: 'Récolte des e-mails, export, Brevo, Mailchimp', picto: 'courrier' },
-  { type: 'preuve', nom: 'Avis et preuves', aide: 'Ta note Google, un chiffre, un témoignage', picto: 'etoile' },
-  { type: 'newsletter', nom: 'Inscription newsletter', aide: 'Branchée sur Lumail', picto: 'courrier' },
+  { type: 'lien', nom: 'Lien', aide: 'Un bouton vers n’importe quelle adresse', picto: 'bloc-lien' },
+  { type: 'titre', nom: 'Titre de section', aide: 'Pour regrouper les liens', picto: 'bloc-titre' },
+  { type: 'texte', nom: 'Texte', aide: 'Un court paragraphe', picto: 'bloc-texte' },
+  { type: 'video', nom: 'Vidéo YouTube', aide: 'Lue directement dans la page', picto: 'bloc-video' },
+  { type: 'derniere-video', nom: 'Ma dernière vidéo', aide: 'Se met à jour toute seule', picto: 'bloc-derniere-video' },
+  { type: 'inscription', nom: 'Rejoins ma liste', aide: 'Récolte des e-mails, export, Brevo, Mailchimp', picto: 'bloc-inscription' },
+  { type: 'preuve', nom: 'Avis et preuves', aide: 'Ta note Google, un chiffre, un témoignage', picto: 'bloc-preuve' },
+  { type: 'newsletter', nom: 'Inscription newsletter', aide: 'Branchée sur Lumail', picto: 'bloc-newsletter' },
 ];
 const NOM_TYPE = Object.fromEntries(TYPES.map(t => [t.type, t.nom])) as Record<TypeBloc, string>;
 
@@ -84,13 +84,22 @@ export function FeuilleAjout({ ouverte, onFermer, onChoisir, principal }: { ouve
   return (
     <Feuille ouverte={ouverte} onFermer={onFermer} titre="Ajouter un bloc">
       {fermer => (
+        <>
+        <svg width="0" height="0" className="absolute" aria-hidden="true">
+          <linearGradient id="hopla-degrade" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stopColor="#ffe3d1" />
+            <stop offset="0.55" stopColor="#ffb38a" />
+            <stop offset="1" stopColor="#ff8a5c" />
+          </linearGradient>
+        </svg>
         <ul className="adm-cascade -mx-2 flex flex-col pb-2">
           {types.map((t, i) => (
             <li key={t.type} style={{ '--i': i } as CSSProperties}>
               <button type="button" onClick={() => fermer(() => onChoisir(t.type))}
                 className="group flex w-full items-center gap-3.5 rounded-2xl px-2 py-2.5 text-left transition duration-150 hover:bg-white/[0.05] active:scale-[0.985] active:bg-white/[0.07]">
-                <span className={`grid h-12 w-12 shrink-0 place-items-center rounded-[14px] transition ${t.type === 'lien' ? 'bg-peche text-nuit' : 'bg-white/[0.07] text-peche group-hover:bg-white/[0.1]'}`}>
-                  <Icone nom={t.picto} taille={22} />
+                {/* Pas de pastille : le picto plein, en dégradé de pêche, se suffit. */}
+                <span className="grid h-12 w-10 shrink-0 place-items-center transition duration-150 group-hover:scale-105">
+                  <Icone nom={t.picto} taille={30} className="picto-degrade" />
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block text-[16px] font-semibold text-white">{t.nom}</span>
@@ -101,6 +110,7 @@ export function FeuilleAjout({ ouverte, onFermer, onChoisir, principal }: { ouve
             </li>
           ))}
         </ul>
+        </>
       )}
     </Feuille>
   );
