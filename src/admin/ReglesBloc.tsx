@@ -5,7 +5,7 @@ import { NOMS_LANGUES } from '../lib/langues.ts';
 import type { Creneau } from '../lib/moments.ts';
 import { FUSEAU_DEFAUT, decrireCreneau } from '../lib/moments.ts';
 import { Icone } from '../components/Icone.tsx';
-import { AUDIENCES, NOMS_AUDIENCES } from '../lib/provenance.ts';
+import { NOMS_AUDIENCES, RESEAUX_SOCIAUX, basculerPour, enTetePour } from '../lib/provenance.ts';
 import type { Audience } from '../lib/provenance.ts';
 import { Champ, Interrupteur, Segments, classeSaisie, vibrer } from './ui.tsx';
 
@@ -96,39 +96,46 @@ export function RegleMoment({ b, maj }: { b: Bloc; maj: (c: Partial<Bloc>) => vo
   );
 }
 
-/** Pour qui le bloc change : les visiteurs venus d'un réseau précis. */
-export function RegleAudience({ b, maj, adressePage }: { b: Bloc; maj: (c: Partial<Bloc>) => void; adressePage: string }) {
-  const a = b.audience;
-  const basculer = (s: Audience) => {
-    vibrer(4);
-    const sources = a?.sources.includes(s) ? a.sources.filter(x => x !== s) : [...(a?.sources ?? []), s];
-    maj({ audience: sources.length ? { sources, effet: a?.effet ?? 'avant' } : null });
-  };
-  const noms = a?.sources.map(s => NOMS_AUDIENCES[s]).join(', ') ?? '';
-  const exemple = a?.sources[0] ?? 'tiktok';
+/** Sur quels réseaux le bloc s'affiche, et sur lesquels il passe en tête. Tout est coché par défaut. */
+export function RegleReseaux({ b, maj, reseaux }: { b: Bloc; maj: (c: Partial<Bloc>) => void; reseaux: Audience[] }) {
+  const cache = b.cache ?? [];
+  const reserve = b.audience?.effet === 'seulement' ? b.audience.sources : null;
+  const visible = (s: Audience) => !cache.includes(s) && (!reserve || reserve.includes(s));
+  const tete = (s: Audience) => b.audience?.effet === 'avant' && b.audience.sources.includes(s);
+  const autres = RESEAUX_SOCIAUX.filter(s => !reseaux.includes(s));
+  const [plus, setPlus] = useState(() => autres.some(s => !visible(s) || tete(s)));
+  const liste = plus ? [...reseaux, ...autres] : reseaux;
+  const caches = [...reseaux, ...autres].filter(s => !visible(s));
+  const enTete = [...reseaux, ...autres].filter(tete);
+  const resume = [caches.length ? `Pas sur ${caches.map(s => NOMS_AUDIENCES[s]).join(', ')}` : 'Partout', enTete.length ? `en tête sur ${enTete.map(s => NOMS_AUDIENCES[s]).join(', ')}` : ''].filter(Boolean).join(', ');
   return (
-    <Repli titre="Selon d’où vient le visiteur" icone="cible" resume={a ? `${a.effet === 'avant' ? 'En tête' : 'Seulement'} pour ${noms}` : ''} ouvert={!!a}>
-      <div role="group" aria-label="Provenances" className="flex flex-wrap gap-1.5">
-        {AUDIENCES.map(s => {
-          const actif = !!a?.sources.includes(s);
+    <Repli titre="Afficher sur" icone="cible" resume={resume} ouvert={false}>
+      <p className="text-[12.5px] leading-snug text-white/50">Un seul lien dans toutes tes bios : Hopla reconnaît d’où vient le visiteur. « En tête » fait passer ce bloc en premier, mis en avant, pour ce réseau.</p>
+      <ul className="-my-1 divide-y divide-white/[0.06]">
+        {liste.map(s => {
+          const vu = visible(s);
           return (
-            <button key={s} type="button" aria-pressed={actif} onClick={() => basculer(s)}
-              className={`inline-flex min-h-10 items-center gap-1.5 rounded-full px-3.5 text-[14px] font-medium transition active:scale-95 ${actif ? 'bg-white text-nuit' : 'bg-white/[0.07] text-white/75'}`}>
-              {ICONE_AUDIENCE[s] && <Icone nom={ICONE_AUDIENCE[s]} taille={15} />}{NOMS_AUDIENCES[s]}
-            </button>
+            <li key={s} className="flex min-h-12 items-center gap-3">
+              <span className="flex min-w-0 flex-1 items-center gap-2.5 text-[14.5px] font-medium text-white">
+                <span className="flex w-4 justify-center text-white/70">{ICONE_AUDIENCE[s] && <Icone nom={ICONE_AUDIENCE[s]} taille={16} />}</span>{NOMS_AUDIENCES[s]}
+              </span>
+              <button type="button" aria-pressed={tete(s)} disabled={!vu || !!reserve} aria-label={`En tête sur ${NOMS_AUDIENCES[s]}`}
+                onClick={() => { vibrer(4); maj(enTetePour(b, s, !tete(s))); }}
+                className={`h-8 rounded-lg px-2.5 text-[13px] font-medium transition disabled:opacity-30 ${tete(s) ? 'bg-white/[0.14] text-white' : 'text-white/45 hover:text-white/80'}`}>
+                En tête
+              </button>
+              <button type="button" role="switch" aria-checked={vu} aria-label={`Afficher sur ${NOMS_AUDIENCES[s]}`}
+                onClick={() => { vibrer(); maj(basculerPour({ ...b, ...(vu ? enTetePour(b, s, false) : {}) }, s, !vu)); }}
+                className={`adm-interrupteur relative h-6 w-10 shrink-0 rounded-full before:absolute before:-inset-2 before:content-[''] ${vu ? 'bg-white' : 'bg-white/15'}`}>
+                <span className={`absolute top-[3px] left-[3px] h-[18px] w-[18px] rounded-full shadow-[0_1px_3px_rgba(0,0,0,0.3)] ${vu ? 'translate-x-4 bg-nuit' : 'bg-white'}`} />
+              </button>
+            </li>
           );
         })}
-      </div>
-      {a ? (
-        <>
-          <Segments label="Ce que change la provenance" valeur={a.effet} onChange={effet => maj({ audience: { ...a, effet } })}
-            options={[{ id: 'avant', nom: 'Mis en avant' }, { id: 'seulement', nom: 'Visible seulement' }]} />
-          <p className="text-[12.5px] leading-snug text-white/50">
-            {a.effet === 'avant' ? `Pour un visiteur venu de ${noms}, ce bloc passe en tête de ta page, mis en avant.` : `Seuls les visiteurs venus de ${noms} voient ce bloc.`}
-            {' '}Pour être sûr du résultat, mets dans ta bio l’adresse <span className="text-white/80">{adressePage.replace(/^https:\/\//, '')}?s={exemple}</span>.
-          </p>
-        </>
-      ) : <p className="text-[12.5px] leading-snug text-white/45">Par exemple « Mon dernier TikTok » en tête pour ceux qui arrivent de TikTok, « Mon CV » pour ceux de LinkedIn.</p>}
+      </ul>
+      {!plus && autres.length > 0 && (
+        <button type="button" onClick={() => setPlus(true)} className="self-start text-[13.5px] font-medium text-white/55 hover:text-white">Autres réseaux</button>
+      )}
     </Repli>
   );
 }

@@ -89,3 +89,25 @@ export function composerAudience(blocs: Bloc[], audience: Audience | ''): Bloc[]
   }
   return [...tete, ...reste];
 }
+
+/** Les réseaux proposés dans chaque lien quand le compte n'en a pas choisi à son arrivée. */
+export const RESEAUX_PAR_DEFAUT: Audience[] = ['instagram', 'tiktok', 'youtube', 'linkedin', 'x', 'facebook'];
+
+/** Les réseaux où le compte partage son lien : ceux choisis aux premiers pas, sinon les plus connus. */
+export function reseauxDePartage(choisis: Audience[]): Audience[] {
+  const reseaux = choisis.filter(a => RESEAUX_SOCIAUX.includes(a));
+  return reseaux.length ? reseaux : RESEAUX_PAR_DEFAUT;
+}
+
+/** Les provenances qui sont des réseaux où l'on colle un lien en bio (pas le QR code, l'e-mail ni Google). */
+export const RESEAUX_SOCIAUX: Audience[] = ['instagram', 'tiktok', 'youtube', 'linkedin', 'x', 'facebook', 'threads', 'snapchat'];
+
+/** Mettre un bloc en tête (et en avant) pour une provenance, ou l'y retirer. */
+export function enTetePour(bloc: Bloc, audience: Audience, oui: boolean): Pick<Bloc, 'audience'> {
+  const a = bloc.audience;
+  // Un bloc réservé à quelques réseaux le reste : « en tête » ne s'applique qu'aux blocs visibles partout.
+  if (a?.effet === 'seulement') return { audience: a };
+  const sources = (a?.sources ?? []).filter(s => s !== audience);
+  if (oui) sources.push(audience);
+  return { audience: sources.length ? { sources: AUDIENCES.filter(s => sources.includes(s)), effet: 'avant' } : null };
+}

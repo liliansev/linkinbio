@@ -6,20 +6,25 @@ import { adresse } from '../lib/valider.ts';
 import { THEMES } from '../lib/themes.ts';
 import { RESEAUX_ACCUEIL, THEMES_ACCUEIL, nomSite, urlReseau } from '../lib/demarrage.ts';
 import { PageLiens } from '../components/PageLiens.tsx';
+import { NOMS_AUDIENCES, reseauxDePartage } from '../lib/provenance.ts';
+import type { Audience } from '../lib/provenance.ts';
 import { Icone, NOMS_RESEAUX } from '../components/Icone.tsx';
 import { Pastille } from './OngletApparence.tsx';
 import { BoutonPrincipal, classeSaisie, preparerImage, vibrer } from './ui.tsx';
 
 /*
- * L'arrivée d'un compte neuf, juste après les CGU : quatre questions, et la
+ * L'arrivée d'un compte neuf, juste après les CGU : cinq questions, et la
  * page se construit sous les yeux à chaque réponse. Tout s'enregistre au fil
  * de l'eau ; chaque étape se passe, et « Plus tard » mène tout de suite à
  * l'éditeur. Les étapes laissées de côté restent dans « Bien démarrer ».
  */
 
-type Etape = 'profil' | 'liens' | 'reseaux' | 'style' | 'fin';
-const ETAPES: Etape[] = ['profil', 'liens', 'reseaux', 'style', 'fin'];
-const QUESTIONS = 4;
+type Etape = 'profil' | 'liens' | 'reseaux' | 'partage' | 'style' | 'fin';
+const ETAPES: Etape[] = ['profil', 'liens', 'reseaux', 'partage', 'style', 'fin'];
+const QUESTIONS = 5;
+
+/** Les réseaux où l'on peut coller son lien, proposés à l'arrivée. */
+const OU_PARTAGER: Audience[] = ['instagram', 'tiktok', 'youtube', 'linkedin', 'x', 'facebook', 'threads'];
 
 /** Ce que le navigateur retient : les premiers pas sont faits (ou remis à plus tard). */
 export const CLE_PREMIERS_PAS = 'hopla-premiers-pas';
@@ -217,6 +222,30 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
             {!tous && <button type="button" onClick={() => setTous(true)} className="flex min-h-10 items-center rounded-full px-3.5 text-[14px] font-medium text-white/60 transition hover:bg-white/[0.07] hover:text-white">Autres réseaux</button>}
           </div>
         </div>
+      ),
+    },
+    partage: {
+      titre: 'Où vas-tu mettre ton lien ?',
+      aide: 'Le même lien partout. Dans chaque bloc, tu choisiras ensuite de l’afficher ou non sur chacun de ces réseaux.',
+      corps: (
+        <ul className="flex flex-col divide-y divide-white/[0.06] rounded-2xl bg-white/[0.04] px-3.5">
+          {OU_PARTAGER.map(a => {
+            const choisis = reseauxDePartage(reglages.vuesReseaux);
+            const coche = choisis.includes(a);
+            const seul = coche && choisis.length === 1;
+            return (
+              <li key={a} className="flex min-h-12 items-center gap-3">
+                <span className="flex w-5 justify-center text-white/75"><Icone nom={a} taille={18} /></span>
+                <span className="flex-1 text-[15px] font-medium text-white">{NOMS_AUDIENCES[a]}</span>
+                <button type="button" role="switch" aria-checked={coche} aria-label={`Mon lien sur ${NOMS_AUDIENCES[a]}`} disabled={seul}
+                  onClick={() => { vibrer(4); onReglages({ ...reglages, vuesReseaux: OU_PARTAGER.filter(x => (x === a ? !coche : choisis.includes(x))) }); }}
+                  className={`adm-interrupteur relative h-6 w-10 shrink-0 rounded-full before:absolute before:-inset-2 before:content-[''] disabled:opacity-60 ${coche ? 'bg-white' : 'bg-white/15'}`}>
+                  <span className={`absolute top-[3px] left-[3px] h-[18px] w-[18px] rounded-full shadow-[0_1px_3px_rgba(0,0,0,0.3)] ${coche ? 'translate-x-4 bg-nuit' : 'bg-white'}`} />
+                </button>
+              </li>
+            );
+          })}
+        </ul>
       ),
     },
     style: {

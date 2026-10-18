@@ -11,7 +11,8 @@ import { BlocPublic } from '../components/PageLiens.tsx';
 import { BoutonPrincipal, Champ, Feuille, Interrupteur, ListeChoix, NOMS_ANIMATIONS, Segments, classeSaisie, preparerImage, vibrer } from './ui.tsx';
 import { TYPES } from './OngletLiens.tsx';
 import { appDe } from '../lib/ouvrirApp.ts';
-import { ChampsPreuve, RegleAcces, RegleAudience, RegleMoment, RegleTraductions } from './ReglesBloc.tsx';
+import { ChampsPreuve, RegleAcces, RegleMoment, RegleReseaux, RegleTraductions } from './ReglesBloc.tsx';
+import { reseauxDePartage } from '../lib/provenance.ts';
 
 const AIDE_FORMATS = {
   bouton: 'La taille des autres boutons, à la couleur choisie.',
@@ -240,7 +241,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
 
         {b.type === 'lien' && <RegleAcces key={`acces-${b.id}`} b={b} maj={maj} prises={prises} />}
         <RegleMoment key={`moment-${b.id}`} b={b} maj={maj} />
-        <RegleAudience key={`audience-${b.id}`} b={b} maj={maj} adressePage={adressePage} />
+        <RegleReseaux key={`reseaux-${b.id}`} b={b} maj={maj} reseaux={reseauxDePartage(reglages.vuesReseaux)} />
         <RegleTraductions key={`langues-${b.id}`} b={b} maj={maj} langues={reglages.langues ?? []} />
 
         {!nouveau && b.type === 'lien' && <p className="text-center text-[13px] text-white/45">{clics} clic{clics > 1 ? 's' : ''} ces 30 derniers jours</p>}

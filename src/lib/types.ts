@@ -135,6 +135,7 @@ export interface Reglages {
   /** Le mouvement des liens mis en avant (un bloc peut choisir le sien). */
   animation: Animation;
   /** Les réseaux qui ont leur vue dans « Ma page » (vide : l'option est coupée). */
+  /** Les réseaux où le compte colle son lien (choisis aux premiers pas) : chaque bloc se coche ou se décoche pour chacun. Vide : les plus connus. */
   vuesReseaux: Audience[];
   /** La mise en page sur un grand écran ; sur téléphone, la page reste une colonne. */
   bureau: MiseEnPageBureau;

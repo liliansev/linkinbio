@@ -3,8 +3,6 @@ import QRCode from 'qrcode';
 import type { ComptePage, Reglages } from '../lib/types.ts';
 import { LANGUES, urlPage } from '../lib/types.ts';
 import { NOMS_LANGUES } from '../lib/langues.ts';
-import { AUDIENCES, NOMS_AUDIENCES } from '../lib/provenance.ts';
-import type { Audience } from '../lib/provenance.ts';
 import type { Abonnement as EtatAbonnement, Periode } from '../lib/abonnement.ts';
 import { AVANTAGES_PRO, TARIFS, estResilie, euros } from '../lib/abonnement.ts';
 import { Icone } from '../components/Icone.tsx';
@@ -32,7 +30,7 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
   const sections: { id: Section; nom: string; resume: string }[] = [
     ...(pro ? [{ id: 'abonnement' as const, nom: 'Abonnement', resume: abonnement.pro ? 'Pro' : 'Gratuit' }] : []),
     { id: 'partage', nom: 'Partage et Google', resume: reglages.seo.titre || 'Titre, description, bouton Partager' },
-    { id: 'reseaux', nom: 'Réseaux sociaux', resume: [reglages.ouvrirApps && 'Liens ouverts dans les apps', reglages.vuesReseaux.length > 0 && 'une vue par réseau'].filter(Boolean).join(', ') || 'Rien d’activé' },
+    { id: 'reseaux', nom: 'Ouvrir dans les apps', resume: reglages.ouvrirApps ? 'Activé' : 'Désactivé' },
     { id: 'langues', nom: 'Langues', resume: ['Français', ...reglages.langues.map(l => NOMS_LANGUES[l])].join(', ') },
     { id: 'emails', nom: 'E-mails', resume: reglages.resumeHebdo ? 'Le résumé du lundi' : 'Aucun' },
     { id: 'donnees', nom: 'Tes données', resume: 'Exporter, supprimer ton compte' },
@@ -62,10 +60,9 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
           </div>
         </div>
       </Carte>}
-      {ouverte === 'reseaux' && <Carte titre="Réseaux sociaux">
-        <div className="divide-y divide-white/[0.06]">
+      {ouverte === 'reseaux' && <Carte titre="Ouvrir dans les apps">
+        <div>
           <Interrupteur label="Ouvrir les liens dans les apps" aide="Depuis Instagram, TikTok ou Facebook, un lien YouTube, Spotify ou Instagram s’ouvre dans son app plutôt que dans leur navigateur intégré." actif={reglages.ouvrirApps} onChange={v => onChange({ ...reglages, ouvrirApps: v })} />
-          <VuesReseaux reglages={reglages} onChange={onChange} />
         </div>
       </Carte>}
       {ouverte === 'langues' && <Langues reglages={reglages} onChange={onChange} adresse={URL_PUBLIQUE} />}
@@ -282,33 +279,3 @@ function Langues({ reglages, onChange, adresse }: { reglages: Reglages; onChange
   );
 }
 
-/** L'option « une vue par réseau » : dans « Ma page », un onglet par réseau pour cacher ce qui ne le concerne pas. */
-function VuesReseaux({ reglages, onChange }: { reglages: Reglages; onChange: (r: Reglages) => void }) {
-  const vues = reglages.vuesReseaux;
-  const actif = vues.length > 0;
-  // À l'ouverture : les réseaux déjà en tête de page, sinon Instagram et TikTok.
-  const depart = (): Audience[] => {
-    const siens = AUDIENCES.filter(a => reglages.reseaux.some(r => r.reseau === a));
-    return siens.length ? siens : ['instagram', 'tiktok'];
-  };
-  const basculer = (a: Audience) => {
-    const suite = vues.includes(a) ? vues.filter(x => x !== a) : AUDIENCES.filter(x => x === a || vues.includes(x));
-    onChange({ ...reglages, vuesReseaux: suite });
-  };
-  return (
-    <div>
-      <Interrupteur label="Une vue par réseau" aide="Dans « Ma page », un onglet par réseau : tu caches d’un toucher ce que ceux qui arrivent d’Instagram, de TikTok ou de LinkedIn n’ont pas besoin de voir. Un seul lien dans toutes tes bios : Hopla reconnaît d’où vient le visiteur."
-        actif={actif} onChange={v => onChange({ ...reglages, vuesReseaux: v ? depart() : [] })} />
-      {actif && (
-        <div className="grid grid-cols-3 gap-1.5 pb-3" role="group" aria-label="Réseaux qui ont leur vue">
-          {AUDIENCES.map(a => (
-            <button key={a} type="button" aria-pressed={vues.includes(a)} onClick={() => basculer(a)}
-              className={`min-h-9 rounded-lg px-2 text-[13px] font-medium transition ${vues.includes(a) ? 'bg-white/[0.14] text-white ring-1 ring-white/30' : 'bg-white/[0.04] text-white/55 hover:bg-white/[0.08]'}`}>
-              {NOMS_AUDIENCES[a]}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
