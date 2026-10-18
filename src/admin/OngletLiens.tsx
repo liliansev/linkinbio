@@ -30,7 +30,6 @@ export function OngletLiens({ blocs, clics, onOrdonner, onModifier, onOuvrir, on
   /** Les autres comptes n'ont pas les blocs branchés sur la chaîne et la newsletter de Lilian. */
   principal?: boolean;
 }) {
-  const types = principal ? TYPES : TYPES.filter(t => !TYPES_PRINCIPAL.includes(t.type));
   const [choix, setChoix] = useState(false);
   const capteurs = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -63,7 +62,7 @@ export function OngletLiens({ blocs, clics, onOrdonner, onModifier, onOuvrir, on
         </SortableContext>
       </DndContext>
       {blocs.length === 0 && (
-        <div className="flex flex-col items-center gap-2 rounded-[20px] border border-dashed border-white/12 px-6 py-10 text-center">
+        <div className="flex flex-col items-center gap-2 rounded-[20px] bg-white/[0.03] px-6 py-10 text-center">
           <span className="mb-1 grid h-12 w-12 place-items-center rounded-full bg-white/[0.06] text-peche"><Icone nom="lien" taille={22} /></span>
           <p className="text-[16px] font-semibold text-white">Ta page est vide</p>
           <p className="max-w-[30ch] text-[14px] leading-snug text-white/55">Ajoute un lien, un titre ou ta dernière vidéo : tout apparaît aussitôt sur ta page.</p>
@@ -71,28 +70,36 @@ export function OngletLiens({ blocs, clics, onOrdonner, onModifier, onOuvrir, on
       )}
       {blocs.length > 1 && <p className="text-center text-[13px] text-white/40">Maintiens la poignée à gauche pour déplacer un bloc.</p>}
 
-      <Feuille ouverte={choix} onFermer={() => setChoix(false)} titre="Ajouter un bloc">
-        {fermer => (
-          <ul className="adm-cascade -mx-2 flex flex-col pb-2">
-            {types.map((t, i) => (
-              <li key={t.type} style={{ '--i': i } as CSSProperties}>
-                <button type="button" onClick={() => fermer(() => ajouter(t.type))}
-                  className="group flex w-full items-center gap-3.5 rounded-2xl px-2 py-2.5 text-left transition duration-150 hover:bg-white/[0.05] active:scale-[0.985] active:bg-white/[0.07]">
-                  <span className={`grid h-12 w-12 shrink-0 place-items-center rounded-[14px] transition ${t.type === 'lien' ? 'bg-peche text-nuit' : 'bg-white/[0.07] text-peche group-hover:bg-white/[0.1]'}`}>
-                    <Icone nom={t.picto} taille={22} />
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-[16px] font-semibold text-white">{t.nom}</span>
-                    <span className="block text-[13.5px] leading-snug text-white/55">{t.aide}</span>
-                  </span>
-                  <Icone nom="ui-chevron" taille={18} className="-rotate-90 text-white/30" />
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </Feuille>
+      <FeuilleAjout ouverte={choix} onFermer={() => setChoix(false)} onChoisir={ajouter} principal={principal} />
     </div>
+  );
+}
+
+/** Le choix du type de bloc à ajouter. */
+export function FeuilleAjout({ ouverte, onFermer, onChoisir, principal }: { ouverte: boolean; onFermer: () => void; onChoisir: (type: TypeBloc) => void; principal: boolean }) {
+  const types = principal ? TYPES : TYPES.filter(t => !TYPES_PRINCIPAL.includes(t.type));
+  return (
+    <Feuille ouverte={ouverte} onFermer={onFermer} titre="Ajouter un bloc">
+      {fermer => (
+        <ul className="adm-cascade -mx-2 flex flex-col pb-2">
+          {types.map((t, i) => (
+            <li key={t.type} style={{ '--i': i } as CSSProperties}>
+              <button type="button" onClick={() => fermer(() => onChoisir(t.type))}
+                className="group flex w-full items-center gap-3.5 rounded-2xl px-2 py-2.5 text-left transition duration-150 hover:bg-white/[0.05] active:scale-[0.985] active:bg-white/[0.07]">
+                <span className={`grid h-12 w-12 shrink-0 place-items-center rounded-[14px] transition ${t.type === 'lien' ? 'bg-peche text-nuit' : 'bg-white/[0.07] text-peche group-hover:bg-white/[0.1]'}`}>
+                  <Icone nom={t.picto} taille={22} />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[16px] font-semibold text-white">{t.nom}</span>
+                  <span className="block text-[13.5px] leading-snug text-white/55">{t.aide}</span>
+                </span>
+                <Icone nom="ui-chevron" taille={18} className="-rotate-90 text-white/30" />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Feuille>
   );
 }
 
@@ -102,15 +109,17 @@ function Ligne({ bloc, clics, onModifier, onOuvrir }: { bloc: Bloc; clics: numbe
   const programme = bloc.public && !enLigne;
   const titre = bloc.titre || (bloc.type === 'lien' ? bloc.url || 'Lien sans titre' : NOM_TYPE[bloc.type]);
   const sousLigne = bloc.type === 'lien' ? bloc.url.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '') : NOM_TYPE[bloc.type];
+  // Un titre de section se lit comme un intercalaire : pas une carte, une séparation.
+  const section = bloc.type === 'titre';
   return (
     <li ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition }}
-      className={`relative flex items-stretch rounded-[20px] border bg-[#141c2e] transition-[box-shadow,border-color,scale] duration-200 ${isDragging ? 'z-10 scale-[1.02] border-peche/60 shadow-[0_24px_50px_-16px_rgba(0,0,0,0.75)]' : 'border-white/[0.07]'}`}>
+      className={`relative flex items-stretch rounded-[20px] border transition-[box-shadow,border-color,scale] duration-200 ${section ? 'mt-2 bg-transparent' : 'bg-[#141c2e]'} ${isDragging ? 'z-10 scale-[1.02] border-peche/60 bg-[#141c2e] shadow-[0_24px_50px_-16px_rgba(0,0,0,0.75)]' : section ? 'border-white/[0.12]' : 'border-white/[0.07]'}`}>
       <button ref={setActivatorNodeRef} type="button" {...attributes} {...listeners} aria-label={`Déplacer ${titre}`}
         className="flex w-10 shrink-0 cursor-grab touch-none items-center justify-center rounded-l-2xl text-white/35 hover:text-white/70 active:cursor-grabbing">
         <svg width="14" height="20" viewBox="0 0 14 20" fill="currentColor" aria-hidden="true"><circle cx="4" cy="4" r="1.7" /><circle cx="10" cy="4" r="1.7" /><circle cx="4" cy="10" r="1.7" /><circle cx="10" cy="10" r="1.7" /><circle cx="4" cy="16" r="1.7" /><circle cx="10" cy="16" r="1.7" /></svg>
       </button>
-      <button type="button" onClick={() => onOuvrir(bloc)} className="flex min-w-0 flex-1 items-center gap-3 py-3 pr-2 text-left">
-        <span className={`grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-[13px] text-lg transition-opacity ${bloc.vedette ? 'bg-peche/15 text-peche' : 'bg-white/[0.07] text-white/85'} ${!bloc.public ? 'opacity-45' : ''}`}>
+      <button type="button" onClick={() => onOuvrir(bloc)} className={`flex min-w-0 flex-1 items-center gap-3 pr-2 text-left ${section ? 'py-2' : 'py-3'}`}>
+        <span className={`grid ${section ? 'h-9 w-9 bg-transparent!' : 'h-11 w-11'} shrink-0 place-items-center overflow-hidden rounded-[13px] text-lg transition-opacity ${bloc.vedette ? 'bg-peche/15 text-peche' : 'bg-white/[0.07] text-white/85'} ${!bloc.public ? 'opacity-45' : ''}`}>
           {bloc.image ? <img src={bloc.image} alt="" className="h-full w-full object-cover" />
             : bloc.icone && ICONES[bloc.icone] ? <Icone nom={bloc.icone} taille={20} />
             : bloc.icone || <Icone nom={TYPES.find(t => t.type === bloc.type)!.picto} taille={20} />}

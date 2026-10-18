@@ -1,6 +1,6 @@
 import { ANIMATIONS, ANIMATIONS_BLOC, FORMATS_VEDETTE, FORMES_BOUTON, MISES_EN_PAGE_BUREAU, RESEAUX, STYLES_BOUTON, TEINTES_VEDETTE, TYPES_BLOC } from './types.ts';
 import type { Bloc, Reglages } from './types.ts';
-import { THEMES, THEME_DEFAUT } from './themes.ts';
+import { idTheme } from './themes.ts';
 
 /*
  * Tout ce qui arrive du navigateur passe ici avant la base : chaque champ est
@@ -76,7 +76,7 @@ export function validerReglages(v: unknown, base: Reglages): Reglages {
     },
     reseaux: reseaux.slice(0, 12).map((r: any) => ({ reseau: parmi(r?.reseau, RESEAUX, 'site'), url: adresse(r?.url) })).filter((r: { url: string }) => r.url),
     reseauxPosition: parmi(o.reseauxPosition, ['haut', 'bas'] as const, base.reseauxPosition),
-    theme: parmi(o.theme, THEMES.map(theme => theme.id), THEME_DEFAUT),
+    theme: idTheme(o.theme),
     bouton: { style: parmi(bouton.style, STYLES_BOUTON, 'plein'), forme: parmi(bouton.forme, FORMES_BOUTON, 'pilule') },
     seo: { titre: texte(seo.titre, 80), description: texte(seo.description, 200), indexable: bool(seo.indexable, true) },
     partage: bool(o.partage, base.partage),
