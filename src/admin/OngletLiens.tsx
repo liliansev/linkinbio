@@ -59,7 +59,7 @@ export function OngletLiens({ blocs, clics, onOrdonner, onModifier, onOuvrir, on
 
       <DndContext sensors={capteurs} collisionDetection={closestCenter} onDragStart={() => vibrer(6)} onDragEnd={deplacer}>
         <SortableContext items={blocs.map(b => b.id)} strategy={verticalListSortingStrategy}>
-          <ul className="flex flex-col gap-2.5">
+          <ul className="flex flex-col gap-1.5">
             {blocs.map(bloc => <Ligne key={bloc.id} bloc={bloc} clics={clics[bloc.id] ?? 0} onModifier={onModifier} onOuvrir={onOuvrir} />)}
           </ul>
         </SortableContext>
@@ -71,7 +71,7 @@ export function OngletLiens({ blocs, clics, onOrdonner, onModifier, onOuvrir, on
           <p className="max-w-[30ch] text-[14px] leading-snug text-white/55">Ajoute un lien, un titre ou ta dernière vidéo : tout apparaît aussitôt sur ta page.</p>
         </div>
       )}
-      {blocs.length > 1 && <p className="text-center text-[13px] text-white/40">Maintiens la poignée à gauche pour déplacer un bloc.</p>}
+      {blocs.length > 1 && <p className="text-center text-[13px] text-white/40">Fais glisser la poignée à gauche pour changer l’ordre.</p>}
 
       <FeuilleAjout ouverte={choix} onFermer={() => setChoix(false)} onChoisir={ajouter} principal={principal} />
     </div>
@@ -118,46 +118,76 @@ export function FeuilleAjout({ ouverte, onFermer, onChoisir, principal }: { ouve
 
 function Ligne({ bloc, clics, onModifier, onOuvrir }: { bloc: Bloc; clics: number; onModifier: (b: Bloc) => void; onOuvrir: (b: Bloc) => void }) {
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({ id: bloc.id });
+  const [menu, setMenu] = useState(false);
   const enLigne = estEnLigne(bloc);
   const programme = bloc.public && !enLigne;
   const titre = bloc.titre || (bloc.type === 'lien' ? bloc.url || 'Lien sans titre' : NOM_TYPE[bloc.type]);
-  const sousLigne = bloc.type === 'lien' ? bloc.url.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '') : NOM_TYPE[bloc.type];
+  const domaine = bloc.url.replace(/^https?:\/\/(www\.)?/, '').replace(/[/?#].*$/, '');
+  // Une ligne lisible d'un coup d'œil : les clics d'abord, puis où mène le lien.
+  const sousLigne = !bloc.public ? 'Privé' : bloc.type === 'lien' ? [`${clics} clic${clics > 1 ? 's' : ''}`, domaine].filter(Boolean).join(' · ') : titre === NOM_TYPE[bloc.type] ? TYPES.find(t => t.type === bloc.type)!.aide : NOM_TYPE[bloc.type];
   // Un titre de section se lit comme un intercalaire : pas une carte, une séparation.
   const section = bloc.type === 'titre';
+  const agir = (b: Bloc) => { vibrer(); setMenu(false); onModifier(b); };
   return (
     <li ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition }}
-      className={`relative flex items-stretch rounded-[20px] border transition-[box-shadow,border-color,scale] duration-200 ${section ? 'mt-2 bg-transparent' : 'bg-[#141c2e]'} ${isDragging ? 'z-10 scale-[1.02] border-peche/60 bg-[#141c2e] shadow-[0_24px_50px_-16px_rgba(0,0,0,0.75)]' : section ? 'border-white/[0.12]' : 'border-white/[0.07]'}`}>
+      className={`relative flex items-stretch rounded-2xl transition-[box-shadow,background-color,scale] duration-200 ${section ? 'mt-3 bg-transparent' : 'bg-white/[0.045]'} ${isDragging ? 'z-10 scale-[1.02] bg-[#1a2336] shadow-[0_24px_50px_-16px_rgba(0,0,0,0.75)]' : ''} ${menu ? 'z-10' : ''}`}>
       <button ref={setActivatorNodeRef} type="button" {...attributes} {...listeners} aria-label={`Déplacer ${titre}`}
-        className="flex w-10 shrink-0 cursor-grab touch-none items-center justify-center rounded-l-2xl text-white/35 hover:text-white/70 active:cursor-grabbing">
-        <svg width="14" height="20" viewBox="0 0 14 20" fill="currentColor" aria-hidden="true"><circle cx="4" cy="4" r="1.7" /><circle cx="10" cy="4" r="1.7" /><circle cx="4" cy="10" r="1.7" /><circle cx="10" cy="10" r="1.7" /><circle cx="4" cy="16" r="1.7" /><circle cx="10" cy="16" r="1.7" /></svg>
+        className="flex w-9 shrink-0 cursor-grab touch-none items-center justify-center text-white/30 hover:text-white/70 active:cursor-grabbing">
+        <Icone nom="ui-poignee" taille={16} />
       </button>
-      <button type="button" onClick={() => onOuvrir(bloc)} className={`flex min-w-0 flex-1 items-center gap-3 pr-2 text-left ${section ? 'py-2' : 'py-3'}`}>
-        <span className={`grid ${section ? 'h-9 w-9 bg-transparent!' : 'h-11 w-11'} shrink-0 place-items-center overflow-hidden rounded-[13px] text-lg transition-opacity ${bloc.vedette ? 'bg-peche/15 text-peche' : 'bg-white/[0.07] text-white/85'} ${!bloc.public ? 'opacity-45' : ''}`}>
-          {bloc.image ? <img src={bloc.image} alt="" className="h-full w-full object-cover" />
-            : bloc.icone && ICONES[bloc.icone] ? <Icone nom={bloc.icone} taille={20} />
-            : bloc.icone || <Icone nom={TYPES.find(t => t.type === bloc.type)!.picto} taille={20} />}
-        </span>
+      <button type="button" onClick={() => onOuvrir(bloc)} className={`flex min-w-0 flex-1 items-center gap-3 text-left ${section ? 'py-1.5' : 'py-2.5'}`}>
+        {!section && (
+          <span className={`grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-xl text-lg transition-opacity ${bloc.vedette ? 'bg-peche/15 text-peche' : 'bg-white/[0.07] text-white/85'} ${!bloc.public ? 'opacity-45' : ''}`}>
+            {bloc.image ? <img src={bloc.image} alt="" className="h-full w-full object-cover" />
+              : bloc.icone && ICONES[bloc.icone] ? <Icone nom={bloc.icone} taille={19} />
+              : bloc.icone || <Icone nom={TYPES.find(t => t.type === bloc.type)!.picto} taille={19} />}
+          </span>
+        )}
         <span className={`min-w-0 flex-1 transition-opacity ${!bloc.public ? 'opacity-45' : ''}`}>
           <span className="flex items-center gap-1.5">
-            <span className="truncate text-[15px] font-semibold text-white">{titre}</span>
-            {bloc.vedette && <span className="shrink-0 text-peche" title="Mis en avant"><Icone nom="etoile" taille={14} className="[&_*]:fill-current" /></span>}
+            <span className={`truncate ${section ? 'text-[13px] font-medium text-white/55' : 'text-[15px] font-medium text-white'}`}>{titre}</span>
+            {bloc.vedette && <span className="shrink-0 text-peche" title="Mis en avant"><Icone nom="ui-etoile" taille={13} /></span>}
           </span>
-          <span className="mt-0.5 flex items-center gap-2 text-[12.5px] text-white/45">
-            <span className="truncate">{!bloc.public ? 'Privé' : sousLigne}</span>
-            {programme && <span className="flex shrink-0 items-center gap-1 text-amber-200/85"><Icone nom="ui-horloge" taille={13} />Programmé</span>}
-            {etiquettes(bloc).map(r => <span key={r} className="shrink-0 text-peche/80">{r}</span>)}
-            {!bloc.indexable && bloc.public && <span className="flex shrink-0 items-center" title="Masqué pour Google"><Icone nom="ui-masque" taille={13} /></span>}
-          </span>
+          {!section && (
+            <span className="mt-0.5 flex items-center gap-2 text-[12.5px] text-white/45">
+              <span className="truncate">{sousLigne}</span>
+              {programme && <span className="flex shrink-0 items-center gap-1 text-amber-200/85"><Icone nom="ui-horloge" taille={13} />Programmé</span>}
+              {etiquettes(bloc).map(r => <span key={r} className="shrink-0 text-peche/80">{r}</span>)}
+              {!bloc.indexable && bloc.public && <span className="flex shrink-0 items-center" title="Masqué pour Google"><Icone nom="ui-masque" taille={13} /></span>}
+            </span>
+          )}
         </span>
-        {bloc.type === 'lien' && <span className="shrink-0 text-right text-[12px] leading-tight text-white/45"><span className="block text-[15px] font-semibold text-white/80">{clics}</span>clics</span>}
       </button>
-      <div className="flex items-center pr-3">
-        <button type="button" role="switch" aria-checked={bloc.public} aria-label={bloc.public ? `Rendre ${titre} privé` : `Rendre ${titre} public`}
-          onClick={() => { vibrer(); onModifier({ ...bloc, public: !bloc.public }); }}
-          className={`adm-interrupteur relative h-7 w-[46px] shrink-0 rounded-full ${bloc.public ? 'bg-peche' : 'bg-white/15'}`}>
-          <span className={`absolute top-1 left-1 h-5 w-5 rounded-full shadow-[0_2px_6px_rgba(0,0,0,0.3)] ${bloc.public ? 'translate-x-[18px] bg-nuit' : 'bg-white'}`} />
+      <div className="flex items-center pr-1">
+        <button type="button" aria-pressed={!bloc.public} aria-label={bloc.public ? `Masquer ${titre}` : `Afficher ${titre}`} title={bloc.public ? 'Visible sur ta page' : 'Masqué'}
+          onClick={() => agir({ ...bloc, public: !bloc.public })}
+          className={`grid h-10 w-10 place-items-center rounded-full transition hover:bg-white/[0.07] ${bloc.public ? 'text-white/55' : 'text-peche'}`}>
+          <Icone nom={bloc.public ? 'ui-oeil' : 'ui-oeil-barre'} taille={18} />
+        </button>
+        <button type="button" aria-label={`Plus d’options pour ${titre}`} aria-expanded={menu} aria-haspopup="menu" onClick={() => setMenu(m => !m)}
+          className="grid h-10 w-8 place-items-center rounded-full text-white/55 transition hover:bg-white/[0.07]">
+          <Icone nom="ui-actions" taille={18} />
         </button>
       </div>
+      {menu && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setMenu(false)} aria-hidden="true" />
+          <div role="menu" className="absolute top-[calc(100%-6px)] right-2 z-20 flex min-w-52 flex-col rounded-2xl bg-[#1d2638] p-1.5 shadow-[0_20px_50px_-14px_rgba(0,0,0,0.85)] ring-1 ring-white/10"
+            onKeyDown={e => { if (e.key === 'Escape') setMenu(false); }}>
+            <ActionMenu icone="ui-crayon" onClick={() => { setMenu(false); onOuvrir(bloc); }}>Modifier</ActionMenu>
+            {!section && <ActionMenu icone="ui-etoile" onClick={() => agir({ ...bloc, vedette: !bloc.vedette })}>{bloc.vedette ? 'Ne plus mettre en avant' : 'Mettre en avant'}</ActionMenu>}
+            <ActionMenu icone={bloc.public ? 'ui-oeil-barre' : 'ui-oeil'} onClick={() => agir({ ...bloc, public: !bloc.public })}>{bloc.public ? 'Masquer de ma page' : 'Afficher sur ma page'}</ActionMenu>
+          </div>
+        </>
+      )}
     </li>
+  );
+}
+
+function ActionMenu({ icone, onClick, children }: { icone: string; onClick: () => void; children: string }) {
+  return (
+    <button type="button" role="menuitem" onClick={onClick} className="flex min-h-11 items-center gap-3 rounded-xl px-3 text-left text-[14.5px] text-white/90 hover:bg-white/[0.07]">
+      <Icone nom={icone} taille={17} className="text-white/55" /> {children}
+    </button>
   );
 }

@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { DndContext, KeyboardSensor, PointerSensor, TouchSensor, closestCenter, useSensor, useSensors } from '@dnd-kit/core';
 import type { DragEndEvent } from '@dnd-kit/core';
@@ -13,7 +13,7 @@ import type { Edition } from '../components/PageLiens.tsx';
 import { Icone } from '../components/Icone.tsx';
 import { HautLiens } from './BienDemarrer.tsx';
 import { FeuilleAjout, OngletLiens } from './OngletLiens.tsx';
-import { OngletApparence } from './OngletApparence.tsx';
+import { DesignTiroirs, OngletApparence } from './OngletApparence.tsx';
 import { Feuille, Interrupteur, Segments, preparerImage, vibrer } from './ui.tsx';
 
 /*
@@ -24,15 +24,17 @@ import { Feuille, Interrupteur, Segments, preparerImage, vibrer } from './ui.tsx
  * veulent leurs clics et leurs interrupteurs en colonne.
  */
 
-type Vue = 'page' | 'liste';
+export type Vue = 'page' | 'liste';
 const CLE_VUE = 'hopla-vue-ma-page';
 const lireVue = (): Vue => { try { return localStorage.getItem(CLE_VUE) === 'liste' ? 'liste' : 'page'; } catch { return 'page'; } };
 
-export function MaPage({ compte, reglages, blocs, clics, onReglages, onOrdonner, onModifier, onOuvrir, onAjouter, envoyerImage }: {
+export function MaPage({ compte, reglages, blocs, clics, onVue, onReglages, onOrdonner, onModifier, onOuvrir, onAjouter, envoyerImage }: {
   compte: PagePublique['compte'];
   reglages: Reglages;
   blocs: Bloc[];
   clics: Record<string, number>;
+  /** En liste, l'ordinateur garde la page en aperçu à droite : le parent doit savoir laquelle est montrée. */
+  onVue?: (v: Vue) => void;
   onReglages: (r: Reglages) => void;
   onOrdonner: (blocs: Bloc[]) => void;
   onModifier: (bloc: Bloc) => void;
@@ -48,6 +50,7 @@ export function MaPage({ compte, reglages, blocs, clics, onReglages, onOrdonner,
   const toile = useRef<HTMLDivElement>(null);
   const principal = compte.principal;
   const visibles = blocs.filter(b => principal || !TYPES_PRINCIPAL.includes(b.type));
+  useEffect(() => { onVue?.(vue); }, [vue, onVue]);
 
   function changerVue(v: Vue) {
     setVue(v);
@@ -143,10 +146,8 @@ export function MaPage({ compte, reglages, blocs, clics, onReglages, onOrdonner,
         <OngletApparence reglages={reglages} onChange={onReglages} envoyerImage={envoyerImage} principal={principal} parties={['reseaux']} />
       </Feuille>
       <Feuille ouverte={feuille === 'design'} onFermer={() => setFeuille(null)} titre="Design" cote>
-        <div className="flex flex-col gap-4">
-          <OngletApparence reglages={reglages} onChange={onReglages} envoyerImage={envoyerImage} principal={principal} parties={['theme', 'boutons', 'animation', 'bureau']} />
-          {principal && <Interrupteur label="Badge vérifié" aide="La petite coche à côté de ton nom." actif={reglages.profil.badge} onChange={v => profil({ badge: v })} />}
-        </div>
+        <DesignTiroirs reglages={reglages} onChange={onReglages} envoyerImage={envoyerImage} principal={principal}
+          pied={principal && <Interrupteur label="Badge vérifié" aide="La petite coche à côté de ton nom." actif={reglages.profil.badge} onChange={v => profil({ badge: v })} />} />
       </Feuille>
     </div>
   );

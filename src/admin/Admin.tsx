@@ -5,6 +5,7 @@ import { TYPES_PRINCIPAL, cheminPage, urlPage } from '../lib/types.ts';
 import { composerMoment } from '../lib/moments.ts';
 import { PageLiens } from '../components/PageLiens.tsx';
 import { MaPage } from './MaPage.tsx';
+import type { Vue } from './MaPage.tsx';
 import { EditeurBloc } from './EditeurBloc.tsx';
 import { OngletStats } from './OngletStats.tsx';
 import { MaListe } from './MaListe.tsx';
@@ -42,6 +43,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
   const [reglages, setReglages] = useState(initial.reglages);
   const [clics, setClics] = useState(initial.clics);
   const [onglet, setOnglet] = useState<Onglet>('page');
+  const [vuePage, setVuePage] = useState<Vue>('page');
   const [edition, setEdition] = useState<{ bloc: Bloc; nouveau: boolean } | null>(null);
   const [sauvegarde, setSauvegarde] = useState<Sauvegarde>('ok');
   const [toast, setToast] = useState<{ texte: string; annuler?: () => void } | null>(null);
@@ -212,11 +214,11 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
         <p className="mx-auto mt-3 max-w-6xl px-4"><span className="block rounded-xl bg-amber-400/15 px-3.5 py-2.5 text-[13.5px] text-amber-100">Le stockage n’est pas encore branché sur le serveur : tes changements seront perdus au prochain redémarrage.</span></p>
       )}
 
-      <div className={`mx-auto max-w-6xl px-4 ${onglet === 'page' ? '' : 'lg:grid lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-10'}`}>
+      <div className={`mx-auto max-w-6xl px-4 ${onglet === 'page' && vuePage === 'page' ? '' : 'lg:grid lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-10'}`}>
         <main className={`mx-auto w-full max-w-xl lg:pb-12 ${onglet === 'page' ? 'pb-48 lg:pt-5' : 'pt-5 pb-32'}`}>
           <div key={onglet} className="adm-onglet">
           <h1 className={`mb-4 text-[28px] font-semibold tracking-[-0.025em] lg:hidden ${onglet === 'page' ? 'sr-only' : ''}`}>{onglets.find(o => o.id === onglet)!.nom}</h1>
-          {onglet === 'page' && <MaPage compte={compte} reglages={reglages} blocs={blocs} clics={clics} onReglages={changerReglages} onOrdonner={ordonner}
+          {onglet === 'page' && <MaPage onVue={setVuePage} compte={compte} reglages={reglages} blocs={blocs} clics={clics} onReglages={changerReglages} onOrdonner={ordonner}
             onModifier={b => { setBlocs(l => l.map(x => (x.id === b.id ? b : x))); ecrire(() => api.enregistrerBloc(b)); }}
             onOuvrir={b => setEdition({ bloc: b, nouveau: false })} onAjouter={b => setEdition({ bloc: b, nouveau: true })} envoyerImage={d => api.envoyerImage(d)} />}
           {onglet === 'stats' && <OngletStats charger={chargerStats} limite={initial.paiement && !compte.pro} onPro={versAbonnement}
@@ -227,7 +229,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
           </div>
         </main>
 
-        {onglet !== 'page' && (
+        {(onglet !== 'page' || vuePage === 'liste') && (
           <aside className="sticky top-16 hidden h-[calc(100dvh-4rem)] items-center justify-center lg:flex" aria-label="Aperçu de ta page">
             <Telephone page={page} />
           </aside>
