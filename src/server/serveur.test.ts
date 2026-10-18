@@ -303,7 +303,10 @@ test('offre Pro : estPro lit le statut, la fin de période et la grâce', async 
   assert.equal(estPro({ statut: 'scheduled_cancel', finPeriode: t + jour }, t), true);
   assert.equal(estPro({ statut: 'scheduled_cancel', finPeriode: t - 1 }, t), false, 'une résiliation s’arrête net à la fin de la période');
   assert.equal(estPro({ statut: 'past_due', finPeriode: t + jour }, t), true);
-  for (const statut of ['canceled', 'expired', 'unpaid', 'paused']) assert.equal(estPro({ statut, finPeriode: t + jour }, t), false, statut);
+  assert.equal(estPro({ statut: 'canceled', finPeriode: t + jour }, t), true, 'résilié depuis le portail : Pro jusqu’à la fin payée');
+  assert.equal(estPro({ statut: 'canceled', finPeriode: t - 1 }, t), false);
+  assert.equal(estPro({ statut: 'canceled', finPeriode: null }, t), false, 'sans date de fin, une résiliation arrête le Pro');
+  for (const statut of ['expired', 'unpaid', 'paused']) assert.equal(estPro({ statut, finPeriode: t + jour }, t), false, statut);
 });
 
 test('offre Pro : webhooks Creem signés, idempotents, dans le désordre', async () => {
@@ -340,6 +343,13 @@ test('offre Pro : webhooks Creem signés, idempotents, dans le désordre', async
   assert.equal(db.compteParId(lea.id)!.abonnement_statut, 'scheduled_cancel');
   assert.equal(db.compteEstPro(lea.id, t + 29 * jour), true);
   assert.equal(db.compteEstPro(lea.id, t + 31 * jour), false, 'en gratuit dès la fin de la période payée');
+
+  // Résilié depuis le portail Creem : `subscription.canceled`, statut `canceled`, le Pro tient jusqu'à la fin payée.
+  envoyer({ id: 'evt_2b', eventType: 'subscription.canceled', created_at: t + 3 * jour, object: { id: 'sub_1', status: 'canceled', customer: 'cust_1', current_period_end_date: new Date(t + 30 * jour).toISOString() } });
+  assert.equal(db.compteParId(lea.id)!.abonnement_statut, 'canceled');
+  assert.equal(db.compteEstPro(lea.id, t + 3 * jour), true);
+  assert.equal(db.abonnement(db.compteParId(lea.id)!, t + 3 * jour).plan, 'pro');
+  assert.equal(db.compteEstPro(lea.id, t + 31 * jour), false);
 
   // Un nouvel abonnement remplace l'ancien ; la fin tardive de l'ancien ne l'éteint pas.
   envoyer({ id: 'evt_3', eventType: 'subscription.active', created_at: t + 40 * jour, object: { id: 'sub_2', status: 'active', customer: 'cust_1', metadata: { compte: lea.id }, current_period_end_date: new Date(t + 405 * jour).toISOString() } });

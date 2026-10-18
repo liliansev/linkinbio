@@ -3,7 +3,7 @@ import QRCode from 'qrcode';
 import type { ComptePage, Reglages } from '../lib/types.ts';
 import { urlPage } from '../lib/types.ts';
 import type { Abonnement as EtatAbonnement, Periode } from '../lib/abonnement.ts';
-import { AVANTAGES_PRO, TARIFS, euros } from '../lib/abonnement.ts';
+import { AVANTAGES_PRO, TARIFS, estResilie, euros } from '../lib/abonnement.ts';
 import { Icone } from '../components/Icone.tsx';
 import { BoutonSecondaire, Carte, Champ, Interrupteur, classeSaisie } from './ui.tsx';
 
@@ -88,7 +88,7 @@ function Abonnement({ abonnement, ouvrirPaiement, ouvrirPortail }: {
 
   if (abonnement.pro) {
     const fin = abonnement.finPeriode ? date(abonnement.finPeriode) : '';
-    const etat = abonnement.statut === 'scheduled_cancel'
+    const etat = estResilie(abonnement.statut)
       ? { texte: fin ? `Résilié. Ton Pro reste actif jusqu’au ${fin}, puis ta page repasse en gratuit, avec tout son contenu.` : 'Résilié. Ton Pro reste actif jusqu’à la fin de la période payée.', alerte: false }
       : abonnement.statut === 'past_due'
         ? { texte: 'Le dernier paiement n’est pas passé. Mets à jour ta carte pour garder le Pro.', alerte: true }
@@ -104,7 +104,7 @@ function Abonnement({ abonnement, ouvrirPaiement, ouvrirPortail }: {
               </button>
               <p className="mt-2 text-[12.5px] leading-snug text-white/45">Ta carte et tes factures, sur la page sécurisée de Creem.</p>
               {/* La loi demande une résiliation nommée comme telle, accessible sans détour. */}
-              {abonnement.statut !== 'scheduled_cancel' && (
+              {!estResilie(abonnement.statut) && (
                 <button type="button" disabled={envoi} onClick={() => aller(ouvrirPortail)} className={`mt-3 text-[13px] ${lien}`}>Résilier mon abonnement</button>
               )}
             </>
