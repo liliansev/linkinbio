@@ -34,8 +34,8 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
   const sections: { id: Section; nom: string; icone: string }[] = [
     { id: 'partager', nom: 'Partager ma page', icone: 'partage' },
     ...(pro ? [{ id: 'abonnement' as const, nom: 'Abonnement', icone: 'diamant' }] : []),
-    { id: 'partage', nom: 'Titre et description', icone: 'globe' },
-    { id: 'langues', nom: 'Langues', icone: 'message' },
+    { id: 'partage', nom: 'Titre et description', icone: 'document' },
+    { id: 'langues', nom: 'Langues', icone: 'globe' },
     { id: 'donnees', nom: 'Mes données', icone: 'cadenas' },
   ];
   const bascules: { nom: string; icone: string; actif: boolean; changer: (v: boolean) => void }[] = [

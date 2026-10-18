@@ -36,8 +36,9 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
 }) {
   const [b, setB] = useState<Bloc | null>(bloc);
   // Une erreur dit sur quel champ elle porte : elle s'affiche dessous, et part dès qu'on y touche.
-  const [erreur, setErreurBrute] = useState<{ texte: string; champ: 'url' | 'titre' | 'description' | 'dates' | 'image' } | null>(null);
-  const setErreur = (texte: string, champ: 'url' | 'titre' | 'description' | 'dates' | 'image' = 'url') => setErreurBrute(texte ? { texte, champ } : null);
+  type ChampErreur = 'url' | 'titre' | 'description' | 'dates' | 'image' | 'note' | 'nombre' | 'source';
+  const [erreur, setErreurBrute] = useState<{ texte: string; champ: ChampErreur } | null>(null);
+  const setErreur = (texte: string, champ: ChampErreur = 'url') => setErreurBrute(texte ? { texte, champ } : null);
   const erreurDe = (champ: string) => (erreur?.champ === champ ? erreur.texte : undefined);
   const [envoi, setEnvoi] = useState(false);
   const [lecture, setLecture] = useState(false);
@@ -59,9 +60,13 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
     if (b.type === 'video' && !idYoutube(url)) { setErreur('Colle l’adresse d’une vidéo YouTube.'); return null; }
     if ((b.type === 'titre' || b.type === 'texte') && !b.titre.trim()) { setErreur('Écris le texte.', 'titre'); return null; }
     if (b.type === 'preuve' && b.preuve?.genre === 'temoignage' && !b.description.trim()) { setErreur('Écris le témoignage.', 'description'); return null; }
-    if (b.type === 'preuve' && b.preuve?.genre === 'compteur' && !b.preuve.nombre) { setErreur('Indique le chiffre à montrer.', 'description'); return null; }
+    if (b.type === 'preuve' && b.preuve?.genre === 'compteur' && !b.preuve.nombre) { setErreur('Indique le chiffre à montrer.', 'nombre'); return null; }
     // Une note n'est jamais inventée : elle se tape, avec son nombre d'avis et sa source.
-    if (b.type === 'preuve' && b.preuve?.genre === 'note' && (!b.preuve.note || !b.preuve.nombre || !b.preuve.source.trim())) { setErreur('Indique ta note, le nombre d’avis et où ils sont publiés.', 'description'); return null; }
+    if (b.type === 'preuve' && b.preuve?.genre === 'note') {
+      if (!b.preuve.note) { setErreur('Indique ta note, par exemple 4,8.', 'note'); return null; }
+      if (!b.preuve.nombre) { setErreur('Indique le nombre d’avis.', 'nombre'); return null; }
+      if (!b.preuve.source.trim()) { setErreur('Indique où les avis sont publiés, par exemple Google.', 'source'); return null; }
+    }
     if (b.debut && b.fin && new Date(b.fin) <= new Date(b.debut)) {
       setPlus(true); setErreur('La fin doit venir après le début.', 'dates');
       setTimeout(() => { const f = document.getElementById('bloc-fin'); f?.scrollIntoView({ block: 'center' }); f?.focus({ preventScroll: true }); }, 60);
@@ -121,7 +126,8 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
    * Fermer d'un glissé, d'Échap ou d'un toucher à côté garde ce qui a changé, comme partout
    * ailleurs, y compris un bloc neuf : une adresse collée ne se perd pas d'un geste.
    */
-  const commence = () => !!b && (nouveau ? !!b.url.trim() || !!b.titre.trim() : !!bloc && JSON.stringify(b) !== JSON.stringify(bloc));
+  // Commencé veut dire touché : un titre proposé par défaut n'en fait pas un travail à garder.
+  const commence = () => !!b && !!bloc && JSON.stringify(b) !== JSON.stringify(bloc);
   function fermerEnGardant() {
     if (commence()) {
       const v = valider();
@@ -129,15 +135,15 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
     }
     onFermer();
   }
-  /** Un bloc neuf commencé mais pas valable : la feuille reste ouverte et l'erreur dit quoi faire. */
-  const retenir = () => nouveau && commence() && !valider();
+  /** Un changement pas valable, neuf ou pas : la feuille reste ouverte et l'erreur dit quoi faire, rien ne se perd en silence. */
+  const retenir = () => commence() && !valider();
 
   return (
-    <Feuille ouverte onFermer={fermerEnGardant} retenir={retenir} titre={nouveau ? `Nouveau : ${type.nom.toLowerCase()}` : [type.nom, !b.public && 'privé', b.public && !estEnLigne(b) && 'programmé'].filter(Boolean).join(' · ')}
+    <Feuille ouverte onFermer={fermerEnGardant} retenir={retenir} titre={nouveau ? `Ajouter : ${type.nom}` : [type.nom, !b.public && 'privé', b.public && !estEnLigne(b) && 'programmé'].filter(Boolean).join(' · ')}
       pied={fermer => (
         <div className="flex items-center gap-2">
-          {/* Fermer garde les changements ; ce bouton est la seule façon de les oublier. */}
-          {!nouveau && commence() && (
+          {/* Fermer garde les changements ; ce bouton est la seule façon de les oublier (un bloc neuf n'est pas ajouté). */}
+          {commence() && (
             <BoutonSecondaire onClick={() => fermer(() => onFermer())}>Annuler</BoutonSecondaire>
           )}
           <BoutonPrincipal className="flex-1" disabled={envoi} onClick={() => { const v = valider(); if (v) { vibrer(12); fermer(() => onEnregistrer(v)); } }}>
@@ -146,6 +152,8 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
         </div>
       )}>
       <div className="flex flex-col gap-4 pt-1">
+        {/* Ce que le bloc a de particulier, en clair : les pictos du coin de la page ne se lisent pas au toucher. */}
+        {!nouveau && etiquettes(b).length > 0 && <p className="text-[13px] leading-snug text-white/60">{etiquettes(b).join(' · ')}</p>}
         {(b.type === 'lien' || b.type === 'preuve') && (
           // L'aperçu reste collé en haut de la feuille : chaque réglage se voit sans remonter.
           <div className="sticky top-0 z-10 -mx-5 bg-[#121a2b] px-5 pb-3 pt-1 shadow-[0_14px_14px_-12px_#121a2b]">
@@ -165,10 +173,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
           </Champ>
         )}
 
-        {b.type === 'preuve' && <ChampsPreuve b={b} maj={maj} />}
-        {/* Ce que le bloc a de particulier, en clair : les pictos du coin de la page ne se lisent pas au toucher. */}
-        {!nouveau && etiquettes(b).length > 0 && <p className="-mt-1 text-[13px] leading-snug text-white/60">{etiquettes(b).join(' · ')}</p>}
-        {erreurDe('description') && <p role="alert" className="-mt-2 text-[13px] font-medium text-red-300">{erreurDe('description')}</p>}
+        {b.type === 'preuve' && <ChampsPreuve b={b} maj={maj} erreurDe={erreurDe} />}
         {b.type === 'preuve' && (
           <Champ label="Lien vers les avis (facultatif)" aide="Ta fiche Google, ta page Trustpilot : le bloc devient cliquable, et la preuve vérifiable.">
             <input className={classeSaisie} type="url" inputMode="url" autoCapitalize="none" autoCorrect="off" placeholder="https://…" value={b.url} onChange={e => maj({ url: e.target.value })} />
@@ -248,15 +253,12 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
             <Interrupteur label="Demander le prénom" actif={b.demanderPrenom} onChange={v => maj({ demanderPrenom: v })} />
           )}
           {b.type !== 'titre' && b.type !== 'texte' && b.type !== 'newsletter' && b.type !== 'inscription' && b.type !== 'preuve' && (
-            <Interrupteur label="Mis en avant" actif={b.vedette} onChange={v => maj({ vedette: v })} />
+            <Interrupteur label="Mis en avant" aide="En plus grand, de la couleur d’accent de ta page." actif={b.vedette} onChange={v => maj({ vedette: v })} />
           )}
           {b.type === 'lien' && principal && (
             <Interrupteur label="Visible par Google" actif={b.indexable} onChange={v => maj({ indexable: v })} />
           )}
         </div>
-        {b.type !== 'titre' && b.type !== 'texte' && b.type !== 'newsletter' && b.type !== 'inscription' && b.type !== 'preuve' && (
-          <p className="-mt-2 px-1 text-[12.5px] leading-snug text-white/55">Mis en avant, le lien passe en plus grand, de la couleur d’accent de ta page.</p>
-        )}
 
         {b.type === 'lien' && b.vedette && (
           <div className="grid gap-3">

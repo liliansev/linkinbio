@@ -21,6 +21,12 @@ const EXEMPLES: Record<Reseau, string> = {
 };
 
 /** Un thème en miniature : sa police, son accent et ses boutons, dans leur vrai style. */
+/** Regarder les thèmes coche l'étape « Choisis ton thème » : garder celui de départ est un choix. */
+function themesVus() {
+  try { localStorage.setItem('hopla-themes-vus', '1'); } catch { /* stockage refusé */ }
+  window.dispatchEvent(new Event('hopla-themes-vus'));
+}
+
 export function Pastille({ theme }: { theme: Theme }) {
   return (
     <span className="lp-pastille flex aspect-[4/5] w-full flex-col items-center gap-[6%] rounded-xl pt-[13%] shadow-inner ring-1 ring-white/10"
@@ -299,7 +305,7 @@ export function DesignTiroirs({ reglages, onChange, envoyerImage, principal, pie
       <ul className="overflow-hidden rounded-xl bg-white/[0.03] ring-1 ring-white/[0.07]">
         {lignes.map((l, i) => (
           <li key={l.id} className={i > 0 ? 'border-t border-white/[0.07]' : ''}>
-            <button id={`design-${l.id}`} type="button" onClick={() => { vibrer(4); setOuvert(l.id); }} className="flex min-h-[52px] w-full items-center gap-3 px-3.5 py-2 text-left transition hover:bg-white/[0.04] active:bg-white/[0.06]">
+            <button id={`design-${l.id}`} type="button" onClick={() => { vibrer(4); setOuvert(l.id); if (l.id === 'theme') themesVus(); }} className="flex min-h-[52px] w-full items-center gap-3 px-3.5 py-2 text-left transition hover:bg-white/[0.04] active:bg-white/[0.06]">
               <Icone nom={l.icone} taille={20} className="shrink-0 text-white/70" />
               <span className="min-w-0 flex-1 truncate text-[14px] font-medium text-white">{l.nom}</span>
               <Icone nom="ui-chevron" taille={16} className="-rotate-90 text-white/30" />

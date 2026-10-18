@@ -130,7 +130,7 @@ export function RegleReseaux({ b, maj, reseaux }: { b: Bloc; maj: (c: Partial<Bl
         })}
       </ul>
       {!plus && autres.length > 0 && (
-        <button type="button" onClick={() => setPlus(true)} className="self-start text-[13.5px] font-medium text-white/55 hover:text-white">Autres réseaux</button>
+        <button type="button" onClick={() => setPlus(true)} className="inline-flex min-h-11 items-center gap-1.5 self-start text-[14px] font-medium text-white/80 hover:text-white"><Icone nom="ui-plus" taille={15} />Autres réseaux</button>
       )}
       {!reserve && (
         <div className="border-t border-white/[0.06] pt-1">
@@ -225,9 +225,12 @@ export function RegleTraductions({ b, maj, langues }: { b: Bloc; maj: (c: Partia
 const SOURCES_PREUVE = ['Google', 'Trustpilot', 'Malt', 'Avis Vérifiés', 'YouTube', 'Instagram', 'TikTok', 'LinkedIn'];
 
 /** Un avis, un chiffre, un témoignage : ce que le bloc `preuve` montre. */
-export function ChampsPreuve({ b, maj }: { b: Bloc; maj: (c: Partial<Bloc>) => void }) {
+export function ChampsPreuve({ b, maj, erreurDe = () => undefined }: { b: Bloc; maj: (c: Partial<Bloc>) => void; erreurDe?: (champ: string) => string | undefined }) {
   const p = b.preuve ?? { genre: 'note' as const, note: 0, nombre: 0, source: '' };
   const majP = (champs: Partial<Preuve>) => maj({ preuve: { ...p, ...champs } });
+  // La note se tape comme on l'écrit (« 4,8 ») et ne se lit qu'en quittant le champ : rien ne s'arrondit sous les doigts.
+  const [note, setNote] = useState(p.note ? String(p.note).replace('.', ',') : '');
+  const lireNote = (v: string) => { const n = Math.round(Number(v.replace(',', '.')) * 10) / 10; return Number.isFinite(n) ? Math.max(0, Math.min(5, n)) : 0; };
   return (
     <>
       <div>
@@ -237,25 +240,26 @@ export function ChampsPreuve({ b, maj }: { b: Bloc; maj: (c: Partial<Bloc>) => v
       </div>
       {p.genre === 'note' && (
         <div className="grid grid-cols-2 gap-3">
-          <Champ label="Note sur 5">
-            <input className={classeSaisie} type="number" inputMode="decimal" min={0} max={5} step={0.1} value={p.note || ''} placeholder="Ex. 4,8"
-              onChange={e => majP({ note: Math.max(0, Math.min(5, Math.round(Number(e.target.value.replace(',', '.')) * 10) / 10 || 0)) })} />
+          <Champ label="Note sur 5" erreur={erreurDe('note')}>
+            <input className={classeSaisie} type="text" inputMode="decimal" value={note} placeholder="Ex. 4,8"
+              onChange={e => { const v = e.target.value.replace(/[^\d.,]/g, '').slice(0, 4); setNote(v); majP({ note: lireNote(v) }); }}
+              onBlur={() => { const n = lireNote(note); setNote(n ? String(n).replace('.', ',') : ''); }} />
           </Champ>
-          <Champ label="Nombre d’avis">
+          <Champ label="Nombre d’avis" erreur={erreurDe('nombre')}>
             <input className={classeSaisie} type="number" inputMode="numeric" min={0} value={p.nombre || ''} placeholder="Ex. 132"
               onChange={e => majP({ nombre: Math.max(0, Math.round(Number(e.target.value) || 0)) })} />
           </Champ>
         </div>
       )}
       {p.genre === 'compteur' && (
-        <Champ label="Le chiffre">
+        <Champ label="Le chiffre" erreur={erreurDe('nombre')}>
           <input className={classeSaisie} type="number" inputMode="numeric" min={0} value={p.nombre || ''} placeholder="Ex. 12400"
             onChange={e => majP({ nombre: Math.max(0, Math.round(Number(e.target.value) || 0)) })} />
         </Champ>
       )}
       {p.genre === 'temoignage' && (
         <>
-          <Champ label="Le témoignage">
+          <Champ label="Le témoignage" erreur={erreurDe('description')}>
             <textarea className={`${classeSaisie} min-h-24`} value={b.description} maxLength={400} onChange={e => maj({ description: e.target.value })}
               placeholder="« Grâce à Camille, j’ai lancé ma boutique en deux semaines. »" />
           </Champ>
@@ -264,7 +268,7 @@ export function ChampsPreuve({ b, maj }: { b: Bloc; maj: (c: Partial<Bloc>) => v
           </Champ>
         </>
       )}
-      <Champ label="Où ça se passe (facultatif)">
+      <Champ label={p.genre === 'note' ? 'Où sont publiés les avis' : 'Où ça se passe (facultatif)'} erreur={erreurDe('source')}>
         {/* Les sources courantes en suggestions du champ, plutôt qu'une rangée de pastilles. */}
         <input className={classeSaisie} value={p.source} maxLength={30} onChange={e => majP({ source: e.target.value })} placeholder="Google" list="sources-preuve" />
       </Champ>

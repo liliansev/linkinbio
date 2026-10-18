@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { Bloc, ComptePage, Reglages } from '../lib/types.ts';
 import { urlPage } from '../lib/types.ts';
 import { etapesDemarrage } from '../lib/demarrage.ts';
@@ -24,6 +24,7 @@ export function HautLiens({ compte, reglages, blocs, aller }: { compte: ComptePa
   const [partagee, setPartagee] = useState(() => lire(CLE_PARTAGE));
   const [masque, setMasque] = useState(() => lire(CLE_MASQUE));
   const [themeVu, setThemeVu] = useState(() => lire(CLE_THEME));
+  useEffect(() => { const vu = () => setThemeVu(true); window.addEventListener(CLE_THEME, vu); return () => window.removeEventListener(CLE_THEME, vu); }, []);
   const [ouvert, setOuvert] = useState(false);
   const etapes = etapesDemarrage(reglages, blocs, partagee, themeVu);
   const faites = etapes.filter(e => e.faite).length;

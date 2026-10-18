@@ -66,6 +66,8 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
   const [quittes, setQuittes] = useState<Set<string>>(() => new Set());
   const [copie, setCopie] = useState(false);
   const [tous, setTous] = useState(false);
+  // Un Continuer sur un champ faux s'arrête une fois et montre le champ ; le second passe sans lui.
+  const [ignorer, setIgnorer] = useState(false);
   const fichier = useRef<HTMLInputElement>(null);
   const adressePage = urlPage(compte);
   const peutPartager = typeof navigator !== 'undefined' && typeof navigator.share === 'function';
@@ -115,8 +117,24 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
     setTimeout(() => document.getElementById(`reseau-${r}`)?.focus(), 30);
   }
 
+  // L'ambiance déjà choisie se montre d'emblée, même au bout de la rangée.
+  useEffect(() => {
+    if (etape !== 'style') return;
+    document.querySelector('[aria-label="Thème"] [aria-checked="true"]')?.scrollIntoView({ inline: 'center', block: 'nearest' });
+  }, [etape]);
+
   /* ---- La marche ---- */
+  const fautifs: string[] = etape === 'liens' ? lignes.filter(l => l.url.trim() && !adresseSaisie(l.url)).map(l => l.id)
+    : etape === 'reseaux' ? ouverts.filter(r => (saisies[r] ?? '').trim() && !urlReseau(r, saisies[r] ?? '')) : [];
   function suivant() {
+    if (fautifs.length && !ignorer) {
+      vibrer(20);
+      setQuittes(q => new Set([...q, ...fautifs]));
+      setIgnorer(true);
+      document.getElementById(etape === 'liens' ? `lien-${fautifs[0]}` : `reseau-${fautifs[0]}`)?.focus();
+      return;
+    }
+    setIgnorer(false);
     vibrer(8);
     if (etape === 'liens') poserLiens();
     // Une ambiance choisie ici compte pour l'étape « Choisis ton thème » de Bien démarrer.
@@ -150,7 +168,9 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
   }, [brouillons, blocs, etape]);
 
   const rempli = etape === 'profil' ? true : etape === 'liens' ? brouillons.length > 0 : etape === 'reseaux' ? reglages.reseaux.some(r => r.url) : true;
-  const libelle = etape === 'style' ? 'C’est parti' : rempli ? 'Continuer' : 'Passer cette étape';
+  const libelle = ignorer && fautifs.length
+    ? (etape === 'liens' ? (fautifs.length > 1 ? 'Continuer sans ces liens' : 'Continuer sans ce lien') : (fautifs.length > 1 ? 'Continuer sans ces réseaux' : 'Continuer sans ce réseau'))
+    : etape === 'style' ? 'C’est parti' : rempli ? 'Continuer' : 'Passer cette étape';
 
   // Le dernier écran nomme le réseau choisi à l'étape d'avant.
   const ou = reseauxDePartage(reglages.vuesReseaux);
@@ -196,7 +216,7 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
                   <span className={`grid h-9 w-9 shrink-0 place-items-center text-[14px] font-semibold ${valide ? 'text-white' : 'text-white/55'}`}>
                     {valide ? <Icone nom="ui-ok" taille={16} /> : n + 1}
                   </span>
-                  <input aria-label={`Adresse du lien ${n + 1}`} className="min-h-11 min-w-0 flex-1 bg-transparent px-1 text-[16px] text-white outline-none placeholder:text-white/55 focus-visible:!outline-none"
+                  <input id={`lien-${l.id}`} aria-label={`Adresse du lien ${n + 1}`} className="min-h-11 min-w-0 flex-1 bg-transparent px-1 text-[16px] text-white outline-none placeholder:text-white/55 focus-visible:!outline-none"
                     type="url" inputMode="url" autoCapitalize="off" autoCorrect="off" spellCheck={false} placeholder={['ton-site.fr', 'calendly.com/toi', 'ta-boutique.fr'][n]}
                     value={l.url} aria-invalid={fausse || undefined} aria-describedby={fausse ? `erreur-${l.id}` : undefined}
                     onChange={e => majLigne(l.id, { url: e.target.value })} onBlur={() => { setQuittes(q => new Set(q).add(l.id)); lireSite(l); }}
@@ -249,14 +269,14 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
                 <Icone nom={r} taille={24} />
               </button>
             ))}
-            {!tous && <button type="button" onClick={() => setTous(true)} className="flex min-h-12 items-center rounded-xl px-3 text-[14px] font-medium text-white/60 transition hover:bg-white/[0.07] hover:text-white">Autres réseaux</button>}
+            {!tous && <button type="button" onClick={() => setTous(true)} className="flex min-h-12 items-center gap-1.5 rounded-xl px-3 text-[14px] font-medium text-white/80 transition hover:bg-white/[0.07] hover:text-white"><Icone nom="ui-plus" taille={15} />Autres réseaux</button>}
           </div>
         </div>
       ),
     },
     partage: {
       titre: 'Où vas-tu mettre ton lien ?',
-      aide: 'Chaque lien pourra se montrer, ou passer en tête, selon le réseau d’où l’on vient. Il en faut au moins un.',
+      aide: 'Chaque lien pourra passer en tête selon le réseau d’où l’on vient : ta boutique en premier pour ceux qui arrivent d’Instagram, par exemple. Les autres réseaux restent à un toucher, lien par lien.',
       corps: (<>
         <ul className="flex flex-col divide-y divide-white/[0.06] rounded-2xl bg-white/[0.04] px-3.5">
           {OU_PARTAGER.map(a => {
@@ -324,7 +344,7 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
   return (
     <div className="adm flex h-dvh flex-col overflow-hidden bg-nuit font-sans text-white antialiased lg:grid lg:grid-cols-[minmax(0,460px)_1fr] lg:grid-rows-[auto_1fr]">
       <header className="flex h-14 shrink-0 items-center gap-2 px-3 lg:col-span-2 lg:px-6">
-        <button type="button" onClick={() => setI(n => n - 1)} aria-label="Étape précédente" disabled={i === 0 || etape === 'fin'}
+        <button type="button" onClick={() => { setIgnorer(false); setI(n => n - 1); }} aria-label="Étape précédente" disabled={i === 0 || etape === 'fin'}
           className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-white/70 transition hover:bg-white/[0.07] disabled:invisible"><Icone nom="ui-chevron" taille={20} className="rotate-90" /></button>
         <div className="flex flex-1 justify-center gap-1.5" role="progressbar" aria-label="Premiers pas" aria-valuemin={0} aria-valuemax={QUESTIONS} aria-valuenow={Math.min(i, QUESTIONS)} aria-valuetext={i < QUESTIONS ? `Question ${i + 1} sur ${QUESTIONS}` : 'Terminé'}>
           {Array.from({ length: QUESTIONS }, (_, n) => (

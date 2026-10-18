@@ -4,7 +4,7 @@
  */
 
 import type { Bloc, Reglages, Reseau } from './types.ts';
-import { adresse } from './valider.ts';
+import { adresse, adresseSaisie } from './valider.ts';
 import { THEME_DEFAUT } from './themes.ts';
 
 export type Destination = 'photo' | 'bio' | 'theme' | 'reseaux' | 'lien';
@@ -18,7 +18,7 @@ export function etapesDemarrage(reglages: Reglages, blocs: Bloc[], partagee: boo
     { id: 'photo', nom: 'Ajoute ta photo', aide: 'Un visage rassure avant de cliquer.', faite: !!reglages.profil.avatar },
     { id: 'bio', nom: 'Écris ta bio', aide: 'Une phrase : ce que tu fais, pour qui.', faite: !!reglages.profil.bio.trim() },
     { id: 'lien', nom: 'Ajoute tes liens', aide: 'Ton site, ta prise de rendez-vous, ta boutique.', faite: liens >= 1 },
-    { id: 'reseaux', nom: 'Relie tes réseaux', aide: 'Leurs icônes s’affichent sous ton nom.', faite: reglages.reseaux.some(r => r.url.trim()) },
+    { id: 'reseaux', nom: 'Relie tes réseaux', aide: 'Leurs icônes s’affichent sous ton nom.', faite: reglages.reseaux.some(r => !!adresseSaisie(r.url)) },
     { id: 'theme', nom: 'Choisis ton thème', aide: 'Des plus sobres aux plus audacieux, en un geste.', faite: themeVu || reglages.theme !== THEME_DEFAUT },
     { id: 'partage', nom: 'Partage ta page', aide: 'Colle l’adresse dans ta bio Instagram ou TikTok.', faite: partagee },
   ];

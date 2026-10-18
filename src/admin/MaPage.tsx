@@ -39,7 +39,14 @@ export function MaPage({ compte, reglages, blocs, clics, onReglages, onOrdonner,
   const [feuille, setFeuilleBrute] = useState<'design' | 'reseaux' | 'ajout' | null>(null);
   // Les réglages au moment où la feuille de design ou des réseaux s'ouvre : « Annuler » y revient.
   const depart = useRef<Reglages | null>(null);
-  const setFeuille = (f: typeof feuille) => { depart.current = f === 'design' || f === 'reseaux' ? reglages : null; setFeuilleBrute(f); };
+  const setFeuille = (f: typeof feuille) => {
+    // En refermant le design, la page revient en vue : on a pu descendre loin en la regardant changer.
+    if (!f && (feuille === 'design' || feuille === 'reseaux')) {
+      const haut = toile.current?.getBoundingClientRect().top ?? 0;
+      if (haut < 0) toile.current?.scrollIntoView({ block: 'start', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+    }
+    depart.current = f === 'design' || f === 'reseaux' ? reglages : null; setFeuilleBrute(f);
+  };
   const change = depart.current !== null && JSON.stringify(depart.current) !== JSON.stringify(reglages);
   const piedAnnuler = change ? (fermer: (apres?: () => void) => void) => (
     <BoutonSecondaire className="w-full" onClick={() => { const avant = depart.current; fermer(() => { if (avant) onReglages(avant); setFeuille(null); }); }}>Annuler les changements</BoutonSecondaire>
@@ -114,7 +121,7 @@ export function MaPage({ compte, reglages, blocs, clics, onReglages, onOrdonner,
           className="adm-apercu adm-toile relative -mx-4 overflow-hidden lg:mx-0 lg:rounded-[30px] lg:ring-1 lg:ring-white/10 lg:shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)]">
           <PageLiens page={{ reglages, blocs: visibles, compte }} edition={edition} />
           {/* Le geste s'écrit sur la page même, dans sa couleur, en haut à gauche : pas une ligne de plus au-dessus d'elle. */}
-          {astuce && <p className="pointer-events-none absolute top-4 left-4 right-16 text-[13px] font-medium leading-snug lg:left-6" style={{ color: variablesTheme(themeDe(reglages))['--doux'] }}>Touche pour modifier, maintiens pour déplacer.</p>}
+          {astuce && <p className="pointer-events-none absolute top-4 left-4 right-16 text-[13px] font-medium leading-snug lg:left-6" style={{ color: variablesTheme(themeDe(reglages))['--doux'] }}><span className="lg:hidden">Touche pour modifier, maintiens pour déplacer.</span><span className="hidden lg:inline">Clique pour modifier, fais glisser pour déplacer.</span></p>}
         </div>
       </div>
 
@@ -218,7 +225,7 @@ function BlocEditable({ bloc, i, clics, ouvrir, children }: { bloc: Bloc; i: num
           {/* Un picto par état, sans étiquette : le nom complet est dans l'aria-label du bloc. */}
           {prive && <span className="lp-ed-puce" title="Privé"><Icone nom="ui-masque" taille={13} /></span>}
           {programme && <span className="lp-ed-puce" title="Programmé"><Icone nom="horloge" taille={13} /></span>}
-          {regles.length > 0 && <span className="lp-ed-puce" title={regles.join(', ')}><Icone nom="reglage" taille={13} /></span>}
+          {regles.length > 0 && <span className="lp-ed-puce" title={regles.join(', ')}><Icone nom="communaute" taille={13} /></span>}
         </span>
       )}
     </div>

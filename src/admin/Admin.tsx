@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Api, Bloc, EtatAdmin, Reglages } from '../lib/types.ts';
 import { TYPES_PRINCIPAL, cheminPage, urlPage } from '../lib/types.ts';
-import { themeDe } from '../lib/themes.ts';
 import { composerMoment } from '../lib/moments.ts';
 import { PageLiens } from '../components/PageLiens.tsx';
 import { MaPage } from './MaPage.tsx';
@@ -144,17 +143,6 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
   }
 
   /** Depuis Ma page : un changement de thème se défait d'un toucher, le temps du message. */
-  const avantTheme = useRef<Reglages | null>(null);
-  function changerDepuisPage(r: Reglages) {
-    if (r.theme !== reglages.theme) {
-      const avant = avantTheme.current ?? reglages;
-      avantTheme.current = avant;
-      setToast({ texte: `Thème : ${themeDe(r).nom}`, annuler: () => { avantTheme.current = null; setToast(null); changerReglages(avant); } });
-    }
-    changerReglages(r);
-  }
-  useEffect(() => { if (!toast) avantTheme.current = null; }, [toast]);
-
   /** Un bloc qui vient d'arriver se montre : la page défile jusqu'à lui et il s'éclaire un instant. */
   function montrer(id: string) {
     setTimeout(() => {
@@ -298,7 +286,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
         <main className={`mx-auto w-full max-w-xl lg:pb-12 ${onglet === 'page' ? 'pb-28 lg:pt-8' : 'pt-5 pb-28 lg:pt-8'}`}>
           <div key={onglet} className="adm-onglet">
           <h1 className={`mb-4 text-[22px] font-semibold tracking-[-0.02em] ${onglet === 'page' ? 'sr-only' : ''}`}>{onglets.find(o => o.id === onglet)!.nom}</h1>
-          {onglet === 'page' && <MaPage compte={compte} reglages={reglages} blocs={blocs} clics={clics} onReglages={changerDepuisPage} onOrdonner={ordonner}
+          {onglet === 'page' && <MaPage compte={compte} reglages={reglages} blocs={blocs} clics={clics} onReglages={changerReglages} onOrdonner={ordonner}
             onOuvrir={b => setEdition({ bloc: b, nouveau: false })} onAjouter={b => setEdition({ bloc: b, nouveau: true })} envoyerImage={d => api.envoyerImage(d)} />}
           {onglet === 'stats' && <OngletStats charger={chargerStats} limite={initial.paiement && !compte.pro} onPro={versAbonnement}
             ouvrirApps={reglages.ouvrirApps} onActiverApps={() => changerReglages({ ...reglages, ouvrirApps: true })} liste={<MaListe api={api} />} />}
