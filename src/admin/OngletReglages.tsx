@@ -258,7 +258,7 @@ function VuesReseaux({ reglages, onChange }: { reglages: Reglages; onChange: (r:
   };
   return (
     <div>
-      <Interrupteur label="Une vue par réseau" aide="Dans « Ma page », un onglet par réseau : tu caches d’un toucher ce que ceux qui arrivent d’Instagram, de TikTok ou de LinkedIn n’ont pas besoin de voir."
+      <Interrupteur label="Une vue par réseau" aide="Dans « Ma page », un onglet par réseau : tu caches d’un toucher ce que ceux qui arrivent d’Instagram, de TikTok ou de LinkedIn n’ont pas besoin de voir. Un seul lien dans toutes tes bios : Hopla reconnaît d’où vient le visiteur."
         actif={actif} onChange={v => onChange({ ...reglages, vuesReseaux: v ? depart() : [] })} />
       {actif && (
         <div className="grid grid-cols-3 gap-1.5 pb-3" role="group" aria-label="Réseaux qui ont leur vue">

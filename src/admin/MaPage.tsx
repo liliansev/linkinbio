@@ -118,10 +118,15 @@ export function MaPage({ compte, reglages, blocs, clics, onReglages, onOrdonner,
           </div>
           {vue && (
             <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12.5px] leading-snug text-white/55">
-              <span>Ce que voit quelqu’un venu de {NOMS_AUDIENCES[vue]}. Touche l’œil d’un bloc pour le cacher ici. Dans ta bio {NOMS_AUDIENCES[vue]}, mets</span>
-              <button type="button" onClick={copierVue} className="inline-flex items-center gap-1 font-medium text-white/85 underline decoration-white/25 underline-offset-2">
-                {adresseVue} <Icone nom={copie ? 'ui-ok' : 'ui-copier'} taille={13} />
-              </button>
+              <span>Ce que voit quelqu’un venu de {NOMS_AUDIENCES[vue]}. Touche l’œil d’un bloc pour le cacher ici.</span>
+              {RECONNUS.includes(vue)
+                ? <span>Rien à changer dans ta bio : ton lien habituel suffit, Hopla reconnaît {NOMS_AUDIENCES[vue]} tout seul.</span>
+                : <>
+                  <span>{NOMS_AUDIENCES[vue]} ne se présente pas toujours : pour en être sûr, utilise ici</span>
+                  <button type="button" onClick={copierVue} className="inline-flex items-center gap-1 font-medium text-white/85 underline decoration-white/25 underline-offset-2">
+                    {adresseVue} <Icone nom={copie ? 'ui-ok' : 'ui-copier'} taille={13} />
+                  </button>
+                </>}
             </p>
           )}
         </div>
@@ -150,6 +155,9 @@ export function MaPage({ compte, reglages, blocs, clics, onReglages, onOrdonner,
     </div>
   );
 }
+
+/** Les provenances que Hopla reconnaît seul (le navigateur intégré de l'app, ou le site d'origine) : le lien habituel suffit. */
+const RECONNUS: Audience[] = ['instagram', 'tiktok', 'linkedin', 'facebook', 'threads', 'snapchat', 'x', 'google'];
 
 /**
  * La page en direct, en miniature, au-dessus de la feuille de design sur
