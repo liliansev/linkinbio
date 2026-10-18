@@ -22,5 +22,3 @@
 html { -webkit-text-size-adjust: 100%; }
 body { margin: 0; }
 
-/* Les pictos pleins de « Ajouter un bloc » prennent le dégradé défini dans la feuille. */
-.picto-degrade path { fill: url(#hopla-degrade); }
