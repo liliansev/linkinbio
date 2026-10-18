@@ -250,9 +250,12 @@ export function DesignTiroirs({ reglages, onChange, envoyerImage, principal, pie
 
   if (ouvert) return (
     <div className="flex flex-col gap-3">
-      <button type="button" onClick={() => { vibrer(4); setOuvert(null); }} className="-ml-1 flex min-h-10 items-center gap-1 self-start rounded-full pr-3 text-[14px] font-medium text-white/70 hover:text-white">
-        <Icone nom="ui-chevron" taille={18} className="rotate-90" /> Retour
-      </button>
+      {/* Le retour reste collé en haut de la feuille : on le retrouve après avoir fait défiler vingt thèmes. */}
+      <div className="sticky top-0 z-10 -mx-5 flex items-center bg-[#111827] px-4 pb-1">
+        <button type="button" onClick={() => { vibrer(4); setOuvert(null); }} className="flex min-h-10 items-center gap-1 rounded-full pr-3 text-[14px] font-medium text-white/75 hover:text-white">
+          <Icone nom="ui-chevron" taille={18} className="rotate-90" /> Retour
+        </button>
+      </div>
       <OngletApparence reglages={reglages} onChange={onChange} envoyerImage={envoyerImage} principal={principal} parties={[ouvert]} />
     </div>
   );
