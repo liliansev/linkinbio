@@ -2,7 +2,7 @@
  * La page publique. Toutes les couleurs viennent du thème (variables posées
  * par `PageLiens`) ; les cinq styles de bouton et les trois formes se lisent
  * sur `data-bouton`, `data-forme` et `data-ombre`, si bien que chaque
- * combinaison marche avec chacun des dix thèmes. La matière du fond
+ * combinaison marche avec chacun des vingt thèmes. La matière du fond
  * (`data-decor`), la police des titres (`--police-titre`) et la typographie
  * réglée de chaque rôle (`--nom-*`, `--section-*`, `--btn-*`, `--carte-*`)
  * viennent aussi du thème.

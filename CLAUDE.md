@@ -64,6 +64,7 @@ embarque tout : l'image n'a pas de `node_modules`.
 - Toute modification des CGU ou de l'accord de traitement change `VERSION_CGU`.
 - Pas de DataFast sur Hopla tant qu'il n'a pas son propre site DataFast.
 - QA : agent-browser (headless). Playwright est interdit.
+- Chaque thème ajouté ou retouché passe par la vérification typographique d'Impeccable (`typeset`) et par une planche de captures de tous les thèmes (`demo`, `#page=<id>`) avant d'être poussé : un nom sur une ligne, des cartes lisibles.
 - Pictos Phosphor pleins, d'une seule couleur (sans dégradé ni duotone), jamais d'emojis.
 - Le suivi des clics Resend reste désactivé : il casse les liens magiques.
 - Le Pro n'est accordé que par un webhook Creem signé, jamais par le retour du paiement.

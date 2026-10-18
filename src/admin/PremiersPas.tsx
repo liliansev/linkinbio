@@ -221,7 +221,7 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
     },
     style: {
       titre: 'Choisis une ambiance',
-      aide: 'Les couleurs, la police et les boutons suivent. Vingt-six thèmes t’attendent ensuite dans Design.',
+      aide: 'Les couleurs, la police et les boutons suivent. Vingt thèmes t’attendent ensuite dans Design.',
       corps: (
         <ul className="-mx-5 flex snap-x scroll-px-5 gap-2.5 overflow-x-auto px-5 pb-1 [scrollbar-width:none] lg:mx-0 lg:grid lg:grid-cols-4 lg:px-0" role="radiogroup" aria-label="Thème">
           {THEMES_ACCUEIL.map(id => THEMES.find(t => t.id === id)!).map(t => {

@@ -4,9 +4,9 @@ import { FAMILLES, REMPLACES, THEMES, contraste, idTheme, themeParId, variablesT
 
 const couleurs = (fond: string) => fond.match(/#[0-9a-f]{6}/gi) ?? [];
 
-test('dix thèmes, identifiants uniques, chaque famille garnie', () => {
-  assert.equal(THEMES.length, 10);
-  assert.equal(new Set(THEMES.map(t => t.id)).size, 10);
+test('vingt thèmes, identifiants uniques, chaque famille garnie', () => {
+  assert.equal(THEMES.length, 20);
+  assert.equal(new Set(THEMES.map(t => t.id)).size, 20);
   for (const f of FAMILLES) assert.ok(THEMES.some(t => t.famille === f.id), `famille vide : ${f.id}`);
 });
 

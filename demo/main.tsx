@@ -4,12 +4,13 @@ import '../src/styles/app.css';
 import type { EtatAdmin, MiseEnPageBureau } from '../src/lib/types.ts';
 import { estEnLigne } from '../src/lib/types.ts';
 import { Admin } from '../src/admin/Admin.tsx';
+import { THEMES } from '../src/lib/themes.ts';
 import { PageLiens } from '../src/components/PageLiens.tsx';
 import { apiDemo, apiNouveau, pageDemo, recommencerNouveau } from './api-demo.ts';
 
 /* L'aperçu navigable : le vrai back office et la vraie page, sans serveur. */
 function Demo() {
-  const lireVue = () => (location.hash === '#page' ? 'page' : location.hash === '#nouveau' ? 'nouveau' : 'admin');
+  const lireVue = () => (location.hash.startsWith('#page') ? 'page' : location.hash === '#nouveau' ? 'nouveau' : 'admin');
   const [vue, setVue] = useState(lireVue);
   const [etat, setEtat] = useState<EtatAdmin | null>(null);
   // Chaque « Recommencer » remonte le back office du nouvel inscrit à zéro.
@@ -21,6 +22,9 @@ function Demo() {
   if (vue === 'page') {
     const p = pageDemo();
     const bureau = bureauChoisi ?? p.reglages.bureau;
+    // `#page=klein` montre la page dans un autre thème, avec ses boutons conseillés : pour revoir chaque thème d'un coup d'œil.
+    const autre = THEMES.find(t => t.id === location.hash.split('=')[1]);
+    if (autre) p.reglages = { ...p.reglages, theme: autre.id, bouton: { ...p.reglages.bouton, ...autre.conseil } };
     return (
       <>
         <PageLiens page={{ reglages: { ...p.reglages, bureau }, blocs: p.blocs.filter(b => estEnLigne(b)), compte: p.compte }} apercu />

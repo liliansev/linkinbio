@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { DndContext, KeyboardSensor, PointerSensor, TouchSensor, closestCenter, useSensor, useSensors } from '@dnd-kit/core';
 import type { DragEndEvent } from '@dnd-kit/core';
@@ -49,12 +49,13 @@ export function MaPage({ compte, reglages, blocs, clics, onReglages, onOrdonner,
     setEnvoi(true);
     try { profil({ avatar: await envoyerImage(await preparerImage(f, 'carre')) }); } finally { setEnvoi(false); if (fichier.current) fichier.current.value = ''; }
   }
-  /** Le design s'ouvre en laissant voir le haut de la page : le nom, les premiers boutons, l'accent. */
+  /** Le design s'ouvre en laissant voir le haut de la page (sur ordinateur, elle est à gauche de la feuille). */
   function design() {
     const nom = toile.current?.querySelector('.lp-nom');
     if (nom) scrollTo({ top: nom.getBoundingClientRect().top + scrollY - 80 });
     setFeuille('design');
   }
+  const direct = <ApercuDirect page={{ reglages, blocs: visibles, compte }} />;
   const ajouter = (type: TypeBloc) => { setFeuille(null); onAjouter(nouveauBloc(type, `n${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`)); };
 
   /** Une étape de « Bien démarrer » mène à l'endroit de la page où elle se fait. */
@@ -104,13 +105,47 @@ export function MaPage({ compte, reglages, blocs, clics, onReglages, onOrdonner,
 
       <input ref={fichier} type="file" accept="image/*" hidden onChange={e => photo(e.target.files?.[0])} />
       <FeuilleAjout ouverte={feuille === 'ajout'} onFermer={() => setFeuille(null)} onChoisir={ajouter} principal={principal} />
-      <Feuille ouverte={feuille === 'reseaux'} onFermer={() => setFeuille(null)} titre="Réseaux" cote>
+      <Feuille ouverte={feuille === 'reseaux'} onFermer={() => setFeuille(null)} titre="Réseaux" cote apercu={direct}>
         <OngletApparence reglages={reglages} onChange={onReglages} envoyerImage={envoyerImage} principal={principal} parties={['reseaux']} />
       </Feuille>
-      <Feuille ouverte={feuille === 'design'} onFermer={() => setFeuille(null)} titre="Design" cote>
+      <Feuille ouverte={feuille === 'design'} onFermer={() => setFeuille(null)} titre="Design" cote apercu={direct}>
         <DesignTiroirs reglages={reglages} onChange={onReglages} envoyerImage={envoyerImage} principal={principal}
           pied={principal && <Interrupteur label="Badge vérifié" aide="La petite coche à côté de ton nom." actif={reglages.profil.badge} onChange={v => profil({ badge: v })} />} />
       </Feuille>
+    </div>
+  );
+}
+
+/**
+ * La page en direct, en miniature, au-dessus de la feuille de design sur
+ * téléphone : rendue à la largeur d'un téléphone puis réduite pour tenir dans
+ * la place laissée, elle suit chaque réglage.
+ */
+function ApercuDirect({ page }: { page: PagePublique }) {
+  const cadre = useRef<HTMLDivElement>(null);
+  const [taille, setTaille] = useState({ l: 0, h: 0 });
+  useLayoutEffect(() => {
+    const el = cadre.current?.parentElement;
+    if (!el) return;
+    const mesurer = () => setTaille({ l: el.clientWidth - 32, h: el.clientHeight - 24 });
+    mesurer();
+    const obs = new ResizeObserver(mesurer);
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+  // Une page de téléphone fait 390 de large ; la miniature garde ses proportions, sans dépasser 62 % de l'écran.
+  const LARGEUR = 390;
+  const l = Math.min(taille.l * 0.62, 260), echelle = l / LARGEUR;
+  return (
+    <div ref={cadre} className="flex flex-col items-center gap-2" aria-hidden="true">
+      {taille.h > 0 && (
+        <div className="overflow-hidden rounded-[22px] ring-1 ring-white/15 shadow-[0_20px_50px_-20px_rgba(0,0,0,0.9)]" style={{ width: l, height: taille.h - 22 }}>
+          <div className="adm-apercu" style={{ width: LARGEUR, height: (taille.h - 22) / echelle, transform: `scale(${echelle})`, transformOrigin: '0 0' }}>
+            <PageLiens page={page} apercu />
+          </div>
+        </div>
+      )}
+      <p className="flex items-center gap-1.5 text-[12px] font-medium text-white/55"><span className="h-1.5 w-1.5 rounded-full bg-[#4ade80]" /> Aperçu en direct</p>
     </div>
   );
 }
