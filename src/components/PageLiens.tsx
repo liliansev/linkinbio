@@ -1,10 +1,11 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import type { CSSProperties, FormEvent, ReactNode } from 'react';
+import type { CSSProperties, FormEvent, MouseEvent, ReactNode } from 'react';
 import type { Bloc, PagePublique } from '../lib/types.ts';
 import { ORIGINE_PUBLIQUE, animationDe, idYoutube, urlPage } from '../lib/types.ts';
 import type { Reglages } from '../lib/types.ts';
 import { themeParId, variablesTheme } from '../lib/themes.ts';
 import { ICONES } from '../lib/icones.ts';
+import { lienApp } from '../lib/ouvrirApp.ts';
 import { Icone, NOMS_RESEAUX } from './Icone.tsx';
 
 /*
@@ -54,6 +55,18 @@ export function PageLiens({ page, apercu = false, edition }: { page: PagePubliqu
   };
   const cible = apercu ? { target: '_blank' } : {};
 
+  // Depuis le navigateur intégré d'Instagram, TikTok…, un lien vers une app connue s'ouvre dans l'app (voir lib/ouvrirApp.ts).
+  function ouvrirDansApp(e: MouseEvent<HTMLDivElement>) {
+    if (apercu || !reglages.ouvrirApps || e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey) return;
+    const a = (e.target as Element).closest?.('a[href]') as HTMLAnchorElement | null;
+    const app = a && lienApp(a.href, navigator.userAgent);
+    if (!a || !app) return;
+    e.preventDefault();
+    location.href = app.adresse;
+    // iOS ne dit pas si l'app existe : si la page est encore là, on ouvre le site.
+    if (app.repli) setTimeout(() => { if (!document.hidden) location.href = a.href; }, 1500);
+  }
+
   async function partager() {
     const url = apercu ? urlPage(compte) : location.href.split('?')[0];
     try {
@@ -79,7 +92,7 @@ export function PageLiens({ page, apercu = false, edition }: { page: PagePubliqu
   );
 
   return (
-    <div className="lp" style={variablesTheme(theme) as CSSProperties} data-bouton={reglages.bouton.style} data-forme={reglages.bouton.forme} data-police={theme.police} data-decor={theme.decor} data-bureau={reglages.bureau}>
+    <div className="lp" onClick={ouvrirDansApp} style={variablesTheme(theme) as CSSProperties} data-bouton={reglages.bouton.style} data-forme={reglages.bouton.forme} data-police={theme.police} data-decor={theme.decor} data-bureau={reglages.bureau}>
       <div className="lp-scene">
       <div className="lp-col">
         {reglages.partage && (

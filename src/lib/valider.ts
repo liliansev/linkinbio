@@ -80,6 +80,7 @@ export function validerReglages(v: unknown, base: Reglages): Reglages {
     bouton: { style: parmi(bouton.style, STYLES_BOUTON, 'plein'), forme: parmi(bouton.forme, FORMES_BOUTON, 'pilule') },
     seo: { titre: texte(seo.titre, 80), description: texte(seo.description, 200), indexable: bool(seo.indexable, true) },
     partage: bool(o.partage, base.partage),
+    ouvrirApps: bool(o.ouvrirApps, base.ouvrirApps ?? true),
     bureau: parmi(o.bureau, MISES_EN_PAGE_BUREAU, base.bureau),
     animation: parmi(o.animation, ANIMATIONS, base.animation),
   };

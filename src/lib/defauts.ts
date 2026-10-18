@@ -29,6 +29,7 @@ export const REGLAGES_DEFAUT: Reglages = {
     indexable: true,
   },
   partage: true,
+  ouvrirApps: true,
   animation: 'orbite',
   bureau: 'onepage',
 };

@@ -68,6 +68,8 @@ export interface Reglages {
   seo: { titre: string; description: string; indexable: boolean };
   /** Le bouton « Partager » en haut de la page publique. */
   partage: boolean;
+  /** Depuis le navigateur intégré d'Instagram, TikTok…, ouvrir les liens dans leur app (YouTube, Spotify…). */
+  ouvrirApps: boolean;
   /** Le mouvement des liens mis en avant (un bloc peut choisir le sien). */
   animation: Animation;
   /** La mise en page sur un grand écran ; sur téléphone, la page reste une colonne. */
