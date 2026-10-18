@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { Api, Bloc, EtatAdmin, Reglages } from '../lib/types.ts';
-import { TYPES_PRINCIPAL, cheminPage, estEnLigne } from '../lib/types.ts';
+import { TYPES_PRINCIPAL, cheminPage, estEnLigne, nouveauBloc } from '../lib/types.ts';
 import { PageLiens } from '../components/PageLiens.tsx';
 import { OngletLiens } from './OngletLiens.tsx';
+import { HautLiens } from './BienDemarrer.tsx';
+import type { Destination } from '../lib/demarrage.ts';
 import { EditeurBloc } from './EditeurBloc.tsx';
 import { OngletApparence } from './OngletApparence.tsx';
 import { OngletStats } from './OngletStats.tsx';
@@ -92,10 +94,18 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
     return () => clearInterval(t);
   }, [api, demo]);
 
-  /** L'onglet Réglages, ouvert sur la carte de l'abonnement. */
-  function versAbonnement() {
-    setOnglet('reglages');
-    setTimeout(() => document.getElementById('abonnement')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
+  /** Un onglet, ouvert sur une de ses cartes. */
+  function ouvrirSur(o: Onglet, ancre: string) {
+    setOnglet(o);
+    setTimeout(() => document.getElementById(ancre)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
+  }
+  function versAbonnement() { ouvrirSur('reglages', 'abonnement'); }
+
+  /** Une étape de « Bien démarrer » mène là où elle se fait. */
+  function aller(d: Destination) {
+    vibrer(5);
+    if (d === 'lien') setEdition({ bloc: nouveauBloc('lien', `n${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`), nouveau: true });
+    else ouvrirSur('apparence', d === 'theme' || d === 'reseaux' ? d : 'profil');
   }
 
   function changerReglages(r: Reglages) {
@@ -160,7 +170,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
         <div className="mx-auto flex h-16 max-w-6xl items-center gap-3 px-4">
           {reglages.profil.avatar ? <img src={reglages.profil.avatar} alt="" className="h-9 w-9 rounded-full object-cover" /> : <span className="h-9 w-9 rounded-full bg-white/10" />}
           <div className="min-w-0 flex-1">
-            <p className="truncate text-[15px] font-semibold leading-tight">Hopla</p>
+            <p className="truncate text-[15px] font-semibold leading-tight">{reglages.profil.nom || 'Hopla'}</p>
             <p className={`flex items-center gap-1.5 text-[12px] leading-tight ${sauvegarde === 'erreur' ? 'text-red-300' : 'text-white/45'}`} aria-live="polite">
               <span className={`h-1.5 w-1.5 rounded-full ${sauvegarde === 'encours' ? 'animate-pulse bg-amber-300' : sauvegarde === 'erreur' ? 'bg-red-400' : 'bg-emerald-400'}`} />{indicateur}
             </p>
@@ -184,6 +194,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
         <main className="mx-auto w-full max-w-xl pt-5 pb-32 lg:pb-12">
           <div key={onglet} className="adm-onglet">
           <h1 className="mb-4 text-[28px] font-semibold tracking-[-0.025em] lg:hidden">{onglets.find(o => o.id === onglet)!.nom}</h1>
+          {onglet === 'liens' && <div className="mb-4"><HautLiens compte={compte} reglages={reglages} blocs={blocs} aller={aller} /></div>}
           {onglet === 'liens' && <OngletLiens blocs={blocs} clics={clics} onOrdonner={ordonner} onModifier={b => { setBlocs(l => l.map(x => (x.id === b.id ? b : x))); ecrire(() => api.enregistrerBloc(b)); }} onOuvrir={b => setEdition({ bloc: b, nouveau: false })} onAjouter={b => setEdition({ bloc: b, nouveau: true })} principal={compte.principal} />}
           {onglet === 'apparence' && <OngletApparence reglages={reglages} onChange={changerReglages} envoyerImage={d => api.envoyerImage(d)} principal={compte.principal} />}
           {onglet === 'stats' && <OngletStats charger={chargerStats} limite={initial.paiement && !compte.pro} onPro={versAbonnement} />}

@@ -46,6 +46,8 @@ embarque tout : l'image n'a pas de `node_modules`.
 - `lib/` : `types.ts` (origines, `cheminPage`, `urlPage`), `valider.ts`, `themes.ts`, `legal.ts` (`VERSION_CGU`),
   `abonnement.ts` (prix, `estPro()`).
 - `admin/` : onglets Liens, Apparence, Stats, Comptes (principal seulement), Réglages.
+  En tête des Liens, `BienDemarrer.tsx` : l'adresse à copier ou partager, et les étapes
+  d'une page prête (`lib/demarrage.ts`), qui se cochent seules.
 - `components/PageLiens.tsx` : la page publique ; `routes/index.tsx` : l'accueil de hopla.page.
 - `demo/` : aperçu statique avec une API simulée, publié en Artifact.
 

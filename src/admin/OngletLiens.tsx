@@ -102,15 +102,17 @@ function Ligne({ bloc, clics, onModifier, onOuvrir }: { bloc: Bloc; clics: numbe
   const programme = bloc.public && !enLigne;
   const titre = bloc.titre || (bloc.type === 'lien' ? bloc.url || 'Lien sans titre' : NOM_TYPE[bloc.type]);
   const sousLigne = bloc.type === 'lien' ? bloc.url.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '') : NOM_TYPE[bloc.type];
+  // Un titre de section se lit comme un intercalaire : pas une carte, une séparation.
+  const section = bloc.type === 'titre';
   return (
     <li ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition }}
-      className={`relative flex items-stretch rounded-[20px] border bg-[#141c2e] transition-[box-shadow,border-color,scale] duration-200 ${isDragging ? 'z-10 scale-[1.02] border-peche/60 shadow-[0_24px_50px_-16px_rgba(0,0,0,0.75)]' : 'border-white/[0.07]'}`}>
+      className={`relative flex items-stretch rounded-[20px] border transition-[box-shadow,border-color,scale] duration-200 ${section ? 'mt-2 border-dashed bg-transparent' : 'bg-[#141c2e]'} ${isDragging ? 'z-10 scale-[1.02] border-peche/60 bg-[#141c2e] shadow-[0_24px_50px_-16px_rgba(0,0,0,0.75)]' : section ? 'border-white/[0.12]' : 'border-white/[0.07]'}`}>
       <button ref={setActivatorNodeRef} type="button" {...attributes} {...listeners} aria-label={`Déplacer ${titre}`}
         className="flex w-10 shrink-0 cursor-grab touch-none items-center justify-center rounded-l-2xl text-white/35 hover:text-white/70 active:cursor-grabbing">
         <svg width="14" height="20" viewBox="0 0 14 20" fill="currentColor" aria-hidden="true"><circle cx="4" cy="4" r="1.7" /><circle cx="10" cy="4" r="1.7" /><circle cx="4" cy="10" r="1.7" /><circle cx="10" cy="10" r="1.7" /><circle cx="4" cy="16" r="1.7" /><circle cx="10" cy="16" r="1.7" /></svg>
       </button>
-      <button type="button" onClick={() => onOuvrir(bloc)} className="flex min-w-0 flex-1 items-center gap-3 py-3 pr-2 text-left">
-        <span className={`grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-[13px] text-lg transition-opacity ${bloc.vedette ? 'bg-peche/15 text-peche' : 'bg-white/[0.07] text-white/85'} ${!bloc.public ? 'opacity-45' : ''}`}>
+      <button type="button" onClick={() => onOuvrir(bloc)} className={`flex min-w-0 flex-1 items-center gap-3 pr-2 text-left ${section ? 'py-2' : 'py-3'}`}>
+        <span className={`grid ${section ? 'h-9 w-9 bg-transparent!' : 'h-11 w-11'} shrink-0 place-items-center overflow-hidden rounded-[13px] text-lg transition-opacity ${bloc.vedette ? 'bg-peche/15 text-peche' : 'bg-white/[0.07] text-white/85'} ${!bloc.public ? 'opacity-45' : ''}`}>
           {bloc.image ? <img src={bloc.image} alt="" className="h-full w-full object-cover" />
             : bloc.icone && ICONES[bloc.icone] ? <Icone nom={bloc.icone} taille={20} />
             : bloc.icone || <Icone nom={TYPES.find(t => t.type === bloc.type)!.picto} taille={20} />}

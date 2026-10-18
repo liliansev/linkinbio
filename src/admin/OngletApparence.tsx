@@ -34,7 +34,7 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
 
   return (
     <div className="flex flex-col gap-4">
-      <Carte titre="Profil">
+      <Carte titre="Profil" id="profil">
         <div className="mb-4 flex items-center gap-4">
           <button type="button" onClick={() => fichier.current?.click()} className="group relative h-20 w-20 shrink-0 overflow-hidden rounded-full bg-white/10" aria-label="Changer la photo">
             {reglages.profil.avatar && <img src={reglages.profil.avatar} alt="" className="h-full w-full object-cover" />}
@@ -53,7 +53,7 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
         </div>
       </Carte>
 
-      <Carte titre="Thème" action={<span className="text-[13px] text-white/50">{theme.nom}</span>}>
+      <Carte titre="Thème" id="theme" action={<span className="text-[13px] text-white/50">{theme.nom}</span>}>
         <div className="-mx-1 mb-3 flex gap-1.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none]">
           {[{ id: 'tous' as const, nom: `Tous · ${THEMES.length}` }, ...FAMILLES].map(f => (
             <button key={f.id} type="button" onClick={() => setFamille(f.id)}
@@ -137,7 +137,7 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
         </div>
       </Carte>
 
-      <Carte titre="Réseaux">
+      <Carte titre="Réseaux" id="reseaux">
         <ul className="flex flex-col gap-2">
           {reglages.reseaux.map((r, i) => (
             <li key={r.reseau} className="flex items-center gap-2">

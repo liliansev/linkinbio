@@ -33,9 +33,9 @@ export function Champ({ label, aide, children }: { label: string; aide?: ReactNo
 
 export const classeSaisie = 'w-full rounded-xl border border-white/10 bg-white/[0.06] px-3.5 py-3 text-[16px] text-white placeholder:text-white/30 outline-none transition focus:border-peche/70 focus:bg-white/[0.09]';
 
-export function Carte({ titre, action, children, className = '' }: { titre?: string; action?: ReactNode; children: ReactNode; className?: string }) {
+export function Carte({ titre, action, children, className = '', id }: { titre?: string; action?: ReactNode; children: ReactNode; className?: string; id?: string }) {
   return (
-    <section className={`rounded-2xl border border-white/[0.07] bg-white/[0.035] p-4 ${className}`}>
+    <section id={id} className={`scroll-mt-20 rounded-2xl border border-white/[0.07] bg-white/[0.035] p-4 ${className}`}>
       {(titre || action) && (
         <div className="mb-3 flex items-center justify-between gap-3">
           {titre && <h2 className="text-[15px] font-semibold text-white">{titre}</h2>}
