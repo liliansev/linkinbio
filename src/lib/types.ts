@@ -51,6 +51,8 @@ export interface Bloc {
   creneau: Creneau | null;
   /** Les provenances visées (Instagram, TikTok…) : le bloc passe en tête pour elles, ou ne s'affiche que pour elles. */
   audience: { sources: Audience[]; effet: EffetAudience } | null;
+  /** Les provenances pour qui le bloc est caché (la vue par réseau de « Ma page »). */
+  cache: Audience[];
   /** « Rejoins ma liste » : demander aussi le prénom. */
   demanderPrenom: boolean;
   /** Le mode drop : un code à taper, des places comptées, ou les deux. L'adresse ne part qu'une fois le lien débloqué. */
@@ -104,12 +106,18 @@ export type OmbreBouton = (typeof OMBRES_BOUTON)[number];
 export const RESEAUX = ['youtube', 'linkedin', 'instagram', 'tiktok', 'x', 'github', 'facebook', 'threads', 'twitch', 'spotify', 'email', 'site'] as const;
 export type Reseau = (typeof RESEAUX)[number];
 
+/** Le fond, les boutons et l'accent qu'on peut changer après avoir choisi un thème. */
+export interface Couleurs { fond: string; boutons: string; accent: string }
+export const SANS_COULEURS: Couleurs = { fond: '', boutons: '', accent: '' };
+
 export interface Reglages {
   profil: { nom: string; bio: string; avatar: string; badge: boolean };
   reseaux: { reseau: Reseau; url: string }[];
   /** Les icônes des réseaux en haut (sous la bio) ou en bas de page. */
   reseauxPosition: 'haut' | 'bas';
   theme: string;
+  /** Les couleurs changées par-dessus le thème (`#rrggbb`) ; vide, c'est celle du thème. */
+  couleurs: Couleurs;
   bouton: { style: StyleBouton; forme: FormeBouton; ombre: OmbreBouton };
   seo: { titre: string; description: string; indexable: boolean };
   /** Le bouton « Partager » en haut de la page publique. */
@@ -126,6 +134,8 @@ export interface Reglages {
   vouvoiement: boolean;
   /** Le mouvement des liens mis en avant (un bloc peut choisir le sien). */
   animation: Animation;
+  /** Les réseaux qui ont leur vue dans « Ma page » (vide : l'option est coupée). */
+  vuesReseaux: Audience[];
   /** La mise en page sur un grand écran ; sur téléphone, la page reste une colonne. */
   bureau: MiseEnPageBureau;
 }
@@ -301,7 +311,7 @@ export function nouveauBloc(type: TypeBloc, id: string): Bloc {
   return {
     id, type, titre: titres[type], url: '', sousTitre: type === 'newsletter' || type === 'inscription' ? 'Un e-mail de temps en temps, rien de plus.' : '', description: '', icone: '', image: '',
     public: true, indexable: true, vedette: false, format: 'bandeau', teinte: 'accent', animation: 'auto', debut: '', fin: '',
-    compteARebours: false, creneau: null, audience: null, demanderPrenom: false, acces: null,
+    compteARebours: false, creneau: null, audience: null, cache: [], demanderPrenom: false, acces: null,
     preuve: type === 'preuve' ? { genre: 'note', note: 5, nombre: 0, source: 'Google' } : null, traductions: {},
   };
 }

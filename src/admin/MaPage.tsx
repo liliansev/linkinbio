@@ -1,11 +1,11 @@
-import { useRef, useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { DndContext, KeyboardSensor, PointerSensor, TouchSensor, closestCenter, useSensor, useSensors } from '@dnd-kit/core';
 import type { DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import type { Bloc, PagePublique, Reglages, TypeBloc } from '../lib/types.ts';
-import { TYPES_PRINCIPAL, estEnLigne, nouveauBloc } from '../lib/types.ts';
+import { TYPES_PRINCIPAL, estEnLigne, nouveauBloc, urlPage } from '../lib/types.ts';
 import { etiquettes } from '../lib/etiquettes.ts';
 import type { Destination } from '../lib/demarrage.ts';
 import { PageLiens } from '../components/PageLiens.tsx';
@@ -15,6 +15,8 @@ import { HautLiens } from './BienDemarrer.tsx';
 import { FeuilleAjout } from './OngletLiens.tsx';
 import { DesignTiroirs, OngletApparence } from './OngletApparence.tsx';
 import { Feuille, Interrupteur, preparerImage, vibrer } from './ui.tsx';
+import { NOMS_AUDIENCES, basculerPour, composerAudience, selonAudience } from '../lib/provenance.ts';
+import type { Audience } from '../lib/provenance.ts';
 
 /*
  * « Ma page » : on édite la page elle-même. Le nom et la bio se tapent en
@@ -24,7 +26,7 @@ import { Feuille, Interrupteur, preparerImage, vibrer } from './ui.tsx';
  * choisir (Lilian, 18 octobre 2026).
  */
 
-export function MaPage({ compte, reglages, blocs, clics, onReglages, onOrdonner, onOuvrir, onAjouter, envoyerImage }: {
+export function MaPage({ compte, reglages, blocs, clics, onReglages, onOrdonner, onOuvrir, onAjouter, onBloc, envoyerImage }: {
   compte: PagePublique['compte'];
   reglages: Reglages;
   blocs: Bloc[];
@@ -33,6 +35,8 @@ export function MaPage({ compte, reglages, blocs, clics, onReglages, onOrdonner,
   onOrdonner: (blocs: Bloc[]) => void;
   onOuvrir: (bloc: Bloc) => void;
   onAjouter: (bloc: Bloc) => void;
+  /** Enregistrer un bloc changé sur place (l'œil de la vue par réseau). */
+  onBloc: (bloc: Bloc) => void;
   envoyerImage: (d: string) => Promise<string>;
 }) {
   const [feuille, setFeuille] = useState<'design' | 'reseaux' | 'ajout' | null>(null);
@@ -41,6 +45,10 @@ export function MaPage({ compte, reglages, blocs, clics, onReglages, onOrdonner,
   const toile = useRef<HTMLDivElement>(null);
   const principal = compte.principal;
   const visibles = blocs.filter(b => principal || !TYPES_PRINCIPAL.includes(b.type));
+  // La vue par réseau : « Toutes », ou ce que voit quelqu'un venu de ce réseau.
+  const [vueChoisie, setVue] = useState<Audience | ''>('');
+  const vue = vueChoisie && reglages.vuesReseaux.includes(vueChoisie) ? vueChoisie : '';
+  const [copie, setCopie] = useState(false);
 
   const profil = (champs: Partial<Reglages['profil']>) => onReglages({ ...reglages, profil: { ...reglages.profil, ...champs } });
 
@@ -49,11 +57,16 @@ export function MaPage({ compte, reglages, blocs, clics, onReglages, onOrdonner,
     setEnvoi(true);
     try { profil({ avatar: await envoyerImage(await preparerImage(f, 'carre')) }); } finally { setEnvoi(false); if (fichier.current) fichier.current.value = ''; }
   }
-  /** Le design s'ouvre en laissant voir le haut de la page : le nom, les premiers boutons, l'accent. */
+  /** Le design s'ouvre en laissant voir le haut de la page (sur ordinateur, elle est à gauche de la feuille). */
   function design() {
     const nom = toile.current?.querySelector('.lp-nom');
     if (nom) scrollTo({ top: nom.getBoundingClientRect().top + scrollY - 80 });
     setFeuille('design');
+  }
+  const direct = <ApercuDirect page={{ reglages, blocs: vue ? composerAudience(visibles, vue) : visibles, compte }} />;
+  const adresseVue = `${urlPage(compte).replace(/^https:\/\//, '')}?s=${vue}`;
+  async function copierVue() {
+    try { await navigator.clipboard.writeText(`https://${adresseVue}`); setCopie(true); setTimeout(() => setCopie(false), 1600); } catch { /* presse-papiers indisponible */ }
   }
   const ajouter = (type: TypeBloc) => { setFeuille(null); onAjouter(nouveauBloc(type, `n${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`)); };
 
@@ -76,7 +89,8 @@ export function MaPage({ compte, reglages, blocs, clics, onReglages, onOrdonner,
     photo: () => fichier.current?.click(),
     envoiPhoto: envoi,
     reseaux: () => setFeuille('reseaux'),
-    liste: (liste, rendu) => <BlocsEditables blocs={liste} rendu={rendu} clics={clics} onOrdonner={onOrdonner} onOuvrir={onOuvrir} onAjouter={() => setFeuille('ajout')} />,
+    liste: (liste, rendu) => <BlocsEditables blocs={liste} rendu={rendu} clics={clics} onOrdonner={onOrdonner} onOuvrir={onOuvrir} onAjouter={() => setFeuille('ajout')}
+      vue={vue} onBasculer={(b, visible) => { if (vue) { vibrer(6); onBloc({ ...b, ...basculerPour(b, vue, visible) }); } }} />,
   };
 
   return (
@@ -91,6 +105,33 @@ export function MaPage({ compte, reglages, blocs, clics, onReglages, onOrdonner,
         </button>
       </div>
 
+      {reglages.vuesReseaux.length > 0 && (
+        <div className="order-0 -mt-1">
+          <div className="-mx-4 flex gap-1 overflow-x-auto px-4 [scrollbar-width:none] lg:mx-0 lg:px-0" role="tablist" aria-label="Ce que voit chaque réseau">
+            {(['', ...reglages.vuesReseaux] as const).map(a => (
+              <button key={a || 'toutes'} type="button" role="tab" aria-selected={vue === a} onClick={() => { vibrer(4); setVue(a); }}
+                className={`flex min-h-9 shrink-0 items-center gap-1.5 rounded-lg px-3 text-[13.5px] font-medium transition ${vue === a ? 'bg-white/[0.12] text-white' : 'text-white/50 hover:text-white/80'}`}>
+                {a && ['instagram', 'tiktok', 'youtube', 'linkedin', 'x', 'facebook', 'threads', 'email'].includes(a) && <Icone nom={a} taille={14} />}
+                {a ? NOMS_AUDIENCES[a] : 'Toutes'}
+              </button>
+            ))}
+          </div>
+          {vue && (
+            <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12.5px] leading-snug text-white/55">
+              <span>Ce que voit quelqu’un venu de {NOMS_AUDIENCES[vue]}. Touche l’œil d’un bloc pour le cacher ici.</span>
+              {RECONNUS.includes(vue)
+                ? <span>Rien à changer dans ta bio : ton lien habituel suffit, Hopla reconnaît {NOMS_AUDIENCES[vue]} tout seul.</span>
+                : <>
+                  <span>{NOMS_AUDIENCES[vue]} ne se présente pas toujours : pour en être sûr, utilise ici</span>
+                  <button type="button" onClick={copierVue} className="inline-flex items-center gap-1 font-medium text-white/85 underline decoration-white/25 underline-offset-2">
+                    {adresseVue} <Icone nom={copie ? 'ui-ok' : 'ui-copier'} taille={13} />
+                  </button>
+                </>}
+            </p>
+          )}
+        </div>
+      )}
+
       {/* Sur téléphone, la page vient d'abord, bord à bord ; l'adresse et « Bien démarrer » passent dessous. */}
       <div className="order-2 lg:order-none"><HautLiens compte={compte} reglages={reglages} blocs={blocs} aller={aller} /></div>
 
@@ -104,10 +145,10 @@ export function MaPage({ compte, reglages, blocs, clics, onReglages, onOrdonner,
 
       <input ref={fichier} type="file" accept="image/*" hidden onChange={e => photo(e.target.files?.[0])} />
       <FeuilleAjout ouverte={feuille === 'ajout'} onFermer={() => setFeuille(null)} onChoisir={ajouter} principal={principal} />
-      <Feuille ouverte={feuille === 'reseaux'} onFermer={() => setFeuille(null)} titre="Réseaux" cote>
+      <Feuille ouverte={feuille === 'reseaux'} onFermer={() => setFeuille(null)} titre="Réseaux" cote apercu={direct}>
         <OngletApparence reglages={reglages} onChange={onReglages} envoyerImage={envoyerImage} principal={principal} parties={['reseaux']} />
       </Feuille>
-      <Feuille ouverte={feuille === 'design'} onFermer={() => setFeuille(null)} titre="Design" cote>
+      <Feuille ouverte={feuille === 'design'} onFermer={() => setFeuille(null)} titre="Design" cote apercu={direct}>
         <DesignTiroirs reglages={reglages} onChange={onReglages} envoyerImage={envoyerImage} principal={principal}
           pied={principal && <Interrupteur label="Badge vérifié" aide="La petite coche à côté de ton nom." actif={reglages.profil.badge} onChange={v => profil({ badge: v })} />} />
       </Feuille>
@@ -115,9 +156,47 @@ export function MaPage({ compte, reglages, blocs, clics, onReglages, onOrdonner,
   );
 }
 
-function BlocsEditables({ blocs, rendu, clics, onOrdonner, onOuvrir, onAjouter }: {
+/** Les provenances que Hopla reconnaît seul (le navigateur intégré de l'app, ou le site d'origine) : le lien habituel suffit. */
+const RECONNUS: Audience[] = ['instagram', 'tiktok', 'linkedin', 'facebook', 'threads', 'snapchat', 'x', 'google'];
+
+/**
+ * La page en direct, en miniature, au-dessus de la feuille de design sur
+ * téléphone : rendue à la largeur d'un téléphone puis réduite pour tenir dans
+ * la place laissée, elle suit chaque réglage.
+ */
+function ApercuDirect({ page }: { page: PagePublique }) {
+  const cadre = useRef<HTMLDivElement>(null);
+  const [taille, setTaille] = useState({ l: 0, h: 0 });
+  useLayoutEffect(() => {
+    const el = cadre.current?.parentElement;
+    if (!el) return;
+    const mesurer = () => setTaille({ l: el.clientWidth - 32, h: el.clientHeight - 24 });
+    mesurer();
+    const obs = new ResizeObserver(mesurer);
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+  // Une page de téléphone fait 390 de large ; la miniature garde ses proportions, sans dépasser 62 % de l'écran.
+  const LARGEUR = 390;
+  const l = Math.min(taille.l * 0.62, 260), echelle = l / LARGEUR;
+  return (
+    <div ref={cadre} className="flex flex-col items-center gap-2" aria-hidden="true">
+      {taille.h > 0 && (
+        <div className="overflow-hidden rounded-[22px] ring-1 ring-white/15 shadow-[0_20px_50px_-20px_rgba(0,0,0,0.9)]" style={{ width: l, height: taille.h - 22 }}>
+          <div className="adm-apercu" style={{ width: LARGEUR, height: (taille.h - 22) / echelle, transform: `scale(${echelle})`, transformOrigin: '0 0' }}>
+            <PageLiens page={page} apercu />
+          </div>
+        </div>
+      )}
+      <p className="flex items-center gap-1.5 text-[12px] font-medium text-white/55"><span className="h-1.5 w-1.5 rounded-full bg-[#4ade80]" /> Aperçu en direct</p>
+    </div>
+  );
+}
+
+function BlocsEditables({ blocs, rendu, clics, onOrdonner, onOuvrir, onAjouter, vue, onBasculer }: {
   blocs: Bloc[]; rendu: (bloc: Bloc) => ReactNode; clics: Record<string, number>;
   onOrdonner: (blocs: Bloc[]) => void; onOuvrir: (bloc: Bloc) => void; onAjouter: () => void;
+  vue: Audience | ''; onBasculer: (bloc: Bloc, visible: boolean) => void;
 }) {
   // Un glisser se termine par un clic : il ne doit pas ouvrir le bloc lâché.
   const glisse = useRef(0);
@@ -138,28 +217,39 @@ function BlocsEditables({ blocs, rendu, clics, onOrdonner, onOuvrir, onAjouter }
       <button type="button" className="lp-ed-ajout" onClick={onAjouter}><Icone nom="ui-plus" taille={18} /> Ajouter un bloc</button>
       <DndContext sensors={capteurs} collisionDetection={closestCenter} onDragStart={() => vibrer(6)} onDragEnd={deplacer} onDragCancel={() => { glisse.current = Date.now(); }}>
         <SortableContext items={blocs.map(b => b.id)} strategy={verticalListSortingStrategy}>
-          {blocs.map((bloc, i) => <BlocEditable key={bloc.id} bloc={bloc} i={i} clics={clics[bloc.id]} ouvrir={ouvrir}>{rendu(bloc)}</BlocEditable>)}
+          {blocs.map((bloc, i) => <BlocEditable key={bloc.id} bloc={bloc} i={i} clics={clics[bloc.id]} ouvrir={ouvrir} vue={vue} onBasculer={onBasculer}>{rendu(bloc)}</BlocEditable>)}
         </SortableContext>
       </DndContext>
     </>
   );
 }
 
-function BlocEditable({ bloc, i, clics, ouvrir, children }: { bloc: Bloc; i: number; clics?: number; ouvrir: (b: Bloc) => void; children: ReactNode }) {
+function BlocEditable({ bloc, i, clics, ouvrir, vue, onBasculer, children }: { bloc: Bloc; i: number; clics?: number; ouvrir: (b: Bloc) => void; vue: Audience | ''; onBasculer: (bloc: Bloc, visible: boolean) => void; children: ReactNode }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: bloc.id });
   const prive = !bloc.public;
   const regles = etiquettes(bloc);
   const programme = bloc.public && !estEnLigne(bloc) && !regles.includes('Compte à rebours');
   const nom = bloc.titre || bloc.url || 'ce bloc';
+  const effet = vue ? selonAudience(bloc, vue) : 'normal';
+  const cache = effet === 'retire';
   return (
     <div ref={setNodeRef} {...attributes} {...listeners} aria-label={`Modifier ${nom}`} aria-roledescription="bloc déplaçable"
-      className="lp-bloc lp-ed-bloc" data-type={bloc.type} data-vedette={bloc.vedette ? bloc.format : undefined} data-glisse={isDragging || undefined} data-prive={prive || programme || undefined}
+      className="lp-bloc lp-ed-bloc" data-type={bloc.type} data-vedette={bloc.vedette ? bloc.format : undefined} data-glisse={isDragging || undefined} data-prive={prive || programme || cache || undefined}
       style={{ '--i': i, transform: CSS.Transform.toString(transform), transition } as CSSProperties}
-      onClickCapture={e => { e.preventDefault(); e.stopPropagation(); ouvrir(bloc); }}
+      onClickCapture={e => { if ((e.target as Element).closest('.lp-ed-oeil')) return; e.preventDefault(); e.stopPropagation(); ouvrir(bloc); }}
       onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); ouvrir(bloc); } else listeners?.onKeyDown?.(e); }}>
       {children}
-      {(prive || programme || regles.length > 0 || (bloc.type === 'lien' && clics !== undefined)) && (
+      {vue && (
+        <button type="button" className="lp-ed-oeil" data-cache={cache || undefined} aria-pressed={!cache}
+          aria-label={cache ? `Montrer ${nom} sur ${NOMS_AUDIENCES[vue]}` : `Cacher ${nom} sur ${NOMS_AUDIENCES[vue]}`}
+          onPointerDown={e => e.stopPropagation()} onTouchStart={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); onBasculer(bloc, cache); }}>
+          <Icone nom={cache ? 'ui-masque' : 'ui-oeil'} taille={16} />
+        </button>
+      )}
+      {((vue && (cache || effet === 'avant')) || prive || programme || regles.length > 0 || (bloc.type === 'lien' && clics !== undefined)) && (
         <span className="lp-ed-puces" aria-hidden="true">
+          {vue && cache && <span className="lp-ed-puce">Caché sur {NOMS_AUDIENCES[vue]}</span>}
+          {vue && effet === 'avant' && <span className="lp-ed-puce">En tête sur {NOMS_AUDIENCES[vue]}</span>}
           {prive && <span className="lp-ed-puce"><Icone nom="ui-masque" taille={12} /> Privé</span>}
           {programme && <span className="lp-ed-puce"><Icone nom="ui-horloge" taille={12} /> Programmé</span>}
           {regles.map(r => <span key={r} className="lp-ed-puce">{r}</span>)}

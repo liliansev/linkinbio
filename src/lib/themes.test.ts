@@ -1,12 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { FAMILLES, REMPLACES, THEMES, contraste, idTheme, themeParId, variablesTheme } from './themes.ts';
+import { FAMILLES, REMPLACES, THEMES, contraste, idTheme, personnaliser, themeDe, themeParId, variablesTheme } from './themes.ts';
 
 const couleurs = (fond: string) => fond.match(/#[0-9a-f]{6}/gi) ?? [];
 
-test('dix thèmes, identifiants uniques, chaque famille garnie', () => {
-  assert.equal(THEMES.length, 10);
-  assert.equal(new Set(THEMES.map(t => t.id)).size, 10);
+test('vingt thèmes, identifiants uniques, chaque famille garnie', () => {
+  assert.equal(THEMES.length, 20);
+  assert.equal(new Set(THEMES.map(t => t.id)).size, 20);
   for (const f of FAMILLES) assert.ok(THEMES.some(t => t.famille === f.id), `famille vide : ${f.id}`);
 });
 
@@ -42,4 +42,19 @@ test('trois rôles par thème : l\'accent se distingue des boutons et du fond', 
     assert.notEqual(t.vedette.toLowerCase(), t.surface.toLowerCase(), `${t.id} : accent identique aux boutons`);
     assert.ok(contraste(t.vedette, t.fondUni) >= 1.6, `${t.id} : accent sur le fond = ${contraste(t.vedette, t.fondUni).toFixed(2)}`);
   }
+});
+
+test('les couleurs changées par-dessus un thème restent lisibles', () => {
+  const fonds = ['#ffffff', '#111111', '#ffd400', '#1f35ff', '#ff6fae', '#7cf5c8', '#23704f', '#808080'];
+  for (const t of THEMES) for (const c of fonds) {
+    const p = personnaliser(t, { fond: c, boutons: c, accent: c });
+    assert.equal(p.fondUni, c);
+    assert.ok(contraste(p.texte, c) >= 4.5, `${t.id} sur ${c} : texte`);
+    assert.ok(contraste(p.doux, c) >= 3, `${t.id} sur ${c} : texte doux = ${contraste(p.doux, c).toFixed(2)}`);
+    assert.ok(contraste(p.surface, p.surfaceTexte) >= 4.5, `${t.id} : boutons ${c}`);
+    assert.ok(contraste(p.vedette, p.vedetteTexte) >= 4.5, `${t.id} : accent ${c}`);
+    assert.equal(p.police, t.police);
+  }
+  assert.deepEqual(themeDe({ theme: 'klein', couleurs: { fond: '', boutons: '', accent: '' } }), themeParId('klein'));
+  assert.equal(themeDe({ theme: 'klein', couleurs: { fond: 'rouge', boutons: '', accent: '' } }).fondUni, themeParId('klein').fondUni);
 });

@@ -29,6 +29,29 @@ function Kpi({ nom, valeur, avant, suffixe = '' }: { nom: string; valeur: number
   );
 }
 
+/**
+ * Une courbe lisse qui passe par chaque point sans jamais les dépasser
+ * (interpolation monotone de Fritsch et Carlson) : pas de bosse sous zéro
+ * ni de pic inventé entre deux jours.
+ */
+function lisse(p: [number, number][]): string {
+  const n = p.length;
+  if (n < 3) return p.map(([a, b], i) => `${i ? 'L' : 'M'}${a.toFixed(1)},${b.toFixed(1)}`).join(' ');
+  const d = p.slice(1).map(([a, b], i) => (b - p[i][1]) / (a - p[i][0]));
+  const m = p.map((_, i) => (i === 0 ? d[0] : i === n - 1 ? d[n - 2] : d[i - 1] * d[i] <= 0 ? 0 : (d[i - 1] + d[i]) / 2));
+  for (let i = 0; i < n - 1; i++) {
+    if (d[i] === 0) { m[i] = 0; m[i + 1] = 0; continue; }
+    const a = m[i] / d[i], b = m[i + 1] / d[i], t = a * a + b * b;
+    if (t > 9) { const k = 3 / Math.sqrt(t); m[i] = k * a * d[i]; m[i + 1] = k * b * d[i]; }
+  }
+  let chemin = `M${p[0][0].toFixed(1)},${p[0][1].toFixed(1)}`;
+  for (let i = 0; i < n - 1; i++) {
+    const [x0, y0] = p[i], [x1, y1] = p[i + 1], h = (x1 - x0) / 3;
+    chemin += ` C${(x0 + h).toFixed(1)},${(y0 + m[i] * h).toFixed(1)} ${(x1 - h).toFixed(1)},${(y1 - m[i + 1] * h).toFixed(1)} ${x1.toFixed(1)},${y1.toFixed(1)}`;
+  }
+  return chemin;
+}
+
 /** Les vues en aire, les clics en ligne, jour par jour. */
 function Courbe({ serie }: { serie: Stats['serie'] }) {
   const [survol, setSurvol] = useState<number | null>(null);
@@ -36,7 +59,7 @@ function Courbe({ serie }: { serie: Stats['serie'] }) {
   const max = Math.max(4, ...serie.map(s => Math.max(s.vues, s.clics)));
   const x = (i: number) => pad + (i * (w - 2 * pad)) / Math.max(1, serie.length - 1);
   const y = (v: number) => h - pad - (v / max) * (h - 2 * pad);
-  const ligne = (cle: 'vues' | 'clics') => serie.map((s, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(s[cle]).toFixed(1)}`).join(' ');
+  const ligne = (cle: 'vues' | 'clics') => lisse(serie.map((s, i) => [x(i), y(s[cle])]));
   const aire = `${ligne('vues')} L${x(serie.length - 1)},${h - pad} L${x(0)},${h - pad} Z`;
   const point = survol !== null ? serie[survol] : null;
   const date = (jour: string) => new Date(`${jour}T12:00:00`).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
@@ -44,7 +67,7 @@ function Courbe({ serie }: { serie: Stats['serie'] }) {
     <div>
       <div className="mb-2 flex items-center justify-between text-[12.5px]">
         <span className="flex gap-3 text-white/60">
-          <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-white" />Vues</span>
+          <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-[#ffb38a]" />Vues</span>
           <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-sky-300" />Clics</span>
         </span>
         <span className="text-white/70 tabular-nums">{point ? `${date(point.jour)} · ${point.vues} vues · ${point.clics} clics` : ''}</span>
@@ -55,8 +78,8 @@ function Courbe({ serie }: { serie: Stats['serie'] }) {
         <defs><linearGradient id="adm-aire" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stopColor="#ffb38a" stopOpacity="0.35" /><stop offset="1" stopColor="#ffb38a" stopOpacity="0" /></linearGradient></defs>
         {[0.25, 0.5, 0.75].map(f => <line key={f} x1={0} x2={w} y1={h * f} y2={h * f} stroke="white" strokeOpacity="0.06" vectorEffect="non-scaling-stroke" />)}
         <path d={aire} fill="url(#adm-aire)" />
-        <path d={ligne('vues')} fill="none" stroke="#ffb38a" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
-        <path d={ligne('clics')} fill="none" stroke="#7dd3fc" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
+        <path d={ligne('vues')} fill="none" stroke="#ffb38a" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinejoin="round" strokeLinecap="round" />
+        <path d={ligne('clics')} fill="none" stroke="#7dd3fc" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinejoin="round" strokeLinecap="round" />
         {survol !== null && <line x1={x(survol)} x2={x(survol)} y1={0} y2={h} stroke="white" strokeOpacity="0.3" vectorEffect="non-scaling-stroke" />}
       </svg>
       <div className="mt-1 flex justify-between text-[11.5px] text-white/40"><span>{date(serie[0].jour)}</span><span>{date(serie[serie.length - 1].jour)}</span></div>

@@ -4,7 +4,7 @@ import type { Api, Bloc, Reglages } from '../lib/types.ts';
 import { ANIMATIONS_BLOC, idYoutube } from '../lib/types.ts';
 import { RESEAUX } from '../lib/types.ts';
 import { adresse } from '../lib/valider.ts';
-import { themeParId, variablesTheme } from '../lib/themes.ts';
+import { themeDe, variablesTheme } from '../lib/themes.ts';
 import { ICONES } from '../lib/icones.ts';
 import { Icone, NOMS_RESEAUX, PICTOS } from '../components/Icone.tsx';
 import { BlocPublic } from '../components/PageLiens.tsx';
@@ -57,7 +57,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
     if (b.type === 'preuve' && b.preuve?.genre === 'compteur' && !b.preuve.nombre) { setErreur('Indique le chiffre à montrer.'); return null; }
     return { ...b, url };
   }
-  const theme = themeParId(reglages.theme);
+  const theme = themeDe(reglages);
   const nomAuto = 'Par défaut';
 
   async function choisirImage(f: File | undefined) {

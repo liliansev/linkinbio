@@ -3,7 +3,7 @@ import type { CSSProperties, FormEvent, MouseEvent, ReactNode } from 'react';
 import type { Bloc, PagePublique } from '../lib/types.ts';
 import { ORIGINE_PUBLIQUE, animationDe, idYoutube, urlPage } from '../lib/types.ts';
 import type { Reglages } from '../lib/types.ts';
-import { themeParId, variablesTheme } from '../lib/themes.ts';
+import { themeDe, variablesTheme } from '../lib/themes.ts';
 import { ICONES } from '../lib/icones.ts';
 import { lienApp } from '../lib/ouvrirApp.ts';
 import { enAttente } from '../lib/moments.ts';
@@ -48,7 +48,7 @@ export function PageLiens({ page, apercu = false, edition }: { page: PagePubliqu
   const { reglages, blocs, compte } = page;
   // La page de Lilian s'annonce sans pseudo ; les autres avec le leur.
   const pseudo = compte.principal ? '' : compte.pseudo;
-  const theme = themeParId(reglages.theme);
+  const theme = themeDe(reglages);
   const langue = page.langue ?? 'fr';
   const t = textes(langue, reglages.vouvoiement);
   const [toast, setToast] = useState('');

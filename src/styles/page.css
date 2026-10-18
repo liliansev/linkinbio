@@ -2,7 +2,7 @@
  * La page publique. Toutes les couleurs viennent du thème (variables posées
  * par `PageLiens`) ; les cinq styles de bouton et les trois formes se lisent
  * sur `data-bouton`, `data-forme` et `data-ombre`, si bien que chaque
- * combinaison marche avec chacun des dix thèmes. La matière du fond
+ * combinaison marche avec chacun des vingt thèmes. La matière du fond
  * (`data-decor`), la police des titres (`--police-titre`) et la typographie
  * réglée de chaque rôle (`--nom-*`, `--section-*`, `--btn-*`, `--carte-*`)
  * viennent aussi du thème.
@@ -637,13 +637,22 @@ button.lp-ed-zone:focus-visible { outline: 2px solid var(--vedette); outline-off
   transition: outline-color 0.15s, background-color 0.15s, box-shadow 0.15s;
 }
 /* Le bloc entier répond : ses liens, sa vidéo et son formulaire restent inertes pendant l'édition. */
-.lp-ed-bloc > :not(.lp-ed-puces) { pointer-events: none; }
+.lp-ed-bloc > :not(.lp-ed-puces, .lp-ed-oeil) { pointer-events: none; }
 /* Au survol, un voile léger autour du bloc, de la couleur du texte : pas de trait, quelle que soit la teinte de l'accent. */
 .lp-ed-bloc:hover { background: color-mix(in srgb, var(--texte) 6%, transparent); box-shadow: 0 0 0 6px color-mix(in srgb, var(--texte) 6%, transparent); }
 .lp-ed-bloc:focus-visible { outline-color: var(--texte); }
-.lp-ed-bloc[data-prive] > :not(.lp-ed-puces) { opacity: 0.42; }
+.lp-ed-bloc[data-prive] > :not(.lp-ed-puces, .lp-ed-oeil) { opacity: 0.42; }
 .lp-ed-bloc[data-glisse] { z-index: 5; cursor: grabbing; outline-color: var(--vedette); }
 .lp-ed-bloc[data-glisse] > :not(.lp-ed-puces) { box-shadow: 0 26px 50px -18px rgb(0 0 0 / 0.6); }
+/* L'œil de la vue par réseau : cacher ou montrer le bloc pour ce réseau, sans ouvrir le bloc. */
+.lp-ed-oeil {
+  position: absolute; top: -11px; left: 10px; z-index: 2; display: grid; place-items: center;
+  width: 30px; height: 30px; border-radius: 999px; cursor: pointer;
+  background: var(--texte); color: var(--fond-uni);
+  box-shadow: 0 4px 12px -4px rgb(0 0 0 / 0.45); transition: transform 0.15s;
+}
+.lp-ed-oeil:active { transform: scale(0.9); }
+.lp-ed-oeil[data-cache] { background: var(--fond-uni); color: var(--texte); box-shadow: inset 0 0 0 1.5px var(--texte); }
 .lp-ed-puces { position: absolute; top: -9px; right: 12px; display: flex; gap: 4px; pointer-events: none; }
 .lp-ed-puce {
   display: inline-flex; align-items: center; gap: 4px; padding: 1px 8px; border-radius: 999px;
