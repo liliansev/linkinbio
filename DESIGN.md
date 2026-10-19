@@ -203,7 +203,7 @@ Les tokens `error` et `pending` correspondent aux états d'erreur et d'enregistr
 
 ### Hierarchy
 
-- **Headline** : titre d'écran, le même pour les onglets, la connexion, les CGU et les premiers pas (classe `.adm-titre`) ; réduit à (28px) sous (640px).
+- **Headline** : titre d'écran, le même pour les onglets, la connexion, les CGU et les premiers pas (classe `.adm-titre`) ; réduit à (28px) sous (640px). Au téléphone, Ma page ne montre pas le sien : l'en-tête et la barre du bas disent déjà où l'on est, et il reste pour les lecteurs d'écran.
 - **Panel title** : nom d'une feuille d'édition, du détail d'un réglage ou d'un prix.
 - **Title** : nom d'une carte ou d'un groupe de réglages.
 - **Body** : contenu courant ; les composants utilisent aussi des variations locales entre (13px) et (14.5px).
@@ -221,7 +221,7 @@ Les tokens `error` et `pending` correspondent aux états d'erreur et d'enregistr
 
 Le shell partage une barre supérieure et un contenu centré, avec une largeur maximale observée de (1120px). Les gouttières passent de (16px) à (32px) à partir de (1024px). À cette même largeur, une navigation latérale fixe de (240px) remplace la navigation basse ; le contenu garde l'espace correspondant. La barre supérieure mesure au moins (72px), puis (80px) sur desktop.
 
-La navigation mobile tient compte de la zone sûre inférieure et réserve (64px) à ses boutons. Le contenu garde un espace bas pour rester accessible au-dessus d'elle. Le rythme récurrent utilise de petits écarts entre contrôles et des écarts plus larges entre groupes, selon les tokens de spacing.
+La navigation mobile tient compte de la zone sûre inférieure et réserve (64px) à ses boutons. Le contenu garde un espace bas pour rester accessible au-dessus d'elle. Sous (1024px), les gestes de Ma page (Ajouter un bloc, Personnaliser) se posent sur cette barre, à portée du pouce : les deux font un seul socle blanc sous un seul trait, et la page commence juste sous l'en-tête. Dans ce même en-tête, tant que la page n'est pas prête, l'anneau de Bien démarrer prend la place de la photo et ouvre ses étapes dans une feuille. Le rythme récurrent utilise de petits écarts entre contrôles et des écarts plus larges entre groupes, selon les tokens de spacing.
 
 Les cartes courantes passent de leur padding desktop au token `mobile-card` sous (640px). Les feuilles montent du bas sur téléphone, deviennent centrées ou latérales à partir de (640px), et suivent l'espace réellement visible avec le clavier. Les compositions propres à Ma page, aux statistiques, aux réglages et à la connexion sont décrites dans le contrat de surface.
 
