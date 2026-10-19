@@ -71,3 +71,12 @@ test('reseauDeUrl reconnaît un profil', async () => {
   assert.equal(reseauDeUrl('https://www.instagram.com/marie'), 'instagram');
   assert.equal(reseauDeUrl('https://ton-site.fr'), null);
 });
+
+test('urlReseau : Spotify veut une adresse Spotify, un site se tape sans https', async () => {
+  const { urlReseau } = await import('./demarrage.ts');
+  assert.equal(urlReseau('spotify', 'mon.spotify'), '');
+  assert.equal(urlReseau('spotify', 'https://exemple.fr/x'), '');
+  assert.match(urlReseau('spotify', 'open.spotify.com/artist/123'), /^https:\/\/open\.spotify\.com\/artist\/123/);
+  assert.match(urlReseau('site', 'ton-site.fr'), /^https:\/\/ton-site\.fr/);
+  assert.equal(urlReseau('instagram', 'camille'), 'https://instagram.com/camille');
+});

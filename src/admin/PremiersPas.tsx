@@ -246,7 +246,7 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
       ),
     },
     reseaux: {
-      titre: 'Où te suivre ?',
+      titre: 'Où te suivre ?',
       aide: 'Touche un réseau et tape ton pseudo. Les icônes s’affichent sous ton nom.',
       corps: (
         <div className="flex flex-col gap-3">
@@ -285,7 +285,7 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
       ),
     },
     partage: {
-      titre: 'Où vas-tu mettre ton lien ?',
+      titre: 'Où vas-tu mettre ton lien ?',
       aide: 'Ta page saura d’où viennent tes visiteurs : tu pourras, par exemple, montrer ta boutique d’abord à ceux qui arrivent d’Instagram.',
       corps: (<>
         <ul className="flex flex-col divide-y divide-white/[0.06] rounded-2xl bg-white/[0.04] px-3.5">
@@ -331,7 +331,7 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
     },
     fin: {
       titre: 'Ta page est en ligne',
-      aide: bioOu ? `Colle son adresse dans ta bio ${bioOu} : tout ce que tu changes sur ta page s’affiche aussitôt.` : 'Colle son adresse là où tu la partages : tout ce que tu changes sur ta page s’affiche aussitôt.',
+      aide: bioOu ? `Colle son adresse dans ta bio ${bioOu} : tout ce que tu changes sur ta page s’affiche aussitôt.` : 'Colle son adresse là où tu la partages : tout ce que tu changes sur ta page s’affiche aussitôt.',
       corps: (
         <div className="flex flex-col gap-3">
           <div className="flex items-center gap-2 rounded-2xl bg-white/[0.05] p-1.5 pl-4">

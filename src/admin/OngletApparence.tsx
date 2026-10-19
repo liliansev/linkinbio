@@ -197,7 +197,7 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
         <ul className="flex flex-col gap-2">
           {reglages.reseaux.map((r, i) => {
             // Un pseudo qui ne mène nulle part se dit sous le champ, une fois quitté ; il ne s'affiche pas sur la page.
-            const faux = enSaisie !== r.reseau && !!r.url.trim() && !adresseSaisie(r.url);
+            const faux = enSaisie !== r.reseau && !!r.url.trim() && !urlReseau(r.reseau, r.url);
             return (
             <li key={r.reseau} className="flex flex-wrap items-center gap-1.5">
               <Icone nom={r.reseau} taille={22} className="w-7 shrink-0 text-white" />
@@ -206,12 +206,12 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
                 aria-invalid={faux || undefined} aria-describedby={faux ? `reseau-faux-${r.reseau}` : undefined} aria-label={NOMS_RESEAUX[r.reseau]} placeholder={EXEMPLES[r.reseau]} inputMode={r.reseau === 'email' ? 'email' : 'url'} autoCapitalize="none" autoCorrect="off"
                 onChange={e => maj({ reseaux: reglages.reseaux.map((x, j) => (j === i ? { ...x, url: e.target.value } : x)) })}
                 onBlur={e => { setEnSaisie(null); const u = urlReseau(r.reseau, e.target.value); if (u && u !== r.url) maj({ reseaux: reglages.reseaux.map((x, j) => (j === i ? { ...x, url: u } : x)) }); }} />
-              {/* Monter et descendre, à la taille du pouce : l'ordre se règle sans glisser. */}
+              {/* Monter et descendre, à la taille du pouce : l'ordre se règle sans glisser (seulement s'il y a un ordre à régler). */}
               <button type="button" disabled={i === 0} aria-label={`Monter ${NOMS_RESEAUX[r.reseau]}`} onClick={() => { const l = [...reglages.reseaux]; [l[i - 1], l[i]] = [l[i], l[i - 1]]; maj({ reseaux: l }); }}
-                className="grid h-11 w-7 shrink-0 place-items-center text-white/50 hover:text-white disabled:invisible"><Icone nom="ui-chevron" taille={18} className="rotate-180" /></button>
+                className={`h-11 w-9 shrink-0 place-items-center text-white/50 hover:text-white disabled:invisible ${reglages.reseaux.length > 1 ? 'grid' : 'hidden'}`}><Icone nom="ui-chevron" taille={18} className="rotate-180" /></button>
               <button type="button" disabled={i === reglages.reseaux.length - 1} aria-label={`Descendre ${NOMS_RESEAUX[r.reseau]}`} onClick={() => { const l = [...reglages.reseaux]; [l[i + 1], l[i]] = [l[i], l[i + 1]]; maj({ reseaux: l }); }}
-                className="grid h-11 w-7 shrink-0 place-items-center text-white/50 hover:text-white disabled:invisible"><Icone nom="ui-chevron" taille={18} /></button>
-              <button type="button" aria-label={`Retirer ${NOMS_RESEAUX[r.reseau]}`} onClick={() => maj({ reseaux: reglages.reseaux.filter((_, j) => j !== i) })} className="grid h-11 w-8 shrink-0 place-items-center text-white/50 hover:text-white"><Icone nom="ui-fermer" taille={18} /></button>
+                className={`h-11 w-9 shrink-0 place-items-center text-white/50 hover:text-white disabled:invisible ${reglages.reseaux.length > 1 ? 'grid' : 'hidden'}`}><Icone nom="ui-chevron" taille={18} /></button>
+              <button type="button" aria-label={`Retirer ${NOMS_RESEAUX[r.reseau]}`} onClick={() => maj({ reseaux: reglages.reseaux.filter((_, j) => j !== i) })} className="grid h-11 w-9 shrink-0 place-items-center text-white/50 hover:text-white"><Icone nom="ui-fermer" taille={18} /></button>
               {faux && <p id={`reseau-faux-${r.reseau}`} role="alert" className="w-full pl-9 text-[13px] font-medium text-red-300">{pourquoiPasReseau(r.reseau, pseudoReseau(r.reseau, r.url))}</p>}
             </li>
             );

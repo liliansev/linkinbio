@@ -51,7 +51,7 @@ export function MaPage({ compte, reglages, blocs, clics, onReglages, onOrdonner,
       if (annule) annoncer({ texte: 'Changements annulés', genre: 'info' });
       else if (avant && JSON.stringify(avant) !== JSON.stringify(reglages)) {
         // Les réseaux se rangent en partant : un pseudo devient l'adresse du profil, une ligne vide s'en va.
-        const propres = feuille === 'reseaux' ? reglages.reseaux.filter(r => r.url.trim()).map(r => ({ ...r, url: urlReseau(r.reseau, r.url) || r.url })) : reglages.reseaux;
+        const propres = feuille === 'reseaux' ? reglages.reseaux.filter(r => r.url.trim()).map(r => ({ ...r, url: urlReseau(r.reseau, r.url) })).filter(r => r.url) : reglages.reseaux;
         if (JSON.stringify(propres) !== JSON.stringify(reglages.reseaux)) onReglages({ ...reglages, reseaux: propres });
         annoncer({ texte: feuille === 'design' ? 'Design mis à jour' : 'Réseaux mis à jour', annuler: () => { onReglages(avant); annoncer({ texte: 'Changements annulés', genre: 'info' }); } });
       }
@@ -117,7 +117,7 @@ export function MaPage({ compte, reglages, blocs, clics, onReglages, onOrdonner,
   }, [onAjouter]);
   /** Un réseau rempli qui ne mène nulle part garde la feuille ouverte, sur son champ. */
   const reseauFaux = () => {
-    const faux = reglages.reseaux.find(r => r.url.trim() && !adresseSaisie(r.url) && !urlReseau(r.reseau, r.url));
+    const faux = reglages.reseaux.find(r => r.url.trim() && !urlReseau(r.reseau, r.url));
     // Le champ se montre, son erreur dessous : il n'est pas refocalisé, sans quoi l'erreur se tairait pendant la saisie.
     if (faux) { (document.activeElement as HTMLElement | null)?.blur(); setTimeout(() => document.querySelector<HTMLInputElement>(`[aria-label="${NOMS_RESEAUX[faux.reseau]}"]`)?.scrollIntoView({ block: 'center' }), 40); }
     return !!faux;

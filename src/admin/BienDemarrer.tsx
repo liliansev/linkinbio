@@ -46,7 +46,7 @@ export function HautLiens({ compte, reglages, blocs, aller, annoncer }: { compte
           <span className="absolute inset-0 animate-ping rounded-full bg-emerald-400/60 motion-reduce:hidden" />
           <span className="relative h-2 w-2 rounded-full bg-emerald-400" />
         </span>
-        <span className="min-w-0 flex-1 truncate text-[14px] font-medium text-white" translate="no">{courte}</span>
+        <a href={adresse} target="_blank" rel="noopener" title="Ouvrir ma page" className="min-w-0 flex-1 truncate text-[14px] font-medium text-white underline-offset-4 hover:underline" translate="no">{courte}</a>
         <BoutonCopier texte={adresse} onCopie={marquerPartagee} label="Copier l’adresse de ta page" />
         {peutPartager && (
           <button type="button" onClick={partager} aria-label="Partager ta page"

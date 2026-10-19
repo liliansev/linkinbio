@@ -206,7 +206,9 @@ export function pourquoiPasAdresse(v: string): string {
 
 /** Pourquoi un pseudo ou une adresse de réseau ne passe pas, avec une piste. */
 export function pourquoiPasReseau(reseau: string, v: string): string {
-  if (reseau === 'email') return 'Une adresse e-mail, par exemple toi@exemple.fr';
+  if (reseau === 'email') return v.includes('@') ? 'Il manque une partie de l’adresse e-mail, par exemple toi@exemple.fr' : 'Il manque le @ de l’adresse e-mail, par exemple toi@exemple.fr';
+  if (reseau === 'spotify') return 'Colle l’adresse de ta page Spotify : elle commence par open.spotify.com';
+  if (reseau === 'site') return 'L’adresse de ton site, par exemple ton\u2011site.fr';
   const s = v.trim().replace(/^@/, '');
   if (/\s/.test(s)) return `Pas d’espace dans un pseudo : essaie ${s.replace(/\s+/g, '.').toLowerCase()}`;
   return 'Un pseudo sans espace, ou l’adresse de ton profil';

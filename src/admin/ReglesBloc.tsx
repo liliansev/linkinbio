@@ -112,7 +112,7 @@ export function RegleReseaux({ b, maj, reseaux }: { b: Bloc; maj: (c: Partial<Bl
   const [premier, setPremier] = useState(enTete.length > 0);
   return (
     <Repli titre="Afficher sur" icone="cible" resume={resume} ouvert={false}>
-      <p className="text-[12.5px] leading-snug text-white/55">Décoché, ce bloc se cache pour ceux qui arrivent de ce réseau par le lien de ta bio. Hopla le reconnaît tout seul ; les autres visiteurs le voient toujours.</p>
+      <p className="text-[12.5px] leading-snug text-white/55">Désactivé, ce bloc se cache pour ceux qui arrivent de ce réseau par le lien de ta bio. Hopla le reconnaît tout seul ; les autres visiteurs le voient toujours.</p>
       <ul className="-my-1 divide-y divide-white/[0.06]" aria-label="Réseaux où ce bloc s’affiche">
         {liste.map(s => {
           const vu = visible(s);

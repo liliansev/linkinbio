@@ -80,7 +80,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
     const url = b.type === 'lien' ? adresseSaisie(b.url) : adresse(b.url);
     if (b.type === 'lien' && !url) { setErreur(b.url.trim() ? pourquoiPasAdresse(b.url) : 'Indique l’adresse du lien.'); return null; }
     if (b.type === 'video' && !idYoutube(url)) { setErreur('Colle l’adresse d’une vidéo YouTube.'); return null; }
-    if ((b.type === 'titre' || b.type === 'texte') && !b.titre.trim()) { setErreur('Écris le texte.', 'titre'); return null; }
+    if ((b.type === 'titre' || b.type === 'texte') && !b.titre.trim()) { setErreur(b.type === 'titre' ? 'Écris le titre.' : 'Écris le texte.', 'titre'); return null; }
     if (b.type === 'preuve' && b.preuve?.genre === 'temoignage' && !b.description.trim()) { setErreur('Écris le témoignage.', 'description'); return null; }
     if (b.type === 'preuve' && b.preuve?.genre === 'compteur' && !b.preuve.nombre) { setErreur('Indique le chiffre à montrer.', 'nombre'); return null; }
     // Une note n'est jamais inventée : elle se tape, avec son nombre d'avis et sa source.
@@ -174,7 +174,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
   const retenir = () => commence() && !valider();
 
   return (
-    <Feuille ouverte onFermer={fermerEnGardant} retenir={retenir} titre={nouveau ? `Ajouter : ${type.nom}` : [type.nom, !b.public && 'masqué', b.public && !estEnLigne(b) && 'programmé'].filter(Boolean).join(' · ')}
+    <Feuille ouverte onFermer={fermerEnGardant} retenir={retenir} titre={nouveau ? `Ajouter : ${type.nom}` : [type.nom, !(bloc ?? b).public && 'masqué', (bloc ?? b).public && !estEnLigne(bloc ?? b) && 'programmé'].filter(Boolean).join(' · ')}
       pied={fermer => (
         <div className="flex items-center gap-2">
           {/* Fermer garde les changements ; ce bouton est la seule façon de les oublier (un bloc neuf n'est pas ajouté). */}

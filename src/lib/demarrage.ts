@@ -56,7 +56,14 @@ export function urlReseau(reseau: Reseau, saisie: string): string {
   const s = saisie.trim();
   if (!s) return '';
   if (reseau === 'email') return s.includes('@') && !s.includes('/') ? adresse(s.replace(/^mailto:/i, '')) : '';
-  if (/^https?:\/\//i.test(s) || s.includes('/')) return adresse(s);
+  if (/^https?:\/\//i.test(s) || s.includes('/')) {
+    const url = adresseSaisie(s);
+    // Spotify n'a pas de pseudo : seule l'adresse d'une page Spotify mène quelque part.
+    if (reseau === 'spotify' && url && !/^https?:\/\/([\w-]+\.)*spotify\.(com|link)(\/|$)/i.test(url)) return '';
+    return url;
+  }
+  // Un site se tape sans https : « ton-site.fr » suffit.
+  if (reseau === 'site') return adresseSaisie(s);
   const pseudo = s.replace(/^@/, '');
   const profil = PROFILS[reseau];
   return profil && /^[\w.-]{1,60}$/.test(pseudo) ? profil(pseudo) : '';

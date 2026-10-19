@@ -141,7 +141,12 @@ export function Feuille({ ouverte, onFermer, retenir, titre, children, pied, cot
     document.body.style.overflow = 'hidden';
     // Le champ qui a l'autoFocus garde la main ; sinon la feuille prend le focus.
     if (!ref.current?.contains(document.activeElement)) ref.current?.focus();
-    return () => { vv?.removeEventListener('resize', suivre); vv?.removeEventListener('scroll', suivre); setVisible(null); document.removeEventListener('keydown', touche); document.body.style.overflow = avant; if (avantFocus?.isConnected) avantFocus.focus({ preventScroll: true }); };
+    return () => { vv?.removeEventListener('resize', suivre); vv?.removeEventListener('scroll', suivre); setVisible(null); document.removeEventListener('keydown', touche); document.body.style.overflow = avant; 
+      // Le focus revient d'où il venait, sauf si une autre feuille vient de le prendre (Ajouter qui ouvre l'éditeur sur son premier champ).
+      const ici = document.activeElement;
+      const libre = !ici || ici === document.body || !!ref.current?.contains(ici);
+      if (libre && avantFocus?.isConnected) avantFocus.focus({ preventScroll: true });
+    };
   }, [ouverte]);
   if (!ouverte) return null;
 
