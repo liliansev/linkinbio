@@ -81,3 +81,13 @@ export function pseudoReseau(reseau: Reseau, url: string): string {
 export function nomSite(url: string): string {
   try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return ''; }
 }
+
+const HOTES_RESEAUX: Record<string, Reseau> = {
+  'instagram.com': 'instagram', 'tiktok.com': 'tiktok', 'youtube.com': 'youtube', 'youtu.be': 'youtube', 'linkedin.com': 'linkedin',
+  'x.com': 'x', 'twitter.com': 'x', 'threads.net': 'threads', 'threads.com': 'threads', 'facebook.com': 'facebook', 'twitch.tv': 'twitch',
+  'spotify.com': 'spotify', 'open.spotify.com': 'spotify', 'github.com': 'github',
+};
+/** Le réseau d'une adresse (instagram.com/marie → instagram), pour lui donner son icône d'office. */
+export function reseauDeUrl(url: string): Reseau | null {
+  try { return HOTES_RESEAUX[new URL(url).hostname.toLowerCase().replace(/^(www|m)\./, '')] ?? null; } catch { return null; }
+}

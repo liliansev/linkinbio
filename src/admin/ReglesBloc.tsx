@@ -46,7 +46,7 @@ const fuseauNavigateur = () => { try { return Intl.DateTimeFormat().resolvedOpti
 /** Quand le bloc s'affiche : des dates, un compte à rebours, un créneau qui revient chaque semaine. */
 export function RegleMoment({ b, maj, erreur }: { b: Bloc; maj: (c: Partial<Bloc>) => void; erreur?: string }) {
   const c = b.creneau;
-  const majCreneau = (champs: Partial<Creneau>) => maj({ creneau: { ...(c ?? { jours: [1, 2, 3, 4, 5], de: '09:00', a: '12:00', fuseau: fuseauNavigateur(), effet: 'avant' }), ...champs, fuseau: fuseauNavigateur() } });
+  const majCreneau = (champs: Partial<Creneau>) => maj({ creneau: { ...(c ?? { jours: [1, 2, 3, 4, 5], de: '09:00', a: '12:00', fuseau: fuseauNavigateur(), effet: 'afficher' }), ...champs, fuseau: fuseauNavigateur() } });
   const resume = [b.debut || b.fin ? 'Dates' : '', b.compteARebours && b.debut ? 'compte à rebours' : '', c ? decrireCreneau(c) : ''].filter(Boolean).join(', ');
   return (
     <Repli key={erreur ? 'erreur' : 'calme'} titre="Quand l’afficher" icone="ui-horloge" resume={resume} ouvert={!!(b.debut || b.fin || c || erreur)}>
@@ -84,12 +84,12 @@ export function RegleMoment({ b, maj, erreur }: { b: Bloc; maj: (c: Partial<Bloc
               <Champ label="À"><input type="time" className={classeSaisie} value={c.a} onChange={e => e.target.value && majCreneau({ a: e.target.value })} /></Champ>
             </div>
             <Segments label="Ce que fait le créneau" valeur={c.effet} onChange={effet => majCreneau({ effet })}
-              options={[{ id: 'avant', nom: 'Mis en avant' }, { id: 'afficher', nom: 'Visible seulement' }]} />
+              options={[{ id: 'afficher', nom: 'Visible seulement' }, { id: 'avant', nom: 'En tête de page' }]} />
             <p className="text-[12.5px] leading-snug text-white/50">
               {c.effet === 'avant' ? `Ce bloc passe en tête de ta page, mis en avant, ${decrireCreneau(c)}.` : `Ce bloc n’apparaît que ${decrireCreneau(c)}.`} Heure de {c.fuseau.split('/').pop()?.replace(/_/g, ' ')}.
             </p>
           </div>
-        ) : <p className="mt-1.5 text-[12.5px] leading-snug text-white/55">Choisis des jours : par exemple « Réserver » mis en avant en semaine le matin, « Mon live » le dimanche soir.</p>}
+        ) : <p className="mt-1.5 text-[12.5px] leading-snug text-white/55">Choisis des jours : par exemple « Réserver » en tête en semaine le matin, « Mon live » le dimanche soir.</p>}
       </div>
     </Repli>
   );
@@ -137,18 +137,18 @@ export function RegleReseaux({ b, maj, reseaux }: { b: Bloc; maj: (c: Partial<Bl
           {/* Le même rang que la liste du dessus (picto, nom, interrupteur), replié tant qu'on ne s'en sert pas. */}
           <button type="button" onClick={() => setPremier(!premier)} aria-expanded={premier}
             className="flex min-h-12 w-full items-center gap-3 text-left text-[14.5px] font-medium text-white">
-            <span className="flex-1">En premier pour</span>
+            <span className="flex-1">En tête pour</span>
             <span className="min-w-0 truncate text-[13px] font-normal text-white/55">{!premier && (enTete.length ? noms(enTete) : 'Aucun réseau')}</span>
             <Icone nom="ui-chevron" taille={18} className={`shrink-0 text-white/75 transition-transform duration-300 ${premier ? 'rotate-180' : ''}`} />
           </button>
-          {premier && <p className="-mt-1 mb-1 text-[12.5px] leading-snug text-white/55">Ce bloc passe tout en haut de ta page pour ceux qui arrivent de ces réseaux.</p>}
+          {premier && <p className="-mt-1 mb-1 text-[12.5px] leading-snug text-white/55">Ce bloc passe en tête de ta page pour ceux qui arrivent de ces réseaux.</p>}
           {premier && (
-            <ul className="-mt-1 divide-y divide-white/[0.06]" aria-label="En premier pour ces visiteurs">
+            <ul className="-mt-1 divide-y divide-white/[0.06]" aria-label="En tête pour ces visiteurs">
               {liste.filter(visible).map(s => (
                 <li key={s} className="flex min-h-12 items-center gap-3">
                   <span className="flex w-4 justify-center text-white/75">{ICONE_AUDIENCE[s] && <Icone nom={ICONE_AUDIENCE[s]} taille={16} />}</span>
                   <span className="flex-1 text-[14.5px] font-medium text-white">{NOMS_AUDIENCES[s]}</span>
-                  <button type="button" role="switch" aria-checked={tete(s)} aria-label={`En premier pour ceux qui viennent de ${NOMS_AUDIENCES[s]}`}
+                  <button type="button" role="switch" aria-checked={tete(s)} aria-label={`En tête pour ceux qui viennent de ${NOMS_AUDIENCES[s]}`}
                     onClick={() => { vibrer(4); maj(enTetePour(b, s, !tete(s))); }}
                     className={`adm-interrupteur relative h-6 w-10 shrink-0 rounded-full before:absolute before:-inset-2 before:content-[''] ${tete(s) ? 'bg-white' : 'bg-white/15'}`}>
                     <span className={`absolute top-[3px] left-[3px] h-[18px] w-[18px] rounded-full shadow-[0_1px_3px_rgba(0,0,0,0.3)] ${tete(s) ? 'translate-x-4 bg-nuit' : 'bg-white'}`} />
@@ -163,7 +163,7 @@ export function RegleReseaux({ b, maj, reseaux }: { b: Bloc; maj: (c: Partial<Bl
   );
 }
 
-const ICONE_AUDIENCE: Partial<Record<Audience, string>> = { instagram: 'instagram', tiktok: 'tiktok', youtube: 'youtube', linkedin: 'linkedin', x: 'x', facebook: 'facebook', threads: 'threads', email: 'email' };
+const ICONE_AUDIENCE: Partial<Record<Audience, string>> = { instagram: 'instagram', tiktok: 'tiktok', youtube: 'youtube', linkedin: 'linkedin', x: 'x', facebook: 'facebook', threads: 'threads', snapchat: 'snapchat', qr: 'qr', newsletter: 'courrier', email: 'email', google: 'google' };
 
 /** Le mode drop : un code à taper, des places comptées, ou les deux. */
 export function RegleAcces({ b, maj, prises }: { b: Bloc; maj: (c: Partial<Bloc>) => void; prises: number }) {

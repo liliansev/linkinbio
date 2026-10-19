@@ -70,6 +70,16 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
       </Carte>}
       {ouverte === 'partage' && <Carte>
         <div className="flex flex-col gap-3">
+          {/* Ce que ces deux champs deviennent : la carte qu'affichent Google, WhatsApp ou iMessage quand on partage ta page. */}
+          <p className="text-[13px] leading-snug text-white/60">Ce que montrent Google et l’aperçu quand tu partages ton lien :</p>
+          <div className="overflow-hidden rounded-2xl bg-white/[0.05] ring-1 ring-white/[0.06]" aria-hidden="true">
+            {reglages.profil.avatar && <img src={reglages.profil.avatar} alt="" className="h-24 w-full object-cover opacity-90" />}
+            <div className="px-3.5 py-2.5">
+              <span className="block text-[12px] text-white/50" translate="no">{URL_PUBLIQUE.replace(/^https?:\/\//, '').split('/')[0]}</span>
+              <span className="block truncate text-[14.5px] font-semibold text-white">{reglages.seo.titre || reglages.profil.nom}</span>
+              <span className="line-clamp-2 text-[13px] leading-snug text-white/60">{reglages.seo.description || reglages.profil.bio}</span>
+            </div>
+          </div>
           <Champ label="Titre dans Google et sur les réseaux" aide={`${reglages.seo.titre.length}/60 caractères conseillés`}>
             <input className={classeSaisie} value={reglages.seo.titre} maxLength={80} onChange={e => seo({ titre: e.target.value })} />
           </Champ>

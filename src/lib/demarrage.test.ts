@@ -63,3 +63,9 @@ test('une adresse de profil se relit en pseudo, et le pseudo redonne la même ad
   assert.equal(pseudoReseau('youtube', 'https://youtube.com/channel/UC123'), 'https://youtube.com/channel/UC123');
   assert.equal(pseudoReseau('email', 'mailto:a@b.fr'), 'a@b.fr');
 });
+
+test('reseauDeUrl reconnaît un profil', async () => {
+  const { reseauDeUrl } = await import('./demarrage.ts');
+  assert.equal(reseauDeUrl('https://www.instagram.com/marie'), 'instagram');
+  assert.equal(reseauDeUrl('https://ton-site.fr'), null);
+});

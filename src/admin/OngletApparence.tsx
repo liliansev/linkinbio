@@ -217,9 +217,10 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
             <span className="mb-1.5 block text-[13px] font-medium text-white/70">Ajouter un réseau</span>
             <div className="flex flex-wrap gap-1">
               {absents.map(r => (
-                <button key={r} type="button" aria-label={`Ajouter ${NOMS_RESEAUX[r]}`} title={NOMS_RESEAUX[r]} onClick={() => { vibrer(4); maj({ reseaux: [...reglages.reseaux, { reseau: r, url: '' }] }); }}
-                  className="grid h-11 w-11 place-items-center rounded-xl text-white/75 transition hover:bg-white/[0.06] hover:text-white active:scale-90">
+                <button key={r} type="button" aria-label={`Ajouter ${NOMS_RESEAUX[r]}`} onClick={() => { vibrer(4); maj({ reseaux: [...reglages.reseaux, { reseau: r, url: '' }] }); setTimeout(() => document.querySelector<HTMLInputElement>(`[aria-label="${NOMS_RESEAUX[r]}"]`)?.focus(), 40); }}
+                  className="flex w-[62px] flex-col items-center gap-1 rounded-xl py-2 text-white/80 transition hover:bg-white/[0.06] hover:text-white active:scale-95">
                   <Icone nom={r} taille={22} />
+                  <span className="w-full truncate text-center text-[11.5px] text-white/55" aria-hidden="true">{NOMS_RESEAUX[r]}</span>
                 </button>
               ))}
             </div>
@@ -282,12 +283,13 @@ export function DesignTiroirs({ reglages, onChange, envoyerImage, principal, pie
     if (ouvert) { dernier.current = ouvert; retour.current?.focus({ preventScroll: true, focusVisible: false } as FocusOptions); }
     else if (dernier.current) document.getElementById(`design-${dernier.current}`)?.focus({ preventScroll: true });
   }, [ouvert]);
-  const lignes: { id: Tiroir; nom: string; icone: string }[] = [
-    { id: 'theme', nom: 'Thème', icone: 'palette' },
-    { id: 'couleurs', nom: 'Couleurs', icone: 'pinceau' },
-    { id: 'boutons', nom: 'Boutons', icone: 'lien' },
-    { id: 'animation', nom: 'Animation', icone: 'eclair' },
-    { id: 'bureau', nom: 'Sur ordinateur', icone: 'ordinateur' },
+  // Chaque ligne dit ce qui est réglé, à droite : on sait sans ouvrir.
+  const lignes: { id: Tiroir; nom: string; icone: string; valeur: string }[] = [
+    { id: 'theme', nom: 'Thème', icone: 'palette', valeur: themeParId(reglages.theme).nom },
+    { id: 'couleurs', nom: 'Couleurs', icone: 'pinceau', valeur: Object.values(reglages.couleurs).some(Boolean) ? 'Personnalisées' : 'Celles du thème' },
+    { id: 'boutons', nom: 'Boutons', icone: 'lien', valeur: STYLES.find(x => x.id === reglages.bouton.style)?.nom ?? '' },
+    { id: 'animation', nom: 'Animation', icone: 'eclair', valeur: NOMS_ANIMATIONS[reglages.animation].nom },
+    { id: 'bureau', nom: 'Sur ordinateur', icone: 'ordinateur', valeur: BUREAUX.find(x => x.id === reglages.bureau)?.nom ?? '' },
   ];
 
   if (ouvert) return (
@@ -310,6 +312,7 @@ export function DesignTiroirs({ reglages, onChange, envoyerImage, principal, pie
             <button id={`design-${l.id}`} type="button" onClick={() => { vibrer(4); setOuvert(l.id); if (l.id === 'theme') themesVus(); }} className="flex min-h-[52px] w-full items-center gap-3 px-3.5 py-2 text-left transition hover:bg-white/[0.04] active:bg-white/[0.06]">
               <Icone nom={l.icone} taille={20} className="shrink-0 text-white/70" />
               <span className="min-w-0 flex-1 truncate text-[14px] font-medium text-white">{l.nom}</span>
+              <span className="min-w-0 max-w-[45%] truncate text-[13px] text-white/55">{l.valeur}</span>
               <Icone nom="ui-chevron" taille={16} className="-rotate-90 text-white/30" />
             </button>
           </li>

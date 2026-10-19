@@ -40,7 +40,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
   const [onglet, setOnglet] = useState<Onglet>('page');
   const [edition, setEdition] = useState<{ bloc: Bloc; nouveau: boolean; enBas?: boolean } | null>(null);
   const [sauvegarde, setSauvegarde] = useState<Sauvegarde>('ok');
-  const [toast, setToast] = useState<{ texte: string; annuler?: () => void; action?: string } | null>(null);
+  const [toast, setToast] = useState<{ texte: string; annuler?: () => void; action?: string; genre?: 'ok' | 'info' } | null>(null);
   // Le doigt ou le focus sur le message le garde affiché : « Annuler » ne file pas pendant qu'on le vise.
   const [toastTenu, setToastTenu] = useState(false);
   const [apercu, setApercu] = useState(false);
@@ -183,8 +183,10 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
   }
 
   function ordonner(liste: Bloc[]) {
+    const avant = blocs;
     setBlocs(liste);
     ecrire(() => api.ordonner(liste.map(b => b.id)));
+    setToast({ texte: 'Bloc déplacé', annuler: () => { setBlocs(avant); setToast(null); ecrire(() => api.ordonner(avant.map(b => b.id))); } });
   }
 
   function supprimer(bloc: Bloc) {
@@ -223,8 +225,8 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
   if (!cguAJour) return <AccepterCgu accepter={async () => { await api.accepterCgu(); setCguAJour(true); }} deconnexion={deconnexion} />;
 
   const bulle = toast && (
-    <div role="status" onPointerEnter={() => setToastTenu(true)} onPointerLeave={() => setToastTenu(false)} onFocus={() => setToastTenu(true)} onBlur={() => setToastTenu(false)} className="adm-toast fixed inset-x-4 bottom-[calc(76px+env(safe-area-inset-bottom))] z-[60] mx-auto flex max-w-sm items-center justify-between gap-3 rounded-2xl bg-white px-4 py-3 text-[14.5px] font-medium text-nuit shadow-2xl lg:bottom-6">
-      <span className="flex items-center gap-2">{!toast.annuler && sauvegarde !== 'erreur' && <span className="grid h-5 w-5 place-items-center rounded-full bg-emerald-500 text-white"><Icone nom="ui-ok" taille={13} /></span>}{toast.texte}</span>
+    <div role="status" onPointerEnter={() => setToastTenu(true)} onPointerLeave={() => setToastTenu(false)} className="adm-toast fixed inset-x-4 bottom-[calc(76px+env(safe-area-inset-bottom))] z-[60] mx-auto flex max-w-sm items-center justify-between gap-3 rounded-2xl bg-white px-4 py-3 text-[14.5px] font-medium text-nuit shadow-2xl lg:bottom-6">
+      <span className="flex items-center gap-2">{/* La coche verte confirme ; une simple information n'en a pas. */}{!toast.annuler && toast.genre !== 'info' && sauvegarde !== 'erreur' && <span className="grid h-5 w-5 place-items-center rounded-full bg-emerald-500 text-white"><Icone nom="ui-ok" taille={13} /></span>}{toast.texte}</span>
       {toast.annuler && <button ref={actionToast} type="button" onClick={toast.annuler} className="-my-2 min-h-11 rounded-full px-3 font-semibold text-nuit underline decoration-nuit/30 underline-offset-4 hover:bg-black/5">{toast.action ?? 'Annuler'}</button>}
     </div>
   );

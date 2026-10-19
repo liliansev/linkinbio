@@ -39,7 +39,7 @@ export function MaPage({ compte, reglages, blocs, clics, onReglages, onOrdonner,
   onAjouter: (bloc: Bloc, enBas?: boolean) => void;
   envoyerImage: (d: string) => Promise<string>;
   /** Un message en bas de l'écran, avec son Annuler. */
-  annoncer: (t: { texte: string; annuler?: () => void }) => void;
+  annoncer: (t: { texte: string; annuler?: () => void; genre?: 'ok' | 'info' }) => void;
 }) {
   const [feuille, setFeuilleBrute] = useState<'design' | 'reseaux' | 'ajout' | null>(null);
   // Les réglages au moment où la feuille de design ou des réseaux s'ouvre : « Annuler » y revient.
@@ -48,12 +48,12 @@ export function MaPage({ compte, reglages, blocs, clics, onReglages, onOrdonner,
     // En refermant le design, la page revient en vue : on a pu descendre loin en la regardant changer.
     if (!f && (feuille === 'design' || feuille === 'reseaux')) {
       const avant = depart.current;
-      if (annule) annoncer({ texte: 'Changements annulés' });
+      if (annule) annoncer({ texte: 'Changements annulés', genre: 'info' });
       else if (avant && JSON.stringify(avant) !== JSON.stringify(reglages)) {
         // Les réseaux se rangent en partant : un pseudo devient l'adresse du profil, une ligne vide s'en va.
         const propres = feuille === 'reseaux' ? reglages.reseaux.filter(r => r.url.trim()).map(r => ({ ...r, url: urlReseau(r.reseau, r.url) || r.url })) : reglages.reseaux;
         if (JSON.stringify(propres) !== JSON.stringify(reglages.reseaux)) onReglages({ ...reglages, reseaux: propres });
-        annoncer({ texte: feuille === 'design' ? 'Design mis à jour' : 'Réseaux mis à jour', annuler: () => { onReglages(avant); annoncer({ texte: 'Changements annulés' }); } });
+        annoncer({ texte: feuille === 'design' ? 'Design mis à jour' : 'Réseaux mis à jour', annuler: () => { onReglages(avant); annoncer({ texte: 'Changements annulés', genre: 'info' }); } });
       }
       const haut = toile.current?.getBoundingClientRect().top ?? 0;
       if (haut < 0) toile.current?.scrollIntoView({ block: 'start', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
@@ -136,7 +136,7 @@ export function MaPage({ compte, reglages, blocs, clics, onReglages, onOrdonner,
     photo: () => fichier.current?.click(),
     envoiPhoto: envoi,
     reseaux: () => setFeuille('reseaux'),
-    nomVide: () => annoncer({ texte: 'Ton nom ne peut pas rester vide' }),
+    nomVide: () => annoncer({ texte: 'Ton nom ne peut pas rester vide : il revient tel qu’il était.', genre: 'info' }),
     liste: (liste, rendu) => <BlocsEditables blocs={liste} rendu={rendu} clics={clics} onOrdonner={onOrdonner} onOuvrir={ouvrirBloc}
       onAjouter={() => { vibrer(5); enBas.current = true; setFeuille('ajout'); }} />,
   };
@@ -154,7 +154,7 @@ export function MaPage({ compte, reglages, blocs, clics, onReglages, onOrdonner,
       </div>
 
       {/* L'adresse et « Bien démarrer » d'abord : ce qui reste à faire se voit sans dérouler toute la page. */}
-      <div className="order-1 lg:order-none"><HautLiens compte={compte} reglages={reglages} blocs={blocs} aller={aller} /></div>
+      <div className="order-1 lg:order-none"><HautLiens compte={compte} reglages={reglages} blocs={blocs} aller={aller} annoncer={annoncer} /></div>
 
       {/* Sur ordinateur, la feuille de design se pose à droite : la page glisse à gauche pour rester visible en entier. */}
       <div className={`order-2 transition-transform duration-300 motion-reduce:transition-none lg:order-none ${feuille === 'design' || feuille === 'reseaux' ? 'lg:-translate-x-[200px]' : ''}`}>
@@ -267,7 +267,7 @@ function BlocEditable({ bloc, i, clics, ouvrir, children }: { bloc: Bloc; i: num
   const noeud = useRef<HTMLDivElement | null>(null);
   useEffect(() => { noeud.current?.querySelectorAll(':scope > :not(.lp-ed-puces)').forEach(x => x.setAttribute('inert', '')); });
   return (
-    <div ref={n => { setNodeRef(n); noeud.current = n; }} {...attributes} {...listeners} aria-label={[`Modifier ${nom}`, prive && 'privé', programme && 'programmé', ...regles].filter(Boolean).join(', ')} aria-roledescription="bloc déplaçable"
+    <div ref={n => { setNodeRef(n); noeud.current = n; }} {...attributes} {...listeners} aria-label={[`Modifier ${nom}`, prive && 'masqué', programme && 'programmé', ...regles].filter(Boolean).join(', ')} aria-roledescription="bloc déplaçable"
       className="lp-bloc lp-ed-bloc" data-id={bloc.id} data-type={bloc.type} data-vedette={bloc.vedette ? bloc.format : undefined} data-glisse={isDragging || undefined} data-prive={prive || programme || undefined}
       style={{ '--i': i, transform: CSS.Transform.toString(transform), transition } as CSSProperties}
       onClickCapture={e => { e.preventDefault(); e.stopPropagation(); ouvrir(bloc); }}
@@ -276,7 +276,7 @@ function BlocEditable({ bloc, i, clics, ouvrir, children }: { bloc: Bloc; i: num
       {(prive || programme || regles.length > 0) && (
         <span className="lp-ed-puces" aria-hidden="true">
           {/* Un picto par état, sans étiquette : le nom complet est dans l'aria-label du bloc. */}
-          {prive && <span className="lp-ed-puce" title="Privé"><Icone nom="ui-masque" taille={13} /></span>}
+          {prive && <span className="lp-ed-puce" title="Masqué"><Icone nom="ui-masque" taille={13} /></span>}
           {programme && <span className="lp-ed-puce" title="Programmé"><Icone nom="horloge" taille={13} /></span>}
           {regles.length > 0 && <span className="lp-ed-puce" title={regles.join(', ')}><Icone nom="communaute" taille={13} /></span>}
         </span>

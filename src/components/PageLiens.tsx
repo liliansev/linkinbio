@@ -355,12 +355,16 @@ function DerniereVideo({ titre, clic }: { titre: string; clic: () => void }) {
     legende={<><span className="lp-video-etiquette">{titre}</span>{video.titre}</>} />;
 }
 
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 function Newsletter({ bloc, apercu }: { bloc: Bloc; apercu: boolean }) {
   const [etat, setEtat] = useState<{ type: 'repos' | 'envoi' | 'ok' | 'erreur'; message?: string }>({ type: 'repos' });
   async function envoyer(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (apercu) { setEtat({ type: 'ok', message: 'Dans l’aperçu, rien n’est envoyé.' }); return; }
     const email = String(new FormData(event.currentTarget).get('email') ?? '');
+    // Le message est celui de la page, dans son ton : pas la bulle du navigateur, dans sa langue à lui.
+    if (!EMAIL.test(email.trim())) { setEtat({ type: 'erreur', message: 'Cette adresse e-mail ne semble pas complète.' }); return; }
     setEtat({ type: 'envoi' });
     try {
       const r = await fetch('/api/newsletter', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, website: '' }) });
@@ -378,8 +382,8 @@ function Newsletter({ bloc, apercu }: { bloc: Bloc; apercu: boolean }) {
         </span>
       </div>
       {etat.type === 'ok' ? <p className="lp-newsletter-ok" role="status">{etat.message}</p> : (
-        <form onSubmit={envoyer}>
-          <input type="email" name="email" required autoComplete="email" placeholder="votre@email.fr" aria-label="Votre adresse e-mail" />
+        <form onSubmit={envoyer} noValidate>
+          <input type="email" name="email" required autoComplete="email" aria-invalid={etat.type === 'erreur' || undefined} placeholder="votre@email.fr" aria-label="Votre adresse e-mail" />
           <button type="submit" className="lp-btn lp-btn-compact lp-accent" disabled={etat.type === 'envoi'}>{etat.type === 'envoi' ? '…' : 'S’inscrire'}</button>
         </form>
       )}
@@ -395,6 +399,7 @@ function Inscription({ bloc, apercu, pseudo, t }: { bloc: Bloc; apercu: boolean;
     event.preventDefault();
     if (apercu) { setEtat({ type: 'ok', message: t.apercu }); return; }
     const f = new FormData(event.currentTarget);
+    if (!EMAIL.test(String(f.get('email') ?? '').trim())) { setEtat({ type: 'erreur', message: t.emailInvalide }); return; }
     setEtat({ type: 'envoi' });
     try {
       const params = new URLSearchParams(location.search);
@@ -414,7 +419,7 @@ function Inscription({ bloc, apercu, pseudo, t }: { bloc: Bloc; apercu: boolean;
         </span>
       </div>
       {etat.type === 'ok' ? <p className="lp-newsletter-ok" role="status">{etat.message}</p> : (
-        <form onSubmit={envoyer} data-prenom={bloc.demanderPrenom || undefined}>
+        <form onSubmit={envoyer} noValidate data-prenom={bloc.demanderPrenom || undefined}>
           {bloc.demanderPrenom && <input name="prenom" autoComplete="given-name" placeholder={t.prenom} aria-label={t.prenomAria} maxLength={60} />}
           <input type="email" name="email" required autoComplete="email" placeholder={t.email} aria-label={t.emailAria} />
           {/* Un champ que seuls les robots remplissent. */}

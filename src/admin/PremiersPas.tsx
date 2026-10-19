@@ -283,7 +283,7 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
     },
     partage: {
       titre: 'Où vas-tu mettre ton lien ?',
-      aide: 'Tu pourras montrer un lien en premier selon le réseau : ta boutique d’abord pour ceux qui viennent d’Instagram, par exemple.',
+      aide: 'Tu pourras mettre un lien en tête selon le réseau d’où l’on vient : ta boutique d’abord pour ceux qui arrivent d’Instagram, par exemple.',
       corps: (<>
         <ul className="flex flex-col divide-y divide-white/[0.06] rounded-2xl bg-white/[0.04] px-3.5">
           {OU_PARTAGER.map(a => {
@@ -307,7 +307,7 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
       </>),
     },
     style: {
-      titre: 'Choisis une ambiance',
+      titre: 'Choisis ton thème',
       aide: 'Les couleurs, la police et les boutons suivent. Une vingtaine d’autres t’attendent dans Design.',
       corps: (
         <ul onKeyDown={e => flechesRadio(e)} className="-mx-5 flex snap-x scroll-px-5 gap-2.5 overflow-x-auto px-5 pb-1 [scrollbar-width:none] lg:mx-0 lg:grid lg:grid-cols-4 lg:px-0" role="radiogroup" aria-label="Thème">

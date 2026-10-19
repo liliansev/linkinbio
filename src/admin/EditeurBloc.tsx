@@ -4,7 +4,7 @@ import type { Api, Bloc, Reglages } from '../lib/types.ts';
 import { ANIMATIONS_BLOC, estEnLigne, idYoutube } from '../lib/types.ts';
 import { RESEAUX } from '../lib/types.ts';
 import { adresse, adresseSaisie, pourquoiPasAdresse } from '../lib/valider.ts';
-import { nomSite } from '../lib/demarrage.ts';
+import { nomSite, reseauDeUrl } from '../lib/demarrage.ts';
 import { themeDe, variablesTheme } from '../lib/themes.ts';
 import { ICONES } from '../lib/icones.ts';
 import { Icone, NOMS_RESEAUX, PICTOS } from '../components/Icone.tsx';
@@ -49,6 +49,15 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
   const [plus, setPlus] = useState(false);
   const fichier = useRef<HTMLInputElement>(null);
   useEffect(() => { setB(bloc); setErreur(''); }, [bloc]);
+  // Clavier ouvert, l'aperçu collant se replie : la place va au champ et à son erreur.
+  const [clavier, setClavier] = useState(false);
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const lire = () => setClavier(vv.height < window.innerHeight * 0.75 || vv.height < 560);
+    lire(); vv.addEventListener('resize', lire);
+    return () => vv.removeEventListener('resize', lire);
+  }, []);
   if (!b) return null;
   const maj = (champs: Partial<Bloc>) => { setB({ ...b, ...champs }); if (erreur) setErreurs({}); };
   const type = TYPES.find(t => t.type === b.type)!;
@@ -121,8 +130,13 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
 
   /** En quittant l'adresse d'un lien sans texte, le texte se remplit du nom du site, puis de son vrai titre. */
   async function titreDepuisSite() {
-    if (b?.type !== 'lien' || b.titre.trim()) return;
+    if (b?.type !== 'lien') return;
     const url = adresseSaisie(b.url);
+    // L'adresse se vérifie en quittant le champ, comme aux premiers pas ; un profil de réseau prend son icône.
+    if (b.url.trim() && !url) { setErreur(pourquoiPasAdresse(b.url)); return; }
+    const reseau = url && !b.icone ? reseauDeUrl(url) : null;
+    if (reseau) setB(avant => avant && (avant.icone ? avant : { ...avant, icone: reseau }));
+    if (b.titre.trim()) return;
     const repli = url && nomSite(url);
     if (!repli) return;
     setB(avant => avant && (avant.titre.trim() ? avant : { ...avant, titre: repli }));
@@ -149,7 +163,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
   const retenir = () => commence() && !valider();
 
   return (
-    <Feuille ouverte onFermer={fermerEnGardant} retenir={retenir} titre={nouveau ? `Ajouter : ${type.nom}` : [type.nom, !b.public && 'privé', b.public && !estEnLigne(b) && 'programmé'].filter(Boolean).join(' · ')}
+    <Feuille ouverte onFermer={fermerEnGardant} retenir={retenir} titre={nouveau ? `Ajouter : ${type.nom}` : [type.nom, !b.public && 'masqué', b.public && !estEnLigne(b) && 'programmé'].filter(Boolean).join(' · ')}
       pied={fermer => (
         <div className="flex items-center gap-2">
           {/* Fermer garde les changements ; ce bouton est la seule façon de les oublier (un bloc neuf n'est pas ajouté). */}
@@ -164,7 +178,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
       <div className="flex flex-col gap-4 pt-1">
         {/* Ce que le bloc a de particulier, en clair : les pictos du coin de la page ne se lisent pas au toucher. */}
         {!nouveau && etiquettes(b).length > 0 && <p className="text-[13px] leading-snug text-white/60">{etiquettes(b).join(' · ')}</p>}
-        {(b.type === 'lien' || (b.type === 'preuve' && preuveRemplie)) && (
+        {(b.type === 'lien' || (b.type === 'preuve' && preuveRemplie)) && !clavier && (
           // L'aperçu reste collé en haut de la feuille : chaque réglage se voit sans remonter.
           <div className="sticky top-0 z-10 -mx-5 bg-[#121a2b] px-5 pb-3 pt-1 shadow-[0_14px_14px_-12px_#121a2b]">
             <div className="lp lp-mini -mx-1 rounded-[20px] p-4 ring-1 ring-white/[0.06]" style={variablesTheme(theme) as CSSProperties}
@@ -177,7 +191,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
         )}
         {avecUrl && (
           <Champ label={b.type === 'video' ? 'Adresse de la vidéo YouTube' : 'Adresse'} erreur={erreurDe('url')}
-            aide={b.type === 'lien' && reglages.ouvrirApps && appDe(adresse(b.url)) ? <span className="inline-flex items-center gap-1.5 text-white/75"><Icone nom="ui-ok" taille={13} />Depuis Instagram ou TikTok, ce lien s’ouvre dans l’app {appDe(adresse(b.url))}.</span> : undefined}>
+            aide={b.type === 'lien' && reglages.ouvrirApps && appDe(adresse(b.url)) ? <span className="inline-flex items-center gap-1.5 text-white/75"><Icone nom="ui-ok" taille={13} />Ce lien s’ouvre directement dans l’app {appDe(adresse(b.url))}, même depuis Instagram ou TikTok.</span> : undefined}>
             <input className={classeSaisie} type="url" inputMode="url" autoCapitalize="none" autoCorrect="off" placeholder={b.type === 'video' ? 'https://youtu.be/…' : 'https://…'}
               value={b.url} onChange={e => maj({ url: e.target.value })} onBlur={titreDepuisSite} autoFocus={nouveau}
               onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); document.getElementById('bloc-titre')?.focus(); } }} />

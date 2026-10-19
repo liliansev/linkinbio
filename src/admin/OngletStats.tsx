@@ -133,6 +133,7 @@ function OuvertsDansLApp({ apps, actif, onActiver }: { apps: Stats['apps']; acti
         <p className="pb-1 text-[13.5px] leading-snug text-white/60">clic{apps.ouverts > 1 ? 's' : ''} ouvert{apps.ouverts > 1 ? 's' : ''} directement dans YouTube, Spotify, Instagram…</p>
       </div>
       <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/[0.07]"><div className="adm-barre h-full origin-left rounded-full bg-white" style={{ width: `${part}%` }} /></div>
+      <p className="mt-1.5 text-[12.5px] text-white/55">{part} % des {nombre(apps.versApp)} clics vers une app depuis Instagram ou TikTok</p>
       {!actif && (
         <p className="mt-2.5 rounded-xl bg-white/10 px-3 py-2.5 text-[13px] leading-snug text-white/75">
           L’ouverture dans les apps est coupée sur ta page. {onActiver && <button type="button" onClick={onActiver} className="font-semibold text-white underline underline-offset-2">La rallumer</button>}

@@ -18,7 +18,7 @@ const CLE_THEME = 'hopla-themes-vus';
 const lire = (cle: string) => { try { return localStorage.getItem(cle) === '1'; } catch { return false; } };
 const noter = (cle: string) => { try { localStorage.setItem(cle, '1'); } catch { /* stockage refusé */ } };
 
-export function HautLiens({ compte, reglages, blocs, aller }: { compte: ComptePage; reglages: Reglages; blocs: Bloc[]; aller: (d: Destination) => void }) {
+export function HautLiens({ compte, reglages, blocs, aller, annoncer }: { compte: ComptePage; reglages: Reglages; blocs: Bloc[]; aller: (d: Destination) => void; annoncer?: (t: { texte: string }) => void }) {
   const adresse = urlPage(compte);
   const courte = adresse.replace(/^https?:\/\//, '');
   const [partagee, setPartagee] = useState(() => lire(CLE_PARTAGE));
@@ -32,7 +32,7 @@ export function HautLiens({ compte, reglages, blocs, aller }: { compte: ComptePa
 
   function marquerPartagee() { noter(CLE_PARTAGE); setPartagee(true); }
   async function copier() {
-    if (await copierTexte(adresse)) { vibrer(8); marquerPartagee(); }
+    if (await copierTexte(adresse)) { vibrer(8); marquerPartagee(); annoncer?.({ texte: 'Adresse copiée : colle-la dans ta bio' }); }
   }
   async function partager() {
     try { await navigator.share({ title: reglages.profil.nom || 'Ma page', url: adresse }); marquerPartagee(); } catch { /* partage annulé */ }
