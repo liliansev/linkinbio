@@ -245,6 +245,8 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
         </div>
 
         {plus ? (<>
+        {/* Deux groupes nommés, l'allure puis les règles : on trouve sans tout lire. */}
+        {['lien', 'video', 'newsletter', 'inscription'].includes(b.type) && <h3 className="-mb-1 pt-1 text-[13px] font-medium text-white/55">Apparence</h3>}
         {(b.type === 'lien' || b.type === 'newsletter' || b.type === 'inscription') && (
           <Champ label="Sous-titre (facultatif)">
             <input className={classeSaisie} value={b.sousTitre} onChange={e => maj({ sousTitre: e.target.value })} maxLength={240} />
@@ -335,6 +337,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
           </Repli>
         )}
 
+        <h3 className="-mb-1 pt-1 text-[13px] font-medium text-white/55">Règles</h3>
         {b.type === 'lien' && <RegleAcces key={`acces-${b.id}`} b={b} maj={maj} prises={prises} />}
         <RegleMoment key={`moment-${b.id}`} b={b} maj={maj} erreur={erreurDe('dates')} />
         <RegleReseaux key={`reseaux-${b.id}`} b={b} maj={maj} reseaux={reseauxDePartage(reglages.vuesReseaux)} />
