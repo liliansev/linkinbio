@@ -176,12 +176,12 @@ export function Feuille({ ouverte, onFermer, retenir, titre, children, pied, cot
       {apercu && <div inert className="adm-fondu pointer-events-none absolute inset-x-0 top-0 bottom-[57dvh] flex items-center justify-center px-4 pt-[max(12px,env(safe-area-inset-top))] pb-3 sm:hidden">{apercu}</div>}
       <div ref={ref} tabIndex={-1}
         style={{ ...(tire ? { transform: `translateY(${tire}px)`, transition: 'none' } : {}), ...(visible ? { maxHeight: visible.h - 8, height: 'auto' } : {}) }}
-        className={`adm-feuille relative flex ${apercu ? 'h-[57dvh] sm:h-auto sm:w-[400px]' : cote ? 'max-h-[58dvh] sm:max-h-none sm:w-[400px]' : 'max-h-[92dvh]'} w-full flex-col rounded-t-[20px] border border-b-0 border-white/10 bg-nuit shadow-[0_-12px_40px_-16px_rgba(0,0,0,0.18)] outline-none sm:max-w-lg sm:rounded-[20px] sm:border-b`}>
+        className={`adm-feuille relative flex ${apercu ? 'h-[57dvh] sm:h-auto sm:w-[400px]' : cote ? 'max-h-[58dvh] sm:max-h-none sm:w-[400px]' : 'max-h-[92dvh]'} w-full flex-col border border-b-0 border-white/10 bg-nuit shadow-[0_-12px_40px_-16px_rgba(0,0,0,0.18)] outline-none sm:max-w-lg sm:border-b`}>
         <div {...tirer} className="shrink-0 touch-none select-none">
           <div className="mx-auto mt-2 h-1 w-9 rounded-full bg-white/20 sm:hidden" />
           <header className="flex items-center justify-between gap-3 px-5 pt-2.5 pb-2 sm:pt-4">
             <h2 className="text-[18px] font-semibold tracking-[-0.025em] text-white">{titre}</h2>
-            <button type="button" onClick={() => fermer()} className="-mr-3 grid h-11 w-11 place-items-center rounded-full text-white/50 transition hover:bg-white/10 hover:text-white active:scale-90" aria-label="Fermer">
+            <button type="button" onClick={() => fermer()} className={`-mr-3 ${classeBouton.icone} active:scale-90`} aria-label="Fermer">
               <Icone nom="ui-fermer" taille={18} />
             </button>
           </header>
@@ -220,24 +220,40 @@ export function BoutonCopier({ texte, onCopie, label, compact = false }: { texte
   }
   if (compact) return (
     <button type="button" onClick={copier} aria-label={copie ? 'Adresse copiée' : label ?? 'Copier'}
-      className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-white/[0.07] text-white transition hover:bg-white/[0.13] active:scale-95">
+      className="adm-button-outline grid h-11 w-11 shrink-0 place-items-center text-white transition active:scale-95">
       <Icone nom={copie ? 'ui-ok' : 'ui-copier'} taille={18} />
     </button>
   );
   return (
     <button type="button" onClick={copier} aria-label={label}
-      className="flex min-h-11 shrink-0 items-center gap-1.5 rounded-full bg-white/[0.08] px-3.5 text-[14px] font-medium text-white transition hover:bg-white/[0.13] active:scale-95">
+      className="adm-button-outline flex min-h-11 shrink-0 items-center gap-1.5 px-3.5 text-[14px] font-medium text-white transition active:scale-95">
       <Icone nom={copie ? 'ui-ok' : 'ui-copier'} taille={16} />{copie ? 'Copié' : 'Copier'}
     </button>
   );
 }
 
+/**
+ * Les cinq boutons du back office, en classes : un lien (télécharger, ouvrir)
+ * prend la même allure qu'un bouton. Tous en rectangle arrondi à 12 px : pas
+ * de pilule (Lilian, 19 octobre 2026). Le rouge ne sert qu'à effacer pour de bon.
+ */
+export const classeBouton = {
+  principal: 'adm-button-primary inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-white px-5 text-[14px] font-semibold text-nuit transition active:scale-[0.98] disabled:opacity-50',
+  secondaire: 'adm-button-outline inline-flex min-h-11 items-center justify-center gap-2 px-4 text-[14px] font-medium text-white transition active:scale-[0.98] disabled:opacity-50',
+  danger: 'adm-button-danger inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 text-[14px] font-semibold transition active:scale-[0.98] disabled:opacity-40',
+  discret: 'inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl px-3 text-[14px] font-medium text-white/60 transition hover:bg-white/[0.06] hover:text-white disabled:opacity-50',
+  icone: 'grid h-11 w-11 shrink-0 place-items-center rounded-xl text-white/55 transition hover:bg-white/[0.06] hover:text-white',
+};
+
+/** Une étiquette d'état (Pro, Suspendu) : petite et rectangulaire, comme les boutons. */
+export const classeBadge = 'inline-flex items-center rounded-[7px] bg-white/[0.07] px-1.5 py-0.5 text-[11.5px] font-semibold text-white';
+
 export function BoutonPrincipal({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) {
-  return <button type="button" data-principal="" aria-keyshortcuts="Control+Enter Meta+Enter" {...props} className={`adm-button-primary inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-white px-5 text-[14px] font-semibold text-nuit transition active:scale-[0.98] disabled:opacity-50 ${props.className ?? ''}`}>{children}</button>;
+  return <button type="button" data-principal="" aria-keyshortcuts="Control+Enter Meta+Enter" {...props} className={`${classeBouton.principal} ${props.className ?? ''}`}>{children}</button>;
 }
 
 export function BoutonSecondaire({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) {
-  return <button type="button" {...props} className={`adm-button-outline inline-flex min-h-11 items-center justify-center gap-2 px-4 text-[14px] font-medium text-white transition active:scale-[0.98] disabled:opacity-50 ${props.className ?? ''}`}>{children}</button>;
+  return <button type="button" {...props} className={`${classeBouton.secondaire} ${props.className ?? ''}`}>{children}</button>;
 }
 
 /** Un choix parmi quelques options, en pastilles. */
@@ -262,7 +278,7 @@ export const arretRadio = (pris: boolean, premier: boolean, aucun: boolean) => (
 /** Un choix parmi plusieurs, en liste : un nom, une coche sur celui qui est pris. */
 export function ListeChoix<T extends string>({ valeur, options, onChange, label }: { valeur: T; options: { id: T; nom: string }[]; onChange: (v: T) => void; label: string }) {
   return (
-    <div role="radiogroup" aria-label={label} onKeyDown={e => flechesRadio(e)} className="divide-y divide-white/[0.06] overflow-hidden rounded-xl bg-white/[0.03]">
+    <div role="radiogroup" aria-label={label} onKeyDown={e => flechesRadio(e)} className="adm-groupe divide-y divide-white/[0.06]">
       {options.map((o, i) => {
         const pris = valeur === o.id;
         return (

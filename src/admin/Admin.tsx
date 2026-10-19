@@ -13,7 +13,8 @@ import { AccepterCgu } from './AccepterCgu.tsx';
 import { PremiersPas, premiersPasFaits } from './PremiersPas.tsx';
 import { pageNeuve } from '../lib/demarrage.ts';
 import { Icone } from '../components/Icone.tsx';
-import { BoutonCopier, vibrer } from './ui.tsx';
+import { BoutonCopier, classeBouton, vibrer } from './ui.tsx';
+import { Marque } from './Marque.tsx';
 
 /*
  * Le back office. Tout s'enregistre tout seul : un bloc quand on valide sa
@@ -32,13 +33,6 @@ const ONGLETS: { id: Onglet; nom: string; icone: string }[] = [
   { id: 'comptes', nom: 'Comptes', icone: 'equipe' },
   { id: 'reglages', nom: 'Réglages', icone: 'reglage' },
 ];
-
-const DESCRIPTIONS: Record<Onglet, string> = {
-  page: 'Un seul lien. Tout ce que tu veux partager.',
-  stats: 'Comprends ce qui plaît et ce qui fait cliquer.',
-  comptes: 'Les invitations et les pages de ta communauté.',
-  reglages: 'Le partage, les préférences et les données de ton compte.',
-};
 
 export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatAdmin; demo?: boolean }) {
   const [blocs, setBlocs] = useState(initial.blocs);
@@ -249,8 +243,8 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
 
   const bulle = toast && (
     <div role="status" onPointerEnter={() => setToastTenu(true)} onPointerLeave={() => setToastTenu(false)} onFocus={() => setToastTenu(true)} onBlur={e => { if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setToastTenu(false); }} className="adm-toast fixed inset-x-4 bottom-[calc(76px+env(safe-area-inset-bottom))] z-[60] mx-auto flex max-w-sm items-center justify-between gap-3 rounded-2xl bg-white px-4 py-3 text-[14.5px] font-medium text-nuit shadow-2xl lg:bottom-6">
-      <span className="flex items-center gap-2">{/* La coche verte confirme ; une simple information n'en a pas. */}{!toast.annuler && toast.genre !== 'info' && sauvegarde !== 'erreur' && <span className="text-emerald-400" aria-hidden="true"><Icone nom="ui-ok" taille={18} /></span>}{toast.texte}</span>
-      {toast.annuler && <button ref={actionToast} type="button" onClick={toast.annuler} className="-my-2 min-h-11 rounded-full px-3 font-semibold text-nuit underline decoration-nuit/30 underline-offset-4 hover:bg-nuit/10">{toast.action ?? 'Annuler'}</button>}
+      <span className="flex items-center gap-2">{/* La coche confirme ; une simple information n'en a pas. */}{!toast.annuler && toast.genre !== 'info' && sauvegarde !== 'erreur' && <span aria-hidden="true"><Icone nom="ui-ok" taille={18} /></span>}{toast.texte}</span>
+      {toast.annuler && <button ref={actionToast} type="button" onClick={toast.annuler} className="-my-2 min-h-11 rounded-lg px-3 font-semibold text-nuit underline decoration-nuit/30 underline-offset-4 hover:bg-nuit/10">{toast.action ?? 'Annuler'}</button>}
     </div>
   );
 
@@ -270,10 +264,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
     <div className="adm adm-shell min-h-dvh font-sans text-white antialiased">
       {/* Sur ordinateur, une barre latérale comme dans tout SaaS : la marque, les sections, l'état de l'enregistrement, la page en ligne. */}
       <aside className="adm-sidebar fixed inset-y-0 left-0 z-30 hidden w-60 flex-col lg:flex" aria-label="Navigation">
-        <div className="flex items-center gap-3 px-3 pb-9 pt-2">
-          <svg viewBox="0 0 256 256" className="h-7 w-7" aria-hidden="true"><rect width="256" height="256" rx="64" fill="#0a0a0a" /><g fill="#ffffff" transform="translate(40 40) scale(0.6875)"><path d="M165.66,90.34a8,8,0,0,1,0,11.32l-64,64a8,8,0,0,1-11.32-11.32l64-64A8,8,0,0,1,165.66,90.34ZM215.6,40.4a56,56,0,0,0-79.2,0L106.34,70.45a8,8,0,0,0,11.32,11.32l30.06-30a40,40,0,0,1,56.57,56.56l-30.07,30.06a8,8,0,0,0,11.31,11.32L215.6,119.6a56,56,0,0,0,0-79.2ZM138.34,174.22l-30.06,30.06a40,40,0,1,1-56.56-56.57l30.05-30.05a8,8,0,0,0-11.32-11.32L40.4,136.4a56,56,0,0,0,79.2,79.2l30.06-30.07a8,8,0,0,0-11.32-11.31Z" /></g></svg>
-          <span className="text-[23px] font-semibold tracking-[-0.035em]">Hopla<span className="text-white/40">.</span></span>
-        </div>
+        <Marque className="px-3 pb-9 pt-2" />
         <nav className="flex flex-col gap-1.5" aria-label="Sections">
           {onglets.map(o => (
             <button key={o.id} type="button" onClick={() => { if (o.id !== onglet) choisirOnglet(o.id); }} aria-current={onglet === o.id ? 'page' : undefined}
@@ -285,7 +276,6 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
         </nav>
         <div className="mt-auto flex flex-col gap-3">
           {/* L'adresse de la page vit en tête de Ma page, avec Copier : pas une deuxième fois ici. */}
-          <p className="px-3 text-[12px] leading-relaxed text-white/55">Un petit espace pour<br />tout ton univers.</p>
           <div className="flex items-center gap-3 border-t border-white/[0.08] px-2 pt-5">
             {reglages.profil.avatar ? <img src={reglages.profil.avatar} alt="" className="h-10 w-10 rounded-full object-cover ring-1 ring-white/10" /> : <span className="grid h-10 w-10 place-items-center rounded-full bg-white/[0.06]"><Icone nom="utilisateur" taille={20} /></span>}
             <div className="min-w-0 flex-1">
@@ -299,7 +289,8 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
       <div className="lg:pl-60">
       <header className="adm-topbar sticky top-0 z-30">
         <div className="mx-auto flex min-h-[72px] max-w-[1120px] items-center gap-3 px-4 lg:min-h-20 lg:px-8">
-          <div className="hidden flex-1 items-center gap-2 text-[13px] lg:flex"><span className="text-white/55">Mon espace</span><Icone nom="ui-chevron" taille={12} className="-rotate-90 text-white/40" /><span className="font-medium">{onglets.find(o => o.id === onglet)!.nom}</span></div>
+          {/* Sur ordinateur, la barre latérale et le titre disent déjà où l'on est : la barre ne garde que l'état et la page. */}
+          <div className="hidden flex-1 lg:block" />
           {reglages.profil.avatar ? <img src={reglages.profil.avatar} alt="" className="h-9 w-9 rounded-full object-cover lg:hidden" /> : <span className="grid h-9 w-9 place-items-center rounded-full bg-white/[0.06] lg:hidden"><Icone nom="utilisateur" taille={18} /></span>}
           <div className="min-w-0 flex-1 lg:hidden">
             {/* Sur téléphone, l'en-tête porte l'adresse de la page : la copier ne prend plus une ligne au-dessus de la page. */}
@@ -324,7 +315,6 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
           <div key={onglet} className="adm-onglet">
           <div className="adm-page-heading">
             <h1>{onglets.find(o => o.id === onglet)!.nom}</h1>
-            <p>{DESCRIPTIONS[onglet]}</p>
           </div>
           {onglet === 'page' && <MaPage compte={compte} reglages={reglages} blocs={blocs} clics={clics} onReglages={changerReglages} onOrdonner={ordonner}
             onOuvrir={b => setEdition({ bloc: b, nouveau: false })} onAjouter={(b, enBas) => setEdition({ bloc: b, nouveau: true, enBas })} envoyerImage={d => api.envoyerImage(d)} annoncer={t => setToast(t)} />}
@@ -345,7 +335,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
           {onglets.map(o => (
             <li key={o.id}>
               <button key={o.id} type="button" onClick={() => { if (o.id !== onglet) { vibrer(5); choisirOnglet(o.id); } }} aria-current={onglet === o.id ? 'page' : undefined}
-                className={`flex h-14 w-full flex-col items-center justify-center gap-0.5 text-[11px] font-medium transition-colors duration-200 ${onglet === o.id ? 'font-semibold text-white' : 'text-white/55'}`}>
+                className={`flex h-14 w-full flex-col items-center justify-center gap-0.5 text-[11.5px] font-medium transition-colors duration-200 ${onglet === o.id ? 'font-semibold text-white' : 'text-white/55'}`}>
                 <span className="adm-nav-pastille grid h-7 w-12 place-items-center rounded-full"><Icone nom={o.icone} taille={21} /></span>{o.id === 'stats' ? 'Stats' : o.nom}
               </button>
             </li>
@@ -358,7 +348,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
           <div className="adm-apercu relative min-h-0 flex-1 overflow-y-auto"><PageLiens page={page} apercu /></div>
           {/* Sous la page, pas par-dessus : le bouton ne cache jamais le bas de la page. */}
           <div className="flex shrink-0 justify-center border-t border-white/[0.08] bg-nuit px-4 pt-3 pb-[max(12px,env(safe-area-inset-bottom))]">
-            <button ref={fermerApercu} type="button" onClick={() => setApercu(false)} className="min-h-12 rounded-full bg-white px-6 text-[15px] font-semibold text-nuit">Fermer l’aperçu</button>
+            <button ref={fermerApercu} type="button" onClick={() => setApercu(false)} className={`${classeBouton.principal} w-full max-w-sm`}>Fermer l’aperçu</button>
           </div>
         </div>
       )}

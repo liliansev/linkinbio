@@ -151,11 +151,6 @@ export function MaPage({ compte, reglages, blocs, clics, onReglages, onOrdonner,
     <div className="adm-editor-layout">
       {/* Les deux gestes de la page, en tête, sur téléphone comme sur ordinateur : rien ne flotte au-dessus des onglets. */}
       <aside className="adm-editor-tools" aria-label="Outils de la page">
-        <div className="mb-5 hidden lg:block">
-          <span className="mb-4 grid h-10 w-10 place-items-center rounded-xl bg-white/[0.05]"><Icone nom="baguette" taille={21} /></span>
-          <h2 className="text-[19px] font-semibold leading-snug tracking-tight">À toi de jouer.</h2>
-          <p className="mt-2 text-[13px] leading-relaxed text-white/60">Tes liens, ton style, ton univers. Fais de cette page un peu de toi.</p>
-        </div>
         <div className="grid grid-cols-2 gap-2 lg:grid-cols-1 lg:gap-2.5">
           <BoutonPrincipal onClick={() => { vibrer(5); setFeuille('ajout'); }} aria-keyshortcuts="A" title="Ajouter (A, ou colle une adresse)"><Icone nom="ui-plus" taille={17} />Ajouter un bloc</BoutonPrincipal>
           <BoutonSecondaire onClick={design}><Icone nom="palette" taille={17} />Personnaliser</BoutonSecondaire>
@@ -226,7 +221,7 @@ function ApercuDirect({ page }: { page: PagePublique }) {
           </div>
         </div>
       )}
-      <p className="flex items-center gap-1.5 text-[12px] font-medium text-white/55"><span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Aperçu en direct</p>
+      <p className="text-[12px] font-medium text-white/55">Aperçu en direct</p>
     </div>
   );
 }

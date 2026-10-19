@@ -10,7 +10,7 @@ import { NOMS_AUDIENCES, reseauxDePartage } from '../lib/provenance.ts';
 import type { Audience } from '../lib/provenance.ts';
 import { Icone, NOMS_RESEAUX } from '../components/Icone.tsx';
 import { Pastille } from './OngletApparence.tsx';
-import { Bascule, BoutonCopier, BoutonPrincipal, copierTexte, classeSaisie, flechesRadio, preparerImage, vibrer } from './ui.tsx';
+import { Bascule, BoutonCopier, BoutonPrincipal, copierTexte, classeBouton, classeSaisie, flechesRadio, preparerImage, vibrer } from './ui.tsx';
 
 /*
  * L'arrivée d'un compte neuf, juste après les CGU : cinq questions, et la
@@ -220,7 +220,7 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
             const valide = !!adresseSaisie(l.url);
             const fausse = quittes.has(l.id) && !!l.url.trim() && !valide;
             return (
-              <li key={l.id} className="rounded-2xl bg-white/[0.04] p-1.5 transition focus-within:bg-white/[0.07] focus-within:ring-2 focus-within:ring-white/30">
+              <li key={l.id} className="rounded-xl border border-white/15 bg-nuit p-1.5 transition hover:border-white/30 focus-within:border-white focus-within:ring-1 focus-within:ring-white">
                 <div className="flex items-center gap-2">
                   <span className={`grid h-9 w-9 shrink-0 place-items-center text-[14px] font-semibold ${valide ? 'text-white' : 'text-white/55'}`}>
                     {valide ? <Icone nom="ui-ok" taille={16} /> : n + 1}
@@ -256,7 +256,7 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
                 const ok = !!urlReseau(r, saisies[r] ?? '');
                 const faux = quittes.has(r) && !!(saisies[r] ?? '').trim() && !ok;
                 return (
-                  <li key={r} className="flex flex-wrap items-center gap-2 rounded-2xl bg-white/[0.04] p-1.5 pl-3 transition focus-within:bg-white/[0.07] focus-within:ring-2 focus-within:ring-white/30">
+                  <li key={r} className="flex flex-wrap items-center gap-2 rounded-xl border border-white/15 bg-nuit p-1.5 pl-3 transition hover:border-white/30 focus-within:border-white focus-within:ring-1 focus-within:ring-white">
                     <span className={ok ? 'text-white' : 'text-white/60'}><Icone nom={r} taille={20} /></span>
                     <input id={`reseau-${r}`} aria-label={`Ton ${NOMS_RESEAUX[r]}`} className="min-h-11 min-w-0 flex-1 bg-transparent px-1 text-[16px] text-white outline-none placeholder:text-white/55 focus-visible:!outline-none"
                       autoCapitalize="off" autoCorrect="off" spellCheck={false} inputMode={r === 'email' ? 'email' : 'text'}
@@ -264,7 +264,7 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
                       value={saisies[r] ?? ''} onChange={e => majReseau(r, e.target.value)} onBlur={() => setQuittes(q => new Set(q).add(r))}
                       aria-invalid={faux || undefined} aria-describedby={faux ? `erreur-${r}` : undefined} />
                     <button type="button" onClick={() => majReseau(r, null)} aria-label={`Retirer ${NOMS_RESEAUX[r]}`}
-                      className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-white/55 transition hover:bg-white/[0.06] hover:text-white"><Icone nom="ui-fermer" taille={16} /></button>
+                      className={classeBouton.icone}><Icone nom="ui-fermer" taille={16} /></button>
                     {faux && <p id={`erreur-${r}`} role="alert" className="w-full pr-2 pb-1 text-[13px] font-medium text-red-300">{pourquoiPasReseau(r, saisies[r] ?? '')}</p>}
                   </li>
                 );
@@ -288,7 +288,7 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
       titre: 'Où vas-tu mettre ton lien ?',
       aide: 'Ta page saura d’où viennent tes visiteurs : tu pourras, par exemple, montrer ta boutique d’abord à ceux qui arrivent d’Instagram.',
       corps: (<>
-        <ul className="flex flex-col divide-y divide-white/[0.06] rounded-2xl bg-white/[0.04] px-3.5">
+        <ul className="adm-groupe flex flex-col divide-y divide-white/[0.06] px-3.5">
           {OU_PARTAGER.map(a => {
             // « Ailleurs » (site, e-mail, QR code) compte comme un choix : personne n'a à cocher un réseau qu'il n'utilise pas.
             const pris = reglages.vuesReseaux.filter(x => OU_PARTAGER.includes(x));
@@ -334,11 +334,8 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
       aide: bioOu ? `Colle son adresse dans ta bio ${bioOu} : tout ce que tu changes sur ta page s’affiche aussitôt.` : 'Colle son adresse là où tu la partages : tout ce que tu changes sur ta page s’affiche aussitôt.',
       corps: (
         <div className="flex flex-col gap-3">
-          <div className="flex items-center gap-2 rounded-2xl bg-white/[0.05] p-1.5 pl-4">
-            <span className="relative flex h-2 w-2 shrink-0" title="En ligne">
-              <span className="absolute inset-0 animate-ping rounded-full bg-emerald-400/60 motion-reduce:hidden" />
-              <span className="relative h-2 w-2 rounded-full bg-emerald-400" />
-            </span>
+          <div className="adm-address flex items-center gap-2 p-1.5 pl-4">
+            <span className="h-2 w-2 shrink-0 rounded-full bg-white/70" title="En ligne" />
             <span className="min-w-0 flex-1 truncate text-[16px] font-semibold text-white" translate="no">{sansSchema(adressePage)}</span>
             {/* Sans partage natif, le grand bouton copie déjà : pas de second « Copier ». */}
             {peutPartager && (
@@ -355,15 +352,15 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
     <div className="adm flex h-dvh flex-col overflow-hidden bg-nuit font-sans text-white antialiased lg:grid lg:grid-cols-[minmax(0,460px)_1fr] lg:grid-rows-[auto_1fr]">
       <header className="flex h-14 shrink-0 items-center gap-2 px-3 lg:col-span-2 lg:px-6">
         <button type="button" onClick={() => { setIgnorer(false); setI(n => n - 1); }} aria-label="Étape précédente" disabled={i === 0 || etape === 'fin'}
-          className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-white/70 transition hover:bg-white/[0.07] disabled:invisible"><Icone nom="ui-chevron" taille={20} className="rotate-90" /></button>
+          className={`${classeBouton.icone} disabled:invisible`}><Icone nom="ui-chevron" taille={20} className="rotate-90" /></button>
         <div className="flex flex-1 justify-center gap-1.5" role="progressbar" aria-label="Premiers pas" aria-valuemin={0} aria-valuemax={QUESTIONS} aria-valuenow={Math.min(i, QUESTIONS)} aria-valuetext={i < QUESTIONS ? `Question ${i + 1} sur ${QUESTIONS}` : 'Terminé'}>
           {Array.from({ length: QUESTIONS }, (_, n) => (
             <span key={n} className="h-1.5 min-w-3 max-w-9 flex-1 overflow-hidden rounded-full bg-white/[0.1]">
-              <span className="block h-full rounded-full bg-white transition-[width] duration-500" style={{ width: n < i ? '100%' : n === i ? '40%' : '0%' }} />
+              <span className="block h-full origin-left rounded-full bg-white transition-transform duration-500 motion-reduce:transition-none" style={{ transform: `scaleX(${n < i ? 1 : n === i ? 0.4 : 0})` }} />
             </span>
           ))}
         </div>
-        <button type="button" onClick={terminer} className={`min-h-11 shrink-0 rounded-full px-3.5 text-[14px] font-medium text-white/60 transition hover:bg-white/[0.07] hover:text-white ${etape === 'fin' ? 'invisible' : ''}`}>Plus tard</button>
+        <button type="button" onClick={terminer} className={`${classeBouton.discret} shrink-0 ${etape === 'fin' ? 'invisible' : ''}`}>Plus tard</button>
       </header>
 
       {/* L'aperçu : la vraie page, en petit, qui se remplit à chaque réponse. */}
@@ -374,11 +371,11 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
       </div>
 
       {/* Les questions, sous le pouce. Le bouton reste visible ; c'est le contenu qui défile s'il déborde. */}
-      <section key={etape} className="adm-onglet flex min-h-0 flex-1 flex-col lg:flex-none rounded-t-[28px] border-t border-white/[0.08] bg-nuit lg:max-h-none lg:min-h-0 lg:rounded-none lg:border-t-0 lg:border-r lg:bg-transparent"
+      <section key={etape} className="adm-onglet flex min-h-0 flex-1 flex-col lg:flex-none rounded-t-2xl border-t border-white/[0.08] bg-nuit lg:max-h-none lg:min-h-0 lg:rounded-none lg:border-t-0 lg:border-r lg:bg-transparent"
         aria-labelledby="premiers-pas-titre">
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pt-5 lg:flex-none lg:px-8 lg:pt-10">
-          {etape === 'fin' && <Icone nom="check" taille={30} className="mb-2 text-emerald-300" />}
-          <h1 id="premiers-pas-titre" ref={titre} tabIndex={-1} className="text-[23px] font-semibold tracking-[-0.02em] outline-none">{c.titre}</h1>
+          {etape === 'fin' && <Icone nom="check" taille={30} className="mb-2" />}
+          <h1 id="premiers-pas-titre" ref={titre} tabIndex={-1} className="adm-titre outline-none">{c.titre}</h1>
           <p className="mt-1 mb-4 text-[14.5px] leading-snug text-white/60">{c.aide}</p>
           {c.corps}
         </div>
@@ -387,8 +384,8 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
             <>
               <BoutonPrincipal className="w-full" onClick={partager}><Icone nom={peutPartager ? 'partage' : copie ? 'ui-ok' : 'ui-copier'} taille={18} /> {peutPartager ? 'Partager ma page' : copie ? 'Adresse copiée' : 'Copier l’adresse'}</BoutonPrincipal>
               <div className="grid grid-cols-2 gap-2">
-                <a href={urlPage(compte)} target="_blank" rel="noopener" className="flex min-h-12 items-center justify-center gap-1.5 rounded-full bg-white/[0.07] text-[15px] font-medium text-white transition hover:bg-white/[0.12]">Voir ma page<Icone nom="ui-ouvrir" taille={16} /></a>
-                <button type="button" onClick={terminer} className="min-h-12 rounded-full text-[15px] font-medium text-white/75 transition hover:bg-white/[0.06] hover:text-white">Peaufiner ma page</button>
+                <a href={urlPage(compte)} target="_blank" rel="noopener" className={classeBouton.secondaire}>Voir ma page<Icone nom="ui-ouvrir" taille={16} /></a>
+                <button type="button" onClick={terminer} className={classeBouton.discret}>Peaufiner ma page</button>
               </div>
             </>
           ) : (

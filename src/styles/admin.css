@@ -120,16 +120,19 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
 .adm-nav-item { display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 0 14px; border: 1px solid transparent; border-radius: 12px; color: var(--adm-secondaire); font-size: 14px; font-weight: 500; text-align: left; transition: background-color 150ms, color 150ms; }
 .adm-nav-item:hover { background: #f1f1ee; color: var(--adm-encre); }
 .adm-nav-item[aria-current='page'] { border-color: var(--adm-trait); background: #fff; color: var(--adm-encre); font-weight: 600; }
-.adm-nav-count { margin-left: auto; display: grid; min-width: 23px; height: 23px; place-items: center; padding: 0 5px; border-radius: 7px; background: #efefec; color: #565651; font-size: 11px; font-variant-numeric: tabular-nums; }
+.adm-nav-count { margin-left: auto; display: grid; min-width: 23px; height: 23px; place-items: center; padding: 0 5px; border-radius: 7px; background: #efefec; color: #565651; font-size: 11.5px; font-variant-numeric: tabular-nums; }
 .adm-topbar { border-bottom: 1px solid var(--adm-trait); background: #fdfdfc; }
-.adm-page-heading { margin-bottom: 26px; }
-.adm-page-heading h1 { font-size: 32px; line-height: 1.2; font-weight: 600; letter-spacing: -0.035em; }
-.adm-page-heading > p { margin-top: 9px; color: var(--adm-secondaire); font-size: 14px; line-height: 1.6; }
+/* Le titre d'un écran, le même partout : les onglets, la connexion, les CGU, les premiers pas. */
+.adm-page-heading { margin-bottom: 24px; }
+.adm-titre, .adm-page-heading h1 { font-size: 32px; line-height: 1.2; font-weight: 600; letter-spacing: -0.035em; text-wrap: balance; }
 .adm-card, .adm-kpi { border: 1px solid var(--adm-trait); border-radius: 16px; background: var(--adm-surface); padding: 22px; }
 .adm-kpi { padding: 20px; }
 .adm-button-outline { border: 1px solid #deded9; border-radius: 12px; background: var(--adm-surface); transition: background-color 150ms, border-color 150ms; }
 .adm-button-outline:hover { background: #f4f4f0; border-color: #c7c7c0; }
 .adm-button-primary:hover { background: #30302e; }
+/* Le seul bouton rouge : effacer pour de bon. */
+.adm-button-danger { background: #c62828; color: #fff; }
+.adm-button-danger:hover { background: #a51f1f; }
 .adm-field { min-height: 48px; background: #fdfdfc; }
 .adm-field:hover { border-color: #b2b2ab; }
 .adm-mobile-nav { border-top: 1px solid var(--adm-trait); background: #fff; }
@@ -150,7 +153,14 @@ button.adm-settings-row:hover { background: #f7f7f5; }
 .adm-settings-list > li:first-child .adm-settings-row { border-radius: 15px 15px 0 0; }
 .adm-settings-list > li:last-child .adm-settings-row { border-radius: 0 0 15px 15px; }
 .adm-settings-list > li:only-child .adm-settings-row { border-radius: 15px; }
-.adm-settings-icon { display: grid; width: 36px; height: 36px; flex-shrink: 0; place-items: center; border-radius: 11px; background: #f2f2ee; color: #555650; }
+/* Le picto d'une ligne, sans tuile derrière : plein, d'une seule couleur (Lilian, 19 octobre 2026). */
+.adm-settings-icon { display: grid; width: 24px; height: 24px; flex-shrink: 0; place-items: center; color: var(--adm-secondaire); }
+/* Un groupe de lignes dans une feuille : un trait fin, l'arrondi des surfaces compactes, sans fond
+ * (la feuille est déjà du papier), pour qu'un survol posé sur une ligne reste visible. La première et
+ * la dernière ligne épousent l'arrondi, sans couper le contour du focus comme le ferait un overflow. */
+.adm-groupe { border: 1px solid var(--adm-trait); border-radius: 14px; }
+.adm-groupe > :first-child { border-top-left-radius: 13px; border-top-right-radius: 13px; }
+.adm-groupe > :last-child { border-bottom-left-radius: 13px; border-bottom-right-radius: 13px; }
 .adm-feuille { border-radius: 16px 16px 0 0; }
 
 @media (min-width: 640px) { .adm-feuille { border-radius: 16px; } }
@@ -161,13 +171,12 @@ button.adm-settings-row:hover { background: #f7f7f5; }
   .adm-editor-content { grid-column: 1; grid-row: 1; }
 }
 @media (max-width: 639px) {
-  .adm-page-heading { margin-bottom: 21px; }
-  .adm-page-heading h1 { font-size: 28px; }
-  .adm-page-heading > p { font-size: 13px; }
+  .adm-page-heading { margin-bottom: 20px; }
+  .adm-titre, .adm-page-heading h1 { font-size: 28px; }
   .adm-card { padding: 18px; }
   .adm-kpi { padding: 16px; }
   .adm-editor-tools [data-principal], .adm-editor-tools .adm-button-outline { font-size: 13px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .adm-nav-item, .adm-button-outline, .adm-button-primary, button.adm-settings-row { transition: none; }
+  .adm-nav-item, .adm-button-outline, .adm-button-primary, .adm-button-danger, button.adm-settings-row { transition: none; }
 }

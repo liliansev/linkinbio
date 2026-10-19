@@ -4,7 +4,7 @@ import { urlPage } from '../lib/types.ts';
 import { etapesDemarrage } from '../lib/demarrage.ts';
 import type { Destination } from '../lib/demarrage.ts';
 import { Icone } from '../components/Icone.tsx';
-import { BoutonCopier, copierTexte, vibrer } from './ui.tsx';
+import { BoutonCopier, classeBouton, copierTexte, vibrer } from './ui.tsx';
 
 /*
  * Le haut de l'onglet Liens : l'adresse de la page, à copier ou partager en un
@@ -49,7 +49,7 @@ export function HautLiens({ compte, reglages, blocs, aller, annoncer }: { compte
         <BoutonCopier texte={adresse} onCopie={marquerPartagee} label="Copier l’adresse de ta page" />
         {peutPartager && (
           <button type="button" onClick={partager} aria-label="Partager ta page"
-            className="grid h-11 w-11 place-items-center rounded-full bg-white text-nuit transition active:scale-95"><Icone nom="partage" taille={19} /></button>
+            className="adm-button-primary grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-white text-nuit transition active:scale-95"><Icone nom="partage" taille={19} /></button>
         )}
       </div>
 
@@ -71,7 +71,7 @@ export function HautLiens({ compte, reglages, blocs, aller, annoncer }: { compte
               <Icone nom="ui-chevron" taille={16} className={`shrink-0 text-white/55 transition ${ouvert ? 'rotate-180' : ''}`} />
             </button>
             <button type="button" onClick={() => { noter(CLE_MASQUE); setMasque(true); }} aria-label="Masquer ces étapes"
-              className="grid h-12 w-11 shrink-0 place-items-center rounded-full text-white/55 hover:text-white"><Icone nom="ui-fermer" taille={18} /></button>
+              className={classeBouton.icone}><Icone nom="ui-fermer" taille={18} /></button>
           </div>
           {ouvert && (
             <ol className="flex flex-col px-2 pb-2">

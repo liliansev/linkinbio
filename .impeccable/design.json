@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-19T10:51:34.080074Z",
+  "generatedAt": "2026-10-19T22:02:33.353952Z",
   "title": "Design System: Hopla back office",
   "extensions": {
     "colorMeta": {
@@ -189,12 +189,12 @@
     },
     "typographyMeta": {
       "headline": {
-        "displayName": "Titre de page",
-        "purpose": "Nom de l’écran ; réduit sur téléphone."
+        "displayName": "Titre d'écran",
+        "purpose": "Nom de l’écran, le même pour les onglets, la connexion, les CGU et les premiers pas ; réduit sur téléphone."
       },
       "panel-title": {
         "displayName": "Titre de feuille",
-        "purpose": "Nom de la tâche en cours."
+        "purpose": "Nom de la tâche en cours, du détail d’un réglage ou d’un prix."
       },
       "title": {
         "displayName": "Titre de carte",
@@ -202,11 +202,15 @@
       },
       "body": {
         "displayName": "Texte courant",
-        "purpose": "Description et contenu de travail."
+        "purpose": "Contenu de travail ; jamais de description sous un titre d’onglet."
       },
       "label": {
         "displayName": "Libellé",
         "purpose": "Nom de champ et aide courte."
+      },
+      "caption": {
+        "displayName": "Légende",
+        "purpose": "Onglet mobile, nom sous un picto, axe de courbe, compteur ; badge en semi-gras."
       },
       "field": {
         "displayName": "Saisie",
@@ -214,7 +218,11 @@
       },
       "metric": {
         "displayName": "Chiffre clé",
-        "purpose": "KPI en chiffres tabulaires."
+        "purpose": "KPI en chiffres tabulaires, à la même taille sur toutes les largeurs."
+      },
+      "wordmark": {
+        "displayName": "Marque",
+        "purpose": "« Hopla. » dans la marque, et nulle part ailleurs."
       }
     },
     "shadows": [
@@ -304,6 +312,30 @@
       "css": ".ds-secondary{font-family:'Geist Variable',ui-sans-serif,system-ui,sans-serif;min-height:44px;padding:0 16px;border:1px solid #deded9;border-radius:12px;background:var(--adm-surface,#fff);color:var(--color-white,#0a0a0a);font-size:14px;font-weight:500;transition:background-color 150ms,border-color 150ms,transform 150ms}.ds-secondary:hover{background:#f4f4f0;border-color:#c7c7c0}.ds-secondary:focus-visible{outline:2px solid var(--color-white,#0a0a0a);outline-offset:2px;}.ds-secondary:active{transform:scale(.98)}.ds-secondary:disabled{opacity:.5}@media(prefers-reduced-motion:reduce){.ds-secondary{transition:none}}"
     },
     {
+      "name": "Bouton danger",
+      "kind": "button",
+      "refersTo": "button-danger",
+      "description": "Effacement définitif, après une confirmation ; le seul bouton rouge.",
+      "html": "<button type=\"button\" class=\"ds-danger\">Supprimer définitivement</button>",
+      "css": ".ds-danger{font-family:'Geist Variable',ui-sans-serif,system-ui,sans-serif;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 16px;border:0;border-radius:12px;background:#c62828;color:#fff;font-size:14px;font-weight:600;transition:background-color 150ms,transform 150ms}.ds-danger:hover{background:#a51f1f}.ds-danger:focus-visible{outline:2px solid var(--color-white,#0a0a0a);outline-offset:2px;}.ds-danger:active{transform:scale(.98)}.ds-danger:disabled{opacity:.4}@media(prefers-reduced-motion:reduce){.ds-danger{transition:none}}"
+    },
+    {
+      "name": "Bouton discret",
+      "kind": "button",
+      "refersTo": "button-quiet",
+      "description": "Annuler, Plus tard, Me déconnecter : du texte secondaire sans fond.",
+      "html": "<button type=\"button\" class=\"ds-quiet\">Plus tard</button>",
+      "css": ".ds-quiet{font-family:'Geist Variable',ui-sans-serif,system-ui,sans-serif;display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:44px;padding:0 12px;border:0;border-radius:12px;background:transparent;color:#666;font-size:14px;font-weight:500;transition:background-color 150ms,color 150ms}.ds-quiet:hover{background:#f4f4f0;color:#0a0a0a}.ds-quiet:focus-visible{outline:2px solid var(--color-white,#0a0a0a);outline-offset:2px;}.ds-quiet:disabled{opacity:.5}@media(prefers-reduced-motion:reduce){.ds-quiet{transition:none}}"
+    },
+    {
+      "name": "Bouton icône",
+      "kind": "button",
+      "refersTo": "button-icon",
+      "description": "Fermer, revenir ou retirer : un carré de 44 px au picto secondaire.",
+      "html": "<button type=\"button\" class=\"ds-icon\" aria-label=\"Fermer\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 256 256\" fill=\"currentColor\" aria-hidden=\"true\"><path d=\"M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z\"/></svg></button>",
+      "css": ".ds-icon{display:grid;place-items:center;width:44px;height:44px;flex-shrink:0;border:0;border-radius:12px;background:transparent;color:#666;transition:background-color 150ms,color 150ms}.ds-icon:hover{background:#f4f4f0;color:#0a0a0a}.ds-icon:focus-visible{outline:2px solid var(--color-white,#0a0a0a);outline-offset:2px;}@media(prefers-reduced-motion:reduce){.ds-icon{transition:none}}"
+    },
+    {
       "name": "Champ de saisie",
       "kind": "input",
       "refersTo": "field",
@@ -317,7 +349,7 @@
       "refersTo": "nav-item",
       "description": "Navigation desktop, actif blanc bordé et survol neutre.",
       "html": "<nav class=\"ds-nav\" aria-label=\"Sections\"><button type=\"button\" aria-current=\"page\" class=\"ds-nav-item\">Ma page<span class=\"ds-count\">4</span></button><button type=\"button\" class=\"ds-nav-item\">Statistiques</button><button type=\"button\" class=\"ds-nav-item\">Réglages</button></nav>",
-      "css": ".ds-nav{display:grid;gap:6px;width:208px;padding:12px;background:#fdfdfc}.ds-nav-item{font-family:'Geist Variable',ui-sans-serif,system-ui,sans-serif;display:flex;align-items:center;gap:12px;min-height:48px;padding:0 14px;border:1px solid transparent;border-radius:12px;background:transparent;color:var(--adm-secondaire,#656560);font-size:14px;font-weight:500;text-align:left;transition:background-color 150ms,color 150ms}.ds-nav-item:hover{background:#f1f1ee;color:var(--adm-encre,#18191b)}.ds-nav-item[aria-current=page]{border-color:var(--adm-trait,#e5e5e1);background:#fff;color:var(--adm-encre,#18191b);font-weight:600}.ds-nav-item:focus-visible{outline:2px solid var(--color-white,#0a0a0a);outline-offset:2px;}.ds-count{display:grid;place-items:center;min-width:23px;height:23px;margin-left:auto;padding:0 5px;border-radius:7px;background:#efefec;color:#565651;font-size:11px;font-variant-numeric:tabular-nums}@media(prefers-reduced-motion:reduce){.ds-nav-item{transition:none}}"
+      "css": ".ds-nav{display:grid;gap:6px;width:208px;padding:12px;background:#fdfdfc}.ds-nav-item{font-family:'Geist Variable',ui-sans-serif,system-ui,sans-serif;display:flex;align-items:center;gap:12px;min-height:48px;padding:0 14px;border:1px solid transparent;border-radius:12px;background:transparent;color:var(--adm-secondaire,#656560);font-size:14px;font-weight:500;text-align:left;transition:background-color 150ms,color 150ms}.ds-nav-item:hover{background:#f1f1ee;color:var(--adm-encre,#18191b)}.ds-nav-item[aria-current=page]{border-color:var(--adm-trait,#e5e5e1);background:#fff;color:var(--adm-encre,#18191b);font-weight:600}.ds-nav-item:focus-visible{outline:2px solid var(--color-white,#0a0a0a);outline-offset:2px;}.ds-count{display:grid;place-items:center;min-width:23px;height:23px;margin-left:auto;padding:0 5px;border-radius:7px;background:#efefec;color:#565651;font-size:11.5px;font-variant-numeric:tabular-nums}@media(prefers-reduced-motion:reduce){.ds-nav-item{transition:none}}"
     },
     {
       "name": "Carte de contenu",
@@ -347,14 +379,30 @@
       "name": "Ligne de réglage",
       "kind": "custom",
       "refersTo": "settings-row",
-      "description": "Entrée de détail dans un groupe de réglages.",
+      "description": "Entrée de détail dans un groupe de réglages, picto nu sans tuile.",
       "html": "<div class=\"ds-settings\"><button class=\"ds-settings-row\" type=\"button\"><span class=\"ds-settings-icon\" aria-hidden=\"true\"><svg width=\"19\" height=\"19\" viewBox=\"0 0 256 256\" fill=\"currentColor\"><path d=\"M240,128a80,80,0,0,1-80,80H104a8,8,0,0,1,0-16h56a64,64,0,0,0,0-128H104a8,8,0,0,1,0-16h56A80.09,80.09,0,0,1,240,128ZM96,192H80A64,64,0,0,1,80,64H96a8,8,0,0,0,0-16H80a80,80,0,0,0,0,160H96a8,8,0,0,0,0-16Zm80-64a8,8,0,0,0-8-8H88a8,8,0,0,0,0,16h80A8,8,0,0,0,176,128Z\"/></svg></span><span class=\"ds-settings-label\">QR code et adresse</span><svg width=\"16\" height=\"16\" viewBox=\"0 0 16 16\" fill=\"currentColor\" aria-hidden=\"true\"><path d=\"M6 3a1 1 0 0 1 1.4 0l4 4a1 1 0 0 1 0 1.4l-4 4A1 1 0 0 1 6 11l3.3-3.3L6 4.4A1 1 0 0 1 6 3Z\"/></svg></button></div>",
-      "css": ".ds-settings{width:320px;max-width:100%;border:1px solid var(--adm-trait,#e5e5e1);border-radius:16px;background:var(--adm-surface,#fff)}.ds-settings-row{font-family:'Geist Variable',ui-sans-serif,system-ui,sans-serif;display:flex;align-items:center;gap:14px;width:100%;min-height:68px;padding:12px 16px;border:0;border-radius:15px;background:transparent;color:var(--color-white,#0a0a0a);text-align:left;transition:background-color 150ms}.ds-settings-row:hover{background:#f7f7f5}.ds-settings-row:focus-visible{outline:2px solid var(--color-white,#0a0a0a);outline-offset:2px;}.ds-settings-icon{display:grid;place-items:center;width:36px;height:36px;flex-shrink:0;border-radius:11px;background:#f2f2ee;color:#555650}.ds-settings-label{flex:1;min-width:0;font-size:14px;font-weight:500}@media(prefers-reduced-motion:reduce){.ds-settings-row{transition:none}}"
+      "css": ".ds-settings{width:320px;max-width:100%;border:1px solid var(--adm-trait,#e5e5e1);border-radius:16px;background:var(--adm-surface,#fff)}.ds-settings-row{font-family:'Geist Variable',ui-sans-serif,system-ui,sans-serif;display:flex;align-items:center;gap:14px;width:100%;min-height:68px;padding:12px 16px;border:0;border-radius:15px;background:transparent;color:var(--color-white,#0a0a0a);text-align:left;transition:background-color 150ms}.ds-settings-row:hover{background:#f7f7f5}.ds-settings-row:focus-visible{outline:2px solid var(--color-white,#0a0a0a);outline-offset:2px;}.ds-settings-icon{display:grid;place-items:center;width:24px;height:24px;flex-shrink:0;color:var(--adm-secondaire,#656560)}.ds-settings-label{flex:1;min-width:0;font-size:14px;font-weight:500}@media(prefers-reduced-motion:reduce){.ds-settings-row{transition:none}}"
+    },
+    {
+      "name": "Badge",
+      "kind": "custom",
+      "refersTo": "badge",
+      "description": "Un état court (Pro) ; seul « Suspendu » prend l'ambre des alertes.",
+      "html": "<span class=\"ds-badge\">Pro</span>",
+      "css": ".ds-badge{font-family:'Geist Variable',ui-sans-serif,system-ui,sans-serif;display:inline-flex;align-items:center;padding:2px 6px;border-radius:7px;background:rgba(10,10,10,.07);color:#0a0a0a;font-size:11.5px;font-weight:600}"
+    },
+    {
+      "name": "Groupe de lignes",
+      "kind": "custom",
+      "refersTo": "card",
+      "description": "Lignes d'une feuille dans un cadre bordé sans fond ; dans une carte, de simples traits.",
+      "html": "<ul class=\"ds-groupe\"><li>Afficher le bloc</li><li>Mettre en avant</li><li>Ouvrir dans l’app</li></ul>",
+      "css": ".ds-groupe{font-family:'Geist Variable',ui-sans-serif,system-ui,sans-serif;width:300px;max-width:100%;margin:0;padding:0 16px;list-style:none;border:1px solid var(--adm-trait,#e5e5e1);border-radius:14px;color:#0a0a0a;font-size:14px;font-weight:500}.ds-groupe li{display:flex;align-items:center;min-height:52px}.ds-groupe li+li{border-top:1px solid rgba(10,10,10,.06)}"
     }
   ],
   "narrative": {
     "northStar": "Un même espace de travail",
-    "overview": "Ce nom reprend le principe déjà inscrit dans le code : l'édition, les statistiques, les réglages et la connexion appartiennent au même espace. Le système est sobre, clair et compact, avec des surfaces blanches sur un fond gris doux et une hiérarchie obtenue par la typographie, les espacements et les traits.\n\nCette documentation décrit le système observable de la branche `design/back-office-harmonise`, au 19 octobre 2026. Elle ne propose pas de nouvelle identité et ne prouve aucune mise en production. Son périmètre est le back office : les thèmes publics rendus dans l'éditeur ou dans un aperçu conservent leurs propres couleurs et fontes. La stratégie des écrans est dans `.impeccable/surfaces/back-office.md`.",
+    "overview": "Ce nom reprend le principe déjà inscrit dans le code : l'édition, les statistiques, les réglages et la connexion appartiennent au même espace. Le système est sobre, clair et compact, avec des surfaces blanches sur un fond gris doux et une hiérarchie obtenue par la typographie, les espacements et les traits.\n\nCette documentation décrit le système observable de la branche `design/back-office-harmonise`, au 19 octobre 2026, resserré le soir même par la revue finale : un seul jeu de boutons sans pilule, une seule marque, un seul titre d'écran, des pictos sans tuile et aucun sous-titre sous les titres. Elle ne propose pas de nouvelle identité et ne prouve aucune mise en production. Son périmètre est le back office : les thèmes publics rendus dans l'éditeur ou dans un aperçu conservent leurs propres couleurs et fontes. La stratégie des écrans est dans `.impeccable/surfaces/back-office.md`.",
     "keyCharacteristics": [
       "Encre noire, papier blanc et gris neutres.",
       "Geist pour une hiérarchie de travail compacte.",
@@ -374,13 +422,18 @@
       },
       {
         "name": "The Working Hierarchy Rule",
-        "body": "Le titre nomme l'endroit, le texte secondaire l'explique et le contrôle porte le geste. Conserver ce rôle lors de l'ajout d'un écran.",
+        "body": "Le titre nomme l'endroit et le contrôle porte le geste. Aucun sous-titre ne répète un titre d'onglet ; une aide ne paraît que là où le geste ne se comprend pas seul.",
         "section": "typography"
       },
       {
         "name": "The Flat Card Rule",
         "body": "Une carte ordinaire se distingue par son fond et son trait ; ne pas lui attribuer une ombre de fenêtre.",
         "section": "elevation"
+      },
+      {
+        "name": "The No Pill Rule",
+        "body": "Aucun bouton, lien d'action ou badge en pilule : ce sont des rectangles arrondis. Restent ronds les avatars, les points d'état, les interrupteurs, les pastilles de couleur, la poignée de déplacement, les boutons radio et les pistes de progression.",
+        "section": "shapes"
       }
     ],
     "dos": [
@@ -395,7 +448,11 @@
       "**Don't** remplacer les couleurs ou la typographie des thèmes publics par celles du shell.",
       "**Don't** transformer chaque carte en fenêtre ombrée.",
       "**Don't** utiliser d'emoji ou de picto en duotone dans cet espace.",
-      "**Don't** présenter une capture locale ou ce document comme une preuve de mise en production."
+      "**Don't** présenter une capture locale ou ce document comme une preuve de mise en production.",
+      "**Don't** faire un bouton en pilule, ni poser un picto sur une tuile de fond.",
+      "**Don't** écrire un sous-titre explicatif sous un titre d'onglet, ni un fil d'Ariane qui répète la navigation.",
+      "**Don't** dire « en ligne » ou « réussi » en vert : le noir suffit, la couleur reste aux alertes.",
+      "**Don't** imbriquer une boîte grise dans une carte."
     ]
   }
 }

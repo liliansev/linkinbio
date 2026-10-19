@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Api, Contact, FournisseurListe, Liste } from '../lib/types.ts';
 import { Icone } from '../components/Icone.tsx';
-import { BoutonPrincipal, Carte, Champ, Feuille, Segments, classeSaisie } from './ui.tsx';
+import { BoutonPrincipal, Carte, Champ, Feuille, Segments, classeBouton, classeSaisie } from './ui.tsx';
 
 /*
  * Les inscrits de « Rejoins ma liste », dans l'onglet Stats : combien, les
@@ -25,12 +25,12 @@ export function MaListe({ api }: { api: Pick<Api, 'liste' | 'brancherListe' | 's
   if (!liste) return null;
   return (
     <>
-      <Carte titre="Ta liste" action={<button type="button" onClick={() => setOuverte(true)} className="min-h-11 rounded-full bg-white/[0.08] px-3.5 text-[13.5px] font-medium text-white hover:bg-white/[0.13]">Gérer</button>}>
+      <Carte titre="Ta liste" action={<button type="button" onClick={() => setOuverte(true)} className={classeBouton.secondaire}>Gérer</button>}>
         {liste.total ? (
           <>
             <div className="flex items-end gap-3">
-              <p className="text-[34px] font-semibold leading-none tracking-tight tabular-nums">{nombre(liste.total)}</p>
-              <p className="pb-1 text-[13.5px] text-white/60">inscrit{liste.total > 1 ? 's' : ''}{liste.semaine ? <>, dont <span className="text-emerald-300">+{nombre(liste.semaine)}</span> cette semaine</> : ''}</p>
+              <p className="text-[30px] font-semibold leading-none tracking-[-0.03em] tabular-nums">{nombre(liste.total)}</p>
+              <p className="pb-1 text-[13.5px] text-white/60">inscrit{liste.total > 1 ? 's' : ''}{liste.semaine ? <>, dont <span className="font-semibold text-white">+{nombre(liste.semaine)}</span> cette semaine</> : ''}</p>
             </div>
             <p className="mt-2.5 flex items-center gap-1.5 text-[13px] text-white/55">
               <Icone nom={liste.integration ? 'ui-ok' : 'courrier'} taille={14} />
@@ -116,7 +116,7 @@ function FeuilleListe({ liste, api, onFermer, onChange }: { liste: Liste; api: P
               {envoi ? 'Vérification…' : choix === 'hopla' ? 'Débrancher' : memeFournisseur ? 'Mettre à jour' : `Brancher ${NOMS[choix]}`}
             </BoutonPrincipal>
           )}
-          {message && <p role="status" className={`rounded-xl px-3.5 py-2.5 text-[13.5px] ${message.ok ? 'bg-emerald-400/10 text-emerald-200' : 'bg-red-500/15 text-red-200'}`}>{message.texte}</p>}
+          {message && <p role="status" className={`flex items-start gap-2 rounded-xl px-3.5 py-2.5 text-[13.5px] ${message.ok ? 'bg-white/[0.05] text-white' : 'bg-red-500/15 text-red-200'}`}>{message.ok && <span className="mt-px shrink-0" aria-hidden="true"><Icone nom="ui-ok" taille={16} /></span>}{message.texte}</p>}
           {liste.integration && liste.enAttente > 0 && (
             <button type="button" disabled={envoi} onClick={renvoyer} className="self-start text-[13.5px] font-medium text-white underline underline-offset-2">
               Envoyer les {nombre(liste.enAttente)} inscrit{liste.enAttente > 1 ? 's' : ''} pas encore chez {NOMS[liste.integration.fournisseur]}
@@ -127,16 +127,16 @@ function FeuilleListe({ liste, api, onFermer, onChange }: { liste: Liste; api: P
         <section>
           <div className="mb-2 flex items-center justify-between">
             <span className="text-[13px] font-medium text-white/70">{nombre(liste.total)} inscrit{liste.total > 1 ? 's' : ''}</span>
-            {api.urlContacts && liste.total > 0 && <a href={api.urlContacts} download className="inline-flex min-h-11 items-center gap-1.5 rounded-full bg-white/[0.08] px-3.5 text-[13.5px] font-medium text-white">Exporter en CSV</a>}
+            {api.urlContacts && liste.total > 0 && <a href={api.urlContacts} download className={classeBouton.secondaire}><Icone nom="telecharger" taille={16} />Exporter en CSV</a>}
           </div>
           {retire && (
-            <p role="status" className="mb-2 flex min-h-11 items-center gap-3 rounded-2xl bg-white/[0.06] px-3.5 text-[13.5px] text-white">
+            <p role="status" className="mb-2 flex min-h-11 items-center gap-3 rounded-xl bg-white/[0.05] pl-3.5 text-[13.5px] text-white">
               <span className="min-w-0 flex-1 truncate">{retire.email} retiré de ta liste</span>
-              <button type="button" onClick={annulerRetrait} className="min-h-11 shrink-0 font-medium underline underline-offset-2">Annuler</button>
+              <button type="button" onClick={annulerRetrait} className="min-h-11 shrink-0 rounded-xl px-3.5 font-medium underline underline-offset-2">Annuler</button>
             </p>
           )}
           {contacts.length ? (
-            <ul className="divide-y divide-white/[0.06] rounded-2xl bg-white/[0.035]">
+            <ul className="adm-groupe divide-y divide-white/[0.06]">
               {contacts.map(c => (
                 <li key={c.id} className="flex items-center gap-3 px-3.5 py-2.5">
                   <span className="min-w-0 flex-1">
@@ -144,7 +144,7 @@ function FeuilleListe({ liste, api, onFermer, onChange }: { liste: Liste; api: P
                     <span className="block text-[12px] text-white/55">{quand(c.ts)}{c.source && c.source !== 'Direct' ? ` · ${c.source}` : ''}{c.synchro === 'erreur' ? ' · pas envoyé' : ''}</span>
                   </span>
                   <button type="button" aria-label={`Retirer ${c.email}`} onClick={() => retirer(c)}
-                    className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-white/55 hover:bg-white/[0.06] hover:text-red-300"><Icone nom="ui-corbeille" taille={17} /></button>
+                    className={`${classeBouton.icone} hover:!text-red-300`}><Icone nom="ui-corbeille" taille={17} /></button>
                 </li>
               ))}
             </ul>

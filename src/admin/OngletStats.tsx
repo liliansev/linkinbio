@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { Stats } from '../lib/types.ts';
-import { Carte, Segments } from './ui.tsx';
+import { Carte, Segments, classeBouton } from './ui.tsx';
 import { Icone } from '../components/Icone.tsx';
 import { resumer } from '../lib/resume.ts';
 
@@ -23,7 +23,7 @@ function Kpi({ nom, valeur, avant, suffixe = '' }: { nom: string; valeur: number
   return (
     <div className="adm-kpi">
       <p className="text-[12px] font-medium text-white/60">{nom}</p>
-      <p className="mb-1.5 mt-2 text-[30px] font-semibold leading-tight tracking-[-0.03em] text-white tabular-nums lg:text-[34px]">{nombre(valeur)}{suffixe}</p>
+      <p className="mb-1.5 mt-2 text-[30px] font-semibold leading-tight tracking-[-0.03em] text-white tabular-nums">{nombre(valeur)}{suffixe}</p>
       {avant !== undefined && <Tendance actuel={valeur} avant={avant} />}
     </div>
   );
@@ -112,7 +112,7 @@ function EnBref({ stats }: { stats: Stats }) {
   const phrases = resumer(stats);
   return (
     <section aria-label="En bref" className="adm-card h-full">
-      <h2 className="mb-4 flex items-center gap-2 text-[15px] font-semibold tracking-tight text-white"><Icone nom="sparkle" taille={17} />En bref</h2>
+      <h2 className="mb-4 text-[15px] font-semibold tracking-[-0.015em] text-white">En bref</h2>
       <ul className="flex flex-col gap-3.5">
         {phrases.map(p => (
           <li key={p.texte} className="flex gap-2.5 text-[13px] leading-relaxed text-white/75">
@@ -131,13 +131,13 @@ function OuvertsDansLApp({ apps, actif, onActiver }: { apps: Stats['apps']; acti
   return (
     <Carte titre="Ouverts dans leur app">
       <div className="flex items-end gap-3">
-        <p className="text-[34px] font-semibold leading-none tracking-tight text-white tabular-nums">{nombre(apps.ouverts)}</p>
+        <p className="text-[30px] font-semibold leading-none tracking-[-0.03em] text-white tabular-nums">{nombre(apps.ouverts)}</p>
         <p className="pb-1 text-[13.5px] leading-snug text-white/60">clic{apps.ouverts > 1 ? 's' : ''} ouvert{apps.ouverts > 1 ? 's' : ''} directement dans YouTube, Spotify, Instagram…</p>
       </div>
       <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/[0.07]"><div className="adm-barre h-full origin-left rounded-full bg-white" style={{ width: `${part}%` }} /></div>
       <p className="mt-1.5 text-[12.5px] text-white/55">{part} % des {nombre(apps.versApp)} clics vers une app depuis Instagram ou TikTok</p>
       {!actif && (
-        <p className="mt-2.5 rounded-xl bg-white/10 px-3 py-2.5 text-[13px] leading-snug text-white/75">
+        <p className="mt-3 border-t border-white/[0.06] pt-3 text-[13px] leading-snug text-white/75">
           L’ouverture dans les apps est coupée sur ta page. {onActiver && <button type="button" onClick={onActiver} className="font-semibold text-white underline underline-offset-2">La rallumer</button>}
         </p>
       )}
@@ -164,15 +164,15 @@ export function OngletStats({ charger, limite = false, onPro, ouvrirApps = true,
   return (
     <div className="flex flex-col gap-4">
       {limite ? (
-        <div className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3">
+        <div className="flex items-center justify-between gap-3 rounded-[14px] border border-white/10 bg-nuit px-4 py-3">
           <p className="text-[14px] leading-snug text-white/80">Les 7 derniers jours. <span className="text-white/55">Avec Pro, jusqu’à un an d’historique : tout est déjà enregistré.</span></p>
-          {onPro && <button type="button" onClick={onPro} className="min-h-11 shrink-0 rounded-full bg-white px-4 text-[13.5px] font-semibold text-nuit">Passer en Pro</button>}
+          {onPro && <button type="button" onClick={onPro} className={`${classeBouton.principal} shrink-0`}>Passer en Pro</button>}
         </div>
-      ) : <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="text-[15px] font-semibold tracking-tight">Vue d’ensemble</h2><div className="w-full sm:w-80"><Segments label="Période" valeur={jours} options={PERIODES} onChange={setJours} /></div></div>}
+      ) : <div className="w-full sm:w-80"><Segments label="Période" valeur={jours} options={PERIODES} onChange={setJours} /></div>}
       {erreur && (
         <div role="alert" className="flex items-center justify-between gap-3 rounded-xl bg-red-500/15 py-1.5 pr-1.5 pl-3.5 text-[14px] text-red-200">
           Les statistiques ne se chargent pas.
-          <button type="button" onClick={() => setEssai(n => n + 1)} className="min-h-11 shrink-0 rounded-full px-4 font-semibold text-white hover:bg-white/10">Réessayer</button>
+          <button type="button" onClick={() => setEssai(n => n + 1)} className={`${classeBouton.secondaire} shrink-0`}>Réessayer</button>
         </div>
       )}
       {!stats ? (!erreur && <div className="h-64 animate-pulse rounded-2xl bg-white/[0.04] motion-reduce:animate-none" aria-label="Chargement des statistiques" />) : (

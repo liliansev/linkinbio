@@ -6,7 +6,7 @@ import { LANGUES, urlPage } from '../lib/types.ts';
 import type { Abonnement as EtatAbonnement, Periode } from '../lib/abonnement.ts';
 import { AVANTAGES_PRO, TARIFS, estResilie, euros } from '../lib/abonnement.ts';
 import { Icone } from '../components/Icone.tsx';
-import { Bascule, BoutonCopier, BoutonSecondaire, Carte, Champ, Interrupteur, classeSaisie, flechesRadio, vibrer } from './ui.tsx';
+import { Bascule, BoutonCopier, BoutonSecondaire, Carte, Champ, Interrupteur, classeBadge, classeBouton, classeSaisie, flechesRadio, vibrer } from './ui.tsx';
 import { LANGUES_FR } from './ReglesBloc.tsx';
 
 export function OngletReglages({ reglages, compte, blocs = [], traduire, onChange, onDeconnexion, urlExport, supprimerMonCompte, abonnement, paiement, ouvrirPaiement, ouvrirPortail, sectionInitiale }: {
@@ -52,18 +52,18 @@ export function OngletReglages({ reglages, compte, blocs = [], traduire, onChang
           className="-ml-2 mb-3 flex min-h-11 items-center gap-1 rounded-xl px-2 text-[13px] font-medium text-white/60 hover:bg-white/[0.05] hover:text-white">
           <Icone nom="ui-chevron" taille={16} className="rotate-90" /> Tous les réglages
         </button>
-        <h2 className="text-[20px] font-semibold tracking-tight">{sections.find(x => x.id === ouverte)?.nom}</h2>
+        <h2 className="text-[18px] font-semibold tracking-[-0.025em]">{sections.find(x => x.id === ouverte)?.nom}</h2>
       </div>
       {ouverte === 'abonnement' && <Abonnement abonnement={abonnement} ouvrirPaiement={ouvrirPaiement} ouvrirPortail={ouvrirPortail} />}
       {ouverte === 'partager' && <Carte>
-        <div className="flex items-center gap-2 rounded-xl bg-white/[0.06] p-1.5 pl-3.5">
+        <div className="adm-address flex items-center gap-2 p-1.5 pl-3.5">
           <span className="min-w-0 flex-1 truncate text-[15px] text-white">{URL_PUBLIQUE.replace(/^https:\/\//, '').replace(/\/$/, '')}</span>
           <BoutonCopier texte={URL_PUBLIQUE} />
         </div>
         {qr && (
           <div className="mt-4 flex flex-col items-center gap-3">
-            <img src={qr} alt="QR code vers ta page" className="h-44 w-44 rounded-2xl bg-white p-1.5" />
-            <a href={qr} download={`qr-${compte.pseudo}-hopla.png`} className="inline-flex min-h-11 items-center gap-1.5 rounded-full bg-white/[0.08] px-4 text-[14px] font-medium text-white"><Icone nom="telecharger" taille={16} /> Télécharger le QR code</a>
+            <img src={qr} alt="QR code vers ta page" className="h-44 w-44 rounded-2xl border border-white/10 bg-nuit p-1.5" />
+            <a href={qr} download={`qr-${compte.pseudo}-hopla.png`} className={classeBouton.secondaire}><Icone nom="telecharger" taille={16} />Télécharger le QR code</a>
           </div>
         )}
         <div className="mt-4 border-t border-white/[0.06]">
@@ -74,7 +74,7 @@ export function OngletReglages({ reglages, compte, blocs = [], traduire, onChang
         <div className="flex flex-col gap-3">
           {/* Ce que ces deux champs deviennent : la carte qu'affichent Google, WhatsApp ou iMessage quand on partage ta page. */}
           <p className="text-[13px] leading-snug text-white/60">Ce que montrent Google et l’aperçu quand tu partages ton lien :</p>
-          <div className="overflow-hidden rounded-2xl bg-white/[0.05] ring-1 ring-white/[0.06]" aria-hidden="true">
+          <div className="overflow-hidden rounded-[14px] border border-white/10 bg-white/[0.03]" aria-hidden="true">
             {reglages.profil.avatar && <img src={reglages.profil.avatar} alt="" className="h-24 w-full object-cover opacity-90" />}
             <div className="px-3.5 py-2.5">
               <span className="block text-[12px] text-white/50" translate="no">{URL_PUBLIQUE.replace(/^https?:\/\//, '').split('/')[0]}</span>
@@ -174,11 +174,11 @@ function Abonnement({ abonnement, ouvrirPaiement, ouvrirPortail }: {
         : { texte: fin ? `Se renouvelle le ${fin}.` : 'Ton abonnement est actif.', alerte: false };
     return (
       <div id="abonnement" className="scroll-mt-24">
-        <Carte titre="Ton abonnement" action={<span className="inline-flex items-center gap-1 text-[13px] font-semibold text-white"><Icone nom="sparkle" taille={14} />Pro</span>}>
+        <Carte titre="Ton abonnement" action={<span className={classeBadge}>Pro</span>}>
           <p className={`text-[14px] leading-snug ${etat.alerte ? 'text-amber-200' : 'text-white/75'}`}>{etat.texte}</p>
           {abonnement.portail && (
             <>
-              <button type="button" disabled={envoi} onClick={() => aller(ouvrirPortail)} className="mt-3 inline-flex min-h-11 items-center gap-1.5 rounded-full bg-white/[0.08] px-4 text-[14px] font-medium text-white hover:bg-white/[0.13] disabled:opacity-50">
+              <button type="button" disabled={envoi} onClick={() => aller(ouvrirPortail)} className={`${classeBouton.secondaire} mt-3`}>
                 {envoi ? 'Ouverture…' : 'Gérer mon abonnement'} <Icone nom="ui-ouvrir" taille={15} />
               </button>
               <p className="mt-2 text-[12.5px] leading-snug text-white/55">Ta carte et tes factures, sur la page sécurisée de Creem.</p>
@@ -211,15 +211,15 @@ function Abonnement({ abonnement, ouvrirPaiement, ouvrirPortail }: {
             const t = TARIFS[p], choisi = periode === p;
             return (
               <button key={p} type="button" role="radio" aria-checked={choisi} onClick={() => setPeriode(p)}
-                className={`flex flex-col items-start rounded-2xl border px-3.5 py-3 text-left transition ${choisi ? 'border-white/30 bg-white/10' : 'border-white/10 bg-white/[0.03] hover:border-white/20'}`}>
+                className={`flex flex-col items-start rounded-[14px] border px-3.5 py-3 text-left transition ${choisi ? 'border-white ring-1 ring-inset ring-white' : 'border-white/15 hover:border-white/30'}`}>
                 <span className="text-[13px] text-white/55">{p === 'an' ? 'Annuel' : 'Mensuel'}</span>
-                <span className="mt-0.5 text-[20px] font-semibold tracking-tight text-white tabular-nums">{euros(t.prix)}<span className="text-[13px] font-normal text-white/50"> / {p === 'an' ? 'an' : 'mois'}</span></span>
-                {'economie' in t && <span className="mt-1 text-[12.5px] font-semibold text-emerald-300">{t.economie}</span>}
+                <span className="mt-0.5 text-[18px] font-semibold tracking-[-0.025em] text-white tabular-nums">{euros(t.prix)}<span className="text-[13px] font-normal text-white/50"> / {p === 'an' ? 'an' : 'mois'}</span></span>
+                {'economie' in t && <span className="mt-1 text-[12.5px] font-semibold text-white">{t.economie}</span>}
               </button>
             );
           })}
         </div>
-        <button type="button" disabled={envoi} onClick={() => aller(() => ouvrirPaiement(periode))} className="mt-3 min-h-11 w-full rounded-full bg-white px-4 text-[15px] font-semibold text-nuit transition hover:brightness-105 disabled:opacity-60">
+        <button type="button" disabled={envoi} onClick={() => aller(() => ouvrirPaiement(periode))} className={`${classeBouton.principal} mt-3 w-full`}>
           {envoi ? 'Ouverture du paiement…' : `Passer en Pro, ${TARIFS[periode].libelle}`}
         </button>
         {erreur && <p role="alert" className="mt-3 text-[13.5px] text-red-300">{erreur}</p>}
@@ -253,7 +253,7 @@ function TesDonnees({ compte, urlExport, supprimerMonCompte }: { compte: CompteP
     <Carte>
       <p className="text-[13.5px] leading-snug text-white/60">Ta page, tes liens, tes images et tes statistiques, dans un fichier que tu peux garder ou importer ailleurs.</p>
       {urlExport
-        ? <a href={urlExport} download className="mt-3 inline-flex min-h-11 items-center rounded-full bg-white/[0.08] px-4 text-[14px] font-medium text-white hover:bg-white/[0.13]">Télécharger mes données</a>
+        ? <a href={urlExport} download className={`${classeBouton.secondaire} mt-3`}><Icone nom="telecharger" taille={16} />Télécharger mes données</a>
         : <p className="mt-3 text-[13px] text-white/55">L’export n’existe pas dans l’aperçu.</p>}
       {!compte.principal && (
         <div className="mt-5 border-t border-white/[0.06] pt-4">
@@ -262,13 +262,13 @@ function TesDonnees({ compte, urlExport, supprimerMonCompte }: { compte: CompteP
               <p className="text-[13.5px] leading-snug text-red-200/90">Ta page disparaît tout de suite, avec tes liens, tes images et tes statistiques. Rien ne se récupère. Pour confirmer, tape ton pseudo, <strong className="text-white">{compte.pseudo}</strong>.</p>
               <input className={classeSaisie} value={saisie} onChange={e => setSaisie(e.target.value)} autoCapitalize="none" autoComplete="off" spellCheck={false} aria-label="Ton pseudo, pour confirmer" />
               <div className="flex flex-wrap gap-2">
-                <button type="button" disabled={envoi || saisie.trim().toLowerCase() !== compte.pseudo} onClick={supprimer} className="min-h-11 rounded-full bg-red-600 px-4 text-[14px] font-medium text-nuit disabled:opacity-40">{envoi ? 'Suppression…' : 'Supprimer définitivement'}</button>
-                <button type="button" onClick={() => { setOuvert(false); setSaisie(''); }} className="min-h-11 rounded-full px-4 text-[14px] text-white/60 hover:text-white">Annuler</button>
+                <button type="button" disabled={envoi || saisie.trim().toLowerCase() !== compte.pseudo} onClick={supprimer} className={classeBouton.danger}>{envoi ? 'Suppression…' : 'Supprimer définitivement'}</button>
+                <button type="button" onClick={() => { setOuvert(false); setSaisie(''); }} className={classeBouton.discret}>Annuler</button>
               </div>
               {erreur && <p role="alert" className="text-[13.5px] text-red-300">{erreur}</p>}
             </div>
           ) : (
-            <button type="button" onClick={() => setOuvert(true)} className="min-h-11 rounded-full px-1 text-[14px] font-medium text-red-300 hover:text-red-200">Supprimer mon compte</button>
+            <button type="button" onClick={() => setOuvert(true)} className="min-h-11 rounded-xl px-1 text-[14px] font-medium text-red-300 hover:text-red-200">Supprimer mon compte</button>
           )}
         </div>
       )}
@@ -291,7 +291,7 @@ function Langues({ reglages, onChange, adresse, blocs, traduire }: { reglages: R
   return (
     <Carte>
       <p className="text-[13.5px] leading-snug text-white/60">Ta page s’affiche dans la langue du visiteur. Les boutons, le formulaire et les dates sont traduits tout seuls ; tes textes se traduisent bloc par bloc.</p>
-      <div className="mt-3 divide-y divide-white/[0.06] rounded-2xl bg-white/[0.035] px-4" role="group" aria-label="Langues proposées">
+      <div className="mt-3 divide-y divide-white/[0.06] border-t border-white/[0.06]" role="group" aria-label="Langues proposées">
         <div className="flex items-center justify-between gap-4 py-3">
           <span className="text-[15px] font-medium text-white">Français</span>
           <span className="text-[13px] text-white/55">Langue de ta page</span>
@@ -302,11 +302,11 @@ function Langues({ reglages, onChange, adresse, blocs, traduire }: { reglages: R
       </div>
       {actives.length > 0 && traduire && (
         <div className="mt-4">
-          <p className="mb-2 px-1 text-[13.5px] font-medium text-white/75">{aTraduire.length ? 'À traduire' : 'Tous tes blocs sont traduits.'}</p>
-          {aTraduire.length > 0 && <ul className="divide-y divide-white/[0.06] rounded-2xl bg-white/[0.035]">
+          <p className="mb-1 text-[13.5px] font-medium text-white/75">{aTraduire.length ? 'À traduire' : 'Tous tes blocs sont traduits.'}</p>
+          {aTraduire.length > 0 && <ul className="divide-y divide-white/[0.06] border-y border-white/[0.06]">
             {aTraduire.map(b => (
               <li key={b.id}>
-                <button type="button" onClick={() => traduire(b)} className="flex min-h-12 w-full items-center gap-3 px-4 text-left transition hover:bg-white/[0.04]">
+                <button type="button" onClick={() => traduire(b)} className="flex min-h-12 w-full items-center gap-3 rounded-xl px-1 text-left transition hover:bg-white/[0.04]">
                   <span className="min-w-0 flex-1 truncate text-[14.5px] font-medium text-white">{b.titre}</span>
                   <span className="shrink-0 text-[13px] text-white/55">{actives.filter(l => !b.traductions?.[l]).map(l => LANGUES_FR[l]).join(', ')}</span>
                   <Icone nom="ui-chevron" taille={16} className="-rotate-90 text-white/55" />
