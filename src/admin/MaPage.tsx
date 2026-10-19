@@ -69,13 +69,13 @@ export function MaPage({ compte, reglages, blocs, clics, onReglages, onOrdonner,
     </div>
   );
   const [envoi, setEnvoi] = useState(false);
-  // Le geste s'explique au-dessus de la page tant que deux blocs n'ont pas été ouverts, puis se tait.
-  const [ouverts, setOuverts] = useState(() => { try { return Number(localStorage.getItem('hopla-blocs-ouverts')) || 0; } catch { return 0; } });
+  // Le geste s'explique au-dessus de la page tant que deux blocs n'ont pas été ouverts, puis se tait (compté par compte, pas par appareil).
+  const [ouverts, setOuverts] = useState(() => { try { return Number(localStorage.getItem(`hopla-blocs-ouverts:${compte.pseudo}`)) || 0; } catch { return 0; } });
   // Et revient, tant qu'aucun bloc n'a jamais été déplacé, dès que la page en a trois : c'est là que l'ordre compte.
-  const [deplace, setDeplace] = useState(() => { try { return !!localStorage.getItem('hopla-bloc-deplace'); } catch { return false; } });
+  const [deplace, setDeplace] = useState(() => { try { return !!localStorage.getItem(`hopla-bloc-deplace:${compte.pseudo}`); } catch { return false; } });
   const astuce = ouverts < 2 || (!deplace && blocs.length >= 3);
-  const ordonner = (liste: Bloc[]) => { if (!deplace) { setDeplace(true); try { localStorage.setItem('hopla-bloc-deplace', '1'); } catch { /* stockage refusé */ } } onOrdonner(liste); };
-  const ouvrirBloc = (bloc: Bloc) => { if (ouverts < 2) { setOuverts(ouverts + 1); try { localStorage.setItem('hopla-blocs-ouverts', String(ouverts + 1)); } catch { /* stockage refusé */ } } onOuvrir(bloc); };
+  const ordonner = (liste: Bloc[]) => { if (!deplace) { setDeplace(true); try { localStorage.setItem(`hopla-bloc-deplace:${compte.pseudo}`, '1'); } catch { /* stockage refusé */ } } onOrdonner(liste); };
+  const ouvrirBloc = (bloc: Bloc) => { if (ouverts < 2) { setOuverts(ouverts + 1); try { localStorage.setItem(`hopla-blocs-ouverts:${compte.pseudo}`, String(ouverts + 1)); } catch { /* stockage refusé */ } } onOuvrir(bloc); };
   const fichier = useRef<HTMLInputElement>(null);
   const toile = useRef<HTMLDivElement>(null);
   const principal = compte.principal;

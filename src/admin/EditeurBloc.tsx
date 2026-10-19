@@ -135,7 +135,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
       }));
       vibrer(10);
       if (!image && !site.description) setErreur('Ce site ne donne ni image ni description. Ajoute-les à la main.', 'image');
-    } catch { setErreur('Impossible de lire ce site pour l’instant.', 'image'); }
+    } catch { setErreur('Impossible de lire ce site pour l’instant. Ajoute l’image et la description à la main.', 'image'); }
     finally { setLecture(false); }
   }
 

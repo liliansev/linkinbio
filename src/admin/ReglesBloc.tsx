@@ -39,7 +39,7 @@ export function Repli({ titre, icone, resume, ouvert: depart, children }: { titr
   );
 }
 
-const JOURS = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
+const JOURS = ['Lu', 'Ma', 'Me', 'Je', 'Ve', 'Sa', 'Di'];
 const NOMS = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche'];
 const fuseauNavigateur = () => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || FUSEAU_DEFAUT; } catch { return FUSEAU_DEFAUT; } };
 
@@ -84,7 +84,7 @@ export function RegleMoment({ b, maj, erreur }: { b: Bloc; maj: (c: Partial<Bloc
               <Champ label="À"><input type="time" className={classeSaisie} value={c.a} onChange={e => e.target.value && majCreneau({ a: e.target.value })} /></Champ>
             </div>
             <Segments label="Ce que fait le créneau" valeur={c.effet} onChange={effet => majCreneau({ effet })}
-              options={[{ id: 'afficher', nom: 'Visible seulement' }, { id: 'avant', nom: 'En tête de page' }]} />
+              options={[{ id: 'afficher', nom: 'Seulement à ces heures' }, { id: 'avant', nom: 'En tête à ces heures' }]} />
             <p className="text-[12.5px] leading-snug text-white/50">
               {c.effet === 'avant' ? `Ce bloc passe en tête de ta page, mis en avant, ${decrireCreneau(c)}.` : `Ce bloc n’apparaît que ${decrireCreneau(c)}.`} Heure de {c.fuseau.split('/').pop()?.replace(/_/g, ' ')}.
             </p>
@@ -112,7 +112,7 @@ export function RegleReseaux({ b, maj, reseaux }: { b: Bloc; maj: (c: Partial<Bl
   const [premier, setPremier] = useState(enTete.length > 0);
   return (
     <Repli titre="Afficher sur" icone="cible" resume={resume} ouvert={false}>
-      <p className="text-[12.5px] leading-snug text-white/55">Désactivé, ce bloc se cache pour ceux qui arrivent de ce réseau par le lien de ta bio. Hopla le reconnaît tout seul ; les autres visiteurs le voient toujours.</p>
+      <p className="text-[12.5px] leading-snug text-white/55">Coupe un réseau : ceux qui arrivent de là ne verront pas ce bloc. Les autres le voient toujours.</p>
       <ul className="-my-1 divide-y divide-white/[0.06]" aria-label="Réseaux où ce bloc s’affiche">
         {liste.map(s => {
           const vu = visible(s);
@@ -134,7 +134,7 @@ export function RegleReseaux({ b, maj, reseaux }: { b: Bloc; maj: (c: Partial<Bl
           <button type="button" onClick={() => setPremier(!premier)} aria-expanded={premier}
             className="flex min-h-12 w-full items-center gap-3 text-left text-[14.5px] font-medium text-white">
             <span className="flex w-4 justify-center text-white/75"><Icone nom="drapeau" taille={16} /></span>
-            <span className="flex-1">En tête pour</span>
+            <span className="flex-1">En tête de ta page pour</span>
             <span className="min-w-0 truncate text-[13px] font-normal text-white/55">{!premier && (enTete.length ? noms(enTete) : 'Aucun réseau')}</span>
             <Icone nom="ui-chevron" taille={18} className={`shrink-0 text-white/75 transition-transform duration-300 ${premier ? 'rotate-180' : ''}`} />
           </button>

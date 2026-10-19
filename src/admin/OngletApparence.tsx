@@ -50,6 +50,7 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
   const [envoi, setEnvoi] = useState(false);
   const [photoRatee, setPhotoRatee] = useState(false);
   const [enSaisie, setEnSaisie] = useState<Reseau | null>(null);
+  const [ligne, setLigne] = useState<Reseau | null>(null);
   // Seule dans une feuille, la partie n'a pas de cadre : la feuille en est déjà un.
   const nu = parties.length === 1;
   // Un thème choisi par-dessus des couleurs à soi : elles partent, mais un toucher les rend.
@@ -128,7 +129,7 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
         <p className="mb-3 text-[13px] leading-snug text-white/60">{vedettes === 0
           ? 'Aucun lien n’est mis en avant pour l’instant : touche un lien sur ta page, puis « Mis en avant » dans Plus de réglages. L’animation choisie ici s’y appliquera.'
           : 'Pour les liens mis en avant. Chaque lien peut aussi choisir la sienne.'}</p>
-        <div className="lp lp-mini rounded-2xl p-2.5" style={variablesTheme(theme) as CSSProperties} data-bouton={reglages.bouton.style} data-forme={reglages.bouton.forme} data-ombre={reglages.bouton.ombre} data-police={theme.police} data-decor={theme.decor}>
+        <div className="lp lp-mini rounded-2xl p-3" style={variablesTheme(theme) as CSSProperties} data-bouton={reglages.bouton.style} data-forme={reglages.bouton.forme} data-ombre={reglages.bouton.ombre} data-police={theme.police} data-decor={theme.decor}>
           <ul role="radiogroup" onKeyDown={e => flechesRadio(e)} aria-label="Animation des liens mis en avant" className="grid grid-cols-2 gap-2">
             {ANIMATIONS.map(a => {
               const choisi = reglages.animation === a;
@@ -199,18 +200,18 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
             // Un pseudo qui ne mène nulle part se dit sous le champ, une fois quitté ; il ne s'affiche pas sur la page.
             const faux = enSaisie !== r.reseau && !!r.url.trim() && !urlReseau(r.reseau, r.url);
             return (
-            <li key={r.reseau} className="flex flex-wrap items-center gap-1.5">
+            <li key={r.reseau} className="flex flex-wrap items-center gap-1.5" onFocus={() => setLigne(r.reseau)} onBlur={e => { if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setLigne(l => (l === r.reseau ? null : l)); }}>
               <Icone nom={r.reseau} taille={22} className="w-7 shrink-0 text-white" />
               {/* Un pseudo suffit, comme aux premiers pas : il devient l'adresse du profil en quittant le champ. */}
               <input className={`${classeSaisie} min-w-0 flex-1 py-2.5`} value={pseudoReseau(r.reseau, r.url)} onFocus={() => setEnSaisie(r.reseau)}
                 aria-invalid={faux || undefined} aria-describedby={faux ? `reseau-faux-${r.reseau}` : undefined} aria-label={NOMS_RESEAUX[r.reseau]} placeholder={EXEMPLES[r.reseau]} inputMode={r.reseau === 'email' ? 'email' : 'url'} autoCapitalize="none" autoCorrect="off"
                 onChange={e => maj({ reseaux: reglages.reseaux.map((x, j) => (j === i ? { ...x, url: e.target.value } : x)) })}
                 onBlur={e => { setEnSaisie(null); const u = urlReseau(r.reseau, e.target.value); if (u && u !== r.url) maj({ reseaux: reglages.reseaux.map((x, j) => (j === i ? { ...x, url: u } : x)) }); }} />
-              {/* Monter et descendre, à la taille du pouce : l'ordre se règle sans glisser (seulement s'il y a un ordre à régler). */}
+              {/* Monter et descendre, à la taille du pouce, sur la ligne touchée seulement : le champ garde sa largeur sur les autres. */}
               <button type="button" disabled={i === 0} aria-label={`Monter ${NOMS_RESEAUX[r.reseau]}`} onClick={() => { const l = [...reglages.reseaux]; [l[i - 1], l[i]] = [l[i], l[i - 1]]; maj({ reseaux: l }); }}
-                className={`h-11 w-9 shrink-0 place-items-center text-white/50 hover:text-white disabled:invisible ${reglages.reseaux.length > 1 ? 'grid' : 'hidden'}`}><Icone nom="ui-chevron" taille={18} className="rotate-180" /></button>
+                className={`h-11 w-9 shrink-0 place-items-center text-white/50 hover:text-white disabled:invisible ${reglages.reseaux.length > 1 && ligne === r.reseau ? 'grid' : 'hidden'}`}><Icone nom="ui-chevron" taille={18} className="rotate-180" /></button>
               <button type="button" disabled={i === reglages.reseaux.length - 1} aria-label={`Descendre ${NOMS_RESEAUX[r.reseau]}`} onClick={() => { const l = [...reglages.reseaux]; [l[i + 1], l[i]] = [l[i], l[i + 1]]; maj({ reseaux: l }); }}
-                className={`h-11 w-9 shrink-0 place-items-center text-white/50 hover:text-white disabled:invisible ${reglages.reseaux.length > 1 ? 'grid' : 'hidden'}`}><Icone nom="ui-chevron" taille={18} /></button>
+                className={`h-11 w-9 shrink-0 place-items-center text-white/50 hover:text-white disabled:invisible ${reglages.reseaux.length > 1 && ligne === r.reseau ? 'grid' : 'hidden'}`}><Icone nom="ui-chevron" taille={18} /></button>
               <button type="button" aria-label={`Retirer ${NOMS_RESEAUX[r.reseau]}`} onClick={() => maj({ reseaux: reglages.reseaux.filter((_, j) => j !== i) })} className="grid h-11 w-9 shrink-0 place-items-center text-white/50 hover:text-white"><Icone nom="ui-fermer" taille={18} /></button>
               {faux && <p id={`reseau-faux-${r.reseau}`} role="alert" className="w-full pl-9 text-[13px] font-medium text-red-300">{pourquoiPasReseau(r.reseau, pseudoReseau(r.reseau, r.url))}</p>}
             </li>

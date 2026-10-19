@@ -40,7 +40,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
   const [onglet, setOnglet] = useState<Onglet>('page');
   const [edition, setEdition] = useState<{ bloc: Bloc; nouveau: boolean; enBas?: boolean; traduire?: boolean } | null>(null);
   const [sauvegarde, setSauvegarde] = useState<Sauvegarde>('ok');
-  const [toast, setToast] = useState<{ texte: string; annuler?: () => void; action?: string; genre?: 'ok' | 'info' } | null>(null);
+  const [toast, setToast] = useState<{ texte: string; annuler?: () => void; action?: string; genre?: 'ok' | 'info'; long?: boolean } | null>(null);
   // Le doigt ou le focus sur le message le garde affiché : « Annuler » ne file pas pendant qu'on le vise.
   const [toastTenu, setToastTenu] = useState(false);
   const [apercu, setApercu] = useState(false);
@@ -104,7 +104,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
     document.addEventListener('keydown', touche);
     return () => { document.removeEventListener('keydown', touche); document.body.style.overflow = corps; avant?.focus({ preventScroll: true }); };
   }, [apercu]);
-  useEffect(() => { if (!toast || toastTenu) return; const t = setTimeout(() => setToast(null), toast.annuler ? 5000 : 2600); return () => clearTimeout(t); }, [toast, toastTenu]);
+  useEffect(() => { if (!toast || toastTenu) return; const t = setTimeout(() => setToast(null), toast.long ? 8000 : toast.annuler ? 5000 : 2600); return () => clearTimeout(t); }, [toast, toastTenu]);
   // Annuler, mis au point par le code, disparaît avec le toast : sans ce rappel, le toast suivant ne partirait plus.
   useEffect(() => { setToastTenu(false); }, [toast]);
   useEffect(() => () => clearTimeout(minuteur.current), []);
@@ -209,6 +209,8 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
     ecrire(() => api.supprimerBloc(bloc.id));
     setToast({
       texte: 'Retiré de ta page',
+      // Retirer ne demande pas de confirmation : l'annulation reste offerte plus longtemps.
+      long: true,
       annuler: () => {
         setBlocs(avant);
         setToast({ texte: 'Remis sur ta page', genre: 'info' });
