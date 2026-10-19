@@ -9,15 +9,16 @@ import { Icone } from '../components/Icone.tsx';
 import { Bascule, BoutonCopier, BoutonSecondaire, Carte, Champ, Interrupteur, classeSaisie, flechesRadio, vibrer } from './ui.tsx';
 import { LANGUES_FR } from './ReglesBloc.tsx';
 
-export function OngletReglages({ reglages, compte, blocs = [], traduire, onChange, onDeconnexion, urlExport, supprimerMonCompte, abonnement, paiement, ouvrirPaiement, ouvrirPortail }: {
+export function OngletReglages({ reglages, compte, blocs = [], traduire, onChange, onDeconnexion, urlExport, supprimerMonCompte, abonnement, paiement, ouvrirPaiement, ouvrirPortail, sectionInitiale }: {
   reglages: Reglages; compte: ComptePage; blocs?: Bloc[]; traduire?: (b: Bloc) => void; onChange: (r: Reglages) => void; onDeconnexion: () => void;
   urlExport: string | null; supprimerMonCompte: (confirmation: string) => Promise<{ ok: boolean; message: string }>;
   abonnement: EtatAbonnement & { pro: boolean }; paiement: boolean;
   ouvrirPaiement: (periode: Periode) => Promise<string>; ouvrirPortail: () => Promise<string>;
+  sectionInitiale?: 'abonnement';
 }) {
   const URL_PUBLIQUE = urlPage(compte);
   const [qr, setQr] = useState('');
-  const [ouverte, setOuverte] = useState<Section | null>(null);
+  const [ouverte, setOuverte] = useState<Section | null>(sectionInitiale ?? null);
   // Ouvrir ou quitter une section déplace le focus : sur son retour en entrant, sur sa ligne en sortant.
   const retour = useRef<HTMLButtonElement>(null);
   const derniere = useRef<Section | null>(null);
@@ -45,13 +46,13 @@ export function OngletReglages({ reglages, compte, blocs = [], traduire, onChang
   ];
 
   if (ouverte) return (
-    <div className="flex flex-col gap-3">
-      <div className="sticky top-14 z-10 -mx-4 bg-nuit/95 px-3 py-1 backdrop-blur lg:top-0">
-        {/* Un seul titre : le retour porte le nom de la section, la carte dessous n'en répète pas. */}
+    <div className="adm-settings-detail flex flex-col gap-4">
+      <div>
         <button ref={retour} type="button" onClick={() => setOuverte(null)} aria-label={`${sections.find(x => x.id === ouverte)?.nom ?? ''}, revenir à tous les réglages`}
-          className="flex min-h-11 items-center gap-1 rounded-full pr-3 text-[15px] font-medium text-white hover:text-white/80">
-          <Icone nom="ui-chevron" taille={18} className="rotate-90 text-white/60" /> {sections.find(x => x.id === ouverte)?.nom}
+          className="-ml-2 mb-3 flex min-h-11 items-center gap-1 rounded-xl px-2 text-[13px] font-medium text-white/60 hover:bg-white/[0.05] hover:text-white">
+          <Icone nom="ui-chevron" taille={16} className="rotate-90" /> Tous les réglages
         </button>
+        <h2 className="text-[20px] font-semibold tracking-tight">{sections.find(x => x.id === ouverte)?.nom}</h2>
       </div>
       {ouverte === 'abonnement' && <Abonnement abonnement={abonnement} ouvrirPaiement={ouvrirPaiement} ouvrirPortail={ouvrirPortail} />}
       {ouverte === 'partager' && <Carte>
@@ -99,38 +100,47 @@ export function OngletReglages({ reglages, compte, blocs = [], traduire, onChang
     </div>
   );
 
+  const lignes = (ids: Section[]) => sections.filter(l => ids.includes(l.id)).map(l => (
+    <li key={l.id}>
+      <button id={`reglage-${l.id}`} type="button" onClick={() => { setOuverte(l.id); scrollTo({ top: 0 }); }} className="adm-settings-row">
+        <span className="adm-settings-icon"><Icone nom={l.icone} taille={19} /></span>
+        <span className="min-w-0 flex-1 text-[14px] font-medium">{l.nom}</span>
+        <Icone nom="ui-chevron" taille={16} className="-rotate-90 text-white/55" />
+      </button>
+    </li>
+  ));
+
   return (
-    <div className="flex flex-col gap-4">
-      {/* Une ligne par sujet, qui s'ouvre à la place de la liste ; les réglages d'un seul interrupteur restent dans la liste. */}
-      <ul className="overflow-hidden rounded-xl bg-white/[0.03] ring-1 ring-white/[0.07]">
-        {sections.map((l, i) => (
-          <li key={l.id} className={i > 0 ? 'border-t border-white/[0.07]' : ''}>
-            <button id={`reglage-${l.id}`} type="button" onClick={() => { setOuverte(l.id); scrollTo({ top: 0 }); }} className="flex min-h-14 w-full items-center gap-3.5 px-4 text-left transition hover:bg-white/[0.04] active:bg-white/[0.06]">
-              <Icone nom={l.icone} taille={20} className="shrink-0 text-white/80" />
-              <span className="min-w-0 flex-1 truncate text-[15px] font-medium text-white">{l.nom}</span>
-              <Icone nom="ui-chevron" taille={16} className="-rotate-90 text-white/30" />
-            </button>
-          </li>
-        ))}
-        {bascules.map(l => (
-          <li key={l.nom} className="border-t border-white/[0.07]">
-            <div className="flex min-h-14 items-center gap-3.5 px-4">
-              <Icone nom={l.icone} taille={20} className="shrink-0 text-white/80" />
-              <span className="min-w-0 flex-1 text-[15px] font-medium text-white">{l.nom}</span>
-              <Bascule actif={l.actif} label={l.nom} onClick={() => { vibrer(); l.changer(!l.actif); }} />
-            </div>
-          </li>
-        ))}
-      </ul>
-
+    <div className="adm-settings flex flex-col gap-7">
+      <section aria-labelledby="reglages-page">
+        <h2 id="reglages-page" className="mb-3 text-[15px] font-semibold">Ta page</h2>
+        <ul className="adm-settings-list">{lignes(['partager', 'partage', 'langues'])}</ul>
+      </section>
+      <section aria-labelledby="reglages-preferences">
+        <h2 id="reglages-preferences" className="mb-3 text-[15px] font-semibold">Préférences</h2>
+        <ul className="adm-settings-list">
+          {bascules.map(l => (
+            <li key={l.nom}>
+              <div className="adm-settings-row">
+                <span className="adm-settings-icon"><Icone nom={l.icone} taille={19} /></span>
+                <span className="min-w-0 flex-1 text-[14px] font-medium">{l.nom}</span>
+                <Bascule actif={l.actif} label={l.nom} onClick={() => { vibrer(); l.changer(!l.actif); }} />
+              </div>
+            </li>
+          ))}
+        </ul>
+      </section>
+      <section aria-labelledby="reglages-compte">
+        <h2 id="reglages-compte" className="mb-3 text-[15px] font-semibold">Ton compte</h2>
+        <ul className="adm-settings-list">{lignes(['abonnement', 'donnees'])}</ul>
+      </section>
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-5">
       <a href={`mailto:${CONTACT_LEGAL}?subject=${encodeURIComponent('Hopla : une question')}`}
-        className="flex min-h-14 items-center gap-3.5 rounded-xl border border-white/[0.07] bg-white/[0.03] px-4 text-[15px] font-medium text-white transition hover:bg-white/[0.05]">
-        <Icone nom="message" taille={20} className="shrink-0 text-white/80" />
-        <span className="flex-1">Une question ? Écris-nous</span>
-        <Icone nom="ui-chevron" taille={16} className="-rotate-90 text-white/30" />
+        className="inline-flex min-h-11 items-center gap-2 rounded-xl px-2 text-[13px] font-medium text-white/60 hover:text-white">
+        <Icone nom="message" taille={18} />Une question ? Écris-nous
       </a>
-
-      <BoutonSecondaire onClick={onDeconnexion} className="self-center">Me déconnecter</BoutonSecondaire>
+      <BoutonSecondaire onClick={onDeconnexion}>Me déconnecter</BoutonSecondaire>
+      </div>
     </div>
   );
 }

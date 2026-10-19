@@ -44,14 +44,14 @@ export function Champ({ label, aide, erreur, children }: { label: string; aide?:
   );
 }
 
-export const classeSaisie = 'w-full rounded-lg border border-white/15 bg-nuit px-3 py-2.5 text-[16px] text-white placeholder:text-white/50 outline-none transition focus:border-white/70 aria-[invalid=true]:border-red-400/70';
+export const classeSaisie = 'adm-field w-full rounded-xl border border-white/15 bg-nuit px-3.5 py-3 text-[16px] text-white placeholder:text-white/50 transition focus:border-white/70 aria-[invalid=true]:border-red-400/70';
 
 export function Carte({ titre, action, children, className = '', id, nu = false }: { titre?: string; action?: ReactNode; children: ReactNode; className?: string; id?: string; nu?: boolean }) {
   return (
-    <section id={id} className={`scroll-mt-20 ${nu ? '' : 'rounded-xl border border-white/[0.07] bg-white/[0.03] p-4'} ${className}`}>
+    <section id={id} className={`scroll-mt-24 ${nu ? '' : 'adm-card'} ${className}`}>
       {(titre || action) && (
         <div className="mb-3 flex items-center justify-between gap-3">
-          {titre && <h2 className="text-[14px] font-medium text-white">{titre}</h2>}
+          {titre && <h2 className="text-[15px] font-semibold tracking-[-0.015em] text-white">{titre}</h2>}
           {action}
         </div>
       )}
@@ -180,7 +180,7 @@ export function Feuille({ ouverte, onFermer, retenir, titre, children, pied, cot
         <div {...tirer} className="shrink-0 touch-none select-none">
           <div className="mx-auto mt-2 h-1 w-9 rounded-full bg-white/20 sm:hidden" />
           <header className="flex items-center justify-between gap-3 px-5 pt-2.5 pb-2 sm:pt-4">
-            <h2 className="text-[15.5px] font-semibold tracking-[-0.01em] text-white">{titre}</h2>
+            <h2 className="text-[18px] font-semibold tracking-[-0.025em] text-white">{titre}</h2>
             <button type="button" onClick={() => fermer()} className="-mr-3 grid h-11 w-11 place-items-center rounded-full text-white/50 transition hover:bg-white/10 hover:text-white active:scale-90" aria-label="Fermer">
               <Icone nom="ui-fermer" taille={18} />
             </button>
@@ -233,11 +233,11 @@ export function BoutonCopier({ texte, onCopie, label, compact = false }: { texte
 }
 
 export function BoutonPrincipal({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) {
-  return <button type="button" data-principal="" aria-keyshortcuts="Control+Enter Meta+Enter" {...props} className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-white px-5 text-[14px] font-semibold text-nuit transition hover:brightness-105 active:scale-[0.98] disabled:opacity-50 ${props.className ?? ''}`}>{children}</button>;
+  return <button type="button" data-principal="" aria-keyshortcuts="Control+Enter Meta+Enter" {...props} className={`adm-button-primary inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-white px-5 text-[14px] font-semibold text-nuit transition active:scale-[0.98] disabled:opacity-50 ${props.className ?? ''}`}>{children}</button>;
 }
 
 export function BoutonSecondaire({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) {
-  return <button type="button" {...props} className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-white/[0.07] px-4 text-[14px] font-medium text-white transition hover:bg-white/[0.13] active:scale-[0.98] disabled:opacity-50 ${props.className ?? ''}`}>{children}</button>;
+  return <button type="button" {...props} className={`adm-button-outline inline-flex min-h-11 items-center justify-center gap-2 px-4 text-[14px] font-medium text-white transition active:scale-[0.98] disabled:opacity-50 ${props.className ?? ''}`}>{children}</button>;
 }
 
 /** Un choix parmi quelques options, en pastilles. */

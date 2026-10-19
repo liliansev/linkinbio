@@ -93,8 +93,7 @@ export function MaPage({ compte, reglages, blocs, clics, onReglages, onOrdonner,
   }
   /** Le design s'ouvre en laissant voir le haut de la page (sur ordinateur, elle est à gauche de la feuille). */
   function design() {
-    const nom = toile.current?.querySelector('.lp-nom');
-    if (nom) scrollTo({ top: nom.getBoundingClientRect().top + scrollY - 80 });
+    if (toile.current) scrollTo({ top: Math.max(0, toile.current.getBoundingClientRect().top + scrollY - 96) });
     setFeuille('design');
   }
   const direct = <ApercuDirect page={{ reglages, blocs: visibles, compte }} />;
@@ -149,28 +148,39 @@ export function MaPage({ compte, reglages, blocs, clics, onReglages, onOrdonner,
   };
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="adm-editor-layout">
       {/* Les deux gestes de la page, en tête, sur téléphone comme sur ordinateur : rien ne flotte au-dessus des onglets. */}
-      <div className="order-0 flex items-center justify-end gap-2 pt-3 lg:pt-0">
-        <button type="button" onClick={design} className="flex min-h-11 items-center gap-1.5 rounded-full bg-white/[0.07] px-4 text-[14px] font-medium text-white transition hover:bg-white/[0.12] active:scale-95">
-          <Icone nom="palette" taille={16} /> Design
-        </button>
-        <button type="button" onClick={() => { vibrer(5); setFeuille('ajout'); }} aria-keyshortcuts="A" title="Ajouter (A, ou colle une adresse)" className="flex min-h-11 items-center gap-1.5 rounded-full bg-peche px-4 text-[14px] font-semibold text-nuit transition hover:brightness-105 active:scale-95">
-          <Icone nom="ui-plus" taille={16} /> Ajouter
-        </button>
-      </div>
+      <aside className="adm-editor-tools" aria-label="Outils de la page">
+        <div className="mb-5 hidden lg:block">
+          <span className="mb-4 grid h-10 w-10 place-items-center rounded-xl bg-white/[0.05]"><Icone nom="baguette" taille={21} /></span>
+          <h2 className="text-[19px] font-semibold leading-snug tracking-tight">À toi de jouer.</h2>
+          <p className="mt-2 text-[13px] leading-relaxed text-white/60">Tes liens, ton style, ton univers. Fais de cette page un peu de toi.</p>
+        </div>
+        <div className="grid grid-cols-2 gap-2 lg:grid-cols-1 lg:gap-2.5">
+          <BoutonPrincipal onClick={() => { vibrer(5); setFeuille('ajout'); }} aria-keyshortcuts="A" title="Ajouter (A, ou colle une adresse)"><Icone nom="ui-plus" taille={17} />Ajouter un bloc</BoutonPrincipal>
+          <BoutonSecondaire onClick={design}><Icone nom="palette" taille={17} />Personnaliser</BoutonSecondaire>
+          <button type="button" onClick={() => setFeuille('reseaux')} className="adm-button-outline hidden min-h-11 items-center justify-center gap-2 px-4 text-[13px] font-medium lg:flex"><Icone nom="globe" taille={17} />Réseaux sociaux</button>
+        </div>
+        <div className="mt-6 hidden border-t border-white/[0.08] pt-5 lg:block">
+          <div className="flex justify-between text-[13px]"><span className="text-white/60">Contenu</span><span className="font-medium">{visibles.length} bloc{visibles.length > 1 ? 's' : ''}</span></div>
+          <div className="mt-2.5 flex justify-between gap-3 text-[13px]"><span className="text-white/60">Thème</span><span className="text-right font-medium">{themeDe(reglages).nom}</span></div>
+        </div>
+      </aside>
+
+      <div className="adm-editor-content">
 
       {/* L'adresse et « Bien démarrer » d'abord : ce qui reste à faire se voit sans dérouler toute la page. */}
-      <div className="order-1 lg:order-none"><HautLiens compte={compte} reglages={reglages} blocs={blocs} aller={aller} annoncer={annoncer} /></div>
+      <HautLiens compte={compte} reglages={reglages} blocs={blocs} aller={aller} annoncer={annoncer} />
 
       {/* Sur ordinateur, la feuille de design se pose à droite : la page glisse à gauche pour rester visible en entier. */}
-      <div className={`order-2 transition-transform duration-300 motion-reduce:transition-none lg:order-none ${feuille === 'design' || feuille === 'reseaux' ? 'lg:-translate-x-[200px]' : ''}`}>
+      <div>
         <div ref={toile}
-          className="adm-apercu adm-toile relative -mx-4 overflow-hidden lg:mx-0 lg:rounded-[30px] lg:ring-1 lg:ring-white/10 lg:shadow-[0_30px_80px_-40px_rgba(0,0,0,0.3)]">
+          className="adm-apercu adm-toile relative overflow-hidden rounded-[24px] ring-1 ring-white/10 lg:rounded-[28px]">
           <PageLiens page={{ reglages, blocs: visibles, compte }} edition={edition} />
           {/* Le geste s'écrit sur la page même, dans sa couleur, en haut à gauche : pas une ligne de plus au-dessus d'elle. */}
           {astuce && <p className="pointer-events-none absolute top-4 left-4 right-16 text-[13px] font-medium leading-snug lg:left-6" style={{ color: variablesTheme(themeDe(reglages))['--doux'] }}>{visibles.length < 2 ? <><span className="lg:hidden">Touche pour modifier.</span><span className="hidden lg:inline">Clique pour modifier.</span></> : <><span className="lg:hidden">Touche pour modifier, maintiens pour déplacer.</span><span className="hidden lg:inline">Clique pour modifier, fais glisser pour déplacer.</span></>}</p>}
         </div>
+      </div>
       </div>
 
       <input ref={fichier} type="file" accept="image/*" hidden onChange={e => photo(e.target.files?.[0])} />

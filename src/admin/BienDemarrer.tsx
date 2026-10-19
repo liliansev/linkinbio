@@ -41,10 +41,9 @@ export function HautLiens({ compte, reglages, blocs, aller, annoncer }: { compte
   return (
     <div className="flex flex-col gap-3">
       {/* Sur téléphone, l'adresse et Copier sont dans l'en-tête ; ici, seulement sur ordinateur. */}
-      <div className="hidden items-center gap-2 rounded-xl border border-white/[0.07] bg-white/[0.03] p-1 pl-3 lg:flex">
+      <div className="adm-address hidden items-center gap-2 p-1 pl-4 lg:flex">
         <span className="relative flex h-2 w-2 shrink-0" title="En ligne">
-          <span className="absolute inset-0 animate-ping rounded-full bg-emerald-400/60 motion-reduce:hidden" />
-          <span className="relative h-2 w-2 rounded-full bg-emerald-400" />
+          <span className="relative h-2 w-2 rounded-full bg-white/70" />
         </span>
         <a href={adresse} target="_blank" rel="noopener" title="Ouvrir ma page" className="min-w-0 flex-1 truncate text-[14px] font-medium text-white underline-offset-4 hover:underline" translate="no">{courte}</a>
         <BoutonCopier texte={adresse} onCopie={marquerPartagee} label="Copier l’adresse de ta page" />
@@ -56,7 +55,7 @@ export function HautLiens({ compte, reglages, blocs, aller, annoncer }: { compte
 
       {/* Une seule ligne tant qu'on ne l'ouvre pas : la page qu'on modifie reste dans le premier écran du téléphone. */}
       {!masque && faites < etapes.length && (
-        <section className="adm-cascade rounded-xl border border-white/[0.07] bg-white/[0.03]" aria-label="Bien démarrer">
+        <section className="adm-checklist adm-cascade" aria-label="Bien démarrer">
           <div className="flex items-center">
             <button type="button" onClick={() => setOuvert(o => !o)} aria-expanded={ouvert}
               className="flex min-h-12 min-w-0 flex-1 items-center gap-3 rounded-xl pl-3.5 text-left">
