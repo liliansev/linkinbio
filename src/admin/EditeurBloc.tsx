@@ -204,7 +204,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
         {!nouveau && etiquettes(b).length > 0 && <p className="text-[13px] leading-snug text-white/60">{etiquettes(b).join(' · ')}</p>}
         {(b.type === 'lien' || (b.type === 'preuve' && preuveRemplie)) && !clavier && (
           // L'aperçu reste collé en haut de la feuille : chaque réglage se voit sans remonter.
-          <div className="sticky top-0 z-10 -mx-5 bg-[#121a2b] px-5 pb-3 pt-1 shadow-[0_14px_14px_-12px_#121a2b]">
+          <div className="sticky top-0 z-10 -mx-5 bg-nuit px-5 pb-3 pt-1 shadow-[0_14px_14px_-12px_#ffffff]">
             <div className="lp lp-mini -mx-1 rounded-[20px] p-4 ring-1 ring-white/[0.06]" style={variablesTheme(theme) as CSSProperties}
               data-bouton={reglages.bouton.style} data-forme={reglages.bouton.forme} data-ombre={reglages.bouton.ombre} data-police={theme.police} data-decor={theme.decor} aria-label="Aperçu du bouton">
               <div className="pointer-events-none" inert>

@@ -62,8 +62,8 @@ export function HautLiens({ compte, reglages, blocs, aller, annoncer }: { compte
               className="flex min-h-12 min-w-0 flex-1 items-center gap-3 rounded-xl pl-3.5 text-left">
               <span className="relative grid h-6 w-6 shrink-0 place-items-center">
                 <svg viewBox="0 0 24 24" className="absolute inset-0 -rotate-90" aria-hidden="true">
-                  <circle cx="12" cy="12" r="10" fill="none" stroke="rgb(255 255 255 / 0.12)" strokeWidth="2.5" />
-                  <circle cx="12" cy="12" r="10" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"
+                  <circle cx="12" cy="12" r="10" fill="none" stroke="rgb(0 0 0 / 0.1)" strokeWidth="2.5" />
+                  <circle cx="12" cy="12" r="10" fill="none" stroke="#0a0a0a" strokeWidth="2.5" strokeLinecap="round"
                     strokeDasharray={`${(faites / etapes.length) * 62.8} 62.8`} />
                 </svg>
               </span>

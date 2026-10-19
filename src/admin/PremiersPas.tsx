@@ -191,7 +191,7 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
             <button type="button" onClick={() => fichier.current?.click()} className="flex shrink-0 flex-col items-center gap-1 self-start transition active:scale-95">
               <span className="relative grid h-[60px] w-[60px] place-items-center overflow-hidden rounded-full bg-white/[0.08] text-white/70">
                 {reglages.profil.avatar ? <img src={reglages.profil.avatar} alt="" className="h-full w-full object-cover" /> : <Icone nom="photo" taille={24} />}
-                {envoi && <span className="absolute inset-0 grid place-items-center bg-black/55 text-[12px] text-white">…</span>}
+                {envoi && <span className="absolute inset-0 grid place-items-center bg-black/55 text-[12px] text-nuit">…</span>}
               </span>
               <span className="text-[12.5px] font-medium text-white/60">{reglages.profil.avatar ? 'Changer' : 'Ta photo'}</span>
             </button>
@@ -368,13 +368,13 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
 
       {/* L'aperçu : la vraie page, en petit, qui se remplit à chaque réponse. */}
       <div className="flex min-h-[16dvh] max-h-[38dvh] flex-1 justify-center px-6 pt-1 pb-4 lg:max-h-none lg:order-last lg:min-h-0 lg:items-center lg:p-8" aria-hidden="true" inert>
-        <div className={`adm-miroir adm-apercu adm-toile pointer-events-none relative max-h-[640px] select-none lg:h-[min(640px,calc(100dvh-8rem))] overflow-hidden rounded-[26px] ring-1 ring-white/10 shadow-[0_30px_70px_-30px_rgba(0,0,0,0.9)] transition-shadow duration-700 ${etape === 'fin' ? 'adm-miroir-fin' : ''}`}>
+        <div className={`adm-miroir adm-apercu adm-toile pointer-events-none relative max-h-[640px] select-none lg:h-[min(640px,calc(100dvh-8rem))] overflow-hidden rounded-[26px] ring-1 ring-white/10 shadow-[0_30px_70px_-30px_rgba(0,0,0,0.28)] transition-shadow duration-700 ${etape === 'fin' ? 'adm-miroir-fin' : ''}`}>
           <div className="adm-miroir-page"><PageLiens page={{ reglages, blocs: visibles, compte }} apercu /></div>
         </div>
       </div>
 
       {/* Les questions, sous le pouce. Le bouton reste visible ; c'est le contenu qui défile s'il déborde. */}
-      <section key={etape} className="adm-onglet flex min-h-0 flex-1 flex-col lg:flex-none rounded-t-[28px] border-t border-white/[0.08] bg-[#121a2b] lg:max-h-none lg:min-h-0 lg:rounded-none lg:border-t-0 lg:border-r lg:bg-transparent"
+      <section key={etape} className="adm-onglet flex min-h-0 flex-1 flex-col lg:flex-none rounded-t-[28px] border-t border-white/[0.08] bg-nuit lg:max-h-none lg:min-h-0 lg:rounded-none lg:border-t-0 lg:border-r lg:bg-transparent"
         aria-labelledby="premiers-pas-titre">
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pt-5 lg:flex-none lg:px-8 lg:pt-10">
           {etape === 'fin' && <Icone nom="check" taille={30} className="mb-2 text-emerald-300" />}
