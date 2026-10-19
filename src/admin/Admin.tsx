@@ -28,16 +28,24 @@ type Sauvegarde = 'ok' | 'encours' | 'erreur';
 // Les mêmes pictos pleins que partout ailleurs dans le back office.
 const ONGLETS: { id: Onglet; nom: string; icone: string }[] = [
   { id: 'page', nom: 'Ma page', icone: 'document' },
-  { id: 'stats', nom: 'Stats', icone: 'courbe' },
+  { id: 'stats', nom: 'Statistiques', icone: 'courbe' },
   { id: 'comptes', nom: 'Comptes', icone: 'equipe' },
   { id: 'reglages', nom: 'Réglages', icone: 'reglage' },
 ];
+
+const DESCRIPTIONS: Record<Onglet, string> = {
+  page: 'Un seul lien. Tout ce que tu veux partager.',
+  stats: 'Comprends ce qui plaît et ce qui fait cliquer.',
+  comptes: 'Les invitations et les pages de ta communauté.',
+  reglages: 'Le partage, les préférences et les données de ton compte.',
+};
 
 export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatAdmin; demo?: boolean }) {
   const [blocs, setBlocs] = useState(initial.blocs);
   const [reglages, setReglages] = useState(initial.reglages);
   const [clics, setClics] = useState(initial.clics);
   const [onglet, setOnglet] = useState<Onglet>('page');
+  const [sectionReglage, setSectionReglage] = useState<'abonnement' | undefined>();
   const [edition, setEdition] = useState<{ bloc: Bloc; nouveau: boolean; enBas?: boolean; traduire?: boolean } | null>(null);
   const [sauvegarde, setSauvegarde] = useState<Sauvegarde>('ok');
   const [toast, setToast] = useState<{ texte: string; annuler?: () => void; action?: string; genre?: 'ok' | 'info'; long?: boolean } | null>(null);
@@ -130,12 +138,12 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
     return () => clearInterval(t);
   }, [api, demo]);
 
-  /** Un onglet, ouvert sur une de ses cartes. */
-  function ouvrirSur(o: Onglet, ancre: string) {
+  function choisirOnglet(o: Onglet) {
+    setSectionReglage(undefined);
     setOnglet(o);
-    setTimeout(() => document.getElementById(ancre)?.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' }), 60);
+    scrollTo({ top: 0 });
   }
-  function versAbonnement() { ouvrirSur('reglages', 'abonnement'); }
+  function versAbonnement() { setSectionReglage('abonnement'); setOnglet('reglages'); scrollTo({ top: 0 }); }
 
   function changerReglages(r: Reglages) {
     setReglages(r);
@@ -259,48 +267,51 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
   const indicateur = sauvegarde === 'encours' ? 'Enregistrement…' : sauvegarde === 'erreur' ? 'Non enregistré' : 'Enregistré';
 
   return (
-    <div className="adm min-h-dvh bg-nuit font-sans text-white antialiased">
+    <div className="adm adm-shell min-h-dvh font-sans text-white antialiased">
       {/* Sur ordinateur, une barre latérale comme dans tout SaaS : la marque, les sections, l'état de l'enregistrement, la page en ligne. */}
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-60 flex-col border-r border-white/[0.08] bg-[#fafafa] px-3 py-4 lg:flex" aria-label="Navigation">
-        <div className="flex items-center gap-2.5 px-2 pb-5">
+      <aside className="adm-sidebar fixed inset-y-0 left-0 z-30 hidden w-60 flex-col lg:flex" aria-label="Navigation">
+        <div className="flex items-center gap-3 px-3 pb-9 pt-2">
           <svg viewBox="0 0 256 256" className="h-7 w-7" aria-hidden="true"><rect width="256" height="256" rx="64" fill="#0a0a0a" /><g fill="#ffffff" transform="translate(40 40) scale(0.6875)"><path d="M165.66,90.34a8,8,0,0,1,0,11.32l-64,64a8,8,0,0,1-11.32-11.32l64-64A8,8,0,0,1,165.66,90.34ZM215.6,40.4a56,56,0,0,0-79.2,0L106.34,70.45a8,8,0,0,0,11.32,11.32l30.06-30a40,40,0,0,1,56.57,56.56l-30.07,30.06a8,8,0,0,0,11.31,11.32L215.6,119.6a56,56,0,0,0,0-79.2ZM138.34,174.22l-30.06,30.06a40,40,0,1,1-56.56-56.57l30.05-30.05a8,8,0,0,0-11.32-11.32L40.4,136.4a56,56,0,0,0,79.2,79.2l30.06-30.07a8,8,0,0,0-11.32-11.31Z" /></g></svg>
-          <span className="text-[15px] font-semibold tracking-[-0.01em]">Hopla</span>
+          <span className="text-[23px] font-semibold tracking-[-0.035em]">Hopla<span className="text-white/40">.</span></span>
         </div>
-        <nav className="flex flex-col gap-0.5" aria-label="Sections">
+        <nav className="flex flex-col gap-1.5" aria-label="Sections">
           {onglets.map(o => (
-            <button key={o.id} type="button" onClick={() => { if (o.id !== onglet) { setOnglet(o.id); scrollTo({ top: 0 }); } }} aria-current={onglet === o.id ? 'page' : undefined}
-              className={`flex min-h-9 items-center gap-2.5 rounded-lg px-2.5 text-[13.5px] font-medium transition ${onglet === o.id ? 'bg-white/[0.08] text-white' : 'text-white/55 hover:bg-white/[0.04] hover:text-white'}`}>
-              <Icone nom={o.icone} taille={18} />{o.nom}
+            <button key={o.id} type="button" onClick={() => { if (o.id !== onglet) choisirOnglet(o.id); }} aria-current={onglet === o.id ? 'page' : undefined}
+              className="adm-nav-item">
+              <Icone nom={o.icone} taille={20} />{o.nom}
+              {o.id === 'page' && <span className="adm-nav-count">{blocs.length}</span>}
             </button>
           ))}
         </nav>
         <div className="mt-auto flex flex-col gap-3">
           {/* L'adresse de la page vit en tête de Ma page, avec Copier : pas une deuxième fois ici. */}
-          <div className="flex items-center gap-2.5 border-t border-white/[0.06] px-1 pt-3">
-            {reglages.profil.avatar ? <img src={reglages.profil.avatar} alt="" className="h-8 w-8 rounded-full object-cover" /> : <span className="h-8 w-8 rounded-full bg-white/10" />}
+          <p className="px-3 text-[12px] leading-relaxed text-white/55">Un petit espace pour<br />tout ton univers.</p>
+          <div className="flex items-center gap-3 border-t border-white/[0.08] px-2 pt-5">
+            {reglages.profil.avatar ? <img src={reglages.profil.avatar} alt="" className="h-10 w-10 rounded-full object-cover ring-1 ring-white/10" /> : <span className="grid h-10 w-10 place-items-center rounded-full bg-white/[0.06]"><Icone nom="utilisateur" taille={20} /></span>}
             <div className="min-w-0 flex-1">
               <p className="truncate text-[13.5px] font-medium leading-tight">{reglages.profil.nom || 'Hopla'}</p>
-              <p className={`flex items-center gap-1.5 text-[11.5px] leading-tight ${sauvegarde === 'erreur' ? 'text-red-300' : 'text-white/55'}`}>
-                <span className={`h-1.5 w-1.5 rounded-full ${sauvegarde === 'encours' ? 'animate-pulse bg-amber-300 motion-reduce:animate-none' : sauvegarde === 'erreur' ? 'bg-red-400' : 'bg-emerald-400'}`} />{indicateur}
-              </p>
+              <p className="mt-1 text-[11.5px] text-white/55">{compte.principal ? 'Compte principal' : compte.pro ? 'Hopla Pro' : 'Hopla Gratuit'}</p>
             </div>
           </div>
         </div>
       </aside>
 
       <div className="lg:pl-60">
-      <header className="sticky top-0 z-30 border-b border-white/[0.06] bg-nuit/85 backdrop-blur-xl lg:hidden">
-        <div className="mx-auto flex h-16 max-w-6xl items-center gap-3 px-4">
-          {reglages.profil.avatar ? <img src={reglages.profil.avatar} alt="" className="h-9 w-9 rounded-full object-cover" /> : <span className="h-9 w-9 rounded-full bg-white/10" />}
-          <div className="min-w-0 flex-1">
+      <header className="adm-topbar sticky top-0 z-30">
+        <div className="mx-auto flex min-h-[72px] max-w-[1120px] items-center gap-3 px-4 lg:min-h-20 lg:px-8">
+          <div className="hidden flex-1 items-center gap-2 text-[13px] lg:flex"><span className="text-white/55">Mon espace</span><Icone nom="ui-chevron" taille={12} className="-rotate-90 text-white/40" /><span className="font-medium">{onglets.find(o => o.id === onglet)!.nom}</span></div>
+          {reglages.profil.avatar ? <img src={reglages.profil.avatar} alt="" className="h-9 w-9 rounded-full object-cover lg:hidden" /> : <span className="grid h-9 w-9 place-items-center rounded-full bg-white/[0.06] lg:hidden"><Icone nom="utilisateur" taille={18} /></span>}
+          <div className="min-w-0 flex-1 lg:hidden">
             {/* Sur téléphone, l'en-tête porte l'adresse de la page : la copier ne prend plus une ligne au-dessus de la page. */}
             <p className="truncate text-[15px] font-semibold leading-tight" translate="no">{urlPage(compte).replace(/^https?:\/\//, '')}</p>
             <p className={`flex items-center gap-1.5 text-[12px] leading-tight ${sauvegarde === 'erreur' ? 'text-red-300' : 'text-white/55'}`} aria-live="polite">
-              <span className={`h-1.5 w-1.5 rounded-full ${sauvegarde === 'encours' ? 'animate-pulse bg-amber-300 motion-reduce:animate-none' : sauvegarde === 'erreur' ? 'bg-red-400' : 'bg-emerald-400'}`} />{indicateur}
+              <span className={`h-1.5 w-1.5 rounded-full ${sauvegarde === 'encours' ? 'animate-pulse bg-amber-300 motion-reduce:animate-none' : sauvegarde === 'erreur' ? 'bg-red-400' : 'bg-white/60'}`} />{indicateur}
             </p>
           </div>
-          <BoutonCopier compact texte={urlPage(compte)} label="Copier l’adresse de ta page" onCopie={() => { try { localStorage.setItem('hopla-page-partagee', '1'); } catch { /* stockage refusé */ } }} />
-          <button type="button" onClick={() => setApercu(true)} className="flex min-h-11 items-center gap-1.5 rounded-full bg-white/[0.07] px-3.5 text-[13.5px] font-medium transition active:scale-95 lg:hidden">Aperçu</button>
+          <p className={`mr-2 hidden items-center gap-1.5 text-[12px] lg:flex ${sauvegarde === 'erreur' ? 'text-red-300' : 'text-white/55'}`} role="status"><Icone nom={sauvegarde === 'ok' ? 'ui-ok' : sauvegarde === 'erreur' ? 'cloche' : 'horloge'} taille={15} />{indicateur}</p>
+          <span className="lg:hidden"><BoutonCopier compact texte={urlPage(compte)} label="Copier l’adresse de ta page" onCopie={() => { try { localStorage.setItem('hopla-page-partagee', '1'); } catch { /* stockage refusé */ } }} /></span>
+          <button type="button" onClick={() => setApercu(true)} className="adm-button-outline flex min-h-11 items-center gap-1.5 px-3.5 text-[13px] font-medium lg:hidden"><Icone nom="oeil" taille={17} />Aperçu</button>
+          <a href={demo ? '#page' : urlPage(compte)} target={demo ? undefined : '_blank'} rel={demo ? undefined : 'noopener'} className="adm-button-outline hidden min-h-11 items-center gap-2 px-4 text-[13px] font-medium lg:flex">Voir ma page<Icone nom="ui-ouvrir" taille={15} /></a>
         </div>
       </header>
 
@@ -308,36 +319,34 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
         <p className="mx-auto mt-3 max-w-6xl px-4"><span className="block rounded-xl bg-amber-400/15 px-3.5 py-2.5 text-[13.5px] text-amber-100">Le stockage n’est pas encore branché sur le serveur : tes changements seront perdus au prochain redémarrage.</span></p>
       )}
 
-      <div className={`mx-auto max-w-6xl px-4 ${onglet === 'page' ? '' : 'lg:grid lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-10'}`}>
-        <main className={`mx-auto w-full max-w-xl lg:pb-12 ${onglet === 'page' ? 'pb-28 lg:pt-8' : 'pt-5 pb-28 lg:pt-8'}`}>
+      <div className="mx-auto max-w-[1120px] px-4 lg:px-8">
+        <main id="contenu-admin" className="mx-auto w-full pb-28 pt-6 lg:pb-12 lg:pt-9">
           <div key={onglet} className="adm-onglet">
-          <h1 className={`mb-4 text-[22px] font-semibold tracking-[-0.02em] ${onglet === 'page' ? 'sr-only' : ''}`}>{onglets.find(o => o.id === onglet)!.nom}</h1>
+          <div className="adm-page-heading">
+            <h1>{onglets.find(o => o.id === onglet)!.nom}</h1>
+            <p>{DESCRIPTIONS[onglet]}</p>
+          </div>
           {onglet === 'page' && <MaPage compte={compte} reglages={reglages} blocs={blocs} clics={clics} onReglages={changerReglages} onOrdonner={ordonner}
             onOuvrir={b => setEdition({ bloc: b, nouveau: false })} onAjouter={(b, enBas) => setEdition({ bloc: b, nouveau: true, enBas })} envoyerImage={d => api.envoyerImage(d)} annoncer={t => setToast(t)} />}
           {onglet === 'stats' && <OngletStats charger={chargerStats} limite={initial.paiement && !compte.pro} onPro={versAbonnement}
             ouvrirApps={reglages.ouvrirApps} onActiverApps={() => changerReglages({ ...reglages, ouvrirApps: true })} liste={<MaListe api={api} />} />}
           {onglet === 'reglages' && <OngletReglages reglages={reglages} compte={compte} blocs={blocs} traduire={b => setEdition({ bloc: b, nouveau: false, traduire: true })} onChange={changerReglages} onDeconnexion={deconnexion} urlExport={api.urlExport} supprimerMonCompte={api.supprimerMonCompte}
-            abonnement={abonnement} paiement={initial.paiement} ouvrirPaiement={api.ouvrirPaiement} ouvrirPortail={api.ouvrirPortail} />}
+            abonnement={abonnement} paiement={initial.paiement} ouvrirPaiement={api.ouvrirPaiement} ouvrirPortail={api.ouvrirPortail} sectionInitiale={sectionReglage} />}
           {onglet === 'comptes' && api.comptes && <OngletComptes api={api.comptes} />}
           </div>
         </main>
 
-        {onglet !== 'page' && (
-          <aside className="sticky top-0 hidden h-dvh items-center justify-center lg:flex" aria-label="Aperçu de ta page">
-            <Telephone page={page} />
-          </aside>
-        )}
       </div>
 
       </div>
 
-      <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-white/[0.07] bg-nuit/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl lg:hidden" aria-label="Sections">
+      <nav className="adm-mobile-nav fixed inset-x-0 bottom-0 z-30 pb-[env(safe-area-inset-bottom)] lg:hidden" aria-label="Sections">
         <ul className={`mx-auto grid max-w-md ${onglets.length === 4 ? 'grid-cols-4' : 'grid-cols-3'}`}>
           {onglets.map(o => (
             <li key={o.id}>
-              <button type="button" onClick={() => { if (o.id !== onglet) { vibrer(5); setOnglet(o.id); scrollTo({ top: 0 }); } }} aria-current={onglet === o.id ? 'page' : undefined}
+              <button key={o.id} type="button" onClick={() => { if (o.id !== onglet) { vibrer(5); choisirOnglet(o.id); } }} aria-current={onglet === o.id ? 'page' : undefined}
                 className={`flex h-14 w-full flex-col items-center justify-center gap-0.5 text-[11px] font-medium transition-colors duration-200 ${onglet === o.id ? 'font-semibold text-white' : 'text-white/55'}`}>
-                <span className="grid h-7 place-items-center"><Icone nom={o.icone} taille={22} /></span>{o.nom}
+                <span className="adm-nav-pastille grid h-7 w-12 place-items-center rounded-full"><Icone nom={o.icone} taille={21} /></span>{o.id === 'stats' ? 'Stats' : o.nom}
               </button>
             </li>
           ))}
@@ -360,15 +369,6 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
       )}
 
       {bulle}
-    </div>
-  );
-}
-
-function Telephone({ page }: { page: Parameters<typeof PageLiens>[0]['page'] }) {
-  return (
-    <div className="relative h-[min(760px,calc(100dvh-7rem))] aspect-[9/19] rounded-[44px] border border-white/10 bg-black p-2.5 shadow-[0_40px_80px_-30px_rgba(0,0,0,0.35)]">
-      <div className="absolute top-4 left-1/2 z-10 h-6 w-24 -translate-x-1/2 rounded-full bg-black" />
-      <div className="adm-apercu h-full overflow-y-auto overflow-x-hidden rounded-[36px] [scrollbar-width:none]"><PageLiens page={page} apercu /></div>
     </div>
   );
 }

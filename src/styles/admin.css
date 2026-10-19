@@ -20,9 +20,10 @@
   --color-peche: #0a0a0a;
   --color-red-200: #b91c1c;
   --color-red-300: #c62828;
-  --color-emerald-100: #065f46;
-  --color-emerald-200: #047857;
-  --color-emerald-300: #047857;
+  --color-emerald-100: #333333;
+  --color-emerald-200: #444444;
+  --color-emerald-300: #444444;
+  --color-emerald-400: #444444;
   --color-amber-100: #92400e;
   --color-amber-200: #a16207;
   --color-amber-300: #d97706;
@@ -65,17 +66,17 @@
 .adm-cascade > * { animation: adm-onglet 0.34s var(--adm-sortie) both; animation-delay: calc(var(--i, 0) * 28ms + 40ms); }
 
 .adm-interrupteur { transition: background-color 0.22s ease; }
-.adm-interrupteur > span { transition: translate 0.28s var(--adm-sortie), width 0.2s var(--adm-sortie), background-color 0.22s ease; }
+.adm-interrupteur > span { transform-origin: left center; transition: translate 0.28s var(--adm-sortie), scale 0.2s var(--adm-sortie), background-color 0.22s ease; }
 /* Sous le doigt, la pastille s'étire, comme sur iOS. */
-.adm-interrupteur:active > span { width: 1.75rem; }
-.adm-interrupteur[aria-checked='true']:active > span { translate: 0.75rem 0; }
+.adm-interrupteur:active > span { scale: 1.5 1; }
+.adm-interrupteur[aria-checked='true']:active > span { translate: 7px 0; }
 
 /* Les barres des statistiques se remplissent à l'arrivée. */
 .adm-barre { animation: adm-barre 0.7s var(--adm-sortie) both; }
 @keyframes adm-barre { from { transform: scaleX(0); } }
 
 /* La pastille de l'onglet actif, dans la barre du bas. */
-.adm-nav-pastille { transition: background-color 0.2s ease, width 0.3s var(--adm-sortie); }
+.adm-nav-pastille { transition: background-color 0.2s ease; }
 
 @media (prefers-reduced-motion: reduce) {
   .adm-feuille, .adm-fondu, .adm-toast, .adm-onglet, .adm-cascade > *, .adm-barre, [data-sortie] .adm-feuille, [data-sortie] .adm-fondu { animation: none; }
@@ -85,7 +86,7 @@
 .adm input[type='datetime-local'] { color-scheme: light; }
 .adm ::selection { background: #0a0a0a; color: #fff; }
 .adm { scrollbar-color: rgb(0 0 0 / 0.2) transparent; -webkit-tap-highlight-color: transparent; }
-.adm :is(button, a, input, textarea, select, summary):focus-visible { outline: 2px solid #0a0a0a; outline-offset: 2px; }
+.adm :is(button, a, input, textarea, select, summary, [tabindex]):focus-visible { outline: 2px solid #0a0a0a; outline-offset: 2px; }
 
 /* Les premiers pas : la vraie page en miniature, à la largeur d'un téléphone. */
 .adm-miroir { --z: 0.62; width: calc(390px * var(--z)); flex-shrink: 0; }
@@ -104,3 +105,69 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
 .adm input[type='number'] { appearance: textfield; -moz-appearance: textfield; }
 .adm input[type='number']::-webkit-inner-spin-button, .adm input[type='number']::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
 .adm input[list]::-webkit-calendar-picker-indicator { display: none !important; }
+
+/* Un même espace de travail, de l'édition aux réglages. Les thèmes publics
+ * gardent leurs propres couleurs et leur typographie dans .adm-apercu. */
+.adm {
+  --adm-fond: #f7f7f5;
+  --adm-surface: #fff;
+  --adm-trait: #e5e5e1;
+  --adm-encre: #18191b;
+  --adm-secondaire: #656560;
+}
+.adm-shell { background: var(--adm-fond); color: var(--adm-encre); }
+.adm-sidebar { padding: 26px 16px 24px; background: #fdfdfc; border-right: 1px solid var(--adm-trait); }
+.adm-nav-item { display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 0 14px; border: 1px solid transparent; border-radius: 12px; color: var(--adm-secondaire); font-size: 14px; font-weight: 500; text-align: left; transition: background-color 150ms, color 150ms; }
+.adm-nav-item:hover { background: #f1f1ee; color: var(--adm-encre); }
+.adm-nav-item[aria-current='page'] { border-color: var(--adm-trait); background: #fff; color: var(--adm-encre); font-weight: 600; }
+.adm-nav-count { margin-left: auto; display: grid; min-width: 23px; height: 23px; place-items: center; padding: 0 5px; border-radius: 7px; background: #efefec; color: #565651; font-size: 11px; font-variant-numeric: tabular-nums; }
+.adm-topbar { border-bottom: 1px solid var(--adm-trait); background: #fdfdfc; }
+.adm-page-heading { margin-bottom: 26px; }
+.adm-page-heading h1 { font-size: 32px; line-height: 1.2; font-weight: 600; letter-spacing: -0.035em; }
+.adm-page-heading > p { margin-top: 9px; color: var(--adm-secondaire); font-size: 14px; line-height: 1.6; }
+.adm-card, .adm-kpi { border: 1px solid var(--adm-trait); border-radius: 16px; background: var(--adm-surface); padding: 22px; }
+.adm-kpi { padding: 20px; }
+.adm-button-outline { border: 1px solid #deded9; border-radius: 12px; background: var(--adm-surface); transition: background-color 150ms, border-color 150ms; }
+.adm-button-outline:hover { background: #f4f4f0; border-color: #c7c7c0; }
+.adm-button-primary:hover { background: #30302e; }
+.adm-field { min-height: 48px; background: #fdfdfc; }
+.adm-field:hover { border-color: #b2b2ab; }
+.adm-mobile-nav { border-top: 1px solid var(--adm-trait); background: #fff; }
+.adm-mobile-nav [aria-current='page'] .adm-nav-pastille { background: #ebebe6; }
+.adm-mobile-nav button { height: 64px; }
+.adm-editor-layout { display: flex; flex-direction: column; gap: 18px; }
+.adm-editor-content { display: flex; min-width: 0; flex-direction: column; gap: 16px; }
+.adm-editor-content > :first-child:empty { display: none; }
+.adm-toile { box-shadow: 0 8px 28px -16px rgb(0 0 0 / 0.25); }
+.adm-address { background: var(--adm-surface); border: 1px solid var(--adm-trait); border-radius: 14px; }
+.adm-checklist { background: var(--adm-surface); border: 1px solid var(--adm-trait); border-radius: 14px; }
+.adm-settings, .adm-settings-detail { max-width: 760px; }
+.adm-settings-list { border: 1px solid var(--adm-trait); border-radius: 16px; background: var(--adm-surface); }
+.adm-settings-list > li + li { border-top: 1px solid var(--adm-trait); }
+.adm-settings-row { display: flex; min-height: 68px; width: 100%; align-items: center; gap: 14px; padding: 12px 16px; text-align: left; }
+button.adm-settings-row { transition: background-color 150ms; }
+button.adm-settings-row:hover { background: #f7f7f5; }
+.adm-settings-list > li:first-child .adm-settings-row { border-radius: 15px 15px 0 0; }
+.adm-settings-list > li:last-child .adm-settings-row { border-radius: 0 0 15px 15px; }
+.adm-settings-list > li:only-child .adm-settings-row { border-radius: 15px; }
+.adm-settings-icon { display: grid; width: 36px; height: 36px; flex-shrink: 0; place-items: center; border-radius: 11px; background: #f2f2ee; color: #555650; }
+.adm-feuille { border-radius: 16px 16px 0 0; }
+
+@media (min-width: 640px) { .adm-feuille { border-radius: 16px; } }
+@media (min-width: 1024px) {
+  .adm-editor-layout { display: grid; grid-template-columns: minmax(0, 1fr) 248px; align-items: start; gap: 32px; }
+  .adm-editor-tools { grid-column: 2; grid-row: 1; position: sticky; top: 108px; padding: 23px; border: 1px solid var(--adm-trait); border-radius: 16px; background: var(--adm-surface); }
+  .adm-editor-tools .adm-button-primary, .adm-editor-tools .adm-button-outline { font-size: 13px; padding-left: 10px; padding-right: 10px; }
+  .adm-editor-content { grid-column: 1; grid-row: 1; }
+}
+@media (max-width: 639px) {
+  .adm-page-heading { margin-bottom: 21px; }
+  .adm-page-heading h1 { font-size: 28px; }
+  .adm-page-heading > p { font-size: 13px; }
+  .adm-card { padding: 18px; }
+  .adm-kpi { padding: 16px; }
+  .adm-editor-tools [data-principal], .adm-editor-tools .adm-button-outline { font-size: 13px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .adm-nav-item, .adm-button-outline, .adm-button-primary, button.adm-settings-row { transition: none; }
+}

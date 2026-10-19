@@ -13,17 +13,17 @@ function Tendance({ actuel, avant }: { actuel: number; avant: number }) {
   const ecart = Math.round(((actuel - avant) / avant) * 100);
   if (ecart === 0) return <span className="text-[12px] text-white/55">stable</span>;
   return (
-    <span className={`inline-flex items-center gap-0.5 text-[12px] font-semibold tabular-nums ${ecart > 0 ? 'text-emerald-300' : 'text-red-300'}`}>
-      <Icone nom={ecart > 0 ? 'ui-fleche' : 'ui-baisse'} taille={13} />{Math.abs(ecart)} %
+    <span className="inline-flex items-center gap-1 text-[12px] font-medium tabular-nums text-white/65">
+      <span className="sr-only">{ecart > 0 ? 'Hausse' : 'Baisse'} de </span><Icone nom={ecart > 0 ? 'ui-fleche' : 'ui-baisse'} taille={13} />{Math.abs(ecart)} %<span className="sr-only"> par rapport à la période précédente</span>
     </span>
   );
 }
 
 function Kpi({ nom, valeur, avant, suffixe = '' }: { nom: string; valeur: number; avant?: number; suffixe?: string }) {
   return (
-    <div className="rounded-2xl border border-white/[0.07] bg-white/[0.035] p-3.5">
-      <p className="text-[12.5px] text-white/55">{nom}</p>
-      <p className="mt-1 text-[24px] font-semibold tracking-tight text-white tabular-nums">{nombre(valeur)}{suffixe}</p>
+    <div className="adm-kpi">
+      <p className="text-[12px] font-medium text-white/60">{nom}</p>
+      <p className="mb-1.5 mt-2 text-[30px] font-semibold leading-tight tracking-[-0.03em] text-white tabular-nums lg:text-[34px]">{nombre(valeur)}{suffixe}</p>
       {avant !== undefined && <Tendance actuel={valeur} avant={avant} />}
     </div>
   );
@@ -111,12 +111,12 @@ function Barres({ lignes, total, unite }: { lignes: { nom: string; valeur: numbe
 function EnBref({ stats }: { stats: Stats }) {
   const phrases = resumer(stats);
   return (
-    <section aria-label="En bref" className="rounded-[22px] bg-white/[0.05] p-4 ring-1 ring-white/10">
-      <p className="mb-2 flex items-center gap-1.5 text-[13px] font-semibold text-white"><Icone nom="sparkle" taille={15} />En bref</p>
-      <ul className="flex flex-col gap-2">
+    <section aria-label="En bref" className="adm-card h-full">
+      <h2 className="mb-4 flex items-center gap-2 text-[15px] font-semibold tracking-tight text-white"><Icone nom="sparkle" taille={17} />En bref</h2>
+      <ul className="flex flex-col gap-3.5">
         {phrases.map(p => (
-          <li key={p.texte} className="flex gap-2.5 text-[15px] leading-snug text-white/90">
-            <span className={`mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full ${p.ton === 'hausse' ? 'bg-emerald-300' : p.ton === 'baisse' ? 'bg-red-300' : 'bg-white/40'}`} />{p.texte}
+          <li key={p.texte} className="flex gap-2.5 text-[13px] leading-relaxed text-white/75">
+            <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-white/45" />{p.texte}
           </li>
         ))}
       </ul>
@@ -168,7 +168,7 @@ export function OngletStats({ charger, limite = false, onPro, ouvrirApps = true,
           <p className="text-[14px] leading-snug text-white/80">Les 7 derniers jours. <span className="text-white/55">Avec Pro, jusqu’à un an d’historique : tout est déjà enregistré.</span></p>
           {onPro && <button type="button" onClick={onPro} className="min-h-11 shrink-0 rounded-full bg-white px-4 text-[13.5px] font-semibold text-nuit">Passer en Pro</button>}
         </div>
-      ) : <Segments label="Période" valeur={jours} options={PERIODES} onChange={setJours} />}
+      ) : <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="text-[15px] font-semibold tracking-tight">Vue d’ensemble</h2><div className="w-full sm:w-80"><Segments label="Période" valeur={jours} options={PERIODES} onChange={setJours} /></div></div>}
       {erreur && (
         <div role="alert" className="flex items-center justify-between gap-3 rounded-xl bg-red-500/15 py-1.5 pr-1.5 pl-3.5 text-[14px] text-red-200">
           Les statistiques ne se chargent pas.
@@ -177,19 +177,25 @@ export function OngletStats({ charger, limite = false, onPro, ouvrirApps = true,
       )}
       {!stats ? (!erreur && <div className="h-64 animate-pulse rounded-2xl bg-white/[0.04] motion-reduce:animate-none" aria-label="Chargement des statistiques" />) : (
         <div className={`flex flex-col gap-4 transition-opacity duration-200 ${charge ? 'opacity-50' : ''}`} aria-busy={charge}>
-          <EnBref stats={stats} />
-          <div className="grid grid-cols-2 gap-2.5">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:gap-4">
             <Kpi nom="Vues" valeur={stats.vues} avant={stats.precedent.vues} />
             <Kpi nom="Visiteurs" valeur={stats.visiteurs} avant={stats.precedent.visiteurs} />
             <Kpi nom="Clics" valeur={stats.clics} avant={stats.precedent.clics} />
             <Kpi nom="Taux de clic" valeur={stats.vues ? Math.round((stats.clics / stats.vues) * 100) : 0} suffixe=" %" />
           </div>
-          <Carte><Courbe serie={stats.serie} /></Carte>
+          <div className="grid items-stretch gap-4 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+            <Carte titre="L’activité de ta page"><Courbe serie={stats.serie} /></Carte>
+            <EnBref stats={stats} />
+          </div>
           {liste}
           <OuvertsDansLApp apps={stats.apps} actif={ouvrirApps} onActiver={onActiverApps} />
-          <Carte titre="Liens les plus cliqués"><Barres lignes={stats.blocs.map(b => ({ nom: b.titre, valeur: b.clics }))} total={stats.clics} unite="clics" /></Carte>
-          <Carte titre="D’où viennent les visiteurs"><Barres lignes={stats.sources.map(s => ({ nom: s.nom, valeur: s.vues }))} total={stats.vues} unite="vues" /></Carte>
-          <Carte titre="Appareils"><Barres lignes={stats.appareils.map(s => ({ nom: s.nom, valeur: s.vues }))} total={stats.vues} unite="vues" /></Carte>
+          <div className="grid gap-4 lg:grid-cols-2">
+            <Carte titre="Liens les plus cliqués"><Barres lignes={stats.blocs.map(b => ({ nom: b.titre, valeur: b.clics }))} total={stats.clics} unite="clics" /></Carte>
+            <div className="flex flex-col gap-4">
+              <Carte titre="D’où viennent les visiteurs"><Barres lignes={stats.sources.map(s => ({ nom: s.nom, valeur: s.vues }))} total={stats.vues} unite="vues" /></Carte>
+              <Carte titre="Appareils"><Barres lignes={stats.appareils.map(s => ({ nom: s.nom, valeur: s.vues }))} total={stats.vues} unite="vues" /></Carte>
+            </div>
+          </div>
           <p className="px-2 text-center text-[12.5px] leading-snug text-white/55">
             Sans cookie : un visiteur compte une fois par jour, toi jamais.
           </p>

@@ -1,0 +1,401 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-19T10:51:34.080074Z",
+  "title": "Design System: Hopla back office",
+  "extensions": {
+    "colorMeta": {
+      "ink": {
+        "role": "primary",
+        "displayName": "Encre",
+        "tonalRamp": [
+          "oklch(15% 0 0)",
+          "oklch(27% 0 0)",
+          "oklch(39% 0 0)",
+          "oklch(51% 0 0)",
+          "oklch(63% 0 0)",
+          "oklch(75% 0 0)",
+          "oklch(87% 0 0)",
+          "oklch(95% 0 0)"
+        ]
+      },
+      "shell-ink": {
+        "role": "neutral",
+        "displayName": "Encre de l’espace",
+        "tonalRamp": [
+          "oklch(15% 0 0)",
+          "oklch(27% 0 0)",
+          "oklch(39% 0 0)",
+          "oklch(51% 0 0)",
+          "oklch(63% 0 0)",
+          "oklch(75% 0 0)",
+          "oklch(87% 0 0)",
+          "oklch(95% 0 0)"
+        ]
+      },
+      "paper": {
+        "role": "neutral",
+        "displayName": "Papier",
+        "tonalRamp": [
+          "oklch(15% 0 0)",
+          "oklch(27% 0 0)",
+          "oklch(39% 0 0)",
+          "oklch(51% 0 0)",
+          "oklch(63% 0 0)",
+          "oklch(75% 0 0)",
+          "oklch(87% 0 0)",
+          "oklch(95% 0 0)"
+        ]
+      },
+      "workspace": {
+        "role": "neutral",
+        "displayName": "Fond de travail",
+        "tonalRamp": [
+          "oklch(15% 0 0)",
+          "oklch(27% 0 0)",
+          "oklch(39% 0 0)",
+          "oklch(51% 0 0)",
+          "oklch(63% 0 0)",
+          "oklch(75% 0 0)",
+          "oklch(87% 0 0)",
+          "oklch(95% 0 0)"
+        ]
+      },
+      "quiet-paper": {
+        "role": "neutral",
+        "displayName": "Papier calme",
+        "tonalRamp": [
+          "oklch(15% 0 0)",
+          "oklch(27% 0 0)",
+          "oklch(39% 0 0)",
+          "oklch(51% 0 0)",
+          "oklch(63% 0 0)",
+          "oklch(75% 0 0)",
+          "oklch(87% 0 0)",
+          "oklch(95% 0 0)"
+        ]
+      },
+      "divider": {
+        "role": "neutral",
+        "displayName": "Trait",
+        "tonalRamp": [
+          "oklch(15% 0 0)",
+          "oklch(27% 0 0)",
+          "oklch(39% 0 0)",
+          "oklch(51% 0 0)",
+          "oklch(63% 0 0)",
+          "oklch(75% 0 0)",
+          "oklch(87% 0 0)",
+          "oklch(95% 0 0)"
+        ]
+      },
+      "control-border": {
+        "role": "neutral",
+        "displayName": "Contour de contrôle",
+        "tonalRamp": [
+          "oklch(15% 0 0)",
+          "oklch(27% 0 0)",
+          "oklch(39% 0 0)",
+          "oklch(51% 0 0)",
+          "oklch(63% 0 0)",
+          "oklch(75% 0 0)",
+          "oklch(87% 0 0)",
+          "oklch(95% 0 0)"
+        ]
+      },
+      "secondary": {
+        "role": "neutral",
+        "displayName": "Secondaire",
+        "tonalRamp": [
+          "oklch(15% 0 0)",
+          "oklch(27% 0 0)",
+          "oklch(39% 0 0)",
+          "oklch(51% 0 0)",
+          "oklch(63% 0 0)",
+          "oklch(75% 0 0)",
+          "oklch(87% 0 0)",
+          "oklch(95% 0 0)"
+        ]
+      },
+      "muted-text": {
+        "role": "neutral",
+        "displayName": "Texte atténué",
+        "tonalRamp": [
+          "oklch(15% 0 0)",
+          "oklch(27% 0 0)",
+          "oklch(39% 0 0)",
+          "oklch(51% 0 0)",
+          "oklch(63% 0 0)",
+          "oklch(75% 0 0)",
+          "oklch(87% 0 0)",
+          "oklch(95% 0 0)"
+        ]
+      },
+      "nav-hover": {
+        "role": "neutral",
+        "displayName": "Survol de navigation",
+        "tonalRamp": [
+          "oklch(15% 0 0)",
+          "oklch(27% 0 0)",
+          "oklch(39% 0 0)",
+          "oklch(51% 0 0)",
+          "oklch(63% 0 0)",
+          "oklch(75% 0 0)",
+          "oklch(87% 0 0)",
+          "oklch(95% 0 0)"
+        ]
+      },
+      "control-hover": {
+        "role": "neutral",
+        "displayName": "Survol de contrôle",
+        "tonalRamp": [
+          "oklch(15% 0 0)",
+          "oklch(27% 0 0)",
+          "oklch(39% 0 0)",
+          "oklch(51% 0 0)",
+          "oklch(63% 0 0)",
+          "oklch(75% 0 0)",
+          "oklch(87% 0 0)",
+          "oklch(95% 0 0)"
+        ]
+      },
+      "error": {
+        "role": "error",
+        "displayName": "Erreur",
+        "tonalRamp": [
+          "oklch(15% 0.14 25)",
+          "oklch(27% 0.14 25)",
+          "oklch(39% 0.14 25)",
+          "oklch(51% 0.14 25)",
+          "oklch(63% 0.14 25)",
+          "oklch(75% 0.14 25)",
+          "oklch(87% 0.14 25)",
+          "oklch(95% 0.14 25)"
+        ]
+      },
+      "pending": {
+        "role": "warning",
+        "displayName": "Enregistrement en cours",
+        "tonalRamp": [
+          "oklch(15% 0.12 60)",
+          "oklch(27% 0.12 60)",
+          "oklch(39% 0.12 60)",
+          "oklch(51% 0.12 60)",
+          "oklch(63% 0.12 60)",
+          "oklch(75% 0.12 60)",
+          "oklch(87% 0.12 60)",
+          "oklch(95% 0.12 60)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "headline": {
+        "displayName": "Titre de page",
+        "purpose": "Nom de l’écran ; réduit sur téléphone."
+      },
+      "panel-title": {
+        "displayName": "Titre de feuille",
+        "purpose": "Nom de la tâche en cours."
+      },
+      "title": {
+        "displayName": "Titre de carte",
+        "purpose": "Nom d’un groupe de contenu."
+      },
+      "body": {
+        "displayName": "Texte courant",
+        "purpose": "Description et contenu de travail."
+      },
+      "label": {
+        "displayName": "Libellé",
+        "purpose": "Nom de champ et aide courte."
+      },
+      "field": {
+        "displayName": "Saisie",
+        "purpose": "Texte des champs."
+      },
+      "metric": {
+        "displayName": "Chiffre clé",
+        "purpose": "KPI en chiffres tabulaires."
+      }
+    },
+    "shadows": [
+      {
+        "name": "editor-canvas",
+        "value": "0 8px 28px -16px rgb(0 0 0 / 0.25)",
+        "purpose": "Détache la page éditée du shell."
+      },
+      {
+        "name": "sheet",
+        "value": "0 -12px 40px -16px rgba(0,0,0,0.18)",
+        "purpose": "Surface temporaire d’édition."
+      },
+      {
+        "name": "selected-segment",
+        "value": "0 1px 3px rgba(0,0,0,0.14)",
+        "purpose": "Choix actif dans un groupe segmenté."
+      },
+      {
+        "name": "switch-knob",
+        "value": "0 1px 3px rgba(0,0,0,0.3)",
+        "purpose": "Pastille de l’interrupteur."
+      }
+    ],
+    "motion": [
+      {
+        "name": "adm-sortie",
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Décélération commune des surfaces et retours."
+      },
+      {
+        "name": "control-transition",
+        "value": "150ms",
+        "purpose": "Couleur et contour des contrôles et de la navigation."
+      },
+      {
+        "name": "sheet-enter",
+        "value": "0.36s var(--adm-sortie)",
+        "purpose": "Entrée de la feuille, désactivée en mouvement réduit."
+      },
+      {
+        "name": "sheet-exit",
+        "value": "0.19s cubic-bezier(0.4, 0, 1, 1)",
+        "purpose": "Sortie de la feuille avant fermeture."
+      },
+      {
+        "name": "tab-enter",
+        "value": "0.28s var(--adm-sortie)",
+        "purpose": "Fondu et translation de 6px à l’entrée d’un onglet."
+      },
+      {
+        "name": "switch-track",
+        "value": "0.22s ease",
+        "purpose": "État de la piste de bascule."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "sm",
+        "value": "640px"
+      },
+      {
+        "name": "lg",
+        "value": "1024px"
+      },
+      {
+        "name": "xl",
+        "value": "1280px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Bouton principal",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Action principale du back office.",
+      "html": "<button type=\"button\" class=\"ds-primary\"><svg width=\"17\" height=\"17\" viewBox=\"0 0 256 256\" fill=\"currentColor\" aria-hidden=\"true\"><path d=\"M224,128a8,8,0,0,1-8,8H136v80a8,8,0,0,1-16,0V136H40a8,8,0,0,1,0-16h80V40a8,8,0,0,1,16,0v80h80A8,8,0,0,1,224,128Z\"/></svg>Ajouter un bloc</button>",
+      "css": ".ds-primary{font-family:'Geist Variable',ui-sans-serif,system-ui,sans-serif;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 20px;border:0;border-radius:12px;background:var(--color-white,#0a0a0a);color:var(--color-nuit,#fff);font-size:14px;font-weight:600;transition:background-color 150ms,transform 150ms}.ds-primary:hover{background:#30302e}.ds-primary:focus-visible{outline:2px solid var(--color-white,#0a0a0a);outline-offset:2px;}.ds-primary:active{transform:scale(.98)}.ds-primary:disabled{opacity:.5}@media(prefers-reduced-motion:reduce){.ds-primary{transition:none}}"
+    },
+    {
+      "name": "Bouton secondaire",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Action complémentaire bordée.",
+      "html": "<button type=\"button\" class=\"ds-secondary\">Personnaliser</button>",
+      "css": ".ds-secondary{font-family:'Geist Variable',ui-sans-serif,system-ui,sans-serif;min-height:44px;padding:0 16px;border:1px solid #deded9;border-radius:12px;background:var(--adm-surface,#fff);color:var(--color-white,#0a0a0a);font-size:14px;font-weight:500;transition:background-color 150ms,border-color 150ms,transform 150ms}.ds-secondary:hover{background:#f4f4f0;border-color:#c7c7c0}.ds-secondary:focus-visible{outline:2px solid var(--color-white,#0a0a0a);outline-offset:2px;}.ds-secondary:active{transform:scale(.98)}.ds-secondary:disabled{opacity:.5}@media(prefers-reduced-motion:reduce){.ds-secondary{transition:none}}"
+    },
+    {
+      "name": "Champ de saisie",
+      "kind": "input",
+      "refersTo": "field",
+      "description": "Champ nommé avec saisie lisible sur téléphone.",
+      "html": "<label class=\"ds-label\">Adresse e-mail<input class=\"ds-field\" type=\"email\" placeholder=\"toi@exemple.fr\" /></label>",
+      "css": ".ds-label{font-family:'Geist Variable',ui-sans-serif,system-ui,sans-serif;display:block;color:#666;font-size:12.5px;font-weight:500}.ds-field{font-family:'Geist Variable',ui-sans-serif,system-ui,sans-serif;display:block;width:240px;max-width:100%;min-height:48px;margin-top:6px;padding:12px 14px;border:1px solid rgb(10 10 10 / .15);border-radius:12px;background:#fdfdfc;color:var(--color-white,#0a0a0a);font-size:16px;transition:border-color 150ms}.ds-field::placeholder{color:#737373}.ds-field:hover{border-color:#b2b2ab}.ds-field:focus{border-color:rgb(10 10 10 / .7)}.ds-field:focus-visible{outline:2px solid var(--color-white,#0a0a0a);outline-offset:2px;}.ds-field[aria-invalid=true]{border-color:#c62828}@media(prefers-reduced-motion:reduce){.ds-field{transition:none}}"
+    },
+    {
+      "name": "Navigation de section",
+      "kind": "nav",
+      "refersTo": "nav-item",
+      "description": "Navigation desktop, actif blanc bordé et survol neutre.",
+      "html": "<nav class=\"ds-nav\" aria-label=\"Sections\"><button type=\"button\" aria-current=\"page\" class=\"ds-nav-item\">Ma page<span class=\"ds-count\">4</span></button><button type=\"button\" class=\"ds-nav-item\">Statistiques</button><button type=\"button\" class=\"ds-nav-item\">Réglages</button></nav>",
+      "css": ".ds-nav{display:grid;gap:6px;width:208px;padding:12px;background:#fdfdfc}.ds-nav-item{font-family:'Geist Variable',ui-sans-serif,system-ui,sans-serif;display:flex;align-items:center;gap:12px;min-height:48px;padding:0 14px;border:1px solid transparent;border-radius:12px;background:transparent;color:var(--adm-secondaire,#656560);font-size:14px;font-weight:500;text-align:left;transition:background-color 150ms,color 150ms}.ds-nav-item:hover{background:#f1f1ee;color:var(--adm-encre,#18191b)}.ds-nav-item[aria-current=page]{border-color:var(--adm-trait,#e5e5e1);background:#fff;color:var(--adm-encre,#18191b);font-weight:600}.ds-nav-item:focus-visible{outline:2px solid var(--color-white,#0a0a0a);outline-offset:2px;}.ds-count{display:grid;place-items:center;min-width:23px;height:23px;margin-left:auto;padding:0 5px;border-radius:7px;background:#efefec;color:#565651;font-size:11px;font-variant-numeric:tabular-nums}@media(prefers-reduced-motion:reduce){.ds-nav-item{transition:none}}"
+    },
+    {
+      "name": "Carte de contenu",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Surface plate qui regroupe une section de travail.",
+      "html": "<section class=\"ds-card\"><h2 class=\"ds-card-title\">L’activité de ta page</h2><p class=\"ds-card-copy\">Vues et clics sur la période choisie.</p></section>",
+      "css": ".ds-card{font-family:'Geist Variable',ui-sans-serif,system-ui,sans-serif;width:280px;max-width:100%;padding:22px;border:1px solid var(--adm-trait,#e5e5e1);border-radius:16px;background:var(--adm-surface,#fff);color:var(--color-white,#0a0a0a)}.ds-card-title{margin:0 0 12px;font-size:15px;font-weight:600;letter-spacing:-.015em}.ds-card-copy{margin:0;color:#666;font-size:14px;line-height:1.6}@media(max-width:639px){.ds-card{padding:18px}}"
+    },
+    {
+      "name": "Choix segmenté",
+      "kind": "chip",
+      "refersTo": "segment",
+      "description": "Choix exclusif de période, état radio visible.",
+      "html": "<div class=\"ds-segments\" role=\"radiogroup\" aria-label=\"Période\"><button class=\"ds-segment\" type=\"button\" role=\"radio\" aria-checked=\"false\" tabindex=\"-1\">7 j</button><button class=\"ds-segment\" type=\"button\" role=\"radio\" aria-checked=\"true\">30 j</button><button class=\"ds-segment\" type=\"button\" role=\"radio\" aria-checked=\"false\" tabindex=\"-1\">90 j</button></div>",
+      "css": ".ds-segments{display:flex;gap:2px;width:260px;padding:3px;border-radius:10px;background:rgb(10 10 10 / .06)}.ds-segment{font-family:'Geist Variable',ui-sans-serif,system-ui,sans-serif;flex:1;min-height:40px;padding:0 10px;border:0;border-radius:7px;background:transparent;color:#666;font-size:13.5px;font-weight:500;transition:color 200ms}.ds-segment:hover{color:#0a0a0a}.ds-segment[aria-checked=true]{background:var(--color-nuit,#fff);color:var(--color-white,#0a0a0a);box-shadow:0 1px 3px rgba(0,0,0,.14)}.ds-segment:focus-visible{outline:2px solid var(--color-white,#0a0a0a);outline-offset:2px;}@media(prefers-reduced-motion:reduce){.ds-segment{transition:none}}"
+    },
+    {
+      "name": "Interrupteur",
+      "kind": "custom",
+      "refersTo": "switch",
+      "description": "État de préférence, cible étendue autour de la piste.",
+      "html": "<button class=\"ds-switch\" type=\"button\" role=\"switch\" aria-checked=\"true\" aria-label=\"Mes stats par e-mail chaque lundi\"><span class=\"ds-knob\"></span></button>",
+      "css": ".ds-switch{position:relative;width:40px;height:24px;border:0;border-radius:9999px;background:rgb(10 10 10 / .15);transition:background-color 220ms ease}.ds-switch::before{position:absolute;inset:-8px;content:\"\"}.ds-switch[aria-checked=true]{background:var(--color-white,#0a0a0a)}.ds-knob{position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:9999px;background:var(--color-nuit,#fff);box-shadow:0 1px 3px rgba(0,0,0,.3);transform-origin:left center;transition:translate 280ms cubic-bezier(.16,1,.3,1),scale 200ms cubic-bezier(.16,1,.3,1)}.ds-switch[aria-checked=true] .ds-knob{translate:16px 0}.ds-switch:focus-visible{outline:2px solid var(--color-white,#0a0a0a);outline-offset:2px;}.ds-switch:active .ds-knob{scale:1.5 1}.ds-switch[aria-checked=true]:active .ds-knob{translate:7px 0}.ds-switch:disabled{opacity:.4}@media(prefers-reduced-motion:reduce){.ds-switch,.ds-knob{transition:none}}"
+    },
+    {
+      "name": "Ligne de réglage",
+      "kind": "custom",
+      "refersTo": "settings-row",
+      "description": "Entrée de détail dans un groupe de réglages.",
+      "html": "<div class=\"ds-settings\"><button class=\"ds-settings-row\" type=\"button\"><span class=\"ds-settings-icon\" aria-hidden=\"true\"><svg width=\"19\" height=\"19\" viewBox=\"0 0 256 256\" fill=\"currentColor\"><path d=\"M240,128a80,80,0,0,1-80,80H104a8,8,0,0,1,0-16h56a64,64,0,0,0,0-128H104a8,8,0,0,1,0-16h56A80.09,80.09,0,0,1,240,128ZM96,192H80A64,64,0,0,1,80,64H96a8,8,0,0,0,0-16H80a80,80,0,0,0,0,160H96a8,8,0,0,0,0-16Zm80-64a8,8,0,0,0-8-8H88a8,8,0,0,0,0,16h80A8,8,0,0,0,176,128Z\"/></svg></span><span class=\"ds-settings-label\">QR code et adresse</span><svg width=\"16\" height=\"16\" viewBox=\"0 0 16 16\" fill=\"currentColor\" aria-hidden=\"true\"><path d=\"M6 3a1 1 0 0 1 1.4 0l4 4a1 1 0 0 1 0 1.4l-4 4A1 1 0 0 1 6 11l3.3-3.3L6 4.4A1 1 0 0 1 6 3Z\"/></svg></button></div>",
+      "css": ".ds-settings{width:320px;max-width:100%;border:1px solid var(--adm-trait,#e5e5e1);border-radius:16px;background:var(--adm-surface,#fff)}.ds-settings-row{font-family:'Geist Variable',ui-sans-serif,system-ui,sans-serif;display:flex;align-items:center;gap:14px;width:100%;min-height:68px;padding:12px 16px;border:0;border-radius:15px;background:transparent;color:var(--color-white,#0a0a0a);text-align:left;transition:background-color 150ms}.ds-settings-row:hover{background:#f7f7f5}.ds-settings-row:focus-visible{outline:2px solid var(--color-white,#0a0a0a);outline-offset:2px;}.ds-settings-icon{display:grid;place-items:center;width:36px;height:36px;flex-shrink:0;border-radius:11px;background:#f2f2ee;color:#555650}.ds-settings-label{flex:1;min-width:0;font-size:14px;font-weight:500}@media(prefers-reduced-motion:reduce){.ds-settings-row{transition:none}}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Un même espace de travail",
+    "overview": "Ce nom reprend le principe déjà inscrit dans le code : l'édition, les statistiques, les réglages et la connexion appartiennent au même espace. Le système est sobre, clair et compact, avec des surfaces blanches sur un fond gris doux et une hiérarchie obtenue par la typographie, les espacements et les traits.\n\nCette documentation décrit le système observable de la branche `design/back-office-harmonise`, au 19 octobre 2026. Elle ne propose pas de nouvelle identité et ne prouve aucune mise en production. Son périmètre est le back office : les thèmes publics rendus dans l'éditeur ou dans un aperçu conservent leurs propres couleurs et fontes. La stratégie des écrans est dans `.impeccable/surfaces/back-office.md`.",
+    "keyCharacteristics": [
+      "Encre noire, papier blanc et gris neutres.",
+      "Geist pour une hiérarchie de travail compacte.",
+      "Bordures fines et surfaces arrondies, sans ombre sur les cartes ordinaires.",
+      "Pictogrammes pleins, retours visibles et gestes courts."
+    ],
+    "rules": [
+      {
+        "name": "The Monochrome Rule",
+        "body": "Le back office garde des actions et contenus neutres ; la couleur est réservée aux alertes, jamais à décorer une section.",
+        "section": "colors"
+      },
+      {
+        "name": "The Public Theme Boundary Rule",
+        "body": "Les couleurs de l'espace de travail ne remplacent pas les variables des pages publiques et de leurs aperçus.",
+        "section": "colors"
+      },
+      {
+        "name": "The Working Hierarchy Rule",
+        "body": "Le titre nomme l'endroit, le texte secondaire l'explique et le contrôle porte le geste. Conserver ce rôle lors de l'ajout d'un écran.",
+        "section": "typography"
+      },
+      {
+        "name": "The Flat Card Rule",
+        "body": "Une carte ordinaire se distingue par son fond et son trait ; ne pas lui attribuer une ombre de fenêtre.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "**Do** conserver le contraste noir sur papier, et du papier sur une action noire.",
+      "**Do** reprendre Geist et la hiérarchie des rôles déjà utilisés.",
+      "**Do** conserver un focus visible, les libellés et les états d'enregistrement explicites.",
+      "**Do** utiliser les pictogrammes Phosphor pleins et monochromes du projet.",
+      "**Do** garder les transitions brèves et respecter le mouvement réduit."
+    ],
+    "donts": [
+      "**Don't** ajouter d'accent décoratif dans le back office.",
+      "**Don't** remplacer les couleurs ou la typographie des thèmes publics par celles du shell.",
+      "**Don't** transformer chaque carte en fenêtre ombrée.",
+      "**Don't** utiliser d'emoji ou de picto en duotone dans cet espace.",
+      "**Don't** présenter une capture locale ou ce document comme une preuve de mise en production."
+    ]
+  }
+}
