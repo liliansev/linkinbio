@@ -194,7 +194,7 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
             // Un pseudo qui ne mène nulle part se dit sous le champ, une fois quitté ; il ne s'affiche pas sur la page.
             const faux = enSaisie !== r.reseau && !!r.url.trim() && !adresseSaisie(r.url);
             return (
-            <li key={r.reseau} className="flex flex-wrap items-center gap-2">
+            <li key={r.reseau} className="flex flex-wrap items-center gap-1.5">
               <Icone nom={r.reseau} taille={22} className="w-7 shrink-0 text-white" />
               {/* Un pseudo suffit, comme aux premiers pas : il devient l'adresse du profil en quittant le champ. */}
               <input className={`${classeSaisie} min-w-0 flex-1 py-2.5`} value={pseudoReseau(r.reseau, r.url)} onFocus={() => setEnSaisie(r.reseau)}
@@ -203,10 +203,10 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
                 onBlur={e => { setEnSaisie(null); const u = urlReseau(r.reseau, e.target.value); if (u && u !== r.url) maj({ reseaux: reglages.reseaux.map((x, j) => (j === i ? { ...x, url: u } : x)) }); }} />
               {/* Monter et descendre, à la taille du pouce : l'ordre se règle sans glisser. */}
               <button type="button" disabled={i === 0} aria-label={`Monter ${NOMS_RESEAUX[r.reseau]}`} onClick={() => { const l = [...reglages.reseaux]; [l[i - 1], l[i]] = [l[i], l[i - 1]]; maj({ reseaux: l }); }}
-                className="grid h-11 w-9 shrink-0 place-items-center text-white/50 hover:text-white disabled:invisible"><Icone nom="ui-chevron" taille={18} className="rotate-180" /></button>
+                className="grid h-11 w-7 shrink-0 place-items-center text-white/50 hover:text-white disabled:invisible"><Icone nom="ui-chevron" taille={18} className="rotate-180" /></button>
               <button type="button" disabled={i === reglages.reseaux.length - 1} aria-label={`Descendre ${NOMS_RESEAUX[r.reseau]}`} onClick={() => { const l = [...reglages.reseaux]; [l[i + 1], l[i]] = [l[i], l[i + 1]]; maj({ reseaux: l }); }}
-                className="grid h-11 w-9 shrink-0 place-items-center text-white/50 hover:text-white disabled:invisible"><Icone nom="ui-chevron" taille={18} /></button>
-              <button type="button" aria-label={`Retirer ${NOMS_RESEAUX[r.reseau]}`} onClick={() => maj({ reseaux: reglages.reseaux.filter((_, j) => j !== i) })} className="grid h-11 w-9 shrink-0 place-items-center text-white/50 hover:text-white"><Icone nom="ui-fermer" taille={18} /></button>
+                className="grid h-11 w-7 shrink-0 place-items-center text-white/50 hover:text-white disabled:invisible"><Icone nom="ui-chevron" taille={18} /></button>
+              <button type="button" aria-label={`Retirer ${NOMS_RESEAUX[r.reseau]}`} onClick={() => maj({ reseaux: reglages.reseaux.filter((_, j) => j !== i) })} className="grid h-11 w-8 shrink-0 place-items-center text-white/50 hover:text-white"><Icone nom="ui-fermer" taille={18} /></button>
               {faux && <p id={`reseau-faux-${r.reseau}`} role="alert" className="w-full pl-9 text-[13px] font-medium text-red-300">{r.reseau === 'email' ? 'Une adresse e-mail, par exemple toi@exemple.fr' : 'Un pseudo sans espace, ou l’adresse de ton profil'}</p>}
             </li>
             );

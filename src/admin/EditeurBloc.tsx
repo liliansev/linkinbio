@@ -3,7 +3,7 @@ import type { CSSProperties } from 'react';
 import type { Api, Bloc, Reglages } from '../lib/types.ts';
 import { ANIMATIONS_BLOC, estEnLigne, idYoutube } from '../lib/types.ts';
 import { RESEAUX } from '../lib/types.ts';
-import { adresse, adresseSaisie } from '../lib/valider.ts';
+import { adresse, adresseSaisie, pourquoiPasAdresse } from '../lib/valider.ts';
 import { nomSite } from '../lib/demarrage.ts';
 import { themeDe, variablesTheme } from '../lib/themes.ts';
 import { ICONES } from '../lib/icones.ts';
@@ -58,7 +58,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
   function valider(): Bloc | null {
     if (!b) return null;
     const url = b.type === 'lien' ? adresseSaisie(b.url) : adresse(b.url);
-    if (b.type === 'lien' && !url) { setErreur(b.url.trim() ? 'Ce n’est pas une adresse. Exemple : ton-site.fr' : 'Indique l’adresse du lien.'); return null; }
+    if (b.type === 'lien' && !url) { setErreur(b.url.trim() ? pourquoiPasAdresse(b.url) : 'Indique l’adresse du lien.'); return null; }
     if (b.type === 'video' && !idYoutube(url)) { setErreur('Colle l’adresse d’une vidéo YouTube.'); return null; }
     if ((b.type === 'titre' || b.type === 'texte') && !b.titre.trim()) { setErreur('Écris le texte.', 'titre'); return null; }
     if (b.type === 'preuve' && b.preuve?.genre === 'temoignage' && !b.description.trim()) { setErreur('Écris le témoignage.', 'description'); return null; }
@@ -81,8 +81,13 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
     return { ...b, url, titre: b.type === 'lien' && !b.titre.trim() ? (nomSite(url) || b.titre) : b.titre };
   }
   const theme = themeDe(reglages);
-  // Ce qui est réglé derrière « Plus de réglages » : un compte, lu à droite de la ligne.
-  const reglees = [!b.public, b.vedette, !!b.sousTitre, !!b.icone, !!b.image, b.vedette && b.animation !== 'auto', !!b.acces, !!(b.debut || b.fin || b.creneau), !!(b.cache.length || b.audience), Object.keys(b.traductions ?? {}).length > 0].filter(Boolean).length;
+  // Une preuve ne s'aperçoit qu'une fois commencée : pas de « 0,0 sur 5 » avant d'avoir rien tapé.
+  const preuveRemplie = !!b.preuve && (b.preuve.genre === 'note' ? b.preuve.note > 0 : b.preuve.genre === 'compteur' ? b.preuve.nombre > 0 : !!b.description.trim());
+  // Ce qui est réglé derrière « Plus de réglages », nommé à droite de la ligne : on sait quoi sans ouvrir.
+  const reglages_ = ([[!b.public, 'Masqué'], [b.vedette, 'Mis en avant'], [!!b.sousTitre, 'Sous-titre'], [!!b.icone, 'Icône'], [!!b.image, 'Image'], [b.vedette && b.animation !== 'auto', 'Animation'],
+    [!!b.acces, 'Accès réservé'], [!!(b.debut || b.fin || b.creneau), 'Programmé'], [!!(b.cache.length || b.audience), 'Réseaux'], [Object.keys(b.traductions ?? {}).length > 0, 'Traduit']] as [boolean, string][])
+    .filter(([oui]) => oui).map(([, nom]) => nom);
+  const reglees = reglages_.length > 2 ? `${reglages_.slice(0, 2).join(', ')} et ${reglages_.length - 2} de plus` : reglages_.join(', ');
   const nomAuto = `Comme ma page (${NOMS_ANIMATIONS[reglages.animation].nom})`;
 
   async function choisirImage(f: File | undefined) {
@@ -159,13 +164,13 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
       <div className="flex flex-col gap-4 pt-1">
         {/* Ce que le bloc a de particulier, en clair : les pictos du coin de la page ne se lisent pas au toucher. */}
         {!nouveau && etiquettes(b).length > 0 && <p className="text-[13px] leading-snug text-white/60">{etiquettes(b).join(' · ')}</p>}
-        {(b.type === 'lien' || b.type === 'preuve') && (
+        {(b.type === 'lien' || (b.type === 'preuve' && preuveRemplie)) && (
           // L'aperçu reste collé en haut de la feuille : chaque réglage se voit sans remonter.
           <div className="sticky top-0 z-10 -mx-5 bg-[#121a2b] px-5 pb-3 pt-1 shadow-[0_14px_14px_-12px_#121a2b]">
             <div className="lp lp-mini -mx-1 rounded-[20px] p-4 ring-1 ring-white/[0.06]" style={variablesTheme(theme) as CSSProperties}
               data-bouton={reglages.bouton.style} data-forme={reglages.bouton.forme} data-ombre={reglages.bouton.ombre} data-police={theme.police} data-decor={theme.decor} aria-label="Aperçu du bouton">
               <div className="pointer-events-none" inert>
-                <BlocPublic key={`${b.format}-${b.teinte}-${b.animation}-${b.vedette}`} bloc={{ ...b, url: b.type === 'preuve' ? b.url : b.url || '#', titre: b.titre || (b.type === 'lien' ? 'Texte du bouton' : ''), public: true, restantes: b.acces?.places ? Math.max(0, b.acces.places - prises) : null }} reglages={reglages} clic={() => {}} cible={{}} apercu />
+                <BlocPublic key={`${b.format}-${b.teinte}-${b.animation}-${b.vedette}`} bloc={{ ...b, preuve: b.preuve && { ...b.preuve, note: Math.min(5, b.preuve.note) }, url: b.type === 'preuve' ? b.url : b.url || '#', titre: b.titre || (b.type === 'lien' ? 'Texte du bouton' : ''), public: true, restantes: b.acces?.places ? Math.max(0, b.acces.places - prises) : null }} reglages={reglages} clic={() => {}} cible={{}} apercu />
               </div>
             </div>
           </div>
@@ -237,7 +242,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
               </div>}
             </div>
             <div className="flex items-center gap-3">
-              {b.image ? <img src={b.image} alt="" className="h-14 w-14 rounded-xl object-cover" /> : <span className="grid h-14 w-14 place-items-center rounded-xl bg-white/[0.06] text-white/35"><Icone nom="ui-image" taille={22} /></span>}
+              {b.image && <img src={b.image} alt="" className="h-14 w-14 rounded-xl object-cover" />}
               <div className="flex flex-1 flex-wrap gap-2">
                 <button type="button" onClick={() => fichier.current?.click()} disabled={envoi} className="min-h-11 rounded-full bg-white/[0.08] px-4 text-[14px] font-medium text-white hover:bg-white/[0.13]">{envoi ? 'Envoi…' : b.image ? 'Changer l’image' : 'Ajouter une image'}</button>
                 {b.url && (
@@ -304,7 +309,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
             className="flex min-h-12 w-full items-center gap-3 rounded-2xl bg-white/[0.035] px-4 text-left transition hover:bg-white/[0.06]">
             <Icone nom="reglage" taille={20} className="text-white/70" />
             <span className="flex-1 text-[14.5px] font-medium text-white/85">Plus de réglages</span>
-            {reglees > 0 && <span className="text-[13px] text-white/55">{reglees} réglé{reglees > 1 ? 's' : ''}</span>}
+            {reglees && <span className="min-w-0 truncate text-[13px] text-white/55">{reglees}</span>}
             <Icone nom="ui-chevron" taille={16} className="text-white/55" />
           </button>
         )}

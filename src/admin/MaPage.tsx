@@ -17,7 +17,7 @@ import { themeDe, variablesTheme } from '../lib/themes.ts';
 import { HautLiens } from './BienDemarrer.tsx';
 import { FeuilleAjout } from './OngletLiens.tsx';
 import { DesignTiroirs, OngletApparence } from './OngletApparence.tsx';
-import { BoutonSecondaire, Feuille, Interrupteur, preparerImage, vibrer } from './ui.tsx';
+import { BoutonPrincipal, BoutonSecondaire, Feuille, Interrupteur, preparerImage, vibrer } from './ui.tsx';
 
 /*
  * « Ma page » : on édite la page elle-même. Le nom et la bio se tapent en
@@ -61,9 +61,13 @@ export function MaPage({ compte, reglages, blocs, clics, onReglages, onOrdonner,
     depart.current = f === 'design' || f === 'reseaux' ? reglages : null; setFeuilleBrute(f);
   };
   const change = depart.current !== null && JSON.stringify(depart.current) !== JSON.stringify(reglages);
-  const piedAnnuler = change ? (fermer: (apres?: () => void) => void) => (
-    <BoutonSecondaire className="w-full" onClick={() => { const avant = depart.current; fermer(() => { if (avant) onReglages(avant); setFeuille(null, true); }); }}>Annuler les changements</BoutonSecondaire>
-  ) : undefined;
+  // Le pied de chaque feuille qui s'enregistre seule : Terminé ferme, Annuler (dès qu'il y a un changement) revient au départ.
+  const piedAnnuler = (fermer: (apres?: () => void) => void) => (
+    <div className="flex items-center gap-2">
+      {change && <BoutonSecondaire onClick={() => { const avant = depart.current; fermer(() => { if (avant) onReglages(avant); setFeuille(null, true); }); }}>Annuler</BoutonSecondaire>}
+      <BoutonPrincipal className="flex-1" onClick={() => fermer()}>Terminé</BoutonPrincipal>
+    </div>
+  );
   const [envoi, setEnvoi] = useState(false);
   // Le geste s'explique au-dessus de la page tant que deux blocs n'ont pas été ouverts, puis se tait.
   const [ouverts, setOuverts] = useState(() => { try { return Number(localStorage.getItem('hopla-blocs-ouverts')) || 0; } catch { return 0; } });
@@ -91,6 +95,20 @@ export function MaPage({ compte, reglages, blocs, clics, onReglages, onOrdonner,
   // Le bouton du bas de la page pose le bloc en bas ; celui du haut, en haut.
   const enBas = useRef(false);
   const ajouter = (type: TypeBloc) => { setFeuille(null); onAjouter(nouveauBloc(type, `n${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`), enBas.current); enBas.current = false; };
+  // Au clavier : « A » ouvre Ajouter ; une adresse collée sur la page (hors d'un champ) devient un lien neuf.
+  useEffect(() => {
+    const libre = (e: Event) => !(e.target as HTMLElement | null)?.closest('input, textarea, select, [contenteditable], [role="dialog"]') && !document.querySelector('[role="dialog"]');
+    const touche = (e: KeyboardEvent) => { if ((e.key === 'a' || e.key === 'A') && !e.metaKey && !e.ctrlKey && !e.altKey && libre(e)) { e.preventDefault(); setFeuilleBrute('ajout'); } };
+    const coller = (e: ClipboardEvent) => {
+      if (!libre(e)) return;
+      const url = adresseSaisie(e.clipboardData?.getData('text') ?? '');
+      if (!url) return;
+      e.preventDefault();
+      onAjouter({ ...nouveauBloc('lien', `n${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`), url });
+    };
+    addEventListener('keydown', touche); addEventListener('paste', coller);
+    return () => { removeEventListener('keydown', touche); removeEventListener('paste', coller); };
+  }, [onAjouter]);
   /** Un réseau rempli qui ne mène nulle part garde la feuille ouverte, sur son champ. */
   const reseauFaux = () => {
     const faux = reglages.reseaux.find(r => r.url.trim() && !adresseSaisie(r.url) && !urlReseau(r.reseau, r.url));
@@ -118,6 +136,7 @@ export function MaPage({ compte, reglages, blocs, clics, onReglages, onOrdonner,
     photo: () => fichier.current?.click(),
     envoiPhoto: envoi,
     reseaux: () => setFeuille('reseaux'),
+    nomVide: () => annoncer({ texte: 'Ton nom ne peut pas rester vide' }),
     liste: (liste, rendu) => <BlocsEditables blocs={liste} rendu={rendu} clics={clics} onOrdonner={onOrdonner} onOuvrir={ouvrirBloc}
       onAjouter={() => { vibrer(5); enBas.current = true; setFeuille('ajout'); }} />,
   };
@@ -129,7 +148,7 @@ export function MaPage({ compte, reglages, blocs, clics, onReglages, onOrdonner,
         <button type="button" onClick={design} className="flex min-h-11 items-center gap-1.5 rounded-full bg-white/[0.07] px-4 text-[14px] font-medium text-white transition hover:bg-white/[0.12] active:scale-95">
           <Icone nom="palette" taille={16} /> Design
         </button>
-        <button type="button" onClick={() => { vibrer(5); setFeuille('ajout'); }} className="flex min-h-11 items-center gap-1.5 rounded-full bg-peche px-4 text-[14px] font-semibold text-nuit transition hover:brightness-105 active:scale-95">
+        <button type="button" onClick={() => { vibrer(5); setFeuille('ajout'); }} aria-keyshortcuts="A" title="Ajouter (A, ou colle une adresse)" className="flex min-h-11 items-center gap-1.5 rounded-full bg-peche px-4 text-[14px] font-semibold text-nuit transition hover:brightness-105 active:scale-95">
           <Icone nom="ui-plus" taille={16} /> Ajouter
         </button>
       </div>
@@ -195,6 +214,18 @@ function ApercuDirect({ page }: { page: PagePublique }) {
   );
 }
 
+/** Ce que les lecteurs d'écran disent pendant un déplacement, en français. */
+const nomDe = (id: string | number) => document.querySelector(`[data-id="${id}"]`)?.getAttribute('aria-label')?.replace(/^Modifier /, '').split(',')[0] ?? 'le bloc';
+const ACCESSIBILITE = {
+  screenReaderInstructions: { draggable: 'Pour déplacer un bloc, appuie sur Espace, puis sur les flèches haut et bas. Espace de nouveau pour le poser, Échap pour annuler.' },
+  announcements: {
+    onDragStart: ({ active }: { active: { id: string | number } }) => `${nomDe(active.id)} pris.`,
+    onDragOver: ({ active, over }: { active: { id: string | number }; over: { id: string | number } | null }) => (over ? `${nomDe(active.id)} au niveau de ${nomDe(over.id)}.` : `${nomDe(active.id)} hors de la liste.`),
+    onDragEnd: ({ active, over }: { active: { id: string | number }; over: { id: string | number } | null }) => (over ? `${nomDe(active.id)} posé.` : `${nomDe(active.id)} reposé à sa place.`),
+    onDragCancel: ({ active }: { active: { id: string | number } }) => `Déplacement annulé, ${nomDe(active.id)} reste à sa place.`,
+  },
+};
+
 function BlocsEditables({ blocs, rendu, clics, onOrdonner, onOuvrir, onAjouter }: {
   blocs: Bloc[]; rendu: (bloc: Bloc) => ReactNode; clics: Record<string, number>;
   onOrdonner: (blocs: Bloc[]) => void; onOuvrir: (bloc: Bloc) => void; onAjouter: () => void;
@@ -215,7 +246,7 @@ function BlocsEditables({ blocs, rendu, clics, onOrdonner, onOuvrir, onAjouter }
   const ouvrir = (bloc: Bloc) => { if (Date.now() - glisse.current > 250) onOuvrir(bloc); };
   return (
     <>
-      <DndContext sensors={capteurs} collisionDetection={closestCenter} onDragStart={() => vibrer(6)} onDragEnd={deplacer} onDragCancel={() => { glisse.current = Date.now(); }}>
+      <DndContext accessibility={ACCESSIBILITE} sensors={capteurs} collisionDetection={closestCenter} onDragStart={() => vibrer(6)} onDragEnd={deplacer} onDragCancel={() => { glisse.current = Date.now(); }}>
         <SortableContext items={blocs.map(b => b.id)} strategy={verticalListSortingStrategy}>
           {blocs.map((bloc, i) => <BlocEditable key={bloc.id} bloc={bloc} i={i} clics={clics[bloc.id]} ouvrir={ouvrir}>{rendu(bloc)}</BlocEditable>)}
         </SortableContext>

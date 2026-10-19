@@ -117,7 +117,7 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
 
       <a href={`mailto:${CONTACT_LEGAL}?subject=${encodeURIComponent('Hopla : une question')}`}
         className="flex min-h-14 items-center gap-3.5 rounded-xl border border-white/[0.07] bg-white/[0.03] px-4 text-[15px] font-medium text-white transition hover:bg-white/[0.05]">
-        <Icone nom="courrier" taille={20} className="shrink-0 text-white/80" />
+        <Icone nom="message" taille={20} className="shrink-0 text-white/80" />
         <span className="flex-1">Une question ? Écris-nous</span>
         <Icone nom="ui-chevron" taille={16} className="-rotate-90 text-white/30" />
       </a>

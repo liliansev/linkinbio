@@ -165,6 +165,12 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
       const avant = blocs;
       setToast({ texte: enBas ? 'Ajouté en bas de ta page' : 'Ajouté en haut de ta page', annuler: () => { setBlocs(avant); setToast(null); ecrire(() => api.supprimerBloc(bloc.id)); } });
       montrer(bloc.id);
+    } else {
+      // Une modification se défait aussi, le temps du message : le bloc revient tel qu'il était.
+      const ancien = blocs.find(b => b.id === bloc.id);
+      if (ancien && JSON.stringify(ancien) !== JSON.stringify(bloc)) setToast({ texte: 'Modifications enregistrées', annuler: () => {
+        setBlocs(l => l.map(b => (b.id === ancien.id ? ancien : b))); setToast(null); ecrire(() => api.enregistrerBloc(ancien));
+      } });
     }
   }
 
@@ -219,7 +225,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
   const bulle = toast && (
     <div role="status" onPointerEnter={() => setToastTenu(true)} onPointerLeave={() => setToastTenu(false)} onFocus={() => setToastTenu(true)} onBlur={() => setToastTenu(false)} className="adm-toast fixed inset-x-4 bottom-[calc(76px+env(safe-area-inset-bottom))] z-[60] mx-auto flex max-w-sm items-center justify-between gap-3 rounded-2xl bg-white px-4 py-3 text-[14.5px] font-medium text-nuit shadow-2xl lg:bottom-6">
       <span className="flex items-center gap-2">{!toast.annuler && sauvegarde !== 'erreur' && <span className="grid h-5 w-5 place-items-center rounded-full bg-emerald-500 text-white"><Icone nom="ui-ok" taille={13} /></span>}{toast.texte}</span>
-      {toast.annuler && <button ref={actionToast} type="button" onClick={toast.annuler} className="-my-2 min-h-11 rounded-full px-3 font-semibold text-[#a3461d] hover:bg-black/5">{toast.action ?? 'Annuler'}</button>}
+      {toast.annuler && <button ref={actionToast} type="button" onClick={toast.annuler} className="-my-2 min-h-11 rounded-full px-3 font-semibold text-nuit underline decoration-nuit/30 underline-offset-4 hover:bg-black/5">{toast.action ?? 'Annuler'}</button>}
     </div>
   );
 

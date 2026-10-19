@@ -192,3 +192,13 @@ export function email(v: unknown): string {
   const s = texte(v, 200).toLowerCase();
   return /^[^\s@<>"',;]+@[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(s) ? s : '';
 }
+
+/** Pourquoi une saisie n'est pas une adresse, dit au plus près de l'erreur. */
+export function pourquoiPasAdresse(v: string): string {
+  const s = v.trim();
+  if (/^https?\/\//i.test(s)) return 'Il manque « : » après http. Exemple : https://ton-site.fr';
+  if (/^https?:\/[^/]/i.test(s)) return 'Il manque un « / » après https:. Exemple : https://ton-site.fr';
+  if (/\s/.test(s)) return 'Une adresse n’a pas d’espace. Exemple : ton-site.fr';
+  if (!/\./.test(s.replace(/^https?:\/\//i, '').split('/')[0])) return 'Il manque la fin de l’adresse, comme .fr ou .com.';
+  return 'Ce n’est pas une adresse. Exemple : ton-site.fr';
+}

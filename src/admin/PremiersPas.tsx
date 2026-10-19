@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { Api, Bloc, PagePublique, Reglages, Reseau } from '../lib/types.ts';
 import { SANS_COULEURS, nouveauBloc, sansSchema, urlPage } from '../lib/types.ts';
-import { adresseSaisie } from '../lib/valider.ts';
+import { adresseSaisie, pourquoiPasAdresse } from '../lib/valider.ts';
 import { THEMES } from '../lib/themes.ts';
 import { RESEAUX_ACCUEIL, THEMES_ACCUEIL, nomSite, urlReseau } from '../lib/demarrage.ts';
 import { PageLiens } from '../components/PageLiens.tsx';
@@ -68,6 +68,7 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
   const [tous, setTous] = useState(false);
   // Un Continuer sur un champ faux s'arrête une fois et montre le champ ; le second passe sans lui.
   const [ignorer, setIgnorer] = useState(false);
+  const [nomVide, setNomVide] = useState(false);
   const fichier = useRef<HTMLInputElement>(null);
   const adressePage = urlPage(compte);
   const peutPartager = typeof navigator !== 'undefined' && typeof navigator.share === 'function';
@@ -127,6 +128,8 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
   const fautifs: string[] = etape === 'liens' ? lignes.filter(l => l.url.trim() && !adresseSaisie(l.url)).map(l => l.id)
     : etape === 'reseaux' ? ouverts.filter(r => (saisies[r] ?? '').trim() && !urlReseau(r, saisies[r] ?? '')) : [];
   function suivant() {
+    // Le nom s'affiche en haut de la page : il ne part jamais vide.
+    if (etape === 'profil' && !reglages.profil.nom.trim()) { vibrer(20); setNomVide(true); document.getElementById('premiers-nom')?.focus(); return; }
     if (fautifs.length && !ignorer) {
       vibrer(20);
       setQuittes(q => new Set([...q, ...fautifs]));
@@ -148,6 +151,7 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
     scrollTo({ top: 0 });
   }
   function terminer() {
+    if (!reglages.profil.nom.trim()) profil({ nom: compte.pseudo });
     if (etape === 'liens') poserLiens();
     noter(CLE_PREMIERS_PAS);
     try { sessionStorage.removeItem(CLE_ETAPE); } catch { /* stockage refusé */ }
@@ -191,7 +195,9 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
             </button>
             <label className="min-w-0 flex-1">
               <span className="mb-1 block text-[13px] font-medium text-white/60">Ton nom</span>
-              <input className={classeSaisie} value={reglages.profil.nom} maxLength={80} autoComplete="name" onFocus={e => e.currentTarget.select()} onChange={e => profil({ nom: e.target.value })} />
+              <input id="premiers-nom" className={classeSaisie} value={reglages.profil.nom} maxLength={80} autoComplete="name" onFocus={e => e.currentTarget.select()} onChange={e => { setNomVide(false); profil({ nom: e.target.value }); }}
+                aria-invalid={nomVide || undefined} aria-describedby={nomVide ? 'erreur-nom' : undefined} />
+              {nomVide && <p id="erreur-nom" role="alert" className="mt-1.5 text-[13px] font-medium text-red-300">Écris ton nom : il s’affiche en haut de ta page.</p>}
             </label>
           </div>
           <label>
@@ -222,7 +228,7 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
                     onChange={e => majLigne(l.id, { url: e.target.value })} onBlur={() => { setQuittes(q => new Set(q).add(l.id)); lireSite(l); }}
                     onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); (e.currentTarget.closest('li')?.nextElementSibling?.querySelector('input') as HTMLInputElement | null)?.focus(); } }} />
                 </div>
-                {fausse && <p id={`erreur-${l.id}`} role="alert" className="px-2 pb-1.5 text-[13px] font-medium text-red-300">Ce n’est pas une adresse. Exemple : ton-site.fr</p>}
+                {fausse && <p id={`erreur-${l.id}`} role="alert" className="px-2 pb-1.5 text-[13px] font-medium text-red-300">{pourquoiPasAdresse(l.url)}</p>}
                 {valide && (
                   <label className="mt-1 flex items-center gap-2 border-t border-white/[0.06] pt-1">
                     <span className="w-9 shrink-0 text-center text-[12px] text-white/55">Titre</span>
@@ -264,9 +270,10 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
           )}
           <div className="flex flex-wrap items-center gap-1">
             {RESEAUX_ACCUEIL.filter((r, n) => !ouverts.includes(r) && (tous || n < 5)).map(r => (
-              <button key={r} type="button" onClick={() => ouvrirReseau(r)} aria-label={NOMS_RESEAUX[r]} title={NOMS_RESEAUX[r]}
-                className="grid h-12 w-12 place-items-center rounded-xl text-white/85 transition hover:bg-white/[0.07] active:scale-90">
+              <button key={r} type="button" onClick={() => ouvrirReseau(r)}
+                className="flex w-[62px] flex-col items-center gap-1 rounded-xl py-2 text-white/85 transition hover:bg-white/[0.07] active:scale-95">
                 <Icone nom={r} taille={24} />
+                <span className="w-full truncate text-center text-[11.5px] text-white/60">{NOMS_RESEAUX[r]}</span>
               </button>
             ))}
             {!tous && <button type="button" onClick={() => setTous(true)} className="flex min-h-12 items-center gap-1.5 rounded-xl px-3 text-[14px] font-medium text-white/80 transition hover:bg-white/[0.07] hover:text-white"><Icone nom="ui-plus" taille={15} />Autres réseaux</button>}
@@ -276,7 +283,7 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
     },
     partage: {
       titre: 'Où vas-tu mettre ton lien ?',
-      aide: 'Tes liens pourront passer en tête selon le réseau d’où l’on vient : ta boutique en premier pour ceux qui arrivent d’Instagram, par exemple.',
+      aide: 'Tu pourras montrer un lien en premier selon le réseau : ta boutique d’abord pour ceux qui viennent d’Instagram, par exemple.',
       corps: (<>
         <ul className="flex flex-col divide-y divide-white/[0.06] rounded-2xl bg-white/[0.04] px-3.5">
           {OU_PARTAGER.map(a => {
@@ -296,7 +303,7 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
             );
           })}
         </ul>
-      {dernierSeul && <p id="au-moins-un" role="alert" className="mt-2 px-1 text-[13px] font-medium text-white/75">Il en faut au moins un, pour savoir où ton lien sera vu : coche d’abord un autre réseau.</p>}
+      {dernierSeul && <p id="au-moins-un" role="alert" className="mt-2 px-1 text-[13px] font-medium text-white/75">Garde au moins un réseau : coche d’abord un autre.</p>}
       </>),
     },
     style: {

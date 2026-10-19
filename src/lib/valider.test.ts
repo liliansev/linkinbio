@@ -9,3 +9,10 @@ test('une adresse tapée doit ressembler à un site', () => {
   assert.equal(adresseSaisie('marie@atelier.fr'), 'mailto:marie@atelier.fr');
   assert.equal(adresseSaisie('/contact'), '/contact');
 });
+
+test('pourquoiPasAdresse dit ce qui manque', async () => {
+  const { pourquoiPasAdresse } = await import('./valider.ts');
+  assert.match(pourquoiPasAdresse('https//x.fr'), /« : »/);
+  assert.match(pourquoiPasAdresse('ma boutique'), /espace/);
+  assert.match(pourquoiPasAdresse('monsite'), /\.fr ou \.com/);
+});

@@ -42,6 +42,8 @@ export interface Edition {
   envoiPhoto: boolean;
   reseaux: () => void;
   liste: (blocs: Bloc[], rendu: (bloc: Bloc) => ReactNode) => ReactNode;
+  /** Le nom vidé puis quitté : il revient tel qu'il était, et le back office le dit. */
+  nomVide?: () => void;
 }
 
 export function PageLiens({ page, apercu = false, edition }: { page: PagePublique; apercu?: boolean; edition?: Edition }) {
@@ -121,7 +123,9 @@ export function PageLiens({ page, apercu = false, edition }: { page: PagePubliqu
           <Nom className="lp-nom">
             {edition
               ? <input className="lp-ed-saisie" value={reglages.profil.nom} maxLength={80} placeholder="Ton nom" aria-label="Ton nom"
-                  style={{ width: `${Math.max(reglages.profil.nom.length, 7) + 1}ch` }} onChange={e => edition.profil({ nom: e.target.value })} />
+                  style={{ width: `${Math.max(reglages.profil.nom.length, 7) + 1}ch` }} onChange={e => edition.profil({ nom: e.target.value })}
+                  onFocus={e => { e.currentTarget.dataset.avant = reglages.profil.nom; }}
+                  onBlur={e => { if (!e.currentTarget.value.trim()) { edition.profil({ nom: e.currentTarget.dataset.avant?.trim() || compte.pseudo }); edition.nomVide?.(); } }} />
               : reglages.profil.nom}
             {reglages.profil.badge && <span className="lp-badge" title={t.verifie} role="img" aria-label={t.verifie}><Icone nom="badge" taille={20} /></span>}
           </Nom>

@@ -141,6 +141,7 @@ export function RegleReseaux({ b, maj, reseaux }: { b: Bloc; maj: (c: Partial<Bl
             <span className="min-w-0 truncate text-[13px] font-normal text-white/55">{!premier && (enTete.length ? noms(enTete) : 'Aucun réseau')}</span>
             <Icone nom="ui-chevron" taille={18} className={`shrink-0 text-white/75 transition-transform duration-300 ${premier ? 'rotate-180' : ''}`} />
           </button>
+          {premier && <p className="-mt-1 mb-1 text-[12.5px] leading-snug text-white/55">Ce bloc passe tout en haut de ta page pour ceux qui arrivent de ces réseaux.</p>}
           {premier && (
             <ul className="-mt-1 divide-y divide-white/[0.06]" aria-label="En premier pour ces visiteurs">
               {liste.filter(visible).map(s => (
@@ -230,6 +231,7 @@ export function ChampsPreuve({ b, maj, erreurDe = () => undefined }: { b: Bloc; 
   const majP = (champs: Partial<Preuve>) => maj({ preuve: { ...p, ...champs } });
   // La note se tape comme on l'écrit (« 4,8 ») et ne se lit qu'en quittant le champ : rien ne s'arrondit sous les doigts.
   const [note, setNote] = useState(p.note ? String(p.note).replace('.', ',') : '');
+  const [trop, setTrop] = useState(false);
   const lireNote = (v: string) => { const n = Math.round(Number(v.replace(',', '.')) * 10) / 10; return Number.isFinite(n) ? Math.max(0, n) : 0; };
   return (
     <>
@@ -240,10 +242,10 @@ export function ChampsPreuve({ b, maj, erreurDe = () => undefined }: { b: Bloc; 
       </div>
       {p.genre === 'note' && (
         <div className="grid grid-cols-2 gap-3">
-          <Champ label="Note sur 5" erreur={erreurDe('note')}>
+          <Champ label="Note sur 5" erreur={erreurDe('note') ?? (trop ? 'La note va de 0 à 5. Sur 10, divise-la par deux.' : undefined)}>
             <input className={classeSaisie} type="text" inputMode="decimal" value={note} placeholder="Ex. 4,8"
-              onChange={e => { const v = e.target.value.replace(/[^\d.,]/g, '').slice(0, 4); setNote(v); majP({ note: lireNote(v) }); }}
-              onBlur={() => { const n = lireNote(note); setNote(n ? String(n).replace('.', ',') : ''); }} />
+              onChange={e => { const v = e.target.value.replace(/[^\d.,]/g, '').slice(0, 4); setNote(v); setTrop(false); majP({ note: lireNote(v) }); }}
+              onBlur={() => { const n = lireNote(note); setNote(n ? String(n).replace('.', ',') : ''); setTrop(n > 5); }} />
           </Champ>
           <Champ label="Nombre d’avis" erreur={erreurDe('nombre')}>
             <input className={classeSaisie} type="number" inputMode="numeric" min={0} value={p.nombre || ''} placeholder="Ex. 132"
