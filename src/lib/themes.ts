@@ -116,7 +116,7 @@ export const THEMES: Theme[] = [
     conseil: { style: 'verre', forme: 'pilule', ombre: 'subtile' },
   },
   {
-    id: 'coucher', nom: 'Coucher de soleil', humeur: 'Pop', famille: 'degrade',
+    id: 'coucher', nom: 'Couchant', humeur: 'Pop', famille: 'degrade',
     fond: 'linear-gradient(170deg, #ffc49e 0%, #ff8fa6 55%, #c7a2f0 100%)', fondUni: '#ff9fa8', texte: '#1c0b1f', doux: '#44263f',
     surface: '#ffffff', surfaceTexte: '#1c0b1f', vedette: '#1c0b1f', vedetteTexte: '#ffffff', ombre: '#7a2e4a',
     police: 'geometrique', decor: 'grain',

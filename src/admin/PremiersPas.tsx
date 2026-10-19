@@ -10,7 +10,7 @@ import { NOMS_AUDIENCES, reseauxDePartage } from '../lib/provenance.ts';
 import type { Audience } from '../lib/provenance.ts';
 import { Icone, NOMS_RESEAUX } from '../components/Icone.tsx';
 import { Pastille } from './OngletApparence.tsx';
-import { BoutonCopier, BoutonPrincipal, copierTexte, classeSaisie, flechesRadio, preparerImage, vibrer } from './ui.tsx';
+import { Bascule, BoutonCopier, BoutonPrincipal, copierTexte, classeSaisie, flechesRadio, preparerImage, vibrer } from './ui.tsx';
 
 /*
  * L'arrivée d'un compte neuf, juste après les CGU : cinq questions, et la
@@ -296,19 +296,17 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
             const coche = choisis.includes(a);
             const seul = coche && choisis.length === 1;
             return (
-              <li key={a} className="flex min-h-12 items-center gap-3">
+              <li key={a} className="flex min-h-12 flex-wrap items-center gap-x-3">
                 <span className="flex w-5 justify-center text-white/75"><Icone nom={a} taille={18} /></span>
                 <span className="flex-1 text-[15px] font-medium text-white">{a === 'qr' ? 'Ailleurs : site, e-mail, QR code' : NOMS_AUDIENCES[a]}</span>
-                <button type="button" role="switch" aria-checked={coche} aria-label={a === 'qr' ? 'Mon lien ailleurs : site, e-mail, QR code' : `Mon lien sur ${NOMS_AUDIENCES[a]}`} aria-describedby={seul && dernierSeul ? 'au-moins-un' : undefined}
-                  onClick={() => { if (seul) { vibrer(20); setDernierSeul(true); return; } setDernierSeul(false); vibrer(4); onReglages({ ...reglages, vuesReseaux: OU_PARTAGER.filter(x => (x === a ? !coche : choisis.includes(x))) }); }}
-                  className={`adm-interrupteur relative h-6 w-10 shrink-0 rounded-full before:absolute before:-inset-2 before:content-[''] ${coche ? 'bg-white' : 'bg-white/15'}`}>
-                  <span className={`absolute top-[3px] left-[3px] h-[18px] w-[18px] rounded-full shadow-[0_1px_3px_rgba(0,0,0,0.3)] ${coche ? 'translate-x-4 bg-nuit' : 'bg-white'}`} />
-                </button>
+                <Bascule actif={coche} label={a === 'qr' ? 'Mon lien ailleurs : site, e-mail, QR code' : `Mon lien sur ${NOMS_AUDIENCES[a]}`} decrit={seul && dernierSeul ? 'au-moins-un' : undefined}
+                  onClick={() => { if (seul) { vibrer(20); setDernierSeul(true); return; } setDernierSeul(false); vibrer(4); onReglages({ ...reglages, vuesReseaux: OU_PARTAGER.filter(x => (x === a ? !coche : choisis.includes(x))) }); }} />
+                {/* Le refus se dit sous la ligne touchée : visible sans faire défiler. */}
+                {seul && dernierSeul && <p id="au-moins-un" role="alert" className="w-full pb-2 pl-8 text-[13px] font-medium text-white/75">Garde au moins un réseau : active d’abord un autre.</p>}
               </li>
             );
           })}
         </ul>
-      {dernierSeul && <p id="au-moins-un" role="alert" className="mt-2 px-1 text-[13px] font-medium text-white/75">Garde au moins un réseau : coche d’abord un autre.</p>}
       </>),
     },
     style: {

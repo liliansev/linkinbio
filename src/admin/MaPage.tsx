@@ -78,6 +78,9 @@ export function MaPage({ compte, reglages, blocs, clics, onReglages, onOrdonner,
   const principal = compte.principal;
   const visibles = blocs.filter(b => principal || !TYPES_PRINCIPAL.includes(b.type));
 
+  // Les réglages du dernier rendu : une annulation tardive ne défait que son propre champ.
+  const derniers = useRef(reglages);
+  derniers.current = reglages;
   const profil = (champs: Partial<Reglages['profil']>) => onReglages({ ...reglages, profil: { ...reglages.profil, ...champs } });
 
   async function photo(f: File | undefined) {
@@ -136,6 +139,7 @@ export function MaPage({ compte, reglages, blocs, clics, onReglages, onOrdonner,
     photo: () => fichier.current?.click(),
     envoiPhoto: envoi,
     reseaux: () => setFeuille('reseaux'),
+    modifie: (champ, avant) => annoncer({ texte: champ === 'nom' ? 'Nom mis à jour' : 'Bio mise à jour', annuler: () => { onReglages({ ...derniers.current, profil: { ...derniers.current.profil, [champ]: avant } }); annoncer({ texte: 'Changements annulés', genre: 'info' }); } }),
     nomVide: () => annoncer({ texte: 'Ton nom ne peut pas rester vide : il revient tel qu’il était.', genre: 'info' }),
     liste: (liste, rendu) => <BlocsEditables blocs={liste} rendu={rendu} clics={clics} onOrdonner={onOrdonner} onOuvrir={ouvrirBloc}
       onAjouter={() => { vibrer(5); enBas.current = true; setFeuille('ajout'); }} />,

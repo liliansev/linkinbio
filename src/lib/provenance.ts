@@ -16,6 +16,15 @@ export const NOMS_AUDIENCES: Record<Audience, string> = {
   snapchat: 'Snapchat', qr: 'QR code', newsletter: 'Newsletter', email: 'E-mail', google: 'Google',
 };
 
+/** « de TikTok », « d’Instagram », « d’un QR code » : la préposition qui va devant le nom. */
+export function deReseau(a: Audience): string {
+  if (a === 'qr') return 'd’un QR code';
+  if (a === 'newsletter') return 'de la newsletter';
+  if (a === 'email') return 'd’un e-mail';
+  const nom = NOMS_AUDIENCES[a];
+  return /^[AEIOU]/i.test(nom) ? `d’${nom}` : `de ${nom}`;
+}
+
 const ALIAS: Record<string, Audience> = {
   ig: 'instagram', insta: 'instagram', tt: 'tiktok', yt: 'youtube', li: 'linkedin', twitter: 'x', fb: 'facebook', snap: 'snapchat',
   nl: 'newsletter', mail: 'email', 'e-mail': 'email',

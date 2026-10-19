@@ -6,12 +6,12 @@ import { Feuille } from './ui.tsx';
 
 export const TYPES: { type: TypeBloc; nom: string; aide: string; picto: string }[] = [
   { type: 'lien', nom: 'Lien', aide: 'Un bouton vers n’importe quelle adresse', picto: 'bloc-lien' },
-  { type: 'titre', nom: 'Titre de section', aide: 'Pour regrouper les liens', picto: 'bloc-titre' },
+  { type: 'titre', nom: 'Titre de section', aide: 'Un intertitre pour regrouper tes liens', picto: 'bloc-titre' },
   { type: 'texte', nom: 'Texte', aide: 'Un court paragraphe', picto: 'bloc-texte' },
   { type: 'video', nom: 'Vidéo YouTube', aide: 'La vidéo s’affiche dans la page', picto: 'bloc-video' },
   { type: 'derniere-video', nom: 'Ma dernière vidéo YouTube', aide: 'Se met à jour toute seule', picto: 'bloc-derniere-video' },
-  { type: 'inscription', nom: 'Ma liste d’inscrits', aide: 'Récolte des e-mails, export, Brevo, Mailchimp', picto: 'bloc-inscription' },
-  { type: 'preuve', nom: 'Avis et preuves', aide: 'Ta note Google, un chiffre, un témoignage', picto: 'bloc-preuve' },
+  { type: 'inscription', nom: 'Ma liste d’inscrits', aide: 'Tes visiteurs laissent leur e-mail, que tu exportes ou envoies vers Brevo ou Mailchimp', picto: 'bloc-inscription' },
+  { type: 'preuve', nom: 'Avis et preuves', aide: 'Ta note Google, un chiffre clé ou un témoignage, avec sa source', picto: 'bloc-preuve' },
   { type: 'newsletter', nom: 'Ma newsletter Lumail', aide: 'Branchée sur Lumail', picto: 'bloc-newsletter' },
 ];
 
@@ -36,6 +36,8 @@ export function FeuilleAjout({ ouverte, onFermer, onChoisir, principal }: { ouve
             </li>
           ))}
         </ul>
+        {/* Les raccourcis, dits une fois là où l'on ajoute : sans eux, ils resteraient secrets. */}
+        <p className="px-1 pb-1 text-[13px] leading-snug text-white/50">Astuce : colle une adresse sur ta page pour ajouter un lien d’un coup<span className="hidden lg:inline">, ou appuie sur A pour ouvrir cette liste</span>.</p>
         </>
       )}
     </Feuille>

@@ -16,7 +16,7 @@ import { ChampsPreuve, RegleAcces, RegleMoment, RegleReseaux, RegleTraductions, 
 import { reseauxDePartage } from '../lib/provenance.ts';
 import { etiquettes } from '../lib/etiquettes.ts';
 
-export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, onSupprimer, onDupliquer, onDeplacer, place, envoyerImage, apercuSite, clics, adressePage, prises = 0, principal = false }: {
+export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, onSupprimer, onDupliquer, onDeplacer, place, traduire = false, envoyerImage, apercuSite, clics, adressePage, prises = 0, principal = false }: {
   bloc: Bloc | null;
   reglages: Reglages;
   nouveau: boolean;
@@ -27,6 +27,8 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
   /** Monter ou descendre le bloc d'un cran, sans glisser : la place est donnée par la page. */
   onDeplacer?: (bloc: Bloc, sens: -1 | 1) => void;
   place?: { rang: number; total: number };
+  /** Ouvert depuis Réglages, Langues : la feuille s'ouvre sur les traductions. */
+  traduire?: boolean;
   envoyerImage: (dataUrl: string) => Promise<string>;
   apercuSite: Api['apercuSite'];
   clics: number;
@@ -50,6 +52,12 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
   const [icones, setIcones] = useState(false);
   // L'essentiel d'abord, neuf ou pas ; le reste attend derrière « Plus de réglages », sauf ce qui est déjà réglé.
   const [plus, setPlus] = useState(false);
+  useEffect(() => {
+    if (!traduire || !bloc) return;
+    setPlus(true);
+    const t = setTimeout(() => document.getElementById('traductions-bloc')?.scrollIntoView({ block: 'start' }), 120);
+    return () => clearTimeout(t);
+  }, [traduire, bloc?.id]);
   const fichier = useRef<HTMLInputElement>(null);
   useEffect(() => { setB(bloc); setErreur(''); }, [bloc]);
   // Clavier ouvert, l'aperçu collant se replie : la place va au champ et à son erreur.
@@ -180,6 +188,8 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
       )}>
       <div className="flex flex-col gap-4 pt-1">
         {/* Ce que le bloc a de particulier, en clair : les pictos du coin de la page ne se lisent pas au toucher. */}
+        {/* Un bloc neuf dit d'abord à quoi il sert, en une ligne. */}
+        {nouveau && <p className="text-[13.5px] leading-snug text-white/60">{type.aide}.</p>}
         {!nouveau && etiquettes(b).length > 0 && <p className="text-[13px] leading-snug text-white/60">{etiquettes(b).join(' · ')}</p>}
         {(b.type === 'lien' || (b.type === 'preuve' && preuveRemplie)) && !clavier && (
           // L'aperçu reste collé en haut de la feuille : chaque réglage se voit sans remonter.
@@ -194,7 +204,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
         )}
         {avecUrl && (
           <Champ label={b.type === 'video' ? 'Adresse de la vidéo YouTube' : 'Adresse'} erreur={erreurDe('url')}
-            aide={b.type === 'lien' && reglages.ouvrirApps && appDe(adresse(b.url)) ? <span className="inline-flex items-center gap-1.5 text-white/75"><Icone nom="ui-ok" taille={13} />Ce lien s’ouvre directement dans l’app {appDe(adresse(b.url))}, même depuis Instagram ou TikTok.</span> : undefined}>
+            aide={b.type === 'lien' && reglages.ouvrirApps && appDe(adresse(b.url)) ? <span className="inline-flex items-center gap-1.5 text-white/75"><Icone nom="ui-ok" taille={13} />Ce lien s’ouvre directement dans l’app {appDe(adresse(b.url))}, même depuis {['Instagram', 'TikTok'].filter(n => n !== appDe(adresse(b.url))).join(' ou ')}.</span> : undefined}>
             <input className={classeSaisie} type="url" inputMode="url" autoCapitalize="none" autoCorrect="off" placeholder={b.type === 'video' ? 'https://youtu.be/…' : 'https://…'}
               value={b.url} onChange={e => maj({ url: e.target.value })} onBlur={titreDepuisSite} autoFocus={nouveau}
               onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); document.getElementById('bloc-titre')?.focus(); } }} />
@@ -262,7 +272,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
               {b.image && <img src={b.image} alt="" className="h-14 w-14 rounded-xl object-cover" />}
               <div className="flex flex-1 flex-wrap gap-2">
                 <button type="button" onClick={() => fichier.current?.click()} disabled={envoi} className="min-h-11 rounded-full bg-white/[0.08] px-4 text-[14px] font-medium text-white hover:bg-white/[0.13]">{envoi ? 'Envoi…' : b.image ? 'Changer l’image' : 'Ajouter une image'}</button>
-                {b.url && (
+                {!!adresseSaisie(b.url) && (
                   <button type="button" onClick={recupererApercu} disabled={lecture || envoi} className="inline-flex min-h-11 items-center gap-1.5 rounded-full bg-white/10 px-4 text-[14px] font-medium text-white hover:bg-white/10 disabled:opacity-60">
                     <Icone nom="sparkle" taille={16} />{lecture ? 'Lecture du site…' : 'Remplir depuis le site'}
                   </button>
@@ -316,7 +326,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
         {b.type === 'lien' && <RegleAcces key={`acces-${b.id}`} b={b} maj={maj} prises={prises} />}
         <RegleMoment key={`moment-${b.id}`} b={b} maj={maj} erreur={erreurDe('dates')} />
         <RegleReseaux key={`reseaux-${b.id}`} b={b} maj={maj} reseaux={reseauxDePartage(reglages.vuesReseaux)} />
-        <RegleTraductions key={`langues-${b.id}`} b={b} maj={maj} langues={reglages.langues ?? []} />
+        <div id="traductions-bloc" className="scroll-mt-28"><RegleTraductions key={`langues-${b.id}`} b={b} maj={maj} langues={reglages.langues ?? []} ouvert={traduire} /></div>
         <button type="button" onClick={() => { vibrer(4); setPlus(false); }}
           className="flex min-h-11 items-center justify-center gap-1.5 text-[14px] font-medium text-white/60 hover:text-white">
           <Icone nom="ui-chevron" taille={16} className="rotate-180" /> Moins de réglages
@@ -336,15 +346,18 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
         {/* Les gestes rares, nommés en toutes lettres, au bout de la feuille plutôt qu'en pictos à côté de Terminé. */}
         {!nouveau && (
           <div className="flex flex-col divide-y divide-white/[0.06] rounded-2xl bg-white/[0.035]">
-            {onDeplacer && place && place.total > 1 && <>
-              <button type="button" disabled={place.rang === 0} onClick={() => onDeplacer(b, -1)} className="flex min-h-12 items-center gap-3 px-4 text-left text-[14.5px] font-medium text-white/85 transition hover:bg-white/[0.04] disabled:text-white/30">
-                <Icone nom="ui-chevron" taille={18} className="rotate-180 text-white/70" /> Monter
-              </button>
-              <button type="button" disabled={place.rang === place.total - 1} onClick={() => onDeplacer(b, 1)} className="flex min-h-12 items-center gap-3 px-4 text-left text-[14.5px] font-medium text-white/85 transition hover:bg-white/[0.04] disabled:text-white/30">
-                <Icone nom="ui-chevron" taille={18} className="text-white/70" /> Descendre
-                <span className="ml-auto text-[13px] font-normal text-white/50">{place.rang + 1} sur {place.total}</span>
-              </button>
-            </>}
+            {onDeplacer && place && place.total > 1 && (
+              <div className="flex min-h-12 items-center gap-2 pl-4 pr-1.5">
+                <span className="flex-1 text-[14.5px] font-medium text-white/85">Place sur ta page</span>
+                <span className="text-[13px] tabular-nums text-white/55">{place.rang + 1} sur {place.total}</span>
+                <button type="button" disabled={place.rang === 0} onClick={() => onDeplacer(b, -1)} aria-label="Monter d’un cran" className="grid h-11 w-10 place-items-center text-white/75 hover:text-white disabled:text-white/25">
+                  <Icone nom="ui-chevron" taille={18} className="rotate-180" />
+                </button>
+                <button type="button" disabled={place.rang === place.total - 1} onClick={() => onDeplacer(b, 1)} aria-label="Descendre d’un cran" className="grid h-11 w-10 place-items-center text-white/75 hover:text-white disabled:text-white/25">
+                  <Icone nom="ui-chevron" taille={18} />
+                </button>
+              </div>
+            )}
             <button type="button" onClick={() => onDupliquer(b)} className="flex min-h-12 items-center gap-3 px-4 text-left text-[14.5px] font-medium text-white/85 transition hover:bg-white/[0.04]">
               <Icone nom="ui-copier" taille={18} className="text-white/70" /> Dupliquer
             </button>

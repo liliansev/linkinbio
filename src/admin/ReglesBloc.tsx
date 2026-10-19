@@ -5,9 +5,9 @@ import { NOMS_LANGUES } from '../lib/langues.ts';
 import type { Creneau } from '../lib/moments.ts';
 import { FUSEAU_DEFAUT, decrireCreneau } from '../lib/moments.ts';
 import { Icone } from '../components/Icone.tsx';
-import { NOMS_AUDIENCES, RESEAUX_SOCIAUX, basculerPour, enTetePour } from '../lib/provenance.ts';
+import { NOMS_AUDIENCES, RESEAUX_SOCIAUX, basculerPour, deReseau, enTetePour } from '../lib/provenance.ts';
 import type { Audience } from '../lib/provenance.ts';
-import { Champ, Interrupteur, Segments, classeSaisie, vibrer } from './ui.tsx';
+import { Bascule, Champ, Interrupteur, Segments, classeSaisie, vibrer } from './ui.tsx';
 
 /*
  * Les règles d'un bloc, rangées sous la feuille d'édition : chacune se replie
@@ -120,11 +120,7 @@ export function RegleReseaux({ b, maj, reseaux }: { b: Bloc; maj: (c: Partial<Bl
             <li key={s} className="flex min-h-12 items-center gap-3">
               <span className="flex w-4 justify-center text-white/75">{ICONE_AUDIENCE[s] && <Icone nom={ICONE_AUDIENCE[s]} taille={16} />}</span>
               <span className="flex-1 text-[14.5px] font-medium text-white">{NOMS_AUDIENCES[s]}</span>
-              <button type="button" role="switch" aria-checked={vu} aria-label={`Afficher sur ${NOMS_AUDIENCES[s]}`}
-                onClick={() => { vibrer(); maj(basculerPour({ ...b, ...(vu ? enTetePour(b, s, false) : {}) }, s, !vu)); }}
-                className={`adm-interrupteur relative h-6 w-10 shrink-0 rounded-full before:absolute before:-inset-2 before:content-[''] ${vu ? 'bg-white' : 'bg-white/15'}`}>
-                <span className={`absolute top-[3px] left-[3px] h-[18px] w-[18px] rounded-full shadow-[0_1px_3px_rgba(0,0,0,0.3)] ${vu ? 'translate-x-4 bg-nuit' : 'bg-white'}`} />
-              </button>
+              <Bascule actif={vu} label={`Afficher sur ${NOMS_AUDIENCES[s]}`} onClick={() => { vibrer(); maj(basculerPour({ ...b, ...(vu ? enTetePour(b, s, false) : {}) }, s, !vu)); }} />
             </li>
           );
         })}
@@ -148,11 +144,7 @@ export function RegleReseaux({ b, maj, reseaux }: { b: Bloc; maj: (c: Partial<Bl
                 <li key={s} className="flex min-h-12 items-center gap-3">
                   <span className="flex w-4 justify-center text-white/75">{ICONE_AUDIENCE[s] && <Icone nom={ICONE_AUDIENCE[s]} taille={16} />}</span>
                   <span className="flex-1 text-[14.5px] font-medium text-white">{NOMS_AUDIENCES[s]}</span>
-                  <button type="button" role="switch" aria-checked={tete(s)} aria-label={`En tête pour ceux qui viennent de ${NOMS_AUDIENCES[s]}`}
-                    onClick={() => { vibrer(4); maj(enTetePour(b, s, !tete(s))); }}
-                    className={`adm-interrupteur relative h-6 w-10 shrink-0 rounded-full before:absolute before:-inset-2 before:content-[''] ${tete(s) ? 'bg-white' : 'bg-white/15'}`}>
-                    <span className={`absolute top-[3px] left-[3px] h-[18px] w-[18px] rounded-full shadow-[0_1px_3px_rgba(0,0,0,0.3)] ${tete(s) ? 'translate-x-4 bg-nuit' : 'bg-white'}`} />
-                  </button>
+                  <Bascule actif={tete(s)} label={`En tête pour ceux qui viennent ${deReseau(s)}`} onClick={() => { vibrer(4); maj(enTetePour(b, s, !tete(s))); }} />
                 </li>
               ))}
             </ul>
@@ -190,7 +182,7 @@ export function RegleAcces({ b, maj, prises }: { b: Bloc; maj: (c: Partial<Bloc>
 }
 
 /** Le texte du bloc dans les langues que la page propose. */
-export function RegleTraductions({ b, maj, langues }: { b: Bloc; maj: (c: Partial<Bloc>) => void; langues: Langue[] }) {
+export function RegleTraductions({ b, maj, langues, ouvert = false }: { b: Bloc; maj: (c: Partial<Bloc>) => void; langues: Langue[]; ouvert?: boolean }) {
   if (!langues.length) return null;
   const champs: { cle: keyof Traduction; label: string; long?: boolean }[] = b.type === 'preuve' && b.preuve?.genre === 'temoignage'
     ? [{ cle: 'description', label: 'Témoignage', long: true }, { cle: 'sousTitre', label: 'Qui le dit' }]
@@ -205,7 +197,7 @@ export function RegleTraductions({ b, maj, langues }: { b: Bloc; maj: (c: Partia
     maj({ traductions: suite });
   };
   return (
-    <Repli titre="Traductions" icone="globe" resume={traduites.length === langues.length ? 'Tout est traduit' : `À traduire : ${langues.filter(l => !b.traductions[l]).map(l => NOMS_LANGUES[l]).join(', ')}`} ouvert={false}>
+    <Repli titre="Traductions" icone="globe" resume={traduites.length === langues.length ? 'Tout est traduit' : `À traduire : ${langues.filter(l => !b.traductions[l]).map(l => NOMS_LANGUES[l]).join(', ')}`} ouvert={ouvert}>
       {langues.map(l => (
         <div key={l} className="flex flex-col gap-2.5 rounded-xl bg-white/[0.035] p-3">
           <span className="text-[13px] font-semibold text-white/80">{NOMS_LANGUES[l]}</span>

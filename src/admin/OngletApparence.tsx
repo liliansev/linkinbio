@@ -154,8 +154,10 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
               return (
               <li key={s.id} data-bouton={s.id} className="lp-style">
                 <button type="button" role="radio" aria-checked={choisi} onClick={() => { vibrer(4); maj({ bouton: { ...reglages.bouton, style: s.id } }); }}
-                  className={`flex w-full items-center gap-3 rounded-[calc(var(--rc)+6px)] p-1.5 transition ${choisi ? 'bg-white/10 ring-2 ring-white' : 'hover:bg-white/[0.05]'}`}>
+                  className={`flex w-full items-center gap-3 rounded-[calc(var(--rc)+6px)] p-1.5 transition ${choisi ? 'ring-2 ring-[color:var(--texte)]' : 'hover:bg-white/[0.05]'}`}>
                   <span className="lp-btn flex-1" style={{ minHeight: 48 }}><span className="lp-btn-texte"><span className="lp-btn-titre">{s.nom}</span></span></span>
+                  {/* Un bouton blanc sous un anneau blanc ne se voit pas : la coche, dans la couleur du texte du thème, dit le choix. */}
+                  <span className="grid w-6 shrink-0 place-items-center" style={{ color: 'var(--texte)' }} aria-hidden="true">{choisi && <Icone nom="ui-ok" taille={20} />}</span>
                 </button>
               </li>
               );
@@ -243,7 +245,7 @@ const BUREAUX: { id: MiseEnPageBureau; nom: string; aide: string }[] = [
 
 /** Un petit croquis de chaque mise en page, dessiné en blocs. */
 function SchemaBureau({ id }: { id: MiseEnPageBureau }) {
-  const b = 'rgb(255 255 255 / 0.16)', p = 'var(--color-peche, #ffb38a)';
+  const b = 'rgb(255 255 255 / 0.16)', p = 'rgb(255 255 255 / 0.7)';
   return (
     <svg viewBox="0 0 120 76" className="w-full rounded-xl bg-[#0c121f]" aria-hidden="true">
       {id === 'colonne' && (<>

@@ -44,6 +44,8 @@ export interface Edition {
   liste: (blocs: Bloc[], rendu: (bloc: Bloc) => ReactNode) => ReactNode;
   /** Le nom vidé puis quitté : il revient tel qu'il était, et le back office le dit. */
   nomVide?: () => void;
+  /** Le nom ou la bio changés puis quittés : le back office propose de revenir à la valeur d'avant. */
+  modifie?: (champ: 'nom' | 'bio', avant: string) => void;
 }
 
 export function PageLiens({ page, apercu = false, edition }: { page: PagePublique; apercu?: boolean; edition?: Edition }) {
@@ -125,12 +127,12 @@ export function PageLiens({ page, apercu = false, edition }: { page: PagePubliqu
               ? <input className="lp-ed-saisie" value={reglages.profil.nom} maxLength={80} placeholder="Ton nom" aria-label="Ton nom"
                   style={{ width: `${Math.max(reglages.profil.nom.length, 7) + 1}ch` }} onChange={e => edition.profil({ nom: e.target.value })}
                   onFocus={e => { e.currentTarget.dataset.avant = reglages.profil.nom; }}
-                  onBlur={e => { if (!e.currentTarget.value.trim()) { edition.profil({ nom: e.currentTarget.dataset.avant?.trim() || compte.pseudo }); edition.nomVide?.(); } }} />
+                  onBlur={e => { const avant = e.currentTarget.dataset.avant ?? ''; if (!e.currentTarget.value.trim()) { edition.profil({ nom: avant.trim() || compte.pseudo }); edition.nomVide?.(); } else if (e.currentTarget.value !== avant) edition.modifie?.('nom', avant); }} />
               : reglages.profil.nom}
             {reglages.profil.badge && <span className="lp-badge" title={t.verifie} role="img" aria-label={t.verifie}><Icone nom="badge" taille={20} /></span>}
           </Nom>
           {edition
-            ? <ChampBio valeur={reglages.profil.bio} onChange={bio => edition.profil({ bio })} />
+            ? <ChampBio valeur={reglages.profil.bio} onChange={bio => edition.profil({ bio })} onQuitter={avant => edition.modifie?.('bio', avant)} />
             : reglages.profil.bio && <p className="lp-bio">{reglages.profil.bio}</p>}
           {reglages.reseauxPosition === 'haut' && reseaux}
         </header>
@@ -172,8 +174,9 @@ export function PageLiens({ page, apercu = false, edition }: { page: PagePubliqu
 }
 
 /** La bio, tapée en place : le champ grandit avec le texte. */
-function ChampBio({ valeur, onChange }: { valeur: string; onChange: (v: string) => void }) {
+function ChampBio({ valeur, onChange, onQuitter }: { valeur: string; onChange: (v: string) => void; onQuitter?: (avant: string) => void }) {
   const ref = useRef<HTMLTextAreaElement>(null);
+  const avant = useRef('');
   // À chaque rendu : le texte, mais aussi la police du thème, changent la hauteur.
   useLayoutEffect(() => {
     const t = ref.current;
@@ -181,7 +184,8 @@ function ChampBio({ valeur, onChange }: { valeur: string; onChange: (v: string) 
     t.style.height = 'auto';
     t.style.height = `${t.scrollHeight}px`;
   });
-  return <textarea ref={ref} className="lp-bio lp-ed-saisie" rows={1} value={valeur} maxLength={300} placeholder="Une phrase sur toi" aria-label="Ta bio" onChange={e => onChange(e.target.value)} />;
+  return <textarea ref={ref} className="lp-bio lp-ed-saisie" rows={1} value={valeur} maxLength={300} placeholder="Une phrase sur toi" aria-label="Ta bio" onChange={e => onChange(e.target.value)}
+    onFocus={e => { avant.current = e.currentTarget.value; }} onBlur={e => { if (e.currentTarget.value !== avant.current) onQuitter?.(avant.current); }} />;
 }
 
 /** « exemple.fr », sans le www ni le chemin. */

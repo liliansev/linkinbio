@@ -1,15 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
 import QRCode from 'qrcode';
 import { CONTACT_LEGAL } from '../lib/legal.ts';
-import type { ComptePage, Reglages } from '../lib/types.ts';
+import type { Bloc, ComptePage, Reglages } from '../lib/types.ts';
 import { LANGUES, urlPage } from '../lib/types.ts';
 import type { Abonnement as EtatAbonnement, Periode } from '../lib/abonnement.ts';
 import { AVANTAGES_PRO, TARIFS, estResilie, euros } from '../lib/abonnement.ts';
 import { Icone } from '../components/Icone.tsx';
-import { BoutonCopier, BoutonSecondaire, Carte, Champ, Interrupteur, classeSaisie, flechesRadio, vibrer } from './ui.tsx';
+import { Bascule, BoutonCopier, BoutonSecondaire, Carte, Champ, Interrupteur, classeSaisie, flechesRadio, vibrer } from './ui.tsx';
 
-export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlExport, supprimerMonCompte, abonnement, paiement, ouvrirPaiement, ouvrirPortail }: {
-  reglages: Reglages; compte: ComptePage; onChange: (r: Reglages) => void; onDeconnexion: () => void;
+export function OngletReglages({ reglages, compte, blocs = [], traduire, onChange, onDeconnexion, urlExport, supprimerMonCompte, abonnement, paiement, ouvrirPaiement, ouvrirPortail }: {
+  reglages: Reglages; compte: ComptePage; blocs?: Bloc[]; traduire?: (b: Bloc) => void; onChange: (r: Reglages) => void; onDeconnexion: () => void;
   urlExport: string | null; supprimerMonCompte: (confirmation: string) => Promise<{ ok: boolean; message: string }>;
   abonnement: EtatAbonnement & { pro: boolean }; paiement: boolean;
   ouvrirPaiement: (periode: Periode) => Promise<string>; ouvrirPortail: () => Promise<string>;
@@ -34,7 +34,7 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
   const sections: { id: Section; nom: string; icone: string }[] = [
     { id: 'partager', nom: 'Partager ma page', icone: 'partage' },
     ...(pro ? [{ id: 'abonnement' as const, nom: 'Abonnement', icone: 'diamant' }] : []),
-    { id: 'partage', nom: 'Titre et description', icone: 'document' },
+    { id: 'partage', nom: 'Aperçu du lien partagé', icone: 'document' },
     { id: 'langues', nom: 'Langues', icone: 'globe' },
     { id: 'donnees', nom: 'Mes données', icone: 'cadenas' },
   ];
@@ -93,7 +93,7 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
           </div>
         </div>
       </Carte>}
-      {ouverte === 'langues' && <Langues reglages={reglages} onChange={onChange} adresse={URL_PUBLIQUE} />}
+      {ouverte === 'langues' && <Langues reglages={reglages} onChange={onChange} adresse={URL_PUBLIQUE} blocs={blocs} traduire={traduire} />}
       {ouverte === 'donnees' && <TesDonnees compte={compte} urlExport={urlExport} supprimerMonCompte={supprimerMonCompte} />}
     </div>
   );
@@ -116,10 +116,7 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
             <div className="flex min-h-14 items-center gap-3.5 px-4">
               <Icone nom={l.icone} taille={20} className="shrink-0 text-white/80" />
               <span className="min-w-0 flex-1 text-[15px] font-medium text-white">{l.nom}</span>
-              <button type="button" role="switch" aria-checked={l.actif} aria-label={l.nom} onClick={() => { vibrer(); l.changer(!l.actif); }}
-                className={`adm-interrupteur relative h-6 w-10 shrink-0 rounded-full before:absolute before:-inset-2 before:content-[''] ${l.actif ? 'bg-white' : 'bg-white/15'}`}>
-                <span className={`absolute top-[3px] left-[3px] h-[18px] w-[18px] rounded-full shadow-[0_1px_3px_rgba(0,0,0,0.3)] ${l.actif ? 'translate-x-4 bg-nuit' : 'bg-white'}`} />
-              </button>
+              <Bascule actif={l.actif} label={l.nom} onClick={() => { vibrer(); l.changer(!l.actif); }} />
             </div>
           </li>
         ))}
@@ -276,12 +273,14 @@ function TesDonnees({ compte, urlExport, supprimerMonCompte }: { compte: CompteP
 const EN_FRANCAIS = { en: 'Anglais', es: 'Espagnol', de: 'Allemand', it: 'Italien' } as const;
 
 /** Les langues de la page : le visiteur la voit dans la sienne, là où les textes sont traduits. */
-function Langues({ reglages, onChange, adresse }: { reglages: Reglages; onChange: (r: Reglages) => void; adresse: string }) {
+function Langues({ reglages, onChange, adresse, blocs, traduire }: { reglages: Reglages; onChange: (r: Reglages) => void; adresse: string; blocs: Bloc[]; traduire?: (b: Bloc) => void }) {
   const actives = reglages.langues ?? [];
+  // Les blocs qui ont un texte à traduire et à qui il manque au moins une des langues proposées.
+  const aTraduire = blocs.filter(b => b.titre.trim() && actives.some(l => !b.traductions?.[l]));
   const basculer = (l: (typeof LANGUES)[number]) => onChange({ ...reglages, langues: actives.includes(l) ? actives.filter(x => x !== l) : LANGUES.filter(x => x === l || actives.includes(x)) });
   return (
     <Carte>
-      <p className="text-[13.5px] leading-snug text-white/60">Ta page s’affiche dans la langue du visiteur. Les boutons, le formulaire et les dates sont traduits tout seuls ; tes textes se traduisent en touchant un bloc de ta page, dans « Plus de réglages ».</p>
+      <p className="text-[13.5px] leading-snug text-white/60">Ta page s’affiche dans la langue du visiteur. Les boutons, le formulaire et les dates sont traduits tout seuls ; tes textes se traduisent bloc par bloc.</p>
       <div className="mt-3 divide-y divide-white/[0.06] rounded-2xl bg-white/[0.035] px-4" role="group" aria-label="Langues proposées">
         <div className="flex items-center justify-between gap-4 py-3">
           <span className="text-[15px] font-medium text-white">Français</span>
@@ -291,6 +290,22 @@ function Langues({ reglages, onChange, adresse }: { reglages: Reglages; onChange
           <Interrupteur key={l} label={EN_FRANCAIS[l]} actif={actives.includes(l)} onChange={() => basculer(l)} />
         ))}
       </div>
+      {actives.length > 0 && traduire && (
+        <div className="mt-4">
+          <p className="mb-2 px-1 text-[13.5px] font-medium text-white/75">{aTraduire.length ? 'À traduire' : 'Tous tes blocs sont traduits.'}</p>
+          {aTraduire.length > 0 && <ul className="divide-y divide-white/[0.06] rounded-2xl bg-white/[0.035]">
+            {aTraduire.map(b => (
+              <li key={b.id}>
+                <button type="button" onClick={() => traduire(b)} className="flex min-h-12 w-full items-center gap-3 px-4 text-left transition hover:bg-white/[0.04]">
+                  <span className="min-w-0 flex-1 truncate text-[14.5px] font-medium text-white">{b.titre}</span>
+                  <span className="shrink-0 text-[13px] text-white/55">{actives.filter(l => !b.traductions?.[l]).map(l => EN_FRANCAIS[l]).join(', ')}</span>
+                  <Icone nom="ui-chevron" taille={16} className="-rotate-90 text-white/55" />
+                </button>
+              </li>
+            ))}
+          </ul>}
+        </div>
+      )}
       {actives.length > 0 && (
         <div className="mt-4 flex flex-col gap-3">
           {actives.map(l => (

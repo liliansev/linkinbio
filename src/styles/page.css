@@ -596,7 +596,7 @@
 .lp-ed-saisie { box-shadow: inset 0 -1.5px 0 color-mix(in srgb, var(--texte) 20%, transparent); }
 .lp-ed-saisie:focus { box-shadow: none; }
 .lp-ed-saisie:hover { background: color-mix(in srgb, var(--texte) 7%, transparent); }
-.lp-ed-saisie:focus { outline: 2px solid var(--vedette); background: color-mix(in srgb, var(--texte) 6%, transparent); }
+.lp-ed-saisie:focus { outline: 2px solid var(--texte); background: color-mix(in srgb, var(--texte) 6%, transparent); }
 .lp-ed-saisie::placeholder { color: inherit; opacity: 0.68; }
 /* Un nom très long ne sort pas de la page : le champ s'arrête au bord et défile. */
 .lp-nom > input.lp-ed-saisie { min-width: 0; flex: 0 1 auto; }
@@ -622,7 +622,7 @@ button.lp-ed-zone {
   padding: 2px 6px; border-radius: 999px; transition: background-color 0.15s;
 }
 button.lp-ed-zone:hover { background: color-mix(in srgb, var(--texte) 7%, transparent); }
-button.lp-ed-zone:focus-visible { outline: 2px solid var(--vedette); outline-offset: 2px; }
+button.lp-ed-zone:focus-visible { outline: 2px solid var(--texte); outline-offset: 2px; }
 .lp-ed-reseau { width: 40px; height: 40px; display: grid; place-items: center; }
 .lp-ed-vide { padding: 9px 12px; font-size: 0.92rem; font-weight: 520; color: var(--doux); }
 /* La ligne « Ajouter à ma page » sous le dernier bloc : un geste de l'éditeur, pas un bouton de la page. */

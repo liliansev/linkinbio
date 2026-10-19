@@ -13,11 +13,18 @@ export function Interrupteur({ actif, onChange, label, aide, disabled }: { actif
         <span className="block text-[14.5px] font-medium text-white">{label}</span>
         {aide && <span className="mt-0.5 block text-[12.5px] leading-snug text-white/50">{aide}</span>}
       </label>
-      <button id={id} type="button" role="switch" aria-checked={actif} disabled={disabled} onClick={() => { vibrer(); onChange(!actif); }}
-        className={`adm-interrupteur relative h-6 w-10 shrink-0 rounded-full before:absolute before:-inset-2 before:content-[''] disabled:opacity-40 ${actif ? 'bg-white' : 'bg-white/15'}`}>
-        <span className={`absolute top-[3px] left-[3px] h-[18px] w-[18px] rounded-full shadow-[0_1px_3px_rgba(0,0,0,0.3)] ${actif ? 'translate-x-4 bg-nuit' : 'bg-white'}`} />
-      </button>
+      <Bascule id={id} actif={actif} disabled={disabled} onClick={() => { vibrer(); onChange(!actif); }} />
     </div>
+  );
+}
+
+/** L'interrupteur seul, pour les lignes qui portent déjà leur icône et leur nom : un seul dessin partout. */
+export function Bascule({ actif, onClick, id, disabled, label, decrit }: { actif: boolean; onClick: () => void; id?: string; disabled?: boolean; label?: string; decrit?: string }) {
+  return (
+    <button id={id} type="button" role="switch" aria-checked={actif} aria-label={label} aria-describedby={decrit} disabled={disabled} onClick={onClick}
+      className={`adm-interrupteur relative h-6 w-10 shrink-0 rounded-full before:absolute before:-inset-2 before:content-[''] disabled:opacity-40 ${actif ? 'bg-white' : 'bg-white/15'}`}>
+      <span className={`absolute top-[3px] left-[3px] h-[18px] w-[18px] rounded-full shadow-[0_1px_3px_rgba(0,0,0,0.3)] ${actif ? 'translate-x-4 bg-nuit' : 'bg-white'}`} />
+    </button>
   );
 }
 
@@ -111,6 +118,12 @@ export function Feuille({ ouverte, onFermer, retenir, titre, children, pied, cot
     const avantFocus = document.activeElement as HTMLElement | null;
     const touche = (e: KeyboardEvent) => {
       if (e.key === 'Escape') fermerRef.current();
+      // Ctrl ou Cmd + Entrée : le bouton principal du pied, comme un clic sur Terminé.
+      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && ref.current) {
+        const principal = ref.current.querySelector<HTMLButtonElement>('[data-principal]:not([disabled])');
+        if (principal) { e.preventDefault(); principal.click(); }
+        return;
+      }
       if (e.key !== 'Tab' || !ref.current) return;
       const cibles = [...ref.current.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), input:not([disabled]):not([type=hidden]), select, textarea, [tabindex]:not([tabindex="-1"])')].filter(x => x.offsetParent !== null);
       if (!cibles.length) return;
@@ -155,10 +168,10 @@ export function Feuille({ ouverte, onFermer, retenir, titre, children, pied, cot
     <div className={`fixed inset-0 z-50 flex items-end justify-center ${cote ? 'sm:items-stretch sm:justify-end sm:p-4' : 'sm:items-center'}`} role="dialog" aria-modal="true" aria-label={titre} data-sortie={sortie || undefined}
       style={visible ? { top: visible.haut, height: visible.h, bottom: 'auto' } : undefined}>
       <button type="button" tabIndex={-1} aria-hidden="true" className={`adm-fondu absolute inset-0 ${apercu ? 'bg-[#0b0f19] sm:bg-black/10' : cote ? 'bg-black/10' : 'bg-black/60 backdrop-blur-[2px]'}`} onClick={() => fermer()} />
-      {apercu && <div inert className="adm-fondu pointer-events-none absolute inset-x-0 top-0 bottom-[54dvh] flex items-center justify-center px-4 pt-[max(12px,env(safe-area-inset-top))] pb-3 sm:hidden">{apercu}</div>}
+      {apercu && <div inert className="adm-fondu pointer-events-none absolute inset-x-0 top-0 bottom-[57dvh] flex items-center justify-center px-4 pt-[max(12px,env(safe-area-inset-top))] pb-3 sm:hidden">{apercu}</div>}
       <div ref={ref} tabIndex={-1}
         style={{ ...(tire ? { transform: `translateY(${tire}px)`, transition: 'none' } : {}), ...(visible ? { maxHeight: visible.h - 8, height: 'auto' } : {}) }}
-        className={`adm-feuille relative flex ${apercu ? 'h-[54dvh] sm:h-auto sm:w-[400px]' : cote ? 'max-h-[58dvh] sm:max-h-none sm:w-[400px]' : 'max-h-[92dvh]'} w-full flex-col rounded-t-[20px] border border-b-0 border-white/10 bg-[#111827] shadow-[0_-20px_60px_-20px_rgba(0,0,0,0.7)] outline-none sm:max-w-lg sm:rounded-[20px] sm:border-b`}>
+        className={`adm-feuille relative flex ${apercu ? 'h-[57dvh] sm:h-auto sm:w-[400px]' : cote ? 'max-h-[58dvh] sm:max-h-none sm:w-[400px]' : 'max-h-[92dvh]'} w-full flex-col rounded-t-[20px] border border-b-0 border-white/10 bg-[#111827] shadow-[0_-20px_60px_-20px_rgba(0,0,0,0.7)] outline-none sm:max-w-lg sm:rounded-[20px] sm:border-b`}>
         <div {...tirer} className="shrink-0 touch-none select-none">
           <div className="mx-auto mt-2 h-1 w-9 rounded-full bg-white/20 sm:hidden" />
           <header className="flex items-center justify-between gap-3 px-5 pt-2.5 pb-2 sm:pt-4">
@@ -215,7 +228,7 @@ export function BoutonCopier({ texte, onCopie, label, compact = false }: { texte
 }
 
 export function BoutonPrincipal({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) {
-  return <button type="button" {...props} className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-white px-5 text-[14px] font-semibold text-nuit transition hover:brightness-105 active:scale-[0.98] disabled:opacity-50 ${props.className ?? ''}`}>{children}</button>;
+  return <button type="button" data-principal="" aria-keyshortcuts="Control+Enter Meta+Enter" {...props} className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-white px-5 text-[14px] font-semibold text-nuit transition hover:brightness-105 active:scale-[0.98] disabled:opacity-50 ${props.className ?? ''}`}>{children}</button>;
 }
 
 export function BoutonSecondaire({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) {
