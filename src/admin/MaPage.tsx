@@ -71,8 +71,11 @@ export function MaPage({ compte, reglages, blocs, clics, onReglages, onOrdonner,
   const [envoi, setEnvoi] = useState(false);
   // Le geste s'explique au-dessus de la page tant que deux blocs n'ont pas été ouverts, puis se tait.
   const [ouverts, setOuverts] = useState(() => { try { return Number(localStorage.getItem('hopla-blocs-ouverts')) || 0; } catch { return 0; } });
-  const astuce = ouverts < 2;
-  const ouvrirBloc = (bloc: Bloc) => { if (astuce) { setOuverts(ouverts + 1); try { localStorage.setItem('hopla-blocs-ouverts', String(ouverts + 1)); } catch { /* stockage refusé */ } } onOuvrir(bloc); };
+  // Et revient, tant qu'aucun bloc n'a jamais été déplacé, dès que la page en a trois : c'est là que l'ordre compte.
+  const [deplace, setDeplace] = useState(() => { try { return !!localStorage.getItem('hopla-bloc-deplace'); } catch { return false; } });
+  const astuce = ouverts < 2 || (!deplace && blocs.length >= 3);
+  const ordonner = (liste: Bloc[]) => { if (!deplace) { setDeplace(true); try { localStorage.setItem('hopla-bloc-deplace', '1'); } catch { /* stockage refusé */ } } onOrdonner(liste); };
+  const ouvrirBloc = (bloc: Bloc) => { if (ouverts < 2) { setOuverts(ouverts + 1); try { localStorage.setItem('hopla-blocs-ouverts', String(ouverts + 1)); } catch { /* stockage refusé */ } } onOuvrir(bloc); };
   const fichier = useRef<HTMLInputElement>(null);
   const toile = useRef<HTMLDivElement>(null);
   const principal = compte.principal;
@@ -141,7 +144,7 @@ export function MaPage({ compte, reglages, blocs, clics, onReglages, onOrdonner,
     reseaux: () => setFeuille('reseaux'),
     modifie: (champ, avant) => annoncer({ texte: champ === 'nom' ? 'Nom mis à jour' : 'Bio mise à jour', annuler: () => { onReglages({ ...derniers.current, profil: { ...derniers.current.profil, [champ]: avant } }); annoncer({ texte: 'Changements annulés', genre: 'info' }); } }),
     nomVide: () => annoncer({ texte: 'Ton nom ne peut pas rester vide : il revient tel qu’il était.', genre: 'info' }),
-    liste: (liste, rendu) => <BlocsEditables blocs={liste} rendu={rendu} clics={clics} onOrdonner={onOrdonner} onOuvrir={ouvrirBloc}
+    liste: (liste, rendu) => <BlocsEditables blocs={liste} rendu={rendu} clics={clics} onOrdonner={ordonner} onOuvrir={ouvrirBloc}
       onAjouter={() => { vibrer(5); enBas.current = true; setFeuille('ajout'); }} />,
   };
 
@@ -176,7 +179,7 @@ export function MaPage({ compte, reglages, blocs, clics, onReglages, onOrdonner,
         <OngletApparence reglages={reglages} onChange={onReglages} envoyerImage={envoyerImage} principal={principal} parties={['reseaux']} />
       </Feuille>
       <Feuille ouverte={feuille === 'design'} onFermer={() => setFeuille(null)} titre="Design" cote apercu={direct} pied={piedAnnuler}>
-        <DesignTiroirs reglages={reglages} onChange={onReglages} envoyerImage={envoyerImage} principal={principal}
+        <DesignTiroirs reglages={reglages} onChange={onReglages} envoyerImage={envoyerImage} principal={principal} vedettes={blocs.filter(b => b.vedette).length}
           pied={principal && <Interrupteur label="Badge vérifié" actif={reglages.profil.badge} onChange={v => profil({ badge: v })} />} />
       </Feuille>
     </div>

@@ -144,7 +144,7 @@ export function PageLiens({ page, apercu = false, edition }: { page: PagePubliqu
                 <BlocPublic bloc={bloc} reglages={reglages} clic={() => clic(bloc)} cible={cible} apercu={apercu} maintenant={page.maintenant} pseudo={pseudo} t={t} langue={langue} />
               </div>
             ))}
-            {blocs.length === 0 && <p className="lp-texte">{t.rien}</p>}
+            {blocs.length === 0 && !apercu && <p className="lp-texte">{t.rien}</p>}
           </>}
         </main>
 

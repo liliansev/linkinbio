@@ -19,3 +19,9 @@ test('pourquoiPasAdresse dit ce qui manque', async () => {
   assert.match(pourquoiPasAdresse('ma boutique'), /espace/);
   assert.match(pourquoiPasAdresse('monsite'), /\.fr ou \.com/);
 });
+
+test('pourquoiPasReseau propose un pseudo sans espace', async () => {
+  const { pourquoiPasReseau } = await import('./valider.ts');
+  assert.match(pourquoiPasReseau('instagram', 'Camille Roux'), /essaie camille\.roux/);
+  assert.match(pourquoiPasReseau('email', 'x'), /e-mail/);
+});

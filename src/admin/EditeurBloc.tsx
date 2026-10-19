@@ -104,7 +104,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
   // Une preuve ne s'aperçoit qu'une fois commencée : pas de « 0,0 sur 5 » avant d'avoir rien tapé.
   const preuveRemplie = !!b.preuve && (b.preuve.genre === 'note' ? b.preuve.note > 0 && b.preuve.note <= 5 : b.preuve.genre === 'compteur' ? b.preuve.nombre > 0 : !!b.description.trim());
   // Ce qui est réglé derrière « Plus de réglages », nommé à droite de la ligne : on sait quoi sans ouvrir.
-  const reglages_ = ([[!b.public, 'Masqué'], [b.vedette, 'Mis en avant'], [!!b.sousTitre, 'Sous-titre'], [!!b.icone, 'Icône'], [!!b.image, 'Image'], [b.vedette && b.animation !== 'auto', 'Animation'],
+  const reglages_ = ([[b.vedette, 'Mis en avant'], [!!b.sousTitre, 'Sous-titre'], [!!b.icone, 'Icône'], [!!b.image, 'Image'], [b.vedette && b.animation !== 'auto', 'Animation'],
     [!!b.acces, 'Accès réservé'], [!!(b.debut || b.fin || b.creneau), 'Programmé'], [!!(b.cache.length || b.audience), 'Réseaux'], [Object.keys(b.traductions ?? {}).length > 0, 'Traduit']] as [boolean, string][])
     .filter(([oui]) => oui).map(([, nom]) => nom);
   const reglees = reglages_.length > 2 ? `${reglages_.slice(0, 2).join(', ')} et ${reglages_.length - 2} de plus` : reglages_.join(', ');
@@ -202,6 +202,12 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
             </div>
           </div>
         )}
+        {b.type === 'preuve' && !preuveRemplie && !clavier && (
+          // La place de l'aperçu est gardée dès l'ouverture : le formulaire ne saute pas quand la première valeur arrive.
+          <div className="lp lp-mini grid min-h-[112px] place-items-center rounded-[20px] p-4 text-center ring-1 ring-white/[0.06]" style={variablesTheme(theme) as CSSProperties} data-police={theme.police} data-decor={theme.decor}>
+            <p className="text-[13.5px]" style={{ color: 'var(--doux)' }}>L’aperçu s’affiche ici dès ta première valeur.</p>
+          </div>
+        )}
         {avecUrl && (
           <Champ label={b.type === 'video' ? 'Adresse de la vidéo YouTube' : 'Adresse'} erreur={erreurDe('url')}
             aide={b.type === 'lien' && reglages.ouvrirApps && appDe(adresse(b.url)) ? <span className="inline-flex items-center gap-1.5 text-white/75"><Icone nom="ui-ok" taille={13} />Ce lien s’ouvre directement dans l’app {appDe(adresse(b.url))}, même depuis {['Instagram', 'TikTok'].filter(n => n !== appDe(adresse(b.url))).join(' ou ')}.</span> : undefined}>
@@ -230,6 +236,11 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
             <input className={classeSaisie} value={b.titre} onChange={e => maj({ titre: e.target.value })} maxLength={160} />
           </Champ>
         )}
+
+        {/* Masquer un bloc un temps est le geste le plus courant après le texte : il reste à portée, hors de « Plus de réglages ». */}
+        <div className="rounded-2xl bg-white/[0.035] px-4">
+          <Interrupteur label="Visible sur ma page" actif={b.public} onChange={v => maj({ public: v })} />
+        </div>
 
         {plus ? (<>
         {(b.type === 'lien' || b.type === 'newsletter' || b.type === 'inscription') && (
@@ -285,8 +296,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
           </>
         )}
 
-        <div className="divide-y divide-white/[0.06] rounded-2xl bg-white/[0.035] px-4">
-          <Interrupteur label="Visible sur ma page" actif={b.public} onChange={v => maj({ public: v })} />
+        <div className="divide-y divide-white/[0.06] rounded-2xl bg-white/[0.035] px-4 empty:hidden">
           {b.type === 'inscription' && (
             <Interrupteur label="Demander le prénom" actif={b.demanderPrenom} onChange={v => maj({ demanderPrenom: v })} />
           )}

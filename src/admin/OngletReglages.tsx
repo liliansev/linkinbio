@@ -32,9 +32,9 @@ export function OngletReglages({ reglages, compte, blocs = [], traduire, onChang
   const pro = !compte.principal && paiement;
   // Un titre et une icône par ligne, sans sous-titre (Lilian, 18 octobre 2026).
   const sections: { id: Section; nom: string; icone: string }[] = [
-    { id: 'partager', nom: 'Partager ma page', icone: 'partage' },
+    { id: 'partager', nom: 'QR code et adresse', icone: 'qr' },
     ...(pro ? [{ id: 'abonnement' as const, nom: 'Abonnement', icone: 'diamant' }] : []),
-    { id: 'partage', nom: 'Aperçu du lien partagé', icone: 'document' },
+    { id: 'partage', nom: 'Aperçu dans Google et les messages', icone: 'document' },
     { id: 'langues', nom: 'Langues', icone: 'globe' },
     { id: 'donnees', nom: 'Mes données', icone: 'cadenas' },
   ];

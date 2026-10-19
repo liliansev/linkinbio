@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { Api, Bloc, PagePublique, Reglages, Reseau } from '../lib/types.ts';
 import { SANS_COULEURS, nouveauBloc, sansSchema, urlPage } from '../lib/types.ts';
-import { adresseSaisie, pourquoiPasAdresse } from '../lib/valider.ts';
+import { adresseSaisie, pourquoiPasAdresse, pourquoiPasReseau } from '../lib/valider.ts';
 import { THEMES } from '../lib/themes.ts';
 import { RESEAUX_ACCUEIL, THEMES_ACCUEIL, nomSite, urlReseau } from '../lib/demarrage.ts';
 import { PageLiens } from '../components/PageLiens.tsx';
@@ -265,7 +265,7 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
                       aria-invalid={faux || undefined} aria-describedby={faux ? `erreur-${r}` : undefined} />
                     <button type="button" onClick={() => majReseau(r, null)} aria-label={`Retirer ${NOMS_RESEAUX[r]}`}
                       className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-white/55 transition hover:bg-white/[0.06] hover:text-white"><Icone nom="ui-fermer" taille={16} /></button>
-                    {faux && <p id={`erreur-${r}`} role="alert" className="w-full pr-2 pb-1 text-[13px] font-medium text-red-300">{r === 'email' ? 'Une adresse e-mail, par exemple toi@exemple.fr' : 'Un pseudo sans espace, ou l’adresse de ton profil'}</p>}
+                    {faux && <p id={`erreur-${r}`} role="alert" className="w-full pr-2 pb-1 text-[13px] font-medium text-red-300">{pourquoiPasReseau(r, saisies[r] ?? '')}</p>}
                   </li>
                 );
               })}
@@ -302,7 +302,7 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
                 <Bascule actif={coche} label={a === 'qr' ? 'Mon lien ailleurs : site, e-mail, QR code' : `Mon lien sur ${NOMS_AUDIENCES[a]}`} decrit={seul && dernierSeul ? 'au-moins-un' : undefined}
                   onClick={() => { if (seul) { vibrer(20); setDernierSeul(true); return; } setDernierSeul(false); vibrer(4); onReglages({ ...reglages, vuesReseaux: OU_PARTAGER.filter(x => (x === a ? !coche : choisis.includes(x))) }); }} />
                 {/* Le refus se dit sous la ligne touchée : visible sans faire défiler. */}
-                {seul && dernierSeul && <p id="au-moins-un" role="alert" className="w-full pb-2 pl-8 text-[13px] font-medium text-white/75">Garde au moins un réseau : active d’abord un autre.</p>}
+                {seul && dernierSeul && <p id="au-moins-un" role="alert" className="w-full pb-2 pl-8 text-[13px] font-medium text-white/75">Garde au moins un endroit : active d’abord un autre.</p>}
               </li>
             );
           })}
@@ -367,16 +367,16 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
       </header>
 
       {/* L'aperçu : la vraie page, en petit, qui se remplit à chaque réponse. */}
-      <div className="flex min-h-[16dvh] flex-1 justify-center px-6 pt-1 pb-4 lg:order-last lg:min-h-0 lg:items-center lg:p-8" aria-hidden="true" inert>
+      <div className="flex min-h-[16dvh] max-h-[38dvh] flex-1 justify-center px-6 pt-1 pb-4 lg:max-h-none lg:order-last lg:min-h-0 lg:items-center lg:p-8" aria-hidden="true" inert>
         <div className={`adm-miroir adm-apercu adm-toile pointer-events-none relative max-h-[640px] select-none lg:h-[min(640px,calc(100dvh-8rem))] overflow-hidden rounded-[26px] ring-1 ring-white/10 shadow-[0_30px_70px_-30px_rgba(0,0,0,0.9)] transition-shadow duration-700 ${etape === 'fin' ? 'adm-miroir-fin' : ''}`}>
           <div className="adm-miroir-page"><PageLiens page={{ reglages, blocs: visibles, compte }} apercu /></div>
         </div>
       </div>
 
       {/* Les questions, sous le pouce. Le bouton reste visible ; c'est le contenu qui défile s'il déborde. */}
-      <section key={etape} className="adm-onglet flex max-h-[72dvh] shrink-0 flex-col rounded-t-[28px] border-t border-white/[0.08] bg-[#121a2b] lg:max-h-none lg:min-h-0 lg:rounded-none lg:border-t-0 lg:border-r lg:bg-transparent"
+      <section key={etape} className="adm-onglet flex min-h-0 flex-1 flex-col lg:flex-none rounded-t-[28px] border-t border-white/[0.08] bg-[#121a2b] lg:max-h-none lg:min-h-0 lg:rounded-none lg:border-t-0 lg:border-r lg:bg-transparent"
         aria-labelledby="premiers-pas-titre">
-        <div className="min-h-0 overflow-y-auto overscroll-contain px-5 pt-5 lg:px-8 lg:pt-10">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pt-5 lg:flex-none lg:px-8 lg:pt-10">
           {etape === 'fin' && <Icone nom="check" taille={30} className="mb-2 text-emerald-300" />}
           <h1 id="premiers-pas-titre" ref={titre} tabIndex={-1} className="text-[23px] font-semibold tracking-[-0.02em] outline-none">{c.titre}</h1>
           <p className="mt-1 mb-4 text-[14.5px] leading-snug text-white/60">{c.aide}</p>

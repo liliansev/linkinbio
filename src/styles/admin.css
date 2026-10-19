@@ -62,3 +62,8 @@
 
 /* Une feuille ouverte occupe le bas de l'écran : le message passe en haut, sans couvrir ce qu'on touche. */
 body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); bottom: auto; }
+
+/* Les champs de nombre et de suggestions gardent l'allure des autres : ni flèches natives, ni triangle de liste. */
+.adm input[type='number'] { appearance: textfield; -moz-appearance: textfield; }
+.adm input[type='number']::-webkit-inner-spin-button, .adm input[type='number']::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.adm input[list]::-webkit-calendar-picker-indicator { display: none !important; }

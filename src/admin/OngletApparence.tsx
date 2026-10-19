@@ -7,7 +7,7 @@ import type { Theme } from '../lib/themes.ts';
 import { Icone, NOMS_RESEAUX } from '../components/Icone.tsx';
 import { Carte, Champ, Interrupteur, NOMS_ANIMATIONS, Segments, classeSaisie, flechesRadio, preparerImage, vibrer } from './ui.tsx';
 import { pseudoReseau, urlReseau } from '../lib/demarrage.ts';
-import { adresseSaisie } from '../lib/valider.ts';
+import { adresseSaisie, pourquoiPasReseau } from '../lib/valider.ts';
 
 const STYLES: { id: StyleBouton; nom: string }[] = [
   { id: 'plein', nom: 'Plein' }, { id: 'contour', nom: 'Contour' }, { id: 'doux', nom: 'Doux' }, { id: 'relief', nom: 'Relief' }, { id: 'verre', nom: 'Verre' },
@@ -43,7 +43,7 @@ export type PartieApparence = 'profil' | 'theme' | 'couleurs' | 'animation' | 'b
 const TOUTES: PartieApparence[] = ['profil', 'theme', 'couleurs', 'animation', 'boutons', 'bureau', 'reseaux'];
 
 /** Les réglages d'apparence, en cartes. `parties` n'en garde que certaines (les feuilles de « Ma page »). */
-export function OngletApparence({ reglages, onChange, envoyerImage, principal = true, parties = TOUTES }: { reglages: Reglages; onChange: (r: Reglages) => void; envoyerImage: (d: string) => Promise<string>; principal?: boolean; parties?: PartieApparence[] }) {
+export function OngletApparence({ reglages, onChange, envoyerImage, principal = true, parties = TOUTES, vedettes }: { reglages: Reglages; onChange: (r: Reglages) => void; envoyerImage: (d: string) => Promise<string>; principal?: boolean; parties?: PartieApparence[]; vedettes?: number }) {
   const voir = (p: PartieApparence) => parties.includes(p);
   // Seule dans une feuille, une partie est déjà nommée par la feuille : pas de second titre.
   const titre = (t: string) => (parties.length === 1 ? undefined : t);
@@ -125,7 +125,9 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
       </Carte>}
 
       {voir('animation') && <Carte nu={nu} titre={titre('Animation')} action={titre('Animation') ? <span className="text-[13px] text-white/50">{NOMS_ANIMATIONS[reglages.animation].nom}</span> : undefined}>
-        <p className="mb-3 text-[13px] leading-snug text-white/60">Pour les liens mis en avant. Chaque lien peut aussi choisir la sienne.</p>
+        <p className="mb-3 text-[13px] leading-snug text-white/60">{vedettes === 0
+          ? 'Aucun lien n’est mis en avant pour l’instant : touche un lien sur ta page, puis « Mis en avant » dans Plus de réglages. L’animation choisie ici s’y appliquera.'
+          : 'Pour les liens mis en avant. Chaque lien peut aussi choisir la sienne.'}</p>
         <div className="lp lp-mini rounded-2xl p-2.5" style={variablesTheme(theme) as CSSProperties} data-bouton={reglages.bouton.style} data-forme={reglages.bouton.forme} data-ombre={reglages.bouton.ombre} data-police={theme.police} data-decor={theme.decor}>
           <ul role="radiogroup" onKeyDown={e => flechesRadio(e)} aria-label="Animation des liens mis en avant" className="grid grid-cols-2 gap-2">
             {ANIMATIONS.map(a => {
@@ -133,11 +135,12 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
               return (
                 <li key={a}>
                   <button type="button" role="radio" aria-checked={choisi} onClick={() => { vibrer(5); maj({ animation: a }); }}
-                    className={`relative flex w-full flex-col gap-2 rounded-[18px] p-2 text-left transition duration-200 ${choisi ? 'bg-white/10 ring-2 ring-white' : 'hover:bg-white/[0.06]'}`}>
+                    className={`relative flex w-full flex-col gap-2 rounded-[18px] p-2 text-left transition duration-200 ${choisi ? 'ring-2 ring-[color:var(--texte)]' : 'hover:bg-white/[0.06]'}`}>
                     <span className={`lp-btn lp-btn-vedette lp-accent ${a !== 'aucune' ? `lp-anim-${a}` : ''}`} style={{ minHeight: 52, padding: '8px 12px', fontSize: 15 }}>
                       {NOMS_ANIMATIONS[a].nom}
                     </span>
-                    {/* Le choix se dit comme pour les thèmes : un anneau blanc, partout dans le Design. */}
+                    {/* Dessiné dans le panneau du thème, le choix se dit comme pour les boutons : anneau et coche à la couleur du texte du thème. */}
+                    {choisi && <span className="absolute -top-1.5 -right-1.5 grid h-6 w-6 place-items-center rounded-full" style={{ background: 'var(--fond-uni)', color: 'var(--texte)' }} aria-hidden="true"><Icone nom="ui-ok" taille={16} /></span>}
                   </button>
                 </li>
               );
@@ -209,7 +212,7 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
               <button type="button" disabled={i === reglages.reseaux.length - 1} aria-label={`Descendre ${NOMS_RESEAUX[r.reseau]}`} onClick={() => { const l = [...reglages.reseaux]; [l[i + 1], l[i]] = [l[i], l[i + 1]]; maj({ reseaux: l }); }}
                 className="grid h-11 w-7 shrink-0 place-items-center text-white/50 hover:text-white disabled:invisible"><Icone nom="ui-chevron" taille={18} /></button>
               <button type="button" aria-label={`Retirer ${NOMS_RESEAUX[r.reseau]}`} onClick={() => maj({ reseaux: reglages.reseaux.filter((_, j) => j !== i) })} className="grid h-11 w-8 shrink-0 place-items-center text-white/50 hover:text-white"><Icone nom="ui-fermer" taille={18} /></button>
-              {faux && <p id={`reseau-faux-${r.reseau}`} role="alert" className="w-full pl-9 text-[13px] font-medium text-red-300">{r.reseau === 'email' ? 'Une adresse e-mail, par exemple toi@exemple.fr' : 'Un pseudo sans espace, ou l’adresse de ton profil'}</p>}
+              {faux && <p id={`reseau-faux-${r.reseau}`} role="alert" className="w-full pl-9 text-[13px] font-medium text-red-300">{pourquoiPasReseau(r.reseau, pseudoReseau(r.reseau, r.url))}</p>}
             </li>
             );
           })}
@@ -276,7 +279,7 @@ type Tiroir = 'theme' | 'couleurs' | 'boutons' | 'animation' | 'bureau';
  * Le design en liste à tiroirs : une icône et un titre par ligne, un toucher
  * l'ouvre à la place de la liste, la flèche ramène.
  */
-export function DesignTiroirs({ reglages, onChange, envoyerImage, principal, pied }: { reglages: Reglages; onChange: (r: Reglages) => void; envoyerImage: (d: string) => Promise<string>; principal: boolean; pied?: ReactNode }) {
+export function DesignTiroirs({ reglages, onChange, envoyerImage, principal, pied, vedettes }: { reglages: Reglages; onChange: (r: Reglages) => void; envoyerImage: (d: string) => Promise<string>; principal: boolean; pied?: ReactNode; vedettes?: number }) {
   const [ouvert, setOuvert] = useState<Tiroir | null>(null);
   // Le focus suit le tiroir : sur son retour en entrant, sur sa ligne en revenant.
   const retour = useRef<HTMLButtonElement>(null);
@@ -310,7 +313,7 @@ export function DesignTiroirs({ reglages, onChange, envoyerImage, principal, pie
           <Icone nom="ui-chevron" taille={18} className="rotate-90" /> {lignes.find(l => l.id === ouvert)?.nom}
         </button>
       </div>
-      <OngletApparence reglages={reglages} onChange={onChange} envoyerImage={envoyerImage} principal={principal} parties={[ouvert]} />
+      <OngletApparence reglages={reglages} onChange={onChange} envoyerImage={envoyerImage} principal={principal} parties={[ouvert]} vedettes={vedettes} />
     </div>
   );
 

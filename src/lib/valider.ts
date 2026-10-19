@@ -203,3 +203,11 @@ export function pourquoiPasAdresse(v: string): string {
   if (!/\./.test(s.replace(/^https?:\/\//i, '').split('/')[0])) return 'Il manque la fin de l’adresse, comme .fr ou .com.';
   return 'Ce n’est pas une adresse. Exemple : ton‑site.fr';
 }
+
+/** Pourquoi un pseudo ou une adresse de réseau ne passe pas, avec une piste. */
+export function pourquoiPasReseau(reseau: string, v: string): string {
+  if (reseau === 'email') return 'Une adresse e-mail, par exemple toi@exemple.fr';
+  const s = v.trim().replace(/^@/, '');
+  if (/\s/.test(s)) return `Pas d’espace dans un pseudo : essaie ${s.replace(/\s+/g, '.').toLowerCase()}`;
+  return 'Un pseudo sans espace, ou l’adresse de ton profil';
+}
