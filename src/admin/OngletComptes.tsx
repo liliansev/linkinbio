@@ -124,8 +124,8 @@ function LigneCompte({ compte, api, onChange, onMessage }: { compte: CompteResum
               {action === 'supprimer' && <p className="text-[12.5px] text-red-200/80">Sa page, ses liens, ses images et ses statistiques seront effacés. Rien ne se récupère.</p>}
               <div className="flex flex-wrap gap-2">
                 {action === 'suspendre'
-                  ? <button type="button" disabled={occupe || !motif.trim()} className={`${bouton} bg-amber-400 text-nuit`} onClick={() => agir(() => api.changerStatut(compte.id, 'suspendu', motif))}>Suspendre et prévenir</button>
-                  : <button type="button" disabled={occupe} className={`${bouton} bg-red-500 text-white hover:bg-red-400`} onClick={() => agir(() => api.supprimer(compte.id, motif))}>Supprimer définitivement</button>}
+                  ? <button type="button" disabled={occupe || !motif.trim()} className={`${bouton} bg-amber-400 text-white`} onClick={() => agir(() => api.changerStatut(compte.id, 'suspendu', motif))}>Suspendre et prévenir</button>
+                  : <button type="button" disabled={occupe} className={`${bouton} bg-red-600 text-nuit hover:bg-red-700`} onClick={() => agir(() => api.supprimer(compte.id, motif))}>Supprimer définitivement</button>}
                 <button type="button" className={`${bouton} text-white/60 hover:text-white`} onClick={() => { setAction(null); setMotif(''); }}>Annuler</button>
               </div>
             </div>
@@ -206,7 +206,7 @@ function LigneSignalement({ s, api, onChange }: { s: SignalementResume; api: Api
             <textarea className={`${classeSaisie} min-h-20`} value={decision} maxLength={2000} onChange={e => setDecision(e.target.value)} />
           </Champ>
           <div className="flex flex-wrap gap-2">
-            <button type="button" disabled={occupe || (action === 'suspendu' && !decision.trim())} onClick={valider} className={`${bouton} ${action === 'suspendu' ? 'bg-amber-400 text-nuit' : 'bg-white text-nuit'}`}>{action === 'suspendu' ? 'Suspendre la page' : 'Classer sans suite'}</button>
+            <button type="button" disabled={occupe || (action === 'suspendu' && !decision.trim())} onClick={valider} className={`${bouton} ${action === 'suspendu' ? 'bg-amber-400 text-white' : 'bg-white text-nuit'}`}>{action === 'suspendu' ? 'Suspendre la page' : 'Classer sans suite'}</button>
             <button type="button" onClick={() => { setAction(null); setDecision(''); }} className={`${bouton} text-white/60 hover:text-white`}>Annuler</button>
           </div>
           {erreur && <p role="alert" className="text-[13px] text-red-300">{erreur}</p>}

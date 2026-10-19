@@ -49,7 +49,7 @@ function PageSignaler() {
               <div className="flex flex-col gap-1.5">
                 {MOTIFS_SIGNALEMENT.map(([id, nom]) => (
                   <label key={id} className={`flex min-h-11 cursor-pointer items-center gap-3 rounded-xl px-3.5 text-[15px] transition ${motif === id ? 'bg-peche/15 text-white' : 'bg-white/[0.04] text-white/80 hover:bg-white/[0.07]'}`}>
-                    <input type="radio" name="motif" value={id} checked={motif === id} onChange={() => setMotif(id)} className="accent-[#ffb38a]" required />{nom}
+                    <input type="radio" name="motif" value={id} checked={motif === id} onChange={() => setMotif(id)} className="accent-[#0a0a0a]" required />{nom}
                   </label>
                 ))}
               </div>
@@ -61,7 +61,7 @@ function PageSignaler() {
               <input type="email" className={classeSaisie} value={email} onChange={e => setEmail(e.target.value)} autoComplete="email" placeholder="toi@exemple.fr" />
             </Champ>
             <label className="flex cursor-pointer items-start gap-3 text-[14px] leading-snug text-white/75">
-              <input type="checkbox" checked={bonneFoi} onChange={e => setBonneFoi(e.target.checked)} required className="mt-0.5 h-5 w-5 shrink-0 accent-[#ffb38a]" />
+              <input type="checkbox" checked={bonneFoi} onChange={e => setBonneFoi(e.target.checked)} required className="mt-0.5 h-5 w-5 shrink-0 accent-[#0a0a0a]" />
               Je déclare de bonne foi que les informations de ce signalement sont exactes et complètes.
             </label>
             <BoutonPrincipal type="submit" disabled={envoi}>{envoi ? 'Envoi…' : 'Envoyer le signalement'}</BoutonPrincipal>
