@@ -115,8 +115,8 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
         </ul>
       </Carte>}
 
-      {voir('couleurs') && <Carte nu={nu} titre={titre('Couleurs')} action={reglages.couleurs.fond || reglages.couleurs.boutons || reglages.couleurs.accent
-        ? <button type="button" onClick={() => maj({ couleurs: SANS_COULEURS })} className="text-[13px] font-medium text-white/60 hover:text-white">Tout remettre</button> : undefined}>
+      {/* Seule dans une feuille, « Réinitialiser » monte dans l'en-tête de la feuille, à côté du retour. */}
+      {voir('couleurs') && <Carte nu={nu} titre={titre('Couleurs')} action={nu ? undefined : <Reinitialiser reglages={reglages} onChange={onChange} />}>
         <div className="flex flex-col gap-5">
           {CLES_COULEURS.map(c => (
             <ChoixCouleur key={c.id} nom={c.nom} valeur={reglages.couleurs[c.id]} duTheme={c.duTheme(themeParId(reglages.theme))}
@@ -313,6 +313,7 @@ export function DesignTiroirs({ reglages, onChange, envoyerImage, principal, pie
         <button ref={retour} type="button" onClick={() => { vibrer(4); setOuvert(null); }} aria-label={`${lignes.find(l => l.id === ouvert)?.nom ?? ''}, revenir au design`} className="flex min-h-11 items-center gap-1 rounded-full pr-3 text-[14px] font-medium text-white/75 hover:text-white">
           <Icone nom="ui-chevron" taille={18} className="rotate-90" /> {lignes.find(l => l.id === ouvert)?.nom}
         </button>
+        {ouvert === 'couleurs' && <span className="ml-auto pl-1"><Reinitialiser reglages={reglages} onChange={onChange} /></span>}
       </div>
       <OngletApparence reglages={reglages} onChange={onChange} envoyerImage={envoyerImage} principal={principal} parties={[ouvert]} vedettes={vedettes} />
     </div>
@@ -334,6 +335,15 @@ export function DesignTiroirs({ reglages, onChange, envoyerImage, principal, pie
       </ul>
       {pied}
     </div>
+  );
+}
+
+/** Remet les trois couleurs à celles du thème. Toujours là pour qu'on le trouve, éteint tant qu'il n'y a rien à remettre. */
+function Reinitialiser({ reglages, onChange }: { reglages: Reglages; onChange: (r: Reglages) => void }) {
+  const perso = Object.values(reglages.couleurs).some(Boolean);
+  return (
+    <button type="button" disabled={!perso} onClick={() => { vibrer(4); onChange({ ...reglages, couleurs: SANS_COULEURS }); }}
+      className="-my-2 min-h-11 text-[13px] font-medium text-white/70 transition hover:text-white disabled:text-white/30 disabled:hover:text-white/30">Réinitialiser</button>
   );
 }
 
