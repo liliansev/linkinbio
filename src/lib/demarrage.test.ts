@@ -52,7 +52,9 @@ test('un pseudo devient l’adresse du réseau, une adresse complète reste tell
 
 test('les thèmes proposés à l’arrivée existent tous', () => {
   for (const id of THEMES_ACCUEIL) assert.ok(THEMES.some(t => t.id === id), id);
-  assert.equal(nomSite('https://www.atelier-marie.fr/boutique'), 'atelier-marie.fr');
+  assert.equal(nomSite('https://www.atelier-marie.fr/boutique'), 'Atelier Marie');
+  assert.equal(nomSite('https://calendly.com/toi'), 'Calendly');
+  assert.equal(nomSite('https://shop.marie.co.uk'), 'Marie');
   assert.equal(nomSite('pas une adresse'), '');
 });
 

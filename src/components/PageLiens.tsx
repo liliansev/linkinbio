@@ -421,13 +421,13 @@ function Inscription({ bloc, apercu, pseudo, t }: { bloc: Bloc; apercu: boolean;
       {etat.type === 'ok' ? <p className="lp-newsletter-ok" role="status">{etat.message}</p> : (
         <form onSubmit={envoyer} noValidate data-prenom={bloc.demanderPrenom || undefined}>
           {bloc.demanderPrenom && <input name="prenom" autoComplete="given-name" placeholder={t.prenom} aria-label={t.prenomAria} maxLength={60} />}
-          <input type="email" name="email" required autoComplete="email" placeholder={t.email} aria-label={t.emailAria} />
+          <input type="email" name="email" required autoComplete="email" placeholder={t.email} aria-label={t.emailAria} aria-invalid={etat.type === 'erreur' || undefined} aria-describedby={etat.type === 'erreur' ? `${bloc.id}-erreur` : undefined} />
           {/* Un champ que seuls les robots remplissent. */}
           <input name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" className="lp-piege" />
           <button type="submit" className="lp-btn lp-btn-compact lp-accent" disabled={etat.type === 'envoi'}>{etat.type === 'envoi' ? '…' : t.inscrire}</button>
         </form>
       )}
-      {etat.type === 'erreur' && <p className="lp-newsletter-erreur" role="alert">{etat.message}</p>}
+      {etat.type === 'erreur' && <p id={`${bloc.id}-erreur`} className="lp-newsletter-erreur" role="alert">{etat.message}</p>}
       <p className="lp-mention">{t.mention} <a href="/legal/confidentialite" target="_blank" rel="noopener">{t.confidentialite}</a></p>
     </section>
   );

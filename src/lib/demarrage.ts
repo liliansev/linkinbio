@@ -77,9 +77,16 @@ export function pseudoReseau(reseau: Reseau, url: string): string {
   return /^[\w.-]{1,60}$/.test(pseudo) ? `@${pseudo}` : url;
 }
 
-/** Le nom d'un site d'après son adresse, quand il ne donne pas le sien : `https://www.atelier-marie.fr/x` devient `atelier-marie.fr`. */
+/** Le nom d'un site d'après son adresse, quand il ne donne pas le sien : `https://www.atelier-marie.fr/x` devient « Atelier Marie », jamais une adresse brute. */
 export function nomSite(url: string): string {
-  try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return ''; }
+  let hote: string;
+  try { hote = new URL(url).hostname.replace(/^www\./, ''); } catch { return ''; }
+  const parts = hote.split('.');
+  // Le nom est la partie avant l'extension (calendly.com, boutique.co.uk) ; une adresse IP ou locale reste telle quelle.
+  const fin = parts.length > 2 && /^(co|com|org|net|gouv)$/.test(parts[parts.length - 2]) ? 3 : 2;
+  const nom = parts.length >= 2 ? parts[parts.length - fin] : hote;
+  if (!nom || /^\d+$/.test(nom)) return hote;
+  return nom.split('-').filter(Boolean).map(m => m[0].toUpperCase() + m.slice(1)).join(' ');
 }
 
 const HOTES_RESEAUX: Record<string, Reseau> = {

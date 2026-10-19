@@ -131,12 +131,11 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
               return (
                 <li key={a}>
                   <button type="button" role="radio" aria-checked={choisi} onClick={() => { vibrer(5); maj({ animation: a }); }}
-                    className={`relative flex w-full flex-col gap-2 rounded-[18px] p-2 pb-2.5 text-left transition duration-200 ${choisi ? 'bg-white/[0.12]' : 'hover:bg-white/[0.06]'}`}>
+                    className={`relative flex w-full flex-col gap-2 rounded-[18px] p-2 text-left transition duration-200 ${choisi ? 'bg-white/10 ring-2 ring-white' : 'hover:bg-white/[0.06]'}`}>
                     <span className={`lp-btn lp-btn-vedette lp-accent ${a !== 'aucune' ? `lp-anim-${a}` : ''}`} style={{ minHeight: 52, padding: '8px 12px', fontSize: 15 }}>
                       {NOMS_ANIMATIONS[a].nom}
                     </span>
-                    {/* La coche dit le choix, comme dans les listes : pas un anneau qu'on confondrait avec un style de bouton. */}
-                    <span className="flex justify-center"><span className={`grid h-5 w-5 shrink-0 place-items-center rounded-full transition duration-150 ${choisi ? 'bg-white text-nuit' : 'ring-[1.5px] ring-inset ring-white/25'}`} aria-hidden="true">{choisi && <Icone nom="ui-ok" taille={12} />}</span></span>
+                    {/* Le choix se dit comme pour les thèmes : un anneau blanc, partout dans le Design. */}
                   </button>
                 </li>
               );
@@ -153,9 +152,8 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
               return (
               <li key={s.id} data-bouton={s.id} className="lp-style">
                 <button type="button" role="radio" aria-checked={choisi} onClick={() => { vibrer(4); maj({ bouton: { ...reglages.bouton, style: s.id } }); }}
-                  className={`flex w-full items-center gap-3 rounded-[calc(var(--rc)+6px)] p-1.5 pr-2 transition ${choisi ? 'bg-white/[0.08]' : ''}`}>
+                  className={`flex w-full items-center gap-3 rounded-[calc(var(--rc)+6px)] p-1.5 transition ${choisi ? 'bg-white/10 ring-2 ring-white' : 'hover:bg-white/[0.05]'}`}>
                   <span className="lp-btn flex-1" style={{ minHeight: 48 }}><span className="lp-btn-texte"><span className="lp-btn-titre">{s.nom}</span></span></span>
-                  <span className={`grid h-5 w-5 shrink-0 place-items-center rounded-full transition duration-150 ${choisi ? 'bg-white text-nuit' : 'ring-[1.5px] ring-inset ring-white/25'}`} aria-hidden="true">{choisi && <Icone nom="ui-ok" taille={12} />}</span>
                 </button>
               </li>
               );

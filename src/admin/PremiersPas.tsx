@@ -24,7 +24,7 @@ const ETAPES: Etape[] = ['profil', 'liens', 'reseaux', 'partage', 'style', 'fin'
 const QUESTIONS = 5;
 
 /** Les réseaux où l'on peut coller son lien, proposés à l'arrivée. */
-const OU_PARTAGER: Audience[] = ['instagram', 'tiktok', 'youtube', 'linkedin', 'x', 'facebook', 'threads'];
+const OU_PARTAGER: Audience[] = ['instagram', 'tiktok', 'youtube', 'linkedin', 'x', 'facebook', 'threads', 'qr'];
 
 /** Ce que le navigateur retient : les premiers pas sont faits (ou remis à plus tard). */
 export const CLE_PREMIERS_PAS = 'hopla-premiers-pas';
@@ -177,7 +177,8 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
     : etape === 'style' ? 'C’est parti' : rempli ? 'Continuer' : 'Passer cette étape';
 
   // Le dernier écran nomme le réseau choisi à l'étape d'avant.
-  const ou = reseauxDePartage(reglages.vuesReseaux);
+  const sociaux = reglages.vuesReseaux.filter(a => a !== 'qr');
+  const ou = reglages.vuesReseaux.length && !sociaux.length ? [] : reseauxDePartage(sociaux);
   const bioOu = ou.slice(0, 2).map(a => NOMS_AUDIENCES[a]).join(' ou ');
   const contenu: Record<Etape, { titre: string; aide: string; corps: ReactNode }> = {
     profil: {
@@ -283,18 +284,20 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
     },
     partage: {
       titre: 'Où vas-tu mettre ton lien ?',
-      aide: 'Tu pourras mettre un lien en tête selon le réseau d’où l’on vient : ta boutique d’abord pour ceux qui arrivent d’Instagram, par exemple.',
+      aide: 'Ta page saura d’où viennent tes visiteurs : tu pourras, par exemple, montrer ta boutique d’abord à ceux qui arrivent d’Instagram.',
       corps: (<>
         <ul className="flex flex-col divide-y divide-white/[0.06] rounded-2xl bg-white/[0.04] px-3.5">
           {OU_PARTAGER.map(a => {
-            const choisis = reseauxDePartage(reglages.vuesReseaux);
+            // « Ailleurs » (site, e-mail, QR code) compte comme un choix : personne n'a à cocher un réseau qu'il n'utilise pas.
+            const pris = reglages.vuesReseaux.filter(x => OU_PARTAGER.includes(x));
+            const choisis = pris.length ? pris : reseauxDePartage([]);
             const coche = choisis.includes(a);
             const seul = coche && choisis.length === 1;
             return (
               <li key={a} className="flex min-h-12 items-center gap-3">
                 <span className="flex w-5 justify-center text-white/75"><Icone nom={a} taille={18} /></span>
-                <span className="flex-1 text-[15px] font-medium text-white">{NOMS_AUDIENCES[a]}</span>
-                <button type="button" role="switch" aria-checked={coche} aria-label={`Mon lien sur ${NOMS_AUDIENCES[a]}`} aria-describedby={seul && dernierSeul ? 'au-moins-un' : undefined}
+                <span className="flex-1 text-[15px] font-medium text-white">{a === 'qr' ? 'Ailleurs : site, e-mail, QR code' : NOMS_AUDIENCES[a]}</span>
+                <button type="button" role="switch" aria-checked={coche} aria-label={a === 'qr' ? 'Mon lien ailleurs : site, e-mail, QR code' : `Mon lien sur ${NOMS_AUDIENCES[a]}`} aria-describedby={seul && dernierSeul ? 'au-moins-un' : undefined}
                   onClick={() => { if (seul) { vibrer(20); setDernierSeul(true); return; } setDernierSeul(false); vibrer(4); onReglages({ ...reglages, vuesReseaux: OU_PARTAGER.filter(x => (x === a ? !coche : choisis.includes(x))) }); }}
                   className={`adm-interrupteur relative h-6 w-10 shrink-0 rounded-full before:absolute before:-inset-2 before:content-[''] ${coche ? 'bg-white' : 'bg-white/15'}`}>
                   <span className={`absolute top-[3px] left-[3px] h-[18px] w-[18px] rounded-full shadow-[0_1px_3px_rgba(0,0,0,0.3)] ${coche ? 'translate-x-4 bg-nuit' : 'bg-white'}`} />
@@ -328,7 +331,7 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
     },
     fin: {
       titre: 'Ta page est en ligne',
-      aide: `Colle son adresse dans ta bio ${bioOu} : tout ce que tu changes sur ta page s’affiche aussitôt.`,
+      aide: bioOu ? `Colle son adresse dans ta bio ${bioOu} : tout ce que tu changes sur ta page s’affiche aussitôt.` : 'Colle son adresse là où tu la partages : tout ce que tu changes sur ta page s’affiche aussitôt.',
       corps: (
         <div className="flex flex-col gap-3">
           <div className="flex items-center gap-2 rounded-2xl bg-white/[0.05] p-1.5 pl-4">

@@ -262,10 +262,25 @@ function BlocEditable({ bloc, i, clics, ouvrir, children }: { bloc: Bloc; i: num
   const prive = !bloc.public;
   const regles = etiquettes(bloc);
   const programme = bloc.public && !estEnLigne(bloc) && !regles.includes('Compte à rebours');
+  const puces = [
+    { oui: !programme && !!(bloc.creneau || (bloc.compteARebours && bloc.debut)), icone: 'ui-horloge', nom: 'Quand l’afficher' },
+    { oui: !!(bloc.cache?.length || bloc.audience?.sources.length), icone: 'cible', nom: 'Afficher sur' },
+    { oui: !!bloc.acces, icone: 'cadenas', nom: 'Accès réservé' },
+    { oui: Object.keys(bloc.traductions ?? {}).length > 0, icone: 'globe', nom: 'Traduit' },
+  ].filter(p => p.oui);
   const nom = bloc.titre || bloc.url || 'ce bloc';
   // Le bloc entier est un seul bouton : ses liens et champs intérieurs sortent de l'ordre de tabulation.
   const noeud = useRef<HTMLDivElement | null>(null);
-  useEffect(() => { noeud.current?.querySelectorAll(':scope > :not(.lp-ed-puces)').forEach(x => x.setAttribute('inert', '')); });
+  // Un contenu qui arrive après coup (la dernière vidéo, chargée à part) devient inerte lui aussi.
+  useEffect(() => {
+    const n = noeud.current;
+    if (!n) return;
+    const figer = () => n.querySelectorAll(':scope > :not(.lp-ed-puces):not([inert])').forEach(x => x.setAttribute('inert', ''));
+    figer();
+    const veille = new MutationObserver(figer);
+    veille.observe(n, { childList: true });
+    return () => veille.disconnect();
+  });
   return (
     <div ref={n => { setNodeRef(n); noeud.current = n; }} {...attributes} {...listeners} aria-label={[`Modifier ${nom}`, prive && 'masqué', programme && 'programmé', ...regles].filter(Boolean).join(', ')} aria-roledescription="bloc déplaçable"
       className="lp-bloc lp-ed-bloc" data-id={bloc.id} data-type={bloc.type} data-vedette={bloc.vedette ? bloc.format : undefined} data-glisse={isDragging || undefined} data-prive={prive || programme || undefined}
@@ -273,12 +288,13 @@ function BlocEditable({ bloc, i, clics, ouvrir, children }: { bloc: Bloc; i: num
       onClickCapture={e => { e.preventDefault(); e.stopPropagation(); ouvrir(bloc); }}
       onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); ouvrir(bloc); } else listeners?.onKeyDown?.(e); }}>
       {children}
-      {(prive || programme || regles.length > 0) && (
+      {(prive || programme || puces.length > 0) && (
         <span className="lp-ed-puces" aria-hidden="true">
           {/* Un picto par état, sans étiquette : le nom complet est dans l'aria-label du bloc. */}
           {prive && <span className="lp-ed-puce" title="Masqué"><Icone nom="ui-masque" taille={13} /></span>}
-          {programme && <span className="lp-ed-puce" title="Programmé"><Icone nom="horloge" taille={13} /></span>}
-          {regles.length > 0 && <span className="lp-ed-puce" title={regles.join(', ')}><Icone nom="communaute" taille={13} /></span>}
+          {programme && <span className="lp-ed-puce" title="Programmé"><Icone nom="ui-horloge" taille={13} /></span>}
+          {/* Chaque règle porte le picto de sa ligne dans l'éditeur : on la reconnaît sans l'ouvrir. */}
+          {puces.map(p => <span key={p.icone} className="lp-ed-puce" title={p.nom}><Icone nom={p.icone} taille={13} /></span>)}
         </span>
       )}
     </div>

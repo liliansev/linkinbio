@@ -41,7 +41,7 @@ export function resumer(s: Stats): Phrase[] {
   const pic = s.serie.reduce((a, b) => (b.vues > a.vues ? b : a), s.serie[0]);
   if (s.serie.length >= 5 && pic.vues >= 10 && pic.vues >= moyenne * 1.8) {
     const jour = new Date(`${pic.jour}T12:00:00`).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
-    phrases.push({ texte: `Ton meilleur jour : ${jour}, avec ${pluriel(pic.vues, 'vue')}. Un post ce jour-là ?`, ton: 'hausse' });
+    phrases.push({ texte: `Ton meilleur jour : ${jour}, avec ${pluriel(pic.vues, 'vue')}. Un post ce jour-là ?`, ton: 'hausse' });
   }
 
   // D'où vient le monde.
