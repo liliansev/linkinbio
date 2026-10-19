@@ -133,6 +133,7 @@ export function RegleReseaux({ b, maj, reseaux }: { b: Bloc; maj: (c: Partial<Bl
           {/* Le même rang que la liste du dessus (picto, nom, interrupteur), replié tant qu'on ne s'en sert pas. */}
           <button type="button" onClick={() => setPremier(!premier)} aria-expanded={premier}
             className="flex min-h-12 w-full items-center gap-3 text-left text-[14.5px] font-medium text-white">
+            <span className="flex w-4 justify-center text-white/75"><Icone nom="drapeau" taille={16} /></span>
             <span className="flex-1">En tête pour</span>
             <span className="min-w-0 truncate text-[13px] font-normal text-white/55">{!premier && (enTete.length ? noms(enTete) : 'Aucun réseau')}</span>
             <Icone nom="ui-chevron" taille={18} className={`shrink-0 text-white/75 transition-transform duration-300 ${premier ? 'rotate-180' : ''}`} />
@@ -235,6 +236,12 @@ export function ChampsPreuve({ b, maj, erreurDe = () => undefined }: { b: Bloc; 
         <Segments label="Genre de preuve" valeur={p.genre} onChange={genre => maj({ preuve: { ...p, genre }, ...(genre !== 'note' && b.titre === TITRE_AVIS ? { titre: '' } : genre === 'note' && !b.titre.trim() ? { titre: TITRE_AVIS } : {}) })}
           options={[{ id: 'note', nom: 'Note' }, { id: 'compteur', nom: 'Chiffre' }, { id: 'temoignage', nom: 'Témoignage' }]} />
       </div>
+      {p.genre === 'note' && (
+        // Le petit titre se lit au-dessus de la note : il se tape juste après le type.
+        <Champ erreur={erreurDe('titre')} label="Petit titre (facultatif)">
+          <input id="bloc-titre" className={classeSaisie} value={b.titre} onChange={e => maj({ titre: e.target.value })} maxLength={160} />
+        </Champ>
+      )}
       {p.genre === 'note' && (
         <div className="grid grid-cols-2 gap-3">
           <Champ label="Note sur 5" erreur={erreurDe('note') ?? (trop ? 'La note va de 0 à 5. Sur 10, divise-la par deux.' : undefined)}>

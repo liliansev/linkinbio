@@ -105,6 +105,8 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
     return () => { document.removeEventListener('keydown', touche); document.body.style.overflow = corps; avant?.focus({ preventScroll: true }); };
   }, [apercu]);
   useEffect(() => { if (!toast || toastTenu) return; const t = setTimeout(() => setToast(null), toast.annuler ? 5000 : 2600); return () => clearTimeout(t); }, [toast, toastTenu]);
+  // Annuler, mis au point par le code, disparaît avec le toast : sans ce rappel, le toast suivant ne partirait plus.
+  useEffect(() => { setToastTenu(false); }, [toast]);
   useEffect(() => () => clearTimeout(minuteur.current), []);
 
   // Au retour de la page de paiement : le Pro arrive par webhook, quelques secondes plus tard.

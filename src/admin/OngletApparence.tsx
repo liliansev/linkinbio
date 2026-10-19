@@ -135,12 +135,12 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
               return (
                 <li key={a}>
                   <button type="button" role="radio" aria-checked={choisi} onClick={() => { vibrer(5); maj({ animation: a }); }}
-                    className={`relative flex w-full flex-col gap-2 rounded-[18px] p-2 text-left transition duration-200 ${choisi ? 'ring-2 ring-[color:var(--texte)]' : 'hover:bg-white/[0.06]'}`}>
-                    <span className={`lp-btn lp-btn-vedette lp-accent ${a !== 'aucune' ? `lp-anim-${a}` : ''}`} style={{ minHeight: 52, padding: '8px 12px', fontSize: 15 }}>
+                    className={`flex w-full items-center gap-1.5 rounded-[18px] p-1.5 text-left transition duration-200 ${choisi ? 'ring-2 ring-[color:var(--texte)]' : 'hover:bg-white/[0.06]'}`}>
+                    <span className={`lp-btn lp-btn-vedette lp-accent min-w-0 flex-1 ${a !== 'aucune' ? `lp-anim-${a}` : ''}`} style={{ minHeight: 52, padding: '8px 10px', fontSize: 15 }}>
                       {NOMS_ANIMATIONS[a].nom}
                     </span>
-                    {/* Dessiné dans le panneau du thème, le choix se dit comme pour les boutons : anneau et coche à la couleur du texte du thème. */}
-                    {choisi && <span className="absolute -top-1.5 -right-1.5 grid h-6 w-6 place-items-center rounded-full" style={{ background: 'var(--fond-uni)', color: 'var(--texte)' }} aria-hidden="true"><Icone nom="ui-ok" taille={16} /></span>}
+                    {/* Le même choix que pour les boutons : anneau, et coche à droite à la couleur du texte du thème. */}
+                    <span className="grid w-5 shrink-0 place-items-center" style={{ color: 'var(--texte)' }} aria-hidden="true">{choisi && <Icone nom="ui-ok" taille={18} />}</span>
                   </button>
                 </li>
               );
@@ -300,7 +300,7 @@ export function DesignTiroirs({ reglages, onChange, envoyerImage, principal, pie
   const lignes: { id: Tiroir; nom: string; icone: string; valeur: string }[] = [
     { id: 'theme', nom: 'Thème', icone: 'palette', valeur: themeParId(reglages.theme).nom },
     { id: 'couleurs', nom: 'Couleurs', icone: 'pinceau', valeur: Object.values(reglages.couleurs).some(Boolean) ? 'Personnalisées' : 'Celles du thème' },
-    { id: 'boutons', nom: 'Boutons', icone: 'lien', valeur: STYLES.find(x => x.id === reglages.bouton.style)?.nom ?? '' },
+    { id: 'boutons', nom: 'Boutons', icone: 'etiquette', valeur: STYLES.find(x => x.id === reglages.bouton.style)?.nom ?? '' },
     { id: 'animation', nom: 'Animation', icone: 'eclair', valeur: NOMS_ANIMATIONS[reglages.animation].nom },
     { id: 'bureau', nom: 'Sur ordinateur', icone: 'ordinateur', valeur: BUREAUX.find(x => x.id === reglages.bureau)?.nom ?? '' },
   ];

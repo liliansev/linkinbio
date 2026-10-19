@@ -11,6 +11,8 @@ export function AccepterCgu({ accepter, deconnexion }: { accepter: () => Promise
   const [envoi, setEnvoi] = useState(false);
   const [erreur, setErreur] = useState('');
   async function valider() {
+    // Le bouton reste actif : sans la case, il dit ce qui manque au lieu de rester gris sans un mot.
+    if (!coche) { setErreur('Coche la case pour continuer.'); document.getElementById('cgu-case')?.focus(); return; }
     setEnvoi(true);
     setErreur('');
     try { await accepter(); } catch { setErreur('Pas enregistré. Vérifie ta connexion et réessaie.'); setEnvoi(false); }
@@ -29,10 +31,10 @@ export function AccepterCgu({ accepter, deconnexion }: { accepter: () => Promise
           Encore une case à cocher, puis cinq questions et ta page est en ligne. Hopla l’héberge et mesure ses visites pour toi, sans cookie.
         </p>
         <label className="mt-6 flex cursor-pointer items-start gap-3 rounded-2xl bg-white/[0.05] p-4 text-[15px] leading-snug">
-          <input type="checkbox" checked={coche} onChange={e => setCoche(e.target.checked)} className="mt-0.5 h-5 w-5 shrink-0 accent-white" />
+          <input id="cgu-case" type="checkbox" checked={coche} onChange={e => { setCoche(e.target.checked); setErreur(''); }} className="mt-0.5 h-5 w-5 shrink-0 accent-white" />
           <span>J’accepte les {lien('cgu', 'conditions d’utilisation')} et l’{lien('traitement-des-donnees', 'accord de traitement des données')}, et j’ai lu la {lien('confidentialite', 'politique de confidentialité')}.</span>
         </label>
-        <BoutonPrincipal type="button" className="mt-4 w-full" disabled={!coche || envoi} onClick={valider}>{envoi ? 'Un instant…' : 'Continuer'}</BoutonPrincipal>
+        <BoutonPrincipal type="button" className="mt-4 w-full" disabled={envoi} onClick={valider}>{envoi ? 'Un instant…' : 'Continuer'}</BoutonPrincipal>
         {erreur && <p role="alert" className="mt-3 text-[14px] text-red-300">{erreur}</p>}
         <button type="button" onClick={deconnexion} className="mt-4 min-h-11 w-full text-center text-[14px] text-white/60 hover:text-white">Me déconnecter</button>
       </div>

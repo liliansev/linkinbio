@@ -13,6 +13,7 @@ test('une adresse tapée doit ressembler à un site', () => {
 test('pourquoiPasAdresse dit ce qui manque', async () => {
   const { pourquoiPasAdresse } = await import('./valider.ts');
   assert.match(pourquoiPasAdresse('https//x.fr'), /« : »/);
+  assert.match(pourquoiPasAdresse('calendly com'), /calendly\.com/);
   assert.match(pourquoiPasAdresse('htp://x.fr'), /mal tapé/);
   assert.match(pourquoiPasAdresse('htps:/x.fr'), /mal tapé/);
   assert.match(pourquoiPasAdresse('htps//monsite'), /mal tapé/);

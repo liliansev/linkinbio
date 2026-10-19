@@ -34,7 +34,7 @@ export function OngletReglages({ reglages, compte, blocs = [], traduire, onChang
   const sections: { id: Section; nom: string; icone: string }[] = [
     { id: 'partager', nom: 'QR code et adresse', icone: 'qr' },
     ...(pro ? [{ id: 'abonnement' as const, nom: 'Abonnement', icone: 'diamant' }] : []),
-    { id: 'partage', nom: 'Aperçu dans Google', icone: 'document' },
+    { id: 'partage', nom: 'Aperçu dans Google', icone: 'google' },
     { id: 'langues', nom: 'Langues', icone: 'globe' },
     { id: 'donnees', nom: 'Mes données', icone: 'cadenas' },
   ];

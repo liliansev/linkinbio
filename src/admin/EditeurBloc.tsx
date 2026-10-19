@@ -105,7 +105,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
   const preuveRemplie = !!b.preuve && (b.preuve.genre === 'note' ? b.preuve.note > 0 && b.preuve.note <= 5 : b.preuve.genre === 'compteur' ? b.preuve.nombre > 0 : !!b.description.trim());
   // Ce qui est réglé derrière « Plus de réglages », nommé à droite de la ligne : on sait quoi sans ouvrir.
   const reglages_ = ([[b.vedette, 'Mis en avant'], [!!b.sousTitre, 'Sous-titre'], [!!b.icone, 'Icône'], [!!b.image, 'Image'], [b.vedette && b.animation !== 'auto', 'Animation'],
-    [!!b.acces, 'Accès réservé'], [!!(b.debut || b.fin || b.creneau), 'Programmé'], [!!(b.cache.length || b.audience), 'Réseaux'], [Object.keys(b.traductions ?? {}).length > 0, 'Traduit']] as [boolean, string][])
+    [!!b.acces, 'Accès réservé'], [!!(b.debut || b.fin || b.creneau), 'Quand l’afficher'], [!!(b.cache.length || b.audience), 'Afficher sur'], [Object.keys(b.traductions ?? {}).length > 0, 'Traduit']] as [boolean, string][])
     .filter(([oui]) => oui).map(([, nom]) => nom);
   const reglees = reglages_.length > 2 ? `${reglages_.slice(0, 2).join(', ')} et ${reglages_.length - 2} de plus` : reglages_.join(', ');
   const nomAuto = `Comme ma page (${NOMS_ANIMATIONS[reglages.animation].nom})`;
@@ -224,13 +224,13 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
             <input className={classeSaisie} type="url" inputMode="url" autoCapitalize="none" autoCorrect="off" placeholder="https://…" value={b.url} onChange={e => maj({ url: e.target.value })} />
           </Champ>
         )}
-        {b.type === 'preuve' && <p className="text-[12.5px] leading-snug text-white/55">Montre des chiffres vrais et des avis réels, avec l’accord de leurs auteurs : c’est la loi, et c’est ce qui marche.</p>}
+        {b.type === 'preuve' && <p className="text-[12.5px] leading-snug text-white/55">Des chiffres vrais, des avis réels, avec l’accord de leurs auteurs.</p>}
 
-        {b.type !== 'derniere-video' && !(b.type === 'preuve' && b.preuve?.genre !== 'note') && (
-          <Champ erreur={erreurDe('titre')} label={b.type === 'lien' ? 'Texte du bouton' : b.type === 'texte' ? 'Texte' : b.type === 'preuve' ? 'Petit titre (facultatif)' : 'Titre'}>
+        {b.type !== 'derniere-video' && b.type !== 'preuve' && (
+          <Champ erreur={erreurDe('titre')} label={b.type === 'lien' ? 'Texte du bouton' : b.type === 'texte' ? 'Texte' : 'Titre'}>
             {b.type === 'texte'
               ? <textarea className={`${classeSaisie} min-h-28`} value={b.titre} onChange={e => maj({ titre: e.target.value })} maxLength={1000} autoFocus={nouveau} />
-              : <input id="bloc-titre" className={classeSaisie} value={b.titre} onChange={e => maj({ titre: e.target.value })} maxLength={160} placeholder={b.type === 'lien' ? 'Mon super lien' : ''} autoFocus={nouveau && !avecUrl && b.type !== 'preuve'} />}
+              : <input id="bloc-titre" className={classeSaisie} value={b.titre} onChange={e => maj({ titre: e.target.value })} maxLength={160} placeholder={b.type === 'lien' ? 'Mon super lien' : ''} autoFocus={nouveau && !avecUrl} />}
           </Champ>
         )}
         {b.type === 'derniere-video' && (
@@ -353,7 +353,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
           </button>
         )}
 
-        {!nouveau && b.type === 'lien' && <p className="text-center text-[13px] text-white/55">{clics} clic{clics > 1 ? 's' : ''} ces 30 derniers jours</p>}
+        {!nouveau && b.type === 'lien' && clics > 0 && <p className="text-center text-[13px] text-white/55">{clics} clic{clics > 1 ? 's' : ''} ces 30 derniers jours</p>}
 
         {/* Les gestes rares, nommés en toutes lettres, au bout de la feuille plutôt qu'en pictos à côté de Terminé. */}
         {!nouveau && (

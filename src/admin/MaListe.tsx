@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Api, Contact, FournisseurListe, Liste } from '../lib/types.ts';
 import { Icone } from '../components/Icone.tsx';
 import { BoutonPrincipal, Carte, Champ, Feuille, Segments, classeSaisie } from './ui.tsx';
@@ -51,6 +51,26 @@ function FeuilleListe({ liste, api, onFermer, onChange }: { liste: Liste; api: P
   const [message, setMessage] = useState<{ ok: boolean; texte: string } | null>(null);
   const [envoi, setEnvoi] = useState(false);
   const [contacts, setContacts] = useState<Contact[]>(liste.derniers);
+  // Un inscrit retiré attend cinq secondes avant de partir pour de bon : le temps d'annuler.
+  const [retire, setRetire] = useState<Contact | null>(null);
+  const attente = useRef<{ id: string; t: ReturnType<typeof setTimeout> } | null>(null);
+  const confirmer = useCallback(() => {
+    const a = attente.current; if (!a) return;
+    clearTimeout(a.t); attente.current = null; setRetire(null);
+    void api.supprimerContact(a.id).then(onChange);
+  }, [api, onChange]);
+  useEffect(() => confirmer, [confirmer]);
+  function retirer(c: Contact) {
+    confirmer();
+    setContacts(l => l.filter(x => x.id !== c.id)); setRetire(c);
+    attente.current = { id: c.id, t: setTimeout(confirmer, 5000) };
+  }
+  function annulerRetrait() {
+    const a = attente.current; if (!a || !retire) return;
+    clearTimeout(a.t); attente.current = null;
+    const c = retire; setRetire(null);
+    setContacts(l => [...l, c].sort((x, y) => y.ts - x.ts));
+  }
   const memeFournisseur = liste.integration?.fournisseur === choix;
 
   async function brancher() {
@@ -109,6 +129,12 @@ function FeuilleListe({ liste, api, onFermer, onChange }: { liste: Liste; api: P
             <span className="text-[13px] font-medium text-white/70">{nombre(liste.total)} inscrit{liste.total > 1 ? 's' : ''}</span>
             {api.urlContacts && liste.total > 0 && <a href={api.urlContacts} download className="inline-flex min-h-11 items-center gap-1.5 rounded-full bg-white/[0.08] px-3.5 text-[13.5px] font-medium text-white">Exporter en CSV</a>}
           </div>
+          {retire && (
+            <p role="status" className="mb-2 flex min-h-11 items-center gap-3 rounded-2xl bg-white/[0.06] px-3.5 text-[13.5px] text-white">
+              <span className="min-w-0 flex-1 truncate">{retire.email} retiré de ta liste</span>
+              <button type="button" onClick={annulerRetrait} className="min-h-11 shrink-0 font-medium underline underline-offset-2">Annuler</button>
+            </p>
+          )}
           {contacts.length ? (
             <ul className="divide-y divide-white/[0.06] rounded-2xl bg-white/[0.035]">
               {contacts.map(c => (
@@ -117,7 +143,7 @@ function FeuilleListe({ liste, api, onFermer, onChange }: { liste: Liste; api: P
                     <span className="block truncate text-[14.5px] text-white">{c.prenom ? `${c.prenom} · ` : ''}{c.email}</span>
                     <span className="block text-[12px] text-white/55">{quand(c.ts)}{c.source && c.source !== 'Direct' ? ` · ${c.source}` : ''}{c.synchro === 'erreur' ? ' · pas envoyé' : ''}</span>
                   </span>
-                  <button type="button" aria-label={`Retirer ${c.email}`} onClick={async () => { await api.supprimerContact(c.id); setContacts(l => l.filter(x => x.id !== c.id)); onChange(); }}
+                  <button type="button" aria-label={`Retirer ${c.email}`} onClick={() => retirer(c)}
                     className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-white/55 hover:bg-white/[0.06] hover:text-red-300"><Icone nom="ui-corbeille" taille={17} /></button>
                 </li>
               ))}

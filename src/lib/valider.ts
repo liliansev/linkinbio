@@ -199,6 +199,9 @@ export function pourquoiPasAdresse(v: string): string {
   if (/^(?!https?:)h?t{1,3}p{1,2}s?:/i.test(s) || /^(?!https?\/\/)h?t{1,3}p{1,2}s?\/\//i.test(s)) return 'Le début de l’adresse est mal tapé : écris https://. Exemple : https://ton‑site.fr';
   if (/^https?\/\//i.test(s)) return 'Il manque « : » après http. Exemple : https://ton‑site.fr';
   if (/^https?:\/[^/]/i.test(s)) return 'Il manque un « / » après https:. Exemple : https://ton‑site.fr';
+  // « calendly com » : l'espace tient lieu de point, on propose l'adresse telle qu'elle était voulue.
+  const piste = s.replace(/\s+(fr|com|net|org|io|co|me|app|page|bio|link|eu|be|ch|ca|shop|store|dev|ai)$/i, '.$1');
+  if (/\s/.test(s) && !/\s/.test(piste)) return `Une adresse n’a pas d’espace : voulais-tu dire ${piste}\u202f?`;
   if (/\s/.test(s)) return 'Une adresse n’a pas d’espace. Exemple : ton‑site.fr';
   if (!/\./.test(s.replace(/^https?:\/\//i, '').split('/')[0])) return 'Il manque la fin de l’adresse, comme .fr ou .com.';
   return 'Ce n’est pas une adresse. Exemple : ton‑site.fr';
