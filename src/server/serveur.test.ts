@@ -98,6 +98,7 @@ test('statistiques : sources lisibles, robots et admin écartés, totaux et tend
   assert.equal(s.vues, 3); assert.equal(s.visiteurs, 2); assert.equal(s.clics, 1);
   assert.equal(s.serie.length, 7); assert.equal(s.serie[6].vues, 3);
   assert.equal(s.precedent.vues, 1);
+  assert.equal(s.dejaVue, true);
   assert.deepEqual(s.blocs.map(b => b.id), [id]);
   assert.equal(s.sources[0].nom, 'Direct');
 });
@@ -126,6 +127,7 @@ test('comptes : chaque page est isolée des autres', async () => {
   // Les statistiques : un clic sur la page de Camille ne compte que chez elle, et pas sur un bloc d'un autre.
   const iphone = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) Safari';
   const t = Date.parse('2026-10-17T12:00:00Z');
+  assert.equal(db.stats(camille.id, 7, t).dejaVue, false, 'une page que personne n’a vue n’a que son état vide');
   assert.equal(enregistrer({ page: 'camille', type: 'vue', bloc: null, utm: '', referent: '' }, { ip: '9.9.9.1', ua: iphone, session: null }, t), true);
   assert.equal(enregistrer({ page: 'camille', type: 'clic', bloc: 'c1', utm: '', referent: '' }, { ip: '9.9.9.1', ua: iphone, session: null }, t), true);
   assert.equal(enregistrer({ page: 'camille', type: 'clic', bloc: aLilian.id, utm: '', referent: '' }, { ip: '9.9.9.1', ua: iphone, session: null }, t), false);
@@ -133,6 +135,8 @@ test('comptes : chaque page est isolée des autres', async () => {
   assert.equal(enregistrer({ page: 'inconnu', type: 'vue', bloc: null, utm: '', referent: '' }, { ip: '9.9.9.3', ua: iphone, session: null }, t), false);
   assert.equal(db.stats(camille.id, 7, t).vues, 1);
   assert.equal(db.stats(camille.id, 7, t).clics, 1);
+  assert.equal(db.stats(camille.id, 7, t + 30 * 86_400_000).vues, 0);
+  assert.equal(db.stats(camille.id, 7, t + 30 * 86_400_000).dejaVue, true, 'une période calme n’efface pas la première visite');
   assert.equal(db.stats(P, 7, t).vues, 0);
 
   // Les images comptent dans le quota du compte.

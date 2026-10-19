@@ -46,7 +46,14 @@ function statsFictives(jours: number): Stats {
     apps: { integres: Math.round(clics * 0.46), versApp: Math.round(clics * 0.31), ouverts: Math.round(clics * 0.29) },
     appareils: [{ nom: 'Mobile', vues: Math.round(vues * 0.81) }, { nom: 'Ordinateur', vues: Math.round(vues * 0.16) }, { nom: 'Tablette', vues: Math.round(vues * 0.03) }],
     precedent: { vues: somme(avant, 'vues'), clics: somme(avant, 'clics'), visiteurs: Math.round(somme(avant, 'vues') * 0.74) },
+    dejaVue: true,
   };
+}
+
+/** Un compte neuf : personne n'a encore vu sa page. */
+function statsVides(jours: number): Stats {
+  const serie = Array.from({ length: jours }, (_, i) => ({ jour: new Date(Date.now() - (jours - 1 - i) * 86_400_000).toISOString().slice(0, 10), vues: 0, clics: 0 }));
+  return { jours, vues: 0, visiteurs: 0, clics: 0, serie, blocs: [], sources: [], appareils: [], apps: { integres: 0, versApp: 0, ouverts: 0 }, precedent: { vues: 0, visiteurs: 0, clics: 0 }, dejaVue: false };
 }
 
 export const apiDemo: Api = {
@@ -152,6 +159,8 @@ const ecrireNouveau = () => { try { localStorage.setItem(CLE_NOUVEAU, JSON.strin
 export function recommencerNouveau() {
   nouveau = neuf();
   try { localStorage.removeItem(CLE_NOUVEAU); for (const m of MARQUES) localStorage.removeItem(m); } catch { /* idem */ }
+  // L'étape où l'on s'était arrêté aussi : on repart de la première question.
+  try { sessionStorage.removeItem('hopla-premiers-pas-etape'); } catch { /* idem */ }
 }
 
 export const apiNouveau: Api = {
@@ -170,6 +179,8 @@ export const apiNouveau: Api = {
   async supprimerBloc(i) { await pause(); nouveau.blocs = nouveau.blocs.filter(b => b.id !== i); ecrireNouveau(); },
   async ordonner(ids) { await pause(); nouveau.blocs = ids.map(i => nouveau.blocs.find(b => b.id === i)).filter((b): b is Bloc => !!b); ecrireNouveau(); },
   async enregistrerReglages(reglages) { await pause(); nouveau.reglages = reglages; ecrireNouveau(); return reglages; },
+  async stats(jours) { await pause(); return statsVides(jours); },
+  async liste() { await pause(); return { total: 0, semaine: 0, derniers: [], integration: null, enAttente: 0 }; },
   async deconnexion() { recommencerNouveau(); },
   async accepterCgu() { await pause(); nouveau.cgu = true; ecrireNouveau(); },
   async supprimerMonCompte() { await pause(); return { ok: false, message: 'Pas de suppression dans l’aperçu.' }; },

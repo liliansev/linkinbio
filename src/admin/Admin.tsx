@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Api, Bloc, EtatAdmin, Reglages } from '../lib/types.ts';
-import { TYPES_PRINCIPAL, urlPage } from '../lib/types.ts';
+import { TYPES_PRINCIPAL, nouveauBloc, urlPage } from '../lib/types.ts';
 import { composerMoment } from '../lib/moments.ts';
 import { PageLiens } from '../components/PageLiens.tsx';
 import { MaPage } from './MaPage.tsx';
@@ -257,7 +257,11 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
     return (
       <>
         <PremiersPas compte={compte} reglages={reglages} blocs={blocs} onReglages={changerReglages} onPoserBlocs={poserBlocs}
-          envoyerImage={d => api.envoyerImage(d)} apercuSite={u => api.apercuSite(u)} onFin={() => { setPremiersPas(false); setOnglet('page'); scrollTo({ top: 0 }); }} />
+          envoyerImage={d => api.envoyerImage(d)} apercuSite={u => api.apercuSite(u)} onFin={suite => {
+            setPremiersPas(false); setOnglet('page'); scrollTo({ top: 0 });
+            // « Ajouter mon premier lien » : l'éditeur s'ouvre déjà sur un lien neuf.
+            if (suite === 'lien') setEdition({ bloc: nouveauBloc('lien', `n${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`), nouveau: true });
+          }} />
         {bulle}
       </>
     );
@@ -331,7 +335,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
           {onglet === 'page' && <MaPage compte={compte} reglages={reglages} blocs={blocs} clics={clics} onReglages={changerReglages} onOrdonner={ordonner}
             onOuvrir={b => setEdition({ bloc: b, nouveau: false })} onAjouter={(b, enBas) => setEdition({ bloc: b, nouveau: true, enBas })} envoyerImage={d => api.envoyerImage(d)} annoncer={t => setToast(t)}
             demarrage={demarrageOuvert} fermerDemarrage={() => setDemarrageOuvert(false)} />}
-          {onglet === 'stats' && <OngletStats charger={chargerStats} limite={initial.paiement && !compte.pro} onPro={versAbonnement}
+          {onglet === 'stats' && <OngletStats charger={chargerStats} adresse={urlPage(compte)} pseudo={compte.pseudo} limite={initial.paiement && !compte.pro} onPro={versAbonnement}
             ouvrirApps={reglages.ouvrirApps} onActiverApps={() => changerReglages({ ...reglages, ouvrirApps: true })} liste={<MaListe api={api} />} />}
           {onglet === 'reglages' && <OngletReglages reglages={reglages} compte={compte} blocs={blocs} traduire={b => setEdition({ bloc: b, nouveau: false, traduire: true })} onChange={changerReglages} onDeconnexion={deconnexion} urlExport={api.urlExport} supprimerMonCompte={api.supprimerMonCompte}
             abonnement={abonnement} paiement={initial.paiement} ouvrirPaiement={api.ouvrirPaiement} ouvrirPortail={api.ouvrirPortail} sectionInitiale={sectionReglage} />}

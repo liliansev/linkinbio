@@ -10,7 +10,7 @@ test('les stats en phrases : ce qui monte, le meilleur jour, d’où vient le mo
     jours: 7, vues: 400, visiteurs: 300, clics: 120, serie: serie([30, 200, 40, 30, 40, 30, 30]),
     blocs: [{ id: 'yt', titre: 'YouTube', clics: 52, avant: 37 }, { id: 'site', titre: 'Mon site', clics: 6, avant: 5 }],
     sources: [{ nom: 'Direct', vues: 150, avant: 100 }, { nom: 'TikTok', vues: 120, avant: 50 }],
-    appareils: [], apps: { integres: 40, versApp: 30, ouverts: 28 }, precedent: { vues: 300, visiteurs: 250, clics: 90 },
+    appareils: [], apps: { integres: 40, versApp: 30, ouverts: 28 }, precedent: { vues: 300, visiteurs: 250, clics: 90 }, dejaVue: true,
   };
   const textes = resumer(s).map(p => p.texte);
   assert.equal(textes[0], 'Ta page a eu 400 vues, 33 % de plus que la semaine d’avant.');

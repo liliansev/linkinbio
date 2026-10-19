@@ -1,9 +1,12 @@
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { Stats } from '../lib/types.ts';
-import { Carte, Segments, classeBouton } from './ui.tsx';
+import { sansSchema } from '../lib/types.ts';
+import { BoutonCopier, Carte, Segments, classeBouton } from './ui.tsx';
 import { Icone } from '../components/Icone.tsx';
 import { resumer } from '../lib/resume.ts';
+import { noterPartage } from './BienDemarrer.tsx';
+import { CodeQR } from './CodeQR.tsx';
 
 const PERIODES = [{ id: '7', nom: '7 j' }, { id: '30', nom: '30 j' }, { id: '90', nom: '90 j' }, { id: '365', nom: '1 an' }];
 const nombre = (n: number) => n.toLocaleString('fr-FR');
@@ -149,8 +152,27 @@ function OuvertsDansLApp({ apps, actif, onActiver }: { apps: Stats['apps']; acti
   );
 }
 
+/** Une page que personne n'a encore vue : pas de zéros ni de courbe plate, mais de quoi amener le premier visiteur. */
+function PageJamaisVue({ adresse, pseudo }: { adresse: string; pseudo: string }) {
+  return (
+    <section aria-labelledby="stats-vide" className="adm-card">
+      <div className="flex flex-col items-center gap-5 py-3 text-center">
+        <div>
+          <h2 id="stats-vide" className="text-[18px] font-semibold tracking-[-0.025em] text-white">Personne n’a encore vu ta page</h2>
+          <p className="mt-1.5 text-[14px] leading-snug text-white/60">Les chiffres arrivent avec le premier visiteur.</p>
+        </div>
+        <div className="adm-address flex w-full max-w-sm items-center gap-2 p-1.5 pl-3.5 text-left">
+          <span className="min-w-0 flex-1 truncate text-[15px] font-medium text-white" translate="no">{sansSchema(adresse)}</span>
+          <BoutonCopier texte={adresse} onCopie={noterPartage} label="Copier l’adresse de ta page" />
+        </div>
+        <CodeQR adresse={adresse} pseudo={pseudo} />
+      </div>
+    </section>
+  );
+}
+
 /** `limite` : un compte gratuit ne voit que les sept derniers jours ; `onPro` mène à l'abonnement. */
-export function OngletStats({ charger, limite = false, onPro, ouvrirApps = true, onActiverApps, liste }: { charger: (jours: number) => Promise<Stats>; limite?: boolean; onPro?: () => void; ouvrirApps?: boolean; onActiverApps?: () => void; liste?: ReactNode }) {
+export function OngletStats({ charger, adresse, pseudo, limite = false, onPro, ouvrirApps = true, onActiverApps, liste }: { charger: (jours: number) => Promise<Stats>; adresse: string; pseudo: string; limite?: boolean; onPro?: () => void; ouvrirApps?: boolean; onActiverApps?: () => void; liste?: ReactNode }) {
   const [choix, setJours] = useState('30');
   const jours = limite ? '7' : choix;
   const [stats, setStats] = useState<Stats | null>(null);
@@ -165,9 +187,11 @@ export function OngletStats({ charger, limite = false, onPro, ouvrirApps = true,
     return () => { annule = true; };
   }, [jours, charger, essai]);
 
+  // La période et l'offre Pro ne se montrent qu'à une page déjà vue : avant, il n'y a rien à comparer.
+  // Pendant le premier chargement, elles restent : la plupart des pages ont déjà des visites, rien ne saute.
   return (
     <div className="flex flex-col gap-4">
-      {limite ? (
+      {stats && !stats.dejaVue ? null : limite ? (
         <div className="flex items-center justify-between gap-3 rounded-[14px] border border-white/10 bg-nuit px-4 py-3">
           <p className="text-[14px] leading-snug text-white/80">Les 7 derniers jours. <span className="text-white/55">Avec Pro, jusqu’à un an d’historique : tout est déjà enregistré.</span></p>
           {onPro && <button type="button" onClick={onPro} className={`${classeBouton.principal} shrink-0`}>Passer en Pro</button>}
@@ -179,7 +203,15 @@ export function OngletStats({ charger, limite = false, onPro, ouvrirApps = true,
           <button type="button" onClick={() => setEssai(n => n + 1)} className={`${classeBouton.secondaire} shrink-0`}>Réessayer</button>
         </div>
       )}
-      {!stats ? (!erreur && <div className="h-64 animate-pulse rounded-2xl bg-white/[0.04] motion-reduce:animate-none" aria-label="Chargement des statistiques" />) : (
+      {!stats ? (!erreur && <div className="h-64 animate-pulse rounded-2xl bg-white/[0.04] motion-reduce:animate-none" aria-label="Chargement des statistiques" />) : !stats.dejaVue ? (
+        <>
+          <PageJamaisVue adresse={adresse} pseudo={pseudo} />
+          {liste}
+          <p className="px-2 text-center text-[12.5px] leading-snug text-white/55">
+            Sans cookie : un visiteur compte une fois par jour, toi jamais.
+          </p>
+        </>
+      ) : (
         <div className={`flex flex-col gap-4 transition-opacity duration-200 ${charge ? 'opacity-50' : ''}`} aria-busy={charge}>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:gap-4">
             <Kpi nom="Vues" valeur={stats.vues} avant={stats.precedent.vues} />
