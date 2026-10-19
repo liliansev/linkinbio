@@ -37,7 +37,7 @@ export function FeuilleAjout({ ouverte, onFermer, onChoisir, principal }: { ouve
           ))}
         </ul>
         {/* Les raccourcis, dits une fois là où l'on ajoute : sans eux, ils resteraient secrets. */}
-        <p className="px-1 pb-1 text-[13px] leading-snug text-white/50">Astuce : colle une adresse sur ta page pour ajouter un lien d’un coup<span className="hidden lg:inline">, ou appuie sur A pour ouvrir cette liste</span>.</p>
+        <p className="hidden px-1 pb-1 text-[13px] leading-snug text-white/50 lg:block">Astuce : colle une adresse sur ta page pour ajouter un lien d’un coup, ou appuie sur A pour ouvrir cette liste.</p>
         </>
       )}
     </Feuille>

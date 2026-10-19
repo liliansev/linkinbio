@@ -318,7 +318,7 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
             const choisi = reglages.theme === t.id;
             return (
               <li key={t.id} className="w-[98px] shrink-0 snap-start lg:w-auto">
-                <button type="button" role="radio" aria-checked={choisi} onClick={() => { vibrer(5); onReglages({ ...reglages, theme: t.id, bouton: t.conseil, couleurs: SANS_COULEURS }); }}
+                <button type="button" role="radio" aria-checked={choisi} onClick={e => { vibrer(5); e.currentTarget.scrollIntoView({ inline: 'nearest', block: 'nearest', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); onReglages({ ...reglages, theme: t.id, bouton: t.conseil, couleurs: SANS_COULEURS }); }}
                   className={`flex w-full flex-col items-center gap-1.5 rounded-2xl p-1.5 transition ${choisi ? 'bg-white/10 ring-2 ring-white' : 'hover:bg-white/[0.05]'}`}>
                   <Pastille theme={t} />
                   <span className="w-full truncate text-center text-[12px] text-white/75">{t.nom}</span>

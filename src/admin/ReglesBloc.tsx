@@ -49,7 +49,7 @@ export function RegleMoment({ b, maj, erreur }: { b: Bloc; maj: (c: Partial<Bloc
   const majCreneau = (champs: Partial<Creneau>) => maj({ creneau: { ...(c ?? { jours: [1, 2, 3, 4, 5], de: '09:00', a: '12:00', fuseau: fuseauNavigateur(), effet: 'afficher' }), ...champs, fuseau: fuseauNavigateur() } });
   const resume = [b.debut || b.fin ? 'Dates' : '', b.compteARebours && b.debut ? 'compte à rebours' : '', c ? decrireCreneau(c) : ''].filter(Boolean).join(', ');
   return (
-    <Repli key={erreur ? 'erreur' : 'calme'} titre="Quand l’afficher" icone="ui-horloge" resume={resume} ouvert={!!(b.debut || b.fin || c || erreur)}>
+    <Repli key={erreur ? 'erreur' : 'calme'} titre="Quand l’afficher" icone="ui-horloge" resume={resume || 'Toujours'} ouvert={!!(b.debut || b.fin || c || erreur)}>
       <div className="grid gap-3 sm:grid-cols-2">
         <Champ label="À partir du">
           <input type="datetime-local" className={classeSaisie} value={versLocal(b.debut)} onChange={e => maj({ debut: depuisLocal(e.target.value) })} />
@@ -157,6 +157,9 @@ export function RegleReseaux({ b, maj, reseaux }: { b: Bloc; maj: (c: Partial<Bl
 
 const ICONE_AUDIENCE: Partial<Record<Audience, string>> = { instagram: 'instagram', tiktok: 'tiktok', youtube: 'youtube', linkedin: 'linkedin', x: 'x', facebook: 'facebook', threads: 'threads', snapchat: 'snapchat', qr: 'qr', newsletter: 'courrier', email: 'email', google: 'google' };
 
+/** Le petit titre par défaut d'un bloc d'avis : il n'a de sens que pour une note. */
+const TITRE_AVIS = 'Ce qu’ils en disent';
+
 /** Le mode drop : un code à taper, des places comptées, ou les deux. */
 export function RegleAcces({ b, maj, prises }: { b: Bloc; maj: (c: Partial<Bloc>) => void; prises: number }) {
   const a = b.acces;
@@ -166,7 +169,7 @@ export function RegleAcces({ b, maj, prises }: { b: Bloc; maj: (c: Partial<Bloc>
   };
   const resume = a ? [a.code ? `code « ${a.code} »` : '', a.places ? `${prises}/${a.places} places prises` : ''].filter(Boolean).join(', ') : '';
   return (
-    <Repli titre="Accès réservé" icone="cadenas" resume={resume} ouvert={!!a}>
+    <Repli titre="Accès réservé" icone="cadenas" resume={resume || 'Ouvert à tous'} ouvert={!!a}>
       <p className="text-[13px] leading-snug text-white/55">L’adresse du lien n’est jamais dans ta page : elle ne s’ouvre qu’avec le bon code, ou pour les premiers arrivés.</p>
       <Champ label="Code à taper (facultatif)" aide="Donne-le en story, en live ou dans ta newsletter. Majuscules et espaces ne comptent pas.">
         <input className={classeSaisie} value={a?.code ?? ''} maxLength={40} autoCapitalize="characters" autoComplete="off" spellCheck={false}
@@ -229,7 +232,7 @@ export function ChampsPreuve({ b, maj, erreurDe = () => undefined }: { b: Bloc; 
     <>
       <div>
         <span className="mb-1.5 block text-[13px] font-medium text-white/70">Type de preuve</span>
-        <Segments label="Genre de preuve" valeur={p.genre} onChange={genre => majP({ genre })}
+        <Segments label="Genre de preuve" valeur={p.genre} onChange={genre => maj({ preuve: { ...p, genre }, ...(genre !== 'note' && b.titre === TITRE_AVIS ? { titre: '' } : genre === 'note' && !b.titre.trim() ? { titre: TITRE_AVIS } : {}) })}
           options={[{ id: 'note', nom: 'Note' }, { id: 'compteur', nom: 'Chiffre' }, { id: 'temoignage', nom: 'Témoignage' }]} />
       </div>
       {p.genre === 'note' && (
@@ -251,6 +254,12 @@ export function ChampsPreuve({ b, maj, erreurDe = () => undefined }: { b: Bloc; 
             onChange={e => majP({ nombre: Math.max(0, Math.round(Number(e.target.value) || 0)) })} />
         </Champ>
       )}
+      {p.genre === 'compteur' && (
+        // Ce que compte le chiffre, juste sous lui : les deux se lisent ensemble sur la page.
+        <Champ erreur={erreurDe('titre')} label="Ce que compte ce chiffre">
+          <input id="bloc-titre" className={classeSaisie} value={b.titre} onChange={e => maj({ titre: e.target.value })} maxLength={160} placeholder="abonnés sur YouTube" />
+        </Champ>
+      )}
       {p.genre === 'temoignage' && (
         <>
           <Champ label="Le témoignage" erreur={erreurDe('description')}>
@@ -262,12 +271,11 @@ export function ChampsPreuve({ b, maj, erreurDe = () => undefined }: { b: Bloc; 
           </Champ>
         </>
       )}
-      <Champ label={p.genre === 'note' ? 'Où sont publiés les avis' : 'Où l’avis a été donné (facultatif)'} erreur={erreurDe('source')}>
+      <Champ label={p.genre === 'note' ? 'Où sont publiés les avis' : p.genre === 'compteur' ? 'Source (facultatif)' : 'Où l’avis a été donné (facultatif)'} erreur={erreurDe('source')}>
         {/* Les sources courantes en suggestions du champ, plutôt qu'une rangée de pastilles. */}
-        <input className={classeSaisie} value={p.source} maxLength={30} onChange={e => majP({ source: e.target.value })} placeholder="Ex. Google" list="sources-preuve" />
+        <input className={classeSaisie} value={p.source} maxLength={30} onChange={e => majP({ source: e.target.value })} placeholder={p.genre === 'compteur' ? 'Ex. YouTube' : 'Ex. Google'} list="sources-preuve" />
       </Champ>
       <datalist id="sources-preuve">{SOURCES_PREUVE.map(s => <option key={s} value={s} />)}</datalist>
-      <p className="text-[12.5px] leading-snug text-white/55">Montre des chiffres vrais et des avis réels, avec l’accord de leurs auteurs : c’est la loi, et c’est ce qui marche.</p>
     </>
   );
 }

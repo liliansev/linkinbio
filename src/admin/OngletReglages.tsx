@@ -34,7 +34,7 @@ export function OngletReglages({ reglages, compte, blocs = [], traduire, onChang
   const sections: { id: Section; nom: string; icone: string }[] = [
     { id: 'partager', nom: 'QR code et adresse', icone: 'qr' },
     ...(pro ? [{ id: 'abonnement' as const, nom: 'Abonnement', icone: 'diamant' }] : []),
-    { id: 'partage', nom: 'Aperçu dans Google et les messages', icone: 'document' },
+    { id: 'partage', nom: 'Aperçu dans Google', icone: 'document' },
     { id: 'langues', nom: 'Langues', icone: 'globe' },
     { id: 'donnees', nom: 'Mes données', icone: 'cadenas' },
   ];
@@ -310,7 +310,7 @@ function Langues({ reglages, onChange, adresse, blocs, traduire }: { reglages: R
         <div className="mt-4 flex flex-col gap-3">
           {actives.map(l => (
             <Champ key={l} label={`Ta bio en ${EN_FRANCAIS[l].toLowerCase()}`} aide={<a href={`${adresse}?lang=${l}`} target="_blank" rel="noopener" className="underline decoration-white/25 underline-offset-2 hover:text-white">Voir ma page en {EN_FRANCAIS[l].toLowerCase()}</a>}>
-              <textarea className={`${classeSaisie} min-h-16`} lang={l} maxLength={300} value={reglages.bioTraduite?.[l] ?? ''} placeholder={reglages.profil.bio}
+              <textarea className={`${classeSaisie} min-h-16`} lang={l} maxLength={300} value={reglages.bioTraduite?.[l] ?? ''} placeholder={`Ta bio en ${EN_FRANCAIS[l].toLowerCase()}`}
                 onChange={e => onChange({ ...reglages, bioTraduite: { ...reglages.bioTraduite, [l]: e.target.value } })} />
             </Champ>
           ))}

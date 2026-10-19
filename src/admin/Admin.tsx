@@ -182,11 +182,11 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
     ecrire(async () => { for (const b of [...liste].reverse()) await api.enregistrerBloc(b); });
   }
 
-  function ordonner(liste: Bloc[]) {
+  function ordonner(liste: Bloc[], texte = 'Bloc déplacé') {
     const avant = blocs;
     setBlocs(liste);
     ecrire(() => api.ordonner(liste.map(b => b.id)));
-    setToast({ texte: 'Bloc déplacé', annuler: () => { setBlocs(avant); setToast({ texte: 'Remis à sa place', genre: 'info' }); ecrire(() => api.ordonner(avant.map(b => b.id))); } });
+    setToast({ texte, annuler: () => { setBlocs(avant); setToast({ texte: 'Remis à sa place', genre: 'info' }); ecrire(() => api.ordonner(avant.map(b => b.id))); } });
   }
 
   /** Un cran plus haut ou plus bas, depuis la feuille du bloc : l'ordre se règle aussi sans glisser. */
@@ -196,7 +196,8 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
     if (i < 0 || j < 0 || j >= blocs.length) return;
     const liste = [...blocs];
     [liste[i], liste[j]] = [liste[j], liste[i]];
-    ordonner(liste);
+    // Le déplacement s'enregistre tout de suite, à part des réglages de la feuille : le message le dit.
+    ordonner(liste, sens < 0 ? 'Bloc monté d’un cran' : 'Bloc descendu d’un cran');
   }
 
   function supprimer(bloc: Bloc) {
@@ -311,7 +312,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
             onOuvrir={b => setEdition({ bloc: b, nouveau: false })} onAjouter={(b, enBas) => setEdition({ bloc: b, nouveau: true, enBas })} envoyerImage={d => api.envoyerImage(d)} annoncer={t => setToast(t)} />}
           {onglet === 'stats' && <OngletStats charger={chargerStats} limite={initial.paiement && !compte.pro} onPro={versAbonnement}
             ouvrirApps={reglages.ouvrirApps} onActiverApps={() => changerReglages({ ...reglages, ouvrirApps: true })} liste={<MaListe api={api} />} />}
-          {onglet === 'reglages' && <OngletReglages reglages={reglages} compte={compte} blocs={blocs} traduire={b => { setOnglet('page'); setEdition({ bloc: b, nouveau: false, traduire: true }); }} onChange={changerReglages} onDeconnexion={deconnexion} urlExport={api.urlExport} supprimerMonCompte={api.supprimerMonCompte}
+          {onglet === 'reglages' && <OngletReglages reglages={reglages} compte={compte} blocs={blocs} traduire={b => setEdition({ bloc: b, nouveau: false, traduire: true })} onChange={changerReglages} onDeconnexion={deconnexion} urlExport={api.urlExport} supprimerMonCompte={api.supprimerMonCompte}
             abonnement={abonnement} paiement={initial.paiement} ouvrirPaiement={api.ouvrirPaiement} ouvrirPortail={api.ouvrirPortail} />}
           {onglet === 'comptes' && api.comptes && <OngletComptes api={api.comptes} />}
           </div>
