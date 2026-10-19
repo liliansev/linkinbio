@@ -75,7 +75,7 @@ export function RegleMoment({ b, maj, erreur }: { b: Bloc; maj: (c: Partial<Bloc
                 vibrer(4);
                 const jours = actif ? c!.jours.filter(n => n !== i + 1) : [...(c?.jours ?? []), i + 1];
                 if (!jours.length) maj({ creneau: null }); else majCreneau({ jours: jours.sort() });
-              }} className={`min-h-11 rounded-[7px] text-[14px] font-semibold transition duration-200 active:scale-95 ${actif ? 'bg-white/[0.14] text-white shadow-[0_1px_2px_rgba(0,0,0,0.3)]' : 'text-white/55 hover:text-white'}`}>{j}</button>
+              }} className={`min-h-11 rounded-[7px] text-[14px] font-semibold transition duration-200 active:scale-95 ${actif ? 'bg-white text-nuit' : 'text-white/55 hover:text-white'}`}>{j}</button>
             );
           })}
         </div>

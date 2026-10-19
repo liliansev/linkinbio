@@ -27,7 +27,7 @@ export function OngletReglages({ reglages, compte, blocs = [], traduire, onChang
   }, [ouverte]);
   const seo = (champs: Partial<Reglages['seo']>) => onChange({ ...reglages, seo: { ...reglages.seo, ...champs } });
   useEffect(() => {
-    QRCode.toDataURL(`${URL_PUBLIQUE}?s=qr`, { width: 720, margin: 2, color: { dark: '#0c121f', light: '#ffffff' }, errorCorrectionLevel: 'M' }).then(setQr).catch(() => setQr(''));
+    QRCode.toDataURL(`${URL_PUBLIQUE}?s=qr`, { width: 720, margin: 2, color: { dark: '#0a0a0a', light: '#ffffff' }, errorCorrectionLevel: 'M' }).then(setQr).catch(() => setQr(''));
   }, [URL_PUBLIQUE]);
 
   const pro = !compte.principal && paiement;
@@ -252,7 +252,7 @@ function TesDonnees({ compte, urlExport, supprimerMonCompte }: { compte: CompteP
               <p className="text-[13.5px] leading-snug text-red-200/90">Ta page disparaît tout de suite, avec tes liens, tes images et tes statistiques. Rien ne se récupère. Pour confirmer, tape ton pseudo, <strong className="text-white">{compte.pseudo}</strong>.</p>
               <input className={classeSaisie} value={saisie} onChange={e => setSaisie(e.target.value)} autoCapitalize="none" autoComplete="off" spellCheck={false} aria-label="Ton pseudo, pour confirmer" />
               <div className="flex flex-wrap gap-2">
-                <button type="button" disabled={envoi || saisie.trim().toLowerCase() !== compte.pseudo} onClick={supprimer} className="min-h-11 rounded-full bg-red-500 px-4 text-[14px] font-medium text-white disabled:opacity-40">{envoi ? 'Suppression…' : 'Supprimer définitivement'}</button>
+                <button type="button" disabled={envoi || saisie.trim().toLowerCase() !== compte.pseudo} onClick={supprimer} className="min-h-11 rounded-full bg-red-600 px-4 text-[14px] font-medium text-nuit disabled:opacity-40">{envoi ? 'Suppression…' : 'Supprimer définitivement'}</button>
                 <button type="button" onClick={() => { setOuvert(false); setSaisie(''); }} className="min-h-11 rounded-full px-4 text-[14px] text-white/60 hover:text-white">Annuler</button>
               </div>
               {erreur && <p role="alert" className="text-[13.5px] text-red-300">{erreur}</p>}

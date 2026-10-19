@@ -4,6 +4,43 @@
  */
 :root { --adm-sortie: cubic-bezier(0.16, 1, 0.3, 1); }
 
+/*
+ * La tenue noir et blanc (19 octobre 2026) : le back office parle à tout le
+ * monde, sans teinte. Les classes écrites pour l'ancien fond de nuit restent,
+ * et leurs couleurs s'inversent ici : dans `.adm`, `white` est l'encre (le
+ * texte, les traits, le bouton principal) et `nuit` est le papier (le fond,
+ * le texte posé sur un bouton noir). `peche` devient l'encre : un seul accent,
+ * le noir. Les tons d'alerte clairs, faits pour la nuit, passent à leur
+ * version foncée pour rester lisibles sur le blanc. La page publique garde
+ * ses thèmes : elle ne lit aucune de ces couleurs.
+ */
+.adm {
+  --color-white: #0a0a0a;
+  --color-nuit: #ffffff;
+  --color-peche: #0a0a0a;
+  --color-red-200: #b91c1c;
+  --color-red-300: #c62828;
+  --color-emerald-100: #065f46;
+  --color-emerald-200: #047857;
+  --color-emerald-300: #047857;
+  --color-amber-100: #92400e;
+  --color-amber-200: #a16207;
+  --color-amber-300: #d97706;
+  }
+
+/*
+ * Les gris secondaires, pensés en blanc transparent sur la nuit, deviennent du
+ * noir transparent trop pâle sur le blanc : on les fixe à des gris lisibles
+ * (4,5:1 au moins sur le blanc et sur les cartes). Dans la couche utilities et
+ * sous `:where`, pour qu'un `hover:text-white` reprenne la main au survol.
+ */
+@layer utilities {
+  :where(.adm) :is(.text-white\/45, .text-white\/50, .text-white\/55, .text-white\/60) { color: #666; }
+  :where(.adm) :is(.text-white\/65, .text-white\/70, .text-white\/75) { color: #525252; }
+  :where(.adm) :is(.text-white\/25, .text-white\/30, .text-white\/40) { color: #9a9a9a; }
+  :where(.adm) :is(.placeholder\:text-white\/50, .placeholder\:text-white\/55)::placeholder { color: #737373; }
+}
+
 .adm-feuille { animation: adm-monte 0.36s var(--adm-sortie); transition: transform 0.3s var(--adm-sortie); }
 .adm-fondu { animation: adm-fondu 0.24s ease-out; }
 [data-sortie] .adm-feuille { animation: adm-descend 0.19s cubic-bezier(0.4, 0, 1, 1) forwards; }
@@ -45,10 +82,10 @@
   .adm-interrupteur > span, .adm-nav-pastille { transition: none; }
 }
 
-.adm input[type='datetime-local'] { color-scheme: dark; }
-.adm ::selection { background: rgb(255 255 255 / 0.85); color: #0c121f; }
-.adm { scrollbar-color: rgb(255 255 255 / 0.18) transparent; -webkit-tap-highlight-color: transparent; }
-.adm :is(button, a, input, textarea, select, summary):focus-visible { outline: 2px solid rgb(255 255 255 / 0.9); outline-offset: 2px; }
+.adm input[type='datetime-local'] { color-scheme: light; }
+.adm ::selection { background: #0a0a0a; color: #fff; }
+.adm { scrollbar-color: rgb(0 0 0 / 0.2) transparent; -webkit-tap-highlight-color: transparent; }
+.adm :is(button, a, input, textarea, select, summary):focus-visible { outline: 2px solid #0a0a0a; outline-offset: 2px; }
 
 /* Les premiers pas : la vraie page en miniature, à la largeur d'un téléphone. */
 .adm-miroir { --z: 0.62; width: calc(390px * var(--z)); flex-shrink: 0; }
@@ -58,7 +95,7 @@
 .adm-miroir-page { flex: 1 0 auto; display: flex; flex-direction: column; }
 .adm-miroir-page > * { flex: 1 0 auto; }
 @media (min-width: 1024px) { .adm-miroir { --z: 0.86; } }
-.adm-miroir-fin { box-shadow: 0 0 0 1.5px rgb(255 255 255 / 0.4), 0 30px 90px -24px rgb(255 255 255 / 0.22); }
+.adm-miroir-fin { box-shadow: 0 0 0 1.5px #0a0a0a, 0 30px 90px -24px rgb(0 0 0 / 0.3); }
 
 /* Une feuille ouverte occupe le bas de l'écran : le message passe en haut, sans couvrir ce qu'on touche. */
 body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); bottom: auto; }

@@ -73,7 +73,7 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
         <div className="mb-4 flex items-center gap-4">
           <button type="button" onClick={() => fichier.current?.click()} className="group relative h-20 w-20 shrink-0 overflow-hidden rounded-full bg-white/10" aria-label="Changer la photo">
             {reglages.profil.avatar && <img src={reglages.profil.avatar} alt="" className="h-full w-full object-cover" />}
-            <span className="absolute inset-0 grid place-items-center bg-black/45 text-[12px] font-medium text-white opacity-0 transition group-hover:opacity-100">{envoi ? '…' : 'Changer'}</span>
+            <span className="absolute inset-0 grid place-items-center bg-black/45 text-[12px] font-medium text-nuit opacity-0 transition group-hover:opacity-100">{envoi ? '…' : 'Changer'}</span>
           </button>
           <div className="flex flex-col items-start gap-1">
             <button type="button" onClick={() => fichier.current?.click()} className="min-h-11 rounded-full bg-white/[0.08] px-4 text-[14px] font-medium text-white">{envoi ? 'Envoi…' : 'Changer la photo'}</button>
@@ -249,24 +249,24 @@ const BUREAUX: { id: MiseEnPageBureau; nom: string; aide: string }[] = [
 
 /** Un petit croquis de chaque mise en page, dessiné en blocs. */
 function SchemaBureau({ id }: { id: MiseEnPageBureau }) {
-  const b = 'rgb(255 255 255 / 0.16)', p = 'rgb(255 255 255 / 0.7)';
+  const b = 'rgb(0 0 0 / 0.14)', p = 'rgb(0 0 0 / 0.78)';
   return (
-    <svg viewBox="0 0 120 76" className="w-full rounded-xl bg-[#0c121f]" aria-hidden="true">
+    <svg viewBox="0 0 120 76" className="w-full rounded-xl bg-[#f4f4f4]" aria-hidden="true">
       {id === 'colonne' && (<>
-        <rect x="38" y="6" width="44" height="64" rx="6" fill="rgb(255 255 255 / 0.05)" />
+        <rect x="38" y="6" width="44" height="64" rx="6" fill="rgb(0 0 0 / 0.05)" />
         <circle cx="60" cy="17" r="5" fill={b} /><rect x="48" y="26" width="24" height="3" rx="1.5" fill={b} />
         <rect x="44" y="34" width="32" height="7" rx="3.5" fill={p} />
         {[44, 52, 60].map(y => <rect key={y} x="44" y={y} width="32" height="6" rx="3" fill={b} />)}
       </>)}
       {id === 'profil' && (<>
-        <circle cx="22" cy="20" r="8" fill={b} /><rect x="14" y="33" width="28" height="4" rx="2" fill={b} /><rect x="14" y="41" width="22" height="3" rx="1.5" fill="rgb(255 255 255 / 0.1)" />
+        <circle cx="22" cy="20" r="8" fill={b} /><rect x="14" y="33" width="28" height="4" rx="2" fill={b} /><rect x="14" y="41" width="22" height="3" rx="1.5" fill="rgb(0 0 0 / 0.08)" />
         <rect x="54" y="10" width="58" height="9" rx="4.5" fill={p} />
         {[24, 34, 44, 54].map(y => [54, 85].map(x => <rect key={`${x}-${y}`} x={x} y={y} width="27" height="7" rx="3.5" fill={b} />))}
       </>)}
       {id === 'onepage' && (<>
-        <rect x="10" y="12" width="52" height="8" rx="2" fill="rgb(255 255 255 / 0.3)" /><rect x="10" y="24" width="38" height="3" rx="1.5" fill={b} />
+        <rect x="10" y="12" width="52" height="8" rx="2" fill="rgb(0 0 0 / 0.3)" /><rect x="10" y="24" width="38" height="3" rx="1.5" fill={b} />
         <rect x="84" y="8" width="26" height="24" rx="6" fill={b} />
-        <rect x="10" y="38" width="100" height="1" fill="rgb(255 255 255 / 0.1)" />
+        <rect x="10" y="38" width="100" height="1" fill="rgb(0 0 0 / 0.08)" />
         <rect x="10" y="44" width="100" height="8" rx="4" fill={p} />
         {[10, 44, 78].map(x => <rect key={x} x={x} y="56" width="32" height="14" rx="4" fill={b} />)}
       </>)}
@@ -309,7 +309,7 @@ export function DesignTiroirs({ reglages, onChange, envoyerImage, principal, pie
   if (ouvert) return (
     <div ref={racine} className="flex flex-col gap-3">
       {/* Le retour reste collé en haut de la feuille : on le retrouve après avoir fait défiler vingt thèmes. */}
-      <div className="sticky top-0 z-10 -mx-5 flex items-center bg-[#111827] px-4 pb-1">
+      <div className="sticky top-0 z-10 -mx-5 flex items-center bg-nuit px-4 pb-1">
         <button ref={retour} type="button" onClick={() => { vibrer(4); setOuvert(null); }} aria-label={`${lignes.find(l => l.id === ouvert)?.nom ?? ''}, revenir au design`} className="flex min-h-11 items-center gap-1 rounded-full pr-3 text-[14px] font-medium text-white/75 hover:text-white">
           <Icone nom="ui-chevron" taille={18} className="rotate-90" /> {lignes.find(l => l.id === ouvert)?.nom}
         </button>

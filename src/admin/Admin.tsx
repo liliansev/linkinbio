@@ -241,8 +241,8 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
 
   const bulle = toast && (
     <div role="status" onPointerEnter={() => setToastTenu(true)} onPointerLeave={() => setToastTenu(false)} onFocus={() => setToastTenu(true)} onBlur={e => { if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setToastTenu(false); }} className="adm-toast fixed inset-x-4 bottom-[calc(76px+env(safe-area-inset-bottom))] z-[60] mx-auto flex max-w-sm items-center justify-between gap-3 rounded-2xl bg-white px-4 py-3 text-[14.5px] font-medium text-nuit shadow-2xl lg:bottom-6">
-      <span className="flex items-center gap-2">{/* La coche verte confirme ; une simple information n'en a pas. */}{!toast.annuler && toast.genre !== 'info' && sauvegarde !== 'erreur' && <span className="text-emerald-600" aria-hidden="true"><Icone nom="ui-ok" taille={18} /></span>}{toast.texte}</span>
-      {toast.annuler && <button ref={actionToast} type="button" onClick={toast.annuler} className="-my-2 min-h-11 rounded-full px-3 font-semibold text-nuit underline decoration-nuit/30 underline-offset-4 hover:bg-black/5">{toast.action ?? 'Annuler'}</button>}
+      <span className="flex items-center gap-2">{/* La coche verte confirme ; une simple information n'en a pas. */}{!toast.annuler && toast.genre !== 'info' && sauvegarde !== 'erreur' && <span className="text-emerald-400" aria-hidden="true"><Icone nom="ui-ok" taille={18} /></span>}{toast.texte}</span>
+      {toast.annuler && <button ref={actionToast} type="button" onClick={toast.annuler} className="-my-2 min-h-11 rounded-full px-3 font-semibold text-nuit underline decoration-nuit/30 underline-offset-4 hover:bg-nuit/10">{toast.action ?? 'Annuler'}</button>}
     </div>
   );
 
@@ -261,9 +261,9 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
   return (
     <div className="adm min-h-dvh bg-nuit font-sans text-white antialiased">
       {/* Sur ordinateur, une barre latérale comme dans tout SaaS : la marque, les sections, l'état de l'enregistrement, la page en ligne. */}
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-60 flex-col border-r border-white/[0.06] bg-[#0a0f1a] px-3 py-4 lg:flex" aria-label="Navigation">
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-60 flex-col border-r border-white/[0.08] bg-[#fafafa] px-3 py-4 lg:flex" aria-label="Navigation">
         <div className="flex items-center gap-2.5 px-2 pb-5">
-          <svg viewBox="0 0 256 256" className="h-7 w-7" aria-hidden="true"><rect width="256" height="256" rx="64" fill="#ffb38a" /><g fill="#0c121f" transform="translate(40 40) scale(0.6875)"><path d="M165.66,90.34a8,8,0,0,1,0,11.32l-64,64a8,8,0,0,1-11.32-11.32l64-64A8,8,0,0,1,165.66,90.34ZM215.6,40.4a56,56,0,0,0-79.2,0L106.34,70.45a8,8,0,0,0,11.32,11.32l30.06-30a40,40,0,0,1,56.57,56.56l-30.07,30.06a8,8,0,0,0,11.31,11.32L215.6,119.6a56,56,0,0,0,0-79.2ZM138.34,174.22l-30.06,30.06a40,40,0,1,1-56.56-56.57l30.05-30.05a8,8,0,0,0-11.32-11.32L40.4,136.4a56,56,0,0,0,79.2,79.2l30.06-30.07a8,8,0,0,0-11.32-11.31Z" /></g></svg>
+          <svg viewBox="0 0 256 256" className="h-7 w-7" aria-hidden="true"><rect width="256" height="256" rx="64" fill="#0a0a0a" /><g fill="#ffffff" transform="translate(40 40) scale(0.6875)"><path d="M165.66,90.34a8,8,0,0,1,0,11.32l-64,64a8,8,0,0,1-11.32-11.32l64-64A8,8,0,0,1,165.66,90.34ZM215.6,40.4a56,56,0,0,0-79.2,0L106.34,70.45a8,8,0,0,0,11.32,11.32l30.06-30a40,40,0,0,1,56.57,56.56l-30.07,30.06a8,8,0,0,0,11.31,11.32L215.6,119.6a56,56,0,0,0,0-79.2ZM138.34,174.22l-30.06,30.06a40,40,0,1,1-56.56-56.57l30.05-30.05a8,8,0,0,0-11.32-11.32L40.4,136.4a56,56,0,0,0,79.2,79.2l30.06-30.07a8,8,0,0,0-11.32-11.31Z" /></g></svg>
           <span className="text-[15px] font-semibold tracking-[-0.01em]">Hopla</span>
         </div>
         <nav className="flex flex-col gap-0.5" aria-label="Sections">
@@ -336,7 +336,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
           {onglets.map(o => (
             <li key={o.id}>
               <button type="button" onClick={() => { if (o.id !== onglet) { vibrer(5); setOnglet(o.id); scrollTo({ top: 0 }); } }} aria-current={onglet === o.id ? 'page' : undefined}
-                className={`flex h-14 w-full flex-col items-center justify-center gap-0.5 text-[11px] font-medium transition-colors duration-200 ${onglet === o.id ? 'text-white' : 'text-white/55'}`}>
+                className={`flex h-14 w-full flex-col items-center justify-center gap-0.5 text-[11px] font-medium transition-colors duration-200 ${onglet === o.id ? 'font-semibold text-white' : 'text-white/55'}`}>
                 <span className="grid h-7 place-items-center"><Icone nom={o.icone} taille={22} /></span>{o.nom}
               </button>
             </li>
@@ -348,7 +348,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
         <div ref={fenetreApercu} className="adm-fondu fixed inset-0 z-40 flex flex-col bg-black/80 backdrop-blur-sm lg:hidden" role="dialog" aria-modal="true" aria-label="Aperçu de ta page">
           <div className="adm-apercu relative min-h-0 flex-1 overflow-y-auto"><PageLiens page={page} apercu /></div>
           {/* Sous la page, pas par-dessus : le bouton ne cache jamais le bas de la page. */}
-          <div className="flex shrink-0 justify-center border-t border-white/[0.08] bg-[#0b0f19] px-4 pt-3 pb-[max(12px,env(safe-area-inset-bottom))]">
+          <div className="flex shrink-0 justify-center border-t border-white/[0.08] bg-nuit px-4 pt-3 pb-[max(12px,env(safe-area-inset-bottom))]">
             <button ref={fermerApercu} type="button" onClick={() => setApercu(false)} className="min-h-12 rounded-full bg-white px-6 text-[15px] font-semibold text-nuit">Fermer l’aperçu</button>
           </div>
         </div>
@@ -366,7 +366,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
 
 function Telephone({ page }: { page: Parameters<typeof PageLiens>[0]['page'] }) {
   return (
-    <div className="relative h-[min(760px,calc(100dvh-7rem))] aspect-[9/19] rounded-[44px] border border-white/10 bg-black p-2.5 shadow-[0_40px_80px_-30px_rgba(0,0,0,0.8),0_0_0_1px_rgba(255,255,255,0.04)_inset]">
+    <div className="relative h-[min(760px,calc(100dvh-7rem))] aspect-[9/19] rounded-[44px] border border-white/10 bg-black p-2.5 shadow-[0_40px_80px_-30px_rgba(0,0,0,0.35)]">
       <div className="absolute top-4 left-1/2 z-10 h-6 w-24 -translate-x-1/2 rounded-full bg-black" />
       <div className="adm-apercu h-full overflow-y-auto overflow-x-hidden rounded-[36px] [scrollbar-width:none]"><PageLiens page={page} apercu /></div>
     </div>

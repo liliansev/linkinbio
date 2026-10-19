@@ -68,7 +68,7 @@ function Courbe({ serie }: { serie: Stats['serie'] }) {
       <div className="mb-2 flex items-center justify-between text-[12.5px]">
         <span className="flex gap-3 text-white/60">
           <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-white" />Vues</span>
-          <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-sky-300" />Clics</span>
+          <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-[#a3a3a3]" />Clics</span>
         </span>
         <span className="text-white/70 tabular-nums" aria-live="polite">{point ? `${date(point.jour)} · ${point.vues} vues · ${point.clics} clics` : ''}</span>
       </div>
@@ -77,12 +77,12 @@ function Courbe({ serie }: { serie: Stats['serie'] }) {
         onBlur={() => setSurvol(null)}
         onPointerMove={e => { const r = e.currentTarget.getBoundingClientRect(); setSurvol(Math.round(((e.clientX - r.left) / r.width) * (serie.length - 1))); }}
         onPointerLeave={() => setSurvol(null)}>
-        <defs><linearGradient id="adm-aire" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stopColor="#ffffff" stopOpacity="0.22" /><stop offset="1" stopColor="#ffffff" stopOpacity="0" /></linearGradient></defs>
-        {[0.25, 0.5, 0.75].map(f => <line key={f} x1={0} x2={w} y1={h * f} y2={h * f} stroke="white" strokeOpacity="0.06" vectorEffect="non-scaling-stroke" />)}
+        <defs><linearGradient id="adm-aire" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stopColor="#0a0a0a" stopOpacity="0.1" /><stop offset="1" stopColor="#0a0a0a" stopOpacity="0" /></linearGradient></defs>
+        {[0.25, 0.5, 0.75].map(f => <line key={f} x1={0} x2={w} y1={h * f} y2={h * f} stroke="#0a0a0a" strokeOpacity="0.07" vectorEffect="non-scaling-stroke" />)}
         <path d={aire} fill="url(#adm-aire)" />
-        <path d={ligne('vues')} fill="none" stroke="#ffffff" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinejoin="round" strokeLinecap="round" />
-        <path d={ligne('clics')} fill="none" stroke="#7dd3fc" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinejoin="round" strokeLinecap="round" />
-        {survol !== null && <line x1={x(survol)} x2={x(survol)} y1={0} y2={h} stroke="white" strokeOpacity="0.3" vectorEffect="non-scaling-stroke" />}
+        <path d={ligne('vues')} fill="none" stroke="#0a0a0a" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinejoin="round" strokeLinecap="round" />
+        <path d={ligne('clics')} fill="none" stroke="#a3a3a3" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinejoin="round" strokeLinecap="round" />
+        {survol !== null && <line x1={x(survol)} x2={x(survol)} y1={0} y2={h} stroke="#0a0a0a" strokeOpacity="0.25" vectorEffect="non-scaling-stroke" />}
       </svg>
       <div className="mt-1 flex justify-between text-[11.5px] text-white/55"><span>{date(serie[0].jour)}</span><span>{date(serie[serie.length - 1].jour)}</span></div>
     </div>
