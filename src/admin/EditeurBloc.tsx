@@ -70,7 +70,18 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
     return () => vv.removeEventListener('resize', lire);
   }, []);
   if (!b) return null;
-  const maj = (champs: Partial<Bloc>) => { setB({ ...b, ...champs }); if (erreur) setErreurs({}); };
+  // Une erreur s'efface quand on touche à son champ, pas aux autres : celles qui restent vraies restent affichées.
+  const maj = (champs: Partial<Bloc>) => {
+    const p = champs.preuve, q = b.preuve;
+    const touches: ChampErreur[] = [
+      ...(['url', 'titre', 'description', 'image'] as const).filter(k => k in champs),
+      ...('debut' in champs || 'fin' in champs || 'creneau' in champs ? ['dates' as const] : []),
+      ...(p && q ? (['note', 'nombre', 'source'] as const).filter(k => p[k] !== q[k]) : []),
+      ...(p && p.genre !== q?.genre ? (['note', 'nombre', 'source'] as const) : []),
+    ];
+    setB({ ...b, ...champs });
+    if (erreur && touches.some(k => erreurs[k])) setErreurs(e => Object.fromEntries(Object.entries(e).filter(([k]) => !touches.includes(k as ChampErreur))));
+  };
   const type = TYPES.find(t => t.type === b.type)!;
   const avecUrl = b.type === 'lien' || b.type === 'video';
 
@@ -90,7 +101,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
       else if (b.preuve.note > 5) manque.note = 'La note va de 0 à 5. Sur 10, divise-la par deux.';
       if (!b.preuve.nombre) manque.nombre = 'Indique le nombre d’avis.';
       if (!b.preuve.source.trim()) manque.source = 'Indique où les avis sont publiés, par exemple Google.';
-      if (Object.keys(manque).length) { setErreurs(manque); return null; }
+      if (Object.keys(manque).length) { setErreurs(manque); setTimeout(() => document.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus()); return null; }
     }
     if (b.debut && b.fin && new Date(b.fin) <= new Date(b.debut)) {
       setPlus(true); setErreur('La fin doit venir après le début.', 'dates');

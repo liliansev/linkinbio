@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import type { ReactNode } from 'react';
 import type { Acces, Bloc, Langue, Preuve, Traduction } from '../lib/types.ts';
-import { NOMS_LANGUES } from '../lib/langues.ts';
 import type { Creneau } from '../lib/moments.ts';
 import { FUSEAU_DEFAUT, decrireCreneau } from '../lib/moments.ts';
 import { Icone } from '../components/Icone.tsx';
@@ -38,6 +37,9 @@ export function Repli({ titre, icone, resume, ouvert: depart, children }: { titr
     </div>
   );
 }
+
+/** Les langues nommées en français, comme dans Réglages > Langues. */
+export const LANGUES_FR = { en: 'Anglais', es: 'Espagnol', de: 'Allemand', it: 'Italien' } as const;
 
 const JOURS = ['Lu', 'Ma', 'Me', 'Je', 'Ve', 'Sa', 'Di'];
 const NOMS = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche'];
@@ -201,10 +203,10 @@ export function RegleTraductions({ b, maj, langues, ouvert = false }: { b: Bloc;
     maj({ traductions: suite });
   };
   return (
-    <Repli titre="Traductions" icone="globe" resume={traduites.length === langues.length ? 'Tout est traduit' : `À traduire : ${langues.filter(l => !b.traductions[l]).map(l => NOMS_LANGUES[l]).join(', ')}`} ouvert={ouvert}>
+    <Repli titre="Traductions" icone="globe" resume={traduites.length === langues.length ? 'Tout est traduit' : `À traduire : ${langues.filter(l => !b.traductions[l]).map(l => LANGUES_FR[l]).join(', ')}`} ouvert={ouvert}>
       {langues.map(l => (
         <div key={l} className="flex flex-col gap-2.5 rounded-xl bg-white/[0.035] p-3">
-          <span className="text-[13px] font-semibold text-white/80">{NOMS_LANGUES[l]}</span>
+          <span className="text-[13px] font-semibold text-white/80">{LANGUES_FR[l]}</span>
           {champs.map(c => (
             <Champ key={c.cle} label={c.label}>
               {c.long

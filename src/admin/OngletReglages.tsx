@@ -7,6 +7,7 @@ import type { Abonnement as EtatAbonnement, Periode } from '../lib/abonnement.ts
 import { AVANTAGES_PRO, TARIFS, estResilie, euros } from '../lib/abonnement.ts';
 import { Icone } from '../components/Icone.tsx';
 import { Bascule, BoutonCopier, BoutonSecondaire, Carte, Champ, Interrupteur, classeSaisie, flechesRadio, vibrer } from './ui.tsx';
+import { LANGUES_FR } from './ReglesBloc.tsx';
 
 export function OngletReglages({ reglages, compte, blocs = [], traduire, onChange, onDeconnexion, urlExport, supprimerMonCompte, abonnement, paiement, ouvrirPaiement, ouvrirPortail }: {
   reglages: Reglages; compte: ComptePage; blocs?: Bloc[]; traduire?: (b: Bloc) => void; onChange: (r: Reglages) => void; onDeconnexion: () => void;
@@ -270,7 +271,6 @@ function TesDonnees({ compte, urlExport, supprimerMonCompte }: { compte: CompteP
   );
 }
 
-const EN_FRANCAIS = { en: 'Anglais', es: 'Espagnol', de: 'Allemand', it: 'Italien' } as const;
 
 /** Les langues de la page : le visiteur la voit dans la sienne, là où les textes sont traduits. */
 function Langues({ reglages, onChange, adresse, blocs, traduire }: { reglages: Reglages; onChange: (r: Reglages) => void; adresse: string; blocs: Bloc[]; traduire?: (b: Bloc) => void }) {
@@ -287,7 +287,7 @@ function Langues({ reglages, onChange, adresse, blocs, traduire }: { reglages: R
           <span className="text-[13px] text-white/55">Langue de ta page</span>
         </div>
         {LANGUES.map(l => (
-          <Interrupteur key={l} label={EN_FRANCAIS[l]} actif={actives.includes(l)} onChange={() => basculer(l)} />
+          <Interrupteur key={l} label={LANGUES_FR[l]} actif={actives.includes(l)} onChange={() => basculer(l)} />
         ))}
       </div>
       {actives.length > 0 && traduire && (
@@ -298,7 +298,7 @@ function Langues({ reglages, onChange, adresse, blocs, traduire }: { reglages: R
               <li key={b.id}>
                 <button type="button" onClick={() => traduire(b)} className="flex min-h-12 w-full items-center gap-3 px-4 text-left transition hover:bg-white/[0.04]">
                   <span className="min-w-0 flex-1 truncate text-[14.5px] font-medium text-white">{b.titre}</span>
-                  <span className="shrink-0 text-[13px] text-white/55">{actives.filter(l => !b.traductions?.[l]).map(l => EN_FRANCAIS[l]).join(', ')}</span>
+                  <span className="shrink-0 text-[13px] text-white/55">{actives.filter(l => !b.traductions?.[l]).map(l => LANGUES_FR[l]).join(', ')}</span>
                   <Icone nom="ui-chevron" taille={16} className="-rotate-90 text-white/55" />
                 </button>
               </li>
@@ -309,8 +309,8 @@ function Langues({ reglages, onChange, adresse, blocs, traduire }: { reglages: R
       {actives.length > 0 && (
         <div className="mt-4 flex flex-col gap-3">
           {actives.map(l => (
-            <Champ key={l} label={`Ta bio en ${EN_FRANCAIS[l].toLowerCase()}`} aide={<a href={`${adresse}?lang=${l}`} target="_blank" rel="noopener" className="underline decoration-white/25 underline-offset-2 hover:text-white">Voir ma page en {EN_FRANCAIS[l].toLowerCase()}</a>}>
-              <textarea className={`${classeSaisie} min-h-16`} lang={l} maxLength={300} value={reglages.bioTraduite?.[l] ?? ''} placeholder={`Ta bio en ${EN_FRANCAIS[l].toLowerCase()}`}
+            <Champ key={l} label={`Ta bio en ${LANGUES_FR[l].toLowerCase()}`} aide={<a href={`${adresse}?lang=${l}`} target="_blank" rel="noopener" className="underline decoration-white/25 underline-offset-2 hover:text-white">Voir ma page en {LANGUES_FR[l].toLowerCase()}</a>}>
+              <textarea className={`${classeSaisie} min-h-16`} lang={l} maxLength={300} value={reglages.bioTraduite?.[l] ?? ''} placeholder={`Ta bio en ${LANGUES_FR[l].toLowerCase()}`}
                 onChange={e => onChange({ ...reglages, bioTraduite: { ...reglages.bioTraduite, [l]: e.target.value } })} />
             </Champ>
           ))}

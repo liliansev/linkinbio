@@ -169,7 +169,7 @@ export function MaPage({ compte, reglages, blocs, clics, onReglages, onOrdonner,
           className="adm-apercu adm-toile relative -mx-4 overflow-hidden lg:mx-0 lg:rounded-[30px] lg:ring-1 lg:ring-white/10 lg:shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)]">
           <PageLiens page={{ reglages, blocs: visibles, compte }} edition={edition} />
           {/* Le geste s'écrit sur la page même, dans sa couleur, en haut à gauche : pas une ligne de plus au-dessus d'elle. */}
-          {astuce && <p className="pointer-events-none absolute top-4 left-4 right-16 text-[13px] font-medium leading-snug lg:left-6" style={{ color: variablesTheme(themeDe(reglages))['--doux'] }}><span className="lg:hidden">Touche pour modifier, maintiens pour déplacer.</span><span className="hidden lg:inline">Clique pour modifier, fais glisser pour déplacer.</span></p>}
+          {astuce && <p className="pointer-events-none absolute top-4 left-4 right-16 text-[13px] font-medium leading-snug lg:left-6" style={{ color: variablesTheme(themeDe(reglages))['--doux'] }}>{visibles.length < 2 ? <><span className="lg:hidden">Touche pour modifier.</span><span className="hidden lg:inline">Clique pour modifier.</span></> : <><span className="lg:hidden">Touche pour modifier, maintiens pour déplacer.</span><span className="hidden lg:inline">Clique pour modifier, fais glisser pour déplacer.</span></>}</p>}
         </div>
       </div>
 
