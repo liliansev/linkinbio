@@ -75,7 +75,7 @@ export function OngletReglages({ reglages, compte, blocs = [], traduire, onChang
           {/* Ce que ces deux champs deviennent : la carte qu'affichent Google, WhatsApp ou iMessage quand on partage ta page. */}
           <p className="text-[13px] leading-snug text-white/60">Ce que montrent Google et l’aperçu quand tu partages ton lien :</p>
           <div className="overflow-hidden rounded-[14px] border border-white/10 bg-white/[0.03]" aria-hidden="true">
-            {reglages.profil.avatar && <img src={reglages.profil.avatar} alt="" className="h-24 w-full object-cover opacity-90" />}
+            {reglages.profil.avatar && <img src={reglages.profil.avatar} alt="" className="aspect-[1.91/1] w-full object-cover" />}
             <div className="px-3.5 py-2.5">
               <span className="block text-[12px] text-white/50" translate="no">{URL_PUBLIQUE.replace(/^https?:\/\//, '').split('/')[0]}</span>
               <span className="block truncate text-[14.5px] font-semibold text-white">{reglages.seo.titre || reglages.profil.nom}</span>
@@ -86,7 +86,7 @@ export function OngletReglages({ reglages, compte, blocs = [], traduire, onChang
             <input className={classeSaisie} value={reglages.seo.titre} maxLength={80} onChange={e => seo({ titre: e.target.value })} />
           </Champ>
           <Champ label="Description" aide={`${reglages.seo.description.length}/160 caractères conseillés`}>
-            <textarea className={`${classeSaisie} min-h-20`} value={reglages.seo.description} maxLength={200} onChange={e => seo({ description: e.target.value })} />
+            <textarea rows={4} className={classeSaisie} value={reglages.seo.description} maxLength={200} onChange={e => seo({ description: e.target.value })} />
           </Champ>
           <div className="divide-y divide-white/[0.06]">
             {compte.principal

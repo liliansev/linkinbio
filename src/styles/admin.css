@@ -75,18 +75,19 @@
 .adm-barre { animation: adm-barre 0.7s var(--adm-sortie) both; }
 @keyframes adm-barre { from { transform: scaleX(0); } }
 
-/* La pastille de l'onglet actif, dans la barre du bas. */
-.adm-nav-pastille { transition: background-color 0.2s ease; }
-
 @media (prefers-reduced-motion: reduce) {
   .adm-feuille, .adm-fondu, .adm-toast, .adm-onglet, .adm-cascade > *, .adm-barre, [data-sortie] .adm-feuille, [data-sortie] .adm-fondu { animation: none; }
-  .adm-interrupteur > span, .adm-nav-pastille { transition: none; }
+  .adm-interrupteur > span { transition: none; }
 }
 
 .adm input[type='datetime-local'] { color-scheme: light; }
 .adm ::selection { background: #0a0a0a; color: #fff; }
 .adm { scrollbar-color: rgb(0 0 0 / 0.2) transparent; -webkit-tap-highlight-color: transparent; }
 .adm :is(button, a, input, textarea, select, summary, [tabindex]):focus-visible { outline: 2px solid #0a0a0a; outline-offset: 2px; }
+/* La feuille prend le focus pour qu'on y entre au clavier, mais elle n'est pas un contrôle : pas d'anneau autour d'elle. */
+.adm .adm-feuille:focus-visible { outline: none; }
+/* Un titre qui reçoit le focus quand l'écran change (premiers pas, lien envoyé) n'est pas un contrôle non plus. */
+.adm h1[tabindex='-1']:focus-visible { outline: none; }
 
 /* Les premiers pas : la vraie page en miniature, à la largeur d'un téléphone. */
 .adm-miroir { --z: 0.62; width: calc(390px * var(--z)); flex-shrink: 0; }
@@ -96,7 +97,6 @@
 .adm-miroir-page { flex: 1 0 auto; display: flex; flex-direction: column; }
 .adm-miroir-page > * { flex: 1 0 auto; }
 @media (min-width: 1024px) { .adm-miroir { --z: 0.86; } }
-.adm-miroir-fin { box-shadow: 0 0 0 1.5px #0a0a0a, 0 30px 90px -24px rgb(0 0 0 / 0.3); }
 
 /* Une feuille ouverte occupe le bas de l'écran : le message passe en haut, sans couvrir ce qu'on touche. */
 body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); bottom: auto; }
@@ -136,12 +136,14 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
 .adm-field { min-height: 48px; background: #fdfdfc; }
 .adm-field:hover { border-color: #b2b2ab; }
 .adm-mobile-nav { border-top: 1px solid var(--adm-trait); background: #fff; }
-.adm-mobile-nav [aria-current='page'] .adm-nav-pastille { background: #ebebe6; }
 .adm-mobile-nav button { height: 64px; }
 .adm-editor-layout { display: flex; flex-direction: column; gap: 18px; }
 .adm-editor-content { display: flex; min-width: 0; flex-direction: column; gap: 16px; }
 .adm-editor-content > :first-child:empty { display: none; }
-.adm-toile { box-shadow: 0 8px 28px -16px rgb(0 0 0 / 0.25); }
+/* La page posée sur le gris : un trait fin pour son bord (un thème clair se confond sinon avec le fond), une ombre courte dessous. */
+.adm-toile { box-shadow: 0 0 0 1px var(--adm-trait), 0 8px 28px -16px rgb(0 0 0 / 0.25); }
+/* La fin des premiers pas : la page passe au premier plan, cernée d'encre. */
+.adm-toile.adm-miroir-fin { box-shadow: 0 0 0 1.5px #0a0a0a, 0 30px 90px -24px rgb(0 0 0 / 0.3); }
 .adm-address { background: var(--adm-surface); border: 1px solid var(--adm-trait); border-radius: 14px; }
 .adm-checklist { background: var(--adm-surface); border: 1px solid var(--adm-trait); border-radius: 14px; }
 .adm-settings, .adm-settings-detail { max-width: 760px; }

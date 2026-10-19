@@ -51,7 +51,7 @@ export function RegleMoment({ b, maj, erreur }: { b: Bloc; maj: (c: Partial<Bloc
   const majCreneau = (champs: Partial<Creneau>) => maj({ creneau: { ...(c ?? { jours: [1, 2, 3, 4, 5], de: '09:00', a: '12:00', fuseau: fuseauNavigateur(), effet: 'afficher' }), ...champs, fuseau: fuseauNavigateur() } });
   const resume = [b.debut || b.fin ? 'Dates' : '', b.compteARebours && b.debut ? 'compte à rebours' : '', c ? decrireCreneau(c) : ''].filter(Boolean).join(', ');
   return (
-    <Repli key={erreur ? 'erreur' : 'calme'} titre="Quand l’afficher" icone="ui-horloge" resume={resume || 'Toujours'} ouvert={!!(b.debut || b.fin || c || erreur)}>
+    <Repli key={erreur ? 'erreur' : 'calme'} titre="Quand l’afficher" icone="horloge" resume={resume || 'Toujours'} ouvert={!!(b.debut || b.fin || c || erreur)}>
       <div className="grid gap-3 sm:grid-cols-2">
         <Champ label="À partir du">
           <input type="datetime-local" className={classeSaisie} value={versLocal(b.debut)} onChange={e => maj({ debut: depuisLocal(e.target.value) })} />

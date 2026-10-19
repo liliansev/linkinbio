@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import type { ApiComptes, CompteResume, SignalementResume } from '../lib/types.ts';
 import { nomMotif } from '../lib/legal.ts';
-import { cheminPage } from '../lib/types.ts';
+import { cheminPage, sansSchema, urlPage } from '../lib/types.ts';
 import { BoutonPrincipal, Carte, Champ, classeBadge, classeBouton, classeSaisie } from './ui.tsx';
 
 /*
@@ -13,7 +13,8 @@ import { BoutonPrincipal, Carte, Champ, classeBadge, classeBouton, classeSaisie 
 
 type Message = { ok: boolean; texte: string; lienDev?: string };
 
-const date = (ts: number | null) => (ts ? new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }).format(ts) : 'jamais');
+const date = (ts: number) => new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }).format(ts);
+const nombre = (n: number) => n.toLocaleString('fr-FR');
 
 export function OngletComptes({ api }: { api: ApiComptes }) {
   const [comptes, setComptes] = useState<CompteResume[] | null>(null);
@@ -48,7 +49,7 @@ export function OngletComptes({ api }: { api: ApiComptes }) {
       <Signalements api={api} onChange={recharger} />
 
       <Carte titre="Inviter quelqu’un">
-        <form onSubmit={inviter} className="flex flex-col gap-3">
+        <form onSubmit={inviter} className="flex max-w-md flex-col gap-3">
           <Champ label="Son adresse e-mail">
             <input type="email" required className={classeSaisie} value={email} onChange={e => setEmail(e.target.value)} placeholder="prenom@exemple.fr" autoComplete="off" />
           </Champ>
@@ -104,16 +105,16 @@ function LigneCompte({ compte, api, onChange, onMessage }: { compte: CompteResum
             {!compte.principal && compte.pro && <span className={classeBadge}>Pro</span>}
             {suspendu && <span className="inline-flex items-center rounded-[7px] bg-amber-400/15 px-1.5 py-0.5 text-[11.5px] font-semibold text-amber-200">Suspendu</span>}
           </p>
-          <p className="truncate text-[13px] text-white/50">{compte.principal ? 'Ta page, hopla.page/lilian' : compte.email}</p>
+          <p className="truncate text-[13px] text-white/50">{compte.principal ? `Ta page, ${sansSchema(urlPage(compte))}` : compte.email}</p>
         </div>
         <div className="shrink-0 text-right">
-          <p className="text-[15px] font-semibold tabular-nums">{compte.vues}</p>
+          <p className="text-[15px] font-semibold tabular-nums">{nombre(compte.vues)}</p>
           <p className="text-[11.5px] text-white/55">vues en 30 j</p>
         </div>
       </div>
       {!compte.principal && (
         <>
-          <p className="text-[12.5px] text-white/55">{compte.blocs} bloc{compte.blocs > 1 ? 's' : ''} · invité le {date(compte.cree)} · dernière connexion {date(compte.connexion)}</p>
+          <p className="text-[12.5px] text-white/55">{compte.blocs} bloc{compte.blocs > 1 ? 's' : ''} · invité le {date(compte.cree)} · {compte.connexion ? `dernière connexion le ${date(compte.connexion)}` : 'aucune connexion'}</p>
           {action ? (
             <div className="flex flex-col gap-2.5">
               <Champ label={action === 'suspendre' ? 'Motif de la suspension' : 'Motif de la suppression (facultatif)'}

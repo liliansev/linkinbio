@@ -339,7 +339,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
         )}
 
         {b.type === 'lien' && b.vedette && (
-          <Repli key={`animation-${b.id}`} titre="Animation" icone="eclair" resume={b.animation === 'auto' ? '' : NOMS_ANIMATIONS[b.animation].nom} ouvert={false}>
+          <Repli key={`animation-${b.id}`} titre="Animation" icone="eclair" resume={b.animation === 'auto' ? 'Comme ma page' : NOMS_ANIMATIONS[b.animation].nom} ouvert={false}>
             {/* Une liste, pas une rangée de pastilles : l'aperçu en haut de la feuille joue l'animation choisie. */}
             <ListeChoix label="Animation" valeur={b.animation} onChange={a => maj({ animation: a })}
               options={ANIMATIONS_BLOC.map(a => a === 'auto'
@@ -361,7 +361,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
           <button type="button" onClick={() => { vibrer(4); setPlus(true); }}
             className="adm-groupe flex min-h-12 w-full items-center gap-3 px-4 text-left transition hover:bg-white/[0.03]">
             <Icone nom="reglage" taille={20} className="text-white/70" />
-            <span className="flex-1 text-[14.5px] font-medium text-white/85">Plus de réglages</span>
+            <span className="flex-1 whitespace-nowrap text-[14.5px] font-medium text-white/85">Plus de réglages</span>
             {reglees && <span className="min-w-0 truncate text-[13px] text-white/55">{reglees}</span>}
             <Icone nom="ui-chevron" taille={16} className="text-white/55" />
           </button>

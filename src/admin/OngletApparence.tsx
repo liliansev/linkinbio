@@ -366,7 +366,7 @@ function ChoixCouleur({ nom, valeur, duTheme, onChange }: { nom: string; valeur:
   const actuelle = valeur || duTheme;
   const pastille = (c: string, choisie: boolean, etiquette: string, action: () => void) => (
     <button type="button" onClick={() => { vibrer(4); action(); }} aria-pressed={choisie} aria-label={etiquette} title={etiquette}
-      className={`h-8 w-8 shrink-0 rounded-full ring-1 ring-inset ring-white/20 transition active:scale-90 ${choisie ? 'outline-2 outline-offset-2 outline-white' : ''}`} style={{ background: c }} />
+      className={`relative h-8 w-8 shrink-0 rounded-full ring-1 ring-inset ring-white/20 transition before:absolute before:-inset-1 before:content-[''] active:scale-90 ${choisie ? 'outline-2 outline-offset-2 outline-white' : ''}`} style={{ background: c }} />
   );
   return (
     <div>
@@ -378,7 +378,7 @@ function ChoixCouleur({ nom, valeur, duTheme, onChange }: { nom: string; valeur:
         {pastille(duTheme, !valeur, `${nom} : celle du thème`, () => onChange(''))}
         <span className="mx-0.5 h-8 w-px self-center bg-white/10" aria-hidden="true" />
         {PALETTE.filter(c => c !== duTheme.toLowerCase()).map(c => pastille(c, valeur === c, `${nom} : ${NOMS_PALETTE[c]}`, () => onChange(c)))}
-        <label className={`relative grid h-8 w-8 shrink-0 cursor-pointer place-items-center rounded-full bg-white/[0.08] text-white/80 ring-1 ring-inset ring-white/20 transition hover:bg-white/[0.14] ${valeur && !PALETTE.includes(valeur) ? 'outline-2 outline-offset-2 outline-white' : ''}`}
+        <label className={`relative grid h-8 w-8 shrink-0 cursor-pointer place-items-center rounded-full bg-white/[0.08] text-white/80 ring-1 ring-inset ring-white/20 transition before:absolute before:-inset-1 before:content-[''] hover:bg-white/[0.14] ${valeur && !PALETTE.includes(valeur) ? 'outline-2 outline-offset-2 outline-white' : ''}`}
           title="Une autre couleur" style={valeur && !PALETTE.includes(valeur) ? { background: valeur } : undefined}>
           <Icone nom="ui-plus" taille={16} />
           <input type="color" value={actuelle} onChange={e => onChange(e.target.value.toLowerCase())} className="absolute inset-0 h-full w-full cursor-pointer opacity-0" aria-label={`${nom} : une autre couleur`} />

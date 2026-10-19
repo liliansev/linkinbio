@@ -19,12 +19,16 @@ function Tendance({ actuel, avant }: { actuel: number; avant: number }) {
   );
 }
 
-function Kpi({ nom, valeur, avant, suffixe = '' }: { nom: string; valeur: number; avant?: number; suffixe?: string }) {
+/** `valeur` nulle : rien à mesurer encore (un taux sans aucune vue), dit en mots plutôt qu'un 0 qui n'en est pas un. */
+function Kpi({ nom, valeur, avant, suffixe = '' }: { nom: string; valeur: number | null; avant?: number; suffixe?: string }) {
   return (
     <div className="adm-kpi">
       <p className="text-[12px] font-medium text-white/60">{nom}</p>
-      <p className="mb-1.5 mt-2 text-[30px] font-semibold leading-tight tracking-[-0.03em] text-white tabular-nums">{nombre(valeur)}{suffixe}</p>
-      {avant !== undefined && <Tendance actuel={valeur} avant={avant} />}
+      {/* Chiffres proportionnels : en Geist, le 1 tabulaire prend un pied qui, à cette taille, se lit comme une autre fonte. */}
+      <p className="mb-1.5 mt-2 text-[30px] font-semibold leading-tight tracking-[-0.03em] text-white proportional-nums">
+        {valeur === null ? <span className="text-[14px] font-medium tracking-normal text-white/55">pas encore</span> : <>{nombre(valeur)}{suffixe}</>}
+      </p>
+      {avant !== undefined && valeur !== null && <Tendance actuel={valeur} avant={avant} />}
     </div>
   );
 }
@@ -68,7 +72,7 @@ function Courbe({ serie }: { serie: Stats['serie'] }) {
       <div className="mb-2 flex items-center justify-between text-[12.5px]">
         <span className="flex gap-3 text-white/60">
           <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-white" />Vues</span>
-          <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-[#a3a3a3]" />Clics</span>
+          <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-[#525252]" />Clics</span>
         </span>
         <span className="text-white/70 tabular-nums" aria-live="polite">{point ? `${date(point.jour)} · ${point.vues} vues · ${point.clics} clics` : ''}</span>
       </div>
@@ -81,7 +85,7 @@ function Courbe({ serie }: { serie: Stats['serie'] }) {
         {[0.25, 0.5, 0.75].map(f => <line key={f} x1={0} x2={w} y1={h * f} y2={h * f} stroke="#0a0a0a" strokeOpacity="0.07" vectorEffect="non-scaling-stroke" />)}
         <path d={aire} fill="url(#adm-aire)" />
         <path d={ligne('vues')} fill="none" stroke="#0a0a0a" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinejoin="round" strokeLinecap="round" />
-        <path d={ligne('clics')} fill="none" stroke="#a3a3a3" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinejoin="round" strokeLinecap="round" />
+        <path d={ligne('clics')} fill="none" stroke="#525252" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinejoin="round" strokeLinecap="round" />
         {survol !== null && <line x1={x(survol)} x2={x(survol)} y1={0} y2={h} stroke="#0a0a0a" strokeOpacity="0.25" vectorEffect="non-scaling-stroke" />}
       </svg>
       <div className="mt-1 flex justify-between text-[11.5px] text-white/55"><span>{date(serie[0].jour)}</span><span>{date(serie[serie.length - 1].jour)}</span></div>
@@ -131,7 +135,7 @@ function OuvertsDansLApp({ apps, actif, onActiver }: { apps: Stats['apps']; acti
   return (
     <Carte titre="Ouverts dans leur app">
       <div className="flex items-end gap-3">
-        <p className="text-[30px] font-semibold leading-none tracking-[-0.03em] text-white tabular-nums">{nombre(apps.ouverts)}</p>
+        <p className="text-[30px] font-semibold leading-none tracking-[-0.03em] text-white proportional-nums">{nombre(apps.ouverts)}</p>
         <p className="pb-1 text-[13.5px] leading-snug text-white/60">clic{apps.ouverts > 1 ? 's' : ''} ouvert{apps.ouverts > 1 ? 's' : ''} directement dans YouTube, Spotify, Instagram…</p>
       </div>
       <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/[0.07]"><div className="adm-barre h-full origin-left rounded-full bg-white" style={{ width: `${part}%` }} /></div>
@@ -181,7 +185,7 @@ export function OngletStats({ charger, limite = false, onPro, ouvrirApps = true,
             <Kpi nom="Vues" valeur={stats.vues} avant={stats.precedent.vues} />
             <Kpi nom="Visiteurs" valeur={stats.visiteurs} avant={stats.precedent.visiteurs} />
             <Kpi nom="Clics" valeur={stats.clics} avant={stats.precedent.clics} />
-            <Kpi nom="Taux de clic" valeur={stats.vues ? Math.round((stats.clics / stats.vues) * 100) : 0} suffixe=" %" />
+            <Kpi nom="Taux de clic" valeur={stats.vues ? Math.round((stats.clics / stats.vues) * 100) : null} suffixe=" %" />
           </div>
           <div className="grid items-stretch gap-4 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
             <Carte titre="L’activité de ta page"><Courbe serie={stats.serie} /></Carte>
@@ -189,7 +193,7 @@ export function OngletStats({ charger, limite = false, onPro, ouvrirApps = true,
           </div>
           {liste}
           <OuvertsDansLApp apps={stats.apps} actif={ouvrirApps} onActiver={onActiverApps} />
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid items-start gap-4 lg:grid-cols-2">
             <Carte titre="Liens les plus cliqués"><Barres lignes={stats.blocs.map(b => ({ nom: b.titre, valeur: b.clics }))} total={stats.clics} unite="clics" /></Carte>
             <div className="flex flex-col gap-4">
               <Carte titre="D’où viennent les visiteurs"><Barres lignes={stats.sources.map(s => ({ nom: s.nom, valeur: s.vues }))} total={stats.vues} unite="vues" /></Carte>

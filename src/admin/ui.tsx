@@ -18,11 +18,14 @@ export function Interrupteur({ actif, onChange, label, aide, disabled }: { actif
   );
 }
 
-/** L'interrupteur seul, pour les lignes qui portent déjà leur icône et leur nom : un seul dessin partout. */
+/**
+ * L'interrupteur seul, pour les lignes qui portent déjà leur icône et leur nom : un seul dessin partout.
+ * Éteint, sa piste reste à 3:1 sur le blanc (WCAG 1.4.11) : on le voit, et on voit qu'il est éteint.
+ */
 export function Bascule({ actif, onClick, id, disabled, label, decrit }: { actif: boolean; onClick: () => void; id?: string; disabled?: boolean; label?: string; decrit?: string }) {
   return (
     <button id={id} type="button" role="switch" aria-checked={actif} aria-label={label} aria-describedby={decrit} disabled={disabled} onClick={onClick}
-      className={`adm-interrupteur relative h-6 w-10 shrink-0 rounded-full before:absolute before:-inset-2 before:content-[''] disabled:opacity-40 ${actif ? 'bg-white' : 'bg-white/15'}`}>
+      className={`adm-interrupteur relative h-6 w-10 shrink-0 rounded-full before:absolute before:-inset-2 before:content-[''] disabled:opacity-40 ${actif ? 'bg-white' : 'bg-white/45'}`}>
       <span className={`absolute top-[3px] left-[3px] h-[18px] w-[18px] rounded-full shadow-[0_1px_3px_rgba(0,0,0,0.3)] bg-nuit ${actif ? 'translate-x-4' : ''}`} />
     </button>
   );
@@ -176,7 +179,7 @@ export function Feuille({ ouverte, onFermer, retenir, titre, children, pied, cot
       {apercu && <div inert className="adm-fondu pointer-events-none absolute inset-x-0 top-0 bottom-[57dvh] flex items-center justify-center px-4 pt-[max(12px,env(safe-area-inset-top))] pb-3 sm:hidden">{apercu}</div>}
       <div ref={ref} tabIndex={-1}
         style={{ ...(tire ? { transform: `translateY(${tire}px)`, transition: 'none' } : {}), ...(visible ? { maxHeight: visible.h - 8, height: 'auto' } : {}) }}
-        className={`adm-feuille relative flex ${apercu ? 'h-[57dvh] sm:h-auto sm:w-[400px]' : cote ? 'max-h-[58dvh] sm:max-h-none sm:w-[400px]' : 'max-h-[92dvh]'} w-full flex-col border border-b-0 border-white/10 bg-nuit shadow-[0_-12px_40px_-16px_rgba(0,0,0,0.18)] outline-none sm:max-w-lg sm:border-b`}>
+        className={`adm-feuille relative flex ${apercu ? 'h-[57dvh] sm:h-auto sm:w-[400px]' : cote ? 'max-h-[58dvh] sm:max-h-none sm:w-[400px]' : 'max-h-[92dvh]'} w-full flex-col border border-b-0 border-white/10 bg-nuit shadow-[0_-12px_40px_-16px_rgba(0,0,0,0.18)] sm:max-w-lg sm:border-b`}>
         <div {...tirer} className="shrink-0 touch-none select-none">
           <div className="mx-auto mt-2 h-1 w-9 rounded-full bg-white/20 sm:hidden" />
           <header className="flex items-center justify-between gap-3 px-5 pt-2.5 pb-2 sm:pt-4">

@@ -39,7 +39,7 @@ export function MaPage({ compte, reglages, blocs, clics, onReglages, onOrdonner,
   onAjouter: (bloc: Bloc, enBas?: boolean) => void;
   envoyerImage: (d: string) => Promise<string>;
   /** Un message en bas de l'écran, avec son Annuler. */
-  annoncer: (t: { texte: string; annuler?: () => void; genre?: 'ok' | 'info' }) => void;
+  annoncer: (t: { texte: string; annuler?: () => void; genre?: 'ok' | 'info'; long?: boolean }) => void;
 }) {
   const [feuille, setFeuilleBrute] = useState<'design' | 'reseaux' | 'ajout' | null>(null);
   // Les réglages au moment où la feuille de design ou des réseaux s'ouvre : « Annuler » y revient.
@@ -89,7 +89,7 @@ export function MaPage({ compte, reglages, blocs, clics, onReglages, onOrdonner,
   async function photo(f: File | undefined) {
     if (!f) return;
     setEnvoi(true);
-    try { profil({ avatar: await envoyerImage(await preparerImage(f, 'carre')) }); } catch { annoncer({ texte: 'La photo n’est pas passée. Essaie une autre image, en JPG ou PNG.', genre: 'info' }); } finally { setEnvoi(false); if (fichier.current) fichier.current.value = ''; }
+    try { profil({ avatar: await envoyerImage(await preparerImage(f, 'carre')) }); } catch { annoncer({ texte: 'La photo n’est pas passée. Essaie une autre image, en JPG ou PNG.', genre: 'info', long: true }); } finally { setEnvoi(false); if (fichier.current) fichier.current.value = ''; }
   }
   /** Le design s'ouvre en laissant voir le haut de la page (sur ordinateur, elle est à gauche de la feuille). */
   function design() {
@@ -156,10 +156,6 @@ export function MaPage({ compte, reglages, blocs, clics, onReglages, onOrdonner,
           <BoutonSecondaire onClick={design}><Icone nom="palette" taille={17} />Personnaliser</BoutonSecondaire>
           <button type="button" onClick={() => setFeuille('reseaux')} className="adm-button-outline hidden min-h-11 items-center justify-center gap-2 px-4 text-[13px] font-medium lg:flex"><Icone nom="globe" taille={17} />Réseaux sociaux</button>
         </div>
-        <div className="mt-6 hidden border-t border-white/[0.08] pt-5 lg:block">
-          <div className="flex justify-between text-[13px]"><span className="text-white/60">Contenu</span><span className="font-medium">{visibles.length} bloc{visibles.length > 1 ? 's' : ''}</span></div>
-          <div className="mt-2.5 flex justify-between gap-3 text-[13px]"><span className="text-white/60">Thème</span><span className="text-right font-medium">{themeDe(reglages).nom}</span></div>
-        </div>
       </aside>
 
       <div className="adm-editor-content">
@@ -170,7 +166,7 @@ export function MaPage({ compte, reglages, blocs, clics, onReglages, onOrdonner,
       {/* Sur ordinateur, la feuille de design se pose à droite : la page glisse à gauche pour rester visible en entier. */}
       <div>
         <div ref={toile}
-          className="adm-apercu adm-toile relative overflow-hidden rounded-[24px] ring-1 ring-white/10 lg:rounded-[28px]">
+          className="adm-apercu adm-toile relative overflow-hidden rounded-[24px] lg:rounded-[28px]">
           <PageLiens page={{ reglages, blocs: visibles, compte }} edition={edition} />
           {/* Le geste s'écrit sur la page même, dans sa couleur, en haut à gauche : pas une ligne de plus au-dessus d'elle. */}
           {astuce && <p className="pointer-events-none absolute top-4 left-4 right-16 text-[13px] font-medium leading-snug lg:left-6" style={{ color: variablesTheme(themeDe(reglages))['--doux'] }}>{visibles.length < 2 ? <><span className="lg:hidden">Touche pour modifier.</span><span className="hidden lg:inline">Clique pour modifier.</span></> : <><span className="lg:hidden">Touche pour modifier, maintiens pour déplacer.</span><span className="hidden lg:inline">Clique pour modifier, fais glisser pour déplacer.</span></>}</p>}
@@ -275,7 +271,7 @@ function BlocEditable({ bloc, i, clics, ouvrir, children }: { bloc: Bloc; i: num
   const regles = etiquettes(bloc);
   const programme = bloc.public && !estEnLigne(bloc) && !regles.includes('Compte à rebours');
   const puces = [
-    { oui: !programme && !!(bloc.creneau || (bloc.compteARebours && bloc.debut)), icone: 'ui-horloge', nom: 'Quand l’afficher' },
+    { oui: !programme && !!(bloc.creneau || (bloc.compteARebours && bloc.debut)), icone: 'horloge', nom: 'Quand l’afficher' },
     { oui: !!(bloc.cache?.length || bloc.audience?.sources.length), icone: 'cible', nom: 'Afficher sur' },
     { oui: !!bloc.acces, icone: 'cadenas', nom: 'Accès réservé' },
     { oui: Object.keys(bloc.traductions ?? {}).length > 0, icone: 'globe', nom: 'Traduit' },
@@ -303,8 +299,8 @@ function BlocEditable({ bloc, i, clics, ouvrir, children }: { bloc: Bloc; i: num
       {(prive || programme || puces.length > 0) && (
         <span className="lp-ed-puces" aria-hidden="true">
           {/* Un picto par état, sans étiquette : le nom complet est dans l'aria-label du bloc. */}
-          {prive && <span className="lp-ed-puce" title="Masqué"><Icone nom="ui-masque" taille={13} /></span>}
-          {programme && <span className="lp-ed-puce" title="Programmé"><Icone nom="ui-horloge" taille={13} /></span>}
+          {prive && <span className="lp-ed-puce" title="Masqué"><Icone nom="masque" taille={13} /></span>}
+          {programme && <span className="lp-ed-puce" title="Programmé"><Icone nom="horloge" taille={13} /></span>}
           {/* Chaque règle porte le picto de sa ligne dans l'éditeur : on la reconnaît sans l'ouvrir. */}
           {puces.map(p => <span key={p.icone} className="lp-ed-puce" title={p.nom}><Icone nom={p.icone} taille={13} /></span>)}
         </span>

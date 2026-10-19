@@ -259,6 +259,8 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
   }
 
   const indicateur = sauvegarde === 'encours' ? 'Enregistrement…' : sauvegarde === 'erreur' ? 'Non enregistré' : 'Enregistré';
+  // Le même point au téléphone et au bureau : gris quand tout va bien, qui bat pendant l'envoi, rouge seulement en cas d'échec.
+  const point = <span aria-hidden="true" className={`h-1.5 w-1.5 shrink-0 rounded-full ${sauvegarde === 'encours' ? 'animate-pulse bg-white/40 motion-reduce:animate-none' : sauvegarde === 'erreur' ? 'bg-red-300' : 'bg-white/60'}`} />;
 
   return (
     <div className="adm adm-shell min-h-dvh font-sans text-white antialiased">
@@ -296,12 +298,12 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
             {/* Sur téléphone, l'en-tête porte l'adresse de la page : la copier ne prend plus une ligne au-dessus de la page. */}
             <p className="truncate text-[15px] font-semibold leading-tight" translate="no">{urlPage(compte).replace(/^https?:\/\//, '')}</p>
             <p className={`flex items-center gap-1.5 text-[12px] leading-tight ${sauvegarde === 'erreur' ? 'text-red-300' : 'text-white/55'}`} aria-live="polite">
-              <span className={`h-1.5 w-1.5 rounded-full ${sauvegarde === 'encours' ? 'animate-pulse bg-amber-300 motion-reduce:animate-none' : sauvegarde === 'erreur' ? 'bg-red-400' : 'bg-white/60'}`} />{indicateur}
+              {point}{indicateur}
             </p>
           </div>
-          <p className={`mr-2 hidden items-center gap-1.5 text-[12px] lg:flex ${sauvegarde === 'erreur' ? 'text-red-300' : 'text-white/55'}`} role="status"><Icone nom={sauvegarde === 'ok' ? 'ui-ok' : sauvegarde === 'erreur' ? 'cloche' : 'horloge'} taille={15} />{indicateur}</p>
+          <p className={`mr-2 hidden items-center gap-1.5 text-[12px] lg:flex ${sauvegarde === 'erreur' ? 'text-red-300' : 'text-white/55'}`} role="status">{point}{indicateur}</p>
           <span className="lg:hidden"><BoutonCopier compact texte={urlPage(compte)} label="Copier l’adresse de ta page" onCopie={() => { try { localStorage.setItem('hopla-page-partagee', '1'); } catch { /* stockage refusé */ } }} /></span>
-          <button type="button" onClick={() => setApercu(true)} className="adm-button-outline flex min-h-11 items-center gap-1.5 px-3.5 text-[13px] font-medium lg:hidden"><Icone nom="oeil" taille={17} />Aperçu</button>
+          <button type="button" onClick={() => setApercu(true)} className="adm-button-outline flex min-h-11 items-center gap-1.5 px-3.5 text-[13px] font-medium lg:hidden"><Icone nom="ui-oeil" taille={17} />Aperçu</button>
           <a href={demo ? '#page' : urlPage(compte)} target={demo ? undefined : '_blank'} rel={demo ? undefined : 'noopener'} className="adm-button-outline hidden min-h-11 items-center gap-2 px-4 text-[13px] font-medium lg:flex">Voir ma page<Icone nom="ui-ouvrir" taille={15} /></a>
         </div>
       </header>
@@ -336,7 +338,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
             <li key={o.id}>
               <button key={o.id} type="button" onClick={() => { if (o.id !== onglet) { vibrer(5); choisirOnglet(o.id); } }} aria-current={onglet === o.id ? 'page' : undefined}
                 className={`flex h-14 w-full flex-col items-center justify-center gap-0.5 text-[11.5px] font-medium transition-colors duration-200 ${onglet === o.id ? 'font-semibold text-white' : 'text-white/55'}`}>
-                <span className="adm-nav-pastille grid h-7 w-12 place-items-center rounded-full"><Icone nom={o.icone} taille={21} /></span>{o.id === 'stats' ? 'Stats' : o.nom}
+                <span className="grid h-7 w-12 place-items-center"><Icone nom={o.icone} taille={21} /></span>{o.id === 'stats' ? 'Stats' : o.nom}
               </button>
             </li>
           ))}

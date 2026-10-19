@@ -281,7 +281,7 @@ Fond calme, contour discret, arrondi de contrôle et texte de saisie au rôle `f
 
 La marque (`Marque.tsx`) est la même partout : le carré noir au lien blanc de (28px), puis « Hopla. » au rôle `wordmark`, sans accroche. La barre latérale, la connexion, les CGU et le lien de connexion périmé la reprennent telle quelle. Aucun fil d'Ariane ne répète la navigation.
 
-Sur desktop, une ligne associe un picto plein (20px), un nom et éventuellement un compteur réel. Le choix actif est blanc, bordé et plus gras ; le survol utilise une surface neutre. Sur mobile, la même navigation devient une barre basse avec picto (21px), label court et pastille de fond pour l'onglet courant.
+Sur desktop, une ligne associe un picto plein (20px), un nom et éventuellement un compteur réel. Le choix actif est blanc, bordé et plus gras ; le survol utilise une surface neutre. Sur mobile, la même navigation devient une barre basse avec picto (21px) et label court ; l'onglet courant se reconnaît à son picto noir et à son label en semi-gras, sans pastille de fond.
 
 ### Segments
 
@@ -293,11 +293,11 @@ Une ligne de réglage porte un picto plein nu, sans tuile de fond, dans une case
 
 ### Switches
 
-Piste de (40px) sur (24px), pastille blanche de (18px), cible tactile étendue. Le déplacement et l'étirement à la pression répondent au geste. L'état est porté par `role="switch"` et `aria-checked`.
+Piste de (40px) sur (24px), pastille blanche de (18px), cible tactile étendue. Allumée, la piste est à l'encre ; éteinte, à 45 % d'encre, soit 3:1 sur le papier, pour qu'on voie l'interrupteur et son état (WCAG 1.4.11). Le déplacement et l'étirement à la pression répondent au geste. L'état est porté par `role="switch"` et `aria-checked`.
 
 ### Sheets and feedback
 
-Les feuilles nomment leur tâche, gardent la fermeture accessible et gèrent le focus. Les mouvements d'entrée et de sortie sont courts et décélérés ; `prefers-reduced-motion` retire les animations prévues. Les retours utilisent un message explicite, et proposent Annuler lorsque l'action le permet. Les durées et courbes observées figurent dans le sidecar.
+Les feuilles nomment leur tâche, gardent la fermeture accessible et gèrent le focus. Les mouvements d'entrée et de sortie sont courts et décélérés ; `prefers-reduced-motion` retire les animations prévues. Les retours utilisent un message explicite, et proposent Annuler lorsque l'action le permet. L'état d'enregistrement est le même au téléphone et au bureau : un point gris suivi de son mot, qui bat pendant l'envoi ; seul l'échec passe au rouge. Les durées et courbes observées figurent dans le sidecar.
 
 ## Do's and Don'ts
 
@@ -306,7 +306,7 @@ Les feuilles nomment leur tâche, gardent la fermeture accessible et gèrent le 
 - **Do** conserver le contraste noir sur papier, et du papier sur une action noire.
 - **Do** reprendre Geist et la hiérarchie des rôles déjà utilisés.
 - **Do** conserver un focus visible, les libellés et les états d'enregistrement explicites.
-- **Do** utiliser les pictogrammes Phosphor pleins et monochromes du projet.
+- **Do** utiliser les pictogrammes Phosphor pleins et monochromes pour ce qu'on montre (un réseau, un bloc, une règle, un état), et les signes de commande au trait (`ui-*`) pour les gestes (fermer, ajouter, déplier, copier, ouvrir), sans mêler les deux dans une même rangée.
 - **Do** garder les transitions brèves et respecter le mouvement réduit.
 
 ### Don't:

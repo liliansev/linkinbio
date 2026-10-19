@@ -335,8 +335,7 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
       corps: (
         <div className="flex flex-col gap-3">
           <div className="adm-address flex items-center gap-2 p-1.5 pl-4">
-            <span className="h-2 w-2 shrink-0 rounded-full bg-white/70" title="En ligne" />
-            <span className="min-w-0 flex-1 truncate text-[16px] font-semibold text-white" translate="no">{sansSchema(adressePage)}</span>
+            <span className="min-w-0 flex-1 truncate text-[18px] font-semibold tracking-[-0.015em] text-white" translate="no">{sansSchema(adressePage)}</span>
             {/* Sans partage natif, le grand bouton copie déjà : pas de second « Copier ». */}
             {peutPartager && (
               <BoutonCopier texte={adressePage} onCopie={() => noter(CLE_PARTAGE)} />
@@ -365,7 +364,7 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
 
       {/* L'aperçu : la vraie page, en petit, qui se remplit à chaque réponse. */}
       <div className="flex min-h-[16dvh] max-h-[38dvh] flex-1 justify-center px-6 pt-1 pb-4 lg:max-h-none lg:order-last lg:min-h-0 lg:items-center lg:p-8" aria-hidden="true" inert>
-        <div className={`adm-miroir adm-apercu adm-toile pointer-events-none relative max-h-[640px] select-none lg:h-[min(640px,calc(100dvh-8rem))] overflow-hidden rounded-[26px] ring-1 ring-white/10 shadow-[0_30px_70px_-30px_rgba(0,0,0,0.28)] transition-shadow duration-700 ${etape === 'fin' ? 'adm-miroir-fin' : ''}`}>
+        <div className={`adm-miroir adm-apercu adm-toile pointer-events-none relative max-h-[640px] select-none lg:h-[min(640px,calc(100dvh-8rem))] overflow-hidden rounded-[26px] transition-shadow duration-700 ${etape === 'fin' ? 'adm-miroir-fin' : ''}`}>
           <div className="adm-miroir-page"><PageLiens page={{ reglages, blocs: visibles, compte }} apercu /></div>
         </div>
       </div>

@@ -31,7 +31,7 @@ function PageConnexion() {
         {erreur ? (
           <div className="adm-card p-6 sm:p-8">
             <h1 className="adm-titre">Connexion impossible</h1>
-            <p className="mt-2 text-[14px] leading-relaxed text-white/60" role="alert">{erreur}</p>
+            <p className="mt-2 text-[14px] leading-relaxed text-pretty text-white/60" role="alert">{erreur}</p>
             <a href="/admin" className={`${classeBouton.principal} mt-6 w-full`}>Demander un nouveau lien</a>
           </div>
         ) : <p className="text-center text-[14px] text-white/60" role="status">Connexion…</p>}

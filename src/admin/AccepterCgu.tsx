@@ -30,11 +30,12 @@ export function AccepterCgu({ accepter, deconnexion }: { accepter: () => Promise
             Encore une case à cocher, puis cinq questions et ta page est en ligne. Hopla l’héberge et mesure ses visites pour toi, sans cookie.
           </p>
           <label className="mt-6 flex cursor-pointer items-start gap-3 rounded-xl border border-white/15 p-4 text-[14.5px] leading-snug transition hover:border-white/30">
-            <input id="cgu-case" type="checkbox" checked={coche} onChange={e => { setCoche(e.target.checked); setErreur(''); }} className="mt-0.5 h-5 w-5 shrink-0 accent-white" />
+            <input id="cgu-case" type="checkbox" checked={coche} onChange={e => { setCoche(e.target.checked); setErreur(''); }} aria-describedby={erreur ? 'cgu-erreur' : undefined} aria-invalid={erreur && !coche ? true : undefined} className="mt-0.5 h-5 w-5 shrink-0 accent-white" />
             <span>J’accepte les {lien('cgu', 'conditions d’utilisation')} et l’{lien('traitement-des-donnees', 'accord de traitement des données')}, et j’ai lu la {lien('confidentialite', 'politique de confidentialité')}.</span>
           </label>
+          {/* L'erreur sous la case qu'elle concerne, pas sous le bouton. */}
+          {erreur && <p id="cgu-erreur" role="alert" className="mt-2 text-[14px] text-red-300">{erreur}</p>}
           <BoutonPrincipal type="button" className="mt-4 w-full" disabled={envoi} onClick={valider}>{envoi ? 'Un instant…' : 'Continuer'}</BoutonPrincipal>
-          {erreur && <p role="alert" className="mt-3 text-[14px] text-red-300">{erreur}</p>}
           <button type="button" onClick={deconnexion} className={`${classeBouton.discret} mt-3 w-full`}>Me déconnecter</button>
         </div>
       </div>
