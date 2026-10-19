@@ -15,6 +15,7 @@ test('pourquoiPasAdresse dit ce qui manque', async () => {
   assert.match(pourquoiPasAdresse('https//x.fr'), /« : »/);
   assert.match(pourquoiPasAdresse('htp://x.fr'), /mal tapé/);
   assert.match(pourquoiPasAdresse('htps:/x.fr'), /mal tapé/);
+  assert.match(pourquoiPasAdresse('htps//monsite'), /mal tapé/);
   assert.match(pourquoiPasAdresse('ma boutique'), /espace/);
   assert.match(pourquoiPasAdresse('monsite'), /\.fr ou \.com/);
 });

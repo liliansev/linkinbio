@@ -61,6 +61,7 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
   // Les réseaux ouverts, et ce qui a été tapé pour chacun (un pseudo ou une adresse).
   const [saisies, setSaisies] = useState<Partial<Record<Reseau, string>>>({});
   const [envoi, setEnvoi] = useState(false);
+  const [photoRatee, setPhotoRatee] = useState(false);
   const [dernierSeul, setDernierSeul] = useState(false);
   // Les champs qu'on a quittés : une adresse ou un pseudo qui ne mène nulle part le dit seulement là.
   const [quittes, setQuittes] = useState<Set<string>>(() => new Set());
@@ -77,8 +78,8 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
 
   async function photo(f: File | undefined) {
     if (!f) return;
-    setEnvoi(true);
-    try { profil({ avatar: await envoyerImage(await preparerImage(f, 'carre')) }); } finally { setEnvoi(false); if (fichier.current) fichier.current.value = ''; }
+    setEnvoi(true); setPhotoRatee(false);
+    try { profil({ avatar: await envoyerImage(await preparerImage(f, 'carre')) }); } catch { setPhotoRatee(true); } finally { setEnvoi(false); if (fichier.current) fichier.current.value = ''; }
   }
 
   /* ---- Les liens : l'adresse collée, le titre se remplit tout seul ---- */
@@ -171,7 +172,7 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
     return etape === 'style' && !liste.some(b => b.type === 'lien') ? [...liste, ...EXEMPLES] : liste;
   }, [brouillons, blocs, etape]);
 
-  const rempli = etape === 'profil' ? true : etape === 'liens' ? brouillons.length > 0 : etape === 'reseaux' ? reglages.reseaux.some(r => r.url) : true;
+  const rempli = etape === 'profil' ? true : etape === 'liens' ? brouillons.length > 0 || lignes.some(l => l.url.trim()) : etape === 'reseaux' ? reglages.reseaux.some(r => r.url) || ouverts.some(r => (saisies[r] ?? '').trim()) : true;
   const libelle = ignorer && fautifs.length
     ? (etape === 'liens' ? (fautifs.length > 1 ? 'Continuer sans ces liens' : 'Continuer sans ce lien') : (fautifs.length > 1 ? 'Continuer sans ces réseaux' : 'Continuer sans ce réseau'))
     : etape === 'style' ? 'C’est parti' : rempli ? 'Continuer' : 'Passer cette étape';
@@ -201,6 +202,7 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
               {nomVide && <p id="erreur-nom" role="alert" className="mt-1.5 text-[13px] font-medium text-red-300">Écris ton nom : il s’affiche en haut de ta page.</p>}
             </label>
           </div>
+          {photoRatee && <p className="text-[13px] text-red-300" role="alert">La photo n’est pas passée. Essaie une autre image, en JPG ou PNG.</p>}
           <label>
             <span className="mb-1 block text-[13px] font-medium text-white/60">Ta bio</span>
             <textarea className={`${classeSaisie} min-h-[76px] resize-none`} rows={2} maxLength={300} placeholder="Céramiste à Lyon. Pièces uniques et ateliers le samedi."
@@ -311,7 +313,7 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
     },
     style: {
       titre: 'Choisis ton thème',
-      aide: 'Les couleurs, la police et les boutons suivent. Une vingtaine d’autres t’attendent dans Design.',
+      aide: 'Les couleurs, la police et les boutons suivent. Les autres t’attendent dans Design.',
       corps: (
         <ul onKeyDown={e => flechesRadio(e)} className="-mx-5 flex snap-x scroll-px-5 gap-2.5 overflow-x-auto px-5 pb-1 [scrollbar-width:none] lg:mx-0 lg:grid lg:grid-cols-4 lg:px-0" role="radiogroup" aria-label="Thème">
           {THEMES_ACCUEIL.map(id => THEMES.find(t => t.id === id)!).map(t => {

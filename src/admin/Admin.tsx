@@ -163,13 +163,13 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
     ecrire(async () => { await api.enregistrerBloc(bloc); if (enBas) await api.ordonner(liste.map(b => b.id)); });
     if (nouveau) {
       const avant = blocs;
-      setToast({ texte: enBas ? 'Ajouté en bas de ta page' : 'Ajouté en haut de ta page', annuler: () => { setBlocs(avant); setToast(null); ecrire(() => api.supprimerBloc(bloc.id)); } });
+      setToast({ texte: enBas ? 'Ajouté en bas de ta page' : 'Ajouté en haut de ta page', annuler: () => { setBlocs(avant); setToast({ texte: 'Ajout annulé', genre: 'info' }); ecrire(() => api.supprimerBloc(bloc.id)); } });
       montrer(bloc.id);
     } else {
       // Une modification se défait aussi, le temps du message : le bloc revient tel qu'il était.
       const ancien = blocs.find(b => b.id === bloc.id);
       if (ancien && JSON.stringify(ancien) !== JSON.stringify(bloc)) setToast({ texte: 'Modifications enregistrées', annuler: () => {
-        setBlocs(l => l.map(b => (b.id === ancien.id ? ancien : b))); setToast(null); ecrire(() => api.enregistrerBloc(ancien));
+        setBlocs(l => l.map(b => (b.id === ancien.id ? ancien : b))); setToast({ texte: 'Changements annulés', genre: 'info' }); ecrire(() => api.enregistrerBloc(ancien));
       } });
     }
   }
@@ -186,7 +186,17 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
     const avant = blocs;
     setBlocs(liste);
     ecrire(() => api.ordonner(liste.map(b => b.id)));
-    setToast({ texte: 'Bloc déplacé', annuler: () => { setBlocs(avant); setToast(null); ecrire(() => api.ordonner(avant.map(b => b.id))); } });
+    setToast({ texte: 'Bloc déplacé', annuler: () => { setBlocs(avant); setToast({ texte: 'Remis à sa place', genre: 'info' }); ecrire(() => api.ordonner(avant.map(b => b.id))); } });
+  }
+
+  /** Un cran plus haut ou plus bas, depuis la feuille du bloc : l'ordre se règle aussi sans glisser. */
+  function deplacer(bloc: Bloc, sens: -1 | 1) {
+    const i = blocs.findIndex(b => b.id === bloc.id);
+    const j = i + sens;
+    if (i < 0 || j < 0 || j >= blocs.length) return;
+    const liste = [...blocs];
+    [liste[i], liste[j]] = [liste[j], liste[i]];
+    ordonner(liste);
   }
 
   function supprimer(bloc: Bloc) {
@@ -198,7 +208,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
       texte: 'Retiré de ta page',
       annuler: () => {
         setBlocs(avant);
-        setToast(null);
+        setToast({ texte: 'Remis sur ta page', genre: 'info' });
         ecrire(async () => { await api.enregistrerBloc(bloc); await api.ordonner(avant.map(b => b.id)); });
       },
     });
@@ -226,7 +236,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
 
   const bulle = toast && (
     <div role="status" onPointerEnter={() => setToastTenu(true)} onPointerLeave={() => setToastTenu(false)} className="adm-toast fixed inset-x-4 bottom-[calc(76px+env(safe-area-inset-bottom))] z-[60] mx-auto flex max-w-sm items-center justify-between gap-3 rounded-2xl bg-white px-4 py-3 text-[14.5px] font-medium text-nuit shadow-2xl lg:bottom-6">
-      <span className="flex items-center gap-2">{/* La coche verte confirme ; une simple information n'en a pas. */}{!toast.annuler && toast.genre !== 'info' && sauvegarde !== 'erreur' && <span className="grid h-5 w-5 place-items-center rounded-full bg-emerald-500 text-white"><Icone nom="ui-ok" taille={13} /></span>}{toast.texte}</span>
+      <span className="flex items-center gap-2">{/* La coche verte confirme ; une simple information n'en a pas. */}{!toast.annuler && toast.genre !== 'info' && sauvegarde !== 'erreur' && <span className="text-emerald-600" aria-hidden="true"><Icone nom="ui-ok" taille={18} /></span>}{toast.texte}</span>
       {toast.annuler && <button ref={actionToast} type="button" onClick={toast.annuler} className="-my-2 min-h-11 rounded-full px-3 font-semibold text-nuit underline decoration-nuit/30 underline-offset-4 hover:bg-black/5">{toast.action ?? 'Annuler'}</button>}
     </div>
   );
@@ -344,7 +354,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
 
       {edition && (
         <EditeurBloc adressePage={urlPage(compte)} principal={compte.principal} bloc={edition.bloc} reglages={reglages} nouveau={edition.nouveau} clics={clics[edition.bloc.id] ?? 0} prises={initial.places?.[edition.bloc.id] ?? 0} onFermer={() => setEdition(null)}
-          onEnregistrer={enregistrerBloc} onSupprimer={supprimer} onDupliquer={dupliquer} envoyerImage={d => api.envoyerImage(d)} apercuSite={u => api.apercuSite(u)} />
+          onEnregistrer={enregistrerBloc} onSupprimer={supprimer} onDupliquer={dupliquer} onDeplacer={deplacer} place={{ rang: blocs.findIndex(b => b.id === edition.bloc.id), total: blocs.length }} envoyerImage={d => api.envoyerImage(d)} apercuSite={u => api.apercuSite(u)} />
       )}
 
       {bulle}

@@ -70,9 +70,11 @@ function Courbe({ serie }: { serie: Stats['serie'] }) {
           <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-white" />Vues</span>
           <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-sky-300" />Clics</span>
         </span>
-        <span className="text-white/70 tabular-nums">{point ? `${date(point.jour)} · ${point.vues} vues · ${point.clics} clics` : ''}</span>
+        <span className="text-white/70 tabular-nums" aria-live="polite">{point ? `${date(point.jour)} · ${point.vues} vues · ${point.clics} clics` : ''}</span>
       </div>
-      <svg viewBox={`0 0 ${w} ${h}`} className="h-44 w-full touch-none" preserveAspectRatio="none" role="img" aria-label="Vues et clics par jour"
+      <svg viewBox={`0 0 ${w} ${h}`} className="h-44 w-full touch-none rounded-lg outline-offset-4" preserveAspectRatio="none" role="img" aria-label="Vues et clics par jour. Flèches gauche et droite pour lire chaque jour." tabIndex={0}
+        onKeyDown={e => { if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return; e.preventDefault(); const pas = e.key === 'ArrowRight' ? 1 : -1; setSurvol(v => Math.min(serie.length - 1, Math.max(0, (v ?? (pas > 0 ? -1 : serie.length)) + pas))); }}
+        onBlur={() => setSurvol(null)}
         onPointerMove={e => { const r = e.currentTarget.getBoundingClientRect(); setSurvol(Math.round(((e.clientX - r.left) / r.width) * (serie.length - 1))); }}
         onPointerLeave={() => setSurvol(null)}>
         <defs><linearGradient id="adm-aire" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stopColor="#ffffff" stopOpacity="0.22" /><stop offset="1" stopColor="#ffffff" stopOpacity="0" /></linearGradient></defs>

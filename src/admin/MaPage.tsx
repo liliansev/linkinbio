@@ -83,7 +83,7 @@ export function MaPage({ compte, reglages, blocs, clics, onReglages, onOrdonner,
   async function photo(f: File | undefined) {
     if (!f) return;
     setEnvoi(true);
-    try { profil({ avatar: await envoyerImage(await preparerImage(f, 'carre')) }); } finally { setEnvoi(false); if (fichier.current) fichier.current.value = ''; }
+    try { profil({ avatar: await envoyerImage(await preparerImage(f, 'carre')) }); } catch { annoncer({ texte: 'La photo n’est pas passée. Essaie une autre image, en JPG ou PNG.', genre: 'info' }); } finally { setEnvoi(false); if (fichier.current) fichier.current.value = ''; }
   }
   /** Le design s'ouvre en laissant voir le haut de la page (sur ordinateur, elle est à gauche de la feuille). */
   function design() {

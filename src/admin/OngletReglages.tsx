@@ -194,7 +194,7 @@ function Abonnement({ abonnement, ouvrirPaiement, ouvrirPortail }: {
         <ul className="flex flex-col gap-2">
           {AVANTAGES_PRO.map(a => (
             <li key={a} className="flex gap-2.5 text-[14px] leading-snug text-white/80">
-              <span className="mt-0.5 grid h-[18px] w-[18px] shrink-0 place-items-center rounded-full bg-white/10 text-white"><Icone nom="ui-ok" taille={12} /></span>{a}
+              <span className="mt-0.5 shrink-0 text-white" aria-hidden="true"><Icone nom="ui-ok" taille={16} /></span>{a}
             </li>
           ))}
         </ul>

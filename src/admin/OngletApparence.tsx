@@ -48,6 +48,7 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
   // Seule dans une feuille, une partie est déjà nommée par la feuille : pas de second titre.
   const titre = (t: string) => (parties.length === 1 ? undefined : t);
   const [envoi, setEnvoi] = useState(false);
+  const [photoRatee, setPhotoRatee] = useState(false);
   const [enSaisie, setEnSaisie] = useState<Reseau | null>(null);
   // Seule dans une feuille, la partie n'a pas de cadre : la feuille en est déjà un.
   const nu = parties.length === 1;
@@ -61,8 +62,8 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
 
   async function avatar(f: File | undefined) {
     if (!f) return;
-    setEnvoi(true);
-    try { profil({ avatar: await envoyerImage(await preparerImage(f, 'carre')) }); } finally { setEnvoi(false); if (fichier.current) fichier.current.value = ''; }
+    setEnvoi(true); setPhotoRatee(false);
+    try { profil({ avatar: await envoyerImage(await preparerImage(f, 'carre')) }); } catch { setPhotoRatee(true); } finally { setEnvoi(false); if (fichier.current) fichier.current.value = ''; }
   }
 
   return (
@@ -79,6 +80,7 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
           </div>
           <input ref={fichier} type="file" accept="image/*" hidden onChange={e => avatar(e.target.files?.[0])} />
         </div>
+        {photoRatee && <p className="-mt-2 mb-3 text-[13px] text-red-300" role="alert">La photo n’est pas passée. Essaie une autre image, en JPG ou PNG.</p>}
         <div className="flex flex-col gap-3">
           <Champ label="Nom"><input className={classeSaisie} value={reglages.profil.nom} maxLength={80} onChange={e => profil({ nom: e.target.value })} /></Champ>
           <Champ label="Bio"><textarea className={`${classeSaisie} min-h-24`} value={reglages.profil.bio} maxLength={300} onChange={e => profil({ bio: e.target.value })} /></Champ>
@@ -277,7 +279,15 @@ export function DesignTiroirs({ reglages, onChange, envoyerImage, principal, pie
   // Le focus suit le tiroir : sur son retour en entrant, sur sa ligne en revenant.
   const retour = useRef<HTMLButtonElement>(null);
   const dernier = useRef<Tiroir | null>(null);
+  const racine = useRef<HTMLDivElement>(null);
   useEffect(() => {
+    // Chaque tiroir, et la liste au retour, s'ouvre par son haut : la feuille ne garde pas le défilement d'avant.
+    // Le thème fait exception : il amène lui-même le thème choisi en vue.
+    if (ouvert !== 'theme') {
+      let el: HTMLElement | null = racine.current?.parentElement ?? null;
+      while (el && !(el.scrollHeight > el.clientHeight && /auto|scroll/.test(getComputedStyle(el).overflowY))) el = el.parentElement;
+      if (el) el.scrollTop = 0;
+    }
     if (ouvert) { dernier.current = ouvert; retour.current?.focus({ preventScroll: true, focusVisible: false } as FocusOptions); }
     else if (dernier.current) document.getElementById(`design-${dernier.current}`)?.focus({ preventScroll: true });
   }, [ouvert]);
@@ -291,7 +301,7 @@ export function DesignTiroirs({ reglages, onChange, envoyerImage, principal, pie
   ];
 
   if (ouvert) return (
-    <div className="flex flex-col gap-3">
+    <div ref={racine} className="flex flex-col gap-3">
       {/* Le retour reste collé en haut de la feuille : on le retrouve après avoir fait défiler vingt thèmes. */}
       <div className="sticky top-0 z-10 -mx-5 flex items-center bg-[#111827] px-4 pb-1">
         <button ref={retour} type="button" onClick={() => { vibrer(4); setOuvert(null); }} aria-label={`${lignes.find(l => l.id === ouvert)?.nom ?? ''}, revenir au design`} className="flex min-h-11 items-center gap-1 rounded-full pr-3 text-[14px] font-medium text-white/75 hover:text-white">
@@ -303,7 +313,7 @@ export function DesignTiroirs({ reglages, onChange, envoyerImage, principal, pie
   );
 
   return (
-    <div className="flex flex-col gap-4">
+    <div ref={racine} className="flex flex-col gap-4">
       <ul className="overflow-hidden rounded-xl bg-white/[0.03] ring-1 ring-white/[0.07]">
         {lignes.map((l, i) => (
           <li key={l.id} className={i > 0 ? 'border-t border-white/[0.07]' : ''}>

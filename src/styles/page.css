@@ -611,7 +611,8 @@ textarea.lp-bio.lp-ed-saisie { display: block; width: 100%; resize: none; overfl
 .lp-ed-pastille {
   position: absolute; right: 0; bottom: 2px; width: 34px; height: 34px; border-radius: 999px;
   display: grid; place-items: center; font-weight: 700;
-  background: var(--vedette); color: var(--vedette-texte); box-shadow: 0 0 0 3px var(--fond-uni);
+  /* Découpé dans le fond de la page, comme les pictos des blocs : pas de pastille de couleur. */
+  background: var(--fond-uni); color: var(--texte);
   transition: scale 0.15s;
 }
 .lp-ed-photo:hover .lp-ed-pastille { scale: 1.08; }

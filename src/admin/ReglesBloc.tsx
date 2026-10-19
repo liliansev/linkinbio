@@ -270,7 +270,7 @@ export function ChampsPreuve({ b, maj, erreurDe = () => undefined }: { b: Bloc; 
           </Champ>
         </>
       )}
-      <Champ label={p.genre === 'note' ? 'Où sont publiés les avis' : 'Où ça se passe (facultatif)'} erreur={erreurDe('source')}>
+      <Champ label={p.genre === 'note' ? 'Où sont publiés les avis' : 'Où l’avis a été donné (facultatif)'} erreur={erreurDe('source')}>
         {/* Les sources courantes en suggestions du champ, plutôt qu'une rangée de pastilles. */}
         <input className={classeSaisie} value={p.source} maxLength={30} onChange={e => majP({ source: e.target.value })} placeholder="Ex. Google" list="sources-preuve" />
       </Champ>

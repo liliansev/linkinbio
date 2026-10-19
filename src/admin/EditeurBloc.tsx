@@ -16,7 +16,7 @@ import { ChampsPreuve, RegleAcces, RegleMoment, RegleReseaux, RegleTraductions, 
 import { reseauxDePartage } from '../lib/provenance.ts';
 import { etiquettes } from '../lib/etiquettes.ts';
 
-export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, onSupprimer, onDupliquer, envoyerImage, apercuSite, clics, adressePage, prises = 0, principal = false }: {
+export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, onSupprimer, onDupliquer, onDeplacer, place, envoyerImage, apercuSite, clics, adressePage, prises = 0, principal = false }: {
   bloc: Bloc | null;
   reglages: Reglages;
   nouveau: boolean;
@@ -24,6 +24,9 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
   onEnregistrer: (bloc: Bloc) => void;
   onSupprimer: (bloc: Bloc) => void;
   onDupliquer: (bloc: Bloc) => void;
+  /** Monter ou descendre le bloc d'un cran, sans glisser : la place est donnée par la page. */
+  onDeplacer?: (bloc: Bloc, sens: -1 | 1) => void;
+  place?: { rang: number; total: number };
   envoyerImage: (dataUrl: string) => Promise<string>;
   apercuSite: Api['apercuSite'];
   clics: number;
@@ -330,9 +333,18 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
 
         {!nouveau && b.type === 'lien' && <p className="text-center text-[13px] text-white/55">{clics} clic{clics > 1 ? 's' : ''} ces 30 derniers jours</p>}
 
-        {/* Les deux gestes rares, nommés en toutes lettres, au bout de la feuille plutôt qu'en pictos à côté de Terminé. */}
+        {/* Les gestes rares, nommés en toutes lettres, au bout de la feuille plutôt qu'en pictos à côté de Terminé. */}
         {!nouveau && (
           <div className="flex flex-col divide-y divide-white/[0.06] rounded-2xl bg-white/[0.035]">
+            {onDeplacer && place && place.total > 1 && <>
+              <button type="button" disabled={place.rang === 0} onClick={() => onDeplacer(b, -1)} className="flex min-h-12 items-center gap-3 px-4 text-left text-[14.5px] font-medium text-white/85 transition hover:bg-white/[0.04] disabled:text-white/30">
+                <Icone nom="ui-chevron" taille={18} className="rotate-180 text-white/70" /> Monter
+              </button>
+              <button type="button" disabled={place.rang === place.total - 1} onClick={() => onDeplacer(b, 1)} className="flex min-h-12 items-center gap-3 px-4 text-left text-[14.5px] font-medium text-white/85 transition hover:bg-white/[0.04] disabled:text-white/30">
+                <Icone nom="ui-chevron" taille={18} className="text-white/70" /> Descendre
+                <span className="ml-auto text-[13px] font-normal text-white/50">{place.rang + 1} sur {place.total}</span>
+              </button>
+            </>}
             <button type="button" onClick={() => onDupliquer(b)} className="flex min-h-12 items-center gap-3 px-4 text-left text-[14.5px] font-medium text-white/85 transition hover:bg-white/[0.04]">
               <Icone nom="ui-copier" taille={18} className="text-white/70" /> Dupliquer
             </button>
