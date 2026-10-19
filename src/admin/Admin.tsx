@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { ReactNode } from 'react';
 import type { Api, Bloc, EtatAdmin, Reglages } from '../lib/types.ts';
-import { TYPES_PRINCIPAL, cheminPage, urlPage } from '../lib/types.ts';
+import { TYPES_PRINCIPAL, urlPage } from '../lib/types.ts';
 import { composerMoment } from '../lib/moments.ts';
 import { PageLiens } from '../components/PageLiens.tsx';
 import { MaPage } from './MaPage.tsx';
@@ -14,7 +13,7 @@ import { AccepterCgu } from './AccepterCgu.tsx';
 import { PremiersPas, premiersPasFaits } from './PremiersPas.tsx';
 import { pageNeuve } from '../lib/demarrage.ts';
 import { Icone } from '../components/Icone.tsx';
-import { vibrer } from './ui.tsx';
+import { BoutonCopier, vibrer } from './ui.tsx';
 
 /*
  * Le back office. Tout s'enregistre tout seul : un bloc quand on valide sa
@@ -26,25 +25,24 @@ import { vibrer } from './ui.tsx';
 type Onglet = 'page' | 'stats' | 'reglages' | 'comptes';
 type Sauvegarde = 'ok' | 'encours' | 'erreur';
 
-const ONGLETS: { id: Onglet; nom: string; icone: ReactNode }[] = [
-  { id: 'page', nom: 'Ma page', icone: <><rect x="6" y="2.5" width="12" height="19" rx="2.5" /><path d="M9.5 8h5M9.5 12h5M9.5 16h3" /></> },
-  { id: 'stats', nom: 'Stats', icone: <path d="M3 3v18h18M7 16l4-5 3 3 5-7" /> },
-  { id: 'comptes', nom: 'Comptes', icone: <><circle cx="9" cy="8" r="3.5" /><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M18 14.5a6.5 6.5 0 0 1 3.5 5.5" /></> },
-  { id: 'reglages', nom: 'Réglages', icone: <><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z" /></> },
+// Les mêmes pictos pleins que partout ailleurs dans le back office.
+const ONGLETS: { id: Onglet; nom: string; icone: string }[] = [
+  { id: 'page', nom: 'Ma page', icone: 'document' },
+  { id: 'stats', nom: 'Stats', icone: 'courbe' },
+  { id: 'comptes', nom: 'Comptes', icone: 'equipe' },
+  { id: 'reglages', nom: 'Réglages', icone: 'reglage' },
 ];
-
-function Picto({ children, taille = 20 }: { children: ReactNode; taille?: number }) {
-  return <svg width={taille} height={taille} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{children}</svg>;
-}
 
 export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatAdmin; demo?: boolean }) {
   const [blocs, setBlocs] = useState(initial.blocs);
   const [reglages, setReglages] = useState(initial.reglages);
   const [clics, setClics] = useState(initial.clics);
   const [onglet, setOnglet] = useState<Onglet>('page');
-  const [edition, setEdition] = useState<{ bloc: Bloc; nouveau: boolean } | null>(null);
+  const [edition, setEdition] = useState<{ bloc: Bloc; nouveau: boolean; enBas?: boolean; traduire?: boolean } | null>(null);
   const [sauvegarde, setSauvegarde] = useState<Sauvegarde>('ok');
-  const [toast, setToast] = useState<{ texte: string; annuler?: () => void } | null>(null);
+  const [toast, setToast] = useState<{ texte: string; annuler?: () => void; action?: string; genre?: 'ok' | 'info'; long?: boolean } | null>(null);
+  // Le doigt ou le focus sur le message le garde affiché : « Annuler » ne file pas pendant qu'on le vise.
+  const [toastTenu, setToastTenu] = useState(false);
   const [apercu, setApercu] = useState(false);
   const [cguAJour, setCguAJour] = useState(initial.cguAJour);
   const [abonnement, setAbonnement] = useState({ ...initial.abonnement, pro: initial.compte.pro });
@@ -69,12 +67,46 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
     } catch (error) {
       enCours.current--;
       setSauvegarde('erreur');
-      setToast({ texte: (error as Error).message?.includes('Session') ? 'Ta session a expiré. Recharge la page pour te reconnecter.' : 'Pas enregistré. Vérifie ta connexion.' });
+      // Un échec se rejoue d'un toucher : la même écriture repart.
+      setToast((error as Error).message?.includes('Session')
+        ? { texte: 'Ta session a expiré. Recharge la page pour te reconnecter.' }
+        : { texte: 'Pas enregistré. Vérifie ta connexion.', action: 'Réessayer', annuler: () => { setToast(null); void ecrireRef.current(action); } });
       return undefined;
     }
   }, []);
 
-  useEffect(() => { if (!toast) return; const t = setTimeout(() => setToast(null), toast.annuler ? 5000 : 2600); return () => clearTimeout(t); }, [toast]);
+  const ecrireRef = useRef(ecrire);
+  ecrireRef.current = ecrire;
+  useEffect(() => { if (!toast) setToastTenu(false); }, [toast]);
+  // Après un retrait, le bloc qui avait le focus n'existe plus : le focus va à « Annuler » plutôt qu'au vide.
+  const actionToast = useRef<HTMLButtonElement>(null);
+  useEffect(() => { if (toast?.annuler && (document.activeElement === document.body || !document.activeElement)) actionToast.current?.focus({ preventScroll: true }); }, [toast]);
+  // L'aperçu plein écran se comporte en fenêtre : Échap le ferme, le focus va au bouton puis revient.
+  const fermerApercu = useRef<HTMLButtonElement>(null);
+  const fenetreApercu = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!apercu) return;
+    const avant = document.activeElement as HTMLElement | null;
+    const corps = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    fermerApercu.current?.focus({ preventScroll: true });
+    const touche = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') return setApercu(false);
+      if (e.key !== 'Tab' || !fenetreApercu.current) return;
+      // Tab tourne dans la fenêtre : rien derrière l'aperçu ne prend le focus.
+      const f = [...fenetreApercu.current.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), input, textarea, [tabindex]:not([tabindex="-1"])')];
+      if (!f.length) return;
+      const [premier, dernier] = [f[0], f[f.length - 1]];
+      const dedans = fenetreApercu.current.contains(document.activeElement);
+      if (e.shiftKey && (document.activeElement === premier || !dedans)) { e.preventDefault(); dernier.focus(); }
+      else if (!e.shiftKey && (document.activeElement === dernier || !dedans)) { e.preventDefault(); premier.focus(); }
+    };
+    document.addEventListener('keydown', touche);
+    return () => { document.removeEventListener('keydown', touche); document.body.style.overflow = corps; avant?.focus({ preventScroll: true }); };
+  }, [apercu]);
+  useEffect(() => { if (!toast || toastTenu) return; const t = setTimeout(() => setToast(null), toast.long ? 8000 : toast.annuler ? 5000 : 2600); return () => clearTimeout(t); }, [toast, toastTenu]);
+  // Annuler, mis au point par le code, disparaît avec le toast : sans ce rappel, le toast suivant ne partirait plus.
+  useEffect(() => { setToastTenu(false); }, [toast]);
   useEffect(() => () => clearTimeout(minuteur.current), []);
 
   // Au retour de la page de paiement : le Pro arrive par webhook, quelques secondes plus tard.
@@ -101,7 +133,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
   /** Un onglet, ouvert sur une de ses cartes. */
   function ouvrirSur(o: Onglet, ancre: string) {
     setOnglet(o);
-    setTimeout(() => document.getElementById(ancre)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
+    setTimeout(() => document.getElementById(ancre)?.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' }), 60);
   }
   function versAbonnement() { ouvrirSur('reglages', 'abonnement'); }
 
@@ -112,12 +144,36 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
     minuteur.current = setTimeout(() => { ecrire(() => api.enregistrerReglages(r)); }, 650);
   }
 
+  /** Un bloc qui vient d'arriver se montre : la page défile jusqu'à lui et il s'éclaire un instant. */
+  function montrer(id: string) {
+    setTimeout(() => {
+      const el = document.querySelector<HTMLElement>(`.adm-toile [data-id="${CSS.escape(id)}"]`);
+      if (!el) return;
+      el.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'center' });
+      el.setAttribute('data-neuf', '');
+      setTimeout(() => el.removeAttribute('data-neuf'), 1800);
+    }, 260);
+  }
+
   function enregistrerBloc(bloc: Bloc) {
     const nouveau = !blocs.some(b => b.id === bloc.id);
-    setBlocs(liste => (nouveau ? [bloc, ...liste] : liste.map(b => (b.id === bloc.id ? bloc : b))));
+    const enBas = nouveau && !!edition?.enBas;
+    const liste = nouveau ? (enBas ? [...blocs, bloc] : [bloc, ...blocs]) : blocs.map(b => (b.id === bloc.id ? bloc : b));
+    setBlocs(liste);
     setEdition(null);
-    ecrire(() => api.enregistrerBloc(bloc));
-    if (nouveau) setToast({ texte: 'Ajouté en haut de ta page' });
+    // Le serveur pose un bloc neuf en tête : ajouté par le bas, il est rangé à la fin juste après.
+    ecrire(async () => { await api.enregistrerBloc(bloc); if (enBas) await api.ordonner(liste.map(b => b.id)); });
+    if (nouveau) {
+      const avant = blocs;
+      setToast({ texte: enBas ? 'Ajouté en bas de ta page' : 'Ajouté en haut de ta page', annuler: () => { setBlocs(avant); setToast({ texte: 'Ajout annulé', genre: 'info' }); ecrire(() => api.supprimerBloc(bloc.id)); } });
+      montrer(bloc.id);
+    } else {
+      // Une modification se défait aussi, le temps du message : le bloc revient tel qu'il était.
+      const ancien = blocs.find(b => b.id === bloc.id);
+      if (ancien && JSON.stringify(ancien) !== JSON.stringify(bloc)) setToast({ texte: 'Modifications enregistrées', annuler: () => {
+        setBlocs(l => l.map(b => (b.id === ancien.id ? ancien : b))); setToast({ texte: 'Changements annulés', genre: 'info' }); ecrire(() => api.enregistrerBloc(ancien));
+      } });
+    }
   }
 
   /** Plusieurs liens d'un coup (les premiers pas) : les nouveaux en tête, dans l'ordre donné ; les autres mis à jour sur place. */
@@ -128,9 +184,22 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
     ecrire(async () => { for (const b of [...liste].reverse()) await api.enregistrerBloc(b); });
   }
 
-  function ordonner(liste: Bloc[]) {
+  function ordonner(liste: Bloc[], texte = 'Bloc déplacé') {
+    const avant = blocs;
     setBlocs(liste);
     ecrire(() => api.ordonner(liste.map(b => b.id)));
+    setToast({ texte, annuler: () => { setBlocs(avant); setToast({ texte: 'Remis à sa place', genre: 'info' }); ecrire(() => api.ordonner(avant.map(b => b.id))); } });
+  }
+
+  /** Un cran plus haut ou plus bas, depuis la feuille du bloc : l'ordre se règle aussi sans glisser. */
+  function deplacer(bloc: Bloc, sens: -1 | 1) {
+    const i = blocs.findIndex(b => b.id === bloc.id);
+    const j = i + sens;
+    if (i < 0 || j < 0 || j >= blocs.length) return;
+    const liste = [...blocs];
+    [liste[i], liste[j]] = [liste[j], liste[i]];
+    // Le déplacement s'enregistre tout de suite, à part des réglages de la feuille : le message le dit.
+    ordonner(liste, sens < 0 ? 'Bloc monté d’un cran' : 'Bloc descendu d’un cran');
   }
 
   function supprimer(bloc: Bloc) {
@@ -139,10 +208,12 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
     setEdition(null);
     ecrire(() => api.supprimerBloc(bloc.id));
     setToast({
-      texte: 'Bloc supprimé',
+      texte: 'Retiré de ta page',
+      // Retirer ne demande pas de confirmation : l'annulation reste offerte plus longtemps.
+      long: true,
       annuler: () => {
         setBlocs(avant);
-        setToast(null);
+        setToast({ texte: 'Remis sur ta page', genre: 'info' });
         ecrire(async () => { await api.enregistrerBloc(bloc); await api.ordonner(avant.map(b => b.id)); });
       },
     });
@@ -154,6 +225,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
     const liste = [...blocs.slice(0, i + 1), copie, ...blocs.slice(i + 1)];
     setBlocs(liste);
     setEdition({ bloc: copie, nouveau: false });
+    montrer(copie.id);
     ecrire(async () => { await api.enregistrerBloc(copie); await api.ordonner(liste.map(b => b.id)); });
   }
 
@@ -168,9 +240,9 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
   if (!cguAJour) return <AccepterCgu accepter={async () => { await api.accepterCgu(); setCguAJour(true); }} deconnexion={deconnexion} />;
 
   const bulle = toast && (
-    <div role="status" className="adm-toast fixed inset-x-4 bottom-[calc(76px+env(safe-area-inset-bottom))] z-[60] mx-auto flex max-w-sm items-center justify-between gap-3 rounded-2xl bg-white px-4 py-3 text-[14.5px] font-medium text-nuit shadow-2xl lg:bottom-6">
-      <span className="flex items-center gap-2">{!toast.annuler && sauvegarde !== 'erreur' && <span className="grid h-5 w-5 place-items-center rounded-full bg-emerald-500 text-white"><Icone nom="ui-ok" taille={13} /></span>}{toast.texte}</span>
-      {toast.annuler && <button type="button" onClick={toast.annuler} className="-my-1 min-h-9 rounded-full px-3 font-semibold text-[#a3461d] hover:bg-black/5">Annuler</button>}
+    <div role="status" onPointerEnter={() => setToastTenu(true)} onPointerLeave={() => setToastTenu(false)} onFocus={() => setToastTenu(true)} onBlur={e => { if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setToastTenu(false); }} className="adm-toast fixed inset-x-4 bottom-[calc(76px+env(safe-area-inset-bottom))] z-[60] mx-auto flex max-w-sm items-center justify-between gap-3 rounded-2xl bg-white px-4 py-3 text-[14.5px] font-medium text-nuit shadow-2xl lg:bottom-6">
+      <span className="flex items-center gap-2">{/* La coche verte confirme ; une simple information n'en a pas. */}{!toast.annuler && toast.genre !== 'info' && sauvegarde !== 'erreur' && <span className="text-emerald-600" aria-hidden="true"><Icone nom="ui-ok" taille={18} /></span>}{toast.texte}</span>
+      {toast.annuler && <button ref={actionToast} type="button" onClick={toast.annuler} className="-my-2 min-h-11 rounded-full px-3 font-semibold text-nuit underline decoration-nuit/30 underline-offset-4 hover:bg-black/5">{toast.action ?? 'Annuler'}</button>}
     </div>
   );
 
@@ -196,23 +268,20 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
         </div>
         <nav className="flex flex-col gap-0.5" aria-label="Sections">
           {onglets.map(o => (
-            <button key={o.id} type="button" onClick={() => setOnglet(o.id)} aria-current={onglet === o.id ? 'page' : undefined}
+            <button key={o.id} type="button" onClick={() => { if (o.id !== onglet) { setOnglet(o.id); scrollTo({ top: 0 }); } }} aria-current={onglet === o.id ? 'page' : undefined}
               className={`flex min-h-9 items-center gap-2.5 rounded-lg px-2.5 text-[13.5px] font-medium transition ${onglet === o.id ? 'bg-white/[0.08] text-white' : 'text-white/55 hover:bg-white/[0.04] hover:text-white'}`}>
-              <Picto taille={18}>{o.icone}</Picto>{o.nom}
+              <Icone nom={o.icone} taille={18} />{o.nom}
             </button>
           ))}
         </nav>
         <div className="mt-auto flex flex-col gap-3">
-          <a href={demo ? '#page' : cheminPage(compte)} target={demo ? undefined : '_blank'} rel="noopener"
-            className="flex min-h-9 items-center justify-between gap-2 rounded-lg px-2.5 text-[13px] text-white/60 transition hover:bg-white/[0.04] hover:text-white">
-            <span className="truncate" translate="no">{urlPage(compte).replace(/^https?:\/\//, '')}</span><Icone nom="ui-fleche" taille={14} />
-          </a>
+          {/* L'adresse de la page vit en tête de Ma page, avec Copier : pas une deuxième fois ici. */}
           <div className="flex items-center gap-2.5 border-t border-white/[0.06] px-1 pt-3">
             {reglages.profil.avatar ? <img src={reglages.profil.avatar} alt="" className="h-8 w-8 rounded-full object-cover" /> : <span className="h-8 w-8 rounded-full bg-white/10" />}
             <div className="min-w-0 flex-1">
               <p className="truncate text-[13.5px] font-medium leading-tight">{reglages.profil.nom || 'Hopla'}</p>
-              <p className={`flex items-center gap-1.5 text-[11.5px] leading-tight ${sauvegarde === 'erreur' ? 'text-red-300' : 'text-white/40'}`}>
-                <span className={`h-1.5 w-1.5 rounded-full ${sauvegarde === 'encours' ? 'animate-pulse bg-amber-300' : sauvegarde === 'erreur' ? 'bg-red-400' : 'bg-emerald-400'}`} />{indicateur}
+              <p className={`flex items-center gap-1.5 text-[11.5px] leading-tight ${sauvegarde === 'erreur' ? 'text-red-300' : 'text-white/55'}`}>
+                <span className={`h-1.5 w-1.5 rounded-full ${sauvegarde === 'encours' ? 'animate-pulse bg-amber-300 motion-reduce:animate-none' : sauvegarde === 'erreur' ? 'bg-red-400' : 'bg-emerald-400'}`} />{indicateur}
               </p>
             </div>
           </div>
@@ -224,12 +293,14 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
         <div className="mx-auto flex h-16 max-w-6xl items-center gap-3 px-4">
           {reglages.profil.avatar ? <img src={reglages.profil.avatar} alt="" className="h-9 w-9 rounded-full object-cover" /> : <span className="h-9 w-9 rounded-full bg-white/10" />}
           <div className="min-w-0 flex-1">
-            <p className="truncate text-[15px] font-semibold leading-tight">{reglages.profil.nom || 'Hopla'}</p>
-            <p className={`flex items-center gap-1.5 text-[12px] leading-tight ${sauvegarde === 'erreur' ? 'text-red-300' : 'text-white/45'}`} aria-live="polite">
-              <span className={`h-1.5 w-1.5 rounded-full ${sauvegarde === 'encours' ? 'animate-pulse bg-amber-300' : sauvegarde === 'erreur' ? 'bg-red-400' : 'bg-emerald-400'}`} />{indicateur}
+            {/* Sur téléphone, l'en-tête porte l'adresse de la page : la copier ne prend plus une ligne au-dessus de la page. */}
+            <p className="truncate text-[15px] font-semibold leading-tight" translate="no">{urlPage(compte).replace(/^https?:\/\//, '')}</p>
+            <p className={`flex items-center gap-1.5 text-[12px] leading-tight ${sauvegarde === 'erreur' ? 'text-red-300' : 'text-white/55'}`} aria-live="polite">
+              <span className={`h-1.5 w-1.5 rounded-full ${sauvegarde === 'encours' ? 'animate-pulse bg-amber-300 motion-reduce:animate-none' : sauvegarde === 'erreur' ? 'bg-red-400' : 'bg-emerald-400'}`} />{indicateur}
             </p>
           </div>
-          <button type="button" onClick={() => setApercu(true)} className="flex min-h-9 items-center gap-1.5 rounded-full bg-white/[0.07] px-3.5 text-[13.5px] font-medium transition active:scale-95 lg:hidden">Aperçu</button>
+          <BoutonCopier compact texte={urlPage(compte)} label="Copier l’adresse de ta page" onCopie={() => { try { localStorage.setItem('hopla-page-partagee', '1'); } catch { /* stockage refusé */ } }} />
+          <button type="button" onClick={() => setApercu(true)} className="flex min-h-11 items-center gap-1.5 rounded-full bg-white/[0.07] px-3.5 text-[13.5px] font-medium transition active:scale-95 lg:hidden">Aperçu</button>
         </div>
       </header>
 
@@ -242,10 +313,10 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
           <div key={onglet} className="adm-onglet">
           <h1 className={`mb-4 text-[22px] font-semibold tracking-[-0.02em] ${onglet === 'page' ? 'sr-only' : ''}`}>{onglets.find(o => o.id === onglet)!.nom}</h1>
           {onglet === 'page' && <MaPage compte={compte} reglages={reglages} blocs={blocs} clics={clics} onReglages={changerReglages} onOrdonner={ordonner}
-            onOuvrir={b => setEdition({ bloc: b, nouveau: false })} onAjouter={b => setEdition({ bloc: b, nouveau: true })} envoyerImage={d => api.envoyerImage(d)} />}
+            onOuvrir={b => setEdition({ bloc: b, nouveau: false })} onAjouter={(b, enBas) => setEdition({ bloc: b, nouveau: true, enBas })} envoyerImage={d => api.envoyerImage(d)} annoncer={t => setToast(t)} />}
           {onglet === 'stats' && <OngletStats charger={chargerStats} limite={initial.paiement && !compte.pro} onPro={versAbonnement}
             ouvrirApps={reglages.ouvrirApps} onActiverApps={() => changerReglages({ ...reglages, ouvrirApps: true })} liste={<MaListe api={api} />} />}
-          {onglet === 'reglages' && <OngletReglages reglages={reglages} compte={compte} onChange={changerReglages} onDeconnexion={deconnexion} urlExport={api.urlExport} supprimerMonCompte={api.supprimerMonCompte}
+          {onglet === 'reglages' && <OngletReglages reglages={reglages} compte={compte} blocs={blocs} traduire={b => setEdition({ bloc: b, nouveau: false, traduire: true })} onChange={changerReglages} onDeconnexion={deconnexion} urlExport={api.urlExport} supprimerMonCompte={api.supprimerMonCompte}
             abonnement={abonnement} paiement={initial.paiement} ouvrirPaiement={api.ouvrirPaiement} ouvrirPortail={api.ouvrirPortail} />}
           {onglet === 'comptes' && api.comptes && <OngletComptes api={api.comptes} />}
           </div>
@@ -265,8 +336,8 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
           {onglets.map(o => (
             <li key={o.id}>
               <button type="button" onClick={() => { if (o.id !== onglet) { vibrer(5); setOnglet(o.id); scrollTo({ top: 0 }); } }} aria-current={onglet === o.id ? 'page' : undefined}
-                className={`flex h-14 w-full flex-col items-center justify-center gap-0.5 text-[11px] font-medium transition-colors duration-200 ${onglet === o.id ? 'text-white' : 'text-white/40'}`}>
-                <span className="grid h-7 place-items-center"><Picto>{o.icone}</Picto></span>{o.nom}
+                className={`flex h-14 w-full flex-col items-center justify-center gap-0.5 text-[11px] font-medium transition-colors duration-200 ${onglet === o.id ? 'text-white' : 'text-white/55'}`}>
+                <span className="grid h-7 place-items-center"><Icone nom={o.icone} taille={22} /></span>{o.nom}
               </button>
             </li>
           ))}
@@ -274,18 +345,18 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
       </nav>
 
       {apercu && (
-        <div className="adm-fondu fixed inset-0 z-40 flex flex-col bg-black/80 backdrop-blur-sm lg:hidden" role="dialog" aria-modal="true" aria-label="Aperçu de ta page">
+        <div ref={fenetreApercu} className="adm-fondu fixed inset-0 z-40 flex flex-col bg-black/80 backdrop-blur-sm lg:hidden" role="dialog" aria-modal="true" aria-label="Aperçu de ta page">
           <div className="adm-apercu relative min-h-0 flex-1 overflow-y-auto"><PageLiens page={page} apercu /></div>
           {/* Sous la page, pas par-dessus : le bouton ne cache jamais le bas de la page. */}
           <div className="flex shrink-0 justify-center border-t border-white/[0.08] bg-[#0b0f19] px-4 pt-3 pb-[max(12px,env(safe-area-inset-bottom))]">
-            <button type="button" onClick={() => setApercu(false)} className="min-h-12 rounded-full bg-white px-6 text-[15px] font-semibold text-nuit">Fermer l’aperçu</button>
+            <button ref={fermerApercu} type="button" onClick={() => setApercu(false)} className="min-h-12 rounded-full bg-white px-6 text-[15px] font-semibold text-nuit">Fermer l’aperçu</button>
           </div>
         </div>
       )}
 
       {edition && (
-        <EditeurBloc adressePage={urlPage(compte)} bloc={edition.bloc} reglages={reglages} nouveau={edition.nouveau} clics={clics[edition.bloc.id] ?? 0} prises={initial.places?.[edition.bloc.id] ?? 0} onFermer={() => setEdition(null)}
-          onEnregistrer={enregistrerBloc} onSupprimer={supprimer} onDupliquer={dupliquer} envoyerImage={d => api.envoyerImage(d)} apercuSite={u => api.apercuSite(u)} />
+        <EditeurBloc adressePage={urlPage(compte)} principal={compte.principal} bloc={edition.bloc} reglages={reglages} nouveau={edition.nouveau} clics={clics[edition.bloc.id] ?? 0} prises={initial.places?.[edition.bloc.id] ?? 0} onFermer={() => setEdition(null)}
+          onEnregistrer={enregistrerBloc} onSupprimer={supprimer} onDupliquer={dupliquer} onDeplacer={deplacer} traduire={edition.traduire} place={{ rang: blocs.findIndex(b => b.id === edition.bloc.id), total: blocs.length }} envoyerImage={d => api.envoyerImage(d)} apercuSite={u => api.apercuSite(u)} />
       )}
 
       {bulle}

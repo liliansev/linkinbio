@@ -42,16 +42,28 @@
 
 @media (prefers-reduced-motion: reduce) {
   .adm-feuille, .adm-fondu, .adm-toast, .adm-onglet, .adm-cascade > *, .adm-barre, [data-sortie] .adm-feuille, [data-sortie] .adm-fondu { animation: none; }
-  .adm-interrupteur > span { transition: none; }
+  .adm-interrupteur > span, .adm-nav-pastille { transition: none; }
 }
 
 .adm input[type='datetime-local'] { color-scheme: dark; }
-.adm ::selection { background: #ffb38a; color: #0c121f; }
+.adm ::selection { background: rgb(255 255 255 / 0.85); color: #0c121f; }
 .adm { scrollbar-color: rgb(255 255 255 / 0.18) transparent; -webkit-tap-highlight-color: transparent; }
-.adm :is(button, a, input, textarea, select, summary):focus-visible { outline: 2px solid #ffb38a; outline-offset: 2px; }
+.adm :is(button, a, input, textarea, select, summary):focus-visible { outline: 2px solid rgb(255 255 255 / 0.9); outline-offset: 2px; }
 
 /* Les premiers pas : la vraie page en miniature, à la largeur d'un téléphone. */
 .adm-miroir { --z: 0.62; width: calc(390px * var(--z)); flex-shrink: 0; }
 .adm-miroir-page { width: 390px; zoom: var(--z); }
+/* Le fond du thème remplit tout le cadre, même quand la page est encore courte. */
+.adm-miroir { display: flex; flex-direction: column; }
+.adm-miroir-page { flex: 1 0 auto; display: flex; flex-direction: column; }
+.adm-miroir-page > * { flex: 1 0 auto; }
 @media (min-width: 1024px) { .adm-miroir { --z: 0.86; } }
-.adm-miroir-fin { box-shadow: 0 0 0 1.5px rgb(255 179 138 / 0.55), 0 30px 90px -24px rgb(255 179 138 / 0.4); }
+.adm-miroir-fin { box-shadow: 0 0 0 1.5px rgb(255 255 255 / 0.4), 0 30px 90px -24px rgb(255 255 255 / 0.22); }
+
+/* Une feuille ouverte occupe le bas de l'écran : le message passe en haut, sans couvrir ce qu'on touche. */
+body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); bottom: auto; }
+
+/* Les champs de nombre et de suggestions gardent l'allure des autres : ni flèches natives, ni triangle de liste. */
+.adm input[type='number'] { appearance: textfield; -moz-appearance: textfield; }
+.adm input[type='number']::-webkit-inner-spin-button, .adm input[type='number']::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.adm input[list]::-webkit-calendar-picker-indicator { display: none !important; }

@@ -116,7 +116,7 @@ export const THEMES: Theme[] = [
     conseil: { style: 'verre', forme: 'pilule', ombre: 'subtile' },
   },
   {
-    id: 'coucher', nom: 'Coucher de soleil', humeur: 'Pop', famille: 'degrade',
+    id: 'coucher', nom: 'Couchant', humeur: 'Pop', famille: 'degrade',
     fond: 'linear-gradient(170deg, #ffc49e 0%, #ff8fa6 55%, #c7a2f0 100%)', fondUni: '#ff9fa8', texte: '#1c0b1f', doux: '#44263f',
     surface: '#ffffff', surfaceTexte: '#1c0b1f', vedette: '#1c0b1f', vedetteTexte: '#ffffff', ombre: '#7a2e4a',
     police: 'geometrique', decor: 'grain',
@@ -135,7 +135,7 @@ export const THEMES: Theme[] = [
   {
     id: 'bauhaus', nom: 'Bauhaus', humeur: 'Géométrique', famille: 'decale',
     fond: '#f2ead8', fondUni: '#f2ead8', texte: '#141414', doux: '#4a463d',
-    surface: '#d62e1f', surfaceTexte: '#ffffff', vedette: '#1f4fd1', vedetteTexte: '#ffffff', ombre: '#141414',
+    surface: '#b8281b', surfaceTexte: '#ffffff', vedette: '#1f4fd1', vedetteTexte: '#ffffff', ombre: '#141414',
     police: 'geometrique', decor: 'grain',
     typo: { nom: { taille: 2.6, graisse: 800, approche: -0.045 }, section: { taille: 1, graisse: 700, approche: -0.01 }, bouton: { graisse: 650, approche: -0.01 }, carte: { taille: 1.15, graisse: 780, approche: -0.03 } },
     conseil: { style: 'plein', forme: 'carre', ombre: 'marquee' },

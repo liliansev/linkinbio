@@ -56,3 +56,11 @@ test('sans choix aux premiers pas, les réseaux les plus connus', () => {
   assert.ok(reseauxDePartage([]).includes('instagram'));
   assert.deepEqual(reseauxDePartage(['tiktok']), ['tiktok']);
 });
+
+test('deReseau élide devant une voyelle', async () => {
+  const { deReseau } = await import('./provenance.ts');
+  assert.equal(deReseau('instagram'), 'd’Instagram');
+  assert.equal(deReseau('tiktok'), 'de TikTok');
+  assert.equal(deReseau('youtube'), 'de YouTube');
+  assert.equal(deReseau('qr'), 'd’un QR code');
+});

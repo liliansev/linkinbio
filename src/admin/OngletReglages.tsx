@@ -1,49 +1,86 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import QRCode from 'qrcode';
-import type { ComptePage, Reglages } from '../lib/types.ts';
+import { CONTACT_LEGAL } from '../lib/legal.ts';
+import type { Bloc, ComptePage, Reglages } from '../lib/types.ts';
 import { LANGUES, urlPage } from '../lib/types.ts';
-import { NOMS_LANGUES } from '../lib/langues.ts';
 import type { Abonnement as EtatAbonnement, Periode } from '../lib/abonnement.ts';
 import { AVANTAGES_PRO, TARIFS, estResilie, euros } from '../lib/abonnement.ts';
 import { Icone } from '../components/Icone.tsx';
-import { BoutonSecondaire, Carte, Champ, Interrupteur, classeSaisie } from './ui.tsx';
+import { Bascule, BoutonCopier, BoutonSecondaire, Carte, Champ, Interrupteur, classeSaisie, flechesRadio, vibrer } from './ui.tsx';
+import { LANGUES_FR } from './ReglesBloc.tsx';
 
-export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlExport, supprimerMonCompte, abonnement, paiement, ouvrirPaiement, ouvrirPortail }: {
-  reglages: Reglages; compte: ComptePage; onChange: (r: Reglages) => void; onDeconnexion: () => void;
+export function OngletReglages({ reglages, compte, blocs = [], traduire, onChange, onDeconnexion, urlExport, supprimerMonCompte, abonnement, paiement, ouvrirPaiement, ouvrirPortail }: {
+  reglages: Reglages; compte: ComptePage; blocs?: Bloc[]; traduire?: (b: Bloc) => void; onChange: (r: Reglages) => void; onDeconnexion: () => void;
   urlExport: string | null; supprimerMonCompte: (confirmation: string) => Promise<{ ok: boolean; message: string }>;
   abonnement: EtatAbonnement & { pro: boolean }; paiement: boolean;
   ouvrirPaiement: (periode: Periode) => Promise<string>; ouvrirPortail: () => Promise<string>;
 }) {
   const URL_PUBLIQUE = urlPage(compte);
   const [qr, setQr] = useState('');
-  const [copie, setCopie] = useState(false);
   const [ouverte, setOuverte] = useState<Section | null>(null);
+  // Ouvrir ou quitter une section déplace le focus : sur son retour en entrant, sur sa ligne en sortant.
+  const retour = useRef<HTMLButtonElement>(null);
+  const derniere = useRef<Section | null>(null);
+  useEffect(() => {
+    if (ouverte) { derniere.current = ouverte; retour.current?.focus({ preventScroll: true, focusVisible: false } as FocusOptions); }
+    else if (derniere.current) document.getElementById(`reglage-${derniere.current}`)?.focus({ preventScroll: true });
+  }, [ouverte]);
   const seo = (champs: Partial<Reglages['seo']>) => onChange({ ...reglages, seo: { ...reglages.seo, ...champs } });
   useEffect(() => {
     QRCode.toDataURL(`${URL_PUBLIQUE}?s=qr`, { width: 720, margin: 2, color: { dark: '#0c121f', light: '#ffffff' }, errorCorrectionLevel: 'M' }).then(setQr).catch(() => setQr(''));
   }, [URL_PUBLIQUE]);
-  async function copier() {
-    try { await navigator.clipboard.writeText(URL_PUBLIQUE); setCopie(true); setTimeout(() => setCopie(false), 1800); } catch { /* presse-papiers refusé */ }
-  }
 
   const pro = !compte.principal && paiement;
-  const sections: { id: Section; nom: string; resume: string }[] = [
-    ...(pro ? [{ id: 'abonnement' as const, nom: 'Abonnement', resume: abonnement.pro ? 'Pro' : 'Gratuit' }] : []),
-    { id: 'partage', nom: 'Partage et Google', resume: reglages.seo.titre || 'Titre, description, bouton Partager' },
-    { id: 'langues', nom: 'Langues', resume: ['Français', ...reglages.langues.map(l => NOMS_LANGUES[l])].join(', ') },
-    { id: 'donnees', nom: 'Tes données', resume: 'Exporter, supprimer ton compte' },
+  // Un titre et une icône par ligne, sans sous-titre (Lilian, 18 octobre 2026).
+  const sections: { id: Section; nom: string; icone: string }[] = [
+    { id: 'partager', nom: 'QR code et adresse', icone: 'qr' },
+    ...(pro ? [{ id: 'abonnement' as const, nom: 'Abonnement', icone: 'diamant' }] : []),
+    { id: 'partage', nom: 'Aperçu dans Google', icone: 'google' },
+    { id: 'langues', nom: 'Langues', icone: 'globe' },
+    { id: 'donnees', nom: 'Mes données', icone: 'cadenas' },
+  ];
+  const bascules: { nom: string; icone: string; actif: boolean; changer: (v: boolean) => void }[] = [
+    { nom: 'Ouvrir YouTube, Spotify… dans leur app', icone: 'lienExterne', actif: reglages.ouvrirApps, changer: v => onChange({ ...reglages, ouvrirApps: v }) },
+    { nom: 'Mes stats par e-mail chaque lundi', icone: 'courrier', actif: reglages.resumeHebdo, changer: v => onChange({ ...reglages, resumeHebdo: v }) },
   ];
 
   if (ouverte) return (
     <div className="flex flex-col gap-3">
       <div className="sticky top-14 z-10 -mx-4 bg-nuit/95 px-3 py-1 backdrop-blur lg:top-0">
-        <button type="button" onClick={() => setOuverte(null)} className="flex min-h-10 items-center gap-1 rounded-full pr-3 text-[14px] font-medium text-white/75 hover:text-white">
-          <Icone nom="ui-chevron" taille={18} className="rotate-90" /> Tous les réglages
+        {/* Un seul titre : le retour porte le nom de la section, la carte dessous n'en répète pas. */}
+        <button ref={retour} type="button" onClick={() => setOuverte(null)} aria-label={`${sections.find(x => x.id === ouverte)?.nom ?? ''}, revenir à tous les réglages`}
+          className="flex min-h-11 items-center gap-1 rounded-full pr-3 text-[15px] font-medium text-white hover:text-white/80">
+          <Icone nom="ui-chevron" taille={18} className="rotate-90 text-white/60" /> {sections.find(x => x.id === ouverte)?.nom}
         </button>
       </div>
       {ouverte === 'abonnement' && <Abonnement abonnement={abonnement} ouvrirPaiement={ouvrirPaiement} ouvrirPortail={ouvrirPortail} />}
-      {ouverte === 'partage' && <Carte titre="Partage et Google">
+      {ouverte === 'partager' && <Carte>
+        <div className="flex items-center gap-2 rounded-xl bg-white/[0.06] p-1.5 pl-3.5">
+          <span className="min-w-0 flex-1 truncate text-[15px] text-white">{URL_PUBLIQUE.replace(/^https:\/\//, '').replace(/\/$/, '')}</span>
+          <BoutonCopier texte={URL_PUBLIQUE} />
+        </div>
+        {qr && (
+          <div className="mt-4 flex flex-col items-center gap-3">
+            <img src={qr} alt="QR code vers ta page" className="h-44 w-44 rounded-2xl bg-white p-1.5" />
+            <a href={qr} download={`qr-${compte.pseudo}-hopla.png`} className="inline-flex min-h-11 items-center gap-1.5 rounded-full bg-white/[0.08] px-4 text-[14px] font-medium text-white"><Icone nom="telecharger" taille={16} /> Télécharger le QR code</a>
+          </div>
+        )}
+        <div className="mt-4 border-t border-white/[0.06]">
+          <Interrupteur label="Bouton Partager sur ma page" actif={reglages.partage} onChange={v => onChange({ ...reglages, partage: v })} />
+        </div>
+      </Carte>}
+      {ouverte === 'partage' && <Carte>
         <div className="flex flex-col gap-3">
+          {/* Ce que ces deux champs deviennent : la carte qu'affichent Google, WhatsApp ou iMessage quand on partage ta page. */}
+          <p className="text-[13px] leading-snug text-white/60">Ce que montrent Google et l’aperçu quand tu partages ton lien :</p>
+          <div className="overflow-hidden rounded-2xl bg-white/[0.05] ring-1 ring-white/[0.06]" aria-hidden="true">
+            {reglages.profil.avatar && <img src={reglages.profil.avatar} alt="" className="h-24 w-full object-cover opacity-90" />}
+            <div className="px-3.5 py-2.5">
+              <span className="block text-[12px] text-white/50" translate="no">{URL_PUBLIQUE.replace(/^https?:\/\//, '').split('/')[0]}</span>
+              <span className="block truncate text-[14.5px] font-semibold text-white">{reglages.seo.titre || reglages.profil.nom}</span>
+              <span className="line-clamp-2 text-[13px] leading-snug text-white/60">{reglages.seo.description || reglages.profil.bio}</span>
+            </div>
+          </div>
           <Champ label="Titre dans Google et sur les réseaux" aide={`${reglages.seo.titre.length}/60 caractères conseillés`}>
             <input className={classeSaisie} value={reglages.seo.titre} maxLength={80} onChange={e => seo({ titre: e.target.value })} />
           </Champ>
@@ -52,62 +89,53 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
           </Champ>
           <div className="divide-y divide-white/[0.06]">
             {compte.principal
-              ? <Interrupteur label="Page visible par Google" aide={reglages.seo.indexable ? 'La page peut apparaître dans les résultats de recherche.' : 'La page demande aux moteurs de ne pas l’indexer.'} actif={reglages.seo.indexable} onChange={v => seo({ indexable: v })} />
+              ? <Interrupteur label="Page visible par Google" actif={reglages.seo.indexable} onChange={v => seo({ indexable: v })} />
               : <p className="py-3 text-[13.5px] leading-snug text-white/55">Pendant la bêta, ta page n’apparaît pas dans Google. Le titre et la description servent aux aperçus quand tu partages ton lien.</p>}
-            <Interrupteur label="Bouton Partager" aide="En haut à droite de ta page." actif={reglages.partage} onChange={v => onChange({ ...reglages, partage: v })} />
           </div>
         </div>
       </Carte>}
-      {ouverte === 'langues' && <Langues reglages={reglages} onChange={onChange} adresse={URL_PUBLIQUE} />}
+      {ouverte === 'langues' && <Langues reglages={reglages} onChange={onChange} adresse={URL_PUBLIQUE} blocs={blocs} traduire={traduire} />}
       {ouverte === 'donnees' && <TesDonnees compte={compte} urlExport={urlExport} supprimerMonCompte={supprimerMonCompte} />}
     </div>
   );
 
   return (
     <div className="flex flex-col gap-4">
-      <Carte titre="Ta page">
-        <div className="flex items-center gap-2 rounded-xl bg-white/[0.06] p-1.5 pl-3.5">
-          <span className="min-w-0 flex-1 truncate text-[15px] text-white">{URL_PUBLIQUE.replace(/^https:\/\//, '').replace(/\/$/, '')}</span>
-          <button type="button" onClick={copier} className="min-h-10 rounded-full bg-white px-4 text-[14px] font-semibold text-nuit">{copie ? 'Copié' : 'Copier'}</button>
-        </div>
-        {qr && (
-          <div className="mt-4 flex items-center gap-4">
-            <img src={qr} alt="QR code vers ta page" className="h-24 w-24 rounded-xl bg-white p-1" />
-            <div className="flex flex-col gap-2">
-              <p className="text-[13px] leading-snug text-white/55">Les scans apparaissent dans tes stats, source « QR code ».</p>
-              <a href={qr} download={`qr-${compte.pseudo}-hopla.png`} className="inline-flex min-h-10 w-fit items-center rounded-full bg-white/[0.08] px-4 text-[14px] font-medium text-white">Télécharger le QR code</a>
-            </div>
-          </div>
-        )}
-      </Carte>
-
-      {/* Une ligne par sujet, qui s'ouvre à la place de la liste (Lilian, 18 octobre 2026 : trop d'options d'un coup). */}
+      {/* Une ligne par sujet, qui s'ouvre à la place de la liste ; les réglages d'un seul interrupteur restent dans la liste. */}
       <ul className="overflow-hidden rounded-xl bg-white/[0.03] ring-1 ring-white/[0.07]">
         {sections.map((l, i) => (
           <li key={l.id} className={i > 0 ? 'border-t border-white/[0.07]' : ''}>
-            <button type="button" onClick={() => { setOuverte(l.id); scrollTo({ top: 0 }); }} className="flex min-h-[56px] w-full items-center gap-3 px-4 py-2 text-left transition hover:bg-white/[0.04] active:bg-white/[0.06]">
-              <span className="flex min-w-0 flex-1 flex-col">
-                <span className="text-[14.5px] font-medium text-white">{l.nom}</span>
-                <span className="truncate text-[12.5px] text-white/45">{l.resume}</span>
-              </span>
+            <button id={`reglage-${l.id}`} type="button" onClick={() => { setOuverte(l.id); scrollTo({ top: 0 }); }} className="flex min-h-14 w-full items-center gap-3.5 px-4 text-left transition hover:bg-white/[0.04] active:bg-white/[0.06]">
+              <Icone nom={l.icone} taille={20} className="shrink-0 text-white/80" />
+              <span className="min-w-0 flex-1 truncate text-[15px] font-medium text-white">{l.nom}</span>
               <Icone nom="ui-chevron" taille={16} className="-rotate-90 text-white/30" />
             </button>
           </li>
         ))}
+        {bascules.map(l => (
+          <li key={l.nom} className="border-t border-white/[0.07]">
+            <div className="flex min-h-14 items-center gap-3.5 px-4">
+              <Icone nom={l.icone} taille={20} className="shrink-0 text-white/80" />
+              <span className="min-w-0 flex-1 text-[15px] font-medium text-white">{l.nom}</span>
+              <Bascule actif={l.actif} label={l.nom} onClick={() => { vibrer(); l.changer(!l.actif); }} />
+            </div>
+          </li>
+        ))}
       </ul>
 
-      {/* Les réglages d'un seul interrupteur restent dans la liste : rien à ouvrir. */}
-      <div className="divide-y divide-white/[0.07] rounded-xl bg-white/[0.03] px-4 ring-1 ring-white/[0.07]">
-        <Interrupteur label="Ouvrir les liens dans les apps" aide="Depuis Instagram ou TikTok, un lien YouTube, Spotify ou Instagram s’ouvre dans son app." actif={reglages.ouvrirApps} onChange={v => onChange({ ...reglages, ouvrirApps: v })} />
-        <Interrupteur label="Le résumé du lundi" aide="Chaque lundi matin, par e-mail : ce qui a marché sur ta page." actif={reglages.resumeHebdo} onChange={v => onChange({ ...reglages, resumeHebdo: v })} />
-      </div>
+      <a href={`mailto:${CONTACT_LEGAL}?subject=${encodeURIComponent('Hopla : une question')}`}
+        className="flex min-h-14 items-center gap-3.5 rounded-xl border border-white/[0.07] bg-white/[0.03] px-4 text-[15px] font-medium text-white transition hover:bg-white/[0.05]">
+        <Icone nom="message" taille={20} className="shrink-0 text-white/80" />
+        <span className="flex-1">Une question ? Écris-nous</span>
+        <Icone nom="ui-chevron" taille={16} className="-rotate-90 text-white/30" />
+      </a>
 
       <BoutonSecondaire onClick={onDeconnexion} className="self-center">Me déconnecter</BoutonSecondaire>
     </div>
   );
 }
 
-type Section = 'abonnement' | 'partage' | 'langues' | 'donnees';
+type Section = 'partager' | 'abonnement' | 'partage' | 'langues' | 'donnees';
 
 const date = (ms: number) => new Date(ms).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
 
@@ -136,14 +164,14 @@ function Abonnement({ abonnement, ouvrirPaiement, ouvrirPortail }: {
         : { texte: fin ? `Se renouvelle le ${fin}.` : 'Ton abonnement est actif.', alerte: false };
     return (
       <div id="abonnement" className="scroll-mt-24">
-        <Carte titre="Ton abonnement" action={<span className="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1 text-[12.5px] font-semibold text-nuit"><Icone nom="sparkle" taille={13} />Pro</span>}>
+        <Carte titre="Ton abonnement" action={<span className="inline-flex items-center gap-1 text-[13px] font-semibold text-white"><Icone nom="sparkle" taille={14} />Pro</span>}>
           <p className={`text-[14px] leading-snug ${etat.alerte ? 'text-amber-200' : 'text-white/75'}`}>{etat.texte}</p>
           {abonnement.portail && (
             <>
-              <button type="button" disabled={envoi} onClick={() => aller(ouvrirPortail)} className="mt-3 inline-flex min-h-10 items-center gap-1.5 rounded-full bg-white/[0.08] px-4 text-[14px] font-medium text-white hover:bg-white/[0.13] disabled:opacity-50">
+              <button type="button" disabled={envoi} onClick={() => aller(ouvrirPortail)} className="mt-3 inline-flex min-h-11 items-center gap-1.5 rounded-full bg-white/[0.08] px-4 text-[14px] font-medium text-white hover:bg-white/[0.13] disabled:opacity-50">
                 {envoi ? 'Ouverture…' : 'Gérer mon abonnement'} <Icone nom="ui-ouvrir" taille={15} />
               </button>
-              <p className="mt-2 text-[12.5px] leading-snug text-white/45">Ta carte et tes factures, sur la page sécurisée de Creem.</p>
+              <p className="mt-2 text-[12.5px] leading-snug text-white/55">Ta carte et tes factures, sur la page sécurisée de Creem.</p>
               {/* La loi demande une résiliation nommée comme telle, accessible sans détour. */}
               {!estResilie(abonnement.statut) && (
                 <button type="button" disabled={envoi} onClick={() => aller(ouvrirPortail)} className={`mt-3 text-[13px] ${lien}`}>Résilier mon abonnement</button>
@@ -164,11 +192,11 @@ function Abonnement({ abonnement, ouvrirPaiement, ouvrirPortail }: {
         <ul className="flex flex-col gap-2">
           {AVANTAGES_PRO.map(a => (
             <li key={a} className="flex gap-2.5 text-[14px] leading-snug text-white/80">
-              <span className="mt-0.5 grid h-[18px] w-[18px] shrink-0 place-items-center rounded-full bg-white/10 text-white"><Icone nom="ui-ok" taille={12} /></span>{a}
+              <span className="mt-0.5 shrink-0 text-white" aria-hidden="true"><Icone nom="ui-ok" taille={16} /></span>{a}
             </li>
           ))}
         </ul>
-        <div role="radiogroup" aria-label="Formule" className="mt-4 grid grid-cols-2 gap-2">
+        <div role="radiogroup" onKeyDown={e => flechesRadio(e)} aria-label="Formule" className="mt-4 grid grid-cols-2 gap-2">
           {(Object.keys(TARIFS) as Periode[]).map(p => {
             const t = TARIFS[p], choisi = periode === p;
             return (
@@ -176,7 +204,7 @@ function Abonnement({ abonnement, ouvrirPaiement, ouvrirPortail }: {
                 className={`flex flex-col items-start rounded-2xl border px-3.5 py-3 text-left transition ${choisi ? 'border-white/30 bg-white/10' : 'border-white/10 bg-white/[0.03] hover:border-white/20'}`}>
                 <span className="text-[13px] text-white/55">{p === 'an' ? 'Annuel' : 'Mensuel'}</span>
                 <span className="mt-0.5 text-[20px] font-semibold tracking-tight text-white tabular-nums">{euros(t.prix)}<span className="text-[13px] font-normal text-white/50"> / {p === 'an' ? 'an' : 'mois'}</span></span>
-                {'economie' in t && <span className="mt-1 rounded-full bg-white/10 px-2 py-0.5 text-[11.5px] font-semibold text-white">{t.economie}</span>}
+                {'economie' in t && <span className="mt-1 text-[12.5px] font-semibold text-emerald-300">{t.economie}</span>}
               </button>
             );
           })}
@@ -185,7 +213,7 @@ function Abonnement({ abonnement, ouvrirPaiement, ouvrirPortail }: {
           {envoi ? 'Ouverture du paiement…' : `Passer en Pro, ${TARIFS[periode].libelle}`}
         </button>
         {erreur && <p role="alert" className="mt-3 text-[13.5px] text-red-300">{erreur}</p>}
-        <p className="mt-3 text-[12.5px] leading-snug text-white/45">
+        <p className="mt-3 text-[12.5px] leading-snug text-white/55">
           Prix TTC. Paiement sécurisé par Creem, revendeur officiel de l’abonnement : il encaisse, envoie la facture et gère la TVA. Résiliable à tout moment, effet à la fin de la période payée.{' '}
           {abonnement.portail && <button type="button" onClick={() => aller(ouvrirPortail)} className={lien}>Mes factures</button>}
         </p>
@@ -210,13 +238,13 @@ function TesDonnees({ compte, urlExport, supprimerMonCompte }: { compte: CompteP
     } catch { setErreur('Le serveur ne répond pas. Réessaie dans un instant.'); }
     setEnvoi(false);
   }
-  const lien = 'text-white/60 underline decoration-white/25 underline-offset-2 hover:text-white';
+  const lien = 'inline-flex min-h-11 items-center text-white/60 underline decoration-white/25 underline-offset-2 hover:text-white';
   return (
-    <Carte titre="Tes données">
+    <Carte>
       <p className="text-[13.5px] leading-snug text-white/60">Ta page, tes liens, tes images et tes statistiques, dans un fichier que tu peux garder ou importer ailleurs.</p>
       {urlExport
-        ? <a href={urlExport} download className="mt-3 inline-flex min-h-10 items-center rounded-full bg-white/[0.08] px-4 text-[14px] font-medium text-white hover:bg-white/[0.13]">Télécharger mes données</a>
-        : <p className="mt-3 text-[13px] text-white/45">L’export n’existe pas dans l’aperçu.</p>}
+        ? <a href={urlExport} download className="mt-3 inline-flex min-h-11 items-center rounded-full bg-white/[0.08] px-4 text-[14px] font-medium text-white hover:bg-white/[0.13]">Télécharger mes données</a>
+        : <p className="mt-3 text-[13px] text-white/55">L’export n’existe pas dans l’aperçu.</p>}
       {!compte.principal && (
         <div className="mt-5 border-t border-white/[0.06] pt-4">
           {ouvert ? (
@@ -224,17 +252,17 @@ function TesDonnees({ compte, urlExport, supprimerMonCompte }: { compte: CompteP
               <p className="text-[13.5px] leading-snug text-red-200/90">Ta page disparaît tout de suite, avec tes liens, tes images et tes statistiques. Rien ne se récupère. Pour confirmer, tape ton pseudo, <strong className="text-white">{compte.pseudo}</strong>.</p>
               <input className={classeSaisie} value={saisie} onChange={e => setSaisie(e.target.value)} autoCapitalize="none" autoComplete="off" spellCheck={false} aria-label="Ton pseudo, pour confirmer" />
               <div className="flex flex-wrap gap-2">
-                <button type="button" disabled={envoi || saisie.trim().toLowerCase() !== compte.pseudo} onClick={supprimer} className="min-h-10 rounded-full bg-red-500 px-4 text-[14px] font-medium text-white disabled:opacity-40">{envoi ? 'Suppression…' : 'Supprimer définitivement'}</button>
-                <button type="button" onClick={() => { setOuvert(false); setSaisie(''); }} className="min-h-10 rounded-full px-4 text-[14px] text-white/60 hover:text-white">Annuler</button>
+                <button type="button" disabled={envoi || saisie.trim().toLowerCase() !== compte.pseudo} onClick={supprimer} className="min-h-11 rounded-full bg-red-500 px-4 text-[14px] font-medium text-white disabled:opacity-40">{envoi ? 'Suppression…' : 'Supprimer définitivement'}</button>
+                <button type="button" onClick={() => { setOuvert(false); setSaisie(''); }} className="min-h-11 rounded-full px-4 text-[14px] text-white/60 hover:text-white">Annuler</button>
               </div>
               {erreur && <p role="alert" className="text-[13.5px] text-red-300">{erreur}</p>}
             </div>
           ) : (
-            <button type="button" onClick={() => setOuvert(true)} className="min-h-10 rounded-full px-1 text-[14px] font-medium text-red-300 hover:text-red-200">Supprimer mon compte</button>
+            <button type="button" onClick={() => setOuvert(true)} className="min-h-11 rounded-full px-1 text-[14px] font-medium text-red-300 hover:text-red-200">Supprimer mon compte</button>
           )}
         </div>
       )}
-      <p className="mt-5 flex flex-wrap gap-x-4 gap-y-1 text-[13px]">
+      <p className="mt-3 flex flex-wrap gap-x-4 text-[13.5px]">
         <a href="/legal/cgu" target="_blank" rel="noopener" className={lien}>Conditions d’utilisation</a>
         <a href="/legal/confidentialite" target="_blank" rel="noopener" className={lien}>Confidentialité</a>
         <a href="/legal/traitement-des-donnees" target="_blank" rel="noopener" className={lien}>Accord de traitement</a>
@@ -243,29 +271,46 @@ function TesDonnees({ compte, urlExport, supprimerMonCompte }: { compte: CompteP
   );
 }
 
-const EN_FRANCAIS = { en: 'Anglais', es: 'Espagnol', de: 'Allemand', it: 'Italien' } as const;
 
 /** Les langues de la page : le visiteur la voit dans la sienne, là où les textes sont traduits. */
-function Langues({ reglages, onChange, adresse }: { reglages: Reglages; onChange: (r: Reglages) => void; adresse: string }) {
+function Langues({ reglages, onChange, adresse, blocs, traduire }: { reglages: Reglages; onChange: (r: Reglages) => void; adresse: string; blocs: Bloc[]; traduire?: (b: Bloc) => void }) {
   const actives = reglages.langues ?? [];
+  // Les blocs qui ont un texte à traduire et à qui il manque au moins une des langues proposées.
+  const aTraduire = blocs.filter(b => b.titre.trim() && actives.some(l => !b.traductions?.[l]));
   const basculer = (l: (typeof LANGUES)[number]) => onChange({ ...reglages, langues: actives.includes(l) ? actives.filter(x => x !== l) : LANGUES.filter(x => x === l || actives.includes(x)) });
   return (
-    <Carte titre="Langues de ta page">
-      <p className="text-[13.5px] leading-snug text-white/60">Ta page s’affiche dans la langue du visiteur. Les boutons, le formulaire et les dates sont traduits tout seuls ; tes textes, tu les traduis dans chaque bloc (Traductions).</p>
+    <Carte>
+      <p className="text-[13.5px] leading-snug text-white/60">Ta page s’affiche dans la langue du visiteur. Les boutons, le formulaire et les dates sont traduits tout seuls ; tes textes se traduisent bloc par bloc.</p>
       <div className="mt-3 divide-y divide-white/[0.06] rounded-2xl bg-white/[0.035] px-4" role="group" aria-label="Langues proposées">
         <div className="flex items-center justify-between gap-4 py-3">
           <span className="text-[15px] font-medium text-white">Français</span>
-          <span className="text-[13px] text-white/45">Langue de ta page</span>
+          <span className="text-[13px] text-white/55">Langue de ta page</span>
         </div>
         {LANGUES.map(l => (
-          <Interrupteur key={l} label={NOMS_LANGUES[l]} aide={EN_FRANCAIS[l]} actif={actives.includes(l)} onChange={() => basculer(l)} />
+          <Interrupteur key={l} label={LANGUES_FR[l]} actif={actives.includes(l)} onChange={() => basculer(l)} />
         ))}
       </div>
+      {actives.length > 0 && traduire && (
+        <div className="mt-4">
+          <p className="mb-2 px-1 text-[13.5px] font-medium text-white/75">{aTraduire.length ? 'À traduire' : 'Tous tes blocs sont traduits.'}</p>
+          {aTraduire.length > 0 && <ul className="divide-y divide-white/[0.06] rounded-2xl bg-white/[0.035]">
+            {aTraduire.map(b => (
+              <li key={b.id}>
+                <button type="button" onClick={() => traduire(b)} className="flex min-h-12 w-full items-center gap-3 px-4 text-left transition hover:bg-white/[0.04]">
+                  <span className="min-w-0 flex-1 truncate text-[14.5px] font-medium text-white">{b.titre}</span>
+                  <span className="shrink-0 text-[13px] text-white/55">{actives.filter(l => !b.traductions?.[l]).map(l => LANGUES_FR[l]).join(', ')}</span>
+                  <Icone nom="ui-chevron" taille={16} className="-rotate-90 text-white/55" />
+                </button>
+              </li>
+            ))}
+          </ul>}
+        </div>
+      )}
       {actives.length > 0 && (
         <div className="mt-4 flex flex-col gap-3">
           {actives.map(l => (
-            <Champ key={l} label={`Ta bio en ${NOMS_LANGUES[l].toLowerCase()}`} aide={<a href={`${adresse}?lang=${l}`} target="_blank" rel="noopener" className="underline decoration-white/25 underline-offset-2 hover:text-white">Voir ma page en {NOMS_LANGUES[l].toLowerCase()}</a>}>
-              <textarea className={`${classeSaisie} min-h-16`} lang={l} maxLength={300} value={reglages.bioTraduite?.[l] ?? ''} placeholder={reglages.profil.bio}
+            <Champ key={l} label={`Ta bio en ${LANGUES_FR[l].toLowerCase()}`} aide={<a href={`${adresse}?lang=${l}`} target="_blank" rel="noopener" className="underline decoration-white/25 underline-offset-2 hover:text-white">Voir ma page en {LANGUES_FR[l].toLowerCase()}</a>}>
+              <textarea className={`${classeSaisie} min-h-16`} lang={l} maxLength={300} value={reglages.bioTraduite?.[l] ?? ''} placeholder={`Ta bio en ${LANGUES_FR[l].toLowerCase()}`}
                 onChange={e => onChange({ ...reglages, bioTraduite: { ...reglages.bioTraduite, [l]: e.target.value } })} />
             </Champ>
           ))}

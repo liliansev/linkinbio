@@ -1,11 +1,13 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import type { Couleurs, FormeBouton, MiseEnPageBureau, OmbreBouton, Reglages, Reseau, StyleBouton } from '../lib/types.ts';
 import { ANIMATIONS, RESEAUX, SANS_COULEURS } from '../lib/types.ts';
 import { THEMES, themeDe, themeParId, variablesTheme } from '../lib/themes.ts';
 import type { Theme } from '../lib/themes.ts';
 import { Icone, NOMS_RESEAUX } from '../components/Icone.tsx';
-import { Carte, Champ, Interrupteur, NOMS_ANIMATIONS, Segments, classeSaisie, preparerImage, vibrer } from './ui.tsx';
+import { Carte, Champ, Interrupteur, NOMS_ANIMATIONS, Segments, classeSaisie, flechesRadio, preparerImage, vibrer } from './ui.tsx';
+import { pseudoReseau, urlReseau } from '../lib/demarrage.ts';
+import { adresseSaisie, pourquoiPasReseau } from '../lib/valider.ts';
 
 const STYLES: { id: StyleBouton; nom: string }[] = [
   { id: 'plein', nom: 'Plein' }, { id: 'contour', nom: 'Contour' }, { id: 'doux', nom: 'Doux' }, { id: 'relief', nom: 'Relief' }, { id: 'verre', nom: 'Verre' },
@@ -13,12 +15,18 @@ const STYLES: { id: StyleBouton; nom: string }[] = [
 const OMBRES: { id: OmbreBouton; nom: string }[] = [{ id: 'aucune', nom: 'Aucune' }, { id: 'subtile', nom: 'Subtile' }, { id: 'marquee', nom: 'Marquée' }];
 const FORMES: { id: FormeBouton; nom: string }[] = [{ id: 'pilule', nom: 'Pilule' }, { id: 'arrondi', nom: 'Arrondi' }, { id: 'carre', nom: 'Net' }];
 const EXEMPLES: Record<Reseau, string> = {
-  youtube: 'https://youtube.com/@…', linkedin: 'https://linkedin.com/in/…', instagram: 'https://instagram.com/…', tiktok: 'https://tiktok.com/@…',
-  x: 'https://x.com/…', github: 'https://github.com/…', facebook: 'https://facebook.com/…', threads: 'https://threads.net/@…', twitch: 'https://twitch.tv/…',
+  youtube: '@pseudo ou lien', linkedin: 'pseudo ou lien', instagram: '@pseudo ou lien', tiktok: '@pseudo ou lien',
+  x: '@pseudo ou lien', github: 'pseudo ou lien', facebook: 'pseudo ou lien', threads: '@pseudo ou lien', twitch: 'pseudo ou lien',
   spotify: 'https://open.spotify.com/…', email: 'toi@exemple.fr', site: 'https://…',
 };
 
 /** Un thème en miniature : sa police, son accent et ses boutons, dans leur vrai style. */
+/** Regarder les thèmes coche l'étape « Choisis ton thème » : garder celui de départ est un choix. */
+function themesVus() {
+  try { localStorage.setItem('hopla-themes-vus', '1'); } catch { /* stockage refusé */ }
+  window.dispatchEvent(new Event('hopla-themes-vus'));
+}
+
 export function Pastille({ theme }: { theme: Theme }) {
   return (
     <span className="lp-pastille flex aspect-[4/5] w-full flex-col items-center gap-[6%] rounded-xl pt-[13%] shadow-inner ring-1 ring-white/10"
@@ -35,9 +43,16 @@ export type PartieApparence = 'profil' | 'theme' | 'couleurs' | 'animation' | 'b
 const TOUTES: PartieApparence[] = ['profil', 'theme', 'couleurs', 'animation', 'boutons', 'bureau', 'reseaux'];
 
 /** Les réglages d'apparence, en cartes. `parties` n'en garde que certaines (les feuilles de « Ma page »). */
-export function OngletApparence({ reglages, onChange, envoyerImage, principal = true, parties = TOUTES }: { reglages: Reglages; onChange: (r: Reglages) => void; envoyerImage: (d: string) => Promise<string>; principal?: boolean; parties?: PartieApparence[] }) {
+export function OngletApparence({ reglages, onChange, envoyerImage, principal = true, parties = TOUTES, vedettes }: { reglages: Reglages; onChange: (r: Reglages) => void; envoyerImage: (d: string) => Promise<string>; principal?: boolean; parties?: PartieApparence[]; vedettes?: number }) {
   const voir = (p: PartieApparence) => parties.includes(p);
+  // Seule dans une feuille, une partie est déjà nommée par la feuille : pas de second titre.
+  const titre = (t: string) => (parties.length === 1 ? undefined : t);
   const [envoi, setEnvoi] = useState(false);
+  const [photoRatee, setPhotoRatee] = useState(false);
+  const [enSaisie, setEnSaisie] = useState<Reseau | null>(null);
+  const [ligne, setLigne] = useState<Reseau | null>(null);
+  // Seule dans une feuille, la partie n'a pas de cadre : la feuille en est déjà un.
+  const nu = parties.length === 1;
   // Un thème choisi par-dessus des couleurs à soi : elles partent, mais un toucher les rend.
   const [avantTheme, setAvantTheme] = useState<Reglages | null>(null);
   const fichier = useRef<HTMLInputElement>(null);
@@ -48,40 +63,41 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
 
   async function avatar(f: File | undefined) {
     if (!f) return;
-    setEnvoi(true);
-    try { profil({ avatar: await envoyerImage(await preparerImage(f, 'carre')) }); } finally { setEnvoi(false); if (fichier.current) fichier.current.value = ''; }
+    setEnvoi(true); setPhotoRatee(false);
+    try { profil({ avatar: await envoyerImage(await preparerImage(f, 'carre')) }); } catch { setPhotoRatee(true); } finally { setEnvoi(false); if (fichier.current) fichier.current.value = ''; }
   }
 
   return (
     <div className="flex flex-col gap-4">
-      {voir('profil') && <Carte titre="Profil" id="profil">
+      {voir('profil') && <Carte nu={nu} titre={titre('Profil')} id="profil">
         <div className="mb-4 flex items-center gap-4">
           <button type="button" onClick={() => fichier.current?.click()} className="group relative h-20 w-20 shrink-0 overflow-hidden rounded-full bg-white/10" aria-label="Changer la photo">
             {reglages.profil.avatar && <img src={reglages.profil.avatar} alt="" className="h-full w-full object-cover" />}
             <span className="absolute inset-0 grid place-items-center bg-black/45 text-[12px] font-medium text-white opacity-0 transition group-hover:opacity-100">{envoi ? '…' : 'Changer'}</span>
           </button>
           <div className="flex flex-col items-start gap-1">
-            <button type="button" onClick={() => fichier.current?.click()} className="min-h-10 rounded-full bg-white/[0.08] px-4 text-[14px] font-medium text-white">{envoi ? 'Envoi…' : 'Changer la photo'}</button>
+            <button type="button" onClick={() => fichier.current?.click()} className="min-h-11 rounded-full bg-white/[0.08] px-4 text-[14px] font-medium text-white">{envoi ? 'Envoi…' : 'Changer la photo'}</button>
             {reglages.profil.avatar && <button type="button" onClick={() => profil({ avatar: '' })} className="px-1 text-[13px] text-white/50">Sans photo</button>}
           </div>
           <input ref={fichier} type="file" accept="image/*" hidden onChange={e => avatar(e.target.files?.[0])} />
         </div>
+        {photoRatee && <p className="-mt-2 mb-3 text-[13px] text-red-300" role="alert">La photo n’est pas passée. Essaie une autre image, en JPG ou PNG.</p>}
         <div className="flex flex-col gap-3">
           <Champ label="Nom"><input className={classeSaisie} value={reglages.profil.nom} maxLength={80} onChange={e => profil({ nom: e.target.value })} /></Champ>
           <Champ label="Bio"><textarea className={`${classeSaisie} min-h-24`} value={reglages.profil.bio} maxLength={300} onChange={e => profil({ bio: e.target.value })} /></Champ>
-          {principal && <Interrupteur label="Badge vérifié" aide="La petite coche à côté de ton nom." actif={reglages.profil.badge} onChange={v => profil({ badge: v })} />}
+          {principal && <Interrupteur label="Badge vérifié" actif={reglages.profil.badge} onChange={v => profil({ badge: v })} />}
         </div>
       </Carte>}
 
-      {voir('theme') && <Carte titre="Thème" id="theme" action={<span className="text-[13px] text-white/50">{theme.nom}</span>}>
+      {voir('theme') && <Carte nu={nu} titre={titre('Thème')} id="theme" action={titre('Thème') ? <span className="text-[13px] text-white/50">{theme.nom}</span> : undefined}>
         {avantTheme && (
           <p role="status" className="mb-3 flex items-center justify-between gap-3 text-[13px] text-white/60">
             Tes couleurs à toi ont été retirées.
             <button type="button" onClick={() => { onChange({ ...reglages, couleurs: avantTheme.couleurs, bouton: avantTheme.bouton }); setAvantTheme(null); }}
-              className="min-h-9 shrink-0 font-medium text-white underline decoration-white/30 underline-offset-2">Les garder</button>
+              className="min-h-11 shrink-0 font-medium text-white underline decoration-white/30 underline-offset-2">Les garder</button>
           </p>
         )}
-        <ul className="grid grid-cols-3 gap-2.5 sm:grid-cols-4">
+        <ul role="radiogroup" aria-label="Thème" onKeyDown={e => flechesRadio(e)} className="grid grid-cols-3 gap-2.5">
           {THEMES.map(t => (
             <li key={t.id}>
               {/* Choisir un thème pose aussi ses boutons et ses couleurs ; on peut les changer ensuite. */}
@@ -89,22 +105,18 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
                 const perso = Object.values(reglages.couleurs).some(Boolean);
                 setAvantTheme(perso ? reglages : null);
                 maj({ theme: t.id, bouton: t.conseil, couleurs: SANS_COULEURS });
-              }} aria-pressed={theme.id === t.id}
+              }} role="radio" aria-checked={theme.id === t.id}
                 className={`flex w-full flex-col items-center gap-1.5 rounded-2xl p-1.5 transition ${theme.id === t.id ? 'bg-white/10 ring-2 ring-white' : 'hover:bg-white/[0.05]'}`}>
                 <Pastille theme={t} />
-                <span className="flex w-full flex-col text-center leading-tight">
-                  <span className="truncate text-[12.5px] font-medium text-white/85">{t.nom}</span>
-                  <span className="truncate text-[11.5px] text-white/50">{t.humeur}</span>
-                </span>
+                <span className="line-clamp-2 w-full text-center text-[12.5px] font-medium leading-tight text-balance text-white/85">{t.nom}</span>
               </button>
             </li>
           ))}
         </ul>
       </Carte>}
 
-      {voir('couleurs') && <Carte titre="Couleurs" action={reglages.couleurs.fond || reglages.couleurs.boutons || reglages.couleurs.accent
+      {voir('couleurs') && <Carte nu={nu} titre={titre('Couleurs')} action={reglages.couleurs.fond || reglages.couleurs.boutons || reglages.couleurs.accent
         ? <button type="button" onClick={() => maj({ couleurs: SANS_COULEURS })} className="text-[13px] font-medium text-white/60 hover:text-white">Tout remettre</button> : undefined}>
-        <p className="-mt-1 mb-4 text-[13px] leading-snug text-white/55">Pars de {themeParId(reglages.theme).nom} et change ce que tu veux. Les textes s’ajustent pour rester lisibles.</p>
         <div className="flex flex-col gap-5">
           {CLES_COULEURS.map(c => (
             <ChoixCouleur key={c.id} nom={c.nom} valeur={reglages.couleurs[c.id]} duTheme={c.duTheme(themeParId(reglages.theme))}
@@ -113,20 +125,23 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
         </div>
       </Carte>}
 
-      {voir('animation') && <Carte titre="Liens mis en avant" action={<span className="text-[13px] text-white/50">{NOMS_ANIMATIONS[reglages.animation].nom}</span>}>
-        <p className="-mt-1 mb-3 text-[13px] leading-snug text-white/55">Le mouvement qui attire l’œil sur tes liens en avant. Un lien peut aussi choisir le sien.</p>
-        <div className="lp lp-mini rounded-2xl p-2.5" style={variablesTheme(theme) as CSSProperties} data-bouton={reglages.bouton.style} data-forme={reglages.bouton.forme} data-ombre={reglages.bouton.ombre} data-police={theme.police} data-decor={theme.decor}>
-          <ul role="radiogroup" aria-label="Animation des liens mis en avant" className="grid grid-cols-2 gap-2">
+      {voir('animation') && <Carte nu={nu} titre={titre('Animation')} action={titre('Animation') ? <span className="text-[13px] text-white/50">{NOMS_ANIMATIONS[reglages.animation].nom}</span> : undefined}>
+        <p className="mb-3 text-[13px] leading-snug text-white/60">{vedettes === 0
+          ? 'Aucun lien n’est mis en avant pour l’instant : touche un lien sur ta page, puis « Mis en avant » dans Plus de réglages. L’animation choisie ici s’y appliquera.'
+          : 'Pour les liens mis en avant. Chaque lien peut aussi choisir la sienne.'}</p>
+        <div className="lp lp-mini rounded-2xl p-3" style={variablesTheme(theme) as CSSProperties} data-bouton={reglages.bouton.style} data-forme={reglages.bouton.forme} data-ombre={reglages.bouton.ombre} data-police={theme.police} data-decor={theme.decor}>
+          <ul role="radiogroup" onKeyDown={e => flechesRadio(e)} aria-label="Animation des liens mis en avant" className="grid grid-cols-2 gap-2">
             {ANIMATIONS.map(a => {
               const choisi = reglages.animation === a;
               return (
                 <li key={a}>
                   <button type="button" role="radio" aria-checked={choisi} onClick={() => { vibrer(5); maj({ animation: a }); }}
-                    className={`flex w-full flex-col gap-2 rounded-[18px] p-2 pb-2.5 text-left transition duration-200 ${choisi ? 'bg-white/[0.12] ring-2 ring-white' : 'hover:bg-white/[0.06]'}`}>
-                    <span className={`lp-btn lp-btn-vedette lp-accent ${a !== 'aucune' ? `lp-anim-${a}` : ''}`} style={{ minHeight: 52, padding: '8px 12px', fontSize: 15 }}>
+                    className={`flex w-full items-center gap-1.5 rounded-[18px] p-1.5 text-left transition duration-200 ${choisi ? 'ring-2 ring-[color:var(--texte)]' : 'hover:bg-white/[0.06]'}`}>
+                    <span className={`lp-btn lp-btn-vedette lp-accent min-w-0 flex-1 ${a !== 'aucune' ? `lp-anim-${a}` : ''}`} style={{ minHeight: 52, padding: '8px 10px', fontSize: 15 }}>
                       {NOMS_ANIMATIONS[a].nom}
                     </span>
-                    <span className="px-1 text-[12px] leading-snug" style={{ color: 'var(--doux)' }}>{NOMS_ANIMATIONS[a].aide}</span>
+                    {/* Le même choix que pour les boutons : anneau, et coche à droite à la couleur du texte du thème. */}
+                    <span className="grid w-5 shrink-0 place-items-center" style={{ color: 'var(--texte)' }} aria-hidden="true">{choisi && <Icone nom="ui-ok" taille={18} />}</span>
                   </button>
                 </li>
               );
@@ -135,17 +150,22 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
         </div>
       </Carte>}
 
-      {voir('boutons') && <Carte titre="Boutons">
+      {voir('boutons') && <Carte nu={nu} titre={titre('Boutons')}>
         <div className="lp lp-mini rounded-2xl p-3" style={variablesTheme(theme) as CSSProperties} data-forme={reglages.bouton.forme} data-ombre={reglages.bouton.ombre} data-police={theme.police} data-decor={theme.decor}>
-          <ul className="grid grid-cols-1 gap-2.5">
-            {STYLES.map(s => (
+          <ul className="grid grid-cols-1 gap-2.5" role="radiogroup" aria-label="Style des boutons" onKeyDown={e => flechesRadio(e)}>
+            {STYLES.map(s => {
+              const choisi = reglages.bouton.style === s.id;
+              return (
               <li key={s.id} data-bouton={s.id} className="lp-style">
-                <button type="button" onClick={() => maj({ bouton: { ...reglages.bouton, style: s.id } })} aria-pressed={reglages.bouton.style === s.id}
-                  className={`w-full rounded-[calc(var(--rc)+6px)] p-1.5 transition ${reglages.bouton.style === s.id ? 'ring-2 ring-white' : ''}`}>
-                  <span className="lp-btn" style={{ minHeight: 48 }}><span className="lp-btn-texte"><span className="lp-btn-titre">{s.nom}</span></span></span>
+                <button type="button" role="radio" aria-checked={choisi} onClick={() => { vibrer(4); maj({ bouton: { ...reglages.bouton, style: s.id } }); }}
+                  className={`flex w-full items-center gap-3 rounded-[calc(var(--rc)+6px)] p-1.5 transition ${choisi ? 'ring-2 ring-[color:var(--texte)]' : 'hover:bg-white/[0.05]'}`}>
+                  <span className="lp-btn flex-1" style={{ minHeight: 48 }}><span className="lp-btn-texte"><span className="lp-btn-titre">{s.nom}</span></span></span>
+                  {/* Un bouton blanc sous un anneau blanc ne se voit pas : la coche, dans la couleur du texte du thème, dit le choix. */}
+                  <span className="grid w-6 shrink-0 place-items-center" style={{ color: 'var(--texte)' }} aria-hidden="true">{choisi && <Icone nom="ui-ok" taille={20} />}</span>
                 </button>
               </li>
-            ))}
+              );
+            })}
           </ul>
         </div>
         <div className="mt-4">
@@ -155,49 +175,61 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
         <div className="mt-4">
           <span className="mb-1.5 block text-[13px] font-medium text-white/70">Ombre</span>
           <Segments label="Ombre des boutons" valeur={reglages.bouton.ombre} options={OMBRES} onChange={v => maj({ bouton: { ...reglages.bouton, ombre: v } })} />
-          {reglages.bouton.style === 'relief' && <p className="mt-1.5 text-[12.5px] leading-snug text-white/50">Le style Relief garde son ombre franche, dessinée au trait.</p>}
         </div>
       </Carte>}
 
-      {voir('bureau') && <Carte titre="Sur ordinateur">
-        <p className="mb-3 text-[13px] leading-snug text-white/55">Sur téléphone, ta page reste une colonne. Sur un grand écran, elle prend la mise en page choisie.</p>
-        <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Mise en page sur ordinateur">
+      {voir('bureau') && <Carte nu={nu} titre={titre('Sur ordinateur')}>
+        <div className="grid grid-cols-3 gap-2" role="radiogroup" onKeyDown={e => flechesRadio(e)} aria-label="Mise en page sur ordinateur">
           {BUREAUX.map(b => {
             const actif = reglages.bureau === b.id;
             return (
               <button key={b.id} type="button" role="radio" aria-checked={actif} onClick={() => { vibrer(); maj({ bureau: b.id }); }}
                 className={`flex flex-col gap-2 rounded-2xl p-2 text-left transition ${actif ? 'bg-white/[0.1] ring-2 ring-white' : 'bg-white/[0.04] ring-1 ring-white/[0.08] hover:bg-white/[0.07]'}`}>
                 <SchemaBureau id={b.id} />
-                <span className="px-1 text-[13px] font-semibold text-white">{b.nom}</span>
-                <span className="px-1 pb-1 text-[12px] leading-snug text-white/55">{b.aide}</span>
+                <span className="px-1 pb-1 text-[13px] font-semibold text-white">{b.nom}</span>
               </button>
             );
           })}
         </div>
+        <p className="mt-3 text-[13px] leading-snug text-white/60">{BUREAUX.find(b => b.id === reglages.bureau)?.aide} Sur téléphone, ta page reste en colonne.</p>
       </Carte>}
 
-      {voir('reseaux') && <Carte titre="Réseaux" id="reseaux">
+      {voir('reseaux') && <Carte nu={nu} titre={titre('Réseaux')} id="reseaux">
         <ul className="flex flex-col gap-2">
-          {reglages.reseaux.map((r, i) => (
-            <li key={r.reseau} className="flex items-center gap-2">
-              <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-white/[0.07] text-white"><Icone nom={r.reseau} taille={20} /></span>
-              <input className={`${classeSaisie} py-2.5`} value={r.url} aria-label={NOMS_RESEAUX[r.reseau]} placeholder={EXEMPLES[r.reseau]} inputMode={r.reseau === 'email' ? 'email' : 'url'} autoCapitalize="none"
-                onChange={e => maj({ reseaux: reglages.reseaux.map((x, j) => (j === i ? { ...x, url: e.target.value } : x)) })} />
-              <div className="flex shrink-0 flex-col">
-                <button type="button" disabled={i === 0} aria-label="Monter" onClick={() => { const l = [...reglages.reseaux]; [l[i - 1], l[i]] = [l[i], l[i - 1]]; maj({ reseaux: l }); }} className="grid h-5 w-7 place-items-center text-white/50 disabled:opacity-20"><Icone nom="ui-chevron" taille={14} className="rotate-180" /></button>
-                <button type="button" disabled={i === reglages.reseaux.length - 1} aria-label="Descendre" onClick={() => { const l = [...reglages.reseaux]; [l[i + 1], l[i]] = [l[i], l[i + 1]]; maj({ reseaux: l }); }} className="grid h-5 w-7 place-items-center text-white/50 disabled:opacity-20"><Icone nom="ui-chevron" taille={14} /></button>
-              </div>
-              <button type="button" aria-label={`Retirer ${NOMS_RESEAUX[r.reseau]}`} onClick={() => maj({ reseaux: reglages.reseaux.filter((_, j) => j !== i) })} className="grid h-10 w-9 shrink-0 place-items-center text-white/40 hover:text-white"><Icone nom="ui-fermer" taille={18} /></button>
+          {reglages.reseaux.map((r, i) => {
+            // Un pseudo qui ne mène nulle part se dit sous le champ, une fois quitté ; il ne s'affiche pas sur la page.
+            const faux = enSaisie !== r.reseau && !!r.url.trim() && !urlReseau(r.reseau, r.url);
+            return (
+            <li key={r.reseau} className="flex flex-wrap items-center gap-1.5" onFocus={() => setLigne(r.reseau)} onBlur={e => { if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setLigne(l => (l === r.reseau ? null : l)); }}>
+              <Icone nom={r.reseau} taille={22} className="w-7 shrink-0 text-white" />
+              {/* Un pseudo suffit, comme aux premiers pas : il devient l'adresse du profil en quittant le champ. */}
+              <input className={`${classeSaisie} min-w-0 flex-1 py-2.5`} value={pseudoReseau(r.reseau, r.url)} onFocus={() => setEnSaisie(r.reseau)}
+                aria-invalid={faux || undefined} aria-describedby={faux ? `reseau-faux-${r.reseau}` : undefined} aria-label={NOMS_RESEAUX[r.reseau]} placeholder={EXEMPLES[r.reseau]} inputMode={r.reseau === 'email' ? 'email' : 'url'} autoCapitalize="none" autoCorrect="off"
+                onChange={e => maj({ reseaux: reglages.reseaux.map((x, j) => (j === i ? { ...x, url: e.target.value } : x)) })}
+                onBlur={e => { setEnSaisie(null); const u = urlReseau(r.reseau, e.target.value); if (u && u !== r.url) maj({ reseaux: reglages.reseaux.map((x, j) => (j === i ? { ...x, url: u } : x)) }); }} />
+              {/* Monter et descendre, à la taille du pouce, sur la ligne touchée seulement : le champ garde sa largeur sur les autres. */}
+              <button type="button" disabled={i === 0} aria-label={`Monter ${NOMS_RESEAUX[r.reseau]}`} onClick={() => { const l = [...reglages.reseaux]; [l[i - 1], l[i]] = [l[i], l[i - 1]]; maj({ reseaux: l }); }}
+                className={`h-11 w-9 shrink-0 place-items-center text-white/50 hover:text-white disabled:invisible ${reglages.reseaux.length > 1 && ligne === r.reseau ? 'grid' : 'hidden'}`}><Icone nom="ui-chevron" taille={18} className="rotate-180" /></button>
+              <button type="button" disabled={i === reglages.reseaux.length - 1} aria-label={`Descendre ${NOMS_RESEAUX[r.reseau]}`} onClick={() => { const l = [...reglages.reseaux]; [l[i + 1], l[i]] = [l[i], l[i + 1]]; maj({ reseaux: l }); }}
+                className={`h-11 w-9 shrink-0 place-items-center text-white/50 hover:text-white disabled:invisible ${reglages.reseaux.length > 1 && ligne === r.reseau ? 'grid' : 'hidden'}`}><Icone nom="ui-chevron" taille={18} /></button>
+              <button type="button" aria-label={`Retirer ${NOMS_RESEAUX[r.reseau]}`} onClick={() => maj({ reseaux: reglages.reseaux.filter((_, j) => j !== i) })} className="grid h-11 w-9 shrink-0 place-items-center text-white/50 hover:text-white"><Icone nom="ui-fermer" taille={18} /></button>
+              {faux && <p id={`reseau-faux-${r.reseau}`} role="alert" className="w-full pl-9 text-[13px] font-medium text-red-300">{pourquoiPasReseau(r.reseau, pseudoReseau(r.reseau, r.url))}</p>}
             </li>
-          ))}
+            );
+          })}
         </ul>
         {absents.length > 0 && (
-          <div className="mt-3 flex flex-wrap gap-2">
-            {absents.map(r => (
-              <button key={r} type="button" onClick={() => maj({ reseaux: [...reglages.reseaux, { reseau: r, url: '' }] })} className="flex min-h-9 items-center gap-1.5 rounded-full bg-white/[0.06] px-3 text-[13px] text-white/75 hover:bg-white/[0.1]">
-                <Icone nom={r} taille={14} /> {NOMS_RESEAUX[r]}
-              </button>
-            ))}
+          <div className="mt-4">
+            <span className="mb-1.5 block text-[13px] font-medium text-white/70">Ajouter un réseau</span>
+            <div className="flex flex-wrap gap-1">
+              {absents.map(r => (
+                <button key={r} type="button" aria-label={`Ajouter ${NOMS_RESEAUX[r]}`} onClick={() => { vibrer(4); maj({ reseaux: [...reglages.reseaux, { reseau: r, url: '' }] }); setTimeout(() => document.querySelector<HTMLInputElement>(`[aria-label="${NOMS_RESEAUX[r]}"]`)?.focus(), 40); }}
+                  className="flex w-[62px] flex-col items-center gap-1 rounded-xl py-2 text-white/80 transition hover:bg-white/[0.06] hover:text-white active:scale-95">
+                  <Icone nom={r} taille={22} />
+                  <span className="w-full truncate text-center text-[11.5px] text-white/55" aria-hidden="true">{NOMS_RESEAUX[r]}</span>
+                </button>
+              ))}
+            </div>
           </div>
         )}
         <div className="mt-4">
@@ -212,12 +244,12 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
 const BUREAUX: { id: MiseEnPageBureau; nom: string; aide: string }[] = [
   { id: 'colonne', nom: 'Colonne', aide: 'Comme sur téléphone, sur un panneau.' },
   { id: 'profil', nom: 'Profil', aide: 'Profil à gauche, liens sur deux colonnes.' },
-  { id: 'onepage', nom: 'One page', aide: 'Ton nom en grand, les liens en cartes.' },
+  { id: 'onepage', nom: 'Pleine page', aide: 'Ton nom en grand, les liens en cartes.' },
 ];
 
 /** Un petit croquis de chaque mise en page, dessiné en blocs. */
 function SchemaBureau({ id }: { id: MiseEnPageBureau }) {
-  const b = 'rgb(255 255 255 / 0.16)', p = 'var(--color-peche, #ffb38a)';
+  const b = 'rgb(255 255 255 / 0.16)', p = 'rgb(255 255 255 / 0.7)';
   return (
     <svg viewBox="0 0 120 76" className="w-full rounded-xl bg-[#0c121f]" aria-hidden="true">
       {id === 'colonne' && (<>
@@ -245,45 +277,56 @@ function SchemaBureau({ id }: { id: MiseEnPageBureau }) {
 type Tiroir = 'theme' | 'couleurs' | 'boutons' | 'animation' | 'bureau';
 
 /**
- * Le design en liste à tiroirs : chaque ligne dit ce qui est choisi, un toucher
- * l'ouvre à la place de la liste, la flèche ramène. On voit tout d'un coup
- * d'œil sans dérouler quatre cartes.
+ * Le design en liste à tiroirs : une icône et un titre par ligne, un toucher
+ * l'ouvre à la place de la liste, la flèche ramène.
  */
-export function DesignTiroirs({ reglages, onChange, envoyerImage, principal, pied }: { reglages: Reglages; onChange: (r: Reglages) => void; envoyerImage: (d: string) => Promise<string>; principal: boolean; pied?: ReactNode }) {
+export function DesignTiroirs({ reglages, onChange, envoyerImage, principal, pied, vedettes }: { reglages: Reglages; onChange: (r: Reglages) => void; envoyerImage: (d: string) => Promise<string>; principal: boolean; pied?: ReactNode; vedettes?: number }) {
   const [ouvert, setOuvert] = useState<Tiroir | null>(null);
-  const theme = themeDe(reglages);
-  const nom = <T extends string>(liste: { id: T; nom: string }[], id: T) => liste.find(x => x.id === id)?.nom ?? '';
-  const lignes: { id: Tiroir; nom: string; valeur: string; vignette?: ReactNode }[] = [
-    { id: 'theme', nom: 'Thème', valeur: theme.nom, vignette: <span className="block w-7"><Pastille theme={theme} /></span> },
-    { id: 'couleurs', nom: 'Couleurs', valeur: resumeCouleurs(reglages.couleurs), vignette: <span className="flex w-7 -space-x-1.5" aria-hidden="true">{[theme.fondUni, theme.surface, theme.vedette].map((c, i) => <span key={i} className="h-4 w-4 shrink-0 rounded-full ring-1 ring-white/25" style={{ background: c }} />)}</span> },
-    { id: 'boutons', nom: 'Boutons', valeur: [nom(STYLES, reglages.bouton.style), nom(FORMES, reglages.bouton.forme), `ombre ${nom(OMBRES, reglages.bouton.ombre).toLowerCase()}`].join(', ') },
-    { id: 'animation', nom: 'Liens mis en avant', valeur: NOMS_ANIMATIONS[reglages.animation].nom },
-    { id: 'bureau', nom: 'Sur ordinateur', valeur: nom(BUREAUX, reglages.bureau) },
+  // Le focus suit le tiroir : sur son retour en entrant, sur sa ligne en revenant.
+  const retour = useRef<HTMLButtonElement>(null);
+  const dernier = useRef<Tiroir | null>(null);
+  const racine = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    // Chaque tiroir, et la liste au retour, s'ouvre par son haut : la feuille ne garde pas le défilement d'avant.
+    // Le thème fait exception : il amène lui-même le thème choisi en vue.
+    if (ouvert !== 'theme') {
+      let el: HTMLElement | null = racine.current?.parentElement ?? null;
+      while (el && !(el.scrollHeight > el.clientHeight && /auto|scroll/.test(getComputedStyle(el).overflowY))) el = el.parentElement;
+      if (el) el.scrollTop = 0;
+    }
+    if (ouvert) { dernier.current = ouvert; retour.current?.focus({ preventScroll: true, focusVisible: false } as FocusOptions); }
+    else if (dernier.current) document.getElementById(`design-${dernier.current}`)?.focus({ preventScroll: true });
+  }, [ouvert]);
+  // Chaque ligne dit ce qui est réglé, à droite : on sait sans ouvrir.
+  const lignes: { id: Tiroir; nom: string; icone: string; valeur: string }[] = [
+    { id: 'theme', nom: 'Thème', icone: 'palette', valeur: themeParId(reglages.theme).nom },
+    { id: 'couleurs', nom: 'Couleurs', icone: 'pinceau', valeur: Object.values(reglages.couleurs).some(Boolean) ? 'Personnalisées' : 'Celles du thème' },
+    { id: 'boutons', nom: 'Boutons', icone: 'etiquette', valeur: STYLES.find(x => x.id === reglages.bouton.style)?.nom ?? '' },
+    { id: 'animation', nom: 'Animation', icone: 'eclair', valeur: NOMS_ANIMATIONS[reglages.animation].nom },
+    { id: 'bureau', nom: 'Sur ordinateur', icone: 'ordinateur', valeur: BUREAUX.find(x => x.id === reglages.bureau)?.nom ?? '' },
   ];
 
   if (ouvert) return (
-    <div className="flex flex-col gap-3">
+    <div ref={racine} className="flex flex-col gap-3">
       {/* Le retour reste collé en haut de la feuille : on le retrouve après avoir fait défiler vingt thèmes. */}
       <div className="sticky top-0 z-10 -mx-5 flex items-center bg-[#111827] px-4 pb-1">
-        <button type="button" onClick={() => { vibrer(4); setOuvert(null); }} className="flex min-h-10 items-center gap-1 rounded-full pr-3 text-[14px] font-medium text-white/75 hover:text-white">
-          <Icone nom="ui-chevron" taille={18} className="rotate-90" /> Retour
+        <button ref={retour} type="button" onClick={() => { vibrer(4); setOuvert(null); }} aria-label={`${lignes.find(l => l.id === ouvert)?.nom ?? ''}, revenir au design`} className="flex min-h-11 items-center gap-1 rounded-full pr-3 text-[14px] font-medium text-white/75 hover:text-white">
+          <Icone nom="ui-chevron" taille={18} className="rotate-90" /> {lignes.find(l => l.id === ouvert)?.nom}
         </button>
       </div>
-      <OngletApparence reglages={reglages} onChange={onChange} envoyerImage={envoyerImage} principal={principal} parties={[ouvert]} />
+      <OngletApparence reglages={reglages} onChange={onChange} envoyerImage={envoyerImage} principal={principal} parties={[ouvert]} vedettes={vedettes} />
     </div>
   );
 
   return (
-    <div className="flex flex-col gap-4">
+    <div ref={racine} className="flex flex-col gap-4">
       <ul className="overflow-hidden rounded-xl bg-white/[0.03] ring-1 ring-white/[0.07]">
         {lignes.map((l, i) => (
           <li key={l.id} className={i > 0 ? 'border-t border-white/[0.07]' : ''}>
-            <button type="button" onClick={() => { vibrer(4); setOuvert(l.id); }} className="flex min-h-[52px] w-full items-center gap-3 px-3.5 py-2 text-left transition hover:bg-white/[0.04] active:bg-white/[0.06]">
-              {l.vignette}
-              <span className="flex min-w-0 flex-1 flex-col">
-                <span className="text-[14px] font-medium text-white">{l.nom}</span>
-                <span className="truncate text-[12.5px] text-white/45">{l.valeur}</span>
-              </span>
+            <button id={`design-${l.id}`} type="button" onClick={() => { vibrer(4); setOuvert(l.id); if (l.id === 'theme') themesVus(); }} className="flex min-h-[52px] w-full items-center gap-3 px-3.5 py-2 text-left transition hover:bg-white/[0.04] active:bg-white/[0.06]">
+              <Icone nom={l.icone} taille={20} className="shrink-0 text-white/70" />
+              <span className="min-w-0 flex-1 truncate text-[14px] font-medium text-white">{l.nom}</span>
+              <span className="min-w-0 max-w-[45%] truncate text-[13px] text-white/55">{l.valeur}</span>
               <Icone nom="ui-chevron" taille={16} className="-rotate-90 text-white/30" />
             </button>
           </li>
@@ -302,11 +345,11 @@ const CLES_COULEURS: { id: keyof Couleurs; nom: string; duTheme: (t: Theme) => s
 ];
 /** Une palette courte, des neutres aux couleurs franches ; le sélecteur donne tout le reste. */
 const PALETTE = ['#0c121f', '#111111', '#ffffff', '#f4ece1', '#e3e9de', '#e9e2f6', '#1f35ff', '#d62e1f', '#ff8a5c', '#ffd400', '#23704f', '#ff6fae'];
-
-function resumeCouleurs(c: Couleurs) {
-  const changes = CLES_COULEURS.filter(k => c[k.id]).map(k => k.nom.toLowerCase());
-  return changes.length ? `${changes.join(', ').replace(/^./, m => m.toUpperCase())} à ton goût` : 'Celles du thème';
-}
+/** Leurs noms, lus à voix haute et sous le nom du réglage : jamais un code hexadécimal. */
+const NOMS_PALETTE: Record<string, string> = {
+  '#0c121f': 'Nuit', '#111111': 'Noir', '#ffffff': 'Blanc', '#f4ece1': 'Crème', '#e3e9de': 'Sauge pâle', '#e9e2f6': 'Lilas pâle',
+  '#1f35ff': 'Bleu Klein', '#d62e1f': 'Rouge', '#ff8a5c': 'Corail', '#ffd400': 'Jaune', '#23704f': 'Vert sapin', '#ff6fae': 'Rose',
+};
 
 /** Une couleur : celle du thème, une de la palette, ou n'importe laquelle au sélecteur. */
 function ChoixCouleur({ nom, valeur, duTheme, onChange }: { nom: string; valeur: string; duTheme: string; onChange: (v: string) => void }) {
@@ -319,12 +362,12 @@ function ChoixCouleur({ nom, valeur, duTheme, onChange }: { nom: string; valeur:
     <div>
       <div className="mb-2 flex items-center justify-between gap-3">
         <span className="text-[13.5px] font-medium text-white/85">{nom}</span>
-        <span className="text-[12.5px] text-white/45">{valeur ? valeur.toUpperCase() : 'Celle du thème'}</span>
+        <span className="text-[12.5px] text-white/55">{valeur ? NOMS_PALETTE[valeur] ?? 'Couleur choisie' : 'Celle du thème'}</span>
       </div>
       <div className="flex flex-wrap gap-2.5">
         {pastille(duTheme, !valeur, `${nom} : celle du thème`, () => onChange(''))}
         <span className="mx-0.5 h-8 w-px self-center bg-white/10" aria-hidden="true" />
-        {PALETTE.filter(c => c !== duTheme.toLowerCase()).map(c => pastille(c, valeur === c, `${nom} : ${c}`, () => onChange(c)))}
+        {PALETTE.filter(c => c !== duTheme.toLowerCase()).map(c => pastille(c, valeur === c, `${nom} : ${NOMS_PALETTE[c]}`, () => onChange(c)))}
         <label className={`relative grid h-8 w-8 shrink-0 cursor-pointer place-items-center rounded-full bg-white/[0.08] text-white/80 ring-1 ring-inset ring-white/20 transition hover:bg-white/[0.14] ${valeur && !PALETTE.includes(valeur) ? 'outline-2 outline-offset-2 outline-white' : ''}`}
           title="Une autre couleur" style={valeur && !PALETTE.includes(valeur) ? { background: valeur } : undefined}>
           <Icone nom="ui-plus" taille={16} />

@@ -4,21 +4,22 @@
  */
 
 import type { Bloc, Reglages, Reseau } from './types.ts';
-import { adresse } from './valider.ts';
+import { adresse, adresseSaisie } from './valider.ts';
 import { THEME_DEFAUT } from './themes.ts';
 
 export type Destination = 'photo' | 'bio' | 'theme' | 'reseaux' | 'lien';
 
 export interface Etape { id: Destination | 'partage'; nom: string; aide: string; faite: boolean }
 
-export function etapesDemarrage(reglages: Reglages, blocs: Bloc[], partagee: boolean): Etape[] {
+/** `themeVu` : les thèmes ont été regardés ; garder celui de départ est un choix, pas un oubli. */
+export function etapesDemarrage(reglages: Reglages, blocs: Bloc[], partagee: boolean, themeVu = false): Etape[] {
   const liens = blocs.filter(b => b.type === 'lien' && b.public && b.url).length;
   return [
     { id: 'photo', nom: 'Ajoute ta photo', aide: 'Un visage rassure avant de cliquer.', faite: !!reglages.profil.avatar },
     { id: 'bio', nom: 'Écris ta bio', aide: 'Une phrase : ce que tu fais, pour qui.', faite: !!reglages.profil.bio.trim() },
-    { id: 'lien', nom: 'Ajoute trois liens', aide: liens ? `${liens} sur 3 pour l’instant.` : 'Ton site, ta prise de rendez-vous, ta boutique.', faite: liens >= 3 },
-    { id: 'reseaux', nom: 'Relie tes réseaux', aide: 'Leurs icônes s’affichent sous ton nom.', faite: reglages.reseaux.some(r => r.url.trim()) },
-    { id: 'theme', nom: 'Choisis ton thème', aide: 'Des plus sobres aux plus audacieux, en un geste.', faite: reglages.theme !== THEME_DEFAUT },
+    { id: 'lien', nom: 'Ajoute tes liens', aide: 'Ton site, ta prise de rendez-vous, ta boutique.', faite: liens >= 1 },
+    { id: 'reseaux', nom: 'Relie tes réseaux', aide: 'Leurs icônes s’affichent sous ton nom.', faite: reglages.reseaux.some(r => !!adresseSaisie(r.url)) },
+    { id: 'theme', nom: 'Choisis ton thème', aide: 'Des plus sobres aux plus audacieux, en un geste.', faite: themeVu || reglages.theme !== THEME_DEFAUT },
     { id: 'partage', nom: 'Partage ta page', aide: 'Colle l’adresse dans ta bio Instagram ou TikTok.', faite: partagee },
   ];
 }
@@ -55,13 +56,52 @@ export function urlReseau(reseau: Reseau, saisie: string): string {
   const s = saisie.trim();
   if (!s) return '';
   if (reseau === 'email') return s.includes('@') && !s.includes('/') ? adresse(s.replace(/^mailto:/i, '')) : '';
-  if (/^https?:\/\//i.test(s) || s.includes('/')) return adresse(s);
+  if (/^https?:\/\//i.test(s) || s.includes('/')) {
+    const url = adresseSaisie(s);
+    // Spotify n'a pas de pseudo : seule l'adresse d'une page Spotify mène quelque part.
+    if (reseau === 'spotify' && url && !/^https?:\/\/([\w-]+\.)*spotify\.(com|link)(\/|$)/i.test(url)) return '';
+    return url;
+  }
+  // Un site se tape sans https : « ton-site.fr » suffit.
+  if (reseau === 'site') return adresseSaisie(s);
   const pseudo = s.replace(/^@/, '');
   const profil = PROFILS[reseau];
   return profil && /^[\w.-]{1,60}$/.test(pseudo) ? profil(pseudo) : '';
 }
 
-/** Le nom d'un site d'après son adresse, quand il ne donne pas le sien : `https://www.atelier-marie.fr/x` devient `atelier-marie.fr`. */
+/**
+ * L'inverse d'`urlReseau` pour l'affichage : l'adresse d'un profil se relit en
+ * pseudo (« @marie »). Une autre adresse reste telle quelle.
+ */
+export function pseudoReseau(reseau: Reseau, url: string): string {
+  if (reseau === 'email') return url.replace(/^mailto:/i, '');
+  const profil = PROFILS[reseau];
+  if (!profil) return url;
+  const [avant, apres] = profil('\u0000').split('\u0000');
+  const sans = url.replace(/^https?:\/\/(www\.)?/i, 'https://').replace(/\/$/, '');
+  if (!sans.toLowerCase().startsWith(avant.toLowerCase()) || apres) return url;
+  const pseudo = sans.slice(avant.length);
+  return /^[\w.-]{1,60}$/.test(pseudo) ? `@${pseudo}` : url;
+}
+
+/** Le nom d'un site d'après son adresse, quand il ne donne pas le sien : `https://www.atelier-marie.fr/x` devient « Atelier Marie », jamais une adresse brute. */
 export function nomSite(url: string): string {
-  try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return ''; }
+  let hote: string;
+  try { hote = new URL(url).hostname.replace(/^www\./, ''); } catch { return ''; }
+  const parts = hote.split('.');
+  // Le nom est la partie avant l'extension (calendly.com, boutique.co.uk) ; une adresse IP ou locale reste telle quelle.
+  const fin = parts.length > 2 && /^(co|com|org|net|gouv)$/.test(parts[parts.length - 2]) ? 3 : 2;
+  const nom = parts.length >= 2 ? parts[parts.length - fin] : hote;
+  if (!nom || /^\d+$/.test(nom)) return hote;
+  return nom.split('-').filter(Boolean).map(m => m[0].toUpperCase() + m.slice(1)).join(' ');
+}
+
+const HOTES_RESEAUX: Record<string, Reseau> = {
+  'instagram.com': 'instagram', 'tiktok.com': 'tiktok', 'youtube.com': 'youtube', 'youtu.be': 'youtube', 'linkedin.com': 'linkedin',
+  'x.com': 'x', 'twitter.com': 'x', 'threads.net': 'threads', 'threads.com': 'threads', 'facebook.com': 'facebook', 'twitch.tv': 'twitch',
+  'spotify.com': 'spotify', 'open.spotify.com': 'spotify', 'github.com': 'github',
+};
+/** Le réseau d'une adresse (instagram.com/marie → instagram), pour lui donner son icône d'office. */
+export function reseauDeUrl(url: string): Reseau | null {
+  try { return HOTES_RESEAUX[new URL(url).hostname.toLowerCase().replace(/^(www|m)\./, '')] ?? null; } catch { return null; }
 }

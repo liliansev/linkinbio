@@ -8,6 +8,7 @@ import { ICONES } from '../lib/icones.ts';
 import { lienApp } from '../lib/ouvrirApp.ts';
 import { enAttente } from '../lib/moments.ts';
 import { etatPlaces } from '../lib/acces.ts';
+import { adresseSaisie } from '../lib/valider.ts';
 import { LOCALES, NOMS_LANGUES, textes } from '../lib/langues.ts';
 import type { Textes } from '../lib/langues.ts';
 import type { LangueVisiteur } from '../lib/types.ts';
@@ -41,11 +42,16 @@ export interface Edition {
   envoiPhoto: boolean;
   reseaux: () => void;
   liste: (blocs: Bloc[], rendu: (bloc: Bloc) => ReactNode) => ReactNode;
+  /** Le nom vidé puis quitté : il revient tel qu'il était, et le back office le dit. */
+  nomVide?: () => void;
+  /** Le nom ou la bio changés puis quittés : le back office propose de revenir à la valeur d'avant. */
+  modifie?: (champ: 'nom' | 'bio', avant: string) => void;
 }
 
 export function PageLiens({ page, apercu = false, edition }: { page: PagePublique; apercu?: boolean; edition?: Edition }) {
   if (edition) apercu = true;
   const { reglages, blocs, compte } = page;
+  const Nom = apercu ? 'h2' : 'h1';
   // La page de Lilian s'annonce sans pseudo ; les autres avec le leur.
   const pseudo = compte.principal ? '' : compte.pseudo;
   const theme = themeDe(reglages);
@@ -86,12 +92,12 @@ export function PageLiens({ page, apercu = false, edition }: { page: PagePubliqu
 
   const reseaux = edition ? (
     <button type="button" className="lp-reseaux lp-ed-zone" onClick={edition.reseaux} aria-label="Modifier les réseaux">
-      {reglages.reseaux.filter(r => r.url).map(r => <span key={r.reseau + r.url} className="lp-ed-reseau"><Icone nom={r.reseau} taille={22} /></span>)}
-      {!reglages.reseaux.some(r => r.url) && <span className="lp-ed-vide">Ajouter tes réseaux</span>}
+      {reglages.reseaux.filter(r => adresseSaisie(r.url)).map(r => <span key={r.reseau + r.url} className="lp-ed-reseau"><Icone nom={r.reseau} taille={22} /></span>)}
+      {!reglages.reseaux.some(r => adresseSaisie(r.url)) && <span className="lp-ed-vide">Ajouter tes réseaux</span>}
     </button>
-  ) : reglages.reseaux.some(r => r.url) && (
+  ) : reglages.reseaux.some(r => adresseSaisie(r.url)) && (
     <nav className="lp-reseaux" aria-label={t.reseaux}>
-      {reglages.reseaux.filter(r => r.url).map(r => (
+      {reglages.reseaux.filter(r => adresseSaisie(r.url)).map(r => (
         <a key={r.reseau + r.url} href={r.url} aria-label={NOMS_RESEAUX[r.reseau]} rel="me noopener" {...cible}>
           <Icone nom={r.reseau} taille={22} />
         </a>
@@ -103,8 +109,8 @@ export function PageLiens({ page, apercu = false, edition }: { page: PagePubliqu
     <div className="lp" lang={langue} onClick={ouvrirDansApp} style={variablesTheme(theme) as CSSProperties} data-bouton={reglages.bouton.style} data-forme={reglages.bouton.forme} data-ombre={reglages.bouton.ombre} data-police={theme.police} data-decor={theme.decor} data-bureau={reglages.bureau}>
       <div className="lp-scene">
       <div className="lp-col">
-        {reglages.partage && (
-          <button type="button" className="lp-partager" onClick={partager} aria-label={t.partager}>
+        {reglages.partage && !edition && (
+          <button type="button" className="lp-partager" onClick={partager} aria-label={t.partager} {...(edition ? { inert: true, tabIndex: -1 } : {})}>
             <Icone nom="partage" taille={18} />
           </button>
         )}
@@ -115,15 +121,18 @@ export function PageLiens({ page, apercu = false, edition }: { page: PagePubliqu
               <span className="lp-ed-pastille">{edition.envoiPhoto ? '…' : <Icone nom="photo" taille={16} />}</span>
             </button>
           ) : reglages.profil.avatar && <img className="lp-avatar" src={reglages.profil.avatar} alt="" width={96} height={96} />}
-          <h1 className="lp-nom">
+          {/* Dans le back office, la page n'est qu'un aperçu : son nom n'y prend pas le titre principal. */}
+          <Nom className="lp-nom">
             {edition
               ? <input className="lp-ed-saisie" value={reglages.profil.nom} maxLength={80} placeholder="Ton nom" aria-label="Ton nom"
-                  style={{ width: `${Math.max(reglages.profil.nom.length, 7) + 1}ch` }} onChange={e => edition.profil({ nom: e.target.value })} />
+                  style={{ width: `${Math.max(reglages.profil.nom.length, 7) + 1}ch` }} onChange={e => edition.profil({ nom: e.target.value })}
+                  onFocus={e => { e.currentTarget.dataset.avant = reglages.profil.nom; }}
+                  onBlur={e => { const avant = e.currentTarget.dataset.avant ?? ''; if (!e.currentTarget.value.trim()) { edition.profil({ nom: avant.trim() || compte.pseudo }); edition.nomVide?.(); } else if (e.currentTarget.value !== avant) edition.modifie?.('nom', avant); }} />
               : reglages.profil.nom}
-            {reglages.profil.badge && <span className="lp-badge" title={t.verifie}><Icone nom="badge" taille={20} /></span>}
-          </h1>
+            {reglages.profil.badge && <span className="lp-badge" title={t.verifie} role="img" aria-label={t.verifie}><Icone nom="badge" taille={20} /></span>}
+          </Nom>
           {edition
-            ? <ChampBio valeur={reglages.profil.bio} onChange={bio => edition.profil({ bio })} />
+            ? <ChampBio valeur={reglages.profil.bio} onChange={bio => edition.profil({ bio })} onQuitter={avant => edition.modifie?.('bio', avant)} />
             : reglages.profil.bio && <p className="lp-bio">{reglages.profil.bio}</p>}
           {reglages.reseauxPosition === 'haut' && reseaux}
         </header>
@@ -135,7 +144,7 @@ export function PageLiens({ page, apercu = false, edition }: { page: PagePubliqu
                 <BlocPublic bloc={bloc} reglages={reglages} clic={() => clic(bloc)} cible={cible} apercu={apercu} maintenant={page.maintenant} pseudo={pseudo} t={t} langue={langue} />
               </div>
             ))}
-            {blocs.length === 0 && <p className="lp-texte">{t.rien}</p>}
+            {blocs.length === 0 && !apercu && <p className="lp-texte">{t.rien}</p>}
           </>}
         </main>
 
@@ -165,8 +174,9 @@ export function PageLiens({ page, apercu = false, edition }: { page: PagePubliqu
 }
 
 /** La bio, tapée en place : le champ grandit avec le texte. */
-function ChampBio({ valeur, onChange }: { valeur: string; onChange: (v: string) => void }) {
+function ChampBio({ valeur, onChange, onQuitter }: { valeur: string; onChange: (v: string) => void; onQuitter?: (avant: string) => void }) {
   const ref = useRef<HTMLTextAreaElement>(null);
+  const avant = useRef('');
   // À chaque rendu : le texte, mais aussi la police du thème, changent la hauteur.
   useLayoutEffect(() => {
     const t = ref.current;
@@ -174,7 +184,8 @@ function ChampBio({ valeur, onChange }: { valeur: string; onChange: (v: string) 
     t.style.height = 'auto';
     t.style.height = `${t.scrollHeight}px`;
   });
-  return <textarea ref={ref} className="lp-bio lp-ed-saisie" rows={1} value={valeur} maxLength={300} placeholder="Une phrase sur toi" aria-label="Ta bio" onChange={e => onChange(e.target.value)} />;
+  return <textarea ref={ref} className="lp-bio lp-ed-saisie" rows={1} value={valeur} maxLength={300} placeholder="Une phrase sur toi" aria-label="Ta bio" onChange={e => onChange(e.target.value)}
+    onFocus={e => { avant.current = e.currentTarget.value; }} onBlur={e => { if (e.currentTarget.value !== avant.current) onQuitter?.(avant.current); }} />;
 }
 
 /** « exemple.fr », sans le www ni le chemin. */
@@ -348,12 +359,16 @@ function DerniereVideo({ titre, clic }: { titre: string; clic: () => void }) {
     legende={<><span className="lp-video-etiquette">{titre}</span>{video.titre}</>} />;
 }
 
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 function Newsletter({ bloc, apercu }: { bloc: Bloc; apercu: boolean }) {
   const [etat, setEtat] = useState<{ type: 'repos' | 'envoi' | 'ok' | 'erreur'; message?: string }>({ type: 'repos' });
   async function envoyer(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (apercu) { setEtat({ type: 'ok', message: 'Dans l’aperçu, rien n’est envoyé.' }); return; }
     const email = String(new FormData(event.currentTarget).get('email') ?? '');
+    // Le message est celui de la page, dans son ton : pas la bulle du navigateur, dans sa langue à lui.
+    if (!EMAIL.test(email.trim())) { setEtat({ type: 'erreur', message: 'Cette adresse e-mail ne semble pas complète.' }); return; }
     setEtat({ type: 'envoi' });
     try {
       const r = await fetch('/api/newsletter', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, website: '' }) });
@@ -371,9 +386,9 @@ function Newsletter({ bloc, apercu }: { bloc: Bloc; apercu: boolean }) {
         </span>
       </div>
       {etat.type === 'ok' ? <p className="lp-newsletter-ok" role="status">{etat.message}</p> : (
-        <form onSubmit={envoyer}>
-          <input type="email" name="email" required autoComplete="email" placeholder="votre@email.fr" aria-label="Votre adresse e-mail" />
-          <button type="submit" className="lp-btn lp-btn-compact" disabled={etat.type === 'envoi'}>{etat.type === 'envoi' ? '…' : 'S’inscrire'}</button>
+        <form onSubmit={envoyer} noValidate>
+          <input type="email" name="email" required autoComplete="email" aria-invalid={etat.type === 'erreur' || undefined} placeholder="votre@email.fr" aria-label="Votre adresse e-mail" />
+          <button type="submit" className="lp-btn lp-btn-compact lp-accent" disabled={etat.type === 'envoi'}>{etat.type === 'envoi' ? '…' : 'S’inscrire'}</button>
         </form>
       )}
       {etat.type === 'erreur' && <p className="lp-newsletter-erreur" role="alert">{etat.message}</p>}
@@ -388,6 +403,7 @@ function Inscription({ bloc, apercu, pseudo, t }: { bloc: Bloc; apercu: boolean;
     event.preventDefault();
     if (apercu) { setEtat({ type: 'ok', message: t.apercu }); return; }
     const f = new FormData(event.currentTarget);
+    if (!EMAIL.test(String(f.get('email') ?? '').trim())) { setEtat({ type: 'erreur', message: t.emailInvalide }); return; }
     setEtat({ type: 'envoi' });
     try {
       const params = new URLSearchParams(location.search);
@@ -407,15 +423,15 @@ function Inscription({ bloc, apercu, pseudo, t }: { bloc: Bloc; apercu: boolean;
         </span>
       </div>
       {etat.type === 'ok' ? <p className="lp-newsletter-ok" role="status">{etat.message}</p> : (
-        <form onSubmit={envoyer} data-prenom={bloc.demanderPrenom || undefined}>
+        <form onSubmit={envoyer} noValidate data-prenom={bloc.demanderPrenom || undefined}>
           {bloc.demanderPrenom && <input name="prenom" autoComplete="given-name" placeholder={t.prenom} aria-label={t.prenomAria} maxLength={60} />}
-          <input type="email" name="email" required autoComplete="email" placeholder={t.email} aria-label={t.emailAria} />
+          <input type="email" name="email" required autoComplete="email" placeholder={t.email} aria-label={t.emailAria} aria-invalid={etat.type === 'erreur' || undefined} aria-describedby={etat.type === 'erreur' ? `${bloc.id}-erreur` : undefined} />
           {/* Un champ que seuls les robots remplissent. */}
           <input name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" className="lp-piege" />
-          <button type="submit" className="lp-btn lp-btn-compact" disabled={etat.type === 'envoi'}>{etat.type === 'envoi' ? '…' : t.inscrire}</button>
+          <button type="submit" className="lp-btn lp-btn-compact lp-accent" disabled={etat.type === 'envoi'}>{etat.type === 'envoi' ? '…' : t.inscrire}</button>
         </form>
       )}
-      {etat.type === 'erreur' && <p className="lp-newsletter-erreur" role="alert">{etat.message}</p>}
+      {etat.type === 'erreur' && <p id={`${bloc.id}-erreur`} className="lp-newsletter-erreur" role="alert">{etat.message}</p>}
       <p className="lp-mention">{t.mention} <a href="/legal/confidentialite" target="_blank" rel="noopener">{t.confidentialite}</a></p>
     </section>
   );
@@ -464,11 +480,11 @@ function Drop({ bloc, t, langue, apercu, pseudo, clic, cible }: { bloc: Bloc; t:
       {avecCode && ouvert && !url && (
         <form className="lp-drop-form" onSubmit={e => { e.preventDefault(); debloquer(String(new FormData(e.currentTarget).get('code') ?? '')); }}>
           <input name="code" required maxLength={40} autoComplete="off" autoCapitalize="none" spellCheck={false} placeholder={t.code} aria-label={t.code} autoFocus />
-          <button type="submit" className="lp-btn lp-btn-compact" disabled={etat.type === 'envoi'}>{etat.type === 'envoi' ? '…' : t.debloquer}</button>
+          <button type="submit" className="lp-btn lp-btn-compact lp-accent" disabled={etat.type === 'envoi'}>{etat.type === 'envoi' ? '…' : t.debloquer}</button>
         </form>
       )}
       {url && (
-        <a className="lp-btn lp-btn-compact lp-drop-ouvrir" href={url} rel="noopener" {...cible}>
+        <a className="lp-btn lp-btn-compact lp-accent lp-drop-ouvrir" href={url} rel="noopener" {...cible}>
           <span className="lp-btn-titre">{t.ouvrir}</span><Icone nom="ui-fleche" taille={16} />
         </a>
       )}

@@ -9,9 +9,9 @@ const PERIODES = [{ id: '7', nom: '7 j' }, { id: '30', nom: '30 j' }, { id: '90'
 const nombre = (n: number) => n.toLocaleString('fr-FR');
 
 function Tendance({ actuel, avant }: { actuel: number; avant: number }) {
-  if (!avant) return actuel ? <span className="text-[12px] text-white/40">nouveau</span> : null;
+  if (!avant) return actuel ? <span className="text-[12px] text-white/55">nouveau</span> : null;
   const ecart = Math.round(((actuel - avant) / avant) * 100);
-  if (ecart === 0) return <span className="text-[12px] text-white/40">stable</span>;
+  if (ecart === 0) return <span className="text-[12px] text-white/55">stable</span>;
   return (
     <span className={`inline-flex items-center gap-0.5 text-[12px] font-semibold tabular-nums ${ecart > 0 ? 'text-emerald-300' : 'text-red-300'}`}>
       <Icone nom={ecart > 0 ? 'ui-fleche' : 'ui-baisse'} taille={13} />{Math.abs(ecart)} %
@@ -67,28 +67,30 @@ function Courbe({ serie }: { serie: Stats['serie'] }) {
     <div>
       <div className="mb-2 flex items-center justify-between text-[12.5px]">
         <span className="flex gap-3 text-white/60">
-          <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-[#ffb38a]" />Vues</span>
+          <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-white" />Vues</span>
           <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-sky-300" />Clics</span>
         </span>
-        <span className="text-white/70 tabular-nums">{point ? `${date(point.jour)} · ${point.vues} vues · ${point.clics} clics` : ''}</span>
+        <span className="text-white/70 tabular-nums" aria-live="polite">{point ? `${date(point.jour)} · ${point.vues} vues · ${point.clics} clics` : ''}</span>
       </div>
-      <svg viewBox={`0 0 ${w} ${h}`} className="h-44 w-full touch-none" preserveAspectRatio="none" role="img" aria-label="Vues et clics par jour"
+      <svg viewBox={`0 0 ${w} ${h}`} className="h-44 w-full touch-none rounded-lg outline-offset-4" preserveAspectRatio="none" role="img" aria-label="Vues et clics par jour. Flèches gauche et droite pour lire chaque jour." tabIndex={0}
+        onKeyDown={e => { if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return; e.preventDefault(); const pas = e.key === 'ArrowRight' ? 1 : -1; setSurvol(v => Math.min(serie.length - 1, Math.max(0, (v ?? (pas > 0 ? -1 : serie.length)) + pas))); }}
+        onBlur={() => setSurvol(null)}
         onPointerMove={e => { const r = e.currentTarget.getBoundingClientRect(); setSurvol(Math.round(((e.clientX - r.left) / r.width) * (serie.length - 1))); }}
         onPointerLeave={() => setSurvol(null)}>
-        <defs><linearGradient id="adm-aire" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stopColor="#ffb38a" stopOpacity="0.35" /><stop offset="1" stopColor="#ffb38a" stopOpacity="0" /></linearGradient></defs>
+        <defs><linearGradient id="adm-aire" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stopColor="#ffffff" stopOpacity="0.22" /><stop offset="1" stopColor="#ffffff" stopOpacity="0" /></linearGradient></defs>
         {[0.25, 0.5, 0.75].map(f => <line key={f} x1={0} x2={w} y1={h * f} y2={h * f} stroke="white" strokeOpacity="0.06" vectorEffect="non-scaling-stroke" />)}
         <path d={aire} fill="url(#adm-aire)" />
-        <path d={ligne('vues')} fill="none" stroke="#ffb38a" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinejoin="round" strokeLinecap="round" />
+        <path d={ligne('vues')} fill="none" stroke="#ffffff" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinejoin="round" strokeLinecap="round" />
         <path d={ligne('clics')} fill="none" stroke="#7dd3fc" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinejoin="round" strokeLinecap="round" />
         {survol !== null && <line x1={x(survol)} x2={x(survol)} y1={0} y2={h} stroke="white" strokeOpacity="0.3" vectorEffect="non-scaling-stroke" />}
       </svg>
-      <div className="mt-1 flex justify-between text-[11.5px] text-white/40"><span>{date(serie[0].jour)}</span><span>{date(serie[serie.length - 1].jour)}</span></div>
+      <div className="mt-1 flex justify-between text-[11.5px] text-white/55"><span>{date(serie[0].jour)}</span><span>{date(serie[serie.length - 1].jour)}</span></div>
     </div>
   );
 }
 
 function Barres({ lignes, total, unite }: { lignes: { nom: string; valeur: number }[]; total: number; unite: string }) {
-  if (!lignes.length) return <p className="py-3 text-[14px] text-white/45">Pas encore de données.</p>;
+  if (!lignes.length) return <p className="py-3 text-[14px] text-white/55">Pas encore de données.</p>;
   const max = Math.max(...lignes.map(l => l.valeur));
   return (
     <ul className="flex flex-col gap-2">
@@ -97,7 +99,7 @@ function Barres({ lignes, total, unite }: { lignes: { nom: string; valeur: numbe
           <span className="adm-barre absolute inset-y-0 left-0 origin-left bg-white/10" style={{ width: `${(l.valeur / max) * 100}%` }} />
           <span className="relative flex items-center justify-between gap-3 text-[14px]">
             <span className="truncate text-white">{l.nom}</span>
-            <span className="shrink-0 tabular-nums text-white/70">{nombre(l.valeur)} {unite}{total ? <span className="ml-1.5 text-white/40">{Math.round((l.valeur / total) * 100)} %</span> : null}</span>
+            <span className="shrink-0 tabular-nums text-white/70">{nombre(l.valeur)} {unite}{total ? <span className="ml-1.5 text-white/55">{Math.round((l.valeur / total) * 100)} %</span> : null}</span>
           </span>
         </li>
       ))}
@@ -133,10 +135,7 @@ function OuvertsDansLApp({ apps, actif, onActiver }: { apps: Stats['apps']; acti
         <p className="pb-1 text-[13.5px] leading-snug text-white/60">clic{apps.ouverts > 1 ? 's' : ''} ouvert{apps.ouverts > 1 ? 's' : ''} directement dans YouTube, Spotify, Instagram…</p>
       </div>
       <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/[0.07]"><div className="adm-barre h-full origin-left rounded-full bg-white" style={{ width: `${part}%` }} /></div>
-      <p className="mt-2.5 text-[13px] leading-snug text-white/55">
-        {nombre(apps.integres)} clic{apps.integres > 1 ? 's' : ''} venaient du navigateur intégré d’Instagram, TikTok ou Facebook, dont {nombre(apps.versApp)} vers un lien qui a son app.
-        {actif ? ' Sans Hopla, ils seraient restés coincés dans la page web, sans compte connecté.' : ''}
-      </p>
+      <p className="mt-1.5 text-[12.5px] text-white/55">{part} % des {nombre(apps.versApp)} clics vers une app depuis Instagram ou TikTok</p>
       {!actif && (
         <p className="mt-2.5 rounded-xl bg-white/10 px-3 py-2.5 text-[13px] leading-snug text-white/75">
           L’ouverture dans les apps est coupée sur ta page. {onActiver && <button type="button" onClick={onActiver} className="font-semibold text-white underline underline-offset-2">La rallumer</button>}
@@ -152,24 +151,32 @@ export function OngletStats({ charger, limite = false, onPro, ouvrirApps = true,
   const jours = limite ? '7' : choix;
   const [stats, setStats] = useState<Stats | null>(null);
   const [erreur, setErreur] = useState(false);
+  // Pendant qu'une autre période se charge, les chiffres d'avant pâlissent : on voit qu'ils vont changer.
+  const [charge, setCharge] = useState(true);
+  const [essai, setEssai] = useState(0);
   useEffect(() => {
     let annule = false;
-    setErreur(false);
-    charger(Number(jours)).then(s => { if (!annule) setStats(s); }).catch(() => { if (!annule) setErreur(true); });
+    setErreur(false); setCharge(true);
+    charger(Number(jours)).then(s => { if (!annule) setStats(s); }).catch(() => { if (!annule) setErreur(true); }).finally(() => { if (!annule) setCharge(false); });
     return () => { annule = true; };
-  }, [jours, charger]);
+  }, [jours, charger, essai]);
 
   return (
     <div className="flex flex-col gap-4">
       {limite ? (
         <div className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3">
           <p className="text-[14px] leading-snug text-white/80">Les 7 derniers jours. <span className="text-white/55">Avec Pro, jusqu’à un an d’historique : tout est déjà enregistré.</span></p>
-          {onPro && <button type="button" onClick={onPro} className="min-h-9 shrink-0 rounded-full bg-white px-4 text-[13.5px] font-semibold text-nuit">Passer en Pro</button>}
+          {onPro && <button type="button" onClick={onPro} className="min-h-11 shrink-0 rounded-full bg-white px-4 text-[13.5px] font-semibold text-nuit">Passer en Pro</button>}
         </div>
       ) : <Segments label="Période" valeur={jours} options={PERIODES} onChange={setJours} />}
-      {erreur && <p className="rounded-xl bg-red-500/15 px-3.5 py-2.5 text-[14px] text-red-200">Les statistiques ne se chargent pas. Réessaie dans un instant.</p>}
-      {!stats ? <div className="h-64 animate-pulse rounded-2xl bg-white/[0.04]" /> : (
-        <>
+      {erreur && (
+        <div role="alert" className="flex items-center justify-between gap-3 rounded-xl bg-red-500/15 py-1.5 pr-1.5 pl-3.5 text-[14px] text-red-200">
+          Les statistiques ne se chargent pas.
+          <button type="button" onClick={() => setEssai(n => n + 1)} className="min-h-11 shrink-0 rounded-full px-4 font-semibold text-white hover:bg-white/10">Réessayer</button>
+        </div>
+      )}
+      {!stats ? (!erreur && <div className="h-64 animate-pulse rounded-2xl bg-white/[0.04] motion-reduce:animate-none" aria-label="Chargement des statistiques" />) : (
+        <div className={`flex flex-col gap-4 transition-opacity duration-200 ${charge ? 'opacity-50' : ''}`} aria-busy={charge}>
           <EnBref stats={stats} />
           <div className="grid grid-cols-2 gap-2.5">
             <Kpi nom="Vues" valeur={stats.vues} avant={stats.precedent.vues} />
@@ -183,10 +190,10 @@ export function OngletStats({ charger, limite = false, onPro, ouvrirApps = true,
           <Carte titre="Liens les plus cliqués"><Barres lignes={stats.blocs.map(b => ({ nom: b.titre, valeur: b.clics }))} total={stats.clics} unite="clics" /></Carte>
           <Carte titre="D’où viennent les visiteurs"><Barres lignes={stats.sources.map(s => ({ nom: s.nom, valeur: s.vues }))} total={stats.vues} unite="vues" /></Carte>
           <Carte titre="Appareils"><Barres lignes={stats.appareils.map(s => ({ nom: s.nom, valeur: s.vues }))} total={stats.vues} unite="vues" /></Carte>
-          <p className="px-2 text-center text-[12.5px] leading-snug text-white/40">
-            Sans cookie : un visiteur est compté une fois par jour. Tes propres visites, une fois connecté, ne comptent pas.
+          <p className="px-2 text-center text-[12.5px] leading-snug text-white/55">
+            Sans cookie : un visiteur compte une fois par jour, toi jamais.
           </p>
-        </>
+        </div>
       )}
     </div>
   );

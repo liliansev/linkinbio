@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { THEMES_ACCUEIL, etapesDemarrage, nomSite, pageNeuve, urlReseau } from './demarrage.ts';
+import { THEMES_ACCUEIL, etapesDemarrage, nomSite, pageNeuve, pseudoReseau, urlReseau } from './demarrage.ts';
 import { REGLAGES_DEFAUT, reglagesNouveauCompte } from './defauts.ts';
 import { THEMES } from './themes.ts';
 import { nouveauBloc } from './types.ts';
@@ -22,9 +22,9 @@ test('les étapes se cochent quand la page se remplit', () => {
 
 test('seuls les liens publics avec une adresse comptent', () => {
   const r = reglagesNouveauCompte('marie');
-  const e = etapesDemarrage(r, [lien('a', 'https://a.fr'), lien('b', ''), lien('c', 'https://c.fr', false)], false).find(x => x.id === 'lien')!;
-  assert.equal(e.faite, false);
-  assert.match(e.aide, /1 sur 3/);
+  const etape = (blocs: Bloc[]) => etapesDemarrage(r, blocs, false).find(x => x.id === 'lien')!;
+  assert.equal(etape([lien('b', ''), lien('c', 'https://c.fr', false)]).faite, false);
+  assert.equal(etape([lien('a', 'https://a.fr'), lien('b', '')]).faite, true);
 });
 
 test('les premiers pas ne s’ouvrent que sur une page où rien n’est posé', () => {
@@ -52,6 +52,31 @@ test('un pseudo devient l’adresse du réseau, une adresse complète reste tell
 
 test('les thèmes proposés à l’arrivée existent tous', () => {
   for (const id of THEMES_ACCUEIL) assert.ok(THEMES.some(t => t.id === id), id);
-  assert.equal(nomSite('https://www.atelier-marie.fr/boutique'), 'atelier-marie.fr');
+  assert.equal(nomSite('https://www.atelier-marie.fr/boutique'), 'Atelier Marie');
+  assert.equal(nomSite('https://calendly.com/toi'), 'Calendly');
+  assert.equal(nomSite('https://shop.marie.co.uk'), 'Marie');
   assert.equal(nomSite('pas une adresse'), '');
+});
+
+test('une adresse de profil se relit en pseudo, et le pseudo redonne la même adresse', () => {
+  assert.equal(pseudoReseau('instagram', 'https://instagram.com/marie.ceramique'), '@marie.ceramique');
+  assert.equal(pseudoReseau('tiktok', 'https://www.tiktok.com/@marie'), '@marie');
+  assert.equal(urlReseau('tiktok', pseudoReseau('tiktok', 'https://tiktok.com/@marie')), 'https://tiktok.com/@marie');
+  assert.equal(pseudoReseau('youtube', 'https://youtube.com/channel/UC123'), 'https://youtube.com/channel/UC123');
+  assert.equal(pseudoReseau('email', 'mailto:a@b.fr'), 'a@b.fr');
+});
+
+test('reseauDeUrl reconnaît un profil', async () => {
+  const { reseauDeUrl } = await import('./demarrage.ts');
+  assert.equal(reseauDeUrl('https://www.instagram.com/marie'), 'instagram');
+  assert.equal(reseauDeUrl('https://ton-site.fr'), null);
+});
+
+test('urlReseau : Spotify veut une adresse Spotify, un site se tape sans https', async () => {
+  const { urlReseau } = await import('./demarrage.ts');
+  assert.equal(urlReseau('spotify', 'mon.spotify'), '');
+  assert.equal(urlReseau('spotify', 'https://exemple.fr/x'), '');
+  assert.match(urlReseau('spotify', 'open.spotify.com/artist/123'), /^https:\/\/open\.spotify\.com\/artist\/123/);
+  assert.match(urlReseau('site', 'ton-site.fr'), /^https:\/\/ton-site\.fr/);
+  assert.equal(urlReseau('instagram', 'camille'), 'https://instagram.com/camille');
 });

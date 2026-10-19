@@ -313,7 +313,7 @@ export function nouveauBloc(type: TypeBloc, id: string): Bloc {
     id, type, titre: titres[type], url: '', sousTitre: type === 'newsletter' || type === 'inscription' ? 'Un e-mail de temps en temps, rien de plus.' : '', description: '', icone: '', image: '',
     public: true, indexable: true, vedette: false, format: 'bandeau', teinte: 'accent', animation: 'auto', debut: '', fin: '',
     compteARebours: false, creneau: null, audience: null, cache: [], demanderPrenom: false, acces: null,
-    preuve: type === 'preuve' ? { genre: 'note', note: 5, nombre: 0, source: 'Google' } : null, traductions: {},
+    preuve: type === 'preuve' ? { genre: 'note', note: 0, nombre: 0, source: '' } : null, traductions: {},
   };
 }
 

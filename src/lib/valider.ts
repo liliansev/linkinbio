@@ -32,6 +32,18 @@ export function adresse(v: unknown): string {
   } catch { return ''; }
 }
 
+/**
+ * Une adresse tapée dans le back office : plus stricte qu'`adresse`, elle refuse
+ * ce qui n'a pas l'air d'un site (« ma boutique », un mot sans point). Vide si
+ * la saisie ne mène nulle part.
+ */
+export function adresseSaisie(v: unknown): string {
+  const url = adresse(v);
+  if (!url || url.startsWith('/') || !/^https?:/i.test(url)) return url;
+  const hote = new URL(url).hostname;
+  return /^[a-z0-9-]+(\.[a-z0-9-]+)+$/i.test(hote) || hote === 'localhost' ? url : '';
+}
+
 /** Une image : seulement nos médias, l'avatar livré, ou https. */
 export function image(v: unknown): string {
   const s = texte(v, 2000);
@@ -179,4 +191,28 @@ export function pseudo(v: unknown): string {
 export function email(v: unknown): string {
   const s = texte(v, 200).toLowerCase();
   return /^[^\s@<>"',;]+@[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(s) ? s : '';
+}
+
+/** Pourquoi une saisie n'est pas une adresse, dit au plus près de l'erreur. */
+export function pourquoiPasAdresse(v: string): string {
+  const s = v.trim();
+  if (/^(?!https?:)h?t{1,3}p{1,2}s?:/i.test(s) || /^(?!https?\/\/)h?t{1,3}p{1,2}s?\/\//i.test(s)) return 'Le début de l’adresse est mal tapé : écris https://. Exemple : https://ton‑site.fr';
+  if (/^https?\/\//i.test(s)) return 'Il manque « : » après http. Exemple : https://ton‑site.fr';
+  if (/^https?:\/[^/]/i.test(s)) return 'Il manque un « / » après https:. Exemple : https://ton‑site.fr';
+  // « calendly com » : l'espace tient lieu de point, on propose l'adresse telle qu'elle était voulue.
+  const piste = s.replace(/\s+(fr|com|net|org|io|co|me|app|page|bio|link|eu|be|ch|ca|shop|store|dev|ai)$/i, '.$1');
+  if (/\s/.test(s) && !/\s/.test(piste)) return `Une adresse n’a pas d’espace : voulais-tu dire ${piste}\u202f?`;
+  if (/\s/.test(s)) return 'Une adresse n’a pas d’espace. Exemple : ton‑site.fr';
+  if (!/\./.test(s.replace(/^https?:\/\//i, '').split('/')[0])) return 'Il manque la fin de l’adresse, comme .fr ou .com.';
+  return 'Ce n’est pas une adresse. Exemple : ton‑site.fr';
+}
+
+/** Pourquoi un pseudo ou une adresse de réseau ne passe pas, avec une piste. */
+export function pourquoiPasReseau(reseau: string, v: string): string {
+  if (reseau === 'email') return v.includes('@') ? 'Il manque une partie de l’adresse e-mail, par exemple toi@exemple.fr' : 'Il manque le @ de l’adresse e-mail, par exemple toi@exemple.fr';
+  if (reseau === 'spotify') return 'Colle l’adresse de ta page Spotify : elle commence par open.spotify.com';
+  if (reseau === 'site') return 'L’adresse de ton site, par exemple ton\u2011site.fr';
+  const s = v.trim().replace(/^@/, '');
+  if (/\s/.test(s)) return `Pas d’espace dans un pseudo : essaie ${s.replace(/\s+/g, '.').toLowerCase()}`;
+  return 'Un pseudo sans espace, ou l’adresse de ton profil';
 }

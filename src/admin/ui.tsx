@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useRef, useState } from 'react';
+import { cloneElement, isValidElement, useCallback, useEffect, useId, useRef, useState } from 'react';
 import { Icone } from '../components/Icone.tsx';
 import type { Animation } from '../lib/types.ts';
 import type { ReactNode } from 'react';
@@ -13,29 +13,42 @@ export function Interrupteur({ actif, onChange, label, aide, disabled }: { actif
         <span className="block text-[14.5px] font-medium text-white">{label}</span>
         {aide && <span className="mt-0.5 block text-[12.5px] leading-snug text-white/50">{aide}</span>}
       </label>
-      <button id={id} type="button" role="switch" aria-checked={actif} disabled={disabled} onClick={() => { vibrer(); onChange(!actif); }}
-        className={`adm-interrupteur relative h-6 w-10 shrink-0 rounded-full before:absolute before:-inset-2 before:content-[''] disabled:opacity-40 ${actif ? 'bg-white' : 'bg-white/15'}`}>
-        <span className={`absolute top-[3px] left-[3px] h-[18px] w-[18px] rounded-full shadow-[0_1px_3px_rgba(0,0,0,0.3)] ${actif ? 'translate-x-4 bg-nuit' : 'bg-white'}`} />
-      </button>
+      <Bascule id={id} actif={actif} disabled={disabled} onClick={() => { vibrer(); onChange(!actif); }} />
     </div>
   );
 }
 
-export function Champ({ label, aide, children }: { label: string; aide?: ReactNode; children: ReactNode }) {
+/** L'interrupteur seul, pour les lignes qui portent déjà leur icône et leur nom : un seul dessin partout. */
+export function Bascule({ actif, onClick, id, disabled, label, decrit }: { actif: boolean; onClick: () => void; id?: string; disabled?: boolean; label?: string; decrit?: string }) {
+  return (
+    <button id={id} type="button" role="switch" aria-checked={actif} aria-label={label} aria-describedby={decrit} disabled={disabled} onClick={onClick}
+      className={`adm-interrupteur relative h-6 w-10 shrink-0 rounded-full before:absolute before:-inset-2 before:content-[''] disabled:opacity-40 ${actif ? 'bg-white' : 'bg-white/15'}`}>
+      <span className={`absolute top-[3px] left-[3px] h-[18px] w-[18px] rounded-full shadow-[0_1px_3px_rgba(0,0,0,0.3)] ${actif ? 'translate-x-4 bg-nuit' : 'bg-white'}`} />
+    </button>
+  );
+}
+
+/** Un champ et son nom ; `erreur` s'affiche dessous, rattachée au champ (aria-invalid, aria-describedby). */
+export function Champ({ label, aide, erreur, children }: { label: string; aide?: ReactNode; erreur?: string; children: ReactNode }) {
+  const id = useId();
+  const champ = erreur && isValidElement(children)
+    ? cloneElement(children as React.ReactElement<Record<string, unknown>>, { 'aria-invalid': true, 'aria-describedby': id })
+    : children;
   return (
     <label className="block">
       <span className="mb-1.5 block text-[12.5px] font-medium text-white/60">{label}</span>
-      {children}
-      {aide && <span className="mt-1.5 block text-[12.5px] leading-snug text-white/45">{aide}</span>}
+      {champ}
+      {erreur && <span id={id} role="alert" className="mt-1.5 block text-[13px] font-medium leading-snug text-red-300">{erreur}</span>}
+      {aide && !erreur && <span className="mt-1.5 block text-[12.5px] leading-snug text-white/55">{aide}</span>}
     </label>
   );
 }
 
-export const classeSaisie = 'w-full rounded-lg border border-white/10 bg-white/[0.05] px-3 py-2.5 text-[16px] text-white placeholder:text-white/50 outline-none transition focus:border-white/40 focus:bg-white/[0.09]';
+export const classeSaisie = 'w-full rounded-lg border border-white/10 bg-white/[0.05] px-3 py-2.5 text-[16px] text-white placeholder:text-white/50 outline-none transition focus:border-white/40 focus:bg-white/[0.09] aria-[invalid=true]:border-red-400/70';
 
-export function Carte({ titre, action, children, className = '', id }: { titre?: string; action?: ReactNode; children: ReactNode; className?: string; id?: string }) {
+export function Carte({ titre, action, children, className = '', id, nu = false }: { titre?: string; action?: ReactNode; children: ReactNode; className?: string; id?: string; nu?: boolean }) {
   return (
-    <section id={id} className={`scroll-mt-20 rounded-xl border border-white/[0.07] bg-white/[0.03] p-4 ${className}`}>
+    <section id={id} className={`scroll-mt-20 ${nu ? '' : 'rounded-xl border border-white/[0.07] bg-white/[0.03] p-4'} ${className}`}>
       {(titre || action) && (
         <div className="mb-3 flex items-center justify-between gap-3">
           {titre && <h2 className="text-[14px] font-medium text-white">{titre}</h2>}
@@ -81,26 +94,60 @@ export function vibrer(ms = 8) {
  * `apercu`, sur téléphone, se pose au-dessus de la feuille : la page en direct,
  * en miniature, qui suit chaque réglage (Lilian, 18 octobre 2026).
  */
-export function Feuille({ ouverte, onFermer, titre, children, pied, cote = false, apercu }: { ouverte: boolean; onFermer: () => void; titre: string; children: Contenu; pied?: Contenu; cote?: boolean; apercu?: React.ReactNode }) {
+export function Feuille({ ouverte, onFermer, retenir, titre, children, pied, cote = false, apercu }: { ouverte: boolean; onFermer: () => void; retenir?: () => boolean; titre: string; children: Contenu; pied?: Contenu; cote?: boolean; apercu?: React.ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
   const [sortie, setSortie] = useState(false);
   const [tire, setTire] = useState(0);
+  // La hauteur visible quand le clavier est ouvert (iOS ne réduit ni la fenêtre ni les dvh) : la feuille s'y tient.
+  const [visible, setVisible] = useState<{ h: number; haut: number } | null>(null);
   const geste = useRef<{ y: number; t: number } | null>(null);
   const fermer = useCallback<Fermer>(apres => {
+    // Un geste qui fermerait sur un travail pas valable laisse la feuille ouverte (retenir dit pourquoi).
+    if (!apres && retenir?.()) { setTire(0); vibrer(20); return; }
     setSortie(true);
     const reduit = matchMedia('(prefers-reduced-motion: reduce)').matches;
     setTimeout(() => { setSortie(false); setTire(0); (apres ?? onFermer)(); }, reduit ? 0 : 190);
-  }, [onFermer]);
+  }, [onFermer, retenir]);
 
+  // L'effet ne dépend que de l'ouverture : un parent qui se redessine ne vole pas le focus du champ en cours.
+  const fermerRef = useRef(fermer);
+  fermerRef.current = fermer;
   useEffect(() => {
     if (!ouverte) return;
-    const touche = (e: KeyboardEvent) => { if (e.key === 'Escape') fermer(); };
+    // Une vraie fenêtre : Tab tourne dans la feuille, et le focus revient d'où il venait à la fermeture.
+    const avantFocus = document.activeElement as HTMLElement | null;
+    const touche = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') fermerRef.current();
+      // Ctrl ou Cmd + Entrée : le bouton principal du pied, comme un clic sur Terminé.
+      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && ref.current) {
+        const principal = ref.current.querySelector<HTMLButtonElement>('[data-principal]:not([disabled])');
+        if (principal) { e.preventDefault(); principal.click(); }
+        return;
+      }
+      if (e.key !== 'Tab' || !ref.current) return;
+      const cibles = [...ref.current.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), input:not([disabled]):not([type=hidden]), select, textarea, [tabindex]:not([tabindex="-1"])')].filter(x => x.offsetParent !== null);
+      if (!cibles.length) return;
+      const premier = cibles[0], dernier = cibles[cibles.length - 1];
+      if (e.shiftKey && (document.activeElement === premier || document.activeElement === ref.current)) { e.preventDefault(); dernier.focus(); }
+      else if (!e.shiftKey && document.activeElement === dernier) { e.preventDefault(); premier.focus(); }
+      else if (!ref.current.contains(document.activeElement)) { e.preventDefault(); premier.focus(); }
+    };
     document.addEventListener('keydown', touche);
+    const vv = window.visualViewport;
+    const suivre = () => { if (vv) setVisible(innerHeight - vv.height > 120 ? { h: vv.height, haut: vv.offsetTop } : null); };
+    vv?.addEventListener('resize', suivre);
+    vv?.addEventListener('scroll', suivre);
     const avant = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
-    ref.current?.focus();
-    return () => { document.removeEventListener('keydown', touche); document.body.style.overflow = avant; };
-  }, [ouverte, fermer]);
+    // Le champ qui a l'autoFocus garde la main ; sinon la feuille prend le focus.
+    if (!ref.current?.contains(document.activeElement)) ref.current?.focus();
+    return () => { vv?.removeEventListener('resize', suivre); vv?.removeEventListener('scroll', suivre); setVisible(null); document.removeEventListener('keydown', touche); document.body.style.overflow = avant; 
+      // Le focus revient d'où il venait, sauf si une autre feuille vient de le prendre (Ajouter qui ouvre l'éditeur sur son premier champ).
+      const ici = document.activeElement;
+      const libre = !ici || ici === document.body || !!ref.current?.contains(ici);
+      if (libre && avantFocus?.isConnected) avantFocus.focus({ preventScroll: true });
+    };
+  }, [ouverte]);
   if (!ouverte) return null;
 
   const tirer = {
@@ -123,50 +170,105 @@ export function Feuille({ ouverte, onFermer, titre, children, pied, cote = false
   const rendre = (c: Contenu) => (typeof c === 'function' ? c(fermer) : c);
 
   return (
-    <div className={`fixed inset-0 z-50 flex items-end justify-center ${cote ? 'sm:items-stretch sm:justify-end sm:p-4' : 'sm:items-center'}`} role="dialog" aria-modal="true" aria-label={titre} data-sortie={sortie || undefined}>
-      <button type="button" aria-label="Fermer" className={`adm-fondu absolute inset-0 ${apercu ? 'bg-[#0b0f19] sm:bg-black/10' : cote ? 'bg-black/10' : 'bg-black/60 backdrop-blur-[2px]'}`} onClick={() => fermer()} />
-      {apercu && <div className="adm-fondu pointer-events-none absolute inset-x-0 top-0 bottom-[54dvh] flex items-center justify-center px-4 pt-[max(12px,env(safe-area-inset-top))] pb-3 sm:hidden">{apercu}</div>}
+    <div className={`fixed inset-0 z-50 flex items-end justify-center ${cote ? 'sm:items-stretch sm:justify-end sm:p-4' : 'sm:items-center'}`} role="dialog" aria-modal="true" aria-label={titre} data-sortie={sortie || undefined}
+      style={visible ? { top: visible.haut, height: visible.h, bottom: 'auto' } : undefined}>
+      <button type="button" tabIndex={-1} aria-hidden="true" className={`adm-fondu absolute inset-0 ${apercu ? 'bg-[#0b0f19] sm:bg-black/10' : cote ? 'bg-black/10' : 'bg-black/60 backdrop-blur-[2px]'}`} onClick={() => fermer()} />
+      {apercu && <div inert className="adm-fondu pointer-events-none absolute inset-x-0 top-0 bottom-[57dvh] flex items-center justify-center px-4 pt-[max(12px,env(safe-area-inset-top))] pb-3 sm:hidden">{apercu}</div>}
       <div ref={ref} tabIndex={-1}
-        style={tire ? { transform: `translateY(${tire}px)`, transition: 'none' } : undefined}
-        className={`adm-feuille relative flex ${apercu ? 'h-[54dvh] sm:h-auto sm:w-[400px]' : cote ? 'max-h-[58dvh] sm:max-h-none sm:w-[400px]' : 'max-h-[92dvh]'} w-full flex-col rounded-t-[20px] border border-b-0 border-white/10 bg-[#111827] shadow-[0_-20px_60px_-20px_rgba(0,0,0,0.7)] outline-none sm:max-w-lg sm:rounded-[20px] sm:border-b`}>
+        style={{ ...(tire ? { transform: `translateY(${tire}px)`, transition: 'none' } : {}), ...(visible ? { maxHeight: visible.h - 8, height: 'auto' } : {}) }}
+        className={`adm-feuille relative flex ${apercu ? 'h-[57dvh] sm:h-auto sm:w-[400px]' : cote ? 'max-h-[58dvh] sm:max-h-none sm:w-[400px]' : 'max-h-[92dvh]'} w-full flex-col rounded-t-[20px] border border-b-0 border-white/10 bg-[#111827] shadow-[0_-20px_60px_-20px_rgba(0,0,0,0.7)] outline-none sm:max-w-lg sm:rounded-[20px] sm:border-b`}>
         <div {...tirer} className="shrink-0 touch-none select-none">
           <div className="mx-auto mt-2 h-1 w-9 rounded-full bg-white/20 sm:hidden" />
           <header className="flex items-center justify-between gap-3 px-5 pt-2.5 pb-2 sm:pt-4">
             <h2 className="text-[15.5px] font-semibold tracking-[-0.01em] text-white">{titre}</h2>
-            <button type="button" onClick={() => fermer()} className="-mr-2 grid h-9 w-9 place-items-center rounded-full text-white/50 transition hover:bg-white/10 hover:text-white active:scale-90" aria-label="Fermer">
+            <button type="button" onClick={() => fermer()} className="-mr-3 grid h-11 w-11 place-items-center rounded-full text-white/50 transition hover:bg-white/10 hover:text-white active:scale-90" aria-label="Fermer">
               <Icone nom="ui-fermer" taille={18} />
             </button>
           </header>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-4">{rendre(children)}</div>
+        <div className={`min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 ${pied ? 'pb-4' : 'pb-[max(16px,env(safe-area-inset-bottom))]'}`}>{rendre(children)}</div>
         {pied && <footer className="shrink-0 border-t border-white/[0.07] px-5 pt-3 pb-[max(12px,env(safe-area-inset-bottom))]">{rendre(pied)}</footer>}
       </div>
     </div>
   );
 }
 
+/**
+ * Copie un texte. Si le presse-papiers est refusé, l'ancienne méthode prend le relais ; si elle échoue
+ * aussi, l'adresse s'affiche, sélectionnée, pour être copiée à la main : une copie ne rate jamais en silence.
+ */
+export async function copierTexte(texte: string): Promise<boolean> {
+  try { await navigator.clipboard.writeText(texte); return true; } catch { /* on essaie autrement */ }
+  try {
+    const zone = document.createElement('textarea');
+    zone.value = texte; zone.setAttribute('readonly', ''); zone.style.position = 'fixed'; zone.style.opacity = '0';
+    document.body.appendChild(zone); zone.select();
+    const ok = document.execCommand('copy');
+    zone.remove();
+    if (ok) return true;
+  } catch { /* on montre l'adresse */ }
+  window.prompt('Copie cette adresse :', texte);
+  return false;
+}
+
+/** Le même bouton Copier partout : il copie, vibre, dit « Copié » un instant, puis prévient (`onCopie`). */
+export function BoutonCopier({ texte, onCopie, label, compact = false }: { texte: string; onCopie?: () => void; label?: string; compact?: boolean }) {
+  const [copie, setCopie] = useState(false);
+  async function copier() {
+    if (!(await copierTexte(texte))) return;
+    vibrer(8); setCopie(true); onCopie?.(); setTimeout(() => setCopie(false), 1800);
+  }
+  if (compact) return (
+    <button type="button" onClick={copier} aria-label={copie ? 'Adresse copiée' : label ?? 'Copier'}
+      className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-white/[0.07] text-white transition hover:bg-white/[0.13] active:scale-95">
+      <Icone nom={copie ? 'ui-ok' : 'ui-copier'} taille={18} />
+    </button>
+  );
+  return (
+    <button type="button" onClick={copier} aria-label={label}
+      className="flex min-h-11 shrink-0 items-center gap-1.5 rounded-full bg-white/[0.08] px-3.5 text-[14px] font-medium text-white transition hover:bg-white/[0.13] active:scale-95">
+      <Icone nom={copie ? 'ui-ok' : 'ui-copier'} taille={16} />{copie ? 'Copié' : 'Copier'}
+    </button>
+  );
+}
+
 export function BoutonPrincipal({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) {
-  return <button type="button" {...props} className={`inline-flex min-h-10 items-center justify-center gap-2 rounded-full bg-white px-5 text-[14px] font-semibold text-nuit transition hover:brightness-105 active:scale-[0.98] disabled:opacity-50 ${props.className ?? ''}`}>{children}</button>;
+  return <button type="button" data-principal="" aria-keyshortcuts="Control+Enter Meta+Enter" {...props} className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-white px-5 text-[14px] font-semibold text-nuit transition hover:brightness-105 active:scale-[0.98] disabled:opacity-50 ${props.className ?? ''}`}>{children}</button>;
 }
 
 export function BoutonSecondaire({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) {
-  return <button type="button" {...props} className={`inline-flex min-h-10 items-center justify-center gap-2 rounded-full bg-white/[0.07] px-4 text-[14px] font-medium text-white transition hover:bg-white/[0.13] active:scale-[0.98] disabled:opacity-50 ${props.className ?? ''}`}>{children}</button>;
+  return <button type="button" {...props} className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-white/[0.07] px-4 text-[14px] font-medium text-white transition hover:bg-white/[0.13] active:scale-[0.98] disabled:opacity-50 ${props.className ?? ''}`}>{children}</button>;
 }
 
 /** Un choix parmi quelques options, en pastilles. */
-/** Un choix parmi plusieurs, en liste : un nom, une ligne d'aide, une coche sur celui qui est pris. */
-export function ListeChoix<T extends string>({ valeur, options, onChange, label }: { valeur: T; options: { id: T; nom: string; aide?: string }[]; onChange: (v: T) => void; label: string }) {
+/**
+ * Les flèches dans un groupe de boutons radio (motif ARIA) : elles passent au
+ * voisin et, si `choisir`, le prennent. À poser sur le conteneur `radiogroup`.
+ */
+export function flechesRadio(e: React.KeyboardEvent<HTMLElement>, choisir = true) {
+  const pas = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1, Home: -Infinity, End: Infinity }[e.key];
+  if (pas === undefined) return;
+  const radios = [...e.currentTarget.querySelectorAll<HTMLElement>('[role=radio]:not([disabled])')];
+  const i = radios.indexOf(document.activeElement as HTMLElement);
+  if (i < 0) return;
+  e.preventDefault();
+  const n = pas === -Infinity ? 0 : pas === Infinity ? radios.length - 1 : (i + pas + radios.length) % radios.length;
+  radios[n].focus();
+  if (choisir) radios[n].click();
+}
+/** Un seul arrêt de tabulation par groupe : le choix en cours, ou le premier. */
+export const arretRadio = (pris: boolean, premier: boolean, aucun: boolean) => (pris || (aucun && premier) ? 0 : -1);
+
+/** Un choix parmi plusieurs, en liste : un nom, une coche sur celui qui est pris. */
+export function ListeChoix<T extends string>({ valeur, options, onChange, label }: { valeur: T; options: { id: T; nom: string }[]; onChange: (v: T) => void; label: string }) {
   return (
-    <div role="radiogroup" aria-label={label} className="divide-y divide-white/[0.06] overflow-hidden rounded-xl bg-white/[0.03]">
-      {options.map(o => {
+    <div role="radiogroup" aria-label={label} onKeyDown={e => flechesRadio(e)} className="divide-y divide-white/[0.06] overflow-hidden rounded-xl bg-white/[0.03]">
+      {options.map((o, i) => {
         const pris = valeur === o.id;
         return (
-          <button key={o.id} type="button" role="radio" aria-checked={pris} onClick={() => { vibrer(4); onChange(o.id); }}
+          <button key={o.id} type="button" role="radio" aria-checked={pris} tabIndex={arretRadio(pris, i === 0, !options.some(x => x.id === valeur))} onClick={() => { vibrer(4); onChange(o.id); }}
             className="flex w-full items-center gap-3 px-3.5 py-2.5 text-left transition-colors duration-150 hover:bg-white/[0.04]">
-            <span className="min-w-0 flex-1">
-              <span className={`block text-[14px] font-medium ${pris ? 'text-white' : 'text-white/80'}`}>{o.nom}</span>
-              {o.aide && <span className="mt-0.5 block text-[12.5px] leading-snug text-white/45">{o.aide}</span>}
-            </span>
+            <span className={`min-w-0 flex-1 text-[14px] font-medium ${pris ? 'text-white' : 'text-white/80'}`}>{o.nom}</span>
             <span className={`grid h-5 w-5 shrink-0 place-items-center rounded-full transition duration-150 ${pris ? 'bg-white text-nuit' : 'ring-[1.5px] ring-inset ring-white/20'}`} aria-hidden="true">
               {pris && <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2.5 6.2 5 8.6l4.5-5" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" /></svg>}
             </span>
@@ -179,10 +281,10 @@ export function ListeChoix<T extends string>({ valeur, options, onChange, label 
 
 export function Segments<T extends string>({ valeur, options, onChange, label }: { valeur: T; options: { id: T; nom: string }[]; onChange: (v: T) => void; label: string }) {
   return (
-    <div role="radiogroup" aria-label={label} className="flex gap-0.5 rounded-[10px] bg-white/[0.05] p-[3px]">
-      {options.map(o => (
-        <button key={o.id} type="button" role="radio" aria-checked={valeur === o.id} onClick={() => { vibrer(5); onChange(o.id); }}
-          className={`min-h-8 flex-1 rounded-[7px] px-2.5 text-[13px] font-medium transition duration-200 ${valeur === o.id ? 'bg-white/[0.14] text-white shadow-[0_1px_2px_rgba(0,0,0,0.3)]' : 'text-white/55 hover:text-white'}`}>
+    <div role="radiogroup" aria-label={label} onKeyDown={e => flechesRadio(e)} className="flex gap-0.5 rounded-[10px] bg-white/[0.05] p-[3px]">
+      {options.map((o, i) => (
+        <button key={o.id} type="button" role="radio" aria-checked={valeur === o.id} tabIndex={arretRadio(valeur === o.id, i === 0, !options.some(x => x.id === valeur))} onClick={() => { vibrer(5); onChange(o.id); }}
+          className={`min-h-10 flex-1 rounded-[7px] px-2.5 text-[13.5px] font-medium transition duration-200 ${valeur === o.id ? 'bg-white/[0.14] text-white shadow-[0_1px_2px_rgba(0,0,0,0.3)]' : 'text-white/55 hover:text-white'}`}>
           {o.nom}
         </button>
       ))}
