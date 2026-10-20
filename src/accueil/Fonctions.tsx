@@ -2,14 +2,17 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import QRCode from 'qrcode';
 import { Icone } from '../components/Icone.tsx';
+import { Symbole } from '../components/Logo.tsx';
 import { CroquisLien, CroquisTete, Telephone } from './Telephone.tsx';
-import { mouvementReduit, useCompte, useGlisse, useSequence, useVu } from './mouvement.ts';
+import { mouvementReduit, useCompte, useGlisse, useSequence, useVisible, useVu } from './mouvement.ts';
 
 /*
  * Ce que fait Hopla, en quatre sections : 02 les liens qui s'ouvrent dans
  * leur app, 03 la page qui change selon le réseau, l'heure et les drops,
  * 04 tout ce qu'il faut autour, 05 les stats en une phrase. Les téléphones y
- * sont des croquis gris : on lit le mouvement, pas un thème.
+ * sont des croquis gris : on lit le mouvement, pas un thème. Au téléphone,
+ * chaque démo part quand son téléphone est à l'écran, et ses commandes et sa
+ * légende sont juste dessous.
  */
 
 const d = (ms: number) => ({ '--d': `${ms}ms` }) as CSSProperties;
@@ -23,6 +26,7 @@ function Revoir({ onClick }: { onClick: () => void }) {
  * onglet choisi rejoue sa scène depuis le début. À la première lecture, la
  * scène « Sans » se joue, son onglet se remplit comme une barre de lecture,
  * puis « Avec » prend la main, une fois ; un toucher arrête l'enchaînement.
+ * Avec moins de mouvement, « Sans » montre le mur de connexion et le départ.
  */
 
 type Cote = 'sans' | 'avec';
@@ -30,23 +34,23 @@ type Cote = 'sans' | 'avec';
 const PAS_APP = [450, 600, 1000, 1100];
 const AVANT_AVEC = 3150 + 1500;
 const LEGENDES: Record<Cote, string> = {
-  sans: 'Le lien s’ouvre dans le navigateur d’Instagram. Ton visiteur n’y est connecté à rien : on lui demande de se reconnecter, et le plus souvent, il repart.',
+  sans: 'Le lien s’ouvre dans le navigateur d’Instagram. Ton visiteur n’y est connecté à rien : on lui demande de se reconnecter, et le plus souvent, il repart.',
   avec: 'Hopla ouvre le lien dans l’app YouTube, où ton visiteur est déjà connecté. Il regarde, il s’abonne, sans rien retaper.',
 };
 
 export function DansApp() {
-  const [ref, vu] = useVu<HTMLDivElement>(0.35);
+  const [ref, vu] = useVu<HTMLDivElement>(0.6);
   const [cote, setCote] = useState<Cote>('sans');
   const [jeu, setJeu] = useState(0);
   const [auto, setAuto] = useState(true);
   const [etape, rejouer] = useSequence(vu, PAS_APP);
-  const clics = useCompte(38, cote === 'avec' && etape >= 2);
+  const reduit = mouvementReduit();
 
   const choisir = (c: Cote) => { setCote(c); setJeu(j => j + 1); rejouer(); };
   const toucher = (c: Cote) => { setAuto(false); choisir(c); };
 
   // La première fois : « Sans », puis « Avec ».
-  const enchaine = vu && auto && cote === 'sans' && !mouvementReduit();
+  const enchaine = vu && auto && cote === 'sans' && !reduit;
   useEffect(() => {
     if (!enchaine) return;
     const t = setTimeout(() => { setAuto(false); choisir('avec'); }, AVANT_AVEC);
@@ -55,30 +59,16 @@ export function DansApp() {
   }, [enchaine]);
 
   return (
-    <section className="hl-section" aria-labelledby="dans-app">
+    <section className="hl-section" id="fonctions" aria-labelledby="dans-app">
       <div className="hl-dans-app">
-        <div className="hl-dans-app-texte">
-          <div className="hl-entre">
-            <h2 id="dans-app" className="hl-h2">Tes liens s’ouvrent dans l’app, pas dans Instagram.</h2>
-            <p className="hl-chapo">Depuis Instagram ou TikTok, ton lien YouTube ou Spotify s’ouvre dans son app, là où ton visiteur est déjà connecté.</p>
-          </div>
-          <div className="hl-onglets hl-onglets-scene" role="group" aria-label="Comparer, la scène se rejoue à chaque choix">
-            {(['sans', 'avec'] as const).map(c => (
-              <button key={c} type="button" aria-pressed={cote === c} onClick={() => toucher(c)}
-                data-remplit={(enchaine && c === 'sans') || undefined} style={{ '--duree': `${AVANT_AVEC}ms` } as CSSProperties}>
-                {c === 'sans' ? 'Sans Hopla' : 'Avec Hopla'}
-              </button>
-            ))}
-          </div>
-          <p key={cote} className="hl-legende-scene" aria-live="polite">{LEGENDES[cote]}</p>
-          <p className="hl-phrase-stat hl-grand-seul" data-visible={(cote === 'avec' && etape >= 2) || undefined} aria-hidden={cote !== 'avec' || undefined}>
-            <b className="hl-chiffre">{clics}</b> clics ouverts dans leur app cette semaine. <span className="hl-gris">Exemple de phrase de tes stats.</span>
-          </p>
+        <div className="hl-dans-app-tete hl-entre">
+          <h2 id="dans-app" className="hl-h2">Tes liens s’ouvrent dans l’app, pas dans Instagram.</h2>
+          <p className="hl-chapo">Depuis Instagram ou TikTok, ton lien YouTube ou Spotify s’ouvre dans son app, là où ton visiteur est déjà connecté.</p>
         </div>
         <div ref={ref} className="hl-dans-app-tel">
-          <Telephone largeur={290} label={cote === 'sans'
-            ? 'Sans Hopla : le lien YouTube s’ouvre dans le navigateur d’Instagram, qui demande de se connecter, et le visiteur repart.'
-            : 'Avec Hopla : le lien YouTube s’ouvre directement dans l’app YouTube, où le visiteur s’abonne.'}>
+          <Telephone largeur={290} className="hl-tel-court" label={cote === 'sans'
+            ? 'Sans Hopla : le lien YouTube s’ouvre dans le navigateur d’Instagram, qui demande de se connecter, et le visiteur repart.'
+            : 'Avec Hopla : le lien YouTube s’ouvre directement dans l’app YouTube, où le visiteur s’abonne.'}>
             <div key={jeu} className="hl-scene-app">
               <div className="hl-cq">
                 <CroquisTete />
@@ -89,7 +79,7 @@ export function DansApp() {
                 </div>
               </div>
               {cote === 'sans' ? <>
-                <div className="hl-integre" data-ouvert={(etape >= 2 && etape < 4) || undefined}>
+                <div className="hl-integre" data-ouvert={(etape >= 2 && (etape < 4 || reduit)) || undefined}>
                   <div className="hl-integre-barre"><span className="hl-tap" data-touche={etape >= 4 || undefined}><Icone nom="ui-fermer" taille={14} /></span><span>youtube.com</span></div>
                   <i className="hl-integre-charge" data-joue={etape >= 2 || undefined} />
                   <div className="hl-integre-video" />
@@ -120,9 +110,17 @@ export function DansApp() {
             </div>
           </Telephone>
         </div>
-        <p className="hl-phrase-stat hl-petit-seul" data-visible={(cote === 'avec' && etape >= 2) || undefined} aria-hidden={cote !== 'avec' || undefined}>
-          <b className="hl-chiffre">{clics}</b> clics ouverts dans leur app cette semaine. <span className="hl-gris">Exemple de phrase de tes stats.</span>
-        </p>
+        <div className="hl-dans-app-commande">
+          <div className="hl-onglets hl-onglets-scene" role="group" aria-label="Comparer, la scène se rejoue à chaque choix">
+            {(['sans', 'avec'] as const).map(c => (
+              <button key={c} type="button" aria-pressed={cote === c} onClick={() => toucher(c)}
+                data-remplit={(enchaine && c === 'sans') || undefined} style={{ '--duree': `${AVANT_AVEC}ms` } as CSSProperties}>
+                {c === 'sans' ? 'Sans Hopla' : 'Avec Hopla'}
+              </button>
+            ))}
+          </div>
+          <p key={cote} className="hl-legende-scene" aria-live="polite">{LEGENDES[cote]}</p>
+        </div>
       </div>
     </section>
   );
@@ -159,18 +157,19 @@ function EcranReseau({ source }: { source: Source }) {
   );
 }
 
-/** Le compte à rebours d'un lancement : il égrène ses secondes tant qu'on le regarde. */
+/** Le compte à rebours d'un lancement : il égrène ses secondes tant que son chapitre est lu et qu'il est à l'écran. */
 function Rebours({ actif }: { actif: boolean }) {
   const [reste, setReste] = useState(((2 * 24 + 14) * 60 + 8) * 60 + 12);
+  const [ref, visible] = useVisible<HTMLDivElement>();
   useEffect(() => {
-    if (!actif || mouvementReduit()) return;
+    if (!actif || !visible || mouvementReduit()) return;
     const t = setInterval(() => setReste(r => r - 1), 1000);
     return () => clearInterval(t);
-  }, [actif]);
+  }, [actif, visible]);
   const j = Math.floor(reste / 86400), h = Math.floor((reste % 86400) / 3600), m = Math.floor((reste % 3600) / 60), s = reste % 60;
   const deux = (n: number) => String(n).padStart(2, '0');
   return (
-    <div className="hl-cq-carte" role="timer" aria-label="Lancement dans deux jours et demi">
+    <div ref={ref} className="hl-cq-carte" role="timer" aria-label="Lancement dans deux jours et demi">
       <Icone nom="horloge" taille={16} />
       <span><b>Lancement dans</b><span className="hl-cq-chrono">{deux(j)} j {deux(h)} h {deux(m)} min {deux(s)} s</span></span>
     </div>
@@ -221,9 +220,9 @@ function EcranDrop({ drop }: { drop: number }) {
 }
 
 const CHAPITRES = [
-  { titre: 'Selon d’où l’on vient', texte: 'Ton TikTok passe en tête pour qui arrive de TikTok, ta chaîne pour qui vient de YouTube. Hopla reconnaît l’app tout seul, sans lien différent par réseau.' },
-  { titre: 'Selon l’heure', texte: '« Réserver un appel » le matin en semaine, « Dernier épisode » le soir. Et un compte à rebours avant un lancement, sans dévoiler l’adresse.' },
-  { titre: 'Des drops', texte: 'Un lien qui s’ouvre avec un code, ou pour les cinquante premiers. Le compteur de places se tient à jour tout seul.' },
+  { court: 'Le réseau', titre: 'Selon d’où l’on vient', texte: 'Ton TikTok passe en tête pour qui arrive de TikTok, ta chaîne pour qui vient de YouTube. Hopla reconnaît l’app tout seul, sans lien différent par réseau.' },
+  { court: 'L’heure', titre: 'Selon l’heure', texte: '« Réserver un appel » le matin en semaine, « Dernier épisode » le soir. Et un compte à rebours avant un lancement, sans dévoiler l’adresse.' },
+  { court: 'Les drops', titre: 'Des drops', texte: 'Un lien qui s’ouvre avec un code, ou pour les cinquante premiers. Le compteur de places se tient à jour tout seul.' },
 ];
 
 function EcranChapitre({ i, e, actif }: { i: number; e: EtatVivant; actif: boolean }) {
@@ -231,21 +230,36 @@ function EcranChapitre({ i, e, actif }: { i: number; e: EtatVivant; actif: boole
 }
 const LABELS = ['La page change l’ordre de ses liens selon le réseau d’origine du visiteur.', 'La page met en avant un autre lien le soir, et affiche un compte à rebours.', 'Un lien réservé s’ouvre avec un code, et ses places se comptent.'];
 
+/** Au téléphone, la durée de chaque démo avant que le chapitre suivant prenne la main. */
+const DUREES = [2600, 3200];
+
 export function Vivante() {
   const [actif, setActif] = useState(-1);
   const [e, setE] = useState<EtatVivant>({ source: 'instagram', heure: 9, drop: 0 });
   const joues = useRef(new Set<number>());
   const chapitres = useRef<(HTMLElement | null)[]>([]);
+  const [refMobile, vuMobile] = useVu<HTMLDivElement>(0.6);
+  const [auto, setAuto] = useState(true);
 
-  // Le chapitre lu : celui qui croise le milieu de l'écran.
+  // Au bureau, le chapitre lu est celui qui croise le milieu de l'écran, à côté du téléphone qui reste.
   useEffect(() => {
-    if (typeof IntersectionObserver !== 'function') return;
+    if (typeof IntersectionObserver !== 'function' || !matchMedia('(min-width: 1024px)').matches) return;
     const o = new IntersectionObserver(entrees => {
       for (const en of entrees) if (en.isIntersecting) setActif(Number((en.target as HTMLElement).dataset.chapitre));
     }, { rootMargin: '-45% 0px -45% 0px' });
     chapitres.current.forEach(c => c && o.observe(c));
     return () => o.disconnect();
   }, []);
+
+  // Au téléphone, un seul téléphone et trois onglets : le premier chapitre part quand le téléphone est à l'écran,
+  // puis chacun passe la main au suivant, une fois ; toucher un onglet arrête l'enchaînement.
+  useEffect(() => { if (vuMobile) setActif(a => (a < 0 ? 0 : a)); }, [vuMobile]);
+  const enchaine = vuMobile && auto && actif >= 0 && actif < CHAPITRES.length - 1 && !mouvementReduit();
+  useEffect(() => {
+    if (!enchaine) return;
+    const t = setTimeout(() => setActif(actif + 1), DUREES[actif]);
+    return () => clearTimeout(t);
+  }, [enchaine, actif]);
 
   // Chaque chapitre joue sa démo la première fois qu'on le lit.
   useEffect(() => {
@@ -265,37 +279,51 @@ export function Vivante() {
     setActif(-1);
     requestAnimationFrame(() => setActif(i));
   };
-
-  const tel = (i: number, l: number) => (
-    <Telephone largeur={l} label={LABELS[i]}>
-      <EcranChapitre i={i} e={e} actif={actif === i} />
+  const lu = Math.max(0, actif);
+  const sources = (
+    <div className="hl-onglets hl-sources" role="group" aria-label="Essayer depuis un réseau">
+      {SOURCES.map(s => <button key={s.id} type="button" aria-pressed={e.source === s.id} onClick={() => { setAuto(false); joues.current.add(0); setE(x => ({ ...x, source: s.id })); }}>{s.nom}</button>)}
+    </div>
+  );
+  const tel = (l: number) => (
+    <Telephone largeur={l} className="hl-tel-court" label={LABELS[lu]}>
+      <EcranChapitre i={lu} e={e} actif={actif === lu} />
     </Telephone>
   );
 
   return (
-    <section className="hl-section" id="fonctions" aria-labelledby="vivante">
+    <section className="hl-section" aria-labelledby="vivante">
       <div className="hl-tete-section hl-entre">
         <h2 id="vivante" className="hl-h2">Une page qui change selon qui la regarde.</h2>
-        <p className="hl-chapo">Un seul lien dans ta bio. Hopla s’occupe du reste.</p>
+        <p className="hl-chapo">Selon le réseau d’où l’on vient, l’heure qu’il est, ou le code qu’on a reçu.</p>
       </div>
-      <div className="hl-vivante">
+      <div className="hl-vivante hl-grand-seul">
         <ol className="hl-chapitres">
           {CHAPITRES.map((c, i) => (
             <li key={c.titre} ref={el => { chapitres.current[i] = el; }} data-chapitre={i} className="hl-chapitre" data-lu={actif === i || undefined}>
               <h3 className="hl-h3">{c.titre}</h3>
               <p>{c.texte}</p>
-              {i === 0 && (
-                <div className="hl-onglets" role="group" aria-label="Essayer depuis un réseau">
-                  {SOURCES.map(s => <button key={s.id} type="button" aria-pressed={e.source === s.id} onClick={() => { joues.current.add(0); setE(x => ({ ...x, source: s.id })); }}>{s.nom}</button>)}
-                </div>
-              )}
-              {i > 0 && <Revoir onClick={() => rejouer(i)} />}
-              <div className="hl-chapitre-tel">{tel(i, 280)}</div>
+              {i === 0 ? sources : <Revoir onClick={() => rejouer(i)} />}
             </li>
           ))}
         </ol>
         <div className="hl-vivante-tel" aria-hidden={actif < 0 || undefined}>
-          <div className="hl-colle">{tel(Math.max(0, actif), 300)}</div>
+          <div className="hl-colle">{tel(300)}</div>
+        </div>
+      </div>
+      <div className="hl-vivante-mobile hl-petit-seul">
+        <div className="hl-onglets hl-onglets-scene" role="group" aria-label="Trois façons de changer, la démo se rejoue à chaque choix">
+          {CHAPITRES.map((c, i) => (
+            <button key={c.court} type="button" aria-pressed={lu === i} onClick={() => { setAuto(false); rejouer(i); }}
+              data-remplit={(enchaine && actif === i) || undefined} style={{ '--duree': `${DUREES[i] ?? 0}ms` } as CSSProperties}>
+              {c.court}
+            </button>
+          ))}
+        </div>
+        <div ref={refMobile} className="hl-vivante-mobile-tel">{tel(290)}</div>
+        <div key={lu} className="hl-legende-scene" aria-live="polite">
+          <p><b>{CHAPITRES[lu].titre}.</b> {CHAPITRES[lu].texte}</p>
+          {lu === 0 && sources}
         </div>
       </div>
     </section>
@@ -371,7 +399,6 @@ function DemoQR({ joue }: { joue: boolean }) {
   );
 }
 
-const SEMAINE = [38, 52, 46, 88, 61, 70, 57];
 export function Autour() {
   return (
     <section className="hl-section" aria-labelledby="autour">
@@ -382,7 +409,7 @@ export function Autour() {
         <Case rang={0} large={2} picto="courrier" titre="Ta liste e-mail, sans outil en plus" texte="Un formulaire sur ta page. Les inscrits arrivent chez toi, en CSV, ou directement dans Brevo et Mailchimp.">
           {joue => <DemoListe joue={joue} />}
         </Case>
-        <Case rang={1} picto="etoile" titre="Avis et preuves" texte="Ta note Google ou Malt, un chiffre qui parle, les mots d’un client.">
+        <Case rang={1} picto="etoile" titre="Avis et preuves" texte="Ta note Google, tes abonnés YouTube ou les mots d’un client : de quoi rassurer avant le clic.">
           {joue => (
             <div className="hl-demo-avis" data-joue={joue || undefined}>
               <b>4,9</b>
@@ -391,7 +418,7 @@ export function Autour() {
             </div>
           )}
         </Case>
-        <Case rang={2} picto="globe" titre="Ta page parle sa langue" texte="Français, anglais, espagnol, allemand, italien : chaque visiteur la lit dans la sienne.">
+        <Case rang={2} picto="globe" titre="Ta page parle sa langue" texte="Français, anglais, espagnol, allemand, italien : chaque visiteur la lit dans la sienne.">
           {joue => <DemoLangues joue={joue} />}
         </Case>
         <Case rang={3} picto="film" titre="Une vidéo, lue sur place" texte="Ta vidéo se lance sur la page, sans quitter Hopla.">
@@ -399,13 +426,6 @@ export function Autour() {
         </Case>
         <Case rang={4} picto="qr" titre="Un QR code prêt à imprimer" texte="Pour une affiche, une carte, un stand. Ceux qui le scannent se comptent à part.">
           {joue => <DemoQR joue={joue} />}
-        </Case>
-        <Case rang={5} large={3} picto="cadenas" titre="Des stats sans cookie" texte="Pas de bannière à imposer à tes visiteurs : l’adresse IP n’est jamais gardée, aucun traceur ne les suit d’un site à l’autre.">
-          {joue => (
-            <div className="hl-demo-barres" data-joue={joue || undefined} aria-hidden="true">
-              {SEMAINE.map((v, k) => <span key={k} style={{ ...d(k * 70), '--h': `${v}%` } as CSSProperties}><i /><small>{'LMMJVSD'[k]}</small></span>)}
-            </div>
-          )}
         </Case>
       </ul>
     </section>
@@ -446,25 +466,25 @@ export function Stats() {
     <section className="hl-section" aria-labelledby="stats">
       <div className="hl-tete-section hl-entre">
         <h2 id="stats" className="hl-h2">Tes stats, en une phrase.</h2>
-        <p className="hl-chapo">Pas de tableau à déchiffrer. Hopla te dit ce qui a bougé, et t’envoie le résumé chaque lundi à 9 h.</p>
+        <p className="hl-chapo">Pas de tableau à déchiffrer : Hopla te dit ce qui a bougé, et t’envoie le résumé chaque lundi à 9 h. Sans cookie ni bannière, l’adresse IP de tes visiteurs n’est jamais gardée.</p>
       </div>
       <div className="hl-stats">
         <div>
           <ol ref={ref} key={tour} className="hl-stats-liste">
             <Phrase joue={vu} depart={0} hausse morceaux={['Ta page a eu', { n: 412, suite: '\u00a0vues,' }, { n: 18, suite: '\u00a0%' }, 'de plus que la semaine d’avant.']} />
-            <Phrase joue={vu} depart={500} morceaux={['Instagram t’amène le plus de monde :', { n: 61, suite: '\u00a0%' }, 'des visites.']} />
-            <Phrase joue={vu} depart={950} hausse morceaux={['Ton meilleur jour : jeudi 16 octobre, avec', { n: 88 }, 'vues. Un post ce jour-là ?']} />
-            <Phrase joue={vu} depart={1450} hausse morceaux={['Ton lien « Ma boutique » a fait', { n: 40, avant: '+', suite: '\u00a0%' }, 'de clics (35 contre 25).']} />
+            <Phrase joue={vu} depart={500} morceaux={['Instagram t’amène le plus de monde :', { n: 61, suite: '\u00a0%' }, 'des visites.']} />
+            <Phrase joue={vu} depart={950} hausse morceaux={['Ton meilleur jour : jeudi 16 octobre, avec', { n: 88 }, 'vues. Un post ce jour-là ?']} />
+            <Phrase joue={vu} depart={1450} hausse morceaux={['Ton lien « Ma boutique » a fait', { n: 40, avant: '+', suite: '\u00a0%' }, 'de clics (35 contre 25).']} />
             <Phrase joue={vu} depart={1950} morceaux={[{ n: 38 }, 'clics se sont ouverts directement dans leur app, sans rester coincés dans Instagram ou TikTok.']} />
           </ol>
           <p className="hl-gris hl-petit">Chiffres d’exemple. <Revoir onClick={() => setTour(t => t + 1)} /></p>
         </div>
         <div className="hl-mail" data-joue={vu || undefined} key={`m${tour}`} aria-label="L’e-mail du lundi" role="img">
-          <div className="hl-mail-tete"><span className="hl-mail-logo" /><b>Hopla</b><span className="hl-gris">lundi 9:00</span></div>
+          <div className="hl-mail-tete"><Symbole className="hl-mail-logo" /><b>Hopla</b><span className="hl-gris">lundi 9:00</span></div>
           <p className="hl-mail-sujet">Ta semaine sur Hopla</p>
-          <p>Ta page a eu 412 vues, 18 % de plus que la semaine d’avant.</p>
-          <p>Instagram t’amène le plus de monde : 61 % des visites.</p>
-          <p>Ton lien « Ma boutique » a fait +40 % de clics.</p>
+          <p>Ta page a eu 412 vues, 18 % de plus que la semaine d’avant.</p>
+          <p>Instagram t’amène le plus de monde : 61 % des visites.</p>
+          <p>Ton lien « Ma boutique » a fait +40 % de clics.</p>
           <span className="hl-mail-bouton">Voir mes stats</span>
         </div>
       </div>

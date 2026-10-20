@@ -6,7 +6,7 @@ import type { Periode } from '../lib/abonnement.ts';
 import { Marque } from './Ouverture.tsx';
 import { Reserver, allerAuChamp } from './Reserver.tsx';
 import type { ApiAccueil } from './Reserver.tsx';
-import { appel, questions, useInscription } from './textes.ts';
+import { MOTS, appel, questions, useInscription } from './textes.ts';
 
 /* 09 · Les prix ; 10 · les questions ; 11 · le dernier appel et le pied de page. */
 
@@ -23,7 +23,8 @@ const GRATUIT = [
 
 export function Prix() {
   const [periode, setPeriode] = useState<Periode>('mois');
-  const libelle = appel(useInscription());
+  const mode = useInscription();
+  const libelle = appel(mode);
   const reserver = (ev: MouseEvent) => { ev.preventDefault(); allerAuChamp(); };
   return (
     <section className="hl-section" id="prix" aria-labelledby="titre-prix">
@@ -48,10 +49,11 @@ export function Prix() {
             <span className="hl-gris">{periode === 'mois' ? 'par mois' : `par an, soit ${euros(Math.round((TARIFS.an.prix / 12) * 100) / 100)} par mois`}</span>
           </p>
           <ul>{['Tout le gratuit', ...AVANTAGES_PRO].map(g => <li key={g}><Icone nom="check" taille={18} />{g}</li>)}</ul>
-          <a href="#reserver" className="hl-btn hl-btn-contour" onClick={reserver}>{libelle}</a>
+          <a href="#reserver" className="hl-btn hl-btn-contour" onClick={reserver}>{mode === 'libre' ? 'Commencer gratuitement' : libelle}</a>
+          <p className="hl-gris hl-petit hl-centre">Le Pro s’active ensuite depuis tes réglages.</p>
         </article>
       </div>
-      <p className="hl-gris hl-petit hl-centre">Prix TTC. Tu résilies quand tu veux depuis ton compte ; le Pro reste jusqu’à la fin de la période payée.</p>
+      <p className="hl-gris hl-petit hl-centre">Prix TTC. Tu résilies quand tu veux depuis ton compte ; le Pro reste jusqu’à la fin de la période payée.</p>
     </section>
   );
 }
@@ -74,10 +76,11 @@ export function Questions() {
 }
 
 export function DernierAppel({ api }: { api: ApiAccueil }) {
+  const mode = useInscription();
   return (
     <section className="hl-section hl-dernier" aria-labelledby="dernier">
       <h2 id="dernier" className="hl-h2 hl-h2-grand hl-entre">Ton nom est <span className="hl-insecable">peut-être</span> encore libre.</h2>
-      <div className="hl-entre" style={{ '--d': '120ms' } as CSSProperties}><Reserver api={api} /></div>
+      <div className="hl-entre" style={{ '--d': '120ms' } as CSSProperties}><Reserver api={api} note={MOTS[mode].note} /></div>
       <a href="/lilian" className="hl-lien-gris">Voir la page de Lilian</a>
     </section>
   );

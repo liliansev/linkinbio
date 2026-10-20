@@ -58,7 +58,7 @@ html:has(.hl) { background: #fff; scroll-padding-top: 76px; }
 .hl-h1 { font-size: clamp(40px, 6.2vw, 72px); line-height: 1.02; }
 .hl-h2 { font-size: clamp(32px, 4.4vw, 52px); line-height: 1.06; }
 .hl-h3 { font-size: 21px; line-height: 1.25; letter-spacing: -0.02em; }
-.hl-chapo { margin-top: 16px; font-size: 18px; color: var(--gris); max-width: 56ch; text-wrap: pretty; }
+.hl-chapo { margin-top: 16px; font-size: 18px; color: var(--gris); max-width: 50ch; text-wrap: pretty; }
 @media (min-width: 1024px) { .hl-chapo { font-size: 19px; } }
 
 /* ---- Boutons et liens ---- */
@@ -119,36 +119,65 @@ html:has(.hl) { background: #fff; scroll-padding-top: 76px; }
 @media (min-width: 380px) { .hl-barre-actions .hl-large { display: inline; } }
 
 /* ---- 01 · L'ouverture ----
- * Centrée : la promesse, le champ du nom, puis trois téléphones en éventail
- * sur une grille fine qui s'efface vers les bords et une lumière grise. */
+ * Au téléphone, centrée : la promesse, le champ du nom, puis trois téléphones
+ * en éventail. Au bureau, deux colonnes : le texte et le champ à gauche, les
+ * téléphones à droite, à la hauteur du champ, pour voir sa page se faire. */
 
 .hl-heros { position: relative; max-width: 1120px; margin: 0 auto; padding: 56px var(--gout) 0; display: flex; flex-direction: column; align-items: center; text-align: center; isolation: isolate; }
-@media (min-width: 1024px) { .hl-heros { padding-top: 88px; } }
-.hl-heros-fond { position: absolute; z-index: -1; inset: -60px 0 0 50%; width: 100vw; translate: -50% 0; pointer-events: none; }
+.hl-heros-fond { position: absolute; z-index: -1; inset: -60px 0 0 50%; width: 100vw; translate: -50% 0; pointer-events: none; --mx: 50%; --my: 34%; }
 .hl-heros-fond::before {
   content: ''; position: absolute; inset: 0;
   background: linear-gradient(#efefef 1px, transparent 1px) 50% 0 / 64px 64px, linear-gradient(90deg, #efefef 1px, transparent 1px) 50% 0 / 64px 64px;
-  -webkit-mask-image: radial-gradient(ellipse 62% 54% at 50% 34%, #000 18%, transparent 72%); mask-image: radial-gradient(ellipse 62% 54% at 50% 34%, #000 18%, transparent 72%);
+  -webkit-mask-image: radial-gradient(ellipse 62% 54% at var(--mx) var(--my), #000 18%, transparent 72%); mask-image: radial-gradient(ellipse 62% 54% at var(--mx) var(--my), #000 18%, transparent 72%);
 }
-.hl-heros-fond::after { content: ''; position: absolute; left: 50%; bottom: 4%; width: min(1100px, 140vw); height: 58%; translate: -50% 0; background: radial-gradient(closest-side, rgb(10 10 10 / .085), transparent); }
+.hl-heros-fond::after { content: ''; position: absolute; left: var(--mx); bottom: 4%; width: min(1100px, 140vw); height: 58%; translate: -50% 0; background: radial-gradient(closest-side, rgb(10 10 10 / .085), transparent); }
 .hl-heros-texte { width: 100%; min-width: 0; }
 .hl-heros-titre { max-width: 13ch; margin-inline: auto; font-size: clamp(42px, 7vw, 82px); line-height: .98; letter-spacing: -0.048em; }
 .hl-heros .hl-chapo { margin: 22px auto 0; max-width: 48ch; }
-@media (min-width: 1024px) { .hl-heros .hl-chapo { font-size: 20px; } }
 .hl-heros .hl-reserver { width: 100%; max-width: 580px; margin: 36px auto 0; text-align: left; }
-.hl-heros .hl-reserver-etat, .hl-heros .hl-reserver-legal { text-align: center; }
+.hl-heros .hl-reserver-etat, .hl-heros .hl-reserver-note { text-align: center; }
+.hl-heros-visuel { width: 100%; display: flex; flex-direction: column; align-items: center; }
 .hl-legende { font-size: 14px; color: var(--gris); text-align: center; }
-.hl-heros > .hl-legende { margin-top: 20px; }
+.hl-heros-visuel > .hl-legende { margin-top: 20px; }
+.hl-souris { display: none; }
+@media (hover: hover) and (pointer: fine) { .hl-souris { display: inline; } .hl-tactile { display: none; } }
+
+/* La carte qui reprend le nom tapé, aux couleurs du thème du téléphone, là où le clavier la laisse voir. */
+.hl-apercu {
+  display: flex; align-items: center; gap: 12px; width: 100%; max-width: 580px; margin: 16px auto 0; padding: 12px 14px;
+  border-radius: 14px; text-align: left; transition: background-color .5s, color .5s; animation: hl-pop .4s var(--ease) both;
+}
+.hl-apercu-avatar {
+  flex: none; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%;
+  background: color-mix(in srgb, currentColor 16%, transparent); font-size: 14px; font-weight: 600;
+}
+.hl-apercu-texte { min-width: 0; display: flex; flex-direction: column; line-height: 1.3; }
+.hl-apercu-texte b { font-size: 16px; font-weight: 600; letter-spacing: -0.01em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hl-apercu-texte small { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+@media (min-width: 1024px) {
+  .hl-heros {
+    display: grid; grid-template-columns: minmax(0, 1fr) clamp(440px, 42vw, 520px); align-items: center; gap: 40px;
+    padding-top: 72px; text-align: left;
+  }
+  .hl-heros-fond { --mx: 68%; --my: 42%; }
+  .hl-heros-titre { max-width: 12ch; margin-inline: 0; font-size: clamp(52px, 5.2vw, 70px); }
+  .hl-heros .hl-chapo { margin: 22px 0 0; max-width: 44ch; font-size: 19px; }
+  .hl-heros .hl-reserver { max-width: 540px; margin: 32px 0 0; }
+  .hl-heros .hl-reserver-etat, .hl-heros .hl-reserver-note { text-align: left; }
+}
 
 .hl-scene { position: relative; width: 100%; display: flex; justify-content: center; margin-top: 56px; }
-@media (min-width: 1024px) { .hl-scene { margin-top: 72px; } }
+@media (min-width: 1024px) { .hl-scene { margin-top: 0; } }
 .hl-scene-milieu { position: relative; z-index: 2; }
 .hl-scene-gauche, .hl-scene-droite { --x: -118px; --r: -6deg; --s: .84; position: absolute; z-index: 1; left: 50%; top: 48px; transform: translateX(calc(-50% + var(--x))) rotate(var(--r)) scale(var(--s)); }
 .hl-scene-droite { --x: 118px; --r: 6deg; }
 @media (min-width: 640px) { .hl-scene-gauche { --x: -210px; --s: .9; } .hl-scene-droite { --x: 210px; --s: .9; } }
-@media (min-width: 1024px) { .hl-scene-gauche { --x: -250px; --r: -7deg; --s: .94; } .hl-scene-droite { --x: 250px; --r: 7deg; --s: .94; } }
+@media (min-width: 1024px) { .hl-scene-gauche { --x: -142px; --r: -6deg; --s: .8; } .hl-scene-droite { --x: 142px; --r: 6deg; --s: .8; } }
 .hl-scene .hl-tel { box-shadow: 0 1px 2px rgb(0 0 0 / .05), 0 44px 88px -44px rgb(0 0 0 / .38); }
 .hl-scene-gauche .hl-tel, .hl-scene-droite .hl-tel { filter: saturate(.92); }
+.hl-tel-pris { color: var(--erreur); }
+.hl-tel-pris s { text-decoration-thickness: 1px; }
 @media (prefers-reduced-motion: no-preference) {
   .hl-scene-milieu { animation: hl-monte 1s var(--ease) .3s both; }
   .hl-scene-gauche, .hl-scene-droite { animation: hl-eventail 1.1s var(--ease) .85s both; }
@@ -170,30 +199,37 @@ html:has(.hl) { background: #fff; scroll-padding-top: 76px; }
 .hl-champ:focus-within { border-color: var(--encre); box-shadow: 0 0 0 3px rgb(10 10 10 / .08); }
 .hl-champ-prefixe { color: var(--gris); font-size: 16px; white-space: nowrap; }
 .hl-champ input { flex: 1; min-width: 0; height: 50px; padding: 0; border: 0; outline: 0; background: transparent; color: var(--encre); font: inherit; font-size: 16px; }
-.hl-champ input::placeholder { color: #a3a3a3; }
+.hl-champ input::placeholder { color: #767676; }
 .hl-champ input:focus-visible { outline: none; }
 .hl-reserver-etat { min-height: 26px; margin-top: 10px; font-size: 15px; line-height: 1.45; }
 .hl-reserver-etat svg { display: inline-block; margin-right: 6px; vertical-align: -3px; }
-.hl-reserver-erreur { color: var(--erreur); }
-.hl-reserver-legal { margin-top: 4px; font-size: 13px; color: var(--gris); }
-.hl-reserver-legal a { color: inherit; text-underline-offset: 2px; }
+.hl-reserver-erreur, .hl-reserver-pris { color: var(--erreur); }
+.hl-reserver-pris b { font-weight: 600; }
+.hl-reserver-pris .hl-lien-texte { color: var(--encre); }
+.hl-reserver-etat [data-signale] { font-weight: 500; }
+.hl-reserver-note { margin-top: 2px; font-size: 14px; color: var(--gris); text-wrap: pretty; }
+.hl-reserver-note a { color: inherit; text-underline-offset: 2px; }
+.hl-reserver[data-pris] .hl-champ, .hl-reserver-grand[data-pris] .hl-reserver-ligne { border-color: var(--erreur); }
 .hl-reserver-grand .hl-reserver-ligne {
   gap: 6px; padding: 6px; border: 1px solid #d6d6d6; border-radius: 15px; background: #fff;
-  box-shadow: 0 1px 2px rgb(0 0 0 / .04), 0 20px 44px -26px rgb(0 0 0 / .3); transition: border-color .15s, box-shadow .15s;
+  box-shadow: 0 1px 2px rgb(0 0 0 / .05), 0 6px 16px -10px rgb(0 0 0 / .16); transition: border-color .15s, box-shadow .15s;
 }
 .hl-reserver-grand .hl-reserver-ligne:hover { border-color: #b8b8b8; }
-.hl-reserver-grand .hl-reserver-ligne:focus-within { border-color: var(--encre); box-shadow: 0 0 0 4px rgb(10 10 10 / .07), 0 20px 44px -26px rgb(0 0 0 / .3); }
+.hl-reserver-grand .hl-reserver-ligne:focus-within { border-color: var(--encre); box-shadow: 0 0 0 4px rgb(10 10 10 / .07), 0 6px 16px -10px rgb(0 0 0 / .16); }
 .hl-reserver-grand .hl-champ { min-height: 54px; padding: 0 8px 0 12px; border: 0; box-shadow: none; }
 .hl-reserver-grand :is(.hl-champ-prefixe, .hl-champ input) { font-size: 17px; }
-.hl-reserver-grand .hl-champ-prefixe { color: #8a8a8a; }
 .hl-reserver-grand .hl-btn { min-height: 54px; padding: 0 22px; border-radius: 10px; font-size: 16px; }
 .hl-reserver-grand .hl-reserver-etat { margin-top: 14px; }
 .hl-reserver-fait {
   display: flex; align-items: flex-start; gap: 10px; padding: 16px 18px;
-  border: 1px solid var(--filet); border-radius: 12px; background: var(--pale); font-weight: 500;
+  border: 1px solid var(--filet); border-radius: 12px; background: var(--pale); text-align: left;
   animation: hl-pop .45s var(--ease) both;
 }
-.hl-reserver-fait svg { flex: none; margin-top: 2px; }
+.hl-reserver-fait > svg { flex: none; margin-top: 3px; }
+.hl-reserver-fait p:first-child { font-weight: 500; }
+.hl-reserver-renvoi { margin-top: 6px; font-size: 14px; color: var(--gris); }
+.hl-reserver-renvoi .hl-lien-texte { color: var(--encre); }
+.hl-reserver-fait .hl-reserver-erreur { margin-top: 6px; font-size: 14px; }
 
 /* ---- Le téléphone ---- */
 
@@ -202,7 +238,8 @@ html:has(.hl) { background: #fff; scroll-padding-top: 76px; }
   aspect-ratio: 390 / 800; border: 1px solid #dcdcdc; border-radius: 28px; background: #fff; overflow: hidden;
   box-shadow: 0 1px 2px rgb(0 0 0 / .04), 0 28px 56px -28px rgb(0 0 0 / .22); isolation: isolate;
 }
-@media (max-width: 359px) { .hl-scene-milieu .hl-tel, .hl-toucher .hl-tel { --l: 270px !important; --z: .6923 !important; } }
+@media (max-width: 359px) { :is(.hl-scene-milieu, .hl-dans-app-tel, .hl-vivante-mobile-tel, .hl-prise-tel) .hl-tel { --l: 270px !important; --z: .6923 !important; } }
+.hl-tel-court { aspect-ratio: 390 / 680; }
 .hl-tel-barre {
   flex: none; height: 34px; display: flex; align-items: center; justify-content: center; padding: 0 12px;
   border-bottom: 1px solid var(--filet); background: #fafafa; font-size: 12px; color: var(--gris);
@@ -263,19 +300,19 @@ html:has(.hl) { background: #fff; scroll-padding-top: 76px; }
 /* ---- 02 · Dans l'app ---- */
 
 .hl-dans-app { display: grid; justify-items: center; gap: 28px; }
-.hl-dans-app-texte { width: 100%; }
+.hl-dans-app-tete, .hl-dans-app-commande { width: 100%; }
+@media (max-width: 1023px) { .hl-dans-app-commande { max-width: 420px; } .hl-dans-app-commande .hl-onglets-scene { margin-top: 0; } }
 @media (min-width: 1024px) {
-  .hl-dans-app { grid-template-columns: 1fr 340px; align-items: center; justify-items: stretch; gap: 72px; }
-  .hl-dans-app-tel { display: flex; justify-content: center; }
+  .hl-dans-app { grid-template-columns: 1fr 340px; grid-template-areas: 'tete tel' 'commande tel'; justify-items: stretch; column-gap: 72px; row-gap: 0; }
+  .hl-dans-app-tete { grid-area: tete; align-self: end; }
+  .hl-dans-app-commande { grid-area: commande; align-self: start; }
+  .hl-dans-app-tel { grid-area: tel; align-self: center; display: flex; justify-content: center; }
 }
 .hl-onglets-scene { margin: 32px 0 0; }
 .hl-onglets-scene button { font-size: 16px; }
 .hl-onglets button[data-remplit]::after { transform-origin: left; animation: hl-remplit var(--duree) linear both; }
 @keyframes hl-remplit { from { transform: scaleX(0); } }
 .hl-legende-scene { min-height: 4.8em; margin-top: 18px; max-width: 46ch; color: var(--gris); animation: hl-fondu .4s ease both; }
-.hl-dans-app .hl-phrase-stat { margin: 8px 0 0; max-width: 46ch; text-align: left; transition: opacity .4s; }
-.hl-dans-app .hl-phrase-stat.hl-petit-seul { margin: 0; text-align: center; }
-.hl-dans-app .hl-phrase-stat:not([data-visible]) { opacity: 0; }
 .hl-scene-app { position: relative; height: 100%; }
 
 .hl-integre {
@@ -323,26 +360,26 @@ html:has(.hl) { background: #fff; scroll-padding-top: 76px; }
 .hl-app-abonne { margin-left: auto; padding: 6px 10px; border-radius: 8px; background: var(--encre); color: #fff; font-size: 12px; font-weight: 600; white-space: nowrap; transition: background-color .25s, color .25s; }
 .hl-app-abonne[data-fait] { background: #f0f0f0; color: var(--encre); }
 
-.hl-phrase-stat { max-width: 640px; margin: 44px auto 0; text-align: center; font-size: 19px; text-wrap: balance; }
-.hl-chiffre { font-size: 1.7em; line-height: 1; letter-spacing: -0.04em; font-variant-numeric: tabular-nums; vertical-align: -0.08em; }
 
-/* ---- 03 · Une page vivante ---- */
+/* ---- 03 · Une page vivante ----
+ * Au bureau, trois chapitres qu'on lit en descendant, à côté d'un téléphone qui
+ * reste ; au téléphone, trois onglets sur un seul téléphone, la légende dessous. */
 
-.hl-chapitre { padding: 28px 0 36px; border-top: 1px solid var(--filet); }
-.hl-chapitre p { margin-top: 10px; color: var(--gris); max-width: 46ch; }
-.hl-chapitre .hl-onglets { margin: 20px 0 0; }
-.hl-chapitre .hl-revoir { margin-top: 14px; }
-.hl-chapitre-tel { display: flex; justify-content: center; margin-top: 28px; }
-.hl-vivante-tel { display: none; }
+.hl-vivante-mobile { display: grid; justify-items: center; gap: 24px; }
+.hl-vivante-mobile > .hl-onglets-scene { width: 100%; max-width: 420px; margin: 0; }
+.hl-vivante-mobile .hl-legende-scene { width: 100%; max-width: 420px; margin: 0; }
+.hl-sources { margin: 16px 0 0; }
+.hl-legende-scene .hl-sources { margin-top: 12px; }
 @media (min-width: 1024px) {
   .hl-vivante { display: grid; grid-template-columns: 1fr 340px; gap: 72px; }
-  .hl-chapitre { min-height: 72vh; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; padding: 0; border: 0; opacity: .32; transition: opacity .45s; }
-  .hl-chapitre[data-lu] { opacity: 1; }
-  .hl-chapitre .hl-h3 { font-size: 30px; letter-spacing: -0.03em; }
-  .hl-chapitre p { font-size: 18px; }
-  .hl-chapitre-tel { display: none; }
-  .hl-vivante-tel { display: block; }
-  .hl-colle { position: sticky; top: max(84px, calc(50vh - 308px)); display: flex; justify-content: center; }
+  .hl-chapitre { min-height: 72vh; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; }
+  /* Le chapitre lu en noir, les autres en gris : lisibles tous les trois, le regard va au premier. */
+  .hl-chapitre .hl-h3 { font-size: 30px; letter-spacing: -0.03em; color: var(--gris); transition: color .45s; }
+  .hl-chapitre p { margin-top: 10px; max-width: 46ch; font-size: 18px; color: var(--gris); transition: color .45s; }
+  .hl-chapitre[data-lu] .hl-h3 { color: var(--encre); }
+  .hl-chapitre[data-lu] p { color: #3a3a3a; }
+  .hl-chapitre .hl-revoir { margin-top: 14px; }
+  .hl-colle { position: sticky; top: max(84px, calc(50vh - 260px)); display: flex; justify-content: center; }
 }
 
 /* ---- 04 · Tout autour ---- */
@@ -375,15 +412,9 @@ html:has(.hl) { background: #fff; scroll-padding-top: 76px; }
 .hl-demo-video[data-joue] i { transform: scaleX(.35); transition: transform 2.4s linear .3s; }
 .hl-demo-qr { display: block; width: 132px; height: 132px; }
 .hl-demo-qr rect { fill: var(--encre); transition: opacity .25s; transition-delay: var(--d, 0ms); }
-.hl-demo-barres { display: flex; align-items: flex-end; gap: 10px; height: 128px; max-width: 520px; }
-.hl-demo-barres span { flex: 1; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 6px; }
-.hl-demo-barres i { width: 100%; height: var(--h); border-radius: 6px 6px 2px 2px; background: #d6d6d6; transform-origin: bottom; transition: transform .6s var(--ease); transition-delay: var(--d, 0ms); }
-.hl-demo-barres span:nth-child(4) i { background: var(--encre); }
-.hl-demo-barres small { font-size: 12px; color: var(--gris); }
 @media (prefers-reduced-motion: no-preference) {
   .hl-demo-avis:not([data-joue]) .hl-etoiles span { opacity: 0; transform: scale(.4); }
   .hl-demo-qr:not([data-joue]) rect { opacity: 0; }
-  .hl-demo-barres:not([data-joue]) i { transform: scaleY(0); }
 }
 
 /* ---- 05 · Les stats ---- */
@@ -400,12 +431,12 @@ html:has(.hl) { background: #fff; scroll-padding-top: 76px; }
 .hl-stat-mot, .hl-stat-hausse { transition: opacity .4s, transform .5s var(--ease); transition-delay: var(--d, 0ms); }
 .hl-mail {
   display: flex; flex-direction: column; gap: 10px; padding: 22px; border: 1px solid var(--filet); border-radius: 16px;
-  background: #fff; font-size: 15px; box-shadow: 0 28px 56px -32px rgb(0 0 0 / .28);
+  background: #fff; font-size: 15px; box-shadow: 0 1px 2px rgb(0 0 0 / .04), 0 10px 24px -16px rgb(0 0 0 / .16);
   transition: opacity .6s, transform .7s var(--ease); transition-delay: 2.4s;
 }
 .hl-mail-tete { display: flex; align-items: center; gap: 10px; font-size: 14px; }
 .hl-mail-tete .hl-gris { margin-left: auto; }
-.hl-mail-logo { width: 28px; height: 28px; border-radius: 8px; background: var(--encre); }
+.hl-mail-logo { flex: none; width: 28px; height: 28px; color: var(--encre); }
 .hl-mail-sujet { margin-top: 4px; font-size: 20px; font-weight: 600; letter-spacing: -0.02em; }
 .hl-mail p:not(.hl-mail-sujet) { color: #3a3a3a; }
 .hl-mail-bouton { align-self: flex-start; margin-top: 6px; padding: 10px 14px; border-radius: 8px; background: var(--encre); color: #fff; font-size: 14px; font-weight: 600; }
@@ -421,12 +452,16 @@ html:has(.hl) { background: #fff; scroll-padding-top: 76px; }
 .hl-onglets-defile::-webkit-scrollbar { display: none; }
 .hl-fleches { display: flex; gap: 8px; }
 .hl-fleches button { display: grid; place-items: center; width: 40px; height: 40px; border: 1px solid var(--filet); border-radius: 10px; background: #fff; color: var(--encre); cursor: pointer; transition: background-color .15s; }
-.hl-fleches button:hover { background: var(--pale); }
+.hl-fleches button:hover:not(:disabled) { background: var(--pale); }
+.hl-fleches button:disabled { color: #b5b5b5; cursor: default; }
 .hl-gauche { transform: rotate(90deg); }
 .hl-droite { transform: rotate(-90deg); }
 .hl-rail {
-  display: flex; gap: 20px; margin: 0 calc(-1 * var(--gout)); padding: 4px var(--gout) 24px;
-  overflow-x: auto; scroll-snap-type: x mandatory; scroll-padding-inline: var(--gout); overscroll-behavior-x: contain; scrollbar-width: none;
+  /* Le rail court d'un bord à l'autre de la fenêtre ; son premier téléphone reste aligné sur le texte
+   * (la section fait 1120 px au plus : pas de pourcentage, que scroll-padding lirait autrement). */
+  --bord: max(var(--gout), calc((100vw - 1120px) / 2 + var(--gout)));
+  display: flex; gap: 20px; margin: 0 calc(-1 * var(--bord)); padding: 4px var(--bord) 24px;
+  overflow-x: auto; scroll-snap-type: x mandatory; scroll-padding-inline: var(--bord); overscroll-behavior-x: contain; scrollbar-width: none;
 }
 .hl-rail::-webkit-scrollbar { display: none; }
 .hl-rail-item { flex: none; width: 210px; display: flex; flex-direction: column; gap: 12px; scroll-snap-align: start; content-visibility: auto; contain-intrinsic-size: 210px 480px; }
@@ -436,43 +471,42 @@ html:has(.hl) { background: #fff; scroll-padding-top: 76px; }
 .hl-couleurs-texte { width: 100%; }
 .hl-couleurs-texte > p { margin-top: 8px; color: var(--gris); max-width: 44ch; }
 .hl-nuances { display: flex; flex-direction: column; gap: 14px; margin: 24px 0 18px; }
-.hl-nuances fieldset { display: flex; align-items: center; gap: 10px; margin: 0; padding: 0; border: 0; min-width: 0; }
-.hl-nuances legend { float: left; width: 76px; padding: 0; font-size: 14px; color: var(--gris); }
-.hl-nuance { width: 34px; height: 34px; padding: 0; border: 1px solid rgb(0 0 0 / .12); border-radius: 10px; cursor: pointer; transition: box-shadow .15s, transform .15s; }
+.hl-nuances fieldset { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 0; padding: 0; border: 0; min-width: 0; }
+.hl-nuances legend { width: 100%; margin-bottom: 2px; padding: 0; font-size: 14px; color: var(--gris); }
+@media (min-width: 480px) { .hl-nuances fieldset { flex-wrap: nowrap; } .hl-nuances legend { float: left; width: 76px; margin: 0; } }
+.hl-nuance { width: 44px; height: 44px; padding: 0; border: 1px solid rgb(0 0 0 / .12); border-radius: 12px; cursor: pointer; transition: box-shadow .15s, transform .15s; }
 .hl-nuance:hover { transform: scale(1.06); }
 .hl-nuance[aria-pressed='true'] { box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--encre); }
 
-/* ---- 07 · L'arrivée ---- */
+/* ---- 07 · Créer et modifier ---- */
 
-.hl-arrivee, .hl-toucher { display: grid; justify-items: center; gap: 32px; }
-@media (min-width: 1024px) { .hl-arrivee, .hl-toucher { grid-template-columns: 1fr auto; align-items: center; justify-items: stretch; gap: 72px; } }
+.hl-prise { display: grid; justify-items: center; gap: 24px; }
+.hl-prise-texte { width: 100%; }
+.hl-prise .hl-onglets-scene { margin: 0; }
+@media (max-width: 1023px) { .hl-prise-texte { max-width: 420px; } }
+@media (min-width: 1024px) { .hl-prise { grid-template-columns: 1fr 340px; align-items: center; justify-items: stretch; gap: 72px; } }
 .hl-etapes { display: none; }
-@media (min-width: 1024px) { .hl-etapes { display: flex; flex-direction: column; gap: 6px; } }
+@media (min-width: 1024px) { .hl-etapes { display: flex; flex-direction: column; gap: 6px; margin-top: 24px; } }
 .hl-etapes button {
   display: flex; gap: 16px; width: 100%; padding: 16px; border: 0; border-radius: 12px; background: none;
-  color: var(--encre); font: inherit; text-align: left; cursor: pointer; opacity: .45; transition: opacity .3s, background-color .3s;
+  color: var(--gris); font: inherit; text-align: left; cursor: pointer; transition: color .3s, background-color .3s;
 }
-.hl-etapes button:hover { opacity: .8; }
-.hl-etapes li[data-lu] button { opacity: 1; background: var(--pale); }
+.hl-etapes button:hover { color: var(--encre); }
+.hl-etapes li[data-lu] button { color: var(--encre); background: var(--pale); }
 .hl-etape-num { flex: none; display: grid; place-items: center; width: 32px; height: 32px; border: 1px solid currentColor; border-radius: 8px; font-size: 14px; font-weight: 600; transition: background-color .3s, color .3s; }
 .hl-etapes li[data-lu] .hl-etape-num { border-color: var(--encre); background: var(--encre); color: #fff; }
-.hl-etapes b, .hl-gestes b { display: block; font-size: 19px; font-weight: 600; letter-spacing: -0.02em; }
+.hl-etapes b { display: block; font-size: 19px; font-weight: 600; letter-spacing: -0.02em; }
 .hl-etape-texte { display: block; margin-top: 2px; font-size: 15px; color: var(--gris); }
-.hl-arrivee-tel { display: flex; flex-direction: column; align-items: center; gap: 14px; }
-.hl-segments { display: flex; gap: 6px; width: 280px; }
+.hl-etapes li[data-lu] .hl-etape-texte { color: #3a3a3a; }
+.hl-prise-tel { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.hl-prise-legende { display: flex; flex-direction: column; align-items: center; gap: 12px; width: min(290px, 100%); }
+.hl-prise-legende p { width: 100%; min-height: 4.6em; font-size: 15px; }
+.hl-prise-legende b { margin-left: 4px; }
+.hl-segments { display: flex; gap: 6px; width: 100%; }
 .hl-segments i { position: relative; flex: 1; height: 3px; border-radius: 2px; background: var(--filet); overflow: hidden; }
 .hl-segments i::after { content: ''; position: absolute; inset: 0; background: var(--encre); transform: scaleX(0); transform-origin: left; transition: transform .5s var(--ease); }
 .hl-segments i[data-plein]::after { transform: none; }
-.hl-arrivee-legende { width: 280px; min-height: 4.6em; font-size: 15px; }
-.hl-arrivee-legende b { margin-left: 4px; }
 
-/* ---- 08 · Modifier en touchant ---- */
-
-.hl-gestes { display: flex; flex-direction: column; gap: 6px; width: 100%; max-width: 520px; }
-.hl-gestes li { display: flex; gap: 16px; padding: 16px; border-radius: 12px; opacity: .45; transition: opacity .3s, background-color .3s; }
-.hl-gestes li[data-lu] { opacity: 1; background: var(--pale); }
-.hl-gestes li > svg { flex: none; margin-top: 2px; }
-.hl-gestes li.hl-gestes-revoir { opacity: 1; padding-top: 6px; }
 .hl-bo { position: relative; height: 100%; display: flex; flex-direction: column; background: #fff; font-size: 13px; line-height: 1.35; }
 .hl-bo-tete { flex: none; display: flex; flex-direction: column; gap: 2px; padding: 18px 16px 12px; border-bottom: 1px solid var(--filet); }
 .hl-bo-tete b { font-size: 16px; letter-spacing: -0.02em; }
@@ -519,7 +553,8 @@ html:has(.hl) { background: #fff; scroll-padding-top: 76px; }
 .hl-offre ul { flex: 1; display: flex; flex-direction: column; gap: 10px; font-size: 15px; }
 .hl-offre li { display: flex; align-items: flex-start; gap: 10px; }
 .hl-offre li svg { flex: none; margin-top: 3px; }
-.hl-offre .hl-btn { width: 100%; }
+.hl-offre { min-width: 0; }
+.hl-offre .hl-btn { width: 100%; white-space: normal; text-align: center; }
 
 /* ---- 10 · Les questions ; 11 · le dernier appel ---- */
 
@@ -530,10 +565,11 @@ html:has(.hl) { background: #fff; scroll-padding-top: 76px; }
 .hl-question summary::-webkit-details-marker { display: none; }
 .hl-question summary svg { flex: none; transition: transform .25s var(--ease); }
 .hl-question[open] summary svg { transform: rotate(45deg); }
-.hl-question p { max-width: 62ch; padding-bottom: 22px; color: var(--gris); }
+.hl-question p { max-width: 48ch; padding-bottom: 22px; color: var(--gris); text-wrap: pretty; }
 .hl-dernier { display: flex; flex-direction: column; align-items: center; gap: 28px; text-align: center; }
 .hl-h2-grand { max-width: 14ch; font-size: clamp(38px, 6vw, 72px); line-height: 1.02; }
-.hl-dernier > div { width: 100%; max-width: 560px; text-align: left; }
+.hl-dernier > div { width: 100%; max-width: 560px; }
+.hl-dernier .hl-reserver-etat, .hl-dernier .hl-reserver-note { text-align: center; }
 .hl-pied { max-width: 1120px; margin: 112px auto 0; padding: 32px var(--gout) 48px; display: flex; flex-direction: column; gap: 20px; border-top: 1px solid var(--filet); }
 @media (min-width: 800px) { .hl-pied { flex-direction: row; align-items: center; justify-content: space-between; } }
 .hl-pied nav { display: flex; flex-wrap: wrap; gap: 10px 22px; font-size: 14px; }
@@ -545,7 +581,6 @@ html:has(.hl) { background: #fff; scroll-padding-top: 76px; }
 @media (prefers-reduced-motion: no-preference) {
   .hl-mots .hl-mot { display: inline-block; animation: hl-mot .75s var(--ease) both; animation-delay: var(--d, 0ms); }
   .hl-apparait { animation: hl-monte-un-peu .7s var(--ease) both; animation-delay: var(--d, 0ms); }
-  .hl-monte { animation: hl-monte .9s var(--ease) .2s both; }
 }
 @media (scripting: enabled) and (prefers-reduced-motion: no-preference) {
   .hl-entre { transition: opacity .7s var(--ease), transform .7s var(--ease); transition-delay: var(--d, 0ms); }

@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Couleurs } from '../lib/types.ts';
 import { SANS_COULEURS } from '../lib/types.ts';
 import { FAMILLES, THEMES } from '../lib/themes.ts';
@@ -22,6 +22,18 @@ export function Themes() {
   const liste = THEMES.filter(t => famille === 'tous' || t.famille === famille);
   const defiler = (sens: number) => rail.current?.scrollBy({ left: sens * rail.current.clientWidth * 0.8, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
 
+  // Les flèches s'éteignent aux deux bouts du rail.
+  const [bouts, setBouts] = useState({ debut: true, fin: false });
+  useEffect(() => {
+    const el = rail.current;
+    if (!el) return;
+    const lire = () => setBouts({ debut: el.scrollLeft <= 4, fin: el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 });
+    lire();
+    el.addEventListener('scroll', lire, { passive: true });
+    addEventListener('resize', lire);
+    return () => { el.removeEventListener('scroll', lire); removeEventListener('resize', lire); };
+  }, [famille]);
+
   return (
     <section className="hl-section" id="themes" aria-labelledby="titre-themes">
       <div className="hl-tete-section hl-entre">
@@ -35,8 +47,8 @@ export function Themes() {
           ))}
         </div>
         <div className="hl-fleches hl-grand-seul">
-          <button type="button" onClick={() => defiler(-1)} aria-label="Thèmes précédents"><Icone nom="ui-chevron" taille={18} className="hl-gauche" /></button>
-          <button type="button" onClick={() => defiler(1)} aria-label="Thèmes suivants"><Icone nom="ui-chevron" taille={18} className="hl-droite" /></button>
+          <button type="button" onClick={() => defiler(-1)} disabled={bouts.debut} aria-label="Thèmes précédents"><Icone nom="ui-chevron" taille={18} className="hl-gauche" /></button>
+          <button type="button" onClick={() => defiler(1)} disabled={bouts.fin} aria-label="Thèmes suivants"><Icone nom="ui-chevron" taille={18} className="hl-droite" /></button>
         </div>
       </div>
       <ul ref={rail} className="hl-rail" aria-label={`${liste.length} thèmes`}>

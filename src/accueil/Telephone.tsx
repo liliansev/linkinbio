@@ -9,7 +9,7 @@ import { PageLiens } from '../components/PageLiens.tsx';
  */
 
 export function Telephone({ largeur = 300, adresse, label, children, className = '', style }: {
-  largeur?: number; adresse?: string; label: string; children: ReactNode; className?: string; style?: CSSProperties;
+  largeur?: number; adresse?: ReactNode; label: string; children: ReactNode; className?: string; style?: CSSProperties;
 }) {
   return (
     <figure className={`hl-tel ${className}`} style={{ '--l': `${largeur}px`, '--z': largeur / 390, ...style } as CSSProperties} role="img" aria-label={label}>

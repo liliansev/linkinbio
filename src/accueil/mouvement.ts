@@ -25,6 +25,21 @@ export function useVu<T extends Element>(seuil = 0.2): [RefObject<T | null>, boo
   return [ref, vu];
 }
 
+/** Vrai tant que l'élément est à l'écran : ce qui égrène le temps s'arrête quand on ne le regarde plus. */
+export function useVisible<T extends Element>(): [RefObject<T | null>, boolean] {
+  const ref = useRef<T>(null);
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    if (typeof IntersectionObserver !== 'function') { setVisible(true); return; }
+    const o = new IntersectionObserver(([e]) => setVisible(e.isIntersecting));
+    o.observe(el);
+    return () => o.disconnect();
+  }, []);
+  return [ref, visible];
+}
+
 /** Pose `data-vu` sur chaque `.hl-entre` de la page quand il arrive à l'écran : la feuille de style fait le reste. */
 export function useEntrees() {
   useEffect(() => {

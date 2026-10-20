@@ -5,15 +5,17 @@ import { Symbole } from '../components/Logo.tsx';
 import { EcranPage, Telephone } from './Telephone.tsx';
 import { Reserver, allerAuChamp, useReservation } from './Reserver.tsx';
 import type { ApiAccueil } from './Reserver.tsx';
-import { pageJules, pageLilian, pageMarie, pageVisiteur } from './exemples.ts';
+import { nomAffiche, pageJules, pageLilian, pageMarie, pageVisiteur } from './exemples.ts';
 import { mouvementReduit } from './mouvement.ts';
 import { APPEL, MOTS, useInscription } from './textes.ts';
 
 /*
  * 01 · La barre et l'ouverture. La promesse, puis tout de suite le champ du
- * nom : on tape, et le téléphone du milieu devient sa page (son nom, son
- * adresse). Trois téléphones s'ouvrent en éventail, une fois, sur une
- * lumière grise et une grille fine qui s'efface vers les bords.
+ * nom : on tape, et le téléphone d'à côté devient sa page (son nom, son
+ * adresse). Au bureau, le texte à gauche et les téléphones à droite, à la
+ * même hauteur que le champ ; au téléphone, où le clavier cache la scène, une
+ * carte aux couleurs du thème reprend son nom sous le champ. Trois téléphones
+ * s'ouvrent en éventail, une fois, sur une lumière grise et une grille fine.
  */
 
 export function Marque() {
@@ -63,7 +65,7 @@ const mots = (texte: string, depart = 0) => texte.split(' ').map((m, i) => (
 export function Ouverture({ api }: { api: ApiAccueil }) {
   const [rang, setRang] = useState(0);
   const [tourFini, setTourFini] = useState(false);
-  const { nom } = useReservation();
+  const { nom, verif } = useReservation();
   const mode = useInscription();
 
   useEffect(() => {
@@ -76,9 +78,13 @@ export function Ouverture({ api }: { api: ApiAccueil }) {
 
   const theme = THEMES.find(t => t.id === TOUR[rang])!;
   const suivant = () => { setTourFini(true); setRang(r => (r + 1) % TOUR.length); };
-  // Dès qu'on tape un nom, la page du milieu devient la sienne.
+  // Dès qu'on tape un nom, la page du milieu devient la sienne ; un nom pris le dit dans la barre d'adresse.
   const pseudo = nom.replace(/-$/, '');
+  const pris = !!pseudo && verif?.nom === pseudo && verif.etat !== 'libre';
   const page = pseudo ? pageVisiteur(pseudo, theme.id) : pageLilian(theme.id);
+  const adresse = pris
+    ? <span className="hl-tel-pris"><s>hopla.page/{pseudo}</s> {verif?.etat === 'pris' ? 'déjà pris' : 'impossible'}</span>
+    : `hopla.page/${pseudo || 'lilian'}`;
 
   return (
     <section className="hl-heros" aria-labelledby="titre">
@@ -90,28 +96,38 @@ export function Ouverture({ api }: { api: ApiAccueil }) {
         </p>
         <div className="hl-apparait" style={d(540)}>
           <Reserver api={api} id="reserver" grand note={MOTS[mode].note} />
+          {pseudo.length >= 3 && !pris && (
+            <div className="hl-apercu hl-petit-seul" style={{ background: theme.fondUni, color: theme.texte }} aria-hidden="true">
+              <span className="hl-apercu-avatar">{nomAffiche(pseudo).split(' ').slice(0, 2).map(m => m[0]).join('')}</span>
+              <span className="hl-apercu-texte"><b>{nomAffiche(pseudo)}</b><small style={{ color: theme.doux }}>hopla.page/{pseudo} · {theme.nom}</small></span>
+            </div>
+          )}
         </div>
       </div>
-      <div className="hl-scene">
-        <div className="hl-scene-tel hl-scene-gauche" aria-hidden="true">
-          <Telephone largeur={250} label="La page de Marie Lambert, céramiste, dans le thème Lin">
-            <EcranPage page={pageMarie('lin')} />
-          </Telephone>
-        </div>
-        <div className="hl-scene-tel hl-scene-droite" aria-hidden="true">
-          <Telephone largeur={250} label="La page de Jules Moreau, musicien, dans le thème Arcade">
-            <EcranPage page={pageJules('arcade')} />
-          </Telephone>
-        </div>
-        <div className="hl-scene-tel hl-scene-milieu">
-          <button type="button" className="hl-tel-bouton" onClick={suivant} aria-label={`Thème suivant (${theme.nom}, ${rang + 1} sur ${TOUR.length})`}>
-            <Telephone largeur={290} adresse={`hopla.page/${pseudo || 'lilian'}`} label={pseudo ? `Un aperçu de ta page, hopla.page/${pseudo}` : 'La page de Lilian Sevoumian sur Hopla, dans plusieurs thèmes'}>
-              <div key={theme.id} className="hl-fondu"><EcranPage page={page} /></div>
+      <div className="hl-heros-visuel">
+        <div className="hl-scene">
+          <div className="hl-scene-tel hl-scene-gauche" aria-hidden="true">
+            <Telephone largeur={250} label="La page de Marie Lambert, céramiste, dans le thème Lin">
+              <EcranPage page={pageMarie('lin')} />
             </Telephone>
-          </button>
+          </div>
+          <div className="hl-scene-tel hl-scene-droite" aria-hidden="true">
+            <Telephone largeur={250} label="La page de Jules Moreau, musicien, dans le thème Arcade">
+              <EcranPage page={pageJules('arcade')} />
+            </Telephone>
+          </div>
+          <div className="hl-scene-tel hl-scene-milieu">
+            <button type="button" className="hl-tel-bouton" onClick={suivant} aria-label={`Thème suivant (${theme.nom}, ${rang + 1} sur ${TOUR.length})`}>
+              <Telephone largeur={290} adresse={adresse} label={pseudo && !pris ? `Un aperçu de ta page, hopla.page/${pseudo}` : 'La page de Lilian Sevoumian sur Hopla, dans plusieurs thèmes'}>
+                <div key={theme.id} className="hl-fondu"><EcranPage page={page} /></div>
+              </Telephone>
+            </button>
+          </div>
         </div>
+        <p className="hl-legende hl-apparait" style={d(1300)} aria-live="polite">
+          Thème {theme.nom} · <span className="hl-tactile">touche</span><span className="hl-souris">clique sur</span> le téléphone pour changer
+        </p>
       </div>
-      <p className="hl-legende hl-apparait" style={d(1300)} aria-live="polite">Thème {theme.nom} · touche le téléphone pour changer</p>
     </section>
   );
 }
