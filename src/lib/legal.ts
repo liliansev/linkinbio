@@ -97,6 +97,9 @@ export const LEGAL: Record<NomDocument, DocumentLegal> = {
         'Si tu t’inscris à la liste d’une page (« Rejoins ma liste »), ton adresse et, s’il est demandé, ton prénom vont à son propriétaire, qui seul décide des e-mails qu’il t’envoie ; il peut les transmettre à son outil d’envoi (Brevo ou Mailchimp). Pour te désinscrire ou faire effacer ton adresse, écris-lui, ou à ' + CONTACT_LEGAL + '.',
         'Pour un lien à accès réservé (mode drop), Hopla garde, pour compter les places, une empreinte chiffrée propre à ce lien, tirée de ton adresse IP et de ton navigateur : elle ne sert qu’à ça, ne permet pas de te suivre d’un lien à l’autre, et s’efface au bout de treize mois.',
       ] },
+      { titre: 'Si tu réserves ton nom', texte: [
+        'Ton adresse e-mail et le nom choisi, pour te garder ce nom, te confirmer la réservation et t’envoyer ton invitation. Base légale : ta demande (mesures précontractuelles). Gardés jusqu’à ton invitation, et effacés au bout d’un an au plus. Pour les effacer avant, réponds à l’e-mail de confirmation ou écris à ' + CONTACT_LEGAL + '.',
+      ] },
       { titre: 'Si tu as un compte', texte: [
         'Ton adresse e-mail, ton pseudo, la date de création et de dernière connexion, la version des conditions acceptées, et ce que tu publies (réglages, blocs, images). Base légale : l’exécution du contrat (les CGU). Ces données sont gardées tant que ton compte existe, et effacées dès que tu le supprimes.',
         'Si tu passes en Pro : l’identifiant de client et d’abonnement que Creem nous transmet, le statut de l’abonnement et sa date de renouvellement, pour savoir si ta page est en Pro. Ton nom, ton adresse de facturation et ta carte restent chez Creem, qui en est responsable pour le paiement et la facturation.',
@@ -123,7 +126,7 @@ export const LEGAL: Record<NomDocument, DocumentLegal> = {
         `Hébergement du serveur et de la base de données. ${HEBERGEUR} : société établie dans l’Union européenne.`,
       ] },
       { titre: 'Resend', texte: [
-        'Envoi des e-mails : liens de connexion, invitations, décisions de modération. Ne reçoit que l’adresse du destinataire et le contenu du message. Resend, Inc., États-Unis ; le transfert est encadré par l’accord de traitement de Resend et les clauses contractuelles types de la Commission européenne.',
+        'Envoi des e-mails : liens de connexion, réservations de nom, invitations, décisions de modération. Ne reçoit que l’adresse du destinataire et le contenu du message. Resend, Inc., États-Unis ; le transfert est encadré par l’accord de traitement de Resend et les clauses contractuelles types de la Commission européenne.',
       ] },
       { titre: 'Creem', texte: [
         'Paiement de l’offre Pro (creem.io), par Armitage Labs OÜ, Rotermanni 14, 10111 Tallinn, Estonie. Creem n’est pas un sous-traitant au sens strict : revendeur officiel de l’abonnement, il est responsable des données de paiement et de facturation qu’il collecte. Hopla lui transmet ton adresse e-mail et l’identifiant de ton compte au moment du paiement, et reçoit en retour l’état de l’abonnement.',

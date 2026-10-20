@@ -1,14 +1,15 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
-import type { ApiComptes, CompteResume, SignalementResume } from '../lib/types.ts';
+import type { ApiComptes, CompteResume, Reservation, SignalementResume } from '../lib/types.ts';
 import { nomMotif } from '../lib/legal.ts';
 import { cheminPage, sansSchema, urlPage } from '../lib/types.ts';
 import { BoutonPrincipal, Carte, Champ, classeBadge, classeBouton, classeSaisie } from './ui.tsx';
 
 /*
  * Les comptes, dans le back office de Lilian seulement. Pendant la bêta on
- * n'entre que sur invitation : Lilian saisit l'adresse et le pseudo, la
- * personne reçoit un lien valable une semaine.
+ * n'entre que sur invitation : Lilian invite une personne de la liste
+ * d'attente (son nom réservé depuis l'accueil), ou saisit l'adresse et le
+ * pseudo ; la personne reçoit un lien valable une semaine.
  */
 
 type Message = { ok: boolean; texte: string; lienDev?: string };
@@ -47,6 +48,7 @@ export function OngletComptes({ api }: { api: ApiComptes }) {
   return (
     <div className="flex flex-col gap-4">
       <Signalements api={api} onChange={recharger} />
+      <ListeAttente api={api} onChange={recharger} />
 
       <Carte titre="Inviter quelqu’un">
         <form onSubmit={inviter} className="flex max-w-md flex-col gap-3">
@@ -145,6 +147,59 @@ function LigneCompte({ compte, api, onChange, onMessage }: { compte: CompteResum
         </>
       )}
     </li>
+  );
+}
+
+/** Les noms réservés depuis l'accueil, du plus ancien au plus récent : inviter crée la page et envoie le lien. */
+function ListeAttente({ api, onChange }: { api: ApiComptes; onChange: () => void }) {
+  const [liste, setListe] = useState<Reservation[] | null>(null);
+  const [occupe, setOccupe] = useState('');
+  const [message, setMessage] = useState<Message | null>(null);
+  // Retirer efface la réservation : un second toucher le confirme.
+  const [aRetirer, setARetirer] = useState('');
+  const recharger = useCallback(() => api.attente().then(setListe).catch(() => setListe([])), [api]);
+  useEffect(() => { recharger(); }, [recharger]);
+  if (!liste) return null;
+
+  async function agir(id: string, faire: () => Promise<void>) {
+    setOccupe(id);
+    setMessage(null);
+    try { await faire(); } catch (error) { setMessage({ ok: false, texte: (error as Error).message || 'L’action n’a pas abouti. Réessaie.' }); }
+    setOccupe('');
+    await recharger();
+    onChange();
+  }
+
+  return (
+    <Carte titre="Liste d’attente" action={<span className="text-[13px] text-white/50">{liste.length ? `${liste.length} nom${liste.length > 1 ? 's' : ''} réservé${liste.length > 1 ? 's' : ''}` : 'Personne pour l’instant'}</span>}>
+      {liste.length === 0 && <p className="text-[13.5px] text-white/50">Les noms réservés depuis hopla.page arrivent ici, dans l’ordre d’arrivée.</p>}
+      <ul className="-mx-1 flex flex-col divide-y divide-white/[0.06]">
+        {liste.map(r => (
+          <li key={r.id} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2.5 px-1 py-3.5">
+            <div className="min-w-0">
+              <p className="truncate text-[15.5px] font-semibold">hopla.page/{r.pseudo}</p>
+              <p className="truncate text-[13px] text-white/50">{r.email} · le {date(r.ts)}</p>
+            </div>
+            <div className="flex gap-2">
+              <button type="button" disabled={!!occupe} className={classeBouton.principal}
+                onClick={() => agir(r.id, async () => { const res = await api.inviterAttente(r.id); setMessage({ ok: res.ok, texte: res.message, lienDev: res.lienDev }); })}>
+                {occupe === r.id ? 'Envoi…' : 'Inviter'}
+              </button>
+              <button type="button" disabled={!!occupe} className={classeBouton.discret}
+                onClick={() => (aRetirer === r.id ? agir(r.id, () => api.retirerAttente(r.id)) : setARetirer(r.id))} onBlur={() => setARetirer('')}>
+                {aRetirer === r.id ? 'Retirer vraiment' : 'Retirer'}
+              </button>
+            </div>
+          </li>
+        ))}
+      </ul>
+      {message && (
+        <p role={message.ok ? 'status' : 'alert'} className={`mt-2 rounded-xl px-3.5 py-2.5 text-[14px] ${message.ok ? 'bg-white/[0.05] text-white' : 'bg-red-400/10 text-red-200'}`}>
+          {message.texte}
+          {message.lienDev && <a href={message.lienDev} className="mt-2 block break-all text-[12.5px] text-white underline">{message.lienDev}</a>}
+        </p>
+      )}
+    </Carte>
   );
 }
 

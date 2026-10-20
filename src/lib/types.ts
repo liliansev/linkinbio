@@ -281,8 +281,16 @@ export interface Api {
   comptes?: ApiComptes;
 }
 
+/** Un nom réservé depuis l'accueil, en attente d'invitation. */
+export interface Reservation { id: string; email: string; pseudo: string; ts: number }
+
 export interface ApiComptes {
   lister(): Promise<CompteResume[]>;
+  /** La liste d'attente, dans l'ordre d'arrivée. */
+  attente(): Promise<Reservation[]>;
+  /** Crée la page de la réservation et envoie l'invitation. */
+  inviterAttente(id: string): Promise<{ ok: boolean; message: string; lienDev?: string }>;
+  retirerAttente(id: string): Promise<void>;
   /** Crée le compte et envoie l'invitation ; renvoie le message à afficher. */
   inviter(email: string, pseudo: string): Promise<{ ok: boolean; message: string; lienDev?: string }>;
   renvoyer(id: string): Promise<{ ok: boolean; message: string; lienDev?: string }>;

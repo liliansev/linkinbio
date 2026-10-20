@@ -73,7 +73,11 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
   const adressePage = urlPage(compte);
   const peutPartager = typeof navigator !== 'undefined' && typeof navigator.share === 'function';
 
-  const profil = (champs: Partial<Reglages['profil']>) => onReglages({ ...reglages, profil: { ...reglages.profil, ...champs } });
+  // Le titre de l'onglet suit le nom tant qu'il est celui donné à la création (« Marie Test · Hopla »).
+  const profil = (champs: Partial<Reglages['profil']>) => onReglages({
+    ...reglages, profil: { ...reglages.profil, ...champs },
+    ...(champs.nom !== undefined && reglages.seo.titre === `${reglages.profil.nom} · Hopla` ? { seo: { ...reglages.seo, titre: `${champs.nom} · Hopla` } } : {}),
+  });
 
   async function photo(f: File | undefined) {
     if (!f) return;

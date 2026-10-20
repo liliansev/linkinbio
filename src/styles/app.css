@@ -14,6 +14,7 @@
 @import '@fontsource/instrument-serif/400-italic.css';
 @import './page.css';
 @import './admin.css';
+@import './accueil.css';
 
 @theme {
   --font-sans: 'Geist Variable', ui-sans-serif, system-ui, sans-serif;
