@@ -1,5 +1,6 @@
 import type { Api, Bloc, CompteResume, EtatAdmin, Reglages, Reservation, SignalementResume, Stats } from '../src/lib/types.ts';
 import { REGLAGES_DEFAUT, blocsDefaut, reglagesNouveauCompte } from '../src/lib/defauts.ts';
+import type { Droits } from '../src/lib/droits.ts';
 import avatar from '../public/avatar.webp?inline';
 
 /*
@@ -10,7 +11,7 @@ import avatar from '../public/avatar.webp?inline';
 
 const CLE = 'liens-demo-v3';
 /** Sans paiement, rien n'est réservé : l'aperçu montre toutes les fonctions (seule la mention reste sans offre). */
-const DROITS_APERCU = { sansMention: false, avis: true, langues: true, reseauHeure: true, drops: true, listeEmail: true };
+const DROITS_APERCU: Droits = { sansMention: false, couleurs: true, programmation: true, avis: true, stats: true, heure: true, drops: true, listeEmail: true };
 let n = 0;
 const id = () => `d${Date.now().toString(36)}${n++}`;
 

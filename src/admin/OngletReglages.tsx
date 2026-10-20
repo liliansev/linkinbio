@@ -1,19 +1,18 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { CONTACT_LEGAL } from '../lib/legal.ts';
-import type { Bloc, ComptePage, Reglages } from '../lib/types.ts';
-import { LANGUES, urlPage } from '../lib/types.ts';
+import type { ComptePage, Reglages } from '../lib/types.ts';
+import { urlPage } from '../lib/types.ts';
 import type { Abonnement as EtatAbonnement, Periode, PlanPayant } from '../lib/abonnement.ts';
 import { OFFRES } from '../lib/abonnement.ts';
 import { Icone } from '../components/Icone.tsx';
 import { Bascule, BoutonCopier, BoutonSecondaire, Carte, Champ, Interrupteur, classeBouton, classeSaisie, vibrer } from './ui.tsx';
 import { Abonnement } from './Offres.tsx';
-import { Etiquette, Reserve, usePermis } from './offre.tsx';
-import { LANGUES_FR } from './ReglesBloc.tsx';
+import { Etiquette, usePermis, useVoirOffres } from './offre.tsx';
 import { CodeQR } from './CodeQR.tsx';
 
-export function OngletReglages({ reglages, compte, blocs = [], traduire, onChange, onDeconnexion, urlExport, supprimerMonCompte, abonnement, paiement, enVente = [], ouvrirPaiement, ouvrirPortail, sectionInitiale }: {
-  reglages: Reglages; compte: ComptePage; blocs?: Bloc[]; traduire?: (b: Bloc) => void; onChange: (r: Reglages) => void; onDeconnexion: () => void;
+export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlExport, supprimerMonCompte, abonnement, paiement, enVente = [], ouvrirPaiement, ouvrirPortail, sectionInitiale }: {
+  reglages: Reglages; compte: ComptePage; onChange: (r: Reglages) => void; onDeconnexion: () => void;
   urlExport: string | null; supprimerMonCompte: (confirmation: string) => Promise<{ ok: boolean; message: string }>;
   abonnement: EtatAbonnement; paiement: boolean; enVente?: PlanPayant[];
   ouvrirPaiement: (plan: PlanPayant, periode: Periode) => Promise<string>; ouvrirPortail: () => Promise<string>;
@@ -31,18 +30,19 @@ export function OngletReglages({ reglages, compte, blocs = [], traduire, onChang
   const seo = (champs: Partial<Reglages['seo']>) => onChange({ ...reglages, seo: { ...reglages.seo, ...champs } });
 
   const offres = !compte.principal && paiement;
-  const langues = usePermis('langues');
+  // Le résumé du lundi fait partie des stats : sans elles, la ligne porte le nom de l'offre et mène aux offres.
+  const stats = usePermis('stats');
+  const voirOffres = useVoirOffres();
   // Un titre et une icône par ligne, sans sous-titre (Lilian, 18 octobre 2026). À droite, une valeur : l'offre en cours, ou celle qui débloque.
   const sections: { id: Section; nom: string; icone: string; valeur?: ReactNode }[] = [
     { id: 'partager', nom: 'QR code et adresse', icone: 'qr' },
     ...(offres ? [{ id: 'abonnement' as const, nom: 'Abonnement', icone: 'diamant', valeur: <span className="text-[13px] text-white/55">{OFFRES[abonnement.plan].nom}</span> }] : []),
     { id: 'partage', nom: 'Aperçu dans Google', icone: 'google' },
-    { id: 'langues', nom: 'Langues', icone: 'globe', valeur: langues ? undefined : <Etiquette fonction="langues" /> },
     { id: 'donnees', nom: 'Mes données', icone: 'cadenas' },
   ];
-  const bascules: { nom: string; icone: string; actif: boolean; changer: (v: boolean) => void }[] = [
+  const bascules: { nom: string; icone: string; actif: boolean; changer: (v: boolean) => void; reservee?: 'stats' }[] = [
     { nom: 'Ouvrir YouTube, Spotify… dans leur app', icone: 'lienExterne', actif: reglages.ouvrirApps, changer: v => onChange({ ...reglages, ouvrirApps: v }) },
-    { nom: 'Mes stats par e-mail chaque lundi', icone: 'courrier', actif: reglages.resumeHebdo, changer: v => onChange({ ...reglages, resumeHebdo: v }) },
+    { nom: 'Mes stats par e-mail chaque lundi', icone: 'courrier', actif: reglages.resumeHebdo, changer: v => onChange({ ...reglages, resumeHebdo: v }), reservee: stats ? undefined : 'stats' },
   ];
 
   if (ouverte) return (
@@ -90,11 +90,6 @@ export function OngletReglages({ reglages, compte, blocs = [], traduire, onChang
           </div>
         </div>
       </Carte>}
-      {ouverte === 'langues' && (langues ? <Langues reglages={reglages} onChange={onChange} adresse={URL_PUBLIQUE} blocs={blocs} traduire={traduire} /> : (
-        <Carte>
-          <Reserve phrase={reglages.langues?.length ? 'Tes langues attendent Hopla Starter : pour l’instant, ta page s’affiche en français pour tout le monde.' : 'Avec Hopla Starter, ta page s’affiche en anglais, en espagnol, en allemand ou en italien, dans la langue du visiteur.'} />
-        </Carte>
-      ))}
       {ouverte === 'donnees' && <TesDonnees compte={compte} urlExport={urlExport} supprimerMonCompte={supprimerMonCompte} />}
     </div>
   );
@@ -114,18 +109,28 @@ export function OngletReglages({ reglages, compte, blocs = [], traduire, onChang
     <div className="adm-settings flex flex-col gap-7">
       <section aria-labelledby="reglages-page">
         <h2 id="reglages-page" className="mb-3 text-[15px] font-semibold">Ta page</h2>
-        <ul className="adm-settings-list">{lignes(['partager', 'partage', 'langues'])}</ul>
+        <ul className="adm-settings-list">{lignes(['partager', 'partage'])}</ul>
       </section>
       <section aria-labelledby="reglages-preferences">
         <h2 id="reglages-preferences" className="mb-3 text-[15px] font-semibold">Préférences</h2>
         <ul className="adm-settings-list">
           {bascules.map(l => (
             <li key={l.nom}>
-              <div className="adm-settings-row">
-                <span className="adm-settings-icon"><Icone nom={l.icone} taille={19} /></span>
-                <span className="min-w-0 flex-1 text-[14px] font-medium">{l.nom}</span>
-                <Bascule actif={l.actif} label={l.nom} onClick={() => { vibrer(); l.changer(!l.actif); }} />
-              </div>
+              {l.reservee ? (
+                // Réservée : pas d'interrupteur qui ne ferait rien, l'offre qui la débloque à la place, et le chemin vers elle.
+                <button type="button" onClick={voirOffres} disabled={!voirOffres} aria-label={`${l.nom}, avec Hopla Starter${voirOffres ? ' : voir les offres' : ''}`} className="adm-settings-row">
+                  <span className="adm-settings-icon"><Icone nom={l.icone} taille={19} /></span>
+                  <span className="min-w-0 flex-1 text-[14px] font-medium">{l.nom}</span>
+                  <Etiquette fonction={l.reservee} />
+                  {voirOffres && <Icone nom="ui-chevron" taille={16} className="-rotate-90 text-white/55" />}
+                </button>
+              ) : (
+                <div className="adm-settings-row">
+                  <span className="adm-settings-icon"><Icone nom={l.icone} taille={19} /></span>
+                  <span className="min-w-0 flex-1 text-[14px] font-medium">{l.nom}</span>
+                  <Bascule actif={l.actif} label={l.nom} onClick={() => { vibrer(); l.changer(!l.actif); }} />
+                </div>
+              )}
             </li>
           ))}
         </ul>
@@ -145,7 +150,7 @@ export function OngletReglages({ reglages, compte, blocs = [], traduire, onChang
   );
 }
 
-type Section = 'partager' | 'abonnement' | 'partage' | 'langues' | 'donnees';
+type Section = 'partager' | 'abonnement' | 'partage' | 'donnees';
 
 /** Le RGPD en libre-service : tout télécharger, ou tout effacer (sauf le compte principal). */
 function TesDonnees({ compte, urlExport, supprimerMonCompte }: { compte: ComptePage; urlExport: string | null; supprimerMonCompte: (confirmation: string) => Promise<{ ok: boolean; message: string }> }) {
@@ -195,53 +200,3 @@ function TesDonnees({ compte, urlExport, supprimerMonCompte }: { compte: CompteP
     </Carte>
   );
 }
-
-
-/** Les langues de la page : le visiteur la voit dans la sienne, là où les textes sont traduits. */
-function Langues({ reglages, onChange, adresse, blocs, traduire }: { reglages: Reglages; onChange: (r: Reglages) => void; adresse: string; blocs: Bloc[]; traduire?: (b: Bloc) => void }) {
-  const actives = reglages.langues ?? [];
-  // Les blocs qui ont un texte à traduire et à qui il manque au moins une des langues proposées.
-  const aTraduire = blocs.filter(b => b.titre.trim() && actives.some(l => !b.traductions?.[l]));
-  const basculer = (l: (typeof LANGUES)[number]) => onChange({ ...reglages, langues: actives.includes(l) ? actives.filter(x => x !== l) : LANGUES.filter(x => x === l || actives.includes(x)) });
-  return (
-    <Carte>
-      <p className="text-[13.5px] leading-snug text-white/60">Ta page s’affiche dans la langue du visiteur. Les boutons, le formulaire et les dates sont traduits tout seuls ; tes textes se traduisent bloc par bloc.</p>
-      <div className="mt-3 divide-y divide-white/[0.06] border-t border-white/[0.06]" role="group" aria-label="Langues proposées">
-        <div className="flex items-center justify-between gap-4 py-3">
-          <span className="text-[15px] font-medium text-white">Français</span>
-          <span className="text-[13px] text-white/55">Langue de ta page</span>
-        </div>
-        {LANGUES.map(l => (
-          <Interrupteur key={l} label={LANGUES_FR[l]} actif={actives.includes(l)} onChange={() => basculer(l)} />
-        ))}
-      </div>
-      {actives.length > 0 && traduire && (
-        <div className="mt-4">
-          <p className="mb-1 text-[13.5px] font-medium text-white/75">{aTraduire.length ? 'À traduire' : 'Tous tes blocs sont traduits.'}</p>
-          {aTraduire.length > 0 && <ul className="divide-y divide-white/[0.06] border-y border-white/[0.06]">
-            {aTraduire.map(b => (
-              <li key={b.id}>
-                <button type="button" onClick={() => traduire(b)} className="flex min-h-12 w-full items-center gap-3 rounded-xl px-1 text-left transition hover:bg-white/[0.04]">
-                  <span className="min-w-0 flex-1 truncate text-[14.5px] font-medium text-white">{b.titre}</span>
-                  <span className="shrink-0 text-[13px] text-white/55">{actives.filter(l => !b.traductions?.[l]).map(l => LANGUES_FR[l]).join(', ')}</span>
-                  <Icone nom="ui-chevron" taille={16} className="-rotate-90 text-white/55" />
-                </button>
-              </li>
-            ))}
-          </ul>}
-        </div>
-      )}
-      {actives.length > 0 && (
-        <div className="mt-4 flex flex-col gap-3">
-          {actives.map(l => (
-            <Champ key={l} label={`Ta bio en ${LANGUES_FR[l].toLowerCase()}`} aide={<a href={`${adresse}?lang=${l}`} target="_blank" rel="noopener" className="underline decoration-white/25 underline-offset-2 hover:text-white">Voir ma page en {LANGUES_FR[l].toLowerCase()}</a>}>
-              <textarea className={`${classeSaisie} min-h-16`} lang={l} maxLength={300} value={reglages.bioTraduite?.[l] ?? ''} placeholder={`Ta bio en ${LANGUES_FR[l].toLowerCase()}`}
-                onChange={e => onChange({ ...reglages, bioTraduite: { ...reglages.bioTraduite, [l]: e.target.value } })} />
-            </Champ>
-          ))}
-        </div>
-      )}
-    </Carte>
-  );
-}
-

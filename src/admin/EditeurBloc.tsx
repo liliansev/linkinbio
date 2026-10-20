@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import type { Api, Bloc, Reglages } from '../lib/types.ts';
-import { ANIMATIONS_BLOC, estEnLigne, idYoutube } from '../lib/types.ts';
+import { ANIMATIONS_BLOC, SANS_COULEURS, estEnLigne, idYoutube } from '../lib/types.ts';
 import { RESEAUX } from '../lib/types.ts';
 import { adresse, adresseSaisie, pourquoiPasAdresse } from '../lib/valider.ts';
 import { nomSite, reseauDeUrl } from '../lib/demarrage.ts';
@@ -12,12 +12,12 @@ import { BlocPublic } from '../components/PageLiens.tsx';
 import { BoutonPrincipal, BoutonSecondaire, Champ, Feuille, Interrupteur, ListeChoix, NOMS_ANIMATIONS, Segments, choisirFichier, classeBouton, classeSaisie, flechesRadio, preparerImage, vibrer } from './ui.tsx';
 import { TYPES } from './OngletLiens.tsx';
 import { appDe } from '../lib/ouvrirApp.ts';
-import { ChampsPreuve, RegleAcces, RegleMoment, RegleReseaux, RegleTraductions, Repli } from './ReglesBloc.tsx';
+import { ChampsPreuve, RegleAcces, RegleMoment, RegleReseaux, Repli } from './ReglesBloc.tsx';
 import { reseauxDePartage } from '../lib/provenance.ts';
 import { etiquettes } from '../lib/etiquettes.ts';
 import { FournisseurOffre, Reserve, offreDe, useDroits, useVoirOffres } from './offre.tsx';
 
-export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, onSupprimer, onDupliquer, onDeplacer, place, traduire = false, envoyerImage, apercuSite, clics, adressePage, prises = 0, principal = false }: {
+export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, onSupprimer, onDupliquer, onDeplacer, place, envoyerImage, apercuSite, clics, adressePage, prises = 0, principal = false }: {
   bloc: Bloc | null;
   reglages: Reglages;
   nouveau: boolean;
@@ -28,8 +28,6 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
   /** Monter ou descendre le bloc d'un cran, sans glisser : la place est donnée par la page. */
   onDeplacer?: (bloc: Bloc, sens: -1 | 1) => void;
   place?: { rang: number; total: number };
-  /** Ouvert depuis Réglages, Langues : la feuille s'ouvre sur les traductions. */
-  traduire?: boolean;
   envoyerImage: (dataUrl: string) => Promise<string>;
   apercuSite: Api['apercuSite'];
   clics: number;
@@ -55,12 +53,6 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
   const [icones, setIcones] = useState(false);
   // L'essentiel d'abord, neuf ou pas ; le reste attend derrière « Plus de réglages », sauf ce qui est déjà réglé.
   const [plus, setPlus] = useState(false);
-  useEffect(() => {
-    if (!traduire || !bloc) return;
-    setPlus(true);
-    const t = setTimeout(() => document.getElementById('traductions-bloc')?.scrollIntoView({ block: 'start' }), 120);
-    return () => clearTimeout(t);
-  }, [traduire, bloc?.id]);
   const fichier = useRef<HTMLInputElement>(null);
   useEffect(() => { setB(bloc); setErreur(''); }, [bloc]);
   // Clavier ouvert, l'aperçu collant se replie : la place va au champ et à son erreur.
@@ -114,12 +106,14 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
     // Un lien sans texte prend le nom du site, comme dans les premiers pas : jamais une adresse brute sur la page.
     return { ...b, url, titre: b.type === 'lien' && !b.titre.trim() ? (nomSite(url) || b.titre) : b.titre };
   }
-  const theme = themeDe(reglages);
+  // L'aperçu montre le bouton comme la page le montrera : sans Starter, aux couleurs du thème.
+  const vue = droits.couleurs ? reglages : { ...reglages, couleurs: SANS_COULEURS };
+  const theme = themeDe(vue);
   // Une preuve ne s'aperçoit qu'une fois commencée : pas de « 0,0 sur 5 » avant d'avoir rien tapé.
   const preuveRemplie = !!b.preuve && (b.preuve.genre === 'note' ? b.preuve.note > 0 && b.preuve.note <= 5 : b.preuve.genre === 'compteur' ? b.preuve.nombre > 0 : !!b.description.trim());
   // Ce qui est réglé derrière « Plus de réglages », nommé à droite de la ligne : on sait quoi sans ouvrir.
   const reglages_ = ([[b.vedette, 'Mis en avant'], [!!b.sousTitre, 'Sous-titre'], [!!b.icone, 'Icône'], [!!b.image, 'Image'], [b.vedette && b.animation !== 'auto', 'Animation'],
-    [!!b.acces, 'Accès réservé'], [!!(b.debut || b.fin || b.creneau), 'Quand l’afficher'], [!!(b.cache.length || b.audience), 'Afficher sur'], [Object.keys(b.traductions ?? {}).length > 0, 'Traduit']] as [boolean, string][])
+    [!!b.acces, 'Accès réservé'], [!!(b.debut || b.fin || b.creneau), 'Quand l’afficher'], [!!(b.cache.length || b.audience), 'Afficher sur']] as [boolean, string][])
     .filter(([oui]) => oui).map(([, nom]) => nom);
   const reglees = reglages_.length > 2 ? `${reglages_.slice(0, 2).join(', ')} et ${reglages_.length - 2} de plus` : reglages_.join(', ');
   const nomAuto = `Comme ma page (${NOMS_ANIMATIONS[reglages.animation].nom})`;
@@ -207,7 +201,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
         {/* Ce que le bloc a de particulier, en clair : les pictos du coin de la page ne se lisent pas au toucher. */}
         {/* Un bloc neuf dit d'abord à quoi il sert, en une ligne. */}
         {nouveau && <p className="text-[13.5px] leading-snug text-white/60">{type.aide}.</p>}
-        {!nouveau && etiquettes(b).length > 0 && <p className="text-[13px] leading-snug text-white/60">{etiquettes(b).join(' · ')}</p>}
+        {!nouveau && etiquettes(b, droits).length > 0 && <p className="text-[13px] leading-snug text-white/60">{etiquettes(b, droits).join(' · ')}</p>}
         {/* Un avis ou une liste gardés d'une offre passée : ils attendent, rien n'est perdu. */}
         {type.fonction && !droits[type.fonction] && <Reserve phrase={`Ce bloc n’est pas montré sur ta page sans Hopla ${offreDe(type.fonction)}. Il revient tel quel dès que tu la prends.`} />}
         {(b.type === 'lien' || (b.type === 'preuve' && preuveRemplie)) && !clavier && (
@@ -216,7 +210,8 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
             <div className="lp lp-mini -mx-1 rounded-[20px] p-4 ring-1 ring-white/[0.06]" style={variablesTheme(theme) as CSSProperties}
               data-bouton={reglages.bouton.style} data-forme={reglages.bouton.forme} data-ombre={reglages.bouton.ombre} data-police={theme.police} data-decor={theme.decor} aria-label="Aperçu du bouton">
               <div className="pointer-events-none" inert>
-                <BlocPublic key={`${b.format}-${b.teinte}-${b.animation}-${b.vedette}`} bloc={{ ...b, url: b.type === 'preuve' ? b.url : b.url || '#', titre: b.titre || (b.type === 'lien' ? 'Texte du bouton' : ''), public: true, restantes: b.acces?.places ? Math.max(0, b.acces.places - prises) : null }} reglages={reglages} clic={() => {}} cible={{}} apercu />
+                {/* Sans Starter, un compte à rebours gardé se tait sur la page : l'aperçu montre le bouton tel qu'il s'ouvrira. */}
+                <BlocPublic key={`${b.format}-${b.teinte}-${b.animation}-${b.vedette}`} bloc={{ ...b, url: b.type === 'preuve' ? b.url : b.url || '#', titre: b.titre || (b.type === 'lien' ? 'Texte du bouton' : ''), public: true, restantes: b.acces?.places ? Math.max(0, b.acces.places - prises) : null, compteARebours: b.compteARebours && droits.programmation }} reglages={vue} clic={() => {}} cible={{}} apercu />
               </div>
             </div>
           </div>
@@ -360,7 +355,6 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
         {b.type === 'lien' && <RegleAcces key={`acces-${b.id}`} b={b} maj={maj} prises={prises} />}
         <RegleMoment key={`moment-${b.id}`} b={b} maj={maj} erreur={erreurDe('dates')} />
         <RegleReseaux key={`reseaux-${b.id}`} b={b} maj={maj} reseaux={reseauxDePartage(reglages.vuesReseaux)} />
-        <div id="traductions-bloc" className="scroll-mt-28"><RegleTraductions key={`langues-${b.id}`} b={b} maj={maj} langues={reglages.langues ?? []} ouvert={traduire} /></div>
         <button type="button" onClick={() => { vibrer(4); setPlus(false); }}
           className={classeBouton.discret}>
           <Icone nom="ui-chevron" taille={16} className="rotate-180" /> Moins de réglages

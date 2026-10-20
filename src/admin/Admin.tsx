@@ -17,7 +17,8 @@ import { BoutonCopier, classeBouton, vibrer } from './ui.tsx';
 import { Marque } from './Marque.tsx';
 import { AnneauDemarrage, noterPartage, useDemarrage } from './BienDemarrer.tsx';
 import { FournisseurOffre } from './offre.tsx';
-import { OFFRES, estPlanPayant } from '../lib/abonnement.ts';
+import { OFFRES, estPlanPayant, joursStats } from '../lib/abonnement.ts';
+import { REFUS_PROGRAMMATION, nouvellesDates, selonDroits } from '../lib/droits.ts';
 
 /*
  * Le back office. Tout s'enregistre tout seul : un bloc quand on valide sa
@@ -43,7 +44,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
   const [clics, setClics] = useState(initial.clics);
   const [onglet, setOnglet] = useState<Onglet>('page');
   const [sectionReglage, setSectionReglage] = useState<'abonnement' | undefined>();
-  const [edition, setEdition] = useState<{ bloc: Bloc; nouveau: boolean; enBas?: boolean; traduire?: boolean } | null>(null);
+  const [edition, setEdition] = useState<{ bloc: Bloc; nouveau: boolean; enBas?: boolean } | null>(null);
   const [sauvegarde, setSauvegarde] = useState<Sauvegarde>('ok');
   const [toast, setToast] = useState<{ texte: string; annuler?: () => void; action?: string; genre?: 'ok' | 'info'; long?: boolean } | null>(null);
   // Le doigt ou le focus sur le message le garde affiché : « Annuler » ne file pas pendant qu'on le vise.
@@ -75,16 +76,26 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
     } catch (error) {
       enCours.current--;
       setSauvegarde('erreur');
-      // Un échec se rejoue d'un toucher : la même écriture repart.
-      setToast((error as Error).message?.includes('Session')
+      // Un échec se rejoue d'un toucher : la même écriture repart. Un refus de l'offre, lui, se dit tel quel, avec le chemin vers les offres,
+      // et la page revient à ce que le serveur a gardé (une copie ou un retour en arrière refusés ne restent pas affichés).
+      const message = (error as Error).message ?? '';
+      // La feuille ouverte sur un bloc que le serveur n'a pas gardé se ferme avec lui.
+      if (message === REFUS_PROGRAMMATION) api.charger().then(e => { setBlocs(e.blocs); setDroits(e.droits); setAbonnement(e.abonnement); setEdition(ed => (ed && !ed.nouveau && !e.blocs.some(b => b.id === ed.bloc.id) ? null : ed)); if (enCours.current === 0) setSauvegarde('ok'); }).catch(() => {});
+      setToast(message.includes('Session')
         ? { texte: 'Ta session a expiré. Recharge la page pour te reconnecter.' }
-        : { texte: 'Pas enregistré. Vérifie ta connexion.', action: 'Réessayer', annuler: () => { setToast(null); void ecrireRef.current(action); } });
+        : message === REFUS_PROGRAMMATION
+          ? refusProgrammation()
+          : { texte: 'Pas enregistré. Vérifie ta connexion.', action: 'Réessayer', annuler: () => { setToast(null); void ecrireRef.current(action); } });
       return undefined;
     }
-  }, []);
+  }, [api]);
 
   const ecrireRef = useRef(ecrire);
   ecrireRef.current = ecrire;
+  // Le chemin vers les offres, pour un refus du serveur (absent quand le compte ne peut pas s'abonner) : la feuille d'un bloc encore ouverte se ferme.
+  const versOffres = useRef<(() => void) | undefined>(undefined);
+  versOffres.current = initial.paiement ? () => { setEdition(null); versAbonnement(); } : undefined;
+  const refusProgrammation = () => ({ texte: REFUS_PROGRAMMATION, long: true, ...(versOffres.current ? { action: 'Voir les offres', annuler: () => { setToast(null); versOffres.current?.(); } } : {}) });
   useEffect(() => { if (!toast) setToastTenu(false); }, [toast]);
   // Après un retrait, le bloc qui avait le focus n'existe plus : le focus va à « Annuler » plutôt qu'au vide.
   const actionToast = useRef<HTMLButtonElement>(null);
@@ -233,6 +244,8 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
 
   function dupliquer(bloc: Bloc) {
     const copie = { ...bloc, id: `n${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`, titre: bloc.titre ? `${bloc.titre} (copie)` : '' };
+    // Sans Starter, une copie ne reprend pas des dates : le serveur la refuserait. Rien n'est créé, le message le dit tout de suite.
+    if (!droits.programmation && nouvellesDates(undefined, copie)) { setToast(refusProgrammation()); return; }
     const i = blocs.findIndex(b => b.id === bloc.id);
     const liste = [...blocs.slice(0, i + 1), copie, ...blocs.slice(i + 1)];
     setBlocs(liste);
@@ -246,7 +259,12 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
     location.reload();
   }
 
-  const page = useMemo(() => { const maintenant = Date.now(); return { reglages, blocs: composerMoment(blocs.filter(b => compte.principal || !TYPES_PRINCIPAL.includes(b.type)), maintenant), compte, maintenant }; }, [reglages, blocs, compte]);
+  // L'aperçu plein écran est la page telle que les visiteurs la voient : ce que l'offre ne comprend pas s'en efface, comme sur le serveur.
+  const page = useMemo(() => {
+    const maintenant = Date.now();
+    const permis = selonDroits(reglages, blocs.filter(b => compte.principal || !TYPES_PRINCIPAL.includes(b.type)), droits);
+    return { reglages: permis.reglages, blocs: composerMoment(permis.blocs, maintenant), compte, maintenant };
+  }, [reglages, blocs, compte, droits]);
   const chargerStats = useCallback((jours: number) => api.stats(jours).then(s => { if (jours === 30) setClics(Object.fromEntries(s.blocs.map(b => [b.id, b.clics]))); return s; }), [api]);
   const demarrage = useDemarrage(reglages, blocs);
   useEffect(() => { if (!demarrage.actif) setDemarrageOuvert(false); }, [demarrage.actif]);
@@ -345,9 +363,9 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
           {onglet === 'page' && <MaPage compte={compte} reglages={reglages} blocs={blocs} clics={clics} onReglages={changerReglages} onOrdonner={ordonner}
             onOuvrir={b => setEdition({ bloc: b, nouveau: false })} onAjouter={(b, enBas) => setEdition({ bloc: b, nouveau: true, enBas })} envoyerImage={d => api.envoyerImage(d)} annoncer={t => setToast(t)}
             demarrage={demarrageOuvert} fermerDemarrage={() => setDemarrageOuvert(false)} />}
-          {onglet === 'stats' && <OngletStats charger={chargerStats} adresse={urlPage(compte)} pseudo={compte.pseudo} joursMax={initial.paiement ? OFFRES[compte.plan].jours : 365} onOffres={initial.paiement ? versAbonnement : undefined}
+          {onglet === 'stats' && <OngletStats charger={chargerStats} adresse={urlPage(compte)} pseudo={compte.pseudo} joursMax={initial.paiement ? joursStats(compte.plan, droits.stats) : 365} onOffres={initial.paiement ? versAbonnement : undefined}
             ouvrirApps={reglages.ouvrirApps} onActiverApps={() => changerReglages({ ...reglages, ouvrirApps: true })} liste={<MaListe api={api} />} />}
-          {onglet === 'reglages' && <OngletReglages reglages={reglages} compte={compte} blocs={blocs} traduire={b => setEdition({ bloc: b, nouveau: false, traduire: true })} onChange={changerReglages} onDeconnexion={deconnexion} urlExport={api.urlExport} supprimerMonCompte={api.supprimerMonCompte}
+          {onglet === 'reglages' && <OngletReglages reglages={reglages} compte={compte} onChange={changerReglages} onDeconnexion={deconnexion} urlExport={api.urlExport} supprimerMonCompte={api.supprimerMonCompte}
             abonnement={abonnement} paiement={initial.paiement} enVente={initial.enVente} ouvrirPaiement={api.ouvrirPaiement} ouvrirPortail={api.ouvrirPortail} sectionInitiale={sectionReglage} />}
           {onglet === 'comptes' && api.comptes && <OngletComptes api={api.comptes} />}
           </div>
@@ -382,7 +400,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
 
       {edition && (
         <EditeurBloc adressePage={urlPage(compte)} principal={compte.principal} bloc={edition.bloc} reglages={reglages} nouveau={edition.nouveau} clics={clics[edition.bloc.id] ?? 0} prises={initial.places?.[edition.bloc.id] ?? 0} onFermer={() => setEdition(null)}
-          onEnregistrer={enregistrerBloc} onSupprimer={supprimer} onDupliquer={dupliquer} onDeplacer={deplacer} traduire={edition.traduire} place={{ rang: blocs.findIndex(b => b.id === edition.bloc.id), total: blocs.length }} envoyerImage={d => api.envoyerImage(d)} apercuSite={u => api.apercuSite(u)} />
+          onEnregistrer={enregistrerBloc} onSupprimer={supprimer} onDupliquer={dupliquer} onDeplacer={deplacer} place={{ rang: blocs.findIndex(b => b.id === edition.bloc.id), total: blocs.length }} envoyerImage={d => api.envoyerImage(d)} apercuSite={u => api.apercuSite(u)} />
       )}
 
       {bulle}

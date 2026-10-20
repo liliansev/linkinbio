@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { ReactNode } from 'react';
-import type { Acces, Bloc, Langue, Preuve, Traduction } from '../lib/types.ts';
+import type { Acces, Bloc, Preuve } from '../lib/types.ts';
 import type { Creneau } from '../lib/moments.ts';
 import { FUSEAU_DEFAUT, decrireCreneau } from '../lib/moments.ts';
 import { Icone } from '../components/Icone.tsx';
@@ -40,41 +40,65 @@ export function Repli({ titre, icone, resume, ouvert: depart, etiquette, childre
   );
 }
 
-/** Les langues nommées en français, comme dans Réglages > Langues. */
-export const LANGUES_FR = { en: 'Anglais', es: 'Espagnol', de: 'Allemand', it: 'Italien' } as const;
-
 const JOURS = ['Lu', 'Ma', 'Me', 'Je', 'Ve', 'Sa', 'Di'];
 const NOMS = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche'];
 const fuseauNavigateur = () => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || FUSEAU_DEFAUT; } catch { return FUSEAU_DEFAUT; } };
 
-/** Quand le bloc s'affiche : des dates, un compte à rebours, un créneau qui revient chaque semaine. */
+/** « 12 novembre à 10:00 » : une date d'un bloc, dite en clair. */
+const quand = (iso: string) => new Date(iso).toLocaleString('fr-FR', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
+
+/**
+ * Quand le bloc s'affiche : des dates et un compte à rebours (Starter), un
+ * créneau qui revient chaque semaine (Pro). Sans l'offre, la règle se montre
+ * quand même, avec ce qu'elle ferait ; des dates déjà posées tiennent toujours
+ * et peuvent se retirer, pas se changer.
+ */
 export function RegleMoment({ b, maj, erreur }: { b: Bloc; maj: (c: Partial<Bloc>) => void; erreur?: string }) {
   const c = b.creneau;
-  // Les dates sont à tout le monde ; le créneau de la semaine vient avec le Pro.
-  const semaine = usePermis('reseauHeure');
+  const dates = usePermis('programmation');
+  const semaine = usePermis('heure');
   const majCreneau = (champs: Partial<Creneau>) => maj({ creneau: { ...(c ?? { jours: [1, 2, 3, 4, 5], de: '09:00', a: '12:00', fuseau: fuseauNavigateur(), effet: 'afficher' }), ...champs, fuseau: fuseauNavigateur() } });
-  const resume = [b.debut || b.fin ? 'Dates' : '', b.compteARebours && b.debut ? 'compte à rebours' : '', c ? decrireCreneau(c) : ''].filter(Boolean).join(', ');
+  const avecDates = !!(b.debut || b.fin);
+  // Le résumé dit ce qui s'applique vraiment : un créneau ou un compte à rebours hors offre ne compte pas.
+  const resume = [avecDates ? 'Dates' : '', dates && b.compteARebours && b.debut ? 'compte à rebours' : '', semaine && c ? decrireCreneau(c) : ''].filter(Boolean).join(', ');
+  // Sans aucune des deux offres et sans rien de réglé : une seule phrase, un seul chemin vers les offres.
+  const rienARegler = !dates && !semaine && !avecDates && !c;
+  const retirerDates = avecDates && <button type="button" onClick={() => maj({ debut: '', fin: '', compteARebours: false })} className="self-start text-[13px] text-white/55 underline">Retirer les dates</button>;
   return (
-    <Repli key={erreur ? 'erreur' : 'calme'} titre="Quand l’afficher" icone="horloge" resume={resume || 'Toujours'} ouvert={!!(b.debut || b.fin || c || erreur)}>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <Champ label="À partir du">
-          <input type="datetime-local" className={classeSaisie} value={versLocal(b.debut)} onChange={e => maj({ debut: depuisLocal(e.target.value) })} />
-        </Champ>
-        <Champ label="Jusqu’au" erreur={erreur}>
-          <input id="bloc-fin" type="datetime-local" className={classeSaisie} min={versLocal(b.debut) || undefined} value={versLocal(b.fin)} onChange={e => maj({ fin: depuisLocal(e.target.value) })} />
-        </Champ>
-      </div>
-      {b.type === 'lien' && b.debut && (
-        <Interrupteur label="Compte à rebours avant l’ouverture" aide="Le lien s’annonce avec le temps qui reste, sans dévoiler son adresse. Parfait pour un lancement." actif={b.compteARebours} onChange={v => maj({ compteARebours: v })} />
+    <Repli key={erreur ? 'erreur' : 'calme'} titre="Quand l’afficher" icone="horloge" etiquette={!dates ? <Etiquette fonction="programmation" /> : undefined} resume={resume || (dates ? 'Toujours' : '')} ouvert={!!(avecDates || c || erreur)}>
+      {rienARegler ? (
+        <Reserve phrase="Avec Hopla Starter, ce bloc apparaît et disparaît aux dates que tu choisis, avec un compte à rebours avant un lancement. Avec Hopla Pro, il revient aussi à heure fixe, chaque semaine." />
+      ) : dates ? (<>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Champ label="À partir du">
+            <input type="datetime-local" className={classeSaisie} value={versLocal(b.debut)} onChange={e => maj({ debut: depuisLocal(e.target.value) })} />
+          </Champ>
+          <Champ label="Jusqu’au" erreur={erreur}>
+            <input id="bloc-fin" type="datetime-local" className={classeSaisie} min={versLocal(b.debut) || undefined} value={versLocal(b.fin)} onChange={e => maj({ fin: depuisLocal(e.target.value) })} />
+          </Champ>
+        </div>
+        {b.type === 'lien' && b.debut && (
+          <Interrupteur label="Compte à rebours avant l’ouverture" aide="Le lien s’annonce avec le temps qui reste, sans dévoiler son adresse. Parfait pour un lancement." actif={b.compteARebours} onChange={v => maj({ compteARebours: v })} />
+        )}
+        {retirerDates}
+      </>) : avecDates ? (
+        // Des dates posées avec une offre passée : elles tiennent toujours, la page ne montre jamais le bloc avant son heure.
+        <Reserve phrase={`Ce bloc s’affiche ${[b.debut && `à partir du ${quand(b.debut)}`, b.fin && `jusqu’au ${quand(b.fin)}`].filter(Boolean).join(' et ')}${b.compteARebours && b.debut ? ', sans compte à rebours' : ''}. Pour changer ses dates, il faut Hopla Starter.`}>
+          {retirerDates}
+        </Reserve>
+      ) : (
+        <Reserve phrase="Avec Hopla Starter, ce bloc apparaît et disparaît aux dates que tu choisis, avec un compte à rebours avant un lancement." />
       )}
-      {(b.debut || b.fin) && <button type="button" onClick={() => maj({ debut: '', fin: '', compteARebours: false })} className="self-start text-[13px] text-white/55 underline">Retirer les dates</button>}
 
-      {!semaine ? (
+      {rienARegler ? null : !semaine ? (
         <div className="border-t border-white/[0.06] pt-3">
-          <span className="mb-2 flex items-center gap-2 text-[13px] font-medium text-white/70">Chaque semaine <Etiquette fonction="reseauHeure" /></span>
-          <Reserve phrase={c ? `Ce bloc devait s’afficher ${decrireCreneau(c)}. Sans Hopla Pro, il s’affiche tout le temps.` : 'Avec Hopla Pro, un bloc revient à heure fixe, ou passe en tête de ta page aux bonnes heures.'}>
-            {c && <button type="button" onClick={() => maj({ creneau: null })} className="text-[13px] text-white/55 underline">Retirer le créneau</button>}
-          </Reserve>
+          <span className="mb-2 flex items-center gap-2 text-[13px] font-medium text-white/70">Chaque semaine <Etiquette fonction="heure" /></span>
+          {/* Le chemin vers les offres est déjà au-dessus quand les dates sont réservées aussi. */}
+          {c || dates ? (
+            <Reserve phrase={c ? `Ce bloc devait s’afficher ${decrireCreneau(c)}. Sans Hopla Pro, il s’affiche tout le temps.` : 'Avec Hopla Pro, un bloc revient à heure fixe, ou passe en tête de ta page aux bonnes heures.'} bouton={dates}>
+              {c && <button type="button" onClick={() => maj({ creneau: null })} className="text-[13px] text-white/55 underline">Retirer le créneau</button>}
+            </Reserve>
+          ) : <p className="text-[13.5px] leading-snug text-white/70">Avec Hopla Pro, un bloc revient à heure fixe, ou passe en tête de ta page aux bonnes heures.</p>}
         </div>
       ) : (
       <div className="border-t border-white/[0.06] pt-3">
@@ -110,7 +134,7 @@ export function RegleMoment({ b, maj, erreur }: { b: Bloc; maj: (c: Partial<Bloc
   );
 }
 
-/** Sur quels réseaux le bloc s'affiche (tout coché par défaut), et pour lesquels il passe en tête. */
+/** Sur quels réseaux le bloc s'affiche (tout coché par défaut), et pour lesquels il passe en tête. À tous, dès Gratuit : c'est la promesse de Hopla. */
 export function RegleReseaux({ b, maj, reseaux }: { b: Bloc; maj: (c: Partial<Bloc>) => void; reseaux: Audience[] }) {
   const cache = b.cache ?? [];
   const reserve = b.audience?.effet === 'seulement' ? b.audience.sources : null;
@@ -123,16 +147,8 @@ export function RegleReseaux({ b, maj, reseaux }: { b: Bloc; maj: (c: Partial<Bl
   const caches = tous.filter(s => !visible(s));
   const enTete = tous.filter(tete);
   const noms = (l: Audience[]) => l.map(s => NOMS_AUDIENCES[s]).join(', ');
-  const reseauPermis = usePermis('reseauHeure');
   const resume = [caches.length ? `Pas sur ${noms(caches)}` : 'Partout', enTete.length ? `en tête sur ${noms(enTete)}` : ''].filter(Boolean).join(', ');
   const [premier, setPremier] = useState(enTete.length > 0);
-  if (!reseauPermis) return (
-    <Repli titre="Afficher sur" icone="cible" etiquette={<Etiquette fonction="reseauHeure" />} resume={caches.length || enTete.length ? 'Pas appliqué' : ''} ouvert={false}>
-      <Reserve phrase={caches.length || enTete.length ? 'Tes réglages par réseau attendent Hopla Pro : ce bloc s’affiche partout, à sa place.' : 'Avec Hopla Pro, ce bloc se montre ou se cache selon le réseau d’où vient le visiteur, et peut passer en tête pour lui.'}>
-        {(caches.length > 0 || enTete.length > 0) && <button type="button" onClick={() => maj({ cache: [], audience: null })} className="text-[13px] text-white/55 underline">Tout remettre partout</button>}
-      </Reserve>
-    </Repli>
-  );
   return (
     <Repli titre="Afficher sur" icone="cible" resume={resume} ouvert={false}>
       <p className="text-[12.5px] leading-snug text-white/55">Coupe un réseau : ceux qui arrivent de là ne verront pas ce bloc. Les autres le voient toujours.</p>
@@ -212,42 +228,6 @@ export function RegleAcces({ b, maj, prises }: { b: Bloc; maj: (c: Partial<Bloc>
           onChange={e => majAcces({ places: Math.max(0, Math.min(100_000, Math.round(Number(e.target.value) || 0))) })} />
       </Champ>
       {a && <button type="button" onClick={() => { vibrer(6); maj({ acces: null }); }} className="self-start text-[13.5px] font-medium text-white/55 hover:text-white">Retirer l’accès réservé</button>}
-    </Repli>
-  );
-}
-
-/** Le texte du bloc dans les langues que la page propose. */
-export function RegleTraductions({ b, maj, langues, ouvert = false }: { b: Bloc; maj: (c: Partial<Bloc>) => void; langues: Langue[]; ouvert?: boolean }) {
-  // Sans Starter, la page ne parle que français : les traductions restent gardées, sans rien à remplir ici.
-  const permis = usePermis('langues');
-  if (!langues.length || !permis) return null;
-  const champs: { cle: keyof Traduction; label: string; long?: boolean }[] = b.type === 'preuve' && b.preuve?.genre === 'temoignage'
-    ? [{ cle: 'description', label: 'Témoignage', long: true }, { cle: 'sousTitre', label: 'Qui le dit' }]
-    : [{ cle: 'titre', label: b.type === 'lien' ? 'Texte du bouton' : b.type === 'texte' ? 'Texte' : 'Titre', long: b.type === 'texte' },
-      ...(['lien', 'newsletter', 'inscription'].includes(b.type) ? [{ cle: 'sousTitre' as const, label: 'Sous-titre' }] : []),
-      ...(b.type === 'lien' && b.vedette ? [{ cle: 'description' as const, label: 'Description', long: true }] : [])];
-  const traduites = langues.filter(l => b.traductions[l]);
-  const majLangue = (l: Langue, cle: keyof Traduction, v: string) => {
-    const t = { titre: '', sousTitre: '', description: '', ...b.traductions[l], [cle]: v };
-    const suite = { ...b.traductions };
-    if (t.titre || t.sousTitre || t.description) suite[l] = t; else delete suite[l];
-    maj({ traductions: suite });
-  };
-  return (
-    <Repli titre="Traductions" icone="globe" resume={traduites.length === langues.length ? 'Tout est traduit' : `À traduire : ${langues.filter(l => !b.traductions[l]).map(l => LANGUES_FR[l]).join(', ')}`} ouvert={ouvert}>
-      {langues.map(l => (
-        <div key={l} className="flex flex-col gap-2.5 border-t border-white/[0.06] pt-3">
-          <span className="text-[13px] font-semibold text-white/80">{LANGUES_FR[l]}</span>
-          {champs.map(c => (
-            <Champ key={c.cle} label={c.label}>
-              {c.long
-                ? <textarea className={`${classeSaisie} min-h-20`} lang={l} value={b.traductions[l]?.[c.cle] ?? ''} placeholder={b[c.cle]} onChange={e => majLangue(l, c.cle, e.target.value)} />
-                : <input className={classeSaisie} lang={l} value={b.traductions[l]?.[c.cle] ?? ''} placeholder={b[c.cle]} onChange={e => majLangue(l, c.cle, e.target.value)} />}
-            </Champ>
-          ))}
-        </div>
-      ))}
-      <p className="text-[12.5px] leading-snug text-white/55">Un champ vide garde le texte en français.</p>
     </Repli>
   );
 }

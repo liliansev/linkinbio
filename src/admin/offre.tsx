@@ -17,7 +17,7 @@ interface ContexteOffre {
   voirOffres?: () => void;
 }
 
-const TOUT: Droits = { sansMention: true, avis: true, langues: true, reseauHeure: true, drops: true, listeEmail: true };
+const TOUT = Object.fromEntries(Object.keys(FONCTIONS).map(f => [f, true])) as Droits;
 const Contexte = createContext<ContexteOffre>({ droits: TOUT });
 export const FournisseurOffre = Contexte.Provider;
 
@@ -34,13 +34,16 @@ export function Etiquette({ fonction }: { fonction: Fonction }) {
   return <span className={classeBadge}>{offreDe(fonction)}</span>;
 }
 
-/** À la place des réglages d'une fonction réservée : une phrase qui nomme l'offre, et le chemin vers les offres. */
-export function Reserve({ phrase, children }: { phrase: string; children?: ReactNode }) {
+/**
+ * À la place des réglages d'une fonction réservée : une phrase qui nomme l'offre, et le chemin vers les offres.
+ * `bouton={false}` quand ce chemin est déjà juste au-dessus : un seul « Voir les offres » par endroit.
+ */
+export function Reserve({ phrase, bouton = true, children }: { phrase: string; bouton?: boolean; children?: ReactNode }) {
   const voir = useVoirOffres();
   return (
     <div className="flex flex-col items-start gap-3">
       <p className="text-[13.5px] leading-snug text-white/70">{phrase}</p>
-      {voir && <button type="button" onClick={voir} className={classeBouton.secondaire}>Voir les offres</button>}
+      {voir && bouton && <button type="button" onClick={voir} className={classeBouton.secondaire}>Voir les offres</button>}
       {children}
     </div>
   );

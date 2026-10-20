@@ -4,12 +4,14 @@ import * as db from './db.ts';
 import { adresseAdmin } from './auth.ts';
 import type { Env } from './courriel.ts';
 import { echapper, envoyer, enveloppe, bouton } from './courriel.ts';
+import { droits } from './droits.ts';
 
 /*
  * Le résumé de la semaine, par e-mail, le lundi à partir de 9 h (heure de
  * Paris). Une seule fois par compte et par semaine (table `resumes`), et
- * seulement si la page a eu des visites : pas de courrier vide. Le réglage
- * « Le résumé de ma semaine » le coupe.
+ * seulement si la page a eu des visites : pas de courrier vide. Il fait partie
+ * des stats : une page qui n'y a pas droit (Gratuit) ne le reçoit pas. Le
+ * réglage « Mes stats par e-mail chaque lundi » le coupe.
  */
 
 const formatParis = new Intl.DateTimeFormat('en-US', { timeZone: 'Europe/Paris', weekday: 'short', hour: '2-digit', hourCycle: 'h23' });
@@ -28,8 +30,8 @@ export function courrielResume(pseudo: string, stats: ReturnType<typeof db.stats
   const chiffres = `${stats.vues.toLocaleString('fr-FR')} vues · ${stats.visiteurs.toLocaleString('fr-FR')} visiteurs · ${stats.clics.toLocaleString('fr-FR')} clics`;
   return {
     subject: `Ta semaine sur Hopla : ${phrases[0]?.replace(/\.$/, '').slice(0, 80) ?? chiffres}`,
-    text: `Bonjour ${pseudo},\n\n${phrases.map(p => `• ${p}`).join('\n')}\n\n${chiffres}\n\nToutes tes stats : ${admin}\n\nPour ne plus recevoir ce résumé : Réglages, « Le résumé de ma semaine ».`,
-    html: enveloppe(`<p>Bonjour ${echapper(pseudo)},</p><ul>${phrases.map(p => `<li style="margin:0 0 8px">${echapper(p)}</li>`).join('')}</ul><p style="color:#555">${chiffres}</p>${bouton(admin, 'Voir mes stats')}<p style="color:#888;font-size:13px">Pour ne plus recevoir ce résumé : Réglages, « Le résumé de ma semaine ».</p>`),
+    text: `Bonjour ${pseudo},\n\n${phrases.map(p => `• ${p}`).join('\n')}\n\n${chiffres}\n\nToutes tes stats : ${admin}\n\nPour ne plus recevoir ce résumé : Réglages, « Mes stats par e-mail chaque lundi ».`,
+    html: enveloppe(`<p>Bonjour ${echapper(pseudo)},</p><ul>${phrases.map(p => `<li style="margin:0 0 8px">${echapper(p)}</li>`).join('')}</ul><p style="color:#555">${chiffres}</p>${bouton(admin, 'Voir mes stats')}<p style="color:#888;font-size:13px">Pour ne plus recevoir ce résumé : Réglages, « Mes stats par e-mail chaque lundi ».</p>`),
   };
 }
 
@@ -41,6 +43,9 @@ export async function envoyerResumes(env: Env, fetchImpl: typeof fetch, maintena
   let envoyes = 0;
   for (const c of db.listerComptes(maintenant)) {
     if (c.statut !== 'actif' || !db.lireReglages(c.id).resumeHebdo) continue;
+    // Les stats se comptent pour tout le monde, mais seule une offre qui les montre reçoit leur résumé.
+    const compte = db.compteParId(c.id);
+    if (!compte || !droits(compte, env, maintenant).stats) continue;
     if (!db.reserverResume(c.id, semaine, maintenant)) continue;
     const stats = db.stats(c.id, 7, maintenant);
     if (!stats.vues) continue;

@@ -5,8 +5,9 @@ import type { DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import type { Bloc, PagePublique, Reglages, TypeBloc } from '../lib/types.ts';
-import { TYPES_PRINCIPAL, estEnLigne, nouveauBloc } from '../lib/types.ts';
+import { SANS_COULEURS, TYPES_PRINCIPAL, estEnLigne, nouveauBloc } from '../lib/types.ts';
 import { etiquettes } from '../lib/etiquettes.ts';
+import { selonDroits } from '../lib/droits.ts';
 import type { Destination } from '../lib/demarrage.ts';
 import { urlReseau } from '../lib/demarrage.ts';
 import { adresseSaisie } from '../lib/valider.ts';
@@ -18,7 +19,7 @@ import { HautLiens } from './BienDemarrer.tsx';
 import { FeuilleAjout } from './OngletLiens.tsx';
 import { DesignTiroirs, OngletApparence } from './OngletApparence.tsx';
 import { BoutonPrincipal, BoutonSecondaire, Feuille, Interrupteur, choisirFichier, preparerImage, vibrer } from './ui.tsx';
-import { offreDe, useDroits } from './offre.tsx';
+import { offreDe, useDroits, usePermis } from './offre.tsx';
 import type { Fonction } from '../lib/abonnement.ts';
 
 /*
@@ -85,6 +86,9 @@ export function MaPage({ compte, reglages, blocs, clics, onReglages, onOrdonner,
   const toile = useRef<HTMLDivElement>(null);
   const principal = compte.principal;
   const visibles = blocs.filter(b => principal || !TYPES_PRINCIPAL.includes(b.type));
+  // La page se dessine comme les visiteurs la verront : sans Starter, aux couleurs de son thème. Les réglages, eux, gardent tout.
+  const droits = useDroits();
+  const vue = droits.couleurs ? reglages : { ...reglages, couleurs: SANS_COULEURS };
 
   // Les réglages du dernier rendu : une annulation tardive ne défait que son propre champ.
   const derniers = useRef(reglages);
@@ -101,7 +105,8 @@ export function MaPage({ compte, reglages, blocs, clics, onReglages, onOrdonner,
     if (toile.current) scrollTo({ top: Math.max(0, toile.current.getBoundingClientRect().top + scrollY - 96) });
     setFeuille('design');
   }
-  const direct = <ApercuDirect page={{ reglages, blocs: visibles, compte }} />;
+  // L'aperçu du design montre la page des visiteurs : sans l'offre, ni drop, ni liste, ni avis, ni compte à rebours.
+  const direct = <ApercuDirect page={{ ...selonDroits(reglages, visibles, droits), compte }} />;
   // Le bouton du bas de la page pose le bloc en bas ; celui du haut, en haut.
   const enBas = useRef(false);
   const ajouter = (type: TypeBloc) => { setFeuille(null); onAjouter(nouveauBloc(type, `n${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`), enBas.current); enBas.current = false; };
@@ -173,9 +178,9 @@ export function MaPage({ compte, reglages, blocs, clics, onReglages, onOrdonner,
       <div>
         <div ref={toile}
           className="adm-apercu adm-toile relative scroll-mt-24 overflow-hidden rounded-[24px] lg:rounded-[28px]">
-          <PageLiens page={{ reglages, blocs: visibles, compte }} edition={edition} />
+          <PageLiens page={{ reglages: vue, blocs: visibles, compte }} edition={edition} />
           {/* Le geste s'écrit sur la page même, dans sa couleur, en haut à gauche : pas une ligne de plus au-dessus d'elle. */}
-          {astuce && <p className="pointer-events-none absolute top-4 left-4 right-16 text-[13px] font-medium leading-snug lg:left-6" style={{ color: variablesTheme(themeDe(reglages))['--doux'] }}>{visibles.length < 2 ? <><span className="lg:hidden">Touche pour modifier.</span><span className="hidden lg:inline">Clique pour modifier.</span></> : <><span className="lg:hidden">Touche pour modifier, maintiens pour déplacer.</span><span className="hidden lg:inline">Clique pour modifier, fais glisser pour déplacer.</span></>}</p>}
+          {astuce && <p className="pointer-events-none absolute top-4 left-4 right-16 text-[13px] font-medium leading-snug lg:left-6" style={{ color: variablesTheme(themeDe(vue))['--doux'] }}>{visibles.length < 2 ? <><span className="lg:hidden">Touche pour modifier.</span><span className="hidden lg:inline">Clique pour modifier.</span></> : <><span className="lg:hidden">Touche pour modifier, maintiens pour déplacer.</span><span className="hidden lg:inline">Clique pour modifier, fais glisser pour déplacer.</span></>}</p>}
         </div>
       </div>
       </div>
@@ -258,11 +263,15 @@ function BlocsEditables({ blocs, rendu, clics, onOrdonner, onOuvrir, onAjouter }
     onOrdonner(arrayMove(blocs, blocs.findIndex(b => b.id === active.id), blocs.findIndex(b => b.id === over.id)));
   }
   const ouvrir = (bloc: Bloc) => { if (Date.now() - glisse.current > 250) onOuvrir(bloc); };
+  // Sans Starter, un compte à rebours gardé d'une offre passée ne se montre pas sur la page : la toile le dessine pareil.
+  // Seul le dessin change : l'éditeur reçoit le bloc tel qu'il est enregistré.
+  const programmation = usePermis('programmation');
+  const dessin = (bloc: Bloc) => rendu(programmation || !bloc.compteARebours ? bloc : { ...bloc, compteARebours: false });
   return (
     <>
       <DndContext accessibility={ACCESSIBILITE} sensors={capteurs} collisionDetection={closestCenter} onDragStart={() => vibrer(6)} onDragEnd={deplacer} onDragCancel={() => { glisse.current = Date.now(); }}>
         <SortableContext items={blocs.map(b => b.id)} strategy={verticalListSortingStrategy}>
-          {blocs.map((bloc, i) => <BlocEditable key={bloc.id} bloc={bloc} i={i} clics={clics[bloc.id]} ouvrir={ouvrir}>{rendu(bloc)}</BlocEditable>)}
+          {blocs.map((bloc, i) => <BlocEditable key={bloc.id} bloc={bloc} i={i} clics={clics[bloc.id]} ouvrir={ouvrir}>{dessin(bloc)}</BlocEditable>)}
         </SortableContext>
       </DndContext>
       {/* Sous le dernier bloc, à portée du pouce : le même geste que le bouton Ajouter du haut. */}
@@ -277,13 +286,13 @@ function BlocEditable({ bloc, i, clics, ouvrir, children }: { bloc: Bloc; i: num
   // Un bloc que l'offre ne comprend plus reste là, grisé comme un bloc masqué : il revient avec l'offre.
   const attend = ([[!!bloc.acces, 'drops'], [bloc.type === 'inscription', 'listeEmail'], [bloc.type === 'preuve', 'avis']] as [boolean, Fonction][]).find(([oui, f]) => oui && !droits[f])?.[1];
   const prive = !bloc.public || !!attend;
-  const regles = etiquettes(bloc);
+  // Une règle que l'offre ne comprend plus n'est pas dite : sans Starter, un lancement attend sa date sans compte à rebours (« programmé »).
+  const regles = etiquettes(bloc, droits);
   const programme = bloc.public && !estEnLigne(bloc) && !regles.includes('Compte à rebours');
   const puces = [
-    { oui: !programme && !!(bloc.creneau || (bloc.compteARebours && bloc.debut)), icone: 'horloge', nom: 'Quand l’afficher' },
+    { oui: !programme && !!((bloc.creneau && droits.heure) || (bloc.compteARebours && bloc.debut && droits.programmation)), icone: 'horloge', nom: 'Quand l’afficher' },
     { oui: !!(bloc.cache?.length || bloc.audience?.sources.length), icone: 'cible', nom: 'Afficher sur' },
     { oui: !!bloc.acces, icone: 'cadenas', nom: 'Accès réservé' },
-    { oui: Object.keys(bloc.traductions ?? {}).length > 0, icone: 'globe', nom: 'Traduit' },
   ].filter(p => p.oui);
   const nom = bloc.titre || bloc.url || 'ce bloc';
   // Le bloc entier est un seul bouton : ses liens et champs intérieurs sortent de l'ordre de tabulation.

@@ -6,16 +6,14 @@ import { tetePage } from '../lib/tete.ts';
 /* Une page, sur hopla.page/<pseudo>. Celle de Lilian est /lilian. */
 export const Route = createFileRoute('/$pseudo')({
   // `?s=tiktok` (ou `utm_source`) : la page s'adapte au réseau d'où vient le visiteur.
-  // `?lang=en` : la langue choisie en bas de page, quand la page en propose plusieurs.
-  validateSearch: (search: Record<string, unknown>): { s?: string; utm_source?: string; lang?: string } => ({
+  validateSearch: (search: Record<string, unknown>): { s?: string; utm_source?: string } => ({
     ...(typeof search.s === 'string' ? { s: search.s } : {}),
     ...(typeof search.utm_source === 'string' ? { utm_source: search.utm_source } : {}),
-    ...(typeof search.lang === 'string' ? { lang: search.lang } : {}),
   }),
-  loaderDeps: ({ search }) => ({ s: search.s ?? search.utm_source ?? '', lang: search.lang ?? '' }),
+  loaderDeps: ({ search }) => ({ s: search.s ?? search.utm_source ?? '' }),
   loader: async ({ params, deps }) => {
     if (!/^[a-z0-9-]{3,30}$/i.test(params.pseudo)) throw notFound();
-    const page = await lirePagePublique({ data: { pseudo: params.pseudo, s: deps.s, lang: deps.lang } });
+    const page = await lirePagePublique({ data: { pseudo: params.pseudo, s: deps.s } });
     if (!page) throw notFound();
     return page;
   },

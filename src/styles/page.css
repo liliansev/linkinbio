@@ -729,13 +729,3 @@ a.lp-preuve:focus-visible { outline: 3px solid var(--texte); outline-offset: 3px
 .lp-preuve-citation { margin: 0; font-size: 1.02rem; line-height: 1.5; font-weight: 470; white-space: pre-line; }
 .lp-preuve-citation::before { content: '“'; display: block; font-size: 2.4rem; line-height: 0.6; margin-bottom: 6px; color: var(--vedette); font-weight: 700; }
 .lp-preuve-auteur { font-size: 0.86rem; font-weight: 600; }
-
-/* ---- Langues ---- */
-.lp-langues { display: flex; justify-content: center; flex-wrap: wrap; gap: 6px; margin: 28px 0 0; }
-.lp-langues a {
-  min-height: 44px; display: inline-flex; align-items: center; padding: 0 14px; border-radius: 999px;
-  font-size: 0.8rem; font-weight: 560; color: var(--doux); text-decoration: none;
-}
-.lp-langues a:hover { color: var(--texte); }
-.lp-langues a[aria-current] { color: var(--texte); background: color-mix(in srgb, var(--texte) 10%, transparent); }
-.lp-langues a:focus-visible { outline: 3px solid var(--texte); outline-offset: 2px; }

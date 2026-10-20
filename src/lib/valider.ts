@@ -1,5 +1,5 @@
-import { ANIMATIONS, ANIMATIONS_BLOC, FORMATS_VEDETTE, FORMES_BOUTON, GENRES_PREUVE, OMBRES_BOUTON, LANGUES, MISES_EN_PAGE_BUREAU, RESEAUX, STYLES_BOUTON, TEINTES_VEDETTE, TYPES_BLOC } from './types.ts';
-import type { Acces, Bloc, Langue, Preuve, Reglages, Traduction } from './types.ts';
+import { ANIMATIONS, ANIMATIONS_BLOC, FORMATS_VEDETTE, FORMES_BOUTON, GENRES_PREUVE, OMBRES_BOUTON, MISES_EN_PAGE_BUREAU, RESEAUX, STYLES_BOUTON, TEINTES_VEDETTE, TYPES_BLOC } from './types.ts';
+import type { Acces, Bloc, Preuve, Reglages } from './types.ts';
 import { idTheme } from './themes.ts';
 import { EFFETS_CRENEAU, fuseauValide } from './moments.ts';
 import type { Creneau } from './moments.ts';
@@ -9,7 +9,9 @@ import type { Audience, EffetAudience } from './provenance.ts';
 /*
  * Tout ce qui arrive du navigateur passe ici avant la base : chaque champ est
  * borné, chaque énumération vérifiée, chaque adresse contrôlée. Une valeur
- * inattendue est remplacée par sa valeur par défaut plutôt que refusée.
+ * inattendue est remplacée par sa valeur par défaut plutôt que refusée, et un
+ * champ qu'on ne connaît plus (les traductions, retirées le 20 octobre 2026)
+ * est laissé de côté : une page enregistrée avant se lit toujours.
  */
 
 const texte = (v: unknown, max: number) => (typeof v === 'string' ? v.replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, '').trim().slice(0, max) : '');
@@ -99,19 +101,6 @@ export function preuve(v: unknown): Preuve | null {
   };
 }
 
-/** Les traductions d'un bloc : seulement les langues connues, seulement les champs remplis. */
-export function traductions(v: unknown): Partial<Record<Langue, Traduction>> {
-  if (!v || typeof v !== 'object') return {};
-  const r: Partial<Record<Langue, Traduction>> = {};
-  for (const l of LANGUES) {
-    const t = (v as Record<string, unknown>)[l] as Record<string, unknown> | undefined;
-    if (!t || typeof t !== 'object') continue;
-    const tr = { titre: texte(t.titre, 1000), sousTitre: texte(t.sousTitre, 240), description: texte(t.description, 400) };
-    if (tr.titre || tr.sousTitre || tr.description) r[l] = tr;
-  }
-  return r;
-}
-
 /** Les noms d'avant le 16 octobre 2026, gardés pour les blocs déjà enregistrés. */
 const ANCIENNES: Record<string, string> = { brille: 'reflet', pulse: 'respiration', secoue: 'secousse' };
 
@@ -142,7 +131,6 @@ export function validerBloc(v: unknown, id: string): Bloc {
     demanderPrenom: bool(o.demanderPrenom, false),
     acces: type === 'lien' ? acces(o.acces) : null,
     preuve: type === 'preuve' ? preuve(o.preuve) ?? { genre: 'note', note: 5, nombre: 0, source: '' } : null,
-    traductions: traductions(o.traductions),
   };
 }
 
@@ -167,8 +155,6 @@ export function validerReglages(v: unknown, base: Reglages): Reglages {
     ouvrirApps: bool(o.ouvrirApps, base.ouvrirApps ?? true),
     resumeHebdo: bool(o.resumeHebdo, base.resumeHebdo ?? true),
     vouvoiement: bool(o.vouvoiement, base.vouvoiement ?? false),
-    langues: Array.isArray(o.langues) ? LANGUES.filter(l => o.langues.includes(l)) : base.langues ?? [],
-    bioTraduite: o.bioTraduite && typeof o.bioTraduite === 'object' ? Object.fromEntries(LANGUES.map(l => [l, texte(o.bioTraduite[l], 300)]).filter(([, b]) => b)) : base.bioTraduite ?? {},
     bureau: parmi(o.bureau, MISES_EN_PAGE_BUREAU, base.bureau),
     vuesReseaux: provenances(o.vuesReseaux ?? base.vuesReseaux),
     animation: parmi(o.animation, ANIMATIONS, base.animation),

@@ -13,7 +13,7 @@ import { OFFRES, euros } from './abonnement.ts';
 /** « 4 € par mois ou 36 € par an » : le prix d'une offre, tel que Creem le facture. */
 const prixDe = (p: 'starter' | 'pro' | 'premium') => `${euros(OFFRES[p].prix.mois)} par mois ou ${euros(OFFRES[p].prix.an)} par an`;
 
-export const VERSION_CGU = '2026-10-20.2';
+export const VERSION_CGU = '2026-10-20.3';
 export const CONTACT_LEGAL = 'bonjour@liliansevoumian.fr';
 
 export interface DocumentLegal { titre: string; resume: string; sections: { titre: string; texte: string[] }[] }
@@ -37,13 +37,14 @@ export const LEGAL: Record<NomDocument, DocumentLegal> = {
         'Tu peux télécharger toutes tes données et supprimer ton compte à tout moment, depuis l’onglet Réglages. La suppression est immédiate et définitive.',
       ] },
       { titre: 'Les offres payantes et leur paiement', texte: [
-        'La version gratuite le reste pour toujours : ta page, des liens sans limite, les thèmes, tes statistiques sur sept jours et 25 Mo d’images. Trois offres payantes s’y ajoutent, chacune avec tout ce que comprend la précédente.',
-        `Starter, à ${prixDe('starter')} : ta page sans la mention « Une page faite avec Hopla », les avis de tes clients, ta page en cinq langues, tes statistiques sur 30 jours et 100 Mo d’images. Pro, à ${prixDe('pro')} : ta page selon le réseau et l’heure, les drops, ta liste e-mail vers Brevo ou Mailchimp, tes statistiques sur un an et 200 Mo d’images. Premium, à ${prixDe('premium')}, ajoutera ton propre nom de domaine, jusqu’à trois pages et 1 Go d’images ; il n’est pas encore en vente.`,
+        'La version gratuite le reste pour toujours : ta page, des liens sans limite, l’ordre de tes liens selon le réseau d’où arrive le visiteur, et les vingt thèmes. Trois offres payantes s’y ajoutent, chacune avec tout ce que comprend la précédente.',
+        `Starter, à ${prixDe('starter')} : ta page sans la mention « Une page faite avec Hopla », tes couleurs, tes liens programmés à l’avance, les avis de tes clients et tes statistiques détaillées sur 30 jours. Pro, à ${prixDe('pro')} : ta page selon l’heure, les drops, ta liste e-mail vers Brevo ou Mailchimp et tes statistiques sur un an. Premium, à ${prixDe('premium')}, ajoutera ton propre nom de domaine et jusqu’à trois pages ; il n’est pas encore en vente.`,
+        'Les visites de ta page sont comptées dans toutes les versions, mais seules les offres payantes te montrent tes statistiques : en prendre une te donne aussi celles d’avant, dans la limite de son historique.',
         'Les prix sont toutes taxes comprises. L’abonnement se renouvelle automatiquement à la fin de chaque période, au mois ou à l’an selon ton choix.',
         'Le paiement passe par Creem (creem.io), service de la société Armitage Labs OÜ (registre estonien n° 16977866, Rotermanni 14, 10111 Tallinn, Estonie), revendeur officiel de l’abonnement : c’est Creem qui te le vend, encaisse le paiement, t’envoie la facture et reverse la TVA. Ses conditions de vente s’ajoutent à celles-ci pour le paiement. Hopla ne voit ni ne garde jamais ton numéro de carte.',
         'Tu peux changer d’offre à tout moment depuis l’onglet Réglages : le changement s’applique tout de suite, et Creem facture ou rembourse la différence au prorata de la période en cours.',
-        'Tu peux résilier à tout moment, sans frais, depuis l’onglet Réglages (« Résilier mon abonnement ») : ton offre reste active jusqu’à la fin de la période déjà payée, puis ta page repasse en gratuit. Ce que la version gratuite ne comprend pas (un drop, un formulaire de liste, un avis, une règle selon le réseau ou l’heure) cesse de s’afficher, mais rien n’est effacé : reprendre une offre le remet en place.',
-        'Les pages créées avant le 21 octobre 2026 gardent, sans abonnement, tout ce que la version gratuite comprenait alors : tout, sauf la page sans mention.',
+        'Tu peux résilier à tout moment, sans frais, depuis l’onglet Réglages (« Résilier mon abonnement ») : ton offre reste active jusqu’à la fin de la période déjà payée, puis ta page repasse en gratuit. Ce que la version gratuite ne comprend pas (tes couleurs, un compte à rebours, un avis, une règle selon l’heure, un drop, un formulaire de liste, tes statistiques) cesse de s’afficher, mais rien n’est effacé : reprendre une offre le remet en place. Les dates déjà posées sur un bloc continuent de s’appliquer ; en poser de nouvelles demande une offre.',
+        'Les pages créées avant le 21 octobre 2026 gardent, sans abonnement, tout ce que la version gratuite comprenait alors : toutes les fonctions sauf la page sans mention, et leurs statistiques sur sept jours.',
         'Tu disposes de 14 jours après ton premier paiement pour changer d’avis : écris à ' + CONTACT_LEGAL + ' et tu es remboursé en entier. Si le prix change, tu es prévenu par e-mail au moins 30 jours avant ; le nouveau prix ne s’applique qu’au renouvellement suivant, et tu peux résilier d’ici là.',
       ] },
       { titre: 'Ce que tu publies', texte: [

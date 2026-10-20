@@ -7,6 +7,7 @@ import { Icone } from '../components/Icone.tsx';
 import { resumer } from '../lib/resume.ts';
 import { noterPartage } from './BienDemarrer.tsx';
 import { CodeQR } from './CodeQR.tsx';
+import { Etiquette } from './offre.tsx';
 
 const PERIODES = [{ id: '7', nom: '7 j' }, { id: '30', nom: '30 j' }, { id: '90', nom: '90 j' }, { id: '365', nom: '1 an' }];
 const nombre = (n: number) => n.toLocaleString('fr-FR');
@@ -171,8 +172,44 @@ function PageJamaisVue({ adresse, pseudo }: { adresse: string; pseudo: string })
   );
 }
 
-/** `joursMax` : l'historique que l'offre laisse lire (7 jours en Gratuit, 30 en Starter) ; `onOffres` mène à l'abonnement. */
-export function OngletStats({ charger, adresse, pseudo, joursMax = 365, onOffres, ouvrirApps = true, onActiverApps, liste }: { charger: (jours: number) => Promise<Stats>; adresse: string; pseudo: string; joursMax?: number; onOffres?: () => void; ouvrirApps?: boolean; onActiverApps?: () => void; liste?: ReactNode }) {
+/** Ce que lire ses stats apporte, pour une offre qui ne les montre pas (Gratuit) : elles se comptent déjà, Starter les ouvre. */
+function StatsReservees({ onOffres, liste }: { onOffres?: () => void; liste?: ReactNode }) {
+  const lignes = ['Tes vues, tes visiteurs et tes clics, jour par jour', 'Tes liens les plus cliqués', 'D’où viennent tes visiteurs, et sur quel appareil', 'Le résumé de ta semaine, chaque lundi par e-mail'];
+  return (
+    <div className="flex flex-col gap-4">
+      <section aria-labelledby="stats-reservees" className="adm-card">
+        <div className="flex items-center gap-2">
+          <h2 id="stats-reservees" className="text-[18px] font-semibold tracking-[-0.025em] text-white">Tes stats</h2>
+          <Etiquette fonction="stats" />
+        </div>
+        <p className="mt-1.5 text-[14px] leading-snug text-white/60">Tes visites se comptent déjà, sans cookie. Avec Hopla Starter, tu les lis sur 30 jours, et sur un an avec Pro :</p>
+        <ul className="mt-4 flex flex-col gap-2">
+          {lignes.map(l => (
+            <li key={l} className="flex gap-2.5 text-[14px] leading-snug text-white/80">
+              <span className="mt-0.5 shrink-0 text-white" aria-hidden="true"><Icone nom="ui-ok" taille={16} /></span>{l}
+            </li>
+          ))}
+        </ul>
+        {onOffres && <button type="button" onClick={onOffres} className={`${classeBouton.principal} mt-5`}>Voir les offres</button>}
+      </section>
+      {liste}
+    </div>
+  );
+}
+
+type Proprietes = { charger: (jours: number) => Promise<Stats>; adresse: string; pseudo: string; joursMax?: number; onOffres?: () => void; ouvrirApps?: boolean; onActiverApps?: () => void; liste?: ReactNode };
+
+/**
+ * `joursMax` : l'historique que l'offre laisse lire (aucun en Gratuit, 30 jours en Starter, un an en Pro ;
+ * 7 pour une page d'avant les offres). Sans historique, rien ne se charge : l'onglet dit ce que Starter ouvre.
+ * `onOffres` mène à l'abonnement.
+ */
+export function OngletStats(props: Proprietes) {
+  if (props.joursMax !== undefined && props.joursMax <= 0) return <StatsReservees onOffres={props.onOffres} liste={props.liste} />;
+  return <TableauStats {...props} />;
+}
+
+function TableauStats({ charger, adresse, pseudo, joursMax = 365, onOffres, ouvrirApps = true, onActiverApps, liste }: Proprietes) {
   const periodes = PERIODES.filter(p => Number(p.id) <= joursMax);
   const [choix, setJours] = useState(String(Math.min(30, joursMax)));
   const jours = periodes.some(p => p.id === choix) ? choix : periodes[periodes.length - 1].id;
