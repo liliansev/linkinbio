@@ -18,7 +18,7 @@ import { themeDe, variablesTheme } from '../lib/themes.ts';
 import { HautLiens } from './BienDemarrer.tsx';
 import { FeuilleAjout } from './OngletLiens.tsx';
 import { DesignTiroirs, OngletApparence } from './OngletApparence.tsx';
-import { BoutonPrincipal, BoutonSecondaire, Feuille, Interrupteur, choisirFichier, preparerImage, vibrer } from './ui.tsx';
+import { ActionEntete, BoutonPrincipal, BoutonSecondaire, Feuille, Interrupteur, choisirFichier, preparerImage, vibrer } from './ui.tsx';
 import { offreDe, useDroits, usePermis } from './offre.tsx';
 import type { Fonction } from '../lib/abonnement.ts';
 
@@ -160,10 +160,14 @@ export function MaPage({ compte, reglages, blocs, clics, onReglages, onOrdonner,
   return (
     <div className="adm-editor-layout">
       {/* Les deux gestes de la page : à droite sur ordinateur ; au téléphone, posés sur la barre des onglets, à portée du pouce, pour que la page commence sous l'en-tête. */}
+      {/* Au bureau, le geste principal est à droite de l'en-tête, comme celui de chaque onglet. */}
+      <ActionEntete>
+        <BoutonPrincipal onClick={() => { vibrer(5); setFeuille('ajout'); }} aria-keyshortcuts="A" title="Ajouter (A, ou colle une adresse)"><Icone nom="ui-plus" taille={14} className="shrink-0" />Ajouter un bloc</BoutonPrincipal>
+      </ActionEntete>
       <aside className="adm-editor-tools" aria-label="Outils de la page">
         {/* Ajouter prend la place qui reste ; sur un écran étroit, il se dit en un mot plutôt que sur deux lignes. */}
         <div className="grid grid-cols-[1fr_auto] gap-2 whitespace-nowrap lg:grid-cols-1 lg:gap-2.5">
-          <BoutonPrincipal onClick={() => { vibrer(5); setFeuille('ajout'); }} aria-keyshortcuts="A" title="Ajouter (A, ou colle une adresse)"><Icone nom="ui-plus" taille={17} className="shrink-0" /><span>Ajouter<span className="max-[359px]:hidden"> un bloc</span></span></BoutonPrincipal>
+          <BoutonPrincipal className="lg:hidden" onClick={() => { vibrer(5); setFeuille('ajout'); }} aria-keyshortcuts="A" title="Ajouter (A, ou colle une adresse)"><Icone nom="ui-plus" taille={17} className="shrink-0" /><span>Ajouter<span className="max-[359px]:hidden"> un bloc</span></span></BoutonPrincipal>
           <BoutonSecondaire onClick={design}><Icone nom="palette" taille={17} className="shrink-0" />Personnaliser</BoutonSecondaire>
           <button type="button" onClick={() => setFeuille('reseaux')} className="adm-button-outline hidden min-h-11 items-center justify-center gap-2 px-4 text-[13px] font-medium lg:flex"><Icone nom="globe" taille={17} />Réseaux sociaux</button>
         </div>

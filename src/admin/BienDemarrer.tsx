@@ -108,7 +108,8 @@ export function HautLiens({ compte, reglages, blocs, aller, annoncer, feuille, f
     <>
       {/* Sur téléphone, l'adresse, Copier et l'anneau sont dans l'en-tête : rien ne passe ici avant la page. */}
       <div className="hidden flex-col gap-3 lg:flex">
-        <div className="adm-address flex items-center gap-2 p-1 pl-4">
+        {/* Au bureau, l'adresse et Copier sont dans l'en-tête : il ne reste ici que les étapes. */}
+        <div className="adm-address hidden items-center gap-2 p-1 pl-4">
           <a href={adresse} target="_blank" rel="noopener" title="Ouvrir ma page" className="min-w-0 flex-1 truncate text-[14px] font-medium text-white underline-offset-4 hover:underline" translate="no">{courte}</a>
           <BoutonCopier texte={adresse} onCopie={noterPartage} label="Copier l’adresse de ta page" />
           {peutPartager && (

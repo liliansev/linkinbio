@@ -11,7 +11,10 @@ colors:
   control-border: "#deded9"
   secondary: "#656560"
   muted-text: "#666666"
-  nav-hover: "#f1f1ee"
+  nav-hover: "#f2f2ef"
+  nav-current: "#ebebe7"
+  sidebar: "#fafaf9"
+  shell-divider: "#ececea"
   control-hover: "#f4f4f0"
   error: "#c62828"
   pending: "#d97706"
@@ -59,7 +62,24 @@ typography:
     fontWeight: 600
     lineHeight: 1
     letterSpacing: "-0.035em"
+  wordmark-desk:
+    fontFamily: "Geist Variable, ui-sans-serif, system-ui, sans-serif"
+    fontSize: "15px"
+    fontWeight: 600
+    lineHeight: 1
+    letterSpacing: "-0.02em"
+  screen-title-desk:
+    fontFamily: "Geist Variable, ui-sans-serif, system-ui, sans-serif"
+    fontSize: "15px"
+    fontWeight: 600
+    letterSpacing: "-0.015em"
+  body-desk:
+    fontFamily: "Geist Variable, ui-sans-serif, system-ui, sans-serif"
+    fontSize: "13.5px"
+    lineHeight: 1.5
 rounded:
+  nav: "7px"
+  control-desk: "8px"
   segment: "7px"
   segment-group: "10px"
   control: "12px"
@@ -123,14 +143,36 @@ components:
     backgroundColor: "{colors.paper}"
     rounded: "{rounded.surface}"
     padding: "22px"
-  nav-item:
-    textColor: "{colors.secondary}"
-    rounded: "{rounded.control}"
+  button-desk:
+    rounded: "{rounded.control-desk}"
     padding: "0 14px"
-    height: "48px"
+    height: "36px"
+  button-icon-desk:
+    rounded: "{rounded.control-desk}"
+    width: "32px"
+    height: "32px"
+  field-desk:
+    typography: "{typography.body-desk}"
+    rounded: "{rounded.control-desk}"
+    padding: "8px 12px"
+    height: "40px"
+  nav-item:
+    textColor: "#55554f"
+    rounded: "{rounded.nav}"
+    padding: "0 10px"
+    height: "44px"
+  nav-item-desk:
+    typography: "{typography.body-desk}"
+    height: "32px"
   nav-item-current:
+    backgroundColor: "{colors.nav-current}"
+    textColor: "{colors.ink}"
+  sidebar:
+    backgroundColor: "{colors.sidebar}"
+    width: "216px"
+  header-desk:
     backgroundColor: "{colors.paper}"
-    textColor: "{colors.shell-ink}"
+    height: "56px"
   segment:
     textColor: "{colors.muted-text}"
     rounded: "{rounded.segment}"
@@ -148,6 +190,11 @@ components:
     rounded: "{rounded.pill}"
     width: "40px"
     height: "24px"
+  switch-desk:
+    backgroundColor: "{colors.ink}"
+    rounded: "{rounded.pill}"
+    width: "32px"
+    height: "18px"
 ---
 
 # Design System: Hopla back office
@@ -185,6 +232,8 @@ Dans le code hérité, `.adm` inverse les noms de couleur : `white` désigne l�
 - **Trait** (`divider`) et **Contour de contrôle** (`control-border`) : séparation des régions et limites des boutons secondaires.
 - **Secondaire** (`secondary`) et **Texte atténué** (`muted-text`) : descriptions et aides lisibles ; le second correspond aux utilitaires corrigés pour le fond clair.
 - **Survol de navigation** (`nav-hover`) et **Survol de contrôle** (`control-hover`) : réponse locale sans nouvel accent.
+- **Onglet courant** (`nav-current`) : le gris uni de la section ouverte dans la barre latérale ; le survol (`nav-hover`) est plus pâle que lui, pour que l'endroit où l'on est se voie mieux que celui qu'on survole.
+- **Barre latérale** (`sidebar`) et **Trait de la coquille** (`shell-divider`) : la barre latérale du bureau et les traits qui la séparent de l'en-tête et du contenu.
 
 Les tokens `error` et `pending` correspondent aux états d'erreur et d'enregistrement en cours. Ils ne constituent pas des accents de marque. Les variantes d'alerte déjà présentes dans le code restent contextuelles.
 
@@ -211,7 +260,11 @@ Les tokens `error` et `pending` correspondent aux états d'erreur et d'enregistr
 - **Caption** : légende d'onglet mobile, nom sous un picto, axe de courbe, compteur, et badge en semi-gras.
 - **Field** : texte saisi, conservé à une taille lisible sur mobile.
 - **Metric** : valeur statistique, (30px) à toutes les largeurs, avec chiffres tabulaires.
-- **Wordmark** : « Hopla. » dans la marque, et nulle part ailleurs.
+- **Wordmark** : « Hopla » dans la marque, et nulle part ailleurs ; en petit (`wordmark-desk`) dans la barre latérale du bureau.
+
+### Au bureau
+
+Sur un écran d'au moins (1024px) tenu à la souris ou au pavé (variante Tailwind `bureau:`, `@media (min-width: 1024px) and (pointer: fine)`), le texte se range sur cinq marches : (12px) pour les libellés, légendes et aides, (13.5px) pour le texte courant, (15px) pour les titres de carte, de panneau et d'écran, (18px) pour un titre de dialogue, (24px) pour un chiffre clé. Les tailles écrites pour le doigt se rangent sur la marche la plus proche (`admin.css`) ; une classe `bureau:text-…` posée sur l'élément garde la main. La page publique n'utilise aucune de ces classes et garde sa typographie.
 
 ### Named Rules
 
@@ -219,7 +272,11 @@ Les tokens `error` et `pending` correspondent aux états d'erreur et d'enregistr
 
 ## Layout
 
-Le shell partage une barre supérieure et un contenu centré, avec une largeur maximale observée de (1120px). Les gouttières passent de (16px) à (32px) à partir de (1024px). À cette même largeur, une navigation latérale fixe de (240px) remplace la navigation basse ; le contenu garde l'espace correspondant. La barre supérieure mesure au moins (72px), puis (80px) sur desktop.
+Au téléphone, le shell partage une barre supérieure d'au moins (72px) et un contenu centré, avec une largeur maximale de (1120px) et des gouttières de (16px).
+
+À partir de (1024px), une barre latérale fixe de (216px) remplace la navigation basse : la petite marque à la hauteur de l'en-tête, les sections (Comptes à part, après un écart de (14px)) et, en bas, le compte, qui s'ouvre sur un menu avec « Me déconnecter ». L'en-tête du bureau est une seule rangée de (56px) : le nom de l'écran à gauche (rôle `screen-title-desk`, c'est le seul titre de l'écran), puis ce qui sert ici, à droite. Ma page y met l'état d'enregistrement, l'adresse courte avec Copier, Voir ma page et le bouton noir Ajouter un bloc ; Réglages, l'état ; Stats, la période ; Comptes, Inviter. Chaque onglet y pose son geste par `ActionEntete`. Pas de barre vide, pas de titre qui répète le menu. Le contenu est posé sur le blanc.
+
+La forme suit la largeur et la densité suit la souris : une tablette en paysage a la barre latérale, avec des cibles de (44px).
 
 La navigation mobile tient compte de la zone sûre inférieure et réserve (64px) à ses boutons. Le contenu garde un espace bas pour rester accessible au-dessus d'elle. Sous (1024px), les gestes de Ma page (Ajouter un bloc, Personnaliser) se posent sur cette barre, à portée du pouce : les deux font un seul socle blanc sous un seul trait, et la page commence juste sous l'en-tête. Dans ce même en-tête, tant que la page n'est pas prête, l'anneau de Bien démarrer prend la place de la photo et ouvre ses étapes dans une feuille. Le rythme récurrent utilise de petits écarts entre contrôles et des écarts plus larges entre groupes, selon les tokens de spacing.
 
@@ -257,6 +314,7 @@ Les bordures de surface sont fines (1px). Le focus observable est un contour noi
 Actions nettes, avec un libellé court et un picto plein lorsque cela aide à reconnaître le geste. Les cinq variantes viennent d'une seule source, `classeBouton` dans `src/admin/ui.tsx`, pour qu'un lien prenne la même allure qu'un bouton. Ne pas ajouter derrière elles un padding ou une hauteur qui les contredit.
 
 - **Primary (`principal`):** noir, texte blanc, semi-gras ; cible minimale (44px), avec pression à l'échelle (0.98) et opacité réduite si désactivé. Il porte l'action principale de la vue.
+- **Au bureau (`bureau:`):** chaque variante descend à (36px) de haut, arrondi (8px), graisse moyenne ; le bouton icône à (32px). Un bouton écrit à la main avec `min-h-11` suit la même règle.
 - **Secondary (`secondaire`):** papier blanc, contour léger, texte noir et graisse moyenne. Le survol modifie le fond et le trait.
 - **Danger (`danger`):** rouge plein, texte blanc ; réservé à l'effacement définitif, après une confirmation.
 - **Quiet (`discret`):** texte secondaire sans fond ; Annuler, Plus tard, Me déconnecter.
@@ -275,13 +333,13 @@ Rectangle à l'arrondi `segment`, fond d'encre à 7 %, texte au rôle `caption` 
 
 ### Inputs / Fields
 
-Fond calme, contour discret, arrondi de contrôle et texte de saisie au rôle `field`. Hauteur minimale observée (48px). Le contour se renforce au survol et au focus. Une erreur est attachée au champ par `aria-invalid` et `aria-describedby` et s'affiche sous lui.
+Fond calme, contour discret, arrondi de contrôle et texte de saisie au rôle `field`. Hauteur minimale observée (48px) ; au bureau, (40px), arrondi (8px) et texte de (13.5px) (`field-desk`). Le contour se renforce au survol et au focus. Une erreur est attachée au champ par `aria-invalid` et `aria-describedby` et s'affiche sous lui.
 
 ### Navigation
 
-La marque (`Marque.tsx`) est la même partout : le carré noir au lien blanc de (28px), puis « Hopla. » au rôle `wordmark`, sans accroche. La barre latérale, la connexion, les CGU et le lien de connexion périmé la reprennent telle quelle. Aucun fil d'Ariane ne répète la navigation.
+La marque (`Marque.tsx`) est la même partout : le carré noir au lien blanc de (28px), puis « Hopla » au rôle `wordmark`, sans accroche. La connexion, les CGU et le lien de connexion périmé la reprennent telle quelle ; la barre latérale du bureau la prend en petit (`petite` : (22px) et `wordmark-desk`). Aucun fil d'Ariane ne répète la navigation.
 
-Sur desktop, une ligne associe un picto plein (20px), un nom et éventuellement un compteur réel. Le choix actif est blanc, bordé et plus gras ; le survol utilise une surface neutre. Sur mobile, la même navigation devient une barre basse avec picto (21px) et label court ; l'onglet courant se reconnaît à son picto noir et à son label en semi-gras, sans pastille de fond.
+Sur desktop, une rangée de (32px) à la souris ((44px) au doigt) associe un picto plein (16px) et un nom, sans compteur. Le choix actif est un gris uni (`nav-current`), sans bordure ni graisse de plus ; le survol, plus pâle (`nav-hover`). Sur mobile, la même navigation devient une barre basse avec picto (21px) et label court ; l'onglet courant se reconnaît à son picto noir et à son label en semi-gras, sans pastille de fond.
 
 ### Segments
 
@@ -293,11 +351,13 @@ Une ligne de réglage porte un picto plein nu, sans tuile de fond, dans une case
 
 ### Switches
 
-Piste de (40px) sur (24px), pastille blanche de (18px), cible tactile étendue. Allumée, la piste est à l'encre ; éteinte, à 45 % d'encre, soit 3:1 sur le papier, pour qu'on voie l'interrupteur et son état (WCAG 1.4.11). Le déplacement et l'étirement à la pression répondent au geste. L'état est porté par `role="switch"` et `aria-checked`.
+Piste de (40px) sur (24px), pastille blanche de (18px), cible tactile étendue ; au bureau, (32px) sur (18px), pastille de (14px) (`switch-desk`). Allumée, la piste est à l'encre ; éteinte, à 45 % d'encre, soit 3:1 sur le papier, pour qu'on voie l'interrupteur et son état (WCAG 1.4.11). Le déplacement et l'étirement à la pression répondent au geste. L'état est porté par `role="switch"` et `aria-checked`.
 
 ### Sheets and feedback
 
-Les feuilles nomment leur tâche, gardent la fermeture accessible et gèrent le focus. Les mouvements d'entrée et de sortie sont courts et décélérés ; `prefers-reduced-motion` retire les animations prévues. Les retours utilisent un message explicite, et proposent Annuler lorsque l'action le permet. L'état d'enregistrement est le même au téléphone et au bureau : un point gris suivi de son mot, qui bat pendant l'envoi ; seul l'échec passe au rouge. Les durées et courbes observées figurent dans le sidecar.
+Les feuilles nomment leur tâche, gardent la fermeture accessible et gèrent le focus. Les mouvements d'entrée et de sortie sont courts et décélérés ; `prefers-reduced-motion` retire les animations prévues. Les retours utilisent un message explicite, et proposent Annuler lorsque l'action le permet. L'état d'enregistrement est le même au téléphone et au bureau : une coche suivie de « Enregistré », un point gris qui bat pendant l'envoi ; seul l'échec passe au rouge. Au bureau, il ne se montre que sur les écrans où l'on écrit (Ma page, Réglages), ou quand il a quelque chose à dire.
+
+Un menu (le compte, puis les actions d'un bloc ou d'une ligne, la période) est une petite surface blanche bordée, avec une ombre courte : les flèches le parcourent, Échap le referme et rend le focus à son bouton (`Menu` dans `ui.tsx`). Les durées et courbes observées figurent dans le sidecar.
 
 ## Do's and Don'ts
 

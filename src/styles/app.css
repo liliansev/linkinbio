@@ -22,6 +22,14 @@
   --color-peche: #ffb38a;
 }
 
+/*
+ * `bureau:` : un grand écran tenu à la souris ou au pavé. Le back office y
+ * prend la densité d'un outil de travail (boutons de 36 px, champs de 40,
+ * rangées de 32). Au doigt, même sur une tablette en paysage, les cibles
+ * gardent leurs 44 px (20 octobre 2026).
+ */
+@custom-variant bureau (@media (min-width: 1024px) and (pointer: fine));
+
 html { -webkit-text-size-adjust: 100%; }
 body { margin: 0; }
 

@@ -1,9 +1,35 @@
-import { cloneElement, isValidElement, useCallback, useEffect, useId, useRef, useState } from 'react';
+import { cloneElement, createContext, isValidElement, useCallback, useContext, useEffect, useId, useRef, useState, useSyncExternalStore } from 'react';
+import { createPortal } from 'react-dom';
 import { Icone } from '../components/Icone.tsx';
 import type { Animation } from '../lib/types.ts';
 import type { ReactNode } from 'react';
 
-/* Les petites pièces du back office : fines et sobres, 40 px de cible au moins pour le pouce. */
+/*
+ * Les petites pièces du back office : fines et sobres, 44 px de cible pour le
+ * pouce. Au bureau (variante `bureau:`, voir app.css), les mêmes pièces se
+ * resserrent : boutons de 36 px, champs de 40, interrupteur de 32 sur 18.
+ */
+
+const GRAND = '(min-width: 1024px)';
+/**
+ * Un écran assez large pour la barre latérale et un panneau à côté de la page
+ * (1024 px). La forme suit la largeur, la densité suit la souris : une tablette
+ * en paysage a la mise en page du bureau avec des cibles pour le doigt.
+ */
+export function useGrandEcran() {
+  return useSyncExternalStore(
+    f => { const m = matchMedia(GRAND); m.addEventListener('change', f); return () => m.removeEventListener('change', f); },
+    () => matchMedia(GRAND).matches,
+    () => false,
+  );
+}
+
+/** L'endroit de l'en-tête où chaque onglet pose son geste, au bureau (Ajouter un bloc, la période, Inviter). */
+export const EmplacementEntete = createContext<HTMLElement | null>(null);
+export function ActionEntete({ children }: { children: ReactNode }) {
+  const lieu = useContext(EmplacementEntete);
+  return lieu ? createPortal(children, lieu) : null;
+}
 
 export function Interrupteur({ actif, onChange, label, aide, disabled }: { actif: boolean; onChange: (v: boolean) => void; label: string; aide?: ReactNode; disabled?: boolean }) {
   const id = useId();
@@ -25,8 +51,8 @@ export function Interrupteur({ actif, onChange, label, aide, disabled }: { actif
 export function Bascule({ actif, onClick, id, disabled, label, decrit }: { actif: boolean; onClick: () => void; id?: string; disabled?: boolean; label?: string; decrit?: string }) {
   return (
     <button id={id} type="button" role="switch" aria-checked={actif} aria-label={label} aria-describedby={decrit} disabled={disabled} onClick={onClick}
-      className={`adm-interrupteur relative h-6 w-10 shrink-0 rounded-full before:absolute before:-inset-2 before:content-[''] disabled:opacity-40 ${actif ? 'bg-white' : 'bg-white/45'}`}>
-      <span className={`absolute top-[3px] left-[3px] h-[18px] w-[18px] rounded-full shadow-[0_1px_3px_rgba(0,0,0,0.3)] bg-nuit ${actif ? 'translate-x-4' : ''}`} />
+      className={`adm-interrupteur relative h-6 w-10 shrink-0 rounded-full before:absolute before:-inset-2 before:content-[''] disabled:opacity-40 bureau:h-[18px] bureau:w-8 ${actif ? 'bg-white' : 'bg-white/45'}`}>
+      <span className={`absolute top-[3px] left-[3px] h-[18px] w-[18px] rounded-full shadow-[0_1px_3px_rgba(0,0,0,0.3)] bg-nuit bureau:top-[2px] bureau:left-[2px] bureau:h-3.5 bureau:w-3.5 ${actif ? 'translate-x-4 bureau:translate-x-3.5' : ''}`} />
     </button>
   );
 }
@@ -39,7 +65,7 @@ export function Champ({ label, aide, erreur, children }: { label: string; aide?:
     : children;
   return (
     <label className="block">
-      <span className="mb-1.5 block text-[12.5px] font-medium text-white/60">{label}</span>
+      <span className="mb-1.5 block text-[12.5px] font-medium text-white/60 bureau:text-white/75">{label}</span>
       {champ}
       {erreur && <span id={id} role="alert" className="mt-1.5 block text-[13px] font-medium leading-snug text-red-300">{erreur}</span>}
       {aide && !erreur && <span className="mt-1.5 block text-[12.5px] leading-snug text-white/55">{aide}</span>}
@@ -242,29 +268,101 @@ export function BoutonCopier({ texte, onCopie, label, compact = false }: { texte
   }
   if (compact) return (
     <button type="button" onClick={copier} aria-label={copie ? 'Adresse copiée' : label ?? 'Copier'}
-      className="adm-button-outline grid h-11 w-11 shrink-0 place-items-center text-white transition active:scale-95">
+      className="adm-button-outline grid h-11 w-11 shrink-0 place-items-center text-white transition active:scale-95 bureau:h-9 bureau:w-9">
       <Icone nom={copie ? 'ui-ok' : 'ui-copier'} taille={18} />
     </button>
   );
   return (
     <button type="button" onClick={copier} aria-label={label}
-      className="adm-button-outline flex min-h-11 shrink-0 items-center gap-1.5 px-3.5 text-[14px] font-medium text-white transition active:scale-95">
+      className="adm-button-outline flex min-h-11 shrink-0 items-center gap-1.5 px-3.5 text-[14px] font-medium text-white transition active:scale-95 bureau:min-h-9 bureau:px-3">
       <Icone nom={copie ? 'ui-ok' : 'ui-copier'} taille={16} />{copie ? 'Copié' : 'Copier'}
     </button>
   );
 }
 
+export interface ElementMenu {
+  nom: string;
+  action: () => void;
+  icone?: string;
+  /** Effacer pour de bon : le seul élément en rouge. */
+  danger?: boolean;
+  /** Un choix exclusif (une période) : l'élément devient une option cochée ou non. */
+  coche?: boolean;
+}
+
+/**
+ * Un bouton qui ouvre une courte liste d'actions (motif ARIA « menu bouton ») :
+ * les flèches parcourent la liste, Échap la referme et rend le focus au
+ * bouton, un clic ailleurs la range. `entete` se pose au-dessus de la liste
+ * sans en faire partie (l'adresse du compte, par exemple).
+ */
+export function Menu({ label, elements, children, className = '', titre, haut = false, aligne = 'droite', entete }: {
+  label: string; elements: ElementMenu[]; children: ReactNode; className?: string;
+  /** Le nom du bouton pour un lecteur d'écran, quand il ne montre qu'un picto. */
+  titre?: string;
+  haut?: boolean; aligne?: 'gauche' | 'droite' | 'largeur'; entete?: ReactNode;
+}) {
+  const [ouvert, setOuvert] = useState(false);
+  const id = useId();
+  const bouton = useRef<HTMLButtonElement>(null);
+  const boite = useRef<HTMLDivElement>(null);
+  const options = () => [...(boite.current?.querySelectorAll<HTMLElement>('[role^=menuitem]') ?? [])];
+  useEffect(() => {
+    if (!ouvert) return;
+    const o = options();
+    (o.find(x => x.getAttribute('aria-checked') === 'true') ?? o[0])?.focus();
+    const dehors = (e: PointerEvent) => { const t = e.target as Node; if (!boite.current?.contains(t) && !bouton.current?.contains(t)) setOuvert(false); };
+    document.addEventListener('pointerdown', dehors);
+    return () => document.removeEventListener('pointerdown', dehors);
+  }, [ouvert]);
+  function touche(e: React.KeyboardEvent) {
+    const o = options();
+    const i = o.indexOf(document.activeElement as HTMLElement);
+    // Échap ne referme que le menu : la feuille ou le panneau qui le porte reste ouvert.
+    if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); setOuvert(false); bouton.current?.focus(); }
+    else if (e.key === 'Tab') setOuvert(false);
+    else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); o[(i + (e.key === 'ArrowDown' ? 1 : -1) + o.length) % o.length]?.focus(); }
+    else if (e.key === 'Home' || e.key === 'End') { e.preventDefault(); o[e.key === 'Home' ? 0 : o.length - 1]?.focus(); }
+  }
+  const place = `${haut ? 'bottom-full mb-1.5' : 'top-full mt-1.5'} ${aligne === 'gauche' ? 'left-0' : aligne === 'droite' ? 'right-0' : 'inset-x-0'}`;
+  return (
+    <div className="relative">
+      <button ref={bouton} type="button" aria-haspopup="menu" aria-expanded={ouvert} aria-controls={ouvert ? id : undefined} aria-label={titre}
+        onClick={() => setOuvert(o => !o)} onKeyDown={e => { if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && !ouvert) { e.preventDefault(); setOuvert(true); } }} className={className}>
+        {children}
+      </button>
+      {ouvert && (
+        <div ref={boite} onKeyDown={touche} className={`adm-menu adm-fondu absolute z-50 min-w-[180px] ${place}`}>
+          {entete}
+          <div role="menu" id={id} aria-label={label}>
+            {elements.map(el => (
+              <button key={el.nom} type="button" tabIndex={-1} role={el.coche === undefined ? 'menuitem' : 'menuitemradio'} aria-checked={el.coche}
+                onClick={() => { setOuvert(false); bouton.current?.focus({ preventScroll: true }); el.action(); }}
+                className={`adm-menu-item ${el.danger ? 'text-red-300' : 'text-white'}`}>
+                {el.icone && <Icone nom={el.icone} taille={16} className="shrink-0" />}
+                <span className="min-w-0 flex-1 truncate text-left">{el.nom}</span>
+                {el.coche && <Icone nom="ui-ok" taille={15} className="shrink-0" />}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /**
  * Les cinq boutons du back office, en classes : un lien (télécharger, ouvrir)
- * prend la même allure qu'un bouton. Tous en rectangle arrondi à 12 px : pas
- * de pilule (Lilian, 19 octobre 2026). Le rouge ne sert qu'à effacer pour de bon.
+ * prend la même allure qu'un bouton. Tous en rectangle arrondi à 12 px, 8 au
+ * bureau : pas de pilule (Lilian, 19 octobre 2026). Le rouge ne sert qu'à
+ * effacer pour de bon.
  */
 export const classeBouton = {
-  principal: 'adm-button-primary inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-white px-5 text-[14px] font-semibold text-nuit transition active:scale-[0.98] disabled:opacity-50',
-  secondaire: 'adm-button-outline inline-flex min-h-11 items-center justify-center gap-2 px-4 text-[14px] font-medium text-white transition active:scale-[0.98] disabled:opacity-50',
-  danger: 'adm-button-danger inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 text-[14px] font-semibold transition active:scale-[0.98] disabled:opacity-40',
-  discret: 'inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl px-3 text-[14px] font-medium text-white/60 transition hover:bg-white/[0.06] hover:text-white disabled:opacity-50',
-  icone: 'grid h-11 w-11 shrink-0 place-items-center rounded-xl text-white/55 transition hover:bg-white/[0.06] hover:text-white',
+  principal: 'adm-button-primary inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-white px-5 text-[14px] font-semibold text-nuit transition active:scale-[0.98] disabled:opacity-50 bureau:min-h-9 bureau:gap-1.5 bureau:rounded-lg bureau:px-3.5 bureau:font-medium',
+  secondaire: 'adm-button-outline inline-flex min-h-11 items-center justify-center gap-2 px-4 text-[14px] font-medium text-white transition active:scale-[0.98] disabled:opacity-50 bureau:min-h-9 bureau:gap-1.5 bureau:px-3',
+  danger: 'adm-button-danger inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 text-[14px] font-semibold transition active:scale-[0.98] disabled:opacity-40 bureau:min-h-9 bureau:rounded-lg bureau:px-3 bureau:font-medium',
+  discret: 'inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl px-3 text-[14px] font-medium text-white/60 transition hover:bg-white/[0.06] hover:text-white disabled:opacity-50 bureau:min-h-9 bureau:rounded-lg bureau:px-2.5',
+  icone: 'grid h-11 w-11 shrink-0 place-items-center rounded-xl text-white/55 transition hover:bg-white/[0.06] hover:text-white bureau:h-8 bureau:w-8 bureau:rounded-lg',
 };
 
 /** Une étiquette d'état (Pro, Suspendu) : petite et rectangulaire, comme les boutons. */
@@ -322,7 +420,7 @@ export function Segments<T extends string>({ valeur, options, onChange, label }:
     <div role="radiogroup" aria-label={label} onKeyDown={e => flechesRadio(e)} className="flex gap-0.5 rounded-[10px] bg-white/[0.06] p-[3px]">
       {options.map((o, i) => (
         <button key={o.id} type="button" role="radio" aria-checked={valeur === o.id} tabIndex={arretRadio(valeur === o.id, i === 0, !options.some(x => x.id === valeur))} onClick={() => { vibrer(5); onChange(o.id); }}
-          className={`min-h-10 flex-1 rounded-[7px] px-2.5 text-[13.5px] font-medium transition duration-200 ${valeur === o.id ? 'bg-nuit text-white shadow-[0_1px_3px_rgba(0,0,0,0.14)]' : 'text-white/55 hover:text-white'}`}>
+          className={`min-h-10 flex-1 rounded-[7px] px-2.5 text-[13.5px] font-medium transition duration-200 bureau:min-h-[30px] ${valeur === o.id ? 'bg-nuit text-white shadow-[0_1px_3px_rgba(0,0,0,0.14)]' : 'text-white/55 hover:text-white'}`}>
           {o.nom}
         </button>
       ))}

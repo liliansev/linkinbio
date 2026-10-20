@@ -12,8 +12,9 @@ import { OngletComptes } from './OngletComptes.tsx';
 import { AccepterCgu } from './AccepterCgu.tsx';
 import { PremiersPas, premiersPasFaits } from './PremiersPas.tsx';
 import { pageNeuve } from '../lib/demarrage.ts';
+import { sansSchema } from '../lib/types.ts';
 import { Icone } from '../components/Icone.tsx';
-import { BoutonCopier, classeBouton, vibrer } from './ui.tsx';
+import { BoutonCopier, EmplacementEntete, Menu, classeBouton, copierTexte, vibrer } from './ui.tsx';
 import { Marque } from './Marque.tsx';
 import { AnneauDemarrage, noterPartage, useDemarrage } from './BienDemarrer.tsx';
 import { FournisseurOffre } from './offre.tsx';
@@ -30,12 +31,12 @@ import { REFUS_PROGRAMMATION, nouvellesDates, selonDroits } from '../lib/droits.
 type Onglet = 'page' | 'stats' | 'reglages' | 'comptes';
 type Sauvegarde = 'ok' | 'encours' | 'erreur';
 
-// Les mêmes pictos pleins que partout ailleurs dans le back office.
+// Les mêmes pictos pleins que partout ailleurs dans le back office. Comptes, l'outil de Lilian, vient en dernier, à part.
 const ONGLETS: { id: Onglet; nom: string; icone: string }[] = [
   { id: 'page', nom: 'Ma page', icone: 'document' },
-  { id: 'stats', nom: 'Statistiques', icone: 'courbe' },
-  { id: 'comptes', nom: 'Comptes', icone: 'equipe' },
+  { id: 'stats', nom: 'Stats', icone: 'courbe' },
   { id: 'reglages', nom: 'Réglages', icone: 'reglage' },
+  { id: 'comptes', nom: 'Comptes', icone: 'equipe' },
 ];
 
 export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatAdmin; demo?: boolean }) {
@@ -50,6 +51,8 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
   // Le doigt ou le focus sur le message le garde affiché : « Annuler » ne file pas pendant qu'on le vise.
   const [toastTenu, setToastTenu] = useState(false);
   const [apercu, setApercu] = useState(false);
+  // L'endroit de l'en-tête du bureau où l'onglet ouvert pose son geste (voir `ActionEntete`).
+  const [emplacement, setEmplacement] = useState<HTMLDivElement | null>(null);
   // « Bien démarrer » au téléphone : l'anneau de l'en-tête ouvre sa liste dans une feuille.
   const [demarrageOuvert, setDemarrageOuvert] = useState(false);
   const [cguAJour, setCguAJour] = useState(initial.cguAJour);
@@ -295,57 +298,78 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
   }
 
   const indicateur = sauvegarde === 'encours' ? 'Enregistrement…' : sauvegarde === 'erreur' ? 'Non enregistré' : 'Enregistré';
-  // Le même point au téléphone et au bureau : gris quand tout va bien, qui bat pendant l'envoi, rouge seulement en cas d'échec.
-  const point = <span aria-hidden="true" className={`h-1.5 w-1.5 shrink-0 rounded-full ${sauvegarde === 'encours' ? 'animate-pulse bg-white/40 motion-reduce:animate-none' : sauvegarde === 'erreur' ? 'bg-red-300' : 'bg-white/60'}`} />;
+  // Le même signe au téléphone et au bureau : une coche quand tout est gardé, un point qui bat pendant l'envoi, du rouge seulement en cas d'échec.
+  const signe = sauvegarde === 'ok'
+    ? <Icone nom="ui-ok" taille={14} className="shrink-0" />
+    : <span aria-hidden="true" className={`mx-1 h-1.5 w-1.5 shrink-0 rounded-full ${sauvegarde === 'encours' ? 'animate-pulse bg-white/40 motion-reduce:animate-none' : 'bg-red-300'}`} />;
+  const adresse = urlPage(compte);
+  const courte = sansSchema(adresse);
+  const coupe = courte.lastIndexOf('/') + 1;
+  const titre = onglets.find(o => o.id === onglet)!.nom;
+  const avatar = (taille: string) => reglages.profil.avatar
+    ? <img src={reglages.profil.avatar} alt="" className={`${taille} shrink-0 rounded-full object-cover`} />
+    : <span className={`${taille} grid shrink-0 place-items-center rounded-full bg-white/[0.06]`}><Icone nom="utilisateur" taille={14} /></span>;
 
   return (
     <FournisseurOffre value={offre}>
     <div className="adm adm-shell min-h-dvh font-sans text-white antialiased">
-      {/* Sur ordinateur, une barre latérale comme dans tout SaaS : la marque, les sections, l'état de l'enregistrement, la page en ligne. */}
-      <aside className="adm-sidebar fixed inset-y-0 left-0 z-30 hidden w-60 flex-col lg:flex" aria-label="Navigation">
-        <Marque className="px-3 pb-9 pt-2" />
-        <nav className="flex flex-col gap-1.5" aria-label="Sections">
+      {/* Au bureau, une barre latérale fine : la marque, les sections, et le compte en bas, qui s'ouvre sur « Me déconnecter ». */}
+      <aside className="adm-sidebar fixed inset-y-0 left-0 z-30 hidden w-[216px] flex-col lg:flex" aria-label="Navigation">
+        <Marque petite className="h-14 shrink-0 px-2" />
+        <nav className="flex flex-col gap-0.5 pt-1.5" aria-label="Sections">
           {onglets.map(o => (
             <button key={o.id} type="button" onClick={() => { if (o.id !== onglet) choisirOnglet(o.id); }} aria-current={onglet === o.id ? 'page' : undefined}
-              className="adm-nav-item">
-              <Icone nom={o.icone} taille={20} />{o.nom}
-              {o.id === 'page' && <span className="adm-nav-count">{blocs.length}</span>}
+              className={`adm-nav-item ${o.id === 'comptes' ? 'mt-3.5' : ''}`}>
+              <Icone nom={o.icone} taille={16} className="shrink-0" />{o.nom}
             </button>
           ))}
         </nav>
-        <div className="mt-auto flex flex-col gap-3">
-          {/* L'adresse de la page vit en tête de Ma page, avec Copier : pas une deuxième fois ici. */}
-          <div className="flex items-center gap-3 border-t border-white/[0.08] px-2 pt-5">
-            {reglages.profil.avatar ? <img src={reglages.profil.avatar} alt="" className="h-10 w-10 rounded-full object-cover ring-1 ring-white/10" /> : <span className="grid h-10 w-10 place-items-center rounded-full bg-white/[0.06]"><Icone nom="utilisateur" taille={20} /></span>}
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-[13.5px] font-medium leading-tight">{reglages.profil.nom || 'Hopla'}</p>
-              <p className="mt-1 text-[11.5px] text-white/55">{compte.principal ? 'Compte principal' : `Hopla ${OFFRES[compte.plan].nom}`}</p>
-            </div>
-          </div>
+        <div className="mt-auto">
+          <Menu label="Ton compte" haut aligne="largeur" className="adm-compte" titre={`${reglages.profil.nom || compte.pseudo}, ton compte`}
+            entete={<p className="truncate px-2.5 pb-1.5 pt-2 text-[12px] text-white/55">{compte.email ? `${compte.email} · ` : ''}{compte.principal ? 'Compte principal' : `Hopla ${OFFRES[compte.plan].nom}`}</p>}
+            elements={[{ nom: 'Me déconnecter', icone: 'ui-sortir', action: deconnexion }]}>
+            {avatar('h-6 w-6')}
+            <span className="min-w-0 flex-1 truncate text-[13.5px] font-medium">{reglages.profil.nom || compte.pseudo}</span>
+            <Icone nom="ui-chevrons" taille={14} className="shrink-0 text-white/55" />
+          </Menu>
         </div>
       </aside>
 
-      <div className="lg:pl-60">
+      <div className="lg:pl-[216px]">
       <header className="adm-topbar sticky top-0 z-30">
-        <div className="mx-auto flex min-h-[72px] max-w-[1120px] items-center gap-3 px-4 lg:min-h-20 lg:px-8">
-          {/* Sur ordinateur, la barre latérale et le titre disent déjà où l'on est : la barre ne garde que l'état et la page. */}
-          <div className="hidden flex-1 lg:block" />
+        {/* Au téléphone, l'en-tête porte l'adresse de la page et son état : la copier ne prend plus une ligne au-dessus de la page. */}
+        <div className="mx-auto flex min-h-[72px] max-w-[1120px] items-center gap-3 px-4 lg:hidden">
           {/* Tant que la page n'est pas prête, l'anneau de « Bien démarrer » prend la place de la photo : la liste ne passe plus avant la page. */}
           {onglet === 'page' && demarrage.actif
-            ? <AnneauDemarrage faites={demarrage.faites} total={demarrage.etapes.length} onClick={() => setDemarrageOuvert(true)} className="lg:hidden" />
-            : reglages.profil.avatar ? <img src={reglages.profil.avatar} alt="" className="h-9 w-9 rounded-full object-cover lg:hidden" /> : <span className="grid h-9 w-9 place-items-center rounded-full bg-white/[0.06] lg:hidden"><Icone nom="utilisateur" taille={18} /></span>}
-          <div className="min-w-0 flex-1 lg:hidden">
-            {/* Sur téléphone, l'en-tête porte l'adresse de la page : la copier ne prend plus une ligne au-dessus de la page. */}
-            <p className="truncate text-[15px] font-semibold leading-tight" translate="no">{urlPage(compte).replace(/^https?:\/\//, '')}</p>
-            <p className={`flex items-center gap-1.5 text-[12px] leading-tight ${sauvegarde === 'erreur' ? 'text-red-300' : 'text-white/55'}`} aria-live="polite">
-              {point}{indicateur}
+            ? <AnneauDemarrage faites={demarrage.faites} total={demarrage.etapes.length} onClick={() => setDemarrageOuvert(true)} />
+            : avatar('h-9 w-9')}
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-[15px] font-semibold leading-tight" translate="no">{courte}</p>
+            <p className={`flex items-center gap-1 text-[12px] leading-tight ${sauvegarde === 'erreur' ? 'text-red-300' : 'text-white/55'}`} aria-live="polite">
+              {signe}{indicateur}
             </p>
           </div>
-          <p className={`mr-2 hidden items-center gap-1.5 text-[12px] lg:flex ${sauvegarde === 'erreur' ? 'text-red-300' : 'text-white/55'}`} role="status">{point}{indicateur}</p>
-          <span className="lg:hidden"><BoutonCopier compact texte={urlPage(compte)} label="Copier l’adresse de ta page" onCopie={noterPartage} /></span>
+          <BoutonCopier compact texte={adresse} label="Copier l’adresse de ta page" onCopie={noterPartage} />
           {/* Sous 390 px, l'œil seul : l'adresse garde la place d'être lue. */}
-          <button type="button" onClick={() => setApercu(true)} className="adm-button-outline flex min-h-11 items-center justify-center gap-1.5 px-3.5 text-[13px] font-medium max-[389px]:w-11 max-[389px]:px-0 lg:hidden"><Icone nom="ui-oeil" taille={17} className="shrink-0" /><span className="max-[389px]:sr-only">Aperçu</span></button>
-          <a href={demo ? '#page' : urlPage(compte)} target={demo ? undefined : '_blank'} rel={demo ? undefined : 'noopener'} className="adm-button-outline hidden min-h-11 items-center gap-2 px-4 text-[13px] font-medium lg:flex">Voir ma page<Icone nom="ui-ouvrir" taille={15} /></a>
+          <button type="button" onClick={() => setApercu(true)} className="adm-button-outline flex min-h-11 items-center justify-center gap-1.5 px-3.5 text-[13px] font-medium max-[389px]:w-11 max-[389px]:px-0"><Icone nom="ui-oeil" taille={17} className="shrink-0" /><span className="max-[389px]:sr-only">Aperçu</span></button>
+        </div>
+        {/* Au bureau, une seule rangée : le nom de l'écran, puis ce qui sert ici. Pas de barre vide, pas de deuxième titre. */}
+        <div className="hidden h-14 items-center gap-2 pl-6 pr-4 lg:flex">
+          <h1 className="adm-entete-titre min-w-0 flex-1 truncate">{titre}</h1>
+          {/* L'état ne se montre que là où l'on écrit, ou quand il a quelque chose à dire. */}
+          {(onglet === 'page' || onglet === 'reglages' || sauvegarde !== 'ok') && (
+            <p className="adm-etat mr-1.5" data-erreur={sauvegarde === 'erreur' || undefined} role="status">{signe}{indicateur}</p>
+          )}
+          {onglet === 'page' && (
+            <>
+              <div className="adm-adresse-entete h-11 bureau:h-9">
+                <span className="flex items-center px-2.5 text-[13px] text-white/55" translate="no">{courte.slice(0, coupe)}<span className="font-medium text-white">{courte.slice(coupe)}</span></span>
+                <BoutonAdresse adresse={adresse} />
+              </div>
+              <a href={demo ? '#page' : adresse} target={demo ? undefined : '_blank'} rel={demo ? undefined : 'noopener'} className={classeBouton.secondaire}><Icone nom="ui-ouvrir" taille={15} className="shrink-0" />Voir ma page</a>
+            </>
+          )}
+          <div ref={setEmplacement} className="flex items-center gap-2 empty:hidden" />
         </div>
       </header>
 
@@ -353,12 +377,14 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
         <p className="mx-auto mt-3 max-w-6xl px-4"><span className="block rounded-xl bg-amber-400/15 px-3.5 py-2.5 text-[13.5px] text-amber-100">Le stockage n’est pas encore branché sur le serveur : tes changements seront perdus au prochain redémarrage.</span></p>
       )}
 
-      <div className="mx-auto max-w-[1120px] px-4 lg:px-8">
-        <main id="contenu-admin" className={`mx-auto w-full pb-28 lg:pb-12 lg:pt-9 ${onglet === 'page' ? 'pt-4' : 'pt-6'}`}>
+      <EmplacementEntete.Provider value={emplacement}>
+      <div className="mx-auto max-w-[1120px] px-4 lg:max-w-none lg:px-10">
+        <main id="contenu-admin" className={`mx-auto w-full pb-28 lg:pb-12 lg:pt-7 ${onglet === 'page' ? 'pt-4' : 'pt-6'}`}>
           <div key={onglet} className="adm-onglet">
-          {/* Au téléphone, Ma page n'affiche pas son titre : l'en-tête et la barre du bas disent déjà où l'on est. Il reste pour les lecteurs d'écran. */}
-          <div className={`adm-page-heading ${onglet === 'page' ? 'max-lg:sr-only' : ''}`}>
-            <h1>{onglets.find(o => o.id === onglet)!.nom}</h1>
+          {/* Au téléphone, le titre de l'écran ouvre le contenu (Ma page n'affiche pas le sien : l'en-tête et la barre du bas disent déjà où l'on est,
+              il reste pour les lecteurs d'écran). Au bureau, il est dans l'en-tête. */}
+          <div className={`adm-page-heading lg:hidden ${onglet === 'page' ? 'sr-only' : ''}`}>
+            <h1>{titre}</h1>
           </div>
           {onglet === 'page' && <MaPage compte={compte} reglages={reglages} blocs={blocs} clics={clics} onReglages={changerReglages} onOrdonner={ordonner}
             onOuvrir={b => setEdition({ bloc: b, nouveau: false })} onAjouter={(b, enBas) => setEdition({ bloc: b, nouveau: true, enBas })} envoyerImage={d => api.envoyerImage(d)} annoncer={t => setToast(t)}
@@ -372,6 +398,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
         </main>
 
       </div>
+      </EmplacementEntete.Provider>
 
       </div>
 
@@ -381,7 +408,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
             <li key={o.id}>
               <button key={o.id} type="button" onClick={() => { if (o.id !== onglet) { vibrer(5); choisirOnglet(o.id); } }} aria-current={onglet === o.id ? 'page' : undefined}
                 className={`flex h-14 w-full flex-col items-center justify-center gap-0.5 text-[11.5px] font-medium transition-colors duration-200 ${onglet === o.id ? 'font-semibold text-white' : 'text-white/55'}`}>
-                <span className="grid h-7 w-12 place-items-center"><Icone nom={o.icone} taille={21} /></span>{o.id === 'stats' ? 'Stats' : o.nom}
+                <span className="grid h-7 w-12 place-items-center"><Icone nom={o.icone} taille={21} /></span>{o.nom}
               </button>
             </li>
           ))}
@@ -406,5 +433,19 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
       {bulle}
     </div>
     </FournisseurOffre>
+  );
+}
+
+/** Copier, collé à l'adresse dans l'en-tête du bureau : « Copié » un instant, et l'étape « Partage ta page » se coche. */
+function BoutonAdresse({ adresse }: { adresse: string }) {
+  const [copie, setCopie] = useState(false);
+  async function copier() {
+    if (!(await copierTexte(adresse))) return;
+    vibrer(8); noterPartage(); setCopie(true); setTimeout(() => setCopie(false), 1800);
+  }
+  return (
+    <button type="button" onClick={copier} aria-label={copie ? 'Adresse copiée' : 'Copier l’adresse de ta page'} className="flex items-center gap-1.5 px-3 text-[13px] font-medium text-white">
+      <Icone nom={copie ? 'ui-ok' : 'ui-copier'} taille={15} className="shrink-0" />{copie ? 'Copié' : 'Copier'}
+    </button>
   );
 }

@@ -118,12 +118,32 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
   --adm-secondaire: #656560;
 }
 .adm-shell { background: var(--adm-fond); color: var(--adm-encre); }
-.adm-sidebar { padding: 26px 16px 24px; background: #fdfdfc; border-right: 1px solid var(--adm-trait); }
-.adm-nav-item { display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 0 14px; border: 1px solid transparent; border-radius: 12px; color: var(--adm-secondaire); font-size: 14px; font-weight: 500; text-align: left; transition: background-color 150ms, color 150ms; }
-.adm-nav-item:hover { background: #f1f1ee; color: var(--adm-encre); }
-.adm-nav-item[aria-current='page'] { border-color: var(--adm-trait); background: #fff; color: var(--adm-encre); font-weight: 600; }
-.adm-nav-count { margin-left: auto; display: grid; min-width: 23px; height: 23px; place-items: center; padding: 0 5px; border-radius: 7px; background: #efefec; color: #565651; font-size: 11.5px; font-variant-numeric: tabular-nums; }
+/*
+ * La coquille du bureau (direction B, 20 octobre 2026) : une barre latérale
+ * fine, une seule rangée d'en-tête de 56 px, le contenu sur le blanc. L'onglet
+ * courant est un gris uni, sans bordure ; le survol est plus pâle que lui.
+ */
+@media (min-width: 1024px) { .adm-shell { background: #fff; } }
+.adm-sidebar { padding: 0 10px 10px; background: #fafaf9; border-right: 1px solid #ececea; }
+.adm-nav-item { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 10px; border-radius: 7px; color: #55554f; font-size: 14px; font-weight: 500; text-align: left; transition: background-color 150ms, color 150ms; }
+.adm-nav-item:hover { background: #f2f2ef; color: var(--adm-encre); }
+.adm-nav-item[aria-current='page'] { background: #ebebe7; color: #0a0a0a; }
+.adm-compte { display: flex; min-height: 44px; width: 100%; align-items: center; gap: 10px; padding: 0 8px; border-radius: 7px; text-align: left; transition: background-color 150ms; }
+.adm-compte:hover, .adm-compte[aria-expanded='true'] { background: #f2f2ef; }
 .adm-topbar { border-bottom: 1px solid var(--adm-trait); background: #fdfdfc; }
+@media (min-width: 1024px) { .adm-topbar { border-bottom-color: #ececea; background: #fff; } }
+.adm-entete-titre { font-size: 15px; font-weight: 600; letter-spacing: -0.015em; }
+/* L'adresse dans l'en-tête : le domaine en gris, le pseudo à l'encre, et Copier collé à elle. */
+.adm-adresse-entete { display: flex; align-items: stretch; overflow: hidden; border: 1px solid #dcdcd7; border-radius: 8px; background: #fff; }
+.adm-adresse-entete > button { border-left: 1px solid #dcdcd7; transition: background-color 150ms; }
+.adm-adresse-entete > button:hover { background: #f4f4f0; }
+.adm-etat { display: flex; align-items: center; gap: 5px; color: #5f5f5a; font-size: 12px; }
+.adm-etat[data-erreur] { color: #c62828; }
+/* Un menu (compte, actions d'un bloc, période) : une petite surface posée au-dessus du travail. */
+.adm-menu { padding: 4px; border: 1px solid #e3e3df; border-radius: 10px; background: #fff; box-shadow: 0 14px 34px -14px rgb(0 0 0 / 0.22), 0 2px 6px -2px rgb(0 0 0 / 0.06); }
+.adm-menu-item { display: flex; width: 100%; min-height: 44px; align-items: center; gap: 9px; padding: 0 10px; border-radius: 6px; font-size: 14px; font-weight: 500; transition: background-color 120ms; }
+.adm-menu-item:hover, .adm-menu-item:focus-visible { background: #f2f2ef; }
+.adm .adm-menu-item:focus-visible { outline-offset: -2px; }
 /* Le titre d'un écran, le même partout : les onglets, la connexion, les CGU, les premiers pas. */
 .adm-page-heading { margin-bottom: 24px; }
 .adm-titre, .adm-page-heading h1 { font-size: 32px; line-height: 1.2; font-weight: 600; letter-spacing: -0.035em; text-wrap: balance; }
@@ -194,7 +214,35 @@ button.adm-settings-row:hover { background: #f7f7f5; }
   .adm-editor-tools [data-principal], .adm-editor-tools .adm-button-outline { font-size: 13px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .adm-nav-item, .adm-button-outline, .adm-button-primary, .adm-button-danger, button.adm-settings-row { transition: none; }
+  .adm-nav-item, .adm-compte, .adm-menu-item, .adm-button-outline, .adm-button-primary, .adm-button-danger, button.adm-settings-row { transition: none; }
+}
+
+/*
+ * Au bureau, à la souris (20 octobre 2026) : la même interface, resserrée.
+ * Rangées de 32 px, boutons de 36, champs de 40, et une échelle de texte à
+ * cinq marches, 12 / 13,5 / 15 / 18 / 24. Les tailles écrites pour le doigt
+ * (de 11,5 à 32 px) se rangent sur la marche la plus proche ; la page
+ * publique, qui n'utilise aucune de ces classes, garde sa typographie.
+ */
+@media (min-width: 1024px) and (pointer: fine) {
+  .adm-nav-item { min-height: 32px; font-size: 13.5px; }
+  .adm-menu-item { min-height: 32px; font-size: 13.5px; }
+  .adm-button-outline { border-radius: 8px; }
+  .adm-field { min-height: 40px; padding: 8px 12px; border-radius: 8px; font-size: 13.5px; }
+  .adm-titre, .adm-page-heading h1 { font-size: 24px; letter-spacing: -0.025em; }
+}
+/* Une classe `bureau:` écrite sur l'élément garde la main : la correspondance ne s'applique qu'aux autres. */
+@layer utilities {
+  @media (min-width: 1024px) and (pointer: fine) {
+    :where(.adm) :is(.text-\[11\.5px\], .text-\[12px\], .text-\[12\.5px\]):not([class*='bureau:text-']) { font-size: 12px; }
+    :where(.adm) :is(.text-\[13px\], .text-\[13\.5px\], .text-\[14px\], .text-\[14\.5px\]):not([class*='bureau:text-']) { font-size: 13.5px; }
+    :where(.adm) :is(.text-\[15px\], .text-\[15\.5px\], .text-\[16px\]):not([class*='bureau:text-']) { font-size: 15px; }
+    :where(.adm) :is(.text-\[17px\], .text-\[18px\]):not([class*='bureau:text-']) { font-size: 18px; }
+    :where(.adm) :is(.text-\[26px\], .text-\[28px\], .text-\[30px\], .text-\[32px\]):not([class*='bureau:text-']) { font-size: 24px; }
+    /* Un bouton écrit à la main pour le pouce (44 px) se resserre comme ceux de `classeBouton`. */
+    :where(.adm) :is(button, a).min-h-11:not([class*='bureau:min-h'], [class*='bureau:h-']) { min-height: 36px; }
+    :where(.adm) :is(button, a).min-h-12:not([class*='bureau:min-h'], [class*='bureau:h-']) { min-height: 40px; }
+  }
 }
 
 /* Réglages, Abonnement : les offres en cartes, à la façon de Linktree, en noir et blanc. */

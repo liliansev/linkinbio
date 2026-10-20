@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-19T22:02:33.353952Z",
+  "generatedAt": "2026-10-20T21:00:00Z",
   "title": "Design System: Hopla back office",
   "extensions": {
     "colorMeta": {
@@ -185,6 +185,48 @@
           "oklch(87% 0.12 60)",
           "oklch(95% 0.12 60)"
         ]
+      },
+      "nav-current": {
+        "role": "neutral",
+        "displayName": "Onglet courant",
+        "tonalRamp": [
+          "oklch(15% 0 0)",
+          "oklch(27% 0 0)",
+          "oklch(39% 0 0)",
+          "oklch(51% 0 0)",
+          "oklch(63% 0 0)",
+          "oklch(75% 0 0)",
+          "oklch(87% 0 0)",
+          "oklch(95% 0 0)"
+        ]
+      },
+      "sidebar": {
+        "role": "neutral",
+        "displayName": "Barre latérale",
+        "tonalRamp": [
+          "oklch(15% 0 0)",
+          "oklch(27% 0 0)",
+          "oklch(39% 0 0)",
+          "oklch(51% 0 0)",
+          "oklch(63% 0 0)",
+          "oklch(75% 0 0)",
+          "oklch(87% 0 0)",
+          "oklch(95% 0 0)"
+        ]
+      },
+      "shell-divider": {
+        "role": "neutral",
+        "displayName": "Trait de la coquille",
+        "tonalRamp": [
+          "oklch(15% 0 0)",
+          "oklch(27% 0 0)",
+          "oklch(39% 0 0)",
+          "oklch(51% 0 0)",
+          "oklch(63% 0 0)",
+          "oklch(75% 0 0)",
+          "oklch(87% 0 0)",
+          "oklch(95% 0 0)"
+        ]
       }
     },
     "typographyMeta": {
@@ -222,7 +264,19 @@
       },
       "wordmark": {
         "displayName": "Marque",
-        "purpose": "« Hopla. » dans la marque, et nulle part ailleurs."
+        "purpose": "« Hopla » dans la marque, et nulle part ailleurs."
+      },
+      "wordmark-desk": {
+        "displayName": "Petite marque",
+        "purpose": "La marque dans la barre latérale du bureau, à la hauteur de l’en-tête."
+      },
+      "screen-title-desk": {
+        "displayName": "Titre d’écran au bureau",
+        "purpose": "Le nom de l’écran à gauche de l’unique rangée d’en-tête ; le seul titre de l’écran au bureau."
+      },
+      "body-desk": {
+        "displayName": "Texte courant au bureau",
+        "purpose": "La marche de 13,5 px de l’échelle du bureau (12 / 13,5 / 15 / 18 / 24)."
       }
     },
     "shadows": [
@@ -291,6 +345,10 @@
       {
         "name": "xl",
         "value": "1280px"
+      },
+      {
+        "name": "bureau",
+        "value": "(min-width: 1024px) and (pointer: fine)"
       }
     ]
   },
@@ -299,17 +357,17 @@
       "name": "Bouton principal",
       "kind": "button",
       "refersTo": "button-primary",
-      "description": "Action principale du back office.",
+      "description": "Action principale du back office ; au bureau, 36 px de haut, arrondi de 8 px, graisse moyenne.",
       "html": "<button type=\"button\" class=\"ds-primary\"><svg width=\"17\" height=\"17\" viewBox=\"0 0 256 256\" fill=\"currentColor\" aria-hidden=\"true\"><path d=\"M224,128a8,8,0,0,1-8,8H136v80a8,8,0,0,1-16,0V136H40a8,8,0,0,1,0-16h80V40a8,8,0,0,1,16,0v80h80A8,8,0,0,1,224,128Z\"/></svg>Ajouter un bloc</button>",
-      "css": ".ds-primary{font-family:'Geist Variable',ui-sans-serif,system-ui,sans-serif;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 20px;border:0;border-radius:12px;background:var(--color-white,#0a0a0a);color:var(--color-nuit,#fff);font-size:14px;font-weight:600;transition:background-color 150ms,transform 150ms}.ds-primary:hover{background:#30302e}.ds-primary:focus-visible{outline:2px solid var(--color-white,#0a0a0a);outline-offset:2px;}.ds-primary:active{transform:scale(.98)}.ds-primary:disabled{opacity:.5}@media(prefers-reduced-motion:reduce){.ds-primary{transition:none}}"
+      "css": ".ds-primary{font-family:'Geist Variable',ui-sans-serif,system-ui,sans-serif;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 20px;border:0;border-radius:12px;background:var(--color-white,#0a0a0a);color:var(--color-nuit,#fff);font-size:14px;font-weight:600;transition:background-color 150ms,transform 150ms}.ds-primary:hover{background:#30302e}.ds-primary:focus-visible{outline:2px solid var(--color-white,#0a0a0a);outline-offset:2px;}.ds-primary:active{transform:scale(.98)}.ds-primary:disabled{opacity:.5}@media(prefers-reduced-motion:reduce){.ds-primary{transition:none}}@media(min-width:1024px) and (pointer:fine){.ds-primary{min-height:36px;padding:0 14px 0 12px;border-radius:8px;font-size:13.5px;font-weight:500;gap:6px}}"
     },
     {
       "name": "Bouton secondaire",
       "kind": "button",
       "refersTo": "button-secondary",
-      "description": "Action complémentaire bordée.",
+      "description": "Action complémentaire bordée ; au bureau, 36 px et arrondi de 8 px.",
       "html": "<button type=\"button\" class=\"ds-secondary\">Personnaliser</button>",
-      "css": ".ds-secondary{font-family:'Geist Variable',ui-sans-serif,system-ui,sans-serif;min-height:44px;padding:0 16px;border:1px solid #deded9;border-radius:12px;background:var(--adm-surface,#fff);color:var(--color-white,#0a0a0a);font-size:14px;font-weight:500;transition:background-color 150ms,border-color 150ms,transform 150ms}.ds-secondary:hover{background:#f4f4f0;border-color:#c7c7c0}.ds-secondary:focus-visible{outline:2px solid var(--color-white,#0a0a0a);outline-offset:2px;}.ds-secondary:active{transform:scale(.98)}.ds-secondary:disabled{opacity:.5}@media(prefers-reduced-motion:reduce){.ds-secondary{transition:none}}"
+      "css": ".ds-secondary{font-family:'Geist Variable',ui-sans-serif,system-ui,sans-serif;min-height:44px;padding:0 16px;border:1px solid #deded9;border-radius:12px;background:var(--adm-surface,#fff);color:var(--color-white,#0a0a0a);font-size:14px;font-weight:500;transition:background-color 150ms,border-color 150ms,transform 150ms}.ds-secondary:hover{background:#f4f4f0;border-color:#c7c7c0}.ds-secondary:focus-visible{outline:2px solid var(--color-white,#0a0a0a);outline-offset:2px;}.ds-secondary:active{transform:scale(.98)}.ds-secondary:disabled{opacity:.5}@media(prefers-reduced-motion:reduce){.ds-secondary{transition:none}}@media(min-width:1024px) and (pointer:fine){.ds-secondary{min-height:36px;padding:0 12px;border-radius:8px;font-size:13.5px}}"
     },
     {
       "name": "Bouton danger",
@@ -317,7 +375,7 @@
       "refersTo": "button-danger",
       "description": "Effacement définitif, après une confirmation ; le seul bouton rouge.",
       "html": "<button type=\"button\" class=\"ds-danger\">Supprimer définitivement</button>",
-      "css": ".ds-danger{font-family:'Geist Variable',ui-sans-serif,system-ui,sans-serif;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 16px;border:0;border-radius:12px;background:#c62828;color:#fff;font-size:14px;font-weight:600;transition:background-color 150ms,transform 150ms}.ds-danger:hover{background:#a51f1f}.ds-danger:focus-visible{outline:2px solid var(--color-white,#0a0a0a);outline-offset:2px;}.ds-danger:active{transform:scale(.98)}.ds-danger:disabled{opacity:.4}@media(prefers-reduced-motion:reduce){.ds-danger{transition:none}}"
+      "css": ".ds-danger{font-family:'Geist Variable',ui-sans-serif,system-ui,sans-serif;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 16px;border:0;border-radius:12px;background:#c62828;color:#fff;font-size:14px;font-weight:600;transition:background-color 150ms,transform 150ms}.ds-danger:hover{background:#a51f1f}.ds-danger:focus-visible{outline:2px solid var(--color-white,#0a0a0a);outline-offset:2px;}.ds-danger:active{transform:scale(.98)}.ds-danger:disabled{opacity:.4}@media(prefers-reduced-motion:reduce){.ds-danger{transition:none}}@media(min-width:1024px) and (pointer:fine){.ds-danger{min-height:36px;padding:0 12px;border-radius:8px;font-size:13.5px;font-weight:500}}"
     },
     {
       "name": "Bouton discret",
@@ -325,31 +383,31 @@
       "refersTo": "button-quiet",
       "description": "Annuler, Plus tard, Me déconnecter : du texte secondaire sans fond.",
       "html": "<button type=\"button\" class=\"ds-quiet\">Plus tard</button>",
-      "css": ".ds-quiet{font-family:'Geist Variable',ui-sans-serif,system-ui,sans-serif;display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:44px;padding:0 12px;border:0;border-radius:12px;background:transparent;color:#666;font-size:14px;font-weight:500;transition:background-color 150ms,color 150ms}.ds-quiet:hover{background:#f4f4f0;color:#0a0a0a}.ds-quiet:focus-visible{outline:2px solid var(--color-white,#0a0a0a);outline-offset:2px;}.ds-quiet:disabled{opacity:.5}@media(prefers-reduced-motion:reduce){.ds-quiet{transition:none}}"
+      "css": ".ds-quiet{font-family:'Geist Variable',ui-sans-serif,system-ui,sans-serif;display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:44px;padding:0 12px;border:0;border-radius:12px;background:transparent;color:#666;font-size:14px;font-weight:500;transition:background-color 150ms,color 150ms}.ds-quiet:hover{background:#f4f4f0;color:#0a0a0a}.ds-quiet:focus-visible{outline:2px solid var(--color-white,#0a0a0a);outline-offset:2px;}.ds-quiet:disabled{opacity:.5}@media(prefers-reduced-motion:reduce){.ds-quiet{transition:none}}@media(min-width:1024px) and (pointer:fine){.ds-quiet{min-height:36px;padding:0 10px;border-radius:8px;font-size:13.5px}}"
     },
     {
       "name": "Bouton icône",
       "kind": "button",
       "refersTo": "button-icon",
-      "description": "Fermer, revenir ou retirer : un carré de 44 px au picto secondaire.",
+      "description": "Fermer, revenir ou retirer : un carré de 44 px au picto secondaire, 32 px au bureau.",
       "html": "<button type=\"button\" class=\"ds-icon\" aria-label=\"Fermer\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 256 256\" fill=\"currentColor\" aria-hidden=\"true\"><path d=\"M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z\"/></svg></button>",
-      "css": ".ds-icon{display:grid;place-items:center;width:44px;height:44px;flex-shrink:0;border:0;border-radius:12px;background:transparent;color:#666;transition:background-color 150ms,color 150ms}.ds-icon:hover{background:#f4f4f0;color:#0a0a0a}.ds-icon:focus-visible{outline:2px solid var(--color-white,#0a0a0a);outline-offset:2px;}@media(prefers-reduced-motion:reduce){.ds-icon{transition:none}}"
+      "css": ".ds-icon{display:grid;place-items:center;width:44px;height:44px;flex-shrink:0;border:0;border-radius:12px;background:transparent;color:#666;transition:background-color 150ms,color 150ms}.ds-icon:hover{background:#f4f4f0;color:#0a0a0a}.ds-icon:focus-visible{outline:2px solid var(--color-white,#0a0a0a);outline-offset:2px;}@media(prefers-reduced-motion:reduce){.ds-icon{transition:none}}@media(min-width:1024px) and (pointer:fine){.ds-icon{width:32px;height:32px;border-radius:8px}}"
     },
     {
       "name": "Champ de saisie",
       "kind": "input",
       "refersTo": "field",
-      "description": "Champ nommé avec saisie lisible sur téléphone.",
+      "description": "Champ nommé avec saisie lisible sur téléphone ; au bureau, 40 px, arrondi de 8 px, texte de 13,5 px.",
       "html": "<label class=\"ds-label\">Adresse e-mail<input class=\"ds-field\" type=\"email\" placeholder=\"toi@exemple.fr\" /></label>",
-      "css": ".ds-label{font-family:'Geist Variable',ui-sans-serif,system-ui,sans-serif;display:block;color:#666;font-size:12.5px;font-weight:500}.ds-field{font-family:'Geist Variable',ui-sans-serif,system-ui,sans-serif;display:block;width:240px;max-width:100%;min-height:48px;margin-top:6px;padding:12px 14px;border:1px solid rgb(10 10 10 / .15);border-radius:12px;background:#fdfdfc;color:var(--color-white,#0a0a0a);font-size:16px;transition:border-color 150ms}.ds-field::placeholder{color:#737373}.ds-field:hover{border-color:#b2b2ab}.ds-field:focus{border-color:rgb(10 10 10 / .7)}.ds-field:focus-visible{outline:2px solid var(--color-white,#0a0a0a);outline-offset:2px;}.ds-field[aria-invalid=true]{border-color:#c62828}@media(prefers-reduced-motion:reduce){.ds-field{transition:none}}"
+      "css": ".ds-label{font-family:'Geist Variable',ui-sans-serif,system-ui,sans-serif;display:block;color:#666;font-size:12.5px;font-weight:500}.ds-field{font-family:'Geist Variable',ui-sans-serif,system-ui,sans-serif;display:block;width:240px;max-width:100%;min-height:48px;margin-top:6px;padding:12px 14px;border:1px solid rgb(10 10 10 / .15);border-radius:12px;background:#fdfdfc;color:var(--color-white,#0a0a0a);font-size:16px;transition:border-color 150ms}.ds-field::placeholder{color:#737373}.ds-field:hover{border-color:#b2b2ab}.ds-field:focus{border-color:rgb(10 10 10 / .7)}.ds-field:focus-visible{outline:2px solid var(--color-white,#0a0a0a);outline-offset:2px;}.ds-field[aria-invalid=true]{border-color:#c62828}@media(prefers-reduced-motion:reduce){.ds-field{transition:none}}@media(min-width:1024px) and (pointer:fine){.ds-label{font-size:12px}.ds-field{min-height:40px;padding:8px 12px;border-radius:8px;font-size:13.5px}}"
     },
     {
       "name": "Navigation de section",
       "kind": "nav",
       "refersTo": "nav-item",
-      "description": "Navigation desktop, actif blanc bordé et survol neutre.",
+      "description": "Navigation du bureau : rangées de 32 px à la souris (44 au doigt), onglet courant en gris uni sans bordure, survol plus pâle.",
       "html": "<nav class=\"ds-nav\" aria-label=\"Sections\"><button type=\"button\" aria-current=\"page\" class=\"ds-nav-item\">Ma page<span class=\"ds-count\">4</span></button><button type=\"button\" class=\"ds-nav-item\">Statistiques</button><button type=\"button\" class=\"ds-nav-item\">Réglages</button></nav>",
-      "css": ".ds-nav{display:grid;gap:6px;width:208px;padding:12px;background:#fdfdfc}.ds-nav-item{font-family:'Geist Variable',ui-sans-serif,system-ui,sans-serif;display:flex;align-items:center;gap:12px;min-height:48px;padding:0 14px;border:1px solid transparent;border-radius:12px;background:transparent;color:var(--adm-secondaire,#656560);font-size:14px;font-weight:500;text-align:left;transition:background-color 150ms,color 150ms}.ds-nav-item:hover{background:#f1f1ee;color:var(--adm-encre,#18191b)}.ds-nav-item[aria-current=page]{border-color:var(--adm-trait,#e5e5e1);background:#fff;color:var(--adm-encre,#18191b);font-weight:600}.ds-nav-item:focus-visible{outline:2px solid var(--color-white,#0a0a0a);outline-offset:2px;}.ds-count{display:grid;place-items:center;min-width:23px;height:23px;margin-left:auto;padding:0 5px;border-radius:7px;background:#efefec;color:#565651;font-size:11.5px;font-variant-numeric:tabular-nums}@media(prefers-reduced-motion:reduce){.ds-nav-item{transition:none}}"
+      "css": ".ds-nav{display:grid;gap:2px;width:196px;padding:6px 10px 10px;background:#fafaf9}.ds-nav-item{font-family:'Geist Variable',ui-sans-serif,system-ui,sans-serif;display:flex;align-items:center;gap:10px;min-height:44px;padding:0 10px;border:0;border-radius:7px;background:transparent;color:#55554f;font-size:14px;font-weight:500;text-align:left;transition:background-color 150ms,color 150ms}.ds-nav-item:hover{background:#f2f2ef;color:var(--adm-encre,#18191b)}.ds-nav-item[aria-current=page]{background:#ebebe7;color:#0a0a0a}.ds-nav-item:focus-visible{outline:2px solid var(--color-white,#0a0a0a);outline-offset:2px}@media(min-width:1024px) and (pointer:fine){.ds-nav-item{min-height:32px;font-size:13.5px}}@media(prefers-reduced-motion:reduce){.ds-nav-item{transition:none}}"
     },
     {
       "name": "Carte de contenu",
@@ -365,15 +423,15 @@
       "refersTo": "segment",
       "description": "Choix exclusif de période, état radio visible.",
       "html": "<div class=\"ds-segments\" role=\"radiogroup\" aria-label=\"Période\"><button class=\"ds-segment\" type=\"button\" role=\"radio\" aria-checked=\"false\" tabindex=\"-1\">7 j</button><button class=\"ds-segment\" type=\"button\" role=\"radio\" aria-checked=\"true\">30 j</button><button class=\"ds-segment\" type=\"button\" role=\"radio\" aria-checked=\"false\" tabindex=\"-1\">90 j</button></div>",
-      "css": ".ds-segments{display:flex;gap:2px;width:260px;padding:3px;border-radius:10px;background:rgb(10 10 10 / .06)}.ds-segment{font-family:'Geist Variable',ui-sans-serif,system-ui,sans-serif;flex:1;min-height:40px;padding:0 10px;border:0;border-radius:7px;background:transparent;color:#666;font-size:13.5px;font-weight:500;transition:color 200ms}.ds-segment:hover{color:#0a0a0a}.ds-segment[aria-checked=true]{background:var(--color-nuit,#fff);color:var(--color-white,#0a0a0a);box-shadow:0 1px 3px rgba(0,0,0,.14)}.ds-segment:focus-visible{outline:2px solid var(--color-white,#0a0a0a);outline-offset:2px;}@media(prefers-reduced-motion:reduce){.ds-segment{transition:none}}"
+      "css": ".ds-segments{display:flex;gap:2px;width:260px;padding:3px;border-radius:10px;background:rgb(10 10 10 / .06)}.ds-segment{font-family:'Geist Variable',ui-sans-serif,system-ui,sans-serif;flex:1;min-height:40px;padding:0 10px;border:0;border-radius:7px;background:transparent;color:#666;font-size:13.5px;font-weight:500;transition:color 200ms}.ds-segment:hover{color:#0a0a0a}.ds-segment[aria-checked=true]{background:var(--color-nuit,#fff);color:var(--color-white,#0a0a0a);box-shadow:0 1px 3px rgba(0,0,0,.14)}.ds-segment:focus-visible{outline:2px solid var(--color-white,#0a0a0a);outline-offset:2px;}@media(prefers-reduced-motion:reduce){.ds-segment{transition:none}}@media(min-width:1024px) and (pointer:fine){.ds-segment{min-height:30px}}"
     },
     {
       "name": "Interrupteur",
       "kind": "custom",
       "refersTo": "switch",
-      "description": "État de préférence, cible étendue autour de la piste ; éteinte, la piste reste à 3:1 sur le papier.",
+      "description": "État de préférence, cible étendue autour de la piste ; éteinte, la piste reste à 3:1 sur le papier. Au bureau, 32 sur 18.",
       "html": "<button class=\"ds-switch\" type=\"button\" role=\"switch\" aria-checked=\"true\" aria-label=\"Mes stats par e-mail chaque lundi\"><span class=\"ds-knob\"></span></button>",
-      "css": ".ds-switch{position:relative;width:40px;height:24px;border:0;border-radius:9999px;background:rgb(10 10 10 / .45);transition:background-color 220ms ease}.ds-switch::before{position:absolute;inset:-8px;content:\"\"}.ds-switch[aria-checked=true]{background:var(--color-white,#0a0a0a)}.ds-knob{position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:9999px;background:var(--color-nuit,#fff);box-shadow:0 1px 3px rgba(0,0,0,.3);transform-origin:left center;transition:translate 280ms cubic-bezier(.16,1,.3,1),scale 200ms cubic-bezier(.16,1,.3,1)}.ds-switch[aria-checked=true] .ds-knob{translate:16px 0}.ds-switch:focus-visible{outline:2px solid var(--color-white,#0a0a0a);outline-offset:2px;}.ds-switch:active .ds-knob{scale:1.5 1}.ds-switch[aria-checked=true]:active .ds-knob{translate:7px 0}.ds-switch:disabled{opacity:.4}@media(prefers-reduced-motion:reduce){.ds-switch,.ds-knob{transition:none}}"
+      "css": ".ds-switch{position:relative;width:40px;height:24px;border:0;border-radius:9999px;background:rgb(10 10 10 / .45);transition:background-color 220ms ease}.ds-switch::before{position:absolute;inset:-8px;content:\"\"}.ds-switch[aria-checked=true]{background:var(--color-white,#0a0a0a)}.ds-knob{position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:9999px;background:var(--color-nuit,#fff);box-shadow:0 1px 3px rgba(0,0,0,.3);transform-origin:left center;transition:translate 280ms cubic-bezier(.16,1,.3,1),scale 200ms cubic-bezier(.16,1,.3,1)}.ds-switch[aria-checked=true] .ds-knob{translate:16px 0}.ds-switch:focus-visible{outline:2px solid var(--color-white,#0a0a0a);outline-offset:2px;}.ds-switch:active .ds-knob{scale:1.5 1}.ds-switch[aria-checked=true]:active .ds-knob{translate:7px 0}.ds-switch:disabled{opacity:.4}@media(prefers-reduced-motion:reduce){.ds-switch,.ds-knob{transition:none}}@media(min-width:1024px) and (pointer:fine){.ds-switch{width:32px;height:18px}.ds-knob{top:2px;left:2px;width:14px;height:14px}.ds-switch[aria-checked=true] .ds-knob{translate:14px 0}}"
     },
     {
       "name": "Ligne de réglage",
