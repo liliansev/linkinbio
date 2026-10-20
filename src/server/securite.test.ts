@@ -237,6 +237,7 @@ test('l’aperçu ne joint ni la machine ni le réseau local, même par un nom',
   const port = (serveur.address() as AddressInfo).port;
   await assert.rejects(apercuSite(`http://127.0.0.1:${port}/`), /refusée/);
   await assert.rejects(apercuSite(`http://[::ffff:127.0.0.1]:${port}/`), /refusée/);
+  await assert.rejects(apercuSite(`http://[::127.0.0.1]:${port}/`), /refusée/);
   await assert.rejects(apercuSite(`http://2130706433:${port}/`), /refusée/);
   await assert.rejects(apercuSite(`http://localhost:${port}/`));
   await assert.rejects(apercuSite('file:///etc/passwd'), /refusée/);
