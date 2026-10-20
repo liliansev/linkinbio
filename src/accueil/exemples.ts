@@ -2,6 +2,7 @@ import type { Bloc, Couleurs, PagePublique, Reglages } from '../lib/types.ts';
 import { SANS_COULEURS, nouveauBloc } from '../lib/types.ts';
 import { REGLAGES_DEFAUT } from '../lib/defauts.ts';
 import { themeParId } from '../lib/themes.ts';
+import { nomSaisi } from '../lib/valider.ts';
 
 /*
  * Les pages montrées dans les téléphones de l'accueil : le vrai composant de
@@ -84,6 +85,13 @@ export function pageJules(theme: string): PagePublique {
 /** « marie-claire-2 » devient « Marie Claire 2 » : le nom qu'on tape, posé sur la page du téléphone. */
 export const nomAffiche = (pseudo: string) => pseudo.split('-').filter(Boolean).map(m => m[0].toUpperCase() + m.slice(1)).join(' ');
 
+/** Le nom tel qu'on l'a tapé (« Zoé Martin »), s'il donne bien ce pseudo ; sinon celui qu'on tire du pseudo. */
+export function nomTape(saisie: string, pseudo: string) {
+  const mots = saisie.trim().split(/[\s._-]+/).filter(Boolean);
+  if (!mots.length || nomSaisi(saisie, 200).replace(/-$/, '') !== pseudo) return nomAffiche(pseudo);
+  return mots.map(m => m[0].toUpperCase() + m.slice(1)).join(' ');
+}
+
 const BLOCS_VISITEUR = [
   bloc('lien', { titre: 'Mon site', url: 'https://exemple.fr', icone: 'site', vedette: true, format: 'bouton' }),
   bloc('lien', { titre: 'Ma dernière vidéo', url: 'https://youtube.com/', icone: 'youtube' }),
@@ -92,8 +100,7 @@ const BLOCS_VISITEUR = [
 ];
 
 /** La page de celui qui tape son nom dans l'ouverture : son nom, ses initiales, des liens de départ. */
-export function pageVisiteur(pseudo: string, theme: string): PagePublique {
-  const nom = nomAffiche(pseudo);
+export function pageVisiteur(pseudo: string, theme: string, nom = nomAffiche(pseudo)): PagePublique {
   const lettres = nom.split(' ').slice(0, 2).map(m => m[0]).join('');
   return {
     reglages: {

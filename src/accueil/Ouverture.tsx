@@ -6,7 +6,7 @@ import { Symbole } from '../components/Logo.tsx';
 import { EcranPage, Telephone } from './Telephone.tsx';
 import { Reserver, allerAuChamp, useReservation } from './Reserver.tsx';
 import type { ApiAccueil } from './Reserver.tsx';
-import { nomAffiche, pageJules, pageLilian, pageMarie, pageVisiteur, selonReseau } from './exemples.ts';
+import { nomTape, pageJules, pageLilian, pageMarie, pageVisiteur, selonReseau } from './exemples.ts';
 import { mouvementReduit, useGlisse, useVu } from './mouvement.ts';
 import { APPEL, MOTS, useInscription } from './textes.ts';
 
@@ -39,6 +39,16 @@ export function Barre() {
   const { etape, ancien, correction } = useReservation();
   // Une fois l'e-mail parti, il n'y a plus rien à créer : la barre garde Connexion.
   const envoye = etape === 'fait' || !!ancien || correction;
+  // Au bureau, Connexion glisse de la largeur du bouton quand il s'efface : on la mesure.
+  const bouton = useRef<HTMLAnchorElement>(null);
+  const [creer, setCreer] = useState(0);
+  useEffect(() => {
+    const el = bouton.current;
+    if (!el || typeof ResizeObserver !== 'function') return;
+    const o = new ResizeObserver(() => setCreer(el.offsetWidth));
+    o.observe(el);
+    return () => o.disconnect();
+  }, []);
   // Le bouton de la barre s'efface tant qu'un champ du nom est à l'écran : un seul appel à la fois.
   useEffect(() => {
     if (typeof IntersectionObserver !== 'function') { setChamp(false); return; }
@@ -66,15 +76,15 @@ export function Barre() {
     return () => { removeEventListener('keydown', echap); removeEventListener('pointerdown', ailleurs); };
   }, [menu]);
   return (
-    <header className="hl-barre" data-defile={defile || menu || undefined} data-champ={(champ && !menu) || undefined} data-envoye={envoye || undefined}>
+    <header className="hl-barre" style={{ '--creer': `${creer}px` } as CSSProperties} data-defile={defile || menu || undefined} data-champ={(champ && !menu) || undefined} data-envoye={envoye || undefined}>
       <div className="hl-barre-dedans">
         <Marque />
         <nav className="hl-barre-nav" aria-label="Sections">
-          {SECTIONS.slice(0, 3).map(([lien, texte]) => <a key={lien} href={lien}>{texte}</a>)}
+          {SECTIONS.map(([lien, texte]) => <a key={lien} href={lien}>{texte}</a>)}
         </nav>
         <div className="hl-barre-actions">
           <a href="/admin" className="hl-barre-connexion">Connexion</a>
-          <a href="#reserver" className="hl-btn hl-btn-petit" onClick={ev => { ev.preventDefault(); setMenu(false); allerAuChamp(); }}><span>{debut}<span className="hl-large">{suite}</span></span></a>
+          <a ref={bouton} href="#reserver" className="hl-btn hl-btn-petit" onClick={ev => { ev.preventDefault(); setMenu(false); allerAuChamp(); }}><span>{debut}<span className="hl-large">{suite}</span></span></a>
           <button type="button" className="hl-barre-menu" aria-expanded={menu} aria-controls="hl-menu" aria-label={menu ? 'Fermer le menu' : 'Ouvrir le menu'} onClick={() => setMenu(m => !m)}>
             <Icone nom={menu ? 'ui-fermer' : 'ui-menu'} taille={22} />
           </button>
@@ -88,7 +98,7 @@ export function Barre() {
   );
 }
 
-/** Les sections de la barre ; au téléphone, le menu ajoute les questions. */
+/** Les sections de la barre, et du menu au téléphone. */
 const SECTIONS = [['#fonctions', 'Fonctions'], ['#themes', 'Thèmes'], ['#prix', 'Prix'], ['#questions', 'Questions']];
 
 /**
@@ -102,6 +112,8 @@ const VISITES = [
   { reseau: 'youtube', arrive: 'Arrivé de YouTube' },
 ];
 const THEME = THEMES.find(t => t.id === 'champagne')!;
+/** « arrivé de TikTok », au milieu d'une phrase : la marque garde sa majuscule. */
+const enMinuscule = (texte: string) => texte[0].toLowerCase() + texte.slice(1);
 
 const d = (ms: number) => ({ '--d': `${ms}ms` }) as CSSProperties;
 const mots = (texte: string, depart = 0) => texte.split(' ').map((m, i) => (
@@ -113,7 +125,7 @@ export function Ouverture({ api }: { api: ApiAccueil }) {
   const [touche, setTouche] = useState(false);
   const [refScene, vu] = useVu<HTMLDivElement>(0.5);
   const liste = useRef<HTMLDivElement>(null);
-  const { nom, verif, etape, ancien } = useReservation();
+  const { nom, saisie, verif, etape, ancien } = useReservation();
   const mode = useInscription();
 
   // La tournée part quand le téléphone est à l'écran, et s'arrête sur YouTube ; avec moins de mouvement, TikTok d'emblée.
@@ -133,8 +145,9 @@ export function Ouverture({ api }: { api: ApiAccueil }) {
   const tape = nom.replace(/-$/, '');
   const pseudo = tape.length >= 3 ? tape : '';
   const pris = !!pseudo && verif?.nom === pseudo && verif.etat !== 'libre' && pseudo !== ancien;
-  const affiche = nomAffiche(pseudo);
-  const page = selonReseau(pseudo ? pageVisiteur(pseudo, THEME.id) : pageMarie(THEME.id), visite.reseau);
+  // Le nom tel qu'on l'a tapé, accents compris.
+  const affiche = nomTape(saisie, pseudo);
+  const page = selonReseau(pseudo ? pageVisiteur(pseudo, THEME.id, affiche) : pageMarie(THEME.id), visite.reseau);
   const adresse = pris
     ? <span className="hl-tel-pris"><s>hopla.page/{pseudo}</s> {verif?.etat === 'pris' ? 'déjà pris' : 'impossible'}</span>
     : etape === 'fait' && pseudo
@@ -150,7 +163,7 @@ export function Ouverture({ api }: { api: ApiAccueil }) {
           Un seul lien dans ta bio. Ta page change selon le réseau et l’heure, ouvre tes liens dans leurs apps et se modifie depuis ton téléphone.
         </p>
         <div className="hl-apparait" style={d(540)} data-zone-appel="">
-          <Reserver api={api} id="reserver" grand note={<>{MOTS[mode].note} <a href="/lilian">Voir une vraie page</a></>} apercu={pseudo && !pris && (
+          <Reserver api={api} id="reserver" grand premier note={<>{MOTS[mode].note} <a href="/lilian">Voir une vraie page</a></>} apercu={pseudo && !pris && (
             <div className="hl-apercu hl-petit-seul" style={{ background: THEME.fondUni, color: THEME.texte }} aria-hidden="true">
               <span className="hl-apercu-avatar">{affiche.split(' ').slice(0, 2).map(m => m[0]).join('')}</span>
               <span className="hl-apercu-texte"><b>{affiche}</b><small style={{ color: THEME.doux }}>hopla.page/{pseudo} · {THEME.nom}</small></span>
@@ -172,10 +185,10 @@ export function Ouverture({ api }: { api: ApiAccueil }) {
           </div>
           <div className="hl-scene-tel hl-scene-milieu">
             <span key={visite.reseau} className="hl-heros-source" aria-hidden="true"><Icone nom={visite.reseau} taille={14} />{visite.arrive}</span>
-            <button type="button" className="hl-tel-bouton" onClick={suivant} aria-label={`Réseau suivant (${visite.arrive.toLowerCase()}, ${rang + 1} sur ${VISITES.length})`}>
+            <button type="button" className="hl-tel-bouton" onClick={suivant} aria-label={`Réseau suivant (${enMinuscule(visite.arrive)}, ${rang + 1} sur ${VISITES.length})`}>
               <Telephone largeur={290} adresse={adresse} label={pseudo && !pris
-                ? `Un aperçu de ta page, hopla.page/${pseudo}, ${visite.arrive.toLowerCase()}`
-                : `La page de Marie Lambert, céramiste, vue par un visiteur ${visite.arrive.toLowerCase()}`}>
+                ? `Un aperçu de ta page, hopla.page/${pseudo}, ${enMinuscule(visite.arrive)}`
+                : `La page de Marie Lambert, céramiste, vue par un visiteur ${enMinuscule(visite.arrive)}`}>
                 <div key={pseudo ? 'toi' : 'marie'} ref={liste} className="hl-fondu" data-pris={pris || undefined}><EcranPage page={page} /></div>
               </Telephone>
             </button>

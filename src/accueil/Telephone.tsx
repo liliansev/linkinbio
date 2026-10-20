@@ -29,13 +29,12 @@ export function EcranPage({ page }: { page: PagePublique }) {
  * pour lire un mouvement sans être distrait par un thème.
  */
 
-export function CroquisTete({ nom = 'Marie Lambert', etiquette }: { nom?: string; etiquette?: ReactNode }) {
+export function CroquisTete({ nom = 'Marie Lambert' }: { nom?: string }) {
   return (
     <div className="hl-cq-tete">
       <span className="hl-cq-avatar" />
       <span className="hl-cq-nom">{nom}</span>
       <span className="hl-cq-trait" style={{ width: '62%' }} />
-      {etiquette}
     </div>
   );
 }

@@ -673,6 +673,35 @@ test('une adresse mal tapée se corrige juste après l’inscription, tant que l
   assert.equal(envois.at(-1).subject, 'Ton nom Hopla est réservé');
 });
 
+test('« renvoie-le » redonne le lien de bienvenue d’une page pas encore ouverte', async () => {
+  const attente = await import('./attente.ts');
+  const envois: any[] = [];
+  const fetchFaux = (async (_url: string, init: RequestInit) => { envois.push(JSON.parse(String(init.body))); return new Response('{}', { status: 200 }); }) as typeof fetch;
+  const env = { RESEND_API_KEY: 'cle', NODE_ENV: 'production' };
+  const t = Date.now();
+  await attente.creerHopla(O, env, { nom: 'lea-renvoi', email: 'lea@exemple.fr' }, fetchFaux, t, '5.5.6.1');
+  const premier = /jeton=([\w-]+)/.exec(envois.at(-1).text)![1];
+  const n = envois.length;
+
+  // Moins d'une minute après le premier : rien ne repart, la réponse ne change pas.
+  const tot = await attente.renvoyerInscription(O, env, { nom: 'lea-renvoi', email: 'lea@exemple.fr' }, fetchFaux, t + 1000, '5.5.6.2');
+  assert.equal(tot.ok, true);
+  assert.equal(envois.length, n);
+
+  const r = await attente.renvoyerInscription(O, env, { nom: 'lea-renvoi', email: 'Lea@Exemple.fr' }, fetchFaux, Date.now() + 61_000, '5.5.6.3');
+  assert.equal(r.ok, true);
+  assert.match(r.message, /7 jours/);
+  assert.equal(envois.length, n + 1);
+  assert.equal(envois.at(-1).subject, 'Ta page Hopla est prête');
+  assert.ok(auth.ouvrirSession(premier), 'le premier lien marche toujours');
+
+  // La page ouverte, c'est un lien de connexion.
+  const c = await attente.renvoyerInscription(O, env, { nom: 'lea-renvoi', email: 'lea@exemple.fr' }, fetchFaux, Date.now() + 122_000, '5.5.6.4');
+  assert.equal(c.ok, true);
+  assert.match(c.message, /15 minutes/);
+  assert.equal(envois.at(-1).subject, 'Ton lien de connexion');
+});
+
 test('un nom mal tapé se change juste après l’inscription, tant que la page n’a pas été ouverte', async () => {
   const attente = await import('./attente.ts');
   const envois: any[] = [];

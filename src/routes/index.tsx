@@ -3,7 +3,7 @@ import { Accueil } from '../accueil/Accueil.tsx';
 import type { ApiAccueil } from '../accueil/Reserver.tsx';
 import { DESCRIPTION, FONCTIONS, questions } from '../accueil/textes.ts';
 import type { Inscription } from '../accueil/textes.ts';
-import { corrigerAdresse, demanderLien, modeInscription, renommerPage, reserverNom, verifierNom } from '../server/fonctions.ts';
+import { corrigerAdresse, modeInscription, renommerPage, renvoyerLien, reserverNom, verifierNom } from '../server/fonctions.ts';
 import { TARIFS } from '../lib/abonnement.ts';
 import { ORIGINE_PUBLIQUE, SITE_LILIAN } from '../lib/types.ts';
 
@@ -86,8 +86,8 @@ export const Route = createFileRoute('/')({
 const api = (mode: Inscription): ApiAccueil => ({
   verifier: nom => verifierNom({ data: nom }),
   reserver: (nom, email) => reserverNom({ data: { nom, email } }),
-  // La page existe déjà : un lien de connexion y mène. En liste d'attente, la réservation se rappelle.
-  renvoyer: (nom, email) => (mode === 'libre' ? demanderLien({ data: email }) : reserverNom({ data: { nom, email } })),
+  // Une page pas encore ouverte reçoit de nouveau sa bienvenue (sinon un lien de connexion). En liste d'attente, la réservation se rappelle.
+  renvoyer: (nom, email) => (mode === 'libre' ? renvoyerLien({ data: { nom, email } }) : reserverNom({ data: { nom, email } })),
   corriger: (nom, ancienne, nouvelle) => corrigerAdresse({ data: { nom, ancienne, nouvelle } }),
   renommer: (ancien, nouveau, email) => renommerPage({ data: { ancien, nouveau, email } }),
 });

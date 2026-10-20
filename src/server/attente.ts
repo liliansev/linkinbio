@@ -3,7 +3,7 @@ import type { Origines } from '../lib/types.ts';
 import { sansSchema } from '../lib/types.ts';
 import { nomSaisi, email as validerEmail, pseudo as validerPseudo } from '../lib/valider.ts';
 import * as db from './db.ts';
-import { inviter } from './auth.ts';
+import { demanderConnexion, inviter } from './auth.ts';
 import type { Reponse } from './auth.ts';
 import { bouton, envoyer, enveloppe } from './courriel.ts';
 import type { Env } from './courriel.ts';
@@ -124,6 +124,28 @@ export async function creerHopla(origines: Origines, env: Env, saisie: { nom: st
   // Sans e-mail, personne ne peut entrer dans la page : elle s'efface, le nom redevient libre.
   if (!envoi.ok) { db.supprimerCompte(compte.id); return { ok: false, message: 'L’e-mail n’est pas parti. Réessaie dans un instant.' }; }
   return note;
+}
+
+/**
+ * « Renvoie-le », sur la carte d'envoi de l'accueil. Une page que personne n'a
+ * encore ouverte reçoit de nouveau son e-mail de bienvenue, valable une semaine
+ * comme le premier, qui marche toujours. Sinon (page déjà ouverte, nom ou
+ * adresse qui ne vont pas ensemble), c'est la demande de connexion habituelle.
+ * Pour un même compte, un envoi par minute et dix par jour ; au-delà on se tait.
+ */
+export async function renvoyerInscription(origines: Origines, env: Env, saisie: { nom: string; email: string }, fetchImpl: typeof fetch = fetch, maintenant = Date.now(), ip = ''): Promise<Reponse> {
+  const nom = validerPseudo(saisie.nom);
+  const adresse = validerEmail(saisie.email);
+  const compte = nom ? db.compteParPseudo(nom) : null;
+  if (!adresse || !compte || compte.email !== adresse || compte.connexion) {
+    const r = await demanderConnexion(origines, env, saisie.email, fetchImpl, maintenant, ip);
+    return r.ok ? { ...r, message: 'C’est renvoyé. Ce lien marche 15 minutes : ouvre-le dès qu’il arrive.' } : r;
+  }
+  const note = { ok: true as const, message: 'C’est renvoyé, avec un nouveau lien de 7 jours. Le premier marche toujours.' };
+  const recents = db.jetonsRecents(maintenant - 86_400_000, compte.id);
+  if (maintenant - recents.dernier < 60_000 || recents.n >= 10) return note;
+  const r = await inviter(origines, env, compte, fetchImpl, 'inscription');
+  return r.ok ? { ...note, lienDev: r.lienDev } : { ok: false, message: 'L’e-mail n’est pas parti. Réessaie dans un instant.' };
 }
 
 /** Le temps de voir qu'on s'est trompé d'adresse, juste après l'envoi. */

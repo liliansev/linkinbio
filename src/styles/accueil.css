@@ -120,11 +120,13 @@ html:has(.hl) { background: #fff; scroll-padding-top: 76px; }
 .hl-barre[data-defile] { border-bottom-color: var(--filet); }
 .hl-barre-actions .hl-btn { transition: background-color .15s, transform .15s, opacity .2s, visibility .2s; }
 /* Un seul appel à la fois : le bouton de la barre s'efface tant qu'un champ du nom est à l'écran, et une fois l'e-mail parti.
- * Au bureau, il se replie aussi, pour que Connexion reste au bord. */
+ * Au bureau, il est posé au bord, hors du flux, et Connexion glisse à sa place quand il s'efface (`--creer`, sa largeur). */
 :is(.hl-barre[data-champ], .hl-barre[data-envoye]) .hl-barre-actions .hl-btn { opacity: 0; visibility: hidden; }
 @media (min-width: 900px) {
-  .hl-barre-actions .hl-btn { max-width: 240px; overflow: hidden; transition: background-color .15s, transform .15s, opacity .2s, visibility .2s, max-width .35s var(--ease), padding .35s var(--ease), margin .35s var(--ease), border-width .35s; }
-  :is(.hl-barre[data-champ], .hl-barre[data-envoye]) .hl-barre-actions .hl-btn { max-width: 0; padding-inline: 0; margin-left: -18px; border-width: 0; }
+  .hl-barre-actions { position: relative; }
+  .hl-barre-actions .hl-btn { position: absolute; top: 0; right: 0; bottom: 0; width: max-content; height: fit-content; margin-block: auto; }
+  .hl-barre-connexion { transform: translateX(calc(-18px - var(--creer, 0px))); transition: color .15s, transform .35s var(--ease); }
+  :is(.hl-barre[data-champ], .hl-barre[data-envoye]) .hl-barre-connexion { transform: none; }
 }
 .hl-barre-dedans { max-width: 1120px; height: 60px; margin: 0 auto; padding: 0 var(--gout); display: flex; align-items: center; gap: 24px; }
 .hl-marque { display: inline-flex; align-items: center; gap: 9px; color: var(--encre); font-size: 18px; font-weight: 600; letter-spacing: -0.03em; text-decoration: none; }
@@ -314,11 +316,6 @@ html:has(.hl-reserver input:focus) { overflow-anchor: none; }
 .hl-cq-avatar { display: block; width: 62px; height: 62px; border-radius: 50%; background: #e7e7e7; flex: none; }
 .hl-cq-nom { font-size: 16px; font-weight: 600; letter-spacing: -0.02em; }
 .hl-cq-trait { display: block; height: 8px; margin-inline: auto; border-radius: 4px; background: #ececec; }
-.hl-cq-etiquette {
-  display: inline-flex; align-items: center; gap: 6px; margin-top: 2px; padding: 4px 9px; border-radius: 6px;
-  background: var(--encre); color: #fff; font-size: 11px; font-weight: 500; animation: hl-pop .45s var(--ease) both;
-}
-.hl-cq-etiquette i { width: 6px; height: 6px; border-radius: 50%; background: #fff; }
 .hl-cq-liens { display: flex; flex-direction: column; gap: 10px; }
 .hl-cq-lien {
   position: relative; display: flex; align-items: center; justify-content: center; gap: 8px;
@@ -436,16 +433,6 @@ html:has(.hl-reserver input:focus) { overflow-anchor: none; }
 .hl-legendes { display: grid; width: 100%; max-width: 420px; }
 .hl-legendes > .hl-legende-scene { grid-area: 1 / 1; margin: 0; }
 .hl-legende-gabarit { visibility: hidden; animation: none; }
-.hl-essai { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 16px; font-size: 14px; }
-.hl-essai > span { margin-right: 2px; }
-.hl-essai button {
-  min-height: 36px; padding: 0 12px; border: 1px solid #d4d4d4; border-radius: 8px; background: #fff;
-  color: var(--encre); font: inherit; font-size: 14px; font-weight: 500; cursor: pointer; transition: background-color .15s, color .15s, border-color .15s;
-}
-.hl-essai button:hover { border-color: #a8a8a8; }
-.hl-essai button[aria-pressed='true'] { border-color: var(--encre); background: var(--encre); color: #fff; }
-@media (max-width: 1023px) { .hl-essai button { min-height: 44px; } }
-.hl-legende-scene .hl-essai { margin-top: 12px; }
 @media (min-width: 1024px) {
   .hl-vivante { display: grid; grid-template-columns: 1fr 340px; gap: 72px; }
   .hl-chapitre { min-height: 30vh; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; }
@@ -517,7 +504,7 @@ html:has(.hl-reserver input:focus) { overflow-anchor: none; }
 /* Au téléphone, l'aperçu ne garde que le haut de la page (avatar, nom, deux boutons) : il tient dans l'écran avec les pastilles. */
 @media (max-width: 899px) {
   .hl-couleurs-tel .hl-tel { --l: 220px !important; --z: .5641 !important; }
-  .hl-couleurs-tel { max-height: 268px; overflow: hidden; -webkit-mask-image: linear-gradient(#000 72%, transparent); mask-image: linear-gradient(#000 72%, transparent); }
+  .hl-couleurs-tel { max-height: 344px; overflow: hidden; -webkit-mask-image: linear-gradient(#000 80%, transparent); mask-image: linear-gradient(#000 80%, transparent); }
 }
 .hl-couleurs-reglage > .hl-lien-texte[data-cache] { visibility: hidden; }
 @media (min-width: 900px) {
