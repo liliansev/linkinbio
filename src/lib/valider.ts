@@ -188,7 +188,7 @@ export function pseudo(v: unknown): string {
 }
 
 /** Ce qu'on tape pour son nom se lit déjà comme une adresse : « Marie Dupont » devient « marie-dupont ». */
-export const nomSaisi = (v: string) => v.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9-]+/g, '-').replace(/-{2,}/g, '-').replace(/^-/, '').slice(0, 30);
+export const nomSaisi = (v: string, max = 30) => v.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9-]+/g, '-').replace(/-{2,}/g, '-').replace(/^-/, '').slice(0, max);
 
 /** Une adresse e-mail plausible, en minuscules. Vide si refusée. */
 export function email(v: unknown): string {

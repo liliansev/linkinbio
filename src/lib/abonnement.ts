@@ -11,13 +11,13 @@ export const euros = (n: number) =>
 /** Prix TTC. L'annuel vaut douze mois moins 20 % : 9 × 12 = 108 €, soit 86,40 €. */
 export const TARIFS = {
   mois: { prix: 9, libelle: `${euros(9)} par mois` },
-  an: { prix: 86.4, libelle: `${euros(86.4)} par an`, economie: '-20\u00a0%' },
+  an: { prix: 86.4, libelle: `${euros(86.4)} par an`, economie: '\u221220\u00a0%' },
 } as const;
 export type Periode = keyof typeof TARIFS;
 
 /** Ce que Pro change, dit une seule fois pour l'écran d'abonnement. */
 export const AVANTAGES_PRO = [
-  'Plus de mention « Une page faite avec Hopla » en bas de ta page',
+  'Sans la mention « Une page faite avec Hopla » en bas de ta page',
   'Tes statistiques sur 30 jours, 90 jours et un an (7 jours en gratuit)',
   '200 Mo d’images au lieu de 25 Mo',
 ];

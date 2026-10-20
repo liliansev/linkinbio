@@ -15,7 +15,7 @@ import { apercuSite as lireApercu } from './apercu.ts';
 import * as db from './db.ts';
 import { COOKIE_SESSION, DUREE_SESSION, adresseAdmin, compteDeSession, demanderConnexion, fermerSession, inviter, ouvrirSession } from './auth.ts';
 import { changerStatutMotive, signaler, supprimerMotive, traiter } from './moderation.ts';
-import { creerHopla, inscriptionLibre, inviterReservation, reserverNom as reserver, verifierNom as verifier } from './attente.ts';
+import { corrigerAdresse as corriger, creerHopla, inscriptionLibre, inviterReservation, renommerPage as renommer, renvoyerInscription, reserverNom as reserver, verifierNom as verifier } from './attente.ts';
 import * as creem from './creem.ts';
 import { JOURS_GRATUIT } from '../lib/abonnement.ts';
 import type { Periode } from '../lib/abonnement.ts';
@@ -301,6 +301,39 @@ export const reserverNom = createServerFn({ method: 'POST' })
     memeOrigine();
     const prendre = inscriptionLibre(process.env) ? creerHopla : reserver;
     return prendre(origines(), process.env, data, fetch, Date.now(), getRequestHeader('x-real-ip') ?? '');
+  });
+
+/** « Renvoie-le » sur l'accueil : l'e-mail de bienvenue d'une page pas encore ouverte, sinon un lien de connexion. */
+export const renvoyerLien = createServerFn({ method: 'POST' })
+  .validator((data: unknown) => {
+    const o = (data ?? {}) as { nom?: unknown; email?: unknown };
+    return { nom: String(o.nom ?? '').slice(0, 40), email: String(o.email ?? '').slice(0, 200) };
+  })
+  .handler(async ({ data }) => {
+    memeOrigine();
+    return renvoyerInscription(origines(), process.env, data, fetch, Date.now(), getRequestHeader('x-real-ip') ?? '');
+  });
+
+/** Juste après l'envoi, une adresse mal tapée se corrige tant que la page n'a pas été ouverte. */
+export const corrigerAdresse = createServerFn({ method: 'POST' })
+  .validator((data: unknown) => {
+    const o = (data ?? {}) as { nom?: unknown; ancienne?: unknown; nouvelle?: unknown };
+    return { nom: String(o.nom ?? '').slice(0, 40), ancienne: String(o.ancienne ?? '').slice(0, 200), nouvelle: String(o.nouvelle ?? '').slice(0, 200) };
+  })
+  .handler(async ({ data }) => {
+    memeOrigine();
+    return corriger(origines(), process.env, data, fetch, Date.now(), getRequestHeader('x-real-ip') ?? '');
+  });
+
+/** Juste après l'envoi, un nom mal tapé se change tant que la page n'a pas été ouverte. */
+export const renommerPage = createServerFn({ method: 'POST' })
+  .validator((data: unknown) => {
+    const o = (data ?? {}) as { ancien?: unknown; nouveau?: unknown; email?: unknown };
+    return { ancien: String(o.ancien ?? '').slice(0, 40), nouveau: String(o.nouveau ?? '').slice(0, 40), email: String(o.email ?? '').slice(0, 200) };
+  })
+  .handler(async ({ data }) => {
+    memeOrigine();
+    return renommer(origines(), process.env, data, fetch, Date.now(), getRequestHeader('x-real-ip') ?? '');
   });
 
 export const listerAttente = createServerFn({ method: 'GET' })

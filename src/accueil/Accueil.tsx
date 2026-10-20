@@ -1,7 +1,7 @@
 import { Barre, Ouverture } from './Ouverture.tsx';
-import { Autour, DansApp, Stats, Vivante } from './Fonctions.tsx';
+import { DansApp, Stats, Vivante } from './Fonctions.tsx';
 import { Themes } from './Themes.tsx';
-import { Arrivee, Toucher } from './Prise.tsx';
+import { Prise } from './Prise.tsx';
 import { DernierAppel, Pied, Prix, Questions } from './Fin.tsx';
 import type { ApiAccueil } from './Reserver.tsx';
 import { useEntrees } from './mouvement.ts';
@@ -26,11 +26,9 @@ export function Accueil({ api, mode = 'libre' }: { api: ApiAccueil; mode?: Inscr
         <Ouverture api={api} />
         <DansApp />
         <Vivante />
-        <Autour />
         <Stats />
         <Themes />
-        <Arrivee />
-        <Toucher />
+        <Prise />
         <Prix />
         <Questions />
         <DernierAppel api={api} />

@@ -1,19 +1,24 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { THEMES } from '../lib/themes.ts';
+import { Icone } from '../components/Icone.tsx';
 import { Symbole } from '../components/Logo.tsx';
 import { EcranPage, Telephone } from './Telephone.tsx';
 import { Reserver, allerAuChamp, useReservation } from './Reserver.tsx';
 import type { ApiAccueil } from './Reserver.tsx';
-import { pageJules, pageLilian, pageMarie, pageVisiteur } from './exemples.ts';
-import { mouvementReduit } from './mouvement.ts';
+import { nomTape, pageJules, pageLilian, pageMarie, pageVisiteur, selonReseau } from './exemples.ts';
+import { mouvementReduit, useGlisse, useVu } from './mouvement.ts';
 import { APPEL, MOTS, useInscription } from './textes.ts';
 
 /*
  * 01 · La barre et l'ouverture. La promesse, puis tout de suite le champ du
- * nom : on tape, et le téléphone du milieu devient sa page (son nom, son
- * adresse). Trois téléphones s'ouvrent en éventail, une fois, sur une
- * lumière grise et une grille fine qui s'efface vers les bords.
+ * nom : on tape, et le téléphone d'à côté devient sa page (son nom, son
+ * adresse). Ce téléphone prouve la promesse : la page de Marie, puis la
+ * sienne, vue depuis Instagram, TikTok et YouTube, range ses liens à chaque
+ * fois. Au bureau, le texte à gauche et les téléphones à droite ; au
+ * téléphone, où le clavier cache la scène, une carte aux couleurs du thème
+ * reprend son nom juste sous la réponse du champ. Trois téléphones s'ouvrent en éventail, une
+ * fois, sur une lumière grise.
  */
 
 export function Marque() {
@@ -27,33 +32,88 @@ export function Marque() {
 
 export function Barre() {
   const [defile, setDefile] = useState(false);
+  const [menu, setMenu] = useState(false);
+  // Au chargement, le champ de l'ouverture est à l'écran : le bouton de la barre attend qu'il en sorte.
+  const [champ, setChamp] = useState(true);
   const [debut, suite] = APPEL[useInscription()];
+  const { etape, ancien, correction } = useReservation();
+  // Une fois l'e-mail parti, il n'y a plus rien à créer : la barre garde Connexion.
+  const envoye = etape === 'fait' || !!ancien || correction;
+  // Au bureau, Connexion glisse de la largeur du bouton quand il s'efface : on la mesure.
+  const bouton = useRef<HTMLAnchorElement>(null);
+  const [creer, setCreer] = useState(0);
+  useEffect(() => {
+    const el = bouton.current;
+    if (!el || typeof ResizeObserver !== 'function') return;
+    const o = new ResizeObserver(() => setCreer(el.offsetWidth));
+    o.observe(el);
+    return () => o.disconnect();
+  }, []);
+  // Le bouton de la barre s'efface tant qu'un champ du nom est à l'écran : un seul appel à la fois.
+  useEffect(() => {
+    if (typeof IntersectionObserver !== 'function') { setChamp(false); return; }
+    const vus = new Set<Element>();
+    const o = new IntersectionObserver(entrees => {
+      for (const en of entrees) if (en.isIntersecting) vus.add(en.target); else vus.delete(en.target);
+      setChamp(vus.size > 0);
+    }, { rootMargin: '-60px 0px 0px 0px' });
+    document.querySelectorAll('[data-zone-appel]').forEach(el => o.observe(el));
+    return () => o.disconnect();
+  }, []);
   useEffect(() => {
     const f = () => setDefile(scrollY > 8);
     f();
     addEventListener('scroll', f, { passive: true });
     return () => removeEventListener('scroll', f);
   }, []);
+  // Au téléphone, le menu se ferme avec Échap ou en touchant ailleurs.
+  useEffect(() => {
+    if (!menu) return;
+    const echap = (e: KeyboardEvent) => { if (e.key === 'Escape') setMenu(false); };
+    const ailleurs = (e: PointerEvent) => { if (!(e.target as Element).closest('.hl-barre')) setMenu(false); };
+    addEventListener('keydown', echap);
+    addEventListener('pointerdown', ailleurs);
+    return () => { removeEventListener('keydown', echap); removeEventListener('pointerdown', ailleurs); };
+  }, [menu]);
   return (
-    <header className="hl-barre" data-defile={defile || undefined}>
+    <header className="hl-barre" style={{ '--creer': `${creer}px` } as CSSProperties} data-defile={defile || menu || undefined} data-champ={(champ && !menu) || undefined} data-envoye={envoye || undefined}>
       <div className="hl-barre-dedans">
         <Marque />
         <nav className="hl-barre-nav" aria-label="Sections">
-          <a href="#fonctions">Fonctions</a>
-          <a href="#themes">Thèmes</a>
-          <a href="#prix">Prix</a>
+          {SECTIONS.map(([lien, texte]) => <a key={lien} href={lien}>{texte}</a>)}
         </nav>
         <div className="hl-barre-actions">
           <a href="/admin" className="hl-barre-connexion">Connexion</a>
-          <a href="#reserver" className="hl-btn hl-btn-petit" onClick={ev => { ev.preventDefault(); allerAuChamp(); }}><span>{debut}<span className="hl-large">{suite}</span></span></a>
+          <a ref={bouton} href="#reserver" className="hl-btn hl-btn-petit" onClick={ev => { ev.preventDefault(); setMenu(false); allerAuChamp(); }}><span>{debut}<span className="hl-large">{suite}</span></span></a>
+          <button type="button" className="hl-barre-menu" aria-expanded={menu} aria-controls="hl-menu" aria-label={menu ? 'Fermer le menu' : 'Ouvrir le menu'} onClick={() => setMenu(m => !m)}>
+            <Icone nom={menu ? 'ui-fermer' : 'ui-menu'} taille={22} />
+          </button>
         </div>
       </div>
+      <nav id="hl-menu" className="hl-menu" aria-label="Menu" hidden={!menu}>
+        {SECTIONS.map(([lien, texte]) => <a key={lien} href={lien} onClick={() => setMenu(false)}>{texte}</a>)}
+        <a href="/admin">Connexion</a>
+      </nav>
     </header>
   );
 }
 
-/** Le tour des thèmes du téléphone du milieu : une fois, puis il s'arrête sur le premier. Toucher passe au suivant. */
-const TOUR = ['nuit-peche', 'aurore', 'champagne', 'klein', 'galaxie'];
+/** Les sections de la barre, et du menu au téléphone. */
+const SECTIONS = [['#fonctions', 'Fonctions'], ['#themes', 'Thèmes'], ['#prix', 'Prix'], ['#questions', 'Questions']];
+
+/**
+ * La tournée des visiteurs du téléphone du milieu : la même page, vue depuis
+ * Instagram, puis TikTok, puis YouTube, une fois, et ses liens se rangent à
+ * chaque fois. Toucher le téléphone passe au réseau suivant.
+ */
+const VISITES = [
+  { reseau: 'instagram', arrive: 'Arrivé d’Instagram' },
+  { reseau: 'tiktok', arrive: 'Arrivé de TikTok' },
+  { reseau: 'youtube', arrive: 'Arrivé de YouTube' },
+];
+const THEME = THEMES.find(t => t.id === 'champagne')!;
+/** « arrivé de TikTok », au milieu d'une phrase : la marque garde sa majuscule. */
+const enMinuscule = (texte: string) => texte[0].toLowerCase() + texte.slice(1);
 
 const d = (ms: number) => ({ '--d': `${ms}ms` }) as CSSProperties;
 const mots = (texte: string, depart = 0) => texte.split(' ').map((m, i) => (
@@ -62,23 +122,37 @@ const mots = (texte: string, depart = 0) => texte.split(' ').map((m, i) => (
 
 export function Ouverture({ api }: { api: ApiAccueil }) {
   const [rang, setRang] = useState(0);
-  const [tourFini, setTourFini] = useState(false);
-  const { nom } = useReservation();
+  const [touche, setTouche] = useState(false);
+  const [refScene, vu] = useVu<HTMLDivElement>(0.5);
+  const liste = useRef<HTMLDivElement>(null);
+  const { nom, saisie, verif, etape, ancien } = useReservation();
   const mode = useInscription();
 
+  // La tournée part quand le téléphone est à l'écran, et s'arrête sur YouTube ; avec moins de mouvement, TikTok d'emblée.
   useEffect(() => {
-    if (tourFini || mouvementReduit()) return;
-    const t = setTimeout(() => {
-      if (rang === TOUR.length - 1) { setRang(0); setTourFini(true); } else setRang(rang + 1);
-    }, rang === 0 ? 3200 : 2400);
+    if (!vu || touche) return;
+    if (mouvementReduit()) { setRang(1); return; }
+    if (rang === VISITES.length - 1) return;
+    const t = setTimeout(() => setRang(rang + 1), 2400);
     return () => clearTimeout(t);
-  }, [rang, tourFini]);
+  }, [vu, rang, touche]);
 
-  const theme = THEMES.find(t => t.id === TOUR[rang])!;
-  const suivant = () => { setTourFini(true); setRang(r => (r + 1) % TOUR.length); };
-  // Dès qu'on tape un nom, la page du milieu devient la sienne.
-  const pseudo = nom.replace(/-$/, '');
-  const page = pseudo ? pageVisiteur(pseudo, theme.id) : pageLilian(theme.id);
+  const visite = VISITES[rang];
+  useGlisse(liste, visite.reseau, 450, '.lp-bloc');
+  const suivant = () => { setTouche(true); setRang(r => (r + 1) % VISITES.length); };
+  // Dès qu'on tape un nom de trois caractères, la page du milieu devient la sienne ;
+  // un nom pris le dit dans la barre d'adresse, et une fois l'e-mail parti, l'adresse est cochée.
+  const tape = nom.replace(/-$/, '');
+  const pseudo = tape.length >= 3 ? tape : '';
+  const pris = !!pseudo && verif?.nom === pseudo && verif.etat !== 'libre' && pseudo !== ancien;
+  // Le nom tel qu'on l'a tapé, accents compris.
+  const affiche = nomTape(saisie, pseudo);
+  const page = selonReseau(pseudo ? pageVisiteur(pseudo, THEME.id, affiche) : pageMarie(THEME.id), visite.reseau);
+  const adresse = pris
+    ? <span className="hl-tel-pris"><s>hopla.page/{pseudo}</s> {verif?.etat === 'pris' ? 'déjà pris' : 'impossible'}</span>
+    : etape === 'fait' && pseudo
+      ? <span key="fait" className="hl-tel-fait"><Icone nom="check" taille={12} />hopla.page/{pseudo}</span>
+      : `hopla.page/${pseudo || 'marie-lambert'}`;
 
   return (
     <section className="hl-heros" aria-labelledby="titre">
@@ -88,30 +162,42 @@ export function Ouverture({ api }: { api: ApiAccueil }) {
         <p className="hl-chapo hl-apparait" style={d(420)}>
           Un seul lien dans ta bio. Ta page change selon le réseau et l’heure, ouvre tes liens dans leurs apps et se modifie depuis ton téléphone.
         </p>
-        <div className="hl-apparait" style={d(540)}>
-          <Reserver api={api} id="reserver" grand note={MOTS[mode].note} />
+        <div className="hl-apparait" style={d(540)} data-zone-appel="">
+          <Reserver api={api} id="reserver" grand premier note={<>{MOTS[mode].note} <a href="/lilian">Voir une vraie page</a></>} apercu={pseudo && !pris && (
+            <div className="hl-apercu hl-petit-seul" style={{ background: THEME.fondUni, color: THEME.texte }} aria-hidden="true">
+              <span className="hl-apercu-avatar">{affiche.split(' ').slice(0, 2).map(m => m[0]).join('')}</span>
+              <span className="hl-apercu-texte"><b>{affiche}</b><small style={{ color: THEME.doux }}>hopla.page/{pseudo} · {THEME.nom}</small></span>
+            </div>
+          )} />
         </div>
       </div>
-      <div className="hl-scene">
-        <div className="hl-scene-tel hl-scene-gauche" aria-hidden="true">
-          <Telephone largeur={250} label="La page de Marie Lambert, céramiste, dans le thème Lin">
-            <EcranPage page={pageMarie('lin')} />
-          </Telephone>
-        </div>
-        <div className="hl-scene-tel hl-scene-droite" aria-hidden="true">
-          <Telephone largeur={250} label="La page de Jules Moreau, musicien, dans le thème Arcade">
-            <EcranPage page={pageJules('arcade')} />
-          </Telephone>
-        </div>
-        <div className="hl-scene-tel hl-scene-milieu">
-          <button type="button" className="hl-tel-bouton" onClick={suivant} aria-label={`Thème suivant (${theme.nom}, ${rang + 1} sur ${TOUR.length})`}>
-            <Telephone largeur={290} adresse={`hopla.page/${pseudo || 'lilian'}`} label={pseudo ? `Un aperçu de ta page, hopla.page/${pseudo}` : 'La page de Lilian Sevoumian sur Hopla, dans plusieurs thèmes'}>
-              <div key={theme.id} className="hl-fondu"><EcranPage page={page} /></div>
+      <div className="hl-heros-visuel">
+        <div ref={refScene} className="hl-scene">
+          <div className="hl-scene-tel hl-scene-gauche" aria-hidden="true">
+            <Telephone largeur={250} label="La page de Lilian Sevoumian, dans le thème Nuit et pêche">
+              <EcranPage page={pageLilian('nuit-peche')} />
             </Telephone>
-          </button>
+          </div>
+          <div className="hl-scene-tel hl-scene-droite" aria-hidden="true">
+            <Telephone largeur={250} label="La page de Jules Moreau, musicien, dans le thème Arcade">
+              <EcranPage page={pageJules('arcade')} />
+            </Telephone>
+          </div>
+          <div className="hl-scene-tel hl-scene-milieu">
+            <span key={visite.reseau} className="hl-heros-source" aria-hidden="true"><Icone nom={visite.reseau} taille={14} />{visite.arrive}</span>
+            <button type="button" className="hl-tel-bouton" onClick={suivant} aria-label={`Réseau suivant (${enMinuscule(visite.arrive)}, ${rang + 1} sur ${VISITES.length})`}>
+              <Telephone largeur={290} adresse={adresse} label={pseudo && !pris
+                ? `Un aperçu de ta page, hopla.page/${pseudo}, ${enMinuscule(visite.arrive)}`
+                : `La page de Marie Lambert, céramiste, vue par un visiteur ${enMinuscule(visite.arrive)}`}>
+                <div key={pseudo ? 'toi' : 'marie'} ref={liste} className="hl-fondu" data-pris={pris || undefined}><EcranPage page={page} /></div>
+              </Telephone>
+            </button>
+          </div>
         </div>
+        <p className="hl-legende hl-apparait" style={d(1300)} aria-live={touche ? 'polite' : 'off'}>
+          Les liens se rangent selon le réseau d’où arrive le visiteur. <span className="hl-tactile">Touche</span><span className="hl-souris">Clique sur</span> le téléphone pour en changer.
+        </p>
       </div>
-      <p className="hl-legende hl-apparait" style={d(1300)} aria-live="polite">Thème {theme.nom} · touche le téléphone pour changer</p>
     </section>
   );
 }
