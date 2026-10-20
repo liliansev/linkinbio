@@ -9,7 +9,7 @@ import { themeDe, variablesTheme } from '../lib/themes.ts';
 import { ICONES } from '../lib/icones.ts';
 import { Icone, NOMS_RESEAUX, PICTOS } from '../components/Icone.tsx';
 import { BlocPublic } from '../components/PageLiens.tsx';
-import { BoutonPrincipal, BoutonSecondaire, Champ, Feuille, Interrupteur, ListeChoix, NOMS_ANIMATIONS, Segments, classeSaisie, flechesRadio, preparerImage, vibrer } from './ui.tsx';
+import { BoutonPrincipal, BoutonSecondaire, Champ, Feuille, Interrupteur, ListeChoix, NOMS_ANIMATIONS, Segments, classeBouton, classeSaisie, flechesRadio, preparerImage, vibrer } from './ui.tsx';
 import { TYPES } from './OngletLiens.tsx';
 import { appDe } from '../lib/ouvrirApp.ts';
 import { ChampsPreuve, RegleAcces, RegleMoment, RegleReseaux, RegleTraductions, Repli } from './ReglesBloc.tsx';
@@ -251,7 +251,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
         )}
 
         {/* Masquer un bloc un temps est le geste le plus courant après le texte : il reste à portée, hors de « Plus de réglages ». */}
-        <div className="rounded-2xl bg-white/[0.035] px-4">
+        <div className="adm-groupe px-4">
           <Interrupteur label="Visible sur ma page" actif={b.public} onChange={v => maj({ public: v })} />
         </div>
 
@@ -275,13 +275,13 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
           <>
             <div>
               <button type="button" onClick={() => setIcones(!icones)} aria-expanded={icones}
-                className="flex min-h-12 w-full items-center gap-3 rounded-2xl bg-white/[0.035] px-4 text-left">
+                className="adm-groupe flex min-h-12 w-full items-center gap-3 px-4 text-left transition hover:bg-white/[0.03]">
                 <span className="text-white"><Icone nom={b.icone && ICONES[b.icone] ? b.icone : 'ui-aucun'} taille={20} /></span>
                 <span className="flex-1 text-[14.5px] font-medium text-white/85">Icône</span>
                 <span className="text-[13px] text-white/50">{b.icone ? NOMS_RESEAUX[b.icone] ?? PICTOS.find(p => p.nom === b.icone)?.libelle ?? '' : 'Aucune'}</span>
                 <Icone nom="ui-chevron" taille={16} className={`text-white/55 transition ${icones ? 'rotate-180' : ''}`} />
               </button>
-              {icones && <div role="radiogroup" onKeyDown={e => flechesRadio(e, false)} aria-label="Icône" className="mt-1.5 grid max-h-[208px] grid-cols-[repeat(auto-fill,minmax(44px,1fr))] gap-1.5 overflow-y-auto rounded-2xl bg-white/[0.035] p-2 [scrollbar-width:thin]">
+              {icones && <div role="radiogroup" onKeyDown={e => flechesRadio(e, false)} aria-label="Icône" className="adm-groupe mt-1.5 grid max-h-[208px] grid-cols-[repeat(auto-fill,minmax(44px,1fr))] gap-1.5 overflow-y-auto p-2 [scrollbar-width:thin]">
                 {[{ nom: '', libelle: 'Sans icône' }, ...RESEAUX.map(r => ({ nom: r as string, libelle: NOMS_RESEAUX[r] })), ...PICTOS].map(p => {
                   const choisi = b.icone === p.nom;
                   return (
@@ -297,13 +297,13 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
             <div className="flex items-center gap-3">
               {b.image && <img src={b.image} alt="" className="h-14 w-14 rounded-xl object-cover" />}
               <div className="flex flex-1 flex-wrap gap-2">
-                <button type="button" onClick={() => fichier.current?.click()} disabled={envoi} className="min-h-11 rounded-full bg-white/[0.08] px-4 text-[14px] font-medium text-white hover:bg-white/[0.13]">{envoi ? 'Envoi…' : b.image ? 'Changer l’image' : 'Ajouter une image'}</button>
+                <button type="button" onClick={() => fichier.current?.click()} disabled={envoi} className={classeBouton.secondaire}>{envoi ? 'Envoi…' : b.image ? 'Changer l’image' : 'Ajouter une image'}</button>
                 {!!adresseSaisie(b.url) && (
-                  <button type="button" onClick={recupererApercu} disabled={lecture || envoi} className="inline-flex min-h-11 items-center gap-1.5 rounded-full bg-white/10 px-4 text-[14px] font-medium text-white hover:bg-white/10 disabled:opacity-60">
-                    <Icone nom="sparkle" taille={16} />{lecture ? 'Lecture du site…' : 'Remplir depuis le site'}
+                  <button type="button" onClick={recupererApercu} disabled={lecture || envoi} className={classeBouton.secondaire}>
+                    {lecture ? 'Lecture du site…' : 'Remplir depuis le site'}
                   </button>
                 )}
-                {b.image && <button type="button" onClick={() => maj({ image: '' })} className="min-h-11 rounded-full px-3 text-[14px] text-white/55 hover:text-white">Retirer</button>}
+                {b.image && <button type="button" onClick={() => maj({ image: '' })} className={classeBouton.discret}>Retirer</button>}
               </div>
               <input ref={fichier} type="file" accept="image/*" hidden onChange={e => choisirImage(e.target.files?.[0])} />
             </div>
@@ -311,7 +311,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
           </>
         )}
 
-        <div className="divide-y divide-white/[0.06] rounded-2xl bg-white/[0.035] px-4 empty:hidden">
+        <div className="adm-groupe divide-y divide-white/[0.06] px-4 empty:hidden">
           {b.type === 'inscription' && (
             <Interrupteur label="Demander le prénom" actif={b.demanderPrenom} onChange={v => maj({ demanderPrenom: v })} />
           )}
@@ -339,7 +339,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
         )}
 
         {b.type === 'lien' && b.vedette && (
-          <Repli key={`animation-${b.id}`} titre="Animation" icone="sparkle" resume={b.animation === 'auto' ? '' : NOMS_ANIMATIONS[b.animation].nom} ouvert={false}>
+          <Repli key={`animation-${b.id}`} titre="Animation" icone="eclair" resume={b.animation === 'auto' ? 'Comme ma page' : NOMS_ANIMATIONS[b.animation].nom} ouvert={false}>
             {/* Une liste, pas une rangée de pastilles : l'aperçu en haut de la feuille joue l'animation choisie. */}
             <ListeChoix label="Animation" valeur={b.animation} onChange={a => maj({ animation: a })}
               options={ANIMATIONS_BLOC.map(a => a === 'auto'
@@ -354,14 +354,14 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
         <RegleReseaux key={`reseaux-${b.id}`} b={b} maj={maj} reseaux={reseauxDePartage(reglages.vuesReseaux)} />
         <div id="traductions-bloc" className="scroll-mt-28"><RegleTraductions key={`langues-${b.id}`} b={b} maj={maj} langues={reglages.langues ?? []} ouvert={traduire} /></div>
         <button type="button" onClick={() => { vibrer(4); setPlus(false); }}
-          className="flex min-h-11 items-center justify-center gap-1.5 text-[14px] font-medium text-white/60 hover:text-white">
+          className={classeBouton.discret}>
           <Icone nom="ui-chevron" taille={16} className="rotate-180" /> Moins de réglages
         </button>
         </>) : (
           <button type="button" onClick={() => { vibrer(4); setPlus(true); }}
-            className="flex min-h-12 w-full items-center gap-3 rounded-2xl bg-white/[0.035] px-4 text-left transition hover:bg-white/[0.06]">
+            className="adm-groupe flex min-h-12 w-full items-center gap-3 px-4 text-left transition hover:bg-white/[0.03]">
             <Icone nom="reglage" taille={20} className="text-white/70" />
-            <span className="flex-1 text-[14.5px] font-medium text-white/85">Plus de réglages</span>
+            <span className="flex-1 whitespace-nowrap text-[14.5px] font-medium text-white/85">Plus de réglages</span>
             {reglees && <span className="min-w-0 truncate text-[13px] text-white/55">{reglees}</span>}
             <Icone nom="ui-chevron" taille={16} className="text-white/55" />
           </button>
@@ -371,7 +371,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
 
         {/* Les gestes rares, nommés en toutes lettres, au bout de la feuille plutôt qu'en pictos à côté de Terminé. */}
         {!nouveau && (
-          <div className="flex flex-col divide-y divide-white/[0.06] rounded-2xl bg-white/[0.035]">
+          <div className="adm-groupe flex flex-col divide-y divide-white/[0.06]">
             {onDeplacer && place && place.total > 1 && (
               <div className="flex min-h-12 items-center gap-2 pl-4 pr-1.5">
                 <span className="flex-1 text-[14.5px] font-medium text-white/85">Place sur ta page</span>

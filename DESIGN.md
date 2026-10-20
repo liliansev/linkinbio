@@ -40,6 +40,10 @@ typography:
     fontFamily: "Geist Variable, ui-sans-serif, system-ui, sans-serif"
     fontSize: "12.5px"
     fontWeight: 500
+  caption:
+    fontFamily: "Geist Variable, ui-sans-serif, system-ui, sans-serif"
+    fontSize: "11.5px"
+    fontWeight: 500
   field:
     fontFamily: "Geist Variable, ui-sans-serif, system-ui, sans-serif"
     fontSize: "16px"
@@ -49,6 +53,12 @@ typography:
     fontWeight: 600
     lineHeight: 1.25
     letterSpacing: "-0.03em"
+  wordmark:
+    fontFamily: "Geist Variable, ui-sans-serif, system-ui, sans-serif"
+    fontSize: "23px"
+    fontWeight: 600
+    lineHeight: 1
+    letterSpacing: "-0.035em"
 rounded:
   segment: "7px"
   segment-group: "10px"
@@ -82,6 +92,27 @@ components:
     rounded: "{rounded.control}"
     padding: "0 16px"
     height: "44px"
+  button-danger:
+    backgroundColor: "{colors.error}"
+    textColor: "{colors.paper}"
+    rounded: "{rounded.control}"
+    padding: "0 16px"
+    height: "44px"
+  button-quiet:
+    textColor: "{colors.secondary}"
+    rounded: "{rounded.control}"
+    padding: "0 12px"
+    height: "44px"
+  button-icon:
+    textColor: "{colors.secondary}"
+    rounded: "{rounded.control}"
+    width: "44px"
+    height: "44px"
+  badge:
+    textColor: "{colors.ink}"
+    typography: "{typography.caption}"
+    rounded: "{rounded.segment}"
+    padding: "2px 6px"
   field:
     backgroundColor: "{colors.quiet-paper}"
     textColor: "{colors.ink}"
@@ -127,7 +158,7 @@ components:
 
 Ce nom reprend le principe déjà inscrit dans le code : l'édition, les statistiques, les réglages et la connexion appartiennent au même espace. Le système est sobre, clair et compact, avec des surfaces blanches sur un fond gris doux et une hiérarchie obtenue par la typographie, les espacements et les traits.
 
-Cette documentation décrit le système observable de la branche `design/back-office-harmonise`, au 19 octobre 2026. Elle ne propose pas de nouvelle identité et ne prouve aucune mise en production. Son périmètre est le back office : les thèmes publics rendus dans l'éditeur ou dans un aperçu conservent leurs propres couleurs et fontes. La stratégie des écrans est dans `.impeccable/surfaces/back-office.md`.
+Cette documentation décrit le système observable de la branche `design/back-office-harmonise`, au 19 octobre 2026, resserré le soir même par la revue finale : un seul jeu de boutons sans pilule, une seule marque, un seul titre d'écran, des pictos sans tuile et aucun sous-titre sous les titres. Elle ne propose pas de nouvelle identité et ne prouve aucune mise en production. Son périmètre est le back office : les thèmes publics rendus dans l'éditeur ou dans un aperçu conservent leurs propres couleurs et fontes. La stratégie des écrans est dans `.impeccable/surfaces/back-office.md`.
 
 **Key Characteristics:**
 - Encre noire, papier blanc et gris neutres.
@@ -172,17 +203,19 @@ Les tokens `error` et `pending` correspondent aux états d'erreur et d'enregistr
 
 ### Hierarchy
 
-- **Headline** : titre de page ; le token desktop est réduit à (28px) sous (640px).
-- **Panel title** : nom d'une feuille d'édition.
+- **Headline** : titre d'écran, le même pour les onglets, la connexion, les CGU et les premiers pas (classe `.adm-titre`) ; réduit à (28px) sous (640px).
+- **Panel title** : nom d'une feuille d'édition, du détail d'un réglage ou d'un prix.
 - **Title** : nom d'une carte ou d'un groupe de réglages.
-- **Body** : description de page et contenu courant ; les composants utilisent aussi des variations locales entre (13px) et (14.5px).
+- **Body** : contenu courant ; les composants utilisent aussi des variations locales entre (13px) et (14.5px).
 - **Label** : nom de champ et aide courte.
+- **Caption** : légende d'onglet mobile, nom sous un picto, axe de courbe, compteur, et badge en semi-gras.
 - **Field** : texte saisi, conservé à une taille lisible sur mobile.
-- **Metric** : valeur statistique, portée à (34px) à partir de (1024px), avec chiffres tabulaires.
+- **Metric** : valeur statistique, (30px) à toutes les largeurs, avec chiffres tabulaires.
+- **Wordmark** : « Hopla. » dans la marque, et nulle part ailleurs.
 
 ### Named Rules
 
-**The Working Hierarchy Rule.** Le titre nomme l'endroit, le texte secondaire l'explique et le contrôle porte le geste. Conserver ce rôle lors de l'ajout d'un écran.
+**The Working Hierarchy Rule.** Le titre nomme l'endroit et le contrôle porte le geste. Aucun sous-titre ne répète un titre d'onglet ; une aide ne paraît que là où le geste ne se comprend pas seul.
 
 ## Layout
 
@@ -209,7 +242,11 @@ Les cartes ordinaires sont plates : leur papier, leur bordure et le fond de trav
 
 ## Shapes
 
-Les contrôles et la navigation utilisent l'arrondi `control`, les cartes et feuilles l'arrondi `surface`. L'adresse et la liste de démarrage utilisent `compact-surface`. Les pastilles, avatars et interrupteurs sont circulaires ou en pilule. Les segments ont une courbure plus serrée que leur groupe.
+Les contrôles et la navigation utilisent l'arrondi `control`, les cartes et feuilles l'arrondi `surface`. L'adresse, la liste de démarrage, les groupes de lignes et les cartes de choix utilisent `compact-surface`. Les segments, les compteurs et les badges ont une courbure plus serrée (`segment`).
+
+### Named Rules
+
+**The No Pill Rule.** Aucun bouton, lien d'action ou badge en pilule : ce sont des rectangles arrondis. Restent ronds les avatars, les points d'état, les interrupteurs, les pastilles de couleur, la poignée de déplacement, les boutons radio et les pistes de progression.
 
 Les bordures de surface sont fines (1px). Le focus observable est un contour noir (2px), décalé de (2px). Les cadres de page et les miniatures ont des rayons propres à leur fonction ; ils ne redéfinissent pas la forme des cartes ordinaires.
 
@@ -217,15 +254,24 @@ Les bordures de surface sont fines (1px). Le focus observable est un contour noi
 
 ### Buttons
 
-Actions nettes, avec un libellé court et un picto plein lorsque cela aide à reconnaître le geste.
+Actions nettes, avec un libellé court et un picto plein lorsque cela aide à reconnaître le geste. Les cinq variantes viennent d'une seule source, `classeBouton` dans `src/admin/ui.tsx`, pour qu'un lien prenne la même allure qu'un bouton. Ne pas ajouter derrière elles un padding ou une hauteur qui les contredit.
 
-- **Primary:** noir, texte blanc, semi-gras ; cible minimale (44px), avec pression à l'échelle (0.98) et opacité réduite si désactivé.
-- **Secondary:** papier blanc, contour léger, texte noir et graisse moyenne. Le survol modifie le fond et le trait.
+- **Primary (`principal`):** noir, texte blanc, semi-gras ; cible minimale (44px), avec pression à l'échelle (0.98) et opacité réduite si désactivé. Il porte l'action principale de la vue.
+- **Secondary (`secondaire`):** papier blanc, contour léger, texte noir et graisse moyenne. Le survol modifie le fond et le trait.
+- **Danger (`danger`):** rouge plein, texte blanc ; réservé à l'effacement définitif, après une confirmation.
+- **Quiet (`discret`):** texte secondaire sans fond ; Annuler, Plus tard, Me déconnecter.
+- **Icon (`icone`):** carré de (44px) au picto secondaire, pour fermer, revenir ou retirer.
 - **Focus:** contour commun explicite. Les transitions de couleur durent généralement (150ms).
 
 ### Cards / Containers
 
 Conteneurs blancs, arrondis et bordés. Un titre de carte et son action éventuelle occupent la même rangée. Les KPI partagent la forme des cartes avec un padding plus compact : (20px), puis (16px) sous (640px).
+
+Dans une feuille, une liste de lignes est un groupe bordé sans fond (`.adm-groupe`). Dans une carte, les groupes deviennent de simples traits de séparation : jamais de boîte grise dans une carte. Un choix entre cartes (formule, aperçu de bureau) est marqué par un contour noir de (2px), pas par une couleur.
+
+### Badges
+
+Rectangle à l'arrondi `segment`, fond d'encre à 7 %, texte au rôle `caption` en semi-gras (`classeBadge`). Seul « Suspendu » prend l'ambre des alertes.
 
 ### Inputs / Fields
 
@@ -233,19 +279,25 @@ Fond calme, contour discret, arrondi de contrôle et texte de saisie au rôle `f
 
 ### Navigation
 
-Sur desktop, une ligne associe un picto plein (20px), un nom et éventuellement un compteur réel. Le choix actif est blanc, bordé et plus gras ; le survol utilise une surface neutre. Sur mobile, la même navigation devient une barre basse avec picto (21px), label court et pastille de fond pour l'onglet courant.
+La marque (`Marque.tsx`) est la même partout : le carré noir au lien blanc de (28px), puis « Hopla. » au rôle `wordmark`, sans accroche. La barre latérale, la connexion, les CGU et le lien de connexion périmé la reprennent telle quelle. Aucun fil d'Ariane ne répète la navigation.
+
+Sur desktop, une ligne associe un picto plein (20px), un nom et éventuellement un compteur réel. Le choix actif est blanc, bordé et plus gras ; le survol utilise une surface neutre. Sur mobile, la même navigation devient une barre basse avec picto (21px) et label court ; l'onglet courant se reconnaît à son picto noir et à son label en semi-gras, sans pastille de fond.
 
 ### Segments
 
 Groupe de choix exclusifs neutre, composé de boutons avec une cible minimale de (40px). La sélection gagne un papier blanc et une ombre courte. Le motif radio conserve un seul arrêt de tabulation et se parcourt avec les flèches.
 
+### Settings rows
+
+Une ligne de réglage porte un picto plein nu, sans tuile de fond, dans une case de (24px) au gris secondaire, puis son nom et un chevron ou une bascule. Les badges « Pro » s'écrivent sans picto décoratif.
+
 ### Switches
 
-Piste de (40px) sur (24px), pastille blanche de (18px), cible tactile étendue. Le déplacement et l'étirement à la pression répondent au geste. L'état est porté par `role="switch"` et `aria-checked`.
+Piste de (40px) sur (24px), pastille blanche de (18px), cible tactile étendue. Allumée, la piste est à l'encre ; éteinte, à 45 % d'encre, soit 3:1 sur le papier, pour qu'on voie l'interrupteur et son état (WCAG 1.4.11). Le déplacement et l'étirement à la pression répondent au geste. L'état est porté par `role="switch"` et `aria-checked`.
 
 ### Sheets and feedback
 
-Les feuilles nomment leur tâche, gardent la fermeture accessible et gèrent le focus. Les mouvements d'entrée et de sortie sont courts et décélérés ; `prefers-reduced-motion` retire les animations prévues. Les retours utilisent un message explicite, et proposent Annuler lorsque l'action le permet. Les durées et courbes observées figurent dans le sidecar.
+Les feuilles nomment leur tâche, gardent la fermeture accessible et gèrent le focus. Les mouvements d'entrée et de sortie sont courts et décélérés ; `prefers-reduced-motion` retire les animations prévues. Les retours utilisent un message explicite, et proposent Annuler lorsque l'action le permet. L'état d'enregistrement est le même au téléphone et au bureau : un point gris suivi de son mot, qui bat pendant l'envoi ; seul l'échec passe au rouge. Les durées et courbes observées figurent dans le sidecar.
 
 ## Do's and Don'ts
 
@@ -254,7 +306,7 @@ Les feuilles nomment leur tâche, gardent la fermeture accessible et gèrent le 
 - **Do** conserver le contraste noir sur papier, et du papier sur une action noire.
 - **Do** reprendre Geist et la hiérarchie des rôles déjà utilisés.
 - **Do** conserver un focus visible, les libellés et les états d'enregistrement explicites.
-- **Do** utiliser les pictogrammes Phosphor pleins et monochromes du projet.
+- **Do** utiliser les pictogrammes Phosphor pleins et monochromes pour ce qu'on montre (un réseau, un bloc, une règle, un état), et les signes de commande au trait (`ui-*`) pour les gestes (fermer, ajouter, déplier, copier, ouvrir), sans mêler les deux dans une même rangée.
 - **Do** garder les transitions brèves et respecter le mouvement réduit.
 
 ### Don't:
@@ -263,4 +315,8 @@ Les feuilles nomment leur tâche, gardent la fermeture accessible et gèrent le 
 - **Don't** remplacer les couleurs ou la typographie des thèmes publics par celles du shell.
 - **Don't** transformer chaque carte en fenêtre ombrée.
 - **Don't** utiliser d'emoji ou de picto en duotone dans cet espace.
+- **Don't** faire un bouton en pilule, ni poser un picto sur une tuile de fond.
+- **Don't** écrire un sous-titre explicatif sous un titre d'onglet, ni un fil d'Ariane qui répète la navigation.
+- **Don't** dire « en ligne » ou « réussi » en vert : le noir suffit, la couleur reste aux alertes.
+- **Don't** imbriquer une boîte grise dans une carte.
 - **Don't** présenter une capture locale ou ce document comme une preuve de mise en production.

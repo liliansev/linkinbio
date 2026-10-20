@@ -16,7 +16,7 @@ La personne travaille sur sa propre page, observe son activité ou règle son co
 
 **STORY:** la personne voit où elle est, comprend si son travail est enregistré et accède au geste utile. Elle modifie directement sa page, consulte les données ou ouvre le groupe de réglages concerné.
 
-**FIRST VIEWPORT:** sur desktop, navigation à gauche, barre supérieure et contenu avec titre explicite. Dans Ma page, contenu éditable à gauche et outils à droite. Sur mobile, adresse et sauvegarde dans l'en-tête, outils compacts avant la page et navigation basse. Les statistiques et réglages utilisent l'espace sans téléphone décoratif permanent.
+**FIRST VIEWPORT:** sur desktop, la marque et la navigation à gauche, la barre supérieure et le contenu sous un titre explicite, sans description sous le titre ni fil d'Ariane. Dans Ma page, contenu éditable à gauche et outils à droite. Sur mobile, adresse et sauvegarde dans l'en-tête, outils compacts avant la page et navigation basse. Les statistiques et réglages utilisent l'espace sans téléphone décoratif permanent.
 
 **FORM:** continuation code-led du patch existant, reprise du brief et de l'implémentation. Aucun tirage de direction, classement ou seed n'a été créé pour cette documentation.
 
@@ -28,7 +28,8 @@ La personne travaille sur sa propre page, observe son activité ou règle son co
 - **Personnalisation:** les feuilles Design et Réseaux laissent juger le résultat. Sur mobile, un aperçu en direct occupe l'espace au-dessus de la feuille ; sur desktop, une feuille latérale de (400px) garde la page visible. Annuler revient à l'état conservé à l'ouverture ; Terminé ferme la feuille.
 - **Statistiques:** KPI en premier, jusqu'à quatre colonnes ; activité et résumé se mettent côte à côte sur grand écran, puis viennent les répartitions. La courbe, les tendances et les chiffres restent interprétables sans dépendre d'une couleur.
 - **Réglages:** les groupes s'appellent Ta page, Préférences et Ton compte. Une ligne mène au détail ou porte une bascule. Le détail conserve un retour explicite et restitue le focus. L'abonnement s'affiche selon les droits et la configuration.
-- **Connexion:** marque et carte centrées, largeur maximale (420px), champ d'adresse et action principale, puis état d'envoi, confirmation ou erreur.
+- **Connexion:** marque et carte centrées, largeur maximale (420px), champ d'adresse et action principale, puis état d'envoi, confirmation ou erreur. Les CGU et le lien de connexion périmé reprennent la même enveloppe : le fond de l'espace, la même marque, une carte et le même titre d'écran.
+- **Premiers pas:** le titre de chaque question au rôle de titre d'écran, les mêmes boutons que le reste du back office et une progression qui respecte le mouvement réduit.
 - **Comptes:** l'entrée n'est visible que si l'API du compte principal existe. Le cas ordinaire garde trois onglets.
 
 ## States and constraints

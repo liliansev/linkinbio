@@ -5,7 +5,7 @@ import { ANIMATIONS, RESEAUX, SANS_COULEURS } from '../lib/types.ts';
 import { THEMES, themeDe, themeParId, variablesTheme } from '../lib/themes.ts';
 import type { Theme } from '../lib/themes.ts';
 import { Icone, NOMS_RESEAUX } from '../components/Icone.tsx';
-import { Carte, Champ, Interrupteur, NOMS_ANIMATIONS, Segments, classeSaisie, flechesRadio, preparerImage, vibrer } from './ui.tsx';
+import { Carte, Champ, Interrupteur, NOMS_ANIMATIONS, Segments, classeBouton, classeSaisie, flechesRadio, preparerImage, vibrer } from './ui.tsx';
 import { pseudoReseau, urlReseau } from '../lib/demarrage.ts';
 import { adresseSaisie, pourquoiPasReseau } from '../lib/valider.ts';
 
@@ -76,8 +76,8 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
             <span className="absolute inset-0 grid place-items-center bg-black/45 text-[12px] font-medium text-nuit opacity-0 transition group-hover:opacity-100">{envoi ? '…' : 'Changer'}</span>
           </button>
           <div className="flex flex-col items-start gap-1">
-            <button type="button" onClick={() => fichier.current?.click()} className="min-h-11 rounded-full bg-white/[0.08] px-4 text-[14px] font-medium text-white">{envoi ? 'Envoi…' : 'Changer la photo'}</button>
-            {reglages.profil.avatar && <button type="button" onClick={() => profil({ avatar: '' })} className="px-1 text-[13px] text-white/50">Sans photo</button>}
+            <button type="button" onClick={() => fichier.current?.click()} className={classeBouton.secondaire}>{envoi ? 'Envoi…' : 'Changer la photo'}</button>
+            {reglages.profil.avatar && <button type="button" onClick={() => profil({ avatar: '' })} className="min-h-11 rounded-xl px-1 text-[13px] text-white/60 hover:text-white">Sans photo</button>}
           </div>
           <input ref={fichier} type="file" accept="image/*" hidden onChange={e => avatar(e.target.files?.[0])} />
         </div>
@@ -184,7 +184,7 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
             const actif = reglages.bureau === b.id;
             return (
               <button key={b.id} type="button" role="radio" aria-checked={actif} onClick={() => { vibrer(); maj({ bureau: b.id }); }}
-                className={`flex flex-col gap-2 rounded-2xl p-2 text-left transition ${actif ? 'bg-white/[0.1] ring-2 ring-white' : 'bg-white/[0.04] ring-1 ring-white/[0.08] hover:bg-white/[0.07]'}`}>
+                className={`flex flex-col gap-2 rounded-[14px] border p-2 text-left transition ${actif ? 'border-white ring-1 ring-inset ring-white' : 'border-white/15 hover:border-white/30'}`}>
                 <SchemaBureau id={b.id} />
                 <span className="px-1 pb-1 text-[13px] font-semibold text-white">{b.nom}</span>
               </button>
@@ -310,7 +310,7 @@ export function DesignTiroirs({ reglages, onChange, envoyerImage, principal, pie
     <div ref={racine} className="flex flex-col gap-3">
       {/* Le retour reste collé en haut de la feuille : on le retrouve après avoir fait défiler vingt thèmes. */}
       <div className="sticky top-0 z-10 -mx-5 flex items-center bg-nuit px-4 pb-1">
-        <button ref={retour} type="button" onClick={() => { vibrer(4); setOuvert(null); }} aria-label={`${lignes.find(l => l.id === ouvert)?.nom ?? ''}, revenir au design`} className="flex min-h-11 items-center gap-1 rounded-full pr-3 text-[14px] font-medium text-white/75 hover:text-white">
+        <button ref={retour} type="button" onClick={() => { vibrer(4); setOuvert(null); }} aria-label={`${lignes.find(l => l.id === ouvert)?.nom ?? ''}, revenir au design`} className="flex min-h-11 items-center gap-1 rounded-xl pr-3 text-[14px] font-medium text-white/75 hover:text-white">
           <Icone nom="ui-chevron" taille={18} className="rotate-90" /> {lignes.find(l => l.id === ouvert)?.nom}
         </button>
         {ouvert === 'couleurs' && <span className="ml-auto pl-1"><Reinitialiser reglages={reglages} onChange={onChange} /></span>}
@@ -321,10 +321,10 @@ export function DesignTiroirs({ reglages, onChange, envoyerImage, principal, pie
 
   return (
     <div ref={racine} className="flex flex-col gap-4">
-      <ul className="overflow-hidden rounded-xl bg-white/[0.03] ring-1 ring-white/[0.07]">
+      <ul className="adm-groupe">
         {lignes.map((l, i) => (
           <li key={l.id} className={i > 0 ? 'border-t border-white/[0.07]' : ''}>
-            <button id={`design-${l.id}`} type="button" onClick={() => { vibrer(4); setOuvert(l.id); if (l.id === 'theme') themesVus(); }} className="flex min-h-[52px] w-full items-center gap-3 px-3.5 py-2 text-left transition hover:bg-white/[0.04] active:bg-white/[0.06]">
+            <button id={`design-${l.id}`} type="button" onClick={() => { vibrer(4); setOuvert(l.id); if (l.id === 'theme') themesVus(); }} className="flex min-h-[52px] w-full items-center gap-3 rounded-[inherit] px-3.5 py-2 text-left transition hover:bg-white/[0.04] active:bg-white/[0.06]">
               <Icone nom={l.icone} taille={20} className="shrink-0 text-white/70" />
               <span className="min-w-0 flex-1 truncate text-[14px] font-medium text-white">{l.nom}</span>
               <span className="min-w-0 max-w-[45%] truncate text-[13px] text-white/55">{l.valeur}</span>
@@ -343,7 +343,7 @@ function Reinitialiser({ reglages, onChange }: { reglages: Reglages; onChange: (
   const perso = Object.values(reglages.couleurs).some(Boolean);
   return (
     <button type="button" disabled={!perso} onClick={() => { vibrer(4); onChange({ ...reglages, couleurs: SANS_COULEURS }); }}
-      className="-my-2 min-h-11 text-[13px] font-medium text-white/70 transition hover:text-white disabled:text-white/30 disabled:hover:text-white/30">Réinitialiser</button>
+      className="-my-2 min-h-11 rounded-xl px-2 text-[13px] font-medium text-white/70 transition hover:text-white disabled:text-white/30 disabled:hover:text-white/30">Réinitialiser</button>
   );
 }
 
@@ -366,7 +366,7 @@ function ChoixCouleur({ nom, valeur, duTheme, onChange }: { nom: string; valeur:
   const actuelle = valeur || duTheme;
   const pastille = (c: string, choisie: boolean, etiquette: string, action: () => void) => (
     <button type="button" onClick={() => { vibrer(4); action(); }} aria-pressed={choisie} aria-label={etiquette} title={etiquette}
-      className={`h-8 w-8 shrink-0 rounded-full ring-1 ring-inset ring-white/20 transition active:scale-90 ${choisie ? 'outline-2 outline-offset-2 outline-white' : ''}`} style={{ background: c }} />
+      className={`relative h-8 w-8 shrink-0 rounded-full ring-1 ring-inset ring-white/20 transition before:absolute before:-inset-1 before:content-[''] active:scale-90 ${choisie ? 'outline-2 outline-offset-2 outline-white' : ''}`} style={{ background: c }} />
   );
   return (
     <div>
@@ -378,7 +378,7 @@ function ChoixCouleur({ nom, valeur, duTheme, onChange }: { nom: string; valeur:
         {pastille(duTheme, !valeur, `${nom} : celle du thème`, () => onChange(''))}
         <span className="mx-0.5 h-8 w-px self-center bg-white/10" aria-hidden="true" />
         {PALETTE.filter(c => c !== duTheme.toLowerCase()).map(c => pastille(c, valeur === c, `${nom} : ${NOMS_PALETTE[c]}`, () => onChange(c)))}
-        <label className={`relative grid h-8 w-8 shrink-0 cursor-pointer place-items-center rounded-full bg-white/[0.08] text-white/80 ring-1 ring-inset ring-white/20 transition hover:bg-white/[0.14] ${valeur && !PALETTE.includes(valeur) ? 'outline-2 outline-offset-2 outline-white' : ''}`}
+        <label className={`relative grid h-8 w-8 shrink-0 cursor-pointer place-items-center rounded-full bg-white/[0.08] text-white/80 ring-1 ring-inset ring-white/20 transition before:absolute before:-inset-1 before:content-[''] hover:bg-white/[0.14] ${valeur && !PALETTE.includes(valeur) ? 'outline-2 outline-offset-2 outline-white' : ''}`}
           title="Une autre couleur" style={valeur && !PALETTE.includes(valeur) ? { background: valeur } : undefined}>
           <Icone nom="ui-plus" taille={16} />
           <input type="color" value={actuelle} onChange={e => onChange(e.target.value.toLowerCase())} className="absolute inset-0 h-full w-full cursor-pointer opacity-0" aria-label={`${nom} : une autre couleur`} />

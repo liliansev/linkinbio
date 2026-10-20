@@ -7,7 +7,7 @@ import * as fn from '../../server/fonctions.ts';
 
 export const Route = createFileRoute('/admin/')({
   loader: () => fn.lireAdmin(),
-  head: () => ({ meta: [{ title: 'Hopla · back office' }, { name: 'robots', content: 'noindex, nofollow' }, { name: 'theme-color', content: '#0c121f' }] }),
+  head: () => ({ meta: [{ title: 'Hopla · back office' }, { name: 'robots', content: 'noindex, nofollow' }, { name: 'theme-color', content: '#fdfdfc' }] }),
   component: PageAdmin,
 });
 

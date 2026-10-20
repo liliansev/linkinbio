@@ -4,7 +4,7 @@ import { urlPage } from '../lib/types.ts';
 import { etapesDemarrage } from '../lib/demarrage.ts';
 import type { Destination } from '../lib/demarrage.ts';
 import { Icone } from '../components/Icone.tsx';
-import { BoutonCopier, copierTexte, vibrer } from './ui.tsx';
+import { BoutonCopier, classeBouton, copierTexte, vibrer } from './ui.tsx';
 
 /*
  * Le haut de l'onglet Liens : l'adresse de la page, à copier ou partager en un
@@ -42,14 +42,11 @@ export function HautLiens({ compte, reglages, blocs, aller, annoncer }: { compte
     <div className="flex flex-col gap-3">
       {/* Sur téléphone, l'adresse et Copier sont dans l'en-tête ; ici, seulement sur ordinateur. */}
       <div className="adm-address hidden items-center gap-2 p-1 pl-4 lg:flex">
-        <span className="relative flex h-2 w-2 shrink-0" title="En ligne">
-          <span className="relative h-2 w-2 rounded-full bg-white/70" />
-        </span>
         <a href={adresse} target="_blank" rel="noopener" title="Ouvrir ma page" className="min-w-0 flex-1 truncate text-[14px] font-medium text-white underline-offset-4 hover:underline" translate="no">{courte}</a>
         <BoutonCopier texte={adresse} onCopie={marquerPartagee} label="Copier l’adresse de ta page" />
         {peutPartager && (
           <button type="button" onClick={partager} aria-label="Partager ta page"
-            className="grid h-11 w-11 place-items-center rounded-full bg-white text-nuit transition active:scale-95"><Icone nom="partage" taille={19} /></button>
+            className="adm-button-primary grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-white text-nuit transition active:scale-95"><Icone nom="partage" taille={19} /></button>
         )}
       </div>
 
@@ -57,21 +54,24 @@ export function HautLiens({ compte, reglages, blocs, aller, annoncer }: { compte
       {!masque && faites < etapes.length && (
         <section className="adm-checklist adm-cascade" aria-label="Bien démarrer">
           <div className="flex items-center">
-            <button type="button" onClick={() => setOuvert(o => !o)} aria-expanded={ouvert}
-              className="flex min-h-12 min-w-0 flex-1 items-center gap-3 rounded-xl pl-3.5 text-left">
-              <span className="relative grid h-6 w-6 shrink-0 place-items-center">
-                <svg viewBox="0 0 24 24" className="absolute inset-0 -rotate-90" aria-hidden="true">
-                  <circle cx="12" cy="12" r="10" fill="none" stroke="rgb(0 0 0 / 0.1)" strokeWidth="2.5" />
-                  <circle cx="12" cy="12" r="10" fill="none" stroke="#0a0a0a" strokeWidth="2.5" strokeLinecap="round"
-                    strokeDasharray={`${(faites / etapes.length) * 62.8} 62.8`} />
-                </svg>
-              </span>
-              <h2 className="min-w-0 flex-1 text-[14px] font-medium text-white">Bien démarrer</h2>
-              <span className="shrink-0 text-[13px] text-white/55">{faites} sur {etapes.length}</span>
-              <Icone nom="ui-chevron" taille={16} className={`shrink-0 text-white/55 transition ${ouvert ? 'rotate-180' : ''}`} />
-            </button>
+            {/* Le titre porte le bouton, pas l'inverse : un lecteur d'écran trouve « Bien démarrer » parmi les titres. */}
+            <h2 className="flex min-w-0 flex-1">
+              <button type="button" onClick={() => setOuvert(o => !o)} aria-expanded={ouvert}
+                className="flex min-h-12 min-w-0 flex-1 items-center gap-3 rounded-xl pl-3.5 text-left">
+                <span className="relative grid h-6 w-6 shrink-0 place-items-center">
+                  <svg viewBox="0 0 24 24" className="absolute inset-0 -rotate-90" aria-hidden="true">
+                    <circle cx="12" cy="12" r="10" fill="none" stroke="rgb(0 0 0 / 0.1)" strokeWidth="2.5" />
+                    <circle cx="12" cy="12" r="10" fill="none" stroke="#0a0a0a" strokeWidth="2.5" strokeLinecap="round"
+                      strokeDasharray={`${(faites / etapes.length) * 62.8} 62.8`} />
+                  </svg>
+                </span>
+                <span className="min-w-0 flex-1 text-[14px] font-medium text-white">Bien démarrer</span>
+                <span className="shrink-0 text-[13px] text-white/55">{faites} sur {etapes.length}</span>
+                <Icone nom="ui-chevron" taille={16} className={`shrink-0 text-white/55 transition ${ouvert ? 'rotate-180' : ''}`} />
+              </button>
+            </h2>
             <button type="button" onClick={() => { noter(CLE_MASQUE); setMasque(true); }} aria-label="Masquer ces étapes"
-              className="grid h-12 w-11 shrink-0 place-items-center rounded-full text-white/55 hover:text-white"><Icone nom="ui-fermer" taille={18} /></button>
+              className={classeBouton.icone}><Icone nom="ui-fermer" taille={18} /></button>
           </div>
           {ouvert && (
             <ol className="flex flex-col px-2 pb-2">

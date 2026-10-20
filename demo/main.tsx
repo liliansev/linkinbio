@@ -28,12 +28,12 @@ function Demo() {
     return (
       <>
         <PageLiens page={{ reglages: { ...p.reglages, bureau }, blocs: p.blocs.filter(b => estEnLigne(b)), compte: p.compte }} apercu />
-        <div className="fixed left-1/2 top-4 z-50 hidden -translate-x-1/2 gap-1 rounded-full bg-white/90 p-1 font-sans text-[13px] font-semibold text-[#0c121f] shadow-2xl backdrop-blur lg:flex" role="radiogroup" aria-label="Mise en page sur ordinateur">
+        <div className="fixed left-1/2 top-4 z-50 hidden -translate-x-1/2 gap-1 rounded-xl border border-black/10 bg-white/90 p-1 font-sans text-[13px] font-semibold text-[#0a0a0a] shadow-lg backdrop-blur lg:flex" role="radiogroup" aria-label="Mise en page sur ordinateur">
           {([['colonne', 'Colonne'], ['profil', 'Profil'], ['onepage', 'One page']] as const).map(([id, nom]) => (
-            <button key={id} type="button" role="radio" aria-checked={bureau === id} onClick={() => choisirBureau(id)} className={`rounded-full px-4 py-2 ${bureau === id ? 'bg-[#0c121f] text-white' : 'hover:bg-black/5'}`}>{nom}</button>
+            <button key={id} type="button" role="radio" aria-checked={bureau === id} onClick={() => choisirBureau(id)} className={`rounded-lg px-4 py-2 ${bureau === id ? 'bg-[#0a0a0a] text-white' : 'hover:bg-black/5'}`}>{nom}</button>
           ))}
         </div>
-        <a href="#" className="fixed bottom-5 left-1/2 z-50 -translate-x-1/2 whitespace-nowrap rounded-full bg-white px-5 py-3 font-sans text-[14px] font-semibold text-[#0c121f] shadow-2xl">← Retour au back office</a>
+        <a href="#" className="fixed bottom-5 left-1/2 z-50 -translate-x-1/2 whitespace-nowrap rounded-xl bg-[#0a0a0a] px-5 py-3 font-sans text-[14px] font-semibold text-white shadow-lg">← Retour au back office</a>
       </>
     );
   }
@@ -41,7 +41,7 @@ function Demo() {
   if (vue === 'nouveau') {
     return (
       <>
-        <p className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 bg-peche px-4 py-2 text-center font-sans text-[13px] font-medium text-nuit">
+        <p className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 bg-[#0a0a0a] px-4 py-2 text-center font-sans text-[13px] font-medium text-white">
           <span>L’arrivée d’un nouvel inscrit, juste après son lien d’invitation.</span>
           <button type="button" className="underline" onClick={() => { recommencerNouveau(); setEtat(null); setTour(t => t + 1); }}>Recommencer</button>
           <a href="#" className="underline">Retour à la démo</a>
@@ -52,7 +52,7 @@ function Demo() {
   }
   return (
     <>
-      <p className="bg-peche px-4 py-2 text-center font-sans text-[13px] font-medium text-nuit">Aperçu de démonstration : tes modifications restent dans ce navigateur, les statistiques sont fictives. <a href="#nouveau" className="underline">Voir l’arrivée d’un nouvel inscrit</a></p>
+      <p className="bg-[#0a0a0a] px-4 py-2 text-center font-sans text-[13px] font-medium text-white">Aperçu de démonstration : tes modifications restent dans ce navigateur, les statistiques sont fictives. <a href="#nouveau" className="underline">Voir l’arrivée d’un nouvel inscrit</a></p>
       <Admin api={apiDemo} initial={etat} demo />
     </>
   );

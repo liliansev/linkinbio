@@ -25,7 +25,7 @@ const depuisLocal = (v: string) => (v ? new Date(v).toISOString() : '');
 export function Repli({ titre, icone, resume, ouvert: depart, children }: { titre: string; icone: string; resume?: string; ouvert: boolean; children: ReactNode }) {
   const [ouvert, setOuvert] = useState(depart);
   return (
-    <div className="rounded-2xl bg-white/[0.035]">
+    <div className="adm-groupe">
       <button type="button" onClick={() => setOuvert(!ouvert)} aria-expanded={ouvert} className="flex min-h-12 w-full items-center gap-2.5 px-4 text-left text-[14.5px] font-medium text-white/85">
         <Icone nom={icone} taille={17} />
         <span className="shrink-0">{titre}</span>
@@ -51,7 +51,7 @@ export function RegleMoment({ b, maj, erreur }: { b: Bloc; maj: (c: Partial<Bloc
   const majCreneau = (champs: Partial<Creneau>) => maj({ creneau: { ...(c ?? { jours: [1, 2, 3, 4, 5], de: '09:00', a: '12:00', fuseau: fuseauNavigateur(), effet: 'afficher' }), ...champs, fuseau: fuseauNavigateur() } });
   const resume = [b.debut || b.fin ? 'Dates' : '', b.compteARebours && b.debut ? 'compte à rebours' : '', c ? decrireCreneau(c) : ''].filter(Boolean).join(', ');
   return (
-    <Repli key={erreur ? 'erreur' : 'calme'} titre="Quand l’afficher" icone="ui-horloge" resume={resume || 'Toujours'} ouvert={!!(b.debut || b.fin || c || erreur)}>
+    <Repli key={erreur ? 'erreur' : 'calme'} titre="Quand l’afficher" icone="horloge" resume={resume || 'Toujours'} ouvert={!!(b.debut || b.fin || c || erreur)}>
       <div className="grid gap-3 sm:grid-cols-2">
         <Champ label="À partir du">
           <input type="datetime-local" className={classeSaisie} value={versLocal(b.debut)} onChange={e => maj({ debut: depuisLocal(e.target.value) })} />
@@ -205,7 +205,7 @@ export function RegleTraductions({ b, maj, langues, ouvert = false }: { b: Bloc;
   return (
     <Repli titre="Traductions" icone="globe" resume={traduites.length === langues.length ? 'Tout est traduit' : `À traduire : ${langues.filter(l => !b.traductions[l]).map(l => LANGUES_FR[l]).join(', ')}`} ouvert={ouvert}>
       {langues.map(l => (
-        <div key={l} className="flex flex-col gap-2.5 rounded-xl bg-white/[0.035] p-3">
+        <div key={l} className="flex flex-col gap-2.5 border-t border-white/[0.06] pt-3">
           <span className="text-[13px] font-semibold text-white/80">{LANGUES_FR[l]}</span>
           {champs.map(c => (
             <Champ key={c.cle} label={c.label}>

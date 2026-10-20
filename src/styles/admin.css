@@ -75,18 +75,19 @@
 .adm-barre { animation: adm-barre 0.7s var(--adm-sortie) both; }
 @keyframes adm-barre { from { transform: scaleX(0); } }
 
-/* La pastille de l'onglet actif, dans la barre du bas. */
-.adm-nav-pastille { transition: background-color 0.2s ease; }
-
 @media (prefers-reduced-motion: reduce) {
   .adm-feuille, .adm-fondu, .adm-toast, .adm-onglet, .adm-cascade > *, .adm-barre, [data-sortie] .adm-feuille, [data-sortie] .adm-fondu { animation: none; }
-  .adm-interrupteur > span, .adm-nav-pastille { transition: none; }
+  .adm-interrupteur > span { transition: none; }
 }
 
 .adm input[type='datetime-local'] { color-scheme: light; }
 .adm ::selection { background: #0a0a0a; color: #fff; }
 .adm { scrollbar-color: rgb(0 0 0 / 0.2) transparent; -webkit-tap-highlight-color: transparent; }
 .adm :is(button, a, input, textarea, select, summary, [tabindex]):focus-visible { outline: 2px solid #0a0a0a; outline-offset: 2px; }
+/* La feuille prend le focus pour qu'on y entre au clavier, mais elle n'est pas un contrôle : pas d'anneau autour d'elle. */
+.adm .adm-feuille:focus-visible { outline: none; }
+/* Un titre qui reçoit le focus quand l'écran change (premiers pas, lien envoyé) n'est pas un contrôle non plus. */
+.adm h1[tabindex='-1']:focus-visible { outline: none; }
 
 /* Les premiers pas : la vraie page en miniature, à la largeur d'un téléphone. */
 .adm-miroir { --z: 0.62; width: calc(390px * var(--z)); flex-shrink: 0; }
@@ -96,7 +97,6 @@
 .adm-miroir-page { flex: 1 0 auto; display: flex; flex-direction: column; }
 .adm-miroir-page > * { flex: 1 0 auto; }
 @media (min-width: 1024px) { .adm-miroir { --z: 0.86; } }
-.adm-miroir-fin { box-shadow: 0 0 0 1.5px #0a0a0a, 0 30px 90px -24px rgb(0 0 0 / 0.3); }
 
 /* Une feuille ouverte occupe le bas de l'écran : le message passe en haut, sans couvrir ce qu'on touche. */
 body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); bottom: auto; }
@@ -120,25 +120,30 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
 .adm-nav-item { display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 0 14px; border: 1px solid transparent; border-radius: 12px; color: var(--adm-secondaire); font-size: 14px; font-weight: 500; text-align: left; transition: background-color 150ms, color 150ms; }
 .adm-nav-item:hover { background: #f1f1ee; color: var(--adm-encre); }
 .adm-nav-item[aria-current='page'] { border-color: var(--adm-trait); background: #fff; color: var(--adm-encre); font-weight: 600; }
-.adm-nav-count { margin-left: auto; display: grid; min-width: 23px; height: 23px; place-items: center; padding: 0 5px; border-radius: 7px; background: #efefec; color: #565651; font-size: 11px; font-variant-numeric: tabular-nums; }
+.adm-nav-count { margin-left: auto; display: grid; min-width: 23px; height: 23px; place-items: center; padding: 0 5px; border-radius: 7px; background: #efefec; color: #565651; font-size: 11.5px; font-variant-numeric: tabular-nums; }
 .adm-topbar { border-bottom: 1px solid var(--adm-trait); background: #fdfdfc; }
-.adm-page-heading { margin-bottom: 26px; }
-.adm-page-heading h1 { font-size: 32px; line-height: 1.2; font-weight: 600; letter-spacing: -0.035em; }
-.adm-page-heading > p { margin-top: 9px; color: var(--adm-secondaire); font-size: 14px; line-height: 1.6; }
+/* Le titre d'un écran, le même partout : les onglets, la connexion, les CGU, les premiers pas. */
+.adm-page-heading { margin-bottom: 24px; }
+.adm-titre, .adm-page-heading h1 { font-size: 32px; line-height: 1.2; font-weight: 600; letter-spacing: -0.035em; text-wrap: balance; }
 .adm-card, .adm-kpi { border: 1px solid var(--adm-trait); border-radius: 16px; background: var(--adm-surface); padding: 22px; }
 .adm-kpi { padding: 20px; }
 .adm-button-outline { border: 1px solid #deded9; border-radius: 12px; background: var(--adm-surface); transition: background-color 150ms, border-color 150ms; }
 .adm-button-outline:hover { background: #f4f4f0; border-color: #c7c7c0; }
 .adm-button-primary:hover { background: #30302e; }
+/* Le seul bouton rouge : effacer pour de bon. */
+.adm-button-danger { background: #c62828; color: #fff; }
+.adm-button-danger:hover { background: #a51f1f; }
 .adm-field { min-height: 48px; background: #fdfdfc; }
 .adm-field:hover { border-color: #b2b2ab; }
 .adm-mobile-nav { border-top: 1px solid var(--adm-trait); background: #fff; }
-.adm-mobile-nav [aria-current='page'] .adm-nav-pastille { background: #ebebe6; }
 .adm-mobile-nav button { height: 64px; }
 .adm-editor-layout { display: flex; flex-direction: column; gap: 18px; }
 .adm-editor-content { display: flex; min-width: 0; flex-direction: column; gap: 16px; }
 .adm-editor-content > :first-child:empty { display: none; }
-.adm-toile { box-shadow: 0 8px 28px -16px rgb(0 0 0 / 0.25); }
+/* La page posée sur le gris : un trait fin pour son bord (un thème clair se confond sinon avec le fond), une ombre courte dessous. */
+.adm-toile { box-shadow: 0 0 0 1px var(--adm-trait), 0 8px 28px -16px rgb(0 0 0 / 0.25); }
+/* La fin des premiers pas : la page passe au premier plan, cernée d'encre. */
+.adm-toile.adm-miroir-fin { box-shadow: 0 0 0 1.5px #0a0a0a, 0 30px 90px -24px rgb(0 0 0 / 0.3); }
 .adm-address { background: var(--adm-surface); border: 1px solid var(--adm-trait); border-radius: 14px; }
 .adm-checklist { background: var(--adm-surface); border: 1px solid var(--adm-trait); border-radius: 14px; }
 .adm-settings, .adm-settings-detail { max-width: 760px; }
@@ -150,7 +155,14 @@ button.adm-settings-row:hover { background: #f7f7f5; }
 .adm-settings-list > li:first-child .adm-settings-row { border-radius: 15px 15px 0 0; }
 .adm-settings-list > li:last-child .adm-settings-row { border-radius: 0 0 15px 15px; }
 .adm-settings-list > li:only-child .adm-settings-row { border-radius: 15px; }
-.adm-settings-icon { display: grid; width: 36px; height: 36px; flex-shrink: 0; place-items: center; border-radius: 11px; background: #f2f2ee; color: #555650; }
+/* Le picto d'une ligne, sans tuile derrière : plein, d'une seule couleur (Lilian, 19 octobre 2026). */
+.adm-settings-icon { display: grid; width: 24px; height: 24px; flex-shrink: 0; place-items: center; color: var(--adm-secondaire); }
+/* Un groupe de lignes dans une feuille : un trait fin, l'arrondi des surfaces compactes, sans fond
+ * (la feuille est déjà du papier), pour qu'un survol posé sur une ligne reste visible. La première et
+ * la dernière ligne épousent l'arrondi, sans couper le contour du focus comme le ferait un overflow. */
+.adm-groupe { border: 1px solid var(--adm-trait); border-radius: 14px; }
+.adm-groupe > :first-child { border-top-left-radius: 13px; border-top-right-radius: 13px; }
+.adm-groupe > :last-child { border-bottom-left-radius: 13px; border-bottom-right-radius: 13px; }
 .adm-feuille { border-radius: 16px 16px 0 0; }
 
 @media (min-width: 640px) { .adm-feuille { border-radius: 16px; } }
@@ -161,13 +173,12 @@ button.adm-settings-row:hover { background: #f7f7f5; }
   .adm-editor-content { grid-column: 1; grid-row: 1; }
 }
 @media (max-width: 639px) {
-  .adm-page-heading { margin-bottom: 21px; }
-  .adm-page-heading h1 { font-size: 28px; }
-  .adm-page-heading > p { font-size: 13px; }
+  .adm-page-heading { margin-bottom: 20px; }
+  .adm-titre, .adm-page-heading h1 { font-size: 28px; }
   .adm-card { padding: 18px; }
   .adm-kpi { padding: 16px; }
   .adm-editor-tools [data-principal], .adm-editor-tools .adm-button-outline { font-size: 13px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .adm-nav-item, .adm-button-outline, .adm-button-primary, button.adm-settings-row { transition: none; }
+  .adm-nav-item, .adm-button-outline, .adm-button-primary, .adm-button-danger, button.adm-settings-row { transition: none; }
 }
