@@ -1,7 +1,10 @@
 /*
- * L'accueil de hopla.page (src/accueil). Noir et blanc : papier blanc, encre
- * presque noire, un gris pour le second plan, un filet pour séparer. La seule
- * couleur est celle des vraies pages, dans les téléphones. Pas de pastille,
+ * L'accueil de hopla.page (src/accueil). Papier blanc, encre presque noire, un
+ * gris pour le second plan, un filet pour séparer. La couleur a trois rôles :
+ * celle des vraies pages dans les téléphones ; celle des réseaux dans
+ * l'ouverture (l'onglet choisi, le lien qui bouge, la lumière derrière) ; et
+ * un violet, `--accent`, pour ce que Hopla fait avancer (onglet choisi, étape
+ * lue, offre Pro), plus le vert d'une hausse. Le bouton d'appel reste noir. Pas de pastille,
  * pas de pointillés, des rayons de 10 (boutons), 16 (cartes) et 28 (téléphones).
  * Chaque mouvement se joue une fois ; « moins de mouvement » montre l'état final.
  */
@@ -13,6 +16,9 @@
   --filet: #ebebeb;
   --pale: #f5f5f5;
   --erreur: #b42318;
+  --accent: #5a3ff0;
+  --accent-pale: #f4f2ff;
+  --vert: #157f3c;
   --ease: cubic-bezier(.2, .7, .2, 1);
   --gout: 20px;
   background: var(--papier);
@@ -25,7 +31,7 @@
 }
 @media (min-width: 1024px) { .hl { --gout: 40px; } }
 .hl :focus-visible { outline: 2px solid var(--encre); outline-offset: 3px; }
-.hl ::selection { background: var(--encre); color: #fff; }
+.hl ::selection { background: var(--accent); color: #fff; }
 
 html:has(.hl) { background: #fff; scroll-padding-top: 76px; }
 @media (prefers-reduced-motion: no-preference) { html:has(.hl) { scroll-behavior: smooth; } }
@@ -108,7 +114,7 @@ html:has(.hl) { background: #fff; scroll-padding-top: 76px; }
 }
 .hl-onglets button:hover { color: var(--encre); }
 .hl-onglets button[aria-pressed='true'] { color: var(--encre); }
-.hl-onglets button[aria-pressed='true']::after { content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; background: var(--encre); }
+.hl-onglets button[aria-pressed='true']::after { content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; background: var(--accent); }
 
 /* ---- 01 · La barre ---- */
 
@@ -157,9 +163,14 @@ html:has(.hl) { background: #fff; scroll-padding-top: 76px; }
  * en éventail. Au bureau, deux colonnes : le texte et le champ à gauche, les
  * téléphones à droite, à la hauteur du champ, pour voir sa page se faire. */
 
-.hl-heros { position: relative; max-width: 1120px; margin: 0 auto; padding: 56px var(--gout) 0; display: flex; flex-direction: column; align-items: center; text-align: center; isolation: isolate; }
+/* La lumière derrière les téléphones prend la couleur du réseau d'où arrive le visiteur. */
+@property --lueur { syntax: '<color>'; inherits: true; initial-value: #7a7a7a; }
+.hl-heros {
+  position: relative; max-width: 1120px; margin: 0 auto; padding: 56px var(--gout) 0; display: flex; flex-direction: column; align-items: center; text-align: center; isolation: isolate;
+  transition: --lueur .9s ease;
+}
 .hl-heros-fond { position: absolute; z-index: -1; inset: -60px 0 0 50%; width: 100vw; translate: -50% 0; pointer-events: none; --mx: 50%; }
-.hl-heros-fond::after { content: ''; position: absolute; left: var(--mx); bottom: 4%; width: min(1100px, 140vw); height: 58%; translate: -50% 0; background: radial-gradient(closest-side, rgb(10 10 10 / .085), transparent); }
+.hl-heros-fond::after { content: ''; position: absolute; left: var(--mx); bottom: 4%; width: min(1100px, 140vw); height: 62%; translate: -50% 0; background: radial-gradient(closest-side, color-mix(in srgb, var(--lueur) 26%, transparent), transparent); }
 .hl-heros-texte { width: 100%; min-width: 0; }
 .hl-heros-titre { max-width: 13ch; margin-inline: auto; font-size: clamp(42px, 7vw, 82px); line-height: .98; letter-spacing: -0.048em; }
 @media (max-width: 359px) { .hl-heros-titre { font-size: 38px; } }
@@ -169,6 +180,54 @@ html:has(.hl) { background: #fff; scroll-padding-top: 76px; }
 .hl-heros-visuel { width: 100%; display: flex; flex-direction: column; align-items: center; }
 .hl-legende { font-size: 14px; color: var(--gris); text-align: center; }
 .hl-heros-visuel > .hl-legende { position: relative; margin-top: 36px; max-width: 40ch; color: #555; text-wrap: balance; }
+
+/* Les onglets des réseaux, au-dessus du téléphone : l'onglet choisi s'enfonce, puis se lève dans la couleur du réseau.
+ * Au téléphone, seul l'onglet choisi dit son nom ; les autres gardent leur picto. */
+.hl-reseaux {
+  display: flex; justify-content: center; gap: 4px; width: fit-content; max-width: 100%; margin: 40px auto 0; padding: 4px;
+  border-radius: 12px; background: var(--pale); box-shadow: inset 0 0 0 1px var(--filet);
+}
+@media (min-width: 1024px) { .hl-reseaux { margin-top: 8px; } }
+.hl-reseaux button {
+  position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-width: 44px; min-height: 40px; padding: 0 12px;
+  border: 0; border-radius: 9px; background: transparent; color: #4a4a4a; font: inherit; font-size: 14px; font-weight: 500; white-space: nowrap; cursor: pointer;
+  transition: background-color .25s, color .25s, box-shadow .25s, transform .2s var(--ease);
+}
+@media (max-width: 1023px) { .hl-reseaux button { min-height: 44px; } }
+.hl-reseaux button:hover { background: #fff; color: var(--encre); }
+.hl-reseaux button span { overflow: hidden; }
+.hl-reseaux button[aria-pressed='true'] {
+  background: var(--fond); color: #fff; transform: translateY(-1px);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / .22), 0 1px 2px rgb(0 0 0 / .2), 0 8px 18px -8px var(--fond);
+}
+/* L'appui : l'onglet s'enfonce, et un rond marque le doigt, comme sur une vidéo d'écran. */
+.hl-reseaux button:active, .hl-reseaux button[data-appui] { transform: translateY(1px) scale(.95); box-shadow: inset 0 2px 5px rgb(0 0 0 / .22); background: #e6e6e6; color: var(--encre); }
+.hl-reseaux button[data-appui]::after {
+  content: ''; position: absolute; left: 50%; top: 50%; width: 34px; height: 34px; margin: -17px 0 0 -17px; border-radius: 50%;
+  background: rgb(10 10 10 / .2); animation: hl-doigt .45s ease-out both;
+}
+@keyframes hl-doigt { from { transform: scale(.4); opacity: 0; } 40% { opacity: 1; } to { transform: scale(1.15); opacity: 0; } }
+@media (max-width: 479px) {
+  .hl-reseaux button { padding: 0 11px; }
+  .hl-reseaux button span { max-width: 0; opacity: 0; margin-left: -7px; transition: max-width .35s var(--ease), opacity .25s, margin-left .35s var(--ease); }
+  .hl-reseaux button[aria-pressed='true'] span { max-width: 6.5em; opacity: 1; margin-left: 0; }
+}
+.hl-heros-visuel > .hl-reseaux-phrase { min-height: 3em; margin-top: 28px; max-width: 46ch; color: #3a3a3a; font-size: 15px; animation: hl-fondu .4s ease both; }
+
+/* Dans le téléphone, le lien qui vient de bouger : un cercle de la couleur du réseau se resserre sur lui,
+ * le reste de la page s'efface un instant. Deux noms d'animation pour la rejouer à chaque réseau. */
+.hl-scene-milieu[data-eclat='a'] { --cercle: hl-cercle-a; --retrait: hl-retrait-a; }
+.hl-scene-milieu[data-eclat='b'] { --cercle: hl-cercle-b; --retrait: hl-retrait-b; }
+.hl-scene-milieu[data-eclat] .lp-bloc:first-child > * { animation: var(--cercle) 2.5s var(--ease) .35s both; }
+.hl-scene-milieu[data-eclat] .lp-bloc:not(:first-child) { animation: var(--retrait) 2.5s ease .35s both; }
+@keyframes hl-cercle-a { from { outline: 6px solid transparent; outline-offset: 16px; } 18%, 80% { outline: 6px solid var(--anneau); outline-offset: 6px; } to { outline: 6px solid transparent; outline-offset: 6px; } }
+@keyframes hl-cercle-b { from { outline: 6px solid transparent; outline-offset: 16px; } 18%, 80% { outline: 6px solid var(--anneau); outline-offset: 6px; } to { outline: 6px solid transparent; outline-offset: 6px; } }
+@keyframes hl-retrait-a { 18%, 80% { opacity: .32; } }
+@keyframes hl-retrait-b { 18%, 80% { opacity: .32; } }
+@media (prefers-reduced-motion: reduce) {
+  @keyframes hl-cercle-a { from, to { outline: 6px solid transparent; outline-offset: 6px; } 10%, 85% { outline: 6px solid var(--anneau); outline-offset: 6px; } }
+  @keyframes hl-cercle-b { from, to { outline: 6px solid transparent; outline-offset: 6px; } 10%, 85% { outline: 6px solid var(--anneau); outline-offset: 6px; } }
+}
 .hl-souris { display: none; }
 @media (hover: hover) and (pointer: fine) { .hl-souris { display: inline; } .hl-tactile { display: none; } }
 
@@ -199,8 +258,7 @@ html:has(.hl) { background: #fff; scroll-padding-top: 76px; }
   .hl-heros .hl-reserver-etat, .hl-heros .hl-reserver-note { text-align: left; }
 }
 
-.hl-scene { position: relative; width: 100%; display: flex; justify-content: center; margin-top: 80px; }
-@media (min-width: 1024px) { .hl-scene { margin-top: 44px; } }
+.hl-scene { position: relative; width: 100%; display: flex; justify-content: center; margin-top: 28px; }
 .hl-scene-milieu { position: relative; z-index: 2; }
 .hl-scene-gauche, .hl-scene-droite { --x: -118px; --r: -6deg; --s: .84; position: absolute; z-index: 1; left: 50%; top: 48px; transform: translateX(calc(-50% + var(--x))) rotate(var(--r)) scale(var(--s)); }
 .hl-scene-droite { --x: 118px; --r: 6deg; }
@@ -208,12 +266,6 @@ html:has(.hl) { background: #fff; scroll-padding-top: 76px; }
 @media (min-width: 1024px) { .hl-scene-gauche { --x: -142px; --r: -6deg; --s: .8; } .hl-scene-droite { --x: 142px; --r: 6deg; --s: .8; } }
 .hl-scene .hl-tel { box-shadow: 0 0 0 1px #dcdcdc, 0 44px 88px -44px rgb(0 0 0 / .38); }
 .hl-scene-gauche .hl-tel, .hl-scene-droite .hl-tel { filter: saturate(.92); }
-.hl-heros-source {
-  position: absolute; z-index: 3; bottom: calc(100% + 12px); left: 50%; translate: -50% 0;
-  display: inline-flex; align-items: center; gap: 6px; padding: 6px 11px; border-radius: 8px;
-  background: var(--encre); color: #fff; font-size: 13px; font-weight: 500; white-space: nowrap;
-  animation: hl-pop .4s var(--ease) both;
-}
 .hl-scene [data-pris] { filter: grayscale(1); opacity: .45; transition: filter .3s, opacity .3s; }
 .hl-tel-pris { color: var(--erreur); }
 .hl-tel-fait { display: inline-flex; align-items: center; gap: 4px; color: var(--encre); font-weight: 600; animation: hl-pop .45s var(--ease) both; }
@@ -305,8 +357,6 @@ html:has(.hl-reserver input:focus) { overflow-anchor: none; }
 .hl-tel-page { width: 390px; height: 100%; zoom: var(--z); }
 .hl-tel-page > .lp { min-height: 100%; background-attachment: scroll; overflow: hidden; }
 .hl-tel [data-decor]::before { position: absolute; animation: none; }
-.hl-tel-bouton { display: block; padding: 0; border: 0; border-radius: 28px; background: none; cursor: pointer; transition: transform .2s var(--ease); }
-.hl-tel-bouton:active { transform: scale(.99); }
 .hl-fondu { height: 100%; animation: hl-fondu .5s ease both; }
 
 /* ---- Les croquis ---- */
@@ -409,6 +459,7 @@ html:has(.hl-reserver input:focus) { overflow-anchor: none; }
 }
 .hl-app[data-ouvert] { transform: none; opacity: 1; }
 .hl-app-barre { flex: none; display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 14px; border-bottom: 1px solid var(--filet); font-size: 14px; letter-spacing: -0.01em; }
+.hl-app-barre svg { color: #f00; }
 .hl-app-video { position: relative; display: grid; place-items: center; aspect-ratio: 16 / 9; background: var(--encre); color: #fff; }
 .hl-app-video i { position: absolute; left: 0; bottom: 0; width: 100%; height: 3px; background: #fff; transform-origin: left; transform: scaleX(0); }
 .hl-app-video i[data-joue] { transform: scaleX(.3); transition: transform 2.2s linear; }
@@ -456,7 +507,7 @@ html:has(.hl-reserver input:focus) { overflow-anchor: none; }
 .hl-stats-liste { display: flex; flex-direction: column; margin: 6px 0 4px; }
 .hl-stat { position: relative; padding: 16px 0 16px 34px; border-top: 1px solid var(--filet); font-size: 17px; line-height: 1.45; letter-spacing: -0.01em; text-wrap: pretty; }
 @media (min-width: 1024px) { .hl-stat { font-size: 19px; } }
-.hl-stat-hausse { position: absolute; left: 0; top: 18px; display: inline-flex; }
+.hl-stat-hausse { position: absolute; left: 0; top: 18px; display: inline-flex; color: var(--vert); }
 .hl-stat-mot { display: inline-block; }
 .hl-stat-nombre { font-weight: 600; font-variant-numeric: tabular-nums; }
 .hl-stat-mot, .hl-stat-hausse { transition: opacity .4s, transform .5s var(--ease); transition-delay: var(--d, 0ms); }
@@ -537,7 +588,7 @@ html:has(.hl-reserver input:focus) { overflow-anchor: none; }
 .hl-etapes button:hover { color: var(--encre); }
 .hl-etapes li[data-lu] button { color: var(--encre); background: var(--pale); }
 .hl-etape-num { flex: none; display: grid; place-items: center; width: 32px; height: 32px; border: 1px solid currentColor; border-radius: 8px; font-size: 14px; font-weight: 600; transition: background-color .3s, color .3s; }
-.hl-etapes li[data-lu] .hl-etape-num { border-color: var(--encre); background: var(--encre); color: #fff; }
+.hl-etapes li[data-lu] .hl-etape-num { border-color: var(--accent); background: var(--accent); color: #fff; }
 .hl-etapes b { display: block; font-size: 19px; font-weight: 600; letter-spacing: -0.02em; }
 .hl-etape-texte { display: block; margin-top: 2px; font-size: 15px; color: var(--gris); }
 .hl-etapes li[data-lu] .hl-etape-texte { color: #3a3a3a; }
@@ -548,7 +599,7 @@ html:has(.hl-reserver input:focus) { overflow-anchor: none; }
 .hl-prise-legende b { margin-left: 4px; }
 .hl-segments { display: flex; gap: 6px; width: 100%; }
 .hl-segments i { position: relative; flex: 1; height: 3px; border-radius: 2px; background: var(--filet); overflow: hidden; }
-.hl-segments i::after { content: ''; position: absolute; inset: 0; background: var(--encre); transform: scaleX(0); transform-origin: left; transition: transform .5s var(--ease); }
+.hl-segments i::after { content: ''; position: absolute; inset: 0; background: var(--accent); transform: scaleX(0); transform-origin: left; transition: transform .5s var(--ease); }
 .hl-segments i[data-plein]::after { transform: none; }
 
 .hl-bo { position: relative; height: 100%; display: flex; flex-direction: column; background: #fff; font-size: 13px; line-height: 1.35; }
@@ -591,7 +642,8 @@ html:has(.hl-reserver input:focus) { overflow-anchor: none; }
 .hl-offres { display: grid; gap: 16px; margin-bottom: 20px; }
 @media (min-width: 800px) { .hl-offres { grid-template-columns: 1fr 1fr; } }
 .hl-offre { display: flex; flex-direction: column; gap: 16px; padding: 28px; border: 1px solid var(--filet); border-radius: 16px; }
-.hl-offre-pro { border-color: var(--encre); }
+.hl-offre-pro { border-color: var(--accent); background: linear-gradient(180deg, var(--accent-pale), #fff 62%); box-shadow: 0 0 0 1px var(--accent), 0 24px 48px -32px rgb(90 63 240 / .45); }
+.hl-offre-pro li svg { color: var(--accent); }
 .hl-prix { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; }
 .hl-prix b { font-size: 44px; font-weight: 600; line-height: 1; letter-spacing: -0.04em; font-variant-numeric: tabular-nums; }
 .hl-prix-glisse { display: inline-block; animation: hl-glisse .35s var(--ease); }
