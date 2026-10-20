@@ -245,6 +245,9 @@ export const listerAttente = () => base().prepare('SELECT id, email, pseudo, ts 
 export const reservationParId = (id: string) => base().prepare('SELECT id, email, pseudo, ts FROM attente WHERE id = ?').get(id) as Reservation | undefined;
 export const retirerReservation = (id: string) => base().prepare('DELETE FROM attente WHERE id = ?').run(id);
 export const reservationsDepuis = (depuis: number) => (base().prepare('SELECT COUNT(*) AS n FROM attente WHERE ts > ?').get(depuis) as { n: number }).n;
+export const reservationParEmail = (email: string) => base().prepare('SELECT id, email, pseudo, ts FROM attente WHERE email = ?').get(email.toLowerCase()) as Reservation | undefined;
+/** Les pages créées depuis `depuis` (le plafond du jour de l'inscription directe). */
+export const comptesDepuis = (depuis: number) => (base().prepare('SELECT COUNT(*) AS n FROM comptes WHERE cree > ? AND id != ?').get(depuis, PRINCIPAL) as { n: number }).n;
 
 /* ---- Abonnement Pro ---- */
 

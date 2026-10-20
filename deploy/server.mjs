@@ -14,7 +14,10 @@ const origin = process.env.LIENS_ORIGINE ?? 'https://hopla.page';
 const originAdmin = process.env.LIENS_ORIGINE_ADMIN ?? 'https://app.hopla.page';
 const hostPublic = new URL(origin).host;
 const hostAdmin = new URL(originAdmin).host;
-const STATIQUE = /^\/(assets\/[\w.-]+|[\w-]+\.(webp|png|svg|ico))$/;
+/* Les fichiers de dist/client : les scripts et styles, les icônes, le manifeste.
+   robots.txt, sitemap.xml et llms.txt n'y sont pas : l'app les écrit selon le nom
+   demandé, et ils passent par ici pour que le back office réponde aussi le sien. */
+const STATIQUE = /^\/(assets\/[\w.-]+|[\w-]+\.(webp|png|svg|ico|webmanifest|txt|xml))$/;
 /* Les blocs « dernière vidéo » et « newsletter » de la page de Lilian lisent
    l'API de son site. Elle est relayée par le réseau interne (LIENS_SITE, par
    exemple http://liliansevoumian-app:3000) : la page reste sur une seule
@@ -24,7 +27,7 @@ const DU_SITE = /^\/api\/(newsletter|derniere-video(\/vignette)?)$/;
 /** Ce que le back office sert lui-même ; le reste (pages, textes légaux) vit sur l'origine publique. */
 const DU_BACK_OFFICE = /^\/(admin(\/|$)|_serverFn\/|api\/|assets\/|media\/)/;
 const appRoot = fileURLToPath(new URL('../dist', import.meta.url));
-const mime = { html: 'text/html; charset=utf-8', css: 'text/css', js: 'text/javascript', mjs: 'text/javascript', json: 'application/json', svg: 'image/svg+xml', png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', avif: 'image/avif', gif: 'image/gif', ico: 'image/x-icon', woff: 'font/woff', woff2: 'font/woff2' };
+const mime = { html: 'text/html; charset=utf-8', css: 'text/css', js: 'text/javascript', mjs: 'text/javascript', json: 'application/json', svg: 'image/svg+xml', png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', avif: 'image/avif', gif: 'image/gif', ico: 'image/x-icon', woff: 'font/woff', woff2: 'font/woff2', webmanifest: 'application/manifest+json', txt: 'text/plain; charset=utf-8', xml: 'application/xml; charset=utf-8' };
 const etagOf = bytes => `"${createHash('sha1').update(bytes).digest('base64url').slice(0, 27)}"`;
 class HttpError extends Error { constructor(status) { super(`HTTP ${status}`); this.status = status; } }
 async function readBody(req, limit) {

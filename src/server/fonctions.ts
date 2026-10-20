@@ -15,7 +15,7 @@ import { apercuSite as lireApercu } from './apercu.ts';
 import * as db from './db.ts';
 import { COOKIE_SESSION, DUREE_SESSION, adresseAdmin, compteDeSession, demanderConnexion, fermerSession, inviter, ouvrirSession } from './auth.ts';
 import { changerStatutMotive, signaler, supprimerMotive, traiter } from './moderation.ts';
-import { inviterReservation, reserverNom as reserver, verifierNom as verifier } from './attente.ts';
+import { creerHopla, inscriptionLibre, inviterReservation, reserverNom as reserver, verifierNom as verifier } from './attente.ts';
 import * as creem from './creem.ts';
 import { JOURS_GRATUIT } from '../lib/abonnement.ts';
 import type { Periode } from '../lib/abonnement.ts';
@@ -283,7 +283,10 @@ export const ouvrirPortail = createServerFn({ method: 'POST' })
   .middleware([session])
   .handler(async ({ context }) => creem.ouvrirPortail(process.env, fetch, db.compteParId(context.compte)!));
 
-/* ---- La liste d'attente : réserver son nom depuis l'accueil ---- */
+/* ---- Prendre son nom depuis l'accueil : créer sa page, ou la liste d'attente ---- */
+
+export const modeInscription = createServerFn({ method: 'GET' })
+  .handler(async (): Promise<'libre' | 'attente'> => (inscriptionLibre(process.env) ? 'libre' : 'attente'));
 
 export const verifierNom = createServerFn({ method: 'GET' })
   .validator((data: unknown) => String(data ?? '').slice(0, 60))
@@ -296,7 +299,8 @@ export const reserverNom = createServerFn({ method: 'POST' })
   })
   .handler(async ({ data }) => {
     memeOrigine();
-    return reserver(origines(), process.env, data, fetch, Date.now(), getRequestHeader('x-real-ip') ?? '');
+    const prendre = inscriptionLibre(process.env) ? creerHopla : reserver;
+    return prendre(origines(), process.env, data, fetch, Date.now(), getRequestHeader('x-real-ip') ?? '');
   });
 
 export const listerAttente = createServerFn({ method: 'GET' })

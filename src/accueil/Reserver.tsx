@@ -2,13 +2,15 @@ import { useEffect, useId, useRef, useSyncExternalStore } from 'react';
 import type { FormEvent } from 'react';
 import { Icone } from '../components/Icone.tsx';
 import { nomSaisi } from '../lib/valider.ts';
+import { MOTS, appel, useInscription } from './textes.ts';
 
 /*
- * « Réserver mon nom », en ouverture et en fin de page. On tape le nom, Hopla
- * dit pendant la frappe s'il est libre ; le même champ demande ensuite
- * l'adresse e-mail, et la réservation part. Les deux champs de la page
- * partagent le même état : un nom réservé en haut l'est aussi en bas, et le
- * téléphone d'ouverture affiche le nom tapé dans sa barre d'adresse.
+ * « Créer ma hopla » (ou « Réserver mon nom » en liste d'attente), en
+ * ouverture et en fin de page. On tape le nom, Hopla dit pendant la frappe
+ * s'il est libre ; le même champ demande ensuite l'adresse e-mail, et la
+ * demande part. Les deux champs de la page partagent le même état : un nom
+ * pris en haut l'est aussi en bas, et le téléphone d'ouverture affiche le nom
+ * tapé dans sa barre d'adresse et sur sa page.
  */
 
 export type EtatNom = { etat: 'libre' | 'pris' | 'invalide'; nom: string; suggestions: string[] };
@@ -44,8 +46,10 @@ function taper(api: ApiAccueil, valeur: string) {
   if (nom.replace(/-$/, '').length >= 3) minuterie = setTimeout(() => verifier(api, nom.replace(/-$/, '')), 280);
 }
 
-export function Reserver({ api, note, id }: { api: ApiAccueil; note?: string; id?: string }) {
+export function Reserver({ api, note, id, grand }: { api: ApiAccueil; note?: string; id?: string; grand?: boolean }) {
   const e = useReservation();
+  const mode = useInscription();
+  const classe = `hl-reserver${grand ? ' hl-reserver-grand' : ''}`;
   const moi = useId();
   const champ = useRef<HTMLInputElement>(null);
   const idEtat = `${moi}-etat`;
@@ -77,7 +81,7 @@ export function Reserver({ api, note, id }: { api: ApiAccueil; note?: string; id
 
   if (e.etape === 'fait') {
     return (
-      <div className="hl-reserver" id={id}>
+      <div className={classe} id={id}>
         <p className="hl-reserver-fait" role="status"><Icone nom="check" taille={20} /><span>{e.message}</span></p>
       </div>
     );
@@ -85,7 +89,7 @@ export function Reserver({ api, note, id }: { api: ApiAccueil; note?: string; id
 
   const v = e.verif;
   return (
-    <form className="hl-reserver" id={id} onSubmit={envoyer} noValidate>
+    <form className={classe} id={id} onSubmit={envoyer} noValidate>
       <div className="hl-reserver-ligne">
         {e.etape === 'nom' ? (
           <label className="hl-champ">
@@ -102,13 +106,13 @@ export function Reserver({ api, note, id }: { api: ApiAccueil; note?: string; id
               autoComplete="email" inputMode="email" enterKeyHint="send" required aria-describedby={idEtat} />
           </label>
         )}
-        <button type="submit" className="hl-btn" disabled={e.envoi}>{e.envoi ? 'Envoi…' : 'Réserver mon nom'}</button>
+        <button type="submit" className="hl-btn" disabled={e.envoi}>{e.envoi ? 'Envoi…' : appel(mode)}</button>
       </div>
       <div className="hl-reserver-etat" id={idEtat} aria-live="polite">
         {e.erreur ? <p className="hl-reserver-erreur" role="alert">{e.erreur}</p>
           : e.etape === 'email' ? (
             <p>
-              <Icone nom="check" taille={16} /><span><b>hopla.page/{e.nom}</b> est libre. À quelle adresse t’envoyer ton invitation ?</span>{' '}
+              <Icone nom="check" taille={16} /><span><b>hopla.page/{e.nom}</b> est libre. {MOTS[mode].adresse}</span>{' '}
               <button type="button" className="hl-lien-texte" onClick={() => changer({ etape: 'nom', focus: moi })}>Changer de nom</button>
             </p>
           )
@@ -124,7 +128,7 @@ export function Reserver({ api, note, id }: { api: ApiAccueil; note?: string; id
           : v?.etat === 'invalide' ? <p>Ce nom ne peut pas servir d’adresse : 3 à 30 caractères, lettres, chiffres et tirets.</p>
           : note ? <p className="hl-gris">{note}</p> : null}
       </div>
-      {e.etape === 'email' && <p className="hl-reserver-legal">On ne t’écrit que pour ton invitation. <a href="/legal/confidentialite">Confidentialité</a></p>}
+      {e.etape === 'email' && <p className="hl-reserver-legal">{MOTS[mode].legal} <a href="/legal/confidentialite">Confidentialité</a></p>}
     </form>
   );
 }

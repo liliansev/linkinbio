@@ -18,73 +18,112 @@ function Revoir({ onClick }: { onClick: () => void }) {
   return <button type="button" className="hl-revoir" onClick={onClick}>Revoir</button>;
 }
 
-/* ---- 02 · Dans l'app ---- */
+/* ---- 02 · Dans l'app ----
+ * Deux onglets, Sans Hopla et Avec Hopla, sur un même téléphone. Chaque
+ * onglet choisi rejoue sa scène depuis le début. À la première lecture, la
+ * scène « Sans » se joue, son onglet se remplit comme une barre de lecture,
+ * puis « Avec » prend la main, une fois ; un toucher arrête l'enchaînement.
+ */
+
+type Cote = 'sans' | 'avec';
+/** 1 : la touche sur le lien ; 2 : ce qui s'ouvre ; 3 : la suite ; 4 : le visiteur repart, ou s'abonne. */
+const PAS_APP = [450, 600, 1000, 1100];
+const AVANT_AVEC = 3150 + 1500;
+const LEGENDES: Record<Cote, string> = {
+  sans: 'Le lien s’ouvre dans le navigateur d’Instagram. Ton visiteur n’y est connecté à rien : on lui demande de se reconnecter, et le plus souvent, il repart.',
+  avec: 'Hopla ouvre le lien dans l’app YouTube, où ton visiteur est déjà connecté. Il regarde, il s’abonne, sans rien retaper.',
+};
 
 export function DansApp() {
   const [ref, vu] = useVu<HTMLDivElement>(0.35);
-  // 1 : la touche sur « Ma dernière vidéo » ; 2 : le navigateur coincé d'un côté, l'app de l'autre ; 3 : le chiffre.
-  const [etape, rejouer] = useSequence(vu, [450, 550, 900]);
-  const clics = useCompte(38, etape >= 3);
-  const [onglet, setOnglet] = useState<'sans' | 'avec'>('sans');
+  const [cote, setCote] = useState<Cote>('sans');
+  const [jeu, setJeu] = useState(0);
+  const [auto, setAuto] = useState(true);
+  const [etape, rejouer] = useSequence(vu, PAS_APP);
+  const clics = useCompte(38, cote === 'avec' && etape >= 2);
 
-  const page = (
-    <div className="hl-cq">
-      <CroquisTete />
-      <div className="hl-cq-liens">
-        <CroquisLien titre="Ma dernière vidéo" picto={<Icone nom="play" taille={14} />} data-touche={etape >= 1 || undefined} />
-        <CroquisLien titre="Ma boutique" />
-        <CroquisLien titre="Réserver un atelier" />
-      </div>
-    </div>
-  );
+  const choisir = (c: Cote) => { setCote(c); setJeu(j => j + 1); rejouer(); };
+  const toucher = (c: Cote) => { setAuto(false); choisir(c); };
+
+  // La première fois : « Sans », puis « Avec ».
+  const enchaine = vu && auto && cote === 'sans' && !mouvementReduit();
+  useEffect(() => {
+    if (!enchaine) return;
+    const t = setTimeout(() => { setAuto(false); choisir('avec'); }, AVANT_AVEC);
+    return () => clearTimeout(t);
+    // `choisir` ne change pas d'effet : seul l'état de l'enchaînement compte.
+  }, [enchaine]);
 
   return (
     <section className="hl-section" aria-labelledby="dans-app">
-      <div className="hl-tete-section hl-entre">
-        <h2 id="dans-app" className="hl-h2">Tes liens s’ouvrent dans l’app, pas dans Instagram.</h2>
-        <p className="hl-chapo">Depuis Instagram ou TikTok, ton lien YouTube ou Spotify s’ouvre dans son app, là où ton visiteur est déjà connecté. Pas dans un navigateur coincé.</p>
-      </div>
-      <div className="hl-onglets hl-petit-seul" role="group" aria-label="Comparer">
-        <button type="button" aria-pressed={onglet === 'sans'} onClick={() => setOnglet('sans')}>Sans Hopla</button>
-        <button type="button" aria-pressed={onglet === 'avec'} onClick={() => setOnglet('avec')}>Avec Hopla</button>
-      </div>
-      <div ref={ref} className="hl-avant-apres" data-onglet={onglet}>
-        <div className="hl-sans">
-          <p className="hl-legende hl-grand-seul">Sans Hopla</p>
-          <Telephone largeur={280} label="Sans Hopla : le lien YouTube s’ouvre dans le navigateur d’Instagram, qui demande de se connecter.">
-            {page}
-            <div className="hl-integre" data-ouvert={etape >= 2 || undefined}>
-              <div className="hl-integre-barre"><Icone nom="ui-fermer" taille={14} /><span>youtube.com</span></div>
-              <div className="hl-integre-video" />
-              <div className="hl-cq-trait" style={{ width: '70%' }} />
-              <div className="hl-cq-trait" style={{ width: '45%' }} />
-              <div className="hl-integre-feuille">
-                <b>Connecte-toi pour continuer</b>
-                <span className="hl-cq-trait" style={{ width: '80%' }} />
-                <span className="hl-integre-bouton">Se connecter</span>
+      <div className="hl-dans-app">
+        <div className="hl-dans-app-texte">
+          <div className="hl-entre">
+            <h2 id="dans-app" className="hl-h2">Tes liens s’ouvrent dans l’app, pas dans Instagram.</h2>
+            <p className="hl-chapo">Depuis Instagram ou TikTok, ton lien YouTube ou Spotify s’ouvre dans son app, là où ton visiteur est déjà connecté.</p>
+          </div>
+          <div className="hl-onglets hl-onglets-scene" role="group" aria-label="Comparer, la scène se rejoue à chaque choix">
+            {(['sans', 'avec'] as const).map(c => (
+              <button key={c} type="button" aria-pressed={cote === c} onClick={() => toucher(c)}
+                data-remplit={(enchaine && c === 'sans') || undefined} style={{ '--duree': `${AVANT_AVEC}ms` } as CSSProperties}>
+                {c === 'sans' ? 'Sans Hopla' : 'Avec Hopla'}
+              </button>
+            ))}
+          </div>
+          <p key={cote} className="hl-legende-scene" aria-live="polite">{LEGENDES[cote]}</p>
+          <p className="hl-phrase-stat hl-grand-seul" data-visible={(cote === 'avec' && etape >= 2) || undefined} aria-hidden={cote !== 'avec' || undefined}>
+            <b className="hl-chiffre">{clics}</b> clics ouverts dans leur app cette semaine. <span className="hl-gris">Exemple de phrase de tes stats.</span>
+          </p>
+        </div>
+        <div ref={ref} className="hl-dans-app-tel">
+          <Telephone largeur={290} label={cote === 'sans'
+            ? 'Sans Hopla : le lien YouTube s’ouvre dans le navigateur d’Instagram, qui demande de se connecter, et le visiteur repart.'
+            : 'Avec Hopla : le lien YouTube s’ouvre directement dans l’app YouTube, où le visiteur s’abonne.'}>
+            <div key={jeu} className="hl-scene-app">
+              <div className="hl-cq">
+                <CroquisTete />
+                <div className="hl-cq-liens">
+                  <CroquisLien titre="Ma dernière vidéo" picto={<Icone nom="youtube" taille={14} />} data-touche={etape >= 1 || undefined} />
+                  <CroquisLien titre="Ma boutique" />
+                  <CroquisLien titre="Réserver un atelier" />
+                </div>
               </div>
+              {cote === 'sans' ? <>
+                <div className="hl-integre" data-ouvert={(etape >= 2 && etape < 4) || undefined}>
+                  <div className="hl-integre-barre"><span className="hl-tap" data-touche={etape >= 4 || undefined}><Icone nom="ui-fermer" taille={14} /></span><span>youtube.com</span></div>
+                  <i className="hl-integre-charge" data-joue={etape >= 2 || undefined} />
+                  <div className="hl-integre-video" />
+                  <div className="hl-cq-trait" style={{ width: '70%' }} />
+                  <div className="hl-cq-trait" style={{ width: '45%' }} />
+                  <div className="hl-integre-feuille">
+                    <b>Connecte-toi pour continuer</b>
+                    <span className="hl-cq-trait" style={{ width: '80%' }} />
+                    <span className="hl-integre-bouton">Se connecter</span>
+                  </div>
+                </div>
+                {etape >= 4 && <p className="hl-toast" role="status">Ton visiteur est reparti.</p>}
+              </> : (
+                <div className="hl-app" data-ouvert={etape >= 2 || undefined}>
+                  <div className="hl-app-video"><Icone nom="play" taille={30} /><i data-joue={etape >= 3 || undefined} /></div>
+                  <div className="hl-app-corps">
+                    <span className="hl-app-trait" style={{ width: '82%' }} />
+                    <span className="hl-app-trait" style={{ width: '50%' }} />
+                    <div className="hl-app-ligne">
+                      <span className="hl-app-rond" /><span className="hl-app-trait" style={{ width: '38%' }} />
+                      <span className="hl-app-abonne hl-tap" data-touche={etape >= 4 || undefined} data-fait={etape >= 4 || undefined}>
+                        {etape >= 4 ? <><Icone nom="check" taille={12} />Abonné</> : 'S’abonner'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </Telephone>
         </div>
-        <div className="hl-avec">
-          <p className="hl-legende hl-grand-seul">Avec Hopla</p>
-          <Telephone largeur={280} label="Avec Hopla : le lien YouTube s’ouvre directement dans l’app YouTube.">
-            {page}
-            <div className="hl-app" data-ouvert={etape >= 2 || undefined}>
-              <div className="hl-app-video"><Icone nom="play" taille={30} /></div>
-              <div className="hl-app-corps">
-                <span className="hl-app-trait" style={{ width: '82%' }} />
-                <span className="hl-app-trait" style={{ width: '50%' }} />
-                <div className="hl-app-ligne"><span className="hl-app-rond" /><span className="hl-app-trait" style={{ width: '38%' }} /><span className="hl-app-abonne">Abonné</span></div>
-              </div>
-            </div>
-          </Telephone>
-        </div>
+        <p className="hl-phrase-stat hl-petit-seul" data-visible={(cote === 'avec' && etape >= 2) || undefined} aria-hidden={cote !== 'avec' || undefined}>
+          <b className="hl-chiffre">{clics}</b> clics ouverts dans leur app cette semaine. <span className="hl-gris">Exemple de phrase de tes stats.</span>
+        </p>
       </div>
-      <p className="hl-phrase-stat hl-entre">
-        <b className="hl-chiffre">{clics}</b> clics se sont ouverts directement dans leur app cette semaine. <span className="hl-gris">Exemple de phrase de tes stats.</span>{' '}
-        <Revoir onClick={rejouer} />
-      </p>
     </section>
   );
 }

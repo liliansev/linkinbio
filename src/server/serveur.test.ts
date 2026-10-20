@@ -588,3 +588,50 @@ test('liste d’attente : nom vérifié, réservé, gardé, puis invité jusqu�
   db.purger(3_000_000 + 366 * 86_400_000);
   assert.equal(db.listerAttente().length, 0);
 });
+
+test('inscription directe : la page se crée sous le nom choisi et le lien part aussitôt', async () => {
+  const attente = await import('./attente.ts');
+  const envois: any[] = [];
+  let enPanne = false;
+  const fetchFaux = (async (_url: string, init: RequestInit) => { if (enPanne) return new Response('{}', { status: 500 }); envois.push(JSON.parse(String(init.body))); return new Response('{}', { status: 200 }); }) as typeof fetch;
+  const env = { RESEND_API_KEY: 'cle', NODE_ENV: 'production' };
+
+  assert.equal(attente.inscriptionLibre({}), true, 'libre par défaut');
+  assert.equal(attente.inscriptionLibre({ LIENS_INSCRIPTION: 'attente' }), false);
+
+  const r = await attente.creerHopla(O, env, { nom: 'paul-martin', email: 'Paul@Exemple.fr' }, fetchFaux, 5_000_000, '8.8.8.1');
+  assert.equal(r.ok, true);
+  assert.match(r.message, /paul@exemple\.fr/);
+  const compte = db.compteParPseudo('paul-martin')!;
+  assert.equal(compte.email, 'paul@exemple.fr');
+  assert.equal(envois.at(-1).subject, 'Ta page Hopla est prête');
+  assert.match(envois.at(-1).text, /Ta page https:\/\/hopla\.page\/paul-martin est créée/);
+  const jeton = /jeton=([\w-]+)/.exec(envois.at(-1).text)![1];
+  assert.equal(auth.compteDeSession(auth.ouvrirSession(jeton)!), compte.id, 'le lien ouvre la page qu’on vient de créer');
+  assert.equal(attente.verifierNom('paul-martin').etat, 'pris');
+
+  // Un nom déjà pris ne se crée pas deux fois ; une adresse qui a sa page reçoit un rappel, et la même réponse.
+  assert.equal((await attente.creerHopla(O, env, { nom: 'paul-martin', email: 'autre@exemple.fr' }, fetchFaux, 5_000_100, '8.8.8.2')).ok, false);
+  const encore = await attente.creerHopla(O, env, { nom: 'paul-bis', email: 'paul@exemple.fr' }, fetchFaux, 5_000_200, '8.8.8.3');
+  assert.deepEqual(encore, r);
+  assert.equal(envois.at(-1).subject, 'Tu as déjà une page Hopla');
+  assert.equal(db.compteParPseudo('paul-bis'), undefined);
+
+  // Qui avait réservé pendant la liste d'attente reçoit la page de ce nom-là.
+  await attente.reserverNom(O, env, { nom: 'jeanne-reserve', email: 'jeanne@exemple.fr' }, fetchFaux, 5_000_300, '8.8.8.4');
+  assert.equal((await attente.creerHopla(O, env, { nom: 'jeanne-autre', email: 'jeanne@exemple.fr' }, fetchFaux, 5_000_400, '8.8.8.5')).ok, true);
+  assert.equal(db.compteParPseudo('jeanne-reserve')?.email, 'jeanne@exemple.fr');
+  assert.equal(db.compteParPseudo('jeanne-autre'), undefined);
+  assert.match(envois.at(-1).text, /Tu avais réservé https:\/\/hopla\.page\/jeanne-reserve/);
+
+  // Si l'e-mail ne part pas, la page s'efface et le nom redevient libre.
+  enPanne = true;
+  assert.equal((await attente.creerHopla(O, env, { nom: 'lea-panne', email: 'lea@exemple.fr' }, fetchFaux, 5_000_500, '8.8.8.6')).ok, false);
+  assert.equal(db.compteParPseudo('lea-panne'), undefined);
+  assert.equal(attente.verifierNom('lea-panne').etat, 'libre');
+  enPanne = false;
+
+  // Cinq pages par heure depuis une même adresse IP.
+  for (let i = 0; i < 5; i++) await attente.creerHopla(O, env, { nom: `page-${i}`, email: `p${i}@exemple.fr` }, fetchFaux, 6_000_000 + i, '6.6.6.6');
+  assert.equal((await attente.creerHopla(O, env, { nom: 'page-6', email: 'p6@exemple.fr' }, fetchFaux, 6_000_010, '6.6.6.6')).ok, false);
+});
