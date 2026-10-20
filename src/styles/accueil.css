@@ -61,15 +61,19 @@ html:has(.hl) { background: #fff; scroll-padding-top: 76px; }
  * posés dessus (téléphones, e-mail, champ du nom, offre gratuite) gardent les jetons du papier blanc.
  * La scène « reseau » prend la teinte du réseau choisi dans la démo. */
 
-@property --teinte { syntax: '<color>'; inherits: true; initial-value: #d9c3a0; }
-[data-teinte] { background: var(--papier); color: var(--encre); }
+@property --teinte { syntax: '<color>'; inherits: true; initial-value: #c4a574; }
+/* Comme les thèmes Hopla, chaque panneau a sa lumière en haut (`--lueur`, la recette de `lueur()` dans
+ * lib/themes.ts) ; `--papier` reste une couleur unie, que lisent la sélection et ce qui est posé dessus. */
+[data-teinte] { background: var(--lueur, var(--papier)); color: var(--encre); }
 [data-teinte='klein'] { --papier: #1f35ff; --encre: #fff; --encre-2: #fff; --gris: #dde2ff; --filet: rgb(255 255 255 / .24); --pale: rgb(255 255 255 / .12); --accent: #ffd400; --erreur: #ffd0c8; }
-[data-teinte='nuit'] { --papier: #0c121f; --encre: #f4f1ec; --encre-2: #dfe3ec; --gris: #aab2c5; --filet: rgb(255 255 255 / .14); --pale: rgb(255 255 255 / .07); --accent: #ffb38a; }
-[data-teinte='peche'] { --papier: #ffc9a8; --encre: #2a1308; --encre-2: #3f1f10; --gris: #6b3a22; --filet: rgb(42 19 8 / .16); --pale: rgb(255 255 255 / .45); --accent: #a8361a; }
-[data-teinte='menthe'] { --papier: #c9ecd5; --encre: #0d2e1b; --encre-2: #16402a; --gris: #335a42; --filet: rgb(13 46 27 / .15); --pale: rgb(255 255 255 / .5); --accent: #157f3c; }
-[data-teinte='lilas'] { --papier: #e3d9ff; --encre: #1d1340; --encre-2: #2c2155; --gris: #4f4570; --filet: rgb(29 19 64 / .14); --pale: rgb(255 255 255 / .6); --accent: #1f35ff; }
-[data-teinte='rose'] { --papier: #ff9fa8; --encre: #1c0b1f; --encre-2: #2b1430; --gris: #44263f; --filet: rgb(28 11 31 / .16); --pale: rgb(255 255 255 / .4); --accent: #1c0b1f; }
-[data-teinte='reseau'] { --papier: color-mix(in srgb, var(--teinte) 16%, #fff); --gris: #5c5c5c; transition: --teinte .7s ease; }
+[data-teinte='nuit'] { --papier: #0c121f; --encre: #f4f1ec; --encre-2: #dfe3ec; --gris: #aab2c5; --filet: rgb(255 255 255 / .14); --pale: rgb(255 255 255 / .07); --accent: #ffb38a; --lueur: radial-gradient(120% 65% at 50% -8%, #35283b 0%, #0c121f 62%); }
+[data-teinte='peche'] { --papier: #ffc9a8; --encre: #2a1308; --encre-2: #3f1f10; --gris: #6b3a22; --filet: rgb(42 19 8 / .16); --pale: rgb(255 255 255 / .45); --accent: #a8361a; --lueur: radial-gradient(120% 65% at 50% -8%, #ffe3d1 0%, #ffc9a8 62%); }
+[data-teinte='menthe'] { --papier: #c9ecd5; --encre: #0d2e1b; --encre-2: #16402a; --gris: #335a42; --filet: rgb(13 46 27 / .15); --pale: rgb(255 255 255 / .5); --accent: #157f3c; --lueur: radial-gradient(120% 65% at 50% -8%, #e6f7ec 0%, #c9ecd5 62%); }
+[data-teinte='lilas'] { --papier: #e3d9ff; --encre: #1d1340; --encre-2: #2c2155; --gris: #4f4570; --filet: rgb(29 19 64 / .14); --pale: rgb(255 255 255 / .6); --accent: #1f35ff; --lueur: radial-gradient(120% 65% at 50% -8%, #f5f1ff 0%, #e3d9ff 62%); }
+[data-teinte='rose'] { --papier: #ff9fa8; --encre: #1c0b1f; --encre-2: #2b1430; --gris: #44263f; --filet: rgb(28 11 31 / .16); --pale: rgb(255 255 255 / .4); --accent: #1c0b1f; --lueur: radial-gradient(120% 65% at 50% -8%, #ffc49e 0%, #ff9fa8 62%); }
+/* La scène « reseau » prend la teinte du réseau touché ; la scène « theme », celle du thème qu'on regarde dans le rail. */
+[data-teinte='reseau'] { --papier: color-mix(in srgb, var(--teinte) 22%, #fff); --gris: #5c5c5c; transition: --teinte .7s ease; }
+[data-teinte='theme'] { --papier: color-mix(in srgb, var(--teinte) 12%, #fff); --gris: #5c5c5c; transition: --teinte .7s ease; }
 :is(.hl-section, .hl-heros)[data-teinte] {
   max-width: none; margin: 10px 8px 0; border-radius: 28px; overflow: clip;
   padding-left: max(var(--gout), calc((100% - 1056px) / 2)); padding-right: max(var(--gout), calc((100% - 1056px) / 2));
@@ -260,6 +264,8 @@ html:has(.hl) { background: #fff; scroll-padding-top: 76px; }
 /* Le lien du réseau n'est pas là tant que personne n'en est venu ; à la première arrivée, il se glisse en tête. */
 .hl-roue-nouvelle { transition: height .45s var(--ease), margin .45s var(--ease), opacity .3s, background-color .35s, color .35s; }
 .hl-roue-page:not([data-rangee]) .hl-roue-nouvelle { height: 0; margin-bottom: -4.5cqi; opacity: 0; }
+/* À chaque arrivée, elle s'allume de la couleur du réseau (`--reseau`, sur la colonne), puis revient au thème. */
+.hl-roue-page[data-arrive] .hl-roue-nouvelle { background: var(--reseau); color: #fff; transition-duration: .45s, .45s, .3s, .15s, .15s; }
 @container (max-width: 95px) {
   .hl-roue-nom { display: none; }
   .hl-roue-avatar { width: 32cqi; font-size: 12cqi; }
@@ -289,6 +295,8 @@ html:has(.hl) { background: #fff; scroll-padding-top: 76px; }
 @media (max-width: 1023px) { .hl-reseaux button { min-height: 44px; } }
 .hl-reseaux button:hover { background: #fff; color: var(--encre); }
 .hl-reseaux button span { overflow: hidden; }
+/* Au repos, chaque picto garde la couleur de son réseau, celle de la roue juste au-dessus. */
+.hl-reseaux button:not([aria-pressed='true']):not(:active):not([data-appui]) svg { color: var(--fond); }
 .hl-reseaux button[aria-pressed='true'] {
   background: var(--fond); color: #fff; transform: translateY(-1px);
   box-shadow: inset 0 1px 0 rgb(255 255 255 / .22), 0 1px 2px rgb(0 0 0 / .2), 0 8px 18px -8px var(--fond);
@@ -306,7 +314,15 @@ html:has(.hl) { background: #fff; scroll-padding-top: 76px; }
   .hl-reseaux button[aria-pressed='true'] span { max-width: 6.5em; opacity: 1; margin-left: 0; }
 }
 /* Essaie : centrée, les onglets, les trois téléphones, puis la phrase de ce qui a changé. */
-.hl-selon { display: flex; flex-direction: column; align-items: center; text-align: center; }
+.hl-selon { position: relative; display: flex; flex-direction: column; align-items: center; text-align: center; }
+/* Le visiteur qui part de l'onglet touché : le rond des visiteurs de la roue, dans la couleur de son réseau. */
+.hl-selon-point {
+  position: absolute; left: -12px; top: -12px; z-index: 5; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%;
+  color: #fff; box-shadow: 0 4px 10px -2px rgb(0 0 30 / .4); opacity: 0; pointer-events: none; will-change: transform;
+}
+/* À son arrivée, la barre d'adresse prend un instant la couleur du réseau. */
+.hl-scene-milieu .hl-tel-barre span { transition: background-color .3s; }
+.hl-scene-milieu[data-arrive] .hl-tel-barre span { background: color-mix(in srgb, var(--anneau, #999) 14%, #fff); }
 .hl-selon .hl-tete-section { margin-inline: auto; margin-bottom: 28px; }
 .hl-selon .hl-chapo { margin-inline: auto; }
 .hl-reseaux-phrase { min-height: 3em; margin: 32px auto 0; max-width: 46ch; color: var(--encre-2); font-size: 16px; text-wrap: balance; animation: hl-fondu .4s ease both; }
@@ -353,6 +369,14 @@ html:has(.hl) { background: #fff; scroll-padding-top: 76px; }
   .hl-heros .hl-chapo { margin: 22px 0 0; max-width: 44ch; font-size: 19px; }
   .hl-heros .hl-reserver { max-width: 540px; margin: 32px 0 0; }
   .hl-heros .hl-reserver-etat, .hl-heros .hl-reserver-note { text-align: left; }
+}
+/* Sur un portable (1366 x 768 et moins haut), le champ du nom tient dans le premier écran. */
+@media (min-width: 1024px) and (max-height: 860px) {
+  .hl-heros { padding-top: 40px; }
+  .hl-heros-texte { padding-top: 8px; }
+  .hl-heros-titre { max-width: 14ch; font-size: clamp(50px, 8vh, 66px); }
+  .hl-heros .hl-chapo { margin-top: 16px; }
+  .hl-heros .hl-reserver { margin-top: 24px; }
 }
 
 .hl-scene { position: relative; width: 100%; display: flex; justify-content: center; margin-top: 36px; }
@@ -501,6 +525,10 @@ html:has(.hl-reserver input:focus) { overflow-anchor: none; }
 .hl-cq-saisie i { width: 1.5px; height: 16px; margin-left: 2px; background: var(--encre); animation: hl-curseur .9s steps(1) 3; }
 .hl-cq-ok, .hl-cq-ouvrir { display: grid; place-items: center; height: 36px; padding: 0 12px; border-radius: 8px; background: var(--encre); color: #fff; font-weight: 600; }
 .hl-cq-ouvrir { animation: hl-pop .4s var(--ease) both; }
+/* « Le bon lien, au bon moment » : ce que Hopla vient de faire (le lien passé en tête, ouvert, débloqué) prend son bleu. */
+.hl-tel-vivante :is(.hl-cq-lien[data-vedette], .hl-cq-ouvrir, .hl-cq-drop[data-ouvert] .hl-cq-drop-picto) { background: var(--accent); border-color: var(--accent); color: #fff; }
+.hl-tel-vivante .hl-cq-drop[data-ouvert] { border-color: var(--accent); }
+.hl-tel-vivante .hl-cq-lien[data-vedette] { box-shadow: 0 10px 22px -12px rgb(31 53 255 / .55); }
 
 /* ---- 02 · Dans l'app ---- */
 
@@ -565,13 +593,15 @@ html:has(.hl-reserver input:focus) { overflow-anchor: none; }
 .hl-app-barre { flex: none; display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 14px; border-bottom: 1px solid var(--filet); font-size: 14px; letter-spacing: -0.01em; }
 .hl-app-barre svg { color: #f00; }
 .hl-app-video { position: relative; display: grid; place-items: center; aspect-ratio: 16 / 9; background: var(--encre); color: #fff; }
-.hl-app-video i { position: absolute; left: 0; bottom: 0; width: 100%; height: 3px; background: #fff; transform-origin: left; transform: scaleX(0); }
+.hl-app-video i { position: absolute; left: 0; bottom: 0; width: 100%; height: 3px; background: #ff0033; transform-origin: left; transform: scaleX(0); }
 .hl-app-video i[data-joue] { transform: scaleX(.3); transition: transform 2.2s linear; }
 .hl-app-corps { display: flex; flex-direction: column; gap: 10px; padding: 14px; }
 .hl-app-trait { display: block; height: 9px; border-radius: 4px; background: #e6e6e6; }
 .hl-app-ligne { display: flex; align-items: center; gap: 10px; margin-top: 6px; }
 .hl-app-rond { flex: none; width: 30px; height: 30px; border-radius: 50%; background: #e6e6e6; }
 .hl-app-abonne { margin-left: auto; padding: 6px 10px; border-radius: 8px; background: var(--encre); color: #fff; font-size: 12px; font-weight: 600; white-space: nowrap; transition: background-color .25s, color .25s; }
+/* Le rouge de YouTube s'allume quand ça marche ; « Abonné » repasse au gris, comme dans la vraie app. */
+.hl-app-abonne:not([data-fait]) { background: #cc0000; color: #fff; }
 .hl-app-abonne[data-fait] { background: #f0f0f0; color: var(--encre); }
 .hl-app-suite { display: flex; flex-direction: column; gap: 12px; padding: 6px 14px 14px; border-top: 1px solid var(--filet); }
 .hl-app-suite li { display: flex; gap: 10px; padding-top: 6px; }
@@ -596,7 +626,10 @@ html:has(.hl-reserver input:focus) { overflow-anchor: none; }
   .hl-chapitre p { margin-top: 10px; max-width: 46ch; font-size: 18px; color: var(--gris); transition: color .45s; }
   .hl-chapitre[data-lu] .hl-h3 { color: var(--encre); }
   .hl-chapitre[data-lu] p { color: var(--encre-2); }
-  .hl-chapitre .hl-revoir { margin-top: 14px; }
+  /* Un seul « Revoir » à la fois : celui du chapitre lu. */
+  .hl-chapitre .hl-revoir { margin-top: 14px; transition: opacity .3s, color .15s; }
+  .hl-chapitre:not([data-lu]) .hl-revoir { opacity: 0; }
+  .hl-chapitre .hl-revoir:focus-visible { opacity: 1; }
   .hl-colle { position: sticky; top: max(84px, calc(50vh - 260px)); display: flex; justify-content: center; }
 }
 
@@ -647,11 +680,16 @@ html:has(.hl-reserver input:focus) { overflow-anchor: none; }
   overflow-x: auto; scroll-snap-type: x mandatory; scroll-padding-inline: var(--bord); overscroll-behavior-x: contain; scrollbar-width: none;
 }
 .hl-rail::-webkit-scrollbar { display: none; }
+/* Le rail entre une fois : les téléphones glissent de 24 px, les six premiers l'un après l'autre. */
+@media (scripting: enabled) and (prefers-reduced-motion: no-preference) {
+  .hl-rail-item { transition: opacity .5s var(--ease), transform .5s var(--ease); transition-delay: var(--d, 0ms); }
+  .hl-rail:not([data-vu]) .hl-rail-item { opacity: 0; transform: translateX(24px); }
+}
 .hl-rail-item { flex: none; width: 210px; display: flex; flex-direction: column; gap: 12px; scroll-snap-align: start; content-visibility: auto; contain-intrinsic-size: 210px 480px; }
 .hl-rail-item p { display: flex; flex-direction: column; font-size: 14px; line-height: 1.4; }
 .hl-couleurs {
   margin-top: 64px; display: grid; grid-template-areas: 'texte' 'tel' 'reglage'; gap: 24px;
-  padding: 28px 22px; border: 1px solid var(--filet); border-radius: 16px;
+  padding: 28px 22px; border: 1px solid var(--filet); border-radius: 16px; background: #fff;
 }
 .hl-couleurs-texte { grid-area: texte; }
 .hl-couleurs-reglage { grid-area: reglage; }
@@ -659,7 +697,7 @@ html:has(.hl-reserver input:focus) { overflow-anchor: none; }
 /* Au téléphone, l'aperçu ne garde que le haut de la page (avatar, nom, deux boutons) : il tient dans l'écran avec les pastilles. */
 @media (max-width: 899px) {
   .hl-couleurs-tel .hl-tel { --l: 220px !important; --z: .5641 !important; }
-  .hl-couleurs-tel { max-height: 344px; overflow: hidden; -webkit-mask-image: linear-gradient(#000 80%, transparent); mask-image: linear-gradient(#000 80%, transparent); }
+  .hl-couleurs-tel { max-height: 300px; overflow: hidden; -webkit-mask-image: linear-gradient(#000 80%, transparent); mask-image: linear-gradient(#000 80%, transparent); }
 }
 .hl-couleurs-reglage > .hl-lien-texte[data-cache] { visibility: hidden; }
 @media (min-width: 900px) {
@@ -671,7 +709,9 @@ html:has(.hl-reserver input:focus) { overflow-anchor: none; }
 .hl-nuances { display: flex; flex-direction: column; gap: 14px; margin: 0 0 18px; }
 .hl-nuances fieldset { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 0; padding: 0; border: 0; min-width: 0; }
 .hl-nuances legend { width: 100%; margin-bottom: 2px; padding: 0; font-size: 14px; color: var(--gris); }
-@media (min-width: 480px) { .hl-nuances fieldset { flex-wrap: nowrap; } .hl-nuances legend { float: left; width: 76px; margin: 0; } }
+@media (min-width: 375px) { .hl-nuances fieldset { flex-wrap: nowrap; } .hl-nuances legend { float: left; width: 68px; margin: 0; } }
+/* L'aperçu change en douceur ; la règle ne vise que lui, pas la page publique. */
+.hl-couleurs-tel :is(.lp, .lp-btn, .lp-carte) { transition: background-color .4s var(--ease), color .4s var(--ease), border-color .4s var(--ease); }
 .hl-nuance { width: 44px; height: 44px; padding: 0; border: 1px solid rgb(0 0 0 / .12); border-radius: 12px; cursor: pointer; transition: box-shadow .15s, transform .15s; }
 .hl-nuance:hover { transform: scale(1.06); }
 .hl-nuance[aria-pressed='true'] { box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--encre); }
@@ -749,7 +789,7 @@ html:has(.hl-reserver input:focus) { overflow-anchor: none; }
 /* L'offre Pro, sur le bleu de Hopla. */
 .hl-offre-pro {
   --papier: #1f35ff; --encre: #fff; --encre-2: #fff; --gris: #dde2ff; --filet: rgb(255 255 255 / .24); --pale: rgb(255 255 255 / .14); --accent: #ffd400;
-  border-color: transparent; background: var(--papier); color: var(--encre); box-shadow: 0 30px 60px -30px rgb(31 53 255 / .7);
+  border-color: transparent; background: var(--papier); color: var(--encre); box-shadow: 0 24px 48px -28px rgb(31 53 255 / .45);
 }
 .hl-offre-pro li svg { color: var(--accent); }
 .hl-offre-pro .hl-periode button[aria-checked='true'] { background: #fff; color: #1f35ff; box-shadow: none; }
@@ -774,6 +814,11 @@ html:has(.hl-reserver input:focus) { overflow-anchor: none; }
 .hl-question summary svg { flex: none; transition: transform .25s var(--ease); }
 .hl-question[open] summary svg { transform: rotate(45deg); }
 .hl-question p { max-width: 48ch; padding-bottom: 22px; color: var(--gris); text-wrap: pretty; }
+/* La réponse s'ouvre ; là où `::details-content` manque, elle paraît d'un coup, comme avant. */
+.hl-questions { interpolate-size: allow-keywords; }
+.hl-question::details-content { block-size: 0; overflow: clip; transition: block-size .3s var(--ease), content-visibility .3s allow-discrete; }
+.hl-question[open]::details-content { block-size: auto; }
+.hl-question[open] p { animation: hl-fondu .25s ease both; }
 .hl-dernier { display: flex; flex-direction: column; align-items: center; gap: 28px; text-align: center; }
 .hl-h2-grand { max-width: 21ch; font-size: clamp(38px, 6vw, 72px); line-height: 1.02; }
 .hl-dernier > div { width: 100%; max-width: 560px; }
@@ -793,8 +838,10 @@ html:has(.hl-reserver input:focus) { overflow-anchor: none; }
   .hl-apparait { animation: hl-monte-un-peu .7s var(--ease) both; animation-delay: var(--d, 0ms); }
 }
 @media (scripting: enabled) and (prefers-reduced-motion: no-preference) {
-  .hl-entre { transition: opacity .7s var(--ease), transform .7s var(--ease); transition-delay: var(--d, 0ms); }
-  .hl-entre:not([data-vu]) { opacity: 0; transform: translateY(18px); }
+  .hl-entre { transition: opacity .45s var(--ease), transform .45s var(--ease); transition-delay: var(--d, 0ms); }
+  .hl-entre:not([data-vu]) { opacity: 0; transform: translateY(8px); }
+  /* La scène des trois téléphones garde son `data-vu` pour l'éventail, sans fondu de plus. */
+  .hl-scene.hl-entre:not([data-vu]) { opacity: 1; transform: none; }
 }
 
 @keyframes hl-mot { from { opacity: 0; transform: translateY(.35em); filter: blur(4px); } }

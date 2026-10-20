@@ -26,7 +26,8 @@ export function EcranPage({ page }: { page: PagePublique }) {
 
 /*
  * Les croquis : des écrans dessinés en gris, le lien mis en avant en noir,
- * pour lire un mouvement sans être distrait par un thème.
+ * pour lire un mouvement sans être distrait par un thème. Dans « Le bon lien,
+ * au bon moment » (`.hl-tel-vivante`), ce que Hopla vient de faire passe au bleu.
  */
 
 export function CroquisTete({ nom = 'Marie Lambert' }: { nom?: string }) {

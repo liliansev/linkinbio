@@ -46,7 +46,7 @@ const LEGENDES: Record<Cote, string> = {
 };
 
 export function DansApp() {
-  const [ref, vu] = useVu<HTMLDivElement>(0.6);
+  const [ref, vu] = useVu<HTMLDivElement>(0.85);
   const [cote, setCote] = useState<Cote>('sans');
   const [jeu, setJeu] = useState(0);
   const [auto, setAuto] = useState(true);
@@ -152,19 +152,24 @@ const ORDRE: Chapitre[] = ['heure', 'rebours', 'drop'];
 
 const deux = (n: number) => String(n).padStart(2, '0');
 
+/** Les trois liens de Marie selon l'heure : le soir, « Ma boutique » monte de la dernière place à la première. */
+const LIENS_HEURE: Record<string, { titre: string; picto: string }> = {
+  atelier: { titre: 'Réserver un atelier', picto: 'agenda' },
+  tiktok: { titre: 'Mon dernier TikTok', picto: 'tiktok' },
+  boutique: { titre: 'Ma boutique', picto: 'panier' },
+};
+
 function EcranHeure({ heure }: { heure: number }) {
   const liste = useRef<HTMLDivElement>(null);
   const soir = heure >= 18;
-  useGlisse(liste, soir ? 'soir' : 'matin');
+  const ordre = soir ? ['boutique', 'tiktok', 'atelier'] : ['atelier', 'tiktok', 'boutique'];
+  useGlisse(liste, ordre.join(), 550);
   return (
     <div className="hl-cq">
       <div className="hl-cq-horloge"><b>{deux(heure)}:00</b><span>{soir ? 'le soir' : 'le matin'}</span></div>
       <CroquisTete />
       <div className="hl-cq-liens" ref={liste}>
-        {soir
-          ? <CroquisLien key="boutique" cle="boutique" titre="Ma boutique" vedette picto={<Icone nom="panier" taille={14} />} data-arrive="" />
-          : <CroquisLien key="atelier" cle="atelier" titre="Réserver un atelier" vedette picto={<Icone nom="agenda" taille={14} />} />}
-        <CroquisLien key="tiktok" cle="tiktok" titre="Mon dernier TikTok" picto={<Icone nom="tiktok" taille={14} />} />
+        {ordre.map((c, k) => <CroquisLien key={c} cle={c} titre={LIENS_HEURE[c].titre} vedette={k === 0} picto={<Icone nom={LIENS_HEURE[c].picto} taille={14} />} />)}
       </div>
     </div>
   );
@@ -216,7 +221,7 @@ function EcranDrop({ drop }: { drop: number }) {
 }
 
 const CHAPITRES = [
-  { court: 'L’heure', titre: 'Selon l’heure', texte: '« Réserver un atelier » le matin en semaine, « Ma boutique » le soir. Le bon lien passe en tête tout seul.' },
+  { court: 'L’heure', titre: 'Selon l’heure', texte: '«\u00a0Réserver un atelier\u00a0» le matin en semaine, «\u00a0Ma boutique\u00a0» le soir. Le bon lien passe en tête tout seul.' },
   { court: 'Le lancement', titre: 'Avant un lancement', texte: 'Ton lien affiche un compte à rebours, sans dévoiler son adresse. À l’heure dite, il s’ouvre tout seul.' },
   { court: 'Les drops', titre: 'Des drops', texte: 'Un drop, c’est un lien réservé : il s’ouvre avec un code, ou pour les cinquante premiers. Le compteur de places se tient à jour tout seul.' },
 ];
@@ -225,7 +230,7 @@ function EcranChapitre({ i, e }: { i: number; e: EtatVivant }) {
   return i === 0 ? <EcranHeure heure={e.heure} /> : i === 1 ? <EcranRebours reste={e.rebours} /> : <EcranDrop drop={e.drop} />;
 }
 const LABELS = [
-  'Le soir, la page met « Ma boutique » en tête à la place de « Réserver un atelier ».',
+  'Le soir, la page met «\u00a0Ma boutique\u00a0» en tête à la place de «\u00a0Réserver un atelier\u00a0».',
   'Un compte à rebours, puis le lien qui s’ouvre à l’heure dite.',
   'Un lien réservé s’ouvre avec un code, et ses places se comptent.',
 ];
