@@ -166,6 +166,18 @@ button.adm-settings-row:hover { background: #f7f7f5; }
 .adm-feuille { border-radius: 16px 16px 0 0; }
 
 @media (min-width: 640px) { .adm-feuille { border-radius: 16px; } }
+/* Au téléphone, les gestes de Ma page se posent sur la barre des onglets, à portée du pouce : la page
+ * commence juste sous l'en-tête. Les deux barres font un seul socle, sous un seul trait. */
+@media (max-width: 1023px) {
+  .adm-editor-tools { position: fixed; inset-inline: 0; bottom: calc(64px + env(safe-area-inset-bottom)); z-index: 30; padding: 10px 16px 2px; border-top: 1px solid var(--adm-trait); background: #fff; }
+  .adm-editor-tools > div { max-width: 28rem; margin-inline: auto; }
+  .adm:has(.adm-editor-tools) .adm-mobile-nav { border-top-color: transparent; }
+  .adm-editor-layout { padding-bottom: 57px; }
+}
+/* Un onglet qui glisse prête son cadre à ce qui est fixe en lui : Ma page arrive en fondu, pour que ses gestes soient déjà à leur place. */
+@media (max-width: 1023px) and (prefers-reduced-motion: no-preference) {
+  .adm-onglet:has(.adm-editor-tools) { animation-name: adm-fondu; }
+}
 @media (min-width: 1024px) {
   .adm-editor-layout { display: grid; grid-template-columns: minmax(0, 1fr) 248px; align-items: start; gap: 32px; }
   .adm-editor-tools { grid-column: 2; grid-row: 1; position: sticky; top: 108px; padding: 23px; border: 1px solid var(--adm-trait); border-radius: 16px; background: var(--adm-surface); }

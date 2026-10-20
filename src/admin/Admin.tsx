@@ -15,6 +15,7 @@ import { pageNeuve } from '../lib/demarrage.ts';
 import { Icone } from '../components/Icone.tsx';
 import { BoutonCopier, classeBouton, vibrer } from './ui.tsx';
 import { Marque } from './Marque.tsx';
+import { AnneauDemarrage, noterPartage, useDemarrage } from './BienDemarrer.tsx';
 
 /*
  * Le back office. Tout s'enregistre tout seul : un bloc quand on valide sa
@@ -46,6 +47,8 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
   // Le doigt ou le focus sur le message le garde affiché : « Annuler » ne file pas pendant qu'on le vise.
   const [toastTenu, setToastTenu] = useState(false);
   const [apercu, setApercu] = useState(false);
+  // « Bien démarrer » au téléphone : l'anneau de l'en-tête ouvre sa liste dans une feuille.
+  const [demarrageOuvert, setDemarrageOuvert] = useState(false);
   const [cguAJour, setCguAJour] = useState(initial.cguAJour);
   const [abonnement, setAbonnement] = useState({ ...initial.abonnement, pro: initial.compte.pro });
   // Un compte neuf arrive sur ses premiers pas, une seule fois, et seulement tant que sa page est vide.
@@ -238,11 +241,13 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
 
   const page = useMemo(() => { const maintenant = Date.now(); return { reglages, blocs: composerMoment(blocs.filter(b => compte.principal || !TYPES_PRINCIPAL.includes(b.type)), maintenant), compte, maintenant }; }, [reglages, blocs, compte]);
   const chargerStats = useCallback((jours: number) => api.stats(jours).then(s => { if (jours === 30) setClics(Object.fromEntries(s.blocs.map(b => [b.id, b.clics]))); return s; }), [api]);
+  const demarrage = useDemarrage(reglages, blocs);
+  useEffect(() => { if (!demarrage.actif) setDemarrageOuvert(false); }, [demarrage.actif]);
 
   if (!cguAJour) return <AccepterCgu accepter={async () => { await api.accepterCgu(); setCguAJour(true); }} deconnexion={deconnexion} />;
 
   const bulle = toast && (
-    <div role="status" onPointerEnter={() => setToastTenu(true)} onPointerLeave={() => setToastTenu(false)} onFocus={() => setToastTenu(true)} onBlur={e => { if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setToastTenu(false); }} className="adm-toast fixed inset-x-4 bottom-[calc(76px+env(safe-area-inset-bottom))] z-[60] mx-auto flex max-w-sm items-center justify-between gap-3 rounded-2xl bg-white px-4 py-3 text-[14.5px] font-medium text-nuit shadow-2xl lg:bottom-6">
+    <div role="status" onPointerEnter={() => setToastTenu(true)} onPointerLeave={() => setToastTenu(false)} onFocus={() => setToastTenu(true)} onBlur={e => { if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setToastTenu(false); }} className={`adm-toast fixed inset-x-4 ${onglet === 'page' && !premiersPas ? 'bottom-[calc(134px+env(safe-area-inset-bottom))]' : 'bottom-[calc(76px+env(safe-area-inset-bottom))]'} z-[60] mx-auto flex max-w-sm items-center justify-between gap-3 rounded-2xl bg-white px-4 py-3 text-[14.5px] font-medium text-nuit shadow-2xl lg:bottom-6`}>
       <span className="flex items-center gap-2">{/* La coche confirme ; une simple information n'en a pas. */}{!toast.annuler && toast.genre !== 'info' && sauvegarde !== 'erreur' && <span aria-hidden="true"><Icone nom="ui-ok" taille={18} /></span>}{toast.texte}</span>
       {toast.annuler && <button ref={actionToast} type="button" onClick={toast.annuler} className="-my-2 min-h-11 rounded-lg px-3 font-semibold text-nuit underline decoration-nuit/30 underline-offset-4 hover:bg-nuit/10">{toast.action ?? 'Annuler'}</button>}
     </div>
@@ -293,7 +298,10 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
         <div className="mx-auto flex min-h-[72px] max-w-[1120px] items-center gap-3 px-4 lg:min-h-20 lg:px-8">
           {/* Sur ordinateur, la barre latérale et le titre disent déjà où l'on est : la barre ne garde que l'état et la page. */}
           <div className="hidden flex-1 lg:block" />
-          {reglages.profil.avatar ? <img src={reglages.profil.avatar} alt="" className="h-9 w-9 rounded-full object-cover lg:hidden" /> : <span className="grid h-9 w-9 place-items-center rounded-full bg-white/[0.06] lg:hidden"><Icone nom="utilisateur" taille={18} /></span>}
+          {/* Tant que la page n'est pas prête, l'anneau de « Bien démarrer » prend la place de la photo : la liste ne passe plus avant la page. */}
+          {onglet === 'page' && demarrage.actif
+            ? <AnneauDemarrage faites={demarrage.faites} total={demarrage.etapes.length} onClick={() => setDemarrageOuvert(true)} className="lg:hidden" />
+            : reglages.profil.avatar ? <img src={reglages.profil.avatar} alt="" className="h-9 w-9 rounded-full object-cover lg:hidden" /> : <span className="grid h-9 w-9 place-items-center rounded-full bg-white/[0.06] lg:hidden"><Icone nom="utilisateur" taille={18} /></span>}
           <div className="min-w-0 flex-1 lg:hidden">
             {/* Sur téléphone, l'en-tête porte l'adresse de la page : la copier ne prend plus une ligne au-dessus de la page. */}
             <p className="truncate text-[15px] font-semibold leading-tight" translate="no">{urlPage(compte).replace(/^https?:\/\//, '')}</p>
@@ -302,8 +310,9 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
             </p>
           </div>
           <p className={`mr-2 hidden items-center gap-1.5 text-[12px] lg:flex ${sauvegarde === 'erreur' ? 'text-red-300' : 'text-white/55'}`} role="status">{point}{indicateur}</p>
-          <span className="lg:hidden"><BoutonCopier compact texte={urlPage(compte)} label="Copier l’adresse de ta page" onCopie={() => { try { localStorage.setItem('hopla-page-partagee', '1'); } catch { /* stockage refusé */ } }} /></span>
-          <button type="button" onClick={() => setApercu(true)} className="adm-button-outline flex min-h-11 items-center gap-1.5 px-3.5 text-[13px] font-medium lg:hidden"><Icone nom="ui-oeil" taille={17} />Aperçu</button>
+          <span className="lg:hidden"><BoutonCopier compact texte={urlPage(compte)} label="Copier l’adresse de ta page" onCopie={noterPartage} /></span>
+          {/* Sous 390 px, l'œil seul : l'adresse garde la place d'être lue. */}
+          <button type="button" onClick={() => setApercu(true)} className="adm-button-outline flex min-h-11 items-center justify-center gap-1.5 px-3.5 text-[13px] font-medium max-[389px]:w-11 max-[389px]:px-0 lg:hidden"><Icone nom="ui-oeil" taille={17} className="shrink-0" /><span className="max-[389px]:sr-only">Aperçu</span></button>
           <a href={demo ? '#page' : urlPage(compte)} target={demo ? undefined : '_blank'} rel={demo ? undefined : 'noopener'} className="adm-button-outline hidden min-h-11 items-center gap-2 px-4 text-[13px] font-medium lg:flex">Voir ma page<Icone nom="ui-ouvrir" taille={15} /></a>
         </div>
       </header>
@@ -313,13 +322,15 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
       )}
 
       <div className="mx-auto max-w-[1120px] px-4 lg:px-8">
-        <main id="contenu-admin" className="mx-auto w-full pb-28 pt-6 lg:pb-12 lg:pt-9">
+        <main id="contenu-admin" className={`mx-auto w-full pb-28 lg:pb-12 lg:pt-9 ${onglet === 'page' ? 'pt-4' : 'pt-6'}`}>
           <div key={onglet} className="adm-onglet">
-          <div className="adm-page-heading">
+          {/* Au téléphone, Ma page n'affiche pas son titre : l'en-tête et la barre du bas disent déjà où l'on est. Il reste pour les lecteurs d'écran. */}
+          <div className={`adm-page-heading ${onglet === 'page' ? 'max-lg:sr-only' : ''}`}>
             <h1>{onglets.find(o => o.id === onglet)!.nom}</h1>
           </div>
           {onglet === 'page' && <MaPage compte={compte} reglages={reglages} blocs={blocs} clics={clics} onReglages={changerReglages} onOrdonner={ordonner}
-            onOuvrir={b => setEdition({ bloc: b, nouveau: false })} onAjouter={(b, enBas) => setEdition({ bloc: b, nouveau: true, enBas })} envoyerImage={d => api.envoyerImage(d)} annoncer={t => setToast(t)} />}
+            onOuvrir={b => setEdition({ bloc: b, nouveau: false })} onAjouter={(b, enBas) => setEdition({ bloc: b, nouveau: true, enBas })} envoyerImage={d => api.envoyerImage(d)} annoncer={t => setToast(t)}
+            demarrage={demarrageOuvert} fermerDemarrage={() => setDemarrageOuvert(false)} />}
           {onglet === 'stats' && <OngletStats charger={chargerStats} limite={initial.paiement && !compte.pro} onPro={versAbonnement}
             ouvrirApps={reglages.ouvrirApps} onActiverApps={() => changerReglages({ ...reglages, ouvrirApps: true })} liste={<MaListe api={api} />} />}
           {onglet === 'reglages' && <OngletReglages reglages={reglages} compte={compte} blocs={blocs} traduire={b => setEdition({ bloc: b, nouveau: false, traduire: true })} onChange={changerReglages} onDeconnexion={deconnexion} urlExport={api.urlExport} supprimerMonCompte={api.supprimerMonCompte}

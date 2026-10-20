@@ -27,7 +27,7 @@ import { BoutonPrincipal, BoutonSecondaire, Feuille, Interrupteur, preparerImage
  * choisir (Lilian, 18 octobre 2026).
  */
 
-export function MaPage({ compte, reglages, blocs, clics, onReglages, onOrdonner, onOuvrir, onAjouter, envoyerImage, annoncer }: {
+export function MaPage({ compte, reglages, blocs, clics, onReglages, onOrdonner, onOuvrir, onAjouter, envoyerImage, annoncer, demarrage, fermerDemarrage }: {
   compte: PagePublique['compte'];
   reglages: Reglages;
   blocs: Bloc[];
@@ -40,6 +40,9 @@ export function MaPage({ compte, reglages, blocs, clics, onReglages, onOrdonner,
   envoyerImage: (d: string) => Promise<string>;
   /** Un message en bas de l'écran, avec son Annuler. */
   annoncer: (t: { texte: string; annuler?: () => void; genre?: 'ok' | 'info'; long?: boolean }) => void;
+  /** « Bien démarrer », ouvert depuis l'anneau de l'en-tête du téléphone. */
+  demarrage: boolean;
+  fermerDemarrage: () => void;
 }) {
   const [feuille, setFeuilleBrute] = useState<'design' | 'reseaux' | 'ajout' | null>(null);
   // Les réglages au moment où la feuille de design ou des réseaux s'ouvre : « Annuler » y revient.
@@ -149,24 +152,25 @@ export function MaPage({ compte, reglages, blocs, clics, onReglages, onOrdonner,
 
   return (
     <div className="adm-editor-layout">
-      {/* Les deux gestes de la page, en tête, sur téléphone comme sur ordinateur : rien ne flotte au-dessus des onglets. */}
+      {/* Les deux gestes de la page : à droite sur ordinateur ; au téléphone, posés sur la barre des onglets, à portée du pouce, pour que la page commence sous l'en-tête. */}
       <aside className="adm-editor-tools" aria-label="Outils de la page">
-        <div className="grid grid-cols-2 gap-2 lg:grid-cols-1 lg:gap-2.5">
-          <BoutonPrincipal onClick={() => { vibrer(5); setFeuille('ajout'); }} aria-keyshortcuts="A" title="Ajouter (A, ou colle une adresse)"><Icone nom="ui-plus" taille={17} />Ajouter un bloc</BoutonPrincipal>
-          <BoutonSecondaire onClick={design}><Icone nom="palette" taille={17} />Personnaliser</BoutonSecondaire>
+        {/* Ajouter prend la place qui reste ; sur un écran étroit, il se dit en un mot plutôt que sur deux lignes. */}
+        <div className="grid grid-cols-[1fr_auto] gap-2 whitespace-nowrap lg:grid-cols-1 lg:gap-2.5">
+          <BoutonPrincipal onClick={() => { vibrer(5); setFeuille('ajout'); }} aria-keyshortcuts="A" title="Ajouter (A, ou colle une adresse)"><Icone nom="ui-plus" taille={17} className="shrink-0" /><span>Ajouter<span className="max-[359px]:hidden"> un bloc</span></span></BoutonPrincipal>
+          <BoutonSecondaire onClick={design}><Icone nom="palette" taille={17} className="shrink-0" />Personnaliser</BoutonSecondaire>
           <button type="button" onClick={() => setFeuille('reseaux')} className="adm-button-outline hidden min-h-11 items-center justify-center gap-2 px-4 text-[13px] font-medium lg:flex"><Icone nom="globe" taille={17} />Réseaux sociaux</button>
         </div>
       </aside>
 
       <div className="adm-editor-content">
 
-      {/* L'adresse et « Bien démarrer » d'abord : ce qui reste à faire se voit sans dérouler toute la page. */}
-      <HautLiens compte={compte} reglages={reglages} blocs={blocs} aller={aller} annoncer={annoncer} />
+      {/* L'adresse et « Bien démarrer » d'abord, sur ordinateur : ce qui reste à faire se voit sans dérouler toute la page. */}
+      <HautLiens compte={compte} reglages={reglages} blocs={blocs} aller={aller} annoncer={annoncer} feuille={demarrage} fermerFeuille={fermerDemarrage} />
 
       {/* Sur ordinateur, la feuille de design se pose à droite : la page glisse à gauche pour rester visible en entier. */}
       <div>
         <div ref={toile}
-          className="adm-apercu adm-toile relative overflow-hidden rounded-[24px] lg:rounded-[28px]">
+          className="adm-apercu adm-toile relative scroll-mt-24 overflow-hidden rounded-[24px] lg:rounded-[28px]">
           <PageLiens page={{ reglages, blocs: visibles, compte }} edition={edition} />
           {/* Le geste s'écrit sur la page même, dans sa couleur, en haut à gauche : pas une ligne de plus au-dessus d'elle. */}
           {astuce && <p className="pointer-events-none absolute top-4 left-4 right-16 text-[13px] font-medium leading-snug lg:left-6" style={{ color: variablesTheme(themeDe(reglages))['--doux'] }}>{visibles.length < 2 ? <><span className="lg:hidden">Touche pour modifier.</span><span className="hidden lg:inline">Clique pour modifier.</span></> : <><span className="lg:hidden">Touche pour modifier, maintiens pour déplacer.</span><span className="hidden lg:inline">Clique pour modifier, fais glisser pour déplacer.</span></>}</p>}

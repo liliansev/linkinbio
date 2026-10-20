@@ -16,7 +16,7 @@ La personne travaille sur sa propre page, observe son activité ou règle son co
 
 **STORY:** la personne voit où elle est, comprend si son travail est enregistré et accède au geste utile. Elle modifie directement sa page, consulte les données ou ouvre le groupe de réglages concerné.
 
-**FIRST VIEWPORT:** sur desktop, la marque et la navigation à gauche, la barre supérieure et le contenu sous un titre explicite, sans description sous le titre ni fil d'Ariane. Dans Ma page, contenu éditable à gauche et outils à droite. Sur mobile, adresse et sauvegarde dans l'en-tête, outils compacts avant la page et navigation basse. Les statistiques et réglages utilisent l'espace sans téléphone décoratif permanent.
+**FIRST VIEWPORT:** sur desktop, la marque et la navigation à gauche, la barre supérieure et le contenu sous un titre explicite, sans description sous le titre ni fil d'Ariane. Dans Ma page, contenu éditable à gauche et outils à droite. Sur mobile, adresse, sauvegarde et Bien démarrer dans l'en-tête, la page juste dessous, ses deux gestes posés sur la navigation basse. Les statistiques et réglages utilisent l'espace sans téléphone décoratif permanent.
 
 **FORM:** continuation code-led du patch existant, reprise du brief et de l'implémentation. Aucun tirage de direction, classement ou seed n'a été créé pour cette documentation.
 
@@ -24,7 +24,7 @@ La personne travaille sur sa propre page, observe son activité ou règle son co
 
 ## Screen invariants
 
-- **Ma page:** la vraie page est éditable. Les outils sont en colonne à droite à partir de (1024px), avec une largeur de (248px) et une position sticky ; sous ce seuil, Ajouter un bloc et Personnaliser forment une rangée compacte. Les réseaux restent accessibles par la page et les feuilles. Le nom, la bio, les blocs et leurs gestes ne sont pas remplacés par une seconde maquette.
+- **Ma page:** la vraie page est éditable. Les outils sont en colonne à droite à partir de (1024px), avec une largeur de (248px) et une position sticky ; sous ce seuil, Ajouter un bloc et Personnaliser forment une rangée posée sur la barre des onglets, et le titre Ma page n'est lu que par les lecteurs d'écran. Bien démarrer y devient un anneau dans l'en-tête, à la place de la photo, qui ouvre ses étapes dans une feuille : la page commence juste sous l'en-tête. Les réseaux restent accessibles par la page et les feuilles. Le nom, la bio, les blocs et leurs gestes ne sont pas remplacés par une seconde maquette.
 - **Personnalisation:** les feuilles Design et Réseaux laissent juger le résultat. Sur mobile, un aperçu en direct occupe l'espace au-dessus de la feuille ; sur desktop, une feuille latérale de (400px) garde la page visible. Annuler revient à l'état conservé à l'ouverture ; Terminé ferme la feuille.
 - **Statistiques:** KPI en premier, jusqu'à quatre colonnes ; activité et résumé se mettent côte à côte sur grand écran, puis viennent les répartitions. La courbe, les tendances et les chiffres restent interprétables sans dépendre d'une couleur.
 - **Réglages:** les groupes s'appellent Ta page, Préférences et Ton compte. Une ligne mène au détail ou porte une bascule. Le détail conserve un retour explicite et restitue le focus. L'abonnement s'affiche selon les droits et la configuration.

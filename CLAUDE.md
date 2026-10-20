@@ -50,7 +50,9 @@ embarque tout : l'image n'a pas de `node_modules`.
   tapés en place, photo, réseaux et blocs ouverts d'un toucher, blocs déplacés en
   les maintenant), le design s'ouvre dans une feuille `cote` qui laisse voir la page,
   et la liste d'avant (`OngletLiens`) reste à un toucher. En tête, `BienDemarrer.tsx` :
-  l'adresse à copier ou partager, et les étapes d'une page prête (`lib/demarrage.ts`).
+  l'adresse à copier ou partager, et les étapes d'une page prête (`lib/demarrage.ts`) ;
+  au téléphone, un anneau dans l'en-tête ouvre ces étapes dans une feuille, et Ajouter
+  et Personnaliser se posent sur la barre des onglets : la page commence sous l'en-tête.
   Un compte neuf, juste après les CGU, passe par `PremiersPas.tsx` (nom et bio, liens,
   réseaux, ambiance, page en ligne), avec sa page en miniature qui se remplit ; une
   seule fois, et seulement tant que la page est vide (`pageNeuve`).
