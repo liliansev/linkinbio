@@ -1,8 +1,9 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { MOTIFS_SIGNALEMENT } from '../lib/legal.ts';
 import { envoyerSignalement } from '../server/fonctions.ts';
+import { avecJeton, preparerTurnstile } from '../lib/turnstile.ts';
 import { BoutonPrincipal, Champ, classeSaisie } from '../admin/ui.tsx';
 
 /*
@@ -23,11 +24,12 @@ function PageSignaler() {
   const [bonneFoi, setBonneFoi] = useState(false);
   const [envoi, setEnvoi] = useState(false);
   const [resultat, setResultat] = useState<{ ok: boolean; message: string } | null>(null);
+  useEffect(() => preparerTurnstile('signalement'), []);
 
   async function envoyer(e: FormEvent) {
     e.preventDefault();
     setEnvoi(true);
-    try { setResultat(await envoyerSignalement({ data: { page, motif, details, email, bonneFoi } })); }
+    try { setResultat(await avecJeton('signalement', jeton => envoyerSignalement({ data: { page, motif, details, email, bonneFoi, jeton } }))); }
     catch { setResultat({ ok: false, message: 'Le serveur ne répond pas. Réessaie dans un instant.' }); }
     setEnvoi(false);
   }

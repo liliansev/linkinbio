@@ -1,5 +1,10 @@
-import { lookup } from 'node:dns/promises';
+import { lookup as resoudreDns } from 'node:dns';
+import type { LookupAddress } from 'node:dns';
+import { request as requeteHttp } from 'node:http';
+import type { IncomingMessage } from 'node:http';
+import { request as requeteHttps } from 'node:https';
 import { BlockList, isIP } from 'node:net';
+import type { LookupFunction } from 'node:net';
 
 /*
  * L'aperçu d'un site, pour habiller un lien mis en avant : son titre, sa
@@ -30,34 +35,64 @@ export function estPrivee(ip: string): boolean {
   return RESERVEES.check(ip, famille === 4 ? 'ipv4' : 'ipv6');
 }
 
-async function verifier(url: URL) {
-  if (url.protocol !== 'https:' && url.protocol !== 'http:') throw new Error('Adresse refusée.');
-  const adresses = isIP(url.hostname) ? [{ address: url.hostname }] : await lookup(url.hostname, { all: true });
-  if (!adresses.length || adresses.some(a => estPrivee(a.address))) throw new Error('Adresse refusée.');
+type Resolveur = (hote: string, options: { all: true }, rappel: (erreur: NodeJS.ErrnoException | null, adresses: LookupAddress[]) => void) => void;
+
+/**
+ * La résolution DNS de la connexion elle-même, qui refuse un nom dont une seule
+ * adresse est privée. Vérifier d'abord, puis laisser `fetch` résoudre de nouveau,
+ * laisserait un serveur DNS répondre une adresse publique à la vérification et
+ * 127.0.0.1 à la connexion.
+ */
+export const resolutionPublique = (resoudre: Resolveur = resoudreDns as Resolveur): LookupFunction => (hote, options, rappel) => {
+  resoudre(hote, { all: true }, (erreur, adresses) => {
+    if (erreur) return rappel(erreur, '', 0);
+    if (!adresses.length || adresses.some(a => estPrivee(a.address))) return rappel(Object.assign(new Error('Adresse refusée.'), { code: 'EREFUSEE' }), '', 0);
+    if (options.all) return rappel(null, adresses);
+    const famille = options.family === 'IPv4' ? 4 : options.family === 'IPv6' ? 6 : options.family;
+    const choisie = adresses.find(a => !famille || a.family === famille) ?? adresses[0];
+    rappel(null, choisie.address, choisie.family);
+  });
+};
+
+/** Une requête GET, sans suivre de redirection, qui ne se connecte qu'à une adresse publique. */
+function obtenir(url: URL, accepte: string): Promise<IncomingMessage> {
+  if (url.protocol !== 'https:' && url.protocol !== 'http:') return Promise.reject(new Error('Adresse refusée.'));
+  // Une adresse IP écrite telle quelle ne passe pas par la résolution : elle se vérifie ici.
+  const hote = url.hostname.replace(/^\[|\]$/g, '');
+  if (isIP(hote) && estPrivee(hote)) return Promise.reject(new Error('Adresse refusée.'));
+  return new Promise((ok, ko) => {
+    const requete = (url.protocol === 'https:' ? requeteHttps : requeteHttp)(url, {
+      method: 'GET', agent: false, lookup: resolutionPublique(), signal: AbortSignal.timeout(DELAI),
+      headers: { accept: accepte, 'user-agent': 'Mozilla/5.0 (compatible; Hopla/1.0; +https://hopla.page)' },
+    }, ok);
+    requete.on('error', ko);
+    requete.end();
+  });
 }
 
 /** Télécharge en suivant au plus quatre redirections, chacune vérifiée, sans dépasser `limite` octets. */
 async function telecharger(depart: string, limite: number, accepte: string) {
   let url = new URL(depart);
   for (let saut = 0; saut < 5; saut++) {
-    await verifier(url);
-    const reponse = await fetch(url, {
-      redirect: 'manual', signal: AbortSignal.timeout(DELAI),
-      headers: { accept: accepte, 'user-agent': 'Mozilla/5.0 (compatible; Hopla/1.0; +https://hopla.page)' },
-    });
-    if (reponse.status >= 300 && reponse.status < 400 && reponse.headers.get('location')) {
-      url = new URL(reponse.headers.get('location')!, url);
+    const reponse = await obtenir(url, accepte);
+    const statut = reponse.statusCode ?? 0;
+    const suite = reponse.headers.location;
+    if (statut >= 300 && statut < 400 && suite) {
+      reponse.destroy();
+      url = new URL(suite, url);
       continue;
     }
-    if (!reponse.ok || !reponse.body) throw new Error(`Réponse ${reponse.status}`);
-    const morceaux: Uint8Array[] = [];
+    if (statut < 200 || statut >= 300) { reponse.destroy(); throw new Error(`Réponse ${statut}`); }
+    const morceaux: Buffer[] = [];
     let total = 0;
-    for await (const morceau of reponse.body as unknown as AsyncIterable<Uint8Array>) {
+    for await (const morceau of reponse as AsyncIterable<Buffer>) {
       total += morceau.length;
-      if (total > limite) throw new Error('Fichier trop lourd.');
+      if (total > limite) { reponse.destroy(); throw new Error('Fichier trop lourd.'); }
       morceaux.push(morceau);
     }
-    return { octets: Buffer.concat(morceaux), type: reponse.headers.get('content-type') ?? '', url: url.toString() };
+    // Coupée par le délai, une réponse peut s'arrêter en route sans erreur.
+    if (!reponse.complete) throw new Error('Réponse incomplète.');
+    return { octets: Buffer.concat(morceaux), type: reponse.headers['content-type'] ?? '', url: url.toString() };
   }
   throw new Error('Trop de redirections.');
 }

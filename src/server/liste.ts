@@ -1,4 +1,6 @@
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'node:crypto';
+import { MINUTE, cleIp, limiteur } from './limites.ts';
+import { MESSAGE_ROBOT, verifierTurnstile } from './turnstile.ts';
 import type { FournisseurListe, IntegrationListe } from '../lib/types.ts';
 import { email as validerEmail } from '../lib/valider.ts';
 import * as db from './db.ts';
@@ -112,20 +114,14 @@ export function resumeIntegration(env: Env, compte: string): IntegrationListe | 
   return { fournisseur: integ.fournisseur, liste: integ.liste, nom: integ.nom, cle: cle ? `•••• ${cle.slice(-4)}` : '' };
 }
 
-const recents = new Map<string, number[]>();
-/** Au plus 5 inscriptions par 10 minutes et par adresse IP. */
-function tropRapide(ip: string, maintenant: number) {
-  const l = (recents.get(ip) ?? []).filter(t => maintenant - t < 600_000);
-  l.push(maintenant);
-  recents.set(ip, l);
-  if (recents.size > 5000) recents.clear();
-  return l.length > 5;
-}
+/** Au plus 5 inscriptions par 10 minutes et par adresse IP (un /64 en IPv6). */
+const recents = limiteur([5, 10 * MINUTE]);
+const tropRapide = (ip: string, maintenant: number) => recents(cleIp(ip), maintenant);
 
 const MESSAGE_OK = 'C’est noté, merci !';
 
 /** Le formulaire d'une page : vérifie, garde l'inscrit, l'envoie chez le fournisseur. */
-export async function inscrire(env: Env, fetchImpl: typeof fetch, entree: Record<string, unknown>, contexte: { ip: string; ua: string; referent: string }, maintenant = Date.now()): Promise<{ status: number; message: string }> {
+export async function inscrire(env: Env, fetchImpl: typeof fetch, entree: Record<string, unknown>, contexte: { ip: string; ua: string; referent: string; hotes?: Set<string> }, maintenant = Date.now()): Promise<{ status: number; message: string }> {
   // Le champ caché qu'un humain ne remplit pas.
   if (entree.website) return { status: 200, message: MESSAGE_OK };
   const adresse = validerEmail(entree.email);
@@ -138,6 +134,8 @@ export async function inscrire(env: Env, fetchImpl: typeof fetch, entree: Record
   if (!droits(compte, env, maintenant).listeEmail) return { status: 404, message: 'Ce formulaire n’existe plus.' };
   const bloc = db.lireBlocs(compte.id).find(b => b.id === entree.bloc && b.type === 'inscription' && b.public);
   if (!bloc) return { status: 404, message: 'Ce formulaire n’existe plus.' };
+  // Une adresse gardée part parfois chez Brevo ou Mailchimp, qui lui écrivent : un robot n'en inscrit pas à la chaîne.
+  if (!(await verifierTurnstile(env, fetchImpl, { jeton: entree.jeton, action: 'liste', ip: contexte.ip, hotes: contexte.hotes ?? new Set() }, maintenant))) return { status: 403, message: MESSAGE_ROBOT };
   if (db.contactsDuJour(compte.id, maintenant) >= 2000) return { status: 429, message: 'Trop d’inscriptions aujourd’hui. Réessaie demain.' };
   const prenom = bloc.demanderPrenom && typeof entree.prenom === 'string' ? entree.prenom.replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, 60) : '';
   const contact = db.ajouterContact(compte.id, { email: adresse, prenom, source: source(typeof entree.utm === 'string' ? entree.utm : '', contexte.referent, contexte.ua), bloc: bloc.id }, maintenant);

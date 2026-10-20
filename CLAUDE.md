@@ -16,7 +16,7 @@ pnpm dev         # vite sur localhost:4400
 pnpm build       # dist/client et dist/server ; régénère src/routeTree.gen.ts (ignoré par git)
 pnpm typecheck   # après un build
 pnpm test        # tests de l'app (src/**/*.test.ts) puis du serveur (deploy/server.test.mjs)
-pnpm start       # deploy/server.mjs sur dist/ (PORT, LIENS_DB, LIENS_ORIGINE, LIENS_ORIGINE_ADMIN, CONTACT_TO, LIENS_INSCRIPTION)
+pnpm start       # deploy/server.mjs sur dist/ (PORT, LIENS_DB, LIENS_ORIGINE, LIENS_ORIGINE_ADMIN, CONTACT_TO, LIENS_INSCRIPTION, LIENS_CLOUDFLARE)
 ```
 
 Sans `RESEND_API_KEY` ni `NODE_ENV=production`, les liens de connexion s'affichent
@@ -42,7 +42,13 @@ embarque tout : l'image n'a pas de `node_modules`.
 - `server/auth.ts` (liens magiques de 15 minutes, sessions de 90 jours),
   `server/courriel.ts` (Resend), `server/analytique.ts` (stats sans cookie, IP
   jamais stockée), `server/moderation.ts` (DSA), `server/creem.ts` (paiement,
-  webhooks signés), `server/apercu.ts` (aperçu de site, anti-SSRF).
+  webhooks signés), `server/apercu.ts` (aperçu de site, anti-SSRF : l'adresse se
+  vérifie au moment de la connexion).
+- `server/limites.ts` : les limites anti-abus en mémoire (`limiteur`, `cleIp` qui
+  compte une IPv6 pour son /64) et `destinataireSature`, cinq e-mails par heure et
+  dix par jour vers une adresse tapée par un inconnu. `server/turnstile.ts` vérifie
+  le jeton Turnstile des formulaires publics, que `lib/turnstile.ts` obtient dans la
+  page (`avecJeton`) ; en sommeil sans `TURNSTILE_SITE_KEY` et `TURNSTILE_SECRET`.
 - `lib/` : `types.ts` (origines, `cheminPage`, `urlPage`), `valider.ts`, `themes.ts`, `legal.ts` (`VERSION_CGU`),
   `abonnement.ts` (les quatre offres Gratuit, Starter, Pro, Premium : prix, `peut()`, `estPaye()`), `droits.ts`
   (`selonDroits` retire de la page publique ce que l'offre ne comprend pas, sans rien effacer).
@@ -80,6 +86,8 @@ embarque tout : l'image n'a pas de `node_modules`.
 - Le back office est en noir et blanc (19 octobre 2026) : dans `.adm`, `white` est l'encre et `nuit` le papier (voir `src/styles/admin.css`). Un texte posé sur un bouton noir s'écrit donc `text-nuit` ; sur un bouton rouge, `text-nuit` aussi. Pas d'accent de couleur hors des alertes ; les thèmes de la page publique n'en dépendent pas.
 - Pictos Phosphor pleins, d'une seule couleur (sans dégradé ni duotone), jamais d'emojis. Les signes de commande du back office (`ui-*` : fermer, ajouter, chevrons, coche, flèches, copier) restent au trait, et les deux ne se mêlent pas dans une même rangée. Une icône nommée qui n'existe pas fait échouer `pnpm test` (`src/lib/icones.test.ts`).
 - Le suivi des clics Resend reste désactivé : il casse les liens magiques.
+- Un formulaire public qui fait partir un e-mail ou garde une adresse passe par Turnstile (`avecJeton` dans la page, `verifierTurnstile` sur le serveur), et tout e-mail vers une adresse tapée par un inconnu par `destinataireSature`. Une limite par adresse IP passe par `limites.ts`.
+- Chez Cloudflare, ni cookie ni défi : Bot Fight Mode éteint, des règles qui bloquent sans défier (voir `deploy/README.md`, « Cloudflare »).
 - Une offre payante (Starter, Pro, Premium) n'est accordée que par un webhook Creem signé, jamais par le retour du paiement. Les produits Creem se créent depuis l'onglet Comptes (« Créer les offres dans Creem ») : la clé a besoin des droits Products et Subscriptions.
 - Aucun secret dans le dépôt ; ils vivent dans `/opt/linkinbio/secrets/runtime.env`.
 - Ne jamais tuer un serveur local avec un `pkill -f` dont le motif correspond à sa propre commande.

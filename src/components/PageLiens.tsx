@@ -9,6 +9,7 @@ import { lienApp } from '../lib/ouvrirApp.ts';
 import { enAttente } from '../lib/moments.ts';
 import { etatPlaces } from '../lib/acces.ts';
 import { adresseSaisie } from '../lib/valider.ts';
+import { jetonTurnstile, preparerTurnstile } from '../lib/turnstile.ts';
 import { LOCALES, NOMS_LANGUES, textes } from '../lib/langues.ts';
 import type { Textes } from '../lib/langues.ts';
 import type { LangueVisiteur } from '../lib/types.ts';
@@ -409,8 +410,9 @@ function Inscription({ bloc, apercu, pseudo, t }: { bloc: Bloc; apercu: boolean;
     setEtat({ type: 'envoi' });
     try {
       const params = new URLSearchParams(location.search);
+      const jeton = await jetonTurnstile('liste');
       const r = await fetch('/api/inscription', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ page: pseudo, bloc: bloc.id, email: f.get('email'), prenom: f.get('prenom') ?? '', website: f.get('website') ?? '', utm: params.get('utm_source') ?? params.get('s') ?? '', referent: document.referrer }) });
+        body: JSON.stringify({ page: pseudo, bloc: bloc.id, email: f.get('email'), prenom: f.get('prenom') ?? '', website: f.get('website') ?? '', utm: params.get('utm_source') ?? params.get('s') ?? '', referent: document.referrer, jeton }) });
       // Les messages viennent de la page, dans la langue du visiteur ; le serveur ne donne que le statut.
       setEtat(r.ok ? { type: 'ok', message: t.merci } : { type: 'erreur', message: r.status === 400 ? t.emailInvalide : r.status === 429 ? t.tropDEssais : r.status === 404 ? t.indisponible : t.echec });
     } catch { setEtat({ type: 'erreur', message: t.echec }); }
@@ -425,7 +427,7 @@ function Inscription({ bloc, apercu, pseudo, t }: { bloc: Bloc; apercu: boolean;
         </span>
       </div>
       {etat.type === 'ok' ? <p className="lp-newsletter-ok" role="status">{etat.message}</p> : (
-        <form onSubmit={envoyer} noValidate data-prenom={bloc.demanderPrenom || undefined}>
+        <form onSubmit={envoyer} noValidate data-prenom={bloc.demanderPrenom || undefined} onFocus={apercu ? undefined : () => preparerTurnstile('liste')}>
           {bloc.demanderPrenom && <input name="prenom" autoComplete="given-name" placeholder={t.prenom} aria-label={t.prenomAria} maxLength={60} />}
           <input type="email" name="email" required autoComplete="email" placeholder={t.email} aria-label={t.emailAria} aria-invalid={etat.type === 'erreur' || undefined} aria-describedby={etat.type === 'erreur' ? `${bloc.id}-erreur` : undefined} />
           {/* Un champ que seuls les robots remplissent. */}

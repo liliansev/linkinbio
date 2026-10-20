@@ -13,6 +13,8 @@ import { composerAudience, provenance } from '../lib/provenance.ts';
 import { adresse, email, pseudo, validerBloc, validerReglages } from '../lib/valider.ts';
 import { apercuSite as lireApercu } from './apercu.ts';
 import * as db from './db.ts';
+import { MESSAGE_ROBOT, hotesTurnstile, verifierTurnstile } from './turnstile.ts';
+import type { ActionTurnstile } from '../lib/turnstile.ts';
 import { COOKIE_SESSION, DUREE_SESSION, adresseAdmin, compteDeSession, demanderConnexion, fermerSession, inviter, ouvrirSession } from './auth.ts';
 import { changerStatutMotive, signaler, supprimerMotive, traiter } from './moderation.ts';
 import { corrigerAdresse as corriger, creerHopla, inscriptionLibre, inviterReservation, renommerPage as renommer, renvoyerInscription, reserverNom as reserver, verifierNom as verifier } from './attente.ts';
@@ -47,6 +49,14 @@ function memeOrigine() {
   const o = origines();
   if (recue && recue !== o.page && recue !== o.admin && recue !== getRequestUrl().origin) throw new Error('Origine refusée');
 }
+
+/** Le jeton Turnstile d'un formulaire public : vrai s'il est bon, ou si Turnstile n'est pas branché (voir turnstile.ts). */
+const humain = (jeton: string, action: ActionTurnstile) => verifierTurnstile(process.env, fetch, {
+  jeton, action, ip: getRequestHeader('x-real-ip') ?? '', hotes: hotesTurnstile(process.env, getRequestUrl().href),
+});
+const ROBOT = { ok: false as const, message: MESSAGE_ROBOT };
+/** Le jeton qui accompagne un formulaire public, tel que le navigateur l'envoie ; au-delà de 2048 caractères, ce n'en est pas un. */
+const jetonDe = (o: { jeton?: unknown }) => (typeof o.jeton === 'string' && o.jeton.length <= 2048 ? o.jeton : '');
 
 /** Une session ouverte, conditions acceptées ou non : de quoi les accepter, exporter ses données ou partir. */
 const sessionBrute = createMiddleware({ type: 'function' }).server(async ({ next }) => {
@@ -122,10 +132,15 @@ export const lireAdmin = createServerFn({ method: 'GET' }).handler(async (): Pro
 export const chargerEtat = createServerFn({ method: 'GET' }).middleware([sessionBrute]).handler(async ({ context }) => etat(context.compte));
 
 export const demanderLien = createServerFn({ method: 'POST' })
-  .validator((data: unknown) => String(data ?? '').slice(0, 200))
+  .validator((data: unknown) => {
+    // Une page restée ouverte d'avant Turnstile envoie l'adresse seule.
+    const o = (typeof data === 'string' ? { email: data } : data ?? {}) as { email?: unknown; jeton?: unknown };
+    return { email: String(o.email ?? '').slice(0, 200), jeton: jetonDe(o) };
+  })
   .handler(async ({ data }) => {
     memeOrigine();
-    return demanderConnexion(origines(), process.env, data, fetch, Date.now(), getRequestHeader('x-real-ip') ?? '');
+    if (!(await humain(data.jeton, 'connexion'))) return ROBOT;
+    return demanderConnexion(origines(), process.env, data.email, fetch, Date.now(), getRequestHeader('x-real-ip') ?? '');
   });
 
 export const connecter = createServerFn({ method: 'POST' })
@@ -305,11 +320,12 @@ export const verifierNom = createServerFn({ method: 'GET' })
 
 export const reserverNom = createServerFn({ method: 'POST' })
   .validator((data: unknown) => {
-    const o = (data ?? {}) as { nom?: unknown; email?: unknown };
-    return { nom: String(o.nom ?? '').slice(0, 40), email: String(o.email ?? '').slice(0, 200) };
+    const o = (data ?? {}) as { nom?: unknown; email?: unknown; jeton?: unknown };
+    return { nom: String(o.nom ?? '').slice(0, 40), email: String(o.email ?? '').slice(0, 200), jeton: jetonDe(o) };
   })
   .handler(async ({ data }) => {
     memeOrigine();
+    if (!(await humain(data.jeton, 'accueil'))) return ROBOT;
     const prendre = inscriptionLibre(process.env) ? creerHopla : reserver;
     return prendre(origines(), process.env, data, fetch, Date.now(), getRequestHeader('x-real-ip') ?? '');
   });
@@ -317,33 +333,36 @@ export const reserverNom = createServerFn({ method: 'POST' })
 /** « Renvoie-le » sur l'accueil : l'e-mail de bienvenue d'une page pas encore ouverte, sinon un lien de connexion. */
 export const renvoyerLien = createServerFn({ method: 'POST' })
   .validator((data: unknown) => {
-    const o = (data ?? {}) as { nom?: unknown; email?: unknown };
-    return { nom: String(o.nom ?? '').slice(0, 40), email: String(o.email ?? '').slice(0, 200) };
+    const o = (data ?? {}) as { nom?: unknown; email?: unknown; jeton?: unknown };
+    return { nom: String(o.nom ?? '').slice(0, 40), email: String(o.email ?? '').slice(0, 200), jeton: jetonDe(o) };
   })
   .handler(async ({ data }) => {
     memeOrigine();
+    if (!(await humain(data.jeton, 'accueil'))) return ROBOT;
     return renvoyerInscription(origines(), process.env, data, fetch, Date.now(), getRequestHeader('x-real-ip') ?? '');
   });
 
 /** Juste après l'envoi, une adresse mal tapée se corrige tant que la page n'a pas été ouverte. */
 export const corrigerAdresse = createServerFn({ method: 'POST' })
   .validator((data: unknown) => {
-    const o = (data ?? {}) as { nom?: unknown; ancienne?: unknown; nouvelle?: unknown };
-    return { nom: String(o.nom ?? '').slice(0, 40), ancienne: String(o.ancienne ?? '').slice(0, 200), nouvelle: String(o.nouvelle ?? '').slice(0, 200) };
+    const o = (data ?? {}) as { nom?: unknown; ancienne?: unknown; nouvelle?: unknown; jeton?: unknown };
+    return { nom: String(o.nom ?? '').slice(0, 40), ancienne: String(o.ancienne ?? '').slice(0, 200), nouvelle: String(o.nouvelle ?? '').slice(0, 200), jeton: jetonDe(o) };
   })
   .handler(async ({ data }) => {
     memeOrigine();
+    if (!(await humain(data.jeton, 'accueil'))) return ROBOT;
     return corriger(origines(), process.env, data, fetch, Date.now(), getRequestHeader('x-real-ip') ?? '');
   });
 
 /** Juste après l'envoi, un nom mal tapé se change tant que la page n'a pas été ouverte. */
 export const renommerPage = createServerFn({ method: 'POST' })
   .validator((data: unknown) => {
-    const o = (data ?? {}) as { ancien?: unknown; nouveau?: unknown; email?: unknown };
-    return { ancien: String(o.ancien ?? '').slice(0, 40), nouveau: String(o.nouveau ?? '').slice(0, 40), email: String(o.email ?? '').slice(0, 200) };
+    const o = (data ?? {}) as { ancien?: unknown; nouveau?: unknown; email?: unknown; jeton?: unknown };
+    return { ancien: String(o.ancien ?? '').slice(0, 40), nouveau: String(o.nouveau ?? '').slice(0, 40), email: String(o.email ?? '').slice(0, 200), jeton: jetonDe(o) };
   })
   .handler(async ({ data }) => {
     memeOrigine();
+    if (!(await humain(data.jeton, 'accueil'))) return ROBOT;
     return renommer(origines(), process.env, data, fetch, Date.now(), getRequestHeader('x-real-ip') ?? '');
   });
 
@@ -418,6 +437,7 @@ export const envoyerSignalement = createServerFn({ method: 'POST' })
   .validator((data: unknown) => (data ?? {}) as Record<string, unknown>)
   .handler(async ({ data }) => {
     memeOrigine();
+    if (!(await humain(jetonDe(data), 'signalement'))) return ROBOT;
     return signaler(process.env, fetch, { page: data.page, motif: data.motif, details: data.details, email: data.email, bonneFoi: data.bonneFoi }, getRequestHeader('x-real-ip') ?? '', origines());
   });
 

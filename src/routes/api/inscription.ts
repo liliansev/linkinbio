@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { inscrire } from '../../server/liste.ts';
+import { hotesTurnstile } from '../../server/turnstile.ts';
 
 /* Le formulaire « Rejoins ma liste » d'une page. */
 export const Route = createFileRoute('/api/inscription')({
@@ -14,6 +15,7 @@ export const Route = createFileRoute('/api/inscription')({
         try { entree = JSON.parse(texte); } catch { return new Response(null, { status: 400 }); }
         const r = await inscrire(process.env, fetch, entree, {
           ip: request.headers.get('x-real-ip') ?? '', ua: request.headers.get('user-agent') ?? '', referent: typeof entree.referent === 'string' ? entree.referent : '',
+          hotes: hotesTurnstile(process.env, request.url),
         });
         return Response.json({ message: r.message }, { status: r.status, headers: { 'Cache-Control': 'no-store' } });
       },

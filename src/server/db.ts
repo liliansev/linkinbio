@@ -418,16 +418,21 @@ export function ajouterMedia(compte: string, octets: Uint8Array, extension: 'web
   return id;
 }
 
-/** Les images sont publiques (elles s'affichent sur les pages) : leur identifiant suffit à les lire. */
+/**
+ * Les images sont publiques (elles s'affichent sur les pages) : leur identifiant suffit à les lire. Celles d'un
+ * compte suspendu ne se lisent plus, comme sa page : une image signalée ne reste pas en ligne par son adresse.
+ */
 export function lireMedia(id: string, extension: string): Uint8Array | null {
-  const ligne = base().prepare('SELECT octets FROM medias WHERE id = ? AND extension = ?').get(id, extension) as { octets: Uint8Array } | undefined;
+  const ligne = base().prepare(`SELECT m.octets FROM medias m JOIN comptes c ON c.id = m.compte
+    WHERE m.id = ? AND m.extension = ? AND c.statut = 'actif'`).get(id, extension) as { octets: Uint8Array } | undefined;
   return ligne?.octets ?? null;
 }
 
 /* ---- Jetons de connexion et sessions (on ne garde que leur empreinte) ---- */
 
-export function ajouterJeton(hash: string, type: 'connexion' | 'session', dureeMs: number, compte: string) {
-  base().prepare('INSERT INTO jetons (hash, type, expire, cree, compte) VALUES (?, ?, ?, ?, ?)').run(hash, type, Date.now() + dureeMs, Date.now(), compte);
+export function ajouterJeton(hash: string, type: 'connexion' | 'session', dureeMs: number, compte: string, maintenant = Date.now()) {
+  // Une seule heure pour les deux colonnes : `expire - cree` vaut exactement la durée, que `jetonsRecents` sait trier.
+  base().prepare('INSERT INTO jetons (hash, type, expire, cree, compte) VALUES (?, ?, ?, ?, ?)').run(hash, type, maintenant + dureeMs, maintenant, compte);
 }
 
 /**
@@ -444,11 +449,14 @@ export function verifierJeton(hash: string, type: 'connexion' | 'session', conso
 
 export const supprimerJeton = (hash: string) => base().prepare('DELETE FROM jetons WHERE hash = ?').run(hash);
 
-/** Combien de liens de connexion envoyés depuis `depuis`, pour un compte ou pour tous (limites anti-abus). */
-export function jetonsRecents(depuis: number, compte?: string): { n: number; dernier: number } {
-  const filtre = compte ? ' AND compte = ?' : '';
-  return base().prepare(`SELECT COUNT(*) AS n, COALESCE(MAX(cree), 0) AS dernier FROM jetons WHERE type = 'connexion' AND cree > ?${filtre}`)
-    .get(...(compte ? [depuis, compte] : [depuis])) as { n: number; dernier: number };
+/**
+ * Combien de liens de connexion envoyés depuis `depuis`, pour un compte ou pour tous (limites anti-abus).
+ * `dureeMax` ne compte que les liens valables au plus ce temps-là (les liens de 15 minutes, pas les invitations d'une semaine).
+ */
+export function jetonsRecents(depuis: number, compte?: string, dureeMax?: number): { n: number; dernier: number } {
+  const filtres = `${compte ? ' AND compte = ?' : ''}${dureeMax ? ' AND expire - cree <= ?' : ''}`;
+  return base().prepare(`SELECT COUNT(*) AS n, COALESCE(MAX(cree), 0) AS dernier FROM jetons WHERE type = 'connexion' AND cree > ?${filtres}`)
+    .get(depuis, ...(compte ? [compte] : []), ...(dureeMax ? [dureeMax] : [])) as { n: number; dernier: number };
 }
 
 /* ---- Statistiques ---- */
@@ -456,10 +464,17 @@ export function jetonsRecents(depuis: number, compte?: string): { n: number; der
 const formatJour = new Intl.DateTimeFormat('fr-CA', { timeZone: 'Europe/Paris', year: 'numeric', month: '2-digit', day: '2-digit' });
 export const jourDe = (ts: number) => formatJour.format(ts);
 
-/** Les événements du jour, pour un compte ou pour tout le serveur. */
+/**
+ * Les événements du jour, pour un compte ou pour tout le serveur. Pour tout le serveur, la date seule obligerait
+ * à parcourir toute la table à chaque visite : on ne lit que les dernières 26 heures (index sur `ts`), le plus
+ * long des jours, changement d'heure compris.
+ */
 export function evenementsDuJour(maintenant = Date.now(), compte?: string): number {
-  const filtre = compte ? ' AND compte = ?' : '';
-  return (base().prepare(`SELECT COUNT(*) AS n FROM evenements WHERE jour = ?${filtre}`).get(...(compte ? [jourDe(maintenant), compte] : [jourDe(maintenant)])) as { n: number }).n;
+  const d = base();
+  const ligne = compte
+    ? d.prepare('SELECT COUNT(*) AS n FROM evenements WHERE jour = ? AND compte = ?').get(jourDe(maintenant), compte)
+    : d.prepare('SELECT COUNT(*) AS n FROM evenements WHERE jour = ? AND ts > ?').get(jourDe(maintenant), maintenant - 26 * 3_600_000);
+  return (ligne as { n: number }).n;
 }
 
 export function ajouterEvenement(e: { compte: string; type: 'vue' | 'clic'; bloc: string | null; visiteur: string; source: string; appareil: string; ts?: number; integre?: boolean; app?: boolean }) {

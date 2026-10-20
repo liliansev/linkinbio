@@ -3,6 +3,7 @@ import { PRINCIPAL } from '../lib/types.ts';
 import { NOMS_AUDIENCES, audienceDeLApp } from '../lib/provenance.ts';
 import { navigateurIntegre } from '../lib/ouvrirApp.ts';
 import { ajouterEvenement, compteParPseudo, evenementsDuJour, jourDe, lireBlocs, secret } from './db.ts';
+import { MINUTE, cleIp, limiteur } from './limites.ts';
 
 /*
  * Les statistiques intégrées, sans cookie ni donnée personnelle : un visiteur
@@ -44,15 +45,9 @@ export function appareil(ua: string): string {
   return 'Ordinateur';
 }
 
-const fenetre = new Map<string, number[]>();
-/** Au plus 60 événements par minute et par adresse IP (changer de navigateur ne suffit pas à passer outre). */
-function tropRapide(visiteur: string, maintenant: number) {
-  const recents = (fenetre.get(visiteur) ?? []).filter(t => maintenant - t < 60_000);
-  recents.push(maintenant);
-  fenetre.set(visiteur, recents);
-  if (fenetre.size > 5000) fenetre.clear();
-  return recents.length > 60;
-}
+/** Au plus 60 événements par minute et par adresse IP, un /64 en IPv6 (changer de navigateur ne suffit pas à passer outre). */
+const fenetre = limiteur([60, MINUTE]);
+const tropRapide = (ip: string, maintenant: number) => fenetre(cleIp(ip), maintenant);
 
 /** Le compte d'une page d'après son pseudo (vide pour la page de Lilian), s'il est en ligne. */
 function compteDePage(page: unknown): string | null {
