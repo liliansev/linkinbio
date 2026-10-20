@@ -9,7 +9,7 @@ import { PageLiens } from '../components/PageLiens.tsx';
 import { NOMS_AUDIENCES, RESEAUX_SOCIAUX, reseauxDePartage } from '../lib/provenance.ts';
 import { Icone, NOMS_RESEAUX } from '../components/Icone.tsx';
 import { Pastille } from './OngletApparence.tsx';
-import { BoutonCopier, BoutonPrincipal, copierTexte, classeBouton, classeSaisie, flechesRadio, preparerImage, vibrer } from './ui.tsx';
+import { BoutonCopier, BoutonPrincipal, choisirFichier, copierTexte, classeBouton, classeSaisie, flechesRadio, preparerImage, vibrer } from './ui.tsx';
 
 /*
  * L'arrivée d'un compte neuf, juste après les CGU : quatre questions, et la
@@ -122,12 +122,6 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
     setTimeout(() => document.getElementById(`reseau-${r}`)?.focus(), 30);
   }
 
-  // L'ambiance déjà choisie se montre d'emblée, même au bout de la rangée.
-  useEffect(() => {
-    if (etape !== 'style') return;
-    document.querySelector('[aria-label="Thème"] [aria-checked="true"]')?.scrollIntoView({ inline: 'center', block: 'nearest' });
-  }, [etape]);
-
   /* ---- La marche ---- */
   const fautifs: string[] = etape === 'liens' ? lignes.filter(l => l.url.trim() && !adresseSaisie(l.url)).map(l => l.id)
     : etape === 'reseaux' ? ouverts.filter(r => (saisies[r] ?? '').trim() && !urlReseau(r, saisies[r] ?? '')) : [];
@@ -192,7 +186,7 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
       corps: (
         <div className="flex flex-col gap-3">
           <div className="flex items-center gap-3">
-            <button type="button" onClick={() => fichier.current?.click()} className="flex shrink-0 flex-col items-center gap-1 self-start transition active:scale-95">
+            <button type="button" onClick={e => choisirFichier(fichier.current, e.currentTarget)} className="flex shrink-0 flex-col items-center gap-1 self-start transition active:scale-95">
               <span className="relative grid h-[60px] w-[60px] place-items-center overflow-hidden rounded-full bg-white/[0.08] text-white/70">
                 {reglages.profil.avatar ? <img src={reglages.profil.avatar} alt="" className="h-full w-full object-cover" /> : <Icone nom="photo" taille={24} />}
                 {envoi && <span className="absolute inset-0 grid place-items-center bg-black/55 text-[12px] text-nuit">…</span>}
@@ -292,15 +286,22 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
       titre: 'Choisis ton thème',
       aide: 'Les couleurs, la police et les boutons suivent. Les autres t’attendent dans Design.',
       corps: (
-        <ul onKeyDown={e => flechesRadio(e)} className="-mx-5 flex snap-x scroll-px-5 gap-2.5 overflow-x-auto px-5 pb-1 [scrollbar-width:none] lg:mx-0 lg:grid lg:grid-cols-4 lg:px-0" role="radiogroup" aria-label="Thème">
-          {THEMES_ACCUEIL.map(id => THEMES.find(t => t.id === id)!).map(t => {
+        // Les dix d'un coup, en deux rangées de cinq : rien ne se cache au bout d'un défilement (Lilian, 20 octobre 2026).
+        <ul onKeyDown={e => flechesRadio(e)} className="grid grid-cols-5 gap-x-2 gap-y-3.5" role="radiogroup" aria-label="Thème">
+          {THEMES_ACCUEIL.map(id => THEMES.find(t => t.id === id)!).map((t, n) => {
             const choisi = reglages.theme === t.id;
+            const aucun = !THEMES_ACCUEIL.includes(reglages.theme);
             return (
-              <li key={t.id} className="w-[98px] shrink-0 snap-start lg:w-auto">
-                <button type="button" role="radio" aria-checked={choisi} onClick={e => { vibrer(5); e.currentTarget.scrollIntoView({ inline: 'nearest', block: 'nearest', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); onReglages({ ...reglages, theme: t.id, bouton: t.conseil, couleurs: SANS_COULEURS }); }}
-                  className={`flex w-full flex-col items-center gap-1.5 rounded-2xl p-1.5 transition ${choisi ? 'bg-white/10 ring-2 ring-white' : 'hover:bg-white/[0.05]'}`}>
-                  <Pastille theme={t} />
-                  <span className="w-full truncate text-center text-[12px] text-white/75">{t.nom}</span>
+              <li key={t.id}>
+                <button type="button" role="radio" aria-checked={choisi} tabIndex={choisi || (aucun && n === 0) ? 0 : -1}
+                  onClick={() => { vibrer(5); onReglages({ ...reglages, theme: t.id, bouton: t.conseil, couleurs: SANS_COULEURS }); }}
+                  className="group flex w-full flex-col items-center gap-1.5 rounded-xl transition active:scale-95">
+                  {/* Le thème pris se reconnaît à un trait et une coche, sans fond gris autour. */}
+                  <span className={`relative block w-full rounded-xl outline-offset-2 transition-[outline-color] ${choisi ? 'outline-2 outline-white outline' : 'outline-2 outline-transparent outline group-hover:outline-white/20'}`}>
+                    <Pastille theme={t} />
+                    {choisi && <span className="absolute -right-1.5 -top-1.5 z-10 grid h-5 w-5 place-items-center rounded-full bg-white text-nuit ring-2 ring-nuit"><Icone nom="ui-ok" taille={12} /></span>}
+                  </span>
+                  <span className={`line-clamp-2 w-full text-center text-[11.5px] leading-tight ${choisi ? 'font-semibold text-white' : 'text-white/70'}`}>{t.nom}</span>
                 </button>
               </li>
             );
@@ -377,7 +378,7 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
           )}
         </div>
       </section>
-      <input ref={fichier} type="file" accept="image/*" hidden onChange={e => photo(e.target.files?.[0])} />
+      <input ref={fichier} type="file" accept="image/*" className="adm-fichier" tabIndex={-1} aria-hidden="true" onChange={e => photo(e.target.files?.[0])} />
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { estPrivee, lireMeta } from './apercu.ts';
+import { estPrivee, lireMeta, titreCourt } from './apercu.ts';
 
 test('lit le titre, la description et l’image de partage, adresse relative comprise', () => {
   const html = `<head><title>Repli</title><meta property="og:title" content="Agence AFK &amp; co">
@@ -9,6 +9,17 @@ test('lit le titre, la description et l’image de partage, adresse relative com
     titre: 'Agence AFK & co', description: 'Automatisation élégante', image: 'https://agenceafk.fr/partage.png',
   });
   assert.equal(lireMeta('<title>Seul titre</title>', 'https://x.fr').titre, 'Seul titre');
+});
+
+test('le titre d’un lien perd le nom du site collé derrière', () => {
+  assert.equal(titreCourt('Agence IA & automatisation pour PME et petites équipes | AFK'), 'Agence IA & automatisation pour PME et petites équipes');
+  assert.equal(titreCourt('Mes ateliers – Atelier Camille'), 'Mes ateliers');
+  assert.equal(titreCourt('Prendre rendez-vous · Calendly'), 'Prendre rendez-vous');
+  // « Accueil » seul ne dit rien : le nom du site le remplace.
+  assert.equal(titreCourt('Accueil - Boulangerie Martin'), 'Boulangerie Martin');
+  // Un trait d'union dans un mot n'est pas un séparateur.
+  assert.equal(titreCourt('Jean-Pierre Durand'), 'Jean-Pierre Durand');
+  assert.equal(titreCourt('x'.repeat(200)).length, 80);
 });
 
 test('refuse les adresses du réseau local', () => {

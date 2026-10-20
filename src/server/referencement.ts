@@ -1,5 +1,5 @@
 import { DESCRIPTION, FONCTIONS, questions } from '../accueil/textes.ts';
-import { AVANTAGES_PRO, TARIFS, euros } from '../lib/abonnement.ts';
+import { OFFRES, PLANS, euros } from '../lib/abonnement.ts';
 import { DOCUMENTS, LEGAL } from '../lib/legal.ts';
 import { ORIGINE_ADMIN, ORIGINE_PUBLIQUE, PRINCIPAL, SITE_LILIAN } from '../lib/types.ts';
 import * as db from './db.ts';
@@ -66,9 +66,11 @@ ${FONCTIONS.map(f => `- ${f}`).join('\n')}
 
 ## Prix
 
-- Gratuit : 0 €, pour toujours, toutes les fonctions comprises.
-- Pro : ${euros(TARIFS.mois.prix)} par mois, ou ${euros(TARIFS.an.prix)} par an.
-${AVANTAGES_PRO.map(a => `  - ${a}`).join('\n')}
+${PLANS.map(p => {
+  const o = OFFRES[p];
+  const prix = p === 'gratuit' ? '0 €, pour toujours' : `${euros(o.prix.mois)} par mois, ou ${euros(o.prix.an)} par an${o.enVente ? '' : ' (bientôt)'}`;
+  return `- ${o.nom} : ${prix}. ${o.phrase}\n${o.avantages.map(a => `  - ${a}`).join('\n')}`;
+}).join('\n')}
 
 ## Questions fréquentes
 

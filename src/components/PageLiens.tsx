@@ -13,6 +13,7 @@ import { LOCALES, NOMS_LANGUES, textes } from '../lib/langues.ts';
 import type { Textes } from '../lib/langues.ts';
 import type { LangueVisiteur } from '../lib/types.ts';
 import { Icone, NOMS_RESEAUX } from './Icone.tsx';
+import { peut } from '../lib/abonnement.ts';
 
 /*
  * La page publique, rendue côté serveur pour Google et les aperçus de liens,
@@ -38,7 +39,8 @@ function suivre(page: string, type: 'vue' | 'clic', bloc?: string, app = false) 
  */
 export interface Edition {
   profil: (champs: Partial<Reglages['profil']>) => void;
-  photo: () => void;
+  /** Choisir une photo ; `source`, l'avatar touché, d'où naît le menu du téléphone. */
+  photo: (source: Element) => void;
   envoiPhoto: boolean;
   reseaux: () => void;
   liste: (blocs: Bloc[], rendu: (bloc: Bloc) => ReactNode) => ReactNode;
@@ -116,7 +118,7 @@ export function PageLiens({ page, apercu = false, edition }: { page: PagePubliqu
         )}
         <header className="lp-tete">
           {edition ? (
-            <button type="button" className="lp-ed-photo" onClick={edition.photo} aria-label={reglages.profil.avatar ? 'Changer la photo' : 'Ajouter une photo'}>
+            <button type="button" className="lp-ed-photo" onClick={e => edition.photo(e.currentTarget)} aria-label={reglages.profil.avatar ? 'Changer la photo' : 'Ajouter une photo'}>
               {reglages.profil.avatar ? <img className="lp-avatar" src={reglages.profil.avatar} alt="" width={96} height={96} /> : <span className="lp-avatar lp-ed-sans-photo" />}
               <span className="lp-ed-pastille">{edition.envoiPhoto ? '…' : <Icone nom="photo" taille={16} />}</span>
             </button>
@@ -159,8 +161,8 @@ export function PageLiens({ page, apercu = false, edition }: { page: PagePubliqu
         <p className="lp-signature">{compte.principal
           ? <a href="https://liliansevoumian.fr" {...cible}>liliansevoumian.fr</a>
           : <>
-            {/* La mention disparaît en Pro ; les liens légaux restent sur toutes les pages. */}
-            {!compte.pro && <a href={ORIGINE_PUBLIQUE} {...cible}>{t.hopla}</a>}
+            {/* La mention disparaît dès Starter ; les liens légaux restent sur toutes les pages. */}
+            {!peut(compte.plan, 'sansMention') && <a href={ORIGINE_PUBLIQUE} {...cible}>{t.hopla}</a>}
             <span className="lp-legal">
               <a href="/legal/confidentialite" {...cible}>{t.confidentialite}</a>
               <a href={`/signaler?page=${compte.pseudo}`} rel="nofollow" {...cible}>{t.signaler}</a>

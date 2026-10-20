@@ -9,6 +9,7 @@ const { validerBloc, validerReglages, adresse, pseudo, email } = await import('.
 const P = 'principal';
 const O = { page: 'https://hopla.page', admin: 'https://app.hopla.page' };
 const { REGLAGES_DEFAUT } = await import('../lib/defauts.ts');
+const { BASCULE_OFFRES, OFFRES } = await import('../lib/abonnement.ts');
 
 test.beforeEach(() => { db.fermer(); });
 
@@ -142,7 +143,7 @@ test('comptes : chaque page est isolée des autres', async () => {
   // Les images comptent dans le quota du compte.
   const media = db.ajouterMedia(camille.id, new Uint8Array(10), 'webp');
   assert.ok(db.lireMedia(media, 'webp'));
-  assert.throws(() => db.ajouterMedia(camille.id, new Uint8Array(db.QUOTA_MEDIAS), 'webp'), /Plus de place/);
+  assert.throws(() => db.ajouterMedia(camille.id, new Uint8Array(OFFRES.gratuit.quota), 'webp'), /Plus de place/);
 
   // Connexion : le lien part à Camille et ouvre son compte, pas celui de Lilian.
   const envois: any[] = [];
@@ -319,23 +320,23 @@ test('signalements : formulaire, accusé de réception, suspension motivée, dé
   assert.deepEqual(envois.map(e => e.to[0]), ['lea@exemple.fr']);
 });
 
-test('offre Pro : estPro lit le statut, la fin de période et la grâce', async () => {
-  const { estPro, GRACE_JOURS } = await import('../lib/abonnement.ts');
+test('offres : estPaye lit le statut, la fin de période et la grâce', async () => {
+  const { estPaye, GRACE_JOURS } = await import('../lib/abonnement.ts');
   const t = Date.parse('2026-10-17T12:00:00Z'), jour = 86_400_000;
-  assert.equal(estPro({ statut: '', finPeriode: null }, t), false);
-  assert.equal(estPro({ statut: 'active', finPeriode: t + 10 * jour }, t), true);
-  assert.equal(estPro({ statut: 'active', finPeriode: t - (GRACE_JOURS - 1) * jour }, t), true, 'un renouvellement sans nouvelles garde quelques jours');
-  assert.equal(estPro({ statut: 'active', finPeriode: t - (GRACE_JOURS + 1) * jour }, t), false);
-  assert.equal(estPro({ statut: 'scheduled_cancel', finPeriode: t + jour }, t), true);
-  assert.equal(estPro({ statut: 'scheduled_cancel', finPeriode: t - 1 }, t), false, 'une résiliation s’arrête net à la fin de la période');
-  assert.equal(estPro({ statut: 'past_due', finPeriode: t + jour }, t), true);
-  assert.equal(estPro({ statut: 'canceled', finPeriode: t + jour }, t), true, 'résilié depuis le portail : Pro jusqu’à la fin payée');
-  assert.equal(estPro({ statut: 'canceled', finPeriode: t - 1 }, t), false);
-  assert.equal(estPro({ statut: 'canceled', finPeriode: null }, t), false, 'sans date de fin, une résiliation arrête le Pro');
-  for (const statut of ['expired', 'unpaid', 'paused']) assert.equal(estPro({ statut, finPeriode: t + jour }, t), false, statut);
+  assert.equal(estPaye({ statut: '', finPeriode: null }, t), false);
+  assert.equal(estPaye({ statut: 'active', finPeriode: t + 10 * jour }, t), true);
+  assert.equal(estPaye({ statut: 'active', finPeriode: t - (GRACE_JOURS - 1) * jour }, t), true, 'un renouvellement sans nouvelles garde quelques jours');
+  assert.equal(estPaye({ statut: 'active', finPeriode: t - (GRACE_JOURS + 1) * jour }, t), false);
+  assert.equal(estPaye({ statut: 'scheduled_cancel', finPeriode: t + jour }, t), true);
+  assert.equal(estPaye({ statut: 'scheduled_cancel', finPeriode: t - 1 }, t), false, 'une résiliation s’arrête net à la fin de la période');
+  assert.equal(estPaye({ statut: 'past_due', finPeriode: t + jour }, t), true);
+  assert.equal(estPaye({ statut: 'canceled', finPeriode: t + jour }, t), true, 'résilié depuis le portail : Pro jusqu’à la fin payée');
+  assert.equal(estPaye({ statut: 'canceled', finPeriode: t - 1 }, t), false);
+  assert.equal(estPaye({ statut: 'canceled', finPeriode: null }, t), false, 'sans date de fin, une résiliation arrête le Pro');
+  for (const statut of ['expired', 'unpaid', 'paused']) assert.equal(estPaye({ statut, finPeriode: t + jour }, t), false, statut);
 });
 
-test('offre Pro : webhooks Creem signés, idempotents, dans le désordre', async () => {
+test('offres : webhooks Creem signés, idempotents, dans le désordre', async () => {
   const { createHmac } = await import('node:crypto');
   const creem = await import('./creem.ts');
   const env = { CREEM_API_KEY: 'creem_test_x', CREEM_WEBHOOK_SECRET: 'whsec_test', CREEM_PRODUIT_MOIS: 'prod_mois', CREEM_PRODUIT_AN: 'prod_an' };
@@ -343,8 +344,8 @@ test('offre Pro : webhooks Creem signés, idempotents, dans le désordre', async
   const signe = (corps: string, secret = env.CREEM_WEBHOOK_SECRET) => createHmac('sha256', secret).update(corps).digest('hex');
   const envoyer = (e: object, secret?: string) => { const corps = JSON.stringify(e); return creem.traiterWebhook(env, corps, signe(corps, secret), t); };
   const lea = db.creerCompte('lea@exemple.fr', 'lea');
-  assert.equal(db.compteEstPro(lea.id, t), false);
-  assert.equal(db.compteEstPro(P, t), true, 'le compte principal est toujours Pro');
+  assert.equal(db.planDuCompte(lea.id, t), 'gratuit');
+  assert.equal(db.planDuCompte(P, t), 'premium', 'le compte principal a tout, sans abonnement');
 
   // Sans configuration, mauvaise signature, JSON cassé : rien ne s'applique.
   assert.equal(creem.traiterWebhook({}, '{}', 'x', t).status, 503);
@@ -352,11 +353,11 @@ test('offre Pro : webhooks Creem signés, idempotents, dans le désordre', async
   assert.equal(envoyer(achat, 'autre secret').status, 401);
   assert.equal(creem.traiterWebhook(env, '{', signe('{'), t).status, 400);
   assert.equal(creem.traiterWebhook(env, JSON.stringify(achat), null, t).status, 401);
-  assert.equal(db.compteEstPro(lea.id, t), false);
+  assert.equal(db.planDuCompte(lea.id, t), 'gratuit');
 
   // Le paiement : le compte voyage dans les métadonnées.
   assert.equal(envoyer(achat).status, 200);
-  assert.equal(db.compteEstPro(lea.id, t), true);
+  assert.equal(db.planDuCompte(lea.id, t), 'pro');
   const c = db.compteParId(lea.id)!;
   assert.equal(c.creem_client, 'cust_1');
   assert.equal(c.creem_abonnement, 'sub_1');
@@ -367,20 +368,20 @@ test('offre Pro : webhooks Creem signés, idempotents, dans le désordre', async
   envoyer({ id: 'evt_2', eventType: 'subscription.scheduled_cancel', created_at: t + 2 * jour, object: { id: 'sub_1', status: 'scheduled_cancel', customer: 'cust_1', current_period_end_date: new Date(t + 30 * jour).toISOString() } });
   envoyer({ id: 'evt_0', eventType: 'subscription.active', created_at: t + jour, object: { id: 'sub_1', status: 'active', customer: 'cust_1' } });
   assert.equal(db.compteParId(lea.id)!.abonnement_statut, 'scheduled_cancel');
-  assert.equal(db.compteEstPro(lea.id, t + 29 * jour), true);
-  assert.equal(db.compteEstPro(lea.id, t + 31 * jour), false, 'en gratuit dès la fin de la période payée');
+  assert.equal(db.planDuCompte(lea.id, t + 29 * jour), 'pro');
+  assert.equal(db.planDuCompte(lea.id, t + 31 * jour), 'gratuit', 'en gratuit dès la fin de la période payée');
 
   // Résilié depuis le portail Creem : `subscription.canceled`, statut `canceled`, le Pro tient jusqu'à la fin payée.
   envoyer({ id: 'evt_2b', eventType: 'subscription.canceled', created_at: t + 3 * jour, object: { id: 'sub_1', status: 'canceled', customer: 'cust_1', current_period_end_date: new Date(t + 30 * jour).toISOString() } });
   assert.equal(db.compteParId(lea.id)!.abonnement_statut, 'canceled');
-  assert.equal(db.compteEstPro(lea.id, t + 3 * jour), true);
+  assert.equal(db.planDuCompte(lea.id, t + 3 * jour), 'pro');
   assert.equal(db.abonnement(db.compteParId(lea.id)!, t + 3 * jour).plan, 'pro');
-  assert.equal(db.compteEstPro(lea.id, t + 31 * jour), false);
+  assert.equal(db.planDuCompte(lea.id, t + 31 * jour), 'gratuit');
 
   // Un nouvel abonnement remplace l'ancien ; la fin tardive de l'ancien ne l'éteint pas.
   envoyer({ id: 'evt_3', eventType: 'subscription.active', created_at: t + 40 * jour, object: { id: 'sub_2', status: 'active', customer: 'cust_1', metadata: { compte: lea.id }, current_period_end_date: new Date(t + 405 * jour).toISOString() } });
   assert.equal(envoyer({ id: 'evt_4', eventType: 'subscription.expired', created_at: t + 41 * jour, object: { id: 'sub_1', status: 'expired', customer: 'cust_1' } }).message, 'ancien abonnement');
-  assert.equal(db.compteEstPro(lea.id, t + 41 * jour), true);
+  assert.equal(db.planDuCompte(lea.id, t + 41 * jour), 'pro');
 
   // Un autre produit de la boutique, payé par le même client, ne touche pas à son Pro.
   const autre = { id: 'sub_f', status: 'active', customer: 'cust_1', product: { id: 'prod_formation' } };
@@ -398,30 +399,104 @@ test('offre Pro : webhooks Creem signés, idempotents, dans le désordre', async
   const max = db.creerCompte('max@exemple.fr', 'max');
   assert.throws(() => db.ajouterMedia(max.id, gros, 'webp'), /Plus de place/);
   assert.ok(db.ajouterMedia(lea.id, gros, 'webp'));
-  assert.equal(db.listerComptes().find(x => x.id === lea.id)?.pro, true);
-  assert.equal(db.listerComptes().find(x => x.id === max.id)?.pro, false);
+  assert.equal(db.listerComptes().find(x => x.id === lea.id)?.plan, 'pro');
+  assert.equal(db.listerComptes().find(x => x.id === max.id)?.plan, 'gratuit');
   assert.equal(db.exporter(lea.id).compte.abonnement?.creemAbonnement, 'sub_2');
+
+  // Un changement d'offre arrive par webhook : le produit du catalogue dit l'offre et la période.
+  const { droits } = await import('./droits.ts');
+  db.ecrireCatalogue([{ id: 'prod_starter_an', plan: 'starter', periode: 'an', prix: 3600, actuel: true }]);
+  assert.equal(envoyer({ id: 'evt_7', eventType: 'subscription.update', created_at: t + 43 * jour, object: { id: 'sub_2', status: 'active', customer: 'cust_1', product: { id: 'prod_starter_an' }, current_period_end_date: new Date(t + 408 * jour).toISOString() } }).status, 200);
+  const passe = db.abonnement(db.compteParId(lea.id)!, t + 43 * jour);
+  assert.equal(passe.plan, 'starter');
+  assert.equal(passe.periode, 'an');
+  assert.equal(db.listerComptes(t + 43 * jour).find(x => x.id === lea.id)?.plan, 'starter');
+
+  // Ce que l'offre permet : Starter ouvre les avis et la page sans mention, pas les drops.
+  const neuve = { ...db.compteParId(lea.id)!, cree: BASCULE_OFFRES + 1 };
+  const d = droits(neuve, env, t + 43 * jour);
+  assert.equal(d.sansMention, true);
+  assert.equal(d.avis, true);
+  assert.equal(d.drops, false);
+  assert.equal(d.reseauHeure, false);
+  // Une page d'avant les offres garde tout, sauf la page sans mention.
+  const ancienne = droits({ ...db.compteParId(max.id)!, cree: BASCULE_OFFRES - 1 }, env, t);
+  assert.equal(ancienne.drops, true);
+  assert.equal(ancienne.sansMention, false);
+  assert.equal(droits({ ...db.compteParId(max.id)!, cree: BASCULE_OFFRES + 1 }, env, t).drops, false);
+  // Sans paiement branché (en local), rien n'est réservé, sauf la page sans mention.
+  const libre = droits({ ...db.compteParId(max.id)!, cree: BASCULE_OFFRES + 1 }, {}, t);
+  assert.equal(libre.drops, true);
+  assert.equal(libre.sansMention, false);
+  // Le compte principal a tout.
+  assert.ok(Object.values(droits(db.compteParId(P)!, env, t)).every(Boolean));
 });
 
-test('offre Pro : la page de paiement et le portail passent par l’API Creem', async () => {
+test('offres : la page de paiement, le changement d’offre et le portail passent par l’API Creem', async () => {
   const creem = await import('./creem.ts');
   const env = { CREEM_API_KEY: 'creem_test_x', CREEM_WEBHOOK_SECRET: 'whsec_test', CREEM_PRODUIT_MOIS: 'prod_mois', CREEM_PRODUIT_AN: 'prod_an', CREEM_TEST: '1' };
   const appels: { url: string; cle: string | null; corps: any }[] = [];
   const fetchFaux = (async (url: string, init: RequestInit) => {
     appels.push({ url, cle: new Headers(init.headers).get('x-api-key'), corps: JSON.parse(String(init.body)) });
-    return Response.json(url.endsWith('/checkouts') ? { checkout_url: 'https://checkout.creem.io/ch_1' } : { customer_portal_link: 'https://creem.io/portal/x' });
+    return Response.json(url.endsWith('/checkouts') ? { checkout_url: 'https://checkout.creem.io/ch_1' } : url.endsWith('/upgrade') ? { id: 'sub_9' } : { customer_portal_link: 'https://creem.io/portal/x' });
   }) as typeof fetch;
   const noa = db.creerCompte('noa@exemple.fr', 'noa');
-  assert.equal(await creem.ouvrirPaiement(env, fetchFaux, noa, 'an', O.admin, 5), 'https://checkout.creem.io/ch_1');
+  assert.equal(await creem.ouvrirPaiement(env, fetchFaux, noa, 'pro', 'an', O.admin, 5), 'https://checkout.creem.io/ch_1');
   assert.equal(appels[0].url, 'https://test-api.creem.io/v1/checkouts');
   assert.equal(appels[0].cle, 'creem_test_x');
-  assert.deepEqual(appels[0].corps, { product_id: 'prod_an', request_id: `${noa.id}-5`, success_url: 'https://app.hopla.page/admin?paiement=ok', customer: { email: 'noa@exemple.fr' }, metadata: { compte: noa.id } });
+  assert.deepEqual(appels[0].corps, { product_id: 'prod_an', request_id: `${noa.id}-5`, success_url: 'https://app.hopla.page/admin?paiement=pro', customer: { email: 'noa@exemple.fr' }, metadata: { compte: noa.id } });
   await assert.rejects(creem.ouvrirPortail(env, fetchFaux, noa), /Aucun abonnement/);
-  await assert.rejects(creem.ouvrirPaiement({}, fetchFaux, noa, 'mois', 'https://x.fr'), /pas encore branché/);
-  await assert.rejects(creem.ouvrirPaiement(env, fetchFaux, db.compteParId(P)!, 'mois', 'https://x.fr'), /principal/);
+  await assert.rejects(creem.ouvrirPaiement({}, fetchFaux, noa, 'pro', 'mois', 'https://x.fr'), /pas encore branché/);
+  await assert.rejects(creem.ouvrirPaiement(env, fetchFaux, db.compteParId(P)!, 'pro', 'mois', 'https://x.fr'), /principal/);
+  // Une offre sans produit dans Creem, ou pas encore en vente, ne s'achète pas.
+  await assert.rejects(creem.ouvrirPaiement(env, fetchFaux, noa, 'starter', 'mois', 'https://x.fr'), /arrive bientôt/);
+  await assert.rejects(creem.ouvrirPaiement(env, fetchFaux, noa, 'premium', 'an', 'https://x.fr'), /arrive bientôt/);
+  assert.deepEqual(creem.offresEnVente(env), ['pro']);
   db.appliquerAbonnement(noa.id, { client: 'cust_9', abonnement: 'sub_9', statut: 'active', finPeriode: null, maj: 1 });
   assert.equal(await creem.ouvrirPortail(env, fetchFaux, db.compteParId(noa.id)!), 'https://creem.io/portal/x');
   assert.deepEqual(appels.at(-1)!.corps, { customer_id: 'cust_9' });
+  // Un abonné change d'offre sans repasser par la caisse : Creem facture la différence au prorata.
+  assert.equal(await creem.ouvrirPaiement(env, fetchFaux, db.compteParId(noa.id)!, 'pro', 'mois', O.admin), 'https://app.hopla.page/admin?paiement=pro');
+  assert.equal(appels.at(-1)!.url, 'https://test-api.creem.io/v1/subscriptions/sub_9/upgrade');
+  assert.deepEqual(appels.at(-1)!.corps, { product_id: 'prod_mois', update_behavior: 'proration-charge-immediately' });
+  db.appliquerAbonnement(noa.id, { client: 'cust_9', abonnement: 'sub_9', statut: 'active', finPeriode: null, maj: 2, produit: 'prod_mois' });
+  await assert.rejects(creem.ouvrirPaiement(env, fetchFaux, db.compteParId(noa.id)!, 'pro', 'mois', O.admin), /déjà ton offre/);
+});
+
+test('offres : « Créer les offres dans Creem » crée ce qui manque, une fois, et reprend l’ancien Pro au bon prix', async () => {
+  const creem = await import('./creem.ts');
+  const env = { CREEM_API_KEY: 'creem_test_x', CREEM_WEBHOOK_SECRET: 'whsec_test', CREEM_PRODUIT_MOIS: 'prod_mois', CREEM_PRODUIT_AN: 'prod_an', CREEM_TEST: '1' };
+  const appels: { url: string; methode: string; cle: string | null; corps: any }[] = [];
+  let n = 0;
+  const fetchFaux = (async (url: string, init: RequestInit) => {
+    appels.push({ url, methode: String(init.method), cle: new Headers(init.headers).get('Idempotency-Key'), corps: init.body ? JSON.parse(String(init.body)) : null });
+    // L'ancien Pro mensuel est déjà à 9 € ; l'ancien annuel était à 86,40 €.
+    if (url.endsWith('/v1/products/prod_mois')) return Response.json({ id: 'prod_mois', price: 900 });
+    if (url.endsWith('/v1/products/prod_an')) return Response.json({ id: 'prod_an', price: 8640 });
+    return Response.json({ id: `prod_neuf_${++n}` });
+  }) as typeof fetch;
+  const etat = await creem.creerOffres(env, fetchFaux);
+  const crees = appels.filter(a => a.methode === 'POST');
+  assert.deepEqual(crees.map(a => a.corps.name), ['Hopla Starter mensuel', 'Hopla Starter annuel', 'Hopla Pro annuel'], 'Premium n’est pas en vente : aucun produit');
+  assert.deepEqual(crees.map(a => a.corps.price), [400, 3600, 7900]);
+  assert.deepEqual(crees.map(a => a.cle), ['hopla-starter-mois-400', 'hopla-starter-an-3600', 'hopla-pro-an-7900']);
+  assert.equal(crees[0].corps.billing_period, 'every-month');
+  assert.equal(crees[0].corps.tax_mode, 'inclusive');
+  assert.equal(etat.find(e => e.plan === 'pro' && e.periode === 'mois')?.produit, 'prod_mois', 'l’ancien Pro au bon prix est repris');
+  assert.equal(etat.find(e => e.plan === 'pro' && e.periode === 'an')?.produit, 'prod_neuf_3');
+  assert.equal(etat.find(e => e.plan === 'premium' && e.periode === 'an')?.produit, null);
+  assert.deepEqual(creem.offresEnVente(env), ['starter', 'pro']);
+  // L'ancien annuel reste connu : ses abonnés gardent le Pro, ses webhooks passent.
+  assert.equal(db.produitConnu('prod_an')?.plan, 'pro');
+  assert.equal(db.produitConnu('prod_an')?.actuel, false);
+  // Rejouer ne crée rien.
+  const avant = appels.length;
+  await creem.creerOffres(env, fetchFaux);
+  assert.equal(appels.length, avant);
+  // Une clé sans le droit « Products » : le message dit quoi faire.
+  db.ecrireCatalogue([]);
+  const refuse = (async () => new Response('forbidden', { status: 403 })) as unknown as typeof fetch;
+  await assert.rejects(creem.creerOffres({ CREEM_API_KEY: 'k', CREEM_WEBHOOK_SECRET: 's' }, refuse), /Products/);
 });
 
 test('statistiques : un navigateur intégré sans référent est rangé sous son app', () => {
@@ -530,10 +605,10 @@ test('page en plusieurs langues : la langue du visiteur, les textes traduits', a
   assert.deepEqual(Object.keys(bloc.traductions), ['en']);
   const reglages = validerReglages({ ...REGLAGES_DEFAUT, langues: ['en', 'zz'], bioTraduite: { en: 'Hi', zz: 'x' } }, REGLAGES_DEFAUT);
   assert.deepEqual(reglages.langues, ['en']); assert.deepEqual(reglages.bioTraduite, { en: 'Hi' });
-  const page = traduirePage({ reglages, blocs: [bloc], compte: { pseudo: 'x', principal: false, pro: false } }, 'en');
+  const page = traduirePage({ reglages, blocs: [bloc], compte: { pseudo: 'x', principal: false, plan: 'gratuit' as const } }, 'en');
   assert.equal(page.blocs[0].titre, 'My course'); assert.equal(page.reglages.profil.bio, 'Hi'); assert.equal(page.langue, 'en');
   // En français, la page reste telle que la personne l'a écrite.
-  assert.equal(traduirePage({ reglages, blocs: [bloc], compte: { pseudo: 'x', principal: false, pro: false } }, 'fr').blocs[0].titre, 'Mon cours');
+  assert.equal(traduirePage({ reglages, blocs: [bloc], compte: { pseudo: 'x', principal: false, plan: 'gratuit' as const } }, 'fr').blocs[0].titre, 'Mon cours');
 });
 
 test('avis et preuves : la note bornée, le genre vérifié', () => {

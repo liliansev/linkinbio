@@ -171,10 +171,13 @@ function PageJamaisVue({ adresse, pseudo }: { adresse: string; pseudo: string })
   );
 }
 
-/** `limite` : un compte gratuit ne voit que les sept derniers jours ; `onPro` mène à l'abonnement. */
-export function OngletStats({ charger, adresse, pseudo, limite = false, onPro, ouvrirApps = true, onActiverApps, liste }: { charger: (jours: number) => Promise<Stats>; adresse: string; pseudo: string; limite?: boolean; onPro?: () => void; ouvrirApps?: boolean; onActiverApps?: () => void; liste?: ReactNode }) {
-  const [choix, setJours] = useState('30');
-  const jours = limite ? '7' : choix;
+/** `joursMax` : l'historique que l'offre laisse lire (7 jours en Gratuit, 30 en Starter) ; `onOffres` mène à l'abonnement. */
+export function OngletStats({ charger, adresse, pseudo, joursMax = 365, onOffres, ouvrirApps = true, onActiverApps, liste }: { charger: (jours: number) => Promise<Stats>; adresse: string; pseudo: string; joursMax?: number; onOffres?: () => void; ouvrirApps?: boolean; onActiverApps?: () => void; liste?: ReactNode }) {
+  const periodes = PERIODES.filter(p => Number(p.id) <= joursMax);
+  const [choix, setJours] = useState(String(Math.min(30, joursMax)));
+  const jours = periodes.some(p => p.id === choix) ? choix : periodes[periodes.length - 1].id;
+  // Ce qu'une offre au-dessus ajouterait : tout est déjà enregistré, elle le rend lisible.
+  const plus = joursMax < 30 ? 'Avec Starter, 30 jours d’historique ; avec Pro, un an.' : joursMax < 365 ? 'Avec Pro, jusqu’à un an d’historique.' : '';
   const [stats, setStats] = useState<Stats | null>(null);
   const [erreur, setErreur] = useState(false);
   // Pendant qu'une autre période se charge, les chiffres d'avant pâlissent : on voit qu'ils vont changer.
@@ -191,12 +194,17 @@ export function OngletStats({ charger, adresse, pseudo, limite = false, onPro, o
   // Pendant le premier chargement, elles restent : la plupart des pages ont déjà des visites, rien ne saute.
   return (
     <div className="flex flex-col gap-4">
-      {stats && !stats.dejaVue ? null : limite ? (
+      {stats && !stats.dejaVue ? null : periodes.length === 1 ? (
         <div className="flex items-center justify-between gap-3 rounded-[14px] border border-white/10 bg-nuit px-4 py-3">
-          <p className="text-[14px] leading-snug text-white/80">Les 7 derniers jours. <span className="text-white/55">Avec Pro, jusqu’à un an d’historique : tout est déjà enregistré.</span></p>
-          {onPro && <button type="button" onClick={onPro} className={`${classeBouton.principal} shrink-0`}>Passer en Pro</button>}
+          <p className="text-[14px] leading-snug text-white/80">Les 7 derniers jours. <span className="text-white/55">{plus} Tout est déjà enregistré.</span></p>
+          {onOffres && <button type="button" onClick={onOffres} className={`${classeBouton.secondaire} shrink-0`}>Voir les offres</button>}
         </div>
-      ) : <div className="w-full sm:w-80"><Segments label="Période" valeur={jours} options={PERIODES} onChange={setJours} /></div>}
+      ) : (
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <div className={`w-full ${periodes.length > 2 ? 'sm:w-80' : 'sm:w-44'}`}><Segments label="Période" valeur={jours} options={periodes} onChange={setJours} /></div>
+          {plus && onOffres && <button type="button" onClick={onOffres} className="min-h-11 text-left text-[13px] text-white/55 underline decoration-white/25 underline-offset-2 hover:text-white">{plus}</button>}
+        </div>
+      )}
       {erreur && (
         <div role="alert" className="flex items-center justify-between gap-3 rounded-xl bg-red-500/15 py-1.5 pr-1.5 pl-3.5 text-[14px] text-red-200">
           Les statistiques ne se chargent pas.

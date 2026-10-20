@@ -4,6 +4,8 @@ import type { ApiComptes, CompteResume, Reservation, SignalementResume } from '.
 import { nomMotif } from '../lib/legal.ts';
 import { cheminPage, sansSchema, urlPage } from '../lib/types.ts';
 import { BoutonPrincipal, Carte, Champ, classeBadge, classeBouton, classeSaisie } from './ui.tsx';
+import type { EtatOffre } from '../lib/abonnement.ts';
+import { OFFRES, euros } from '../lib/abonnement.ts';
 
 /*
  * Les comptes, dans le back office de Lilian seulement. Pendant la bêta on
@@ -43,12 +45,13 @@ export function OngletComptes({ api }: { api: ApiComptes }) {
 
   const autres = comptes?.filter(c => !c.principal) ?? [];
   const actifs = autres.filter(c => c.statut === 'actif').length;
-  const enPro = autres.filter(c => c.pro).length;
+  const payants = autres.filter(c => c.plan !== 'gratuit').length;
 
   return (
     <div className="flex flex-col gap-4">
       <Signalements api={api} onChange={recharger} />
       <ListeAttente api={api} onChange={recharger} />
+      <OffresCreem api={api} />
 
       <Carte titre="Inviter quelqu’un">
         <form onSubmit={inviter} className="flex max-w-md flex-col gap-3">
@@ -69,7 +72,7 @@ export function OngletComptes({ api }: { api: ApiComptes }) {
         </form>
       </Carte>
 
-      <Carte titre="Les comptes" action={comptes && <span className="text-[13px] text-white/50">{autres.length ? `${actifs} actif${actifs > 1 ? 's' : ''} sur ${autres.length}${enPro ? `, ${enPro} en Pro` : ''}` : 'Aucun invité'}</span>}>
+      <Carte titre="Les comptes" action={comptes && <span className="text-[13px] text-white/50">{autres.length ? `${actifs} actif${actifs > 1 ? 's' : ''} sur ${autres.length}${payants ? `, ${payants} abonné${payants > 1 ? 's' : ''}` : ''}` : 'Aucun invité'}</span>}>
         {erreur && <p className="text-[14px] text-red-300" role="alert">{erreur}</p>}
         {!comptes && !erreur && <p className="text-[14px] text-white/50">Chargement…</p>}
         {comptes && (
@@ -104,7 +107,7 @@ function LigneCompte({ compte, api, onChange, onMessage }: { compte: CompteResum
         <div className="min-w-0">
           <p className="flex items-center gap-2 text-[15.5px] font-semibold">
             <span className="truncate">{compte.principal ? 'Toi' : compte.pseudo}</span>
-            {!compte.principal && compte.pro && <span className={classeBadge}>Pro</span>}
+            {!compte.principal && compte.plan !== 'gratuit' && <span className={classeBadge}>{OFFRES[compte.plan].nom}</span>}
             {suspendu && <span className="inline-flex items-center rounded-[7px] bg-amber-400/15 px-1.5 py-0.5 text-[11.5px] font-semibold text-amber-200">Suspendu</span>}
           </p>
           <p className="truncate text-[13px] text-white/50">{compte.principal ? `Ta page, ${sansSchema(urlPage(compte))}` : compte.email}</p>
@@ -272,5 +275,49 @@ function LigneSignalement({ s, api, onChange }: { s: SignalementResume; api: Api
         </div>
       )}
     </li>
+  );
+}
+
+/**
+ * Les offres dans Creem : pour chaque offre et chaque période, le produit qui
+ * la vend. « Créer les offres dans Creem » fabrique ceux qui manquent, au prix
+ * de `OFFRES` ; un prix changé dans le code donne un nouveau produit, et
+ * l'ancien reste en place pour les abonnés qui l'ont.
+ */
+function OffresCreem({ api }: { api: ApiComptes }) {
+  const [offres, setOffres] = useState<EtatOffre[] | null>(null);
+  const [envoi, setEnvoi] = useState(false);
+  const [message, setMessage] = useState<{ ok: boolean; texte: string } | null>(null);
+  useEffect(() => { api.offres().then(setOffres).catch(() => setOffres([])); }, [api]);
+  const manquent = offres?.filter(o => o.enVente && !o.produit) ?? [];
+
+  async function creer() {
+    setEnvoi(true);
+    setMessage(null);
+    try {
+      const o = await api.creerOffres();
+      setOffres(o);
+      setMessage({ ok: true, texte: 'Les offres sont en vente dans Creem.' });
+    } catch (error) { setMessage({ ok: false, texte: (error as Error).message || 'Creem ne répond pas. Réessaie dans un instant.' }); }
+    setEnvoi(false);
+  }
+
+  if (!offres?.length) return null;
+  return (
+    <Carte titre="Les offres dans Creem" action={manquent.length ? <span className="text-[13px] text-white/55">{manquent.length} à créer</span> : undefined}>
+      <ul className="-mx-1 flex flex-col divide-y divide-white/[0.06]">
+        {offres.map(o => (
+          <li key={`${o.plan}-${o.periode}`} className="flex min-h-11 items-center gap-3 px-1 py-2">
+            <span className="min-w-0 flex-1 text-[14.5px] font-medium">{OFFRES[o.plan].nom} {o.periode === 'an' ? 'annuel' : 'mensuel'}</span>
+            <span className="text-[13.5px] tabular-nums text-white/60">{euros(o.prix)}</span>
+            <span className={`w-24 text-right text-[13px] ${o.produit ? 'text-white' : 'text-white/55'}`}>{o.produit ? 'En vente' : o.enVente ? 'À créer' : 'Plus tard'}</span>
+          </li>
+        ))}
+      </ul>
+      {manquent.length > 0 && (
+        <button type="button" disabled={envoi} onClick={creer} className={`${classeBouton.principal} mt-3`}>{envoi ? 'Création…' : 'Créer les offres dans Creem'}</button>
+      )}
+      {message && <p role={message.ok ? 'status' : 'alert'} className={`mt-3 text-[13.5px] ${message.ok ? 'text-white/75' : 'text-red-300'}`}>{message.texte}</p>}
+    </Carte>
   );
 }

@@ -197,6 +197,25 @@ export function Feuille({ ouverte, onFermer, retenir, titre, children, pied, cot
 }
 
 /**
+ * Ouvre le choix d'une image depuis ce qu'on vient de toucher. iOS fait naître
+ * son menu (Photothèque, Prendre une photo…) du champ lui-même : caché en
+ * `display: none`, le champ n'a pas de place, et le menu partait d'un coin de
+ * l'écran en une petite tache noire. Le champ (classe `adm-fichier`) se pose
+ * donc, invisible, sur l'élément touché juste avant de s'ouvrir.
+ */
+export function choisirFichier(champ: HTMLInputElement | null, source?: Element | null) {
+  if (!champ) return;
+  const cible = source?.getBoundingClientRect();
+  if (cible) {
+    // Mesuré depuis sa propre place : le champ peut vivre dans une feuille animée, qui déplace son repère.
+    Object.assign(champ.style, { left: '0px', top: '0px', width: `${cible.width}px`, height: `${cible.height}px` });
+    const repere = champ.getBoundingClientRect();
+    Object.assign(champ.style, { left: `${cible.left - repere.left}px`, top: `${cible.top - repere.top}px` });
+  }
+  champ.click();
+}
+
+/**
  * Copie un texte. Si le presse-papiers est refusé, l'ancienne méthode prend le relais ; si elle échoue
  * aussi, l'adresse s'affiche, sélectionnée, pour être copiée à la main : une copie ne rate jamais en silence.
  */

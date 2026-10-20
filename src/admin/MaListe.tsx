@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Api, Contact, FournisseurListe, Liste } from '../lib/types.ts';
 import { Icone } from '../components/Icone.tsx';
 import { BoutonPrincipal, Carte, Champ, Feuille, Segments, classeBouton, classeSaisie } from './ui.tsx';
+import { Etiquette, Reserve, usePermis } from './offre.tsx';
 
 /*
  * Les inscrits de « Rejoins ma liste », dans l'onglet Stats : combien, les
@@ -22,7 +23,14 @@ export function MaListe({ api }: { api: Pick<Api, 'liste' | 'brancherListe' | 's
   const [ouverte, setOuverte] = useState(false);
   const recharger = useCallback(() => api.liste().then(setListe).catch(() => {}), [api]);
   useEffect(() => { recharger(); }, [recharger]);
+  const permis = usePermis('listeEmail');
   if (!liste) return null;
+  // Sans l'offre et sans inscrit, la carte dit ce que la liste ferait ; des inscrits déjà là restent à toi (export, Brevo).
+  if (!permis && !liste.total) return (
+    <Carte titre="Ta liste" action={<Etiquette fonction="listeEmail" />}>
+      <Reserve phrase="Avec Hopla Pro, tes visiteurs laissent leur e-mail sur ta page : chaque adresse arrive ici, et chez Brevo ou Mailchimp si tu les branches." />
+    </Carte>
+  );
   return (
     <>
       <Carte titre="Ta liste" action={<button type="button" onClick={() => setOuverte(true)} className={classeBouton.secondaire}>Gérer</button>}>
@@ -37,7 +45,8 @@ export function MaListe({ api }: { api: Pick<Api, 'liste' | 'brancherListe' | 's
               {liste.integration ? `Envoyés aussi chez ${NOMS[liste.integration.fournisseur]}${liste.integration.nom ? `, liste « ${liste.integration.nom} »` : ''}.` : 'Gardés ici. Exporte-les en CSV, ou branche Brevo ou Mailchimp.'}
             </p>
           </>
-        ) : <p className="text-[14px] leading-snug text-white/60">Ajoute « Ma liste d’inscrits » à ta page : chaque adresse arrive ici, et chez Brevo ou Mailchimp si tu les branches. Inclus dans l’offre gratuite.</p>}
+        ) : <p className="text-[14px] leading-snug text-white/60">Ajoute « Ma liste d’inscrits » à ta page : chaque adresse arrive ici, et chez Brevo ou Mailchimp si tu les branches.</p>}
+        {!permis && liste.total > 0 && <p className="mt-2.5 text-[13px] leading-snug text-white/55">Le formulaire n’est plus sur ta page sans Hopla Pro. Tes inscrits restent à toi : exporte-les depuis Gérer.</p>}
       </Carte>
       {ouverte && <FeuilleListe liste={liste} api={api} onFermer={() => setOuverte(false)} onChange={recharger} />}
     </>

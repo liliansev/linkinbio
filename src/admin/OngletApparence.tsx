@@ -5,7 +5,7 @@ import { ANIMATIONS, RESEAUX, SANS_COULEURS } from '../lib/types.ts';
 import { THEMES, themeDe, themeParId, variablesTheme } from '../lib/themes.ts';
 import type { Theme } from '../lib/themes.ts';
 import { Icone, NOMS_RESEAUX } from '../components/Icone.tsx';
-import { Carte, Champ, Interrupteur, NOMS_ANIMATIONS, Segments, classeBouton, classeSaisie, flechesRadio, preparerImage, vibrer } from './ui.tsx';
+import { Carte, Champ, Interrupteur, NOMS_ANIMATIONS, Segments, choisirFichier, classeBouton, classeSaisie, flechesRadio, preparerImage, vibrer } from './ui.tsx';
 import { pseudoReseau, urlReseau } from '../lib/demarrage.ts';
 import { adresseSaisie, pourquoiPasReseau } from '../lib/valider.ts';
 
@@ -71,15 +71,15 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
     <div className="flex flex-col gap-4">
       {voir('profil') && <Carte nu={nu} titre={titre('Profil')} id="profil">
         <div className="mb-4 flex items-center gap-4">
-          <button type="button" onClick={() => fichier.current?.click()} className="group relative h-20 w-20 shrink-0 overflow-hidden rounded-full bg-white/10" aria-label="Changer la photo">
+          <button type="button" onClick={e => choisirFichier(fichier.current, e.currentTarget)} className="group relative h-20 w-20 shrink-0 overflow-hidden rounded-full bg-white/10" aria-label="Changer la photo">
             {reglages.profil.avatar && <img src={reglages.profil.avatar} alt="" className="h-full w-full object-cover" />}
             <span className="absolute inset-0 grid place-items-center bg-black/45 text-[12px] font-medium text-nuit opacity-0 transition group-hover:opacity-100">{envoi ? '…' : 'Changer'}</span>
           </button>
           <div className="flex flex-col items-start gap-1">
-            <button type="button" onClick={() => fichier.current?.click()} className={classeBouton.secondaire}>{envoi ? 'Envoi…' : 'Changer la photo'}</button>
+            <button type="button" onClick={e => choisirFichier(fichier.current, e.currentTarget)} className={classeBouton.secondaire}>{envoi ? 'Envoi…' : 'Changer la photo'}</button>
             {reglages.profil.avatar && <button type="button" onClick={() => profil({ avatar: '' })} className="min-h-11 rounded-xl px-1 text-[13px] text-white/60 hover:text-white">Sans photo</button>}
           </div>
-          <input ref={fichier} type="file" accept="image/*" hidden onChange={e => avatar(e.target.files?.[0])} />
+          <input ref={fichier} type="file" accept="image/*" className="adm-fichier" tabIndex={-1} aria-hidden="true" onChange={e => avatar(e.target.files?.[0])} />
         </div>
         {photoRatee && <p className="-mt-2 mb-3 text-[13px] text-red-300" role="alert">La photo n’est pas passée. Essaie une autre image, en JPG ou PNG.</p>}
         <div className="flex flex-col gap-3">

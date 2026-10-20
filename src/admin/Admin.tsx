@@ -16,6 +16,8 @@ import { Icone } from '../components/Icone.tsx';
 import { BoutonCopier, classeBouton, vibrer } from './ui.tsx';
 import { Marque } from './Marque.tsx';
 import { AnneauDemarrage, noterPartage, useDemarrage } from './BienDemarrer.tsx';
+import { FournisseurOffre } from './offre.tsx';
+import { OFFRES, estPlanPayant } from '../lib/abonnement.ts';
 
 /*
  * Le back office. Tout s'enregistre tout seul : un bloc quand on valide sa
@@ -50,13 +52,14 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
   // « Bien démarrer » au téléphone : l'anneau de l'en-tête ouvre sa liste dans une feuille.
   const [demarrageOuvert, setDemarrageOuvert] = useState(false);
   const [cguAJour, setCguAJour] = useState(initial.cguAJour);
-  const [abonnement, setAbonnement] = useState({ ...initial.abonnement, pro: initial.compte.pro });
+  const [abonnement, setAbonnement] = useState(initial.abonnement);
+  const [droits, setDroits] = useState(initial.droits);
   // Un compte neuf arrive sur ses premiers pas, une seule fois, et seulement tant que sa page est vide.
   const [premiersPas, setPremiersPas] = useState(() => !initial.compte.principal && pageNeuve(initial.reglages, initial.blocs));
   // Remis à plus tard sur cet appareil : lu après l'hydratation, le serveur n'en sait rien.
   useEffect(() => { if (premiersPasFaits()) setPremiersPas(false); }, []);
   const enCours = useRef(0);
-  const compte = useMemo(() => ({ ...initial.compte, pro: abonnement.pro }), [initial.compte, abonnement.pro]);
+  const compte = useMemo(() => ({ ...initial.compte, plan: abonnement.plan }), [initial.compte, abonnement.plan]);
   // L'onglet Comptes n'existe que pour Lilian.
   const onglets = ONGLETS.filter(o => o.id !== 'comptes' || api.comptes);
   const minuteur = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -114,21 +117,25 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
   useEffect(() => { setToastTenu(false); }, [toast]);
   useEffect(() => () => clearTimeout(minuteur.current), []);
 
-  // Au retour de la page de paiement : le Pro arrive par webhook, quelques secondes plus tard.
+  // Au retour de la page de paiement (ou d'un changement d'offre) : l'offre arrive par webhook, quelques secondes plus tard.
   useEffect(() => {
-    if (demo || !new URLSearchParams(location.search).has('paiement')) return;
+    const voulue = new URLSearchParams(location.search).get('paiement');
+    if (demo || voulue === null) return;
     history.replaceState(null, '', location.pathname);
     versAbonnement();
-    setToast({ texte: 'Merci ! Ton passage en Pro arrive dans un instant.' });
+    const plan = estPlanPayant(voulue) ? voulue : 'pro';
+    setToast({ texte: `Merci ! Ton offre ${OFFRES[plan].nom} arrive dans un instant.` });
     let essais = 0;
     const t = setInterval(async () => {
       essais++;
       try {
         const e = await api.charger();
-        if (e.compte.pro || essais >= 15) {
+        const arrivee = e.abonnement.plan === plan;
+        if (arrivee || essais >= 15) {
           clearInterval(t);
-          setAbonnement({ ...e.abonnement, pro: e.compte.pro });
-          if (e.compte.pro) setToast({ texte: 'Bienvenue en Pro' });
+          setAbonnement(e.abonnement);
+          setDroits(e.droits);
+          if (arrivee) setToast({ texte: `Bienvenue en ${OFFRES[plan].nom}` });
         }
       } catch { if (essais >= 15) clearInterval(t); }
     }, 2000);
@@ -253,9 +260,11 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
     </div>
   );
 
+  const offre = { droits, voirOffres: initial.paiement ? versAbonnement : undefined };
+
   if (premiersPas) {
     return (
-      <>
+      <FournisseurOffre value={offre}>
         <PremiersPas compte={compte} reglages={reglages} blocs={blocs} onReglages={changerReglages} onPoserBlocs={poserBlocs}
           envoyerImage={d => api.envoyerImage(d)} apercuSite={u => api.apercuSite(u)} onFin={suite => {
             setPremiersPas(false); setOnglet('page'); scrollTo({ top: 0 });
@@ -263,7 +272,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
             if (suite === 'lien') setEdition({ bloc: nouveauBloc('lien', `n${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`), nouveau: true });
           }} />
         {bulle}
-      </>
+      </FournisseurOffre>
     );
   }
 
@@ -272,6 +281,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
   const point = <span aria-hidden="true" className={`h-1.5 w-1.5 shrink-0 rounded-full ${sauvegarde === 'encours' ? 'animate-pulse bg-white/40 motion-reduce:animate-none' : sauvegarde === 'erreur' ? 'bg-red-300' : 'bg-white/60'}`} />;
 
   return (
+    <FournisseurOffre value={offre}>
     <div className="adm adm-shell min-h-dvh font-sans text-white antialiased">
       {/* Sur ordinateur, une barre latérale comme dans tout SaaS : la marque, les sections, l'état de l'enregistrement, la page en ligne. */}
       <aside className="adm-sidebar fixed inset-y-0 left-0 z-30 hidden w-60 flex-col lg:flex" aria-label="Navigation">
@@ -291,7 +301,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
             {reglages.profil.avatar ? <img src={reglages.profil.avatar} alt="" className="h-10 w-10 rounded-full object-cover ring-1 ring-white/10" /> : <span className="grid h-10 w-10 place-items-center rounded-full bg-white/[0.06]"><Icone nom="utilisateur" taille={20} /></span>}
             <div className="min-w-0 flex-1">
               <p className="truncate text-[13.5px] font-medium leading-tight">{reglages.profil.nom || 'Hopla'}</p>
-              <p className="mt-1 text-[11.5px] text-white/55">{compte.principal ? 'Compte principal' : compte.pro ? 'Hopla Pro' : 'Hopla Gratuit'}</p>
+              <p className="mt-1 text-[11.5px] text-white/55">{compte.principal ? 'Compte principal' : `Hopla ${OFFRES[compte.plan].nom}`}</p>
             </div>
           </div>
         </div>
@@ -335,10 +345,10 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
           {onglet === 'page' && <MaPage compte={compte} reglages={reglages} blocs={blocs} clics={clics} onReglages={changerReglages} onOrdonner={ordonner}
             onOuvrir={b => setEdition({ bloc: b, nouveau: false })} onAjouter={(b, enBas) => setEdition({ bloc: b, nouveau: true, enBas })} envoyerImage={d => api.envoyerImage(d)} annoncer={t => setToast(t)}
             demarrage={demarrageOuvert} fermerDemarrage={() => setDemarrageOuvert(false)} />}
-          {onglet === 'stats' && <OngletStats charger={chargerStats} adresse={urlPage(compte)} pseudo={compte.pseudo} limite={initial.paiement && !compte.pro} onPro={versAbonnement}
+          {onglet === 'stats' && <OngletStats charger={chargerStats} adresse={urlPage(compte)} pseudo={compte.pseudo} joursMax={initial.paiement ? OFFRES[compte.plan].jours : 365} onOffres={initial.paiement ? versAbonnement : undefined}
             ouvrirApps={reglages.ouvrirApps} onActiverApps={() => changerReglages({ ...reglages, ouvrirApps: true })} liste={<MaListe api={api} />} />}
           {onglet === 'reglages' && <OngletReglages reglages={reglages} compte={compte} blocs={blocs} traduire={b => setEdition({ bloc: b, nouveau: false, traduire: true })} onChange={changerReglages} onDeconnexion={deconnexion} urlExport={api.urlExport} supprimerMonCompte={api.supprimerMonCompte}
-            abonnement={abonnement} paiement={initial.paiement} ouvrirPaiement={api.ouvrirPaiement} ouvrirPortail={api.ouvrirPortail} sectionInitiale={sectionReglage} />}
+            abonnement={abonnement} paiement={initial.paiement} enVente={initial.enVente} ouvrirPaiement={api.ouvrirPaiement} ouvrirPortail={api.ouvrirPortail} sectionInitiale={sectionReglage} />}
           {onglet === 'comptes' && api.comptes && <OngletComptes api={api.comptes} />}
           </div>
         </main>
@@ -377,5 +387,6 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
 
       {bulle}
     </div>
+    </FournisseurOffre>
   );
 }

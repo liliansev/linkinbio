@@ -2,6 +2,7 @@ import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'node:
 import type { FournisseurListe, IntegrationListe } from '../lib/types.ts';
 import { email as validerEmail } from '../lib/valider.ts';
 import * as db from './db.ts';
+import { droits } from './droits.ts';
 import { source } from './analytique.ts';
 import type { Env } from './courriel.ts';
 
@@ -133,6 +134,8 @@ export async function inscrire(env: Env, fetchImpl: typeof fetch, entree: Record
   const page = typeof entree.page === 'string' ? entree.page : '';
   const compte = page ? db.compteParPseudo(page) : db.compteParId('principal');
   if (!compte || compte.statut !== 'actif') return { status: 404, message: 'Cette page n’existe plus.' };
+  // Le formulaire n'existe que dans l'offre qui le comprend (la page publique ne le montre pas sans elle).
+  if (!droits(compte, env, maintenant).listeEmail) return { status: 404, message: 'Ce formulaire n’existe plus.' };
   const bloc = db.lireBlocs(compte.id).find(b => b.id === entree.bloc && b.type === 'inscription' && b.public);
   if (!bloc) return { status: 404, message: 'Ce formulaire n’existe plus.' };
   if (db.contactsDuJour(compte.id, maintenant) >= 2000) return { status: 429, message: 'Trop d’inscriptions aujourd’hui. Réessaie demain.' };
