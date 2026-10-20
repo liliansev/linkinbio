@@ -149,7 +149,7 @@ export function Prise() {
             : 'Le back office de Hopla au téléphone : le nom s’écrit sur la page, un lien se déplace, le design s’ouvre dans une feuille.'}>
             <div key={jeu} className="hl-fondu">{onglet === 'creer' ? <EcranPage page={pageEtape(etape)} /> : <BackOffice etape={etape} />}</div>
           </Telephone>
-          <div className="hl-prise-legende hl-petit-seul" aria-live="polite">
+          <div className="hl-prise-legende hl-petit-seul" aria-live={auto ? 'off' : 'polite'}>
             <div className="hl-segments" aria-hidden="true">{liste.map((_, i) => <i key={i} data-plein={rang >= i || undefined} />)}</div>
             <p><span className="hl-gris">{rang + 1} sur {liste.length}</span> <b>{liste[rang].titre}</b><span className="hl-etape-texte">{liste[rang].texte}</span></p>
           </div>

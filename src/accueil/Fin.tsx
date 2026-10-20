@@ -31,10 +31,6 @@ export function Prix() {
       <div className="hl-tete-section hl-entre">
         <h2 id="titre-prix" className="hl-h2">Gratuit pour tout faire. Pro pour aller plus loin.</h2>
       </div>
-      <div className="hl-periode hl-entre" role="radiogroup" aria-label="Période de facturation du Pro">
-        <button type="button" role="radio" aria-checked={periode === 'mois'} onClick={() => setPeriode('mois')}>Par mois</button>
-        <button type="button" role="radio" aria-checked={periode === 'an'} onClick={() => setPeriode('an')}>Par an · {TARIFS.an.economie}</button>
-      </div>
       <div className="hl-offres">
         <article className="hl-offre hl-entre">
           <h3 className="hl-h3">Gratuit</h3>
@@ -44,6 +40,10 @@ export function Prix() {
         </article>
         <article className="hl-offre hl-offre-pro hl-entre" style={{ '--d': '80ms' } as CSSProperties}>
           <h3 className="hl-h3">Pro</h3>
+          <div className="hl-periode" role="radiogroup" aria-label="Période de facturation du Pro">
+            <button type="button" role="radio" aria-checked={periode === 'mois'} onClick={() => setPeriode('mois')}>Par mois</button>
+            <button type="button" role="radio" aria-checked={periode === 'an'} onClick={() => setPeriode('an')}>Par an · {TARIFS.an.economie}</button>
+          </div>
           <p className="hl-prix" aria-live="polite">
             <b key={periode} className="hl-prix-glisse">{euros(TARIFS[periode].prix)}</b>{' '}
             <span className="hl-gris">{periode === 'mois' ? 'par mois' : `par an, soit ${euros(Math.round((TARIFS.an.prix / 12) * 100) / 100)} par mois`}</span>
@@ -80,7 +80,7 @@ export function DernierAppel({ api }: { api: ApiAccueil }) {
   return (
     <section className="hl-section hl-dernier" aria-labelledby="dernier">
       <h2 id="dernier" className="hl-h2 hl-h2-grand hl-entre">Ton nom est <span className="hl-insecable">peut-être</span> encore libre.</h2>
-      <div className="hl-entre" style={{ '--d': '120ms' } as CSSProperties}><Reserver api={api} note={MOTS[mode].note} /></div>
+      <div className="hl-entre" style={{ '--d': '120ms' } as CSSProperties}><Reserver api={api} id="reserver-fin" note={MOTS[mode].note} /></div>
       <a href="/lilian" className="hl-lien-gris">Voir la page de Lilian</a>
     </section>
   );

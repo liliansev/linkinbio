@@ -214,6 +214,18 @@ export function supprimerCompte(id: string) {
   } catch (error) { d.exec('ROLLBACK'); throw error; }
 }
 
+/** Une adresse mal tapée, corrigée juste après l'inscription : les liens partis à l'ancienne ne servent plus. */
+export function changerEmail(id: string, email: string) {
+  if (id === PRINCIPAL) throw new Error('L’adresse du compte principal se lit dans l’environnement.');
+  const d = base();
+  d.exec('BEGIN');
+  try {
+    d.prepare('UPDATE comptes SET email = ? WHERE id = ?').run(email.toLowerCase(), id);
+    d.prepare('DELETE FROM jetons WHERE compte = ?').run(id);
+    d.exec('COMMIT');
+  } catch (error) { d.exec('ROLLBACK'); throw error; }
+}
+
 /* ---- La liste d'attente ----
  * Depuis l'accueil, on réserve son nom (hopla.page/<pseudo>) avec son adresse ;
  * Lilian invite ensuite depuis l'onglet Comptes, et `creerCompte` retire la
@@ -246,6 +258,7 @@ export const reservationParId = (id: string) => base().prepare('SELECT id, email
 export const retirerReservation = (id: string) => base().prepare('DELETE FROM attente WHERE id = ?').run(id);
 export const reservationsDepuis = (depuis: number) => (base().prepare('SELECT COUNT(*) AS n FROM attente WHERE ts > ?').get(depuis) as { n: number }).n;
 export const reservationParEmail = (email: string) => base().prepare('SELECT id, email, pseudo, ts FROM attente WHERE email = ?').get(email.toLowerCase()) as Reservation | undefined;
+export const changerEmailReservation = (id: string, email: string) => base().prepare('UPDATE attente SET email = ? WHERE id = ?').run(email.toLowerCase(), id);
 /** Les pages créées depuis `depuis` (le plafond du jour de l'inscription directe). */
 export const comptesDepuis = (depuis: number) => (base().prepare('SELECT COUNT(*) AS n FROM comptes WHERE cree > ? AND id != ?').get(depuis, PRINCIPAL) as { n: number }).n;
 

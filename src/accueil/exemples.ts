@@ -105,3 +105,15 @@ export function pageVisiteur(pseudo: string, theme: string): PagePublique {
     compte: { pseudo, principal: false, pro: false },
   };
 }
+
+/** La page vue depuis un réseau : son lien passe en tête et devient le lien mis en avant, comme sur une vraie page Hopla. */
+export function selonReseau(page: PagePublique, reseau: string): PagePublique {
+  const enTete = page.blocs.filter(b => b.icone === reseau);
+  if (!enTete.length) return page;
+  const reste = page.blocs.filter(b => b.icone !== reseau);
+  const vedette = page.blocs.find(b => b.vedette);
+  return {
+    ...page,
+    blocs: [...enTete, ...reste].map((b, i) => ({ ...b, vedette: i === 0, format: i === 0 ? 'bouton' : b.format, sousTitre: i === 0 ? b.sousTitre : b === vedette ? '' : b.sousTitre })),
+  };
+}

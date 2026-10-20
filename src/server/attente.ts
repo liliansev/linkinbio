@@ -72,6 +72,11 @@ export async function reserverNom(origines: Origines, env: Env, saisie: { nom: s
   const deja = db.dejaInscrit(adresse);
   if (deja) { await rappeler(origines, env, adresse, deja, fetchImpl); return note; }
   if (!db.reserver(adresse, nom, maintenant)) return { ok: false, message: `hopla.page/${nom} vient d’être pris. Essaie une variante.` };
+  await confirmerReservation(env, adresse, nom, fetchImpl);
+  return note;
+}
+
+async function confirmerReservation(env: Env, adresse: string, nom: string, fetchImpl: typeof fetch) {
   const texte = `hopla.page/${nom} est à toi. On ouvre les pages petit à petit : ton invitation arrivera à cette adresse, avec un lien pour créer ta page en quatre questions.`;
   const parti = await envoyer(env, fetchImpl, {
     to: adresse, subject: 'Ton nom Hopla est réservé', replyTo: CONTACT_LEGAL,
@@ -81,7 +86,6 @@ export async function reserverNom(origines: Origines, env: Env, saisie: { nom: s
   });
   // La réservation tient même si l'e-mail tarde : l'invitation repartira de la liste.
   if (!parti) console.error('[liens] confirmation de réservation non envoyée');
-  return note;
 }
 
 /** Depuis l'onglet Comptes : la réservation devient une page, et l'invitation part. */
@@ -118,5 +122,49 @@ export async function creerHopla(origines: Origines, env: Env, saisie: { nom: st
   const envoi = await inviter(origines, env, compte, fetchImpl, 'inscription');
   // Sans e-mail, personne ne peut entrer dans la page : elle s'efface, le nom redevient libre.
   if (!envoi.ok) { db.supprimerCompte(compte.id); return { ok: false, message: 'L’e-mail n’est pas parti. Réessaie dans un instant.' }; }
+  return note;
+}
+
+/** Le temps de voir qu'on s'est trompé d'adresse, juste après l'envoi. */
+export const DELAI_CORRECTION = 30 * 60_000;
+
+/**
+ * Une faute dans l'adresse, vue juste après l'envoi. Tant que personne n'est
+ * entré dans la page (ou que la réservation est toute neuve), l'adresse se
+ * corrige et le lien repart à la bonne ; celui parti à l'ancienne ne sert plus.
+ * Il faut redonner le nom et l'ancienne adresse exacte : personne d'autre ne
+ * détourne une page qui vient de naître. Comme à l'inscription, la réponse ne
+ * dit pas si la nouvelle adresse a déjà une page.
+ */
+export async function corrigerAdresse(origines: Origines, env: Env, saisie: { nom: string; ancienne: string; nouvelle: string }, fetchImpl: typeof fetch = fetch, maintenant = Date.now(), ip = ''): Promise<Reponse> {
+  const nom = validerPseudo(saisie.nom);
+  const ancienne = validerEmail(saisie.ancienne);
+  const nouvelle = validerEmail(saisie.nouvelle);
+  if (!nouvelle) return { ok: false, message: 'Cette adresse e-mail ne semble pas valide.' };
+  const refus = { ok: false as const, message: `Cette adresse ne se corrige plus d’ici. Écris-nous à ${CONTACT_LEGAL}.` };
+  if (!nom || !ancienne) return refus;
+  if (tropInsistante(ip, maintenant)) return { ok: false, message: 'Trop d’essais depuis ta connexion. Réessaie dans une heure.' };
+  const panne = { ok: false as const, message: 'L’e-mail n’est pas parti. Réessaie dans un instant.' };
+
+  if (!inscriptionLibre(env)) {
+    const r = db.reservationParEmail(ancienne);
+    if (!r || r.pseudo !== nom || maintenant - r.ts > DELAI_CORRECTION) return refus;
+    const note = { ok: true as const, message: `C’est corrigé. Ton invitation arrivera à ${nouvelle}.` };
+    const deja = nouvelle === ancienne ? null : db.dejaInscrit(nouvelle);
+    if (deja) { await rappeler(origines, env, nouvelle, deja, fetchImpl); return note; }
+    db.changerEmailReservation(r.id, nouvelle);
+    await confirmerReservation(env, nouvelle, nom, fetchImpl);
+    return note;
+  }
+
+  const compte = db.compteParPseudo(nom);
+  if (!compte || compte.email !== ancienne || compte.connexion || maintenant - compte.cree > DELAI_CORRECTION) return refus;
+  const note = { ok: true as const, message: `C’est corrigé. Ouvre l’e-mail envoyé à ${nouvelle} : un clic, et tu entres dans ta page.` };
+  const deja = nouvelle === ancienne ? null : db.dejaInscrit(nouvelle);
+  if (deja) { await rappeler(origines, env, nouvelle, deja, fetchImpl); return note; }
+  db.changerEmail(compte.id, nouvelle);
+  const envoi = await inviter(origines, env, { ...compte, email: nouvelle }, fetchImpl, 'inscription');
+  // L'e-mail n'est pas parti : l'adresse d'avant revient, et l'on peut réessayer.
+  if (!envoi.ok) { db.changerEmail(compte.id, ancienne); return panne; }
   return note;
 }

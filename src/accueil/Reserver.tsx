@@ -15,7 +15,8 @@ import { MOTS, appel, useInscription } from './textes.ts';
  *
  * Une phrase rassure à chaque étape. Avant l'envoi, un domaine mal tapé est
  * signalé une fois (`adresse.ts`) ; après, l'e-mail peut se renvoyer, une
- * minute plus tard, le temps que le premier arrive.
+ * minute plus tard, le temps que le premier arrive, et une adresse fausse se
+ * corrige tant que la page n'a pas été ouverte (`corrigerAdresse`).
  */
 
 export type EtatNom = { etat: 'libre' | 'pris' | 'invalide'; nom: string; suggestions: string[] };
@@ -24,6 +25,8 @@ export interface ApiAccueil {
   reserver(nom: string, email: string): Promise<{ ok: boolean; message: string }>;
   /** Le lien repart à la même adresse : un lien de connexion, ou le rappel de la réservation. */
   renvoyer(nom: string, email: string): Promise<{ ok: boolean; message: string }>;
+  /** Le lien repart à la bonne adresse ; celui parti à l'ancienne ne sert plus. */
+  corriger(nom: string, ancienne: string, nouvelle: string): Promise<{ ok: boolean; message: string }>;
 }
 
 type Etape = 'nom' | 'email' | 'fait';
@@ -33,9 +36,12 @@ interface Etat {
   /** L'adresse dont on a déjà signalé le domaine : renvoyée telle quelle, elle part. */
   signalee: string;
   renvoi: Renvoi;
+  /** L'adresse où le lien est parti ; `correction` rouvre le champ pour la corriger. */
+  envoyee: string;
+  correction: boolean;
 }
 
-let etat: Etat = { nom: '', verif: null, etape: 'nom', email: '', message: '', erreur: '', envoi: false, focus: '', signalee: '', renvoi: 'bientot' };
+let etat: Etat = { nom: '', verif: null, etape: 'nom', email: '', message: '', erreur: '', envoi: false, focus: '', signalee: '', renvoi: 'bientot', envoyee: '', correction: false };
 const abonnes = new Set<() => void>();
 const changer = (m: Partial<Etat>) => { etat = { ...etat, ...m }; abonnes.forEach(f => f()); };
 const abonner = (f: () => void) => { abonnes.add(f); return () => { abonnes.delete(f); }; };
@@ -47,7 +53,8 @@ async function verifier(api: ApiAccueil, nom: string): Promise<EtatNom | null> {
   const ici = ++demande;
   try {
     const r = await api.verifier(nom);
-    if (ici === demande && etat.nom === nom) changer({ verif: r });
+    // « lilian » suivi d'une espace s'écrit « lilian- » pendant la frappe : c'est le même nom.
+    if (ici === demande && etat.nom.replace(/-$/, '') === nom) changer({ verif: r });
     return r;
   } catch { return null; }
 }
@@ -61,12 +68,15 @@ function taper(api: ApiAccueil, valeur: string) {
 
 /** Un e-mail renvoyé trop tôt croise le premier : le bouton n'arrive qu'au bout d'une minute. */
 const DELAI_RENVOI = 60_000;
-const attendreRenvoi = () => setTimeout(() => changer({ renvoi: 'pret' }), DELAI_RENVOI);
+let attente: ReturnType<typeof setTimeout> | undefined;
+const attendreRenvoi = () => { clearTimeout(attente); attente = setTimeout(() => changer({ renvoi: 'pret' }), DELAI_RENVOI); };
+/** Le lien est parti à `adresse` : l'état final, puis une minute avant de pouvoir le renvoyer. */
+const parti = (message: string, adresse: string) => { changer({ etape: 'fait', message, envoi: false, renvoi: 'bientot', envoyee: adresse, correction: false, erreur: '' }); attendreRenvoi(); };
 
 async function renvoyer(api: ApiAccueil) {
   changer({ renvoi: 'envoi', erreur: '' });
   try {
-    const r = await api.renvoyer(etat.nom, etat.email);
+    const r = await api.renvoyer(etat.nom, etat.envoyee);
     if (r.ok) { changer({ renvoi: 'fait' }); attendreRenvoi(); } else changer({ renvoi: 'pret', erreur: r.message });
   } catch { changer({ renvoi: 'pret', erreur: 'Le serveur ne répond pas. Réessaie dans un instant.' }); }
 }
@@ -91,17 +101,24 @@ export function Reserver({ api, note, id, grand }: { api: ApiAccueil; note?: str
       clearTimeout(minuterie);
       const v = e.verif?.nom === nom ? e.verif : await verifier(api, nom);
       if (!v) { changer({ erreur: 'Le serveur ne répond pas. Réessaie dans un instant.' }); return; }
+      // Pris ou impossible : le verdict s'affiche, avec ses variantes, et la main reste au champ.
       if (v.etat === 'libre') changer({ nom, etape: 'email', erreur: '', focus: moi });
-      else champ.current?.focus();
+      else { changer({ nom, verif: v }); champ.current?.focus(); }
       return;
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e.email.trim())) { changer({ erreur: 'Il manque une adresse e-mail complète, comme marie@exemple.fr.' }); champ.current?.focus(); return; }
     // Un domaine qui ressemble à une faute : on le dit une fois, puis l'adresse part telle quelle.
     if (adresseSuggeree(e.email) && e.signalee !== e.email) { changer({ signalee: e.email }); champ.current?.focus(); return; }
+    const adresse = e.email.trim();
     changer({ envoi: true, erreur: '' });
     try {
-      const r = await api.reserver(e.nom, e.email.trim());
-      if (r.ok) { changer({ etape: 'fait', message: r.message, envoi: false, renvoi: 'bientot' }); attendreRenvoi(); }
+      if (e.correction) {
+        const r = await api.corriger(e.nom, e.envoyee, adresse);
+        if (r.ok) parti(r.message, adresse); else changer({ envoi: false, erreur: r.message });
+        return;
+      }
+      const r = await api.reserver(e.nom, adresse);
+      if (r.ok) parti(r.message, adresse);
       else if (/pris/.test(r.message)) { changer({ etape: 'nom', envoi: false, erreur: r.message, verif: null, focus: moi }); verifier(api, e.nom); }
       else changer({ envoi: false, erreur: r.message });
     } catch { changer({ envoi: false, erreur: 'Le serveur ne répond pas. Réessaie dans un instant.' }); }
@@ -119,6 +136,8 @@ export function Reserver({ api, note, id, grand }: { api: ApiAccueil; note?: str
                 : e.renvoi === 'bientot' ? 'Pas reçu ? Regarde dans tes indésirables. Tu pourras le renvoyer dans une minute.'
                 : <>Pas reçu ? Regarde dans tes indésirables, ou{' '}
                   <button type="button" className="hl-lien-texte" disabled={e.renvoi === 'envoi'} onClick={() => renvoyer(api)}>{e.renvoi === 'envoi' ? 'envoi…' : 'renvoie-le'}</button>.</>}
+              {' '}Une faute dans l’adresse ?{' '}
+              <button type="button" className="hl-lien-texte" onClick={() => changer({ etape: 'email', correction: true, email: e.envoyee, signalee: '', erreur: '', focus: moi })}>Corrige-la</button>.
             </p>
             {e.erreur && <p className="hl-reserver-erreur" role="alert">{e.erreur}</p>}
           </div>
@@ -139,6 +158,7 @@ export function Reserver({ api, note, id, grand }: { api: ApiAccueil; note?: str
             <span className="hl-champ-prefixe" aria-hidden="true">hopla.page/</span>
             <span className="hl-cache">Le nom de ta page, après hopla.page/</span>
             <input ref={champ} value={e.nom} onChange={ev => taper(api, ev.target.value)} placeholder="ton-nom" maxLength={30}
+              onBlur={() => { if (/-$/.test(etat.nom)) changer({ nom: etat.nom.replace(/-+$/, '') }); }}
               autoComplete="off" autoCapitalize="none" autoCorrect="off" spellCheck={false} enterKeyHint="next" aria-describedby={idEtat}
               aria-invalid={pris || undefined} data-champ-nom />
           </label>
@@ -149,7 +169,7 @@ export function Reserver({ api, note, id, grand }: { api: ApiAccueil; note?: str
               autoComplete="email" inputMode="email" enterKeyHint="send" required aria-describedby={idEtat} />
           </label>
         )}
-        <button type="submit" className="hl-btn" disabled={e.envoi}>{e.envoi ? 'Envoi…' : appel(mode)}</button>
+        <button type="submit" className="hl-btn" disabled={e.envoi}>{e.envoi ? 'Envoi…' : e.correction ? 'Corriger' : appel(mode)}</button>
       </div>
       <div className="hl-reserver-etat" id={idEtat} aria-live="polite">
         {e.erreur ? <p className="hl-reserver-erreur" role="alert">{e.erreur}</p>
@@ -158,6 +178,12 @@ export function Reserver({ api, note, id, grand }: { api: ApiAccueil; note?: str
               <span>Tu voulais dire </span>
               <button type="button" className="hl-lien-texte" onClick={() => corriger(suggeree)}>{suggeree}</button>
               <span>{e.signalee === e.email ? ' ? Si ton adresse est juste, valide de nouveau.' : ' ?'}</span>
+            </p>
+          )
+          : e.correction ? (
+            <p>
+              <span>Le lien partira à cette adresse ; celui envoyé à <b>{e.envoyee}</b> ne marchera plus.</span>{' '}
+              <button type="button" className="hl-lien-texte" onClick={() => changer({ etape: 'fait', correction: false, email: e.envoyee, erreur: '' })}>Annuler</button>
             </p>
           )
           : e.etape === 'email' ? (
@@ -185,9 +211,11 @@ export function Reserver({ api, note, id, grand }: { api: ApiAccueil; note?: str
   );
 }
 
-/** Le bouton de la barre : remonte au champ d'ouverture et lui donne la main. */
+/** Les boutons de la barre et des prix : vont au champ le plus proche (celui de l'ouverture ou celui de la fin) et lui donnent la main. */
 export function allerAuChamp() {
-  const cible = document.getElementById('reserver');
+  const distance = (el: HTMLElement) => Math.abs(el.getBoundingClientRect().top + el.offsetHeight / 2 - innerHeight / 2);
+  const cible = ['reserver', 'reserver-fin'].map(id => document.getElementById(id)).filter((el): el is HTMLElement => !!el)
+    .sort((a, b) => distance(a) - distance(b))[0];
   if (!cible) return;
   cible.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'center' });
   cible.querySelector<HTMLInputElement>('input')?.focus({ preventScroll: true });

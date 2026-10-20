@@ -1,6 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import type { CSSProperties, ReactNode } from 'react';
-import QRCode from 'qrcode';
+import { useEffect, useRef, useState } from 'react';
+import type { CSSProperties } from 'react';
 import { Icone } from '../components/Icone.tsx';
 import { Symbole } from '../components/Logo.tsx';
 import { CroquisLien, CroquisTete, Telephone } from './Telephone.tsx';
@@ -12,7 +11,8 @@ import { mouvementReduit, useCompte, useGlisse, useSequence, useVisible, useVu }
  * 04 tout ce qu'il faut autour, 05 les stats en une phrase. Les téléphones y
  * sont des croquis gris : on lit le mouvement, pas un thème. Au téléphone,
  * chaque démo part quand son téléphone est à l'écran, et ses commandes et sa
- * légende sont juste dessous.
+ * légende sont juste dessous. Les légendes ne s'annoncent aux lecteurs d'écran
+ * qu'une fois qu'on a touché une commande.
  */
 
 const d = (ms: number) => ({ '--d': `${ms}ms` }) as CSSProperties;
@@ -32,7 +32,8 @@ function Revoir({ onClick }: { onClick: () => void }) {
 type Cote = 'sans' | 'avec';
 /** 1 : la touche sur le lien ; 2 : ce qui s'ouvre ; 3 : la suite ; 4 : le visiteur repart, ou s'abonne. */
 const PAS_APP = [450, 600, 1000, 1100];
-const AVANT_AVEC = 3150 + 1500;
+/** La scène « Sans » dure 3,15 s ; on laisse ensuite le temps de lire sa légende avant « Avec ». */
+const AVANT_AVEC = 3150 + 3500;
 const LEGENDES: Record<Cote, string> = {
   sans: 'Le lien s’ouvre dans le navigateur d’Instagram. Ton visiteur n’y est connecté à rien : on lui demande de se reconnecter, et le plus souvent, il repart.',
   avec: 'Hopla ouvre le lien dans l’app YouTube, où ton visiteur est déjà connecté. Il regarde, il s’abonne, sans rien retaper.',
@@ -94,6 +95,7 @@ export function DansApp() {
                 {etape >= 4 && <p className="hl-toast" role="status">Ton visiteur est reparti.</p>}
               </> : (
                 <div className="hl-app" data-ouvert={etape >= 2 || undefined}>
+                  <div className="hl-app-barre"><Icone nom="youtube" taille={18} /><b>YouTube</b></div>
                   <div className="hl-app-video"><Icone nom="play" taille={30} /><i data-joue={etape >= 3 || undefined} /></div>
                   <div className="hl-app-corps">
                     <span className="hl-app-trait" style={{ width: '82%' }} />
@@ -105,6 +107,9 @@ export function DansApp() {
                       </span>
                     </div>
                   </div>
+                  <ul className="hl-app-suite" aria-hidden="true">
+                    {[0, 1, 2].map(k => <li key={k}><i /><span><span className="hl-app-trait" style={{ width: `${86 - k * 14}%` }} /><span className="hl-app-trait" style={{ width: '44%' }} /></span></li>)}
+                  </ul>
                 </div>
               )}
             </div>
@@ -119,7 +124,7 @@ export function DansApp() {
               </button>
             ))}
           </div>
-          <p key={cote} className="hl-legende-scene" aria-live="polite">{LEGENDES[cote]}</p>
+          <p key={cote} className="hl-legende-scene" aria-live={auto ? 'off' : 'polite'}>{LEGENDES[cote]}</p>
         </div>
       </div>
     </section>
@@ -230,16 +235,13 @@ function EcranChapitre({ i, e, actif }: { i: number; e: EtatVivant; actif: boole
 }
 const LABELS = ['La page change l’ordre de ses liens selon le réseau d’origine du visiteur.', 'La page met en avant un autre lien le soir, et affiche un compte à rebours.', 'Un lien réservé s’ouvre avec un code, et ses places se comptent.'];
 
-/** Au téléphone, la durée de chaque démo avant que le chapitre suivant prenne la main. */
-const DUREES = [2600, 3200];
-
 export function Vivante() {
   const [actif, setActif] = useState(-1);
   const [e, setE] = useState<EtatVivant>({ source: 'instagram', heure: 9, drop: 0 });
   const joues = useRef(new Set<number>());
   const chapitres = useRef<(HTMLElement | null)[]>([]);
   const [refMobile, vuMobile] = useVu<HTMLDivElement>(0.6);
-  const [auto, setAuto] = useState(true);
+  const [touche, setTouche] = useState(false);
 
   // Au bureau, le chapitre lu est celui qui croise le milieu de l'écran, à côté du téléphone qui reste.
   useEffect(() => {
@@ -251,15 +253,9 @@ export function Vivante() {
     return () => o.disconnect();
   }, []);
 
-  // Au téléphone, un seul téléphone et trois onglets : le premier chapitre part quand le téléphone est à l'écran,
-  // puis chacun passe la main au suivant, une fois ; toucher un onglet arrête l'enchaînement.
+  // Au téléphone, un seul téléphone et trois onglets : le premier chapitre se joue quand le téléphone est à l'écran,
+  // les autres quand on les touche. Rien n'avance pendant qu'on lit.
   useEffect(() => { if (vuMobile) setActif(a => (a < 0 ? 0 : a)); }, [vuMobile]);
-  const enchaine = vuMobile && auto && actif >= 0 && actif < CHAPITRES.length - 1 && !mouvementReduit();
-  useEffect(() => {
-    if (!enchaine) return;
-    const t = setTimeout(() => setActif(actif + 1), DUREES[actif]);
-    return () => clearTimeout(t);
-  }, [enchaine, actif]);
 
   // Chaque chapitre joue sa démo la première fois qu'on le lit.
   useEffect(() => {
@@ -281,8 +277,9 @@ export function Vivante() {
   };
   const lu = Math.max(0, actif);
   const sources = (
-    <div className="hl-onglets hl-sources" role="group" aria-label="Essayer depuis un réseau">
-      {SOURCES.map(s => <button key={s.id} type="button" aria-pressed={e.source === s.id} onClick={() => { setAuto(false); joues.current.add(0); setE(x => ({ ...x, source: s.id })); }}>{s.nom}</button>)}
+    <div className="hl-essai" role="group" aria-label="Essayer depuis un réseau">
+      <span className="hl-gris">Arrivé de</span>
+      {SOURCES.map(s => <button key={s.id} type="button" aria-pressed={e.source === s.id} onClick={() => { setTouche(true); joues.current.add(0); setE(x => ({ ...x, source: s.id })); }}>{s.nom}</button>)}
     </div>
   );
   const tel = (l: number) => (
@@ -314,14 +311,13 @@ export function Vivante() {
       <div className="hl-vivante-mobile hl-petit-seul">
         <div className="hl-onglets hl-onglets-scene" role="group" aria-label="Trois façons de changer, la démo se rejoue à chaque choix">
           {CHAPITRES.map((c, i) => (
-            <button key={c.court} type="button" aria-pressed={lu === i} onClick={() => { setAuto(false); rejouer(i); }}
-              data-remplit={(enchaine && actif === i) || undefined} style={{ '--duree': `${DUREES[i] ?? 0}ms` } as CSSProperties}>
+            <button key={c.court} type="button" aria-pressed={lu === i} onClick={() => { setTouche(true); rejouer(i); }}>
               {c.court}
             </button>
           ))}
         </div>
         <div ref={refMobile} className="hl-vivante-mobile-tel">{tel(290)}</div>
-        <div key={lu} className="hl-legende-scene" aria-live="polite">
+        <div key={lu} className="hl-legende-scene" aria-live={touche ? 'polite' : 'off'}>
           <p><b>{CHAPITRES[lu].titre}.</b> {CHAPITRES[lu].texte}</p>
           {lu === 0 && sources}
         </div>
@@ -330,74 +326,19 @@ export function Vivante() {
   );
 }
 
-/* ---- 04 · Tout ce qu'il faut autour ---- */
+/* ---- 04 · Tout ce qu'il faut autour ----
+ * Une liste dense, sans démo : ce qui se comprend en une ligne n'a pas besoin
+ * d'une scène. Le rythme change, la page raccourcit.
+ */
 
-function Case({ picto, titre, texte, large, rang, children }: { picto: string; titre: string; texte: string; large?: 2 | 3; rang: number; children: (joue: boolean) => ReactNode }) {
-  const [ref, vu] = useVu<HTMLLIElement>(0.4);
-  const [tour, setTour] = useState(0);
-  return (
-    <li ref={ref} className="hl-case hl-entre" data-large={large} style={d(rang * 60)} onMouseEnter={() => vu && setTour(t => t + 1)}>
-      <Icone nom={picto} taille={24} />
-      <h3 className="hl-case-titre">{titre}</h3>
-      <p>{texte}</p>
-      <div key={tour} className="hl-case-demo">{children(vu)}</div>
-    </li>
-  );
-}
-
-function Tape({ texte, joue, apres = 0 }: { texte: string; joue: boolean; apres?: number }) {
-  const [n, setN] = useState(0);
-  useEffect(() => {
-    if (!joue) return;
-    if (mouvementReduit()) { setN(texte.length); return; }
-    const t = [...texte].map((_, k) => setTimeout(() => setN(k + 1), apres + k * 45));
-    return () => t.forEach(clearTimeout);
-  }, [joue, texte, apres]);
-  return <>{texte.slice(0, n)}</>;
-}
-
-function DemoListe({ joue }: { joue: boolean }) {
-  const [merci, setMerci] = useState(false);
-  useEffect(() => { if (!joue) return; const t = setTimeout(() => setMerci(true), mouvementReduit() ? 0 : 1400); return () => clearTimeout(t); }, [joue]);
-  return (
-    <div className="hl-demo-liste">
-      <div className="hl-mini-carte">
-        <b>Rejoins ma liste</b>
-        <span className="hl-gris">Un e-mail de temps en temps, rien de plus.</span>
-        {merci ? <span className="hl-mini-merci"><Icone nom="check" taille={16} />Merci, c’est noté.</span> : (
-          <span className="hl-mini-form"><span className="hl-mini-champ"><Tape texte="marie@exemple.fr" joue={joue} apres={200} /></span><span className="hl-mini-ok">S’inscrire</span></span>
-        )}
-      </div>
-      <p className="hl-outils">Brevo · Mailchimp · CSV</p>
-    </div>
-  );
-}
-
-const LANGUES = ['Bonjour', 'Hello', 'Hola', 'Hallo', 'Ciao', 'Bonjour'];
-function DemoLangues({ joue }: { joue: boolean }) {
-  const [i, setI] = useState(0);
-  useEffect(() => {
-    if (!joue || mouvementReduit()) return;
-    const t = LANGUES.slice(1).map((_, k) => setTimeout(() => setI(k + 1), 300 + k * 650));
-    return () => t.forEach(clearTimeout);
-  }, [joue]);
-  return <p className="hl-demo-langue" aria-label="Bonjour, Hello, Hola, Hallo, Ciao"><span key={i}>{LANGUES[i]}</span></p>;
-}
-
-function DemoQR({ joue }: { joue: boolean }) {
-  const modules = useMemo(() => {
-    const q = QRCode.create('https://hopla.page/marie-lambert?s=qr', { errorCorrectionLevel: 'M' });
-    const n = q.modules.size;
-    const pleins: [number, number][] = [];
-    for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) if (q.modules.get(x, y)) pleins.push([x, y]);
-    return { n, pleins };
-  }, []);
-  return (
-    <svg className="hl-demo-qr" data-joue={joue || undefined} viewBox={`-2 -2 ${modules.n + 4} ${modules.n + 4}`} role="img" aria-label="Un QR code vers la page de Marie">
-      {modules.pleins.map(([x, y]) => <rect key={`${x}-${y}`} x={x} y={y} width="1.04" height="1.04" style={d((x + y) * 14)} />)}
-    </svg>
-  );
-}
+const AUTOUR = [
+  { picto: 'courrier', titre: 'Ta liste e-mail', texte: 'Un formulaire sur ta page ; les inscrits arrivent dans Brevo, Mailchimp ou un fichier CSV.' },
+  { picto: 'etoile', titre: 'Avis et preuves', texte: 'Ta note Google, tes abonnés YouTube ou les mots d’un client, avant le clic.' },
+  { picto: 'globe', titre: 'Cinq langues', texte: 'Français, anglais, espagnol, allemand, italien : chacun lit ta page dans la sienne.' },
+  { picto: 'film', titre: 'Une vidéo sur place', texte: 'Ta vidéo se lance sur la page, sans envoyer ton visiteur ailleurs.' },
+  { picto: 'qr', titre: 'Un QR code', texte: 'Prêt à imprimer pour une affiche ou un stand ; ses visites se comptent à part.' },
+  { picto: 'telecharger', titre: 'Tes données à toi', texte: 'Ta page, tes stats et ta liste s’exportent en un clic, depuis Réglages.' },
+];
 
 export function Autour() {
   return (
@@ -405,28 +346,14 @@ export function Autour() {
       <div className="hl-tete-section hl-entre">
         <h2 id="autour" className="hl-h2">Et tout ce qu’il faut autour.</h2>
       </div>
-      <ul className="hl-bento">
-        <Case rang={0} large={2} picto="courrier" titre="Ta liste e-mail, sans outil en plus" texte="Un formulaire sur ta page. Les inscrits arrivent chez toi, en CSV, ou directement dans Brevo et Mailchimp.">
-          {joue => <DemoListe joue={joue} />}
-        </Case>
-        <Case rang={1} picto="etoile" titre="Avis et preuves" texte="Ta note Google, tes abonnés YouTube ou les mots d’un client : de quoi rassurer avant le clic.">
-          {joue => (
-            <div className="hl-demo-avis" data-joue={joue || undefined}>
-              <b>4,9</b>
-              <span className="hl-etoiles" aria-hidden="true">{[0, 1, 2, 3, 4].map(k => <span key={k} style={d(k * 80)}><Icone nom="etoile" taille={18} /></span>)}</span>
-              <span className="hl-gris">sur 5 · 128 avis Google, exemple</span>
-            </div>
-          )}
-        </Case>
-        <Case rang={2} picto="globe" titre="Ta page parle sa langue" texte="Français, anglais, espagnol, allemand, italien : chaque visiteur la lit dans la sienne.">
-          {joue => <DemoLangues joue={joue} />}
-        </Case>
-        <Case rang={3} picto="film" titre="Une vidéo, lue sur place" texte="Ta vidéo se lance sur la page, sans quitter Hopla.">
-          {joue => <div className="hl-demo-video" data-joue={joue || undefined}><Icone nom="play" taille={26} /><i /></div>}
-        </Case>
-        <Case rang={4} picto="qr" titre="Un QR code prêt à imprimer" texte="Pour une affiche, une carte, un stand. Ceux qui le scannent se comptent à part.">
-          {joue => <DemoQR joue={joue} />}
-        </Case>
+      <ul className="hl-autour">
+        {AUTOUR.map((a, i) => (
+          <li key={a.titre} className="hl-entre" style={d(i * 50)}>
+            <Icone nom={a.picto} taille={22} />
+            <h3 className="hl-autour-titre">{a.titre}</h3>
+            <p>{a.texte}</p>
+          </li>
+        ))}
       </ul>
     </section>
   );
@@ -440,7 +367,7 @@ function Phrase({ morceaux, joue, depart, hausse }: { morceaux: Morceau[]; joue:
   let k = 0;
   return (
     <li className="hl-stat" data-joue={joue || undefined}>
-      {hausse && <span className="hl-stat-hausse" style={d(depart)}><Icone nom="courbe" taille={22} /></span>}
+      {hausse && <span className="hl-stat-hausse" style={d(depart)}><Icone nom="hausse" taille={22} /><span className="hl-cache">En hausse : </span></span>}
       <span>
         {morceaux.map((m, i) => {
           if (typeof m === 'string') return m.split(' ').filter(Boolean).map((mot, j) => <span key={`${i}-${j}`}><span className="hl-stat-mot" style={d(depart + k++ * 30)}>{mot}</span> </span>);
@@ -451,10 +378,10 @@ function Phrase({ morceaux, joue, depart, hausse }: { morceaux: Morceau[]; joue:
   );
 }
 
-/** Un nombre qui compte depuis 0 quand son mot apparaît. */
+/** Un nombre qui compte depuis 0 quand son mot apparaît ; avec moins de mouvement, il est là tout de suite. */
 function Nombre({ n, avant = '', suite = '', joue, delai }: { n: number; avant?: string; suite?: string; joue: boolean; delai: number }) {
   const [pret, setPret] = useState(false);
-  useEffect(() => { if (!joue) return; const t = setTimeout(() => setPret(true), delai); return () => clearTimeout(t); }, [joue, delai]);
+  useEffect(() => { if (!joue) return; const t = setTimeout(() => setPret(true), mouvementReduit() ? 0 : delai); return () => clearTimeout(t); }, [joue, delai]);
   const v = useCompte(n, pret);
   return <><span className="hl-stat-mot hl-stat-nombre" style={d(delai)}>{avant}{v.toLocaleString('fr-FR')}{suite}</span> </>;
 }
@@ -471,7 +398,7 @@ export function Stats() {
       <div className="hl-stats">
         <div>
           <ol ref={ref} key={tour} className="hl-stats-liste">
-            <Phrase joue={vu} depart={0} hausse morceaux={['Ta page a eu', { n: 412, suite: '\u00a0vues,' }, { n: 18, suite: '\u00a0%' }, 'de plus que la semaine d’avant.']} />
+            <Phrase joue={vu} depart={0} hausse morceaux={['Ta page a eu', { n: 412, suite: '\u00a0vues,' }, 'soit', { n: 18, suite: '\u00a0%' }, 'de plus que la semaine d’avant.']} />
             <Phrase joue={vu} depart={500} morceaux={['Instagram t’amène le plus de monde :', { n: 61, suite: '\u00a0%' }, 'des visites.']} />
             <Phrase joue={vu} depart={950} hausse morceaux={['Ton meilleur jour : jeudi 16 octobre, avec', { n: 88 }, 'vues. Un post ce jour-là ?']} />
             <Phrase joue={vu} depart={1450} hausse morceaux={['Ton lien « Ma boutique » a fait', { n: 40, avant: '+', suite: '\u00a0%' }, 'de clics (35 contre 25).']} />
@@ -482,7 +409,7 @@ export function Stats() {
         <div className="hl-mail" data-joue={vu || undefined} key={`m${tour}`} aria-label="L’e-mail du lundi" role="img">
           <div className="hl-mail-tete"><Symbole className="hl-mail-logo" /><b>Hopla</b><span className="hl-gris">lundi 9:00</span></div>
           <p className="hl-mail-sujet">Ta semaine sur Hopla</p>
-          <p>Ta page a eu 412 vues, 18 % de plus que la semaine d’avant.</p>
+          <p>Ta page a eu 412 vues, soit 18 % de plus que la semaine d’avant.</p>
           <p>Instagram t’amène le plus de monde : 61 % des visites.</p>
           <p>Ton lien « Ma boutique » a fait +40 % de clics.</p>
           <span className="hl-mail-bouton">Voir mes stats</span>

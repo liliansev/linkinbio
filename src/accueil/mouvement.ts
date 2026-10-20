@@ -90,23 +90,25 @@ export function useCompte(cible: number, actif: boolean, duree = 800): number {
 }
 
 /**
- * Les enfants de `ref` qui portent `data-cle` glissent de leur ancienne place à
- * la nouvelle quand `ordre` change (la technique FLIP), en `duree` ms.
+ * Les enfants de `ref` (ceux qui portent `data-cle`, ou ceux de `selecteur`)
+ * glissent de leur ancienne place à la nouvelle quand `ordre` change (la
+ * technique FLIP), en `duree` ms. React garde le même élément d'un ordre à
+ * l'autre : c'est lui qu'on suit.
  */
-export function useGlisse(ref: RefObject<HTMLElement | null>, ordre: string, duree = 400) {
-  const places = useRef(new Map<string, number>());
+export function useGlisse(ref: RefObject<HTMLElement | null>, ordre: string, duree = 400, selecteur = '[data-cle]') {
+  const places = useRef(new Map<Element, number>());
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const enfants = [...el.querySelectorAll<HTMLElement>('[data-cle]')];
+    const enfants = [...el.querySelectorAll<HTMLElement>(selecteur)];
     const avant = places.current;
-    const apres = new Map(enfants.map(e => [e.dataset.cle!, e.offsetTop]));
+    const apres = new Map(enfants.map(e => [e, e.offsetTop] as const));
     if (avant.size && !mouvementReduit()) {
       for (const e of enfants) {
-        const d = (avant.get(e.dataset.cle!) ?? apres.get(e.dataset.cle!)!) - apres.get(e.dataset.cle!)!;
+        const d = (avant.get(e) ?? apres.get(e)!) - apres.get(e)!;
         if (d) e.animate([{ transform: `translateY(${d}px)` }, { transform: 'none' }], { duration: duree, easing: 'cubic-bezier(.2,.7,.2,1)' });
       }
     }
     places.current = apres;
-  }, [ref, ordre, duree]);
+  }, [ref, ordre, duree, selecteur]);
 }

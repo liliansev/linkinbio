@@ -9,10 +9,10 @@ import { pageMarie } from './exemples.ts';
 
 /* 06 · Vingt thèmes, rangés par famille sur un rail, puis les couleurs qu'on change soi-même. */
 
-const NUANCES: { role: keyof Couleurs; nom: string; choix: string[] }[] = [
-  { role: 'fond', nom: 'Fond', choix: ['#f4efe6', '#1d2b3a', '#f6d9d0', '#dfe8dc'] },
-  { role: 'boutons', nom: 'Boutons', choix: ['#ffffff', '#1b1b1b', '#33524a', '#f2c94c'] },
-  { role: 'accent', nom: 'Accent', choix: ['#e2552d', '#3651d4', '#b0186b', '#1f7a4d'] },
+const NUANCES: { role: keyof Couleurs; nom: string; choix: [string, string][] }[] = [
+  { role: 'fond', nom: 'Fond', choix: [['#f4efe6', 'crème'], ['#1d2b3a', 'nuit'], ['#f6d9d0', 'rose poudré'], ['#dfe8dc', 'sauge']] },
+  { role: 'boutons', nom: 'Boutons', choix: [['#ffffff', 'blancs'], ['#1b1b1b', 'noirs'], ['#33524a', 'vert forêt'], ['#f2c94c', 'moutarde']] },
+  { role: 'accent', nom: 'Accent', choix: [['#e2552d', 'corail'], ['#3651d4', 'bleu'], ['#b0186b', 'framboise'], ['#1f7a4d', 'vert']] },
 ];
 
 export function Themes() {
@@ -70,9 +70,9 @@ export function Themes() {
             {NUANCES.map(n => (
               <fieldset key={n.role}>
                 <legend>{n.nom}</legend>
-                {n.choix.map(c => (
+                {n.choix.map(([c, nom]) => (
                   <button key={c} type="button" className="hl-nuance" style={{ background: c }} aria-pressed={couleurs[n.role] === c}
-                    aria-label={`${n.nom} ${c}`} onClick={() => setCouleurs(x => ({ ...x, [n.role]: x[n.role] === c ? '' : c }))} />
+                    aria-label={`${n.nom} ${nom}`} title={nom} onClick={() => setCouleurs(x => ({ ...x, [n.role]: x[n.role] === c ? '' : c }))} />
                 ))}
               </fieldset>
             ))}
