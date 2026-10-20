@@ -17,8 +17,10 @@ import { COOKIE_SESSION, DUREE_SESSION, adresseAdmin, compteDeSession, demanderC
 import { changerStatutMotive, signaler, supprimerMotive, traiter } from './moderation.ts';
 import { corrigerAdresse as corriger, creerHopla, inscriptionLibre, inviterReservation, renommerPage as renommer, renvoyerInscription, reserverNom as reserver, verifierNom as verifier } from './attente.ts';
 import * as creem from './creem.ts';
-import { JOURS_GRATUIT } from '../lib/abonnement.ts';
-import type { Periode } from '../lib/abonnement.ts';
+import { droits } from './droits.ts';
+import { selonDroits } from '../lib/droits.ts';
+import { OFFRES, estPlanPayant } from '../lib/abonnement.ts';
+import type { Periode, PlanPayant } from '../lib/abonnement.ts';
 
 /*
  * Les fonctions serveur : les pages publiques en lecture libre, tout le reste
@@ -86,14 +88,15 @@ export const lirePagePublique = createServerFn({ method: 'GET' })
     const compte = data.pseudo ? db.compteParPseudo(data.pseudo) : db.compteParId(PRINCIPAL);
     if (!compte || compte.statut !== 'actif') return null;
     const maintenant = Date.now();
-    const reglages = reglagesPourCompte(compte.id, db.lireReglages(compte.id));
+    // Ce que l'offre du compte ne comprend pas s'efface avant tout le reste.
+    const { reglages, blocs: permis } = selonDroits(reglagesPourCompte(compte.id, db.lireReglages(compte.id)), pourCompte(compte.id, db.lireBlocs(compte.id)), droits(compte, process.env, maintenant));
     // Le référent d'une page qui se recharge elle-même (hopla.page) ne dit rien de la provenance.
-    const blocs = composerAudience(composerMoment(pourCompte(compte.id, db.lireBlocs(compte.id)), maintenant), provenance({ s: data.s, ua: getRequestHeader('user-agent') ?? '', referent: getRequestHeader('referer') ?? '' }));
+    const blocs = composerAudience(composerMoment(permis, maintenant), provenance({ s: data.s, ua: getRequestHeader('user-agent') ?? '', referent: getRequestHeader('referer') ?? '' }));
     const prises = db.placesParBloc(compte.id);
     const page: PagePublique = {
       reglages,
       blocs: masquerAcces(blocs, id => prises[id] ?? 0),
-      compte: { pseudo: compte.pseudo, principal: compte.id === PRINCIPAL, pro: db.abonnement(compte, maintenant).plan === 'pro' },
+      compte: { pseudo: compte.pseudo, principal: compte.id === PRINCIPAL, plan: db.abonnement(compte, maintenant).plan },
       maintenant,
     };
     return traduirePage(page, langueDuVisiteur(getRequestHeader('accept-language') ?? '', reglages.langues, data.lang));
@@ -104,8 +107,8 @@ function etat(compte: string): EtatAdmin {
   const abonnement = db.abonnement(c);
   return {
     reglages: db.lireReglages(compte), blocs: db.lireBlocs(compte), clics: db.clicsParBloc(compte, 30), places: db.placesParBloc(compte), stockageEphemere: db.stockageEphemere(),
-    compte: { pseudo: c.pseudo, principal: compte === PRINCIPAL, email: c.email, pro: abonnement.plan === 'pro' }, cguAJour: cguAJour(compte),
-    abonnement, paiement: compte !== PRINCIPAL && !!creem.config(process.env),
+    compte: { pseudo: c.pseudo, principal: compte === PRINCIPAL, email: c.email, plan: abonnement.plan }, cguAJour: cguAJour(compte),
+    abonnement, paiement: compte !== PRINCIPAL && !!creem.config(process.env), enVente: creem.offresEnVente(process.env), droits: droits(c),
   };
 }
 
@@ -220,11 +223,11 @@ export const apercuSite = createServerFn({ method: 'POST' })
 export const lireStats = createServerFn({ method: 'GET' })
   .middleware([session])
   .validator((data: unknown) => ([7, 30, 90, 365].includes(Number(data)) ? Number(data) : 30))
-  // En gratuit, l'historique visible s'arrête à sept jours (tout est gardé : passer en Pro le rend visible).
-  // Tant que le paiement n'est pas branché, il n'y a pas de Pro à proposer : rien n'est limité.
+  // L'historique visible suit l'offre : 7 jours en Gratuit, 30 en Starter, un an en Pro (tout est gardé : changer d'offre le rend visible).
+  // Tant que le paiement n'est pas branché, il n'y a pas d'offre à proposer : rien n'est limité.
   .handler(async ({ data, context }): Promise<Stats> => {
-    const limite = !db.compteEstPro(context.compte) && !!creem.config(process.env);
-    return db.stats(context.compte, limite ? JOURS_GRATUIT : data);
+    const plafond = creem.config(process.env) ? OFFRES[db.planDuCompte(context.compte)].jours : 365;
+    return db.stats(context.compte, Math.min(data, plafond));
   });
 
 /* ---- « Rejoins ma liste » ---- */
@@ -272,16 +275,24 @@ export const resynchroniser = createServerFn({ method: 'POST' })
 
 export const ouvrirPaiement = createServerFn({ method: 'POST' })
   .middleware([session])
-  .validator((data: unknown): Periode => (data === 'an' ? 'an' : 'mois'))
-  .handler(async ({ data, context }) => {
-    const compte = db.compteParId(context.compte)!;
-    if (db.abonnement(compte).plan === 'pro') throw new Error('Tu es déjà en Pro : gère ton abonnement depuis le portail.');
-    return creem.ouvrirPaiement(process.env, fetch, compte, data, origines().admin);
-  });
+  .validator((data: unknown): { plan: PlanPayant; periode: Periode } => {
+    const o = (data ?? {}) as { plan?: unknown; periode?: unknown };
+    return { plan: estPlanPayant(o.plan) ? o.plan : 'pro', periode: o.periode === 'an' ? 'an' : 'mois' };
+  })
+  .handler(async ({ data, context }) => creem.ouvrirPaiement(process.env, fetch, db.compteParId(context.compte)!, data.plan, data.periode, origines().admin));
 
 export const ouvrirPortail = createServerFn({ method: 'POST' })
   .middleware([session])
   .handler(async ({ context }) => creem.ouvrirPortail(process.env, fetch, db.compteParId(context.compte)!));
+
+/** Les offres dans Creem, pour le compte principal : l'état, et la création des produits qui manquent. */
+export const lireOffresCreem = createServerFn({ method: 'GET' })
+  .middleware([proprietaire])
+  .handler(async () => creem.etatOffres(process.env));
+
+export const creerOffresCreem = createServerFn({ method: 'POST' })
+  .middleware([proprietaire])
+  .handler(async () => creem.creerOffres(process.env, fetch));
 
 /* ---- Prendre son nom depuis l'accueil : créer sa page, ou la liste d'attente ---- */
 

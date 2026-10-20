@@ -9,12 +9,13 @@ import { themeDe, variablesTheme } from '../lib/themes.ts';
 import { ICONES } from '../lib/icones.ts';
 import { Icone, NOMS_RESEAUX, PICTOS } from '../components/Icone.tsx';
 import { BlocPublic } from '../components/PageLiens.tsx';
-import { BoutonPrincipal, BoutonSecondaire, Champ, Feuille, Interrupteur, ListeChoix, NOMS_ANIMATIONS, Segments, classeBouton, classeSaisie, flechesRadio, preparerImage, vibrer } from './ui.tsx';
+import { BoutonPrincipal, BoutonSecondaire, Champ, Feuille, Interrupteur, ListeChoix, NOMS_ANIMATIONS, Segments, choisirFichier, classeBouton, classeSaisie, flechesRadio, preparerImage, vibrer } from './ui.tsx';
 import { TYPES } from './OngletLiens.tsx';
 import { appDe } from '../lib/ouvrirApp.ts';
 import { ChampsPreuve, RegleAcces, RegleMoment, RegleReseaux, RegleTraductions, Repli } from './ReglesBloc.tsx';
 import { reseauxDePartage } from '../lib/provenance.ts';
 import { etiquettes } from '../lib/etiquettes.ts';
+import { FournisseurOffre, Reserve, offreDe, useDroits, useVoirOffres } from './offre.tsx';
 
 export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, onSupprimer, onDupliquer, onDeplacer, place, traduire = false, envoyerImage, apercuSite, clics, adressePage, prises = 0, principal = false }: {
   bloc: Bloc | null;
@@ -49,6 +50,8 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
   const erreur = Object.keys(erreurs).length > 0;
   const [envoi, setEnvoi] = useState(false);
   const [lecture, setLecture] = useState(false);
+  const droits = useDroits();
+  const voir = useVoirOffres();
   const [icones, setIcones] = useState(false);
   // L'essentiel d'abord, neuf ou pas ; le reste attend derrière « Plus de réglages », sauf ce qui est déjà réglé.
   const [plus, setPlus] = useState(false);
@@ -183,8 +186,11 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
   }
   /** Un changement pas valable, neuf ou pas : la feuille reste ouverte et l'erreur dit quoi faire, rien ne se perd en silence. */
   const retenir = () => commence() && !valider();
+  // « Voir les offres » ferme la feuille comme un glissé, en gardant ce qui a changé, puis ouvre l'abonnement.
+  const offre = { droits, voirOffres: voir && (() => { if (retenir()) return; fermerEnGardant(); voir(); }) };
 
   return (
+    <FournisseurOffre value={offre}>
     <Feuille ouverte onFermer={fermerEnGardant} retenir={retenir} titre={nouveau ? `Ajouter : ${type.nom}` : [type.nom, !(bloc ?? b).public && 'masqué', (bloc ?? b).public && !estEnLigne(bloc ?? b) && 'programmé'].filter(Boolean).join(' · ')}
       pied={fermer => (
         <div className="flex items-center gap-2">
@@ -202,6 +208,8 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
         {/* Un bloc neuf dit d'abord à quoi il sert, en une ligne. */}
         {nouveau && <p className="text-[13.5px] leading-snug text-white/60">{type.aide}.</p>}
         {!nouveau && etiquettes(b).length > 0 && <p className="text-[13px] leading-snug text-white/60">{etiquettes(b).join(' · ')}</p>}
+        {/* Un avis ou une liste gardés d'une offre passée : ils attendent, rien n'est perdu. */}
+        {type.fonction && !droits[type.fonction] && <Reserve phrase={`Ce bloc n’est pas montré sur ta page sans Hopla ${offreDe(type.fonction)}. Il revient tel quel dès que tu la prends.`} />}
         {(b.type === 'lien' || (b.type === 'preuve' && preuveRemplie)) && !clavier && (
           // L'aperçu reste collé en haut de la feuille : chaque réglage se voit sans remonter.
           <div className="sticky top-0 z-10 -mx-5 bg-nuit px-5 pb-3 pt-1 shadow-[0_14px_14px_-12px_#ffffff]">
@@ -297,7 +305,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
             <div className="flex items-center gap-3">
               {b.image && <img src={b.image} alt="" className="h-14 w-14 rounded-xl object-cover" />}
               <div className="flex flex-1 flex-wrap gap-2">
-                <button type="button" onClick={() => fichier.current?.click()} disabled={envoi} className={classeBouton.secondaire}>{envoi ? 'Envoi…' : b.image ? 'Changer l’image' : 'Ajouter une image'}</button>
+                <button type="button" onClick={e => choisirFichier(fichier.current, e.currentTarget)} disabled={envoi} className={classeBouton.secondaire}>{envoi ? 'Envoi…' : b.image ? 'Changer l’image' : 'Ajouter une image'}</button>
                 {!!adresseSaisie(b.url) && (
                   <button type="button" onClick={recupererApercu} disabled={lecture || envoi} className={classeBouton.secondaire}>
                     {lecture ? 'Lecture du site…' : 'Remplir depuis le site'}
@@ -305,7 +313,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
                 )}
                 {b.image && <button type="button" onClick={() => maj({ image: '' })} className={classeBouton.discret}>Retirer</button>}
               </div>
-              <input ref={fichier} type="file" accept="image/*" hidden onChange={e => choisirImage(e.target.files?.[0])} />
+              <input ref={fichier} type="file" accept="image/*" className="adm-fichier" tabIndex={-1} aria-hidden="true" onChange={e => choisirImage(e.target.files?.[0])} />
             </div>
             {erreurDe('image') && <p role="alert" className="-mt-2 text-[13px] font-medium text-red-300">{erreurDe('image')}</p>}
           </>
@@ -394,5 +402,6 @@ export function EditeurBloc({ bloc, reglages, nouveau, onFermer, onEnregistrer, 
         )}
       </div>
     </Feuille>
+    </FournisseurOffre>
   );
 }

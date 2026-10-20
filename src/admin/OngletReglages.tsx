@@ -1,19 +1,22 @@
 import { useEffect, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
 import { CONTACT_LEGAL } from '../lib/legal.ts';
 import type { Bloc, ComptePage, Reglages } from '../lib/types.ts';
 import { LANGUES, urlPage } from '../lib/types.ts';
-import type { Abonnement as EtatAbonnement, Periode } from '../lib/abonnement.ts';
-import { AVANTAGES_PRO, TARIFS, estResilie, euros } from '../lib/abonnement.ts';
+import type { Abonnement as EtatAbonnement, Periode, PlanPayant } from '../lib/abonnement.ts';
+import { OFFRES } from '../lib/abonnement.ts';
 import { Icone } from '../components/Icone.tsx';
-import { Bascule, BoutonCopier, BoutonSecondaire, Carte, Champ, Interrupteur, classeBadge, classeBouton, classeSaisie, flechesRadio, vibrer } from './ui.tsx';
+import { Bascule, BoutonCopier, BoutonSecondaire, Carte, Champ, Interrupteur, classeBouton, classeSaisie, vibrer } from './ui.tsx';
+import { Abonnement } from './Offres.tsx';
+import { Etiquette, Reserve, usePermis } from './offre.tsx';
 import { LANGUES_FR } from './ReglesBloc.tsx';
 import { CodeQR } from './CodeQR.tsx';
 
-export function OngletReglages({ reglages, compte, blocs = [], traduire, onChange, onDeconnexion, urlExport, supprimerMonCompte, abonnement, paiement, ouvrirPaiement, ouvrirPortail, sectionInitiale }: {
+export function OngletReglages({ reglages, compte, blocs = [], traduire, onChange, onDeconnexion, urlExport, supprimerMonCompte, abonnement, paiement, enVente = [], ouvrirPaiement, ouvrirPortail, sectionInitiale }: {
   reglages: Reglages; compte: ComptePage; blocs?: Bloc[]; traduire?: (b: Bloc) => void; onChange: (r: Reglages) => void; onDeconnexion: () => void;
   urlExport: string | null; supprimerMonCompte: (confirmation: string) => Promise<{ ok: boolean; message: string }>;
-  abonnement: EtatAbonnement & { pro: boolean }; paiement: boolean;
-  ouvrirPaiement: (periode: Periode) => Promise<string>; ouvrirPortail: () => Promise<string>;
+  abonnement: EtatAbonnement; paiement: boolean; enVente?: PlanPayant[];
+  ouvrirPaiement: (plan: PlanPayant, periode: Periode) => Promise<string>; ouvrirPortail: () => Promise<string>;
   sectionInitiale?: 'abonnement';
 }) {
   const URL_PUBLIQUE = urlPage(compte);
@@ -27,13 +30,14 @@ export function OngletReglages({ reglages, compte, blocs = [], traduire, onChang
   }, [ouverte]);
   const seo = (champs: Partial<Reglages['seo']>) => onChange({ ...reglages, seo: { ...reglages.seo, ...champs } });
 
-  const pro = !compte.principal && paiement;
-  // Un titre et une icône par ligne, sans sous-titre (Lilian, 18 octobre 2026).
-  const sections: { id: Section; nom: string; icone: string }[] = [
+  const offres = !compte.principal && paiement;
+  const langues = usePermis('langues');
+  // Un titre et une icône par ligne, sans sous-titre (Lilian, 18 octobre 2026). À droite, une valeur : l'offre en cours, ou celle qui débloque.
+  const sections: { id: Section; nom: string; icone: string; valeur?: ReactNode }[] = [
     { id: 'partager', nom: 'QR code et adresse', icone: 'qr' },
-    ...(pro ? [{ id: 'abonnement' as const, nom: 'Abonnement', icone: 'diamant' }] : []),
+    ...(offres ? [{ id: 'abonnement' as const, nom: 'Abonnement', icone: 'diamant', valeur: <span className="text-[13px] text-white/55">{OFFRES[abonnement.plan].nom}</span> }] : []),
     { id: 'partage', nom: 'Aperçu dans Google', icone: 'google' },
-    { id: 'langues', nom: 'Langues', icone: 'globe' },
+    { id: 'langues', nom: 'Langues', icone: 'globe', valeur: langues ? undefined : <Etiquette fonction="langues" /> },
     { id: 'donnees', nom: 'Mes données', icone: 'cadenas' },
   ];
   const bascules: { nom: string; icone: string; actif: boolean; changer: (v: boolean) => void }[] = [
@@ -50,7 +54,7 @@ export function OngletReglages({ reglages, compte, blocs = [], traduire, onChang
         </button>
         <h2 className="text-[18px] font-semibold tracking-[-0.025em]">{sections.find(x => x.id === ouverte)?.nom}</h2>
       </div>
-      {ouverte === 'abonnement' && <Abonnement abonnement={abonnement} ouvrirPaiement={ouvrirPaiement} ouvrirPortail={ouvrirPortail} />}
+      {ouverte === 'abonnement' && <Abonnement abonnement={abonnement} enVente={enVente} ouvrirPaiement={ouvrirPaiement} ouvrirPortail={ouvrirPortail} />}
       {ouverte === 'partager' && <Carte>
         <div className="adm-address flex items-center gap-2 p-1.5 pl-3.5">
           <span className="min-w-0 flex-1 truncate text-[15px] text-white">{URL_PUBLIQUE.replace(/^https:\/\//, '').replace(/\/$/, '')}</span>
@@ -86,7 +90,11 @@ export function OngletReglages({ reglages, compte, blocs = [], traduire, onChang
           </div>
         </div>
       </Carte>}
-      {ouverte === 'langues' && <Langues reglages={reglages} onChange={onChange} adresse={URL_PUBLIQUE} blocs={blocs} traduire={traduire} />}
+      {ouverte === 'langues' && (langues ? <Langues reglages={reglages} onChange={onChange} adresse={URL_PUBLIQUE} blocs={blocs} traduire={traduire} /> : (
+        <Carte>
+          <Reserve phrase={reglages.langues?.length ? 'Tes langues attendent Hopla Starter : pour l’instant, ta page s’affiche en français pour tout le monde.' : 'Avec Hopla Starter, ta page s’affiche en anglais, en espagnol, en allemand ou en italien, dans la langue du visiteur.'} />
+        </Carte>
+      ))}
       {ouverte === 'donnees' && <TesDonnees compte={compte} urlExport={urlExport} supprimerMonCompte={supprimerMonCompte} />}
     </div>
   );
@@ -96,6 +104,7 @@ export function OngletReglages({ reglages, compte, blocs = [], traduire, onChang
       <button id={`reglage-${l.id}`} type="button" onClick={() => { setOuverte(l.id); scrollTo({ top: 0 }); }} className="adm-settings-row">
         <span className="adm-settings-icon"><Icone nom={l.icone} taille={19} /></span>
         <span className="min-w-0 flex-1 text-[14px] font-medium">{l.nom}</span>
+        {l.valeur}
         <Icone nom="ui-chevron" taille={16} className="-rotate-90 text-white/55" />
       </button>
     </li>
@@ -137,91 +146,6 @@ export function OngletReglages({ reglages, compte, blocs = [], traduire, onChang
 }
 
 type Section = 'partager' | 'abonnement' | 'partage' | 'langues' | 'donnees';
-
-const date = (ms: number) => new Date(ms).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
-
-/** L'offre Pro : la choisir (paiement chez Creem), ou gérer l'abonnement en cours (portail Creem). */
-function Abonnement({ abonnement, ouvrirPaiement, ouvrirPortail }: {
-  abonnement: EtatAbonnement & { pro: boolean }; ouvrirPaiement: (periode: Periode) => Promise<string>; ouvrirPortail: () => Promise<string>;
-}) {
-  const [periode, setPeriode] = useState<Periode>('an');
-  const [envoi, setEnvoi] = useState(false);
-  const [erreur, setErreur] = useState('');
-  async function aller(ouvrir: () => Promise<string>) {
-    setEnvoi(true);
-    setErreur('');
-    try { location.href = await ouvrir(); return; }
-    catch (error) { setErreur((error as Error).message || 'Le paiement ne répond pas. Réessaie dans un instant.'); }
-    setEnvoi(false);
-  }
-  const lien = 'text-white/60 underline decoration-white/25 underline-offset-2 hover:text-white';
-
-  if (abonnement.pro) {
-    const fin = abonnement.finPeriode ? date(abonnement.finPeriode) : '';
-    const etat = estResilie(abonnement.statut)
-      ? { texte: fin ? `Résilié. Ton Pro reste actif jusqu’au ${fin}, puis ta page repasse en gratuit, avec tout son contenu.` : 'Résilié. Ton Pro reste actif jusqu’à la fin de la période payée.', alerte: false }
-      : abonnement.statut === 'past_due'
-        ? { texte: 'Le dernier paiement n’est pas passé. Mets à jour ta carte pour garder le Pro.', alerte: true }
-        : { texte: fin ? `Se renouvelle le ${fin}.` : 'Ton abonnement est actif.', alerte: false };
-    return (
-      <div id="abonnement" className="scroll-mt-24">
-        <Carte titre="Ton abonnement" action={<span className={classeBadge}>Pro</span>}>
-          <p className={`text-[14px] leading-snug ${etat.alerte ? 'text-amber-200' : 'text-white/75'}`}>{etat.texte}</p>
-          {abonnement.portail && (
-            <>
-              <button type="button" disabled={envoi} onClick={() => aller(ouvrirPortail)} className={`${classeBouton.secondaire} mt-3`}>
-                {envoi ? 'Ouverture…' : 'Gérer mon abonnement'} <Icone nom="ui-ouvrir" taille={15} />
-              </button>
-              <p className="mt-2 text-[12.5px] leading-snug text-white/55">Ta carte et tes factures, sur la page sécurisée de Creem.</p>
-              {/* La loi demande une résiliation nommée comme telle, accessible sans détour. */}
-              {!estResilie(abonnement.statut) && (
-                <button type="button" disabled={envoi} onClick={() => aller(ouvrirPortail)} className={`mt-3 text-[13px] ${lien}`}>Résilier mon abonnement</button>
-              )}
-            </>
-          )}
-          {erreur && <p role="alert" className="mt-3 text-[13.5px] text-red-300">{erreur}</p>}
-        </Carte>
-      </div>
-    );
-  }
-
-  const termine = ['canceled', 'expired', 'unpaid', 'paused'].includes(abonnement.statut);
-  return (
-    <div id="abonnement" className="scroll-mt-24">
-      <Carte titre="Passer en Pro">
-        {termine && <p className="mb-3 text-[13.5px] leading-snug text-white/55">Ton abonnement Pro est terminé. Ta page est en gratuit, avec tout son contenu.</p>}
-        <ul className="flex flex-col gap-2">
-          {AVANTAGES_PRO.map(a => (
-            <li key={a} className="flex gap-2.5 text-[14px] leading-snug text-white/80">
-              <span className="mt-0.5 shrink-0 text-white" aria-hidden="true"><Icone nom="ui-ok" taille={16} /></span>{a}
-            </li>
-          ))}
-        </ul>
-        <div role="radiogroup" onKeyDown={e => flechesRadio(e)} aria-label="Formule" className="mt-4 grid grid-cols-2 gap-2">
-          {(Object.keys(TARIFS) as Periode[]).map(p => {
-            const t = TARIFS[p], choisi = periode === p;
-            return (
-              <button key={p} type="button" role="radio" aria-checked={choisi} onClick={() => setPeriode(p)}
-                className={`flex flex-col items-start rounded-[14px] border px-3.5 py-3 text-left transition ${choisi ? 'border-white ring-1 ring-inset ring-white' : 'border-white/15 hover:border-white/30'}`}>
-                <span className="text-[13px] text-white/55">{p === 'an' ? 'Annuel' : 'Mensuel'}</span>
-                <span className="mt-0.5 text-[18px] font-semibold tracking-[-0.025em] text-white tabular-nums">{euros(t.prix)}<span className="text-[13px] font-normal text-white/50"> / {p === 'an' ? 'an' : 'mois'}</span></span>
-                {'economie' in t && <span className="mt-1 text-[12.5px] font-semibold text-white">{t.economie}</span>}
-              </button>
-            );
-          })}
-        </div>
-        <button type="button" disabled={envoi} onClick={() => aller(() => ouvrirPaiement(periode))} className={`${classeBouton.principal} mt-3 w-full`}>
-          {envoi ? 'Ouverture du paiement…' : `Passer en Pro, ${TARIFS[periode].libelle}`}
-        </button>
-        {erreur && <p role="alert" className="mt-3 text-[13.5px] text-red-300">{erreur}</p>}
-        <p className="mt-3 text-[12.5px] leading-snug text-white/55">
-          Prix TTC. Paiement sécurisé par Creem, revendeur officiel de l’abonnement : il encaisse, envoie la facture et gère la TVA. Résiliable à tout moment, effet à la fin de la période payée.{' '}
-          {abonnement.portail && <button type="button" onClick={() => aller(ouvrirPortail)} className={lien}>Mes factures</button>}
-        </p>
-      </Carte>
-    </div>
-  );
-}
 
 /** Le RGPD en libre-service : tout télécharger, ou tout effacer (sauf le compte principal). */
 function TesDonnees({ compte, urlExport, supprimerMonCompte }: { compte: ComptePage; urlExport: string | null; supprimerMonCompte: (confirmation: string) => Promise<{ ok: boolean; message: string }> }) {

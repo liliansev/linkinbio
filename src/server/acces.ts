@@ -3,6 +3,7 @@ import { PRINCIPAL } from '../lib/types.ts';
 import { composerMoment } from '../lib/moments.ts';
 import { normaliserCode } from '../lib/acces.ts';
 import * as db from './db.ts';
+import { droits } from './droits.ts';
 
 /*
  * `/api/acces` : le lien d'un drop, rendu à qui tape le bon code et tant
@@ -31,6 +32,8 @@ export function debloquer(entree: Record<string, unknown>, contexte: { ip: strin
   const page = typeof entree.page === 'string' ? entree.page : '';
   const compte = page ? db.compteParPseudo(page) : db.compteParId(PRINCIPAL);
   if (!compte || compte.statut !== 'actif') return { status: 404, message: 'Cette page n’existe plus.' };
+  // Un drop n'existe que dans l'offre qui le comprend (la page publique ne le montre pas sans elle).
+  if (!droits(compte, process.env, maintenant).drops) return { status: 404, message: 'Ce lien n’est plus disponible.' };
   // Le bloc tel que la page le montre à cet instant : un drop pas encore ouvert, ou fini, ne se débloque pas.
   const bloc = composerMoment(db.lireBlocs(compte.id), maintenant).find(b => b.id === entree.bloc && b.type === 'lien' && b.acces && b.url);
   if (!bloc?.acces) return { status: 404, message: 'Ce lien n’est plus disponible.' };

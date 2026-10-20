@@ -17,7 +17,9 @@ import { themeDe, variablesTheme } from '../lib/themes.ts';
 import { HautLiens } from './BienDemarrer.tsx';
 import { FeuilleAjout } from './OngletLiens.tsx';
 import { DesignTiroirs, OngletApparence } from './OngletApparence.tsx';
-import { BoutonPrincipal, BoutonSecondaire, Feuille, Interrupteur, preparerImage, vibrer } from './ui.tsx';
+import { BoutonPrincipal, BoutonSecondaire, Feuille, Interrupteur, choisirFichier, preparerImage, vibrer } from './ui.tsx';
+import { offreDe, useDroits } from './offre.tsx';
+import type { Fonction } from '../lib/abonnement.ts';
 
 /*
  * « Ma page » : on édite la page elle-même. Le nom et la bio se tapent en
@@ -129,7 +131,7 @@ export function MaPage({ compte, reglages, blocs, clics, onReglages, onOrdonner,
   function aller(d: Destination) {
     vibrer(5);
     if (d === 'lien') return ajouter('lien');
-    if (d === 'photo') return fichier.current?.click();
+    if (d === 'photo') return choisirFichier(fichier.current, toile.current?.querySelector('.lp-ed-photo'));
     if (d === 'theme') return design();
     if (d === 'reseaux') return setFeuille('reseaux');
     setTimeout(() => {
@@ -141,7 +143,7 @@ export function MaPage({ compte, reglages, blocs, clics, onReglages, onOrdonner,
 
   const edition: Edition = {
     profil,
-    photo: () => fichier.current?.click(),
+    photo: source => choisirFichier(fichier.current, source),
     envoiPhoto: envoi,
     reseaux: () => setFeuille('reseaux'),
     modifie: (champ, avant) => annoncer({ texte: champ === 'nom' ? 'Nom mis à jour' : 'Bio mise à jour', annuler: () => { onReglages({ ...derniers.current, profil: { ...derniers.current.profil, [champ]: avant } }); annoncer({ texte: 'Changements annulés', genre: 'info' }); } }),
@@ -178,7 +180,7 @@ export function MaPage({ compte, reglages, blocs, clics, onReglages, onOrdonner,
       </div>
       </div>
 
-      <input ref={fichier} type="file" accept="image/*" hidden onChange={e => photo(e.target.files?.[0])} />
+      <input ref={fichier} type="file" accept="image/*" className="adm-fichier" tabIndex={-1} aria-hidden="true" onChange={e => photo(e.target.files?.[0])} />
       <FeuilleAjout ouverte={feuille === 'ajout'} onFermer={() => { enBas.current = false; setFeuille(null); }} onChoisir={ajouter} principal={principal} />
       <Feuille ouverte={feuille === 'reseaux'} onFermer={() => setFeuille(null)} retenir={reseauFaux} titre="Réseaux" cote apercu={direct} pied={piedAnnuler}>
         <OngletApparence reglages={reglages} onChange={onReglages} envoyerImage={envoyerImage} principal={principal} parties={['reseaux']} />
@@ -271,7 +273,10 @@ function BlocsEditables({ blocs, rendu, clics, onOrdonner, onOuvrir, onAjouter }
 
 function BlocEditable({ bloc, i, clics, ouvrir, children }: { bloc: Bloc; i: number; clics?: number; ouvrir: (b: Bloc) => void; children: ReactNode }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: bloc.id });
-  const prive = !bloc.public;
+  const droits = useDroits();
+  // Un bloc que l'offre ne comprend plus reste là, grisé comme un bloc masqué : il revient avec l'offre.
+  const attend = ([[!!bloc.acces, 'drops'], [bloc.type === 'inscription', 'listeEmail'], [bloc.type === 'preuve', 'avis']] as [boolean, Fonction][]).find(([oui, f]) => oui && !droits[f])?.[1];
+  const prive = !bloc.public || !!attend;
   const regles = etiquettes(bloc);
   const programme = bloc.public && !estEnLigne(bloc) && !regles.includes('Compte à rebours');
   const puces = [
@@ -294,7 +299,7 @@ function BlocEditable({ bloc, i, clics, ouvrir, children }: { bloc: Bloc; i: num
     return () => veille.disconnect();
   });
   return (
-    <div ref={n => { setNodeRef(n); noeud.current = n; }} {...attributes} {...listeners} aria-label={[`Modifier ${nom}`, prive && 'masqué', programme && 'programmé', ...regles].filter(Boolean).join(', ')} aria-roledescription="bloc déplaçable"
+    <div ref={n => { setNodeRef(n); noeud.current = n; }} {...attributes} {...listeners} aria-label={[`Modifier ${nom}`, attend ? `pas montré sans Hopla ${offreDe(attend)}` : prive && 'masqué', programme && 'programmé', ...regles].filter(Boolean).join(', ')} aria-roledescription="bloc déplaçable"
       className="lp-bloc lp-ed-bloc" data-id={bloc.id} data-type={bloc.type} data-vedette={bloc.vedette ? bloc.format : undefined} data-glisse={isDragging || undefined} data-prive={prive || programme || undefined}
       style={{ '--i': i, transform: CSS.Transform.toString(transform), transition } as CSSProperties}
       onClickCapture={e => { e.preventDefault(); e.stopPropagation(); ouvrir(bloc); }}
@@ -303,7 +308,7 @@ function BlocEditable({ bloc, i, clics, ouvrir, children }: { bloc: Bloc; i: num
       {(prive || programme || puces.length > 0) && (
         <span className="lp-ed-puces" aria-hidden="true">
           {/* Un picto par état, sans étiquette : le nom complet est dans l'aria-label du bloc. */}
-          {prive && <span className="lp-ed-puce" title="Masqué"><Icone nom="masque" taille={13} /></span>}
+          {prive && <span className="lp-ed-puce" title={attend ? `Pas montré sans Hopla ${offreDe(attend)}` : 'Masqué'}><Icone nom="masque" taille={13} /></span>}
           {programme && <span className="lp-ed-puce" title="Programmé"><Icone nom="horloge" taille={13} /></span>}
           {/* Chaque règle porte le picto de sa ligne dans l'éditeur : on la reconnaît sans l'ouvrir. */}
           {puces.map(p => <span key={p.icone} className="lp-ed-puce" title={p.nom}><Icone nom={p.icone} taille={13} /></span>)}

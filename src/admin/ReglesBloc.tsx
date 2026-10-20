@@ -7,6 +7,7 @@ import { Icone } from '../components/Icone.tsx';
 import { NOMS_AUDIENCES, RESEAUX_SOCIAUX, basculerPour, deReseau, enTetePour } from '../lib/provenance.ts';
 import type { Audience } from '../lib/provenance.ts';
 import { Bascule, Champ, Interrupteur, Segments, classeSaisie, vibrer } from './ui.tsx';
+import { Etiquette, Reserve, usePermis } from './offre.tsx';
 
 /*
  * Les règles d'un bloc, rangées sous la feuille d'édition : chacune se replie
@@ -22,13 +23,14 @@ const versLocal = (iso: string) => {
 const depuisLocal = (v: string) => (v ? new Date(v).toISOString() : '');
 
 /** Une section qui se replie, avec un résumé de ce qui est réglé. */
-export function Repli({ titre, icone, resume, ouvert: depart, children }: { titre: string; icone: string; resume?: string; ouvert: boolean; children: ReactNode }) {
+export function Repli({ titre, icone, resume, ouvert: depart, etiquette, children }: { titre: string; icone: string; resume?: string; ouvert: boolean; etiquette?: ReactNode; children: ReactNode }) {
   const [ouvert, setOuvert] = useState(depart);
   return (
     <div className="adm-groupe">
       <button type="button" onClick={() => setOuvert(!ouvert)} aria-expanded={ouvert} className="flex min-h-12 w-full items-center gap-2.5 px-4 text-left text-[14.5px] font-medium text-white/85">
         <Icone nom={icone} taille={17} />
         <span className="shrink-0">{titre}</span>
+        {etiquette}
         {/* Ce qui est réglé se lit à droite, comme une valeur, jamais en sous-titre sous le nom. */}
         <span className="min-w-0 flex-1 truncate text-right text-[13px] font-normal text-white/55">{!ouvert && resume}</span>
         <Icone nom="ui-chevron" taille={18} className={`shrink-0 transition-transform duration-300 ${ouvert ? 'rotate-180' : ''}`} />
@@ -48,6 +50,8 @@ const fuseauNavigateur = () => { try { return Intl.DateTimeFormat().resolvedOpti
 /** Quand le bloc s'affiche : des dates, un compte à rebours, un créneau qui revient chaque semaine. */
 export function RegleMoment({ b, maj, erreur }: { b: Bloc; maj: (c: Partial<Bloc>) => void; erreur?: string }) {
   const c = b.creneau;
+  // Les dates sont à tout le monde ; le créneau de la semaine vient avec le Pro.
+  const semaine = usePermis('reseauHeure');
   const majCreneau = (champs: Partial<Creneau>) => maj({ creneau: { ...(c ?? { jours: [1, 2, 3, 4, 5], de: '09:00', a: '12:00', fuseau: fuseauNavigateur(), effet: 'afficher' }), ...champs, fuseau: fuseauNavigateur() } });
   const resume = [b.debut || b.fin ? 'Dates' : '', b.compteARebours && b.debut ? 'compte à rebours' : '', c ? decrireCreneau(c) : ''].filter(Boolean).join(', ');
   return (
@@ -65,6 +69,14 @@ export function RegleMoment({ b, maj, erreur }: { b: Bloc; maj: (c: Partial<Bloc
       )}
       {(b.debut || b.fin) && <button type="button" onClick={() => maj({ debut: '', fin: '', compteARebours: false })} className="self-start text-[13px] text-white/55 underline">Retirer les dates</button>}
 
+      {!semaine ? (
+        <div className="border-t border-white/[0.06] pt-3">
+          <span className="mb-2 flex items-center gap-2 text-[13px] font-medium text-white/70">Chaque semaine <Etiquette fonction="reseauHeure" /></span>
+          <Reserve phrase={c ? `Ce bloc devait s’afficher ${decrireCreneau(c)}. Sans Hopla Pro, il s’affiche tout le temps.` : 'Avec Hopla Pro, un bloc revient à heure fixe, ou passe en tête de ta page aux bonnes heures.'}>
+            {c && <button type="button" onClick={() => maj({ creneau: null })} className="text-[13px] text-white/55 underline">Retirer le créneau</button>}
+          </Reserve>
+        </div>
+      ) : (
       <div className="border-t border-white/[0.06] pt-3">
         <span className="mb-1.5 block text-[13px] font-medium text-white/70">Chaque semaine</span>
         <div role="group" aria-label="Jours" className="grid grid-cols-7 gap-0.5 rounded-[10px] bg-white/[0.05] p-[3px]">
@@ -93,6 +105,7 @@ export function RegleMoment({ b, maj, erreur }: { b: Bloc; maj: (c: Partial<Bloc
           </div>
         ) : <p className="mt-1.5 text-[12.5px] leading-snug text-white/55">Choisis des jours : par exemple « Réserver » en tête en semaine le matin, « Mon live » le dimanche soir.</p>}
       </div>
+      )}
     </Repli>
   );
 }
@@ -110,8 +123,16 @@ export function RegleReseaux({ b, maj, reseaux }: { b: Bloc; maj: (c: Partial<Bl
   const caches = tous.filter(s => !visible(s));
   const enTete = tous.filter(tete);
   const noms = (l: Audience[]) => l.map(s => NOMS_AUDIENCES[s]).join(', ');
+  const reseauPermis = usePermis('reseauHeure');
   const resume = [caches.length ? `Pas sur ${noms(caches)}` : 'Partout', enTete.length ? `en tête sur ${noms(enTete)}` : ''].filter(Boolean).join(', ');
   const [premier, setPremier] = useState(enTete.length > 0);
+  if (!reseauPermis) return (
+    <Repli titre="Afficher sur" icone="cible" etiquette={<Etiquette fonction="reseauHeure" />} resume={caches.length || enTete.length ? 'Pas appliqué' : ''} ouvert={false}>
+      <Reserve phrase={caches.length || enTete.length ? 'Tes réglages par réseau attendent Hopla Pro : ce bloc s’affiche partout, à sa place.' : 'Avec Hopla Pro, ce bloc se montre ou se cache selon le réseau d’où vient le visiteur, et peut passer en tête pour lui.'}>
+        {(caches.length > 0 || enTete.length > 0) && <button type="button" onClick={() => maj({ cache: [], audience: null })} className="text-[13px] text-white/55 underline">Tout remettre partout</button>}
+      </Reserve>
+    </Repli>
+  );
   return (
     <Repli titre="Afficher sur" icone="cible" resume={resume} ouvert={false}>
       <p className="text-[12.5px] leading-snug text-white/55">Coupe un réseau : ceux qui arrivent de là ne verront pas ce bloc. Les autres le voient toujours.</p>
@@ -166,11 +187,19 @@ const TITRE_AVIS = 'Ce qu’ils en disent';
 /** Le mode drop : un code à taper, des places comptées, ou les deux. */
 export function RegleAcces({ b, maj, prises }: { b: Bloc; maj: (c: Partial<Bloc>) => void; prises: number }) {
   const a = b.acces;
+  const permis = usePermis('drops');
   const majAcces = (champs: Partial<Acces>) => {
     const suite = { code: a?.code ?? '', places: a?.places ?? 0, ...champs };
     maj({ acces: suite.code || suite.places ? suite : null });
   };
   const resume = a ? [a.code ? `code « ${a.code} »` : '', a.places ? `${prises}/${a.places} places prises` : ''].filter(Boolean).join(', ') : '';
+  if (!permis) return (
+    <Repli titre="Accès réservé" icone="cadenas" etiquette={<Etiquette fonction="drops" />} resume={a ? 'Pas montré' : ''} ouvert={false}>
+      <Reserve phrase={a ? 'Sans Hopla Pro, ce lien réservé n’est pas montré : son adresse serait sinon à la vue de tous.' : 'Avec Hopla Pro, un lien ne s’ouvre qu’avec un code, ou pour les premiers arrivés.'}>
+        {a && <button type="button" onClick={() => { vibrer(6); maj({ acces: null }); }} className="text-[13px] text-white/55 underline">Retirer l’accès réservé</button>}
+      </Reserve>
+    </Repli>
+  );
   return (
     <Repli titre="Accès réservé" icone="cadenas" resume={resume || 'Ouvert à tous'} ouvert={!!a}>
       <p className="text-[13px] leading-snug text-white/55">L’adresse du lien n’est jamais dans ta page : elle ne s’ouvre qu’avec le bon code, ou pour les premiers arrivés.</p>
@@ -189,7 +218,9 @@ export function RegleAcces({ b, maj, prises }: { b: Bloc; maj: (c: Partial<Bloc>
 
 /** Le texte du bloc dans les langues que la page propose. */
 export function RegleTraductions({ b, maj, langues, ouvert = false }: { b: Bloc; maj: (c: Partial<Bloc>) => void; langues: Langue[]; ouvert?: boolean }) {
-  if (!langues.length) return null;
+  // Sans Starter, la page ne parle que français : les traductions restent gardées, sans rien à remplir ici.
+  const permis = usePermis('langues');
+  if (!langues.length || !permis) return null;
   const champs: { cle: keyof Traduction; label: string; long?: boolean }[] = b.type === 'preuve' && b.preuve?.genre === 'temoignage'
     ? [{ cle: 'description', label: 'Témoignage', long: true }, { cle: 'sousTitre', label: 'Qui le dit' }]
     : [{ cle: 'titre', label: b.type === 'lien' ? 'Texte du bouton' : b.type === 'texte' ? 'Texte' : 'Titre', long: b.type === 'texte' },

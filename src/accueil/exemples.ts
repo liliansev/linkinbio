@@ -33,7 +33,7 @@ export function pageLilian(theme: string): PagePublique {
   return {
     reglages: habiller(REGLAGES_DEFAUT, theme),
     blocs: BLOCS_LILIAN,
-    compte: { pseudo: 'lilian', principal: true, pro: true },
+    compte: { pseudo: 'lilian', principal: true, plan: 'premium' },
   };
 }
 
@@ -74,7 +74,7 @@ export function pageMarie(theme: string, o: { couleurs?: Couleurs; profil?: Part
   return {
     reglages: { ...habiller(REGLAGES_DEFAUT, theme, o.couleurs), profil: { ...PROFIL_MARIE, ...o.profil }, reseaux: o.reseaux === false ? [] : RESEAUX_MARIE },
     blocs: o.blocs ?? BLOCS_MARIE,
-    compte: { pseudo: 'marie-lambert', principal: false, pro: false },
+    compte: { pseudo: 'marie-lambert', principal: false, plan: 'gratuit' },
   };
 }
 
@@ -96,7 +96,7 @@ export function pageJules(theme: string): PagePublique {
       reseaux: [{ reseau: 'instagram', url: 'https://instagram.com/' }, { reseau: 'spotify', url: 'https://open.spotify.com/' }, { reseau: 'youtube', url: 'https://youtube.com/' }],
     },
     blocs: BLOCS_JULES,
-    compte: { pseudo: 'jules-moreau', principal: false, pro: false },
+    compte: { pseudo: 'jules-moreau', principal: false, plan: 'gratuit' },
   };
 }
 
@@ -128,7 +128,7 @@ export function pageVisiteur(pseudo: string, theme: string, nom = nomAffiche(pse
       reseaux: RESEAUX_MARIE,
     },
     blocs: BLOCS_VISITEUR,
-    compte: { pseudo, principal: false, pro: false },
+    compte: { pseudo, principal: false, plan: 'gratuit' },
   };
 }
 

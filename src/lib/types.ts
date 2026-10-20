@@ -4,7 +4,8 @@
  * liste ordonnée de blocs.
  */
 
-import type { Abonnement, Periode } from './abonnement.ts';
+import type { Abonnement, EtatOffre, Periode, Plan, PlanPayant } from './abonnement.ts';
+import type { Droits } from './droits.ts';
 import type { Creneau } from './moments.ts';
 import type { Audience, EffetAudience } from './provenance.ts';
 
@@ -176,16 +177,16 @@ export interface CompteResume {
   /** Vues des 30 derniers jours. */
   vues: number;
   principal: boolean;
-  /** Abonné Pro en ce moment (jamais vrai pour le compte principal, qui n'a pas d'abonnement). */
-  pro: boolean;
+  /** L'offre en ce moment (Premium pour le compte principal, qui n'a pas d'abonnement). */
+  plan: Plan;
 }
 
 /** Ce que la page publique reçoit : jamais un bloc privé ni hors programmation. */
 export interface PagePublique {
   reglages: Reglages;
   blocs: Bloc[];
-  /** `pro` retire la mention « Une page faite avec Hopla ». */
-  compte: ComptePage & { pro: boolean };
+  /** Dès Starter, la page perd la mention « Une page faite avec Hopla ». */
+  compte: ComptePage & { plan: Plan };
   /** L'instant où la page a été composée : le compte à rebours part de là, au serveur comme au navigateur. */
   maintenant?: number;
   /** La langue dans laquelle la page s'affiche (celle du visiteur, si la page la propose). */
@@ -195,10 +196,14 @@ export interface PagePublique {
 export interface EtatAdmin {
   reglages: Reglages;
   blocs: Bloc[];
-  compte: ComptePage & { email: string; pro: boolean };
+  compte: ComptePage & { email: string; plan: Plan };
   abonnement: Abonnement;
   /** Vrai quand le paiement est branché sur le serveur (Creem configuré) et que le compte peut s'abonner. */
   paiement: boolean;
+  /** Les offres qu'on peut prendre maintenant (un produit Creem pour chaque période). */
+  enVente: PlanPayant[];
+  /** Ce que le compte peut faire de sa page ; le reste se montre avec l'offre qui le débloque. */
+  droits: Droits;
   /** Clics des 30 derniers jours, par bloc. */
   clics: Record<string, number>;
   /** Les places prises de chaque drop. */
@@ -265,8 +270,8 @@ export interface Api {
   supprimerMonCompte(confirmation: string): Promise<{ ok: boolean; message: string }>;
   /** L'adresse de l'export complet (JSON), ou null dans l'aperçu. */
   urlExport: string | null;
-  /** L'adresse de la page de paiement Creem pour passer en Pro. */
-  ouvrirPaiement(periode: Periode): Promise<string>;
+  /** Prendre une offre : l'adresse où aller (la page de paiement Creem, ou le retour après un changement d'offre). */
+  ouvrirPaiement(plan: PlanPayant, periode: Periode): Promise<string>;
   /** L'adresse du portail client Creem : carte, factures, résiliation. */
   ouvrirPortail(): Promise<string>;
   liste(): Promise<Liste>;
@@ -286,6 +291,10 @@ export interface Reservation { id: string; email: string; pseudo: string; ts: nu
 
 export interface ApiComptes {
   lister(): Promise<CompteResume[]>;
+  /** Les offres et leurs produits dans Creem. */
+  offres(): Promise<EtatOffre[]>;
+  /** Crée dans Creem les produits qui manquent, au prix du jour. */
+  creerOffres(): Promise<EtatOffre[]>;
   /** La liste d'attente, dans l'ordre d'arrivée. */
   attente(): Promise<Reservation[]>;
   /** Crée la page de la réservation et envoie l'invitation. */

@@ -44,7 +44,8 @@ embarque tout : l'image n'a pas de `node_modules`.
   jamais stockée), `server/moderation.ts` (DSA), `server/creem.ts` (paiement,
   webhooks signés), `server/apercu.ts` (aperçu de site, anti-SSRF).
 - `lib/` : `types.ts` (origines, `cheminPage`, `urlPage`), `valider.ts`, `themes.ts`, `legal.ts` (`VERSION_CGU`),
-  `abonnement.ts` (prix, `estPro()`).
+  `abonnement.ts` (les quatre offres Gratuit, Starter, Pro, Premium : prix, `peut()`, `estPaye()`), `droits.ts`
+  (`selonDroits` retire de la page publique ce que l'offre ne comprend pas, sans rien effacer).
 - `admin/` : onglets Ma page, Stats, Comptes (principal seulement), Réglages.
   `MaPage.tsx` édite la page elle-même : `PageLiens` reçoit `edition` (nom et bio
   tapés en place, photo, réseaux et blocs ouverts d'un toucher, blocs déplacés en
@@ -79,6 +80,6 @@ embarque tout : l'image n'a pas de `node_modules`.
 - Le back office est en noir et blanc (19 octobre 2026) : dans `.adm`, `white` est l'encre et `nuit` le papier (voir `src/styles/admin.css`). Un texte posé sur un bouton noir s'écrit donc `text-nuit` ; sur un bouton rouge, `text-nuit` aussi. Pas d'accent de couleur hors des alertes ; les thèmes de la page publique n'en dépendent pas.
 - Pictos Phosphor pleins, d'une seule couleur (sans dégradé ni duotone), jamais d'emojis. Les signes de commande du back office (`ui-*` : fermer, ajouter, chevrons, coche, flèches, copier) restent au trait, et les deux ne se mêlent pas dans une même rangée. Une icône nommée qui n'existe pas fait échouer `pnpm test` (`src/lib/icones.test.ts`).
 - Le suivi des clics Resend reste désactivé : il casse les liens magiques.
-- Le Pro n'est accordé que par un webhook Creem signé, jamais par le retour du paiement.
+- Une offre payante (Starter, Pro, Premium) n'est accordée que par un webhook Creem signé, jamais par le retour du paiement. Les produits Creem se créent depuis l'onglet Comptes (« Créer les offres dans Creem ») : la clé a besoin des droits Products et Subscriptions.
 - Aucun secret dans le dépôt ; ils vivent dans `/opt/linkinbio/secrets/runtime.env`.
 - Ne jamais tuer un serveur local avec un `pkill -f` dont le motif correspond à sa propre commande.

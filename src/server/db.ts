@@ -6,8 +6,8 @@ import type { Bloc, CompteResume, Contact, FournisseurListe, Reglages, Reservati
 import { PRINCIPAL } from '../lib/types.ts';
 import { REGLAGES_DEFAUT, blocsDefaut, reglagesNouveauCompte } from '../lib/defauts.ts';
 import { validerBloc, validerReglages } from '../lib/valider.ts';
-import type { Abonnement } from '../lib/abonnement.ts';
-import { QUOTA_GRATUIT, QUOTA_PRO, estPro } from '../lib/abonnement.ts';
+import type { Abonnement, Periode, Plan, PlanPayant } from '../lib/abonnement.ts';
+import { OFFRES, estPaye } from '../lib/abonnement.ts';
 import { appDe } from '../lib/ouvrirApp.ts';
 
 /*
@@ -28,8 +28,6 @@ let ephemere = false;
 
 export const nouvelId = () => randomUUID().replace(/-/g, '').slice(0, 12);
 
-/** Ce qu'un compte invité gratuit peut stocker en images ; le compte principal n'a pas de plafond. */
-export const QUOTA_MEDIAS = QUOTA_GRATUIT;
 const MAX_BLOCS = 200;
 
 function chemin() {
@@ -97,6 +95,8 @@ export function base(): DatabaseSync {
   colonne(db, 'comptes', 'abonnement_statut', "TEXT NOT NULL DEFAULT ''");
   colonne(db, 'comptes', 'fin_periode', 'INTEGER');
   colonne(db, 'comptes', 'abonnement_maj', 'INTEGER NOT NULL DEFAULT 0');
+  // Le produit Creem de l'abonnement, qui dit l'offre (Starter, Pro, Premium) ; vide pour les abonnements Pro d'avant les quatre offres.
+  colonne(db, 'comptes', 'abonnement_produit', "TEXT NOT NULL DEFAULT ''");
   // Vu depuis le navigateur intégré d'une app (Instagram, TikTok…), et pour un clic, ouvert dans l'app visée.
   colonne(db, 'evenements', 'integre', 'INTEGER NOT NULL DEFAULT 0');
   colonne(db, 'evenements', 'app', 'INTEGER NOT NULL DEFAULT 0');
@@ -176,10 +176,10 @@ export function secret(): string {
 
 export interface Compte {
   id: string; email: string; pseudo: string; statut: 'actif' | 'suspendu'; cree: number; connexion: number | null; cgu: string; cgu_le: number | null;
-  creem_client: string; creem_abonnement: string; abonnement_statut: string; fin_periode: number | null; abonnement_maj: number;
+  creem_client: string; creem_abonnement: string; abonnement_statut: string; fin_periode: number | null; abonnement_maj: number; abonnement_produit: string;
 }
 
-const LIRE_COMPTE = 'SELECT id, email, pseudo, statut, cree, connexion, cgu, cgu_le, creem_client, creem_abonnement, abonnement_statut, fin_periode, abonnement_maj FROM comptes';
+const LIRE_COMPTE = 'SELECT id, email, pseudo, statut, cree, connexion, cgu, cgu_le, creem_client, creem_abonnement, abonnement_statut, fin_periode, abonnement_maj, abonnement_produit FROM comptes';
 export const compteParId = (id: string) => base().prepare(`${LIRE_COMPTE} WHERE id = ?`).get(id) as Compte | undefined;
 export const compteParPseudo = (pseudo: string) => base().prepare(`${LIRE_COMPTE} WHERE pseudo = ?`).get(pseudo.toLowerCase()) as Compte | undefined;
 /** Jamais le compte principal : son adresse se lit dans l'environnement. */
@@ -283,18 +283,35 @@ export const changerPseudoReservation = (id: string, pseudo: string) => base().p
 /** Les pages créées depuis `depuis` (le plafond du jour de l'inscription directe). */
 export const comptesDepuis = (depuis: number) => (base().prepare('SELECT COUNT(*) AS n FROM comptes WHERE cree > ? AND id != ?').get(depuis, PRINCIPAL) as { n: number }).n;
 
-/* ---- Abonnement Pro ---- */
+/* ---- Offres et abonnement ---- */
 
-/** Où en est l'abonnement d'un compte. Le compte principal est Pro sans abonnement. */
-export function abonnement(c: Compte, maintenant = Date.now()): Abonnement {
-  if (c.id === PRINCIPAL) return { plan: 'pro', statut: '', finPeriode: null, portail: false };
-  const lu = { statut: c.abonnement_statut, finPeriode: c.fin_periode };
-  return { plan: estPro(lu, maintenant) ? 'pro' : 'gratuit', statut: c.abonnement_statut, finPeriode: c.fin_periode, portail: !!c.creem_client };
+/** Un produit créé dans Creem pour une offre et une période. Les anciens restent : leurs abonnés gardent leur offre. */
+export interface ProduitCreem { id: string; plan: PlanPayant; periode: Periode; prix: number; actuel: boolean }
+
+/** Les produits Creem connus de Hopla, tenus par « Créer les offres dans Creem » (onglet Comptes). */
+export function lireCatalogue(): ProduitCreem[] {
+  const ligne = base().prepare('SELECT valeur FROM reglages WHERE cle = ?').get('creem-produits') as { valeur: string } | undefined;
+  try { return ligne ? (JSON.parse(ligne.valeur) as ProduitCreem[]) : []; } catch { return []; }
+}
+export const ecrireCatalogue = (produits: ProduitCreem[]) =>
+  base().prepare('INSERT INTO reglages (cle, valeur) VALUES (?, ?) ON CONFLICT (cle) DO UPDATE SET valeur = excluded.valeur').run('creem-produits', JSON.stringify(produits));
+
+/** L'offre d'un produit Creem. Un produit inconnu est un Pro d'avant les quatre offres (les webhooks des autres produits sont écartés avant). */
+export function produitConnu(id: string): ProduitCreem | undefined {
+  return id ? lireCatalogue().find(p => p.id === id) : undefined;
 }
 
-export const compteEstPro = (id: string, maintenant = Date.now()) => {
+/** Où en est l'abonnement d'un compte. Le compte principal a tout, sans abonnement. */
+export function abonnement(c: Compte, maintenant = Date.now()): Abonnement {
+  if (c.id === PRINCIPAL) return { plan: 'premium', statut: '', finPeriode: null, periode: null, portail: false };
+  const produit = produitConnu(c.abonnement_produit);
+  const plan: Plan = estPaye({ statut: c.abonnement_statut, finPeriode: c.fin_periode }, maintenant) ? produit?.plan ?? 'pro' : 'gratuit';
+  return { plan, statut: c.abonnement_statut, finPeriode: c.fin_periode, periode: produit?.periode ?? null, portail: !!c.creem_client };
+}
+
+export const planDuCompte = (id: string, maintenant = Date.now()): Plan => {
   const c = compteParId(id);
-  return !!c && abonnement(c, maintenant).plan === 'pro';
+  return c ? abonnement(c, maintenant).plan : 'gratuit';
 };
 
 export const compteParAbonnement = (id: string) => (id ? base().prepare(`${LIRE_COMPTE} WHERE creem_abonnement = ?`).get(id) as Compte | undefined : undefined);
@@ -306,14 +323,15 @@ export const compteParClientCreem = (id: string) => (id ? base().prepare(`${LIRE
  * Un nouvel abonnement repart de sa propre fin de période, jamais de celle de
  * l'ancien. Vrai si l'état a changé.
  */
-export function appliquerAbonnement(id: string, a: { client: string; abonnement: string; statut: string; finPeriode: number | null; maj: number }): boolean {
+export function appliquerAbonnement(id: string, a: { client: string; abonnement: string; statut: string; finPeriode: number | null; maj: number; produit?: string }): boolean {
   if (id === PRINCIPAL) return false;
   const r = base().prepare(`UPDATE comptes SET
       creem_client = CASE WHEN $client != '' THEN $client ELSE creem_client END,
+      abonnement_produit = CASE WHEN $produit != '' THEN $produit WHEN $abonnement != '' AND $abonnement != creem_abonnement THEN '' ELSE abonnement_produit END,
       fin_periode = CASE WHEN $abonnement != '' AND $abonnement != creem_abonnement THEN $fin ELSE COALESCE($fin, fin_periode) END,
       creem_abonnement = CASE WHEN $abonnement != '' THEN $abonnement ELSE creem_abonnement END,
       abonnement_statut = $statut, abonnement_maj = $maj
-    WHERE id = $id AND abonnement_maj <= $maj`).run({ client: a.client, abonnement: a.abonnement, fin: a.finPeriode, statut: a.statut, maj: a.maj, id });
+    WHERE id = $id AND abonnement_maj <= $maj`).run({ client: a.client, abonnement: a.abonnement, fin: a.finPeriode, statut: a.statut, maj: a.maj, produit: a.produit ?? '', id });
   return Number(r.changes) > 0;
 }
 
@@ -331,13 +349,17 @@ export const noterConnexion = (id: string, maintenant = Date.now()) => base().pr
 /** La liste du back office de Lilian, avec de quoi juger l'activité de chaque page. */
 export function listerComptes(maintenant = Date.now()): CompteResume[] {
   const lignes = base().prepare(`
-    SELECT c.id, c.email, c.pseudo, c.statut, c.cree, c.connexion, c.abonnement_statut, c.fin_periode,
+    SELECT c.id, c.email, c.pseudo, c.statut, c.cree, c.connexion, c.abonnement_statut, c.fin_periode, c.abonnement_produit,
       (SELECT COUNT(*) FROM blocs b WHERE b.compte = c.id) AS blocs,
       (SELECT COUNT(*) FROM evenements e WHERE e.compte = c.id AND e.type = 'vue' AND e.ts > ?) AS vues
-    FROM comptes c ORDER BY c.id = ? DESC, c.cree DESC`).all(maintenant - 30 * 86_400_000, PRINCIPAL) as (Omit<CompteResume, 'principal' | 'pro'> & { abonnement_statut: string; fin_periode: number | null })[];
-  return lignes.map(({ abonnement_statut, fin_periode, ...l }) => ({
-    ...l, principal: l.id === PRINCIPAL, pro: l.id !== PRINCIPAL && estPro({ statut: abonnement_statut, finPeriode: fin_periode }, maintenant),
-  }));
+    FROM comptes c ORDER BY c.id = ? DESC, c.cree DESC`).all(maintenant - 30 * 86_400_000, PRINCIPAL) as (Omit<CompteResume, 'principal' | 'plan'> & { abonnement_statut: string; fin_periode: number | null; abonnement_produit: string })[];
+  const catalogue = lireCatalogue();
+  return lignes.map(({ abonnement_statut, fin_periode, abonnement_produit, ...l }) => {
+    const paye = l.id !== PRINCIPAL && estPaye({ statut: abonnement_statut, finPeriode: fin_periode }, maintenant);
+    // L'offre d'un abonné : celle de son produit, Pro pour un abonnement d'avant les quatre offres.
+    const plan: Plan = paye ? catalogue.find(p => p.id === abonnement_produit)?.plan ?? 'pro' : 'gratuit';
+    return { ...l, principal: l.id === PRINCIPAL, plan };
+  });
 }
 
 /* ---- Pages et blocs ---- */
@@ -387,7 +409,7 @@ export function ordonner(compte: string, ids: string[]) {
 export function ajouterMedia(compte: string, octets: Uint8Array, extension: 'webp' | 'jpg'): string {
   const d = base();
   if (compte !== PRINCIPAL) {
-    const quota = compteEstPro(compte) ? QUOTA_PRO : QUOTA_MEDIAS;
+    const quota = OFFRES[planDuCompte(compte)].quota;
     const { total } = d.prepare('SELECT COALESCE(SUM(LENGTH(octets)), 0) AS total FROM medias WHERE compte = ?').get(compte) as { total: number };
     if (total + octets.length > quota) throw new Error('Plus de place pour les images : supprime-en ou réutilise une image déjà envoyée.');
   }

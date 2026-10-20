@@ -8,9 +8,12 @@
  * professionnel est prévue avant l'ouverture publique.
  */
 
-import { TARIFS, euros } from './abonnement.ts';
+import { OFFRES, euros } from './abonnement.ts';
 
-export const VERSION_CGU = '2026-10-20.1';
+/** « 4 € par mois ou 36 € par an » : le prix d'une offre, tel que Creem le facture. */
+const prixDe = (p: 'starter' | 'pro' | 'premium') => `${euros(OFFRES[p].prix.mois)} par mois ou ${euros(OFFRES[p].prix.an)} par an`;
+
+export const VERSION_CGU = '2026-10-20.2';
 export const CONTACT_LEGAL = 'bonjour@liliansevoumian.fr';
 
 export interface DocumentLegal { titre: string; resume: string; sections: { titre: string; texte: string[] }[] }
@@ -27,16 +30,20 @@ export const LEGAL: Record<NomDocument, DocumentLegal> = {
     sections: [
       { titre: 'Le service', texte: [
         'Hopla permet de publier une page de liens personnelle à l’adresse hopla.page/<pseudo>, et de la gérer depuis un back office, sur app.hopla.page. Le service est édité par Lilian Sevoumian (voir les mentions légales).',
-        'Hopla existe en version gratuite et en offre Pro, payante (voir « L’offre Pro et son paiement »). Il peut évoluer, s’interrompre pour maintenance ou s’arrêter : dans ce dernier cas, tu es prévenu par e-mail au moins 30 jours avant, et tu peux exporter tes données jusqu’au dernier jour.',
+        'Hopla existe en version gratuite et en offres payantes (voir « Les offres payantes et leur paiement »). Il peut évoluer, s’interrompre pour maintenance ou s’arrêter : dans ce dernier cas, tu es prévenu par e-mail au moins 30 jours avant, et tu peux exporter tes données jusqu’au dernier jour.',
       ] },
       { titre: 'Ton compte', texte: [
         'Tu te connectes avec ton adresse e-mail, par un lien à usage unique. Tu es responsable de l’accès à ta boîte mail : quiconque y accède peut ouvrir ton back office.',
         'Tu peux télécharger toutes tes données et supprimer ton compte à tout moment, depuis l’onglet Réglages. La suppression est immédiate et définitive.',
       ] },
-      { titre: 'L’offre Pro et son paiement', texte: [
-        `L’offre Pro retire la mention « Une page faite avec Hopla », montre tes statistiques sur un an au lieu de sept jours, et porte la place pour les images à 200 Mo. Elle coûte ${euros(TARIFS.mois.prix)} par mois ou ${euros(TARIFS.an.prix)} par an, toutes taxes comprises, et se renouvelle automatiquement à la fin de chaque période.`,
+      { titre: 'Les offres payantes et leur paiement', texte: [
+        'La version gratuite le reste pour toujours : ta page, des liens sans limite, les thèmes, tes statistiques sur sept jours et 25 Mo d’images. Trois offres payantes s’y ajoutent, chacune avec tout ce que comprend la précédente.',
+        `Starter, à ${prixDe('starter')} : ta page sans la mention « Une page faite avec Hopla », les avis de tes clients, ta page en cinq langues, tes statistiques sur 30 jours et 100 Mo d’images. Pro, à ${prixDe('pro')} : ta page selon le réseau et l’heure, les drops, ta liste e-mail vers Brevo ou Mailchimp, tes statistiques sur un an et 200 Mo d’images. Premium, à ${prixDe('premium')}, ajoutera ton propre nom de domaine, jusqu’à trois pages et 1 Go d’images ; il n’est pas encore en vente.`,
+        'Les prix sont toutes taxes comprises. L’abonnement se renouvelle automatiquement à la fin de chaque période, au mois ou à l’an selon ton choix.',
         'Le paiement passe par Creem (creem.io), service de la société Armitage Labs OÜ (registre estonien n° 16977866, Rotermanni 14, 10111 Tallinn, Estonie), revendeur officiel de l’abonnement : c’est Creem qui te le vend, encaisse le paiement, t’envoie la facture et reverse la TVA. Ses conditions de vente s’ajoutent à celles-ci pour le paiement. Hopla ne voit ni ne garde jamais ton numéro de carte.',
-        'Tu peux résilier à tout moment, sans frais, depuis l’onglet Réglages (« Résilier mon abonnement ») : le Pro reste actif jusqu’à la fin de la période déjà payée, puis ta page repasse en gratuit avec tout son contenu. Rien n’est effacé.',
+        'Tu peux changer d’offre à tout moment depuis l’onglet Réglages : le changement s’applique tout de suite, et Creem facture ou rembourse la différence au prorata de la période en cours.',
+        'Tu peux résilier à tout moment, sans frais, depuis l’onglet Réglages (« Résilier mon abonnement ») : ton offre reste active jusqu’à la fin de la période déjà payée, puis ta page repasse en gratuit. Ce que la version gratuite ne comprend pas (un drop, un formulaire de liste, un avis, une règle selon le réseau ou l’heure) cesse de s’afficher, mais rien n’est effacé : reprendre une offre le remet en place.',
+        'Les pages créées avant le 21 octobre 2026 gardent, sans abonnement, tout ce que la version gratuite comprenait alors : tout, sauf la page sans mention.',
         'Tu disposes de 14 jours après ton premier paiement pour changer d’avis : écris à ' + CONTACT_LEGAL + ' et tu es remboursé en entier. Si le prix change, tu es prévenu par e-mail au moins 30 jours avant ; le nouveau prix ne s’applique qu’au renouvellement suivant, et tu peux résilier d’ici là.',
       ] },
       { titre: 'Ce que tu publies', texte: [
@@ -102,14 +109,14 @@ export const LEGAL: Record<NomDocument, DocumentLegal> = {
       ] },
       { titre: 'Si tu as un compte', texte: [
         'Ton adresse e-mail, ton pseudo, la date de création et de dernière connexion, la version des conditions acceptées, et ce que tu publies (réglages, blocs, images). Base légale : l’exécution du contrat (les CGU). Ces données sont gardées tant que ton compte existe, et effacées dès que tu le supprimes. Une page où tu n’entres jamais (aucun lien de connexion utilisé) est effacée avec ton adresse un mois après sa création, une fois expirés les liens qu’on t’a envoyés : son nom redevient libre.',
-        'Si tu passes en Pro : l’identifiant de client et d’abonnement que Creem nous transmet, le statut de l’abonnement et sa date de renouvellement, pour savoir si ta page est en Pro. Ton nom, ton adresse de facturation et ta carte restent chez Creem, qui en est responsable pour le paiement et la facturation.',
+        'Si tu prends une offre payante : l’identifiant de client, d’abonnement et de produit que Creem nous transmet, le statut de l’abonnement et sa date de renouvellement, pour savoir quelle offre a ta page. Ton nom, ton adresse de facturation et ta carte restent chez Creem, qui en est responsable pour le paiement et la facturation.',
         'Les liens de connexion et les sessions ne sont gardés que sous forme d’empreinte, et effacés à leur expiration (15 minutes, 7 jours pour une invitation, 90 jours pour une session).',
       ] },
       { titre: 'Si tu signales une page', texte: [
         'Le motif, ton explication et, si tu la donnes, ton adresse e-mail, pour te tenir informé de la décision. Base légale : l’obligation légale de traiter les signalements (règlement sur les services numériques). Gardés un an après la décision.',
       ] },
       { titre: 'Où vont les données', texte: [
-        'Nulle part ailleurs que chez les sous-traitants listés sur la page dédiée : l’hébergeur, et le service d’envoi des e-mails. Pour un abonnement Pro, Creem reçoit ton adresse e-mail au moment du paiement. Rien n’est vendu ni partagé à des fins publicitaires.',
+        'Nulle part ailleurs que chez les sous-traitants listés sur la page dédiée : l’hébergeur, et le service d’envoi des e-mails. Pour un abonnement, Creem reçoit ton adresse e-mail au moment du paiement. Rien n’est vendu ni partagé à des fins publicitaires.',
       ] },
       { titre: 'Tes droits', texte: [
         'Tu peux accéder à tes données, les corriger, les effacer, les récupérer dans un format lisible par une machine, t’opposer à un traitement ou en demander la limitation. Avec un compte, l’export et la suppression se font en un clic dans l’onglet Réglages. Pour le reste, écris à ' + CONTACT_LEGAL + ' : réponse sous un mois.',
@@ -129,7 +136,7 @@ export const LEGAL: Record<NomDocument, DocumentLegal> = {
         'Envoi des e-mails : liens de connexion, réservations de nom, invitations, décisions de modération. Ne reçoit que l’adresse du destinataire et le contenu du message. Resend, Inc., États-Unis ; le transfert est encadré par l’accord de traitement de Resend et les clauses contractuelles types de la Commission européenne.',
       ] },
       { titre: 'Creem', texte: [
-        'Paiement de l’offre Pro (creem.io), par Armitage Labs OÜ, Rotermanni 14, 10111 Tallinn, Estonie. Creem n’est pas un sous-traitant au sens strict : revendeur officiel de l’abonnement, il est responsable des données de paiement et de facturation qu’il collecte. Hopla lui transmet ton adresse e-mail et l’identifiant de ton compte au moment du paiement, et reçoit en retour l’état de l’abonnement.',
+        'Paiement des offres payantes (creem.io), par Armitage Labs OÜ, Rotermanni 14, 10111 Tallinn, Estonie. Creem n’est pas un sous-traitant au sens strict : revendeur officiel de l’abonnement, il est responsable des données de paiement et de facturation qu’il collecte. Hopla lui transmet ton adresse e-mail et l’identifiant de ton compte au moment du paiement, et reçoit en retour l’état de l’abonnement.',
       ] },
     ],
   },

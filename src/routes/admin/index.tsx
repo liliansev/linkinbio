@@ -26,7 +26,7 @@ function PageAdmin() {
     accepterCgu: async () => { await fn.accepterCgu(); },
     supprimerMonCompte: confirmation => fn.supprimerMonCompte({ data: confirmation }),
     urlExport: '/api/export',
-    ouvrirPaiement: periode => fn.ouvrirPaiement({ data: periode }),
+    ouvrirPaiement: (plan, periode) => fn.ouvrirPaiement({ data: { plan, periode } }),
     ouvrirPortail: () => fn.ouvrirPortail(),
     liste: () => fn.lireListe(),
     brancherListe: i => fn.brancherListe({ data: i }),
@@ -35,6 +35,8 @@ function PageAdmin() {
     urlContacts: '/api/contacts',
     comptes: acces.connecte && acces.etat.compte.principal ? {
       lister: () => fn.listerComptes(),
+      offres: () => fn.lireOffresCreem(),
+      creerOffres: () => fn.creerOffresCreem(),
       attente: () => fn.listerAttente(),
       inviterAttente: id => fn.inviterAttente({ data: id }),
       retirerAttente: async id => { await fn.retirerAttente({ data: id }); },

@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import type { CSSProperties, KeyboardEvent, MouseEvent } from 'react';
 import { Icone } from '../components/Icone.tsx';
-import { AVANTAGES_PRO, TARIFS, euros } from '../lib/abonnement.ts';
+import { OFFRES, PLANS, PLANS_PAYANTS, economie, euros, parMoisAnnuel } from '../lib/abonnement.ts';
 import { CONTACT_LEGAL } from '../lib/legal.ts';
-import type { Periode } from '../lib/abonnement.ts';
+import type { Periode, Plan } from '../lib/abonnement.ts';
 import { Marque } from './Ouverture.tsx';
 import { Reserver, allerAuChamp, useReservation } from './Reserver.tsx';
 import type { ApiAccueil } from './Reserver.tsx';
@@ -11,17 +11,9 @@ import { MOTS, appel, questions, useInscription } from './textes.ts';
 
 /* 09 · Les prix ; 10 · les questions ; 11 · le dernier appel et le pied de page. */
 
-/** Tout ce que fait l'offre gratuite ; les fonctions que la page ne montre pas plus haut y sont dites en une ligne. */
-const GRATUIT = [
-  'Ta page selon le réseau et l’heure, et les drops',
-  'Ta liste e-mail, vers Brevo, Mailchimp ou un fichier CSV',
-  'Avis de tes clients, vidéos intégrées, QR code, page en cinq langues',
-  'Vingt thèmes et tes couleurs',
-  'Stats sur 7 jours et résumé du lundi',
-  'Tes données exportées en un clic',
-  '25 Mo d’images',
-];
-const PERIODES: Periode[] = ['mois', 'an'];
+const PERIODES: Periode[] = ['an', 'mois'];
+/** Ce que l'annuel fait gagner au mieux, pour l'onglet (27 % sur le Pro). */
+const MEILLEURE = Math.max(...PLANS_PAYANTS.filter(p => OFFRES[p].enVente).map(economie));
 
 /** L'e-mail est parti (ou se corrige) : la page ne propose plus de créer. */
 function useEnvoye() {
@@ -30,7 +22,9 @@ function useEnvoye() {
 }
 
 export function Prix() {
-  const [periode, setPeriode] = useState<Periode>('mois');
+  const [periode, setPeriode] = useState<Periode>('an');
+  // Au téléphone, les avantages se replient sous chaque carte ; au bureau, ils sont toujours ouverts.
+  const [ouverts, setOuverts] = useState<Plan[]>([]);
   const mode = useInscription();
   const envoye = useEnvoye();
   const libelle = appel(mode);
@@ -46,34 +40,58 @@ export function Prix() {
   return (
     <section className="hl-section" id="prix" aria-labelledby="titre-prix">
       <div className="hl-tete-section hl-entre">
-        <h2 id="titre-prix" className="hl-h2">Gratuit pour tout faire. Pro, sans la mention Hopla.</h2>
+        <h2 id="titre-prix" className="hl-h2">Gratuit pour commencer. Une offre quand ta page grandit.</h2>
+      </div>
+      <div className="hl-periode hl-entre" role="radiogroup" aria-label="Paiement" onKeyDown={fleches}>
+        {PERIODES.map(p => (
+          <button key={p} type="button" role="radio" data-periode={p} aria-checked={periode === p} tabIndex={periode === p ? 0 : -1} onClick={() => setPeriode(p)}>
+            {p === 'mois' ? 'Mensuel' : <>Annuel <span className="hl-periode-gain">jusqu’à −{MEILLEURE} %</span></>}
+          </button>
+        ))}
       </div>
       <div className="hl-offres">
-        <article className="hl-offre hl-entre">
-          <h3 className="hl-h3">Gratuit</h3>
-          <p className="hl-prix"><b>0 €</b> <span className="hl-gris">pour toujours</span></p>
-          <ul>{GRATUIT.map(g => <li key={g}><Icone nom="check" taille={18} />{g}</li>)}</ul>
-          {!envoye && <a href="#reserver" className="hl-btn" onClick={reserver}>{libelle}</a>}
-        </article>
-        <article className="hl-offre hl-offre-pro hl-entre" style={{ '--d': '80ms' } as CSSProperties}>
-          <h3 className="hl-h3">Pro</h3>
-          <div className="hl-periode" role="radiogroup" aria-label="Période de facturation du Pro" onKeyDown={fleches}>
-            {PERIODES.map(p => (
-              <button key={p} type="button" role="radio" data-periode={p} aria-checked={periode === p} tabIndex={periode === p ? 0 : -1} onClick={() => setPeriode(p)}>
-                {p === 'mois' ? 'Par mois' : `Par an, ${TARIFS.an.economie}`}
+        {PLANS.map((plan, i) => {
+          const o = OFFRES[plan];
+          const ouvert = ouverts.includes(plan);
+          const avant = i ? OFFRES[PLANS[i - 1]].nom : null;
+          return (
+            <article key={plan} className={`hl-offre hl-entre ${plan === 'pro' ? 'hl-offre-pro' : ''}`} style={{ '--d': `${i * 60}ms` } as CSSProperties}>
+              <div className="hl-offre-tete">
+                <h3 className="hl-h3">{o.nom}</h3>
+                {plan === 'pro' && <span className="hl-offre-badge">Recommandé</span>}
+                {!o.enVente && <span className="hl-offre-badge hl-offre-badge-pale">Bientôt</span>}
+              </div>
+              {plan === 'gratuit' ? (
+                <div>
+                  <p className="hl-prix"><b>0 €</b></p>
+                  <p className="hl-gris hl-petit hl-prix-an">Pour toujours, sans carte bancaire</p>
+                </div>
+              ) : (
+                <div>
+                  <p className="hl-prix"><b key={periode} className="hl-prix-glisse">{euros(periode === 'an' ? parMoisAnnuel(plan) : o.prix.mois)}</b> <span className="hl-gris">par mois</span></p>
+                  <p className="hl-gris hl-petit hl-prix-an">{periode === 'an' ? <>{euros(o.prix.an)} par an, au lieu de <s>{euros(o.prix.mois * 12)}</s></> : 'Sans engagement'}</p>
+                </div>
+              )}
+              <p className="hl-offre-phrase">{o.phrase}</p>
+              <button type="button" className="hl-offre-plus" aria-expanded={ouvert} aria-controls={`offre-${plan}`}
+                onClick={() => setOuverts(l => (l.includes(plan) ? l.filter(x => x !== plan) : [...l, plan]))}>
+                Ce qu’elle comprend <Icone nom="ui-chevron" taille={16} />
               </button>
-            ))}
-          </div>
-          <p className="hl-prix" aria-live="polite">
-            <b key={periode} className="hl-prix-glisse">{euros(TARIFS[periode].prix)}</b>{' '}
-            <span className="hl-gris">{periode === 'mois' ? 'par mois' : `par an, soit ${euros(Math.round((TARIFS.an.prix / 12) * 100) / 100)} par mois`}</span>
-          </p>
-          <ul>{['Tout le gratuit', ...AVANTAGES_PRO].map(g => <li key={g}><Icone nom="check" taille={18} />{g}</li>)}</ul>
-          {!envoye && <a href="#reserver" className="hl-btn hl-btn-contour" onClick={reserver}>{mode === 'libre' ? 'Commencer gratuitement' : libelle}</a>}
-          <p className="hl-gris hl-petit hl-centre">Le Pro s’active ensuite depuis tes réglages.</p>
-        </article>
+              <ul id={`offre-${plan}`} data-ouvert={ouvert || undefined}>
+                {avant && <li className="hl-offre-avant">Tout {avant}, et :</li>}
+                {o.avantages.map(g => <li key={g}><Icone nom="check" taille={18} />{g}</li>)}
+              </ul>
+              {/* On commence toujours en Gratuit : l'offre se prend ensuite depuis les réglages. */}
+              {!envoye && o.enVente && (
+                <a href="#reserver" className={`hl-btn ${plan === 'gratuit' ? '' : 'hl-btn-contour'}`} onClick={reserver}>
+                  {plan === 'gratuit' || mode !== 'libre' ? libelle : 'Commencer gratuitement'}
+                </a>
+              )}
+            </article>
+          );
+        })}
       </div>
-      <p className="hl-gris hl-petit hl-centre">Prix TTC. Tu résilies quand tu veux depuis ton compte ; le Pro reste jusqu’à la fin de la période payée.</p>
+      <p className="hl-gris hl-petit hl-centre">Prix TTC. Tu commences en Gratuit, puis tu prends une offre depuis tes réglages, quand tu veux. Résiliable à tout moment : l’offre reste jusqu’à la fin de la période payée.</p>
     </section>
   );
 }

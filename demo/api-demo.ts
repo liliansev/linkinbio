@@ -9,6 +9,8 @@ import avatar from '../public/avatar.webp?inline';
  */
 
 const CLE = 'liens-demo-v3';
+/** Sans paiement, rien n'est réservé : l'aperçu montre toutes les fonctions (seule la mention reste sans offre). */
+const DROITS_APERCU = { sansMention: false, avis: true, langues: true, reseauHeure: true, drops: true, listeEmail: true };
 let n = 0;
 const id = () => `d${Date.now().toString(36)}${n++}`;
 
@@ -59,8 +61,8 @@ function statsVides(jours: number): Stats {
 export const apiDemo: Api = {
   async charger(): Promise<EtatAdmin> {
     const s = statsFictives(30);
-    return { ...etat, clics: Object.fromEntries(s.blocs.map(b => [b.id, b.clics])), places: {}, stockageEphemere: false, cguAJour: true, compte: { pseudo: 'lilian', principal: true, email: '', pro: true },
-      abonnement: { plan: 'pro', statut: '', finPeriode: null, portail: false }, paiement: false };
+    return { ...etat, clics: Object.fromEntries(s.blocs.map(b => [b.id, b.clics])), places: {}, stockageEphemere: false, cguAJour: true, compte: { pseudo: 'lilian', principal: true, email: '', plan: 'premium' },
+      abonnement: { plan: 'premium', statut: '', finPeriode: null, periode: null, portail: false }, paiement: false, enVente: [], droits: DROITS_APERCU };
   },
   async enregistrerBloc(bloc) {
     await pause();
@@ -95,10 +97,12 @@ export const apiDemo: Api = {
   urlContacts: null,
   comptes: {
     async lister() { await pause(); return comptesDemo; },
+    async offres() { await pause(); return []; },
+    async creerOffres() { throw new Error('Pas de Creem dans l’aperçu.'); },
     async inviter(email, pseudo) {
       await pause();
       if (comptesDemo.some(c => c.pseudo === pseudo)) return { ok: false, message: 'Ce pseudo est déjà pris.' };
-      comptesDemo.splice(1, 0, { id: id(), email, pseudo, statut: 'actif', cree: Date.now(), connexion: null, blocs: 0, vues: 0, principal: false, pro: false });
+      comptesDemo.splice(1, 0, { id: id(), email, pseudo, statut: 'actif', cree: Date.now(), connexion: null, blocs: 0, vues: 0, principal: false, plan: 'gratuit' as const });
       return { ok: true, message: `Invitation envoyée à ${email} (dans l’aperçu, rien ne part vraiment).` };
     },
     async attente() { await pause(); return attenteDemo; },
@@ -107,7 +111,7 @@ export const apiDemo: Api = {
       const k = attenteDemo.findIndex(r => r.id === i);
       if (k < 0) return { ok: false, message: 'Cette réservation n’existe plus.' };
       const [r] = attenteDemo.splice(k, 1);
-      comptesDemo.splice(1, 0, { id: id(), email: r.email, pseudo: r.pseudo, statut: 'actif', cree: Date.now(), connexion: null, blocs: 0, vues: 0, principal: false, pro: false });
+      comptesDemo.splice(1, 0, { id: id(), email: r.email, pseudo: r.pseudo, statut: 'actif', cree: Date.now(), connexion: null, blocs: 0, vues: 0, principal: false, plan: 'gratuit' as const });
       return { ok: true, message: `Invitation envoyée à ${r.email} (dans l’aperçu, rien ne part vraiment).` };
     },
     async retirerAttente(i) { await pause(); const k = attenteDemo.findIndex(r => r.id === i); if (k >= 0) attenteDemo.splice(k, 1); },
@@ -127,10 +131,10 @@ export const apiDemo: Api = {
 /** Des comptes inventés, pour voir l'onglet Comptes dans l'aperçu. */
 const jour = 86_400_000;
 const comptesDemo: CompteResume[] = [
-  { id: 'principal', email: '', pseudo: 'lilian', statut: 'actif', cree: Date.now() - 40 * jour, connexion: Date.now(), blocs: 8, vues: 2140, principal: true, pro: true },
-  { id: 'demo1', email: 'camille@exemple.fr', pseudo: 'camille-studio', statut: 'actif', cree: Date.now() - 6 * jour, connexion: Date.now() - jour, blocs: 7, vues: 312, principal: false, pro: true },
-  { id: 'demo2', email: 'hugo@exemple.fr', pseudo: 'hugo-podcast', statut: 'actif', cree: Date.now() - 4 * jour, connexion: null, blocs: 0, vues: 0, principal: false, pro: false },
-  { id: 'demo3', email: 'sarah@exemple.fr', pseudo: 'sarah-coach', statut: 'suspendu', cree: Date.now() - 12 * jour, connexion: Date.now() - 9 * jour, blocs: 4, vues: 58, principal: false, pro: false },
+  { id: 'principal', email: '', pseudo: 'lilian', statut: 'actif', cree: Date.now() - 40 * jour, connexion: Date.now(), blocs: 8, vues: 2140, principal: true, plan: 'premium' as const },
+  { id: 'demo1', email: 'camille@exemple.fr', pseudo: 'camille-studio', statut: 'actif', cree: Date.now() - 6 * jour, connexion: Date.now() - jour, blocs: 7, vues: 312, principal: false, plan: 'pro' as const },
+  { id: 'demo2', email: 'hugo@exemple.fr', pseudo: 'hugo-podcast', statut: 'actif', cree: Date.now() - 4 * jour, connexion: null, blocs: 0, vues: 0, principal: false, plan: 'gratuit' as const },
+  { id: 'demo3', email: 'sarah@exemple.fr', pseudo: 'sarah-coach', statut: 'suspendu', cree: Date.now() - 12 * jour, connexion: Date.now() - 9 * jour, blocs: 4, vues: 58, principal: false, plan: 'gratuit' as const },
 ];
 
 const attenteDemo: Reservation[] = [
@@ -156,7 +160,7 @@ function vignetteDemo(url: string): string {
 }
 
 export const etatDemo = () => apiDemo.charger();
-export const pageDemo = () => ({ reglages: etat.reglages, blocs: etat.blocs, compte: { pseudo: 'lilian', principal: true, pro: true } });
+export const pageDemo = () => ({ reglages: etat.reglages, blocs: etat.blocs, compte: { pseudo: 'lilian', principal: true, plan: 'premium' as const } });
 
 /* ---- L'arrivée d'un nouvel inscrit : un compte vide, ses CGU à accepter ---- */
 
@@ -181,8 +185,8 @@ export function recommencerNouveau() {
 export const apiNouveau: Api = {
   ...apiDemo,
   async charger(): Promise<EtatAdmin> {
-    return { reglages: nouveau.reglages, blocs: nouveau.blocs, clics: {}, places: {}, stockageEphemere: false, cguAJour: nouveau.cgu, compte: { pseudo: 'camille', principal: false, email: 'camille@exemple.fr', pro: false },
-      abonnement: { plan: 'gratuit', statut: '', finPeriode: null, portail: false }, paiement: false };
+    return { reglages: nouveau.reglages, blocs: nouveau.blocs, clics: {}, places: {}, stockageEphemere: false, cguAJour: nouveau.cgu, compte: { pseudo: 'camille', principal: false, email: 'camille@exemple.fr', plan: 'gratuit' },
+      abonnement: { plan: 'gratuit', statut: '', finPeriode: null, periode: null, portail: false }, paiement: false, enVente: [], droits: DROITS_APERCU };
   },
   async enregistrerBloc(bloc) {
     await pause();
@@ -201,4 +205,4 @@ export const apiNouveau: Api = {
   async supprimerMonCompte() { await pause(); return { ok: false, message: 'Pas de suppression dans l’aperçu.' }; },
   comptes: undefined,
 };
-export const pageNouveau = () => ({ reglages: nouveau.reglages, blocs: nouveau.blocs, compte: { pseudo: 'camille', principal: false, pro: false } });
+export const pageNouveau = () => ({ reglages: nouveau.reglages, blocs: nouveau.blocs, compte: { pseudo: 'camille', principal: false, plan: 'gratuit' as const } });

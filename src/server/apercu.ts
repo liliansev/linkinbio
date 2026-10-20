@@ -68,6 +68,25 @@ const decoder = (t: string) => t
   .replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(Number(d)))
   .replace(/&([a-z]+);/gi, (m, n) => ENTITES[n.toLowerCase()] ?? m);
 
+/** Ce qui sépare le titre d'une page du nom de son site : « Mes ateliers | Atelier Camille ». */
+const SEPARATEUR = /\s+(?:\||-|–|—|·|•|::|»)\s+/;
+const GENERIQUES = /^(accueil|page d['’]accueil|home|homepage|home page|bienvenue|welcome)$/i;
+
+/**
+ * Le titre d'un lien, tel qu'on l'écrirait sur un bouton : sans le nom du site
+ * collé derrière (« | AFK », « - Mon site »), sauf quand il ne reste qu'un mot
+ * comme « Accueil » ; alors c'est le nom du site qui sert.
+ */
+export function titreCourt(titre: string): string {
+  const t = titre.replace(/\s+/g, ' ').trim();
+  const morceaux = t.split(SEPARATEUR);
+  if (morceaux.length < 2) return t.slice(0, 80);
+  const tete = morceaux[0].trim();
+  const queue = morceaux[morceaux.length - 1].trim();
+  const choisi = GENERIQUES.test(tete) ? queue : tete.length >= 3 ? tete : t;
+  return choisi.slice(0, 80).trim();
+}
+
 /** Le titre, la description et l'image de partage déclarés dans le `<head>` d'une page. */
 export function lireMeta(html: string, base: string): { titre: string; description: string; image: string } {
   const meta: Record<string, string> = {};
@@ -84,7 +103,7 @@ export function lireMeta(html: string, base: string): { titre: string; descripti
   let absolue = '';
   try { if (image) absolue = new URL(image, base).toString(); } catch { /* image illisible */ }
   return {
-    titre: (meta['og:title'] || meta['twitter:title'] || decoder(titreBalise)).trim().slice(0, 160),
+    titre: titreCourt(meta['og:title'] || meta['twitter:title'] || decoder(titreBalise)),
     description: (meta['og:description'] || meta['description'] || meta['twitter:description'] || '').replace(/\s+/g, ' ').trim().slice(0, 400),
     image: absolue,
   };

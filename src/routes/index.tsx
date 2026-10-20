@@ -4,7 +4,7 @@ import type { ApiAccueil } from '../accueil/Reserver.tsx';
 import { DESCRIPTION, FONCTIONS, questions } from '../accueil/textes.ts';
 import type { Inscription } from '../accueil/textes.ts';
 import { corrigerAdresse, modeInscription, renommerPage, renvoyerLien, reserverNom, verifierNom } from '../server/fonctions.ts';
-import { TARIFS } from '../lib/abonnement.ts';
+import { OFFRES, PERIODES, PLANS_PAYANTS } from '../lib/abonnement.ts';
 import { ORIGINE_PUBLIQUE, SITE_LILIAN } from '../lib/types.ts';
 
 /*
@@ -42,9 +42,11 @@ const donnees = (mode: Inscription) => ({
       applicationCategory: 'BusinessApplication', applicationSubCategory: 'Page de liens pour la bio des réseaux sociaux', operatingSystem: 'Web, iOS, Android',
       inLanguage: 'fr', description: DESCRIPTION, featureList: FONCTIONS, publisher: { '@id': `${URL}#organisation` },
       offers: [
-        { '@type': 'Offer', name: 'Gratuit', price: '0', priceCurrency: 'EUR', description: 'Toutes les fonctions, pour toujours.' },
-        { '@type': 'Offer', name: 'Pro, par mois', price: String(TARIFS.mois.prix), priceCurrency: 'EUR' },
-        { '@type': 'Offer', name: 'Pro, par an', price: String(TARIFS.an.prix), priceCurrency: 'EUR' },
+        { '@type': 'Offer', name: 'Gratuit', price: '0', priceCurrency: 'EUR', description: OFFRES.gratuit.phrase },
+        // Les offres en vente, au mois et à l'an ; Premium attend son nom de domaine.
+        ...PLANS_PAYANTS.filter(p => OFFRES[p].enVente).flatMap(p => PERIODES.map(periode => ({
+          '@type': 'Offer', name: `${OFFRES[p].nom}, par ${periode}`, price: String(OFFRES[p].prix[periode]), priceCurrency: 'EUR', description: OFFRES[p].phrase,
+        }))),
       ],
     },
     {
