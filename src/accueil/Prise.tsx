@@ -25,7 +25,7 @@ const ETAPES: Pas[] = [
 ];
 const GESTES: Pas[] = [
   { picto: 'plume', titre: 'Toucher pour écrire', texte: 'Ton nom, ta bio, un lien : touche, tape, c’est en ligne.' },
-  { picto: 'poignee', titre: 'Maintenir pour déplacer', texte: 'Un bloc se soulève et se pose où tu veux.' },
+  { picto: 'deplacer', titre: 'Maintenir pour déplacer', texte: 'Un bloc se soulève et se pose où tu veux.' },
   { picto: 'palette', titre: 'Personnaliser', texte: 'Le design s’ouvre dans une feuille qui laisse voir ta page.' },
 ];
 

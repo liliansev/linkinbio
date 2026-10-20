@@ -17,7 +17,7 @@ import { APPEL, MOTS, useInscription } from './textes.ts';
  * sienne, vue depuis Instagram, TikTok et YouTube, range ses liens à chaque
  * fois. Au bureau, le texte à gauche et les téléphones à droite ; au
  * téléphone, où le clavier cache la scène, une carte aux couleurs du thème
- * reprend son nom sous le champ. Trois téléphones s'ouvrent en éventail, une
+ * reprend son nom juste sous la réponse du champ. Trois téléphones s'ouvrent en éventail, une
  * fois, sur une lumière grise.
  */
 
@@ -33,11 +33,15 @@ export function Marque() {
 export function Barre() {
   const [defile, setDefile] = useState(false);
   const [menu, setMenu] = useState(false);
-  const [champ, setChamp] = useState(false);
+  // Au chargement, le champ de l'ouverture est à l'écran : le bouton de la barre attend qu'il en sorte.
+  const [champ, setChamp] = useState(true);
   const [debut, suite] = APPEL[useInscription()];
-  // Au téléphone, le bouton de la barre s'efface tant qu'un champ du nom est à l'écran : un seul appel à la fois.
+  const { etape, ancien, correction } = useReservation();
+  // Une fois l'e-mail parti, il n'y a plus rien à créer : la barre garde Connexion.
+  const envoye = etape === 'fait' || !!ancien || correction;
+  // Le bouton de la barre s'efface tant qu'un champ du nom est à l'écran : un seul appel à la fois.
   useEffect(() => {
-    if (typeof IntersectionObserver !== 'function') return;
+    if (typeof IntersectionObserver !== 'function') { setChamp(false); return; }
     const vus = new Set<Element>();
     const o = new IntersectionObserver(entrees => {
       for (const en of entrees) if (en.isIntersecting) vus.add(en.target); else vus.delete(en.target);
@@ -62,7 +66,7 @@ export function Barre() {
     return () => { removeEventListener('keydown', echap); removeEventListener('pointerdown', ailleurs); };
   }, [menu]);
   return (
-    <header className="hl-barre" data-defile={defile || menu || undefined} data-champ={(champ && !menu) || undefined}>
+    <header className="hl-barre" data-defile={defile || menu || undefined} data-champ={(champ && !menu) || undefined} data-envoye={envoye || undefined}>
       <div className="hl-barre-dedans">
         <Marque />
         <nav className="hl-barre-nav" aria-label="Sections">
@@ -146,13 +150,12 @@ export function Ouverture({ api }: { api: ApiAccueil }) {
           Un seul lien dans ta bio. Ta page change selon le réseau et l’heure, ouvre tes liens dans leurs apps et se modifie depuis ton téléphone.
         </p>
         <div className="hl-apparait" style={d(540)} data-zone-appel="">
-          <Reserver api={api} id="reserver" grand note={<>{MOTS[mode].note} <a href="/lilian">Voir une vraie page</a></>} />
-          {pseudo && !pris && etape !== 'fait' && (
+          <Reserver api={api} id="reserver" grand note={<>{MOTS[mode].note} <a href="/lilian">Voir une vraie page</a></>} apercu={pseudo && !pris && (
             <div className="hl-apercu hl-petit-seul" style={{ background: THEME.fondUni, color: THEME.texte }} aria-hidden="true">
               <span className="hl-apercu-avatar">{affiche.split(' ').slice(0, 2).map(m => m[0]).join('')}</span>
               <span className="hl-apercu-texte"><b>{affiche}</b><small style={{ color: THEME.doux }}>hopla.page/{pseudo} · {THEME.nom}</small></span>
             </div>
-          )}
+          )} />
         </div>
       </div>
       <div className="hl-heros-visuel">

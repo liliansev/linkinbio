@@ -11,8 +11,8 @@ import { mouvementReduit, useCompte, useGlisse, useSequence, useVisible, useVu }
  * 05 les stats en phrases, lues comme l'e-mail du lundi (le reste de l'offre
  * gratuite se lit dans les prix). Les téléphones y
  * sont des croquis gris : on lit le mouvement, pas un thème. Au téléphone,
- * chaque démo part quand son téléphone est à l'écran, et ses commandes et sa
- * légende sont juste dessous. Les légendes ne s'annoncent aux lecteurs d'écran
+ * chaque démo part quand son téléphone est à l'écran, ses onglets juste
+ * au-dessus et sa légende dessous. Les légendes ne s'annoncent aux lecteurs d'écran
  * qu'une fois qu'on a touché une commande.
  */
 
@@ -29,8 +29,8 @@ function Revoir({ onClick }: { onClick: () => void }) {
  * puis « Avec » prend la main, une fois ; un toucher arrête l'enchaînement.
  * Avec moins de mouvement, rien ne s'enchaîne : la scène montre d'emblée
  * « Avec », la promesse, et « Sans » reste à un toucher. Au téléphone, les
- * onglets et la légende passent au-dessus du téléphone, pour qu'on sache ce
- * qu'on regarde avant que la scène parte.
+ * onglets passent juste au-dessus du téléphone, à l'écran avec lui pendant
+ * que la scène joue, et la légende dessous.
  */
 
 type Cote = 'sans' | 'avec';
@@ -289,7 +289,7 @@ export function Vivante() {
     </div>
   );
   const tel = (l: number) => (
-    <Telephone largeur={l} className="hl-tel-court" label={LABELS[lu]}>
+    <Telephone largeur={l} className="hl-tel-court hl-tel-vivante" label={LABELS[lu]}>
       <EcranChapitre i={lu} e={e} actif={actif === lu} />
     </Telephone>
   );
@@ -322,8 +322,9 @@ export function Vivante() {
             </button>
           ))}
         </div>
+        <div ref={refMobile} className="hl-vivante-mobile-tel">{tel(290)}</div>
         <div className="hl-legendes">
-          {/* Les trois légendes réservent la place de la plus longue : le téléphone dessous ne saute pas. */}
+          {/* Les trois légendes réservent la place de la plus longue : rien dessous ne saute. */}
           {CHAPITRES.map((c, i) => i !== lu && (
             <div key={c.court} className="hl-legende-scene hl-legende-gabarit" aria-hidden="true">
               <p><b>{c.titre}.</b> {c.texte}</p>
@@ -335,7 +336,6 @@ export function Vivante() {
             {lu === 0 && sources}
           </div>
         </div>
-        <div ref={refMobile} className="hl-vivante-mobile-tel">{tel(290)}</div>
       </div>
     </section>
   );
@@ -388,7 +388,7 @@ export function Stats() {
           <ol ref={ref} key={tour} className="hl-stats-liste">
             <Phrase joue={vu} depart={0} hausse morceaux={['Ta page a eu', { n: 412, suite: ' vues,' }, 'soit', { n: 18, suite: ' %' }, 'de plus que la semaine d’avant.']} />
             <Phrase joue={vu} depart={500} morceaux={['Instagram t’amène le plus de monde :', { n: 61, suite: ' %' }, 'des visites.']} />
-            <Phrase joue={vu} depart={950} hausse morceaux={['Ton meilleur jour : jeudi, avec', { n: 88 }, 'vues. Un post ce jour-là ?']} />
+            <Phrase joue={vu} depart={950} morceaux={['Ton meilleur jour : jeudi, avec', { n: 88 }, 'vues. Un post ce jour-là ?']} />
             <Phrase joue={vu} depart={1450} hausse morceaux={['Ton lien « Ma boutique » a fait', { n: 40, avant: '+', suite: ' %' }, 'de clics (35 contre 25).']} />
             <Phrase joue={vu} depart={1950} morceaux={[{ n: 38 }, 'clics se sont ouverts directement dans leur app, sans rester coincés dans Instagram ou TikTok.']} />
           </ol>

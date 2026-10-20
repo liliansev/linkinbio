@@ -5,7 +5,7 @@ import { AVANTAGES_PRO, TARIFS, euros } from '../lib/abonnement.ts';
 import { CONTACT_LEGAL } from '../lib/legal.ts';
 import type { Periode } from '../lib/abonnement.ts';
 import { Marque } from './Ouverture.tsx';
-import { Reserver, allerAuChamp } from './Reserver.tsx';
+import { Reserver, allerAuChamp, useReservation } from './Reserver.tsx';
 import type { ApiAccueil } from './Reserver.tsx';
 import { MOTS, appel, questions, useInscription } from './textes.ts';
 
@@ -15,7 +15,7 @@ import { MOTS, appel, questions, useInscription } from './textes.ts';
 const GRATUIT = [
   'Ta page selon le réseau et l’heure, et les drops',
   'Ta liste e-mail, vers Brevo, Mailchimp ou un fichier CSV',
-  'Avis, vidéos sur la page, QR code et cinq langues',
+  'Avis de tes clients, vidéos intégrées, QR code, page en cinq langues',
   'Vingt thèmes et tes couleurs',
   'Stats sur 7 jours et résumé du lundi',
   'Tes données exportées en un clic',
@@ -23,9 +23,16 @@ const GRATUIT = [
 ];
 const PERIODES: Periode[] = ['mois', 'an'];
 
+/** L'e-mail est parti (ou se corrige) : la page ne propose plus de créer. */
+function useEnvoye() {
+  const { etape, ancien, correction } = useReservation();
+  return etape === 'fait' || !!ancien || correction;
+}
+
 export function Prix() {
   const [periode, setPeriode] = useState<Periode>('mois');
   const mode = useInscription();
+  const envoye = useEnvoye();
   const libelle = appel(mode);
   const reserver = (ev: MouseEvent) => { ev.preventDefault(); allerAuChamp(); };
   // Un groupe de boutons radio : un seul arrêt de tabulation, les flèches changent de période.
@@ -39,14 +46,14 @@ export function Prix() {
   return (
     <section className="hl-section" id="prix" aria-labelledby="titre-prix">
       <div className="hl-tete-section hl-entre">
-        <h2 id="titre-prix" className="hl-h2">Gratuit pour tout faire. Pro pour aller plus loin.</h2>
+        <h2 id="titre-prix" className="hl-h2">Gratuit pour tout faire. Pro, sans la mention Hopla.</h2>
       </div>
       <div className="hl-offres">
         <article className="hl-offre hl-entre">
           <h3 className="hl-h3">Gratuit</h3>
           <p className="hl-prix"><b>0 €</b> <span className="hl-gris">pour toujours</span></p>
           <ul>{GRATUIT.map(g => <li key={g}><Icone nom="check" taille={18} />{g}</li>)}</ul>
-          <a href="#reserver" className="hl-btn" onClick={reserver}>{libelle}</a>
+          {!envoye && <a href="#reserver" className="hl-btn" onClick={reserver}>{libelle}</a>}
         </article>
         <article className="hl-offre hl-offre-pro hl-entre" style={{ '--d': '80ms' } as CSSProperties}>
           <h3 className="hl-h3">Pro</h3>
@@ -62,7 +69,7 @@ export function Prix() {
             <span className="hl-gris">{periode === 'mois' ? 'par mois' : `par an, soit ${euros(Math.round((TARIFS.an.prix / 12) * 100) / 100)} par mois`}</span>
           </p>
           <ul>{['Tout le gratuit', ...AVANTAGES_PRO].map(g => <li key={g}><Icone nom="check" taille={18} />{g}</li>)}</ul>
-          <a href="#reserver" className="hl-btn hl-btn-contour" onClick={reserver}>{mode === 'libre' ? 'Commencer gratuitement' : libelle}</a>
+          {!envoye && <a href="#reserver" className="hl-btn hl-btn-contour" onClick={reserver}>{mode === 'libre' ? 'Commencer gratuitement' : libelle}</a>}
           <p className="hl-gris hl-petit hl-centre">Le Pro s’active ensuite depuis tes réglages.</p>
         </article>
       </div>
@@ -90,9 +97,11 @@ export function Questions() {
 
 export function DernierAppel({ api }: { api: ApiAccueil }) {
   const mode = useInscription();
+  // Pour qui vient d'envoyer, la fin dit où l'attend la suite au lieu de relancer.
+  const envoye = useEnvoye();
   return (
     <section className="hl-section hl-dernier" aria-labelledby="dernier">
-      <h2 id="dernier" className="hl-h2 hl-h2-grand hl-entre">Ton nom est <span className="hl-insecable">peut-être</span> <span className="hl-insecable">encore libre.</span></h2>
+      <h2 id="dernier" className="hl-h2 hl-h2-grand hl-entre">{envoye ? MOTS[mode].fin : <>Ton nom est <span className="hl-insecable">peut-être</span> <span className="hl-insecable">encore libre.</span></>}</h2>
       <div className="hl-entre" style={{ '--d': '120ms' } as CSSProperties} data-zone-appel=""><Reserver api={api} id="reserver-fin" grand note={MOTS[mode].note} /></div>
       <a href="/lilian" className="hl-lien-gris">Voir une vraie page</a>
     </section>

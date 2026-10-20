@@ -67,7 +67,7 @@ export async function reserverNom(origines: Origines, env: Env, saisie: { nom: s
   const adresse = validerEmail(saisie.email);
   if (!nom) return { ok: false, message: 'Ce nom ne peut pas servir d’adresse. Choisis-en un autre.' };
   if (!adresse) return { ok: false, message: 'Cette adresse e-mail ne semble pas valide.' };
-  if (tropInsistante(ip, maintenant)) return { ok: false, message: 'Trop de réservations depuis ta connexion. Réessaie dans une heure.' };
+  if (tropInsistante(ip, maintenant)) return { ok: false, message: 'Trop de réservations depuis ce réseau. Réessaie dans une heure.' };
   if (db.reservationsDepuis(maintenant - 86_400_000) >= PLAFOND_JOUR) return { ok: false, message: 'Beaucoup de monde aujourd’hui. Réessaie demain, ton nom t’attendra peut-être.' };
   const note = { ok: true as const, message: `C’est noté. Ton invitation arrivera à ${adresse}.` };
   const deja = db.dejaInscrit(adresse);
@@ -110,7 +110,7 @@ export async function creerHopla(origines: Origines, env: Env, saisie: { nom: st
   const adresse = validerEmail(saisie.email);
   if (!nom) return { ok: false, message: 'Ce nom ne peut pas servir d’adresse. Choisis-en un autre.' };
   if (!adresse) return { ok: false, message: 'Cette adresse e-mail ne semble pas valide.' };
-  if (tropInsistante(ip, maintenant)) return { ok: false, message: 'Trop de pages créées depuis ta connexion. Réessaie dans une heure.' };
+  if (tropInsistante(ip, maintenant)) return { ok: false, message: 'Trop de pages créées depuis ce réseau. Réessaie dans une heure.' };
   if (db.comptesDepuis(maintenant - 86_400_000) >= PLAFOND_JOUR) return { ok: false, message: 'Beaucoup de monde aujourd’hui. Réessaie demain, ton nom t’attendra peut-être.' };
   const note = { ok: true as const, message: `C’est parti. Ouvre l’e-mail envoyé à ${adresse} : un clic, et tu entres dans ta page.` };
   const reservation = db.reservationParEmail(adresse);
@@ -144,7 +144,7 @@ export async function corrigerAdresse(origines: Origines, env: Env, saisie: { no
   if (!nouvelle) return { ok: false, message: 'Cette adresse e-mail ne semble pas valide.' };
   const refus = { ok: false as const, message: `Cette adresse ne se corrige plus d’ici. Écris-nous à ${CONTACT_LEGAL}.` };
   if (!nom || !ancienne) return refus;
-  if (tropInsistante(ip, maintenant)) return { ok: false, message: 'Trop d’essais depuis ta connexion. Réessaie dans une heure.' };
+  if (tropInsistante(ip, maintenant)) return { ok: false, message: 'Trop d’essais depuis ce réseau. Réessaie dans une heure.' };
   const panne = { ok: false as const, message: 'L’e-mail n’est pas parti. Réessaie dans un instant.' };
 
   if (!inscriptionLibre(env)) {
@@ -185,7 +185,7 @@ export async function renommerPage(origines: Origines, env: Env, saisie: { ancie
   if (nouveau.etat === 'invalide') return { ok: false, message: 'Ce nom ne peut pas servir d’adresse : 3 à 30 caractères, lettres, chiffres et tirets.' };
   if (nouveau.nom === ancien) return { ok: true, message: `hopla.page/${ancien} reste ton adresse.`, nom: ancien };
   if (nouveau.etat === 'pris') return { ok: false, message: `hopla.page/${nouveau.nom} est déjà pris. Essaie une variante.` };
-  if (tropInsistante(ip, maintenant)) return { ok: false, message: 'Trop d’essais depuis ta connexion. Réessaie dans une heure.' };
+  if (tropInsistante(ip, maintenant)) return { ok: false, message: 'Trop d’essais depuis ce réseau. Réessaie dans une heure.' };
   const nom = nouveau.nom;
 
   if (!inscriptionLibre(env)) {

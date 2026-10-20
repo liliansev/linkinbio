@@ -17,20 +17,28 @@ export const appel = (m: Inscription) => APPEL[m].join('');
 
 /**
  * `note` rassure sous le champ du nom ; `rassure` prend sa place à l'étape de
- * l'e-mail, au moment où l'on hésite ; `renvoi` suit un nouvel envoi.
+ * l'e-mail, au moment où l'on hésite, et `envoyer` y nomme le bouton ; `duree`
+ * dit combien de temps marche le lien parti, `renvoi` suit un nouvel envoi ;
+ * `fin` titre la fin de page une fois l'e-mail parti.
  */
-export const MOTS: Record<Inscription, { note: string; adresse: string; rassure: string; renvoi: string }> = {
+export const MOTS: Record<Inscription, { note: string; adresse: string; rassure: string; envoyer: string; duree: string; renvoi: string; fin: string }> = {
   libre: {
     note: 'Gratuit, toutes les fonctions comprises. En ligne en deux minutes.',
     adresse: 'À quelle adresse e-mail t’envoyer le lien de ta page ?',
     rassure: 'Ni mot de passe ni carte bancaire : un lien arrive par e-mail, et on ne t’écrit que pour ta page.',
+    envoyer: 'Recevoir mon lien',
+    duree: 'Le lien marche 7 jours.',
     renvoi: 'C’est renvoyé. Ce nouveau lien marche 15 minutes : ouvre-le dès qu’il arrive.',
+    fin: 'Ton lien t’attend dans ta boîte.',
   },
   attente: {
     note: 'Gratuit, toutes les fonctions comprises.',
     adresse: 'À quelle adresse e-mail t’envoyer ton invitation ?',
     rassure: 'Ni carte bancaire ni engagement : on ne t’écrit que pour ton invitation.',
+    envoyer: 'Garder ce nom',
+    duree: '',
     renvoi: 'C’est renvoyé.',
+    fin: 'Ton nom est gardé pour toi.',
   },
 };
 

@@ -119,7 +119,13 @@ html:has(.hl) { background: #fff; scroll-padding-top: 76px; }
 }
 .hl-barre[data-defile] { border-bottom-color: var(--filet); }
 .hl-barre-actions .hl-btn { transition: background-color .15s, transform .15s, opacity .2s, visibility .2s; }
-@media (max-width: 1023px) { .hl-barre[data-champ] .hl-barre-actions .hl-btn { opacity: 0; visibility: hidden; } }
+/* Un seul appel à la fois : le bouton de la barre s'efface tant qu'un champ du nom est à l'écran, et une fois l'e-mail parti.
+ * Au bureau, il se replie aussi, pour que Connexion reste au bord. */
+:is(.hl-barre[data-champ], .hl-barre[data-envoye]) .hl-barre-actions .hl-btn { opacity: 0; visibility: hidden; }
+@media (min-width: 900px) {
+  .hl-barre-actions .hl-btn { max-width: 240px; overflow: hidden; transition: background-color .15s, transform .15s, opacity .2s, visibility .2s, max-width .35s var(--ease), padding .35s var(--ease), margin .35s var(--ease), border-width .35s; }
+  :is(.hl-barre[data-champ], .hl-barre[data-envoye]) .hl-barre-actions .hl-btn { max-width: 0; padding-inline: 0; margin-left: -18px; border-width: 0; }
+}
 .hl-barre-dedans { max-width: 1120px; height: 60px; margin: 0 auto; padding: 0 var(--gout); display: flex; align-items: center; gap: 24px; }
 .hl-marque { display: inline-flex; align-items: center; gap: 9px; color: var(--encre); font-size: 18px; font-weight: 600; letter-spacing: -0.03em; text-decoration: none; }
 .hl-marque svg { width: 28px; height: 28px; flex: none; }
@@ -219,6 +225,8 @@ html:has(.hl) { background: #fff; scroll-padding-top: 76px; }
 /* ---- Réserver son nom ---- */
 
 .hl-reserver { max-width: 560px; }
+/* Pendant la frappe, la réponse qui s'ouvre sous le champ ne fait pas défiler la page : le champ reste où il est. */
+html:has(.hl-reserver input:focus) { overflow-anchor: none; }
 .hl-reserver-ligne { display: flex; flex-direction: column; gap: 10px; }
 @media (min-width: 560px) { .hl-reserver-ligne { flex-direction: row; } }
 .hl-reserver .hl-btn { min-height: 52px; flex: none; }
@@ -229,13 +237,15 @@ html:has(.hl) { background: #fff; scroll-padding-top: 76px; }
 }
 .hl-champ:hover { border-color: #a8a8a8; }
 .hl-champ:focus-within { border-color: var(--encre); box-shadow: 0 0 0 1px var(--encre); }
-.hl-champ-prefixe { color: var(--gris); font-size: 16px; white-space: nowrap; }
+.hl-champ-prefixe { color: var(--encre); font-size: 16px; white-space: nowrap; }
+.hl-champ-picto { display: inline-flex; margin-right: 10px; color: var(--gris); }
 .hl-champ input { flex: 1; min-width: 0; height: 50px; padding: 0; border: 0; outline: 0; background: transparent; color: var(--encre); font: inherit; font-size: 16px; }
 .hl-champ input::placeholder { color: #767676; }
 .hl-champ input:focus-visible { outline: none; }
 .hl-reserver-etat { margin-top: 10px; font-size: 15px; line-height: 1.45; }
 .hl-reserver-etat:empty { margin-top: 0; }
 .hl-reserver-etat svg { display: inline-block; margin-right: 6px; vertical-align: -3px; }
+.hl-reserver-etat b { overflow-wrap: anywhere; }
 .hl-reserver-erreur, .hl-reserver-pris { color: var(--erreur); }
 .hl-reserver-pris b { font-weight: 600; }
 .hl-reserver-pris .hl-lien-texte { color: var(--encre); }
@@ -244,7 +254,8 @@ html:has(.hl) { background: #fff; scroll-padding-top: 76px; }
 .hl-reserver-attente { color: var(--gris); animation: hl-tard .2s .45s both; }
 @keyframes hl-tard { from { opacity: 0; } }
 .hl-reserver-note { margin-top: 10px; font-size: 14px; color: var(--gris); text-wrap: pretty; }
-.hl-reserver-note a { color: var(--encre); text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
+.hl-reserver-note a { color: var(--encre); text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; white-space: nowrap; }
+.hl-reserver-coupe { margin-top: 4px; color: var(--gris); }
 .hl-reserver[data-pris] .hl-champ, .hl-reserver-grand[data-pris] .hl-reserver-ligne { border-color: var(--erreur); }
 .hl-reserver-grand .hl-reserver-ligne {
   gap: 6px; padding: 6px; border: 1px solid #d6d6d6; border-radius: 15px; background: #fff;
@@ -267,9 +278,9 @@ html:has(.hl) { background: #fff; scroll-padding-top: 76px; }
 .hl-reserver-adresse { margin-bottom: 2px; font-size: 17px; font-weight: 600; letter-spacing: -0.01em; overflow-wrap: anywhere; }
 .hl-courriel { font-weight: 600; overflow-wrap: anywhere; }
 .hl-reserver-tien { display: block; margin-top: 2px; color: var(--encre); }
-.hl-reserver-tien a { color: inherit; font-weight: 500; text-underline-offset: 3px; text-decoration-thickness: 1px; }
+.hl-reserver-tien a { color: inherit; font-weight: 500; text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
 .hl-reserver-renvoi { margin-top: 6px; font-size: 14px; color: var(--gris); }
-.hl-reserver-renvoi .hl-lien-texte { color: var(--encre); }
+.hl-reserver-renvoi :is(.hl-lien-texte, a) { color: var(--encre); font-weight: 500; text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
 .hl-reserver-fait .hl-reserver-erreur { margin-top: 6px; font-size: 14px; }
 
 /* ---- Le téléphone ---- */
@@ -281,6 +292,8 @@ html:has(.hl) { background: #fff; scroll-padding-top: 76px; }
 }
 @media (max-width: 359px) { :is(.hl-scene-milieu, .hl-dans-app-tel, .hl-vivante-mobile-tel, .hl-prise-tel) .hl-tel { --l: 270px !important; --z: .6923 !important; } }
 .hl-tel-court { aspect-ratio: 390 / 680; }
+/* Les croquis de « Une page qui change » tiennent dans un téléphone plus court : pas d'écran à moitié vide. */
+.hl-tel-vivante { aspect-ratio: 390 / 610; }
 .hl-tel-barre {
   flex: none; height: 34px; display: flex; align-items: center; justify-content: center; padding: 0 12px;
   border-bottom: 1px solid var(--filet); background: #fafafa; font-size: 12px; color: var(--gris);
@@ -342,10 +355,13 @@ html:has(.hl) { background: #fff; scroll-padding-top: 76px; }
 
 .hl-dans-app { display: grid; justify-items: center; gap: 28px; }
 .hl-dans-app-tete, .hl-dans-app-commande { width: 100%; }
+/* Au téléphone, les onglets juste au-dessus du téléphone, à l'écran avec lui pendant que la scène joue ; la légende dessous. */
 @media (max-width: 1023px) {
-  .hl-dans-app-commande { order: 1; max-width: 420px; }
-  .hl-dans-app-commande .hl-onglets-scene { margin-top: 0; }
+  .hl-dans-app-commande { display: contents; }
+  .hl-dans-app-commande > :is(.hl-onglets-scene, .hl-legende-scene) { width: 100%; max-width: 420px; margin: 0; }
+  .hl-dans-app-commande > .hl-onglets-scene { order: 1; }
   .hl-dans-app-tel { order: 2; }
+  .hl-dans-app-commande > .hl-legende-scene { order: 3; }
 }
 @media (min-width: 1024px) {
   .hl-dans-app { grid-template-columns: 1fr 340px; grid-template-areas: 'tete tel' 'commande tel'; justify-items: stretch; column-gap: 72px; row-gap: 0; }
@@ -466,19 +482,15 @@ html:has(.hl) { background: #fff; scroll-padding-top: 76px; }
 .hl-mail-tete .hl-gris { margin-left: auto; }
 .hl-mail-logo { flex: none; width: 28px; height: 28px; color: var(--encre); }
 .hl-mail-sujet { margin-top: 4px; font-size: 20px; font-weight: 600; letter-spacing: -0.02em; }
-.hl-mail-bouton { align-self: flex-start; margin-top: 4px; font-size: 15px; font-weight: 500; text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
+/* Le bouton de l'e-mail, dessiné comme dans une boîte de réception : un cadre, pas un lien de la page. */
+.hl-mail-bouton { align-self: flex-start; display: inline-flex; align-items: center; min-height: 38px; margin-top: 4px; padding: 0 14px; border: 1px solid #d4d4d4; border-radius: 9px; font-size: 14px; font-weight: 500; }
 @media (prefers-reduced-motion: no-preference) {
   .hl-stat:not([data-joue]) :is(.hl-stat-mot, .hl-stat-hausse) { opacity: 0; transform: translateY(.3em); }
 }
 
 /* ---- 06 · Les thèmes ---- */
 
-.hl-rail-tete { display: flex; align-items: flex-end; gap: 16px; margin-bottom: 24px; }
-.hl-onglets-defile { flex: 1; min-width: 0; margin-bottom: 0; overflow-x: auto; scrollbar-width: none; }
-.hl-onglets-defile::-webkit-scrollbar { display: none; }
-@media (max-width: 1023px) {
-  .hl-onglets-defile { padding-right: 40px; -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 48px), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 48px), transparent); }
-}
+.hl-rail-tete { display: flex; justify-content: flex-end; margin: -64px 0 24px; }
 .hl-fleches { display: flex; gap: 8px; }
 .hl-fleches button { display: grid; place-items: center; width: 40px; height: 40px; border: 1px solid var(--filet); border-radius: 10px; background: #fff; color: var(--encre); cursor: pointer; transition: background-color .15s; }
 .hl-fleches button:hover:not(:disabled) { background: var(--pale); }
