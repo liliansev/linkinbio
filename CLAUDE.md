@@ -16,7 +16,7 @@ pnpm dev         # vite sur localhost:4400
 pnpm build       # dist/client et dist/server ; régénère src/routeTree.gen.ts (ignoré par git)
 pnpm typecheck   # après un build
 pnpm test        # tests de l'app (src/**/*.test.ts) puis du serveur (deploy/server.test.mjs)
-pnpm start       # deploy/server.mjs sur dist/ (PORT, LIENS_DB, LIENS_ORIGINE, LIENS_ORIGINE_ADMIN, CONTACT_TO)
+pnpm start       # deploy/server.mjs sur dist/ (PORT, LIENS_DB, LIENS_ORIGINE, LIENS_ORIGINE_ADMIN, CONTACT_TO, LIENS_INSCRIPTION)
 ```
 
 Sans `RESEND_API_KEY` ni `NODE_ENV=production`, les liens de connexion s'affichent
@@ -58,8 +58,14 @@ embarque tout : l'image n'a pas de `node_modules`.
   seule fois, et seulement tant que la page est vide (`pageNeuve`).
 - `components/PageLiens.tsx` : la page publique.
 - `accueil/` : l'accueil de hopla.page (`routes/index.tsx`, styles dans `styles/accueil.css`), en noir et
-  blanc, chaque mouvement joué une fois. On y réserve son nom : `server/attente.ts` garde la réservation
-  (table `attente`, un an au plus) et l'onglet Comptes l'invite, ce qui crée la page et envoie le lien.
+  blanc, chaque mouvement joué une fois (les onglets Sans / Avec Hopla rejouent leur scène). On y prend
+  son nom : par défaut la page se crée aussitôt et le lien part (`creerHopla` dans `server/attente.ts`) ;
+  avec `LIENS_INSCRIPTION=attente`, on retrouve la liste d'attente (table `attente`, un an au plus,
+  invitée depuis l'onglet Comptes). Les mots qui changent d'un mode à l'autre et les questions vivent
+  dans `accueil/textes.ts`, repris par les données structurées et `llms.txt`.
+- Marque : `components/Logo.tsx` (le symbole, un « h » et sa balle) ; favicon, icônes, manifeste et
+  image de partage dans `public/`. `server/referencement.ts` écrit `robots.txt`, `sitemap.xml` et
+  `llms.txt` (routes `robots[.]txt.ts`…) ; le back office ne s'indexe pas.
 - `demo/` : aperçu statique avec une API simulée, publié en Artifact ; `#nouveau` y
   rejoue l'arrivée d'un nouvel inscrit.
 

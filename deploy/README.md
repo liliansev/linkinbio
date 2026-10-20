@@ -28,6 +28,9 @@ pour l'offre Pro `CREEM_API_KEY`, `CREEM_WEBHOOK_SECRET`, `CREEM_PRODUIT_MOIS`,
 `https://app.hopla.page/api/creem`, événements `checkout.completed` et
 `subscription.*`.
 
+`LIENS_INSCRIPTION` (facultatif) : vide, chacun crée sa page depuis l'accueil ;
+`attente` remet la liste d'attente (on réserve son nom, l'invitation part à la main).
+
 `LIENS_SITE` (dans `compose.yaml`, rien de secret) : l'adresse interne du site de
 Lilian, dont l'API sert les blocs « dernière vidéo » et « newsletter » de sa page.
 

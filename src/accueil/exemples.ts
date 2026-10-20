@@ -58,3 +58,50 @@ export function pageMarie(theme: string, o: { couleurs?: Couleurs; profil?: Part
     compte: { pseudo: 'marie-lambert', principal: false, pro: false },
   };
 }
+
+/** Des initiales sur un rond : l'avatar des pages inventées. */
+const initiales = (texte: string, fond: string, encre: string) => `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96"><rect width="96" height="96" fill="${fond}"/><text x="48" y="58" font-family="Geist Variable, system-ui, sans-serif" font-size="30" font-weight="600" text-anchor="middle" fill="${encre}">${texte}</text></svg>`)}`;
+
+/** Jules Moreau, un musicien inventé, pour le troisième téléphone de l'ouverture. */
+const BLOCS_JULES = [
+  bloc('lien', { titre: 'Le nouveau single', sousTitre: 'Sur toutes les plateformes', url: 'https://open.spotify.com/', icone: 'spotify', vedette: true, format: 'bouton' }),
+  bloc('lien', { titre: 'Billets de la tournée', url: 'https://exemple.fr/tournee', icone: 'billet' }),
+  bloc('lien', { titre: 'Le clip', url: 'https://youtube.com/', icone: 'youtube' }),
+  bloc('lien', { titre: 'Mon podcast', url: 'https://exemple.fr/podcast', icone: 'podcast' }),
+];
+export function pageJules(theme: string): PagePublique {
+  return {
+    reglages: {
+      ...habiller(REGLAGES_DEFAUT, theme),
+      profil: { nom: 'Jules Moreau', bio: 'Auteur, compositeur. En tournée cet hiver.', avatar: initiales('JM', '#dcdcf5', '#2b2b4a'), badge: false },
+      reseaux: [{ reseau: 'instagram', url: 'https://instagram.com/' }, { reseau: 'spotify', url: 'https://open.spotify.com/' }, { reseau: 'youtube', url: 'https://youtube.com/' }],
+    },
+    blocs: BLOCS_JULES,
+    compte: { pseudo: 'jules-moreau', principal: false, pro: false },
+  };
+}
+
+/** « marie-claire-2 » devient « Marie Claire 2 » : le nom qu'on tape, posé sur la page du téléphone. */
+export const nomAffiche = (pseudo: string) => pseudo.split('-').filter(Boolean).map(m => m[0].toUpperCase() + m.slice(1)).join(' ');
+
+const BLOCS_VISITEUR = [
+  bloc('lien', { titre: 'Mon site', url: 'https://exemple.fr', icone: 'site', vedette: true, format: 'bouton' }),
+  bloc('lien', { titre: 'Ma dernière vidéo', url: 'https://youtube.com/', icone: 'youtube' }),
+  bloc('lien', { titre: 'Mon dernier TikTok', url: 'https://tiktok.com/', icone: 'tiktok' }),
+  bloc('lien', { titre: 'Me contacter', url: 'https://exemple.fr/contact', icone: 'courrier' }),
+];
+
+/** La page de celui qui tape son nom dans l'ouverture : son nom, ses initiales, des liens de départ. */
+export function pageVisiteur(pseudo: string, theme: string): PagePublique {
+  const nom = nomAffiche(pseudo);
+  const lettres = nom.split(' ').slice(0, 2).map(m => m[0]).join('');
+  return {
+    reglages: {
+      ...habiller(REGLAGES_DEFAUT, theme),
+      profil: { nom, bio: 'Ta bio, en une phrase.', avatar: initiales(lettres, '#e9e9e9', '#333'), badge: false },
+      reseaux: RESEAUX_MARIE,
+    },
+    blocs: BLOCS_VISITEUR,
+    compte: { pseudo, principal: false, pro: false },
+  };
+}

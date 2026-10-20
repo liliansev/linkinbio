@@ -51,7 +51,8 @@ export function useSequence(actif: boolean, pas: number[]): [number, () => void]
     return () => minuteries.forEach(clearTimeout);
     // `pas` est une constante de chaque démo : seuls `actif` et « Revoir » relancent.
   }, [actif, tour]);
-  return [etape, () => setTour(t => t + 1)];
+  // Rejouer repart de zéro dans le même rendu : l'écran remonté ne montre jamais la fin de la lecture d'avant.
+  return [etape, () => { setEtape(mouvementReduit() ? pas.length : 0); setTour(t => t + 1); }];
 }
 
 /** Un nombre qui compte de 0 à `cible` en `duree` ms, quand `actif` passe à vrai. */
