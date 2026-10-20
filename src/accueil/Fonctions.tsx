@@ -6,9 +6,9 @@ import { CroquisLien, CroquisTete, Telephone } from './Telephone.tsx';
 import { mouvementReduit, useCompte, useGlisse, useSequence, useVisible, useVu } from './mouvement.ts';
 
 /*
- * Ce que fait Hopla, en quatre sections : 02 les liens qui s'ouvrent dans
+ * Ce que fait Hopla, en trois sections : 02 les liens qui s'ouvrent dans
  * leur app, 03 la page qui change selon le réseau, l'heure et les drops,
- * 04 tout ce qu'il faut autour, 05 les stats en une phrase. Les téléphones y
+ * 05 les stats en une phrase (le reste de l'offre gratuite se lit dans les prix). Les téléphones y
  * sont des croquis gris : on lit le mouvement, pas un thème. Au téléphone,
  * chaque démo part quand son téléphone est à l'écran, et ses commandes et sa
  * légende sont juste dessous. Les légendes ne s'annoncent aux lecteurs d'écran
@@ -26,7 +26,10 @@ function Revoir({ onClick }: { onClick: () => void }) {
  * onglet choisi rejoue sa scène depuis le début. À la première lecture, la
  * scène « Sans » se joue, son onglet se remplit comme une barre de lecture,
  * puis « Avec » prend la main, une fois ; un toucher arrête l'enchaînement.
- * Avec moins de mouvement, « Sans » montre le mur de connexion et le départ.
+ * Avec moins de mouvement, rien ne s'enchaîne : la scène montre d'emblée
+ * « Avec », la promesse, et « Sans » reste à un toucher. Au téléphone, les
+ * onglets et la légende passent au-dessus du téléphone, pour qu'on sache ce
+ * qu'on regarde avant que la scène parte.
  */
 
 type Cote = 'sans' | 'avec';
@@ -44,11 +47,13 @@ export function DansApp() {
   const [cote, setCote] = useState<Cote>('sans');
   const [jeu, setJeu] = useState(0);
   const [auto, setAuto] = useState(true);
+  const [touche, setTouche] = useState(false);
   const [etape, rejouer] = useSequence(vu, PAS_APP);
   const reduit = mouvementReduit();
 
   const choisir = (c: Cote) => { setCote(c); setJeu(j => j + 1); rejouer(); };
-  const toucher = (c: Cote) => { setAuto(false); choisir(c); };
+  const toucher = (c: Cote) => { setAuto(false); setTouche(true); choisir(c); };
+  useEffect(() => { if (reduit) setCote('avec'); }, [reduit]);
 
   // La première fois : « Sans », puis « Avec ».
   const enchaine = vu && auto && cote === 'sans' && !reduit;
@@ -124,7 +129,7 @@ export function DansApp() {
               </button>
             ))}
           </div>
-          <p key={cote} className="hl-legende-scene" aria-live={auto ? 'off' : 'polite'}>{LEGENDES[cote]}</p>
+          <p key={cote} className="hl-legende-scene" aria-live={touche ? 'polite' : 'off'}>{LEGENDES[cote]}</p>
         </div>
       </div>
     </section>
@@ -227,7 +232,7 @@ function EcranDrop({ drop }: { drop: number }) {
 const CHAPITRES = [
   { court: 'Le réseau', titre: 'Selon d’où l’on vient', texte: 'Ton TikTok passe en tête pour qui arrive de TikTok, ta chaîne pour qui vient de YouTube. Hopla reconnaît l’app tout seul, sans lien différent par réseau.' },
   { court: 'L’heure', titre: 'Selon l’heure', texte: '« Réserver un appel » le matin en semaine, « Dernier épisode » le soir. Et un compte à rebours avant un lancement, sans dévoiler l’adresse.' },
-  { court: 'Les drops', titre: 'Des drops', texte: 'Un lien qui s’ouvre avec un code, ou pour les cinquante premiers. Le compteur de places se tient à jour tout seul.' },
+  { court: 'Les drops', titre: 'Des drops', texte: 'Un drop, c’est un lien réservé : il s’ouvre avec un code, ou pour les cinquante premiers. Le compteur de places se tient à jour tout seul.' },
 ];
 
 function EcranChapitre({ i, e, actif }: { i: number; e: EtatVivant; actif: boolean }) {
@@ -316,45 +321,21 @@ export function Vivante() {
             </button>
           ))}
         </div>
-        <div ref={refMobile} className="hl-vivante-mobile-tel">{tel(290)}</div>
-        <div key={lu} className="hl-legende-scene" aria-live={touche ? 'polite' : 'off'}>
-          <p><b>{CHAPITRES[lu].titre}.</b> {CHAPITRES[lu].texte}</p>
-          {lu === 0 && sources}
+        <div className="hl-legendes">
+          {/* Les trois légendes réservent la place de la plus longue : le téléphone dessous ne saute pas. */}
+          {CHAPITRES.map((c, i) => i !== lu && (
+            <div key={c.court} className="hl-legende-scene hl-legende-gabarit" aria-hidden="true">
+              <p><b>{c.titre}.</b> {c.texte}</p>
+              {i === 0 && sources}
+            </div>
+          ))}
+          <div key={lu} className="hl-legende-scene" aria-live={touche ? 'polite' : 'off'}>
+            <p><b>{CHAPITRES[lu].titre}.</b> {CHAPITRES[lu].texte}</p>
+            {lu === 0 && sources}
+          </div>
         </div>
+        <div ref={refMobile} className="hl-vivante-mobile-tel">{tel(290)}</div>
       </div>
-    </section>
-  );
-}
-
-/* ---- 04 · Tout ce qu'il faut autour ----
- * Une liste dense, sans démo : ce qui se comprend en une ligne n'a pas besoin
- * d'une scène. Le rythme change, la page raccourcit.
- */
-
-const AUTOUR = [
-  { picto: 'courrier', titre: 'Ta liste e-mail', texte: 'Un formulaire sur ta page ; les inscrits arrivent dans Brevo, Mailchimp ou un fichier CSV.' },
-  { picto: 'etoile', titre: 'Avis et preuves', texte: 'Ta note Google, tes abonnés YouTube ou les mots d’un client, avant le clic.' },
-  { picto: 'globe', titre: 'Cinq langues', texte: 'Français, anglais, espagnol, allemand, italien : chacun lit ta page dans la sienne.' },
-  { picto: 'film', titre: 'Une vidéo sur place', texte: 'Ta vidéo se lance sur la page, sans envoyer ton visiteur ailleurs.' },
-  { picto: 'qr', titre: 'Un QR code', texte: 'Prêt à imprimer pour une affiche ou un stand ; ses visites se comptent à part.' },
-  { picto: 'telecharger', titre: 'Tes données à toi', texte: 'Ta page, tes stats et ta liste s’exportent en un clic, depuis Réglages.' },
-];
-
-export function Autour() {
-  return (
-    <section className="hl-section" aria-labelledby="autour">
-      <div className="hl-tete-section hl-entre">
-        <h2 id="autour" className="hl-h2">Et tout ce qu’il faut autour.</h2>
-      </div>
-      <ul className="hl-autour">
-        {AUTOUR.map((a, i) => (
-          <li key={a.titre} className="hl-entre" style={d(i * 50)}>
-            <Icone nom={a.picto} taille={22} />
-            <h3 className="hl-autour-titre">{a.titre}</h3>
-            <p>{a.texte}</p>
-          </li>
-        ))}
-      </ul>
     </section>
   );
 }
@@ -407,7 +388,7 @@ export function Stats() {
           <p className="hl-gris hl-petit">Chiffres d’exemple. <Revoir onClick={() => setTour(t => t + 1)} /></p>
         </div>
         <div className="hl-mail" data-joue={vu || undefined} key={`m${tour}`} aria-label="L’e-mail du lundi" role="img">
-          <div className="hl-mail-tete"><Symbole className="hl-mail-logo" /><b>Hopla</b><span className="hl-gris">lundi 9:00</span></div>
+          <div className="hl-mail-tete"><Symbole className="hl-mail-logo" /><b>Hopla</b><span className="hl-gris">lundi, 9 h</span></div>
           <p className="hl-mail-sujet">Ta semaine sur Hopla</p>
           <p>Ta page a eu 412 vues, soit 18 % de plus que la semaine d’avant.</p>
           <p>Instagram t’amène le plus de monde : 61 % des visites.</p>

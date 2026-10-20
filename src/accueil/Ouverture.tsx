@@ -97,7 +97,7 @@ export function Ouverture({ api }: { api: ApiAccueil }) {
   const [touche, setTouche] = useState(false);
   const [refScene, vu] = useVu<HTMLDivElement>(0.5);
   const liste = useRef<HTMLDivElement>(null);
-  const { nom, verif } = useReservation();
+  const { nom, verif, etape } = useReservation();
   const mode = useInscription();
 
   // La tournée part quand le téléphone est à l'écran, et s'arrête sur YouTube ; avec moins de mouvement, TikTok d'emblée.
@@ -112,13 +112,18 @@ export function Ouverture({ api }: { api: ApiAccueil }) {
   const visite = VISITES[rang];
   useGlisse(liste, visite.reseau, 450, '.lp-bloc');
   const suivant = () => { setTouche(true); setRang(r => (r + 1) % VISITES.length); };
-  // Dès qu'on tape un nom, la page du milieu devient la sienne ; un nom pris le dit dans la barre d'adresse.
-  const pseudo = nom.replace(/-$/, '');
+  // Dès qu'on tape un nom de trois caractères, la page du milieu devient la sienne ;
+  // un nom pris le dit dans la barre d'adresse, et une fois l'e-mail parti, l'adresse est cochée.
+  const tape = nom.replace(/-$/, '');
+  const pseudo = tape.length >= 3 ? tape : '';
   const pris = !!pseudo && verif?.nom === pseudo && verif.etat !== 'libre';
+  const affiche = nomAffiche(pseudo);
   const page = selonReseau(pseudo ? pageVisiteur(pseudo, THEME.id) : pageMarie(THEME.id), visite.reseau);
   const adresse = pris
     ? <span className="hl-tel-pris"><s>hopla.page/{pseudo}</s> {verif?.etat === 'pris' ? 'déjà pris' : 'impossible'}</span>
-    : `hopla.page/${pseudo || 'marie-lambert'}`;
+    : etape === 'fait' && pseudo
+      ? <span key="fait" className="hl-tel-fait"><Icone nom="check" taille={12} />hopla.page/{pseudo}</span>
+      : `hopla.page/${pseudo || 'marie-lambert'}`;
 
   return (
     <section className="hl-heros" aria-labelledby="titre">
@@ -129,11 +134,11 @@ export function Ouverture({ api }: { api: ApiAccueil }) {
           Un seul lien dans ta bio. Ta page change selon le réseau et l’heure, ouvre tes liens dans leurs apps et se modifie depuis ton téléphone.
         </p>
         <div className="hl-apparait" style={d(540)}>
-          <Reserver api={api} id="reserver" grand note={MOTS[mode].note} />
-          {pseudo.length >= 3 && !pris && (
+          <Reserver api={api} id="reserver" grand note={<>{MOTS[mode].note} <a href="/lilian">Voir une vraie page</a></>} />
+          {pseudo && !pris && etape !== 'fait' && (
             <div className="hl-apercu hl-petit-seul" style={{ background: THEME.fondUni, color: THEME.texte }} aria-hidden="true">
-              <span className="hl-apercu-avatar">{nomAffiche(pseudo).split(' ').slice(0, 2).map(m => m[0]).join('')}</span>
-              <span className="hl-apercu-texte"><b>{nomAffiche(pseudo)}</b><small style={{ color: THEME.doux }}>hopla.page/{pseudo} · {THEME.nom}</small></span>
+              <span className="hl-apercu-avatar">{affiche.split(' ').slice(0, 2).map(m => m[0]).join('')}</span>
+              <span className="hl-apercu-texte"><b>{affiche}</b><small style={{ color: THEME.doux }}>hopla.page/{pseudo} · {THEME.nom}</small></span>
             </div>
           )}
         </div>

@@ -94,15 +94,16 @@ html:has(.hl) { background: #fff; scroll-padding-top: 76px; }
 /* Au téléphone, les liens écrits gardent leur taille mais se touchent sur 44 px : seuls dans leur ligne, ils
  * en prennent la hauteur ; dans une phrase, une zone invisible les agrandit. */
 @media (max-width: 1023px) {
-  :is(.hl-revoir, .hl-lien-gris, .hl-marque, .hl-pied nav a, .hl-couleurs-texte > .hl-lien-texte) { display: inline-flex; align-items: center; min-height: 44px; }
-  p .hl-lien-texte { position: relative; }
-  p .hl-lien-texte::after { content: ''; position: absolute; inset: -12px -4px; }
+  :is(.hl-revoir, .hl-lien-gris, .hl-marque, .hl-pied nav a, .hl-couleurs-reglage > .hl-lien-texte) { display: inline-flex; align-items: center; min-height: 44px; }
+  .hl-revoir { justify-content: center; min-width: 44px; }
+  /* Dans une phrase, la zone de toucher grandit sans écarter les lignes. */
+  p :is(.hl-lien-texte, a) { padding-block: 11px; margin-block: -11px; }
 }
 
 /* Des onglets écrits, soulignés quand ils sont choisis. */
 .hl-onglets { display: flex; gap: 22px; border-bottom: 1px solid var(--filet); margin-bottom: 28px; }
 .hl-onglets button {
-  position: relative; padding: 12px 0; border: 0; background: none; color: var(--gris);
+  position: relative; min-width: 44px; padding: 12px 0; border: 0; background: none; color: var(--gris);
   font: inherit; font-size: 15px; font-weight: 500; white-space: nowrap; cursor: pointer;
 }
 .hl-onglets button:hover { color: var(--encre); }
@@ -194,7 +195,7 @@ html:has(.hl) { background: #fff; scroll-padding-top: 76px; }
 .hl-scene-droite { --x: 118px; --r: 6deg; }
 @media (min-width: 640px) { .hl-scene-gauche { --x: -210px; --s: .9; } .hl-scene-droite { --x: 210px; --s: .9; } }
 @media (min-width: 1024px) { .hl-scene-gauche { --x: -142px; --r: -6deg; --s: .8; } .hl-scene-droite { --x: 142px; --r: 6deg; --s: .8; } }
-.hl-scene .hl-tel { box-shadow: 0 1px 2px rgb(0 0 0 / .05), 0 44px 88px -44px rgb(0 0 0 / .38); }
+.hl-scene .hl-tel { box-shadow: 0 0 0 1px #dcdcdc, 0 44px 88px -44px rgb(0 0 0 / .38); }
 .hl-scene-gauche .hl-tel, .hl-scene-droite .hl-tel { filter: saturate(.92); }
 .hl-heros-source {
   position: absolute; z-index: 3; bottom: calc(100% + 12px); left: 50%; translate: -50% 0;
@@ -204,6 +205,7 @@ html:has(.hl) { background: #fff; scroll-padding-top: 76px; }
 }
 .hl-scene [data-pris] { filter: grayscale(1); opacity: .45; transition: filter .3s, opacity .3s; }
 .hl-tel-pris { color: var(--erreur); }
+.hl-tel-fait { display: inline-flex; align-items: center; gap: 4px; color: var(--encre); font-weight: 600; animation: hl-pop .45s var(--ease) both; }
 .hl-tel-pris s { text-decoration-thickness: 1px; }
 @media (prefers-reduced-motion: no-preference) {
   .hl-scene-milieu { animation: hl-monte 1s var(--ease) .3s both; }
@@ -236,7 +238,7 @@ html:has(.hl) { background: #fff; scroll-padding-top: 76px; }
 .hl-reserver-pris .hl-lien-texte { color: var(--encre); }
 .hl-reserver-etat [data-signale] { font-weight: 500; }
 .hl-reserver-note { margin-top: 10px; font-size: 14px; color: var(--gris); text-wrap: pretty; }
-.hl-reserver-note a { color: inherit; text-underline-offset: 2px; }
+.hl-reserver-note a { color: var(--encre); text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
 .hl-reserver[data-pris] .hl-champ, .hl-reserver-grand[data-pris] .hl-reserver-ligne { border-color: var(--erreur); }
 .hl-reserver-grand .hl-reserver-ligne {
   gap: 6px; padding: 6px; border: 1px solid #d6d6d6; border-radius: 15px; background: #fff;
@@ -256,7 +258,10 @@ html:has(.hl) { background: #fff; scroll-padding-top: 76px; }
   animation: hl-pop .45s var(--ease) both;
 }
 .hl-reserver-fait > svg { flex: none; margin-top: 3px; }
-.hl-reserver-fait p:first-child { font-weight: 500; }
+.hl-reserver-adresse { margin-bottom: 2px; font-size: 17px; font-weight: 600; letter-spacing: -0.01em; overflow-wrap: anywhere; }
+.hl-courriel { font-weight: 600; overflow-wrap: anywhere; }
+.hl-reserver-tien { display: block; margin-top: 2px; color: var(--encre); }
+.hl-reserver-tien a { color: inherit; font-weight: 500; text-underline-offset: 3px; text-decoration-thickness: 1px; }
 .hl-reserver-renvoi { margin-top: 6px; font-size: 14px; color: var(--gris); }
 .hl-reserver-renvoi .hl-lien-texte { color: var(--encre); }
 .hl-reserver-fait .hl-reserver-erreur { margin-top: 6px; font-size: 14px; }
@@ -265,8 +270,8 @@ html:has(.hl) { background: #fff; scroll-padding-top: 76px; }
 
 .hl-tel {
   position: relative; display: flex; flex-direction: column; width: var(--l); margin: 0;
-  aspect-ratio: 390 / 800; border: 1px solid #dcdcdc; border-radius: 28px; background: #fff; overflow: hidden;
-  box-shadow: 0 1px 2px rgb(0 0 0 / .04), 0 28px 56px -28px rgb(0 0 0 / .22); isolation: isolate;
+  aspect-ratio: 390 / 800; border-radius: 28px; background: #fff; overflow: hidden;
+  box-shadow: 0 0 0 1px #dcdcdc, 0 28px 56px -28px rgb(0 0 0 / .22); isolation: isolate;
 }
 @media (max-width: 359px) { :is(.hl-scene-milieu, .hl-dans-app-tel, .hl-vivante-mobile-tel, .hl-prise-tel) .hl-tel { --l: 270px !important; --z: .6923 !important; } }
 .hl-tel-court { aspect-ratio: 390 / 680; }
@@ -331,7 +336,11 @@ html:has(.hl) { background: #fff; scroll-padding-top: 76px; }
 
 .hl-dans-app { display: grid; justify-items: center; gap: 28px; }
 .hl-dans-app-tete, .hl-dans-app-commande { width: 100%; }
-@media (max-width: 1023px) { .hl-dans-app-commande { max-width: 420px; } .hl-dans-app-commande .hl-onglets-scene { margin-top: 0; } }
+@media (max-width: 1023px) {
+  .hl-dans-app-commande { order: 1; max-width: 420px; }
+  .hl-dans-app-commande .hl-onglets-scene { margin-top: 0; }
+  .hl-dans-app-tel { order: 2; }
+}
 @media (min-width: 1024px) {
   .hl-dans-app { grid-template-columns: 1fr 340px; grid-template-areas: 'tete tel' 'commande tel'; justify-items: stretch; column-gap: 72px; row-gap: 0; }
   .hl-dans-app-tete { grid-area: tete; align-self: end; }
@@ -370,8 +379,8 @@ html:has(.hl) { background: #fff; scroll-padding-top: 76px; }
   border-radius: 50%; background: rgb(10 10 10 / .2); animation: hl-touche .6s ease-out both; pointer-events: none;
 }
 .hl-toast {
-  position: absolute; left: 14px; right: 14px; bottom: 16px; z-index: 4; padding: 12px 14px; border-radius: 12px;
-  background: var(--encre); color: #fff; font-size: 13px; font-weight: 500; text-align: center; animation: hl-pop .45s var(--ease) .5s both;
+  position: absolute; left: 14px; right: 14px; bottom: 16px; z-index: 4; padding: 11px 14px; border-radius: 12px;
+  background: #f1f1f1; color: #3a3a3a; font-size: 13px; font-weight: 500; text-align: center; animation: hl-pop .45s var(--ease) .5s both;
 }
 .hl-integre-bouton { display: grid; place-items: center; height: 38px; border-radius: 8px; background: #dedede; color: #555; font-weight: 600; }
 
@@ -402,7 +411,9 @@ html:has(.hl) { background: #fff; scroll-padding-top: 76px; }
 
 .hl-vivante-mobile { display: grid; justify-items: center; gap: 24px; }
 .hl-vivante-mobile > .hl-onglets-scene { width: 100%; max-width: 420px; margin: 0; }
-.hl-vivante-mobile .hl-legende-scene { width: 100%; max-width: 420px; margin: 0; }
+.hl-legendes { display: grid; width: 100%; max-width: 420px; }
+.hl-legendes > .hl-legende-scene { grid-area: 1 / 1; margin: 0; }
+.hl-legende-gabarit { visibility: hidden; animation: none; }
 .hl-essai { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 16px; font-size: 14px; }
 .hl-essai > span { margin-right: 2px; }
 .hl-essai button {
@@ -415,7 +426,7 @@ html:has(.hl) { background: #fff; scroll-padding-top: 76px; }
 .hl-legende-scene .hl-essai { margin-top: 12px; }
 @media (min-width: 1024px) {
   .hl-vivante { display: grid; grid-template-columns: 1fr 340px; gap: 72px; }
-  .hl-chapitre { min-height: 56vh; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; }
+  .hl-chapitre { min-height: 42vh; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; }
   /* Le chapitre lu en noir, les autres en gris : lisibles tous les trois, le regard va au premier. */
   .hl-chapitre .hl-h3 { font-size: 30px; letter-spacing: -0.03em; color: var(--gris); transition: color .45s; }
   .hl-chapitre p { margin-top: 10px; max-width: 46ch; font-size: 18px; color: var(--gris); transition: color .45s; }
@@ -424,16 +435,6 @@ html:has(.hl) { background: #fff; scroll-padding-top: 76px; }
   .hl-chapitre .hl-revoir { margin-top: 14px; }
   .hl-colle { position: sticky; top: max(84px, calc(50vh - 260px)); display: flex; justify-content: center; }
 }
-
-/* ---- 04 · Tout autour ---- */
-
-.hl-autour { display: grid; grid-template-columns: 1fr; column-gap: 48px; }
-@media (min-width: 640px) { .hl-autour { grid-template-columns: 1fr 1fr; } }
-@media (min-width: 1024px) { .hl-autour { grid-template-columns: repeat(3, 1fr); } }
-.hl-autour li { display: grid; grid-template-columns: 22px 1fr; column-gap: 14px; row-gap: 4px; padding: 22px 0 28px; border-top: 1px solid var(--filet); }
-.hl-autour li > svg { grid-row: span 2; margin-top: 2px; }
-.hl-autour-titre { font-size: 18px; font-weight: 600; line-height: 1.3; letter-spacing: -0.02em; }
-.hl-autour li > p { color: var(--gris); font-size: 15px; max-width: 40ch; text-wrap: pretty; }
 
 /* ---- 05 · Les stats ---- */
 
@@ -487,11 +488,21 @@ html:has(.hl) { background: #fff; scroll-padding-top: 76px; }
 .hl-rail::-webkit-scrollbar { display: none; }
 .hl-rail-item { flex: none; width: 210px; display: flex; flex-direction: column; gap: 12px; scroll-snap-align: start; content-visibility: auto; contain-intrinsic-size: 210px 480px; }
 .hl-rail-item p { display: flex; flex-direction: column; font-size: 14px; line-height: 1.4; }
-.hl-couleurs { margin-top: 64px; display: grid; justify-items: center; gap: 36px; padding: 28px 22px; border: 1px solid var(--filet); border-radius: 16px; }
-@media (min-width: 900px) { .hl-couleurs { grid-template-columns: 1fr auto; align-items: center; justify-items: stretch; gap: 56px; padding: 48px; } }
-.hl-couleurs-texte { width: 100%; }
+.hl-couleurs {
+  margin-top: 64px; display: grid; grid-template-areas: 'texte' 'tel' 'reglage'; gap: 24px;
+  padding: 28px 22px; border: 1px solid var(--filet); border-radius: 16px;
+}
+.hl-couleurs-texte { grid-area: texte; }
+.hl-couleurs-reglage { grid-area: reglage; }
+.hl-couleurs-tel { grid-area: tel; justify-self: center; }
+@media (max-width: 899px) { .hl-couleurs-tel .hl-tel { --l: 220px !important; --z: .5641 !important; } }
+@media (min-width: 900px) {
+  .hl-couleurs { grid-template-columns: 1fr auto; grid-template-areas: 'texte tel' 'reglage tel'; column-gap: 56px; row-gap: 0; padding: 48px; }
+  .hl-couleurs-texte { align-self: end; }
+  .hl-couleurs-reglage { align-self: start; padding-top: 24px; }
+}
 .hl-couleurs-texte > p { margin-top: 8px; color: var(--gris); max-width: 44ch; }
-.hl-nuances { display: flex; flex-direction: column; gap: 14px; margin: 24px 0 18px; }
+.hl-nuances { display: flex; flex-direction: column; gap: 14px; margin: 0 0 18px; }
 .hl-nuances fieldset { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 0; padding: 0; border: 0; min-width: 0; }
 .hl-nuances legend { width: 100%; margin-bottom: 2px; padding: 0; font-size: 14px; color: var(--gris); }
 @media (min-width: 480px) { .hl-nuances fieldset { flex-wrap: nowrap; } .hl-nuances legend { float: left; width: 76px; margin: 0; } }
@@ -505,7 +516,7 @@ html:has(.hl) { background: #fff; scroll-padding-top: 76px; }
 .hl-prise-texte { width: 100%; }
 .hl-prise .hl-onglets-scene { margin: 0; }
 @media (max-width: 1023px) { .hl-prise-texte { max-width: 420px; } }
-@media (min-width: 1024px) { .hl-prise { grid-template-columns: 1fr 340px; align-items: center; justify-items: stretch; gap: 72px; } }
+@media (min-width: 1024px) { .hl-prise { grid-template-columns: 1fr 340px; align-items: start; justify-items: stretch; gap: 72px; } }
 .hl-etapes { display: none; }
 @media (min-width: 1024px) { .hl-etapes { display: flex; flex-direction: column; gap: 6px; margin-top: 24px; } }
 .hl-etapes button {
@@ -562,7 +573,7 @@ html:has(.hl) { background: #fff; scroll-padding-top: 76px; }
 /* ---- 09 · Les prix ---- */
 
 .hl-periode { align-self: flex-start; display: inline-flex; gap: 4px; padding: 4px; border-radius: 10px; background: var(--pale); }
-.hl-periode button { min-height: 40px; padding: 0 14px; border: 0; border-radius: 8px; background: none; color: var(--gris); font: inherit; font-size: 15px; font-weight: 500; cursor: pointer; transition: background-color .15s, color .15s; }
+.hl-periode button { min-height: 40px; padding: 0 14px; white-space: nowrap; border: 0; border-radius: 8px; background: none; color: var(--gris); font: inherit; font-size: 15px; font-weight: 500; cursor: pointer; transition: background-color .15s, color .15s; }
 @media (max-width: 1023px) { .hl-periode button { min-height: 44px; } }
 .hl-periode button[aria-checked='true'] { background: #fff; color: var(--encre); box-shadow: 0 1px 2px rgb(0 0 0 / .08), 0 0 0 1px var(--filet); }
 .hl-offres { display: grid; gap: 16px; margin-bottom: 20px; }
@@ -576,6 +587,7 @@ html:has(.hl) { background: #fff; scroll-padding-top: 76px; }
 .hl-offre li { display: flex; align-items: flex-start; gap: 10px; }
 .hl-offre li svg { flex: none; margin-top: 3px; }
 .hl-offre { min-width: 0; }
+@media (max-width: 399px) { .hl-offre { padding: 22px 18px; } .hl-periode button { padding: 0 10px; } .hl-offre .hl-btn { padding: 0 12px; } }
 .hl-offre .hl-btn { width: 100%; white-space: normal; text-align: center; }
 
 /* ---- 10 · Les questions ; 11 · le dernier appel ---- */

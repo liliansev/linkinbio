@@ -95,12 +95,14 @@ export function Prise() {
   const [onglet, setOnglet] = useState<Onglet>('creer');
   const [jeu, setJeu] = useState(0);
   const [auto, setAuto] = useState(true);
+  // La légende ne s'annonce qu'une fois qu'on a touché une commande, pas pendant l'enchaînement automatique.
+  const [touche, setTouche] = useState(false);
   const [choisi, setChoisi] = useState<number | null>(null);
   const [lu, rejouer] = useSequence(vu, PAS[onglet]);
   const etape = choisi ?? lu;
 
   const choisir = (o: Onglet) => { setOnglet(o); setChoisi(null); setJeu(j => j + 1); rejouer(); };
-  const toucher = (o: Onglet) => { setAuto(false); choisir(o); };
+  const toucher = (o: Onglet) => { setAuto(false); setTouche(true); choisir(o); };
 
   // La première fois : Créer, puis Modifier.
   const enchaine = vu && auto && onglet === 'creer' && choisi === null && !mouvementReduit();
@@ -114,7 +116,7 @@ export function Prise() {
   const liste = onglet === 'creer' ? ETAPES : GESTES;
   // Le pas lu, de 0 à liste.length - 1.
   const rang = onglet === 'creer' ? Math.max(1, etape) - 1 : etape < 2 ? 0 : etape < 5 ? 1 : 2;
-  const montrer = (i: number) => { setAuto(false); setChoisi(onglet === 'creer' ? i + 1 : ETAPE_DU_GESTE[i]); };
+  const montrer = (i: number) => { setAuto(false); setTouche(true); setChoisi(onglet === 'creer' ? i + 1 : ETAPE_DU_GESTE[i]); };
 
   return (
     <section className="hl-section" aria-labelledby="prise">
@@ -149,11 +151,11 @@ export function Prise() {
             : 'Le back office de Hopla au téléphone : le nom s’écrit sur la page, un lien se déplace, le design s’ouvre dans une feuille.'}>
             <div key={jeu} className="hl-fondu">{onglet === 'creer' ? <EcranPage page={pageEtape(etape)} /> : <BackOffice etape={etape} />}</div>
           </Telephone>
-          <div className="hl-prise-legende hl-petit-seul" aria-live={auto ? 'off' : 'polite'}>
+          <div className="hl-prise-legende hl-petit-seul" aria-live={touche ? 'polite' : 'off'}>
             <div className="hl-segments" aria-hidden="true">{liste.map((_, i) => <i key={i} data-plein={rang >= i || undefined} />)}</div>
             <p><span className="hl-gris">{rang + 1} sur {liste.length}</span> <b>{liste[rang].titre}</b><span className="hl-etape-texte">{liste[rang].texte}</span></p>
           </div>
-          <button type="button" className="hl-revoir" onClick={() => { setChoisi(null); rejouer(); }}>Revoir</button>
+          <button type="button" className="hl-revoir" onClick={() => { setTouche(true); setChoisi(null); rejouer(); }}>Revoir</button>
         </div>
       </div>
     </section>

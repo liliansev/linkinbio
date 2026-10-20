@@ -62,10 +62,13 @@ export function Themes() {
         ))}
       </ul>
 
+      {/* Au téléphone, l'aperçu passe entre le texte et les pastilles : on voit ce que change chaque toucher. */}
       <div className="hl-couleurs hl-entre">
         <div className="hl-couleurs-texte">
           <h3 className="hl-h3">Tes couleurs</h3>
-          <p>Garde la typographie d’un thème et change son fond, ses boutons ou son accent. Un geste remet tout comme avant.</p>
+          <p>Garde la typographie d’un thème, ici Lin, et change son fond, ses boutons ou son accent. Un geste remet tout comme avant.</p>
+        </div>
+        <div className="hl-couleurs-reglage">
           <div className="hl-nuances">
             {NUANCES.map(n => (
               <fieldset key={n.role}>
@@ -79,9 +82,11 @@ export function Themes() {
           </div>
           <button type="button" className="hl-lien-texte" disabled={!couleurs.fond && !couleurs.boutons && !couleurs.accent} onClick={() => setCouleurs(SANS_COULEURS)}>Revenir aux couleurs du thème</button>
         </div>
-        <Telephone largeur={260} label="La page de Marie avec les couleurs choisies">
-          <EcranPage page={pageMarie('lin', { couleurs })} />
-        </Telephone>
+        <div className="hl-couleurs-tel">
+          <Telephone largeur={260} label="La page de Marie dans le thème Lin, avec les couleurs choisies">
+            <EcranPage page={pageMarie('lin', { couleurs })} />
+          </Telephone>
+        </div>
       </div>
     </section>
   );

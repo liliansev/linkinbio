@@ -1,5 +1,5 @@
 import { Barre, Ouverture } from './Ouverture.tsx';
-import { Autour, DansApp, Stats, Vivante } from './Fonctions.tsx';
+import { DansApp, Stats, Vivante } from './Fonctions.tsx';
 import { Themes } from './Themes.tsx';
 import { Prise } from './Prise.tsx';
 import { DernierAppel, Pied, Prix, Questions } from './Fin.tsx';
@@ -26,7 +26,6 @@ export function Accueil({ api, mode = 'libre' }: { api: ApiAccueil; mode?: Inscr
         <Ouverture api={api} />
         <DansApp />
         <Vivante />
-        <Autour />
         <Stats />
         <Themes />
         <Prise />

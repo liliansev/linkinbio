@@ -12,7 +12,7 @@ export const ModeInscription = createContext<Inscription>('libre');
 export const useInscription = () => useContext(ModeInscription);
 
 /** Le bouton d'appel, en deux morceaux : la barre ne garde que le premier sur un petit écran. */
-export const APPEL: Record<Inscription, [string, string]> = { libre: ['Créer', ' ma hopla'], attente: ['Réserver', ' mon nom'] };
+export const APPEL: Record<Inscription, [string, string]> = { libre: ['Créer', ' ma page'], attente: ['Réserver', ' mon nom'] };
 export const appel = (m: Inscription) => APPEL[m].join('');
 
 /**
@@ -24,7 +24,7 @@ export const MOTS: Record<Inscription, { note: string; adresse: string; rassure:
     note: 'Gratuit, toutes les fonctions comprises. En ligne en deux minutes.',
     adresse: 'À quelle adresse t’envoyer le lien de ta page ?',
     rassure: 'Ni mot de passe ni carte bancaire : un lien arrive par e-mail, et l’on ne t’écrit que pour ta page.',
-    renvoi: 'C’est renvoyé. Ce nouveau lien marche pendant 15 minutes.',
+    renvoi: 'C’est renvoyé. Ce nouveau lien marche 15 minutes : ouvre-le dès qu’il arrive.',
   },
   attente: {
     note: 'Gratuit, toutes les fonctions comprises.',

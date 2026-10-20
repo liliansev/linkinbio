@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { CSSProperties, MouseEvent } from 'react';
+import type { CSSProperties, KeyboardEvent, MouseEvent } from 'react';
 import { Icone } from '../components/Icone.tsx';
 import { AVANTAGES_PRO, TARIFS, euros } from '../lib/abonnement.ts';
 import type { Periode } from '../lib/abonnement.ts';
@@ -10,22 +10,31 @@ import { MOTS, appel, questions, useInscription } from './textes.ts';
 
 /* 09 · Les prix ; 10 · les questions ; 11 · le dernier appel et le pied de page. */
 
+/** Tout ce que fait l'offre gratuite ; les fonctions que la page ne montre pas plus haut y sont dites en une ligne. */
 const GRATUIT = [
-  'Ta page selon le réseau et l’heure',
-  'Les drops, avec code ou places comptées',
-  'Ta liste e-mail, vers Brevo ou Mailchimp',
-  'Avis, vidéos et QR code',
-  'Cinq langues',
+  'Ta page selon le réseau et l’heure, et les drops',
+  'Ta liste e-mail, vers Brevo, Mailchimp ou un fichier CSV',
+  'Avis, vidéos sur la page, QR code et cinq langues',
   'Vingt thèmes et tes couleurs',
   'Stats sur 7 jours et résumé du lundi',
+  'Tes données exportées en un clic',
   '25 Mo d’images',
 ];
+const PERIODES: Periode[] = ['mois', 'an'];
 
 export function Prix() {
   const [periode, setPeriode] = useState<Periode>('mois');
   const mode = useInscription();
   const libelle = appel(mode);
   const reserver = (ev: MouseEvent) => { ev.preventDefault(); allerAuChamp(); };
+  // Un groupe de boutons radio : un seul arrêt de tabulation, les flèches changent de période.
+  const fleches = (ev: KeyboardEvent<HTMLDivElement>) => {
+    if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(ev.key)) return;
+    ev.preventDefault();
+    const suivante = periode === 'mois' ? 'an' : 'mois';
+    setPeriode(suivante);
+    ev.currentTarget.querySelector<HTMLButtonElement>(`[data-periode="${suivante}"]`)?.focus();
+  };
   return (
     <section className="hl-section" id="prix" aria-labelledby="titre-prix">
       <div className="hl-tete-section hl-entre">
@@ -40,9 +49,12 @@ export function Prix() {
         </article>
         <article className="hl-offre hl-offre-pro hl-entre" style={{ '--d': '80ms' } as CSSProperties}>
           <h3 className="hl-h3">Pro</h3>
-          <div className="hl-periode" role="radiogroup" aria-label="Période de facturation du Pro">
-            <button type="button" role="radio" aria-checked={periode === 'mois'} onClick={() => setPeriode('mois')}>Par mois</button>
-            <button type="button" role="radio" aria-checked={periode === 'an'} onClick={() => setPeriode('an')}>Par an · {TARIFS.an.economie}</button>
+          <div className="hl-periode" role="radiogroup" aria-label="Période de facturation du Pro" onKeyDown={fleches}>
+            {PERIODES.map(p => (
+              <button key={p} type="button" role="radio" data-periode={p} aria-checked={periode === p} tabIndex={periode === p ? 0 : -1} onClick={() => setPeriode(p)}>
+                {p === 'mois' ? 'Par mois' : `Par an · ${TARIFS.an.economie}`}
+              </button>
+            ))}
           </div>
           <p className="hl-prix" aria-live="polite">
             <b key={periode} className="hl-prix-glisse">{euros(TARIFS[periode].prix)}</b>{' '}
@@ -80,7 +92,7 @@ export function DernierAppel({ api }: { api: ApiAccueil }) {
   return (
     <section className="hl-section hl-dernier" aria-labelledby="dernier">
       <h2 id="dernier" className="hl-h2 hl-h2-grand hl-entre">Ton nom est <span className="hl-insecable">peut-être</span> encore libre.</h2>
-      <div className="hl-entre" style={{ '--d': '120ms' } as CSSProperties}><Reserver api={api} id="reserver-fin" note={MOTS[mode].note} /></div>
+      <div className="hl-entre" style={{ '--d': '120ms' } as CSSProperties}><Reserver api={api} id="reserver-fin" grand note={MOTS[mode].note} /></div>
       <a href="/lilian" className="hl-lien-gris">Voir la page de Lilian</a>
     </section>
   );
