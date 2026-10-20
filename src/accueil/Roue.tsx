@@ -11,7 +11,8 @@ import { mouvementReduit, useVu } from './mouvement.ts';
  * réseaux tournent sur une roue, et chaque visiteur en part, passe par le
  * même lien Hopla, puis descend vers la page rangée pour son réseau. À son
  * arrivée, la page fait un petit bond ; la première fois, le lien de ce
- * réseau se glisse en tête. Inès Durand, une coach inventée, dans le thème
+ * réseau se glisse en tête, dans la couleur du réseau, avant de prendre celle
+ * du thème. Inès Durand, une coach inventée, dans le thème
  * Couchant (celui de la démo d'en dessous est Champagne). Le trafic se joue
  * une fois, puis la roue ralentit et s'arrête ; « Revoir » le rejoue. Avec
  * moins de mouvement, les quatre pages sont déjà rangées.
@@ -103,6 +104,8 @@ export function Roue({ pseudo, nom }: { pseudo: string; nom: string }) {
     const vols: { reseau: number; case: number; depart: number; long: number }[] = [];
     let suivante = 0, image = 0, debut = 0, fin = 0, dernier = arret.current;
     const vus = new Set<Reseau>();
+    // À chaque arrivée, la ligne du réseau prend sa couleur un instant (`data-arrive`), puis celle du thème.
+    const teintes: ReturnType<typeof setTimeout>[] = [];
     const tourner = (t: number) => {
       // Vitesse constante pendant le trafic, puis un freinage exponentiel.
       const s = t / 1000;
@@ -121,6 +124,12 @@ export function Roue({ pseudo, nom }: { pseudo: string; nom: string }) {
         [{ opacity: 0.9, transform: 'scale(1)' }, { opacity: 0, transform: 'scale(1.16)' }],
         { duration: 650, easing: 'cubic-bezier(.16,1,.3,1)' },
       );
+      const page = pages.current[i];
+      if (page) {
+        clearTimeout(teintes[i]);
+        page.dataset.arrive = '';
+        teintes[i] = setTimeout(() => { delete page.dataset.arrive; }, 1200);
+      }
       if (!vus.has(reseau)) { vus.add(reseau); setRangees(r => [...r, reseau]); }
     };
     const pas = (now: number) => {
@@ -170,6 +179,8 @@ export function Roue({ pseudo, nom }: { pseudo: string; nom: string }) {
     return () => {
       clearTimeout(depart);
       cancelAnimationFrame(image);
+      teintes.forEach(clearTimeout);
+      pages.current.forEach(p => { if (p) delete p.dataset.arrive; });
       arret.current = dernier % 360;
       points.current.forEach(p => { if (p) p.style.opacity = '0'; });
       traines.current.forEach(c => { if (c) c.style.opacity = '0'; });
@@ -222,7 +233,7 @@ export function Roue({ pseudo, nom }: { pseudo: string; nom: string }) {
           {RESEAUX.map((r, i) => {
             const rangee = rangees.includes(r);
             return (
-              <div key={r} className="hl-roue-colonne">
+              <div key={r} className="hl-roue-colonne" style={{ '--reseau': COULEURS[r] } as CSSProperties}>
                 <span ref={el => { ondes.current[i] = el; }} className="hl-roue-onde" />
                 <div ref={el => { pages.current[i] = el; }} className="hl-roue-page" style={page} data-rangee={rangee || undefined}>
                   <span className="hl-roue-avatar">{initiales}</span>

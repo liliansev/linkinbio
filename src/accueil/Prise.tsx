@@ -43,6 +43,19 @@ function pageEtape(n: number) {
   });
 }
 
+/** Avant la première question, la page n'est encore qu'une silhouette : jamais un écran vide. */
+function Silhouette() {
+  return (
+    <div className="hl-cq" aria-hidden="true">
+      <div className="hl-cq-tete">
+        <span className="hl-cq-avatar" />
+        <span className="hl-cq-trait" style={{ width: '46%', height: 12 }} />
+        <span className="hl-cq-trait" style={{ width: '64%' }} />
+      </div>
+    </div>
+  );
+}
+
 const SUITE = ' Lambert';
 const TITRES: Record<string, string> = { atelier: 'Réserver un atelier', tiktok: 'Mon dernier TikTok', boutique: 'Ma boutique' };
 
@@ -149,7 +162,8 @@ export function Prise() {
           <Telephone largeur={290} label={onglet === 'creer'
             ? 'La page de Marie se remplit à chaque étape de l’inscription.'
             : 'Le back office de Hopla au téléphone : le nom s’écrit sur la page, un lien se déplace, le design s’ouvre dans une feuille.'}>
-            <div key={jeu} className="hl-fondu">{onglet === 'creer' ? <EcranPage page={pageEtape(etape)} /> : <BackOffice etape={etape} />}</div>
+            <div key={jeu} className="hl-fondu">{onglet === 'modifier' ? <BackOffice etape={etape} />
+              : etape === 0 ? <Silhouette /> : <div className="hl-fondu"><EcranPage page={pageEtape(etape)} /></div>}</div>
           </Telephone>
           <div className="hl-prise-legende hl-petit-seul" aria-live={touche ? 'polite' : 'off'}>
             <div className="hl-segments" aria-hidden="true">{liste.map((_, i) => <i key={i} data-plein={rang >= i || undefined} />)}</div>
