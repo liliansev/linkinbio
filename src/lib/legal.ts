@@ -10,7 +10,7 @@
 
 import { TARIFS, euros } from './abonnement.ts';
 
-export const VERSION_CGU = '2026-10-18.5';
+export const VERSION_CGU = '2026-10-20.1';
 export const CONTACT_LEGAL = 'bonjour@liliansevoumian.fr';
 
 export interface DocumentLegal { titre: string; resume: string; sections: { titre: string; texte: string[] }[] }
@@ -23,11 +23,11 @@ const HEBERGEUR = 'Hostinger International Limited, 61 Lordou Vironos Street, 60
 export const LEGAL: Record<NomDocument, DocumentLegal> = {
   cgu: {
     titre: 'Conditions générales d’utilisation',
-    resume: `Les règles du service Hopla, en vigueur depuis le 18 octobre 2026 (version ${VERSION_CGU}).`,
+    resume: `Les règles du service Hopla, en vigueur depuis le 20 octobre 2026 (version ${VERSION_CGU}).`,
     sections: [
       { titre: 'Le service', texte: [
         'Hopla permet de publier une page de liens personnelle à l’adresse hopla.page/<pseudo>, et de la gérer depuis un back office, sur app.hopla.page. Le service est édité par Lilian Sevoumian (voir les mentions légales).',
-        'Pendant la bêta, le service est ouvert sur invitation. Il existe en version gratuite et en offre Pro, payante (voir « L’offre Pro et son paiement »). Il peut évoluer, s’interrompre pour maintenance ou s’arrêter : dans ce dernier cas, tu es prévenu par e-mail au moins 30 jours avant, et tu peux exporter tes données jusqu’au dernier jour.',
+        'Hopla existe en version gratuite et en offre Pro, payante (voir « L’offre Pro et son paiement »). Il peut évoluer, s’interrompre pour maintenance ou s’arrêter : dans ce dernier cas, tu es prévenu par e-mail au moins 30 jours avant, et tu peux exporter tes données jusqu’au dernier jour.',
       ] },
       { titre: 'Ton compte', texte: [
         'Tu te connectes avec ton adresse e-mail, par un lien à usage unique. Tu es responsable de l’accès à ta boîte mail : quiconque y accède peut ouvrir ton back office.',
