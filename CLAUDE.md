@@ -47,8 +47,10 @@ embarque tout : l'image n'a pas de `node_modules`.
 - `lib/` : `types.ts` (origines, `cheminPage`, `urlPage`), `valider.ts`, `themes.ts`, `legal.ts` (`VERSION_CGU`),
   `abonnement.ts` (les quatre offres Gratuit, Starter, Pro, Premium : prix, `FONCTIONS`, `peut()`, `joursStats()`, `estPaye()`), `droits.ts`
   (`selonDroits` retire de la page publique ce que l'offre ne comprend pas, sans rien effacer ; `nouvellesDates`),
-  `mots.ts` (les mots de la page publique, au « tu » ou au « vous »).
-- `admin/` : onglets Ma page, Stats, Comptes (principal seulement), Réglages.
+  `mots.ts` (les mots de la page publique, au « tu » ou au « vous »), `stats.ts` (les quatre chiffres de l'onglet Stats, leurs écarts,
+  l'échelle de la courbe), `resume.ts` (« En bref », et le résumé du lundi), `comptes.ts` (statut, dernière connexion et recherche de l'onglet Comptes).
+- `admin/` : onglets Ma page, Stats, Comptes (principal seulement), Réglages. Réglages tient sur une seule page de lignes
+  (`Groupe`, `Ligne`, `LigneLien` dans `ui.tsx`) ; un détail s'y ouvre en sous-page (`SousPage`), avec un fil dans l'en-tête.
   `MaPage.tsx` édite la page elle-même : `PageLiens` reçoit `edition` (nom et bio
   tapés en place, photo, réseaux et blocs ouverts d'un toucher, blocs déplacés en
   les maintenant), le design s'ouvre dans une feuille `cote` qui laisse voir la page,

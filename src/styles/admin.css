@@ -169,17 +169,6 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
 .adm-toile.adm-miroir-fin { box-shadow: 0 0 0 1.5px #0a0a0a, 0 30px 90px -24px rgb(0 0 0 / 0.3); }
 .adm-address { background: var(--adm-surface); border: 1px solid var(--adm-trait); border-radius: 14px; }
 .adm-checklist { background: var(--adm-surface); border: 1px solid var(--adm-trait); border-radius: 14px; }
-.adm-settings, .adm-settings-detail { max-width: 760px; }
-.adm-settings-list { border: 1px solid var(--adm-trait); border-radius: 16px; background: var(--adm-surface); }
-.adm-settings-list > li + li { border-top: 1px solid var(--adm-trait); }
-.adm-settings-row { display: flex; min-height: 68px; width: 100%; align-items: center; gap: 14px; padding: 12px 16px; text-align: left; }
-button.adm-settings-row { transition: background-color 150ms; }
-button.adm-settings-row:hover { background: #f7f7f5; }
-.adm-settings-list > li:first-child .adm-settings-row { border-radius: 15px 15px 0 0; }
-.adm-settings-list > li:last-child .adm-settings-row { border-radius: 0 0 15px 15px; }
-.adm-settings-list > li:only-child .adm-settings-row { border-radius: 15px; }
-/* Le picto d'une ligne, sans tuile derrière : plein, d'une seule couleur (Lilian, 19 octobre 2026). */
-.adm-settings-icon { display: grid; width: 24px; height: 24px; flex-shrink: 0; place-items: center; color: var(--adm-secondaire); }
 /* Un groupe de lignes dans une feuille : un trait fin, l'arrondi des surfaces compactes, sans fond
  * (la feuille est déjà du papier), pour qu'un survol posé sur une ligne reste visible. La première et
  * la dernière ligne épousent l'arrondi, sans couper le contour du focus comme le ferait un overflow. */
@@ -277,7 +266,7 @@ button.adm-settings-row:hover { background: #f7f7f5; }
   .adm-editor-tools [data-principal], .adm-editor-tools .adm-button-outline { font-size: 13px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .adm-nav-item, .adm-compte, .adm-menu-item, .adm-button-outline, .adm-button-primary, .adm-button-danger, button.adm-settings-row { transition: none; }
+  .adm-nav-item, .adm-compte, .adm-menu-item, .adm-button-outline, .adm-button-primary, .adm-button-danger { transition: none; }
 }
 
 /*
@@ -325,3 +314,171 @@ button.adm-offre-tete:active { background: #fafaf8; }
 .adm-offres-pied { position: sticky; bottom: calc(56px + env(safe-area-inset-bottom)); z-index: 5; margin: 0 -4px; padding: 14px 4px 12px; background: linear-gradient(to top, var(--adm-fond) 78%, transparent); }
 @media (min-width: 1024px) { .adm-offres-pied { bottom: 0; padding-bottom: 20px; } }
 @media (prefers-reduced-motion: reduce) { .adm-offres-onglets > button, .adm-offre, .adm-offre-radio { transition: none; } }
+
+/*
+ * Stats (direction B, 20 octobre 2026) : une phrase, une courbe à onglets, des
+ * listes à barre pâle. Un encart est un trait fin sur le blanc, arrondi à 10 au
+ * bureau ; les gris de texte sont ceux des maquettes (#5f5f5a, 6,5:1 sur le blanc).
+ */
+.adm-encart { border: 1px solid #e6e6e2; border-radius: 12px; background: #fff; }
+.adm-stats-phrase { max-width: 62rem; font-size: 18px; line-height: 1.4; font-weight: 500; letter-spacing: -0.01em; text-wrap: pretty; }
+.adm-stats .adm-card { border-color: #e6e6e2; border-radius: 12px; padding: 16px; }
+.adm-courbe { overflow: hidden; }
+.adm-courbe-onglets { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-bottom: 1px solid #ececea; }
+.adm-courbe-onglets > button { display: flex; min-width: 0; min-height: 72px; flex-direction: column; align-items: flex-start; justify-content: center; gap: 2px; padding: 0 16px; background: #fafaf9; text-align: left; transition: background-color 150ms; }
+.adm-courbe-onglets > button:nth-child(even) { border-left: 1px solid #ececea; }
+.adm-courbe-onglets > button:nth-child(n + 3) { border-top: 1px solid #ececea; }
+.adm-courbe-onglets > button:hover { background: #f4f4f2; }
+.adm-courbe-onglets > button[aria-selected='true'] { background: #fff; box-shadow: inset 0 -2px 0 #0a0a0a; }
+.adm .adm-courbe-onglets > button:focus-visible { outline-offset: -3px; }
+.adm-courbe-nom { font-size: 12px; font-weight: 500; color: #5f5f5a; }
+[aria-selected='true'] > .adm-courbe-nom { color: #3d3d39; }
+.adm-courbe-chiffre { font-size: 24px; line-height: 1.25; font-weight: 600; letter-spacing: -0.02em; color: #3d3d39; font-variant-numeric: proportional-nums; white-space: nowrap; }
+[aria-selected='true'] .adm-courbe-chiffre { color: #0a0a0a; }
+.adm-courbe-vide { font-size: 14px; line-height: 30px; font-weight: 500; color: #5f5f5a; }
+.adm-courbe-ecart { font-size: 12px; color: #5f5f5a; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.adm-courbe-svg { font-family: inherit; }
+.adm .adm-courbe-svg:focus-visible { outline-offset: -2px; border-radius: 0 0 10px 10px; }
+.adm-courbe-texte { fill: #5f5f5a; font-size: 12px; font-variant-numeric: tabular-nums; }
+.adm-courbe-dernier { fill: #0a0a0a; font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.adm-voir-tableau { display: inline-flex; min-height: 36px; align-items: center; padding: 0 12px; border: 1px solid #e3e3df; border-radius: 8px; background: #fff; font-size: 12px; font-weight: 500; transition: background-color 150ms; }
+.adm-voir-tableau:hover { background: #f4f4f0; }
+.adm-bulle { z-index: 2; display: flex; flex-direction: column; gap: 1px; padding: 8px 10px; border: 1px solid #e3e3df; border-radius: 8px; background: #fff; box-shadow: 0 8px 24px -12px rgb(10 10 10 / 0.25); white-space: nowrap; font-size: 13.5px; }
+.adm-tableau-jours { border-collapse: collapse; font-size: 13.5px; font-variant-numeric: tabular-nums; }
+.adm-tableau-jours thead th { position: sticky; top: 0; z-index: 1; height: 36px; padding: 0 16px; border-bottom: 1px solid #ececea; background: #fff; color: #5f5f5a; font-size: 12px; font-weight: 500; text-align: right; }
+.adm-tableau-jours th:first-child { text-align: left; }
+.adm-tableau-jours tbody th { font-weight: 400; text-align: left; white-space: nowrap; }
+.adm-tableau-jours tbody th, .adm-tableau-jours td { height: 36px; padding: 0 16px; border-bottom: 1px solid #efefec; }
+.adm-tableau-jours td { text-align: right; }
+.adm-repartition { padding: 14px 16px 12px; }
+.adm-repartition li { display: grid; grid-template-columns: minmax(0, 1fr) 52px 40px; align-items: center; gap: 8px; min-height: 32px; }
+.adm-repartition-nom { position: relative; display: flex; min-width: 0; height: 32px; align-items: center; gap: 8px; padding-left: 10px; font-size: 14px; }
+.adm-repartition-barre { position: absolute; inset: 0 auto 0 0; min-width: 4px; border-radius: 6px; background: #efefec; }
+.adm-repartition-valeur { text-align: right; font-size: 14px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.adm-repartition-part { text-align: right; font-size: 12px; color: #5f5f5a; font-variant-numeric: tabular-nums; }
+@media (min-width: 640px) {
+  .adm-courbe-onglets { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .adm-courbe-onglets > button { min-height: 84px; padding: 0 20px; }
+  .adm-courbe-onglets > button:nth-child(n + 3) { border-top: 0; }
+  .adm-courbe-onglets > button + button { border-left: 1px solid #ececea; }
+}
+@media (min-width: 1024px) {
+  .adm-encart, .adm-stats .adm-card { border-radius: 10px; }
+  .adm-stats .adm-card { padding: 14px 16px; }
+}
+@media (min-width: 1024px) and (pointer: fine) {
+  .adm-voir-tableau { min-height: 28px; padding: 0 10px; }
+  .adm-repartition-nom, .adm-repartition-valeur, .adm-tableau-jours { font-size: 13.5px; }
+}
+@media (prefers-reduced-motion: reduce) { .adm-courbe-onglets > button, .adm-voir-tableau { transition: none; } }
+
+/*
+ * Réglages (direction B, 20 octobre 2026) : une seule page de 680 px, sans
+ * tiroir. Des groupes de lignes dans un trait fin, le libellé à gauche, la
+ * valeur en gris, le contrôle à droite. Une ligne fait 56 px au doigt, 48 à la
+ * souris ; sur un téléphone, la valeur passe sous le libellé.
+ */
+.adm-reglages { display: flex; width: 100%; max-width: 680px; flex-direction: column; gap: 24px; margin-inline: auto; }
+.adm-lignes { border: 1px solid #e3e3df; border-radius: 12px; background: #fff; }
+.adm-lignes > :first-child { border-top-left-radius: 11px; border-top-right-radius: 11px; }
+.adm-lignes > :last-child { border-bottom-left-radius: 11px; border-bottom-right-radius: 11px; }
+.adm-ligne { display: flex; width: 100%; min-height: 56px; align-items: center; gap: 12px; padding: 6px 16px; font-size: 15px; text-align: left; }
+.adm-ligne + .adm-ligne { border-top: 1px solid #efefec; }
+.adm-ligne-controle { padding-right: 8px; }
+.adm-ligne.adm-ligne-bascule { padding-right: 16px; }
+.adm-ligne-lien { padding-right: 12px; transition: background-color 150ms; }
+.adm-ligne-lien:hover { background: #fafaf9; }
+.adm .adm-ligne-lien:focus-visible { outline-offset: -2px; }
+.adm-ligne-texte { display: flex; min-width: 0; flex: 1; flex-direction: column; gap: 1px; }
+.adm-ligne-nom { min-width: 0; }
+.adm-ligne-valeur { display: -webkit-box; min-width: 0; overflow: hidden; color: #5f5f5a; font-size: 13.5px; overflow-wrap: anywhere; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; }
+.adm-ligne-valeur strong { color: #3d3d39; font-weight: 500; }
+.adm-ligne-valeur [data-alerte] { color: #a16207; }
+.adm-reglages-pied { display: flex; flex-direction: column; gap: 6px; color: #5f5f5a; font-size: 12px; }
+.adm-reglages-pied a { color: #0a0a0a; text-decoration: underline; text-decoration-color: rgb(10 10 10 / 0.35); text-underline-offset: 2px; }
+.adm-reglages-pied a:hover { text-decoration-color: currentColor; }
+/* Le fil d'une sous-page dans l'en-tête : « ‹ Réglages / Les offres ». */
+.adm-fil-retour { display: inline-flex; min-height: 44px; align-items: center; gap: 4px; padding: 0 8px; border-radius: 7px; color: #55554f; font-size: 13.5px; font-weight: 500; transition: background-color 150ms, color 150ms; }
+.adm-fil-retour:hover { background: #f2f2ef; color: #0a0a0a; }
+@media (min-width: 640px) {
+  .adm-ligne-texte { flex-direction: row; align-items: center; gap: 16px; }
+  .adm-ligne-nom { flex: 0 1 auto; }
+  .adm-ligne-valeur { display: block; flex: 1 1 0; font-size: inherit; text-align: right; text-overflow: ellipsis; white-space: nowrap; }
+}
+@media (min-width: 1024px) {
+  .adm-lignes { border-radius: 10px; }
+  .adm-lignes > :first-child { border-top-left-radius: 9px; border-top-right-radius: 9px; }
+  .adm-lignes > :last-child { border-bottom-left-radius: 9px; border-bottom-right-radius: 9px; }
+}
+@media (min-width: 640px) { .adm-feuille.adm-feuille-petite { border-radius: 12px; } }
+@media (min-width: 1024px) and (pointer: fine) {
+  .adm-ligne { min-height: 48px; font-size: 13.5px; }
+  .adm-ligne-controle { padding-right: 6px; }
+  .adm-fil-retour { min-height: 32px; }
+}
+@media (prefers-reduced-motion: reduce) { .adm-ligne-lien, .adm-fil-retour { transition: none; } }
+
+/* Un champ précédé d'un texte fixe (« hopla.page/ ») : un seul cadre, le focus l'entoure en entier. */
+.adm-champ-prefixe { display: flex; min-height: 48px; align-items: center; overflow: hidden; border: 1px solid rgb(10 10 10 / 0.15); border-radius: 12px; background: #fdfdfc; font-size: 16px; transition: border-color 150ms; }
+.adm-champ-prefixe:hover { border-color: #b2b2ab; }
+.adm-champ-prefixe:focus-within { border-color: rgb(10 10 10 / 0.7); outline: 2px solid #0a0a0a; outline-offset: 2px; }
+.adm-champ-prefixe > span { padding-left: 14px; color: #5f5f5a; white-space: nowrap; }
+.adm-champ-prefixe > input { min-width: 0; flex: 1; align-self: stretch; padding: 0 14px 0 0; background: transparent; color: #0a0a0a; }
+.adm-champ-prefixe > input::placeholder { color: #737373; }
+.adm .adm-champ-prefixe > input:focus-visible { outline: none; }
+@media (min-width: 1024px) and (pointer: fine) {
+  .adm-champ-prefixe { min-height: 40px; border-radius: 8px; font-size: 13.5px; }
+  .adm-champ-prefixe > span { padding-left: 12px; }
+  .adm-champ-prefixe > input { padding-right: 12px; }
+}
+
+/*
+ * Comptes (direction B, 20 octobre 2026) : les onglets avec leur compte et la
+ * recherche sur une barre pleine largeur, puis un tableau. Au téléphone, le
+ * tableau devient une liste. Le seul ambre : un signalement à traiter.
+ */
+.adm-comptes-barre { display: flex; flex-direction: column; gap: 12px; }
+.adm-comptes-onglets { display: flex; gap: 22px; overflow-x: auto; border-bottom: 1px solid #ececea; scrollbar-width: none; }
+.adm-comptes-onglets > button { display: flex; min-height: 44px; flex-shrink: 0; align-items: center; gap: 7px; color: #55554f; font-size: 14px; font-weight: 500; white-space: nowrap; transition: color 150ms, box-shadow 200ms var(--adm-sortie); }
+.adm-comptes-onglets > button:hover { color: #0a0a0a; }
+.adm-comptes-onglets > button[aria-selected='true'] { color: #0a0a0a; box-shadow: inset 0 -2px 0 #0a0a0a; }
+.adm .adm-comptes-onglets > button:focus-visible { outline-offset: -2px; }
+.adm-compteur { display: inline-flex; height: 20px; min-width: 20px; align-items: center; justify-content: center; padding: 0 7px; border-radius: 7px; background: rgb(10 10 10 / 0.07); color: #3d3d39; font-size: 12px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.adm-compteur[data-alerte] { background: #a16207; color: #fff; font-weight: 600; }
+.adm-recherche { position: relative; display: flex; min-width: 0; flex: 1; align-items: center; }
+.adm-recherche > svg { position: absolute; left: 12px; color: #5f5f5a; pointer-events: none; }
+.adm-recherche > input { width: 100%; min-height: 44px; padding: 0 12px 0 34px; border: 1px solid #dcdcd7; border-radius: 10px; background: #fff; font-size: 16px; }
+.adm-recherche > input::placeholder { color: #737373; }
+.adm-recherche > input::-webkit-search-cancel-button { cursor: pointer; }
+.adm-tableau { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 13.5px; }
+.adm-tableau th { height: 36px; padding: 0 12px 0 0; border-bottom: 1px solid #ececea; color: #5f5f5a; font-size: 12px; font-weight: 500; text-align: left; }
+.adm-tableau td { height: 48px; padding: 0 12px 0 0; border-bottom: 1px solid #efefec; }
+.adm-tableau .adm-nombre { padding-right: 24px; text-align: right; font-variant-numeric: tabular-nums; }
+.adm-tableau .adm-gris { overflow: hidden; color: #5f5f5a; text-overflow: ellipsis; white-space: nowrap; }
+.adm-tableau tbody tr { transition: background-color 120ms; }
+.adm-tableau tbody tr:hover { background: #fafaf9; }
+.adm-pastille { display: grid; width: 24px; height: 24px; flex-shrink: 0; place-items: center; overflow: hidden; border-radius: 50%; background: #ebebe7; color: #3d3d39; font-size: 12px; font-weight: 600; text-transform: uppercase; }
+.adm-pastille > img { width: 100%; height: 100%; object-fit: cover; }
+.adm-statut { display: inline-flex; align-items: center; gap: 6px; color: #5f5f5a; white-space: nowrap; }
+.adm-statut[data-alerte] { color: #a16207; font-weight: 500; }
+.adm-points { display: grid; width: 32px; height: 32px; place-items: center; border-radius: 8px; color: #55554f; transition: background-color 150ms, color 150ms; }
+.adm-points:hover, .adm-points[aria-expanded='true'] { background: #f2f2ef; color: #0a0a0a; }
+.adm-liste-comptes > li { display: flex; min-height: 64px; align-items: center; gap: 12px; padding: 10px 0; }
+.adm-liste-comptes > li + li { border-top: 1px solid #efefec; }
+.adm-liste-comptes .adm-pastille { width: 36px; height: 36px; font-size: 14px; }
+.adm-bandeau { display: flex; align-items: flex-start; gap: 12px; padding: 10px 8px 10px 14px; border: 1px solid #e3e3df; border-radius: 10px; background: #fafaf9; font-size: 14px; }
+.adm-bandeau[data-erreur] { border-color: #f1c7c7; background: #fdf3f3; color: #a51f1f; }
+@media (max-width: 1023px) { .adm-points { width: 44px; height: 44px; border-radius: 10px; } }
+@media (min-width: 1024px) {
+  .adm-comptes-barre { height: 48px; flex-direction: row; align-items: stretch; justify-content: space-between; gap: 16px; padding: 0 16px 0 24px; border-bottom: 1px solid #ececea; }
+  .adm-comptes-onglets { border-bottom: 0; }
+  .adm-comptes-onglets > button { min-height: 0; }
+  .adm-recherche { width: 260px; flex: none; }
+  .adm-comptes-contenu { padding: 8px 16px 0 24px; }
+}
+@media (min-width: 1024px) and (pointer: fine) {
+  .adm-comptes-onglets > button { font-size: 13.5px; }
+  .adm-recherche > input { min-height: 36px; border-radius: 8px; font-size: 13.5px; }
+  .adm-bandeau { font-size: 13.5px; }
+}
+@media (prefers-reduced-motion: reduce) { .adm-comptes-onglets > button, .adm-tableau tbody tr, .adm-points { transition: none; } }

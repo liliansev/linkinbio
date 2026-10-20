@@ -1,5 +1,7 @@
 import type { Api, Bloc, CompteResume, EtatAdmin, Reglages, Reservation, SignalementResume, Stats } from '../src/lib/types.ts';
+import { nouveauBloc } from '../src/lib/types.ts';
 import { REGLAGES_DEFAUT, blocsDefaut, reglagesNouveauCompte } from '../src/lib/defauts.ts';
+import { CONTACT_LEGAL } from '../src/lib/legal.ts';
 import type { Droits } from '../src/lib/droits.ts';
 import avatar from '../public/avatar.webp?inline';
 
@@ -31,38 +33,40 @@ function statsFictives(jours: number): Stats {
   const serieComplete = Array.from({ length: 730 }, (_, i) => {
     const base = 60 + 40 * Math.sin(i / 9) + i * 0.08;
     const vues = Math.max(5, Math.round(base * (0.7 + r() * 0.6)));
-    return { vues, clics: Math.round(vues * (0.28 + r() * 0.2)) };
+    return { vues, visiteurs: Math.round(vues * (0.7 + r() * 0.08)), clics: Math.round(vues * (0.28 + r() * 0.2)) };
   });
   const jour = (decalage: number) => new Date(Date.now() - decalage * 86_400_000).toISOString().slice(0, 10);
   const serie = serieComplete.slice(730 - jours).map((s, i) => ({ jour: jour(jours - 1 - i), ...s }));
   const avant = serieComplete.slice(730 - 2 * jours, 730 - jours);
-  const somme = (l: { vues: number; clics: number }[], k: 'vues' | 'clics') => l.reduce((t, s) => t + s[k], 0);
-  const vues = somme(serie, 'vues'), clics = somme(serie, 'clics');
+  type Cle = 'vues' | 'visiteurs' | 'clics';
+  const somme = (l: Record<Cle, number>[], k: Cle) => l.reduce((t, s) => t + s[k], 0);
+  const vues = somme(serie, 'vues'), clics = somme(serie, 'clics'), clicsAvant = somme(avant, 'clics'), vuesAvant = somme(avant, 'vues');
   const liens = etat.blocs.filter(b => b.type === 'lien');
   const poids = liens.map((_, i) => 1 / (i + 1.4));
   const total = poids.reduce((a, b) => a + b, 0);
   return {
-    jours, vues, clics, visiteurs: Math.round(vues * 0.74),
+    jours, vues, clics, visiteurs: somme(serie, 'visiteurs'),
     serie,
-    blocs: liens.map((b, i) => ({ id: b.id, titre: b.titre || b.url, clics: Math.round((clics * poids[i]) / total) })).sort((a, b) => b.clics - a.clics),
-    sources: [['Instagram', 0.38], ['LinkedIn', 0.22], ['YouTube', 0.18], ['Direct', 0.12], ['QR code', 0.06], ['Google', 0.04]].map(([nom, p]) => ({ nom: String(nom), vues: Math.round(vues * Number(p)) })),
+    blocs: liens.map((b, i) => ({ id: b.id, titre: b.titre || b.url, clics: Math.round((clics * poids[i]) / total), avant: Math.round((clicsAvant * poids[i]) / total) })).sort((a, b) => b.clics - a.clics),
+    sources: [['Instagram', 0.38, 0.33], ['LinkedIn', 0.22, 0.24], ['YouTube', 0.18, 0.2], ['Direct', 0.12, 0.13], ['QR code', 0.06, 0.06], ['Google', 0.04, 0.04]]
+      .map(([nom, p, q]) => ({ nom: String(nom), vues: Math.round(vues * Number(p)), avant: Math.round(vuesAvant * Number(q)) })),
     apps: { integres: Math.round(clics * 0.46), versApp: Math.round(clics * 0.31), ouverts: Math.round(clics * 0.29) },
     appareils: [{ nom: 'Mobile', vues: Math.round(vues * 0.81) }, { nom: 'Ordinateur', vues: Math.round(vues * 0.16) }, { nom: 'Tablette', vues: Math.round(vues * 0.03) }],
-    precedent: { vues: somme(avant, 'vues'), clics: somme(avant, 'clics'), visiteurs: Math.round(somme(avant, 'vues') * 0.74) },
+    precedent: { vues: vuesAvant, clics: clicsAvant, visiteurs: somme(avant, 'visiteurs') },
     dejaVue: true,
   };
 }
 
 /** Un compte neuf : personne n'a encore vu sa page. */
 function statsVides(jours: number): Stats {
-  const serie = Array.from({ length: jours }, (_, i) => ({ jour: new Date(Date.now() - (jours - 1 - i) * 86_400_000).toISOString().slice(0, 10), vues: 0, clics: 0 }));
+  const serie = Array.from({ length: jours }, (_, i) => ({ jour: new Date(Date.now() - (jours - 1 - i) * 86_400_000).toISOString().slice(0, 10), vues: 0, visiteurs: 0, clics: 0 }));
   return { jours, vues: 0, visiteurs: 0, clics: 0, serie, blocs: [], sources: [], appareils: [], apps: { integres: 0, versApp: 0, ouverts: 0 }, precedent: { vues: 0, visiteurs: 0, clics: 0 }, dejaVue: false };
 }
 
 export const apiDemo: Api = {
   async charger(): Promise<EtatAdmin> {
     const s = statsFictives(30);
-    return { ...etat, clics: Object.fromEntries(s.blocs.map(b => [b.id, b.clics])), places: {}, stockageEphemere: false, cguAJour: true, dejaVue: true, compte: { pseudo: 'lilian', principal: true, email: '', plan: 'premium' },
+    return { ...etat, clics: Object.fromEntries(s.blocs.map(b => [b.id, b.clics])), places: {}, stockageEphemere: false, cguAJour: true, dejaVue: true, compte: { pseudo: 'lilian', principal: true, email: CONTACT_LEGAL, plan: 'premium' },
       abonnement: { plan: 'premium', statut: '', finPeriode: null, periode: null, portail: false }, paiement: false, enVente: [], droits: DROITS_APERCU };
   },
   async enregistrerBloc(bloc) {
@@ -132,7 +136,7 @@ export const apiDemo: Api = {
 /** Des comptes inventés, pour voir l'onglet Comptes dans l'aperçu. */
 const jour = 86_400_000;
 const comptesDemo: CompteResume[] = [
-  { id: 'principal', email: '', pseudo: 'lilian', statut: 'actif', cree: Date.now() - 40 * jour, connexion: Date.now(), blocs: 8, vues: 2140, principal: true, plan: 'premium' as const },
+  { id: 'principal', email: CONTACT_LEGAL, pseudo: 'lilian', statut: 'actif', cree: Date.now() - 40 * jour, connexion: Date.now(), blocs: 8, vues: 2140, principal: true, plan: 'premium' as const },
   { id: 'demo1', email: 'camille@exemple.fr', pseudo: 'camille-studio', statut: 'actif', cree: Date.now() - 6 * jour, connexion: Date.now() - jour, blocs: 7, vues: 312, principal: false, plan: 'pro' as const },
   { id: 'demo2', email: 'hugo@exemple.fr', pseudo: 'hugo-podcast', statut: 'actif', cree: Date.now() - 4 * jour, connexion: null, blocs: 0, vues: 0, principal: false, plan: 'gratuit' as const },
   { id: 'demo3', email: 'sarah@exemple.fr', pseudo: 'sarah-coach', statut: 'suspendu', cree: Date.now() - 12 * jour, connexion: Date.now() - 9 * jour, blocs: 4, vues: 58, principal: false, plan: 'gratuit' as const },
@@ -207,3 +211,39 @@ export const apiNouveau: Api = {
   comptes: undefined,
 };
 export const pageNouveau = () => ({ reglages: nouveau.reglages, blocs: nouveau.blocs, compte: { pseudo: 'camille', principal: false, plan: 'gratuit' as const } });
+
+/* ---- Un compte ordinaire en Gratuit, pour voir ce que l'offre réserve (#gratuit) ---- */
+
+const CLE_GRATUIT = 'liens-demo-gratuit-v1';
+const RIEN: Droits = { sansMention: false, couleurs: false, programmation: false, avis: false, stats: false, heure: false, drops: false, listeEmail: false };
+function gratuitNeuf(): { reglages: Reglages; blocs: Bloc[] } {
+  const bloc = (titre: string, url: string, icone: string): Bloc => ({ ...nouveauBloc('lien', id()), titre, url, icone });
+  return {
+    reglages: { ...reglagesNouveauCompte('sarah-coach'), profil: { nom: 'Sarah Martin', bio: 'Coach sportive à Lyon. Séances en salle et en ligne.', avatar: '', badge: false } },
+    blocs: [bloc('Réserver une séance', 'https://exemple.fr/reserver', 'agenda'), bloc('Mes programmes', 'https://exemple.fr/programmes', 'flamme'), bloc('Ma chaîne YouTube', 'https://www.youtube.com/@exemple', 'youtube')],
+  };
+}
+let gratuit = (() => { try { const v = localStorage.getItem(CLE_GRATUIT); if (v) return JSON.parse(v) as ReturnType<typeof gratuitNeuf>; } catch { /* stockage indisponible */ } return gratuitNeuf(); })();
+const ecrireGratuit = () => { try { localStorage.setItem(CLE_GRATUIT, JSON.stringify(gratuit)); } catch { /* idem */ } };
+
+export const apiGratuit: Api = {
+  ...apiDemo,
+  async charger(): Promise<EtatAdmin> {
+    return { reglages: gratuit.reglages, blocs: gratuit.blocs, clics: {}, places: {}, stockageEphemere: false, cguAJour: true, dejaVue: true, compte: { pseudo: 'sarah-coach', principal: false, email: 'sarah@exemple.fr', plan: 'gratuit' },
+      abonnement: { plan: 'gratuit', statut: '', finPeriode: null, periode: null, portail: false }, paiement: true, enVente: ['starter', 'pro'], droits: RIEN };
+  },
+  async enregistrerBloc(bloc) {
+    await pause();
+    const existe = gratuit.blocs.some(b => b.id === bloc.id);
+    gratuit.blocs = existe ? gratuit.blocs.map(b => (b.id === bloc.id ? bloc : b)) : [bloc, ...gratuit.blocs];
+    ecrireGratuit();
+    return bloc;
+  },
+  async supprimerBloc(i) { await pause(); gratuit.blocs = gratuit.blocs.filter(b => b.id !== i); ecrireGratuit(); },
+  async ordonner(ids) { await pause(); gratuit.blocs = ids.map(i => gratuit.blocs.find(b => b.id === i)).filter((b): b is Bloc => !!b); ecrireGratuit(); },
+  async enregistrerReglages(reglages) { await pause(); gratuit.reglages = reglages; ecrireGratuit(); return reglages; },
+  async liste() { await pause(); return { total: 0, semaine: 0, derniers: [], integration: null, enAttente: 0 }; },
+  async deconnexion() { try { localStorage.removeItem(CLE_GRATUIT); } catch { /* idem */ } gratuit = gratuitNeuf(); },
+  async supprimerMonCompte() { await pause(); return { ok: false, message: 'Pas de suppression dans l’aperçu.' }; },
+  comptes: undefined,
+};

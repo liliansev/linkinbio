@@ -24,6 +24,79 @@ export function useGrandEcran() {
   );
 }
 
+/**
+ * Une sous-page d'un onglet (Réglages, puis Facturation) : l'en-tête montre le
+ * fil « Réglages / Facturation », dont le premier nom ramène en arrière.
+ * L'onglet pose `SousPage` tant que la sous-page est ouverte.
+ */
+export interface Fil { nom: string; retour: () => void }
+export const PoserFil = createContext<(f: Fil | null) => void>(() => {});
+export function SousPage({ nom, retour }: Fil) {
+  const poser = useContext(PoserFil);
+  const retourRef = useRef(retour);
+  retourRef.current = retour;
+  useEffect(() => { poser({ nom, retour: () => retourRef.current() }); return () => poser(null); }, [nom, poser]);
+  return null;
+}
+
+/** Un groupe de réglages : son titre, puis ses lignes dans un cadre fin (Réglages, Facturation). */
+export function Groupe({ titre, children }: { titre: string; children: ReactNode }) {
+  const id = useId();
+  return (
+    <section aria-labelledby={id} className="flex flex-col gap-2.5">
+      <h2 id={id} className="text-[15px] font-semibold tracking-[-0.015em] text-white">{titre}</h2>
+      <div className="adm-lignes">{children}</div>
+    </section>
+  );
+}
+
+/**
+ * Une ligne de réglage : le libellé à gauche, le contrôle à droite. `valeur`
+ * se lit en gris entre les deux au bureau, sous le libellé au téléphone.
+ */
+export function Ligne({ nom, valeur, children, className = '' }: { nom: ReactNode; valeur?: ReactNode; children?: ReactNode; className?: string }) {
+  return (
+    <div className={`adm-ligne ${children ? 'adm-ligne-controle' : ''} ${className}`}>
+      <span className="adm-ligne-texte">
+        <span className="adm-ligne-nom">{nom}</span>
+        {valeur && <span className="adm-ligne-valeur">{valeur}</span>}
+      </span>
+      {children}
+    </div>
+  );
+}
+
+/** Une ligne à interrupteur : le libellé l'actionne aussi. */
+export function LigneBascule({ nom, actif, changer, disabled }: { nom: string; actif: boolean; changer: (v: boolean) => void; disabled?: boolean }) {
+  const id = useId();
+  return (
+    <Ligne className="adm-ligne-bascule" nom={<label htmlFor={id} className="cursor-pointer">{nom}</label>}>
+      <Bascule id={id} actif={actif} disabled={disabled} onClick={() => { vibrer(); changer(!actif); }} />
+    </Ligne>
+  );
+}
+
+/**
+ * Une ligne qui mène ailleurs (Facturation, une fonction réservée) : toute la
+ * ligne se touche, un chevron au bout. `apres` se pose avant lui (l'offre qui
+ * débloque). Sans `onClick`, la ligne se lit sans mener nulle part.
+ */
+export function LigneLien({ nom, valeur, apres, onClick, label, disabled, id }: { nom: ReactNode; valeur?: ReactNode; apres?: ReactNode; onClick?: () => void; label?: string; disabled?: boolean; id?: string }) {
+  const texte = (
+    <span className="adm-ligne-texte">
+      <span className="adm-ligne-nom">{nom}</span>
+      {valeur && <span className="adm-ligne-valeur">{valeur}</span>}
+    </span>
+  );
+  if (!onClick) return <div className="adm-ligne">{texte}{apres}</div>;
+  return (
+    <button id={id} type="button" onClick={onClick} aria-label={label} disabled={disabled} className="adm-ligne adm-ligne-lien">
+      {texte}{apres}
+      <Icone nom="ui-chevron" taille={16} className="-rotate-90 shrink-0 text-[#55554f]" />
+    </button>
+  );
+}
+
 /** L'endroit de l'en-tête où chaque onglet pose son geste, au bureau (Ajouter un bloc, la période, Inviter). */
 export const EmplacementEntete = createContext<HTMLElement | null>(null);
 export function ActionEntete({ children }: { children: ReactNode }) {
@@ -124,7 +197,9 @@ export function vibrer(ms = 8) {
  * `apercu`, sur téléphone, se pose au-dessus de la feuille : la page en direct,
  * en miniature, qui suit chaque réglage (Lilian, 18 octobre 2026).
  */
-export function Feuille({ ouverte, onFermer, retenir, titre, children, pied, cote = false, apercu }: { ouverte: boolean; onFermer: () => void; retenir?: () => boolean; titre: string; children: Contenu; pied?: Contenu; cote?: boolean; apercu?: React.ReactNode }) {
+export function Feuille({ ouverte, onFermer, retenir, titre, children, pied, cote = false, apercu, petite = false }: { ouverte: boolean; onFermer: () => void; retenir?: () => boolean; titre: string; children: Contenu; pied?: Contenu; cote?: boolean; apercu?: React.ReactNode;
+  /** Une petite fenêtre au bureau (440 px, titre de 15) : une question courte, comme Inviter. */
+  petite?: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
   const [sortie, setSortie] = useState(false);
   const [tire, setTire] = useState(0);
@@ -206,11 +281,11 @@ export function Feuille({ ouverte, onFermer, retenir, titre, children, pied, cot
       {apercu && <div inert className="adm-fondu pointer-events-none absolute inset-x-0 top-0 bottom-[57dvh] flex items-center justify-center px-4 pt-[max(12px,env(safe-area-inset-top))] pb-3 sm:hidden">{apercu}</div>}
       <div ref={ref} tabIndex={-1}
         style={{ ...(tire ? { transform: `translateY(${tire}px)`, transition: 'none' } : {}), ...(visible ? { maxHeight: visible.h - 8, height: 'auto' } : {}) }}
-        className={`adm-feuille relative flex ${apercu ? 'h-[57dvh] sm:h-auto sm:w-[400px]' : cote ? 'max-h-[58dvh] sm:max-h-none sm:w-[400px]' : 'max-h-[92dvh]'} w-full flex-col border border-b-0 border-white/10 bg-nuit shadow-[0_-12px_40px_-16px_rgba(0,0,0,0.18)] sm:max-w-lg sm:border-b`}>
+        className={`adm-feuille relative flex ${apercu ? 'h-[57dvh] sm:h-auto sm:w-[400px]' : cote ? 'max-h-[58dvh] sm:max-h-none sm:w-[400px]' : 'max-h-[92dvh]'} w-full flex-col border border-b-0 border-white/10 bg-nuit shadow-[0_-12px_40px_-16px_rgba(0,0,0,0.18)] sm:border-b ${petite ? 'adm-feuille-petite sm:max-w-[440px]' : 'sm:max-w-lg'}`}>
         <div {...tirer} className="shrink-0 touch-none select-none">
           <div className="mx-auto mt-2 h-1 w-9 rounded-full bg-white/20 sm:hidden" />
           <header className="flex items-center justify-between gap-3 px-5 pt-2.5 pb-2 sm:pt-4">
-            <h2 className="text-[18px] font-semibold tracking-[-0.025em] text-white">{titre}</h2>
+            <h2 className={`text-[18px] font-semibold tracking-[-0.025em] text-white ${petite ? 'bureau:text-[15px] bureau:tracking-[-0.015em]' : ''}`}>{titre}</h2>
             <button type="button" onClick={() => fermer()} className={`-mr-3 ${classeBouton.icone} active:scale-90`} aria-label="Fermer">
               <Icone nom="ui-fermer" taille={18} />
             </button>
@@ -344,6 +419,8 @@ export interface ElementMenu {
   danger?: boolean;
   /** Un choix exclusif (une période) : l'élément devient une option cochée ou non. */
   coche?: boolean;
+  /** Le nom de l'offre qui ouvre ce choix (« Pro ») : l'élément mène aux offres plutôt qu'au choix. */
+  etiquette?: string;
 }
 
 /**
@@ -400,10 +477,12 @@ export function Menu({ label, elements, children, className = '', titre, haut = 
           <div role="menu" id={id} aria-label={label}>
             {elements.map(el => (
               <button key={el.nom} type="button" tabIndex={-1} role={el.coche === undefined ? 'menuitem' : 'menuitemradio'} aria-checked={el.coche}
+                aria-label={el.etiquette ? `${el.nom}, avec ${el.etiquette} : voir les offres` : undefined}
                 onClick={() => { setOuvert(false); bouton.current?.focus({ preventScroll: true }); el.action(); }}
                 className={`adm-menu-item ${el.danger ? 'text-red-300' : 'text-white'}`}>
                 {el.icone && <Icone nom={el.icone} taille={16} className="shrink-0" />}
-                <span className="min-w-0 flex-1 truncate text-left">{el.nom}</span>
+                <span className={`min-w-0 flex-1 truncate text-left ${el.etiquette ? 'text-white/60' : ''}`}>{el.nom}</span>
+                {el.etiquette && <span className={classeBadge}>{el.etiquette}</span>}
                 {el.coche && <Icone nom="ui-ok" taille={15} className="shrink-0" />}
               </button>
             ))}

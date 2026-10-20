@@ -15,7 +15,8 @@ import { PremiersPas, premiersPasFaits } from './PremiersPas.tsx';
 import { pageNeuve } from '../lib/demarrage.ts';
 import { sansSchema } from '../lib/types.ts';
 import { Icone } from '../components/Icone.tsx';
-import { BoutonCopier, EmplacementEntete, Menu, classeBouton, copierTexte, useGrandEcran, vibrer } from './ui.tsx';
+import { BoutonCopier, EmplacementEntete, Menu, PoserFil, classeBouton, copierTexte, useGrandEcran, vibrer } from './ui.tsx';
+import type { Fil } from './ui.tsx';
 import { Marque } from './Marque.tsx';
 import { AnneauDemarrage, noterPartage, useDemarrage } from './BienDemarrer.tsx';
 import { FournisseurOffre } from './offre.tsx';
@@ -61,6 +62,14 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
   const [apercu, setApercu] = useState(false);
   // L'endroit de l'en-tête du bureau où l'onglet ouvert pose son geste (voir `ActionEntete`).
   const [emplacement, setEmplacement] = useState<HTMLDivElement | null>(null);
+  // Une sous-page ouverte (Réglages, puis Les offres) : l'en-tête montre son fil, qui ramène en arrière (voir `SousPage`).
+  const [fil, setFil] = useState<Fil | null>(null);
+  // En entrant dans une sous-page, le focus va au retour visible (celui de l'en-tête au bureau, du titre au téléphone).
+  const dansSousPage = !!fil;
+  useEffect(() => {
+    if (!dansSousPage) return;
+    [...document.querySelectorAll<HTMLElement>('.adm-fil-retour')].find(b => b.offsetParent)?.focus({ preventScroll: true });
+  }, [dansSousPage]);
   // « Bien démarrer » au téléphone : l'anneau de l'en-tête ouvre sa liste dans une feuille.
   const [demarrageOuvert, setDemarrageOuvert] = useState(false);
   const [cguAJour, setCguAJour] = useState(initial.cguAJour);
@@ -416,7 +425,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
         <Marque petite className="h-14 shrink-0 px-2" />
         <nav className="flex flex-col gap-0.5 pt-1.5" aria-label="Sections">
           {onglets.map(o => (
-            <button key={o.id} type="button" onClick={() => { if (o.id !== onglet) choisirOnglet(o.id); }} aria-current={onglet === o.id ? 'page' : undefined}
+            <button key={o.id} type="button" onClick={() => { if (o.id !== onglet) choisirOnglet(o.id); else fil?.retour(); }} aria-current={onglet === o.id ? 'page' : undefined}
               className={`adm-nav-item ${o.id === 'comptes' ? 'mt-3.5' : ''}`}>
               <Icone nom={o.icone} taille={16} className="shrink-0" />{o.nom}
             </button>
@@ -453,7 +462,13 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
         </div>
         {/* Au bureau, une seule rangée : le nom de l'écran, puis ce qui sert ici. Pas de barre vide, pas de deuxième titre. */}
         <div className="hidden h-14 items-center gap-2 pl-6 pr-4 lg:flex">
-          <h1 className="adm-entete-titre min-w-0 flex-1 truncate">{titre}</h1>
+          {fil ? (
+            <div className="flex min-w-0 flex-1 items-center gap-1.5">
+              <button type="button" onClick={fil.retour} className="adm-fil-retour -ml-2"><Icone nom="ui-chevron" taille={14} className="rotate-90" />{titre}</button>
+              <span aria-hidden="true" className="text-[#b5b5ae]">/</span>
+              <h1 className="adm-entete-titre ml-1.5 min-w-0 truncate">{fil.nom}</h1>
+            </div>
+          ) : <h1 className="adm-entete-titre min-w-0 flex-1 truncate">{titre}</h1>}
           {/* L'état ne se montre que là où l'on écrit, ou quand il a quelque chose à dire. */}
           {(onglet === 'page' || onglet === 'reglages' || sauvegarde !== 'ok') && (
             <p className="adm-etat mr-1.5" data-erreur={sauvegarde === 'erreur' || undefined} role="status">{signe}{indicateur}</p>
@@ -476,14 +491,16 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
       )}
 
       <EmplacementEntete.Provider value={emplacement}>
-      {/* Ma page prend tout le canevas au bureau ; les autres onglets gardent leurs marges. */}
-      <div className={`mx-auto max-w-[1120px] px-4 lg:max-w-none ${onglet === 'page' ? 'lg:px-0' : 'lg:px-10'}`}>
-        <main id="contenu-admin" className={`mx-auto w-full pb-28 ${onglet === 'page' ? 'pt-4 lg:p-0' : 'pt-6 lg:pb-12 lg:pt-7'}`}>
+      <PoserFil.Provider value={setFil}>
+      {/* Ma page et Comptes prennent toute la largeur au bureau (le canevas, la barre des onglets de Comptes) ; les autres gardent leurs marges. */}
+      <div className={`mx-auto max-w-[1120px] px-4 lg:max-w-none ${onglet === 'page' || onglet === 'comptes' ? 'lg:px-0' : 'lg:px-10'}`}>
+        <main id="contenu-admin" className={`mx-auto w-full pb-28 ${onglet === 'page' ? 'pt-4 lg:p-0' : onglet === 'comptes' ? 'pt-6 lg:pb-12 lg:pt-0' : 'pt-6 lg:pb-12 lg:pt-7'}`}>
           <div key={onglet} className="adm-onglet">
           {/* Au téléphone, le titre de l'écran ouvre le contenu (Ma page n'affiche pas le sien : l'en-tête et la barre du bas disent déjà où l'on est,
               il reste pour les lecteurs d'écran). Au bureau, il est dans l'en-tête. */}
           <div className={`adm-page-heading lg:hidden ${onglet === 'page' ? 'sr-only' : ''}`}>
-            <h1>{titre}</h1>
+            {fil && <button type="button" onClick={fil.retour} className="adm-fil-retour -ml-2 mb-1"><Icone nom="ui-chevron" taille={16} className="rotate-90" />{titre}</button>}
+            <h1>{fil?.nom ?? titre}</h1>
           </div>
           {onglet === 'page' && <MaPage compte={compte} reglages={reglages} blocs={blocsAffiches} clics={clics} visiteurs={page} grand={grand}
             choisi={idOuvert} panneau={grand && editeur} onReglages={changerReglages} onOrdonner={l => ordonner(l)}
@@ -491,14 +508,15 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
             envoyerImage={d => api.envoyerImage(d)} annoncer={t => setToast(t)}
             demarrage={demarrage} demarrageOuvert={demarrageOuvert} fermerDemarrage={() => setDemarrageOuvert(false)} />}
           {onglet === 'stats' && <OngletStats charger={chargerStats} adresse={urlPage(compte)} pseudo={compte.pseudo} joursMax={initial.paiement ? joursStats(compte.plan, droits.stats) : 365} onOffres={initial.paiement ? versAbonnement : undefined}
-            ouvrirApps={reglages.ouvrirApps} onActiverApps={() => changerReglages({ ...reglages, ouvrirApps: true })} liste={<MaListe api={api} />} />}
+            ouvrirApps={reglages.ouvrirApps} onActiverApps={() => changerReglages({ ...reglages, ouvrirApps: true })} liste={<MaListe api={api} />} blocs={blocs} />}
           {onglet === 'reglages' && <OngletReglages reglages={reglages} compte={compte} onChange={changerReglages} onDeconnexion={deconnexion} urlExport={api.urlExport} supprimerMonCompte={api.supprimerMonCompte}
             abonnement={abonnement} paiement={initial.paiement} enVente={initial.enVente} ouvrirPaiement={api.ouvrirPaiement} ouvrirPortail={api.ouvrirPortail} sectionInitiale={sectionReglage} />}
-          {onglet === 'comptes' && api.comptes && <OngletComptes api={api.comptes} />}
+          {onglet === 'comptes' && api.comptes && <OngletComptes api={api.comptes} avatar={reglages.profil.avatar} />}
           </div>
         </main>
 
       </div>
+      </PoserFil.Provider>
       </EmplacementEntete.Provider>
 
       </div>

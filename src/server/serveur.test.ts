@@ -97,7 +97,7 @@ test('statistiques : sources lisibles, robots et admin écartés, totaux et tend
   enregistrer({ type: 'vue', bloc: null, utm: '', referent: '' }, { ip: '3.3.3.3', ua: iphone, session: null }, maintenant - 10 * 86_400_000);
   const s = db.stats(P, 7, maintenant);
   assert.equal(s.vues, 3); assert.equal(s.visiteurs, 2); assert.equal(s.clics, 1);
-  assert.equal(s.serie.length, 7); assert.equal(s.serie[6].vues, 3);
+  assert.equal(s.serie.length, 7); assert.equal(s.serie[6].vues, 3); assert.equal(s.serie[6].visiteurs, 2);
   assert.equal(s.precedent.vues, 1);
   assert.equal(s.dejaVue, true);
   assert.deepEqual(s.blocs.map(b => b.id), [id]);

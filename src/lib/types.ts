@@ -207,8 +207,8 @@ export interface Stats {
   vues: number;
   visiteurs: number;
   clics: number;
-  /** Une entrée par jour, du plus ancien au plus récent. */
-  serie: { jour: string; vues: number; clics: number }[];
+  /** Une entrée par jour, du plus ancien au plus récent. `visiteurs` : ceux du jour (un visiteur compte une fois par jour). */
+  serie: { jour: string; vues: number; visiteurs: number; clics: number }[];
   /** `avant` : le même chiffre sur la période précédente. */
   blocs: { id: string; titre: string; clics: number; avant: number }[];
   sources: { nom: string; vues: number; avant: number }[];

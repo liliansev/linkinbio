@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-20T21:00:00Z",
+  "generatedAt": "2026-10-20T23:40:00Z",
   "title": "Design System: Hopla back office",
   "extensions": {
     "colorMeta": {
@@ -260,7 +260,7 @@
       },
       "metric": {
         "displayName": "Chiffre clé",
-        "purpose": "KPI en chiffres tabulaires, à la même taille sur toutes les largeurs."
+        "purpose": "Chiffre clé de 24 px : proportionnel dans les onglets de la courbe des stats ; les listes et tableaux gardent des chiffres tabulaires."
       },
       "wordmark": {
         "displayName": "Marque",
@@ -437,9 +437,9 @@
       "name": "Ligne de réglage",
       "kind": "custom",
       "refersTo": "settings-row",
-      "description": "Entrée de détail dans un groupe de réglages, picto nu sans tuile.",
-      "html": "<div class=\"ds-settings\"><button class=\"ds-settings-row\" type=\"button\"><span class=\"ds-settings-icon\" aria-hidden=\"true\"><svg width=\"19\" height=\"19\" viewBox=\"0 0 256 256\" fill=\"currentColor\"><path d=\"M240,128a80,80,0,0,1-80,80H104a8,8,0,0,1,0-16h56a64,64,0,0,0,0-128H104a8,8,0,0,1,0-16h56A80.09,80.09,0,0,1,240,128ZM96,192H80A64,64,0,0,1,80,64H96a8,8,0,0,0,0-16H80a80,80,0,0,0,0,160H96a8,8,0,0,0,0-16Zm80-64a8,8,0,0,0-8-8H88a8,8,0,0,0,0,16h80A8,8,0,0,0,176,128Z\"/></svg></span><span class=\"ds-settings-label\">QR code et adresse</span><svg width=\"16\" height=\"16\" viewBox=\"0 0 16 16\" fill=\"currentColor\" aria-hidden=\"true\"><path d=\"M6 3a1 1 0 0 1 1.4 0l4 4a1 1 0 0 1 0 1.4l-4 4A1 1 0 0 1 6 11l3.3-3.3L6 4.4A1 1 0 0 1 6 3Z\"/></svg></button></div>",
-      "css": ".ds-settings{width:320px;max-width:100%;border:1px solid var(--adm-trait,#e5e5e1);border-radius:16px;background:var(--adm-surface,#fff)}.ds-settings-row{font-family:'Geist Variable',ui-sans-serif,system-ui,sans-serif;display:flex;align-items:center;gap:14px;width:100%;min-height:68px;padding:12px 16px;border:0;border-radius:15px;background:transparent;color:var(--color-white,#0a0a0a);text-align:left;transition:background-color 150ms}.ds-settings-row:hover{background:#f7f7f5}.ds-settings-row:focus-visible{outline:2px solid var(--color-white,#0a0a0a);outline-offset:2px;}.ds-settings-icon{display:grid;place-items:center;width:24px;height:24px;flex-shrink:0;color:var(--adm-secondaire,#656560)}.ds-settings-label{flex:1;min-width:0;font-size:14px;font-weight:500}@media(prefers-reduced-motion:reduce){.ds-settings-row{transition:none}}"
+      "description": "Ligne de Réglages : le nom à gauche, la valeur au gris secondaire, le contrôle à droite (bouton au contour, bascule ou chevron) ; 56 px, 48 px au bureau. Sans picto ni tiroir.",
+      "html": "<div class=\"ds-lignes\"><div class=\"ds-ligne\"><span class=\"ds-ligne-texte\"><span class=\"ds-ligne-nom\">Adresse</span><span class=\"ds-ligne-valeur\">hopla.page/sarah-coach</span></span><button type=\"button\" class=\"ds-ligne-bouton\">Copier</button></div><button type=\"button\" class=\"ds-ligne ds-ligne-lien\"><span class=\"ds-ligne-texte\"><span class=\"ds-ligne-nom\">Mes stats par e-mail chaque lundi</span></span><span class=\"ds-badge\">Starter</span><svg width=\"16\" height=\"16\" viewBox=\"0 0 16 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" aria-hidden=\"true\"><path d=\"m6 4 4 4-4 4\"/></svg></button></div>",
+      "css": ".ds-lignes{font-family:'Geist Variable',ui-sans-serif,system-ui,sans-serif;width:560px;max-width:100%;border:1px solid #e3e3df;border-radius:12px;background:#fff;color:#0a0a0a}.ds-ligne{display:flex;align-items:center;gap:12px;width:100%;min-height:56px;padding:6px 8px 6px 16px;border:0;background:transparent;color:inherit;font:inherit;font-size:15px;text-align:left}.ds-ligne+.ds-ligne{border-top:1px solid #efefec}.ds-ligne-lien{padding-right:12px;border-radius:0 0 11px 11px;transition:background-color 150ms}.ds-ligne-lien:hover{background:#fafaf9}.ds-ligne-texte{display:flex;flex:1;min-width:0;flex-direction:column}.ds-ligne-valeur{color:#5f5f5a;font-size:13.5px}.ds-ligne-bouton{min-height:36px;padding:0 14px;border:1px solid rgba(10,10,10,.15);border-radius:8px;background:#fff;color:#0a0a0a;font:inherit;font-size:13.5px;font-weight:500}.ds-badge{padding:2px 6px;border-radius:5px;background:rgba(10,10,10,.07);font-size:11.5px;font-weight:600}.ds-ligne:focus-visible,.ds-ligne-bouton:focus-visible{outline:2px solid #0a0a0a;outline-offset:-2px}@media(min-width:640px){.ds-ligne-texte{flex-direction:row;gap:16px}.ds-ligne-valeur{flex:1;overflow:hidden;font-size:inherit;text-align:right;text-overflow:ellipsis;white-space:nowrap}}@media(min-width:1024px) and (pointer:fine){.ds-ligne{min-height:48px;font-size:13.5px}}@media(prefers-reduced-motion:reduce){.ds-ligne-lien{transition:none}}"
     },
     {
       "name": "Badge",
@@ -456,6 +456,14 @@
       "description": "Lignes d'une feuille dans un cadre bordé sans fond ; dans une carte, de simples traits.",
       "html": "<ul class=\"ds-groupe\"><li>Afficher le bloc</li><li>Mettre en avant</li><li>Ouvrir dans l’app</li></ul>",
       "css": ".ds-groupe{font-family:'Geist Variable',ui-sans-serif,system-ui,sans-serif;width:300px;max-width:100%;margin:0;padding:0 16px;list-style:none;border:1px solid var(--adm-trait,#e5e5e1);border-radius:14px;color:#0a0a0a;font-size:14px;font-weight:500}.ds-groupe li{display:flex;align-items:center;min-height:52px}.ds-groupe li+li{border-top:1px solid rgba(10,10,10,.06)}"
+    },
+    {
+      "name": "Tableau de comptes",
+      "kind": "custom",
+      "refersTo": "table-row-desk",
+      "description": "Comptes au bureau : en-têtes de 12 px au gris secondaire, rangées de 48 px, nombres à droite en chiffres tabulaires, ambre réservé aux statuts d'alerte ; une liste sous 1024 px.",
+      "html": "<table class=\"ds-tableau\"><thead><tr><th>Page</th><th>Offre</th><th class=\"ds-nombre\">Vues 30 j</th><th>Statut</th></tr></thead><tbody><tr><td>sarah-coach</td><td>Starter</td><td class=\"ds-nombre\">1 284</td><td>Actif</td></tr><tr><td>hugo-podcast</td><td>Gratuit</td><td class=\"ds-nombre\">36</td><td class=\"ds-alerte\">Signalé</td></tr></tbody></table>",
+      "css": ".ds-tableau{font-family:'Geist Variable',ui-sans-serif,system-ui,sans-serif;width:520px;max-width:100%;border-collapse:collapse;table-layout:fixed;color:#0a0a0a;font-size:13.5px}.ds-tableau th{height:36px;padding:0 12px;border-bottom:1px solid #e6e6e2;color:#5f5f5a;font-size:12px;font-weight:500;text-align:left}.ds-tableau td{height:48px;padding:0 12px;border-bottom:1px solid #efefec}.ds-tableau tbody tr:hover{background:#fafaf9}.ds-nombre{text-align:right!important;font-variant-numeric:tabular-nums}.ds-alerte{color:#a16207;font-weight:500}"
     }
   ],
   "narrative": {

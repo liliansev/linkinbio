@@ -488,7 +488,8 @@ export function stats(compte: string, jours: number, maintenant = Date.now()): S
     FROM evenements WHERE compte = ? AND jour BETWEEN ? AND ?`).get(compte, de, a) as { vues: number | null; clics: number | null; visiteurs: number };
   const actuel = totaux(debut, fin);
   const avant = totaux(debutPrecedent, jourListe.length > 1 ? jourDe(maintenant - jours * 86_400_000) : debutPrecedent);
-  const parJour = new Map((d.prepare(`SELECT jour, SUM(type = 'vue') AS vues, SUM(type = 'clic') AS clics FROM evenements WHERE compte = ? AND jour BETWEEN ? AND ? GROUP BY jour`).all(compte, debut, fin) as { jour: string; vues: number; clics: number }[]).map(l => [l.jour, l]));
+  const parJour = new Map((d.prepare(`SELECT jour, SUM(type = 'vue') AS vues, SUM(type = 'clic') AS clics, COUNT(DISTINCT CASE WHEN type = 'vue' THEN visiteur END) AS visiteurs
+    FROM evenements WHERE compte = ? AND jour BETWEEN ? AND ? GROUP BY jour`).all(compte, debut, fin) as { jour: string; vues: number; clics: number; visiteurs: number }[]).map(l => [l.jour, l]));
   const titres = new Map(lireBlocs(compte).map(b => [b.id, b.titre || b.url]));
   const finPrecedent = jourListe.length > 1 ? jourDe(maintenant - jours * 86_400_000) : debutPrecedent;
   // La période d'avant, pour dire ce qui monte : « ton lien YouTube a fait +40 % ».
@@ -513,7 +514,7 @@ export function stats(compte: string, jours: number, maintenant = Date.now()): S
   return {
     jours,
     vues: actuel.vues ?? 0, visiteurs: actuel.visiteurs ?? 0, clics: actuel.clics ?? 0,
-    serie: jourListe.map(jour => ({ jour, vues: parJour.get(jour)?.vues ?? 0, clics: parJour.get(jour)?.clics ?? 0 })),
+    serie: jourListe.map(jour => ({ jour, vues: parJour.get(jour)?.vues ?? 0, visiteurs: parJour.get(jour)?.visiteurs ?? 0, clics: parJour.get(jour)?.clics ?? 0 })),
     blocs, sources: groupe('source'), appareils: groupe('appareil'), apps,
     precedent: { vues: avant.vues ?? 0, visiteurs: avant.visiteurs ?? 0, clics: avant.clics ?? 0 },
     dejaVue,

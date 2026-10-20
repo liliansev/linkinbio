@@ -56,3 +56,29 @@ export function resumer(s: Stats): Phrase[] {
 
   return phrases.slice(0, 4);
 }
+
+/** « la semaine d’avant », « les 30 jours d’avant », « l’année d’avant ». */
+const avantPeriode = (jours: number) => (jours === 365 ? 'l’année d’avant' : periode(jours));
+/** D'où vient le monde, en mots : « Instagram t’amène… », « ton QR code t’amène… », « les e-mails t’amènent… ». */
+const AMENE: Record<string, string> = { 'QR code': 'ton QR code t’amène', Newsletter: 'ta newsletter t’amène', 'E-mail': 'les e-mails t’amènent' };
+
+/**
+ * Les stats en une seule phrase, en tête de l'onglet (Lilian, 20 octobre 2026) :
+ * le total, ce qui a bougé s'il y a de quoi comparer, et d'où vient le monde.
+ * « En 30 jours, ta page a eu 2 877 vues, 33 % de moins que les 30 jours d’avant,
+ * et Instagram t’amène le plus de monde. »
+ */
+export function enUnePhrase(s: Stats): string {
+  const sur = s.jours === 365 ? 'En un an' : `En ${s.jours} jours`;
+  if (!s.vues) return `${sur}, pas encore de visite. Partage ton lien en bio pour lancer la machine.`;
+  let comparaison = '';
+  if (s.precedent.vues >= 10) {
+    const e = pourcent(s.vues, s.precedent.vues);
+    comparaison = Math.abs(e) >= 10 ? `${Math.abs(e)}\u202f% de ${e > 0 ? 'plus' : 'moins'} que ${avantPeriode(s.jours)}` : `à peu près autant que ${avantPeriode(s.jours)}`;
+  }
+  const source = s.sources.find(x => x.nom !== 'Direct' && x.vues >= 5);
+  const qui = source ? `${AMENE[source.nom] ?? `${source.nom} t’amène`} le plus de monde` : '';
+  const debut = `${sur}, ta page a eu ${pluriel(s.vues, 'vue')}`;
+  if (comparaison) return `${debut}, ${comparaison}${qui ? `, et ${qui}` : ''}.`;
+  return `${debut} et ${qui || pluriel(s.clics, 'clic')}.`;
+}
