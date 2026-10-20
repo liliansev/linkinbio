@@ -6,25 +6,23 @@ import { adresseSaisie, pourquoiPasAdresse, pourquoiPasReseau } from '../lib/val
 import { THEMES } from '../lib/themes.ts';
 import { RESEAUX_ACCUEIL, THEMES_ACCUEIL, nomSite, urlReseau } from '../lib/demarrage.ts';
 import { PageLiens } from '../components/PageLiens.tsx';
-import { NOMS_AUDIENCES, reseauxDePartage } from '../lib/provenance.ts';
-import type { Audience } from '../lib/provenance.ts';
+import { NOMS_AUDIENCES, RESEAUX_SOCIAUX, reseauxDePartage } from '../lib/provenance.ts';
 import { Icone, NOMS_RESEAUX } from '../components/Icone.tsx';
 import { Pastille } from './OngletApparence.tsx';
-import { Bascule, BoutonCopier, BoutonPrincipal, copierTexte, classeBouton, classeSaisie, flechesRadio, preparerImage, vibrer } from './ui.tsx';
+import { BoutonCopier, BoutonPrincipal, copierTexte, classeBouton, classeSaisie, flechesRadio, preparerImage, vibrer } from './ui.tsx';
 
 /*
- * L'arrivée d'un compte neuf, juste après les CGU : cinq questions, et la
+ * L'arrivée d'un compte neuf, juste après les CGU : quatre questions, et la
  * page se construit sous les yeux à chaque réponse. Tout s'enregistre au fil
  * de l'eau ; chaque étape se passe, et « Plus tard » mène tout de suite à
  * l'éditeur. Les étapes laissées de côté restent dans « Bien démarrer ».
+ * Où l'on mettra son lien ne se demande pas : la page voit d'où arrive
+ * chaque visiteur, et chaque bloc se règle réseau par réseau (« Afficher sur »).
  */
 
-type Etape = 'profil' | 'liens' | 'reseaux' | 'partage' | 'style' | 'fin';
-const ETAPES: Etape[] = ['profil', 'liens', 'reseaux', 'partage', 'style', 'fin'];
-const QUESTIONS = 5;
-
-/** Les réseaux où l'on peut coller son lien, proposés à l'arrivée. */
-const OU_PARTAGER: Audience[] = ['instagram', 'tiktok', 'youtube', 'linkedin', 'x', 'facebook', 'threads', 'qr'];
+type Etape = 'profil' | 'liens' | 'reseaux' | 'style' | 'fin';
+const ETAPES: Etape[] = ['profil', 'liens', 'reseaux', 'style', 'fin'];
+const QUESTIONS = 4;
 
 /** Ce que le navigateur retient : les premiers pas sont faits (ou remis à plus tard). */
 export const CLE_PREMIERS_PAS = 'hopla-premiers-pas';
@@ -47,11 +45,13 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
   onPoserBlocs: (blocs: Bloc[]) => void;
   envoyerImage: (d: string) => Promise<string>;
   apercuSite: Api['apercuSite'];
-  onFin: () => void;
+  /** `suite` : « lien » ouvre aussitôt l'ajout d'un lien dans l'éditeur. */
+  onFin: (suite?: 'lien') => void;
 }) {
   // L'étape survit à un rechargement ou à un passage par une autre app : ce qui est tapé est déjà enregistré, la place aussi.
-  const [i, setI] = useState(() => { try { const n = Number(sessionStorage.getItem(CLE_ETAPE)); return n > 0 && n < ETAPES.length ? n : 0; } catch { return 0; } });
-  useEffect(() => { try { sessionStorage.setItem(CLE_ETAPE, String(i)); } catch { /* stockage refusé */ } }, [i]);
+  // Elle est retenue par son nom : une étape ajoutée ou retirée ne décale pas celle où l'on était.
+  const [i, setI] = useState(() => { try { return Math.max(0, ETAPES.indexOf(sessionStorage.getItem(CLE_ETAPE) as Etape)); } catch { return 0; } });
+  useEffect(() => { try { sessionStorage.setItem(CLE_ETAPE, ETAPES[i]); } catch { /* stockage refusé */ } }, [i]);
   const etape = ETAPES[i];
   // À chaque étape, le focus va à sa question : un lecteur d'écran l'annonce, Tab repart de là.
   const titre = useRef<HTMLHeadingElement>(null);
@@ -62,7 +62,6 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
   const [saisies, setSaisies] = useState<Partial<Record<Reseau, string>>>({});
   const [envoi, setEnvoi] = useState(false);
   const [photoRatee, setPhotoRatee] = useState(false);
-  const [dernierSeul, setDernierSeul] = useState(false);
   // Les champs qu'on a quittés : une adresse ou un pseudo qui ne mène nulle part le dit seulement là.
   const [quittes, setQuittes] = useState<Set<string>>(() => new Set());
   const [copie, setCopie] = useState(false);
@@ -143,20 +142,20 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
     if (etape === 'liens') poserLiens();
     // Une ambiance choisie ici compte pour l'étape « Choisis ton thème » de Bien démarrer.
     if (etape === 'style') noter('hopla-themes-vus');
-    // Où mettre le lien : on part des réseaux qu'on vient de relier, pas d'une liste toute cochée.
+    // Les réseaux qu'on vient de relier sont ceux où l'on mettra son lien : la fin les nomme, et « Afficher sur » les propose d'abord dans chaque bloc.
     if (etape === 'reseaux' && !reglages.vuesReseaux.length) {
-      const relies = OU_PARTAGER.filter(a => reglages.reseaux.some(r => r.reseau === a && r.url));
+      const relies = RESEAUX_SOCIAUX.filter(a => reglages.reseaux.some(r => r.reseau === a && r.url));
       if (relies.length) onReglages({ ...reglages, vuesReseaux: relies });
     }
     setI(n => Math.min(n + 1, ETAPES.length - 1));
     scrollTo({ top: 0 });
   }
-  function terminer() {
+  function terminer(suite?: 'lien') {
     if (!reglages.profil.nom.trim()) profil({ nom: compte.pseudo });
     if (etape === 'liens') poserLiens();
     noter(CLE_PREMIERS_PAS);
     try { sessionStorage.removeItem(CLE_ETAPE); } catch { /* stockage refusé */ }
-    onFin();
+    onFin(suite);
   }
   async function copier() {
     if (await copierTexte(adressePage)) { vibrer(8); setCopie(true); noter(CLE_PARTAGE); setTimeout(() => setCopie(false), 1800); }
@@ -177,7 +176,8 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
     ? (etape === 'liens' ? (fautifs.length > 1 ? 'Continuer sans ces liens' : 'Continuer sans ce lien') : (fautifs.length > 1 ? 'Continuer sans ces réseaux' : 'Continuer sans ce réseau'))
     : etape === 'style' ? 'C’est parti' : rempli ? 'Continuer' : 'Passer cette étape';
 
-  // Le dernier écran nomme le réseau choisi à l'étape d'avant.
+  // Le dernier écran nomme les réseaux reliés ; sans lien sur la page, il propose d'abord d'en ajouter un plutôt que de la partager vide.
+  const sansLien = !blocs.some(b => b.type === 'lien' && b.public && b.url);
   const sociaux = reglages.vuesReseaux.filter(a => a !== 'qr');
   const ou = reglages.vuesReseaux.length && !sociaux.length ? [] : reseauxDePartage(sociaux);
   const bioOu = ou.slice(0, 2).map(a => NOMS_AUDIENCES[a]).join(' ou ');
@@ -284,31 +284,6 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
         </div>
       ),
     },
-    partage: {
-      titre: 'Où vas-tu mettre ton lien ?',
-      aide: 'Ta page saura d’où viennent tes visiteurs : tu pourras, par exemple, montrer ta boutique d’abord à ceux qui arrivent d’Instagram.',
-      corps: (<>
-        <ul className="adm-groupe flex flex-col divide-y divide-white/[0.06] px-3.5">
-          {OU_PARTAGER.map(a => {
-            // « Ailleurs » (site, e-mail, QR code) compte comme un choix : personne n'a à cocher un réseau qu'il n'utilise pas.
-            const pris = reglages.vuesReseaux.filter(x => OU_PARTAGER.includes(x));
-            const choisis = pris.length ? pris : reseauxDePartage([]);
-            const coche = choisis.includes(a);
-            const seul = coche && choisis.length === 1;
-            return (
-              <li key={a} className="flex min-h-12 flex-wrap items-center gap-x-3">
-                <span className="flex w-5 justify-center text-white/75"><Icone nom={a} taille={18} /></span>
-                <span className="flex-1 text-[15px] font-medium text-white">{a === 'qr' ? 'Ailleurs : site, e-mail, QR code' : NOMS_AUDIENCES[a]}</span>
-                <Bascule actif={coche} label={a === 'qr' ? 'Mon lien ailleurs : site, e-mail, QR code' : `Mon lien sur ${NOMS_AUDIENCES[a]}`} decrit={seul && dernierSeul ? 'au-moins-un' : undefined}
-                  onClick={() => { if (seul) { vibrer(20); setDernierSeul(true); return; } setDernierSeul(false); vibrer(4); onReglages({ ...reglages, vuesReseaux: OU_PARTAGER.filter(x => (x === a ? !coche : choisis.includes(x))) }); }} />
-                {/* Le refus se dit sous la ligne touchée : visible sans faire défiler. */}
-                {seul && dernierSeul && <p id="au-moins-un" role="alert" className="w-full pb-2 pl-8 text-[13px] font-medium text-white/75">Garde au moins un endroit : active d’abord un autre.</p>}
-              </li>
-            );
-          })}
-        </ul>
-      </>),
-    },
     style: {
       titre: 'Choisis ton thème',
       aide: 'Les couleurs, la police et les boutons suivent. Les autres t’attendent dans Design.',
@@ -331,13 +306,14 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
     },
     fin: {
       titre: 'Ta page est en ligne',
-      aide: bioOu ? `Colle son adresse dans ta bio ${bioOu} : tout ce que tu changes sur ta page s’affiche aussitôt.` : 'Colle son adresse là où tu la partages : tout ce que tu changes sur ta page s’affiche aussitôt.',
+      aide: sansLien ? 'Il ne lui manque plus qu’un lien : ton site, ta prise de rendez-vous ou ta boutique.'
+        : bioOu ? `Colle son adresse dans ta bio ${bioOu} : tout ce que tu changes sur ta page s’affiche aussitôt.` : 'Colle son adresse là où tu la partages : tout ce que tu changes sur ta page s’affiche aussitôt.',
       corps: (
         <div className="flex flex-col gap-3">
           <div className="adm-address flex items-center gap-2 p-1.5 pl-4">
             <span className="min-w-0 flex-1 truncate text-[18px] font-semibold tracking-[-0.015em] text-white" translate="no">{sansSchema(adressePage)}</span>
-            {/* Sans partage natif, le grand bouton copie déjà : pas de second « Copier ». */}
-            {peutPartager && (
+            {/* Le grand bouton copie déjà quand le téléphone ne sait pas partager ; sans lien, il ajoute, et Copier reste ici. */}
+            {(peutPartager || sansLien) && (
               <BoutonCopier texte={adressePage} onCopie={() => noter(CLE_PARTAGE)} />
             )}
           </div>
@@ -359,7 +335,7 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
             </span>
           ))}
         </div>
-        <button type="button" onClick={terminer} className={`${classeBouton.discret} shrink-0 ${etape === 'fin' ? 'invisible' : ''}`}>Plus tard</button>
+        <button type="button" onClick={() => terminer()} className={`${classeBouton.discret} shrink-0 ${etape === 'fin' ? 'invisible' : ''}`}>Plus tard</button>
       </header>
 
       {/* L'aperçu : la vraie page, en petit, qui se remplit à chaque réponse. */}
@@ -379,12 +355,17 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
           {c.corps}
         </div>
         <div className="flex shrink-0 flex-col gap-2 px-5 pt-4 pb-[max(16px,env(safe-area-inset-bottom))] lg:px-8 lg:pb-8">
-          {etape === 'fin' ? (
+          {etape === 'fin' && sansLien ? (
+            <>
+              <BoutonPrincipal className="w-full" onClick={() => terminer('lien')}><Icone nom="ui-plus" taille={18} />Ajouter mon premier lien</BoutonPrincipal>
+              <button type="button" onClick={() => terminer()} className={classeBouton.discret}>Plus tard</button>
+            </>
+          ) : etape === 'fin' ? (
             <>
               <BoutonPrincipal className="w-full" onClick={partager}><Icone nom={peutPartager ? 'partage' : copie ? 'ui-ok' : 'ui-copier'} taille={18} /> {peutPartager ? 'Partager ma page' : copie ? 'Adresse copiée' : 'Copier l’adresse'}</BoutonPrincipal>
               <div className="grid grid-cols-2 gap-2">
                 <a href={urlPage(compte)} target="_blank" rel="noopener" className={classeBouton.secondaire}>Voir ma page<Icone nom="ui-ouvrir" taille={16} /></a>
-                <button type="button" onClick={terminer} className={classeBouton.discret}>Peaufiner ma page</button>
+                <button type="button" onClick={() => terminer()} className={classeBouton.discret}>Peaufiner ma page</button>
               </div>
             </>
           ) : (

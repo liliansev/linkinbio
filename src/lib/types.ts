@@ -224,6 +224,8 @@ export interface Stats {
   apps: { integres: number; versApp: number; ouverts: number };
   /** Mêmes totaux sur la période précédente, pour la tendance. */
   precedent: { vues: number; visiteurs: number; clics: number };
+  /** Faux tant que personne n'a jamais vu la page (sur toute la durée de conservation) : Stats n'en montre alors qu'un état vide. */
+  dejaVue: boolean;
 }
 
 export const FOURNISSEURS_LISTE = ['brevo', 'mailchimp'] as const;

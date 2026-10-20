@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react';
-import QRCode from 'qrcode';
 import { CONTACT_LEGAL } from '../lib/legal.ts';
 import type { Bloc, ComptePage, Reglages } from '../lib/types.ts';
 import { LANGUES, urlPage } from '../lib/types.ts';
@@ -8,6 +7,7 @@ import { AVANTAGES_PRO, TARIFS, estResilie, euros } from '../lib/abonnement.ts';
 import { Icone } from '../components/Icone.tsx';
 import { Bascule, BoutonCopier, BoutonSecondaire, Carte, Champ, Interrupteur, classeBadge, classeBouton, classeSaisie, flechesRadio, vibrer } from './ui.tsx';
 import { LANGUES_FR } from './ReglesBloc.tsx';
+import { CodeQR } from './CodeQR.tsx';
 
 export function OngletReglages({ reglages, compte, blocs = [], traduire, onChange, onDeconnexion, urlExport, supprimerMonCompte, abonnement, paiement, ouvrirPaiement, ouvrirPortail, sectionInitiale }: {
   reglages: Reglages; compte: ComptePage; blocs?: Bloc[]; traduire?: (b: Bloc) => void; onChange: (r: Reglages) => void; onDeconnexion: () => void;
@@ -17,7 +17,6 @@ export function OngletReglages({ reglages, compte, blocs = [], traduire, onChang
   sectionInitiale?: 'abonnement';
 }) {
   const URL_PUBLIQUE = urlPage(compte);
-  const [qr, setQr] = useState('');
   const [ouverte, setOuverte] = useState<Section | null>(sectionInitiale ?? null);
   // Ouvrir ou quitter une section déplace le focus : sur son retour en entrant, sur sa ligne en sortant.
   const retour = useRef<HTMLButtonElement>(null);
@@ -27,9 +26,6 @@ export function OngletReglages({ reglages, compte, blocs = [], traduire, onChang
     else if (derniere.current) document.getElementById(`reglage-${derniere.current}`)?.focus({ preventScroll: true });
   }, [ouverte]);
   const seo = (champs: Partial<Reglages['seo']>) => onChange({ ...reglages, seo: { ...reglages.seo, ...champs } });
-  useEffect(() => {
-    QRCode.toDataURL(`${URL_PUBLIQUE}?s=qr`, { width: 720, margin: 2, color: { dark: '#0a0a0a', light: '#ffffff' }, errorCorrectionLevel: 'M' }).then(setQr).catch(() => setQr(''));
-  }, [URL_PUBLIQUE]);
 
   const pro = !compte.principal && paiement;
   // Un titre et une icône par ligne, sans sous-titre (Lilian, 18 octobre 2026).
@@ -60,12 +56,7 @@ export function OngletReglages({ reglages, compte, blocs = [], traduire, onChang
           <span className="min-w-0 flex-1 truncate text-[15px] text-white">{URL_PUBLIQUE.replace(/^https:\/\//, '').replace(/\/$/, '')}</span>
           <BoutonCopier texte={URL_PUBLIQUE} />
         </div>
-        {qr && (
-          <div className="mt-4 flex flex-col items-center gap-3">
-            <img src={qr} alt="QR code vers ta page" className="h-44 w-44 rounded-2xl border border-white/10 bg-nuit p-1.5" />
-            <a href={qr} download={`qr-${compte.pseudo}-hopla.png`} className={classeBouton.secondaire}><Icone nom="telecharger" taille={16} />Télécharger le QR code</a>
-          </div>
-        )}
+        <div className="mt-4 empty:hidden"><CodeQR adresse={URL_PUBLIQUE} pseudo={compte.pseudo} /></div>
         <div className="mt-4 border-t border-white/[0.06]">
           <Interrupteur label="Bouton Partager sur ma page" actif={reglages.partage} onChange={v => onChange({ ...reglages, partage: v })} />
         </div>

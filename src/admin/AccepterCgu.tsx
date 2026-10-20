@@ -27,7 +27,7 @@ export function AccepterCgu({ accepter, deconnexion }: { accepter: () => Promise
         <div className="adm-card p-6 sm:p-8">
           <h1 className="adm-titre">Ta page de liens, en deux minutes</h1>
           <p className="mt-2 text-[14px] leading-relaxed text-white/65">
-            Encore une case à cocher, puis cinq questions et ta page est en ligne. Hopla l’héberge et mesure ses visites pour toi, sans cookie.
+            Encore une case à cocher, puis quatre questions et ta page est en ligne. Hopla l’héberge et mesure ses visites pour toi, sans cookie.
           </p>
           <label className="mt-6 flex cursor-pointer items-start gap-3 rounded-xl border border-white/15 p-4 text-[14.5px] leading-snug transition hover:border-white/30">
             <input id="cgu-case" type="checkbox" checked={coche} onChange={e => { setCoche(e.target.checked); setErreur(''); }} aria-describedby={erreur ? 'cgu-erreur' : undefined} aria-invalid={erreur && !coche ? true : undefined} className="mt-0.5 h-5 w-5 shrink-0 accent-white" />

@@ -406,6 +406,8 @@ export function stats(compte: string, jours: number, maintenant = Date.now()): S
     apps.ouverts += l.ouverts;
     if (appDe(urls.get(l.bloc) ?? '')) apps.versApp += l.n;
   }
+  // Une page que personne n'a jamais vue n'a pas de courbe à montrer : sans vue sur les deux périodes, on regarde plus loin.
+  const dejaVue = !!(actuel.vues || avant.vues) || !!d.prepare("SELECT 1 FROM evenements WHERE compte = ? AND type = 'vue' LIMIT 1").get(compte);
   const groupe = (colonne: 'source' | 'appareil') => (d.prepare(`SELECT ${colonne} AS nom, COUNT(*) AS n FROM evenements WHERE compte = ? AND type = 'vue' AND jour BETWEEN ? AND ? GROUP BY ${colonne} ORDER BY n DESC LIMIT 8`).all(compte, debut, fin) as { nom: string; n: number }[])
     .map(l => ({ nom: l.nom, vues: l.n, avant: colonne === 'source' ? vuesAvant.get(l.nom) ?? 0 : 0 }));
   return {
@@ -414,6 +416,7 @@ export function stats(compte: string, jours: number, maintenant = Date.now()): S
     serie: jourListe.map(jour => ({ jour, vues: parJour.get(jour)?.vues ?? 0, clics: parJour.get(jour)?.clics ?? 0 })),
     blocs, sources: groupe('source'), appareils: groupe('appareil'), apps,
     precedent: { vues: avant.vues ?? 0, visiteurs: avant.visiteurs ?? 0, clics: avant.clics ?? 0 },
+    dejaVue,
   };
 }
 
