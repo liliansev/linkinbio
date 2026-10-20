@@ -3,11 +3,11 @@ import type { CSSProperties } from 'react';
 import { Icone } from '../components/Icone.tsx';
 import { Symbole } from '../components/Logo.tsx';
 import { CroquisLien, CroquisTete, Telephone } from './Telephone.tsx';
-import { mouvementReduit, useCompte, useGlisse, useSequence, useVisible, useVu } from './mouvement.ts';
+import { mouvementReduit, useCompte, useGlisse, useSequence, useVu } from './mouvement.ts';
 
 /*
  * Ce que fait Hopla, en trois sections : 02 les liens qui s'ouvrent dans
- * leur app, 03 la page qui change selon l'heure et les drops (le réseau se
+ * leur app, 03 la page qui change selon l'heure, avant un lancement et pour les drops (le réseau se
  * voit dans l'ouverture),
  * 05 les stats en phrases, lues comme l'e-mail du lundi (le reste de l'offre
  * gratuite se lit dans les prix). Les téléphones y
@@ -141,41 +141,51 @@ export function DansApp() {
 
 /* ---- 03 · Une page vivante ---- */
 
-interface EtatVivant { heure: number; drop: number }
+interface EtatVivant { heure: number; rebours: number; drop: number }
+type Chapitre = keyof EtatVivant;
 
-/** Le compte à rebours d'un lancement : il égrène ses secondes tant que son chapitre est lu et qu'il est à l'écran. */
-function Rebours({ actif }: { actif: boolean }) {
-  const [reste, setReste] = useState(((2 * 24 + 14) * 60 + 8) * 60 + 12);
-  const [ref, visible] = useVisible<HTMLDivElement>();
-  useEffect(() => {
-    if (!actif || !visible || mouvementReduit()) return;
-    const t = setInterval(() => setReste(r => r - 1), 1000);
-    return () => clearInterval(t);
-  }, [actif, visible]);
-  const j = Math.floor(reste / 86400), h = Math.floor((reste % 86400) / 3600), m = Math.floor((reste % 3600) / 60), s = reste % 60;
-  const deux = (n: number) => String(n).padStart(2, '0');
-  return (
-    <div ref={ref} className="hl-cq-carte" role="timer" aria-label="Lancement dans deux jours et demi">
-      <Icone nom="horloge" taille={16} />
-      <span><b>Lancement dans</b><span className="hl-cq-chrono">{deux(j)} j {deux(h)} h {deux(m)} min {deux(s)} s</span></span>
-    </div>
-  );
-}
+/* Chaque démo part de DEPART et finit sur FIN ; avec moins de mouvement, elle est
+ * posée sur IMMOBILE : le compte à rebours y reste lisible au lieu d'être déjà ouvert. */
+const DEPART: EtatVivant = { heure: 9, rebours: 5, drop: 0 };
+const IMMOBILE: EtatVivant = { heure: 21, rebours: ((2 * 60) + 14) * 60 + 8, drop: 3 };
+const ORDRE: Chapitre[] = ['heure', 'rebours', 'drop'];
 
-function EcranHeure({ heure, actif }: { heure: number; actif: boolean }) {
+const deux = (n: number) => String(n).padStart(2, '0');
+
+function EcranHeure({ heure }: { heure: number }) {
   const liste = useRef<HTMLDivElement>(null);
   const soir = heure >= 18;
   useGlisse(liste, soir ? 'soir' : 'matin');
   return (
     <div className="hl-cq">
-      <div className="hl-cq-statut"><b>{String(heure).padStart(2, '0')}:00</b></div>
+      <div className="hl-cq-horloge"><b>{deux(heure)}:00</b><span>{soir ? 'le soir' : 'le matin'}</span></div>
       <CroquisTete />
       <div className="hl-cq-liens" ref={liste}>
         {soir
           ? <CroquisLien key="boutique" cle="boutique" titre="Ma boutique" vedette picto={<Icone nom="panier" taille={14} />} data-arrive="" />
           : <CroquisLien key="atelier" cle="atelier" titre="Réserver un atelier" vedette picto={<Icone nom="agenda" taille={14} />} />}
         <CroquisLien key="tiktok" cle="tiktok" titre="Mon dernier TikTok" picto={<Icone nom="tiktok" taille={14} />} />
-        <div data-cle="rebours"><Rebours actif={actif} /></div>
+      </div>
+    </div>
+  );
+}
+
+/** Un lancement : le compte à rebours, sans l'adresse, puis le lien qui s'ouvre à l'heure dite. */
+function EcranRebours({ reste }: { reste: number }) {
+  const h = Math.floor(reste / 3600), m = Math.floor((reste % 3600) / 60), s = reste % 60;
+  return (
+    <div className="hl-cq">
+      <CroquisTete />
+      <div className="hl-cq-liens">
+        {reste > 0 ? (
+          <div className="hl-cq-rebours" role="timer" aria-label="Ma nouvelle collection ouvre ce soir à 18 h">
+            <span className="hl-cq-rebours-tete"><Icone nom="horloge" taille={16} /><b>Ma nouvelle collection</b></span>
+            <span className="hl-cq-rebours-chrono">{deux(h)}:{deux(m)}:{deux(s)}</span>
+            <span className="hl-cq-sous">Ouvre ce soir à 18:00</span>
+          </div>
+        ) : <CroquisLien key="ouvert" titre="Ma nouvelle collection" vedette picto={<Icone nom="fusee" taille={14} />} data-arrive="" />}
+        <CroquisLien titre="Mon dernier TikTok" picto={<Icone nom="tiktok" taille={14} />} />
+        <CroquisLien titre="Réserver un atelier" picto={<Icone nom="agenda" taille={14} />} />
       </div>
     </div>
   );
@@ -206,18 +216,23 @@ function EcranDrop({ drop }: { drop: number }) {
 }
 
 const CHAPITRES = [
-  { court: 'L’heure', titre: 'Selon l’heure', texte: '« Réserver un atelier » le matin en semaine, « Ma boutique » le soir. Et un compte à rebours avant un lancement, sans dévoiler l’adresse.' },
+  { court: 'L’heure', titre: 'Selon l’heure', texte: '« Réserver un atelier » le matin en semaine, « Ma boutique » le soir. Le bon lien passe en tête tout seul.' },
+  { court: 'Le lancement', titre: 'Avant un lancement', texte: 'Ton lien affiche un compte à rebours, sans dévoiler son adresse. À l’heure dite, il s’ouvre tout seul.' },
   { court: 'Les drops', titre: 'Des drops', texte: 'Un drop, c’est un lien réservé : il s’ouvre avec un code, ou pour les cinquante premiers. Le compteur de places se tient à jour tout seul.' },
 ];
 
-function EcranChapitre({ i, e, actif }: { i: number; e: EtatVivant; actif: boolean }) {
-  return i === 0 ? <EcranHeure heure={e.heure} actif={actif} /> : <EcranDrop drop={e.drop} />;
+function EcranChapitre({ i, e }: { i: number; e: EtatVivant }) {
+  return i === 0 ? <EcranHeure heure={e.heure} /> : i === 1 ? <EcranRebours reste={e.rebours} /> : <EcranDrop drop={e.drop} />;
 }
-const LABELS = ['La page met en avant un autre lien le soir, et affiche un compte à rebours.', 'Un lien réservé s’ouvre avec un code, et ses places se comptent.'];
+const LABELS = [
+  'Le soir, la page met « Ma boutique » en tête à la place de « Réserver un atelier ».',
+  'Un compte à rebours, puis le lien qui s’ouvre à l’heure dite.',
+  'Un lien réservé s’ouvre avec un code, et ses places se comptent.',
+];
 
 export function Vivante() {
   const [actif, setActif] = useState(-1);
-  const [e, setE] = useState<EtatVivant>({ heure: 9, drop: 0 });
+  const [e, setE] = useState<EtatVivant>(DEPART);
   const joues = useRef(new Set<number>());
   const chapitres = useRef<(HTMLElement | null)[]>([]);
   const [refMobile, vuMobile] = useVu<HTMLDivElement>(0.6);
@@ -233,39 +248,46 @@ export function Vivante() {
     return () => o.disconnect();
   }, []);
 
-  // Au téléphone, un seul téléphone et deux onglets : le premier chapitre se joue quand le téléphone est à l'écran,
+  // Au téléphone, un seul téléphone et trois onglets : le premier chapitre se joue quand le téléphone est à l'écran,
   // les autres quand on les touche. Rien n'avance pendant qu'on lit.
   useEffect(() => { if (vuMobile) setActif(a => (a < 0 ? 0 : a)); }, [vuMobile]);
 
-  // Chaque chapitre joue sa démo la première fois qu'on le lit.
+  // Chaque chapitre joue sa démo la première fois qu'on le lit. Une démo quittée en route se rejouera.
   useEffect(() => {
     if (actif < 0 || joues.current.has(actif)) return;
+    const cle = ORDRE[actif];
     joues.current.add(actif);
-    if (mouvementReduit()) { setE(x => (actif === 0 ? { ...x, heure: 21 } : { ...x, drop: 3 })); return; }
-    const t: ReturnType<typeof setTimeout>[] = [];
-    if (actif === 0) for (let h = 10; h <= 21; h++) t.push(setTimeout(() => setE(x => ({ ...x, heure: h })), 500 + (h - 10) * 90));
-    if (actif === 1) [1, 2, 3].forEach((n, k) => t.push(setTimeout(() => setE(x => ({ ...x, drop: n })), 600 + k * 650)));
-    return () => t.forEach(clearTimeout);
+    if (mouvementReduit()) { setE(x => ({ ...x, [cle]: IMMOBILE[cle] })); return; }
+    const pas: [number, number][] =
+      cle === 'heure' ? Array.from({ length: 12 }, (_, k) => [500 + k * 110, 10 + k])
+      : cle === 'rebours' ? [4, 3, 2, 1, 0].map((n, k) => [1000 + k * 1000, n])
+      : [1, 2, 3].map((n, k) => [600 + k * 650, n]);
+    let fini = false;
+    const t = pas.map(([ms, v], k) => setTimeout(() => { setE(x => ({ ...x, [cle]: v })); if (k === pas.length - 1) fini = true; }, ms));
+    return () => {
+      t.forEach(clearTimeout);
+      if (!fini) { joues.current.delete(actif); setE(x => ({ ...x, [cle]: DEPART[cle] })); }
+    };
   }, [actif]);
 
   const rejouer = (i: number) => {
     joues.current.delete(i);
-    setE(x => (i === 0 ? { ...x, heure: 9 } : { ...x, drop: 0 }));
+    setE(x => ({ ...x, [ORDRE[i]]: DEPART[ORDRE[i]] }));
     setActif(-1);
     requestAnimationFrame(() => setActif(i));
   };
   const lu = Math.max(0, actif);
   const tel = (l: number) => (
     <Telephone largeur={l} className="hl-tel-court hl-tel-vivante" label={LABELS[lu]}>
-      <EcranChapitre i={lu} e={e} actif={actif === lu} />
+      <EcranChapitre i={lu} e={e} />
     </Telephone>
   );
 
   return (
     <section className="hl-section" data-teinte="peche" aria-labelledby="vivante">
       <div className="hl-tete-section hl-entre">
-        <h2 id="vivante" className="hl-h2">Une page qui change selon qui la regarde.</h2>
-        <p className="hl-chapo">Le réseau, tu l’as vu plus haut. Ta page change aussi selon l’heure qu’il est, ou le code que ton visiteur a reçu.</p>
+        <h2 id="vivante" className="hl-h2">Le bon lien, au bon moment.</h2>
+        <p className="hl-chapo">Un lien selon l’heure, un compte à rebours avant un lancement, un drop pour ceux qui ont le code. Tu règles une fois, ta page fait le reste.</p>
       </div>
       <div className="hl-vivante hl-grand-seul">
         <ol className="hl-chapitres">
@@ -282,7 +304,7 @@ export function Vivante() {
         </div>
       </div>
       <div className="hl-vivante-mobile hl-petit-seul">
-        <div className="hl-onglets hl-onglets-scene" role="group" aria-label="Deux façons de changer, la démo se rejoue à chaque choix">
+        <div className="hl-onglets hl-onglets-scene" role="group" aria-label="Trois façons de changer, la démo se rejoue à chaque choix">
           {CHAPITRES.map((c, i) => (
             <button key={c.court} type="button" aria-pressed={lu === i} onClick={() => { setTouche(true); rejouer(i); }}>
               {c.court}
@@ -291,7 +313,7 @@ export function Vivante() {
         </div>
         <div ref={refMobile} className="hl-vivante-mobile-tel">{tel(290)}</div>
         <div className="hl-legendes">
-          {/* Les deux légendes réservent la place de la plus longue : rien dessous ne saute. */}
+          {/* Les légendes réservent la place de la plus longue : rien dessous ne saute. */}
           {CHAPITRES.map((c, i) => i !== lu && (
             <div key={c.court} className="hl-legende-scene hl-legende-gabarit" aria-hidden="true">
               <p><b>{c.titre}.</b> {c.texte}</p>

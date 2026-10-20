@@ -440,7 +440,12 @@ html:has(.hl-reserver input:focus) { overflow-anchor: none; }
   aspect-ratio: 390 / 800; border-radius: 28px; background: #fff; overflow: hidden;
   box-shadow: 0 0 0 1px #dcdcdc, 0 28px 56px -28px rgb(0 0 0 / .22); isolation: isolate;
 }
-@media (max-width: 359px) { :is(.hl-scene-milieu, .hl-dans-app-tel, .hl-vivante-mobile-tel, .hl-prise-tel) .hl-tel { --l: 270px !important; --z: .6923 !important; } }
+/* À 320 px, le panneau laisse 264 px : le téléphone et les onglets tiennent dedans, rien n'est rogné. */
+@media (max-width: 359px) {
+  :is(.hl-scene-milieu, .hl-dans-app-tel, .hl-vivante-mobile-tel, .hl-prise-tel) .hl-tel { --l: 248px !important; --z: .6359 !important; }
+  .hl-onglets-scene { gap: 16px; }
+  .hl-onglets-scene button { font-size: 15px; }
+}
 .hl-tel-court { aspect-ratio: 390 / 680; }
 /* Les croquis de « Une page qui change » tiennent dans un téléphone plus court : pas d'écran à moitié vide. */
 .hl-tel-vivante { aspect-ratio: 390 / 610; }
@@ -477,11 +482,14 @@ html:has(.hl-reserver input:focus) { overflow-anchor: none; }
 }
 .hl-cq-lien[data-arrive] { animation: hl-pop .5s var(--ease) both; }
 .hl-cq-lien[data-souleve] { scale: 1.05; z-index: 2; box-shadow: 0 16px 28px -12px rgb(0 0 0 / .4); }
-.hl-cq-statut { margin: -16px 0 -6px; font-size: 12px; font-variant-numeric: tabular-nums; }
-.hl-cq-carte { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border: 1px solid #e6e6e6; border-radius: 12px; background: #fff; }
-.hl-cq-carte > svg { flex: none; }
-.hl-cq-carte b { display: block; font-size: 12px; font-weight: 500; color: var(--gris); }
-.hl-cq-chrono { display: block; font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
+/* L'heure qu'il est chez le visiteur, assez grande pour se lire de loin pendant qu'elle tourne. */
+.hl-cq-horloge { display: flex; align-items: baseline; justify-content: center; gap: 8px; margin: -8px 0 -2px; }
+.hl-cq-horloge b { font-size: 44px; font-weight: 600; letter-spacing: -0.045em; line-height: 1; font-variant-numeric: tabular-nums; }
+.hl-cq-horloge span { font-size: 14px; color: var(--gris); }
+.hl-cq-rebours { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 14px 12px; border: 1px solid var(--encre); border-radius: 12px; background: #fff; text-align: center; }
+.hl-cq-rebours-tete { display: flex; align-items: center; gap: 6px; }
+.hl-cq-rebours-tete b { font-size: 13px; }
+.hl-cq-rebours-chrono { font-size: 36px; font-weight: 600; letter-spacing: -0.04em; line-height: 1.15; font-variant-numeric: tabular-nums; }
 .hl-cq-drop { display: flex; flex-direction: column; gap: 10px; padding: 12px; border: 1px solid var(--encre); border-radius: 12px; background: #fff; }
 .hl-cq-drop-tete { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 8px 10px; }
 .hl-cq-drop-tete b { display: block; font-size: 13px; }
