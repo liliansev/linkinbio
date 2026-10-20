@@ -8,10 +8,11 @@
 export const euros = (n: number) =>
   `${n.toLocaleString('fr-FR', { minimumFractionDigits: Number.isInteger(n) ? 0 : 2, maximumFractionDigits: 2 })}\u00a0€`;
 
-/** Prix TTC. L'annuel vaut douze mois moins 20 % : 9 × 12 = 108 €, soit 86,40 €. */
+/** Prix TTC. L'annuel, 79 € (choix de Lilian, 20 octobre 2026), revient à 27 % de moins que douze mois à 9 €. */
+const MOIS = 9, AN = 79;
 export const TARIFS = {
-  mois: { prix: 9, libelle: `${euros(9)} par mois` },
-  an: { prix: 86.4, libelle: `${euros(86.4)} par an`, economie: '\u221220\u00a0%' },
+  mois: { prix: MOIS, libelle: `${euros(MOIS)} par mois` },
+  an: { prix: AN, libelle: `${euros(AN)} par an`, economie: `\u2212${Math.round((1 - AN / (MOIS * 12)) * 100)}\u00a0%` },
 } as const;
 export type Periode = keyof typeof TARIFS;
 
