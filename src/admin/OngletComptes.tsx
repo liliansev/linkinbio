@@ -282,7 +282,8 @@ function LigneSignalement({ s, api, onChange }: { s: SignalementResume; api: Api
  * Les offres dans Creem : pour chaque offre et chaque période, le produit qui
  * la vend. « Créer les offres dans Creem » fabrique ceux qui manquent, au prix
  * de `OFFRES` ; un prix changé dans le code donne un nouveau produit, et
- * l'ancien reste en place pour les abonnés qui l'ont.
+ * l'ancien reste en place pour les abonnés qui l'ont. La carte ne se montre
+ * que s'il reste un produit à créer (ou juste après la création, pour le dire).
  */
 function OffresCreem({ api }: { api: ApiComptes }) {
   const [offres, setOffres] = useState<EtatOffre[] | null>(null);
@@ -302,7 +303,7 @@ function OffresCreem({ api }: { api: ApiComptes }) {
     setEnvoi(false);
   }
 
-  if (!offres?.length) return null;
+  if (!offres || (!manquent.length && !message)) return null;
   return (
     <Carte titre="Les offres dans Creem" action={manquent.length ? <span className="text-[13px] text-white/55">{manquent.length} à créer</span> : undefined}>
       <ul className="-mx-1 flex flex-col divide-y divide-white/[0.06]">
