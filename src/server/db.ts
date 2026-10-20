@@ -2,7 +2,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { randomBytes, randomUUID } from 'node:crypto';
-import type { Bloc, CompteResume, Contact, FournisseurListe, Reglages, Stats } from '../lib/types.ts';
+import type { Bloc, CompteResume, Contact, FournisseurListe, Reglages, Reservation, Stats } from '../lib/types.ts';
 import { PRINCIPAL } from '../lib/types.ts';
 import { REGLAGES_DEFAUT, blocsDefaut, reglagesNouveauCompte } from '../lib/defauts.ts';
 import { validerBloc, validerReglages } from '../lib/valider.ts';
@@ -84,6 +84,7 @@ export function base(): DatabaseSync {
       id TEXT PRIMARY KEY, compte TEXT NOT NULL, motif TEXT NOT NULL, details TEXT NOT NULL, email TEXT NOT NULL DEFAULT '',
       ts INTEGER NOT NULL, statut TEXT NOT NULL DEFAULT 'ouvert', decision TEXT NOT NULL DEFAULT '', traite INTEGER
     );
+    CREATE TABLE IF NOT EXISTS attente (id TEXT PRIMARY KEY, email TEXT NOT NULL UNIQUE, pseudo TEXT NOT NULL UNIQUE, ts INTEGER NOT NULL);
   `);
   // Les tables d'avant les comptes : tout ce qu'elles contiennent est à Lilian.
   for (const table of ['blocs', 'medias', 'evenements', 'jetons']) colonne(db, table, 'compte', `TEXT NOT NULL DEFAULT '${PRINCIPAL}'`);
@@ -131,12 +132,13 @@ export function base(): DatabaseSync {
 }
 
 /** Ce qu'on garde, annoncé dans la politique de confidentialité (`lib/legal.ts`). */
-export const CONSERVATION = { statistiquesJours: 395, signalementsJours: 365 };
+export const CONSERVATION = { statistiquesJours: 395, signalementsJours: 365, attenteJours: 365 };
 let derniere = 0;
 
 /**
  * Efface ce qui a passé sa durée de conservation : les statistiques de plus de
- * treize mois, les jetons expirés, les signalements traités depuis un an. Au
+ * treize mois, les jetons expirés, les signalements traités depuis un an, les
+ * noms réservés depuis un an sans invitation. Au
  * démarrage, puis au plus une fois toutes les six heures (voir `ajouterEvenement`).
  */
 export function purger(maintenant = Date.now(), d = base()) {
@@ -147,6 +149,7 @@ export function purger(maintenant = Date.now(), d = base()) {
   d.prepare('DELETE FROM webhooks WHERE recu < ?').run(maintenant - 30 * 86_400_000);
   d.prepare('DELETE FROM resumes WHERE envoye < ?').run(maintenant - 60 * 86_400_000);
   d.prepare('DELETE FROM acces WHERE ts < ?').run(maintenant - CONSERVATION.statistiquesJours * 86_400_000);
+  d.prepare('DELETE FROM attente WHERE ts < ?').run(maintenant - CONSERVATION.attenteJours * 86_400_000);
 }
 
 export const stockageEphemere = () => (base(), ephemere);
@@ -178,9 +181,12 @@ export function creerCompte(email: string, pseudo: string, maintenant = Date.now
   const e = email.toLowerCase(), p = pseudo.toLowerCase();
   if (d.prepare('SELECT 1 FROM comptes WHERE email = ? AND id != ?').get(e, PRINCIPAL)) throw new Error('Cette adresse a déjà un compte.');
   if (d.prepare('SELECT 1 FROM comptes WHERE pseudo = ?').get(p)) throw new Error('Ce pseudo est déjà pris.');
+  if (d.prepare('SELECT 1 FROM attente WHERE pseudo = ? AND email != ?').get(p, e)) throw new Error('Ce pseudo est réservé par quelqu’un de la liste d’attente.');
   const id = nouvelId();
   d.exec('BEGIN');
   try {
+    // Une personne de la liste d'attente qui reçoit son compte la quitte.
+    d.prepare('DELETE FROM attente WHERE email = ?').run(e);
     d.prepare('INSERT INTO comptes (id, email, pseudo, cree) VALUES (?, ?, ?, ?)').run(id, e, p, maintenant);
     d.prepare('INSERT INTO pages (compte, valeur) VALUES (?, ?)').run(id, JSON.stringify(reglagesNouveauCompte(p)));
     d.exec('COMMIT');
@@ -207,6 +213,38 @@ export function supprimerCompte(id: string) {
     d.exec('COMMIT');
   } catch (error) { d.exec('ROLLBACK'); throw error; }
 }
+
+/* ---- La liste d'attente ----
+ * Depuis l'accueil, on réserve son nom (hopla.page/<pseudo>) avec son adresse ;
+ * Lilian invite ensuite depuis l'onglet Comptes, et `creerCompte` retire la
+ * réservation. Un nom réservé ne se donne à personne d'autre.
+ */
+
+/** Pris par une page ou par une réservation. */
+export const nomPris = (pseudo: string) => !!base().prepare('SELECT 1 FROM comptes WHERE pseudo = ?1 UNION ALL SELECT 1 FROM attente WHERE pseudo = ?1').get(pseudo.toLowerCase());
+
+/** Ce que l'adresse a déjà : une page, une réservation, ou rien. */
+export function dejaInscrit(email: string): { compte: string } | { reservation: string } | null {
+  const e = email.toLowerCase();
+  const c = base().prepare('SELECT pseudo FROM comptes WHERE email = ? AND id != ?').get(e, PRINCIPAL) as { pseudo: string } | undefined;
+  if (c) return { compte: c.pseudo };
+  const r = base().prepare('SELECT pseudo FROM attente WHERE email = ?').get(e) as { pseudo: string } | undefined;
+  return r ? { reservation: r.pseudo } : null;
+}
+
+/** Réserve un nom libre pour une adresse qui n'a encore rien ; null si le nom ou l'adresse est déjà pris. */
+export function reserver(email: string, pseudo: string, maintenant = Date.now()): Reservation | null {
+  const r = { id: nouvelId(), email: email.toLowerCase(), pseudo: pseudo.toLowerCase(), ts: maintenant };
+  if (nomPris(r.pseudo) || dejaInscrit(r.email)) return null;
+  try { base().prepare('INSERT INTO attente (id, email, pseudo, ts) VALUES (?, ?, ?, ?)').run(r.id, r.email, r.pseudo, r.ts); }
+  catch { return null; }
+  return r;
+}
+
+export const listerAttente = () => base().prepare('SELECT id, email, pseudo, ts FROM attente ORDER BY ts').all() as unknown as Reservation[];
+export const reservationParId = (id: string) => base().prepare('SELECT id, email, pseudo, ts FROM attente WHERE id = ?').get(id) as Reservation | undefined;
+export const retirerReservation = (id: string) => base().prepare('DELETE FROM attente WHERE id = ?').run(id);
+export const reservationsDepuis = (depuis: number) => (base().prepare('SELECT COUNT(*) AS n FROM attente WHERE ts > ?').get(depuis) as { n: number }).n;
 
 /* ---- Abonnement Pro ---- */
 

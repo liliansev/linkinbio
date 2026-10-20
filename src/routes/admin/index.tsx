@@ -35,6 +35,9 @@ function PageAdmin() {
     urlContacts: '/api/contacts',
     comptes: acces.connecte && acces.etat.compte.principal ? {
       lister: () => fn.listerComptes(),
+      attente: () => fn.listerAttente(),
+      inviterAttente: id => fn.inviterAttente({ data: id }),
+      retirerAttente: async id => { await fn.retirerAttente({ data: id }); },
       inviter: (email, pseudo) => fn.inviterCompte({ data: { email, pseudo } }),
       renvoyer: id => fn.renvoyerInvitation({ data: id }),
       changerStatut: async (id, statut, motif) => { await fn.changerStatutCompte({ data: { id, statut, motif } }); },

@@ -56,7 +56,10 @@ embarque tout : l'image n'a pas de `node_modules`.
   Un compte neuf, juste après les CGU, passe par `PremiersPas.tsx` (nom et bio, liens,
   réseaux, ambiance, page en ligne), avec sa page en miniature qui se remplit ; une
   seule fois, et seulement tant que la page est vide (`pageNeuve`).
-- `components/PageLiens.tsx` : la page publique ; `routes/index.tsx` : l'accueil de hopla.page.
+- `components/PageLiens.tsx` : la page publique.
+- `accueil/` : l'accueil de hopla.page (`routes/index.tsx`, styles dans `styles/accueil.css`), en noir et
+  blanc, chaque mouvement joué une fois. On y réserve son nom : `server/attente.ts` garde la réservation
+  (table `attente`, un an au plus) et l'onglet Comptes l'invite, ce qui crée la page et envoie le lien.
 - `demo/` : aperçu statique avec une API simulée, publié en Artifact ; `#nouveau` y
   rejoue l'arrivée d'un nouvel inscrit.
 

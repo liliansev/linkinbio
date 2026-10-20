@@ -118,17 +118,22 @@ ${bouton(lien, 'Ouvrir mon back office')}
   return r.ok ? { ...envoye, lienDev: r.lienDev } : r;
 }
 
-/** Le premier e-mail d'un compte créé par Lilian : l'adresse de sa page et un lien valable une semaine. */
-export async function inviter(origines: Origines, env: Env, compte: Compte, fetchImpl: typeof fetch = fetch): Promise<Reponse> {
+/**
+ * Le premier e-mail d'un compte créé par Lilian : l'adresse de sa page et un
+ * lien valable une semaine. `reserve` : la personne avait réservé ce nom depuis
+ * l'accueil, l'e-mail le lui rappelle.
+ */
+export async function inviter(origines: Origines, env: Env, compte: Compte, fetchImpl: typeof fetch = fetch, reserve = false): Promise<Reponse> {
   const page = `${origines.page}/${compte.pseudo}`;
+  const lienPage = `<a href="${page}">${sansSchema(page)}</a>`;
   const r = await envoyerLien({
     origines, env, fetchImpl, compte: compte.id, destinataire: compte.email, duree: DUREE_INVITATION,
     sujet: 'Ta page Hopla est prête',
     html: lien => enveloppe(`<p>Bonjour,</p>
-<p>Lilian Sevoumian t’a ouvert une page sur Hopla, à l’adresse <a href="${page}">${sansSchema(page)}</a>. Elle est vide pour l’instant : ajoute tes liens, choisis un thème, et elle est en ligne.</p>
+<p>${reserve ? `Tu avais réservé ${lienPage} : ta page est ouverte.` : `Lilian Sevoumian t’a ouvert une page sur Hopla, à l’adresse ${lienPage}.`} Elle est vide pour l’instant : ajoute tes liens, choisis un thème, et elle est en ligne.</p>
 ${bouton(lien, 'Créer ma page')}
 <p style="color:#666;font-size:14px">Ce lien marche une seule fois, pendant 7 jours. Ensuite, tu te connectes depuis ${sansSchema(origines.admin)} avec cette adresse.</p>`),
-    texte: lien => `Lilian Sevoumian t’a ouvert une page sur Hopla : ${page}\nPour la créer : ${lien}\nLe lien marche une seule fois, pendant 7 jours. Ensuite, tu te connectes depuis ${origines.admin} avec cette adresse.`,
+    texte: lien => `${reserve ? `Tu avais réservé ${page} : ta page est ouverte.` : `Lilian Sevoumian t’a ouvert une page sur Hopla : ${page}`}\nPour la créer : ${lien}\nLe lien marche une seule fois, pendant 7 jours. Ensuite, tu te connectes depuis ${origines.admin} avec cette adresse.`,
   });
   return r.ok ? { ok: true, message: `Invitation envoyée à ${compte.email}.`, lienDev: r.lienDev } : r;
 }

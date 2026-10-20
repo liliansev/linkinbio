@@ -1,6 +1,6 @@
 import { createMiddleware, createServerFn } from '@tanstack/react-start';
 import { deleteCookie, getCookie, getRequestHeader, getRequestUrl, setCookie } from '@tanstack/react-start/server';
-import type { Bloc, CompteResume, EtatAdmin, Liste, Origines, PagePublique, Reglages, SignalementResume, Stats } from '../lib/types.ts';
+import type { Bloc, CompteResume, EtatAdmin, Liste, Origines, PagePublique, Reglages, Reservation, SignalementResume, Stats } from '../lib/types.ts';
 import { FOURNISSEURS_LISTE } from '../lib/types.ts';
 import * as liste from './liste.ts';
 import { planifierResumes } from './resume.ts';
@@ -15,6 +15,7 @@ import { apercuSite as lireApercu } from './apercu.ts';
 import * as db from './db.ts';
 import { COOKIE_SESSION, DUREE_SESSION, adresseAdmin, compteDeSession, demanderConnexion, fermerSession, inviter, ouvrirSession } from './auth.ts';
 import { changerStatutMotive, signaler, supprimerMotive, traiter } from './moderation.ts';
+import { inviterReservation, reserverNom as reserver, verifierNom as verifier } from './attente.ts';
 import * as creem from './creem.ts';
 import { JOURS_GRATUIT } from '../lib/abonnement.ts';
 import type { Periode } from '../lib/abonnement.ts';
@@ -281,6 +282,36 @@ export const ouvrirPaiement = createServerFn({ method: 'POST' })
 export const ouvrirPortail = createServerFn({ method: 'POST' })
   .middleware([session])
   .handler(async ({ context }) => creem.ouvrirPortail(process.env, fetch, db.compteParId(context.compte)!));
+
+/* ---- La liste d'attente : réserver son nom depuis l'accueil ---- */
+
+export const verifierNom = createServerFn({ method: 'GET' })
+  .validator((data: unknown) => String(data ?? '').slice(0, 60))
+  .handler(async ({ data }) => verifier(data));
+
+export const reserverNom = createServerFn({ method: 'POST' })
+  .validator((data: unknown) => {
+    const o = (data ?? {}) as { nom?: unknown; email?: unknown };
+    return { nom: String(o.nom ?? '').slice(0, 40), email: String(o.email ?? '').slice(0, 200) };
+  })
+  .handler(async ({ data }) => {
+    memeOrigine();
+    return reserver(origines(), process.env, data, fetch, Date.now(), getRequestHeader('x-real-ip') ?? '');
+  });
+
+export const listerAttente = createServerFn({ method: 'GET' })
+  .middleware([proprietaire])
+  .handler(async (): Promise<Reservation[]> => db.listerAttente());
+
+export const inviterAttente = createServerFn({ method: 'POST' })
+  .middleware([proprietaire])
+  .validator((data: unknown) => String(data ?? '').slice(0, 40))
+  .handler(async ({ data }) => inviterReservation(origines(), process.env, data));
+
+export const retirerAttente = createServerFn({ method: 'POST' })
+  .middleware([proprietaire])
+  .validator((data: unknown) => String(data ?? '').slice(0, 40))
+  .handler(async ({ data }) => { db.retirerReservation(data); return { ok: true }; });
 
 /* ---- Les comptes, depuis le back office de Lilian ---- */
 

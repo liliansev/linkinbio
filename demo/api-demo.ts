@@ -1,4 +1,4 @@
-import type { Api, Bloc, CompteResume, EtatAdmin, Reglages, SignalementResume, Stats } from '../src/lib/types.ts';
+import type { Api, Bloc, CompteResume, EtatAdmin, Reglages, Reservation, SignalementResume, Stats } from '../src/lib/types.ts';
 import { REGLAGES_DEFAUT, blocsDefaut, reglagesNouveauCompte } from '../src/lib/defauts.ts';
 import avatar from '../public/avatar.webp?inline';
 
@@ -101,6 +101,16 @@ export const apiDemo: Api = {
       comptesDemo.splice(1, 0, { id: id(), email, pseudo, statut: 'actif', cree: Date.now(), connexion: null, blocs: 0, vues: 0, principal: false, pro: false });
       return { ok: true, message: `Invitation envoyée à ${email} (dans l’aperçu, rien ne part vraiment).` };
     },
+    async attente() { await pause(); return attenteDemo; },
+    async inviterAttente(i) {
+      await pause();
+      const k = attenteDemo.findIndex(r => r.id === i);
+      if (k < 0) return { ok: false, message: 'Cette réservation n’existe plus.' };
+      const [r] = attenteDemo.splice(k, 1);
+      comptesDemo.splice(1, 0, { id: id(), email: r.email, pseudo: r.pseudo, statut: 'actif', cree: Date.now(), connexion: null, blocs: 0, vues: 0, principal: false, pro: false });
+      return { ok: true, message: `Invitation envoyée à ${r.email} (dans l’aperçu, rien ne part vraiment).` };
+    },
+    async retirerAttente(i) { await pause(); const k = attenteDemo.findIndex(r => r.id === i); if (k >= 0) attenteDemo.splice(k, 1); },
     async renvoyer() { await pause(); return { ok: true, message: '' }; },
     async changerStatut(i, statut) { await pause(); const c = comptesDemo.find(x => x.id === i); if (c) c.statut = statut; },
     async supprimer(i) { await pause(); const k = comptesDemo.findIndex(x => x.id === i); if (k > 0) comptesDemo.splice(k, 1); },
@@ -121,6 +131,11 @@ const comptesDemo: CompteResume[] = [
   { id: 'demo1', email: 'camille@exemple.fr', pseudo: 'camille-studio', statut: 'actif', cree: Date.now() - 6 * jour, connexion: Date.now() - jour, blocs: 7, vues: 312, principal: false, pro: true },
   { id: 'demo2', email: 'hugo@exemple.fr', pseudo: 'hugo-podcast', statut: 'actif', cree: Date.now() - 4 * jour, connexion: null, blocs: 0, vues: 0, principal: false, pro: false },
   { id: 'demo3', email: 'sarah@exemple.fr', pseudo: 'sarah-coach', statut: 'suspendu', cree: Date.now() - 12 * jour, connexion: Date.now() - 9 * jour, blocs: 4, vues: 58, principal: false, pro: false },
+];
+
+const attenteDemo: Reservation[] = [
+  { id: 'r1', email: 'lea@exemple.fr', pseudo: 'lea-ceramique', ts: Date.now() - 2 * jour },
+  { id: 'r2', email: 'tom@exemple.fr', pseudo: 'tom-velo', ts: Date.now() - 5 * 3_600_000 },
 ];
 
 const signalementsDemo: SignalementResume[] = [

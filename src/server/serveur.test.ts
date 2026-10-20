@@ -523,3 +523,68 @@ test('avis et preuves : la note bornée, le genre vérifié', () => {
   assert.equal(validerBloc({ type: 'texte', titre: 'x', acces: { code: 'a' } }, 'r').acces, null);
   assert.equal(validerBloc({ type: 'lien', url: 'x.fr', acces: { code: '', places: 0 } }, 'r').acces, null);
 });
+
+test('liste d’attente : nom vérifié, réservé, gardé, puis invité jusqu’à la session', async () => {
+  const attente = await import('./attente.ts');
+  const envois: any[] = [];
+  const fetchFaux = (async (_url: string, init: RequestInit) => { envois.push(JSON.parse(String(init.body))); return new Response('{}', { status: 200 }); }) as typeof fetch;
+  const env = { RESEND_API_KEY: 'cle', NODE_ENV: 'production' };
+
+  assert.equal((await import('../lib/valider.ts')).nomSaisi('Marie Dupont'), 'marie-dupont');
+  assert.deepEqual(attente.verifierNom('Marie Dupont'), { etat: 'libre', nom: 'marie-dupont', suggestions: [] });
+  assert.equal(attente.verifierNom('admin').etat, 'pris', 'un nom réservé par Hopla se dit pris');
+  assert.equal(attente.verifierNom('lilian').suggestions.length, 2);
+  assert.equal(attente.verifierNom('ab').etat, 'invalide');
+
+  const r = await attente.reserverNom(O, env, { nom: 'marie-dupont', email: 'Marie@Exemple.fr' }, fetchFaux, 2_000_000, '9.9.9.1');
+  assert.equal(r.ok, true);
+  assert.match(r.message, /marie@exemple\.fr/);
+  assert.equal(envois.at(-1).subject, 'Ton nom Hopla est réservé');
+  assert.match(envois.at(-1).text, /hopla\.page\/marie-dupont est à toi/);
+  assert.equal(envois.at(-1).reply_to, 'bonjour@liliansevoumian.fr', 'on répond au message pour faire effacer son adresse');
+
+  // Le nom réservé n'est plus libre, et deux variantes sont proposées.
+  const pris = attente.verifierNom('marie-dupont');
+  assert.equal(pris.etat, 'pris');
+  assert.equal(pris.suggestions.length, 2);
+  assert.ok(pris.suggestions.every(s => pseudo(s) === s));
+  const vole = await attente.reserverNom(O, env, { nom: 'marie-dupont', email: 'autre@exemple.fr' }, fetchFaux, 2_000_100, '9.9.9.2');
+  assert.equal(vole.ok, false);
+
+  // La même adresse ne prend pas un deuxième nom, et la réponse ne le révèle pas : seul l'e-mail le dit.
+  const encore = await attente.reserverNom(O, env, { nom: 'marie-bis', email: 'marie@exemple.fr' }, fetchFaux, 2_000_200, '9.9.9.3');
+  assert.deepEqual(encore, r);
+  assert.equal(envois.at(-1).subject, 'Ton nom Hopla est déjà réservé');
+  assert.equal(attente.verifierNom('marie-bis').etat, 'libre');
+
+  // Une invitation à la main ne prend pas un nom réservé par quelqu'un d'autre.
+  assert.throws(() => db.creerCompte('x@exemple.fr', 'marie-dupont'), /liste d’attente/);
+
+  // Cinq réservations par heure depuis une même adresse IP.
+  for (let i = 0; i < 5; i++) await attente.reserverNom(O, env, { nom: `essai-${i}`, email: `e${i}@exemple.fr` }, fetchFaux, 3_000_000 + i, '7.7.7.7');
+  assert.equal((await attente.reserverNom(O, env, { nom: 'essai-6', email: 'e6@exemple.fr' }, fetchFaux, 3_000_010, '7.7.7.7')).ok, false);
+
+  // Lilian invite : la page existe, la réservation part, le lien ouvre une session du nouveau compte.
+  const reservation = db.listerAttente().find(x => x.pseudo === 'marie-dupont')!;
+  const invite = await attente.inviterReservation(O, env, reservation.id, fetchFaux);
+  assert.equal(invite.ok, true);
+  assert.equal(envois.at(-1).subject, 'Ta page Hopla est prête');
+  assert.match(envois.at(-1).text, /Tu avais réservé https:\/\/hopla\.page\/marie-dupont/);
+  assert.equal(db.reservationParId(reservation.id), undefined);
+  const compte = db.compteParPseudo('marie-dupont')!;
+  assert.equal(compte.email, 'marie@exemple.fr');
+  const jeton = /jeton=([\w-]+)/.exec(envois.at(-1).text)![1];
+  const session = auth.ouvrirSession(jeton)!;
+  assert.equal(auth.compteDeSession(session), compte.id);
+  assert.equal(auth.ouvrirSession(jeton), null, 'le lien d’invitation ne sert qu’une fois');
+  assert.equal((await attente.inviterReservation(O, env, reservation.id, fetchFaux)).ok, false);
+
+  // Une adresse qui a déjà sa page reçoit un rappel, rien de plus.
+  await attente.reserverNom(O, env, { nom: 'marie-trois', email: 'marie@exemple.fr' }, fetchFaux, 4_000_000, '9.9.9.4');
+  assert.equal(envois.at(-1).subject, 'Tu as déjà une page Hopla');
+  assert.equal(attente.verifierNom('marie-trois').etat, 'libre');
+
+  // Sans invitation, une réservation s'efface au bout d'un an.
+  db.purger(3_000_000 + 366 * 86_400_000);
+  assert.equal(db.listerAttente().length, 0);
+});
