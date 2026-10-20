@@ -138,8 +138,8 @@ export async function inviter(origines: Origines, env: Env, compte: Compte, fetc
     html: lien => enveloppe(`<p>Bonjour,</p>
 <p>${intro(lienPage)} Elle est vide pour l’instant : ajoute tes liens, choisis un thème, et elle est en ligne.</p>
 ${bouton(lien, 'Créer ma page')}
-<p style="color:#666;font-size:14px">Ce lien marche une seule fois, pendant 7 jours. Ensuite, tu te connectes depuis ${sansSchema(origines.admin)} avec cette adresse.${motif === 'inscription' ? ' Tu n’as rien demandé ? Réponds à ce message et on supprime la page.' : ''}</p>`),
-    texte: lien => `${intro(page, true)}\nPour la créer : ${lien}\nLe lien marche une seule fois, pendant 7 jours. Ensuite, tu te connectes depuis ${origines.admin} avec cette adresse.`,
+<p style="color:#666;font-size:14px">Ce lien marche une seule fois, pendant 7 jours. Ensuite, tu te connectes depuis ${sansSchema(origines.admin)} avec cette adresse. Une page jamais ouverte s’efface au bout d’un mois.${motif === 'inscription' ? ' Tu n’as rien demandé ? Ne fais rien, ou réponds à ce message pour qu’on l’efface tout de suite.' : ''}</p>`),
+    texte: lien => `${intro(page, true)}\nPour la créer : ${lien}\nLe lien marche une seule fois, pendant 7 jours. Ensuite, tu te connectes depuis ${origines.admin} avec cette adresse.\nUne page jamais ouverte s’efface au bout d’un mois.`,
   });
   return r.ok ? { ok: true, message: `Invitation envoyée à ${compte.email}.`, lienDev: r.lienDev } : r;
 }

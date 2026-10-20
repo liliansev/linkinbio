@@ -231,6 +231,28 @@ test('conservation : les statistiques de plus de treize mois et les jetons expir
   assert.equal(restes[0].ts, new Date(maintenant - 300 * 86_400_000).toISOString());
 });
 
+test('conservation : une page où personne n’est jamais entré s’efface un mois après sa création', () => {
+  const jour = 86_400_000, maintenant = Date.now(), ilYa = maintenant - 31 * jour;
+  const oubliee = db.creerCompte('oubliee@exemple.fr', 'oubliee', ilYa);
+  const ouverte = db.creerCompte('ouverte@exemple.fr', 'ouverte', ilYa);
+  db.noterConnexion(ouverte.id, ilYa + jour);
+  const remplie = db.creerCompte('remplie@exemple.fr', 'remplie', ilYa);
+  db.enregistrerBloc(remplie.id, validerBloc({ type: 'lien', titre: 'Boutique', url: 'remplie.fr' }, 'r1'));
+  const relancee = db.creerCompte('relancee@exemple.fr', 'relancee', ilYa);
+  db.ajouterJeton('empreinte-relance', 'connexion', 7 * jour, relancee.id);
+  const suspendue = db.creerCompte('suspendue@exemple.fr', 'suspendue', ilYa);
+  db.changerStatut(suspendue.id, 'suspendu');
+  db.creerCompte('recente@exemple.fr', 'recente', maintenant - 29 * jour);
+
+  db.purger(maintenant);
+  assert.equal(db.compteParId(oubliee.id), undefined);
+  assert.equal(db.nomPris('oubliee'), false, 'le nom redevient libre');
+  assert.equal(db.dejaInscrit('oubliee@exemple.fr'), null, 'l’adresse aussi');
+  assert.throws(() => db.lireReglages(oubliee.id));
+  for (const pseudo of ['ouverte', 'remplie', 'relancee', 'suspendue', 'recente']) assert.ok(db.compteParPseudo(pseudo), `${pseudo} reste`);
+  assert.ok(db.compteParId(P));
+});
+
 test('export : tout le compte, sans l’empreinte des visiteurs', () => {
   const zoe = db.creerCompte('zoe@exemple.fr', 'zoe');
   db.enregistrerBloc(zoe.id, validerBloc({ type: 'lien', titre: 'Portfolio', url: 'zoe.fr' }, 'z1'));
