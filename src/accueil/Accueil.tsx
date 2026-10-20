@@ -1,4 +1,4 @@
-import { Barre, Ouverture } from './Ouverture.tsx';
+import { Barre, Ouverture, Selon } from './Ouverture.tsx';
 import { DansApp, Stats, Vivante } from './Fonctions.tsx';
 import { Themes } from './Themes.tsx';
 import { Prise } from './Prise.tsx';
@@ -10,9 +10,10 @@ import type { Inscription } from './textes.ts';
 
 /*
  * L'accueil de hopla.page (20 octobre 2026, d'après les wireframes validés par
- * Lilian) : noir et blanc, la seule couleur est celle des pages elles-mêmes ;
- * chaque mouvement se joue une fois, et « moins de mouvement » montre l'état
- * final. On y prend son nom : la page se crée tout de suite, ou le nom se
+ * Lilian) : un papier blanc, et des sections posées sur les couleurs des
+ * thèmes Hopla (le bleu Klein de l'ouverture, la nuit, la pêche, la menthe,
+ * le lilas, le rose du Couchant) ; chaque mouvement se joue une fois, et
+ * « moins de mouvement » montre l'état final. On y prend son nom : la page se crée tout de suite, ou le nom se
  * réserve quand Hopla ouvre sur invitation (`mode`, voir `server/attente.ts`).
  */
 export function Accueil({ api, mode = 'libre' }: { api: ApiAccueil; mode?: Inscription }) {
@@ -24,6 +25,7 @@ export function Accueil({ api, mode = 'libre' }: { api: ApiAccueil; mode?: Inscr
       <Barre />
       <main id="contenu">
         <Ouverture api={api} />
+        <Selon />
         <DansApp />
         <Vivante />
         <Stats />

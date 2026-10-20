@@ -100,7 +100,7 @@ export function DernierAppel({ api }: { api: ApiAccueil }) {
   // Pour qui vient d'envoyer, la fin dit où l'attend la suite au lieu de relancer.
   const envoye = useEnvoye();
   return (
-    <section className="hl-section hl-dernier" aria-labelledby="dernier">
+    <section className="hl-section hl-dernier" data-teinte="rose" aria-labelledby="dernier">
       <h2 id="dernier" className="hl-h2 hl-h2-grand hl-entre">{envoye ? MOTS[mode].fin : <>Ton nom est <span className="hl-insecable">peut-être</span> <span className="hl-insecable">encore libre.</span></>}</h2>
       <div className="hl-entre" style={{ '--d': '120ms' } as CSSProperties} data-zone-appel=""><Reserver api={api} id="reserver-fin" grand note={MOTS[mode].note} /></div>
       <a href="/lilian" className="hl-lien-gris">Voir une vraie page</a>

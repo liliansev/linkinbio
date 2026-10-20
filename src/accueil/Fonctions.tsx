@@ -68,7 +68,7 @@ export function DansApp() {
   }, [enchaine]);
 
   return (
-    <section className="hl-section" id="fonctions" aria-labelledby="dans-app">
+    <section className="hl-section" id="fonctions" data-teinte="nuit" aria-labelledby="dans-app">
       <div className="hl-dans-app">
         <div className="hl-dans-app-tete hl-entre">
           <h2 id="dans-app" className="hl-h2">Tes liens s’ouvrent dans l’app, pas dans Instagram.</h2>
@@ -262,7 +262,7 @@ export function Vivante() {
   );
 
   return (
-    <section className="hl-section" aria-labelledby="vivante">
+    <section className="hl-section" data-teinte="peche" aria-labelledby="vivante">
       <div className="hl-tete-section hl-entre">
         <h2 id="vivante" className="hl-h2">Une page qui change selon qui la regarde.</h2>
         <p className="hl-chapo">Le réseau, tu l’as vu plus haut. Ta page change aussi selon l’heure qu’il est, ou le code que ton visiteur a reçu.</p>
@@ -341,7 +341,7 @@ export function Stats() {
   const [ref, vu] = useVu<HTMLOListElement>(0.3);
   const [tour, setTour] = useState(0);
   return (
-    <section className="hl-section hl-section-stats" aria-labelledby="stats">
+    <section className="hl-section hl-section-stats" data-teinte="menthe" aria-labelledby="stats">
       <div className="hl-tete-section hl-entre">
         <h2 id="stats" className="hl-h2">Tes stats, en clair.</h2>
         <p className="hl-chapo">Pas de tableau à déchiffrer : Hopla te dit ce qui a bougé, dans ton espace et par e‑mail chaque lundi à 9 h. Sans cookie ni bannière, l’adresse IP de tes visiteurs n’est jamais gardée.</p>

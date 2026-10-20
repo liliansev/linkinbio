@@ -1,12 +1,14 @@
 /*
  * L'accueil de hopla.page (src/accueil). Papier blanc, encre presque noire, un
- * gris pour le second plan, un filet pour séparer. La couleur a trois rôles :
- * celle des vraies pages dans les téléphones ; celle des réseaux dans
- * l'ouverture (l'onglet choisi, le lien qui bouge, la lumière derrière) ; et
- * un violet, `--accent`, pour ce que Hopla fait avancer (onglet choisi, étape
- * lue, offre Pro), plus le vert d'une hausse. Le bouton d'appel reste noir. Pas de pastille,
- * pas de pointillés, des rayons de 10 (boutons), 16 (cartes) et 28 (téléphones).
- * Chaque mouvement se joue une fois ; « moins de mouvement » montre l'état final.
+ * gris pour le second plan, un filet pour séparer. La couleur (20 octobre
+ * 2026, Lilian trouvait la page « ennuyeuse ») vient des thèmes Hopla : la
+ * plupart des sections sont posées sur une scène de couleur (`data-teinte`),
+ * un grand panneau arrondi qui redéfinit les jetons ; le bleu Klein est celui
+ * de Hopla (ouverture, offre Pro, accent sur le blanc). Les réseaux gardent
+ * leurs couleurs (roue, onglets, cercle du lien qui bouge). Le bouton d'appel
+ * reste noir. Pas de pointillés, des rayons de 10 (boutons), 16 (cartes), 28
+ * (téléphones) et 28 à 36 (scènes). Chaque mouvement se joue une fois ;
+ * « moins de mouvement » montre l'état final.
  */
 
 .hl {
@@ -16,8 +18,8 @@
   --filet: #ebebeb;
   --pale: #f5f5f5;
   --erreur: #b42318;
-  --accent: #5a3ff0;
-  --accent-pale: #f4f2ff;
+  --encre-2: #3a3a3a;
+  --accent: #1f35ff;
   --vert: #157f3c;
   --ease: cubic-bezier(.2, .7, .2, 1);
   --gout: 20px;
@@ -31,7 +33,7 @@
 }
 @media (min-width: 1024px) { .hl { --gout: 40px; } }
 .hl :focus-visible { outline: 2px solid var(--encre); outline-offset: 3px; }
-.hl ::selection { background: var(--accent); color: #fff; }
+.hl ::selection { background: var(--encre); color: var(--papier); }
 
 html:has(.hl) { background: #fff; scroll-padding-top: 76px; }
 @media (prefers-reduced-motion: no-preference) { html:has(.hl) { scroll-behavior: smooth; } }
@@ -52,6 +54,35 @@ html:has(.hl) { background: #fff; scroll-padding-top: 76px; }
 .hl-petit { font-size: 14px; }
 .hl-centre { text-align: center; }
 .hl-insecable { white-space: nowrap; }
+
+/* ---- Les scènes de couleur ----
+ * Une section posée sur la couleur d'un thème Hopla : un panneau arrondi presque bord à bord, qui
+ * redéfinit les jetons (encre, gris, filet, pâle, accent) ; tout ce qu'il contient suit. Les objets
+ * posés dessus (téléphones, e-mail, champ du nom, offre gratuite) gardent les jetons du papier blanc.
+ * La scène « reseau » prend la teinte du réseau choisi dans la démo. */
+
+@property --teinte { syntax: '<color>'; inherits: true; initial-value: #d9c3a0; }
+[data-teinte] { background: var(--papier); color: var(--encre); }
+[data-teinte='klein'] { --papier: #1f35ff; --encre: #fff; --encre-2: #fff; --gris: #dde2ff; --filet: rgb(255 255 255 / .24); --pale: rgb(255 255 255 / .12); --accent: #ffd400; --erreur: #ffd0c8; }
+[data-teinte='nuit'] { --papier: #0c121f; --encre: #f4f1ec; --encre-2: #dfe3ec; --gris: #aab2c5; --filet: rgb(255 255 255 / .14); --pale: rgb(255 255 255 / .07); --accent: #ffb38a; }
+[data-teinte='peche'] { --papier: #ffc9a8; --encre: #2a1308; --encre-2: #3f1f10; --gris: #6b3a22; --filet: rgb(42 19 8 / .16); --pale: rgb(255 255 255 / .45); --accent: #a8361a; }
+[data-teinte='menthe'] { --papier: #c9ecd5; --encre: #0d2e1b; --encre-2: #16402a; --gris: #335a42; --filet: rgb(13 46 27 / .15); --pale: rgb(255 255 255 / .5); --accent: #157f3c; }
+[data-teinte='lilas'] { --papier: #e3d9ff; --encre: #1d1340; --encre-2: #2c2155; --gris: #4f4570; --filet: rgb(29 19 64 / .14); --pale: rgb(255 255 255 / .6); --accent: #1f35ff; }
+[data-teinte='rose'] { --papier: #ff9fa8; --encre: #1c0b1f; --encre-2: #2b1430; --gris: #44263f; --filet: rgb(28 11 31 / .16); --pale: rgb(255 255 255 / .4); --accent: #1c0b1f; }
+[data-teinte='reseau'] { --papier: color-mix(in srgb, var(--teinte) 16%, #fff); --gris: #5c5c5c; transition: --teinte .7s ease; }
+:is(.hl-section, .hl-heros)[data-teinte] {
+  max-width: none; margin: 10px 8px 0; border-radius: 28px; overflow: clip;
+  padding-left: max(var(--gout), calc((100% - 1056px) / 2)); padding-right: max(var(--gout), calc((100% - 1056px) / 2));
+}
+.hl-section[data-teinte] { padding-top: 80px; padding-bottom: 88px; }
+@media (min-width: 1024px) {
+  :is(.hl-section, .hl-heros)[data-teinte] { margin: 14px 14px 0; border-radius: 36px; }
+  .hl-section[data-teinte] { padding-top: 120px; padding-bottom: 128px; }
+}
+:is(.hl-tel, .hl-mail, .hl-reserver-grand .hl-reserver-ligne, .hl-offre:not(.hl-offre-pro)) {
+  --encre: #0a0a0a; --encre-2: #3a3a3a; --gris: #6b6b6b; --filet: #ebebeb; --pale: #f5f5f5; --erreur: #b42318; --accent: #1f35ff; --papier: #fff;
+  color: var(--encre);
+}
 
 /* ---- Titres et textes ---- */
 
@@ -163,15 +194,11 @@ html:has(.hl) { background: #fff; scroll-padding-top: 76px; }
  * en éventail. Au bureau, deux colonnes : le texte et le champ à gauche, les
  * téléphones à droite, à la hauteur du champ, pour voir sa page se faire. */
 
-/* La lumière derrière les téléphones prend la couleur du réseau d'où arrive le visiteur. */
-@property --lueur { syntax: '<color>'; inherits: true; initial-value: #7a7a7a; }
 .hl-heros {
-  position: relative; max-width: 1120px; margin: 0 auto; padding: 56px var(--gout) 0; display: flex; flex-direction: column; align-items: center; text-align: center; isolation: isolate;
-  transition: --lueur .9s ease;
+  position: relative; max-width: 1120px; margin: 0 auto; padding: 52px var(--gout) 12px; display: flex; flex-direction: column; align-items: center; text-align: center; isolation: isolate;
 }
-.hl-heros-fond { position: absolute; z-index: -1; inset: -60px 0 0 50%; width: 100vw; translate: -50% 0; pointer-events: none; --mx: 50%; }
-.hl-heros-fond::after { content: ''; position: absolute; left: var(--mx); bottom: 4%; width: min(1100px, 140vw); height: 62%; translate: -50% 0; background: radial-gradient(closest-side, color-mix(in srgb, var(--lueur) 26%, transparent), transparent); }
 .hl-heros-texte { width: 100%; min-width: 0; }
+.hl-vif { color: var(--accent); }
 .hl-heros-titre { max-width: 13ch; margin-inline: auto; font-size: clamp(42px, 7vw, 82px); line-height: .98; letter-spacing: -0.048em; }
 @media (max-width: 359px) { .hl-heros-titre { font-size: 38px; } }
 .hl-heros .hl-chapo { margin: 22px auto 0; max-width: 48ch; }
@@ -179,15 +206,81 @@ html:has(.hl) { background: #fff; scroll-padding-top: 76px; }
 .hl-heros .hl-reserver-etat, .hl-heros .hl-reserver-note { text-align: center; }
 .hl-heros-visuel { width: 100%; display: flex; flex-direction: column; align-items: center; }
 .hl-legende { font-size: 14px; color: var(--gris); text-align: center; }
-.hl-heros-visuel > .hl-legende { position: relative; margin-top: 36px; max-width: 40ch; color: #555; text-wrap: balance; }
+
+/* La roue des réseaux : les badges tournent sur un anneau, le Hopla au moyeu, le lien dessous, puis
+ * quatre pages. Les visiteurs (`.hl-roue-point`) passent sous le moyeu, le lien et les pages : ils
+ * plongent dedans. Les chemins et les traînées sont dans le SVG, sous tout le reste. */
+.hl-roue-cadre { width: 100%; max-width: 520px; margin: 48px auto 0; }
+.hl-roue { --d: 192px; --badge: 40px; --ecart: 72px; position: relative; isolation: isolate; }
+@media (min-width: 480px) { .hl-roue { --d: 224px; --badge: 46px; --ecart: 88px; } }
+.hl-roue-traces { position: absolute; left: 0; top: 0; z-index: 1; overflow: visible; pointer-events: none; }
+.hl-roue-voie { fill: none; stroke: rgb(255 255 255 / .28); stroke-width: 1.5; }
+.hl-roue-traine { fill: none; stroke: #fff; stroke-width: 3; stroke-linecap: round; }
+.hl-roue-points { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
+.hl-roue-point {
+  position: absolute; left: -12px; top: -12px; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%;
+  background: #fff; box-shadow: 0 4px 10px -2px rgb(0 0 30 / .4); will-change: transform;
+}
+.hl-roue-haut { position: relative; z-index: 3; display: grid; place-items: center; width: var(--d); height: var(--d); margin: 0 auto; }
+.hl-roue-anneau { position: absolute; inset: 0; border-radius: 50%; box-shadow: inset 0 0 0 1.5px rgb(255 255 255 / .34), 0 0 0 calc(var(--badge) / 2 + 6px) rgb(255 255 255 / .06); transform: rotate(var(--a, 0deg)); }
+.hl-roue-badge {
+  position: absolute; left: 50%; top: 50%; display: grid; place-items: center; width: var(--badge); height: var(--badge); margin: calc(var(--badge) / -2);
+  border-radius: 50%; background: #fff; box-shadow: 0 8px 18px -8px rgb(0 0 30 / .55);
+  transform: rotate(var(--b)) translateY(calc(var(--d) / -2)) rotate(calc(-1 * var(--b) - var(--a, 0deg)));
+}
+.hl-roue-moyeu { position: relative; display: block; width: 60px; height: 60px; border-radius: 17px; color: #0a0a0a; box-shadow: 0 0 0 8px rgb(255 255 255 / .16), 0 14px 28px -10px rgb(0 0 30 / .6); }
+.hl-roue-moyeu svg { display: block; width: 100%; height: 100%; }
+.hl-roue-lien {
+  position: relative; z-index: 3; width: fit-content; max-width: 100%; margin: calc(var(--badge) / 2 + 10px) auto 0; padding: 8px 14px; border-radius: 10px;
+  background: #fff; color: #0a0a0a; font-size: 14px; font-weight: 600; letter-spacing: -0.01em; line-height: 1.3;
+  box-shadow: 0 10px 22px -12px rgb(0 0 30 / .6); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.hl-roue-pages { position: relative; z-index: 3; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-top: var(--ecart); }
+@media (min-width: 480px) { .hl-roue-pages { gap: 14px; } }
+.hl-roue-colonne { position: relative; display: flex; flex-direction: column; align-items: center; gap: 10px; min-width: 0; }
+.hl-roue-page, .hl-roue-onde { width: 100%; aspect-ratio: 2 / 3; border-radius: 14px; }
+.hl-roue-onde { position: absolute; left: 0; top: 0; box-shadow: 0 0 0 2px #fff; opacity: 0; pointer-events: none; }
+/* Le retrait de la page en %, pas en cqi : les unités de conteneur d'une boîte ne valent que pour ce qu'elle contient. */
+.hl-roue-page {
+  position: relative; container-type: inline-size; display: flex; flex-direction: column; align-items: center; padding: 11% 8% 0;
+  background: var(--fond); color: var(--texte); font-family: var(--police); overflow: hidden; box-shadow: 0 20px 34px -20px rgb(0 0 40 / .7);
+}
+.hl-roue-page > * { flex: none; }
+.hl-roue-avatar { display: grid; place-items: center; width: 28cqi; aspect-ratio: 1; border-radius: 50%; background: rgb(255 255 255 / .55); font-size: 11cqi; font-weight: 600; }
+.hl-roue-nom { max-width: 100%; margin-top: 5cqi; font-size: 10cqi; font-weight: 620; letter-spacing: -0.02em; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hl-roue-liens { display: flex; flex-direction: column; gap: 4.5cqi; width: 100%; margin-top: 8cqi; }
+.hl-roue-ligne {
+  flex: none; display: flex; align-items: center; gap: 4cqi; height: 17cqi; padding: 0 6cqi; border-radius: 99px;
+  background: var(--surface); color: var(--surface-texte); font-size: 8cqi; font-weight: 560; white-space: nowrap; overflow: hidden;
+  box-shadow: 0 2px 0 rgb(122 46 74 / .28); transition: background-color .35s, color .35s;
+}
+.hl-roue-ligne svg { flex: none; width: 9cqi; height: 9cqi; }
+.hl-roue-ligne span { overflow: hidden; text-overflow: ellipsis; }
+.hl-roue-ligne[data-vedette] { background: var(--vedette); color: var(--vedette-texte); }
+/* Le lien du réseau n'est pas là tant que personne n'en est venu ; à la première arrivée, il se glisse en tête. */
+.hl-roue-nouvelle { transition: height .45s var(--ease), margin .45s var(--ease), opacity .3s, background-color .35s, color .35s; }
+.hl-roue-page:not([data-rangee]) .hl-roue-nouvelle { height: 0; margin-bottom: -4.5cqi; opacity: 0; }
+@container (max-width: 95px) {
+  .hl-roue-nom { display: none; }
+  .hl-roue-avatar { width: 32cqi; font-size: 12cqi; }
+  .hl-roue-liens { margin-top: 12cqi; gap: 6cqi; }
+  .hl-roue-ligne { justify-content: center; height: 19cqi; }
+  .hl-roue-ligne svg { width: 12cqi; height: 12cqi; }
+  .hl-roue-ligne span { display: none; }
+  .hl-roue-page:not([data-rangee]) .hl-roue-nouvelle { margin-bottom: -6cqi; }
+}
+.hl-roue-source { display: inline-flex; align-items: center; justify-content: center; gap: 5px; min-width: 26px; height: 24px; padding: 0 6px; border-radius: 7px; color: #fff; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.hl-roue-source svg { flex: none; }
+@media (max-width: 479px) { .hl-roue-source { font-size: 0; gap: 0; } }
+.hl-roue-pied { min-height: 44px; margin-top: 10px; display: flex; justify-content: center; align-items: center; }
+.hl-roue-pied .hl-revoir { animation: hl-fondu .4s ease both; }
 
 /* Les onglets des réseaux, au-dessus du téléphone : l'onglet choisi s'enfonce, puis se lève dans la couleur du réseau.
  * Au téléphone, seul l'onglet choisi dit son nom ; les autres gardent leur picto. */
 .hl-reseaux {
-  display: flex; justify-content: center; gap: 4px; width: fit-content; max-width: 100%; margin: 40px auto 0; padding: 4px;
-  border-radius: 12px; background: var(--pale); box-shadow: inset 0 0 0 1px var(--filet);
+  display: flex; justify-content: center; gap: 4px; width: fit-content; max-width: 100%; margin: 8px auto 0; padding: 4px;
+  border-radius: 12px; background: rgb(255 255 255 / .7); box-shadow: inset 0 0 0 1px rgb(0 0 0 / .08);
 }
-@media (min-width: 1024px) { .hl-reseaux { margin-top: 8px; } }
 .hl-reseaux button {
   position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-width: 44px; min-height: 40px; padding: 0 12px;
   border: 0; border-radius: 9px; background: transparent; color: #4a4a4a; font: inherit; font-size: 14px; font-weight: 500; white-space: nowrap; cursor: pointer;
@@ -212,7 +305,11 @@ html:has(.hl) { background: #fff; scroll-padding-top: 76px; }
   .hl-reseaux button span { max-width: 0; opacity: 0; margin-left: -7px; transition: max-width .35s var(--ease), opacity .25s, margin-left .35s var(--ease); }
   .hl-reseaux button[aria-pressed='true'] span { max-width: 6.5em; opacity: 1; margin-left: 0; }
 }
-.hl-heros-visuel > .hl-reseaux-phrase { min-height: 3em; margin-top: 28px; max-width: 46ch; color: #3a3a3a; font-size: 15px; animation: hl-fondu .4s ease both; }
+/* Essaie : centrée, les onglets, les trois téléphones, puis la phrase de ce qui a changé. */
+.hl-selon { display: flex; flex-direction: column; align-items: center; text-align: center; }
+.hl-selon .hl-tete-section { margin-inline: auto; margin-bottom: 28px; }
+.hl-selon .hl-chapo { margin-inline: auto; }
+.hl-reseaux-phrase { min-height: 3em; margin: 32px auto 0; max-width: 46ch; color: var(--encre-2); font-size: 16px; text-wrap: balance; animation: hl-fondu .4s ease both; }
 
 /* Dans le téléphone, le lien qui vient de bouger : un cercle de la couleur du réseau se resserre sur lui,
  * le reste de la page s'efface un instant. Deux noms d'animation pour la rejouer à chaque réseau. */
@@ -246,35 +343,34 @@ html:has(.hl) { background: #fff; scroll-padding-top: 76px; }
 
 @media (min-width: 1024px) {
   .hl-heros {
-    display: grid; grid-template-columns: minmax(0, 1fr) clamp(440px, 42vw, 520px); align-items: center; gap: 40px;
-    align-items: start; padding-top: 72px; text-align: left;
+    display: grid; grid-template-columns: minmax(0, 1fr) clamp(440px, 42vw, 520px); gap: 48px;
+    align-items: start; padding-top: 72px; padding-bottom: 28px; text-align: left;
   }
   /* Le texte part d'en haut : une ligne d'état qui paraît sous le champ ne fait plus bouger le titre. */
-  .hl-heros-texte { padding-top: 88px; }
-  .hl-heros-fond { --mx: 68%; }
+  .hl-heros-texte { padding-top: 64px; }
+  .hl-roue-cadre { margin-top: 0; }
   .hl-heros-titre { max-width: 12ch; margin-inline: 0; font-size: clamp(52px, 5.2vw, 70px); }
   .hl-heros .hl-chapo { margin: 22px 0 0; max-width: 44ch; font-size: 19px; }
   .hl-heros .hl-reserver { max-width: 540px; margin: 32px 0 0; }
   .hl-heros .hl-reserver-etat, .hl-heros .hl-reserver-note { text-align: left; }
 }
 
-.hl-scene { position: relative; width: 100%; display: flex; justify-content: center; margin-top: 28px; }
+.hl-scene { position: relative; width: 100%; display: flex; justify-content: center; margin-top: 36px; }
 .hl-scene-milieu { position: relative; z-index: 2; }
 .hl-scene-gauche, .hl-scene-droite { --x: -118px; --r: -6deg; --s: .84; position: absolute; z-index: 1; left: 50%; top: 48px; transform: translateX(calc(-50% + var(--x))) rotate(var(--r)) scale(var(--s)); }
 .hl-scene-droite { --x: 118px; --r: 6deg; }
 @media (min-width: 640px) { .hl-scene-gauche { --x: -210px; --s: .9; } .hl-scene-droite { --x: 210px; --s: .9; } }
-@media (min-width: 1024px) { .hl-scene-gauche { --x: -142px; --r: -6deg; --s: .8; } .hl-scene-droite { --x: 142px; --r: 6deg; --s: .8; } }
+@media (min-width: 1024px) { .hl-scene-gauche { --x: -250px; --r: -6deg; --s: .88; } .hl-scene-droite { --x: 250px; --r: 6deg; --s: .88; } }
 .hl-scene .hl-tel { box-shadow: 0 0 0 1px #dcdcdc, 0 44px 88px -44px rgb(0 0 0 / .38); }
 .hl-scene-gauche .hl-tel, .hl-scene-droite .hl-tel { filter: saturate(.92); }
 .hl-scene [data-pris] { filter: grayscale(1); opacity: .45; transition: filter .3s, opacity .3s; }
 .hl-tel-pris { color: var(--erreur); }
 .hl-tel-fait { display: inline-flex; align-items: center; gap: 4px; color: var(--encre); font-weight: 600; animation: hl-pop .45s var(--ease) both; }
 .hl-tel-pris s { text-decoration-thickness: 1px; }
-@media (prefers-reduced-motion: no-preference) {
-  .hl-scene-milieu { animation: hl-monte 1s var(--ease) .3s both; }
-  .hl-scene-gauche, .hl-scene-droite { animation: hl-eventail 1.1s var(--ease) .85s both; }
+@media (scripting: enabled) and (prefers-reduced-motion: no-preference) {
+  .hl-scene :is(.hl-scene-gauche, .hl-scene-droite) { transition: transform 1.1s var(--ease) .25s, opacity .6s .25s; }
+  .hl-scene:not([data-vu]) :is(.hl-scene-gauche, .hl-scene-droite) { opacity: 0; transform: translateX(-50%) rotate(0deg) scale(calc(var(--s) * .97)); }
 }
-@keyframes hl-eventail { from { opacity: 0; transform: translateX(-50%) rotate(0deg) scale(calc(var(--s) * .97)); } }
 
 /* ---- Réserver son nom ---- */
 
@@ -491,7 +587,7 @@ html:has(.hl-reserver input:focus) { overflow-anchor: none; }
   .hl-chapitre .hl-h3 { font-size: 30px; letter-spacing: -0.03em; color: var(--gris); transition: color .45s; }
   .hl-chapitre p { margin-top: 10px; max-width: 46ch; font-size: 18px; color: var(--gris); transition: color .45s; }
   .hl-chapitre[data-lu] .hl-h3 { color: var(--encre); }
-  .hl-chapitre[data-lu] p { color: #3a3a3a; }
+  .hl-chapitre[data-lu] p { color: var(--encre-2); }
   .hl-chapitre .hl-revoir { margin-top: 14px; }
   .hl-colle { position: sticky; top: max(84px, calc(50vh - 260px)); display: flex; justify-content: center; }
 }
@@ -591,7 +687,7 @@ html:has(.hl-reserver input:focus) { overflow-anchor: none; }
 .hl-etapes li[data-lu] .hl-etape-num { border-color: var(--accent); background: var(--accent); color: #fff; }
 .hl-etapes b { display: block; font-size: 19px; font-weight: 600; letter-spacing: -0.02em; }
 .hl-etape-texte { display: block; margin-top: 2px; font-size: 15px; color: var(--gris); }
-.hl-etapes li[data-lu] .hl-etape-texte { color: #3a3a3a; }
+.hl-etapes li[data-lu] .hl-etape-texte { color: var(--encre-2); }
 .hl-prise-tel { display: flex; flex-direction: column; align-items: center; gap: 14px; }
 /* Au téléphone, la légende passe au-dessus du téléphone, comme dans les autres démos. */
 .hl-prise-legende { order: -1; display: flex; flex-direction: column; align-items: center; gap: 12px; width: min(290px, 100%); }
@@ -642,8 +738,14 @@ html:has(.hl-reserver input:focus) { overflow-anchor: none; }
 .hl-offres { display: grid; gap: 16px; margin-bottom: 20px; }
 @media (min-width: 800px) { .hl-offres { grid-template-columns: 1fr 1fr; } }
 .hl-offre { display: flex; flex-direction: column; gap: 16px; padding: 28px; border: 1px solid var(--filet); border-radius: 16px; }
-.hl-offre-pro { border-color: var(--accent); background: linear-gradient(180deg, var(--accent-pale), #fff 62%); box-shadow: 0 0 0 1px var(--accent), 0 24px 48px -32px rgb(90 63 240 / .45); }
+/* L'offre Pro, sur le bleu de Hopla. */
+.hl-offre-pro {
+  --papier: #1f35ff; --encre: #fff; --encre-2: #fff; --gris: #dde2ff; --filet: rgb(255 255 255 / .24); --pale: rgb(255 255 255 / .14); --accent: #ffd400;
+  border-color: transparent; background: var(--papier); color: var(--encre); box-shadow: 0 30px 60px -30px rgb(31 53 255 / .7);
+}
 .hl-offre-pro li svg { color: var(--accent); }
+.hl-offre-pro .hl-periode button[aria-checked='true'] { background: #fff; color: #1f35ff; box-shadow: none; }
+.hl-offre-pro .hl-btn-contour:hover { background: rgb(255 255 255 / .12); }
 .hl-prix { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; }
 .hl-prix b { font-size: 44px; font-weight: 600; line-height: 1; letter-spacing: -0.04em; font-variant-numeric: tabular-nums; }
 .hl-prix-glisse { display: inline-block; animation: hl-glisse .35s var(--ease); }

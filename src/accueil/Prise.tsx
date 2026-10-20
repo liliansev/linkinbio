@@ -119,7 +119,7 @@ export function Prise() {
   const montrer = (i: number) => { setAuto(false); setTouche(true); setChoisi(onglet === 'creer' ? i + 1 : ETAPE_DU_GESTE[i]); };
 
   return (
-    <section className="hl-section" aria-labelledby="prise">
+    <section className="hl-section" data-teinte="lilas" aria-labelledby="prise">
       <div className="hl-tete-section hl-entre">
         <h2 id="prise" className="hl-h2">Ta page en deux minutes, depuis ton téléphone.</h2>
         <p className="hl-chapo">Quatre questions pour la créer. Ensuite, tu la modifies en la touchant : pas de formulaire à part.</p>
