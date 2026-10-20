@@ -31,13 +31,14 @@ export function ActionEntete({ children }: { children: ReactNode }) {
   return lieu ? createPortal(children, lieu) : null;
 }
 
-export function Interrupteur({ actif, onChange, label, aide, disabled }: { actif: boolean; onChange: (v: boolean) => void; label: string; aide?: ReactNode; disabled?: boolean }) {
+/** `compact` : une rangée du panneau du bureau, le nom à gauche, sans phrase d'aide (elle passe en infobulle). */
+export function Interrupteur({ actif, onChange, label, aide, disabled, compact = false }: { actif: boolean; onChange: (v: boolean) => void; label: string; aide?: ReactNode; disabled?: boolean; compact?: boolean }) {
   const id = useId();
   return (
-    <div className="flex items-center justify-between gap-4 py-2.5">
-      <label htmlFor={id} className="min-w-0 flex-1 cursor-pointer">
-        <span className="block text-[14.5px] font-medium text-white">{label}</span>
-        {aide && <span className="mt-0.5 block text-[12.5px] leading-snug text-white/50">{aide}</span>}
+    <div className={`flex items-center justify-between gap-4 ${compact ? 'min-h-11 bureau:min-h-9' : 'py-2.5'}`}>
+      <label htmlFor={id} className="min-w-0 flex-1 cursor-pointer" title={compact && typeof aide === 'string' ? aide : undefined}>
+        <span className={`block text-white ${compact ? 'text-[13.5px]' : 'text-[14.5px] font-medium'}`}>{label}</span>
+        {aide && !compact && <span className="mt-0.5 block text-[12.5px] leading-snug text-white/50">{aide}</span>}
       </label>
       <Bascule id={id} actif={actif} disabled={disabled} onClick={() => { vibrer(); onChange(!actif); }} />
     </div>
@@ -223,6 +224,61 @@ export function Feuille({ ouverte, onFermer, retenir, titre, children, pied, cot
 }
 
 /**
+ * Le panneau du bureau, à droite de la page (direction B, 20 octobre 2026) :
+ * non modal. Pas de voile, pas de piège à focus : la page reste à portée, on
+ * clique un autre bloc, on la fait défiler. Tout s'enregistre en route, il n'y
+ * a donc pas de « Terminé ». Échap ou la croix le ferment ; le focus revient
+ * d'où il venait. `menu` range les gestes rares derrière « … ».
+ */
+export function Panneau({ titre, onFermer, menu, pied, children }: { titre: string; onFermer: () => void; menu?: ElementMenu[]; pied?: ReactNode; children: ReactNode }) {
+  const id = useId();
+  const racine = useRef<HTMLElement>(null);
+  const tete = useRef<HTMLHeadingElement>(null);
+  const fermerRef = useRef(onFermer);
+  fermerRef.current = onFermer;
+  // Ce qui avait le focus avant le panneau, lu avant qu'un champ du panneau (autoFocus) ne le prenne : il le retrouve à la fermeture.
+  const [avant] = useState(() => (typeof document === 'undefined' ? null : document.activeElement as HTMLElement | null));
+  useEffect(() => {
+    // Ouvert au clavier, le panneau prend le focus sur son titre (Tab mène aux champs). Ouvert à la souris, le focus reste
+    // où l'on a cliqué : la page garde la main, et les raccourcis (A, coller une adresse) marchent toujours.
+    const ici = document.activeElement as HTMLElement | null;
+    const auClavier = !ici || ici === document.body || ici.matches(':focus-visible');
+    if (!racine.current?.contains(ici) && auClavier) tete.current?.focus({ preventScroll: true });
+    const touche = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape' || e.defaultPrevented || document.querySelector('[role="dialog"][aria-modal="true"]')) return;
+      // Dans un champ de la page (le nom, la bio), Échap ne ferme pas le panneau.
+      const ici = document.activeElement;
+      if (ici?.closest('input, textarea, select, [contenteditable]') && !racine.current?.contains(ici)) return;
+      e.preventDefault();
+      fermerRef.current();
+    };
+    document.addEventListener('keydown', touche);
+    return () => {
+      document.removeEventListener('keydown', touche);
+      const ici = document.activeElement;
+      if ((!ici || ici === document.body) && avant?.isConnected) avant.focus({ preventScroll: true });
+    };
+  }, []);
+  return (
+    <section ref={racine} aria-labelledby={id} className="adm-panneau flex h-full min-h-0 flex-col">
+      <header className="flex h-[52px] shrink-0 items-center gap-1 pl-5 pr-3">
+        <h2 ref={tete} id={id} tabIndex={-1} className="min-w-0 flex-1 truncate text-[15px] font-semibold tracking-[-0.015em] text-white">{titre}</h2>
+        {menu && menu.length > 0 && (
+          <Menu label={`Gestes : ${titre}`} titre="Plus de gestes" elements={menu} className={classeBouton.icone}>
+            <Icone nom="ui-points" taille={18} />
+          </Menu>
+        )}
+        <button type="button" onClick={() => fermerRef.current()} className={classeBouton.icone} aria-label="Fermer le panneau" title="Fermer (Échap)">
+          <Icone nom="ui-fermer" taille={18} />
+        </button>
+      </header>
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-6">{children}</div>
+      {pied && <footer className="shrink-0 border-t border-white/[0.07] px-5 py-3">{pied}</footer>}
+    </section>
+  );
+}
+
+/**
  * Ouvre le choix d'une image depuis ce qu'on vient de toucher. iOS fait naître
  * son menu (Photothèque, Prendre une photo…) du champ lui-même : caché en
  * `display: none`, le champ n'a pas de place, et le menu partait d'un coin de
@@ -296,17 +352,24 @@ export interface ElementMenu {
  * bouton, un clic ailleurs la range. `entete` se pose au-dessus de la liste
  * sans en faire partie (l'adresse du compte, par exemple).
  */
-export function Menu({ label, elements, children, className = '', titre, haut = false, aligne = 'droite', entete }: {
+export function Menu({ label, elements, children, className = '', titre, haut = false, aligne = 'droite', entete, tabIndex, onBascule }: {
   label: string; elements: ElementMenu[]; children: ReactNode; className?: string;
   /** Le nom du bouton pour un lecteur d'écran, quand il ne montre qu'un picto. */
   titre?: string;
   haut?: boolean; aligne?: 'gauche' | 'droite' | 'largeur'; entete?: ReactNode;
+  /** -1 pour un raccourci de la souris dont le clavier a déjà le chemin (les actions posées à côté d'un bloc). */
+  tabIndex?: number;
+  /** Prévenu quand la liste s'ouvre ou se ferme : ce qui porte le menu reste affiché tant qu'elle est ouverte. */
+  onBascule?: (ouvert: boolean) => void;
 }) {
   const [ouvert, setOuvert] = useState(false);
   const id = useId();
   const bouton = useRef<HTMLButtonElement>(null);
   const boite = useRef<HTMLDivElement>(null);
   const options = () => [...(boite.current?.querySelectorAll<HTMLElement>('[role^=menuitem]') ?? [])];
+  const basculeRef = useRef(onBascule);
+  basculeRef.current = onBascule;
+  useEffect(() => { basculeRef.current?.(ouvert); }, [ouvert]);
   useEffect(() => {
     if (!ouvert) return;
     const o = options();
@@ -327,7 +390,7 @@ export function Menu({ label, elements, children, className = '', titre, haut = 
   const place = `${haut ? 'bottom-full mb-1.5' : 'top-full mt-1.5'} ${aligne === 'gauche' ? 'left-0' : aligne === 'droite' ? 'right-0' : 'inset-x-0'}`;
   return (
     <div className="relative">
-      <button ref={bouton} type="button" aria-haspopup="menu" aria-expanded={ouvert} aria-controls={ouvert ? id : undefined} aria-label={titre}
+      <button ref={bouton} type="button" aria-haspopup="menu" aria-expanded={ouvert} aria-controls={ouvert ? id : undefined} aria-label={titre} title={titre} tabIndex={tabIndex}
         onClick={() => setOuvert(o => !o)} onKeyDown={e => { if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && !ouvert) { e.preventDefault(); setOuvert(true); } }} className={className}>
         {children}
       </button>

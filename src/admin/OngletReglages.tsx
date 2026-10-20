@@ -69,7 +69,7 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
         <div className="flex flex-col gap-3">
           {/* Ce que ces deux champs deviennent : la carte qu'affichent Google, WhatsApp ou iMessage quand on partage ta page. */}
           <p className="text-[13px] leading-snug text-white/60">Ce que montrent Google et l’aperçu quand tu partages ton lien :</p>
-          <div className="overflow-hidden rounded-[14px] border border-white/10 bg-white/[0.03]" aria-hidden="true">
+          <div className="w-full max-w-[420px] overflow-hidden rounded-[14px] border border-white/10 bg-white/[0.03]" aria-hidden="true">
             {reglages.profil.avatar && <img src={reglages.profil.avatar} alt="" className="aspect-[1.91/1] w-full object-cover" />}
             <div className="px-3.5 py-2.5">
               <span className="block text-[12px] text-white/50" translate="no">{URL_PUBLIQUE.replace(/^https?:\/\//, '').split('/')[0]}</span>

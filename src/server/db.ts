@@ -474,6 +474,9 @@ export function clicsParBloc(compte: string, jours = 30): Record<string, number>
   return Object.fromEntries(lignes.map(l => [l.bloc, l.n]));
 }
 
+/** Quelqu'un a-t-il déjà vu la page (sur toute la durée de conservation) ? Une page vue a commencé : « Bien démarrer » se tait. */
+export const pageDejaVue = (compte: string) => !!base().prepare("SELECT 1 FROM evenements WHERE compte = ? AND type = 'vue' LIMIT 1").get(compte);
+
 export function stats(compte: string, jours: number, maintenant = Date.now()): Stats {
   const d = base();
   const jourListe: string[] = [];
@@ -504,7 +507,7 @@ export function stats(compte: string, jours: number, maintenant = Date.now()): S
     if (appDe(urls.get(l.bloc) ?? '')) apps.versApp += l.n;
   }
   // Une page que personne n'a jamais vue n'a pas de courbe à montrer : sans vue sur les deux périodes, on regarde plus loin.
-  const dejaVue = !!(actuel.vues || avant.vues) || !!d.prepare("SELECT 1 FROM evenements WHERE compte = ? AND type = 'vue' LIMIT 1").get(compte);
+  const dejaVue = !!(actuel.vues || avant.vues) || pageDejaVue(compte);
   const groupe = (colonne: 'source' | 'appareil') => (d.prepare(`SELECT ${colonne} AS nom, COUNT(*) AS n FROM evenements WHERE compte = ? AND type = 'vue' AND jour BETWEEN ? AND ? GROUP BY ${colonne} ORDER BY n DESC LIMIT 8`).all(compte, debut, fin) as { nom: string; n: number }[])
     .map(l => ({ nom: l.nom, vues: l.n, avant: colonne === 'source' ? vuesAvant.get(l.nom) ?? 0 : 0 }));
   return {

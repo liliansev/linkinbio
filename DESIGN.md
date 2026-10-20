@@ -288,7 +288,7 @@ Les cartes ordinaires sont plates : leur papier, leur bordure et le fond de trav
 
 ### Shadow Vocabulary
 
-- **Page éditée** : l'ombre légère détache la vraie page du shell.
+- **Page éditée** : l'ombre légère détache la vraie page du shell ; au bureau, le cadre de (390px) au centre de la toile (`0 0 0 1px` à 8 %, `0 24px 60px -24px` à 35 %).
 - **Feuille** : l'ombre signale une surface temporaire au-dessus du travail.
 - **Segment choisi** : petite ombre locale sur le choix actif.
 - **Retour flottant** : contraste inversé et ombre pour le message, sans masquer l'action de la feuille.
@@ -356,6 +356,8 @@ Piste de (40px) sur (24px), pastille blanche de (18px), cible tactile étendue ;
 ### Sheets and feedback
 
 Les feuilles nomment leur tâche, gardent la fermeture accessible et gèrent le focus. Les mouvements d'entrée et de sortie sont courts et décélérés ; `prefers-reduced-motion` retire les animations prévues. Les retours utilisent un message explicite, et proposent Annuler lorsque l'action le permet. L'état d'enregistrement est le même au téléphone et au bureau : une coche suivie de « Enregistré », un point gris qui bat pendant l'envoi ; seul l'échec passe au rouge. Au bureau, il ne se montre que sur les écrans où l'on écrit (Ma page, Réglages), ou quand il a quelque chose à dire.
+
+Au bureau, les réglages d'un bloc, le Design et les Réseaux s'ouvrent dans un panneau latéral non modal de (380px) (`Panneau` dans `ui.tsx`) : en-tête de (52px) avec le nom, le menu « … » et la croix, sections titrées en (12px) semi-gras, rangées de (36px) avec le libellé à gauche et la valeur à droite (`.adm-valeur`, (32px)). Il n'a pas de Terminé : ce qui est valable s'enregistre seul. Il ne prend le focus que s'il a été ouvert au clavier, et le rend à la fermeture. Sur la page éditée, la sélection est un anneau de (2px) à la couleur du texte du thème, jamais une couleur du shell : il se lit sur tous les thèmes.
 
 Un menu (le compte, puis les actions d'un bloc ou d'une ligne, la période) est une petite surface blanche bordée, avec une ombre courte : les flèches le parcourent, Échap le referme et rend le focus à son bouton (`Menu` dans `ui.tsx`). Les durées et courbes observées figurent dans le sidecar.
 

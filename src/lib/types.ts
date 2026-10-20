@@ -198,6 +198,8 @@ export interface EtatAdmin {
   stockageEphemere: boolean;
   /** Faux tant que le compte n'a pas accepté la version en vigueur des CGU (toujours vrai pour le compte principal). */
   cguAJour: boolean;
+  /** Vrai dès qu'un visiteur a vu la page : elle a commencé, « Bien démarrer » ne se montre plus. */
+  dejaVue: boolean;
 }
 
 export interface Stats {

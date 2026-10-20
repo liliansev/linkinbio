@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { Api, Bloc, EtatAdmin, Reglages } from '../lib/types.ts';
 import { TYPES_PRINCIPAL, nouveauBloc, urlPage } from '../lib/types.ts';
 import { composerMoment } from '../lib/moments.ts';
 import { PageLiens } from '../components/PageLiens.tsx';
 import { MaPage } from './MaPage.tsx';
 import { EditeurBloc } from './EditeurBloc.tsx';
+import type { OptionsEnregistrement } from './EditeurBloc.tsx';
 import { OngletStats } from './OngletStats.tsx';
 import { MaListe } from './MaListe.tsx';
 import { OngletReglages } from './OngletReglages.tsx';
@@ -14,7 +15,7 @@ import { PremiersPas, premiersPasFaits } from './PremiersPas.tsx';
 import { pageNeuve } from '../lib/demarrage.ts';
 import { sansSchema } from '../lib/types.ts';
 import { Icone } from '../components/Icone.tsx';
-import { BoutonCopier, EmplacementEntete, Menu, classeBouton, copierTexte, vibrer } from './ui.tsx';
+import { BoutonCopier, EmplacementEntete, Menu, classeBouton, copierTexte, useGrandEcran, vibrer } from './ui.tsx';
 import { Marque } from './Marque.tsx';
 import { AnneauDemarrage, noterPartage, useDemarrage } from './BienDemarrer.tsx';
 import { FournisseurOffre } from './offre.tsx';
@@ -22,10 +23,11 @@ import { OFFRES, estPlanPayant, joursStats } from '../lib/abonnement.ts';
 import { REFUS_PROGRAMMATION, nouvellesDates, selonDroits } from '../lib/droits.ts';
 
 /*
- * Le back office. Tout s'enregistre tout seul : un bloc quand on valide sa
- * feuille, l'ordre dès qu'on lâche, l'apparence et les réglages une fraction
- * de seconde après la dernière frappe. L'aperçu à droite (ou plein écran sur
- * téléphone) est la vraie page, rendue avec l'état en cours.
+ * Le back office. Tout s'enregistre tout seul : un bloc une fraction de
+ * seconde après la dernière frappe dans son panneau (au bureau) ou quand on
+ * valide sa feuille (au téléphone), l'ordre dès qu'on lâche, l'apparence et
+ * les réglages une fraction de seconde après la dernière frappe. La page
+ * qu'on modifie est la vraie page, rendue avec l'état en cours.
  */
 
 type Onglet = 'page' | 'stats' | 'reglages' | 'comptes';
@@ -46,6 +48,12 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
   const [onglet, setOnglet] = useState<Onglet>('page');
   const [sectionReglage, setSectionReglage] = useState<'abonnement' | undefined>();
   const [edition, setEdition] = useState<{ bloc: Bloc; nouveau: boolean; enBas?: boolean } | null>(null);
+  // Le bloc tel qu'il se tape dans l'éditeur : la page le redessine à chaque frappe, avant même qu'il soit écrit.
+  const [brouillon, setBrouillon] = useState<Bloc | null>(null);
+  // Ce que l'éditeur ouvert fait avant qu'on passe à autre chose : écrire ce qui est valable, ou retenir (voir `EditeurBloc`).
+  const garde = useRef<(() => boolean) | null>(null);
+  // La forme suit la largeur : au bureau, les réglages d'un bloc s'ouvrent dans un panneau à côté de la page.
+  const grand = useGrandEcran();
   const [sauvegarde, setSauvegarde] = useState<Sauvegarde>('ok');
   const [toast, setToast] = useState<{ texte: string; annuler?: () => void; action?: string; genre?: 'ok' | 'info'; long?: boolean } | null>(null);
   // Le doigt ou le focus sur le message le garde affiché : « Annuler » ne file pas pendant qu'on le vise.
@@ -63,6 +71,15 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
   // Remis à plus tard sur cet appareil : lu après l'hydratation, le serveur n'en sait rien.
   useEffect(() => { if (premiersPasFaits()) setPremiersPas(false); }, []);
   const enCours = useRef(0);
+  // La liste à jour entre deux rendus : deux gestes dans le même instant (écrire le bloc ouvert, puis en ouvrir un autre) partent de la même.
+  const blocsRef = useRef(blocs);
+  blocsRef.current = blocs;
+  const poserListe = (liste: Bloc[]) => { blocsRef.current = liste; setBlocs(liste); };
+  /** Un ordre de blocs appliqué à la liste d'aujourd'hui : un bloc modifié entre-temps garde sa dernière version. */
+  const selonOrdre = (ids: string[]) => {
+    const l = blocsRef.current;
+    return [...l.filter(b => !ids.includes(b.id)), ...ids.map(id => l.find(b => b.id === id)).filter((b): b is Bloc => !!b)];
+  };
   const compte = useMemo(() => ({ ...initial.compte, plan: abonnement.plan }), [initial.compte, abonnement.plan]);
   // L'onglet Comptes n'existe que pour Lilian.
   const onglets = ONGLETS.filter(o => o.id !== 'comptes' || api.comptes);
@@ -156,12 +173,43 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
     return () => clearInterval(t);
   }, [api, demo]);
 
+  /** Avant un autre geste : ce que l'éditeur ouvert a de valable s'écrit ; un champ faux le retient (faux). */
+  const libererEdition = () => !garde.current || garde.current();
+  /** Ferme l'éditeur ouvert, après avoir écrit ce qui est valable. */
+  function fermerEdition() {
+    if (!edition) return true;
+    if (!libererEdition()) return false;
+    setEdition(null);
+    return true;
+  }
   function choisirOnglet(o: Onglet) {
+    if (!fermerEdition()) return;
     setSectionReglage(undefined);
     setOnglet(o);
     scrollTo({ top: 0 });
   }
-  function versAbonnement() { setSectionReglage('abonnement'); setOnglet('reglages'); scrollTo({ top: 0 }); }
+  function versAbonnement() { setEdition(null); setSectionReglage('abonnement'); setOnglet('reglages'); scrollTo({ top: 0 }); }
+
+  /** Un clic sur un bloc l'ouvre ; au bureau, le panneau passe d'un bloc à l'autre en écrivant le précédent. */
+  function ouvrirBloc(bloc: Bloc) {
+    if (edition && !edition.nouveau && edition.bloc.id === bloc.id) return;
+    if (!libererEdition()) return;
+    setEdition({ bloc: blocsRef.current.find(b => b.id === bloc.id) ?? bloc, nouveau: false });
+  }
+  function ajouterBloc(bloc: Bloc, enBas?: boolean) {
+    if (!libererEdition()) return;
+    setEdition({ bloc, nouveau: true, enBas });
+  }
+  // Au téléphone, la feuille du bloc couvre le bas de l'écran : le bloc ouvert remonte juste sous l'en-tête, au-dessus d'elle.
+  const idOuvert = edition && !edition.nouveau ? edition.bloc.id : null;
+  useLayoutEffect(() => {
+    if (!idOuvert || grand) return;
+    const el = document.querySelector<HTMLElement>(`.adm-toile [data-id="${CSS.escape(idOuvert)}"]`);
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    const haut = 84, bas = innerHeight * 0.42 - 12;
+    if (r.top < haut || r.bottom > bas) scrollTo({ top: Math.max(0, scrollY + r.top - haut) });
+  }, [idOuvert, grand]);
 
   function changerReglages(r: Reglages) {
     setReglages(r);
@@ -181,25 +229,48 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
     }, 260);
   }
 
-  function enregistrerBloc(bloc: Bloc) {
-    const nouveau = !blocs.some(b => b.id === bloc.id);
+  /**
+   * Écrit un bloc. `garder` : l'éditeur reste ouvert sur lui (le panneau du bureau). `discret` : enregistré en route,
+   * sans message ni défilement ; l'état de l'en-tête dit que c'est gardé.
+   */
+  function enregistrerBloc(bloc: Bloc, options: OptionsEnregistrement = {}) {
+    const avant = blocsRef.current;
+    const nouveau = !avant.some(b => b.id === bloc.id);
     const enBas = nouveau && !!edition?.enBas;
-    const liste = nouveau ? (enBas ? [...blocs, bloc] : [bloc, ...blocs]) : blocs.map(b => (b.id === bloc.id ? bloc : b));
-    setBlocs(liste);
-    setEdition(null);
+    const liste = nouveau ? (enBas ? [...avant, bloc] : [bloc, ...avant]) : avant.map(b => (b.id === bloc.id ? bloc : b));
+    poserListe(liste);
+    setEdition(e => (e && e.bloc.id === bloc.id ? (options.garder ? { bloc, nouveau: false } : null) : e));
     // Le serveur pose un bloc neuf en tête : ajouté par le bas, il est rangé à la fin juste après.
     ecrire(async () => { await api.enregistrerBloc(bloc); if (enBas) await api.ordonner(liste.map(b => b.id)); });
     if (nouveau) {
-      const avant = blocs;
-      setToast({ texte: enBas ? 'Ajouté en bas de ta page' : 'Ajouté en haut de ta page', annuler: () => { setBlocs(avant); setToast({ texte: 'Ajout annulé', genre: 'info' }); ecrire(() => api.supprimerBloc(bloc.id)); } });
-      montrer(bloc.id);
-    } else {
+      setToast({ texte: enBas ? 'Ajouté en bas de ta page' : 'Ajouté en haut de ta page', annuler: () => {
+        poserListe(blocsRef.current.filter(b => b.id !== bloc.id));
+        setEdition(e => (e?.bloc.id === bloc.id ? null : e));
+        setToast({ texte: 'Ajout annulé', genre: 'info' });
+        ecrire(() => api.supprimerBloc(bloc.id));
+      } });
+      if (!options.discret) montrer(bloc.id);
+    } else if (!options.discret) {
       // Une modification se défait aussi, le temps du message : le bloc revient tel qu'il était.
-      const ancien = blocs.find(b => b.id === bloc.id);
+      const ancien = avant.find(b => b.id === bloc.id);
       if (ancien && JSON.stringify(ancien) !== JSON.stringify(bloc)) setToast({ texte: 'Modifications enregistrées', annuler: () => {
-        setBlocs(l => l.map(b => (b.id === ancien.id ? ancien : b))); setToast({ texte: 'Changements annulés', genre: 'info' }); ecrire(() => api.enregistrerBloc(ancien));
+        poserListe(blocsRef.current.map(b => (b.id === ancien.id ? ancien : b))); setToast({ texte: 'Changements annulés', genre: 'info' }); ecrire(() => api.enregistrerBloc(ancien));
       } });
     }
+  }
+
+  /** L'œil posé à côté d'un bloc, au bureau : le montrer ou le masquer sans l'ouvrir. */
+  function basculer(bloc: Bloc) {
+    const vrai = blocsRef.current.find(b => b.id === bloc.id);
+    if (!vrai || edition?.bloc.id === bloc.id) return;
+    const change = { ...vrai, public: !vrai.public };
+    poserListe(blocsRef.current.map(b => (b.id === vrai.id ? change : b)));
+    ecrire(() => api.enregistrerBloc(change));
+    setToast({ texte: change.public ? 'Montré sur ta page' : 'Masqué de ta page', annuler: () => {
+      poserListe(blocsRef.current.map(b => (b.id === vrai.id ? { ...b, public: vrai.public } : b)));
+      setToast({ texte: 'Changements annulés', genre: 'info' });
+      ecrire(() => api.enregistrerBloc({ ...change, public: vrai.public }));
+    } });
   }
 
   /** Plusieurs liens d'un coup (les premiers pas) : les nouveaux en tête, dans l'ordre donné ; les autres mis à jour sur place. */
@@ -210,15 +281,18 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
     ecrire(async () => { for (const b of [...liste].reverse()) await api.enregistrerBloc(b); });
   }
 
+  /** Un nouvel ordre : seuls les identifiants comptent, la page peut montrer un bloc en cours de saisie. */
   function ordonner(liste: Bloc[], texte = 'Bloc déplacé') {
-    const avant = blocs;
-    setBlocs(liste);
-    ecrire(() => api.ordonner(liste.map(b => b.id)));
-    setToast({ texte, annuler: () => { setBlocs(avant); setToast({ texte: 'Remis à sa place', genre: 'info' }); ecrire(() => api.ordonner(avant.map(b => b.id))); } });
+    const avant = blocsRef.current.map(b => b.id);
+    const nouvelle = selonOrdre(liste.map(b => b.id));
+    poserListe(nouvelle);
+    ecrire(() => api.ordonner(nouvelle.map(b => b.id)));
+    setToast({ texte, annuler: () => { const remise = selonOrdre(avant); poserListe(remise); setToast({ texte: 'Remis à sa place', genre: 'info' }); ecrire(() => api.ordonner(remise.map(b => b.id))); } });
   }
 
   /** Un cran plus haut ou plus bas, depuis la feuille du bloc : l'ordre se règle aussi sans glisser. */
   function deplacer(bloc: Bloc, sens: -1 | 1) {
+    const blocs = blocsRef.current;
     const i = blocs.findIndex(b => b.id === bloc.id);
     const j = i + sens;
     if (i < 0 || j < 0 || j >= blocs.length) return;
@@ -229,29 +303,43 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
   }
 
   function supprimer(bloc: Bloc) {
-    const avant = blocs;
-    setBlocs(liste => liste.filter(b => b.id !== bloc.id));
-    setEdition(null);
+    const avant = blocsRef.current;
+    const i = avant.findIndex(b => b.id === bloc.id);
+    if (i < 0) return;
+    // La version enregistrée revient avec Annuler, jamais un champ à moitié tapé.
+    const vrai = avant[i];
+    poserListe(avant.filter(b => b.id !== bloc.id));
+    // Retiré depuis la page, un autre bloc ouvert dans le panneau le reste.
+    setEdition(e => (e?.bloc.id === bloc.id ? null : e));
     ecrire(() => api.supprimerBloc(bloc.id));
     setToast({
       texte: 'Retiré de ta page',
       // Retirer ne demande pas de confirmation : l'annulation reste offerte plus longtemps.
       long: true,
       annuler: () => {
-        setBlocs(avant);
+        // À sa place d'avant : juste après le bloc qui le précédait.
+        const l = blocsRef.current.filter(b => b.id !== vrai.id);
+        const precedent = avant[i - 1]?.id;
+        const k = precedent ? l.findIndex(b => b.id === precedent) + 1 : 0;
+        const remise = [...l.slice(0, k), vrai, ...l.slice(k)];
+        poserListe(remise);
         setToast({ texte: 'Remis sur ta page', genre: 'info' });
-        ecrire(async () => { await api.enregistrerBloc(bloc); await api.ordonner(avant.map(b => b.id)); });
+        ecrire(async () => { await api.enregistrerBloc(vrai); await api.ordonner(remise.map(b => b.id)); });
       },
     });
   }
 
   function dupliquer(bloc: Bloc) {
-    const copie = { ...bloc, id: `n${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`, titre: bloc.titre ? `${bloc.titre} (copie)` : '' };
+    // L'éditeur ouvert écrit d'abord ce qui est tapé : la copie s'ouvre à sa place.
+    if (!libererEdition()) return;
+    const blocs = blocsRef.current;
+    const source = blocs.find(b => b.id === bloc.id) ?? bloc;
+    const copie = { ...source, id: `n${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`, titre: source.titre ? `${source.titre} (copie)` : '' };
     // Sans Starter, une copie ne reprend pas des dates : le serveur la refuserait. Rien n'est créé, le message le dit tout de suite.
     if (!droits.programmation && nouvellesDates(undefined, copie)) { setToast(refusProgrammation()); return; }
     const i = blocs.findIndex(b => b.id === bloc.id);
     const liste = [...blocs.slice(0, i + 1), copie, ...blocs.slice(i + 1)];
-    setBlocs(liste);
+    poserListe(liste);
     setEdition({ bloc: copie, nouveau: false });
     montrer(copie.id);
     ecrire(async () => { await api.enregistrerBloc(copie); await api.ordonner(liste.map(b => b.id)); });
@@ -262,20 +350,24 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
     location.reload();
   }
 
-  // L'aperçu plein écran est la page telle que les visiteurs la voient : ce que l'offre ne comprend pas s'en efface, comme sur le serveur.
+  // Le bloc en cours de saisie, à sa place sur la page.
+  const brouillonVu = brouillon && edition && !edition.nouveau && brouillon.id === edition.bloc.id ? brouillon : null;
+  const blocsAffiches = useMemo(() => (brouillonVu ? blocs.map(b => (b.id === brouillonVu.id ? brouillonVu : b)) : blocs), [blocs, brouillonVu]);
+  // L'aperçu (plein écran au téléphone, sur ordinateur au bureau) est la page telle que les visiteurs la voient :
+  // ce que l'offre ne comprend pas s'en efface, comme sur le serveur.
   const page = useMemo(() => {
     const maintenant = Date.now();
-    const permis = selonDroits(reglages, blocs.filter(b => compte.principal || !TYPES_PRINCIPAL.includes(b.type)), droits);
+    const permis = selonDroits(reglages, blocsAffiches.filter(b => compte.principal || !TYPES_PRINCIPAL.includes(b.type)), droits);
     return { reglages: permis.reglages, blocs: composerMoment(permis.blocs, maintenant), compte, maintenant };
-  }, [reglages, blocs, compte, droits]);
+  }, [reglages, blocsAffiches, compte, droits]);
   const chargerStats = useCallback((jours: number) => api.stats(jours).then(s => { if (jours === 30) setClics(Object.fromEntries(s.blocs.map(b => [b.id, b.clics]))); return s; }), [api]);
-  const demarrage = useDemarrage(reglages, blocs);
+  const demarrage = useDemarrage(reglages, blocs, { principal: compte.principal, dejaVue: !!initial.dejaVue });
   useEffect(() => { if (!demarrage.actif) setDemarrageOuvert(false); }, [demarrage.actif]);
 
   if (!cguAJour) return <AccepterCgu accepter={async () => { await api.accepterCgu(); setCguAJour(true); }} deconnexion={deconnexion} />;
 
   const bulle = toast && (
-    <div role="status" onPointerEnter={() => setToastTenu(true)} onPointerLeave={() => setToastTenu(false)} onFocus={() => setToastTenu(true)} onBlur={e => { if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setToastTenu(false); }} className={`adm-toast fixed inset-x-4 ${onglet === 'page' && !premiersPas ? 'bottom-[calc(134px+env(safe-area-inset-bottom))]' : 'bottom-[calc(76px+env(safe-area-inset-bottom))]'} z-[60] mx-auto flex max-w-sm items-center justify-between gap-3 rounded-2xl bg-white px-4 py-3 text-[14.5px] font-medium text-nuit shadow-2xl lg:bottom-6`}>
+    <div role="status" onPointerEnter={() => setToastTenu(true)} onPointerLeave={() => setToastTenu(false)} onFocus={() => setToastTenu(true)} onBlur={e => { if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setToastTenu(false); }} className={`adm-toast fixed inset-x-4 ${onglet === 'page' && !premiersPas ? 'bottom-[calc(134px+env(safe-area-inset-bottom))]' : 'bottom-[calc(76px+env(safe-area-inset-bottom))]'} z-[60] mx-auto flex max-w-sm items-center justify-between gap-3 rounded-2xl bg-white px-4 py-3 text-[14.5px] font-medium text-nuit shadow-2xl lg:bottom-6 lg:left-[232px]`}>
       <span className="flex items-center gap-2">{/* La coche confirme ; une simple information n'en a pas. */}{!toast.annuler && toast.genre !== 'info' && sauvegarde !== 'erreur' && <span aria-hidden="true"><Icone nom="ui-ok" taille={18} /></span>}{toast.texte}</span>
       {toast.annuler && <button ref={actionToast} type="button" onClick={toast.annuler} className="-my-2 min-h-11 rounded-lg px-3 font-semibold text-nuit underline decoration-nuit/30 underline-offset-4 hover:bg-nuit/10">{toast.action ?? 'Annuler'}</button>}
     </div>
@@ -297,6 +389,12 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
     );
   }
 
+  // Un éditeur par bloc (la clé) : passer d'un bloc à l'autre repart de la version enregistrée du suivant.
+  const editeur = edition && (
+    <EditeurBloc key={edition.bloc.id} panneau={grand} garde={garde} onBrouillon={setBrouillon}
+      adressePage={urlPage(compte)} principal={compte.principal} bloc={edition.bloc} reglages={reglages} nouveau={edition.nouveau} clics={clics[edition.bloc.id] ?? 0} prises={initial.places?.[edition.bloc.id] ?? 0} onFermer={() => setEdition(null)}
+      onEnregistrer={enregistrerBloc} onSupprimer={supprimer} onDupliquer={dupliquer} onDeplacer={deplacer} place={{ rang: blocs.findIndex(b => b.id === edition.bloc.id), total: blocs.length }} envoyerImage={d => api.envoyerImage(d)} apercuSite={u => api.apercuSite(u)} />
+  );
   const indicateur = sauvegarde === 'encours' ? 'Enregistrement…' : sauvegarde === 'erreur' ? 'Non enregistré' : 'Enregistré';
   // Le même signe au téléphone et au bureau : une coche quand tout est gardé, un point qui bat pendant l'envoi, du rouge seulement en cas d'échec.
   const signe = sauvegarde === 'ok'
@@ -378,17 +476,20 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
       )}
 
       <EmplacementEntete.Provider value={emplacement}>
-      <div className="mx-auto max-w-[1120px] px-4 lg:max-w-none lg:px-10">
-        <main id="contenu-admin" className={`mx-auto w-full pb-28 lg:pb-12 lg:pt-7 ${onglet === 'page' ? 'pt-4' : 'pt-6'}`}>
+      {/* Ma page prend tout le canevas au bureau ; les autres onglets gardent leurs marges. */}
+      <div className={`mx-auto max-w-[1120px] px-4 lg:max-w-none ${onglet === 'page' ? 'lg:px-0' : 'lg:px-10'}`}>
+        <main id="contenu-admin" className={`mx-auto w-full pb-28 ${onglet === 'page' ? 'pt-4 lg:p-0' : 'pt-6 lg:pb-12 lg:pt-7'}`}>
           <div key={onglet} className="adm-onglet">
           {/* Au téléphone, le titre de l'écran ouvre le contenu (Ma page n'affiche pas le sien : l'en-tête et la barre du bas disent déjà où l'on est,
               il reste pour les lecteurs d'écran). Au bureau, il est dans l'en-tête. */}
           <div className={`adm-page-heading lg:hidden ${onglet === 'page' ? 'sr-only' : ''}`}>
             <h1>{titre}</h1>
           </div>
-          {onglet === 'page' && <MaPage compte={compte} reglages={reglages} blocs={blocs} clics={clics} onReglages={changerReglages} onOrdonner={ordonner}
-            onOuvrir={b => setEdition({ bloc: b, nouveau: false })} onAjouter={(b, enBas) => setEdition({ bloc: b, nouveau: true, enBas })} envoyerImage={d => api.envoyerImage(d)} annoncer={t => setToast(t)}
-            demarrage={demarrageOuvert} fermerDemarrage={() => setDemarrageOuvert(false)} />}
+          {onglet === 'page' && <MaPage compte={compte} reglages={reglages} blocs={blocsAffiches} clics={clics} visiteurs={page} grand={grand}
+            choisi={idOuvert} panneau={grand && editeur} onReglages={changerReglages} onOrdonner={l => ordonner(l)}
+            onOuvrir={ouvrirBloc} onAjouter={ajouterBloc} liberer={libererEdition} fermerEdition={fermerEdition} gestes={{ basculer, dupliquer, supprimer }}
+            envoyerImage={d => api.envoyerImage(d)} annoncer={t => setToast(t)}
+            demarrage={demarrage} demarrageOuvert={demarrageOuvert} fermerDemarrage={() => setDemarrageOuvert(false)} />}
           {onglet === 'stats' && <OngletStats charger={chargerStats} adresse={urlPage(compte)} pseudo={compte.pseudo} joursMax={initial.paiement ? joursStats(compte.plan, droits.stats) : 365} onOffres={initial.paiement ? versAbonnement : undefined}
             ouvrirApps={reglages.ouvrirApps} onActiverApps={() => changerReglages({ ...reglages, ouvrirApps: true })} liste={<MaListe api={api} />} />}
           {onglet === 'reglages' && <OngletReglages reglages={reglages} compte={compte} onChange={changerReglages} onDeconnexion={deconnexion} urlExport={api.urlExport} supprimerMonCompte={api.supprimerMonCompte}
@@ -425,10 +526,8 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
         </div>
       )}
 
-      {edition && (
-        <EditeurBloc adressePage={urlPage(compte)} principal={compte.principal} bloc={edition.bloc} reglages={reglages} nouveau={edition.nouveau} clics={clics[edition.bloc.id] ?? 0} prises={initial.places?.[edition.bloc.id] ?? 0} onFermer={() => setEdition(null)}
-          onEnregistrer={enregistrerBloc} onSupprimer={supprimer} onDupliquer={dupliquer} onDeplacer={deplacer} place={{ rang: blocs.findIndex(b => b.id === edition.bloc.id), total: blocs.length }} envoyerImage={d => api.envoyerImage(d)} apercuSite={u => api.apercuSite(u)} />
-      )}
+      {/* Au téléphone, l'éditeur est une feuille du bas ; au bureau, il occupe le panneau à droite de la page (voir MaPage). */}
+      {!grand && editeur}
 
       {bulle}
     </div>

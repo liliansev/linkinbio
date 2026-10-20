@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { createContext, useContext, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { Acces, Bloc, Preuve } from '../lib/types.ts';
 import type { Creneau } from '../lib/moments.ts';
@@ -22,9 +22,31 @@ const versLocal = (iso: string) => {
 };
 const depuisLocal = (v: string) => (v ? new Date(v).toISOString() : '');
 
+/**
+ * Dans le panneau du bureau, chaque règle tient sur une rangée : son nom à
+ * gauche, ce qui est réglé à droite comme une valeur qu'on ouvre (« Toujours »,
+ * « Tous les réseaux »). Ailleurs, le groupe bordé avec son picto.
+ */
+export const RangeesCompactes = createContext(false);
+
 /** Une section qui se replie, avec un résumé de ce qui est réglé. */
 export function Repli({ titre, icone, resume, ouvert: depart, etiquette, children }: { titre: string; icone: string; resume?: string; ouvert: boolean; etiquette?: ReactNode; children: ReactNode }) {
   const [ouvert, setOuvert] = useState(depart);
+  const compact = useContext(RangeesCompactes);
+  if (compact) return (
+    <div>
+      <button type="button" onClick={() => setOuvert(!ouvert)} aria-expanded={ouvert} className="group flex min-h-11 w-full items-center gap-2 text-left bureau:min-h-9">
+        <span className="min-w-0 shrink-0 text-[13.5px] text-white">{titre}</span>
+        {etiquette}
+        {/* La valeur se lit comme un menu qu'on ouvre : le résumé, puis un chevron. */}
+        <span className="adm-valeur ml-auto">
+          <span className="min-w-0 truncate">{resume || 'Régler'}</span>
+          <Icone nom="ui-chevron" taille={14} className={`shrink-0 transition-transform duration-300 ${ouvert ? 'rotate-180' : ''}`} />
+        </span>
+      </button>
+      {ouvert && <div className="flex flex-col gap-3 pb-2 pt-1.5">{children}</div>}
+    </div>
+  );
   return (
     <div className="adm-groupe">
       <button type="button" onClick={() => setOuvert(!ouvert)} aria-expanded={ouvert} className="flex min-h-12 w-full items-center gap-2.5 px-4 text-left text-[14.5px] font-medium text-white/85">
@@ -147,7 +169,7 @@ export function RegleReseaux({ b, maj, reseaux }: { b: Bloc; maj: (c: Partial<Bl
   const caches = tous.filter(s => !visible(s));
   const enTete = tous.filter(tete);
   const noms = (l: Audience[]) => l.map(s => NOMS_AUDIENCES[s]).join(', ');
-  const resume = [caches.length ? `Pas sur ${noms(caches)}` : 'Partout', enTete.length ? `en tête sur ${noms(enTete)}` : ''].filter(Boolean).join(', ');
+  const resume = [caches.length ? `Pas sur ${noms(caches)}` : 'Tous les réseaux', enTete.length ? `en tête sur ${noms(enTete)}` : ''].filter(Boolean).join(', ');
   const [premier, setPremier] = useState(enTete.length > 0);
   return (
     <Repli titre="Afficher sur" icone="cible" resume={resume} ouvert={false}>

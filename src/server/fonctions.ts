@@ -106,7 +106,7 @@ function etat(compte: string): EtatAdmin {
   const d = droits(c);
   return {
     // Les clics de chaque bloc sont des stats : sans elles, l'éditeur n'en montre pas.
-    reglages: db.lireReglages(compte), blocs: db.lireBlocs(compte), clics: d.stats ? db.clicsParBloc(compte, 30) : {}, places: db.placesParBloc(compte), stockageEphemere: db.stockageEphemere(),
+    reglages: db.lireReglages(compte), blocs: db.lireBlocs(compte), clics: d.stats ? db.clicsParBloc(compte, 30) : {}, places: db.placesParBloc(compte), stockageEphemere: db.stockageEphemere(), dejaVue: db.pageDejaVue(compte),
     compte: { pseudo: c.pseudo, principal: compte === PRINCIPAL, email: c.email, plan: abonnement.plan }, cguAJour: cguAJour(compte),
     abonnement, paiement: compte !== PRINCIPAL && !!creem.config(process.env), enVente: creem.offresEnVente(process.env), droits: d,
   };

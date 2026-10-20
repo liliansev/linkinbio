@@ -62,7 +62,7 @@ function statsVides(jours: number): Stats {
 export const apiDemo: Api = {
   async charger(): Promise<EtatAdmin> {
     const s = statsFictives(30);
-    return { ...etat, clics: Object.fromEntries(s.blocs.map(b => [b.id, b.clics])), places: {}, stockageEphemere: false, cguAJour: true, compte: { pseudo: 'lilian', principal: true, email: '', plan: 'premium' },
+    return { ...etat, clics: Object.fromEntries(s.blocs.map(b => [b.id, b.clics])), places: {}, stockageEphemere: false, cguAJour: true, dejaVue: true, compte: { pseudo: 'lilian', principal: true, email: '', plan: 'premium' },
       abonnement: { plan: 'premium', statut: '', finPeriode: null, periode: null, portail: false }, paiement: false, enVente: [], droits: DROITS_APERCU };
   },
   async enregistrerBloc(bloc) {
@@ -186,7 +186,7 @@ export function recommencerNouveau() {
 export const apiNouveau: Api = {
   ...apiDemo,
   async charger(): Promise<EtatAdmin> {
-    return { reglages: nouveau.reglages, blocs: nouveau.blocs, clics: {}, places: {}, stockageEphemere: false, cguAJour: nouveau.cgu, compte: { pseudo: 'camille', principal: false, email: 'camille@exemple.fr', plan: 'gratuit' },
+    return { reglages: nouveau.reglages, blocs: nouveau.blocs, clics: {}, places: {}, stockageEphemere: false, cguAJour: nouveau.cgu, dejaVue: false, compte: { pseudo: 'camille', principal: false, email: 'camille@exemple.fr', plan: 'gratuit' },
       abonnement: { plan: 'gratuit', statut: '', finPeriode: null, periode: null, portail: false }, paiement: false, enVente: [], droits: DROITS_APERCU };
   },
   async enregistrerBloc(bloc) {

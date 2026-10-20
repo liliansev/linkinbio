@@ -3,6 +3,8 @@
  * court (150 à 300 ms) et décéléré : l'interface répond, elle ne se montre pas.
  */
 :root { --adm-sortie: cubic-bezier(0.16, 1, 0.3, 1); }
+/* Une feuille qui fige le défilement ne fait pas sauter la page : la place de la barre reste réservée. */
+html:has(.adm) { scrollbar-gutter: stable; }
 
 /*
  * La tenue noir et blanc (19 octobre 2026) : le back office parle à tout le
@@ -86,10 +88,12 @@
 .adm ::selection { background: #0a0a0a; color: #fff; }
 .adm { scrollbar-color: rgb(0 0 0 / 0.2) transparent; -webkit-tap-highlight-color: transparent; }
 .adm :is(button, a, input, textarea, select, summary, [tabindex]):focus-visible { outline: 2px solid #0a0a0a; outline-offset: 2px; }
+/* Dans la page qu'on modifie (et ses aperçus), l'anneau prend la couleur du texte du thème : l'encre du back office disparaîtrait sur un thème sombre. */
+.adm .lp :is(button, a, input, textarea, select, summary, [tabindex]):focus-visible { outline-color: var(--texte); }
 /* La feuille prend le focus pour qu'on y entre au clavier, mais elle n'est pas un contrôle : pas d'anneau autour d'elle. */
 .adm .adm-feuille:focus-visible { outline: none; }
-/* Un titre qui reçoit le focus quand l'écran change (premiers pas, lien envoyé) n'est pas un contrôle non plus. */
-.adm h1[tabindex='-1']:focus-visible { outline: none; }
+/* Un titre qui reçoit le focus quand l'écran change (premiers pas, lien envoyé, panneau ouvert au clavier) n'est pas un contrôle non plus. */
+.adm :is(h1, h2)[tabindex='-1']:focus-visible { outline: none; }
 
 /* Les premiers pas : la vraie page en miniature, à la largeur d'un téléphone. */
 .adm-miroir { --z: 0.62; width: calc(390px * var(--z)); flex-shrink: 0; }
@@ -159,9 +163,6 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
 .adm-field:hover { border-color: #b2b2ab; }
 .adm-mobile-nav { border-top: 1px solid var(--adm-trait); background: #fff; }
 .adm-mobile-nav button { height: 64px; }
-.adm-editor-layout { display: flex; flex-direction: column; gap: 18px; }
-.adm-editor-content { display: flex; min-width: 0; flex-direction: column; gap: 16px; }
-.adm-editor-content > :first-child:empty { display: none; }
 /* La page posée sur le gris : un trait fin pour son bord (un thème clair se confond sinon avec le fond), une ombre courte dessous. */
 .adm-toile { box-shadow: 0 0 0 1px var(--adm-trait), 0 8px 28px -16px rgb(0 0 0 / 0.25); }
 /* La fin des premiers pas : la page passe au premier plan, cernée d'encre. */
@@ -194,17 +195,79 @@ button.adm-settings-row:hover { background: #f7f7f5; }
   .adm-editor-tools { position: fixed; inset-inline: 0; bottom: calc(64px + env(safe-area-inset-bottom)); z-index: 30; padding: 10px 16px 2px; border-top: 1px solid var(--adm-trait); background: #fff; }
   .adm-editor-tools > div { max-width: 28rem; margin-inline: auto; }
   .adm:has(.adm-editor-tools) .adm-mobile-nav { border-top-color: transparent; }
-  .adm-editor-layout { padding-bottom: 57px; }
+  .adm-studio { padding-bottom: 57px; }
+  .adm-outils-page, .adm-panneau-cote { display: none; }
+  /* Une feuille ouverte couvre le bas de l'écran : la page gagne de quoi faire monter son dernier bloc au-dessus d'elle. */
+  .adm:has(.adm-feuille) .adm-studio { padding-bottom: 60dvh; }
 }
 /* Un onglet qui glisse prête son cadre à ce qui est fixe en lui : Ma page arrive en fondu, pour que ses gestes soient déjà à leur place. */
 @media (max-width: 1023px) and (prefers-reduced-motion: no-preference) {
   .adm-onglet:has(.adm-editor-tools) { animation-name: adm-fondu; }
 }
+/*
+ * Ma page au bureau (direction B, 20 octobre 2026) : le canevas gris, la page
+ * au centre à la largeur d'un téléphone, et à droite un panneau de 380 px qui
+ * s'ouvre sur le bloc choisi ou le design. Le canevas rétrécit pour lui faire
+ * place : la page reste entière et centrée dans ce qui reste.
+ */
 @media (min-width: 1024px) {
-  .adm-editor-layout { display: grid; grid-template-columns: minmax(0, 1fr) 248px; align-items: start; gap: 32px; }
-  .adm-editor-tools { grid-column: 2; grid-row: 1; position: sticky; top: 108px; padding: 23px; border: 1px solid var(--adm-trait); border-radius: 16px; background: var(--adm-surface); }
-  .adm-editor-tools .adm-button-primary, .adm-editor-tools .adm-button-outline { font-size: 13px; padding-left: 10px; padding-right: 10px; }
-  .adm-editor-content { grid-column: 1; grid-row: 1; }
+  .adm-studio { display: grid; grid-template-columns: minmax(0, 1fr) 0px; min-height: calc(100dvh - 57px); transition: grid-template-columns 0.28s var(--adm-sortie); }
+  .adm-studio[data-cote] { grid-template-columns: minmax(0, 1fr) 380px; }
+  .adm-editor-tools { display: none; }
+  .adm-canevas { container: canevas / inline-size; min-width: 0; padding: 16px clamp(16px, 2.5vw, 32px) 72px; background: #f3f3f1; }
+  /* La barre du haut flotte au-dessus de la page et la suit quand on descend. */
+  .adm-outils-page { position: sticky; top: 73px; z-index: 20; display: flex; width: fit-content; height: 36px; align-items: center; gap: 4px; margin: 0 auto 20px; padding: 0 4px; border: 1px solid #e3e3df; border-radius: 10px; background: #fff; box-shadow: 0 1px 2px rgb(10 10 10 / 0.05); }
+  .adm-outil { display: inline-flex; height: 28px; align-items: center; gap: 6px; padding: 0 10px; border-radius: 7px; color: #0a0a0a; font-size: 13.5px; font-weight: 500; transition: background-color 150ms, color 150ms; }
+  .adm-outil:hover { background: #f2f2ef; }
+  .adm-outil:is([aria-pressed='true'], [aria-checked='true']) { background: #ebebe7; }
+  .adm-outil-carre { width: 28px; justify-content: center; padding: 0; color: #55554f; }
+  .adm-outil-carre[aria-checked='true'] { color: #0a0a0a; }
+  .adm-outils-trait { width: 1px; height: 18px; background: #e3e3df; }
+  .adm-demarrage { width: 390px; max-width: 100%; margin: 0 auto 16px; }
+  .adm-demarrage:empty { display: none; }
+  .adm-cadre-lieu { position: relative; width: 390px; max-width: 100%; margin: 0 auto; }
+  .adm-cadre { display: flex; min-height: 760px; flex-direction: column; border-radius: 28px; box-shadow: 0 0 0 1px rgb(10 10 10 / 0.08), 0 24px 60px -24px rgb(10 10 10 / 0.35); }
+  .adm-cadre > .lp { flex: 1 0 auto; }
+  .adm-calque { position: absolute; inset: 0; z-index: 10; pointer-events: none; }
+  /* Le panneau : collé sous l'en-tête, il défile seul ; la colonne s'ouvre de 0 à 380 px sans couper la page. */
+  .adm-panneau-cote { min-width: 0; overflow-x: clip; background: #fff; }
+  .adm-panneau-colle { position: sticky; top: 57px; width: 380px; height: calc(100dvh - 57px); border-left: 1px solid #ececea; }
+  /* Le message du bas se centre sur ce qui reste visible : la page, pas le panneau. */
+  .adm:has(.adm-studio[data-cote]) .adm-toast { right: 396px; }
+}
+@media (min-width: 1024px) and (prefers-reduced-motion: reduce) { .adm-studio { transition: none; } }
+
+/* Les gestes d'un bloc au survol, hors de la page : la poignée à gauche, l'œil et « … » à droite. */
+.adm-actions-bloc { position: absolute; display: flex; gap: 4px; pointer-events: auto; }
+.adm-actions-gauche { left: -44px; }
+.adm-actions-droite { left: calc(100% + 12px); }
+/* Un canevas étroit (le panneau ouvert sur un petit écran) : les gestes rentrent dans la marge de la page. */
+@container canevas (max-width: 559px) {
+  .adm-actions-gauche { left: 4px; }
+  .adm-actions-droite { left: auto; right: 4px; }
+}
+.adm-action-bloc { display: grid; width: 32px; height: 32px; place-items: center; border: 1px solid #e3e3df; border-radius: 8px; background: #fff; color: #55554f; box-shadow: 0 1px 2px rgb(10 10 10 / 0.05); transition: color 150ms, border-color 150ms; }
+.adm-action-bloc:hover, .adm-action-bloc[aria-expanded='true'] { border-color: #c7c7c0; color: #0a0a0a; }
+
+/* L'aperçu sur ordinateur : la page des visiteurs à 1280 px, réduite pour tenir dans le canevas. */
+.adm-ordi-lieu { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.adm-ordi { overflow: hidden; border-radius: 14px; }
+.adm-ordi-page { display: flex; min-height: 800px; flex-direction: column; transform-origin: 0 0; }
+.adm-ordi-page > .lp { flex: 1 0 auto; }
+.adm-ordi-legende { color: #5f5f5a; font-size: 12px; }
+
+/*
+ * Le panneau d'un bloc : une rangée par réglage, son nom à gauche, sa valeur à
+ * droite dans un petit bouton bordé (36 px de haut, bouton de 32).
+ */
+.adm-section-panneau { margin: 0 0 6px; color: #3d3d39; font-size: 12px; font-weight: 600; }
+.adm-valeur { display: inline-flex; min-width: 0; max-width: 62%; height: 44px; flex-shrink: 0; align-items: center; gap: 6px; padding: 0 10px; border: 1px solid #e3e3df; border-radius: 10px; background: #fff; color: #0a0a0a; font-size: 13.5px; white-space: nowrap; transition: border-color 150ms, background-color 150ms; }
+.adm-valeur:hover { border-color: #c7c7c0; }
+.adm-valeur:disabled { opacity: 0.45; }
+.adm-field.adm-field-ligne { min-height: 44px; padding: 0 10px; border-color: #e3e3df; border-radius: 10px; background: #fff; font-size: 16px; }
+@media (min-width: 1024px) and (pointer: fine) {
+  .adm-valeur { height: 32px; border-radius: 8px; }
+  .adm-field.adm-field-ligne { min-height: 32px; height: 32px; border-radius: 8px; font-size: 13.5px; }
 }
 @media (max-width: 639px) {
   .adm-page-heading { margin-bottom: 20px; }
