@@ -14,15 +14,17 @@ import { MOTS, appel, useInscription } from './textes.ts';
  * tapé dans sa barre d'adresse et sur sa page.
  *
  * Une phrase rassure à chaque étape. Avant l'envoi, un domaine mal tapé est
- * signalé une fois (`adresse.ts`) ; après, l'e-mail peut se renvoyer, une
- * minute plus tard, le temps que le premier arrive, et une adresse fausse se
- * corrige tant que la page n'a pas été ouverte (`corrigerAdresse`).
+ * signalé une fois (`adresse.ts`), quand on quitte le champ ou qu'on valide ;
+ * après, l'e-mail peut se renvoyer, une minute plus tard, le temps que le
+ * premier arrive, et un e-mail faux ou un nom mal tapé se corrigent tant que
+ * la page n'a pas été ouverte (`corrigerAdresse`, `renommerPage`).
  *
  * L'état envoyé survit à un rechargement (sessionStorage), et un nom pris
  * propose aussi la connexion : c'est peut-être le sien.
  */
 
-export type EtatNom = { etat: 'libre' | 'pris' | 'invalide'; nom: string; suggestions: string[] };
+/** `reserve` : un nom gardé par Hopla (admin, aide…), pris sans être la page de personne. */
+export type EtatNom = { etat: 'libre' | 'pris' | 'invalide'; nom: string; suggestions: string[]; reserve?: boolean };
 export interface ApiAccueil {
   verifier(nom: string): Promise<EtatNom>;
   reserver(nom: string, email: string): Promise<{ ok: boolean; message: string }>;
@@ -30,6 +32,8 @@ export interface ApiAccueil {
   renvoyer(nom: string, email: string): Promise<{ ok: boolean; message: string }>;
   /** Le lien repart à la bonne adresse ; celui parti à l'ancienne ne sert plus. */
   corriger(nom: string, ancienne: string, nouvelle: string): Promise<{ ok: boolean; message: string }>;
+  /** La page prend le nouveau nom, et le lien repart à la même adresse. */
+  renommer(ancien: string, nouveau: string, email: string): Promise<{ ok: boolean; message: string; nom?: string }>;
 }
 
 type Etape = 'nom' | 'email' | 'fait';
@@ -42,9 +46,15 @@ interface Etat {
   /** L'adresse où le lien est parti ; `correction` rouvre le champ pour la corriger. */
   envoyee: string;
   correction: boolean;
+  /** Le nom sous lequel la page est partie, quand on rouvre le champ du nom pour le changer. */
+  ancien: string;
+  /** L'e-mail tel qu'il était en quittant le champ : la faute de domaine ne se signale qu'une fois la frappe finie. */
+  quitte: string;
+  /** Le nom parti à la vérification : une ligne le dit, si la réponse tarde. */
+  verifie: string;
 }
 
-let etat: Etat = { nom: '', verif: null, etape: 'nom', email: '', message: '', erreur: '', envoi: false, focus: '', signalee: '', renvoi: 'bientot', envoyee: '', correction: false };
+let etat: Etat = { nom: '', verif: null, etape: 'nom', email: '', message: '', erreur: '', envoi: false, focus: '', signalee: '', renvoi: 'bientot', envoyee: '', correction: false, ancien: '', quitte: '', verifie: '' };
 const abonnes = new Set<() => void>();
 const changer = (m: Partial<Etat>) => { etat = { ...etat, ...m }; abonnes.forEach(f => f()); };
 const abonner = (f: () => void) => { abonnes.add(f); return () => { abonnes.delete(f); }; };
@@ -73,12 +83,13 @@ let minuterie: ReturnType<typeof setTimeout> | undefined;
 let demande = 0;
 async function verifier(api: ApiAccueil, nom: string): Promise<EtatNom | null> {
   const ici = ++demande;
+  changer({ verifie: nom });
   try {
     const r = await api.verifier(nom);
     // « lilian » suivi d'une espace s'écrit « lilian- » pendant la frappe : c'est le même nom.
     if (ici === demande && etat.nom.replace(/-$/, '') === nom) changer({ verif: r });
     return r;
-  } catch { return null; }
+  } catch { return null; } finally { if (ici === demande) changer({ verifie: '' }); }
 }
 
 function taper(api: ApiAccueil, valeur: string) {
@@ -94,7 +105,7 @@ let attente: ReturnType<typeof setTimeout> | undefined;
 const attendreRenvoi = () => { clearTimeout(attente); attente = setTimeout(() => changer({ renvoi: 'pret' }), DELAI_RENVOI); };
 /** Le lien est parti à `adresse` : l'état final, qui prend le focus du formulaire `qui`, puis une minute avant de pouvoir le renvoyer. */
 const parti = (message: string, adresse: string, qui: string) => {
-  changer({ etape: 'fait', message, envoi: false, renvoi: 'bientot', envoyee: adresse, correction: false, erreur: '', focus: qui });
+  changer({ etape: 'fait', message, envoi: false, renvoi: 'bientot', envoyee: adresse, correction: false, ancien: '', erreur: '', focus: qui });
   garder();
   attendreRenvoi();
 };
@@ -131,11 +142,21 @@ export function Reserver({ api, note, id, grand }: { api: ApiAccueil; note?: Rea
       const nom = e.nom.replace(/-$/, '');
       if (nom.length < 3) { changer({ erreur: nom ? 'Il faut au moins 3 caractères.' : 'Choisis le nom de ta page.' }); champ.current?.focus(); return; }
       clearTimeout(minuterie);
+      // Le même nom qu'avant : rien à changer.
+      if (e.ancien && nom === e.ancien) { changer({ etape: 'fait', ancien: '', verif: null, erreur: '', focus: moi }); return; }
+      changer({ envoi: true });
       const v = e.verif?.nom === nom ? e.verif : await verifier(api, nom);
+      changer({ envoi: false });
       if (!v) { changer({ erreur: 'Le serveur ne répond pas. Réessaie dans un instant.' }); return; }
       // Pris ou impossible : le verdict s'affiche, avec ses variantes, et la main reste au champ.
-      if (v.etat === 'libre') changer({ nom, etape: 'email', erreur: '', focus: moi });
-      else { changer({ nom, verif: v }); champ.current?.focus(); }
+      if (v.etat !== 'libre') { changer({ nom, verif: v }); champ.current?.focus(); return; }
+      if (!e.ancien) { changer({ nom, etape: 'email', erreur: '', focus: moi }); return; }
+      // Un nom changé après l'envoi : la page le prend, et le lien repart.
+      changer({ envoi: true, erreur: '' });
+      try {
+        const r = await api.renommer(e.ancien, nom, e.envoyee);
+        if (r.ok) { changer({ nom: r.nom ?? nom, verif: null }); parti(r.message, e.envoyee, moi); } else changer({ envoi: false, erreur: r.message });
+      } catch { changer({ envoi: false, erreur: 'Le serveur ne répond pas. Réessaie dans un instant.' }); }
       return;
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e.email.trim())) { changer({ erreur: 'Il manque une adresse e-mail complète, comme marie@exemple.fr.' }); champ.current?.focus(); return; }
@@ -169,8 +190,10 @@ export function Reserver({ api, note, id, grand }: { api: ApiAccueil; note?: Rea
                 : e.renvoi === 'bientot' ? 'Pas reçu ? Regarde dans tes indésirables. Tu pourras le renvoyer dans une minute.'
                 : <>Pas reçu ? Regarde dans tes indésirables, ou{' '}
                   <button type="button" className="hl-lien-texte" disabled={e.renvoi === 'envoi'} onClick={() => renvoyer(api)}>{e.renvoi === 'envoi' ? 'envoi…' : 'renvoie-le'}</button>.</>}
-              {' '}Une faute dans l’adresse ?{' '}
-              <button type="button" className="hl-lien-texte" onClick={() => changer({ etape: 'email', correction: true, email: e.envoyee, signalee: '', erreur: '', focus: moi })}>Corrige-la</button>.
+              {' '}Une faute ?{' '}
+              <button type="button" className="hl-lien-texte" onClick={() => changer({ etape: 'email', correction: true, email: e.envoyee, signalee: '', quitte: '', erreur: '', focus: moi })}>Corrige ton e-mail</button>
+              {' '}ou{' '}
+              <button type="button" className="hl-lien-texte" onClick={() => changer({ etape: 'nom', ancien: e.nom, verif: null, erreur: '', focus: moi })}>change de nom</button>.
             </p>
             {e.erreur && <p className="hl-reserver-erreur" role="alert">{e.erreur}</p>}
           </div>
@@ -181,8 +204,12 @@ export function Reserver({ api, note, id, grand }: { api: ApiAccueil; note?: Rea
 
   const v = e.verif;
   // Un nom pris, impossible ou refusé à l'envoi marque le champ.
-  const pris = e.etape === 'nom' && (v?.etat === 'pris' || v?.etat === 'invalide' || !!e.erreur);
-  const suggeree = e.etape === 'email' ? adresseSuggeree(e.email) : null;
+  // Pendant un changement de nom, l'ancien nom est le sien : il n'est pas « pris ».
+  const sien = !!e.ancien && v?.nom === e.ancien;
+  const pris = e.etape === 'nom' && !sien && (v?.etat === 'pris' || v?.etat === 'invalide' || !!e.erreur);
+  // La faute de domaine attend la fin de la frappe : on a quitté le champ, ou validé une première fois.
+  const suggeree = e.etape === 'email' && (e.quitte === e.email || e.signalee === e.email) ? adresseSuggeree(e.email) : null;
+  const revenir = () => changer({ etape: 'fait', correction: false, nom: e.ancien || e.nom, ancien: '', email: e.envoyee, verif: null, signalee: '', erreur: '', focus: moi });
   const corriger = (adresse: string) => { changer({ email: adresse, signalee: '', erreur: '' }); champ.current?.focus(); };
   return (
     <form className={classe} id={id} onSubmit={envoyer} noValidate data-pris={pris || undefined}>
@@ -200,10 +227,11 @@ export function Reserver({ api, note, id, grand }: { api: ApiAccueil; note?: Rea
           <label className="hl-champ">
             <span className="hl-cache">Ton adresse e-mail</span>
             <input ref={champ} type="email" value={e.email} onChange={ev => changer({ email: ev.target.value, erreur: '' })} placeholder="ton@adresse.fr" maxLength={200}
+              onBlur={() => changer({ quitte: etat.email })}
               autoComplete="email" inputMode="email" enterKeyHint="send" required aria-describedby={idEtat} />
           </label>
         )}
-        <button type="submit" className="hl-btn" disabled={e.envoi}>{e.envoi ? 'Envoi…' : e.correction ? 'Corriger' : appel(mode)}</button>
+        <button type="submit" className="hl-btn" disabled={e.envoi}>{e.envoi ? (e.etape === 'nom' && !e.ancien ? 'Vérification…' : 'Envoi…') : e.correction ? 'Corriger' : e.ancien ? 'Changer' : appel(mode)}</button>
       </div>
       <div className="hl-reserver-etat" id={idEtat} aria-live="polite">
         {e.erreur ? <p className="hl-reserver-erreur" role="alert">{e.erreur}</p>
@@ -216,8 +244,15 @@ export function Reserver({ api, note, id, grand }: { api: ApiAccueil; note?: Rea
           )
           : e.correction ? (
             <p>
-              <span>Le lien partira à cette adresse ; celui envoyé à <b>{e.envoyee}</b> ne marchera plus.</span>{' '}
-              <button type="button" className="hl-lien-texte" onClick={() => changer({ etape: 'fait', correction: false, email: e.envoyee, signalee: '', erreur: '', focus: moi })}>Annuler</button>
+              <span>Le lien partira à cette adresse ; celui envoyé à <b className="hl-courriel">{insecable(e.envoyee)}</b> ne marchera plus.</span>{' '}
+              <button type="button" className="hl-lien-texte" onClick={revenir}>Annuler</button>
+            </p>
+          )
+          : e.ancien && (sien || (v?.etat !== 'pris' && v?.etat !== 'invalide')) ? (
+            <p>
+              {v?.etat === 'libre' && v.nom !== e.ancien && <><Icone nom="check" taille={16} /><span><b>hopla.page/{v.nom}</b> est libre. </span></>}
+              <span>{e.nom.replace(/-$/, '') === e.ancien ? 'Tape le bon nom.' : <>Ta page prendra ce nom ; le lien envoyé pour <b>hopla.page/{e.ancien}</b> ne marchera plus.</>}</span>{' '}
+              <button type="button" className="hl-lien-texte" onClick={revenir}>Annuler</button>
             </p>
           )
           : e.etape === 'email' ? (
@@ -234,10 +269,11 @@ export function Reserver({ api, note, id, grand }: { api: ApiAccueil; note?: Rea
                 <span key={s}>{i > 0 && ' ou '}<button type="button" className="hl-lien-texte" onClick={() => { changer({ nom: s, verif: { etat: 'libre', nom: s, suggestions: [] } }); champ.current?.focus(); verifier(api, s); }}>{s}</button></span>
               ))}
               {v.suggestions.length > 0 && '.'}{' '}
-              <span className="hl-reserver-tien">C’est le tien ? <a href="/admin">Connecte-toi</a>.</span>
+              {!v.reserve && !e.ancien && <span className="hl-reserver-tien">C’est le tien ? <a href="/admin">Connecte-toi</a>.</span>}
             </p>
           )
           : v?.etat === 'invalide' ? <p className="hl-reserver-pris">Ce nom ne peut pas servir d’adresse : 3 à 30 caractères, lettres, chiffres et tirets.</p>
+          : e.verifie && e.verifie === e.nom.replace(/-$/, '') ? <p className="hl-reserver-attente">Vérification de <b>hopla.page/{e.verifie}</b>…</p>
           : null}
       </div>
       {e.etape === 'email'
@@ -247,11 +283,14 @@ export function Reserver({ api, note, id, grand }: { api: ApiAccueil; note?: Rea
   );
 }
 
+/** Une adresse e-mail ne se coupe pas sur ses tirets. */
+const insecable = (adresse: string) => adresse.replaceAll('-', '\u2011');
+
 /** L'adresse e-mail du message, en gras et sans coupure sur ses tirets. */
 function avecAdresse(message: string, adresse: string): ReactNode {
   const i = adresse ? message.indexOf(adresse) : -1;
   if (i < 0) return message;
-  return <>{message.slice(0, i)}<b className="hl-courriel">{adresse.replaceAll('-', '\u2011')}</b>{message.slice(i + adresse.length)}</>;
+  return <>{message.slice(0, i)}<b className="hl-courriel">{insecable(adresse)}</b>{message.slice(i + adresse.length)}</>;
 }
 
 /** Les boutons de la barre et des prix : vont au champ le plus proche (celui de l'ouverture ou celui de la fin) et lui donnent la main. */

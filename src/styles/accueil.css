@@ -103,7 +103,7 @@ html:has(.hl) { background: #fff; scroll-padding-top: 76px; }
 /* Des onglets écrits, soulignés quand ils sont choisis. */
 .hl-onglets { display: flex; gap: 22px; border-bottom: 1px solid var(--filet); margin-bottom: 28px; }
 .hl-onglets button {
-  position: relative; min-width: 44px; padding: 12px 0; border: 0; background: none; color: var(--gris);
+  position: relative; flex: none; min-width: 44px; padding: 12px 0; border: 0; background: none; color: var(--gris);
   font: inherit; font-size: 15px; font-weight: 500; white-space: nowrap; cursor: pointer;
 }
 .hl-onglets button:hover { color: var(--encre); }
@@ -114,10 +114,12 @@ html:has(.hl) { background: #fff; scroll-padding-top: 76px; }
 
 .hl-barre {
   position: sticky; top: 0; z-index: 50;
-  background: rgb(255 255 255 / .88); backdrop-filter: saturate(1.4) blur(14px); -webkit-backdrop-filter: saturate(1.4) blur(14px);
+  background: #fff;
   border-bottom: 1px solid transparent; transition: border-color .2s;
 }
 .hl-barre[data-defile] { border-bottom-color: var(--filet); }
+.hl-barre-actions .hl-btn { transition: background-color .15s, transform .15s, opacity .2s, visibility .2s; }
+@media (max-width: 1023px) { .hl-barre[data-champ] .hl-barre-actions .hl-btn { opacity: 0; visibility: hidden; } }
 .hl-barre-dedans { max-width: 1120px; height: 60px; margin: 0 auto; padding: 0 var(--gout); display: flex; align-items: center; gap: 24px; }
 .hl-marque { display: inline-flex; align-items: center; gap: 9px; color: var(--encre); font-size: 18px; font-weight: 600; letter-spacing: -0.03em; text-decoration: none; }
 .hl-marque svg { width: 28px; height: 28px; flex: none; }
@@ -152,6 +154,7 @@ html:has(.hl) { background: #fff; scroll-padding-top: 76px; }
 .hl-heros-fond::after { content: ''; position: absolute; left: var(--mx); bottom: 4%; width: min(1100px, 140vw); height: 58%; translate: -50% 0; background: radial-gradient(closest-side, rgb(10 10 10 / .085), transparent); }
 .hl-heros-texte { width: 100%; min-width: 0; }
 .hl-heros-titre { max-width: 13ch; margin-inline: auto; font-size: clamp(42px, 7vw, 82px); line-height: .98; letter-spacing: -0.048em; }
+@media (max-width: 359px) { .hl-heros-titre { font-size: 38px; } }
 .hl-heros .hl-chapo { margin: 22px auto 0; max-width: 48ch; }
 .hl-heros .hl-reserver { width: 100%; max-width: 580px; margin: 36px auto 0; text-align: left; }
 .hl-heros .hl-reserver-etat, .hl-heros .hl-reserver-note { text-align: center; }
@@ -225,7 +228,7 @@ html:has(.hl) { background: #fff; scroll-padding-top: 76px; }
   transition: border-color .15s, box-shadow .15s;
 }
 .hl-champ:hover { border-color: #a8a8a8; }
-.hl-champ:focus-within { border-color: var(--encre); box-shadow: 0 0 0 3px rgb(10 10 10 / .08); }
+.hl-champ:focus-within { border-color: var(--encre); box-shadow: 0 0 0 1px var(--encre); }
 .hl-champ-prefixe { color: var(--gris); font-size: 16px; white-space: nowrap; }
 .hl-champ input { flex: 1; min-width: 0; height: 50px; padding: 0; border: 0; outline: 0; background: transparent; color: var(--encre); font: inherit; font-size: 16px; }
 .hl-champ input::placeholder { color: #767676; }
@@ -237,6 +240,9 @@ html:has(.hl) { background: #fff; scroll-padding-top: 76px; }
 .hl-reserver-pris b { font-weight: 600; }
 .hl-reserver-pris .hl-lien-texte { color: var(--encre); }
 .hl-reserver-etat [data-signale] { font-weight: 500; }
+/* « Vérification… » ne se montre que si la réponse tarde : une réponse rapide ne fait rien clignoter. */
+.hl-reserver-attente { color: var(--gris); animation: hl-tard .2s .45s both; }
+@keyframes hl-tard { from { opacity: 0; } }
 .hl-reserver-note { margin-top: 10px; font-size: 14px; color: var(--gris); text-wrap: pretty; }
 .hl-reserver-note a { color: var(--encre); text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
 .hl-reserver[data-pris] .hl-champ, .hl-reserver-grand[data-pris] .hl-reserver-ligne { border-color: var(--erreur); }
@@ -245,8 +251,8 @@ html:has(.hl) { background: #fff; scroll-padding-top: 76px; }
   transition: border-color .15s, box-shadow .15s;
 }
 .hl-reserver-grand .hl-reserver-ligne:hover { border-color: #b8b8b8; }
-.hl-reserver-grand .hl-reserver-ligne:focus-within { border-color: var(--encre); box-shadow: 0 0 0 4px rgb(10 10 10 / .07); }
-.hl-reserver-grand[data-pris] .hl-reserver-ligne:focus-within { border-color: var(--erreur); box-shadow: 0 0 0 4px rgb(180 35 24 / .1); }
+.hl-reserver-grand .hl-reserver-ligne:focus-within { border-color: var(--encre); box-shadow: 0 0 0 1px var(--encre); }
+.hl-reserver-grand[data-pris] .hl-reserver-ligne:focus-within { border-color: var(--erreur); box-shadow: 0 0 0 1px var(--erreur); }
 .hl-reserver-grand .hl-champ { min-height: 54px; padding: 0 8px 0 12px; border: 0; box-shadow: none; }
 .hl-reserver-grand :is(.hl-champ-prefixe, .hl-champ input) { font-size: 17px; }
 .hl-reserver-grand .hl-btn { min-height: 54px; padding: 0 22px; border-radius: 10px; font-size: 16px; }
@@ -426,7 +432,7 @@ html:has(.hl) { background: #fff; scroll-padding-top: 76px; }
 .hl-legende-scene .hl-essai { margin-top: 12px; }
 @media (min-width: 1024px) {
   .hl-vivante { display: grid; grid-template-columns: 1fr 340px; gap: 72px; }
-  .hl-chapitre { min-height: 42vh; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; }
+  .hl-chapitre { min-height: 30vh; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; }
   /* Le chapitre lu en noir, les autres en gris : lisibles tous les trois, le regard va au premier. */
   .hl-chapitre .hl-h3 { font-size: 30px; letter-spacing: -0.03em; color: var(--gris); transition: color .45s; }
   .hl-chapitre p { margin-top: 10px; max-width: 46ch; font-size: 18px; color: var(--gris); transition: color .45s; }
@@ -438,30 +444,31 @@ html:has(.hl) { background: #fff; scroll-padding-top: 76px; }
 
 /* ---- 05 · Les stats ---- */
 
-.hl-stats { display: grid; gap: 40px; }
-@media (min-width: 1024px) { .hl-stats { grid-template-columns: 1fr 380px; align-items: start; gap: 72px; } }
-.hl-stats-liste { display: flex; flex-direction: column; margin-bottom: 16px; }
-.hl-stat { position: relative; padding: 18px 0 18px 38px; border-top: 1px solid var(--filet); font-size: 19px; line-height: 1.45; letter-spacing: -0.01em; text-wrap: pretty; }
-.hl-stat:last-child { border-bottom: 1px solid var(--filet); }
-@media (min-width: 1024px) { .hl-stat { font-size: 21px; } }
-.hl-stat-hausse { position: absolute; left: 0; top: 21px; display: inline-flex; }
+/* Au bureau, le titre à gauche et l'e-mail à droite : la seule section posée de côté. */
+@media (min-width: 1024px) {
+  .hl-section-stats { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 600px); gap: 72px; align-items: start; }
+  .hl-section-stats .hl-tete-section { position: sticky; top: 120px; margin-bottom: 0; }
+}
+.hl-stats { display: flex; flex-direction: column; gap: 14px; }
+.hl-stats-liste { display: flex; flex-direction: column; margin: 6px 0 4px; }
+.hl-stat { position: relative; padding: 16px 0 16px 34px; border-top: 1px solid var(--filet); font-size: 17px; line-height: 1.45; letter-spacing: -0.01em; text-wrap: pretty; }
+@media (min-width: 1024px) { .hl-stat { font-size: 19px; } }
+.hl-stat-hausse { position: absolute; left: 0; top: 18px; display: inline-flex; }
 .hl-stat-mot { display: inline-block; }
 .hl-stat-nombre { font-weight: 600; font-variant-numeric: tabular-nums; }
 .hl-stat-mot, .hl-stat-hausse { transition: opacity .4s, transform .5s var(--ease); transition-delay: var(--d, 0ms); }
 .hl-mail {
   display: flex; flex-direction: column; gap: 10px; padding: 22px; border: 1px solid var(--filet); border-radius: 16px;
   background: #fff; font-size: 15px;
-  transition: opacity .6s, transform .7s var(--ease); transition-delay: 2.4s;
 }
+@media (max-width: 399px) { .hl-mail { padding: 18px 16px; } }
 .hl-mail-tete { display: flex; align-items: center; gap: 10px; font-size: 14px; }
 .hl-mail-tete .hl-gris { margin-left: auto; }
 .hl-mail-logo { flex: none; width: 28px; height: 28px; color: var(--encre); }
 .hl-mail-sujet { margin-top: 4px; font-size: 20px; font-weight: 600; letter-spacing: -0.02em; }
-.hl-mail p:not(.hl-mail-sujet) { color: #3a3a3a; }
 .hl-mail-bouton { align-self: flex-start; margin-top: 4px; font-size: 15px; font-weight: 500; text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
 @media (prefers-reduced-motion: no-preference) {
   .hl-stat:not([data-joue]) :is(.hl-stat-mot, .hl-stat-hausse) { opacity: 0; transform: translateY(.3em); }
-  .hl-mail:not([data-joue]) { opacity: 0; transform: translateY(16px); }
 }
 
 /* ---- 06 · Les thèmes ---- */
@@ -495,7 +502,12 @@ html:has(.hl) { background: #fff; scroll-padding-top: 76px; }
 .hl-couleurs-texte { grid-area: texte; }
 .hl-couleurs-reglage { grid-area: reglage; }
 .hl-couleurs-tel { grid-area: tel; justify-self: center; }
-@media (max-width: 899px) { .hl-couleurs-tel .hl-tel { --l: 220px !important; --z: .5641 !important; } }
+/* Au téléphone, l'aperçu ne garde que le haut de la page (avatar, nom, deux boutons) : il tient dans l'écran avec les pastilles. */
+@media (max-width: 899px) {
+  .hl-couleurs-tel .hl-tel { --l: 220px !important; --z: .5641 !important; }
+  .hl-couleurs-tel { max-height: 268px; overflow: hidden; -webkit-mask-image: linear-gradient(#000 72%, transparent); mask-image: linear-gradient(#000 72%, transparent); }
+}
+.hl-couleurs-reglage > .hl-lien-texte[data-cache] { visibility: hidden; }
 @media (min-width: 900px) {
   .hl-couleurs { grid-template-columns: 1fr auto; grid-template-areas: 'texte tel' 'reglage tel'; column-gap: 56px; row-gap: 0; padding: 48px; }
   .hl-couleurs-texte { align-self: end; }
@@ -531,7 +543,8 @@ html:has(.hl) { background: #fff; scroll-padding-top: 76px; }
 .hl-etape-texte { display: block; margin-top: 2px; font-size: 15px; color: var(--gris); }
 .hl-etapes li[data-lu] .hl-etape-texte { color: #3a3a3a; }
 .hl-prise-tel { display: flex; flex-direction: column; align-items: center; gap: 14px; }
-.hl-prise-legende { display: flex; flex-direction: column; align-items: center; gap: 12px; width: min(290px, 100%); }
+/* Au téléphone, la légende passe au-dessus du téléphone, comme dans les autres démos. */
+.hl-prise-legende { order: -1; display: flex; flex-direction: column; align-items: center; gap: 12px; width: min(290px, 100%); }
 .hl-prise-legende p { width: 100%; min-height: 4.6em; font-size: 15px; }
 .hl-prise-legende b { margin-left: 4px; }
 .hl-segments { display: flex; gap: 6px; width: 100%; }
@@ -601,7 +614,7 @@ html:has(.hl) { background: #fff; scroll-padding-top: 76px; }
 .hl-question[open] summary svg { transform: rotate(45deg); }
 .hl-question p { max-width: 48ch; padding-bottom: 22px; color: var(--gris); text-wrap: pretty; }
 .hl-dernier { display: flex; flex-direction: column; align-items: center; gap: 28px; text-align: center; }
-.hl-h2-grand { max-width: 14ch; font-size: clamp(38px, 6vw, 72px); line-height: 1.02; }
+.hl-h2-grand { max-width: 21ch; font-size: clamp(38px, 6vw, 72px); line-height: 1.02; }
 .hl-dernier > div { width: 100%; max-width: 560px; }
 .hl-dernier .hl-reserver-etat, .hl-dernier .hl-reserver-note { text-align: center; }
 .hl-pied { position: relative; max-width: 1120px; margin: 112px auto 0; padding: 32px var(--gout) 48px; display: flex; flex-direction: column; gap: 20px; }

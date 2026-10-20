@@ -24,7 +24,7 @@ import type { Env } from './courriel.ts';
 
 export const inscriptionLibre = (env: Env) => env.LIENS_INSCRIPTION?.trim() !== 'attente';
 
-export type EtatNom = { etat: 'libre' | 'pris' | 'invalide'; nom: string; suggestions: string[] };
+export type EtatNom = { etat: 'libre' | 'pris' | 'invalide'; nom: string; suggestions: string[]; reserve?: boolean };
 
 /** Deux variantes libres d'un nom déjà pris. */
 function suggestions(nom: string, annee = new Date().getFullYear()): string[] {
@@ -36,8 +36,9 @@ function suggestions(nom: string, annee = new Date().getFullYear()): string[] {
 export function verifierNom(saisie: string): EtatNom {
   const nom = nomSaisi(saisie).replace(/-$/, '');
   if (!/^[a-z0-9](?:[a-z0-9-]{1,28})[a-z0-9]$/.test(nom) || nom.includes('--')) return { etat: 'invalide', nom, suggestions: [] };
-  // Un nom réservé par Hopla (admin, lilian…) se lit comme un nom déjà pris.
-  return validerPseudo(nom) !== nom || db.nomPris(nom) ? { etat: 'pris', nom, suggestions: suggestions(nom) } : { etat: 'libre', nom, suggestions: [] };
+  if (db.nomPris(nom)) return { etat: 'pris', nom, suggestions: suggestions(nom) };
+  // Un nom gardé par Hopla (admin, aide…) se lit comme un nom déjà pris, sans proposer de s'y connecter.
+  return validerPseudo(nom) !== nom ? { etat: 'pris', nom, suggestions: suggestions(nom), reserve: true } : { etat: 'libre', nom, suggestions: [] };
 }
 
 const parIp = new Map<string, number[]>();
@@ -167,4 +168,39 @@ export async function corrigerAdresse(origines: Origines, env: Env, saisie: { no
   // L'e-mail n'est pas parti : l'adresse d'avant revient, et l'on peut réessayer.
   if (!envoi.ok) { db.changerEmail(compte.id, ancienne); return panne; }
   return note;
+}
+
+/**
+ * Une faute dans le nom, vue juste après l'envoi. Mêmes garde-fous que pour
+ * l'adresse : l'ancien nom et l'adresse exacte, une page que personne n'a
+ * ouverte, dans la demi-heure. La page prend le nouveau nom et le lien repart,
+ * avec la bonne adresse dans l'e-mail ; celui parti sous l'ancien nom ne sert plus.
+ */
+export async function renommerPage(origines: Origines, env: Env, saisie: { ancien: string; nouveau: string; email: string }, fetchImpl: typeof fetch = fetch, maintenant = Date.now(), ip = ''): Promise<Reponse & { nom?: string }> {
+  const ancien = validerPseudo(saisie.ancien);
+  const adresse = validerEmail(saisie.email);
+  const nouveau = verifierNom(saisie.nouveau);
+  const refus = { ok: false as const, message: `Ce nom ne se change plus d’ici. Écris-nous à ${CONTACT_LEGAL}.` };
+  if (!ancien || !adresse) return refus;
+  if (nouveau.etat === 'invalide') return { ok: false, message: 'Ce nom ne peut pas servir d’adresse : 3 à 30 caractères, lettres, chiffres et tirets.' };
+  if (nouveau.nom === ancien) return { ok: true, message: `hopla.page/${ancien} reste ton adresse.`, nom: ancien };
+  if (nouveau.etat === 'pris') return { ok: false, message: `hopla.page/${nouveau.nom} est déjà pris. Essaie une variante.` };
+  if (tropInsistante(ip, maintenant)) return { ok: false, message: 'Trop d’essais depuis ta connexion. Réessaie dans une heure.' };
+  const nom = nouveau.nom;
+
+  if (!inscriptionLibre(env)) {
+    const r = db.reservationParEmail(adresse);
+    if (!r || r.pseudo !== ancien || maintenant - r.ts > DELAI_CORRECTION) return refus;
+    try { db.changerPseudoReservation(r.id, nom); } catch { return { ok: false, message: `hopla.page/${nom} vient d’être pris. Essaie une variante.` }; }
+    await confirmerReservation(env, adresse, nom, fetchImpl);
+    return { ok: true, message: `C’est changé. Ton invitation arrivera à ${adresse}.`, nom };
+  }
+
+  const compte = db.compteParPseudo(ancien);
+  if (!compte || compte.email !== adresse || compte.connexion || maintenant - compte.cree > DELAI_CORRECTION) return refus;
+  try { db.changerPseudo(compte.id, nom); } catch { return { ok: false, message: `hopla.page/${nom} vient d’être pris. Essaie une variante.` }; }
+  const envoi = await inviter(origines, env, { ...compte, pseudo: nom }, fetchImpl, 'inscription');
+  // L'e-mail n'est pas parti : l'ancien nom revient, et l'on peut réessayer.
+  if (!envoi.ok) { db.changerPseudo(compte.id, ancien); return { ok: false, message: 'L’e-mail n’est pas parti. Réessaie dans un instant.' }; }
+  return { ok: true, message: `C’est changé. Ouvre le nouvel e-mail envoyé à ${adresse} : un clic, et tu entres dans ta page.`, nom };
 }

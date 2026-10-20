@@ -22,13 +22,13 @@ export const appel = (m: Inscription) => APPEL[m].join('');
 export const MOTS: Record<Inscription, { note: string; adresse: string; rassure: string; renvoi: string }> = {
   libre: {
     note: 'Gratuit, toutes les fonctions comprises. En ligne en deux minutes.',
-    adresse: 'À quelle adresse t’envoyer le lien de ta page ?',
-    rassure: 'Ni mot de passe ni carte bancaire : un lien arrive par e-mail, et l’on ne t’écrit que pour ta page.',
+    adresse: 'À quelle adresse e-mail t’envoyer le lien de ta page ?',
+    rassure: 'Ni mot de passe ni carte bancaire : un lien arrive par e-mail, et on ne t’écrit que pour ta page.',
     renvoi: 'C’est renvoyé. Ce nouveau lien marche 15 minutes : ouvre-le dès qu’il arrive.',
   },
   attente: {
     note: 'Gratuit, toutes les fonctions comprises.',
-    adresse: 'À quelle adresse t’envoyer ton invitation ?',
+    adresse: 'À quelle adresse e-mail t’envoyer ton invitation ?',
     rassure: 'Ni carte bancaire ni engagement : on ne t’écrit que pour ton invitation.',
     renvoi: 'C’est renvoyé.',
   },
@@ -52,14 +52,14 @@ export const FONCTIONS = [
 
 export function questions(m: Inscription): [string, string][] {
   return [
-    ['C’est quoi, Hopla ?', 'Une page de liens à mettre dans ta bio Instagram, TikTok ou YouTube, sur hopla.page/ton-nom. Elle change l’ordre de ses liens selon le réseau d’où l’on vient et l’heure qu’il est, ouvre tes liens dans leurs apps et se modifie depuis ton téléphone.'],
+    ['C’est quoi, Hopla ?', 'Une page de liens à mettre dans ta bio Instagram, TikTok ou YouTube, sur hopla.page/ton-nom. Elle change l’ordre de ses liens selon le réseau d’où arrive ton visiteur et l’heure qu’il est, ouvre tes liens dans leurs apps et se modifie depuis ton téléphone.'],
     ['C’est vraiment gratuit ?', 'Oui, et toutes les fonctions sont comprises. Pro enlève la mention « Une page faite avec Hopla » et garde tes stats sur 30 jours, 90 jours et un an.'],
     m === 'libre'
-      ? ['Combien de temps pour avoir ma page ?', 'Deux minutes. Tu choisis ton nom, tu laisses ton adresse, et le lien pour entrer dans ta page arrive par e-mail. Quatre questions plus tard, elle est en ligne.']
+      ? ['Combien de temps pour avoir ma page ?', 'Deux minutes. Tu choisis ton nom, tu laisses ton e-mail, et le lien pour entrer dans ta page arrive par e-mail. Quatre questions plus tard, elle est en ligne.']
       : ['Quand aurai-je ma page ?', 'On ouvre les pages petit à petit, dans l’ordre des réservations. Ton invitation arrive par e-mail, avec un lien valable une semaine ; quatre questions plus tard, ta page est en ligne.'],
     m === 'libre'
-      ? ['Quelle sera mon adresse ?', 'hopla.page/ suivi du nom que tu choisis ici : 3 à 30 caractères, lettres, chiffres et tirets. Une fois pris, un nom n’est donné à personne d’autre.']
-      : ['Quelle sera mon adresse ?', 'hopla.page/ suivi du nom que tu réserves ici : 3 à 30 caractères, lettres, chiffres et tirets. Un nom réservé n’est donné à personne d’autre.'],
+      ? ['Quelle sera mon adresse ?', 'hopla.page/ suivi du nom que tu choisis ici : 3 à 30 caractères, lettres, chiffres et tirets. Une fois pris, un nom n’est donné à personne d’autre. Une faute de frappe ? Juste après l’envoi, tant que tu n’es pas entré dans ta page, tu peux encore le changer.']
+      : ['Quelle sera mon adresse ?', 'hopla.page/ suivi du nom que tu réserves ici : 3 à 30 caractères, lettres, chiffres et tirets. Un nom réservé n’est donné à personne d’autre. Une faute de frappe ? Juste après la réservation, tu peux encore le changer.'],
     ['En quoi Hopla change d’une page de liens classique ?', 'Ta page se réorganise toute seule selon le réseau et l’heure, tes liens s’ouvrent dans leurs apps plutôt que dans le navigateur d’Instagram, et tes stats se lisent en une phrase, sans cookie. Et tout ça est gratuit.'],
     ['Comment Hopla sait d’où vient un visiteur ?', 'Instagram, TikTok et les autres apps se signalent quand elles ouvrent ta page. Tu mets un seul lien dans toutes tes bios, Hopla fait le tri. Quand rien ne le dit, par exemple un lien envoyé sur WhatsApp ou tapé dans Safari, ta page garde l’ordre que tu as choisi.'],
     ['Mes visiteurs sont-ils pistés ?', 'Non. Aucun cookie, aucune publicité, aucun traceur d’un site à l’autre. Les stats comptent les visites sans garder l’adresse IP : pas de bannière à imposer à tes visiteurs.'],

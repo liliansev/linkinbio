@@ -672,3 +672,40 @@ test('une adresse mal tapée se corrige juste après l’inscription, tant que l
   assert.equal(db.reservationParEmail('ines@hotmail.fr')?.pseudo, 'ines-attente');
   assert.equal(envois.at(-1).subject, 'Ton nom Hopla est réservé');
 });
+
+test('un nom mal tapé se change juste après l’inscription, tant que la page n’a pas été ouverte', async () => {
+  const attente = await import('./attente.ts');
+  const envois: any[] = [];
+  const fetchFaux = (async (_url: string, init: RequestInit) => { envois.push(JSON.parse(String(init.body))); return new Response('{}', { status: 200 }); }) as typeof fetch;
+  const env = { RESEND_API_KEY: 'cle', NODE_ENV: 'production' };
+  const t = 8_000_000;
+
+  await attente.creerHopla(O, env, { nom: 'pual-faute', email: 'paul@exemple.fr' }, fetchFaux, t, '7.7.7.1');
+  const premier = /jeton=([\w-]+)/.exec(envois.at(-1).text)![1];
+
+  // Sans l'adresse exacte, ou vers un nom pris, rien ne bouge.
+  assert.equal((await attente.renommerPage(O, env, { ancien: 'pual-faute', nouveau: 'paul-juste', email: 'pirate@exemple.fr' }, fetchFaux, t + 1000, '7.7.7.2')).ok, false);
+  assert.equal((await attente.renommerPage(O, env, { ancien: 'pual-faute', nouveau: 'lilian', email: 'paul@exemple.fr' }, fetchFaux, t + 1000, '7.7.7.3')).ok, false);
+  assert.ok(db.compteParPseudo('pual-faute'));
+
+  const r = await attente.renommerPage(O, env, { ancien: 'pual-faute', nouveau: 'Paul Juste', email: 'paul@exemple.fr' }, fetchFaux, t + 2000, '7.7.7.4');
+  assert.equal(r.ok, true);
+  assert.equal((r as { nom?: string }).nom, 'paul-juste');
+  assert.equal(db.compteParPseudo('pual-faute'), undefined);
+  assert.equal(db.compteParPseudo('paul-juste')!.email, 'paul@exemple.fr');
+  assert.match(envois.at(-1).text, /paul-juste/);
+  assert.equal(auth.ouvrirSession(premier), null, 'le lien parti sous l’ancien nom ne sert plus');
+  assert.ok(auth.ouvrirSession(/jeton=([\w-]+)/.exec(envois.at(-1).text)![1]), 'le nouveau lien ouvre la page');
+
+  // Une page ouverte, ou trop ancienne, garde son nom.
+  assert.equal((await attente.renommerPage(O, env, { ancien: 'paul-juste', nouveau: 'paul-autre', email: 'paul@exemple.fr' }, fetchFaux, t + 3000, '7.7.7.5')).ok, false);
+  await attente.creerHopla(O, env, { nom: 'lea-tard', email: 'lea@exemple.fr' }, fetchFaux, t, '7.7.7.6');
+  assert.equal((await attente.renommerPage(O, env, { ancien: 'lea-tard', nouveau: 'lea-tot', email: 'lea@exemple.fr' }, fetchFaux, t + attente.DELAI_CORRECTION + 1, '7.7.7.7')).ok, false);
+  assert.ok(db.compteParPseudo('lea-tard'));
+
+  // En liste d'attente, la réservation change de nom de la même façon.
+  const enAttente = { ...env, LIENS_INSCRIPTION: 'attente' };
+  await attente.reserverNom(O, enAttente, { nom: 'mila-atente', email: 'mila@exemple.fr' }, fetchFaux, t, '7.7.7.8');
+  assert.equal((await attente.renommerPage(O, enAttente, { ancien: 'mila-atente', nouveau: 'mila-attente', email: 'mila@exemple.fr' }, fetchFaux, t + 1000, '7.7.7.9')).ok, true);
+  assert.equal(db.reservationParEmail('mila@exemple.fr')?.pseudo, 'mila-attente');
+});

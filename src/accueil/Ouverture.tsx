@@ -33,7 +33,19 @@ export function Marque() {
 export function Barre() {
   const [defile, setDefile] = useState(false);
   const [menu, setMenu] = useState(false);
+  const [champ, setChamp] = useState(false);
   const [debut, suite] = APPEL[useInscription()];
+  // Au téléphone, le bouton de la barre s'efface tant qu'un champ du nom est à l'écran : un seul appel à la fois.
+  useEffect(() => {
+    if (typeof IntersectionObserver !== 'function') return;
+    const vus = new Set<Element>();
+    const o = new IntersectionObserver(entrees => {
+      for (const en of entrees) if (en.isIntersecting) vus.add(en.target); else vus.delete(en.target);
+      setChamp(vus.size > 0);
+    }, { rootMargin: '-60px 0px 0px 0px' });
+    document.querySelectorAll('[data-zone-appel]').forEach(el => o.observe(el));
+    return () => o.disconnect();
+  }, []);
   useEffect(() => {
     const f = () => setDefile(scrollY > 8);
     f();
@@ -50,7 +62,7 @@ export function Barre() {
     return () => { removeEventListener('keydown', echap); removeEventListener('pointerdown', ailleurs); };
   }, [menu]);
   return (
-    <header className="hl-barre" data-defile={defile || menu || undefined}>
+    <header className="hl-barre" data-defile={defile || menu || undefined} data-champ={(champ && !menu) || undefined}>
       <div className="hl-barre-dedans">
         <Marque />
         <nav className="hl-barre-nav" aria-label="Sections">
@@ -97,7 +109,7 @@ export function Ouverture({ api }: { api: ApiAccueil }) {
   const [touche, setTouche] = useState(false);
   const [refScene, vu] = useVu<HTMLDivElement>(0.5);
   const liste = useRef<HTMLDivElement>(null);
-  const { nom, verif, etape } = useReservation();
+  const { nom, verif, etape, ancien } = useReservation();
   const mode = useInscription();
 
   // La tournée part quand le téléphone est à l'écran, et s'arrête sur YouTube ; avec moins de mouvement, TikTok d'emblée.
@@ -116,7 +128,7 @@ export function Ouverture({ api }: { api: ApiAccueil }) {
   // un nom pris le dit dans la barre d'adresse, et une fois l'e-mail parti, l'adresse est cochée.
   const tape = nom.replace(/-$/, '');
   const pseudo = tape.length >= 3 ? tape : '';
-  const pris = !!pseudo && verif?.nom === pseudo && verif.etat !== 'libre';
+  const pris = !!pseudo && verif?.nom === pseudo && verif.etat !== 'libre' && pseudo !== ancien;
   const affiche = nomAffiche(pseudo);
   const page = selonReseau(pseudo ? pageVisiteur(pseudo, THEME.id) : pageMarie(THEME.id), visite.reseau);
   const adresse = pris
@@ -133,7 +145,7 @@ export function Ouverture({ api }: { api: ApiAccueil }) {
         <p className="hl-chapo hl-apparait" style={d(420)}>
           Un seul lien dans ta bio. Ta page change selon le réseau et l’heure, ouvre tes liens dans leurs apps et se modifie depuis ton téléphone.
         </p>
-        <div className="hl-apparait" style={d(540)}>
+        <div className="hl-apparait" style={d(540)} data-zone-appel="">
           <Reserver api={api} id="reserver" grand note={<>{MOTS[mode].note} <a href="/lilian">Voir une vraie page</a></>} />
           {pseudo && !pris && etape !== 'fait' && (
             <div className="hl-apercu hl-petit-seul" style={{ background: THEME.fondUni, color: THEME.texte }} aria-hidden="true">
@@ -167,7 +179,7 @@ export function Ouverture({ api }: { api: ApiAccueil }) {
           </div>
         </div>
         <p className="hl-legende hl-apparait" style={d(1300)} aria-live={touche ? 'polite' : 'off'}>
-          Les liens se rangent selon le réseau d’où l’on vient. <span className="hl-tactile">Touche</span><span className="hl-souris">Clique sur</span> le téléphone pour en changer.
+          Les liens se rangent selon le réseau d’où arrive le visiteur. <span className="hl-tactile">Touche</span><span className="hl-souris">Clique sur</span> le téléphone pour en changer.
         </p>
       </div>
     </section>

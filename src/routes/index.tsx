@@ -3,7 +3,7 @@ import { Accueil } from '../accueil/Accueil.tsx';
 import type { ApiAccueil } from '../accueil/Reserver.tsx';
 import { DESCRIPTION, FONCTIONS, questions } from '../accueil/textes.ts';
 import type { Inscription } from '../accueil/textes.ts';
-import { corrigerAdresse, demanderLien, modeInscription, reserverNom, verifierNom } from '../server/fonctions.ts';
+import { corrigerAdresse, demanderLien, modeInscription, renommerPage, reserverNom, verifierNom } from '../server/fonctions.ts';
 import { TARIFS } from '../lib/abonnement.ts';
 import { ORIGINE_PUBLIQUE, SITE_LILIAN } from '../lib/types.ts';
 
@@ -89,6 +89,7 @@ const api = (mode: Inscription): ApiAccueil => ({
   // La page existe déjà : un lien de connexion y mène. En liste d'attente, la réservation se rappelle.
   renvoyer: (nom, email) => (mode === 'libre' ? demanderLien({ data: email }) : reserverNom({ data: { nom, email } })),
   corriger: (nom, ancienne, nouvelle) => corrigerAdresse({ data: { nom, ancienne, nouvelle } }),
+  renommer: (ancien, nouveau, email) => renommerPage({ data: { ancien, nouveau, email } }),
 });
 const API = { libre: api('libre'), attente: api('attente') };
 

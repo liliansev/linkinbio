@@ -8,7 +8,8 @@ import { mouvementReduit, useCompte, useGlisse, useSequence, useVisible, useVu }
 /*
  * Ce que fait Hopla, en trois sections : 02 les liens qui s'ouvrent dans
  * leur app, 03 la page qui change selon le réseau, l'heure et les drops,
- * 05 les stats en une phrase (le reste de l'offre gratuite se lit dans les prix). Les téléphones y
+ * 05 les stats en phrases, lues comme l'e-mail du lundi (le reste de l'offre
+ * gratuite se lit dans les prix). Les téléphones y
  * sont des croquis gris : on lit le mouvement, pas un thème. Au téléphone,
  * chaque démo part quand son téléphone est à l'écran, et ses commandes et sa
  * légende sont juste dessous. Les légendes ne s'annoncent aux lecteurs d'écran
@@ -230,7 +231,7 @@ function EcranDrop({ drop }: { drop: number }) {
 }
 
 const CHAPITRES = [
-  { court: 'Le réseau', titre: 'Selon d’où l’on vient', texte: 'Ton TikTok passe en tête pour qui arrive de TikTok, ta chaîne pour qui vient de YouTube. Hopla reconnaît l’app tout seul, sans lien différent par réseau.' },
+  { court: 'Le réseau', titre: 'Selon le réseau', texte: 'Ton TikTok passe en tête pour qui arrive de TikTok, ta chaîne pour qui vient de YouTube. Hopla reconnaît l’app tout seul, sans lien différent par réseau.' },
   { court: 'L’heure', titre: 'Selon l’heure', texte: '« Réserver un appel » le matin en semaine, « Dernier épisode » le soir. Et un compte à rebours avant un lancement, sans dévoiler l’adresse.' },
   { court: 'Les drops', titre: 'Des drops', texte: 'Un drop, c’est un lien réservé : il s’ouvre avec un code, ou pour les cinquante premiers. Le compteur de places se tient à jour tout seul.' },
 ];
@@ -297,7 +298,7 @@ export function Vivante() {
     <section className="hl-section" aria-labelledby="vivante">
       <div className="hl-tete-section hl-entre">
         <h2 id="vivante" className="hl-h2">Une page qui change selon qui la regarde.</h2>
-        <p className="hl-chapo">Selon le réseau d’où l’on vient, l’heure qu’il est, ou le code qu’on a reçu.</p>
+        <p className="hl-chapo">Selon le réseau d’où arrive ton visiteur, l’heure qu’il est, ou le code qu’il a reçu.</p>
       </div>
       <div className="hl-vivante hl-grand-seul">
         <ol className="hl-chapitres">
@@ -340,7 +341,11 @@ export function Vivante() {
   );
 }
 
-/* ---- 05 · Les stats en une phrase ---- */
+/* ---- 05 · Les stats en phrases ----
+ * Les phrases que Hopla écrit dans Stats, posées dans l'e-mail du lundi qui
+ * les reprend : une seule fois chaque chiffre. Au bureau, le titre à gauche
+ * et l'e-mail à droite.
+ */
 
 type Morceau = string | { n: number; avant?: string; suite?: string };
 
@@ -371,30 +376,25 @@ export function Stats() {
   const [ref, vu] = useVu<HTMLOListElement>(0.3);
   const [tour, setTour] = useState(0);
   return (
-    <section className="hl-section" aria-labelledby="stats">
+    <section className="hl-section hl-section-stats" aria-labelledby="stats">
       <div className="hl-tete-section hl-entre">
-        <h2 id="stats" className="hl-h2">Tes stats, en une phrase.</h2>
-        <p className="hl-chapo">Pas de tableau à déchiffrer : Hopla te dit ce qui a bougé, et t’envoie le résumé chaque lundi à 9 h. Sans cookie ni bannière, l’adresse IP de tes visiteurs n’est jamais gardée.</p>
+        <h2 id="stats" className="hl-h2">Tes stats, en clair.</h2>
+        <p className="hl-chapo">Pas de tableau à déchiffrer : Hopla te dit ce qui a bougé, dans ton espace et par e‑mail chaque lundi à 9 h. Sans cookie ni bannière, l’adresse IP de tes visiteurs n’est jamais gardée.</p>
       </div>
       <div className="hl-stats">
-        <div>
+        <article className="hl-mail" aria-label="Exemple d’e-mail du lundi">
+          <div className="hl-mail-tete"><Symbole className="hl-mail-logo" /><b>Hopla</b><span className="hl-gris">lundi, 9 h</span></div>
+          <p className="hl-mail-sujet">Ta semaine sur Hopla</p>
           <ol ref={ref} key={tour} className="hl-stats-liste">
-            <Phrase joue={vu} depart={0} hausse morceaux={['Ta page a eu', { n: 412, suite: '\u00a0vues,' }, 'soit', { n: 18, suite: '\u00a0%' }, 'de plus que la semaine d’avant.']} />
-            <Phrase joue={vu} depart={500} morceaux={['Instagram t’amène le plus de monde :', { n: 61, suite: '\u00a0%' }, 'des visites.']} />
-            <Phrase joue={vu} depart={950} hausse morceaux={['Ton meilleur jour : jeudi 16 octobre, avec', { n: 88 }, 'vues. Un post ce jour-là ?']} />
-            <Phrase joue={vu} depart={1450} hausse morceaux={['Ton lien « Ma boutique » a fait', { n: 40, avant: '+', suite: '\u00a0%' }, 'de clics (35 contre 25).']} />
+            <Phrase joue={vu} depart={0} hausse morceaux={['Ta page a eu', { n: 412, suite: ' vues,' }, 'soit', { n: 18, suite: ' %' }, 'de plus que la semaine d’avant.']} />
+            <Phrase joue={vu} depart={500} morceaux={['Instagram t’amène le plus de monde :', { n: 61, suite: ' %' }, 'des visites.']} />
+            <Phrase joue={vu} depart={950} hausse morceaux={['Ton meilleur jour : jeudi, avec', { n: 88 }, 'vues. Un post ce jour-là ?']} />
+            <Phrase joue={vu} depart={1450} hausse morceaux={['Ton lien « Ma boutique » a fait', { n: 40, avant: '+', suite: ' %' }, 'de clics (35 contre 25).']} />
             <Phrase joue={vu} depart={1950} morceaux={[{ n: 38 }, 'clics se sont ouverts directement dans leur app, sans rester coincés dans Instagram ou TikTok.']} />
           </ol>
-          <p className="hl-gris hl-petit">Chiffres d’exemple. <Revoir onClick={() => setTour(t => t + 1)} /></p>
-        </div>
-        <div className="hl-mail" data-joue={vu || undefined} key={`m${tour}`} aria-label="L’e-mail du lundi" role="img">
-          <div className="hl-mail-tete"><Symbole className="hl-mail-logo" /><b>Hopla</b><span className="hl-gris">lundi, 9 h</span></div>
-          <p className="hl-mail-sujet">Ta semaine sur Hopla</p>
-          <p>Ta page a eu 412 vues, soit 18 % de plus que la semaine d’avant.</p>
-          <p>Instagram t’amène le plus de monde : 61 % des visites.</p>
-          <p>Ton lien « Ma boutique » a fait +40 % de clics.</p>
-          <span className="hl-mail-bouton">Voir mes stats</span>
-        </div>
+          <span className="hl-mail-bouton" aria-hidden="true">Voir mes stats</span>
+        </article>
+        <p className="hl-gris hl-petit">Chiffres d’exemple. <Revoir onClick={() => setTour(t => t + 1)} /></p>
       </div>
     </section>
   );

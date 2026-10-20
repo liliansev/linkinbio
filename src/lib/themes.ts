@@ -234,7 +234,7 @@ export const idTheme = (id: unknown): string =>
 export const themeParId = (id: string) => THEMES.find(theme => theme.id === idTheme(id))!;
 
 export const FAMILLES: { id: Famille; nom: string }[] = [
-  { id: 'premium', nom: 'Premium' }, { id: 'decale', nom: 'Décalés' },
+  { id: 'premium', nom: 'Élégants' }, { id: 'decale', nom: 'Décalés' },
   { id: 'sombre', nom: 'Sombres' }, { id: 'clair', nom: 'Clairs' }, { id: 'couleur', nom: 'Couleurs' }, { id: 'degrade', nom: 'Dégradés' },
 ];
 

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { CSSProperties, KeyboardEvent, MouseEvent } from 'react';
 import { Icone } from '../components/Icone.tsx';
 import { AVANTAGES_PRO, TARIFS, euros } from '../lib/abonnement.ts';
+import { CONTACT_LEGAL } from '../lib/legal.ts';
 import type { Periode } from '../lib/abonnement.ts';
 import { Marque } from './Ouverture.tsx';
 import { Reserver, allerAuChamp } from './Reserver.tsx';
@@ -52,7 +53,7 @@ export function Prix() {
           <div className="hl-periode" role="radiogroup" aria-label="Période de facturation du Pro" onKeyDown={fleches}>
             {PERIODES.map(p => (
               <button key={p} type="button" role="radio" data-periode={p} aria-checked={periode === p} tabIndex={periode === p ? 0 : -1} onClick={() => setPeriode(p)}>
-                {p === 'mois' ? 'Par mois' : `Par an · ${TARIFS.an.economie}`}
+                {p === 'mois' ? 'Par mois' : `Par an, ${TARIFS.an.economie}`}
               </button>
             ))}
           </div>
@@ -91,9 +92,9 @@ export function DernierAppel({ api }: { api: ApiAccueil }) {
   const mode = useInscription();
   return (
     <section className="hl-section hl-dernier" aria-labelledby="dernier">
-      <h2 id="dernier" className="hl-h2 hl-h2-grand hl-entre">Ton nom est <span className="hl-insecable">peut-être</span> encore libre.</h2>
-      <div className="hl-entre" style={{ '--d': '120ms' } as CSSProperties}><Reserver api={api} id="reserver-fin" grand note={MOTS[mode].note} /></div>
-      <a href="/lilian" className="hl-lien-gris">Voir la page de Lilian</a>
+      <h2 id="dernier" className="hl-h2 hl-h2-grand hl-entre">Ton nom est <span className="hl-insecable">peut-être</span> <span className="hl-insecable">encore libre.</span></h2>
+      <div className="hl-entre" style={{ '--d': '120ms' } as CSSProperties} data-zone-appel=""><Reserver api={api} id="reserver-fin" grand note={MOTS[mode].note} /></div>
+      <a href="/lilian" className="hl-lien-gris">Voir une vraie page</a>
     </section>
   );
 }
@@ -108,6 +109,7 @@ export function Pied() {
         <a href="/legal/confidentialite">Confidentialité</a>
         <a href="/legal/mentions-legales">Mentions légales</a>
         <a href="/signaler">Signaler un contenu</a>
+        <a href={`mailto:${CONTACT_LEGAL}`}>Contact</a>
       </nav>
     </footer>
   );

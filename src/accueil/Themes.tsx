@@ -43,7 +43,12 @@ export function Themes() {
       <div className="hl-rail-tete">
         <div className="hl-onglets hl-onglets-defile" role="group" aria-label="Familles de thèmes">
           {[{ id: 'tous' as const, nom: 'Tous' }, ...FAMILLES].map(f => (
-            <button key={f.id} type="button" aria-pressed={famille === f.id} onClick={() => { setFamille(f.id); rail.current?.scrollTo({ left: 0 }); }}>{f.nom}</button>
+            <button key={f.id} type="button" aria-pressed={famille === f.id} onClick={ev => {
+              setFamille(f.id);
+              rail.current?.scrollTo({ left: 0 });
+              // Au téléphone, l'onglet choisi vient entier dans la bande.
+              ev.currentTarget.scrollIntoView({ block: 'nearest', inline: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+            }}>{f.nom}</button>
           ))}
         </div>
         <div className="hl-fleches hl-grand-seul">
@@ -80,7 +85,8 @@ export function Themes() {
               </fieldset>
             ))}
           </div>
-          <button type="button" className="hl-lien-texte" disabled={!couleurs.fond && !couleurs.boutons && !couleurs.accent} onClick={() => setCouleurs(SANS_COULEURS)}>Revenir aux couleurs du thème</button>
+          {/* Le retour n'apparaît qu'une fois une couleur choisie ; sa place est gardée, rien ne saute. */}
+          <button type="button" className="hl-lien-texte" data-cache={(!couleurs.fond && !couleurs.boutons && !couleurs.accent) || undefined} onClick={() => setCouleurs(SANS_COULEURS)}>Revenir aux couleurs du thème</button>
         </div>
         <div className="hl-couleurs-tel">
           <Telephone largeur={260} label="La page de Marie dans le thème Lin, avec les couleurs choisies">
