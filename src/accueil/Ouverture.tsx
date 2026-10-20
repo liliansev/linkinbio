@@ -6,19 +6,21 @@ import { Symbole } from '../components/Logo.tsx';
 import { EcranPage, Telephone } from './Telephone.tsx';
 import { Reserver, allerAuChamp, useReservation } from './Reserver.tsx';
 import type { ApiAccueil } from './Reserver.tsx';
-import { nomTape, pageJules, pageLilian, pageMarie, pageVisiteur, selonReseau } from './exemples.ts';
-import { mouvementReduit, useGlisse, useVu } from './mouvement.ts';
+import { BLOCS_MARIE_RESEAUX, ceQuiChange, nomTape, pageJules, pageLilian, pageMarie, pageVisiteur, selonReseau } from './exemples.ts';
+import { NOMS_AUDIENCES, deReseau } from '../lib/provenance.ts';
+import { useGlisse } from './mouvement.ts';
+import { Roue } from './Roue.tsx';
 import { APPEL, MOTS, useInscription } from './textes.ts';
 
 /*
  * 01 · La barre et l'ouverture. La promesse, puis tout de suite le champ du
- * nom : on tape, et le téléphone d'à côté devient sa page (son nom, son
- * adresse). Ce téléphone prouve la promesse : la page de Marie, puis la
- * sienne, vue depuis Instagram, TikTok et YouTube, range ses liens à chaque
- * fois. Au bureau, le texte à gauche et les téléphones à droite ; au
- * téléphone, où le clavier cache la scène, une carte aux couleurs du thème
- * reprend son nom juste sous la réponse du champ. Trois téléphones s'ouvrent en éventail, une
- * fois, sur une lumière grise.
+ * nom, sur le bleu Klein d'un des thèmes. À côté (dessous au téléphone), la
+ * roue des réseaux (`Roue.tsx`) : les visiteurs partent d'Instagram, TikTok,
+ * YouTube et LinkedIn, passent par le même lien et tombent chacun sur la page
+ * rangée pour eux ; le nom qu'on tape y remplace celui d'Inès. Juste dessous,
+ * « Essaie » (`Selon`) : on touche un réseau et la page de Marie (ou la
+ * sienne) se range. Au téléphone, où le clavier cache la roue, une carte aux
+ * couleurs du thème reprend son nom juste sous la réponse du champ.
  */
 
 export function Marque() {
@@ -102,63 +104,48 @@ export function Barre() {
 const SECTIONS = [['#fonctions', 'Fonctions'], ['#themes', 'Thèmes'], ['#prix', 'Prix'], ['#questions', 'Questions']];
 
 /**
- * La tournée des visiteurs du téléphone du milieu : la même page, vue depuis
- * Instagram, puis TikTok, puis YouTube, une fois, et ses liens se rangent à
- * chaque fois. Toucher le téléphone passe au réseau suivant.
+ * Essaie (juste sous l'ouverture) : le même lien, ouvert depuis Instagram,
+ * TikTok, YouTube ou LinkedIn, au choix du visiteur. Toucher un onglet range
+ * la page de Marie (ou la sienne, s'il a tapé son nom) pour ce réseau : le
+ * lien qui a bougé est cerclé de la couleur du réseau, et le fond de la
+ * section en prend la teinte. Rien ne joue tout seul : la roue d'au-dessus
+ * montre déjà le trafic.
  */
-const VISITES = [
-  { reseau: 'instagram', arrive: 'Arrivé d’Instagram' },
-  { reseau: 'tiktok', arrive: 'Arrivé de TikTok' },
-  { reseau: 'youtube', arrive: 'Arrivé de YouTube' },
-];
+const RESEAUX = ['instagram', 'tiktok', 'youtube', 'linkedin'] as const;
+type ReseauDemo = (typeof RESEAUX)[number];
+const COULEURS: Record<ReseauDemo, { fond: string; anneau: string; teinte: string }> = {
+  instagram: { fond: '#d62976', anneau: '#c13584', teinte: '#f56040' },
+  tiktok: { fond: '#111111', anneau: '#111111', teinte: '#25f4ee' },
+  youtube: { fond: '#e00000', anneau: '#ff0000', teinte: '#ff2a2a' },
+  linkedin: { fond: '#0a66c2', anneau: '#0a66c2', teinte: '#2f8ae0' },
+};
 const THEME = THEMES.find(t => t.id === 'champagne')!;
-/** « arrivé de TikTok », au milieu d'une phrase : la marque garde sa majuscule. */
-const enMinuscule = (texte: string) => texte[0].toLowerCase() + texte.slice(1);
 
 const d = (ms: number) => ({ '--d': `${ms}ms` }) as CSSProperties;
-const mots = (texte: string, depart = 0) => texte.split(' ').map((m, i) => (
-  <span key={i}><span className="hl-mot" style={d(depart + i * 55)}>{m}</span>{' '}</span>
-));
+/** Les mots d'un titre, qui montent un à un ; ceux de `vifs` prennent la couleur d'accent. */
+const mots = (texte: string, depart = 0, vifs = 0) => {
+  const liste = texte.split(' ');
+  return liste.map((m, i) => (
+    <span key={i}><span className={`hl-mot${i >= liste.length - vifs ? ' hl-vif' : ''}`} style={d(depart + i * 55)}>{m}</span>{' '}</span>
+  ));
+};
 
-export function Ouverture({ api }: { api: ApiAccueil }) {
-  const [rang, setRang] = useState(0);
-  const [touche, setTouche] = useState(false);
-  const [refScene, vu] = useVu<HTMLDivElement>(0.5);
-  const liste = useRef<HTMLDivElement>(null);
-  const { nom, saisie, verif, etape, ancien } = useReservation();
-  const mode = useInscription();
-
-  // La tournée part quand le téléphone est à l'écran, et s'arrête sur YouTube ; avec moins de mouvement, TikTok d'emblée.
-  useEffect(() => {
-    if (!vu || touche) return;
-    if (mouvementReduit()) { setRang(1); return; }
-    if (rang === VISITES.length - 1) return;
-    const t = setTimeout(() => setRang(rang + 1), 2400);
-    return () => clearTimeout(t);
-  }, [vu, rang, touche]);
-
-  const visite = VISITES[rang];
-  useGlisse(liste, visite.reseau, 450, '.lp-bloc');
-  const suivant = () => { setTouche(true); setRang(r => (r + 1) % VISITES.length); };
-  // Dès qu'on tape un nom de trois caractères, la page du milieu devient la sienne ;
-  // un nom pris le dit dans la barre d'adresse, et une fois l'e-mail parti, l'adresse est cochée.
+/** Le nom tapé dans le champ, s'il fait au moins trois caractères et qu'il est libre. */
+function usePseudo() {
+  const { nom, saisie, verif, ancien } = useReservation();
   const tape = nom.replace(/-$/, '');
   const pseudo = tape.length >= 3 ? tape : '';
   const pris = !!pseudo && verif?.nom === pseudo && verif.etat !== 'libre' && pseudo !== ancien;
-  // Le nom tel qu'on l'a tapé, accents compris.
-  const affiche = nomTape(saisie, pseudo);
-  const page = selonReseau(pseudo ? pageVisiteur(pseudo, THEME.id, affiche) : pageMarie(THEME.id), visite.reseau);
-  const adresse = pris
-    ? <span className="hl-tel-pris"><s>hopla.page/{pseudo}</s> {verif?.etat === 'pris' ? 'déjà pris' : 'impossible'}</span>
-    : etape === 'fait' && pseudo
-      ? <span key="fait" className="hl-tel-fait"><Icone nom="check" taille={12} />hopla.page/{pseudo}</span>
-      : `hopla.page/${pseudo || 'marie-lambert'}`;
+  return { pseudo, pris, affiche: nomTape(saisie, pseudo), verif };
+}
 
+export function Ouverture({ api }: { api: ApiAccueil }) {
+  const { pseudo, pris, affiche } = usePseudo();
+  const mode = useInscription();
   return (
-    <section className="hl-heros" aria-labelledby="titre">
-      <div className="hl-heros-fond" aria-hidden="true" />
+    <section className="hl-heros" data-teinte="klein" aria-labelledby="titre">
       <div className="hl-heros-texte">
-        <h1 id="titre" className="hl-h1 hl-heros-titre hl-mots">{mots('La page de liens qui s’adapte à chaque visiteur.')}</h1>
+        <h1 id="titre" className="hl-h1 hl-heros-titre hl-mots">{mots('La page de liens qui s’adapte à chaque visiteur.', 0, 2)}</h1>
         <p className="hl-chapo hl-apparait" style={d(420)}>
           Un seul lien dans ta bio. Ta page change selon le réseau et l’heure, ouvre tes liens dans leurs apps et se modifie depuis ton téléphone.
         </p>
@@ -171,33 +158,71 @@ export function Ouverture({ api }: { api: ApiAccueil }) {
           )} />
         </div>
       </div>
-      <div className="hl-heros-visuel">
-        <div ref={refScene} className="hl-scene">
-          <div className="hl-scene-tel hl-scene-gauche" aria-hidden="true">
-            <Telephone largeur={250} label="La page de Lilian Sevoumian, dans le thème Nuit et pêche">
-              <EcranPage page={pageLilian('nuit-peche')} />
-            </Telephone>
-          </div>
-          <div className="hl-scene-tel hl-scene-droite" aria-hidden="true">
-            <Telephone largeur={250} label="La page de Jules Moreau, musicien, dans le thème Arcade">
-              <EcranPage page={pageJules('arcade')} />
-            </Telephone>
-          </div>
-          <div className="hl-scene-tel hl-scene-milieu">
-            <span key={visite.reseau} className="hl-heros-source" aria-hidden="true"><Icone nom={visite.reseau} taille={14} />{visite.arrive}</span>
-            <button type="button" className="hl-tel-bouton" onClick={suivant} aria-label={`Réseau suivant (${enMinuscule(visite.arrive)}, ${rang + 1} sur ${VISITES.length})`}>
-              <Telephone largeur={290} adresse={adresse} label={pseudo && !pris
-                ? `Un aperçu de ta page, hopla.page/${pseudo}, ${enMinuscule(visite.arrive)}`
-                : `La page de Marie Lambert, céramiste, vue par un visiteur ${enMinuscule(visite.arrive)}`}>
-                <div key={pseudo ? 'toi' : 'marie'} ref={liste} className="hl-fondu" data-pris={pris || undefined}><EcranPage page={page} /></div>
-              </Telephone>
-            </button>
-          </div>
-        </div>
-        <p className="hl-legende hl-apparait" style={d(1300)} aria-live={touche ? 'polite' : 'off'}>
-          Les liens se rangent selon le réseau d’où arrive le visiteur. <span className="hl-tactile">Touche</span><span className="hl-souris">Clique sur</span> le téléphone pour en changer.
-        </p>
+      <div className="hl-heros-visuel hl-apparait" style={d(700)}>
+        <Roue pseudo={pseudo && !pris ? pseudo : ''} nom={pseudo && !pris ? affiche : ''} />
       </div>
+    </section>
+  );
+}
+
+export function Selon() {
+  // -1 : personne n'est encore arrivé de nulle part ; sinon le rang dans RESEAUX.
+  const [rang, setRang] = useState(-1);
+  const [eclat, setEclat] = useState(0);
+  const liste = useRef<HTMLDivElement>(null);
+  const { pseudo, pris, affiche, verif } = usePseudo();
+  const { etape } = useReservation();
+
+  const reseau = rang >= 0 ? RESEAUX[rang] : null;
+  useGlisse(liste, reseau ?? 'direct', 450, '.lp-bloc');
+  const toucher = (i: number) => { setRang(i); setEclat(e => e + 1); };
+  // Dès qu'on tape un nom de trois caractères, la page du milieu devient la sienne ;
+  // un nom pris le dit dans la barre d'adresse, et une fois l'e-mail parti, l'adresse est cochée.
+  const base = pseudo ? pageVisiteur(pseudo, THEME.id, affiche) : pageMarie(THEME.id, { blocs: BLOCS_MARIE_RESEAUX });
+  const page = selonReseau(base, reseau ?? '');
+  const phrase = reseau ? ceQuiChange(base, reseau) : 'Touche un réseau pour voir la page de son visiteur.';
+  const vuDe = reseau ? `vue par un visiteur arrivé ${deReseau(reseau)}` : 'vue par un visiteur';
+  const adresse = pris
+    ? <span className="hl-tel-pris"><s>hopla.page/{pseudo}</s> {verif?.etat === 'pris' ? 'déjà pris' : 'impossible'}</span>
+    : etape === 'fait' && pseudo
+      ? <span key="fait" className="hl-tel-fait"><Icone nom="check" taille={12} />hopla.page/{pseudo}</span>
+      : `hopla.page/${pseudo || 'marie-lambert'}`;
+  const couleur = reseau ? COULEURS[reseau] : null;
+
+  return (
+    <section className="hl-section hl-selon" data-teinte="reseau" aria-labelledby="selon" style={couleur ? { '--teinte': couleur.teinte } as CSSProperties : undefined}>
+      <div className="hl-tete-section hl-entre">
+        <h2 id="selon" className="hl-h2">Choisis d’où arrive ton visiteur.</h2>
+        <p className="hl-chapo">Le même lien dans toutes tes bios. Touche un réseau : la page se range pour celui qui arrive de là.</p>
+      </div>
+      <div className="hl-reseaux hl-entre" role="group" aria-label="D’où arrive le visiteur">
+        {RESEAUX.map((r, i) => (
+          <button key={r} type="button" aria-pressed={rang === i} style={{ '--fond': COULEURS[r].fond } as CSSProperties} onClick={() => toucher(i)}>
+            <Icone nom={r} taille={16} /><span>{NOMS_AUDIENCES[r]}</span>
+          </button>
+        ))}
+      </div>
+      <div className="hl-scene hl-entre">
+        <div className="hl-scene-tel hl-scene-gauche" aria-hidden="true">
+          <Telephone largeur={250} label="La page de Lilian Sevoumian, dans le thème Nuit et pêche">
+            <EcranPage page={pageLilian('nuit-peche')} />
+          </Telephone>
+        </div>
+        <div className="hl-scene-tel hl-scene-droite" aria-hidden="true">
+          <Telephone largeur={250} label="La page de Jules Moreau, musicien, dans le thème Arcade">
+            <EcranPage page={pageJules('arcade')} />
+          </Telephone>
+        </div>
+        <div className="hl-scene-tel hl-scene-milieu" data-eclat={eclat ? (eclat % 2 ? 'a' : 'b') : undefined}
+          style={couleur ? { '--anneau': couleur.anneau } as CSSProperties : undefined}>
+          <Telephone largeur={290} adresse={adresse} label={pseudo && !pris
+            ? `Un aperçu de ta page, hopla.page/${pseudo}, ${vuDe}`
+            : `La page de Marie Lambert, céramiste, ${vuDe}`}>
+            <div key={pseudo ? 'toi' : 'marie'} ref={liste} className="hl-fondu" data-pris={pris || undefined}><EcranPage page={page} /></div>
+          </Telephone>
+        </div>
+      </div>
+      <p key={rang} className="hl-legende hl-reseaux-phrase" aria-live="polite">{phrase}</p>
     </section>
   );
 }

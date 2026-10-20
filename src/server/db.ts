@@ -132,13 +132,14 @@ export function base(): DatabaseSync {
 }
 
 /** Ce qu'on garde, annoncé dans la politique de confidentialité (`lib/legal.ts`). */
-export const CONSERVATION = { statistiquesJours: 395, signalementsJours: 365, attenteJours: 365 };
+export const CONSERVATION = { statistiquesJours: 395, signalementsJours: 365, attenteJours: 365, pagesNonOuvertesJours: 30 };
 let derniere = 0;
 
 /**
  * Efface ce qui a passé sa durée de conservation : les statistiques de plus de
  * treize mois, les jetons expirés, les signalements traités depuis un an, les
- * noms réservés depuis un an sans invitation. Au
+ * noms réservés depuis un an sans invitation, et les pages jamais ouvertes un
+ * mois après leur création. Au
  * démarrage, puis au plus une fois toutes les six heures (voir `ajouterEvenement`).
  */
 export function purger(maintenant = Date.now(), d = base()) {
@@ -150,6 +151,14 @@ export function purger(maintenant = Date.now(), d = base()) {
   d.prepare('DELETE FROM resumes WHERE envoye < ?').run(maintenant - 60 * 86_400_000);
   d.prepare('DELETE FROM acces WHERE ts < ?').run(maintenant - CONSERVATION.statistiquesJours * 86_400_000);
   d.prepare('DELETE FROM attente WHERE ts < ?').run(maintenant - CONSERVATION.attenteJours * 86_400_000);
+  // Une page où personne n'est jamais entré (aucun lien de connexion utilisé) libère son nom et son adresse.
+  // Jamais tant qu'un lien envoyé marche encore, qu'elle a des liens, un client Creem, un signalement ouvert, ou qu'elle est suspendue.
+  const oubliees = d.prepare(`SELECT id FROM comptes c WHERE id != ? AND connexion IS NULL AND statut = 'actif' AND creem_client = '' AND cree < ?
+    AND NOT EXISTS (SELECT 1 FROM jetons j WHERE j.compte = c.id AND j.expire > ?)
+    AND NOT EXISTS (SELECT 1 FROM blocs b WHERE b.compte = c.id)
+    AND NOT EXISTS (SELECT 1 FROM signalements s WHERE s.compte = c.id AND s.statut = 'ouvert')`)
+    .all(PRINCIPAL, maintenant - CONSERVATION.pagesNonOuvertesJours * 86_400_000, maintenant) as { id: string }[];
+  for (const { id } of oubliees) supprimerCompte(id, d);
 }
 
 export const stockageEphemere = () => (base(), ephemere);
@@ -202,9 +211,8 @@ export function changerStatut(id: string, statut: Compte['statut']) {
 }
 
 /** Supprime un compte et tout ce qu'il possède. */
-export function supprimerCompte(id: string) {
+export function supprimerCompte(id: string, d = base()) {
   if (id === PRINCIPAL) throw new Error('Le compte principal ne se supprime pas.');
-  const d = base();
   d.exec('BEGIN');
   try {
     for (const table of ['blocs', 'medias', 'evenements', 'jetons', 'signalements', 'contacts', 'integrations', 'resumes', 'acces']) d.prepare(`DELETE FROM ${table} WHERE compte = ?`).run(id);

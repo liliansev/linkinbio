@@ -3,6 +3,8 @@ import { SANS_COULEURS, nouveauBloc } from '../lib/types.ts';
 import { REGLAGES_DEFAUT } from '../lib/defauts.ts';
 import { themeParId } from '../lib/themes.ts';
 import { nomSaisi } from '../lib/valider.ts';
+import { NOMS_AUDIENCES, composerAudience } from '../lib/provenance.ts';
+import type { Audience } from '../lib/provenance.ts';
 
 /*
  * Les pages montrées dans les téléphones de l'accueil : le vrai composant de
@@ -51,6 +53,22 @@ export const BLOCS_MARIE = [
   bloc('lien', { titre: 'Ma chaîne YouTube', url: 'https://youtube.com/', icone: 'youtube' }),
 ];
 
+/** Un lien réglé pour certains réseaux, comme dans « Ma page » : en tête pour eux, ou rien que pour eux. */
+const pour = (sources: Audience[], effet: 'avant' | 'seulement' = 'avant'): Pick<Bloc, 'audience'> => ({ audience: { sources, effet } });
+
+/**
+ * La page de Marie dans l'ouverture : chaque lien vise son réseau. Le lien
+ * réservé à LinkedIn est rangé en premier : absent ailleurs, il prend la tête
+ * quand on arrive de LinkedIn.
+ */
+export const BLOCS_MARIE_RESEAUX = [
+  bloc('lien', { titre: 'Ateliers pour les équipes', sousTitre: 'Une demi-journée, chez vous ou à l’atelier', url: 'https://exemple.fr/equipes', icone: 'equipe', ...pour(['linkedin'], 'seulement') }),
+  BLOCS_MARIE[0],
+  bloc('lien', { titre: 'Réserver un atelier', sousTitre: 'Samedi, plus que 3 places', url: 'https://exemple.fr/ateliers', icone: 'agenda', ...pour(['instagram']) }),
+  bloc('lien', { titre: 'Mon dernier TikTok', sousTitre: 'Un bol en 60 secondes', url: 'https://tiktok.com/', icone: 'tiktok', ...pour(['tiktok']), cache: ['linkedin'] }),
+  bloc('lien', { titre: 'Le tuto du tournage', sousTitre: '12 minutes, de la terre au bol', url: 'https://youtube.com/', icone: 'youtube', ...pour(['youtube']) }),
+];
+
 /** La page de Marie, entière ou en partie (l'arrivée la remplit étape par étape). */
 export function pageMarie(theme: string, o: { couleurs?: Couleurs; profil?: Partial<Reglages['profil']>; reseaux?: boolean; blocs?: Bloc[] } = {}): PagePublique {
   return {
@@ -93,10 +111,11 @@ export function nomTape(saisie: string, pseudo: string) {
 }
 
 const BLOCS_VISITEUR = [
+  bloc('lien', { titre: 'Travailler avec moi', url: 'https://exemple.fr/contact', icone: 'equipe', ...pour(['linkedin'], 'seulement') }),
   bloc('lien', { titre: 'Mon site', url: 'https://exemple.fr', icone: 'site', vedette: true, format: 'bouton' }),
-  bloc('lien', { titre: 'Ma dernière vidéo', url: 'https://youtube.com/', icone: 'youtube' }),
-  bloc('lien', { titre: 'Mon dernier TikTok', url: 'https://tiktok.com/', icone: 'tiktok' }),
-  bloc('lien', { titre: 'Me contacter', url: 'https://exemple.fr/contact', icone: 'courrier' }),
+  bloc('lien', { titre: 'Ma newsletter', sousTitre: 'Un e-mail le dimanche', url: 'https://exemple.fr/newsletter', icone: 'courrier', ...pour(['instagram']) }),
+  bloc('lien', { titre: 'Mon dernier TikTok', url: 'https://tiktok.com/', icone: 'tiktok', ...pour(['tiktok']), cache: ['linkedin'] }),
+  bloc('lien', { titre: 'Ma dernière vidéo', url: 'https://youtube.com/', icone: 'youtube', ...pour(['youtube']) }),
 ];
 
 /** La page de celui qui tape son nom dans l'ouverture : son nom, ses initiales, des liens de départ. */
@@ -113,14 +132,27 @@ export function pageVisiteur(pseudo: string, theme: string, nom = nomAffiche(pse
   };
 }
 
-/** La page vue depuis un réseau : son lien passe en tête et devient le lien mis en avant, comme sur une vraie page Hopla. */
-export function selonReseau(page: PagePublique, reseau: string): PagePublique {
-  const enTete = page.blocs.filter(b => b.icone === reseau);
-  if (!enTete.length) return page;
-  const reste = page.blocs.filter(b => b.icone !== reseau);
-  const vedette = page.blocs.find(b => b.vedette);
+/**
+ * La page vue depuis un réseau, composée comme sur le serveur (`composerAudience`) :
+ * les liens qui visent ce réseau passent en tête, ceux qui lui sont réservés
+ * apparaissent, ceux qu'on lui cache partent. Seul le premier reste mis en avant.
+ */
+export function selonReseau(page: PagePublique, reseau: Audience | ''): PagePublique {
+  const blocs = composerAudience(page.blocs, reseau);
   return {
     ...page,
-    blocs: [...enTete, ...reste].map((b, i) => ({ ...b, vedette: i === 0, format: i === 0 ? 'bouton' : b.format, sousTitre: i === 0 ? b.sousTitre : b === vedette ? '' : b.sousTitre })),
+    blocs: blocs.map((b, i) => ({ ...b, vedette: i === 0, format: i === 0 ? 'bouton' : b.format, sousTitre: i === 0 ? b.sousTitre : '' })),
   };
+}
+
+/** Ce qui a changé pour ce réseau, en une phrase : le lien passé en tête, ou apparu, et celui qui s'est caché. */
+export function ceQuiChange(page: PagePublique, reseau: Audience): string {
+  const avant = composerAudience(page.blocs, '');
+  const apres = composerAudience(page.blocs, reseau);
+  const tete = apres[0], nom = NOMS_AUDIENCES[reseau];
+  const g = (t: string) => `«\u00a0${t}\u00a0»`;
+  if (!tete || tete.id === avant[0]?.id) return `Depuis ${nom}, la page reste comme tu l’as rangée.`;
+  const parti = avant.find(b => !apres.some(a => a.id === b.id));
+  if (!avant.some(b => b.id === tete.id)) return `Depuis ${nom}, ${g(tete.titre)} apparaît${parti ? ` et ${g(parti.titre)} se cache` : ''}.`;
+  return `Depuis ${nom}, ${g(tete.titre)} passe en tête.`;
 }
