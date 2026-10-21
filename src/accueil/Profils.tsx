@@ -4,7 +4,7 @@ import { Icone, NOMS_RESEAUX } from '../components/Icone.tsx';
 import { Symbole } from '../components/Logo.tsx';
 import { OFFRES, euros, peut } from '../lib/abonnement.ts';
 import type { Plan } from '../lib/abonnement.ts';
-import { NOMS_AUDIENCES, composerAudience } from '../lib/provenance.ts';
+import { NOMS_AUDIENCES, composerAudience, deReseau } from '../lib/provenance.ts';
 import { BLOCS_EXEMPLES, IDS_PROFILS, PROFILS, de, pageExemple } from './exemples.ts';
 import type { ProfilExemple } from './exemples.ts';
 import { mouvementReduit, useGlisse, useVu } from './mouvement.ts';
@@ -48,7 +48,8 @@ export function Personne({ profil, badge = true }: { profil: ProfilExemple; badg
  * plan, arrive d'Instagram, ses pièces en tête, puis un visiteur de YouTube la
  * fait se ranger, ses coulisses en vidéo en premier. Une fois, quand la
  * composition est à l'écran (au téléphone, elle est sous le champ) ; avec moins
- * de mouvement, la carte est déjà rangée pour YouTube. La note du
+ * de mouvement, la carte est déjà rangée pour YouTube. Une pastille du réseau
+ * marque le lien monté, et une légende lisible le dit en clair. La note du
  * bas reprend le nom qu'on tape dans le champ, tant qu'il n'est pas pris.
  */
 const SOURCES = ['instagram', 'youtube'] as const;
@@ -78,7 +79,7 @@ export function HeroProfils() {
   const blocsInes = composerAudience(BLOCS_EXEMPLES.ines, reseau);
   useGlisse(liens, blocsInes.map(b => b.id).join(), 600);
   const nom = useNomTape();
-  return <div ref={scene} className="hp-composition" role="img" aria-label={`Les pages de Sacha, Inès et Camille. Ouverte depuis ${NOMS_AUDIENCES[reseau]}, celle d’Inès met « ${blocsInes[0].titre} » en premier.`}>
+  return <div className="hp-figure"><div ref={scene} className="hp-composition" role="img" aria-label={`Les pages de Sacha, Inès et Camille. Ouverte depuis ${NOMS_AUDIENCES[reseau]}, celle d’Inès met « ${blocsInes[0].titre} » en premier.`}>
     {(['sacha', 'ines', 'camille'] as const).map(id => {
       const p = PROFILS[id];
       const page = pageExemple(id);
@@ -91,7 +92,9 @@ export function HeroProfils() {
           <p>{p.bio}</p>
           <small>{page.reglages.reseaux.map(r => NOMS_RESEAUX[r.reseau] ?? r.reseau).join(' · ')}</small>
           <div className="hp-page-liens" ref={id === 'ines' ? liens : undefined}>
-            {blocs.map((b, i) => <div key={b.id} data-cle={b.id} data-premier={i === 0 || undefined}><span>{b.titre}</span><Icone nom="ui-fleche" taille={14} /></div>)}
+            {blocs.map((b, i) => <div key={b.id} data-cle={b.id} data-premier={i === 0 || undefined}><span>{b.titre}</span>{id === 'ines' && i === 0
+              ? <span key={reseau} className="hp-lien-source" data-reseau={reseau}><Icone nom={reseau} taille={12} /></span>
+              : <Icone nom="ui-fleche" taille={14} />}</div>)}
           </div>
           {/* Inès est en Starter : sa page n'a plus la mention. */}
           {!peut(p.offre, 'sansMention') && <span className="hp-page-marque"><Symbole /> fait avec Hopla</span>}
@@ -103,6 +106,9 @@ export function HeroProfils() {
     <span className="hp-note hp-note-bas">Et bientôt,<span key={nom} className="hp-note-fin" data-nom={nom || undefined}> {nom || 'toi'}</span></span>
     <Avatar profil="lea" className="hp-visage-libre hp-visage-lea" prioritaire />
     <Avatar profil="hugo" className="hp-visage-libre hp-visage-hugo" prioritaire />
+  </div>
+    {/* La composition se dit déjà aux lecteurs d'écran : la légende est pour les yeux. */}
+    <p key={reseau} className="hp-preuve" aria-hidden="true">Venu {deReseau(reseau)}, le visiteur voit d’abord <b>« {blocsInes[0].titre} »</b></p>
   </div>;
 }
 

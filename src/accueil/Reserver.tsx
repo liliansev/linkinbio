@@ -377,7 +377,7 @@ export function Reserver({ api, note, apercu, id, grand, premier, libelleNom }: 
           : v?.etat === 'libre' ? <p><Icone nom="check" taille={16} /><span><b>hopla.page/{insecable(v.nom)}</b> est libre</span></p>
           : v?.etat === 'pris' ? (
             <p className="hl-reserver-pris">
-              <span><b>hopla.page/{insecable(v.nom)}</b> est déjà pris.{v.suggestions.length > 0 && ' Essaie '}</span>
+              <Icone nom="cadenas" taille={16} /><span><b>hopla.page/{insecable(v.nom)}</b> est déjà pris.{v.suggestions.length > 0 && ' Essaie '}</span>
               {v.suggestions.map((s, i) => (
                 <span key={s}>{i > 0 && ' ou '}<button type="button" className="hl-lien-texte" onClick={() => { changer({ nom: s, verif: { etat: 'libre', nom: s, suggestions: [] } }); champ.current?.focus(); verifier(api, s); }}>{s}</button></span>
               ))}
@@ -385,7 +385,7 @@ export function Reserver({ api, note, apercu, id, grand, premier, libelleNom }: 
               {!v.reserve && !e.ancien && <span className="hl-reserver-tien">C’est le tien ? <a href="/admin">Connecte-toi</a>.</span>}
             </p>
           )
-          : v?.etat === 'invalide' ? <p className="hl-reserver-pris">Ce nom ne peut pas servir d’adresse : 3 à 30 caractères, lettres, chiffres et tirets.</p>
+          : v?.etat === 'invalide' ? <p className="hl-reserver-pris"><Icone nom="alerte" taille={16} />Ce nom ne peut pas servir d’adresse : 3 à 30 caractères, lettres, chiffres et tirets.</p>
           : e.verifie && e.verifie === e.nom.replace(/-$/, '') ? <p className="hl-reserver-attente">Vérification de <b>hopla.page/{insecable(e.verifie)}</b>…</p>
           : null}
         {e.etape === 'nom' && e.coupe && !e.erreur && <p className="hl-reserver-coupe">Un nom tient en 30 caractères : la fin est coupée.</p>}

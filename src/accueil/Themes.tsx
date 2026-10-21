@@ -42,18 +42,20 @@ export function Themes() {
     return () => { el.removeEventListener('scroll', lire); removeEventListener('resize', lire); };
   }, []);
 
-  // Le premier thème entier dans le rail donne sa teinte à la scène.
+  // Le premier thème entier dans le rail donne sa teinte à la scène ; si aucun n'est entier (un écran très étroit), le plus visible.
   useEffect(() => {
     const el = rail.current;
     if (!el || typeof IntersectionObserver !== 'function') return;
-    const vus = new Set<number>();
+    const parts = new Map<number, number>();
     const o = new IntersectionObserver(entrees => {
       for (const e of entrees) {
         const i = Number((e.target as HTMLElement).dataset.i);
-        if (e.isIntersecting) vus.add(i); else vus.delete(i);
+        if (e.isIntersecting) parts.set(i, e.intersectionRatio); else parts.delete(i);
       }
-      if (vus.size) setPremier(Math.min(...vus));
-    }, { root: el, threshold: 0.6 });
+      if (!parts.size) return;
+      const entiers = [...parts].filter(([, r]) => r >= 0.97).map(([i]) => i);
+      setPremier(entiers.length ? Math.min(...entiers) : [...parts].reduce((a, b) => (b[1] > a[1] ? b : a))[0]);
+    }, { root: el, threshold: [0, 0.25, 0.5, 0.75, 0.97, 1] });
     el.querySelectorAll('[data-i]').forEach(li => o.observe(li));
     return () => o.disconnect();
   }, []);

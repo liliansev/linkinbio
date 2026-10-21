@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { Avatar, OffreFonction, Personne } from './Profils.tsx';
+import type { ProfilExemple } from './exemples.ts';
 import { Icone } from '../components/Icone.tsx';
 import { Symbole } from '../components/Logo.tsx';
 import { CroquisLien, CroquisTete, Telephone } from './Telephone.tsx';
@@ -8,8 +9,8 @@ import { mouvementReduit, useCompte, useEnchainement, useGlisse, useSequence, us
 
 /*
  * Ce que fait Hopla, en trois sections : 02 les liens qui s'ouvrent dans
- * leur app, 03 la page qui change selon l'heure, avant un lancement et pour les drops (le réseau se
- * voit dans l'ouverture),
+ * leur app, 03 la page qui change selon l'heure, avant un lancement et pour les drops, avec les avis
+ * et la liste e-mail (le réseau se voit dans l'ouverture),
  * 05 le dashboard et les stats en phrases de l'e-mail du lundi (ce que comprend
  * chaque offre se lit dans les prix). Les téléphones y
  * sont des croquis gris : on lit le mouvement, pas un thème. Au téléphone,
@@ -142,10 +143,14 @@ export function DansApp() {
             {(['sans', 'avec'] as const).map(c => <p key={c} className="hl-legende-scene hl-legende-gabarit" aria-hidden="true">{LEGENDES[c]}</p>)}
             <p key={cote} className="hl-legende-scene" aria-live={touche ? 'polite' : 'off'}>{LEGENDES[cote]}</p>
           </div>
-          {/* La suite se dit quand « Sans » finit : on ne l'attend pas sans le savoir. Sa place est gardée, rien ne saute. */}
-          {!reduit && <button type="button" className="hl-btn hl-btn-petit hl-suite" data-cache={!(cote === 'sans' && etape >= PAS_SANS.length) || undefined} onClick={() => toucher('avec')}>
-            Voir avec Hopla<Icone nom="ui-chevron" taille={16} className="hl-droite" />
-          </button>}
+          {/* Revoir rejoue la scène affichée, comme ses onglets. La suite se dit quand « Sans » finit : on ne l'attend pas sans le savoir.
+              Sa place est gardée, rien ne saute. Avec moins de mouvement, chaque scène est posée sur sa fin : ni l'un ni l'autre. */}
+          {!reduit && <div className="hl-dans-app-actions">
+            <Revoir onClick={() => toucher(cote)} quoi={cote === 'sans' ? 'le trajet sans Hopla' : 'le trajet avec Hopla'} />
+            <button type="button" className="hl-btn hl-btn-petit hl-suite" data-cache={!(cote === 'sans' && etape >= PAS_SANS.length) || undefined} onClick={() => toucher('avec')}>
+              Voir avec Hopla<Icone nom="ui-chevron" taille={16} className="hl-droite" />
+            </button>
+          </div>}
         </div>
       </div>
     </section>
@@ -154,14 +159,34 @@ export function DansApp() {
 
 /* ---- 03 · Une page vivante ---- */
 
-interface EtatVivant { heure: number; rebours: number; drop: number }
+interface EtatVivant { heure: number; rebours: number; drop: number; avis: number; liste: number }
 type Chapitre = keyof EtatVivant;
 
 /* Chaque démo part de DEPART et finit sur FIN ; avec moins de mouvement, elle est
  * posée sur IMMOBILE : le compte à rebours y reste lisible au lieu d'être déjà ouvert. */
-const DEPART: EtatVivant = { heure: 9, rebours: 5, drop: 0 };
-const IMMOBILE: EtatVivant = { heure: 21, rebours: ((2 * 60) + 14) * 60 + 8, drop: 3 };
-const ORDRE: Chapitre[] = ['heure', 'rebours', 'drop'];
+const DEPART: EtatVivant = { heure: 9, rebours: 5, drop: 0, avis: 0, liste: 0 };
+const ORDRE: Chapitre[] = ['heure', 'rebours', 'drop', 'avis', 'liste'];
+
+/** L'adresse que tape le visiteur de Malik, une lettre après l'autre. */
+const ADRESSE_LISTE = 'noa@mail.fr';
+/* La liste : l'adresse s'écrit (1 à 11), le bouton est touché (12), « C'est noté » (13), l'inscrit part vers Brevo (14). */
+const LISTE_TOUCHE = ADRESSE_LISTE.length + 1;
+const LISTE_NOTEE = ADRESSE_LISTE.length + 2;
+const LISTE_BREVO = ADRESSE_LISTE.length + 3;
+/* Les avis : les cinq étoiles se remplissent (1 à 5), la note et le nombre d'avis (6), le mot d'une cliente (7). */
+const AVIS_NOTE = 6;
+const AVIS_MOT = 7;
+const IMMOBILE: EtatVivant = { heure: 21, rebours: ((2 * 60) + 14) * 60 + 8, drop: 3, avis: AVIS_MOT, liste: LISTE_BREVO };
+
+/** Les pas de chaque démo : [délai en ms, valeur]. */
+const PAS_VIVANTE: Record<Chapitre, [number, number][]> = {
+  heure: Array.from({ length: 12 }, (_, k) => [700 + k * 110, 10 + k]),
+  rebours: [4, 3, 2, 1, 0].map((n, k) => [700 + k * 1000, n]),
+  drop: [1, 2, 3].map((n, k) => [700 + k * 650, n]),
+  avis: [...[1, 2, 3, 4, 5].map((n, k): [number, number] => [700 + k * 180, n]), [1800, AVIS_NOTE], [2700, AVIS_MOT]],
+  liste: [...Array.from({ length: ADRESSE_LISTE.length }, (_, k): [number, number] => [700 + k * 85, k + 1]),
+    [2000, LISTE_TOUCHE], [2450, LISTE_NOTEE], [3300, LISTE_BREVO]],
+};
 
 const deux = (n: number) => String(n).padStart(2, '0');
 
@@ -235,23 +260,84 @@ function EcranDrop({ drop }: { drop: number }) {
   );
 }
 
+/** Les avis d'Inès : ses étoiles se remplissent, puis sa note, le nombre d'avis et le mot d'une cliente. */
+function EcranAvis({ avis }: { avis: number }) {
+  return (
+    <div className="hl-cq">
+      <CroquisTete profil="ines" />
+      <div className="hl-cq-liens">
+        <CroquisLien titre="Mes pièces du moment" picto={<Icone nom="instagram" taille={14} />} />
+        <div className="hl-cq-avis">
+          <b>Ce qu’en disent mes clients</b>
+          <span className="hl-cq-etoiles">{[1, 2, 3, 4, 5].map(n => <span key={n} data-pleine={avis >= n || undefined}><Icone nom="etoile" taille={18} /></span>)}</span>
+          <span className="hl-cq-note" data-vu={avis >= AVIS_NOTE || undefined}><b>4,9</b> sur 5 · 87 avis Google</span>
+        </div>
+        {avis >= AVIS_MOT && <figure className="hl-cq-citation">
+          <blockquote>« Mon bol préféré. Je m’en sers tous les matins. »</blockquote>
+          <figcaption>Julie, cliente à Lyon</figcaption>
+        </figure>}
+        {avis < AVIS_MOT && <CroquisLien titre="Réserver un atelier" picto={<Icone nom="agenda" taille={14} />} />}
+      </div>
+    </div>
+  );
+}
+
+/** La liste de Malik : un visiteur tape son adresse, s'inscrit, et l'inscrit part vers Brevo. */
+function EcranListe({ liste }: { liste: number }) {
+  const note = liste >= LISTE_NOTEE;
+  return (
+    <div className="hl-cq">
+      <CroquisTete profil="malik" />
+      <div className="hl-cq-liens">
+        <CroquisLien titre="Ma recette du dimanche" picto={<Icone nom="youtube" taille={14} />} />
+        <div className="hl-cq-liste" data-note={note || undefined}>
+          <div className="hl-cq-drop-tete">
+            <span className="hl-cq-drop-picto"><Icone nom="courrier" taille={16} /></span>
+            <span><b>Rejoins ma liste</b><span className="hl-cq-sous">Une recette chaque dimanche</span></span>
+          </div>
+          {note
+            ? <p key="note" className="hl-cq-merci"><Icone nom="check" taille={14} />C’est noté, merci !</p>
+            : <div className="hl-cq-code">
+              <span className="hl-cq-saisie hl-cq-adresse">{ADRESSE_LISTE.slice(0, liste)}{liste < LISTE_TOUCHE && <i />}{liste === 0 && <span className="hl-cq-indice">ton@email.fr</span>}</span>
+              <span className="hl-cq-ok hl-cq-inscrire" data-touche={liste >= LISTE_TOUCHE || undefined}>Je m’inscris</span>
+            </div>}
+        </div>
+        <CroquisLien titre="Réserver un dîner" picto={<Icone nom="agenda" taille={14} />} />
+      </div>
+      {liste >= LISTE_BREVO && <p className="hl-toast hl-toast-vite"><Icone nom="check" taille={14} />Ajouté à ta liste Brevo</p>}
+    </div>
+  );
+}
+
 const CHAPITRES: { court: string; offre: 'starter' | 'pro'; titre: string; texte: string }[] = [
   { court: 'L’heure', offre: 'pro', titre: 'Malik cuisine, sa\u00a0page s’organise', texte: 'Le menu du jour le midi, les réservations pour dîner le soir. Tu choisis les horaires, Hopla met le bon lien en tête.' },
   { court: 'Le lancement', offre: 'starter', titre: 'Les nouvelles pièces d’Inès', texte: 'Ton lien affiche un compte à rebours, sans dévoiler son adresse. À l’heure dite, il s’ouvre tout seul.' },
   { court: 'Les drops', offre: 'pro', titre: 'Les éditions limitées d’Hugo', texte: 'Un drop, c’est un lien réservé : il s’ouvre avec un code, pour le nombre de places que tu choisis. Le compteur se tient à jour tout seul.' },
+  { court: 'Les avis', offre: 'starter', titre: 'Les clients d’Inès en parlent', texte: 'Ta note sur 5, le nombre d’avis et le mot d’un client, en bonne place sur ta page. Tu les reprends de Google ou d’ailleurs, Hopla les met en forme.' },
+  { court: 'La liste e-mail', offre: 'pro', titre: 'Malik garde le contact', texte: 'Un visiteur laisse son e-mail sur ta page et rejoint ta liste. Il part tout seul vers Brevo ou Mailchimp si tu les as branchés.' },
 ];
+/** Qui montre chaque chapitre. */
+const PERSONNES: ProfilExemple[] = ['malik', 'ines', 'hugo', 'ines', 'malik'];
 
 function EcranChapitre({ i, e }: { i: number; e: EtatVivant }) {
-  return i === 0 ? <EcranHeure heure={e.heure} /> : i === 1 ? <EcranRebours reste={e.rebours} /> : <EcranDrop drop={e.drop} />;
+  switch (ORDRE[i]) {
+    case 'heure': return <EcranHeure heure={e.heure} />;
+    case 'rebours': return <EcranRebours reste={e.rebours} />;
+    case 'drop': return <EcranDrop drop={e.drop} />;
+    case 'avis': return <EcranAvis avis={e.avis} />;
+    default: return <EcranListe liste={e.liste} />;
+  }
 }
 const LABELS = [
   'Le soir, la page de Malik met « Réserver un dîner » en tête à la place de « Le menu du jour ».',
   'Un compte à rebours, puis le lien qui s’ouvre à l’heure dite.',
   'Un lien réservé s’ouvre avec un code, et ses places se comptent.',
+  'Sur la page d’Inès, ses avis : 4,9 sur 5 pour 87 avis Google, et le mot d’une cliente.',
+  'Sur la page de Malik, un visiteur laisse son e-mail : il rejoint sa liste, envoyée vers Brevo.',
 ];
 
 /** Les onglets ont une adresse : un avantage des prix (#vivante-drops) ramène à son chapitre et l'ouvre. */
-const IDS_CHAPITRES = ['vivante-heure', 'vivante-lancement', 'vivante-drops'];
+const IDS_CHAPITRES = ['vivante-heure', 'vivante-lancement', 'vivante-drops', 'vivante-avis', 'vivante-liste'];
 
 export function Vivante() {
   const [ref, vu] = useVu<HTMLDivElement>(0.6);
@@ -278,27 +364,30 @@ export function Vivante() {
     const cle = ORDRE[actif];
     if (mouvementReduit()) { setE({ ...DEPART, [cle]: IMMOBILE[cle] }); return; }
     setE(DEPART);
-    const pas: [number, number][] = cle === 'heure'
-      ? Array.from({ length: 12 }, (_, k) => [700 + k * 110, 10 + k])
-      : cle === 'rebours' ? [4, 3, 2, 1, 0].map((n, k) => [700 + k * 1000, n])
-      : [1, 2, 3].map((n, k) => [700 + k * 650, n]);
-    const t = pas.map(([ms, v]) => setTimeout(() => setE(x => ({ ...x, [cle]: v })), ms));
+    const t = PAS_VIVANTE[cle].map(([ms, v]) => setTimeout(() => setE(x => ({ ...x, [cle]: v })), ms));
     return () => t.forEach(clearTimeout);
   }, [actif, vu, tour]);
+  // Quand les onglets défilent de côté, celui de la démo en cours vient au milieu de la bande.
+  useEffect(() => {
+    const b = document.getElementById(IDS_CHAPITRES[actif]);
+    const bande = b?.parentElement;
+    if (!b || !bande || bande.scrollWidth <= bande.clientWidth) return;
+    bande.scrollTo({ left: b.offsetLeft - (bande.clientWidth - b.offsetWidth) / 2, behavior: mouvementReduit() ? 'auto' : 'smooth' });
+  }, [actif]);
   // Au téléphone, la démo choisie se joue à l'écran : le téléphone, juste sous les onglets, remonte s'il le faut.
   const choisir = (i: number) => {
     setTouche(true); setActif(i); setTour(t => t + 1);
     if (matchMedia('(max-width: 1023px)').matches) ref.current?.scrollIntoView({ block: 'nearest', behavior: mouvementReduit() ? 'auto' : 'smooth' });
   };
   return <section className="hl-section hp-vivante" data-teinte="peche" aria-labelledby="vivante">
-    <div className="hl-tete-section"><h2 id="vivante" className="hl-h2">Toi, tu avances<br /><span className="hl-cache">. </span>Ta page suit</h2><p className="hl-chapo">Le bon lien selon l’heure, un compte à rebours avant un lancement, des places comptées pour un drop. Hopla garde le rythme.</p></div>
+    <div className="hl-tete-section"><h2 id="vivante" className="hl-h2">Toi, tu avances<br /><span className="hl-cache">. </span>Ta page suit</h2><p className="hl-chapo">Le bon lien selon l’heure, un compte à rebours avant un lancement, des places comptées pour un drop, tes avis clients et ta liste e-mail. Hopla garde le rythme.</p></div>
     <div className="hp-vivante-scene">
       <div className="hp-vivante-texte">
         <div className="hl-onglets" role="group" aria-label="Choisir une démonstration">
           {CHAPITRES.map((c, i) => <button key={c.court} id={IDS_CHAPITRES[i]} type="button" aria-pressed={actif === i} onClick={() => choisir(i)}>{c.court}</button>)}
         </div>
         <div className="hp-vivante-explication" aria-live={touche ? 'polite' : 'off'}>
-          <Personne profil={actif === 0 ? 'malik' : actif === 1 ? 'ines' : 'hugo'} badge={false} />
+          <Personne profil={PERSONNES[actif]} badge={false} />
           <h3 className="hl-h3">{CHAPITRES[actif].titre}</h3><p>{CHAPITRES[actif].texte}</p>
           <OffreFonction offre={CHAPITRES[actif].offre} />
         </div>
