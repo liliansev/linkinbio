@@ -202,7 +202,7 @@ async function renvoyer(api: ApiAccueil) {
  * `apercu` : ce qui suit la réponse du champ, avant la note (au téléphone, la carte qui reprend le nom tapé).
  * `premier` : le formulaire qui parle aux lecteurs d'écran tant qu'on ne s'est servi d'aucun des deux.
  */
-export function Reserver({ api, note, apercu, id, grand, premier }: { api: ApiAccueil; note?: ReactNode; apercu?: ReactNode; id?: string; grand?: boolean; premier?: boolean }) {
+export function Reserver({ api, note, apercu, id, grand, premier, libelleNom }: { api: ApiAccueil; note?: ReactNode; apercu?: ReactNode; id?: string; grand?: boolean; premier?: boolean; libelleNom?: string }) {
   const e = useReservation();
   const mode = useInscription();
   const classe = `hl-reserver${grand ? ' hl-reserver-grand' : ''}`;
@@ -323,7 +323,7 @@ export function Reserver({ api, note, apercu, id, grand, premier }: { api: ApiAc
               autoComplete="email" inputMode="email" enterKeyHint="send" required aria-describedby={idEtat} />
           </label>
         )}
-        <button type="submit" className="hl-btn" disabled={e.envoi}>{e.envoi ? (e.etape === 'nom' && !e.ancien ? 'Vérification…' : 'Envoi…') : e.correction ? 'Corriger' : e.ancien ? 'Changer' : e.etape === 'email' ? MOTS[mode].envoyer : appel(mode)}</button>
+        <button type="submit" className="hl-btn" disabled={e.envoi}>{e.envoi ? (e.etape === 'nom' && !e.ancien ? 'Vérification…' : 'Envoi…') : e.correction ? 'Corriger' : e.ancien ? 'Changer' : e.etape === 'email' ? MOTS[mode].envoyer : libelleNom ?? appel(mode)}</button>
       </div>
       <div className="hl-reserver-etat" id={idEtat} aria-live={parle ? 'polite' : 'off'}>
         {e.erreur ? <p className="hl-reserver-erreur" role={parle ? 'alert' : undefined}>{e.erreur}</p>

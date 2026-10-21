@@ -75,13 +75,16 @@ export function Prix() {
               <p className="hl-offre-phrase">{o.phrase}</p>
               <ul id={`offre-${plan}`} data-ouvert="">
                 {avant && <li className="hl-offre-avant">Tout {avant}, et :</li>}
-                {o.avantages.map(g => <li key={g}><Icone nom="check" taille={18} />{g}</li>)}
+                {o.avantages.map(g => <li key={g}><Icone nom="check" taille={18} /><span>{g.replace(/« /g, '«\u00a0').replace(/ »/g, '\u00a0»')}</span></li>)}
               </ul>
               {/* On commence toujours en Gratuit : l'offre se prend ensuite depuis les réglages. */}
               {!envoye && o.enVente && (
-                <a href="#reserver" className={`hl-btn ${plan === 'gratuit' ? '' : 'hl-btn-contour'}`} onClick={reserver}>
-                  {plan === 'gratuit' || mode !== 'libre' ? libelle : 'Commencer gratuitement'}
-                </a>
+                <div className="hp-offre-action">
+                  <a href="#reserver" className={`hl-btn ${plan === 'gratuit' ? '' : 'hl-btn-contour'}`} onClick={reserver}>
+                    {plan === 'gratuit' || mode !== 'libre' ? libelle : 'Créer mon compte'}
+                  </a>
+                  {plan !== 'gratuit' && mode === 'libre' && <p>Puis active {o.nom} dans tes réglages.</p>}
+                </div>
               )}
             </article>
           );
@@ -116,8 +119,8 @@ export function DernierAppel({ api }: { api: ApiAccueil }) {
   return (
     <section className="hl-section hl-dernier" data-teinte="klein" aria-labelledby="dernier">
       <RubanProfils />
-      <h2 id="dernier" className="hl-h2 hl-h2-grand hl-entre">{envoye ? MOTS[mode].fin : <>Et toi,<br />on te trouve où ?</>}</h2>
-      <div className="hl-entre" style={{ '--d': '120ms' } as CSSProperties} data-zone-appel=""><Reserver api={api} id="reserver-fin" grand note={MOTS[mode].note} /></div>
+      <h2 id="dernier" className="hl-h2 hl-h2-grand hl-entre">{envoye ? MOTS[mode].fin : <>Réserve ton nom<br />en premier</>}</h2>
+      <div className="hl-entre" style={{ '--d': '120ms' } as CSSProperties} data-zone-appel=""><Reserver api={api} id="reserver-fin" grand libelleNom={mode === 'libre' ? 'Réserver mon nom' : undefined} note={MOTS[mode].note} /></div>
       <a href="/lilian" className="hl-lien-gris">Voir une vraie page</a>
     </section>
   );

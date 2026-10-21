@@ -1,0 +1,20 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "design-system-font",
+        "value": "bricolage grotesque variable",
+        "createdAt": "2026-10-21T08:43:12.027Z",
+        "reason": "LP approuvee par Lilian et documentee dans docs/DESIGN-LP.md ; DESIGN.md decrit uniquement le back office"
+      },
+      {
+        "rule": "design-system-font",
+        "value": "instrument serif",
+        "createdAt": "2026-10-21T08:43:12.047Z",
+        "reason": "Annotations de la LP approuvee et documentee dans docs/DESIGN-LP.md ; DESIGN.md decrit uniquement le back office"
+      }
+    ]
+  }
+}

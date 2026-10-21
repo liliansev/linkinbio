@@ -10,7 +10,7 @@ import { mouvementReduit, useCompte, useGlisse, useSequence, useVu } from './mou
  * Ce que fait Hopla, en trois sections : 02 les liens qui s'ouvrent dans
  * leur app, 03 la page qui change selon l'heure, avant un lancement et pour les drops (le réseau se
  * voit dans l'ouverture),
- * 05 les stats en phrases, lues comme l'e-mail du lundi (ce que comprend
+ * 05 le dashboard et les stats en phrases de l'e-mail du lundi (ce que comprend
  * chaque offre se lit dans les prix). Les téléphones y
  * sont des croquis gris : on lit le mouvement, pas un thème. Au téléphone,
  * chaque démo part quand son téléphone est à l'écran, ses onglets juste
@@ -38,9 +38,9 @@ function Revoir({ onClick, quoi }: { onClick: () => void; quoi: string }) {
 
 type Cote = 'sans' | 'avec';
 /** 1 : la touche sur le lien ; 2 : ce qui s'ouvre ; 3 : la suite ; 4 : le visiteur repart, ou s'abonne. */
-const PAS_APP = [450, 600, 1000, 1100];
-/** La scène « Sans » dure 3,15 s ; on laisse ensuite le temps de lire sa légende avant « Avec ». */
-const AVANT_AVEC = 3150 + 3500;
+const PAS_APP = [350, 500, 850, 900];
+/** La scène « Sans » dure 2,6 s ; une courte pause laisse lire la légende avant « Avec ». */
+const AVANT_AVEC = PAS_APP.reduce((total, duree) => total + duree, 0) + 2800;
 const LEGENDES: Record<Cote, string> = {
   sans: 'Le lien s’ouvre dans le navigateur d’Instagram. Une connexion peut être demandée avant de regarder le clip de Sacha.',
   avec: 'Hopla ouvre le clip de Sacha dans l’app YouTube si elle est installée. Le visiteur retrouve son compte et peut s’abonner.',
@@ -303,29 +303,68 @@ function Nombre({ n, avant = '', suite = '', joue, delai }: { n: number; avant?:
   return <><span className="hl-stat-mot hl-stat-nombre" style={d(delai)}>{avant}{v.toLocaleString('fr-FR')}{suite}</span> </>;
 }
 
+/** Un aperçu des mêmes mesures que le dashboard, avec les chiffres de l'e-mail ci-dessous. */
+function DashboardStats() {
+  const vues = [42, 54, 48, 88, 62, 70, 48];
+  const points = vues.map((v, i) => `${16 + i * 78},${170 - v * 1.5}`).join(' ');
+  return (
+    <div className="hp-dashboard">
+      <div className="hp-dashboard-titre"><h3>Mes statistiques</h3><span>7 derniers jours</span></div>
+      <p>Ta page a reçu <b>18 % de vues en plus</b> cette semaine.</p>
+      <dl className="hp-dashboard-mesures">
+        {[['Vues', '412'], ['Visiteurs', '286'], ['Clics', '124'], ['Taux de clic', '30,1 %']].map(([nom, valeur]) => <div key={nom}><dt>{nom}</dt><dd>{valeur}</dd></div>)}
+      </dl>
+      <figure className="hp-dashboard-courbe">
+        <figcaption>Les vues, jour après jour</figcaption>
+        <svg viewBox="0 0 500 200" role="img" aria-label="Vues de lundi à dimanche : 42, 54, 48, 88, 62, 70 et 48. Le meilleur jour est jeudi, avec 88 vues.">
+          {[20, 95, 170].map(y => <line key={y} x1="16" x2="484" y1={y} y2={y} stroke="#e8e8e3" />)}
+          <polygon points={`16,170 ${points} 484,170`} fill="#20241f" fillOpacity=".06" />
+          <polyline points={points} fill="none" stroke="#20241f" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
+          <circle cx="250" cy="38" r="4" fill="#20241f" />
+          <text x="250" y="25" textAnchor="middle" className="hp-dashboard-pic">88</text>
+          {['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'].map((jour, i) => <text key={jour} x={16 + i * 78} y="194" textAnchor={i === 0 ? 'start' : i === 6 ? 'end' : 'middle'}>{jour}</text>)}
+        </svg>
+      </figure>
+      <div className="hp-dashboard-details">
+        <div><h4>D’où viennent les visites</h4><ul>{[['Instagram', 61], ['Accès direct', 24], ['TikTok', 15]].map(([nom, part]) => <li key={nom}><span className="hp-dashboard-barre" style={{ width: `${part}%` }} /><span>{nom}</span><b>{part} %</b></li>)}</ul></div>
+        <div><h4>Les liens les plus cliqués</h4><ul>{[['Mes affiches', 35], ['Une commande sur mesure', 28], ['Mon carnet de dessins', 19]].map(([nom, clics]) => <li key={nom}><span>{nom}</span><b>{clics}</b></li>)}</ul></div>
+      </div>
+    </div>
+  );
+}
+
 export function Stats() {
-  const [ref, vu] = useVu<HTMLOListElement>(0.3);
+  const [ref, vu] = useVu<HTMLDivElement>(0.3);
   const [tour, setTour] = useState(0);
+  const [vue, setVue] = useState<'dashboard' | 'email'>('dashboard');
   return (
     <section className="hl-section hl-section-stats" data-teinte="menthe" aria-labelledby="stats">
       <div className="hl-tete-section hl-entre">
         <h2 id="stats" className="hl-h2">Tes stats, en clair.</h2>
-        <p className="hl-chapo">Pas de tableau à déchiffrer : Hopla te dit ce qui a bougé, dans ton espace et par e‑mail chaque lundi à 9 h. Sans cookie ni bannière, l’adresse IP de tes visiteurs n’est jamais gardée.</p>
+        <p className="hl-chapo">Ton dashboard pour suivre tes vues, tes clics et d’où viennent tes visiteurs. Et chaque lundi à 9 h, l’essentiel par e‑mail.</p>
+        <p className="hp-stats-confidentialite">Sans cookie ni bannière, l’adresse IP de tes visiteurs n’est jamais gardée.</p>
       </div>
-      <div className="hl-stats">
-        <article className="hl-mail" aria-label="Exemple d’e-mail du lundi">
-          <div className="hl-mail-tete"><Symbole className="hl-mail-logo" /><b>Hopla</b><span className="hl-gris">lundi, 9 h</span></div>
-          <Personne profil="hugo" offre="starter" /><p className="hl-mail-sujet">Hugo sait ce qui plaît</p>
-          <ol ref={ref} key={tour} className="hl-stats-liste">
+      <div ref={ref} className="hl-stats">
+        <div className="hp-stats-vues" role="group" aria-label="Aperçu des statistiques">
+          <button type="button" aria-pressed={vue === 'dashboard'} onClick={() => setVue('dashboard')}>Le dashboard</button>
+          <button type="button" aria-pressed={vue === 'email'} onClick={() => setVue('email')}>L’e-mail du lundi</button>
+        </div>
+        <article className="hl-mail" aria-label={vue === 'dashboard' ? 'Exemple de dashboard' : 'Exemple d’e-mail du lundi'}>
+          <div className="hl-mail-tete"><Symbole className="hl-mail-logo" /><b>Hopla</b>{vue === 'email' && <span className="hl-gris">lundi, 9 h</span>}</div>
+          <Personne profil="hugo" offre="starter" />
+          {vue === 'dashboard' ? <DashboardStats /> : <>
+          <p className="hl-mail-sujet">Hugo sait ce qui plaît</p>
+          <ol key={tour} className="hl-stats-liste">
             <Phrase joue={vu} depart={0} hausse morceaux={['Ta page a eu', { n: 412, suite: ' vues,' }, 'soit', { n: 18, suite: ' %' }, 'de plus que la semaine d’avant.']} />
             <Phrase joue={vu} depart={500} morceaux={['Instagram t’amène le plus de monde :', { n: 61, suite: ' %' }, 'des visites.']} />
             <Phrase joue={vu} depart={950} morceaux={['Ton meilleur jour : jeudi, avec', { n: 88 }, 'vues. Un post ce jour-là ?']} />
             <Phrase joue={vu} depart={1450} hausse morceaux={['Ton lien « Mes affiches » a fait', { n: 40, avant: '+', suite: ' %' }, 'de clics (35 contre 25).']} />
             <Phrase joue={vu} depart={1950} morceaux={[{ n: 38 }, 'clics se sont ouverts directement dans leur app, sans rester coincés dans Instagram ou TikTok.']} />
           </ol>
-          <span className="hl-mail-bouton" aria-hidden="true">Voir mes stats</span>
+          <button type="button" className="hl-mail-bouton hp-mail-vers-dashboard" onClick={() => setVue('dashboard')}>Voir le dashboard</button>
+          </>}
         </article>
-        <p className="hl-gris hl-petit">Chiffres d’exemple. <Revoir onClick={() => setTour(t => t + 1)} quoi="les chiffres" /></p>
+        <p className="hl-gris hl-petit">Chiffres d’exemple. {vue === 'email' && <Revoir onClick={() => setTour(t => t + 1)} quoi="les chiffres" />}</p>
       </div>
     </section>
   );

@@ -234,6 +234,8 @@ L’inscription commence par le nom de la page, dans le composant `Reserver` exi
 
 Les CTA secondaires reviennent à ce champ. La direction visuelle ne remplace ni son API, ni les modes d’inscription libre et sur invitation.
 
+Le dernier appel dit « Réserve ton nom en premier ». Son bouton « Réserver mon nom » ne remplace que le libellé de la première étape ; les étapes e-mail, correction et confirmation conservent leurs actions réelles.
+
 ### Navigation
 
 La barre blanche est fixe au défilement avec `position: sticky`. Son contenu fait 60 px de haut. Les liens sont en Geist à 15 px ; le logo et l’action principale restent visibles. Le menu mobile regroupe les mêmes ancres que la navigation large : inspiration, fonctionnement et tarifs.
@@ -259,9 +261,17 @@ Les six portraits sont générés. Chaque WebP possède un fichier `.webp.json` 
 
 Les cartes utilisent `OFFRES` et les plans en vente de `src/lib/abonnement.ts` pour les noms, prix et avantages. Le sélecteur mensuel ou annuel modifie les montants. Les avantages restent affichés, sans accordéon, à toutes les largeurs. L’offre Pro utilise un fond bleu et un CTA citron, sans ombre. Les portraits d’Inès, Hugo et Malik contextualisent respectivement Gratuit, Starter et Pro. Les montants et les droits ne doivent pas être recopiés dans un décor figé ou déduits de cette documentation. Les références de comparaison Height et Tines consultées sur Mobbin sont consignées dans [la note de reprise](lp-reprise-claude.md).
 
+Sur les offres payantes, « Créer mon compte » décrit l’étape suivante et « Puis active Starter/Pro dans tes réglages » précise la suite. Le choix de l’offre ne déclenche aucun paiement depuis la LP. Les espaces à l’intérieur des guillemets sont insécables et les avantages utilisent une césure équilibrée pour éviter un guillemet isolé.
+
+### Statistics preview
+
+Le dashboard est l’aperçu par défaut, avec Hugo et son badge Starter. Il reprend les quatre mesures du produit : vues, visiteurs, clics et taux de clic, puis une courbe hebdomadaire, les sources et les liens les plus cliqués. Les chiffres sont illustratifs et annoncés comme tels. Le sélecteur « Le dashboard / L’e-mail du lundi » donne accès au résumé animé existant ; « Voir le dashboard » ramène au premier aperçu. Ces contrôles mesurent au moins 44 px. Sur mobile, les mesures passent sur deux colonnes et les listes sur une colonne.
+
 ### Demonstrations and motion
 
 La roue réutilise Camille et ses liens adaptés à la provenance. Elle joue son trajet puis s’arrête ; « Revoir » relance la démonstration. La scène de Sacha conserve les choix « Sans Hopla » et « Avec Hopla » : sélectionner un côté redémarre sa séquence.
+
+Après le retour de Lilian, la scène de Sacha dure 2,6 secondes, puis laisse une pause de 2,8 secondes avant le passage automatique de Sans à Avec. Les transitions restent rejouables et l’état final reste immédiat avec moins de mouvement.
 
 La scène vivante garde un seul téléphone compact avec les onglets « L’heure », « Le lancement » et « Les drops ». Le texte, le personnage, le badge et l’écran changent ensemble. Les contrôles restent à l’extérieur des téléphones : les écrans sont `inert` et accompagnés d’un libellé descriptif. `EcranPage` rend le véritable `PageLiens` lorsque la scène doit montrer un thème réel.
 
