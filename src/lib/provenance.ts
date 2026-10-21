@@ -33,7 +33,7 @@ const ALIAS: Record<string, Audience> = {
 /** Le navigateur intégré d'une app, d'après son user agent. */
 const APPS: [RegExp, Audience][] = [
   [/Barcelona/i, 'threads'], [/Instagram/i, 'instagram'], [/musical_ly|BytedanceWebview|TikTok/i, 'tiktok'],
-  [/LinkedInApp/i, 'linkedin'], [/FBAN|FBAV|FB_IAB|FBIOS/i, 'facebook'], [/Snapchat/i, 'snapchat'], [/Twitter/i, 'x'],
+  [/LinkedInApp/i, 'linkedin'], [/FBAN|FBAV|FB_IAB|FBIOS|MetaIAB/i, 'facebook'], [/Snapchat/i, 'snapchat'], [/Twitter/i, 'x'],
 ];
 
 const SITES: [RegExp, Audience][] = [
