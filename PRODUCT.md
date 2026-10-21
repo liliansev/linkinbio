@@ -37,7 +37,7 @@ Le mécanisme déjà implémenté est l'édition de la vraie page : le nom et la
 - Les réglages proposent notamment adresse et QR code, aperçu de partage, préférences, données et déconnexion. Les entrées d'abonnement dépendent du compte et de la configuration du paiement.
 - Les offres Gratuit, Starter, Pro et Premium (pas encore en vente) sont représentées dans le produit (`src/lib/abonnement.ts`). Le paiement et le portail sont fournis par Creem. Une offre payante est accordée seulement par un webhook Creem signé, jamais par le retour de paiement. Aucun état de configuration locale ne prouve une activation en production.
 - Les comptes ordinaires ont une page non indexée pendant la bêta ; les métadonnées de partage restent configurables.
-- Ouverte dans le navigateur intégré de LinkedIn, Instagram, Facebook, Messenger ou Threads, une page propose d'abord de s'ouvrir dans Safari ou le navigateur du téléphone, dans son propre thème (`EcranSortie`). C'est actif par défaut, et un interrupteur de Réglages le coupe. TikTok, X et Snapchat ne laissent pas sortir : la page s'y montre directement.
+- Ouverte dans le navigateur intégré de LinkedIn, Instagram, Facebook, Messenger ou Threads, une page propose d'abord de s'ouvrir dans Safari ou le navigateur du téléphone, dans une feuille qui monte par-dessus la page, dans son propre thème (`FeuilleSortie`). C'est actif par défaut, et un interrupteur de Réglages le coupe. TikTok, X et Snapchat ne laissent pas sortir : la page s'y montre directement.
 - Une base SQLite porte les comptes et leurs données. L'interface signale un éventuel stockage éphémère. Aucun secret ou jeu de données de production n'est nécessaire à cette refonte.
 
 ## Brand Commitments

@@ -9,7 +9,7 @@ import { PageLiens } from '../src/components/PageLiens.tsx';
 import { apiDemo, apiGratuit, apiNouveau, pageDemo, recommencerNouveau } from './api-demo.ts';
 import type { Sortie } from '../src/lib/sortie.ts';
 
-/** L'écran qui passe avant la page dans LinkedIn sur iPhone (`#sortie`), ou dans Instagram sur Android (`#sortie-android`). */
+/** La feuille qui monte par-dessus la page dans LinkedIn sur iPhone (`#sortie`), ou dans Instagram sur Android (`#sortie-android`). */
 const sortieDemo = (android: boolean): Sortie => (android
   ? { adresse: 'intent://hopla.page/lilian?s=instagram#Intent;scheme=https;end', fenetre: false, safari: false, android: true, lien: 'https://hopla.page/lilian?s=instagram' }
   : { adresse: 'x-safari-https://hopla.page/lilian?s=linkedin', fenetre: false, safari: true, android: false, lien: 'https://hopla.page/lilian?s=linkedin' });
@@ -33,7 +33,7 @@ function Demo() {
     // `#page=klein` montre la page dans un autre thème, avec ses boutons conseillés : pour revoir chaque thème d'un coup d'œil.
     const autre = THEMES.find(t => t.id === hash.split('=')[1]);
     if (autre) p.reglages = { ...p.reglages, theme: autre.id, couleurs: { fond: '', boutons: '', accent: '' }, bouton: { ...p.reglages.bouton, ...autre.conseil } };
-    // `#sortie=klein` : l'écran qui propose Safari, dans un thème, pour la planche de captures ; rien d'autre par-dessus.
+    // `#sortie=klein` : la feuille qui propose Safari, dans un thème, pour la planche de captures ; rien d'autre par-dessus.
     if (hash.startsWith('#sortie')) {
       const sortie = sortieDemo(hash.startsWith('#sortie-android'));
       return <PageLiens key={hash} page={{ reglages: { ...p.reglages, bureau }, blocs: p.blocs.filter(b => estEnLigne(b)), compte: p.compte, sortie }} apercu />;
