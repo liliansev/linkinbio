@@ -77,11 +77,12 @@ export function LigneBascule({ nom, actif, changer, disabled }: { nom: string; a
 }
 
 /**
- * Une ligne qui mène ailleurs (Facturation, une fonction réservée) : toute la
+ * Une ligne qui mène ailleurs (Mon abonnement, une fonction réservée) : toute la
  * ligne se touche, un chevron au bout. `apres` se pose avant lui (l'offre qui
- * débloque). Sans `onClick`, la ligne se lit sans mener nulle part.
+ * débloque). `externe` : elle quitte Hopla (le portail de Creem), le signe
+ * d'ouverture remplace le chevron. Sans `onClick`, la ligne se lit sans mener nulle part.
  */
-export function LigneLien({ nom, valeur, apres, onClick, label, disabled, id }: { nom: ReactNode; valeur?: ReactNode; apres?: ReactNode; onClick?: () => void; label?: string; disabled?: boolean; id?: string }) {
+export function LigneLien({ nom, valeur, apres, onClick, label, disabled, id, externe = false }: { nom: ReactNode; valeur?: ReactNode; apres?: ReactNode; onClick?: () => void; label?: string; disabled?: boolean; id?: string; externe?: boolean }) {
   const texte = (
     <span className="adm-ligne-texte">
       <span className="adm-ligne-nom">{nom}</span>
@@ -92,7 +93,9 @@ export function LigneLien({ nom, valeur, apres, onClick, label, disabled, id }: 
   return (
     <button id={id} type="button" onClick={onClick} aria-label={label} disabled={disabled} className="adm-ligne adm-ligne-lien">
       {texte}{apres}
-      <Icone nom="ui-chevron" taille={16} className="-rotate-90 shrink-0 text-[#55554f]" />
+      {externe
+        ? <Icone nom="ui-ouvrir" taille={15} className="shrink-0 text-[#55554f]" />
+        : <Icone nom="ui-chevron" taille={16} className="-rotate-90 shrink-0 text-[#55554f]" />}
     </button>
   );
 }

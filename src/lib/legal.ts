@@ -13,7 +13,7 @@ import { OFFRES, euros } from './abonnement.ts';
 /** « 4 € par mois ou 36 € par an » : le prix d'une offre, tel que Creem le facture. */
 const prixDe = (p: 'starter' | 'pro' | 'premium') => `${euros(OFFRES[p].prix.mois)} par mois ou ${euros(OFFRES[p].prix.an)} par an`;
 
-export const VERSION_CGU = '2026-10-20.3';
+export const VERSION_CGU = '2026-10-21.1';
 export const CONTACT_LEGAL = 'bonjour@liliansevoumian.fr';
 
 export interface DocumentLegal { titre: string; resume: string; sections: { titre: string; texte: string[] }[] }
@@ -26,7 +26,7 @@ const HEBERGEUR = 'Hostinger International Limited, 61 Lordou Vironos Street, 60
 export const LEGAL: Record<NomDocument, DocumentLegal> = {
   cgu: {
     titre: 'Conditions générales d’utilisation',
-    resume: `Les règles du service Hopla, en vigueur depuis le 20 octobre 2026 (version ${VERSION_CGU}).`,
+    resume: `Les règles du service Hopla, en vigueur depuis le 21 octobre 2026 (version ${VERSION_CGU}).`,
     sections: [
       { titre: 'Le service', texte: [
         'Hopla permet de publier une page de liens personnelle à l’adresse hopla.page/<pseudo>, et de la gérer depuis un back office, sur app.hopla.page. Le service est édité par Lilian Sevoumian (voir les mentions légales).',
@@ -34,7 +34,7 @@ export const LEGAL: Record<NomDocument, DocumentLegal> = {
       ] },
       { titre: 'Ton compte', texte: [
         'Tu te connectes avec ton adresse e-mail, par un lien à usage unique. Tu es responsable de l’accès à ta boîte mail : quiconque y accède peut ouvrir ton back office.',
-        'Tu peux télécharger toutes tes données et supprimer ton compte à tout moment, depuis l’onglet Réglages. La suppression est immédiate et définitive.',
+        'Tu peux télécharger toutes tes données et supprimer ton compte à tout moment, depuis l’onglet Réglages. La suppression est immédiate et définitive. Si tu as un abonnement, elle le résilie au même moment : plus aucun paiement ne part, et la période en cours n’est pas remboursée, sauf dans les 14 jours qui suivent ton premier paiement (voir « Les offres payantes et leur paiement »).',
       ] },
       { titre: 'Les offres payantes et leur paiement', texte: [
         'La version gratuite le reste pour toujours : ta page, des liens sans limite, l’ordre de tes liens selon le réseau d’où arrive le visiteur, et les vingt thèmes. Trois offres payantes s’y ajoutent, chacune avec tout ce que comprend la précédente.',
@@ -110,7 +110,7 @@ export const LEGAL: Record<NomDocument, DocumentLegal> = {
       ] },
       { titre: 'Si tu as un compte', texte: [
         'Ton adresse e-mail, ton pseudo, la date de création et de dernière connexion, la version des conditions acceptées, et ce que tu publies (réglages, blocs, images). Base légale : l’exécution du contrat (les CGU). Ces données sont gardées tant que ton compte existe, et effacées dès que tu le supprimes. Une page où tu n’entres jamais (aucun lien de connexion utilisé) est effacée avec ton adresse un mois après sa création, une fois expirés les liens qu’on t’a envoyés : son nom redevient libre.',
-        'Si tu prends une offre payante : l’identifiant de client, d’abonnement et de produit que Creem nous transmet, le statut de l’abonnement et sa date de renouvellement, pour savoir quelle offre a ta page. Ton nom, ton adresse de facturation et ta carte restent chez Creem, qui en est responsable pour le paiement et la facturation.',
+        'Si tu prends une offre payante : l’identifiant de client, d’abonnement et de produit que Creem nous transmet, le statut de l’abonnement et sa date de renouvellement, pour savoir quelle offre a ta page. Ton nom, ton adresse de facturation, ta carte et tes factures restent chez Creem, qui en est responsable pour le paiement et la facturation. Supprimer ton compte résilie ton abonnement chez Creem ; si Creem ne le confirme pas, l’éditeur reçoit par e-mail ton pseudo et ces identifiants, le temps de le résilier à la main.',
         'Les liens de connexion et les sessions ne sont gardés que sous forme d’empreinte, et effacés à leur expiration (15 minutes, 7 jours pour une invitation, 90 jours pour une session).',
       ] },
       { titre: 'Si tu signales une page', texte: [

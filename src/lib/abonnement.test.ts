@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { BASCULE_OFFRES, FONCTIONS, FONCTIONS_EN_MOTS, OFFRES, PLANS, PLANS_PAYANTS, avantagesEntre, echeance, economie, economieAnnuelle, euros, joursStats, libellePrix, moisOfferts, parMoisAnnuel, peut } from './abonnement.ts';
-import type { Fonction } from './abonnement.ts';
+import { ACCROCHES, BASCULE_OFFRES, FONCTIONS, FONCTIONS_EN_MOTS, OFFRES, PLANS, PLANS_PAYANTS, accesAbonnement, avantagesEntre, echeance, economie, economieAnnuelle, euros, joursStats, libellePrix, moisOfferts, offreSuivante, parMoisAnnuel, peut, sensDuChangement } from './abonnement.ts';
+import type { Fonction, Plan, PlanPayant } from './abonnement.ts';
 import { nouvellesDates, selonDroits } from './droits.ts';
 import type { Droits } from './droits.ts';
 import { LEGAL } from './legal.ts';
@@ -179,4 +179,65 @@ test('ni les offres ni les CGU ne parlent plus de place pour les images ni de la
   const cgu = LEGAL.cgu.sections.flatMap(s => s.texte).join(' ');
   const offres = PLANS.flatMap(p => [OFFRES[p].phrase, ...OFFRES[p].avantages]).join(' ');
   for (const texte of [cgu, offres]) assert.doesNotMatch(texte, /[MG]o d’images|langues/);
+});
+
+/** Les droits d'un compte, comme le serveur les calcule : son offre, et ce que garde une page d'avant les offres. */
+const droitsDe = (plan: Plan, cree = Number.POSITIVE_INFINITY) => Object.fromEntries((Object.keys(FONCTIONS) as Fonction[]).map(f => [f, peut(plan, f, cree)])) as Droits;
+
+test('l’offre du dessus : la première en vente, avec ce qu’elle apporte de plus parlant', () => {
+  const enVente: PlanPayant[] = ['starter', 'pro'];
+  const compte = (plan: Plan, statut = plan === 'gratuit' ? '' : 'active', cree?: number) => offreSuivante({ plan, statut }, droitsDe(plan, cree), enVente);
+  assert.deepEqual(compte('gratuit'), { plan: 'starter', texte: 'sans la mention Hopla', fonction: 'sansMention' });
+  assert.deepEqual(compte('starter'), { plan: 'pro', texte: 'ta page selon l’heure', fonction: 'heure' });
+  // Au-dessus de Pro, Premium n'est pas en vente ; le compte principal (Premium) a déjà tout.
+  assert.equal(compte('pro'), null);
+  assert.equal(compte('premium', ''), null);
+  // Qui s'en va, ou a un souci de carte, n'est pas relancé.
+  for (const statut of ['scheduled_cancel', 'canceled', 'past_due']) assert.equal(compte('starter', statut), null, statut);
+  // Revenu en Gratuit, un ancien abonné voit de nouveau Starter.
+  assert.deepEqual(compte('gratuit', 'expired'), { plan: 'starter', texte: 'sans la mention Hopla', fonction: 'sansMention' });
+  // Ce qui est en vente décide : rien en vente, rien à proposer ; Pro seul, on propose Pro.
+  assert.equal(offreSuivante({ plan: 'gratuit', statut: '' }, droitsDe('gratuit'), []), null);
+  assert.deepEqual(offreSuivante({ plan: 'gratuit', statut: '' }, droitsDe('gratuit'), ['pro']), { plan: 'pro', texte: 'ta page selon l’heure', fonction: 'heure' });
+  // Une page d'avant les offres a déjà presque tout : on lui propose ce qui lui manque vraiment.
+  const avant = BASCULE_OFFRES - 86_400_000;
+  assert.deepEqual(compte('gratuit', '', avant), { plan: 'starter', texte: 'sans la mention Hopla', fonction: 'sansMention' });
+  assert.deepEqual(compte('starter', 'active', avant), { plan: 'pro', texte: 'tes stats sur un an' });
+});
+
+test('chaque accroche parle d’une fonction de son offre, et la dernière ne dépend de rien', () => {
+  for (const p of PLANS_PAYANTS) {
+    const liste = ACCROCHES[p];
+    assert.ok(liste.length > 0, p);
+    for (const a of liste) {
+      if (a.fonction) assert.equal(FONCTIONS[a.fonction], p, `${p} : ${a.texte}`);
+      assert.match(a.texte, /^[a-zà-ÿ]/, 'en minuscule, après « Passer en … : »');
+      assert.doesNotMatch(a.texte, /\u2014/, 'jamais de tiret cadratin');
+    }
+    assert.equal(liste.at(-1)!.fonction, undefined, `${p} a toujours quelque chose à dire`);
+  }
+});
+
+test('changer d’offre : monter fait payer la différence, descendre la rend, changer de période laisse Creem décider', () => {
+  assert.equal(sensDuChangement({ plan: 'starter', periode: 'mois' }, { plan: 'pro', periode: 'mois' }), 'facture');
+  assert.equal(sensDuChangement({ plan: 'pro', periode: 'an' }, { plan: 'starter', periode: 'an' }), 'rendu');
+  // Une autre période : ce qui reste de la période en cours décide.
+  assert.equal(sensDuChangement({ plan: 'pro', periode: 'mois' }, { plan: 'starter', periode: 'an' }), null);
+  assert.equal(sensDuChangement({ plan: 'starter', periode: 'an' }, { plan: 'starter', periode: 'mois' }), null);
+  assert.equal(sensDuChangement({ plan: 'starter', periode: null }, { plan: 'pro', periode: 'mois' }), null);
+  // Depuis Gratuit, ce n'est pas un changement : on paie sur la page de Creem.
+  assert.equal(sensDuChangement({ plan: 'gratuit', periode: null }, { plan: 'starter', periode: 'mois' }), null);
+});
+
+test('Réglages : gérer son abonnement tant qu’il court, ses factures dès qu’on a payé une fois', () => {
+  assert.deepEqual(accesAbonnement({ plan: 'gratuit', portail: false }), { gerer: false, factures: false });
+  assert.deepEqual(accesAbonnement({ plan: 'gratuit', portail: true }), { gerer: false, factures: true }, 'un ancien abonné garde ses factures');
+  assert.deepEqual(accesAbonnement({ plan: 'starter', portail: true }), { gerer: true, factures: true });
+  assert.deepEqual(accesAbonnement({ plan: 'pro', portail: false }), { gerer: true, factures: false });
+});
+
+test('les CGU disent que supprimer son compte résilie son abonnement', () => {
+  const compte = LEGAL.cgu.sections.find(s => s.titre === 'Ton compte')!.texte.join(' ');
+  assert.match(compte, /résilie au même moment/);
+  assert.match(compte, /n’est pas remboursée, sauf dans les 14 jours/);
 });

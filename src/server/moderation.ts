@@ -1,10 +1,11 @@
 import { PRINCIPAL, sansSchema } from '../lib/types.ts';
-import type { Origines } from '../lib/types.ts';
+import type { Origines, Resiliation } from '../lib/types.ts';
 import { CONTACT_LEGAL, MOTIFS_SIGNALEMENT, nomMotif } from '../lib/legal.ts';
-import { ajouterSignalement, changerStatut, compteParId, compteParPseudo, signalementParId, signalementsDepuis, supprimerCompte, traiterSignalement } from './db.ts';
+import { ajouterSignalement, changerStatut, compteParId, compteParPseudo, signalementParId, signalementsDepuis, traiterSignalement } from './db.ts';
 import { adresseAdmin } from './auth.ts';
 import { echapper, envoyer, enveloppe } from './courriel.ts';
 import type { Env } from './courriel.ts';
+import { supprimerAvecAbonnement } from './suppression.ts';
 
 /*
  * La modération, telle que le règlement sur les services numériques la
@@ -62,13 +63,23 @@ export async function signaler(
   return { ok: true, message: email ? 'Merci. Le signalement est envoyé, et tu recevras la décision par e-mail.' : 'Merci. Le signalement est envoyé et sera examiné par une personne.' };
 }
 
-/** La motivation envoyée au compte (DSA, article 17) : ce qui a été décidé, pourquoi, et comment contester. */
-export async function motiver(env: Env, fetchImpl: typeof fetch, compte: { email: string; pseudo: string }, action: 'suspendu' | 'supprime', motif: string): Promise<boolean> {
+/** Ce que devient l'abonnement d'un compte supprimé, dit à la personne. */
+const ABONNEMENT_SUPPRIME: Record<Resiliation, string> = {
+  aucune: '',
+  faite: ' Ton abonnement s’arrête avec : plus aucun paiement ne sera prélevé. Tes factures restent chez Creem.',
+  'a-la-main': ' Ton abonnement s’arrête avec : nous le résilions à la main, et un paiement prélevé d’ici là te sera remboursé. Tes factures restent chez Creem.',
+};
+
+/**
+ * La motivation envoyée au compte (DSA, article 17) : ce qui a été décidé, pourquoi, et comment contester.
+ * Une suppression dit aussi ce qu'il advient de l'abonnement, quand il y en avait un.
+ */
+export async function motiver(env: Env, fetchImpl: typeof fetch, compte: { email: string; pseudo: string }, action: 'suspendu' | 'supprime', motif: string, resiliation: Resiliation = 'aucune'): Promise<boolean> {
   if (!compte.email || !motif.trim()) return false;
   const quoi = action === 'suspendu' ? 'Ta page Hopla est suspendue' : 'Ton compte Hopla est supprimé';
   const suite = action === 'suspendu'
     ? 'Ta page n’est plus visible et tu ne peux plus te connecter au back office. Tes données sont conservées : si la décision est levée, tout revient tel quel.'
-    : 'Ta page, tes liens, tes images et tes statistiques sont effacés.';
+    : `Ta page, tes liens, tes images et tes statistiques sont effacés.${ABONNEMENT_SUPPRIME[resiliation]}`;
   return envoyer(env, fetchImpl, {
     to: compte.email, replyTo: CONTACT_LEGAL,
     subject: quoi,
@@ -86,12 +97,17 @@ export async function changerStatutMotive(env: Env, fetchImpl: typeof fetch, id:
   if (statut === 'suspendu' && compte.statut !== 'suspendu') await motiver(env, fetchImpl, compte, 'suspendu', motif);
 }
 
-/** Supprime un compte ; si un motif est donné, la personne le reçoit (une suppression demandée par elle n'en a pas besoin). */
-export async function supprimerMotive(env: Env, fetchImpl: typeof fetch, id: string, motif: string) {
+/**
+ * Supprime un compte, son abonnement résilié d'abord (voir `suppression.ts`) ; si un motif est donné, la
+ * personne le reçoit (une suppression demandée par elle n'en a pas besoin). Ce qu'il advient de l'abonnement.
+ */
+export async function supprimerMotive(env: Env, fetchImpl: typeof fetch, id: string, motif: string, maintenant = Date.now()): Promise<Resiliation> {
   const compte = compteParId(id);
   if (!compte || compte.id === PRINCIPAL) throw new Error('Compte introuvable.');
-  supprimerCompte(id);
-  if (motif.trim()) await motiver(env, fetchImpl, compte, 'supprime', motif);
+  const issue = await supprimerAvecAbonnement(env, fetchImpl, compte, maintenant);
+  if (!issue.ok) throw new Error(`Creem n’a pas résilié l’abonnement de ${compte.pseudo}, alors le compte n’est pas supprimé. Réessaie : si Creem échoue encore, le compte sera supprimé et tu recevras par e-mail de quoi résilier l’abonnement à la main.`);
+  if (motif.trim()) await motiver(env, fetchImpl, compte, 'supprime', motif, issue.resiliation);
+  return issue.resiliation;
 }
 
 /** Classe un signalement, ou suspend la page ; la personne qui l'a envoyé reçoit la décision si elle a laissé son adresse. */

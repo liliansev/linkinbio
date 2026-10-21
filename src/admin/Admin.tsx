@@ -21,10 +21,10 @@ import { BoutonCopier, EmplacementEntete, Menu, PoserFil, classeBouton, copierTe
 import type { Fil } from './ui.tsx';
 import { Marque } from './Marque.tsx';
 import { AnneauDemarrage, noterPartage, useDemarrage } from './BienDemarrer.tsx';
-import { FournisseurOffre } from './offre.tsx';
+import { AppelOffre, FournisseurOffre } from './offre.tsx';
 import { FenetreOffres, RetourPaiement } from './Offres.tsx';
 import type { Fonction, PlanPayant } from '../lib/abonnement.ts';
-import { FONCTIONS, OFFRES, joursStats, peut } from '../lib/abonnement.ts';
+import { FONCTIONS, OFFRES, joursStats, offreSuivante, peut } from '../lib/abonnement.ts';
 import type { Droits } from '../lib/droits.ts';
 import { REFUS_PROGRAMMATION, nouvellesDates, selonDroits } from '../lib/droits.ts';
 import type { Achat, EtapeRetour } from '../lib/achat.ts';
@@ -71,8 +71,9 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
   const [reglages, setReglages] = useState(initial.reglages);
   const [clics, setClics] = useState(initial.clics);
   const [onglet, setOnglet] = useState<Onglet>('page');
-  // Les offres, par-dessus l'écran en cours : `pour`, la fonction réservée d'où l'on vient ; `vers`, l'offre à mettre en avant sans fonction.
-  const [offres, setOffres] = useState<{ pour?: Fonction; vers?: PlanPayant; bloc?: string } | null>(null);
+  // Les offres, par-dessus l'écran en cours : `pour`, la fonction réservée d'où l'on vient ; `vers`, l'offre à mettre en avant sans fonction ;
+  // `resilier`, ouvertes droit sur « Repasser en Gratuit ».
+  const [offres, setOffres] = useState<{ pour?: Fonction; vers?: PlanPayant; bloc?: string; resilier?: boolean } | null>(null);
   // Au retour de Creem : ce qu'on vient de prendre, et où en est l'offre (voir `lib/achat.ts`).
   const [retour, setRetour] = useState<{ achat: Achat; etape: EtapeRetour } | null>(null);
   // « Essayer tes couleurs » : Ma page ouvre le design sur ses couleurs.
@@ -157,6 +158,18 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
   // Le compte peut-il prendre une offre : le paiement est branché, et ce n'est pas le compte principal, qui a tout.
   const peutAcheter = initial.paiement && !initial.compte.principal;
   const ouvrirOffres = (pour?: Fonction, vers?: PlanPayant, bloc?: string) => setOffres({ pour, vers, bloc });
+  // L'offre du dessus, en une ligne : rien pour le compte principal, ni au-dessus de Pro, ni pendant une résiliation ou un impayé.
+  const suivante = peutAcheter ? offreSuivante(abonnement, droits, initial.enVente) : null;
+  const appel = (className = '') => suivante && (
+    <AppelOffre suivante={suivante} className={className} onClick={() => ouvrirOffres(suivante.fonction, suivante.fonction ? undefined : suivante.plan)} />
+  );
+  /** Repasser en Gratuit : Creem résilie pour la fin de la période payée, l'abonnement relu le dit aussitôt (avec l'année : un annuel finit l'an prochain). */
+  async function resilier() {
+    const a = await api.resilierAbonnement();
+    setAbonnement(a);
+    const nom = OFFRES[abonnement.plan].nom;
+    setToast({ texte: a.finPeriode ? `C’est noté : ${nom} jusqu’au ${new Date(a.finPeriode).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}, puis Gratuit` : `C’est noté : ${nom} jusqu’à la fin de la période payée, puis Gratuit`, long: true });
+  }
   // Le chemin vers les offres, pour un refus du serveur (absent quand le compte ne peut pas s'abonner) : elles s'ouvrent par-dessus.
   const versOffres = useRef<(() => void) | undefined>(undefined);
   versOffres.current = peutAcheter ? () => ouvrirOffres('programmation') : undefined;
@@ -525,6 +538,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
           ))}
         </nav>
         <div className="mt-auto">
+          {appel('mb-1')}
           <Menu label="Ton compte" haut aligne="largeur" className="adm-compte" titre={`${reglages.profil.nom || compte.pseudo}, ton compte`}
             entete={<p className="truncate px-2.5 pb-1.5 pt-2 text-[12px] text-white/55">{compte.email ? `${compte.email} · ` : ''}{compte.principal ? 'Compte principal' : `Hopla ${OFFRES[compte.plan].nom}`}</p>}
             elements={[{ nom: 'Me déconnecter', icone: 'ui-sortir', action: deconnexion }]}>
@@ -599,11 +613,13 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
             choisi={idOuvert} panneau={grand && editeur} onReglages={changerReglages} onOrdonner={l => ordonner(l)}
             onOuvrir={ouvrirBloc} onAjouter={ajouterBloc} liberer={libererEdition} fermerEdition={fermerEdition} gestes={{ basculer, dupliquer, supprimer }}
             envoyerImage={d => api.envoyerImage(d)} annoncer={t => setToast(t)}
-            demarrage={demarrage} demarrageOuvert={demarrageOuvert} fermerDemarrage={() => setDemarrageOuvert(false)} demandeDesign={demandeDesign} designOuvert={() => setDemandeDesign(null)} />}
+            demarrage={demarrage} demarrageOuvert={demarrageOuvert} fermerDemarrage={() => setDemarrageOuvert(false)} demandeDesign={demandeDesign} designOuvert={() => setDemandeDesign(null)}
+            appel={grand ? null : appel()} />}
           {onglet === 'stats' && <OngletStats charger={chargerStats} adresse={urlPage(compte)} pseudo={compte.pseudo} joursMax={initial.paiement ? joursStats(compte.plan, droits.stats) : 365} onOffres={peutAcheter ? ouvrirOffres : undefined}
             ouvrirApps={reglages.ouvrirApps} onActiverApps={() => changerReglages({ ...reglages, ouvrirApps: true })} liste={<MaListe api={api} />} blocs={blocs} />}
           {onglet === 'reglages' && <OngletReglages reglages={reglages} compte={compte} onChange={changerReglages} onDeconnexion={deconnexion} urlExport={api.urlExport} supprimerMonCompte={api.supprimerMonCompte}
-            abonnement={abonnement} onOffres={peutAcheter ? (pour?: Fonction) => ouvrirOffres(pour) : undefined} ouvrirPortail={api.ouvrirPortail} />}
+            abonnement={abonnement} onOffres={peutAcheter ? (pour?: Fonction) => ouvrirOffres(pour) : undefined} ouvrirPortail={api.ouvrirPortail}
+            onResilier={peutAcheter ? () => setOffres({ resilier: true }) : undefined} />}
           {onglet === 'comptes' && api.comptes && <OngletComptes api={api.comptes} avatar={reglages.profil.avatar} />}
           </div>
         </main>
@@ -643,7 +659,8 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
       {/* Les offres et le retour de Creem s'ouvrent par-dessus l'écran en cours, qu'on retrouve en les fermant. */}
       {offres && (
         <FenetreOffres onFermer={() => setOffres(null)} abonnement={abonnement} enVente={initial.enVente} pour={offres.pour} vers={offres.vers} bloc={offres.bloc}
-          ouvrirPaiement={api.ouvrirPaiement} avantDePartir={avantDePartir} apercu={apercuAvec} />
+          ouvrirPaiement={api.ouvrirPaiement} avantDePartir={avantDePartir} apercu={apercuAvec}
+          resilier={resilier} ouvrirPortail={api.ouvrirPortail} resiliation={offres.resilier} />
       )}
       {retour && (
         <RetourPaiement achat={retour.achat} etape={retour.etape} action={actionApres(retour.achat)}

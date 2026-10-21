@@ -14,6 +14,7 @@ import { apercuSite as lireApercu } from './apercu.ts';
 import * as db from './db.ts';
 import { COOKIE_SESSION, DUREE_SESSION, adresseAdmin, compteDeSession, demanderConnexion, fermerSession, inviter, ouvrirSession } from './auth.ts';
 import { changerStatutMotive, signaler, supprimerMotive, traiter } from './moderation.ts';
+import { supprimerAvecAbonnement } from './suppression.ts';
 import { corrigerAdresse as corriger, creerHopla, inscriptionLibre, inviterReservation, renommerPage as renommer, renvoyerInscription, reserverNom as reserver, verifierNom as verifier } from './attente.ts';
 import * as creem from './creem.ts';
 import { droits, joursLisibles, verifierDates } from './droits.ts';
@@ -150,16 +151,24 @@ export const accepterCgu = createServerFn({ method: 'POST' }).middleware([sessio
   return { ok: true };
 });
 
-/** Le droit à l'effacement, en libre-service : il faut retaper son pseudo. */
+/**
+ * Le droit à l'effacement, en libre-service : il faut retaper son pseudo. Un abonnement en cours est résilié
+ * avant, tout de suite (voir `suppression.ts`) : si Creem ne répond pas, rien n'est supprimé et on le dit ; au
+ * deuxième échec, le compte part quand même et l'abonnement est résilié à la main.
+ */
 export const supprimerMonCompte = createServerFn({ method: 'POST' })
   .middleware([sessionBrute])
   .validator((data: unknown) => String(data ?? '').trim().toLowerCase().slice(0, 40))
-  .handler(async ({ data, context }) => {
+  .handler(async ({ data, context }): Promise<{ ok: boolean; message: string; aLaMain?: boolean }> => {
     if (context.compte === PRINCIPAL) return { ok: false, message: 'Le compte principal ne se supprime pas.' };
     const compte = db.compteParId(context.compte);
     if (!compte || data !== compte.pseudo) return { ok: false, message: 'Retape ton pseudo exactement pour confirmer.' };
-    db.supprimerCompte(compte.id);
+    const issue = await supprimerAvecAbonnement(process.env, fetch, compte);
+    if (!issue.ok) return { ok: false, message: 'Creem n’a pas pu résilier ton abonnement, alors rien n’est supprimé pour l’instant. Réessaie dans un instant.' };
     deleteCookie(COOKIE_SESSION, cookieSession());
+    if (issue.resiliation === 'a-la-main') {
+      return { ok: true, aLaMain: true, message: 'Ton compte est supprimé. Creem n’a pas confirmé la résiliation de ton abonnement : on la fait à la main, et un prélèvement qui partirait d’ici là te serait remboursé.' };
+    }
     return { ok: true, message: 'Ton compte est supprimé.' };
   });
 
@@ -273,7 +282,7 @@ export const resynchroniser = createServerFn({ method: 'POST' })
     return { envoyes, erreurs };
   });
 
-/* ---- Abonnement Pro (Creem) ---- */
+/* ---- Les offres payantes (Creem) ---- */
 
 export const ouvrirPaiement = createServerFn({ method: 'POST' })
   .middleware([session])
@@ -286,6 +295,14 @@ export const ouvrirPaiement = createServerFn({ method: 'POST' })
 export const ouvrirPortail = createServerFn({ method: 'POST' })
   .middleware([session])
   .handler(async ({ context }) => creem.ouvrirPortail(process.env, fetch, db.compteParId(context.compte)!));
+
+/** Repasser en Gratuit : l'abonnement est résilié pour la fin de la période payée. L'abonnement tel qu'il est ensuite. */
+export const resilierAbonnement = createServerFn({ method: 'POST' })
+  .middleware([session])
+  .handler(async ({ context }) => {
+    await creem.resilierEnFinDePeriode(process.env, fetch, db.compteParId(context.compte)!);
+    return db.abonnement(db.compteParId(context.compte)!);
+  });
 
 /** Les offres dans Creem, pour le compte principal : l'état, et la création des produits qui manquent. */
 export const lireOffresCreem = createServerFn({ method: 'GET' })
@@ -411,7 +428,7 @@ export const supprimerCompte = createServerFn({ method: 'POST' })
     const o = (data ?? {}) as { id?: unknown; motif?: unknown };
     return { id: String(o.id ?? '').slice(0, 40), motif: motif(o.motif) };
   })
-  .handler(async ({ data }) => { await supprimerMotive(process.env, fetch, data.id, data.motif); return { ok: true }; });
+  .handler(async ({ data }) => supprimerMotive(process.env, fetch, data.id, data.motif));
 
 /* ---- Signalements ---- */
 
