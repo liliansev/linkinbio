@@ -23,9 +23,10 @@ const versLocal = (iso: string) => {
 const depuisLocal = (v: string) => (v ? new Date(v).toISOString() : '');
 
 /**
- * Dans le panneau du bureau, chaque règle tient sur une rangée : son nom à
- * gauche, ce qui est réglé à droite comme une valeur qu'on ouvre (« Toujours »,
- * « Tous les réseaux »). Ailleurs, le groupe bordé avec son picto.
+ * Au bureau, dans la rangée dépliée d'un bloc, chaque règle tient sur une
+ * ligne : son nom à gauche, ce qui est réglé à droite comme une valeur qu'on
+ * ouvre (« Toujours », « Tous les réseaux »). Ailleurs, le groupe bordé avec
+ * son picto.
  */
 export const RangeesCompactes = createContext(false);
 
@@ -39,10 +40,11 @@ export function Repli({ titre, icone, resume, ouvert: depart, etiquette, montrer
   const racine = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!montrer || !racine.current) return;
-    // Le défilement de la feuille ou du panneau, pas celui de la page : la section remonte juste assez pour se lire en entier.
+    // Le défilement de la feuille, pas celui de la page : la section remonte juste assez pour se lire en entier.
+    // Au bureau, la rangée dépliée est dans la page même : c'est elle qui défile, sous l'en-tête et les onglets collés.
     let boite = racine.current.parentElement;
     while (boite && !(/(auto|scroll)/.test(getComputedStyle(boite).overflowY) && boite.scrollHeight > boite.clientHeight)) boite = boite.parentElement;
-    if (!boite) return;
+    if (!boite) { racine.current.scrollIntoView({ block: 'nearest', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); return; }
     const r = racine.current.getBoundingClientRect(), b = boite.getBoundingClientRect();
     const ecart = Math.min(r.bottom + 16 - b.bottom, r.top - b.top - 8);
     if (ecart > 0) boite.scrollBy({ top: ecart, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });

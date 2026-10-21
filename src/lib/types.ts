@@ -254,14 +254,19 @@ export interface Api {
   deconnexion(): Promise<void>;
   /** Enregistre l'acceptation des CGU et de l'accord de traitement en vigueur. */
   accepterCgu(): Promise<void>;
-  /** Supprime son propre compte ; `confirmation` est le pseudo retapé. Jamais le compte principal. */
-  supprimerMonCompte(confirmation: string): Promise<{ ok: boolean; message: string }>;
+  /**
+   * Supprime son propre compte ; `confirmation` est le pseudo retapé. Jamais le compte principal. Un abonnement
+   * en cours est résilié avant ; `aLaMain` : Creem ne l'a pas confirmé, il sera résilié à la main (le message le dit).
+   */
+  supprimerMonCompte(confirmation: string): Promise<{ ok: boolean; message: string; aLaMain?: boolean }>;
   /** L'adresse de l'export complet (JSON), ou null dans l'aperçu. */
   urlExport: string | null;
   /** Prendre une offre : l'adresse où aller (la page de paiement Creem, ou le retour après un changement d'offre). */
   ouvrirPaiement(plan: PlanPayant, periode: Periode): Promise<string>;
   /** L'adresse du portail client Creem : carte, factures, résiliation. */
   ouvrirPortail(): Promise<string>;
+  /** Repasser en Gratuit : l'abonnement est résilié chez Creem pour la fin de la période payée. L'abonnement tel qu'il est ensuite. */
+  resilierAbonnement(): Promise<Abonnement>;
   liste(): Promise<Liste>;
   /** Branche Brevo ou Mailchimp (la clé est vérifiée chez eux), ou débranche avec `null`. */
   brancherListe(i: { fournisseur: FournisseurListe; cle: string; liste: string } | null): Promise<{ ok: boolean; message: string }>;
@@ -273,6 +278,13 @@ export interface Api {
   /** Seulement pour le compte principal : gérer les autres comptes. */
   comptes?: ApiComptes;
 }
+
+/**
+ * Ce qu'il advient de l'abonnement Creem d'un compte qu'on supprime : `aucune` (rien à résilier), `faite`
+ * (résilié tout de suite), `a-la-main` (Creem ne l'a pas confirmé deux fois de suite : le compte est supprimé
+ * quand même, et Lilian reçoit de quoi le résilier à la main).
+ */
+export type Resiliation = 'aucune' | 'faite' | 'a-la-main';
 
 /** Un nom réservé depuis l'accueil, en attente d'invitation. */
 export interface Reservation { id: string; email: string; pseudo: string; ts: number }
@@ -293,7 +305,8 @@ export interface ApiComptes {
   renvoyer(id: string): Promise<{ ok: boolean; message: string; lienDev?: string }>;
   /** `motif` part par e-mail à la personne (DSA, article 17) quand on suspend ou supprime. */
   changerStatut(id: string, statut: CompteResume['statut'], motif: string): Promise<void>;
-  supprimer(id: string, motif: string): Promise<void>;
+  /** Supprime le compte, après avoir résilié son abonnement : ce qu'il est advenu de l'abonnement. */
+  supprimer(id: string, motif: string): Promise<Resiliation>;
   signalements(): Promise<SignalementResume[]>;
   /** Classe un signalement, ou suspend la page avec `decision` pour motif. */
   traiterSignalement(id: string, statut: 'sans-suite' | 'suspendu', decision: string): Promise<void>;

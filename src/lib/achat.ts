@@ -14,11 +14,11 @@ import { FONCTIONS, PERIODES, estPlan, estPlanPayant } from './abonnement.ts';
 
 export const CLE_ACHAT = 'hopla-achat';
 
-/** Ce qu'on vient de prendre. `avant` : l'offre d'avant, quand on la connaît ; `bloc` : le bloc d'où l'on venait. */
-export interface Achat { plan: PlanPayant; periode: Periode | null; pour?: Fonction; avant?: Plan; bloc?: string }
+/** Ce qu'on vient de prendre. `avant` : l'offre d'avant, quand on la connaît, et `periodeAvant` sa période ; `bloc` : le bloc d'où l'on venait. */
+export interface Achat { plan: PlanPayant; periode: Periode | null; pour?: Fonction; avant?: Plan; periodeAvant?: Periode; bloc?: string }
 
 /** La note posée avant de partir chez Creem. Elle ne vaut que pour cette offre, et quelques heures. */
-export interface NoteAchat { plan: PlanPayant; periode: Periode; pour?: Fonction; avant: Plan; bloc?: string; ts: number }
+export interface NoteAchat { plan: PlanPayant; periode: Periode; pour?: Fonction; avant: Plan; periodeAvant?: Periode; bloc?: string; ts: number }
 
 const VALIDITE = 3 * 3_600_000;
 
@@ -34,6 +34,7 @@ export function achatDeRetour(recherche: string, note: unknown, maintenant = Dat
     periode: PERIODES.includes(n.periode as Periode) ? n.periode as Periode : null,
     ...(typeof n.pour === 'string' && Object.hasOwn(FONCTIONS, n.pour) ? { pour: n.pour } : {}),
     ...(estPlan(n.avant) ? { avant: n.avant } : {}),
+    ...(PERIODES.includes(n.periodeAvant as Periode) ? { periodeAvant: n.periodeAvant as Periode } : {}),
     ...(typeof n.bloc === 'string' && /^[\w-]{1,64}$/.test(n.bloc) ? { bloc: n.bloc } : {}),
   };
 }

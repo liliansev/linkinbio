@@ -109,6 +109,43 @@ export const FONCTIONS_EN_MOTS: Record<Fonction, { avantage: string; pour: strin
   listeEmail: { avantage: 'Ta liste e-mail, vers Brevo ou Mailchimp', pour: 'Pour ta liste e-mail' },
 };
 
+/**
+ * L'appel vers l'offre du dessus, en une ligne du back office (Lilian, 21 octobre 2026) : ce que chaque offre
+ * apporte de plus parlant, en peu de mots, dans l'ordre où on le propose (« Passer en Starter : sans la mention
+ * Hopla »). Une fonction que le compte a déjà (une page d'avant les offres garde presque tout) laisse la place
+ * à la suivante ; la dernière de chaque liste ne dépend d'aucune fonction.
+ */
+export const ACCROCHES: Record<PlanPayant, { texte: string; fonction?: Fonction }[]> = {
+  starter: [{ texte: 'sans la mention Hopla', fonction: 'sansMention' }, { texte: 'tes couleurs', fonction: 'couleurs' }, { texte: 'tes stats sur 30 jours' }],
+  pro: [{ texte: 'ta page selon l’heure', fonction: 'heure' }, { texte: 'les drops', fonction: 'drops' }, { texte: 'ta liste e-mail', fonction: 'listeEmail' }, { texte: 'tes stats sur un an' }],
+  premium: [{ texte: 'ton nom de domaine' }],
+};
+
+/** L'offre à proposer au-dessus de celle d'un compte, et ce qu'elle apporte : `fonction` met en avant sa ligne dans les offres. */
+export interface OffreSuivante { plan: PlanPayant; texte: string; fonction?: Fonction }
+
+/**
+ * La première offre en vente au-dessus de celle du compte, avec son accroche. Rien quand rien n'est en vente
+ * au-dessus (Pro : Premium n'est pas en vente ; le compte principal a déjà tout), ni pour une offre résiliée ou
+ * impayée : on ne relance pas qui s'en va, ni qui a un souci de carte. `droits` : ce que le compte a déjà.
+ */
+export function offreSuivante(a: Pick<Abonnement, 'plan' | 'statut'>, droits: Partial<Record<Fonction, boolean>>, enVente: readonly PlanPayant[]): OffreSuivante | null {
+  if (a.plan !== 'gratuit' && (estResilie(a.statut) || a.statut === 'past_due')) return null;
+  const plan = PLANS_PAYANTS.find(p => rang(p) > rang(a.plan) && OFFRES[p].enVente && enVente.includes(p));
+  const accroche = plan && ACCROCHES[plan].find(x => !x.fonction || !droits[x.fonction]);
+  return plan && accroche ? { plan, ...accroche } : null;
+}
+
+/**
+ * Un abonné qui change d'offre paie ou se fait rendre la différence aujourd'hui, au prorata (Creem,
+ * `proration-charge-immediately`) : monter la fait payer, descendre la rend sur sa carte. Quand la période
+ * change aussi, le sens dépend de ce qui reste de la période en cours : Creem en décide (null).
+ */
+export function sensDuChangement(avant: { plan: Plan; periode: Periode | null }, apres: { plan: PlanPayant; periode: Periode }): 'facture' | 'rendu' | null {
+  if (avant.plan === 'gratuit' || avant.plan === apres.plan || avant.periode !== apres.periode) return null;
+  return rang(apres.plan) > rang(avant.plan) ? 'facture' : 'rendu';
+}
+
 /** Ce qu'on gagne (ou perd) en passant d'une offre à l'autre : les avantages des offres entre les deux, dans l'ordre où on les lit. */
 export function avantagesEntre(depuis: Plan, vers: Plan): string[] {
   const [bas, haut] = rang(depuis) <= rang(vers) ? [depuis, vers] : [vers, depuis];
@@ -181,3 +218,10 @@ export function estPaye(a: { statut: string; finPeriode: number | null }, mainte
   if (a.finPeriode && maintenant > a.finPeriode + grace) return false;
   return true;
 }
+
+/**
+ * Ce que Réglages montre de l'abonnement, d'un coup d'œil : « Gérer mon abonnement » tant qu'une offre payée
+ * court (la changer, la résilier, la carte), et « Mes factures » pour tout compte que Creem connaît, qu'il soit
+ * abonné, résilié ou ancien abonné : ses factures restent chez Creem.
+ */
+export const accesAbonnement = (a: Pick<Abonnement, 'plan' | 'portail'>) => ({ gerer: a.plan !== 'gratuit', factures: a.portail });
