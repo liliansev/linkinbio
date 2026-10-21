@@ -5,7 +5,7 @@ import { SANS_COULEURS } from '../lib/types.ts';
 import { THEMES } from '../lib/themes.ts';
 import { Icone } from '../components/Icone.tsx';
 import { EcranPage, Telephone } from './Telephone.tsx';
-import { pageMarie } from './exemples.ts';
+import { pageExemple, IDS_PROFILS, PROFILS } from './exemples.ts';
 import { useVu } from './mouvement.ts';
 
 /*
@@ -61,7 +61,7 @@ export function Themes() {
     <section className="hl-section" id="themes" data-teinte="theme" aria-labelledby="titre-themes"
       style={regarde >= 0 ? { '--teinte': THEMES[regarde].vedette } as CSSProperties : undefined}>
       <div className="hl-tete-section hl-entre">
-        <h2 id="titre-themes" className="hl-h2">Vingt thèmes. Et tes couleurs.</h2>
+        <h2 id="titre-themes" className="hl-h2">Une page à toi<br />Ça se voit</h2>
         <p className="hl-chapo">Des plus sobres aux plus audacieux, chacun avec sa typographie réglée à la main. Change d’ambiance en un geste.</p>
       </div>
       <div className="hl-rail-tete hl-grand-seul">
@@ -75,8 +75,8 @@ export function Themes() {
         {THEMES.map((t, i) => (
           <li key={t.id} className="hl-rail-item" data-i={i} style={i < 6 ? { '--d': `${i * 40}ms` } as CSSProperties : undefined}
             onPointerEnter={e => { if (e.pointerType === 'mouse') setSurvol(i); }}>
-            <Telephone largeur={210} label={`La page de Marie dans le thème ${t.nom}`}>
-              <EcranPage page={pageMarie(t.id)} />
+            <Telephone largeur={210} label={`La page de ${PROFILS[IDS_PROFILS[i % IDS_PROFILS.length]].nom} dans le thème ${t.nom}`}>
+              <EcranPage page={pageExemple(IDS_PROFILS[i % IDS_PROFILS.length], t.id)} />
             </Telephone>
             <p><b>{t.nom}</b> <span className="hl-gris">{t.humeur}</span></p>
           </li>
@@ -106,8 +106,8 @@ export function Themes() {
           <button type="button" className="hl-lien-texte" data-cache={(!couleurs.fond && !couleurs.boutons && !couleurs.accent) || undefined} onClick={() => setCouleurs(SANS_COULEURS)}>Revenir aux couleurs du thème</button>
         </div>
         <div className="hl-couleurs-tel">
-          <Telephone largeur={260} label="La page de Marie dans le thème Lin, avec les couleurs choisies">
-            <EcranPage page={pageMarie('lin', { couleurs })} />
+          <Telephone largeur={260} label="La page de Léa Morel dans le thème Lin, avec les couleurs choisies">
+            <EcranPage page={pageExemple('lea', 'lin', { couleurs })} />
           </Telephone>
         </div>
       </div>

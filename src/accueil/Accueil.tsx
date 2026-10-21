@@ -1,3 +1,4 @@
+import { GalerieProfils } from './Profils.tsx';
 import { Barre, Ouverture, Selon } from './Ouverture.tsx';
 import { DansApp, Stats, Vivante } from './Fonctions.tsx';
 import { Themes } from './Themes.tsx';
@@ -20,11 +21,12 @@ export function Accueil({ api, mode = 'libre' }: { api: ApiAccueil; mode?: Inscr
   useEntrees();
   return (
     <ModeInscription.Provider value={mode}>
-    <div className="hl">
+    <div className="hl hl-humain">
       <a href="#contenu" className="hl-evitement">Aller au contenu</a>
       <Barre />
       <main id="contenu">
         <Ouverture api={api} />
+        <GalerieProfils />
         <Selon />
         <DansApp />
         <Vivante />

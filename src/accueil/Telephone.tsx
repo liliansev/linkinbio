@@ -1,5 +1,7 @@
 import type { CSSProperties, ReactNode } from 'react';
 import type { PagePublique } from '../lib/types.ts';
+import { PROFILS } from './exemples.ts';
+import type { ProfilExemple } from './exemples.ts';
 import { PageLiens } from '../components/PageLiens.tsx';
 
 /*
@@ -30,14 +32,13 @@ export function EcranPage({ page }: { page: PagePublique }) {
  * au bon moment » (`.hl-tel-vivante`), ce que Hopla vient de faire passe au bleu.
  */
 
-export function CroquisTete({ nom = 'Marie Lambert' }: { nom?: string }) {
-  return (
-    <div className="hl-cq-tete">
-      <span className="hl-cq-avatar" />
-      <span className="hl-cq-nom">{nom}</span>
-      <span className="hl-cq-trait" style={{ width: '62%' }} />
-    </div>
-  );
+export function CroquisTete({ profil }: { profil: ProfilExemple }) {
+  const p = PROFILS[profil];
+  return <div className="hl-cq-tete">
+    <img className="hl-cq-avatar" src={p.avatar} alt="" width="62" height="62" loading="lazy" />
+    <span className="hl-cq-nom">{p.nom}</span>
+    <span className="hp-cq-bio">{p.bio}</span>
+  </div>;
 }
 
 export function CroquisLien({ titre, vedette, picto, cle, ...reste }: { titre: ReactNode; vedette?: boolean; picto?: ReactNode; cle?: string } & Record<`data-${string}`, unknown>) {
