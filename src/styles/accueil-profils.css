@@ -4,9 +4,9 @@
 .hl-humain [data-teinte='klein'] { --papier: #292bff; --accent: #e3fc96; }
 .hl-humain [data-teinte='nuit'] { --papier: #292530; --lueur: none; --encre: #eee0fa; --gris: #d3c9dc; --accent: #e3fc96; }
 .hl-humain [data-teinte='peche'] { --papier: #f3eee5; --lueur: none; --encre: #292a24; --gris: #64675d; --accent: #292bff; }
-.hl-humain [data-teinte='menthe'] { --papier: #e7edde; --lueur: none; --encre: #202820; --gris: #56624d; }
+.hl-humain [data-teinte='menthe'] { --papier: #e7edde; --lueur: none; --encre: #202820; --gris: #56624d; --accent: #292bff; }
 .hl-humain [data-teinte] { background: var(--papier); }
-.hl-humain [data-teinte='lilas'] { --papier: #eee6f3; --lueur: none; }
+.hl-humain [data-teinte='lilas'] { --papier: #eee6f3; --lueur: none; --accent: #292bff; }
 .hl-humain :is(.hl-section, .hl-heros)[data-teinte] { padding-inline: max(28px, calc((100% - 1200px) / 2)); }
 .hl-humain .hl-section { max-width: 1280px; padding-top: 100px; }
 .hl-humain .hl-section[data-teinte] { max-width: none; }
@@ -282,8 +282,8 @@
   .hp-note-haut { display: none; }
   /* « jusqu’à −27 % » reste entier : sans « jusqu’à », le chiffre se lirait pour Starter aussi. La section et le rail se resserrent. */
   .hl-humain #prix { padding-inline: 16px; }
-  .hl-humain .hl-periode button { padding-inline: 8px; font-size: 14px; }
-  .hl-humain .hl-periode-gain { margin-left: 5px; padding-inline: 5px; font-size: 12px; }
+  .hl-humain .hl-periode button { padding-inline: 6px; font-size: 14px; }
+  .hl-humain .hl-periode-gain { margin-left: 4px; padding-inline: 4px; font-size: 13px; }
   .hl-br-large { display: none; }
   .hl-h2-grand { text-wrap: balance; }
   .hp-dialogue-qui { flex-wrap: wrap; row-gap: 6px; }

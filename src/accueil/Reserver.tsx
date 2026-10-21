@@ -136,7 +136,7 @@ function heure(t: number) {
 
 /** Une lettre d'un autre alphabet ne passe pas dans une adresse : on le dit au lieu de l'effacer en silence. */
 const AUTRE_ALPHABET = /[^\P{L}\p{Script=Latin}]/u;
-const MOT_ALPHABET = 'Une adresse ne prend que des lettres latines, des chiffres et des tirets : le reste est retiré.';
+const MOT_ALPHABET = 'Une adresse ne prend que des lettres latines, des chiffres et des tirets : les accents sont simplifiés, le reste est retiré.';
 /** Un emoji non plus : effacé sans un mot, le champ aurait l'air cassé. */
 const PICTOGRAMME = /\p{Extended_Pictographic}/u;
 

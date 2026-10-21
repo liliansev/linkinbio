@@ -75,7 +75,7 @@ export function DansApp() {
       <div className="hl-dans-app">
         <div className="hl-dans-app-tete hl-entre">
           <h2 id="dans-app" className="hl-h2">Moins de détours<br /><span className="hl-cache">. </span>Plus de Sacha</h2>
-          <p className="hl-chapo">Un clic sur son clip et YouTube prend le relais. Regarde le trajet, puis rejoue la scène avec ou sans Hopla.</p>
+          <p className="hl-chapo">Un clic sur son clip et YouTube prend le relais. <span className="hl-si-mouvement">Regarde le trajet, puis rejoue la scène avec ou sans Hopla.</span><span className="hl-sans-mouvement">Compare le trajet avec et sans Hopla.</span></p>
           <OffreFonction offre="gratuit" />
         </div>
         <div ref={ref} className="hl-dans-app-tel" {...garde}>

@@ -46,4 +46,5 @@ test('un lien tapé lettre à lettre se reconnaît dès le début de son nom, et
   assert.equal(nomDansLien('marie@gmail.com'), '');
   assert.equal(nomSaisi('zoé🎉'), 'zoe');
   assert.equal(nomSaisi('Zoé 🎉 Martin'), 'zoe-martin');
+  assert.equal(nomSaisi('Zoé Martin 🎉'), 'zoe-martin');
 });

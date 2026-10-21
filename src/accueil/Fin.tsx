@@ -8,7 +8,7 @@ import type { Periode, Plan } from '../lib/abonnement.ts';
 import { Marque } from './Ouverture.tsx';
 import { Reserver, allerAuChamp, choisirOffre, useReservation } from './Reserver.tsx';
 import type { ApiAccueil } from './Reserver.tsx';
-import { MOTS, appel, questions, useInscription } from './textes.ts';
+import { MOTS, QUESTION_LINKTREE, appel, questions, useInscription } from './textes.ts';
 
 /* 09 · Les prix ; 10 · les questions ; 11 · le dernier appel et le pied de page. */
 
@@ -127,7 +127,7 @@ export function Questions() {
         {liste.map(([q, r]) => (
           <details key={q} className="hl-question">
             <summary>{q}<Icone nom="ui-plus" taille={18} /></summary>
-            <p>{r}</p>
+            <p>{r}{q === QUESTION_LINKTREE && <> <button type="button" className="hl-lien-texte" onClick={() => allerAuChamp()}>Coller mon adresse Linktree</button></>}</p>
           </details>
         ))}
       </div>

@@ -35,10 +35,15 @@
 }
 @media (min-width: 1024px) { .hl { --gout: 40px; } }
 .hl :focus-visible { outline: 2px solid var(--encre); outline-offset: 3px; }
+/* Le titre où mène un lien de la barre prend le focus pour le lecteur d'écran ; ce n'est pas une commande, il n'a pas de cadre. */
+.hl :is(h1, h2)[tabindex='-1']:focus-visible { outline: none; }
 .hl ::selection { background: var(--encre); color: var(--papier); }
 
 html:has(.hl) { background: #fff; scroll-padding-top: 76px; }
 @media (prefers-reduced-motion: no-preference) { html:has(.hl) { scroll-behavior: smooth; } }
+/* Une phrase qui parle d'un mouvement a sa variante sans mouvement ; la feuille choisit, le rendu du serveur reste le même. */
+@media (prefers-reduced-motion: reduce) { .hl-si-mouvement { display: none; } }
+@media (prefers-reduced-motion: no-preference) { .hl-sans-mouvement { display: none; } }
 
 /* ---- Utilitaires ---- */
 
@@ -182,8 +187,8 @@ html:has(.hl) { background: #fff; scroll-padding-top: 76px; }
 /* La section où l'on est : à l'encre, soulignée. */
 .hl-barre-nav a[aria-current] { color: var(--encre); text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 8px; }
 .hl-menu a[aria-current] { font-weight: 650; }
-/* Entre 900 et 1100 px, cinq liens ne tiennent pas à côté de Connexion et du bouton : Thèmes reste au menu du téléphone et à son ancre. */
-@media (max-width: 1099px) { .hl-barre-nav a[href='#themes'] { display: none; } }
+/* Entre 900 et 1100 px, les cinq liens se resserrent pour tenir à côté de Connexion et du bouton. */
+@media (max-width: 1099px) { .hl-barre-nav { gap: 18px; margin-left: 4px; } .hl-barre-actions { gap: 14px; } }
 /* Sur une tablette tactile en paysage, la barre large garde des cibles de 44 px. */
 @media (pointer: coarse) { .hl-barre-nav a, .hl-barre-connexion { display: inline-flex; align-items: center; min-height: 44px; } }
 .hl-barre-actions { margin-left: auto; display: flex; align-items: center; gap: 18px; }
@@ -720,6 +725,11 @@ html:has(.hl-reserver input:focus) { overflow-anchor: none; }
 @media (min-width: 1024px) { .hl-prise { grid-template-columns: 1fr 340px; align-items: start; justify-items: stretch; gap: 72px; } }
 .hl-etapes { display: none; }
 @media (min-width: 1024px) { .hl-etapes { display: flex; flex-direction: column; gap: 6px; margin-top: 24px; } }
+/* Sans mouvement, au téléphone, rien ne fait défiler les étapes : leur liste remplace la légende, et chacune se montre d'un toucher. */
+@media (max-width: 1023px) and (prefers-reduced-motion: reduce) {
+  .hl-etapes { display: flex; flex-direction: column; gap: 6px; margin-top: 24px; }
+  .hl-prise .hl-prise-legende { display: none; }
+}
 .hl-etapes button {
   display: flex; gap: 16px; width: 100%; padding: 16px; border: 0; border-radius: 12px; background: none;
   color: var(--gris); font: inherit; text-align: left; cursor: pointer; transition: color .3s, background-color .3s;

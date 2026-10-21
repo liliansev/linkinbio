@@ -228,7 +228,7 @@ Le survol du bouton bleu utilise `hopla-blue-hover`, celui du citron `lime-hover
 
 ### Inputs / Fields
 
-L’inscription commence par le nom de la page, dans le composant `Reserver` existant. Dès qu’on est dans le champ, la ligne de la réponse est gardée : « est libre » arrive sans pousser la page. Un emoji s’efface sans laisser de tiret, et un lien tapé lettre à lettre (https://linktr.ee/zoe) se réduit à son nom comme un lien collé. Une erreur d’e-mail marque le champ comme une erreur de nom (`aria-invalid`, anneau saumon). Une lettre d’un autre alphabet ou un emoji retiré de l’adresse est dit dans une note neutre sous le champ (« Une adresse ne prend que des lettres latines, des chiffres et des tirets : le reste est retiré. »), jamais effacé en silence. Le groupe principal réunit le champ et l’action sur fond blanc, avec 6 px de marge intérieure et le rayon `signup-group`. Le préfixe et le texte saisi font 17 px. Un focus dans le groupe renforce la bordure avec un second trait d’un pixel. Les états d’erreur, de disponibilité et d’envoi restent gérés par le formulaire réel.
+L’inscription commence par le nom de la page, dans le composant `Reserver` existant. Dès qu’on est dans le champ, la ligne de la réponse est gardée : « est libre » arrive sans pousser la page. Un emoji s’efface sans laisser de tiret, et un lien tapé lettre à lettre (https://linktr.ee/zoe) se réduit à son nom comme un lien collé. Une erreur d’e-mail marque le champ comme une erreur de nom (`aria-invalid`, anneau saumon). Une lettre d’un autre alphabet ou un emoji retiré de l’adresse est dit dans une note neutre sous le champ (« Une adresse ne prend que des lettres latines, des chiffres et des tirets : les accents sont simplifiés, le reste est retiré. »), jamais effacé en silence. Le groupe principal réunit le champ et l’action sur fond blanc, avec 6 px de marge intérieure et le rayon `signup-group`. Le préfixe et le texte saisi font 17 px. Un focus dans le groupe renforce la bordure avec un second trait d’un pixel. Les états d’erreur, de disponibilité et d’envoi restent gérés par le formulaire réel.
 
 Les CTA secondaires reviennent à ce champ. La direction visuelle ne remplace ni son API, ni les modes d’inscription libre et sur invitation.
 
@@ -236,7 +236,7 @@ Le dernier appel dit « Réserve ton nom en premier ». Son bouton « Réserver 
 
 ### Navigation
 
-La barre blanche est fixe au défilement avec `position: sticky`. Son contenu fait 60 px de haut. Les liens sont en Geist à 15 px ; le logo et l’action principale restent visibles. Le menu mobile regroupe les mêmes ancres que la navigation large : inspiration, fonctionnement, thèmes, tarifs et questions (entre 900 et 1100 px, Thèmes ne reste qu’au menu, faute de place). La section où l’on est se lit dans la barre : son lien passe à l’encre, souligné, avec `aria-current`. Échap ferme le menu et rend le focus à son bouton ; le bouton de la barre qui a le focus ne s’efface pas. Une ancre suivie pose le focus sur le titre de sa section (`tabIndex -1`, sans défilement en plus). Au pied du hero, à droite, une ligne de prix soulignée mène aux tarifs : « Gratuit · Starter 4 € · Pro 9 € par mois », lue dans `OFFRES`.
+La barre blanche est fixe au défilement avec `position: sticky`. Son contenu fait 60 px de haut. Les liens sont en Geist à 15 px ; le logo et l’action principale restent visibles. Le menu mobile regroupe les mêmes ancres que la navigation large : inspiration, fonctionnement, thèmes, tarifs et questions (entre 900 et 1100 px, les cinq liens se resserrent pour tenir). La section où l’on est se lit dans la barre : son lien passe à l’encre, souligné, avec `aria-current` ; Prise et le dernier appel, sans lien, n’en marquent aucun. Échap ferme le menu et rend le focus à son bouton ; le bouton de la barre qui a le focus ne s’efface pas. Une ancre suivie pose le focus sur le titre de sa section (`tabIndex -1`, sans défilement en plus), sans cadre : un titre n’est pas une commande. Au pied du hero, à droite, une ligne de prix soulignée mène aux tarifs : « Gratuit · Starter 4 € · Pro 9 € par mois », lue dans `OFFRES`.
 
 ### Portraits and profile previews
 
@@ -284,7 +284,7 @@ Les animations de démonstration démarrent avec l’entrée dans le champ de vi
 - **Do** conserver le même portrait et la même identité à chaque réapparition d’une personne.
 - **Do** montrer l’activité et les liens propres au profil pour rendre la démonstration compréhensible.
 - **Do** garder la mention introductive des six profils imaginés.
-- **Do** maintenir les démonstrations rejouables, leurs libellés, le focus visible et leur état à mouvement réduit.
+- **Do** maintenir les démonstrations rejouables, leurs libellés, le focus visible et leur état à mouvement réduit. Au téléphone, sans mouvement, les étapes de Prise se lisent en liste et se montrent d’un toucher.
 - **Do** lire les prix et droits dans les données du produit, et rendre les thèmes via les composants publics existants.
 - **Do** limiter toute extension de ces règles au périmètre de la landing publique.
 

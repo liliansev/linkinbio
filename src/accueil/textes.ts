@@ -66,6 +66,9 @@ export const FONCTIONS = [
   'Statistiques sur un an (Pro)',
 ];
 
+/** La question de celui qui a déjà un Linktree : sa réponse mène au champ. */
+export const QUESTION_LINKTREE = 'J’ai déjà un Linktree. Comment passer à Hopla ?';
+
 export function questions(m: Inscription): [string, string][] {
   return [
     ['C’est quoi, Hopla ?', 'Une page de liens à mettre dans ta bio Instagram, TikTok ou YouTube, sur hopla.page/ton-nom. Elle change l’ordre de ses liens selon le réseau d’où arrive ton visiteur (et selon l’heure, avec Pro), ouvre tes liens dans leurs apps et se modifie depuis ton téléphone.'],
@@ -77,7 +80,7 @@ export function questions(m: Inscription): [string, string][] {
       ? ['Quelle sera mon adresse ?', 'hopla.page/ suivi du nom que tu choisis ici : 3 à 30 caractères, lettres, chiffres et tirets. Une fois pris, un nom n’est donné à personne d’autre, sauf si personne n’entre jamais dans la page : elle s’efface au bout d’un mois. Une faute de frappe ? Juste après l’envoi, tant que tu n’es pas entré dans ta page, tu peux encore le changer.']
       : ['Quelle sera mon adresse ?', 'hopla.page/ suivi du nom que tu réserves ici : 3 à 30 caractères, lettres, chiffres et tirets. Un nom réservé n’est donné à personne d’autre. Une faute de frappe ? Juste après la réservation, tu peux encore le changer.'],
     ['En quoi Hopla change d’une page de liens classique ?', 'Ta page se réorganise toute seule selon le réseau d’où arrive ton visiteur (et selon l’heure, avec Pro), tes liens s’ouvrent dans leurs apps plutôt que dans le navigateur d’Instagram, et tes stats se lisent en une phrase, sans cookie (avec Starter).'],
-    ['J’ai déjà un Linktree. Comment passer à Hopla ?', 'Colle ton adresse Linktree dans le champ : Hopla en garde le nom, s’il est libre ici. Ensuite, dans ta page, colle les adresses de tes liens, Hopla retrouve leurs titres tout seul. Il ne reste qu’à mettre hopla.page/ton-nom à la place de l’ancien lien dans tes bios.'],
+    [QUESTION_LINKTREE, 'Colle ton adresse Linktree dans le champ : Hopla en garde le nom, s’il est libre ici. Ensuite, dans ta page, colle les adresses de tes liens, Hopla retrouve leurs titres tout seul. Il ne reste qu’à mettre hopla.page/ton-nom à la place de l’ancien lien dans tes bios.'],
     ['Comment Hopla sait d’où vient un visiteur ?', 'Instagram, TikTok et les autres apps se signalent quand elles ouvrent ta page. Tu mets un seul lien dans toutes tes bios, Hopla fait le tri. Quand rien ne le dit, par exemple un lien envoyé sur WhatsApp ou tapé dans Safari, ta page garde l’ordre que tu as choisi.'],
     ['Mes visiteurs sont-ils pistés ?', 'Non. Aucun cookie, aucune publicité, aucun traceur d’un site à l’autre. Les stats comptent les visites sans garder l’adresse IP : pas de bannière à imposer à tes visiteurs.'],
     ['Je peux partir avec mes données ?', 'Oui. Ta page, tes stats et ta liste e‑mail s’exportent en un clic depuis Réglages, et ton compte se supprime de la même façon.'],

@@ -54,15 +54,19 @@ export function Barre() {
     addEventListener('scroll', f, { passive: true });
     return () => removeEventListener('scroll', f);
   }, []);
-  // La section où l'on est : la dernière dont le haut a passé les deux cinquièmes de l'écran. La barre la dit (`aria-current`).
+  // La section où l'on est : la dernière dont le haut a passé les deux cinquièmes de l'écran. La barre la dit (`aria-current`) ;
+  // Prise et le dernier appel, qui n'ont pas de lien, n'en marquent aucun.
   const [ici, setIci] = useState('');
   useEffect(() => {
     let image = 0;
     const f = () => {
       cancelAnimationFrame(image);
       image = requestAnimationFrame(() => {
-        let actif = '';
-        for (const [lien] of SECTIONS) if ((document.querySelector(lien)?.getBoundingClientRect().top ?? Infinity) <= innerHeight * 0.4) actif = lien;
+        let actif = '', haut = -Infinity;
+        for (const [ancre, lien] of REPERES) {
+          const t = document.querySelector(ancre)?.getBoundingClientRect().top ?? Infinity;
+          if (t <= innerHeight * 0.4 && t > haut) { haut = t; actif = lien; }
+        }
         setIci(actif);
       });
     };
@@ -121,6 +125,8 @@ function titreDe(lien: string) {
 
 /** Les sections de la barre, et du menu au téléphone, dans l'ordre de la page. */
 const SECTIONS = [['#inspiration', 'Inspiration'], ['#fonctionnement', 'Comment ça marche'], ['#themes', 'Thèmes'], ['#prix', 'Tarifs'], ['#questions', 'Questions']];
+/** Où commence chaque lien de la barre ; les sections sans lien (Prise, le dernier appel) le referment. */
+const REPERES = [...SECTIONS.map(([lien]) => [lien, lien]), ['#prise', ''], ['#dernier', '']];
 
 export function Ouverture({ api }: { api: ApiAccueil }) {
   const mode = useInscription();
