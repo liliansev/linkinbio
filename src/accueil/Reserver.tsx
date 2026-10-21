@@ -1,9 +1,11 @@
 import { useEffect, useId, useRef, useSyncExternalStore } from 'react';
 import type { FocusEvent, FormEvent, ReactNode } from 'react';
 import { Icone } from '../components/Icone.tsx';
+import { OFFRES } from '../lib/abonnement.ts';
+import type { Periode, PlanPayant } from '../lib/abonnement.ts';
 import { CONTACT_LEGAL } from '../lib/legal.ts';
 import { nomSaisi } from '../lib/valider.ts';
-import { adresseSuggeree, nomDansAdresse } from './adresse.ts';
+import { adresseSuggeree, nomDansAdresse, nomDansLien } from './adresse.ts';
 import { mouvementReduit } from './mouvement.ts';
 import { MOTS, appel, useInscription } from './textes.ts';
 
@@ -60,8 +62,10 @@ interface Etat {
   quitte: string;
   /** Le nom parti à la vérification : une ligne le dit, si la réponse tarde. */
   verifie: string;
-  /** La saisie dépassait 30 caractères : la fin est coupée, et on le dit. */
+  /** La saisie dépassait 30 caractères : la fin est coupée, et on le dit. */
   coupe: boolean;
+  /** La saisie avait un emoji ou une lettre d'un autre alphabet : retirés, et on le dit, sans en faire une erreur. */
+  retire: boolean;
   /** L'heure du premier envoi, et la fin du temps pour corriger. */
   le: number;
   fermee: boolean;
@@ -71,13 +75,22 @@ interface Etat {
   renvoye: string;
   /** Le formulaire dont on se sert : lui seul parle aux lecteurs d'écran, l'autre affiche le même état en silence. */
   actif: string;
+  /** L'offre payante dont on a pris le bouton dans les prix : on commence en Gratuit, le champ dit où l'activer ensuite. */
+  offre: PlanPayant | '';
+  /** La période lue dans les prix au moment du choix : la note la reprend. */
+  periode: Periode;
 }
 
-let etat: Etat = { nom: '', verif: null, etape: 'nom', email: '', message: '', erreur: '', envoi: false, focus: '', signalee: '', renvoi: 'bientot', envoyee: '', correction: false, ancien: '', quitte: '', verifie: '', coupe: false, le: 0, fermee: false, saisie: '', renvoye: '', actif: '' };
+let etat: Etat = { nom: '', verif: null, etape: 'nom', email: '', message: '', erreur: '', envoi: false, focus: '', signalee: '', renvoi: 'bientot', envoyee: '', correction: false, ancien: '', quitte: '', verifie: '', coupe: false, retire: false, le: 0, fermee: false, saisie: '', renvoye: '', actif: '', offre: '', periode: 'mois' };
 const abonnes = new Set<() => void>();
 const changer = (m: Partial<Etat>) => { etat = { ...etat, ...m }; abonnes.forEach(f => f()); };
 const abonner = (f: () => void) => { abonnes.add(f); return () => { abonnes.delete(f); }; };
 export const useReservation = () => useSyncExternalStore(abonner, () => etat, () => etat);
+
+/** Le bouton d'une offre, dans les prix : `''` pour Gratuit ; la période est celle qu'on lisait. */
+export const choisirOffre = (offre: PlanPayant | '', periode: Periode = 'mois') => changer({ offre, periode });
+/** « Pro », ou « Pro à l'année » : l'offre choisie, telle que les prix la montraient. */
+const offreLue = (e: Etat) => e.offre ? `${OFFRES[e.offre].nom}${e.periode === 'an' ? ' à l’année' : ''}` : '';
 
 /** L'envoi fait, gardé pour l'onglet : un rechargement ne le fait pas oublier. Avant l'envoi, le nom tapé. */
 const CLE = 'hopla-envoi';
@@ -123,7 +136,7 @@ function heure(t: number) {
 
 /** Une lettre d'un autre alphabet ne passe pas dans une adresse : on le dit au lieu de l'effacer en silence. */
 const AUTRE_ALPHABET = /[^\P{L}\p{Script=Latin}]/u;
-const MOT_ALPHABET = 'Une adresse ne prend que des lettres latines, des chiffres et des tirets.';
+const MOT_ALPHABET = 'Une adresse ne prend que des lettres latines, des chiffres et des tirets : les accents sont simplifiés, le reste est retiré.';
 /** Un emoji non plus : effacé sans un mot, le champ aurait l'air cassé. */
 const PICTOGRAMME = /\p{Extended_Pictographic}/u;
 
@@ -155,9 +168,13 @@ function suite(avant: string, brut: string, valeur: string) {
 }
 
 function taper(api: ApiAccueil, valeur: string) {
-  const colle = nomDansAdresse(valeur);
+  let colle = nomDansAdresse(valeur);
+  let saisie = suite(etat.nom, etat.saisie, colle);
+  // Une adresse tapée lettre à lettre (https://linktr.ee/zoe) se lit sur la saisie entière, comme si on l'avait collée.
+  const lien = colle === valeur ? nomDansLien(saisie) : '';
+  if (lien) colle = saisie = lien;
   const nom = nomSaisi(colle);
-  changer({ nom, saisie: suite(etat.nom, etat.saisie, colle), verif: null, coupe: nomSaisi(colle, 200).replace(/-$/, '').length > 30, erreur: AUTRE_ALPHABET.test(valeur) || PICTOGRAMME.test(valeur) ? MOT_ALPHABET : '' });
+  changer({ nom, saisie, verif: null, coupe: nomSaisi(colle, 200).replace(/-$/, '').length > 30, retire: AUTRE_ALPHABET.test(valeur) || PICTOGRAMME.test(valeur), erreur: '' });
   retenir(nom);
   clearTimeout(minuterie);
   if (nom.replace(/-$/, '').length >= 3) minuterie = setTimeout(() => verifier(api, nom.replace(/-$/, '')), 280);
@@ -284,8 +301,9 @@ export function Reserver({ api, note, apercu, id, grand, premier, libelleNom }: 
                 : <>Une faute ? Jusqu’à {heure(e.le + FENETRE)}, tu peux{' '}
                   <button type="button" className="hl-lien-texte" onClick={() => changer({ etape: 'email', correction: true, email: e.envoyee, signalee: '', quitte: '', erreur: '', focus: moi })}>corriger ton e‑mail</button>
                   {' '}ou{' '}
-                  <button type="button" className="hl-lien-texte" onClick={() => changer({ etape: 'nom', ancien: e.nom, verif: null, erreur: '', coupe: false, focus: moi })}>changer de nom</button>.</>}
+                  <button type="button" className="hl-lien-texte" onClick={() => changer({ etape: 'nom', ancien: e.nom, verif: null, erreur: '', coupe: false, retire: false, focus: moi })}>changer de nom</button>.</>}
             </p>
+            {e.offre && mode === 'libre' && <p className="hl-reserver-renvoi">Ensuite, active {offreLue(e)} dans tes réglages.</p>}
             {e.erreur && <p className="hl-reserver-erreur" role={parle ? 'alert' : undefined}>{e.erreur}</p>}
           </div>
         </div>
@@ -298,12 +316,14 @@ export function Reserver({ api, note, apercu, id, grand, premier, libelleNom }: 
   // Pendant un changement de nom, l'ancien nom est le sien : il n'est pas « pris ».
   const sien = !!e.ancien && v?.nom === e.ancien;
   const pris = e.etape === 'nom' && !sien && (v?.etat === 'pris' || v?.etat === 'invalide' || !!e.erreur);
+  // Une adresse e-mail refusée marque le champ de la même façon.
+  const emailFautif = e.etape === 'email' && !!e.erreur;
   // La faute de domaine attend la fin de la frappe : on a quitté le champ, ou validé une première fois.
   const suggeree = e.etape === 'email' && (e.quitte === e.email || e.signalee === e.email) ? adresseSuggeree(e.email) : null;
   const revenir = () => changer({ etape: 'fait', correction: false, nom: e.ancien || e.nom, ancien: '', email: e.envoyee, verif: null, signalee: '', erreur: '', focus: moi });
   const corriger = (adresse: string) => { changer({ email: adresse, signalee: '', erreur: '' }); champ.current?.focus(); };
   return (
-    <form className={classe} id={id} onSubmit={envoyer} noValidate data-pris={pris || undefined} onFocusCapture={prendre} onPointerDownCapture={prendre}>
+    <form className={classe} id={id} onSubmit={envoyer} noValidate data-pris={pris || emailFautif || undefined} onFocusCapture={prendre} onPointerDownCapture={prendre}>
       <div className="hl-reserver-ligne">
         {e.etape === 'nom' ? (
           <label className="hl-champ">
@@ -320,13 +340,14 @@ export function Reserver({ api, note, apercu, id, grand, premier, libelleNom }: 
             <span className="hl-cache">Ton adresse e-mail, pour recevoir le lien</span>
             <input ref={champ} type="email" value={e.email} onChange={ev => changer({ email: ev.target.value, erreur: '' })} placeholder="ton@adresse.fr" maxLength={200} onFocus={remonter}
               onBlur={() => changer({ quitte: etat.email })}
-              autoComplete="email" inputMode="email" enterKeyHint="send" required aria-describedby={idEtat} />
+              autoComplete="email" inputMode="email" enterKeyHint="send" required aria-describedby={idEtat} aria-invalid={emailFautif || undefined} />
           </label>
         )}
         <button type="submit" className="hl-btn" disabled={e.envoi}>{e.envoi ? (e.etape === 'nom' && !e.ancien ? 'Vérification…' : 'Envoi…') : e.correction ? 'Corriger' : e.ancien ? 'Changer' : e.etape === 'email' ? MOTS[mode].envoyer : libelleNom ?? appel(mode)}</button>
       </div>
       <div className="hl-reserver-etat" id={idEtat} aria-live={parle ? 'polite' : 'off'}>
-        {e.erreur ? <p className="hl-reserver-erreur" role={parle ? 'alert' : undefined}>{e.erreur}</p>
+        {/* La zone annonce déjà ce qui change : pas de role="alert" en plus, le message serait lu deux fois. */}
+        {e.erreur ? <p className="hl-reserver-erreur"><Icone nom="alerte" taille={18} />{e.erreur}</p>
           : suggeree ? (
             <p data-signale={e.signalee === e.email || undefined}>
               <span>Tu voulais dire </span>
@@ -368,11 +389,18 @@ export function Reserver({ api, note, apercu, id, grand, premier, libelleNom }: 
           : e.verifie && e.verifie === e.nom.replace(/-$/, '') ? <p className="hl-reserver-attente">Vérification de <b>hopla.page/{insecable(e.verifie)}</b>…</p>
           : null}
         {e.etape === 'nom' && e.coupe && !e.erreur && <p className="hl-reserver-coupe">Un nom tient en 30 caractères : la fin est coupée.</p>}
+        {/* Un nom nettoyé reste un nom valable : une note, comme pour la coupe, pas l'anneau d'une erreur. */}
+        {e.etape === 'nom' && e.retire && !e.erreur && <p className="hl-reserver-coupe">{MOT_ALPHABET}</p>}
+        {/* Une adresse refusée ou une faute signalée n'enferment pas : le nom se change toujours d'ici. */}
+        {e.etape === 'email' && !e.correction && (e.erreur || suggeree) && <p><button type="button" className="hl-lien-texte" onClick={() => changer({ etape: 'nom', erreur: '', focus: moi })}>Changer de nom</button></p>}
       </div>
       {apercu}
       {e.etape === 'email'
         ? <p className="hl-reserver-note">{MOTS[mode].rassure} <a href="/legal/confidentialite">Confidentialité</a></p>
-        : note && !e.ancien && <p className="hl-reserver-note">{note}</p>}
+        : note && !e.ancien && <p className="hl-reserver-note">{e.offre && mode === 'libre'
+          // Le chemin du retour vers les prix : on n'a pas à remonter toute la page pour changer d'avis.
+          ? <>Tu commences en Gratuit, puis tu actives {offreLue(e)} dans tes réglages. <a href="#prix">Revoir les offres</a></>
+          : note}</p>}
     </form>
   );
 }

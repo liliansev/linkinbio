@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import type { RefObject } from 'react';
+import type { FocusEvent, PointerEvent, RefObject } from 'react';
 
 /*
  * Le mouvement de l'accueil, en quelques outils : un élément « vu » une fois
@@ -10,18 +10,31 @@ import type { RefObject } from 'react';
 
 export const mouvementReduit = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-/** Vrai dès que l'élément entre à `seuil` dans l'écran, et le reste. */
-export function useVu<T extends Element>(seuil = 0.2): [RefObject<T | null>, boolean] {
+/**
+ * Vrai quand l'élément est resté `tenue` ms à `seuil` dans l'écran, et le
+ * reste : une scène que l'on traverse (un saut vers une ancre, un défilement
+ * rapide) ne se joue pas dans le dos du visiteur. Il suffit toujours que
+ * l'élément occupe 40 % de l'écran : un téléphone, au téléphone, part quand on
+ * s'arrête sur ses onglets, sans qu'il faille l'avoir entier au pixel près.
+ */
+export function useVu<T extends Element>(seuil = 0.2, tenue = 450): [RefObject<T | null>, boolean] {
   const ref = useRef<T>(null);
   const [vu, setVu] = useState(false);
   useEffect(() => {
     const el = ref.current;
     if (!el || vu) return;
     if (typeof IntersectionObserver !== 'function') { setVu(true); return; }
-    const o = new IntersectionObserver(([e]) => { if (e.isIntersecting) { setVu(true); o.disconnect(); } }, { threshold: seuil, rootMargin: '0px 0px -8% 0px' });
+    const hauteur = el.getBoundingClientRect().height;
+    const s = hauteur ? Math.min(seuil, (innerHeight * 0.4) / hauteur) : seuil;
+    let minuterie: ReturnType<typeof setTimeout> | undefined;
+    const o = new IntersectionObserver(([e]) => {
+      clearTimeout(minuterie);
+      // Le rappel vient aussi quand l'élément repasse sous le seuil : il compte alors comme sorti.
+      if (e.isIntersecting && e.intersectionRatio >= s - 0.01) minuterie = setTimeout(() => { setVu(true); o.disconnect(); }, tenue);
+    }, { threshold: s, rootMargin: '0px 0px -8% 0px' });
     o.observe(el);
-    return () => o.disconnect();
-  }, [vu, seuil]);
+    return () => { clearTimeout(minuterie); o.disconnect(); };
+  }, [vu, seuil, tenue]);
   return [ref, vu];
 }
 
@@ -68,6 +81,47 @@ export function useSequence(actif: boolean, pas: number[]): [number, () => void]
   }, [actif, tour]);
   // Rejouer repart de zéro dans le même rendu : l'écran remonté ne montre jamais la fin de la lecture d'avant.
   return [etape, () => { setEtape(mouvementReduit() ? pas.length : 0); setTour(t => t + 1); }];
+}
+
+/** Le temps sans mouvement de souris après lequel une scène en pause repart. */
+const REPRISE = 1500;
+
+/**
+ * Une scène qui passe d'elle-même à la suite après `duree` ms, tant que
+ * `actif`. La souris qui bouge sur la scène met l'attente en pause, et elle
+ * reprend une seconde et demie après le dernier mouvement : un curseur laissé
+ * là par la molette n'arrête rien. Le focus au clavier la suspend tant qu'il
+ * reste dedans. Le temps qui restait repart à la reprise. `garde` se pose sur
+ * ce que la pause couvre.
+ */
+export function useEnchainement(actif: boolean, duree: number, suite: () => void) {
+  const [pause, setPause] = useState(false);
+  const restant = useRef(duree);
+  const fn = useRef(suite);
+  fn.current = suite;
+  const reprise = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const clavier = useRef(false);
+  useEffect(() => { if (!actif) restant.current = duree; }, [actif, duree]);
+  useEffect(() => {
+    if (!actif || pause) return;
+    const debut = performance.now();
+    const t = setTimeout(() => fn.current(), restant.current);
+    return () => { clearTimeout(t); restant.current = Math.max(0, restant.current - (performance.now() - debut)); };
+  }, [actif, pause]);
+  useEffect(() => () => clearTimeout(reprise.current), []);
+  const garde = {
+    onPointerMove: (e: PointerEvent) => {
+      if (e.pointerType !== 'mouse' || clavier.current) return;
+      setPause(true);
+      clearTimeout(reprise.current);
+      reprise.current = setTimeout(() => setPause(false), REPRISE);
+    },
+    onPointerLeave: () => { clearTimeout(reprise.current); if (!clavier.current) setPause(false); },
+    // Un clic laisse le focus sur le bouton touché : seul le focus visible, celui du clavier, retient la scène.
+    onFocus: (e: FocusEvent) => { if (!(e.target as Element).matches(':focus-visible')) return; clavier.current = true; clearTimeout(reprise.current); setPause(true); },
+    onBlur: (e: FocusEvent) => { if (!e.currentTarget.contains(e.relatedTarget as Node | null)) { clavier.current = false; setPause(false); } },
+  };
+  return [actif && pause, garde] as const;
 }
 
 /** Un nombre qui compte de 0 à `cible` en `duree` ms, quand `actif` passe à vrai. */

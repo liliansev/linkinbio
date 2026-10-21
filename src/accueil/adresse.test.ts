@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { adresseSuggeree, nomDansAdresse } from './adresse.ts';
+import { adresseSuggeree, nomDansAdresse, nomDansLien } from './adresse.ts';
 import { nomSaisi } from '../lib/valider.ts';
 
 test('une faute de frappe dans un domaine courant propose la bonne adresse', () => {
@@ -37,4 +37,14 @@ test('une adresse collée dans le champ du nom ne garde que le nom', () => {
   // Ce qui n'est pas une adresse passe tel quel.
   assert.equal(nom('Marie Lambert'), 'marie-lambert');
   assert.equal(nom('marie.lambert'), 'marie-lambert');
+});
+
+test('un lien tapé lettre à lettre se reconnaît dès le début de son nom, et un emoji ne laisse pas de tiret', () => {
+  assert.equal(nomDansLien('https://linktr.ee/'), '');
+  assert.equal(nomDansLien('https://linktr.ee/z'), 'z');
+  assert.equal(nomDansLien('marie.lambert'), '');
+  assert.equal(nomDansLien('marie@gmail.com'), '');
+  assert.equal(nomSaisi('zoé🎉'), 'zoe');
+  assert.equal(nomSaisi('Zoé 🎉 Martin'), 'zoe-martin');
+  assert.equal(nomSaisi('Zoé Martin 🎉'), 'zoe-martin');
 });

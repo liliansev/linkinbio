@@ -4,7 +4,7 @@ import { Icone } from '../components/Icone.tsx';
 import { THEMES } from '../lib/themes.ts';
 import { CroquisLien, EcranPage, Telephone } from './Telephone.tsx';
 import { BLOCS_EXEMPLES, PROFILS, pageExemple } from './exemples.ts';
-import { mouvementReduit, useGlisse, useSequence, useVu } from './mouvement.ts';
+import { mouvementReduit, useEnchainement, useGlisse, useSequence, useVu } from './mouvement.ts';
 
 /*
  * 07 · Prendre sa page en main, en une section et deux onglets sur un même
@@ -21,7 +21,7 @@ const ETAPES: Pas[] = [
   { titre: 'Ta page, à ton nom', texte: 'Ta photo, ton nom, une phrase sur ce que tu fais.' },
   { titre: 'Tes liens les plus utiles', texte: 'Colle une adresse, Hopla trouve le titre du site tout seul.' },
   { titre: 'Où te suivre ?', texte: 'Ton pseudo suffit, l’adresse se complète.' },
-  { titre: 'Choisis ton thème', texte: 'Dix pour commencer, les vingt ensuite.' },
+  { titre: 'Choisis ton thème', texte: 'Dix au choix pour commencer, les vingt ensuite, tous gratuits.' },
 ];
 const GESTES: Pas[] = [
   { picto: 'plume', titre: 'Toucher pour écrire', texte: 'Ton nom, ta bio, un lien : touche, tape, c’est en ligne.' },
@@ -117,29 +117,30 @@ export function Prise() {
   const choisir = (o: Onglet) => { setOnglet(o); setChoisi(null); setJeu(j => j + 1); rejouer(); };
   const toucher = (o: Onglet) => { setAuto(false); setTouche(true); choisir(o); };
 
-  // La première fois : Créer, puis Modifier.
+  // La première fois : Créer, puis Modifier ; la souris qui bouge sur la scène suspend le passage.
   const enchaine = vu && auto && onglet === 'creer' && choisi === null && !mouvementReduit();
-  useEffect(() => {
-    if (!enchaine) return;
-    const t = setTimeout(() => { setAuto(false); choisir('modifier'); }, AVANT_MODIFIER);
-    return () => clearTimeout(t);
-    // `choisir` ne change pas d'effet : seul l'état de l'enchaînement compte.
-  }, [enchaine]);
+  const [pause, garde] = useEnchainement(enchaine, AVANT_MODIFIER, () => { setAuto(false); choisir('modifier'); });
 
   const liste = onglet === 'creer' ? ETAPES : GESTES;
   // Le pas lu, de 0 à liste.length - 1.
   const rang = onglet === 'creer' ? Math.max(1, etape) - 1 : etape < 2 ? 0 : etape < 5 ? 1 : 2;
   const montrer = (i: number) => { setAuto(false); setTouche(true); setChoisi(onglet === 'creer' ? i + 1 : ETAPE_DU_GESTE[i]); };
+  // Créer fini, la suite se dit : on n'attend pas Modifier sans le savoir. Au bureau sous les étapes, au téléphone sous le téléphone ; sa place est gardée, rien ne saute.
+  const suite = (ou: string) => (
+    <button type="button" className={`hl-btn hl-btn-petit hl-suite ${ou}`} data-cache={!(onglet === 'creer' && etape >= PAS.creer.length) || undefined} onClick={() => toucher('modifier')}>
+      Voir comment la modifier<Icone nom="ui-chevron" taille={16} className="hl-droite" />
+    </button>
+  );
 
   return (
     <section className="hl-section" data-teinte="lilas" aria-labelledby="prise">
       <div className="hl-tete-section hl-entre">
-        <h2 id="prise" className="hl-h2">Ta page en deux minutes<br />Depuis ton téléphone</h2>
+        <h2 id="prise" className="hl-h2">Ta page en deux minutes<br /><span className="hl-cache">. </span>Depuis ton téléphone</h2>
         <p className="hl-chapo">Quatre questions pour la créer. Ensuite, tu la modifies en la touchant : pas de formulaire à part.</p>
       </div>
-      <div className="hl-prise">
+      <div className="hl-prise" {...garde}>
         <div className="hl-prise-texte">
-          <div className="hl-onglets hl-onglets-scene" role="group" aria-label="Créer ou modifier sa page, la scène se rejoue à chaque choix">
+          <div className="hl-onglets hl-onglets-scene" role="group" aria-label="Créer ou modifier sa page, la scène se rejoue à chaque choix" data-pause={pause || undefined}>
             {(['creer', 'modifier'] as const).map(o => (
               <button key={o} type="button" aria-pressed={onglet === o} onClick={() => toucher(o)}
                 data-remplit={(enchaine && o === 'creer') || undefined} style={{ '--duree': `${AVANT_MODIFIER}ms` } as CSSProperties}>
@@ -157,6 +158,7 @@ export function Prise() {
               </li>
             ))}
           </ol>
+          {!mouvementReduit() && suite('hl-grand-seul')}
         </div>
         <div ref={ref} className="hl-prise-tel">
           <Telephone largeur={290} label={onglet === 'creer'
@@ -169,7 +171,10 @@ export function Prise() {
             <div className="hl-segments" aria-hidden="true">{liste.map((_, i) => <i key={i} data-plein={rang >= i || undefined} />)}</div>
             <p><span className="hl-gris">{rang + 1} sur {liste.length}</span> <b>{liste[rang].titre}</b><span className="hl-etape-texte">{liste[rang].texte}</span></p>
           </div>
-          <button type="button" className="hl-revoir" onClick={() => { setTouche(true); setChoisi(null); rejouer(); }}>Revoir</button>
+          {!mouvementReduit() && <>
+            <button type="button" className="hl-revoir" aria-label={`Revoir : ${onglet === 'creer' ? 'créer sa page' : 'la modifier'}`} onClick={() => { setAuto(false); setTouche(true); setChoisi(null); rejouer(); }}>Revoir</button>
+            {suite('hl-petit-seul')}
+          </>}
         </div>
       </div>
     </section>

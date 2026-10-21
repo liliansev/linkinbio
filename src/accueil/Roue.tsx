@@ -12,10 +12,10 @@ import { mouvementReduit, useVu } from './mouvement.ts';
  * réseaux tournent sur une roue, et chaque visiteur en part, passe par le
  * même lien Hopla, puis descend vers la page rangée pour son réseau. À son
  * arrivée, la page fait un petit bond ; la première fois, le lien de ce
- * réseau se glisse en tête, dans la couleur du réseau, avant de prendre celle
- * du thème. Camille Nguyen, une photographe inventée, dans le thème
+ * réseau se glisse en tête, dans la couleur du réseau, qu'il garde : au repos,
+ * on lit encore quel réseau a rangé chaque page. Camille Nguyen, une photographe inventée, dans le thème
  * Neige. Le trafic se joue
- * une fois, puis la roue ralentit et s'arrête ; « Revoir » le rejoue. Avec
+ * une fois, puis la roue ralentit et s'arrête ; « Passer » le saute, « Revoir » le rejoue. Avec
  * moins de mouvement, les quatre pages sont déjà rangées.
  *
  * Le dessin est en HTML (roue, lien, pages) ; les chemins et les traînées sont
@@ -48,7 +48,7 @@ const facile = (p: number) => (p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2
 interface Geo { cx: number; cy: number; r: number; bas: number; pages: { x: number; y: number }[]; w: number; h: number; base: number[] }
 
 export function Roue() {
-  const [refVu, vu] = useVu<HTMLDivElement>(0.35);
+  const [refVu, vu] = useVu<HTMLDivElement>(0.6);
   const scene = useRef<HTMLDivElement>(null);
   const anneau = useRef<HTMLDivElement>(null);
   const lien = useRef<HTMLDivElement>(null);
@@ -63,6 +63,8 @@ export function Roue() {
   const [rangees, setRangees] = useState<Reseau[]>([]);
   const [fini, setFini] = useState(false);
   const [tour, setTour] = useState(0);
+  // « Passer » pose la roue sur sa fin, les quatre pages rangées ; « Revoir » rejoue le trafic.
+  const [passe, setPasse] = useState(false);
 
   // Les positions de la roue, du lien et des pages, relues à chaque changement de taille.
   useLayoutEffect(() => {
@@ -89,7 +91,7 @@ export function Roue() {
   // Le trafic : une fois, quand la roue est à l'écran ; « Revoir » le relance.
   useEffect(() => {
     if (!vu) return;
-    if (mouvementReduit()) { setRangees([...RESEAUX]); setFini(true); return; }
+    if (mouvementReduit() || passe) { setRangees([...RESEAUX]); setFini(true); return; }
     setRangees([]);
     setFini(false);
     const libres = RESEAUX.map((_, i) => Array.from({ length: PAR_RESEAU }, (_, k) => i * PAR_RESEAU + k));
@@ -177,7 +179,7 @@ export function Roue() {
       points.current.forEach(p => { if (p) p.style.opacity = '0'; });
       traines.current.forEach(c => { if (c) c.style.opacity = '0'; });
     };
-  }, [vu, tour]);
+  }, [vu, tour, passe]);
 
   const adresse = `hopla.page/${PROFILS.camille.pseudo}`;
   const qui = PROFILS.camille.nom;
@@ -247,9 +249,9 @@ export function Roue() {
         </div>
       </div>
       <p className="hl-roue-pied">
-        {fini && !mouvementReduit() && (
-          <button type="button" className="hl-revoir" onClick={() => setTour(t => t + 1)}>Revoir les visiteurs</button>
-        )}
+        {!mouvementReduit() && vu && (fini
+          ? <button type="button" className="hl-revoir" onClick={() => { setPasse(false); setTour(t => t + 1); }}>Revoir les visiteurs</button>
+          : <button type="button" className="hl-revoir" onClick={() => setPasse(true)}>Passer l’animation</button>)}
       </p>
     </div>
   );

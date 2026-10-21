@@ -11,6 +11,8 @@
  * « moins de mouvement » montre l'état final.
  */
 
+/* Pas de mot seul en fin de paragraphe, ni de question coupée sur un mot. */
+.hl :is(p, li, small, figcaption, dd) { text-wrap: pretty; }
 .hl {
   --encre: #0a0a0a;
   --papier: #fff;
@@ -33,10 +35,15 @@
 }
 @media (min-width: 1024px) { .hl { --gout: 40px; } }
 .hl :focus-visible { outline: 2px solid var(--encre); outline-offset: 3px; }
+/* Le titre où mène un lien de la barre prend le focus pour le lecteur d'écran ; ce n'est pas une commande, il n'a pas de cadre. */
+.hl :is(h1, h2)[tabindex='-1']:focus-visible { outline: none; }
 .hl ::selection { background: var(--encre); color: var(--papier); }
 
 html:has(.hl) { background: #fff; scroll-padding-top: 76px; }
 @media (prefers-reduced-motion: no-preference) { html:has(.hl) { scroll-behavior: smooth; } }
+/* Une phrase qui parle d'un mouvement a sa variante sans mouvement ; la feuille choisit, le rendu du serveur reste le même. */
+@media (prefers-reduced-motion: reduce) { .hl-si-mouvement { display: none; } }
+@media (prefers-reduced-motion: no-preference) { .hl-sans-mouvement { display: none; } }
 
 /* ---- Utilitaires ---- */
 
@@ -98,6 +105,7 @@ html:has(.hl) { background: #fff; scroll-padding-top: 76px; }
 .hl-h1, .hl-h2, .hl-h3 { font-weight: 600; letter-spacing: -0.035em; text-wrap: balance; }
 .hl-h1 { font-size: clamp(40px, 6.2vw, 72px); line-height: 1.02; }
 .hl-h2 { font-size: clamp(32px, 4.4vw, 52px); line-height: 1.06; }
+@media (max-width: 359px) { .hl-h2 { font-size: 28px; } }
 .hl-h3 { font-size: 21px; line-height: 1.25; letter-spacing: -0.02em; }
 .hl-chapo { margin-top: 16px; font-size: 18px; color: var(--gris); max-width: 50ch; text-wrap: pretty; }
 @media (min-width: 1024px) { .hl-chapo { font-size: 19px; } }
@@ -115,7 +123,7 @@ html:has(.hl) { background: #fff; scroll-padding-top: 76px; }
 .hl-btn:active { transform: scale(.98); }
 .hl-btn:disabled { opacity: .6; cursor: default; }
 .hl-btn-petit { min-height: 38px; padding: 0 14px; border-radius: 9px; font-size: 15px; }
-@media (max-width: 1023px) { .hl-btn-petit { min-height: 44px; } }
+@media (max-width: 1023px), (pointer: coarse) { .hl-btn-petit { min-height: 44px; } }
 .hl-btn-contour { background: transparent; color: var(--encre); }
 .hl-btn-contour:hover { background: var(--pale); }
 
@@ -132,13 +140,13 @@ html:has(.hl) { background: #fff; scroll-padding-top: 76px; }
 }
 .hl-revoir:hover { color: var(--encre); }
 
-/* Au téléphone, les liens écrits gardent leur taille mais se touchent sur 44 px : seuls dans leur ligne, ils
- * en prennent la hauteur ; dans une phrase, une zone invisible les agrandit. */
-@media (max-width: 1023px) {
+/* Au téléphone (et sur une tablette tactile, même large), les liens écrits gardent leur taille mais se touchent
+ * sur 44 px : seuls dans leur ligne, ils en prennent la hauteur ; dans une phrase, une zone invisible les agrandit. */
+@media (max-width: 1023px), (pointer: coarse) {
   :is(.hl-revoir, .hl-lien-gris, .hl-marque, .hl-pied nav a, .hl-couleurs-reglage > .hl-lien-texte) { display: inline-flex; align-items: center; min-height: 44px; }
   .hl-revoir { justify-content: center; min-width: 44px; }
   /* Dans une phrase, la zone de toucher grandit sans écarter les lignes. */
-  p :is(.hl-lien-texte, a) { padding-block: 11px; margin-block: -11px; }
+  p :is(.hl-lien-texte, a) { padding-block: 13px; margin-block: -13px; }
 }
 
 /* Des onglets écrits, soulignés quand ils sont choisis. */
@@ -162,12 +170,13 @@ html:has(.hl) { background: #fff; scroll-padding-top: 76px; }
 .hl-barre-actions .hl-btn { transition: background-color .15s, transform .15s, opacity .2s, visibility .2s; }
 /* Un seul appel à la fois : le bouton de la barre s'efface tant qu'un champ du nom est à l'écran, et une fois l'e-mail parti.
  * Au bureau, il est posé au bord, hors du flux, et Connexion glisse à sa place quand il s'efface (`--creer`, sa largeur). */
-:is(.hl-barre[data-champ], .hl-barre[data-envoye]) .hl-barre-actions .hl-btn { opacity: 0; visibility: hidden; }
+/* Un bouton qui a le focus reste là : le clavier ne tombe jamais dans le vide. */
+.hl-barre[data-champ] .hl-barre-actions .hl-btn:not(:focus), .hl-barre[data-envoye] .hl-barre-actions .hl-btn { opacity: 0; visibility: hidden; }
 @media (min-width: 900px) {
   .hl-barre-actions { position: relative; }
   .hl-barre-actions .hl-btn { position: absolute; top: 0; right: 0; bottom: 0; width: max-content; height: fit-content; margin-block: auto; }
   .hl-barre-connexion { transform: translateX(calc(-18px - var(--creer, 0px))); transition: color .15s, transform .35s var(--ease); }
-  :is(.hl-barre[data-champ], .hl-barre[data-envoye]) .hl-barre-connexion { transform: none; }
+  :is(.hl-barre[data-champ]:not(:has(.hl-barre-actions .hl-btn:focus)), .hl-barre[data-envoye]) .hl-barre-connexion { transform: none; }
 }
 .hl-barre-dedans { max-width: 1120px; height: 60px; margin: 0 auto; padding: 0 var(--gout); display: flex; align-items: center; gap: 24px; }
 .hl-marque { display: inline-flex; align-items: center; gap: 9px; color: var(--encre); font-size: 18px; font-weight: 600; letter-spacing: -0.03em; text-decoration: none; }
@@ -175,6 +184,13 @@ html:has(.hl) { background: #fff; scroll-padding-top: 76px; }
 .hl-barre-nav { display: none; gap: 28px; margin-left: 12px; }
 .hl-barre-nav a, .hl-barre-connexion { color: var(--gris); font-size: 15px; text-decoration: none; transition: color .15s; }
 .hl-barre-nav a:hover, .hl-barre-connexion:hover { color: var(--encre); }
+/* La section où l'on est : à l'encre, soulignée. */
+.hl-barre-nav a[aria-current] { color: var(--encre); text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 8px; }
+.hl-menu a[aria-current] { font-weight: 650; }
+/* Entre 900 et 1100 px, les cinq liens se resserrent pour tenir à côté de Connexion et du bouton. */
+@media (max-width: 1099px) { .hl-barre-nav { gap: 18px; margin-left: 4px; } .hl-barre-actions { gap: 14px; } }
+/* Sur une tablette tactile en paysage, la barre large garde des cibles de 44 px. */
+@media (pointer: coarse) { .hl-barre-nav a, .hl-barre-connexion { display: inline-flex; align-items: center; min-height: 44px; } }
 .hl-barre-actions { margin-left: auto; display: flex; align-items: center; gap: 18px; }
 @media (min-width: 900px) { .hl-barre-nav { display: flex; } }
 @media (min-width: 380px) { .hl-barre-actions .hl-large { display: inline; } }
@@ -242,7 +258,8 @@ html:has(.hl) { background: #fff; scroll-padding-top: 76px; }
 .hl-roue-pages { position: relative; z-index: 3; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-top: var(--ecart); }
 @media (min-width: 480px) { .hl-roue-pages { gap: 14px; } }
 .hl-roue-colonne { position: relative; display: flex; flex-direction: column; align-items: center; gap: 10px; min-width: 0; }
-.hl-roue-page, .hl-roue-onde { width: 100%; aspect-ratio: 2 / 3; border-radius: 14px; }
+/* La page tient juste ce qu'elle montre : la tête et trois liens, sans bas vide. */
+.hl-roue-page, .hl-roue-onde { width: 100%; aspect-ratio: 18 / 25; border-radius: 14px; }
 .hl-roue-onde { position: absolute; left: 0; top: 0; box-shadow: 0 0 0 2px #fff; opacity: 0; pointer-events: none; }
 /* Le retrait de la page en %, pas en cqi : les unités de conteneur d'une boîte ne valent que pour ce qu'elle contient. */
 .hl-roue-page {
@@ -254,17 +271,19 @@ html:has(.hl) { background: #fff; scroll-padding-top: 76px; }
 .hl-roue-nom { max-width: 100%; margin-top: 5cqi; font-size: 10cqi; font-weight: 620; letter-spacing: -0.02em; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .hl-roue-liens { display: flex; flex-direction: column; gap: 4.5cqi; width: 100%; margin-top: 8cqi; }
 .hl-roue-ligne {
-  flex: none; display: flex; align-items: center; gap: 4cqi; height: 17cqi; padding: 0 6cqi; border-radius: 99px;
+  flex: none; display: flex; align-items: center; gap: 4cqi; height: 19cqi; padding: 0 6cqi; border-radius: 99px;
   background: var(--surface); color: var(--surface-texte); font-size: 8cqi; font-weight: 560; white-space: nowrap; overflow: hidden;
   box-shadow: 0 2px 0 rgb(122 46 74 / .28); transition: background-color .35s, color .35s;
 }
 .hl-roue-ligne svg { flex: none; width: 9cqi; height: 9cqi; }
-.hl-roue-ligne span { overflow: hidden; text-overflow: ellipsis; }
+/* Un titre long passe sur deux lignes plutôt que d'être coupé. */
+.hl-roue-ligne span { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; white-space: normal; line-height: 1.1; }
 .hl-roue-ligne[data-vedette] { background: var(--vedette); color: var(--vedette-texte); }
 /* Le lien du réseau n'est pas là tant que personne n'en est venu ; à la première arrivée, il se glisse en tête. */
 .hl-roue-nouvelle { transition: height .45s var(--ease), margin .45s var(--ease), opacity .3s, background-color .35s, color .35s; }
 .hl-roue-page:not([data-rangee]) .hl-roue-nouvelle { height: 0; margin-bottom: -4.5cqi; opacity: 0; }
 /* À chaque arrivée, elle s'allume de la couleur du réseau (`--reseau`, sur la colonne), puis revient au thème. */
+.hl-roue-page[data-rangee] .hl-roue-nouvelle { background: var(--reseau); color: #fff; }
 .hl-roue-page[data-arrive] .hl-roue-nouvelle { background: var(--reseau); color: #fff; transition-duration: .45s, .45s, .3s, .15s, .15s; }
 @container (max-width: 95px) {
   .hl-roue-nom { display: none; }
@@ -281,51 +300,6 @@ html:has(.hl) { background: #fff; scroll-padding-top: 76px; }
 .hl-roue-pied { min-height: 44px; margin-top: 10px; display: flex; justify-content: center; align-items: center; }
 .hl-roue-pied .hl-revoir { animation: hl-fondu .4s ease both; }
 
-/* Les onglets des réseaux, au-dessus du téléphone : l'onglet choisi s'enfonce, puis se lève dans la couleur du réseau.
- * Au téléphone, seul l'onglet choisi dit son nom ; les autres gardent leur picto. */
-.hl-reseaux {
-  display: flex; justify-content: center; gap: 4px; width: fit-content; max-width: 100%; margin: 8px auto 0; padding: 4px;
-  border-radius: 12px; background: rgb(255 255 255 / .7); box-shadow: inset 0 0 0 1px rgb(0 0 0 / .08);
-}
-.hl-reseaux button {
-  position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-width: 44px; min-height: 40px; padding: 0 12px;
-  border: 0; border-radius: 9px; background: transparent; color: #4a4a4a; font: inherit; font-size: 14px; font-weight: 500; white-space: nowrap; cursor: pointer;
-  transition: background-color .25s, color .25s, box-shadow .25s, transform .2s var(--ease);
-}
-@media (max-width: 1023px) { .hl-reseaux button { min-height: 44px; } }
-.hl-reseaux button:hover { background: #fff; color: var(--encre); }
-.hl-reseaux button span { overflow: hidden; }
-/* Au repos, chaque picto garde la couleur de son réseau, celle de la roue juste au-dessus. */
-.hl-reseaux button:not([aria-pressed='true']):not(:active):not([data-appui]) svg { color: var(--fond); }
-.hl-reseaux button[aria-pressed='true'] {
-  background: var(--fond); color: #fff; transform: translateY(-1px);
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / .22), 0 1px 2px rgb(0 0 0 / .2), 0 8px 18px -8px var(--fond);
-}
-/* L'appui : l'onglet s'enfonce, et un rond marque le doigt, comme sur une vidéo d'écran. */
-.hl-reseaux button:active, .hl-reseaux button[data-appui] { transform: translateY(1px) scale(.95); box-shadow: inset 0 2px 5px rgb(0 0 0 / .22); background: #e6e6e6; color: var(--encre); }
-.hl-reseaux button[data-appui]::after {
-  content: ''; position: absolute; left: 50%; top: 50%; width: 34px; height: 34px; margin: -17px 0 0 -17px; border-radius: 50%;
-  background: rgb(10 10 10 / .2); animation: hl-doigt .45s ease-out both;
-}
-@keyframes hl-doigt { from { transform: scale(.4); opacity: 0; } 40% { opacity: 1; } to { transform: scale(1.15); opacity: 0; } }
-@media (max-width: 479px) {
-  .hl-reseaux button { padding: 0 11px; }
-  .hl-reseaux button span { max-width: 0; opacity: 0; margin-left: -7px; transition: max-width .35s var(--ease), opacity .25s, margin-left .35s var(--ease); }
-  .hl-reseaux button[aria-pressed='true'] span { max-width: 6.5em; opacity: 1; margin-left: 0; }
-}
-/* Essaie : centrée, les onglets, les trois téléphones, puis la phrase de ce qui a changé. */
-.hl-selon { position: relative; display: flex; flex-direction: column; align-items: center; text-align: center; }
-/* Le visiteur qui part de l'onglet touché : le rond des visiteurs de la roue, dans la couleur de son réseau. */
-.hl-selon-point {
-  position: absolute; left: -12px; top: -12px; z-index: 5; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%;
-  color: #fff; box-shadow: 0 4px 10px -2px rgb(0 0 30 / .4); opacity: 0; pointer-events: none; will-change: transform;
-}
-/* À son arrivée, la barre d'adresse prend un instant la couleur du réseau. */
-.hl-scene-milieu .hl-tel-barre span { transition: background-color .3s; }
-.hl-scene-milieu[data-arrive] .hl-tel-barre span { background: color-mix(in srgb, var(--anneau, #999) 14%, #fff); }
-.hl-selon .hl-tete-section { margin-inline: auto; margin-bottom: 28px; }
-.hl-selon .hl-chapo { margin-inline: auto; }
-.hl-reseaux-phrase { min-height: 3em; margin: 32px auto 0; max-width: 46ch; color: var(--encre-2); font-size: 16px; text-wrap: balance; animation: hl-fondu .4s ease both; }
 
 /* Dans le téléphone, le lien qui vient de bouger : un cercle de la couleur du réseau se resserre sur lui,
  * le reste de la page s'efface un instant. Deux noms d'animation pour la rejouer à chaque réseau. */
@@ -442,6 +416,8 @@ html:has(.hl-reserver input:focus) { overflow-anchor: none; }
 .hl-reserver-grand :is(.hl-champ-prefixe, .hl-champ input) { font-size: 17px; }
 .hl-reserver-grand .hl-btn { min-height: 54px; padding: 0 22px; border-radius: 10px; font-size: 16px; }
 .hl-reserver-grand .hl-reserver-etat:not(:empty) { margin-top: 14px; }
+/* Dès qu'on est dans le champ, la ligne de la réponse est gardée : « est libre » arrive sans pousser la page. */
+.hl-reserver-grand:focus-within .hl-reserver-etat { min-height: 1.45em; margin-top: 14px; }
 .hl-reserver-grand .hl-reserver-note { margin-top: 14px; }
 .hl-reserver-fait {
   display: flex; align-items: flex-start; gap: 10px; padding: 16px 18px;
@@ -478,7 +454,9 @@ html:has(.hl-reserver input:focus) { overflow-anchor: none; }
   border-bottom: 1px solid var(--filet); background: #fafafa; font-size: 12px; color: var(--gris);
 }
 .hl-tel-barre span { max-width: 100%; padding: 2px 10px; border-radius: 6px; background: #efefef; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.hl-tel-ecran { position: relative; flex: 1; min-height: 0; overflow: hidden; transform: translateZ(0); }
+.hl-tel-ecran { position: relative; flex: 1; min-height: 0; overflow: hidden; transform: translateZ(0); border-radius: inherit; }
+/* Composé à part, l'écran garde lui-même l'arrondi du cadre ; sous une barre d'adresse, seulement en bas. */
+.hl-tel-barre + .hl-tel-ecran { border-radius: 0 0 28px 28px; }
 .hl-tel-page { width: 390px; height: 100%; zoom: var(--z); }
 .hl-tel-page > .lp { min-height: 100%; background-attachment: scroll; overflow: hidden; }
 .hl-tel [data-decor]::before { position: absolute; animation: none; }
@@ -509,7 +487,7 @@ html:has(.hl-reserver input:focus) { overflow-anchor: none; }
 /* L'heure qu'il est chez le visiteur, assez grande pour se lire de loin pendant qu'elle tourne. */
 .hl-cq-horloge { display: flex; align-items: baseline; justify-content: center; gap: 8px; margin: -8px 0 -2px; }
 .hl-cq-horloge b { font-size: 44px; font-weight: 600; letter-spacing: -0.045em; line-height: 1; font-variant-numeric: tabular-nums; }
-.hl-cq-horloge span { font-size: 14px; color: var(--gris); }
+.hl-cq-horloge span { min-width: 4.5em; font-size: 14px; color: var(--gris); }
 .hl-cq-rebours { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 14px 12px; border: 1px solid var(--encre); border-radius: 12px; background: #fff; text-align: center; }
 .hl-cq-rebours-tete { display: flex; align-items: center; gap: 6px; }
 .hl-cq-rebours-tete b { font-size: 13px; }
@@ -537,10 +515,11 @@ html:has(.hl-reserver input:focus) { overflow-anchor: none; }
 /* Au téléphone, les onglets juste au-dessus du téléphone, à l'écran avec lui pendant que la scène joue ; la légende dessous. */
 @media (max-width: 1023px) {
   .hl-dans-app-commande { display: contents; }
-  .hl-dans-app-commande > :is(.hl-onglets-scene, .hl-legende-scene) { width: 100%; max-width: 420px; margin: 0; }
+  .hl-dans-app-commande > :is(.hl-onglets-scene, .hl-legendes) { width: 100%; max-width: 420px; margin: 0; }
   .hl-dans-app-commande > .hl-onglets-scene { order: 1; }
   .hl-dans-app-tel { order: 2; }
-  .hl-dans-app-commande > .hl-legende-scene { order: 3; }
+  .hl-dans-app-commande > .hl-legendes { order: 3; }
+  .hl-dans-app-commande > .hl-suite { order: 4; margin-top: -14px; }
 }
 @media (min-width: 1024px) {
   .hl-dans-app { grid-template-columns: 1fr 340px; grid-template-areas: 'tete tel' 'commande tel'; justify-items: stretch; column-gap: 72px; row-gap: 0; }
@@ -551,7 +530,12 @@ html:has(.hl-reserver input:focus) { overflow-anchor: none; }
 .hl-onglets-scene { margin: 32px 0 0; }
 .hl-onglets-scene button { font-size: 16px; }
 .hl-onglets button[data-remplit]::after { transform-origin: left; animation: hl-remplit var(--duree) linear both; }
+/* La souris sur la scène suspend le passage à la suite : la barre s'arrête avec lui. */
+.hl-onglets[data-pause] button[data-remplit]::after { animation-play-state: paused; }
 @keyframes hl-remplit { from { transform: scaleX(0); } }
+/* La suite d'une scène, dite quand elle finit (« Voir avec Hopla », « Voir comment la modifier ») ; sa place est gardée, rien ne saute. */
+.hl-suite[data-cache] { visibility: hidden; }
+.hl-suite:not([data-cache]) { animation: hl-fondu .4s ease both; }
 .hl-legende-scene { min-height: 4.8em; margin-top: 18px; max-width: 46ch; color: var(--gris); animation: hl-fondu .4s ease both; }
 .hl-scene-app { position: relative; height: 100%; }
 
@@ -580,8 +564,10 @@ html:has(.hl-reserver input:focus) { overflow-anchor: none; }
   border-radius: 50%; background: rgb(10 10 10 / .2); animation: hl-touche .6s ease-out both; pointer-events: none;
 }
 .hl-toast {
-  position: absolute; left: 14px; right: 14px; bottom: 16px; z-index: 4; padding: 11px 14px; border-radius: 12px;
-  background: #f1f1f1; color: #3a3a3a; font-size: 13px; font-weight: 500; text-align: center; animation: hl-pop .45s var(--ease) .5s both;
+  /* Un message du système, pas une commande : sombre, sans relief de bouton. */
+  position: absolute; left: 14px; right: 14px; bottom: 16px; z-index: 4; display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 12px 14px; border-radius: 12px; background: #1c1c1e; color: #fff; font-size: 13px; font-weight: 500; text-align: center;
+  box-shadow: 0 8px 24px rgb(0 0 0 / .22); animation: hl-pop .45s var(--ease) .5s both;
 }
 .hl-integre-bouton { display: grid; place-items: center; height: 38px; border-radius: 8px; background: #dedede; color: #555; font-weight: 600; }
 
@@ -616,7 +602,8 @@ html:has(.hl-reserver input:focus) { overflow-anchor: none; }
 .hl-vivante-mobile { display: grid; justify-items: center; gap: 24px; }
 .hl-vivante-mobile > .hl-onglets-scene { width: 100%; max-width: 420px; margin: 0; }
 .hl-legendes { display: grid; width: 100%; max-width: 420px; }
-.hl-legendes > .hl-legende-scene { grid-area: 1 / 1; margin: 0; }
+.hl-legendes > .hl-legende-scene { grid-area: 1 / 1; margin: 0; min-height: 0; }
+@media (min-width: 1024px) { .hl-dans-app-commande > .hl-legendes { margin-top: 18px; max-width: 46ch; } }
 .hl-legende-gabarit { visibility: hidden; animation: none; }
 @media (min-width: 1024px) {
   .hl-vivante { display: grid; grid-template-columns: 1fr 340px; gap: 72px; }
@@ -635,11 +622,18 @@ html:has(.hl-reserver input:focus) { overflow-anchor: none; }
 
 /* ---- 05 · Les stats ---- */
 
-/* Au bureau, le titre à gauche et l'e-mail à droite : la seule section posée de côté. */
+/*
+ * La seule section sans téléphone : deux documents, l'un ou l'autre d'un
+ * onglet, à toutes les tailles. Au bureau, le titre et son chapô sur une
+ * ligne, puis le document choisi au milieu, à la largeur d'un e-mail.
+ */
 @media (min-width: 1024px) {
-  .hl-section-stats { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 600px); gap: 72px; align-items: start; }
-  .hl-section-stats .hl-tete-section { position: sticky; top: 120px; margin-bottom: 0; }
+  .hp-stats-tete { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 72px; align-items: start; max-width: none; }
+  .hp-stats-tete .hl-chapo { margin-top: 10px; }
+  .hl-stats { max-width: 760px; margin-inline: auto; }
 }
+.hl-stats[data-vue='dashboard'] .hp-doc-email, .hl-stats[data-vue='email'] .hp-doc-dashboard, .hp-stats-revoir[data-vue='dashboard'] { display: none; }
+.hl-stats > .hl-onglets { margin: 0 0 6px; }
 .hl-stats { display: flex; flex-direction: column; gap: 14px; }
 .hl-stats-liste { display: flex; flex-direction: column; margin: 6px 0 4px; }
 .hl-stat { position: relative; padding: 16px 0 16px 34px; border-top: 1px solid var(--filet); font-size: 17px; line-height: 1.45; letter-spacing: -0.01em; text-wrap: pretty; }
@@ -667,9 +661,9 @@ html:has(.hl-reserver input:focus) { overflow-anchor: none; }
 
 .hl-rail-tete { display: flex; justify-content: flex-end; margin: -64px 0 24px; }
 .hl-fleches { display: flex; gap: 8px; }
-.hl-fleches button { display: grid; place-items: center; width: 40px; height: 40px; border: 1px solid var(--filet); border-radius: 10px; background: #fff; color: var(--encre); cursor: pointer; transition: background-color .15s; }
-.hl-fleches button:hover:not(:disabled) { background: var(--pale); }
-.hl-fleches button:disabled { color: #b5b5b5; cursor: default; }
+.hl-fleches button { display: grid; place-items: center; width: 44px; height: 44px; border: 1px solid var(--filet); border-radius: 10px; background: #fff; color: var(--encre); cursor: pointer; transition: background-color .15s; }
+.hl-fleches button:hover:not([aria-disabled]) { background: var(--pale); }
+.hl-fleches button[aria-disabled] { color: #b5b5b5; cursor: default; }
 .hl-gauche { transform: rotate(90deg); }
 .hl-droite { transform: rotate(-90deg); }
 .hl-rail {
@@ -680,12 +674,15 @@ html:has(.hl-reserver input:focus) { overflow-anchor: none; }
   overflow-x: auto; scroll-snap-type: x mandatory; scroll-padding-inline: var(--bord); overscroll-behavior-x: contain; scrollbar-width: none;
 }
 .hl-rail::-webkit-scrollbar { display: none; }
-/* Le rail entre une fois : les téléphones glissent de 24 px, les six premiers l'un après l'autre. */
+/* Le rail entre une fois : les téléphones glissent de 24 px, les six premiers l'un après l'autre. La glissade est sur
+ * le contenu, pas sur l'élément aimanté : le rail ne bouge pas sous la flèche ou le focus. */
 @media (scripting: enabled) and (prefers-reduced-motion: no-preference) {
-  .hl-rail-item { transition: opacity .5s var(--ease), transform .5s var(--ease); transition-delay: var(--d, 0ms); }
-  .hl-rail:not([data-vu]) .hl-rail-item { opacity: 0; transform: translateX(24px); }
+  .hl-rail-item > * { transition: opacity .5s var(--ease), transform .5s var(--ease); transition-delay: var(--d, 0ms); }
+  .hl-rail:not([data-vu]) .hl-rail-item > * { opacity: 0; transform: translateX(24px); }
 }
-.hl-rail-item { flex: none; width: 210px; display: flex; flex-direction: column; gap: 12px; scroll-snap-align: start; content-visibility: auto; contain-intrinsic-size: 210px 480px; }
+.hl-rail-item { flex: none; width: 210px; display: flex; flex-direction: column; gap: 12px; scroll-snap-align: start; }
+.hl-rail-item > :first-child { content-visibility: auto; contain-intrinsic-size: auto 210px auto 420px; }
+.hl-rail:focus-visible { outline-offset: -2px; }
 .hl-rail-item p { display: flex; flex-direction: column; font-size: 14px; line-height: 1.4; }
 .hl-couleurs {
   margin-top: 64px; display: grid; grid-template-areas: 'texte' 'tel' 'reglage'; gap: 24px;
@@ -701,30 +698,38 @@ html:has(.hl-reserver input:focus) { overflow-anchor: none; }
 }
 .hl-couleurs-reglage > .hl-lien-texte[data-cache] { visibility: hidden; }
 @media (min-width: 900px) {
-  .hl-couleurs { grid-template-columns: 1fr auto; grid-template-areas: 'texte tel' 'reglage tel'; column-gap: 56px; row-gap: 0; padding: 48px; }
+  /* Le texte à sa mesure et le téléphone à côté, au milieu de la carte : pas de vide entre les pastilles et l'aperçu. */
+  .hl-couleurs { grid-template-columns: minmax(0, 480px) auto; grid-template-areas: 'texte tel' 'reglage tel'; justify-content: center; column-gap: 96px; row-gap: 0; padding: 48px; }
   .hl-couleurs-texte { align-self: end; }
   .hl-couleurs-reglage { align-self: start; padding-top: 24px; }
 }
-.hl-couleurs-texte > p { margin-top: 8px; color: var(--gris); max-width: 44ch; }
+.hl-couleurs-texte > p:not(.hp-inclus) { margin-top: 8px; color: var(--gris); max-width: 44ch; }
 .hl-nuances { display: flex; flex-direction: column; gap: 14px; margin: 0 0 18px; }
 .hl-nuances fieldset { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 0; padding: 0; border: 0; min-width: 0; }
 .hl-nuances legend { width: 100%; margin-bottom: 2px; padding: 0; font-size: 14px; color: var(--gris); }
 @media (min-width: 375px) { .hl-nuances fieldset { flex-wrap: nowrap; } .hl-nuances legend { float: left; width: 68px; margin: 0; } }
 /* L'aperçu change en douceur ; la règle ne vise que lui, pas la page publique. */
 .hl-couleurs-tel :is(.lp, .lp-btn, .lp-carte) { transition: background-color .4s var(--ease), color .4s var(--ease), border-color .4s var(--ease); }
-.hl-nuance { width: 44px; height: 44px; padding: 0; border: 1px solid rgb(0 0 0 / .12); border-radius: 12px; cursor: pointer; transition: box-shadow .15s, transform .15s; }
+.hl-nuance { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 1px solid rgb(0 0 0 / .12); border-radius: 12px; cursor: pointer; transition: box-shadow .15s, transform .15s; }
 .hl-nuance:hover { transform: scale(1.06); }
-.hl-nuance[aria-pressed='true'] { box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--encre); }
+/* La pastille choisie porte une coche ; l'anneau reste celui du focus. */
+.hl-nuance-coche { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--encre); color: #fff; box-shadow: 0 0 0 2px #fff; animation: hl-pop .25s var(--ease) both; }
 
 /* ---- 07 · Créer et modifier ---- */
 
 .hl-prise { display: grid; justify-items: center; gap: 24px; }
 .hl-prise-texte { width: 100%; }
 .hl-prise .hl-onglets-scene { margin: 0; }
+.hl-prise-texte > .hl-suite { margin: 22px 0 0 16px; }
 @media (max-width: 1023px) { .hl-prise-texte { max-width: 420px; } }
 @media (min-width: 1024px) { .hl-prise { grid-template-columns: 1fr 340px; align-items: start; justify-items: stretch; gap: 72px; } }
 .hl-etapes { display: none; }
 @media (min-width: 1024px) { .hl-etapes { display: flex; flex-direction: column; gap: 6px; margin-top: 24px; } }
+/* Sans mouvement, au téléphone, rien ne fait défiler les étapes : leur liste remplace la légende, et chacune se montre d'un toucher. */
+@media (max-width: 1023px) and (prefers-reduced-motion: reduce) {
+  .hl-etapes { display: flex; flex-direction: column; gap: 6px; margin-top: 24px; }
+  .hl-prise .hl-prise-legende { display: none; }
+}
 .hl-etapes button {
   display: flex; gap: 16px; width: 100%; padding: 16px; border: 0; border-radius: 12px; background: none;
   color: var(--gris); font: inherit; text-align: left; cursor: pointer; transition: color .3s, background-color .3s;
@@ -737,6 +742,8 @@ html:has(.hl-reserver input:focus) { overflow-anchor: none; }
 .hl-etape-texte { display: block; margin-top: 2px; font-size: 15px; color: var(--gris); }
 .hl-etapes li[data-lu] .hl-etape-texte { color: var(--encre-2); }
 .hl-prise-tel { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+/* Au téléphone, la colonne garde sa largeur d'une étape à l'autre : la légende ne la fait pas respirer. */
+@media (max-width: 1023px) { .hl-prise-tel { width: min(330px, 100%); } }
 /* Au téléphone, la légende passe au-dessus du téléphone, comme dans les autres démos. */
 .hl-prise-legende { order: -1; display: flex; flex-direction: column; align-items: center; gap: 12px; width: min(290px, 100%); }
 .hl-prise-legende p { width: 100%; min-height: 4.6em; font-size: 15px; }
@@ -774,14 +781,14 @@ html:has(.hl-reserver input:focus) { overflow-anchor: none; }
 .hl-bo-themes span { width: 44px; height: 60px; border: 1px solid rgb(0 0 0 / .1); border-radius: 10px; transition: box-shadow .2s; }
 .hl-bo-themes span[data-choisi] { box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--encre); }
 .hl-bo-onglets { position: relative; z-index: 2; flex: none; display: flex; height: 56px; border-top: 1px solid var(--filet); background: #fff; }
-.hl-bo-onglets span { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-size: 11px; color: #8a8a8a; }
+.hl-bo-onglets span { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-size: 11px; color: #6b6b6b; }
 .hl-bo-onglets span[data-actif] { color: var(--encre); font-weight: 600; }
 
 /* ---- 09 · Les prix ---- */
 
 .hl-periode { display: inline-flex; gap: 4px; margin-bottom: 20px; padding: 4px; border-radius: 10px; background: var(--pale); }
 .hl-periode button { min-height: 40px; padding: 0 14px; white-space: nowrap; border: 0; border-radius: 8px; background: none; color: var(--gris); font: inherit; font-size: 15px; font-weight: 500; cursor: pointer; transition: background-color .15s, color .15s; }
-@media (max-width: 1023px) { .hl-periode button { min-height: 44px; } }
+@media (max-width: 1023px), (pointer: coarse) { .hl-periode button { min-height: 44px; } }
 .hl-periode button[aria-checked='true'] { background: #fff; color: var(--encre); box-shadow: 0 1px 2px rgb(0 0 0 / .08), 0 0 0 1px var(--filet); }
 .hl-periode-gain { margin-left: 4px; color: var(--accent); font-weight: 600; }
 .hl-offres { display: grid; gap: 16px; margin-bottom: 20px; }
@@ -828,7 +835,7 @@ html:has(.hl-reserver input:focus) { overflow-anchor: none; }
 .hl-etroite > * { max-width: 800px; }
 .hl-questions { margin-top: 28px; border-top: 1px solid var(--filet); }
 .hl-question { border-bottom: 1px solid var(--filet); }
-.hl-question summary { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 20px 0; font-size: 18px; font-weight: 600; letter-spacing: -0.015em; list-style: none; cursor: pointer; }
+.hl-question summary { text-wrap: balance; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 20px 0; font-size: 18px; font-weight: 600; letter-spacing: -0.015em; list-style: none; cursor: pointer; }
 .hl-question summary::-webkit-details-marker { display: none; }
 .hl-question summary svg { flex: none; transition: transform .25s var(--ease); }
 .hl-question[open] summary svg { transform: rotate(45deg); }
@@ -840,6 +847,7 @@ html:has(.hl-reserver input:focus) { overflow-anchor: none; }
 .hl-question[open] p { animation: hl-fondu .25s ease both; }
 .hl-dernier { display: flex; flex-direction: column; align-items: center; gap: 28px; text-align: center; }
 .hl-h2-grand { max-width: 21ch; font-size: clamp(38px, 6vw, 72px); line-height: 1.02; }
+@media (max-width: 359px) { .hl-h2-grand { font-size: 32px; } }
 .hl-dernier > div { width: 100%; max-width: 560px; }
 .hl-dernier .hl-reserver-etat, .hl-dernier .hl-reserver-note { text-align: center; }
 .hl-pied { position: relative; max-width: 1120px; margin: 112px auto 0; padding: 32px var(--gout) 48px; display: flex; flex-direction: column; gap: 20px; }
@@ -859,6 +867,8 @@ html:has(.hl-reserver input:focus) { overflow-anchor: none; }
 @media (scripting: enabled) and (prefers-reduced-motion: no-preference) {
   .hl-entre { transition: opacity .45s var(--ease), transform .45s var(--ease); transition-delay: var(--d, 0ms); }
   .hl-entre:not([data-vu]) { opacity: 0; transform: translateY(8px); }
+  /* Un lien direct vers une section (hopla.page/#prix) la montre tout de suite, sans attendre le script. */
+  :target .hl-entre:not([data-vu]) { opacity: 1; transform: none; }
   /* La scène des trois téléphones garde son `data-vu` pour l'éventail, sans fondu de plus. */
   .hl-scene.hl-entre:not([data-vu]) { opacity: 1; transform: none; }
 }

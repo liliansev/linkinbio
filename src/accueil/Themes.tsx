@@ -5,7 +5,8 @@ import { SANS_COULEURS } from '../lib/types.ts';
 import { THEMES } from '../lib/themes.ts';
 import { Icone } from '../components/Icone.tsx';
 import { EcranPage, Telephone } from './Telephone.tsx';
-import { pageExemple, IDS_PROFILS, PROFILS } from './exemples.ts';
+import { de, pageExemple, IDS_PROFILS, PROFILS } from './exemples.ts';
+import { OffreFonction } from './Profils.tsx';
 import { useVu } from './mouvement.ts';
 
 /*
@@ -22,13 +23,14 @@ const NUANCES: { role: keyof Couleurs; nom: string; choix: [string, string][] }[
 
 export function Themes() {
   const [couleurs, setCouleurs] = useState<Couleurs>(SANS_COULEURS);
-  const [refVu, vu] = useVu<HTMLDivElement>(0.3);
+  // Le rail entre dès qu'il paraît : ce n'est pas une scène, rien ne s'y joue sans le visiteur.
+  const [refVu, vu] = useVu<HTMLDivElement>(0.3, 0);
   const rail = useRef<HTMLUListElement>(null);
   const [premier, setPremier] = useState(-1);
   const [survol, setSurvol] = useState(-1);
   const defiler = (sens: number) => rail.current?.scrollBy({ left: sens * rail.current.clientWidth * 0.8, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
 
-  // Les flèches s'éteignent aux deux bouts du rail.
+  // Les flèches s'éteignent aux deux bouts du rail, sans `disabled` : le focus reste sur la flèche qu'on vient d'utiliser.
   const [bouts, setBouts] = useState({ debut: true, fin: false });
   useEffect(() => {
     const el = rail.current;
@@ -61,21 +63,22 @@ export function Themes() {
     <section className="hl-section" id="themes" data-teinte="theme" aria-labelledby="titre-themes"
       style={regarde >= 0 ? { '--teinte': THEMES[regarde].vedette } as CSSProperties : undefined}>
       <div className="hl-tete-section hl-entre">
-        <h2 id="titre-themes" className="hl-h2">Une page à toi<br />Ça se voit</h2>
+        <h2 id="titre-themes" className="hl-h2">Une page à toi<br /><span className="hl-cache">. </span>Ça se voit</h2>
         <p className="hl-chapo">Des plus sobres aux plus audacieux, chacun avec sa typographie réglée à la main. Change d’ambiance en un geste.</p>
+        <OffreFonction offre="gratuit" quoi="Les vingt thèmes" />
       </div>
       <div className="hl-rail-tete hl-grand-seul">
         <div className="hl-fleches">
-          <button type="button" onClick={() => defiler(-1)} disabled={bouts.debut} aria-label="Thèmes précédents"><Icone nom="ui-chevron" taille={18} className="hl-gauche" /></button>
-          <button type="button" onClick={() => defiler(1)} disabled={bouts.fin} aria-label="Thèmes suivants"><Icone nom="ui-chevron" taille={18} className="hl-droite" /></button>
+          <button type="button" onClick={() => { if (!bouts.debut) defiler(-1); }} aria-disabled={bouts.debut || undefined} aria-label="Thèmes précédents"><Icone nom="ui-chevron" taille={18} className="hl-gauche" /></button>
+          <button type="button" onClick={() => { if (!bouts.fin) defiler(1); }} aria-disabled={bouts.fin || undefined} aria-label="Thèmes suivants"><Icone nom="ui-chevron" taille={18} className="hl-droite" /></button>
         </div>
       </div>
       <div ref={refVu}>
-      <ul ref={rail} className="hl-rail" data-vu={vu || undefined} aria-label={`${THEMES.length} thèmes`} onPointerLeave={() => setSurvol(-1)}>
+      <ul ref={rail} className="hl-rail" tabIndex={0} data-vu={vu || undefined} aria-label={`${THEMES.length} thèmes`} onPointerLeave={() => setSurvol(-1)}>
         {THEMES.map((t, i) => (
           <li key={t.id} className="hl-rail-item" data-i={i} style={i < 6 ? { '--d': `${i * 40}ms` } as CSSProperties : undefined}
             onPointerEnter={e => { if (e.pointerType === 'mouse') setSurvol(i); }}>
-            <Telephone largeur={210} label={`La page de ${PROFILS[IDS_PROFILS[i % IDS_PROFILS.length]].nom} dans le thème ${t.nom}`}>
+            <Telephone largeur={210} label={`La page ${de(PROFILS[IDS_PROFILS[i % IDS_PROFILS.length]].nom)} dans le thème ${t.nom}`}>
               <EcranPage page={pageExemple(IDS_PROFILS[i % IDS_PROFILS.length], t.id)} />
             </Telephone>
             <p><b>{t.nom}</b> <span className="hl-gris">{t.humeur}</span></p>
@@ -85,10 +88,11 @@ export function Themes() {
       </div>
 
       {/* Au téléphone, l'aperçu passe entre le texte et les pastilles : on voit ce que change chaque toucher. */}
-      <div className="hl-couleurs hl-entre">
+      <div id="couleurs" className="hl-couleurs hl-entre">
         <div className="hl-couleurs-texte">
-          <h3 className="hl-h3">Tes couleurs</h3>
+          <h3 className="hl-h3 hl-couleurs-titre">Tes couleurs</h3>
           <p>Garde la typographie d’un thème, ici Lin, et change son fond, ses boutons ou son accent. Un geste remet tout comme avant.</p>
+          <OffreFonction offre="starter" />
         </div>
         <div className="hl-couleurs-reglage">
           <div className="hl-nuances">
@@ -97,7 +101,10 @@ export function Themes() {
                 <legend>{n.nom}</legend>
                 {n.choix.map(([c, nom]) => (
                   <button key={c} type="button" className="hl-nuance" style={{ background: c }} aria-pressed={couleurs[n.role] === c}
-                    aria-label={`${n.nom} ${nom}`} title={nom} onClick={() => setCouleurs(x => ({ ...x, [n.role]: x[n.role] === c ? '' : c }))} />
+                    aria-label={`${n.nom} ${nom}`} title={nom} onClick={() => setCouleurs(x => ({ ...x, [n.role]: x[n.role] === c ? '' : c }))}>
+                    {/* La pastille choisie porte une coche : elle ne se confond pas avec celle qui a le focus. */}
+                    {couleurs[n.role] === c && <span className="hl-nuance-coche"><Icone nom="check" taille={14} /></span>}
+                  </button>
                 ))}
               </fieldset>
             ))}
@@ -106,8 +113,8 @@ export function Themes() {
           <button type="button" className="hl-lien-texte" data-cache={(!couleurs.fond && !couleurs.boutons && !couleurs.accent) || undefined} onClick={() => setCouleurs(SANS_COULEURS)}>Revenir aux couleurs du thème</button>
         </div>
         <div className="hl-couleurs-tel">
-          <Telephone largeur={260} label="La page de Léa Morel dans le thème Lin, avec les couleurs choisies">
-            <EcranPage page={pageExemple('lea', 'lin', { couleurs })} />
+          <Telephone largeur={260} className="hl-tel-court" label="La page d’Inès Laurent dans le thème Lin, avec les couleurs choisies">
+            <EcranPage page={pageExemple('ines', 'lin', { couleurs })} />
           </Telephone>
         </div>
       </div>
