@@ -92,7 +92,7 @@ html:has(.adm) { scrollbar-gutter: stable; }
 .adm .lp :is(button, a, input, textarea, select, summary, [tabindex]):focus-visible { outline-color: var(--texte); }
 /* La feuille prend le focus pour qu'on y entre au clavier, mais elle n'est pas un contrôle : pas d'anneau autour d'elle. */
 .adm .adm-feuille:focus-visible { outline: none; }
-/* Un titre qui reçoit le focus quand l'écran change (premiers pas, lien envoyé, panneau ouvert au clavier) n'est pas un contrôle non plus. */
+/* Un titre qui reçoit le focus quand l'écran change (premiers pas, lien envoyé) n'est pas un contrôle non plus. */
 .adm :is(h1, h2)[tabindex='-1']:focus-visible { outline: none; }
 
 /* Les premiers pas : la vraie page en miniature, à la largeur d'un téléphone. */
@@ -197,7 +197,6 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
   .adm-editor-tools > div { max-width: 28rem; margin-inline: auto; }
   .adm:has(.adm-editor-tools) .adm-mobile-nav { border-top-color: transparent; }
   .adm-studio { padding-bottom: 57px; }
-  .adm-outils-page, .adm-panneau-cote { display: none; }
   /* Une feuille ouverte couvre le bas de l'écran : la page gagne de quoi faire monter son dernier bloc au-dessus d'elle. */
   .adm:has(.adm-feuille) .adm-studio { padding-bottom: 60dvh; }
 }
@@ -206,51 +205,161 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
   .adm-onglet:has(.adm-editor-tools) { animation-name: adm-fondu; }
 }
 /*
- * Ma page au bureau (direction B, 20 octobre 2026) : le canevas gris, la page
- * au centre à la largeur d'un téléphone, et à droite un panneau de 380 px qui
- * s'ouvre sur le bloc choisi ou le design. Le canevas rétrécit pour lui faire
- * place : la page reste entière et centrée dans ce qui reste.
+ * Ma page au bureau (direction A, 21 octobre 2026, choisie par Lilian) :
+ * l'édition à gauche, la page à droite. À gauche, une colonne de 760 px au
+ * plus : « Bien démarrer », les onglets Contenu et Design collés sous
+ * l'en-tête, le profil, le champ où coller une adresse, puis la liste des
+ * blocs, une rangée chacun, dépliée sur ses réglages. À droite, sur un gris
+ * pâle, la page dans un téléphone à sa vraie largeur, collée sous l'en-tête et
+ * réduite si l'écran est court ou étroit.
  */
 @media (min-width: 1024px) {
-  .adm-studio { display: grid; grid-template-columns: minmax(0, 1fr) 0px; min-height: calc(100dvh - 57px); transition: grid-template-columns 0.28s var(--adm-sortie); }
-  .adm-studio[data-cote] { grid-template-columns: minmax(0, 1fr) 380px; }
+  .adm { --adm-apercu: clamp(360px, 36vw, 520px); }
+  /* L'en-tête (57 px) et les onglets collés (44 px) couvrent le haut : ce qu'on amène en vue s'arrête dessous. */
+  html:has(.adm-studio-bureau) { scroll-padding-top: 113px; }
   .adm-editor-tools { display: none; }
-  .adm-canevas { container: canevas / inline-size; min-width: 0; padding: 16px clamp(16px, 2.5vw, 32px) 72px; background: #f3f3f1; }
-  /* La barre du haut flotte au-dessus de la page et la suit quand on descend. */
-  .adm-outils-page { position: sticky; top: 73px; z-index: 20; display: flex; width: fit-content; height: 36px; align-items: center; gap: 4px; margin: 0 auto 20px; padding: 0 4px; border: 1px solid #e3e3df; border-radius: 10px; background: #fff; box-shadow: 0 1px 2px rgb(10 10 10 / 0.05); }
+  .adm-studio-bureau { display: grid; grid-template-columns: minmax(0, 1fr) var(--adm-apercu); min-height: calc(100dvh - 57px); }
+  .adm-edition { min-width: 0; padding: 0 clamp(20px, 3vw, 40px) 96px; }
+  .adm-edition-col { container: edition / inline-size; max-width: 760px; margin-inline: auto; padding-top: 16px; }
+  .adm-demarrage { margin-bottom: 12px; }
+  .adm-demarrage:empty { display: none; }
+
+  /* Contenu, Design : les onglets de Comptes, collés sous l'en-tête. */
+  .adm-onglets-edition { position: sticky; top: 57px; z-index: 20; display: flex; height: 44px; align-items: center; gap: 8px; border-bottom: 1px solid #ececea; background: #fff; }
+  .adm-onglets { display: flex; align-self: stretch; gap: 22px; }
+  .adm-onglets > button { display: flex; align-items: center; color: #55554f; font-size: 13.5px; font-weight: 500; transition: color 150ms, box-shadow 200ms var(--adm-sortie); }
+  .adm-onglets > button:hover { color: #0a0a0a; }
+  .adm-onglets > button[aria-selected='true'] { color: #0a0a0a; box-shadow: inset 0 -2px 0 #0a0a0a; }
+  .adm .adm-onglets > button:focus-visible { outline-offset: -2px; }
+  .adm-edition-corps { display: flex; flex-direction: column; gap: 16px; padding-top: 20px; }
+  /* Le retour d'un tiroir du design se colle sous les onglets, pas sous l'en-tête. */
+  .adm-studio-bureau .adm-tiroir-retour { top: 101px; margin-inline: 0; padding-inline: 0; }
+
+  /* Le profil : la photo, puis le nom et la bio tapés en place, qui ressemblent à du texte jusqu'au survol. */
+  .adm-profil { display: flex; flex-direction: column; gap: 12px; }
+  .adm-profil-haut { display: flex; align-items: flex-start; gap: 14px; }
+  .adm-profil-photo { position: relative; display: grid; width: 52px; height: 52px; flex: none; place-items: center; border-radius: 50%; background: #f2f2ef; color: #8b8b86; }
+  .adm-profil-photo > img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
+  .adm-profil-pastille { position: absolute; right: -3px; bottom: -3px; display: grid; width: 20px; height: 20px; place-items: center; border-radius: 50%; background: #0a0a0a; color: #fff; font-size: 11px; box-shadow: 0 0 0 2px #fff; transition: scale 150ms var(--adm-sortie); }
+  .adm-profil-photo:hover .adm-profil-pastille { scale: 1.1; }
+  .adm-profil-texte { display: flex; min-width: 0; flex: 1; flex-direction: column; gap: 1px; padding-top: 3px; }
+  .adm-profil-ligne { display: flex; min-width: 0; align-items: center; gap: 2px; }
+  .adm-profil-badge { display: inline-flex; flex: none; color: #0a0a0a; }
+  .adm-profil-nom, .adm-profil-bio { min-width: 0; margin-left: -6px; border: 0; border-radius: 6px; background: transparent; transition: background-color 150ms; }
+  .adm-profil-nom { max-width: calc(100% + 6px); height: 28px; padding: 0 6px; color: #0a0a0a; font-size: 15px; font-weight: 600; letter-spacing: -0.01em; }
+  .adm-profil-bio { display: block; width: calc(100% + 12px); padding: 3px 6px; color: #5f5f5a; font-size: 13.5px; line-height: 1.45; resize: none; overflow: hidden; field-sizing: content; }
+  :is(.adm-profil-nom, .adm-profil-bio):hover { background: #f4f4f0; }
+  :is(.adm-profil-nom, .adm-profil-bio):focus { background: #fff; }
+  .adm :is(.adm-profil-nom, .adm-profil-bio):focus-visible { outline-offset: 0; }
+  :is(.adm-profil-nom, .adm-profil-bio)::placeholder { color: #737373; }
+  @supports (field-sizing: content) { .adm-profil-nom { field-sizing: content; width: auto !important; min-width: 7ch; } }
+  .adm-profil-reseaux { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+  .adm-reseau { display: grid; width: 30px; height: 30px; place-items: center; border: 1px solid #e3e3df; border-radius: 8px; color: #0a0a0a; }
+  .adm-lien { display: inline-flex; min-height: 30px; align-items: center; padding: 0 6px; border-radius: 6px; color: #3d3d39; font-size: 13.5px; font-weight: 500; text-decoration: underline; text-decoration-color: rgb(10 10 10 / 0.25); text-underline-offset: 3px; transition: color 150ms, text-decoration-color 150ms; }
+  .adm-lien:hover { color: #0a0a0a; text-decoration-color: currentColor; }
+  /* Seul sur sa ligne (pas encore de réseaux), il s'aligne sur la photo, comme le nom et la bio. */
+  .adm-profil-reseaux > .adm-lien:first-child { margin-left: -6px; }
+  .adm-profil-edition { display: flex; flex-direction: column; gap: 12px; padding: 14px 16px; border: 1px solid #e6e6e2; border-radius: 10px; }
+
+  /* Coller une adresse : un champ comme la recherche de Comptes, son signe à gauche. */
+  .adm-coller { display: flex; flex-direction: column; gap: 6px; }
+  .adm-coller-champ { position: relative; display: flex; align-items: center; }
+  .adm-coller-signe { position: absolute; left: 12px; color: #737373; pointer-events: none; }
+  .adm-coller-champ > input { width: 100%; height: 40px; padding: 0 12px 0 34px; border: 1px solid #dcdcd7; border-radius: 8px; background: #fff; color: #0a0a0a; font-size: 13.5px; transition: border-color 150ms; }
+  .adm-coller-champ > input:hover { border-color: #b5b5ae; }
+  .adm-coller-champ > input::placeholder { color: #737373; }
+  .adm-coller-champ > input[aria-invalid='true'] { border-color: #c62828; }
+  .adm-coller-erreur { color: #c62828; font-size: 13.5px; font-weight: 500; }
+
+  /*
+   * La liste des blocs : un trait fin autour, une rangée de 44 px par bloc. La
+   * poignée à gauche, le nom et ce qui le distingue, ses clics, puis l'œil et
+   * « … ». La rangée ouverte passe sur un gris très pâle, ses réglages dessous.
+   */
+  .adm-liste-vide { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 32px 16px; border: 1px solid #e6e6e2; border-radius: 10px; color: #5f5f5a; font-size: 13.5px; text-align: center; }
+  .adm-liste-blocs { margin: 0; padding: 0; list-style: none; border: 1px solid #e6e6e2; border-radius: 10px; background: #fff; overflow-anchor: none; }
+  .adm-rangee { position: relative; background: #fff; transition: background-color 150ms; }
+  .adm-rangee + .adm-rangee { border-top: 1px solid #efefec; }
+  .adm-rangee:first-child { border-top-left-radius: 9px; border-top-right-radius: 9px; }
+  .adm-rangee:last-child { border-bottom-left-radius: 9px; border-bottom-right-radius: 9px; }
+  .adm-rangee:not([data-ouvert]):hover { background: #fafaf9; }
+  .adm-rangee[data-ouvert] { background: #f7f7f5; }
+  .adm-rangee[data-glisse] { z-index: 3; border-radius: 9px; background: #fff; box-shadow: 0 0 0 1px #e3e3df, 0 14px 30px -14px rgb(10 10 10 / 0.35); }
+  /* Un bloc qui vient d'arriver s'éclaire un instant, comme sur la page. */
+  .adm-rangee[data-neuf] { animation: adm-rangee-neuf 1.8s ease-out; }
+  @keyframes adm-rangee-neuf { 0%, 35% { background-color: #ececea; } }
+  .adm-rangee[data-prive] :is(.adm-rangee-nom, .adm-rangee-picto) { color: #6b6b66; }
+  .adm-rangee-tete { display: flex; min-height: 44px; align-items: center; gap: 2px; padding: 0 8px 0 6px; }
+  .adm-rangee-poignee { display: grid; width: 24px; height: 32px; flex: none; place-items: center; border-radius: 6px; color: #8b8b86; cursor: grab; touch-action: none; transition: background-color 150ms, color 150ms; }
+  button.adm-rangee-poignee:hover { background: #ebebe7; color: #0a0a0a; }
+  span.adm-rangee-poignee { cursor: default; }
+  .adm-rangee[data-glisse] .adm-rangee-poignee { cursor: grabbing; }
+  .adm-rangee-bouton { display: flex; min-width: 0; flex: 1; align-self: stretch; align-items: center; gap: 8px; padding: 0 6px; border-radius: 6px; text-align: left; }
+  .adm .adm-rangee-bouton:focus-visible { outline-offset: -2px; }
+  .adm-rangee-picto { flex: none; color: #0a0a0a; }
+  .adm-rangee-nom { min-width: 0; flex: 0 1 auto; overflow: hidden; color: #0a0a0a; font-size: 13.5px; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
+  .adm-rangee-sous { min-width: 0; flex: 0 4 auto; overflow: hidden; color: #5f5f5a; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+  .adm-rangee-marque { display: inline-flex; height: 20px; flex: none; align-items: center; padding: 0 7px; border-radius: 6px; background: rgb(10 10 10 / 0.06); color: #3d3d39; font-size: 12px; font-weight: 500; white-space: nowrap; }
+  .adm-rangee-marque-picto { display: none; }
+  .adm-rangee-etats { display: inline-flex; flex: none; align-items: center; gap: 6px; color: #55554f; }
+  .adm-rangee-clics { flex: none; margin-left: auto; padding-left: 8px; color: #5f5f5a; font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .adm-rangee-geste { display: grid; width: 28px; height: 28px; flex: none; place-items: center; border-radius: 6px; color: #55554f; transition: background-color 150ms, color 150ms; }
+  .adm-rangee-geste:hover, .adm-rangee-geste[aria-expanded='true'] { background: #ebebe7; color: #0a0a0a; }
+  /* Les réglages s'alignent sur le picto du bloc, sous son nom. */
+  .adm-rangee-reglages { padding: 2px 16px 16px 40px; }
+  /* Une colonne étroite (1024 px) : l'adresse s'efface, « Mis en avant » devient un picto d'état, le nom garde la place. */
+  @container edition (max-width: 479px) {
+    .adm-rangee-sous { display: none; }
+    .adm-rangee-marque { height: auto; padding: 0; background: none; color: #55554f; }
+    .adm-rangee-marque-mot { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+    .adm-rangee-marque-picto { display: inline-flex; }
+    .adm-rangee-reglages { padding-inline: 12px; }
+  }
+
+  /* Les réglages d'un bloc, dépliés : l'essentiel, deux interrupteurs, puis « Plus de réglages » dans un trait fin. */
+  .adm-editeur-ligne { display: flex; flex-direction: column; gap: 14px; }
+  .adm-paire { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px 16px; }
+  @container edition (min-width: 560px) { .adm-paire { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .adm-plus-groupe { border: 1px solid #e3e3df; border-radius: 8px; background: #fff; }
+  .adm-plus { display: flex; width: 100%; min-height: 36px; align-items: center; gap: 8px; padding: 0 12px; border-radius: 7px; font-size: 13.5px; text-align: left; transition: background-color 150ms; }
+  .adm-plus:hover { background: #fafaf9; }
+  .adm-plus[aria-expanded='true'] { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+  .adm .adm-plus:focus-visible { outline-offset: -2px; }
+  .adm-plus-contenu { display: flex; flex-direction: column; gap: 14px; padding: 10px 12px 12px; border-top: 1px solid #efefec; }
+  .adm-editeur-pied { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; }
+
+  /* La page, à droite : collée sous l'en-tête, sur un gris pâle, avec le choix de la largeur au-dessus. */
+  .adm-apercu-cote { min-width: 0; border-left: 1px solid #ececea; background: #f5f5f3; }
+  .adm-apercu-colle { position: sticky; top: 57px; display: flex; height: calc(100dvh - 57px); flex-direction: column; align-items: center; gap: 14px; padding: 16px 24px 20px; }
+  .adm-vues { display: flex; flex: none; gap: 2px; padding: 3px; border: 1px solid #e3e3df; border-radius: 10px; background: #fff; }
   .adm-outil { display: inline-flex; height: 28px; align-items: center; gap: 6px; padding: 0 10px; border-radius: 7px; color: #0a0a0a; font-size: 13.5px; font-weight: 500; transition: background-color 150ms, color 150ms; }
   .adm-outil:hover { background: #f2f2ef; }
   .adm-outil:is([aria-pressed='true'], [aria-checked='true']) { background: #ebebe7; }
   .adm-outil-carre { width: 28px; justify-content: center; padding: 0; color: #55554f; }
   .adm-outil-carre[aria-checked='true'] { color: #0a0a0a; }
-  .adm-outils-trait { width: 1px; height: 18px; background: #e3e3df; }
-  .adm-demarrage { width: 390px; max-width: 100%; margin: 0 auto 16px; }
-  .adm-demarrage:empty { display: none; }
-  .adm-cadre-lieu { position: relative; width: 390px; max-width: 100%; margin: 0 auto; }
-  .adm-cadre { display: flex; min-height: 760px; flex-direction: column; border-radius: 28px; box-shadow: 0 0 0 1px rgb(10 10 10 / 0.08), 0 24px 60px -24px rgb(10 10 10 / 0.35); }
-  .adm-cadre > .lp { flex: 1 0 auto; }
-  .adm-calque { position: absolute; inset: 0; z-index: 10; pointer-events: none; }
-  /* Le panneau : collé sous l'en-tête, il défile seul ; la colonne s'ouvre de 0 à 380 px sans couper la page. */
-  .adm-panneau-cote { min-width: 0; overflow-x: clip; background: #fff; }
-  .adm-panneau-colle { position: sticky; top: 57px; width: 380px; height: calc(100dvh - 57px); border-left: 1px solid #ececea; }
-  /* Le message du bas se centre sur ce qui reste visible : la page, pas le panneau. */
-  .adm:has(.adm-studio[data-cote]) .adm-toast { right: 396px; }
+  /* Le téléphone : 390 px d'écran dans un bord de 9, réduit d'un bloc (voir `Telephone`) ; son écran défile seul. */
+  .adm-tel-lieu { display: flex; width: 100%; min-height: 0; flex: 1; align-items: flex-start; justify-content: center; }
+  .adm-tel-cadre { flex: none; }
+  .adm-tel { width: 408px; height: 778px; padding: 9px; border-radius: 54px; background: #141414; box-shadow: 0 24px 60px -24px rgb(10 10 10 / 0.35); transform-origin: 0 0; }
+  /* L'écran prend la couleur du cadre : le bord arrondi de la page s'y fond, sans liseré clair. */
+  .adm-tel-ecran { width: 390px; height: 760px; overflow-y: auto; overscroll-behavior: contain; border-radius: 45px; background: #141414; scrollbar-width: none; }
+  .adm-tel-ecran::-webkit-scrollbar { display: none; }
+  .adm-ordi-boite { display: flex; width: 100%; min-height: 0; flex: 1; flex-direction: column; overflow-y: auto; }
+  /* Le message du bas se centre sur l'édition, pas sur la page. */
+  .adm:has(.adm-studio-bureau) .adm-toast { right: calc(var(--adm-apercu) + 16px); }
 }
-@media (min-width: 1024px) and (prefers-reduced-motion: reduce) { .adm-studio { transition: none; } }
-
-/* Les gestes d'un bloc au survol, hors de la page : la poignée à gauche, l'œil et « … » à droite. */
-.adm-actions-bloc { position: absolute; display: flex; gap: 4px; pointer-events: auto; }
-.adm-actions-gauche { left: -44px; }
-.adm-actions-droite { left: calc(100% + 12px); }
-/* Un canevas étroit (le panneau ouvert sur un petit écran) : les gestes rentrent dans la marge de la page. */
-@container canevas (max-width: 559px) {
-  .adm-actions-gauche { left: 4px; }
-  .adm-actions-droite { left: auto; right: 4px; }
+/* Une tablette en paysage a la mise en page du bureau, avec des cibles pour le doigt. */
+@media (min-width: 1024px) and (pointer: coarse) {
+  .adm-rangee-tete { min-height: 52px; }
+  .adm-rangee-poignee { width: 32px; height: 44px; }
+  .adm-rangee-geste { width: 40px; height: 40px; }
 }
-.adm-action-bloc { display: grid; width: 32px; height: 32px; place-items: center; border: 1px solid #e3e3df; border-radius: 8px; background: #fff; color: #55554f; box-shadow: 0 1px 2px rgb(10 10 10 / 0.05); transition: color 150ms, border-color 150ms; }
-.adm-action-bloc:hover, .adm-action-bloc[aria-expanded='true'] { border-color: #c7c7c0; color: #0a0a0a; }
+@media (min-width: 1024px) and (prefers-reduced-motion: reduce) {
+  .adm-rangee[data-neuf] { animation: none; }
+  .adm-rangee, .adm-onglets > button, .adm-rangee-poignee, .adm-rangee-geste, .adm-plus, .adm-lien, .adm-profil-pastille, .adm-coller-champ > input { transition: none; }
+}
 
-/* L'aperçu sur ordinateur : la page des visiteurs à 1280 px, réduite pour tenir dans le canevas. */
+/* L'aperçu sur ordinateur : la page des visiteurs à 1280 px, réduite pour tenir dans la colonne de droite. */
 .adm-ordi-lieu { display: flex; flex-direction: column; align-items: center; gap: 12px; }
 .adm-ordi { overflow: hidden; border-radius: 14px; }
 .adm-ordi-page { display: flex; min-height: 800px; flex-direction: column; transform-origin: 0 0; }
@@ -258,8 +367,9 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
 .adm-ordi-legende { color: #5f5f5a; font-size: 12px; }
 
 /*
- * Le panneau d'un bloc : une rangée par réglage, son nom à gauche, sa valeur à
- * droite dans un petit bouton bordé (36 px de haut, bouton de 32).
+ * Les réglages d'un bloc au bureau, dans sa rangée dépliée : une ligne par
+ * réglage, son nom à gauche, sa valeur à droite dans un petit bouton bordé
+ * (36 px de haut, bouton de 32).
  */
 .adm-section-panneau { margin: 0 0 6px; color: #3d3d39; font-size: 12px; font-weight: 600; }
 .adm-valeur { display: inline-flex; min-width: 0; max-width: 62%; height: 44px; flex-shrink: 0; align-items: center; gap: 6px; padding: 0 10px; border: 1px solid #e3e3df; border-radius: 10px; background: #fff; color: #0a0a0a; font-size: 13.5px; white-space: nowrap; transition: border-color 150ms, background-color 150ms; }

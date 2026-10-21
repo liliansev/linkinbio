@@ -63,10 +63,18 @@ embarque tout : l'image n'a pas de `node_modules`.
   une résiliation ou un impayé) : `Offres.tsx` (`FenetreOffres`, le récapitulatif avant Creem, `RepasserGratuit` qui résilie pour
   la fin de la période payée, `RetourPaiement` au retour, dont le geste ramène où servir l'offre ; parti d'une règle de bloc, au bloc,
   la règle ouverte par `RegleAOuvrir` dans `ReglesBloc.tsx`).
-  `MaPage.tsx` édite la page elle-même : `PageLiens` reçoit `edition` (nom et bio
-  tapés en place, photo, réseaux et blocs ouverts d'un toucher, blocs déplacés en
-  les maintenant), le design s'ouvre dans une feuille `cote` qui laisse voir la page,
-  et la liste d'avant (`OngletLiens`) reste à un toucher. En tête, `BienDemarrer.tsx` :
+  `MaPage.tsx`, au bureau (direction A, 21 octobre 2026, choisie par Lilian) : l'édition
+  à gauche, la page à droite. À gauche, deux onglets collés : Contenu (le profil, une
+  adresse à coller, puis les blocs en rangées, déplacées par leur poignée avec dnd-kit,
+  souris ou clavier, et dépliées en place sur `EditeurBloc` `bureau`, une à la fois ;
+  un bloc neuf a sa rangée en haut ou en bas) et Design (`DesignTiroirs`). À droite,
+  `PageLiens` reçoit `liste` et se montre dans un téléphone de 390 px, collé et réduit
+  s'il le faut : elle suit chaque frappe, un bloc neuf y prend déjà sa place, un clic
+  sur un bloc ouvre sa rangée. Au téléphone, `MaPage` édite la page elle-même :
+  `PageLiens` reçoit `edition` (nom et bio tapés en place, photo, réseaux et blocs
+  ouverts d'un toucher, blocs déplacés en les maintenant), le design s'ouvre dans une
+  feuille `cote` qui laisse voir la page, et la liste d'avant (`OngletLiens`) reste à
+  un toucher. En tête, `BienDemarrer.tsx` :
   l'adresse à copier ou partager, et les étapes d'une page prête (`lib/demarrage.ts`) ;
   au téléphone, un anneau dans l'en-tête ouvre ces étapes dans une feuille, et Ajouter
   et Personnaliser se posent sur la barre des onglets : la page commence sous l'en-tête.

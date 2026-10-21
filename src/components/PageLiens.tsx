@@ -49,8 +49,14 @@ export interface Edition {
   modifie?: (champ: 'nom' | 'bio', avant: string) => void;
 }
 
-export function PageLiens({ page, apercu = false, edition }: { page: PagePublique; apercu?: boolean; edition?: Edition }) {
-  if (edition) apercu = true;
+export function PageLiens({ page, apercu = false, edition, liste }: {
+  page: PagePublique;
+  apercu?: boolean;
+  edition?: Edition;
+  /** L'aperçu du bureau : les blocs passent par le back office (cerclés, grisés, cliquables) ; le reste de la page est figé. */
+  liste?: Edition['liste'];
+}) {
+  if (edition || liste) apercu = true;
   const { reglages, blocs, compte } = page;
   const Nom = apercu ? 'h2' : 'h1';
   // La page de Lilian s'annonce sans pseudo ; les autres avec le leur.
@@ -68,6 +74,8 @@ export function PageLiens({ page, apercu = false, edition }: { page: PagePubliqu
     suivre(pseudo, 'clic', bloc.id, reglages.ouvrirApps && !!bloc.url && !!lienApp(bloc.url, navigator.userAgent));
   };
   const cible = apercu ? { target: '_blank' } : {};
+  // Dans l'aperçu du bureau, seuls les blocs répondent : l'en-tête, les réseaux et la signature ne mènent nulle part.
+  const fige = liste && !edition ? { inert: true } : {};
 
   // Depuis le navigateur intégré d'Instagram, TikTok…, un lien vers une app connue s'ouvre dans l'app (voir lib/ouvrirApp.ts).
   function ouvrirDansApp(e: MouseEvent<HTMLDivElement>) {
@@ -110,11 +118,11 @@ export function PageLiens({ page, apercu = false, edition }: { page: PagePubliqu
       <div className="lp-scene">
       <div className="lp-col">
         {reglages.partage && !edition && (
-          <button type="button" className="lp-partager" onClick={partager} aria-label={t.partager} {...(edition ? { inert: true, tabIndex: -1 } : {})}>
+          <button type="button" className="lp-partager" onClick={partager} aria-label={t.partager} {...fige}>
             <Icone nom="partage" taille={18} />
           </button>
         )}
-        <header className="lp-tete">
+        <header className="lp-tete" {...fige}>
           {edition ? (
             <button type="button" className="lp-ed-photo" onClick={e => edition.photo(e.currentTarget)} aria-label={reglages.profil.avatar ? 'Changer la photo' : 'Ajouter une photo'}>
               {reglages.profil.avatar ? <img className="lp-avatar" src={reglages.profil.avatar} alt="" width={96} height={96} /> : <span className="lp-avatar lp-ed-sans-photo" />}
@@ -138,7 +146,7 @@ export function PageLiens({ page, apercu = false, edition }: { page: PagePubliqu
         </header>
 
         <main className="lp-blocs">
-          {edition ? edition.liste(blocs, bloc => <BlocPublic bloc={bloc} reglages={reglages} clic={() => {}} cible={cible} apercu t={t} />) : <>
+          {edition || liste ? (edition?.liste ?? liste!)(blocs, bloc => <BlocPublic bloc={bloc} reglages={reglages} clic={() => {}} cible={cible} apercu t={t} />) : <>
             {blocs.map((bloc, i) => (
               <div key={bloc.id} className="lp-bloc" data-type={bloc.type} data-vedette={bloc.vedette ? bloc.format : undefined} style={{ '--i': i } as CSSProperties}>
                 <BlocPublic bloc={bloc} reglages={reglages} clic={() => clic(bloc)} cible={cible} apercu={apercu} maintenant={page.maintenant} pseudo={pseudo} t={t} />
@@ -148,8 +156,8 @@ export function PageLiens({ page, apercu = false, edition }: { page: PagePubliqu
           </>}
         </main>
 
-        {reglages.reseauxPosition === 'bas' && <footer className="lp-pied">{reseaux}</footer>}
-        <p className="lp-signature">{compte.principal
+        {reglages.reseauxPosition === 'bas' && <footer className="lp-pied" {...fige}>{reseaux}</footer>}
+        <p className="lp-signature" {...fige}>{compte.principal
           ? <a href="https://liliansevoumian.fr" {...cible}>liliansevoumian.fr</a>
           : <>
             {/* La mention disparaît dès Starter ; les liens légaux restent sur toutes les pages. */}

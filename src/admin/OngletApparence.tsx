@@ -303,6 +303,8 @@ export function DesignTiroirs({ reglages, onChange, envoyerImage, principal, pie
       let el: HTMLElement | null = racine.current?.parentElement ?? null;
       while (el && !(el.scrollHeight > el.clientHeight && /auto|scroll/.test(getComputedStyle(el).overflowY))) el = el.parentElement;
       if (el) el.scrollTop = 0;
+      // Au bureau, le design est dans la page même : son haut revient sous les onglets collés s'il était passé dessous.
+      else if (racine.current && racine.current.getBoundingClientRect().top < (parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop) || 0)) racine.current.scrollIntoView({ block: 'start' });
     }
     if (ouvert) { dernier.current = ouvert; retour.current?.focus({ preventScroll: true, focusVisible: false } as FocusOptions); }
     else if (dernier.current) document.getElementById(`design-${dernier.current}`)?.focus({ preventScroll: true });
@@ -321,8 +323,8 @@ export function DesignTiroirs({ reglages, onChange, envoyerImage, principal, pie
 
   if (ouvert) return (
     <div ref={racine} className="flex flex-col gap-3">
-      {/* Le retour reste collé en haut de la feuille : on le retrouve après avoir fait défiler vingt thèmes. */}
-      <div className="sticky top-0 z-10 -mx-5 flex items-center bg-nuit px-4 pb-1">
+      {/* Le retour reste collé en haut de la feuille (au bureau, sous les onglets) : on le retrouve après avoir fait défiler vingt thèmes. */}
+      <div className="adm-tiroir-retour sticky top-0 z-10 -mx-5 flex items-center bg-nuit px-4 pb-1">
         <button ref={retour} type="button" onClick={() => { vibrer(4); setOuvert(null); }} aria-label={`${lignes.find(l => l.id === ouvert)?.nom ?? ''}, revenir au design`} className="flex min-h-11 items-center gap-1 rounded-xl pr-3 text-[14px] font-medium text-white/75 hover:text-white">
           <Icone nom="ui-chevron" taille={18} className="rotate-90" /> {lignes.find(l => l.id === ouvert)?.nom}
         </button>

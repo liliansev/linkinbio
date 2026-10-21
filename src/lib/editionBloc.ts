@@ -5,7 +5,7 @@ import { nomSite } from './demarrage.ts';
 
 /*
  * Ce qu'on tape dans l'éditeur d'un bloc, vérifié sans rien toucher : la même
- * règle sert au bouton « Ajouter à ma page », à la fermeture du panneau et à
+ * règle sert au bouton « Ajouter à ma page », au repli de la rangée et à
  * l'enregistrement automatique du bureau, qui n'écrit qu'une version valable.
  */
 
