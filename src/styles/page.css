@@ -378,11 +378,67 @@
 
 .lp-toast {
   position: fixed; left: 50%; bottom: 24px; translate: -50% 0; z-index: 10;
+  /* Sa propre largeur, pas la moitié de l'écran qui reste à droite de son ancrage. */
+  width: max-content; max-width: calc(100% - 32px); text-align: center;
   padding: 10px 18px; border-radius: 999px; font-size: 0.92rem; font-weight: 560;
   background: var(--texte); color: var(--fond-uni);
   animation: lp-toast 0.25s ease-out;
 }
 @keyframes lp-toast { from { opacity: 0; translate: -50% 8px; } }
+
+/* ---- L'écran qui propose le navigateur ----
+ * Dans le navigateur intégré de LinkedIn, d'Instagram…, il passe avant la
+ * page (lib/sortie.ts) : l'en-tête de la page et une phrase, puis ses boutons
+ * (l'accent pour ouvrir, un trait pour copier) et « Continuer ici ».
+ * Centré dans l'écran, il entre une fois, comme la page.
+ */
+.lp-sortie {
+  min-height: 100dvh; display: grid; place-items: center;
+  padding: 40px 20px 32px;
+  position: relative; isolation: isolate;
+}
+.lp-sortie-col { width: 100%; max-width: 400px; display: flex; flex-direction: column; align-items: center; }
+.lp-sortie .lp-tete { margin-bottom: 32px; }
+.lp-sortie .lp-bio { max-width: 30ch; }
+/* La phrase et l'aide occupent la même place, celle de la plus longue : l'aide arrive sans rien pousser. */
+.lp-sortie-mots { display: grid; justify-items: center; }
+.lp-sortie-mots > p { grid-area: 1 / 1; }
+.lp-sortie-aide { visibility: hidden; color: var(--texte); }
+.lp-sortie-mots[data-aide] > p:first-child { visibility: hidden; }
+.lp-sortie-mots[data-aide] > .lp-sortie-aide { visibility: visible; animation: lp-entree 0.45s cubic-bezier(0.16, 1, 0.3, 1) both; }
+/* Le bouton du menu de l'app, dessiné : trois points couchés sur iPhone, debout sur Android. */
+.lp-sortie-points {
+  display: inline-grid; place-items: center; vertical-align: -0.25em;
+  min-width: 30px; height: 22px; padding: 0 6px; border-radius: 999px;
+  color: var(--texte); background: color-mix(in srgb, var(--texte) 12%, transparent);
+}
+.lp-sortie-annonce { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.lp-sortie-gestes { align-self: stretch; display: flex; flex-direction: column; gap: 12px; }
+:where(.lp-sortie-gestes) button.lp-btn { border: 0; font: inherit; font-weight: var(--btn-graisse, 560); cursor: pointer; }
+/* Copier le lien n'est qu'un recours : au trait, quel que soit le style des boutons, l'accent reste le seul bouton plein. */
+.lp[data-bouton] .lp-sortie-gestes .lp-btn:not(.lp-accent) {
+  --lp-encre: var(--texte);
+  background: transparent; color: var(--texte); border: 0;
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--texte) 32%, transparent);
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+}
+.lp[data-bouton] .lp-sortie-gestes .lp-btn:not(.lp-accent):hover { background: color-mix(in srgb, var(--texte) 8%, transparent); }
+.lp-sortie-ici {
+  display: inline-flex; align-items: center;
+  margin-top: 10px; min-height: 48px; padding: 0 20px; border-radius: 999px;
+  font-size: 0.95rem; font-weight: 560; color: var(--texte);
+  text-decoration: underline; text-decoration-thickness: 1.5px; text-underline-offset: 4px;
+  text-decoration-color: color-mix(in srgb, var(--texte) 35%, transparent);
+  transition: text-decoration-color 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.lp-sortie-ici:hover { text-decoration-color: currentColor; }
+.lp-sortie-ici:focus-visible { outline: 3px solid var(--texte); outline-offset: 2px; }
+/* Les boutons suivent l'en-tête, comme les blocs de la page. */
+.lp-sortie-gestes, .lp-sortie-ici { animation: lp-entree 0.6s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.lp-sortie-gestes { animation-delay: 90ms; }
+.lp-sortie-ici { animation-delay: 150ms; }
+@media (prefers-reduced-motion: reduce) { .lp-sortie-gestes, .lp-sortie-ici, .lp-sortie-mots[data-aide] > .lp-sortie-aide { animation: none; } }
 
 /* Les échantillons du back office : la vraie page, en miniature. */
 .lp.lp-mini { min-height: 0; background-attachment: scroll; }

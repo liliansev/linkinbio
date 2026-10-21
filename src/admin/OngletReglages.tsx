@@ -85,6 +85,7 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
         </Ligne>
         <LigneBascule nom="Bouton Partager sur ma page" actif={reglages.partage} changer={v => onChange({ ...reglages, partage: v })} />
         <LigneBascule nom="Ouvrir YouTube, Spotify… dans leur app" actif={reglages.ouvrirApps} changer={v => onChange({ ...reglages, ouvrirApps: v })} />
+        <LigneBascule nom="Proposer Safari ou Chrome depuis Instagram, LinkedIn…" actif={reglages.ouvrirNavigateur} changer={v => onChange({ ...reglages, ouvrirNavigateur: v })} />
       </Groupe>
 
       <Groupe titre="Compte">

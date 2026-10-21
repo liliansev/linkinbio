@@ -14,6 +14,7 @@ test('la provenance se lit dans le paramètre, puis l’app, puis le site d’or
   assert.equal(provenance({ ua: IOS_TIKTOK }), 'tiktok', 'TikTok tait le référent mais se nomme');
   assert.equal(provenance({ ua: ANDROID_INSTA, referent: '' }), 'instagram');
   assert.equal(provenance({ ua: THREADS }), 'threads');
+  assert.equal(provenance({ ua: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_6_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/22G100 Safari/604.1 MetaIAB Facebook' }), 'facebook', 'le navigateur de Facebook, nouvelle manière');
   assert.equal(provenance({ referent: 'https://www.linkedin.com/feed/' }), 'linkedin');
   assert.equal(provenance({ s: 'inconnu', referent: 'https://exemple.fr' }), '');
 });
