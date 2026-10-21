@@ -26,9 +26,11 @@ const DEMOS: Record<string, string> = {
   'Les vingt thèmes': '#themes',
   'Tes couleurs': '#couleurs',
   'Tes liens programmés à l’avance': '#vivante-lancement',
+  'Les avis de tes clients': '#vivante-avis',
   'Tes stats sur 30 jours': '#stats',
   'Ta page selon l’heure': '#vivante-heure',
   'Les drops : un code, des places comptées': '#vivante-drops',
+  'Ta liste e-mail, vers Brevo ou Mailchimp': '#vivante-liste',
   'Tes stats sur un an': '#stats',
 };
 
@@ -40,6 +42,13 @@ function useEnvoye() {
 
 export function Prix() {
   const [periode, setPeriode] = useState<Periode>('mois');
+  // Les prix changent sous les yeux ; aux lecteurs d'écran, une phrase les redit, seulement quand on change de période.
+  const [annonce, setAnnonce] = useState('');
+  const changer = (p: Periode) => {
+    setPeriode(p);
+    const payants = PLANS_PAYANTS.filter(plan => OFFRES[plan].enVente).map(plan => `${OFFRES[plan].nom} ${euros(OFFRES[plan].prix[p])}`).join(', ');
+    setAnnonce(p === 'an' ? `À l’année : ${payants} par an.` : `Au mois : ${payants} par mois.`);
+  };
   const mode = useInscription();
   const envoye = useEnvoye();
   const libelle = appel(mode);
@@ -50,7 +59,7 @@ export function Prix() {
     if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(ev.key)) return;
     ev.preventDefault();
     const suivante = periode === 'mois' ? 'an' : 'mois';
-    setPeriode(suivante);
+    changer(suivante);
     ev.currentTarget.querySelector<HTMLButtonElement>(`[data-periode="${suivante}"]`)?.focus();
   };
   return (
@@ -60,11 +69,12 @@ export function Prix() {
       </div>
       <div className="hl-periode hl-entre" role="radiogroup" aria-label="Paiement" onKeyDown={fleches}>
         {PERIODES.map(p => (
-          <button key={p} type="button" role="radio" data-periode={p} aria-checked={periode === p} tabIndex={periode === p ? 0 : -1} onClick={() => setPeriode(p)}>
+          <button key={p} type="button" role="radio" data-periode={p} aria-checked={periode === p} tabIndex={periode === p ? 0 : -1} onClick={() => changer(p)}>
             {p === 'mois' ? 'Mensuel' : <>Annuel <span className="hl-periode-gain">jusqu’à −{MEILLEURE}&nbsp;%</span></>}
           </button>
         ))}
       </div>
+      <p className="hl-cache" aria-live="polite">{annonce}</p>
       <div className="hl-offres">
         {PLANS.filter(plan => OFFRES[plan].enVente).map((plan, i) => {
           const o = OFFRES[plan];

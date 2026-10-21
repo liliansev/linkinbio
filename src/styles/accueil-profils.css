@@ -310,12 +310,19 @@
   .hp-vivante-tel { grid-column: 1; grid-row: 1 / 3; justify-self: center; }
   .hl-humain .hp-vivante { row-gap: 30px; }
 }
+/* Cinq démos : leurs onglets défilent de côté quand la place manque, le filet dessiné dans la bande pour ne pas être rogné. */
+/* Le cadre du focus passe à l'intérieur de l'onglet (la bande rogne ce qui dépasse) : chaque onglet prend 6 px de marge, rendus par l'écart et la bande. */
+.hp-vivante .hl-onglets { position: relative; gap: 10px; margin-inline: -6px; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; border-bottom: 0; box-shadow: inset 0 -1px var(--filet); }
+.hp-vivante .hl-onglets::-webkit-scrollbar { display: none; }
+.hp-vivante .hl-onglets button { padding-inline: 6px; }
+.hp-vivante .hl-onglets button:focus-visible { outline-offset: -2px; border-radius: 6px; }
+.hp-vivante .hl-onglets button[aria-pressed='true']::after { left: 6px; right: 6px; bottom: 0; }
 /* Au téléphone, les onglets juste au-dessus du téléphone : la démo choisie se joue sous le doigt ; Revoir dessous, puis le texte. */
 @media (max-width: 1023px) {
   .hl-humain .hp-vivante { display: block; }
   .hp-vivante-scene { display: flex; flex-direction: column; align-items: center; gap: 20px; margin-top: 28px; }
   .hp-vivante-texte { display: contents; }
-  .hp-vivante-texte > .hl-onglets { order: 1; align-self: stretch; margin: 0; }
+  .hp-vivante-texte > .hl-onglets { order: 1; align-self: stretch; margin: 0 -6px; }
   .hp-vivante-tel { order: 2; }
   .hp-vivante-texte > .hl-revoir { order: 3; margin-top: -8px; }
   .hp-vivante-explication { order: 4; align-self: stretch; min-height: 252px; margin-block: 0; }
@@ -342,6 +349,11 @@
   .hp-source { left: 21%; top: 4%; transform: rotate(-7deg); }
 }
 
+/* Au téléphone, les cartes s'empilent : le choix Mensuel ou Annuel reste collé sous la barre tant qu'on lit les prix. */
+@media (max-width: 1023px) {
+  .hl-humain .hl-periode { position: sticky; top: 70px; z-index: 5; display: flex; width: fit-content; box-shadow: inset 0 0 0 1px #d3d1c5, 0 12px 24px -14px rgb(32 36 31 / .5); }
+}
+
 /* Le pied de page s'aligne sur la barre et les sections, à 1280 px. */
 .hl-humain .hl-pied { max-width: 1280px; }
 
@@ -365,3 +377,30 @@
 .hl-cq-horloge-petite { margin: -6px 0 -6px; }
 .hl-cq-horloge-petite b { font-size: 24px; }
 .hl-cq-horloge-petite span { font-size: 13px; }
+
+/* La preuve du hero en clair : le lien monté porte la pastille de son réseau, et une légende lisible dit ce qui vient de se passer. */
+.hp-lien-source { flex: none; display: grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; color: #fff; box-shadow: 0 0 0 2px #fff; animation: hl-pop .45s var(--ease) both; }
+.hp-lien-source[data-reseau='instagram'] { background: #c42a6e; }
+.hp-lien-source[data-reseau='youtube'] { background: #d40000; }
+/* La légende vient sous la composition, à droite, glissée sous le coin le plus bas de la carte de Camille. */
+.hp-figure { width: 100%; max-width: 660px; align-self: start; }
+.hp-figure > .hp-composition { max-width: none; }
+.hp-preuve { position: relative; z-index: 4; max-width: 290px; margin: -14px 0 0 auto; color: #fff; font-size: 14px; line-height: 1.45; text-align: right; text-wrap: balance; animation: hp-nom .45s ease both; }
+.hp-preuve b { font-weight: 650; color: #e3fc96; white-space: nowrap; }
+@media (max-width: 1023px) {
+  .hp-figure { width: min(100%, 640px); margin-inline: auto; }
+  .hp-figure > .hp-composition { width: 100%; }
+}
+@media (max-width: 599px) {
+  .hp-figure { width: 100%; }
+  .hp-figure > .hp-composition { width: calc(100% + 20px); }
+  .hp-lien-source { width: 13px; height: 13px; box-shadow: 0 0 0 1.5px #fff; }
+  .hp-lien-source svg { width: 8px; height: 8px; }
+  /* Les cartes gardent leurs textes à taille fixe : plus l'écran est étroit, plus celle de Camille dépasse sous la composition (environ 360 px moins 87 % de la largeur). La légende passe dessous. */
+  .hp-preuve { max-width: 68%; margin-top: max(6px, calc(376px - 87vw)); font-size: 13px; }
+  /* « Et bientôt, toi » pend sous la composition, d'autant plus bas que l'écran est large. */
+  .hp-heros-pied { padding-top: max(22px, calc(8vw - 8px)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hp-lien-source, .hp-preuve { animation: none; }
+}
