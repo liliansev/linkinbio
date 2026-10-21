@@ -646,9 +646,7 @@ button.lp-ed-ajout {
 .lp-ed-bloc:focus-visible { outline-color: var(--texte); }
 /* Sur un écran tactile, pas de survol : le même voile, plus léger, reste posé pour dire que le bloc se touche. */
 @media (hover: none) and (pointer: coarse) { .lp-ed-bloc { box-shadow: 0 0 0 6px color-mix(in srgb, var(--texte) 4%, transparent); background: color-mix(in srgb, var(--texte) 4%, transparent); } }
-/* Au bureau, la rangée que la souris longe se cerne d'un trait fin, celui du bloc choisi d'un trait plein : la couleur du texte du thème, lisible sur tous. */
-[data-studio] .lp-ed-bloc:hover { background: none; box-shadow: none; }
-[data-studio] .lp-ed-bloc[data-survol]:not([data-choisi]) { outline: 1px solid color-mix(in srgb, var(--texte) 55%, transparent); outline-offset: 3px; }
+/* Le bloc ouvert (dans sa feuille au téléphone, dans sa rangée au bureau) se cerne d'un trait plein : la couleur du texte du thème, lisible sur tous. */
 .lp-ed-bloc[data-choisi] { outline: 2px solid var(--texte); outline-offset: 3px; }
 .lp-ed-bloc[data-prive] > :not(.lp-ed-puces) { opacity: 0.42; }
 /* Un bloc qui vient d'être ajouté s'éclaire un instant, de l'accent du thème. */

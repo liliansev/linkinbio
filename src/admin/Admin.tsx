@@ -32,8 +32,8 @@ import { CLE_ACHAT, achatDeRetour, delaiAvantEssai, etapeRetour } from '../lib/a
 
 /*
  * Le back office. Tout s'enregistre tout seul : un bloc une fraction de
- * seconde après la dernière frappe dans son panneau (au bureau) ou quand on
- * valide sa feuille (au téléphone), l'ordre dès qu'on lâche, l'apparence et
+ * seconde après la dernière frappe dans sa rangée dépliée (au bureau) ou quand
+ * on valide sa feuille (au téléphone), l'ordre dès qu'on lâche, l'apparence et
  * les réglages une fraction de seconde après la dernière frappe. La page
  * qu'on modifie est la vraie page, rendue avec l'état en cours.
  */
@@ -87,7 +87,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
   const [brouillon, setBrouillon] = useState<Bloc | null>(null);
   // Ce que l'éditeur ouvert fait avant qu'on passe à autre chose : écrire ce qui est valable, ou retenir (voir `EditeurBloc`).
   const garde = useRef<(() => boolean) | null>(null);
-  // La forme suit la largeur : au bureau, les réglages d'un bloc s'ouvrent dans un panneau à côté de la page.
+  // La forme suit la largeur : au bureau, les réglages d'un bloc se déplient dans sa rangée, à gauche de la page.
   const grand = useGrandEcran();
   const [sauvegarde, setSauvegarde] = useState<Sauvegarde>('ok');
   const [toast, setToast] = useState<{ texte: string; annuler?: () => void; action?: string; genre?: 'ok' | 'info'; long?: boolean } | null>(null);
@@ -298,7 +298,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
     return undefined;
   }
 
-  /** Un clic sur un bloc l'ouvre ; au bureau, le panneau passe d'un bloc à l'autre en écrivant le précédent. */
+  /** Un clic sur un bloc l'ouvre ; au bureau, l'éditeur passe d'une rangée à l'autre en écrivant le précédent. */
   function ouvrirBloc(bloc: Bloc) {
     if (edition && !edition.nouveau && edition.bloc.id === bloc.id) return;
     if (!libererEdition()) return;
@@ -329,19 +329,21 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
     minuteur.current = setTimeout(() => { reglagesEnAttente.current = null; ecrire(() => api.enregistrerReglages(r)); }, 650);
   }
 
-  /** Un bloc qui vient d'arriver se montre : la page défile jusqu'à lui et il s'éclaire un instant. */
+  /**
+   * Un bloc qui vient d'arriver se montre et s'éclaire un instant. Au téléphone, la page défile jusqu'à lui ; au bureau,
+   * sa rangée (que la liste montre déjà, ouverte) et son bloc sur la page à droite s'éclairent ensemble.
+   */
   function montrer(id: string) {
     setTimeout(() => {
-      const el = document.querySelector<HTMLElement>(`.adm-toile [data-id="${CSS.escape(id)}"]`);
-      if (!el) return;
-      el.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'center' });
-      el.setAttribute('data-neuf', '');
-      setTimeout(() => el.removeAttribute('data-neuf'), 1800);
+      const els = [...document.querySelectorAll<HTMLElement>(`:is(.adm-toile, .adm-liste-blocs, .adm-tel-ecran) [data-id="${CSS.escape(id)}"]`)];
+      if (!els.length) return;
+      if (!grand) els[0].scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'center' });
+      for (const el of els) { el.setAttribute('data-neuf', ''); setTimeout(() => el.removeAttribute('data-neuf'), 1800); }
     }, 260);
   }
 
   /**
-   * Écrit un bloc. `garder` : l'éditeur reste ouvert sur lui (le panneau du bureau). `discret` : enregistré en route,
+   * Écrit un bloc. `garder` : l'éditeur reste ouvert sur lui (sa rangée dépliée, au bureau). `discret` : enregistré en route,
    * sans message ni défilement ; l'état de l'en-tête dit que c'est gardé.
    */
   function enregistrerBloc(bloc: Bloc, options: OptionsEnregistrement = {}) {
@@ -370,7 +372,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
     }
   }
 
-  /** L'œil posé à côté d'un bloc, au bureau : le montrer ou le masquer sans l'ouvrir. */
+  /** L'œil d'une rangée, au bureau : montrer ou masquer le bloc sans l'ouvrir. */
   function basculer(bloc: Bloc) {
     const vrai = blocsRef.current.find(b => b.id === bloc.id);
     if (!vrai || edition?.bloc.id === bloc.id) return;
@@ -420,7 +422,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
     // La version enregistrée revient avec Annuler, jamais un champ à moitié tapé.
     const vrai = avant[i];
     poserListe(avant.filter(b => b.id !== bloc.id));
-    // Retiré depuis la page, un autre bloc ouvert dans le panneau le reste.
+    // Retiré depuis sa rangée, un autre bloc ouvert le reste.
     setEdition(e => (e?.bloc.id === bloc.id ? null : e));
     ecrire(() => api.supprimerBloc(bloc.id));
     setToast({
@@ -505,7 +507,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
   // Un éditeur par bloc (la clé) : passer d'un bloc à l'autre repart de la version enregistrée du suivant.
   const editeur = edition && (
     <RegleAOuvrir.Provider value={regleOuverte?.bloc === edition.bloc.id ? regleOuverte.regle : null}>
-    <EditeurBloc key={edition.bloc.id} panneau={grand} garde={garde} onBrouillon={setBrouillon}
+    <EditeurBloc key={edition.bloc.id} bureau={grand} garde={garde} onBrouillon={setBrouillon}
       adressePage={urlPage(compte)} principal={compte.principal} bloc={edition.bloc} reglages={reglages} nouveau={edition.nouveau} clics={clics[edition.bloc.id] ?? 0} prises={initial.places?.[edition.bloc.id] ?? 0} onFermer={() => setEdition(null)}
       onEnregistrer={enregistrerBloc} onSupprimer={supprimer} onDupliquer={dupliquer} onDeplacer={deplacer} place={{ rang: blocs.findIndex(b => b.id === edition.bloc.id), total: blocs.length }} envoyerImage={d => api.envoyerImage(d)} apercuSite={u => api.apercuSite(u)} />
     </RegleAOuvrir.Provider>
@@ -599,7 +601,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
 
       <EmplacementEntete.Provider value={emplacement}>
       <PoserFil.Provider value={setFil}>
-      {/* Ma page et Comptes prennent toute la largeur au bureau (le canevas, la barre des onglets de Comptes) ; les autres gardent leurs marges. */}
+      {/* Ma page et Comptes prennent toute la largeur au bureau (l'édition et la page côte à côte, la barre des onglets de Comptes) ; les autres gardent leurs marges. */}
       <div className={`mx-auto max-w-[1120px] px-4 lg:max-w-none ${onglet === 'page' || onglet === 'comptes' ? 'lg:px-0' : 'lg:px-10'}`}>
         <main id="contenu-admin" className={`mx-auto w-full pb-28 ${onglet === 'page' ? 'pt-4 lg:p-0' : onglet === 'comptes' ? 'pt-6 lg:pb-12 lg:pt-0' : 'pt-6 lg:pb-12 lg:pt-7'}`}>
           <div key={onglet} className="adm-onglet">
@@ -610,7 +612,8 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
             <h1>{fil?.nom ?? titre}</h1>
           </div>
           {onglet === 'page' && <MaPage compte={compte} reglages={reglages} blocs={blocsAffiches} clics={clics} visiteurs={page} grand={grand}
-            choisi={idOuvert} panneau={grand && editeur} onReglages={changerReglages} onOrdonner={l => ordonner(l)}
+            choisi={idOuvert} editeur={grand ? editeur : null} neuf={grand && edition?.nouveau ? { bloc: brouillon?.id === edition.bloc.id ? brouillon : edition.bloc, enBas: !!edition.enBas } : null}
+            onReglages={changerReglages} onOrdonner={l => ordonner(l)}
             onOuvrir={ouvrirBloc} onAjouter={ajouterBloc} liberer={libererEdition} fermerEdition={fermerEdition} gestes={{ basculer, dupliquer, supprimer }}
             envoyerImage={d => api.envoyerImage(d)} annoncer={t => setToast(t)}
             demarrage={demarrage} demarrageOuvert={demarrageOuvert} fermerDemarrage={() => setDemarrageOuvert(false)} demandeDesign={demandeDesign} designOuvert={() => setDemandeDesign(null)}
@@ -653,7 +656,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
         </div>
       )}
 
-      {/* Au téléphone, l'éditeur est une feuille du bas ; au bureau, il occupe le panneau à droite de la page (voir MaPage). */}
+      {/* Au téléphone, l'éditeur est une feuille du bas ; au bureau, il se déplie dans la rangée du bloc (voir MaPage). */}
       {!grand && editeur}
 
       {/* Les offres et le retour de Creem s'ouvrent par-dessus l'écran en cours, qu'on retrouve en les fermant. */}

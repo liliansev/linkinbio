@@ -1,60 +1,64 @@
-import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import type { CSSProperties, PointerEvent as EvenementPointeur, ReactNode } from 'react';
-import { createPortal } from 'react-dom';
+import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import type { CSSProperties, ReactNode, RefObject } from 'react';
 import { DndContext, KeyboardSensor, PointerSensor, TouchSensor, closestCenter, useSensor, useSensors } from '@dnd-kit/core';
-import type { DragEndEvent } from '@dnd-kit/core';
+import type { DragEndEvent, Modifier } from '@dnd-kit/core';
 import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
+import { CSS as CssDnd } from '@dnd-kit/utilities';
 import type { Bloc, PagePublique, Reglages, TypeBloc } from '../lib/types.ts';
-import { SANS_COULEURS, TYPES_PRINCIPAL, estEnLigne, nouveauBloc } from '../lib/types.ts';
+import { SANS_COULEURS, TYPES_PRINCIPAL, estEnLigne, nouveauBloc, sansSchema } from '../lib/types.ts';
 import { etiquettes } from '../lib/etiquettes.ts';
 import { selonDroits } from '../lib/droits.ts';
+import type { Droits } from '../lib/droits.ts';
 import type { Destination } from '../lib/demarrage.ts';
 import { urlReseau } from '../lib/demarrage.ts';
-import { adresseSaisie } from '../lib/valider.ts';
+import { adresseSaisie, pourquoiPasAdresse } from '../lib/valider.ts';
+import { verifierBloc } from '../lib/editionBloc.ts';
+import { ICONES } from '../lib/icones.ts';
 import { PageLiens } from '../components/PageLiens.tsx';
 import type { Edition } from '../components/PageLiens.tsx';
 import { Icone, NOMS_RESEAUX } from '../components/Icone.tsx';
 import { themeDe, variablesTheme } from '../lib/themes.ts';
 import { HautLiens } from './BienDemarrer.tsx';
 import type { Demarrage } from './BienDemarrer.tsx';
-import { FeuilleAjout } from './OngletLiens.tsx';
+import { FeuilleAjout, TYPES } from './OngletLiens.tsx';
 import { DesignTiroirs, OngletApparence } from './OngletApparence.tsx';
 import type { Tiroir } from './OngletApparence.tsx';
-import { ActionEntete, BoutonPrincipal, BoutonSecondaire, Feuille, Interrupteur, Menu, Panneau, choisirFichier, flechesRadio, preparerImage, vibrer } from './ui.tsx';
-import type { ElementMenu } from './ui.tsx';
+import { ActionEntete, BoutonPrincipal, BoutonSecondaire, Feuille, Interrupteur, Menu, choisirFichier, classeBouton, flechesRadio, preparerImage, vibrer } from './ui.tsx';
 import { offreDe, useDroits, usePermis } from './offre.tsx';
 import type { Fonction } from '../lib/abonnement.ts';
 
 /*
- * « Ma page » : on édite la page elle-même. Le nom et la bio se tapent en
- * place ; la photo, les réseaux et chaque bloc s'ouvrent d'un toucher ; un
- * bloc maintenu se déplace. Une seule façon d'éditer : pas de vue en liste à
- * choisir (Lilian, 18 octobre 2026).
+ * « Ma page ».
  *
- * Au bureau (direction B, 20 octobre 2026), la page est au centre du canevas,
- * à la vraie largeur d'un téléphone. Un clic sur un bloc le choisit : ses
- * réglages s'ouvrent dans un panneau à droite, non modal, qui s'enregistre
- * tout seul ; le design s'ouvre au même endroit. Au survol, chaque bloc montre
- * sa poignée à gauche, son œil et ses gestes à droite, hors de la page. Au
- * téléphone, les réglages s'ouvrent dans une feuille du bas qui laisse voir la
- * page au-dessus.
+ * Au bureau (direction A, 21 octobre 2026, choisie par Lilian), l'édition est
+ * à gauche et la page à droite. À gauche, sous « Bien démarrer », deux onglets
+ * collés en haut, Contenu et Design. Contenu : le profil (photo, nom et bio
+ * tapés en place, réseaux), un champ où coller une adresse, puis la liste des
+ * blocs, une rangée chacun. Une rangée se déplace par sa poignée (souris ou
+ * clavier) ; un clic la déplie sur les réglages du bloc, qui s'enregistrent
+ * tout seuls, une rangée ouverte à la fois. Un bloc neuf a sa rangée en haut
+ * (en bas s'il vient du bas), et se voit déjà sur la page, à la place qu'il
+ * prendra. Design : les tiroirs du design. À
+ * droite, la page à la vraie largeur d'un téléphone, collée, réduite si
+ * l'écran est court ou étroit ; elle suit chaque frappe, et un clic sur un de
+ * ses blocs ouvre sa rangée. Elle se regarde aussi sur un ordinateur, comme la
+ * voient les visiteurs.
+ *
+ * Au téléphone, rien ne change : on édite la page elle-même. Le nom et la bio
+ * se tapent en place ; la photo, les réseaux et chaque bloc s'ouvrent d'un
+ * toucher, dans une feuille du bas qui laisse voir la page au-dessus ; un bloc
+ * maintenu se déplace (Lilian, 18 octobre 2026).
  */
 
 type Cote = 'design' | 'reseaux';
+type Gestes = { basculer: (b: Bloc) => void; dupliquer: (b: Bloc) => void; supprimer: (b: Bloc) => void };
 
-/** Ce que la page sait du travail en cours, pour chaque bloc : celui qui est choisi, celui que la souris longe, où poser les gestes. */
-interface Toile {
-  calque: HTMLElement | null;
-  choisi: string | null;
-  survole: string | null;
-  basculer: (b: Bloc) => void;
-  dupliquer: (b: Bloc) => void;
-  supprimer: (b: Bloc) => void;
-}
-const ContexteToile = createContext<Toile | null>(null);
+const nouvelId = () => `n${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+const reduit = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+/** Ce que l'en-tête et les onglets collés couvrent en haut de l'écran, au bureau (le `scroll-padding-top` de la page). */
+const margeHaut = () => parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop) || 0;
 
-export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, choisi, panneau, onReglages, onOrdonner, onOuvrir, onAjouter, liberer, fermerEdition, gestes, envoyerImage, annoncer, demarrage, demarrageOuvert, fermerDemarrage, demandeDesign, designOuvert, appel }: {
+export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, choisi, editeur, neuf, onReglages, onOrdonner, onOuvrir, onAjouter, liberer, fermerEdition, gestes, envoyerImage, annoncer, demarrage, demarrageOuvert, fermerDemarrage, demandeDesign, designOuvert, appel }: {
   compte: PagePublique['compte'];
   reglages: Reglages;
   /** Les blocs tels qu'on les voit : celui qu'on règle se redessine à chaque frappe. */
@@ -62,12 +66,14 @@ export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, chois
   clics: Record<string, number>;
   /** La page telle que les visiteurs la voient, pour l'aperçu sur ordinateur. */
   visiteurs: PagePublique;
-  /** La mise en page du bureau : la page au centre, les réglages dans un panneau à droite. */
+  /** La mise en page du bureau : l'édition à gauche, la page à droite. */
   grand: boolean;
-  /** Le bloc ouvert dans l'éditeur, cerclé sur la page. */
+  /** Le bloc ouvert dans l'éditeur : sa rangée est dépliée, et il est cerclé sur la page. */
   choisi: string | null;
-  /** L'éditeur du bloc ouvert, au bureau : il occupe le panneau de droite. */
-  panneau: ReactNode;
+  /** L'éditeur du bloc ouvert, au bureau : il se déplie dans sa rangée. */
+  editeur: ReactNode;
+  /** Au bureau, un bloc neuf qu'on règle avant de l'ajouter, tel qu'il est saisi : une rangée de plus, en haut de la liste (en bas s'il vient du bas). */
+  neuf: { bloc: Bloc; enBas: boolean } | null;
   onReglages: (r: Reglages) => void;
   onOrdonner: (blocs: Bloc[]) => void;
   onOuvrir: (bloc: Bloc) => void;
@@ -75,10 +81,10 @@ export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, chois
   onAjouter: (bloc: Bloc, enBas?: boolean) => void;
   /** Avant un autre geste : ce qui est tapé dans l'éditeur s'écrit. Faux si un champ faux le retient. */
   liberer: () => boolean;
-  /** Ferme l'éditeur du bloc (le design prend sa place, un clic à côté de la page). Faux s'il est retenu. */
+  /** Ferme l'éditeur du bloc (le design prend sa place, la rangée se replie). Faux s'il est retenu. */
   fermerEdition: () => boolean;
-  /** Les gestes posés à côté d'un bloc, au survol. */
-  gestes: { basculer: (b: Bloc) => void; dupliquer: (b: Bloc) => void; supprimer: (b: Bloc) => void };
+  /** Les gestes d'une rangée, au bureau : l'œil, Dupliquer, Retirer. */
+  gestes: Gestes;
   envoyerImage: (d: string) => Promise<string>;
   /** Un message en bas de l'écran, avec son Annuler. */
   annoncer: (t: { texte: string; annuler?: () => void; genre?: 'ok' | 'info'; long?: boolean }) => void;
@@ -92,14 +98,14 @@ export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, chois
   /** Au téléphone, sous la page : l'offre du dessus, en une ligne (voir `AppelOffre`). Au bureau, elle est dans la barre latérale. */
   appel?: ReactNode;
 }) {
-  // Le design ou les réseaux : dans le panneau de droite au bureau, dans une feuille au téléphone.
+  // Le design ou les réseaux. Au bureau, le design est l'onglet de droite, les réseaux s'ouvrent dans le profil ; au téléphone, dans une feuille.
   const [cote, setCote] = useState<Cote | null>(null);
   // Le tiroir du design ouvert d'emblée (les couleurs, juste après les avoir prises), le temps d'une ouverture ;
   // la clé remonte le design s'il était déjà ouvert sur un autre tiroir.
   const [tiroirDepart, setTiroirDepart] = useState<Tiroir | undefined>();
   const [cleDesign, setCleDesign] = useState(0);
   const [ajout, setAjout] = useState(false);
-  // La page à la largeur d'un téléphone, qu'on modifie, ou sur un ordinateur, en aperçu.
+  // Au bureau, la page à droite, à la largeur d'un téléphone ou sur un ordinateur.
   const [largeur, setLargeur] = useState<'telephone' | 'ordinateur'>('telephone');
   // Les réglages au moment où le design ou les réseaux s'ouvrent : « Annuler » y revient.
   const depart = useRef<Reglages | null>(null);
@@ -112,9 +118,11 @@ export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, chois
   const astuce = ouverts < 2 || (!deplace && blocs.length >= 3);
   const fichier = useRef<HTMLInputElement>(null);
   const toile = useRef<HTMLDivElement>(null);
-  const zone = useRef<HTMLDivElement>(null);
-  const [calque, setCalque] = useState<HTMLDivElement | null>(null);
-  const [survole, setSurvole] = useState<string | null>(null);
+  // Au bureau : la photo et la bio du profil (où mènent les étapes de « Bien démarrer »), et l'écran du téléphone.
+  const photoBureau = useRef<HTMLButtonElement>(null);
+  const bioBureau = useRef<HTMLTextAreaElement>(null);
+  const ecran = useRef<HTMLDivElement>(null);
+  const id = useId();
   const principal = compte.principal;
   const visibles = blocs.filter(b => principal || !TYPES_PRINCIPAL.includes(b.type));
   // La page se dessine comme les visiteurs la verront : sans Starter, aux couleurs de son thème. Les réglages, eux, gardent tout.
@@ -125,6 +133,9 @@ export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, chois
   const derniers = useRef(reglages);
   derniers.current = reglages;
   const profil = (champs: Partial<Reglages['profil']>) => onReglages({ ...reglages, profil: { ...reglages.profil, ...champs } });
+  /** Le nom ou la bio changés puis quittés : le message propose de revenir à la valeur d'avant. */
+  const modifie = (champ: 'nom' | 'bio', avant: string) => annoncer({ texte: champ === 'nom' ? 'Nom mis à jour' : 'Bio mise à jour', annuler: () => { onReglages({ ...derniers.current, profil: { ...derniers.current.profil, [champ]: avant } }); annoncer({ texte: 'Changements annulés', genre: 'info' }); } });
+  const nomVide = () => annoncer({ texte: 'Ton nom ne peut pas rester vide : il revient tel qu’il était.', genre: 'info' });
 
   /** Un réseau rempli qui ne mène nulle part garde le design ou la feuille ouverts, sur son champ. */
   const reseauFaux = () => {
@@ -145,7 +156,7 @@ export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, chois
       annoncer({ texte: cote === 'design' ? 'Design mis à jour' : 'Réseaux mis à jour', annuler: () => { onReglages(avant); annoncer({ texte: 'Changements annulés', genre: 'info' }); } });
     }
     // Au téléphone, la page revient en vue : on a pu descendre loin en la regardant changer.
-    if (!grand && (toile.current?.getBoundingClientRect().top ?? 0) < 0) toile.current?.scrollIntoView({ block: 'start', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+    if (!grand && (toile.current?.getBoundingClientRect().top ?? 0) < 0) toile.current?.scrollIntoView({ block: 'start', behavior: reduit() ? 'auto' : 'smooth' });
     depart.current = null;
     setTiroirDepart(undefined);
     setCote(null);
@@ -157,14 +168,18 @@ export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, chois
     fermerCote();
     return true;
   };
+  /** Ouvre le design ou les réseaux, après avoir écrit et fermé ce qui était ouvert. Faux si quelque chose le retient. */
   function ouvrirCote(c: Cote) {
-    if (cote === c) return;
-    if (!quitterCote() || !fermerEdition()) return;
+    if (cote === c) return true;
+    if (!quitterCote() || !fermerEdition()) return false;
     depart.current = reglages;
     setCote(c);
     // Au téléphone, le design s'ouvre en laissant voir le haut de la page, au-dessus de la feuille.
     if (!grand && c === 'design' && toile.current) scrollTo({ top: Math.max(0, toile.current.getBoundingClientRect().top + scrollY - 96) });
+    return true;
   }
+  /** « Annuler mes changements », au bureau : le design ou les réseaux reviennent à ce qu'ils étaient en ouvrant. */
+  const annulerCote = () => { if (depart.current) onReglages(depart.current); annoncer({ texte: 'Changements annulés', genre: 'info' }); };
   // Une demande venue d'ailleurs (après l'achat des couleurs) : le design s'ouvre sur le bon tiroir, une fois.
   useEffect(() => {
     if (!demandeDesign) return;
@@ -194,8 +209,14 @@ export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, chois
   const ajouter = (type: TypeBloc) => {
     setAjout(false);
     if (!quitterCote()) return;
-    onAjouter(nouveauBloc(type, `n${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`), enBas.current);
+    onAjouter(nouveauBloc(type, nouvelId()), enBas.current);
     enBas.current = false;
+  };
+  /** Une adresse collée devient un lien neuf, qu'on règle avant de l'ajouter. Faux si quelque chose le retient. */
+  const ajouterAdresse = (url: string) => {
+    if (!quitterCote()) return false;
+    onAjouter({ ...nouveauBloc('lien', nouvelId()), url });
+    return true;
   };
   const ordonner = (liste: Bloc[]) => { if (!deplace) { setDeplace(true); try { localStorage.setItem(`hopla-bloc-deplace:${compte.pseudo}`, '1'); } catch { /* stockage refusé */ } } onOrdonner(liste); };
   const ouvrirBloc = (bloc: Bloc) => {
@@ -203,10 +224,16 @@ export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, chois
     if (ouverts < 2) { setOuverts(ouverts + 1); try { localStorage.setItem(`hopla-blocs-ouverts:${compte.pseudo}`, String(ouverts + 1)); } catch { /* stockage refusé */ } }
     onOuvrir(bloc);
   };
+  /** Un clic sur un bloc de la page, au bureau : sa rangée s'ouvre, ou revient en vue si elle l'est déjà. Le focus ne bouge pas : c'est un geste de souris. */
+  const ouvrirDepuisApercu = (bloc: Bloc) => {
+    if (bloc.id !== (choisi ?? neuf?.bloc.id)) { ouvrirBloc(bloc); return; }
+    const li = document.querySelector<HTMLElement>(`.adm-rangee[data-id="${CSS.escape(bloc.id)}"]`);
+    if (li) montrerRangee(li);
+  };
 
   // Au clavier : « A » ouvre Ajouter ; une adresse collée sur la page (hors d'un champ) devient un lien neuf.
-  const raccourcis = useRef({ ouvrirAjout, quitterCote, onAjouter });
-  raccourcis.current = { ouvrirAjout, quitterCote, onAjouter };
+  const raccourcis = useRef({ ouvrirAjout, ajouterAdresse });
+  raccourcis.current = { ouvrirAjout, ajouterAdresse };
   useEffect(() => {
     const libre = (e: Event) => !(e.target as HTMLElement | null)?.closest('input, textarea, select, [contenteditable], [role="dialog"]') && !document.querySelector('[role="dialog"]');
     const touche = (e: KeyboardEvent) => { if ((e.key === 'a' || e.key === 'A') && !e.metaKey && !e.ctrlKey && !e.altKey && libre(e)) { e.preventDefault(); raccourcis.current.ouvrirAjout(); } };
@@ -215,86 +242,161 @@ export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, chois
       const url = adresseSaisie(e.clipboardData?.getData('text') ?? '');
       if (!url) return;
       e.preventDefault();
-      if (!raccourcis.current.quitterCote()) return;
-      raccourcis.current.onAjouter({ ...nouveauBloc('lien', `n${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`), url });
+      raccourcis.current.ajouterAdresse(url);
     };
     addEventListener('keydown', touche); addEventListener('paste', coller);
     return () => { removeEventListener('keydown', touche); removeEventListener('paste', coller); };
   }, []);
 
-  /** Une étape de « Bien démarrer » mène à l'endroit de la page où elle se fait. */
+  /** Une étape de « Bien démarrer » mène à l'endroit où elle se fait : sur la page au téléphone, dans le profil au bureau. */
   function aller(d: Destination) {
     vibrer(5);
     if (d === 'lien') return ajouter('lien');
-    if (d === 'photo') return choisirFichier(fichier.current, toile.current?.querySelector('.lp-ed-photo'));
+    if (d === 'photo') return choisirFichier(fichier.current, grand ? photoBureau.current : toile.current?.querySelector('.lp-ed-photo'));
     if (d === 'theme') return ouvrirCote('design');
     if (d === 'reseaux') return ouvrirCote('reseaux');
+    // La bio : on y arrive en contenu, le design refermé.
+    if (grand && !quitterCote()) return;
     setTimeout(() => {
-      const bio = toile.current?.querySelector<HTMLTextAreaElement>('.lp-bio');
-      bio?.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'center' });
+      const bio = grand ? bioBureau.current : toile.current?.querySelector<HTMLTextAreaElement>('.lp-bio');
+      bio?.scrollIntoView({ behavior: reduit() ? 'auto' : 'smooth', block: 'center' });
       bio?.focus({ preventScroll: true });
     }, 60);
   }
 
-  // Au survol, la rangée du bloc que la souris longe, d'un bord à l'autre du canevas : ses gestes, posés hors de la page, restent à portée.
-  const image = useRef(0);
-  // La hauteur de la souris, gardée : la page qui défile sous elle change le bloc longé sans qu'elle bouge.
-  const hauteur = useRef<number | null>(null);
-  function relire() {
-    cancelAnimationFrame(image.current);
-    image.current = requestAnimationFrame(() => {
-      const y = hauteur.current;
-      let id: string | null = null;
-      if (y !== null) for (const el of zone.current?.querySelectorAll<HTMLElement>('.lp-ed-bloc') ?? []) {
-        const r = el.getBoundingClientRect();
-        if (y >= r.top - 8 && y <= r.bottom + 8) { id = el.dataset.id ?? null; break; }
-      }
-      setSurvole(id);
-    });
-  }
-  function suivreSurvol(e: EvenementPointeur) {
-    if (!grand || e.pointerType !== 'mouse') return;
-    hauteur.current = e.clientY;
-    relire();
-  }
-  function quitterSurvol() { hauteur.current = null; relire(); }
-  useEffect(() => {
-    const defile = () => { if (hauteur.current !== null) relire(); };
-    addEventListener('scroll', defile, { passive: true });
-    return () => { removeEventListener('scroll', defile); cancelAnimationFrame(image.current); };
-  }, []);
+  const badge = principal && <Interrupteur label="Badge vérifié" actif={reglages.profil.badge} onChange={v => profil({ badge: v })} />;
+  const design = <DesignTiroirs key={cleDesign} reglages={reglages} onChange={onReglages} envoyerImage={envoyerImage} principal={principal} vedettes={blocs.filter(b => b.vedette).length} pied={badge} initial={tiroirDepart} />;
+  const reseaux = <OngletApparence reglages={reglages} onChange={onReglages} envoyerImage={envoyerImage} principal={principal} parties={['reseaux']} />;
 
-  // Un clic à côté de la page referme ce qui est ouvert à droite, comme dans un outil de dessin.
-  const pointeVide = useRef(false);
-  const vide = (t: EventTarget) => t instanceof HTMLElement && t.hasAttribute('data-vide');
+  if (grand) {
+    const enDesign = cote === 'design';
+    const actifs = reglages.reseaux.filter(r => adresseSaisie(r.url));
+    /** Contenu ou Design : quitter le design le referme (et dit ce qui a changé). Faux si quelque chose retient. */
+    const choisirOnglet = (o: 'contenu' | 'design') => (o === 'design' ? ouvrirCote('design') : !enDesign || quitterCote());
+    // Un bloc neuf se voit sur la page, à la place qu'il prendra, dès qu'il a de quoi s'y montrer ;
+    // un lien tout de suite, avec le texte qu'il aura. Il n'y est pas encore : un clic sur lui ramène à sa rangée.
+    const neufVu = neuf && (verifierBloc(neuf.bloc).bloc ?? (neuf.bloc.type === 'lien' ? { ...neuf.bloc, titre: neuf.bloc.titre.trim() || 'Texte du bouton', url: '#' } : null));
+    return (
+      <div className="adm-studio adm-studio-bureau">
+        {/* Le geste principal est à droite de l'en-tête, comme celui de chaque onglet. */}
+        <ActionEntete>
+          <BoutonPrincipal onClick={() => ouvrirAjout()} aria-keyshortcuts="A" title="Ajouter (A, ou colle une adresse)"><Icone nom="ui-plus" taille={14} className="shrink-0" />Ajouter un bloc</BoutonPrincipal>
+        </ActionEntete>
+
+        <div className="adm-edition">
+          <div className="adm-edition-col">
+            {/* « Bien démarrer », tant que la page n'a pas commencé : au-dessus des onglets, il mène au profil, au design ou à un lien neuf. */}
+            <HautLiens compte={compte} reglages={reglages} demarrage={demarrage} aller={aller} annoncer={annoncer} feuille={demarrageOuvert} fermerFeuille={fermerDemarrage} />
+
+            {/* Collés sous l'en-tête : on change d'onglet sans remonter. */}
+            <div className="adm-onglets-edition">
+              <div role="tablist" aria-label="Ma page" className="adm-onglets"
+                onKeyDown={e => {
+                  const vers = ({ ArrowLeft: 'contenu', ArrowRight: 'design', Home: 'contenu', End: 'design' } as const)[e.key as 'Home'];
+                  if (!vers) return;
+                  e.preventDefault();
+                  if (choisirOnglet(vers)) document.getElementById(`${id}-${vers}`)?.focus();
+                }}>
+                {(['contenu', 'design'] as const).map(o => {
+                  const pris = (o === 'design') === enDesign;
+                  return (
+                    <button key={o} id={`${id}-${o}`} type="button" role="tab" aria-selected={pris} aria-controls={`${id}-panneau`} tabIndex={pris ? 0 : -1}
+                      onClick={() => { if (!pris) { vibrer(4); choisirOnglet(o); } }}>
+                      {o === 'contenu' ? 'Contenu' : 'Design'}
+                    </button>
+                  );
+                })}
+              </div>
+              {enDesign && change && (
+                <button type="button" onClick={annulerCote} className={`${classeBouton.discret} ml-auto`}><Icone nom="ui-retour" taille={15} className="shrink-0" />Annuler mes changements</button>
+              )}
+            </div>
+
+            <div id={`${id}-panneau`} role="tabpanel" aria-labelledby={`${id}-${enDesign ? 'design' : 'contenu'}`} className="adm-edition-corps">
+              {enDesign ? design : (
+                <>
+                  <section className="adm-profil" aria-label="Ton profil">
+                    <div className="adm-profil-haut">
+                      <button ref={photoBureau} type="button" className="adm-profil-photo" onClick={e => choisirFichier(fichier.current, e.currentTarget)}
+                        aria-label={reglages.profil.avatar ? 'Changer la photo' : 'Ajouter une photo'} title={reglages.profil.avatar ? 'Changer la photo' : 'Ajouter une photo'}>
+                        {reglages.profil.avatar ? <img src={reglages.profil.avatar} alt="" /> : <Icone nom="utilisateur" taille={22} />}
+                        <span className="adm-profil-pastille" aria-hidden="true">{envoi ? '…' : <Icone nom="photo" taille={11} />}</span>
+                      </button>
+                      <div className="adm-profil-texte">
+                        {/* Le nom et la bio se tapent en place, comme sur la page au téléphone : ils ressemblent à du texte jusqu'au survol. */}
+                        <div className="adm-profil-ligne">
+                          <input className="adm-profil-nom" value={reglages.profil.nom} maxLength={80} placeholder="Ton nom" aria-label="Ton nom"
+                            style={{ width: `${Math.max(reglages.profil.nom.length, 7) + 2}ch` }} onChange={e => profil({ nom: e.target.value })}
+                            onFocus={e => { e.currentTarget.dataset.avant = reglages.profil.nom; }}
+                            onBlur={e => { const avant = e.currentTarget.dataset.avant ?? ''; if (!e.currentTarget.value.trim()) { profil({ nom: avant.trim() || compte.pseudo }); nomVide(); } else if (e.currentTarget.value !== avant) modifie('nom', avant); }} />
+                          {reglages.profil.badge && <span className="adm-profil-badge" role="img" aria-label="Badge vérifié" title="Badge vérifié"><Icone nom="badge" taille={15} /></span>}
+                        </div>
+                        <ChampBio cible={bioBureau} valeur={reglages.profil.bio} onChange={bio => profil({ bio })} onQuitter={avant => modifie('bio', avant)} />
+                      </div>
+                    </div>
+                    <div className="adm-profil-reseaux">
+                      {actifs.map(r => <span key={r.reseau + r.url} className="adm-reseau" title={NOMS_RESEAUX[r.reseau]}><Icone nom={r.reseau} taille={15} /></span>)}
+                      <button type="button" className="adm-lien" aria-expanded={cote === 'reseaux'} aria-controls={`${id}-reseaux`}
+                        onClick={() => { vibrer(4); if (cote === 'reseaux') quitterCote(); else ouvrirCote('reseaux'); }}>
+                        {cote === 'reseaux' ? 'Fermer les réseaux' : actifs.length ? 'Modifier mes réseaux' : 'Ajouter tes réseaux'}
+                      </button>
+                    </div>
+                    {cote === 'reseaux' && (
+                      <div id={`${id}-reseaux`} className="adm-profil-edition">
+                        {reseaux}
+                        <div className="flex items-center justify-end gap-1">
+                          {change && <button type="button" onClick={annulerCote} className={classeBouton.discret}><Icone nom="ui-retour" taille={15} className="shrink-0" />Annuler mes changements</button>}
+                          <BoutonSecondaire onClick={() => quitterCote()}>Terminé</BoutonSecondaire>
+                        </div>
+                      </div>
+                    )}
+                  </section>
+
+                  <ChampColler ajouter={ajouterAdresse} />
+
+                  <ListeBlocs blocs={visibles} clics={clics} choisi={choisi} editeur={editeur} neuf={neuf} gestes={{ ...gestes, dupliquer: b => { if (quitterCote()) gestes.dupliquer(b); } }}
+                    onOrdonner={ordonner} onOuvrir={ouvrirBloc} fermer={fermerEdition} onAjouter={() => ouvrirAjout()} />
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* La page, collée à droite : elle suit chaque frappe ; un clic sur un bloc ouvre sa rangée. */}
+        <aside className="adm-apercu-cote" aria-label="Aperçu de ta page">
+          <div className="adm-apercu-colle">
+            <div role="radiogroup" aria-label="Voir ma page" onKeyDown={e => flechesRadio(e)} className="adm-vues">
+              {(['telephone', 'ordinateur'] as const).map(l => (
+                <button key={l} type="button" role="radio" aria-checked={largeur === l} tabIndex={largeur === l ? 0 : -1} onClick={() => setLargeur(l)}
+                  aria-label={l === 'telephone' ? 'Sur un téléphone' : 'Sur un ordinateur'} title={l === 'telephone' ? 'Sur un téléphone' : 'Sur un ordinateur'} className="adm-outil adm-outil-carre">
+                  <Icone nom={l === 'telephone' ? 'mobile' : 'ordinateur'} taille={l === 'telephone' ? 15 : 16} />
+                </button>
+              ))}
+            </div>
+            {largeur === 'ordinateur' ? <div className="adm-ordi-boite"><ApercuBureau page={visiteurs} /></div> : (
+              <Telephone ecran={ecran} choisi={choisi ?? neuf?.bloc.id ?? null}>
+                <PageLiens page={{ reglages: montree, blocs: neufVu ? (neuf!.enBas ? [...visibles, neufVu] : [neufVu, ...visibles]) : visibles, compte }}
+                  liste={(liste, rendu) => <BlocsApercu blocs={liste} rendu={rendu} choisi={choisi ?? neuf?.bloc.id ?? null} ouvrir={ouvrirDepuisApercu} />} />
+              </Telephone>
+            )}
+          </div>
+        </aside>
+
+        <input ref={fichier} type="file" accept="image/*" className="adm-fichier" tabIndex={-1} aria-hidden="true" onChange={e => photo(e.target.files?.[0])} />
+        <FeuilleAjout ouverte={ajout} onFermer={() => { enBas.current = false; setAjout(false); }} onChoisir={ajouter} principal={principal} />
+      </div>
+    );
+  }
 
   const edition: Edition = {
     profil,
     photo: source => choisirFichier(fichier.current, source),
     envoiPhoto: envoi,
     reseaux: () => ouvrirCote('reseaux'),
-    modifie: (champ, avant) => annoncer({ texte: champ === 'nom' ? 'Nom mis à jour' : 'Bio mise à jour', annuler: () => { onReglages({ ...derniers.current, profil: { ...derniers.current.profil, [champ]: avant } }); annoncer({ texte: 'Changements annulés', genre: 'info' }); } }),
-    nomVide: () => annoncer({ texte: 'Ton nom ne peut pas rester vide : il revient tel qu’il était.', genre: 'info' }),
-    liste: (liste, rendu) => <BlocsEditables blocs={liste} rendu={rendu} clics={clics} onOrdonner={ordonner} onOuvrir={ouvrirBloc} onAjouter={() => ouvrirAjout(true)} />,
+    modifie,
+    nomVide,
+    liste: (liste, rendu) => <BlocsEditables blocs={liste} rendu={rendu} choisi={choisi} onOrdonner={ordonner} onOuvrir={ouvrirBloc} onAjouter={() => ouvrirAjout(true)} />,
   };
-  const contexte: Toile = {
-    calque: grand ? calque : null, choisi, survole,
-    basculer: gestes.basculer,
-    dupliquer: b => { if (quitterCote()) gestes.dupliquer(b); },
-    supprimer: gestes.supprimer,
-  };
-
-  // Le design et les réseaux, au bureau : dans le panneau de droite, à la place des réglages d'un bloc.
-  const menuCote: ElementMenu[] = change ? [{ nom: 'Annuler mes changements', icone: 'ui-retour', action: () => { if (depart.current) onReglages(depart.current); annoncer({ texte: 'Changements annulés', genre: 'info' }); } }] : [];
-  const badge = principal && <Interrupteur label="Badge vérifié" actif={reglages.profil.badge} onChange={v => profil({ badge: v })} />;
-  const contenuCote = cote === 'design'
-    ? <DesignTiroirs key={cleDesign} reglages={reglages} onChange={onReglages} envoyerImage={envoyerImage} principal={principal} vedettes={blocs.filter(b => b.vedette).length} pied={badge} initial={tiroirDepart} />
-    : cote === 'reseaux' && <OngletApparence reglages={reglages} onChange={onReglages} envoyerImage={envoyerImage} principal={principal} parties={['reseaux']} />;
-  const aDroite = grand && (panneau || (cote && (
-    <Panneau key={cote} titre={cote === 'design' ? 'Design' : 'Réseaux'} onFermer={quitterCote} menu={menuCote}>
-      <div className="pt-1">{contenuCote}</div>
-    </Panneau>
-  )));
   // Le pied des feuilles du téléphone, qui s'enregistrent seules : Terminé ferme, Annuler (dès qu'il y a un changement) revient au départ.
   const piedAnnuler = (fermer: (apres?: () => void) => void) => (
     <div className="flex items-center gap-2">
@@ -304,31 +406,8 @@ export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, chois
   );
 
   return (
-    <div className="adm-studio" data-cote={aDroite ? '' : undefined}>
-      {/* Au bureau, le geste principal est à droite de l'en-tête, comme celui de chaque onglet. */}
-      <ActionEntete>
-        <BoutonPrincipal onClick={() => ouvrirAjout()} aria-keyshortcuts="A" title="Ajouter (A, ou colle une adresse)"><Icone nom="ui-plus" taille={14} className="shrink-0" />Ajouter un bloc</BoutonPrincipal>
-      </ActionEntete>
-
-      <div className="adm-canevas" data-vide=""
-        onPointerDown={e => { pointeVide.current = vide(e.target); }}
-        onClick={e => { if (!grand || !pointeVide.current || !vide(e.target)) return; pointeVide.current = false; if (cote) quitterCote(); else if (choisi) fermerEdition(); }}>
-        {/* Au bureau, une barre posée au-dessus de la page : le design, et la largeur à laquelle on la regarde. */}
-        <div className="adm-outils-page" role="toolbar" aria-label="Outils de la page">
-          <button type="button" onClick={() => (cote === 'design' ? quitterCote() : ouvrirCote('design'))} aria-pressed={cote === 'design'} className="adm-outil">
-            <Icone nom="palette" taille={15} className="shrink-0" />Design
-          </button>
-          <span className="adm-outils-trait" aria-hidden="true" />
-          <div role="radiogroup" aria-label="Voir ma page" onKeyDown={e => flechesRadio(e)} className="flex gap-0.5">
-            {(['telephone', 'ordinateur'] as const).map(l => (
-              <button key={l} type="button" role="radio" aria-checked={largeur === l} tabIndex={largeur === l ? 0 : -1} onClick={() => setLargeur(l)}
-                aria-label={l === 'telephone' ? 'Sur un téléphone, à modifier' : 'Sur un ordinateur, en aperçu'} title={l === 'telephone' ? 'Sur un téléphone' : 'Sur un ordinateur'} className="adm-outil adm-outil-carre">
-                <Icone nom={l === 'telephone' ? 'mobile' : 'ordinateur'} taille={l === 'telephone' ? 15 : 16} />
-              </button>
-            ))}
-          </div>
-        </div>
-
+    <div className="adm-studio">
+      <div>
         {/* Au téléphone, les deux gestes de la page sont posés sur la barre des onglets, à portée du pouce : la page commence sous l'en-tête. */}
         <aside className="adm-editor-tools" aria-label="Outils de la page">
           {/* Ajouter prend la place qui reste ; sur un écran étroit, il se dit en un mot plutôt que sur deux lignes. */}
@@ -338,38 +417,357 @@ export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, chois
           </div>
         </aside>
 
-        {/* « Bien démarrer » au-dessus de la page, au bureau, tant qu'elle n'a pas commencé. */}
+        {/* La feuille de « Bien démarrer », que l'anneau de l'en-tête ouvre. */}
         <HautLiens compte={compte} reglages={reglages} demarrage={demarrage} aller={aller} annoncer={annoncer} feuille={demarrageOuvert} fermerFeuille={fermerDemarrage} />
 
-        {largeur === 'ordinateur' && grand ? <ApercuBureau page={visiteurs} /> : (
-          <div ref={zone} className="adm-cadre-zone" data-vide="" onPointerMove={suivreSurvol} onPointerLeave={quitterSurvol}>
-            <div className="adm-cadre-lieu" data-vide="">
-              <div ref={toile} className="adm-apercu adm-toile adm-cadre relative scroll-mt-24 overflow-hidden rounded-[24px] lg:rounded-[28px]" data-studio={grand || undefined}>
-                <ContexteToile.Provider value={contexte}>
-                  <PageLiens page={{ reglages: montree, blocs: visibles, compte }} edition={edition} />
-                </ContexteToile.Provider>
-                {/* Au téléphone, le geste s'écrit sur la page même, dans sa couleur, en haut à gauche : pas une ligne de plus au-dessus d'elle. */}
-                {astuce && !grand && <p className="pointer-events-none absolute top-4 left-4 right-16 text-[13px] font-medium leading-snug" style={{ color: variablesTheme(themeDe(montree))['--doux'] }}>{visibles.length < 2 ? 'Touche pour modifier.' : 'Touche pour modifier, maintiens pour déplacer.'}</p>}
-              </div>
-              {/* Les gestes d'un bloc se posent ici, hors du cadre de la page qui les couperait. */}
-              {grand && <div ref={setCalque} className="adm-calque" />}
-            </div>
-          </div>
-        )}
+        <div ref={toile} className="adm-apercu adm-toile relative scroll-mt-24 overflow-hidden rounded-[24px]">
+          <PageLiens page={{ reglages: montree, blocs: visibles, compte }} edition={edition} />
+          {/* Le geste s'écrit sur la page même, dans sa couleur, en haut à gauche : pas une ligne de plus au-dessus d'elle. */}
+          {astuce && <p className="pointer-events-none absolute top-4 left-4 right-16 text-[13px] font-medium leading-snug" style={{ color: variablesTheme(themeDe(montree))['--doux'] }}>{visibles.length < 2 ? 'Touche pour modifier.' : 'Touche pour modifier, maintiens pour déplacer.'}</p>}
+        </div>
         {appel && <div className="adm-appel-sous">{appel}</div>}
       </div>
 
-      {/* Le panneau de droite, au bureau : les réglages du bloc choisi, ou le design. Il s'ouvre sans voile, la page reste à portée. */}
-      <div className="adm-panneau-cote">{aDroite && <div className="adm-panneau-colle">{aDroite}</div>}</div>
-
       <input ref={fichier} type="file" accept="image/*" className="adm-fichier" tabIndex={-1} aria-hidden="true" onChange={e => photo(e.target.files?.[0])} />
       <FeuilleAjout ouverte={ajout} onFermer={() => { enBas.current = false; setAjout(false); }} onChoisir={ajouter} principal={principal} />
-      <Feuille ouverte={!grand && cote === 'reseaux'} onFermer={() => fermerCote()} retenir={reseauFaux} titre="Réseaux" cote apercu={direct} pied={piedAnnuler}>
-        {contenuCote}
+      <Feuille ouverte={cote === 'reseaux'} onFermer={() => fermerCote()} retenir={reseauFaux} titre="Réseaux" cote apercu={direct} pied={piedAnnuler}>
+        {reseaux}
       </Feuille>
-      <Feuille ouverte={!grand && cote === 'design'} onFermer={() => fermerCote()} titre="Design" cote apercu={direct} pied={piedAnnuler}>
-        {contenuCote}
+      <Feuille ouverte={cote === 'design'} onFermer={() => fermerCote()} titre="Design" cote apercu={direct} pied={piedAnnuler}>
+        {design}
       </Feuille>
+    </div>
+  );
+}
+
+/** La bio du profil, au bureau : tapée en place, le champ grandit avec le texte. */
+function ChampBio({ cible, valeur, onChange, onQuitter }: { cible: RefObject<HTMLTextAreaElement | null>; valeur: string; onChange: (v: string) => void; onQuitter: (avant: string) => void }) {
+  const avant = useRef('');
+  useLayoutEffect(() => {
+    const t = cible.current;
+    if (!t || CSS.supports('field-sizing', 'content')) return;
+    t.style.height = 'auto';
+    t.style.height = `${t.scrollHeight}px`;
+  });
+  return <textarea ref={cible} className="adm-profil-bio" rows={1} value={valeur} maxLength={300} placeholder="Une phrase sur toi" aria-label="Ta bio" onChange={e => onChange(e.target.value)}
+    onFocus={e => { avant.current = e.currentTarget.value; }} onBlur={e => { if (e.currentTarget.value !== avant.current) onQuitter(avant.current); }} />;
+}
+
+/**
+ * Coller une adresse au-dessus de la liste : elle devient un lien neuf, qu'on
+ * règle dans sa rangée avant de l'ajouter. Entrée fait de même avec une
+ * adresse tapée ; une saisie qui n'en est pas une dit pourquoi.
+ */
+function ChampColler({ ajouter }: { ajouter: (url: string) => boolean }) {
+  const [valeur, setValeur] = useState('');
+  const [erreur, setErreur] = useState('');
+  const idErreur = useId();
+  const poser = (texte: string) => {
+    const url = adresseSaisie(texte);
+    if (!url) { setErreur(pourquoiPasAdresse(texte)); return; }
+    if (ajouter(url)) { setValeur(''); setErreur(''); }
+  };
+  return (
+    <div className="adm-coller">
+      <div className="adm-coller-champ">
+        <Icone nom="ui-plus" taille={15} className="adm-coller-signe" />
+        <input type="url" inputMode="url" autoCapitalize="none" autoCorrect="off" spellCheck={false} value={valeur}
+          placeholder="Colle une adresse pour ajouter un lien" aria-label="Ajouter un lien depuis son adresse"
+          aria-invalid={erreur ? true : undefined} aria-describedby={erreur ? idErreur : undefined}
+          onChange={e => { setValeur(e.target.value); if (erreur) setErreur(''); }}
+          onPaste={e => {
+            if (valeur.trim()) return;
+            const texte = e.clipboardData.getData('text');
+            if (!adresseSaisie(texte)) return;
+            e.preventDefault();
+            poser(texte);
+          }}
+          onKeyDown={e => {
+            if (e.key === 'Enter') { e.preventDefault(); if (valeur.trim()) poser(valeur); }
+            else if (e.key === 'Escape' && valeur) { e.preventDefault(); setValeur(''); setErreur(''); }
+          }} />
+      </div>
+      {erreur && <p id={idErreur} role="alert" className="adm-coller-erreur">{erreur}</p>}
+    </div>
+  );
+}
+
+/** Le nom d'un bloc dans sa rangée : son texte, sinon son adresse, sinon son genre. */
+function nomBloc(b: Bloc) {
+  const type = TYPES.find(t => t.type === b.type)?.nom ?? 'Bloc';
+  const titre = b.titre.trim().split('\n')[0];
+  return titre || ((b.type === 'lien' || b.type === 'video') && b.url ? sansSchema(b.url).replace(/\/$/, '') : '') || type;
+}
+/** Ce qui se lit en gris à côté du nom : l'adresse d'un lien ou d'une vidéo, sinon le genre du bloc. */
+function sousBloc(b: Bloc, nom: string) {
+  const sous = (b.type === 'lien' || b.type === 'video') && b.url ? sansSchema(b.url).replace(/\/$/, '') : TYPES.find(t => t.type === b.type)?.nom ?? '';
+  return sous === nom ? '' : sous;
+}
+
+/** Ce qu'un bloc a de particulier, dit de la même façon dans la liste du bureau et sur la page du téléphone. */
+function etatBloc(bloc: Bloc, droits: Droits) {
+  // Un bloc que l'offre ne comprend plus reste là, grisé comme un bloc masqué : il revient avec l'offre.
+  const attend = ([[!!bloc.acces, 'drops'], [bloc.type === 'inscription', 'listeEmail'], [bloc.type === 'preuve', 'avis']] as [boolean, Fonction][]).find(([oui, f]) => oui && !droits[f])?.[1];
+  const prive = !bloc.public || !!attend;
+  // Une règle que l'offre ne comprend plus n'est pas dite : sans Starter, un lancement attend sa date sans compte à rebours (« programmé »).
+  const regles = etiquettes(bloc, droits);
+  const programme = bloc.public && !estEnLigne(bloc) && !regles.includes('Compte à rebours');
+  // Chaque règle porte le picto de sa ligne dans l'éditeur : on la reconnaît sans l'ouvrir.
+  const puces = [
+    { oui: !programme && !!((bloc.creneau && droits.heure) || (bloc.compteARebours && bloc.debut && droits.programmation)), icone: 'horloge', nom: 'Quand l’afficher' },
+    { oui: !!(bloc.cache?.length || bloc.audience?.sources.length), icone: 'cible', nom: 'Afficher sur' },
+    { oui: !!bloc.acces, icone: 'cadenas', nom: 'Accès réservé' },
+  ].filter(p => p.oui);
+  // Ce qu'un lecteur d'écran entend après le nom.
+  const dit = [attend ? `pas montré sans Hopla ${offreDe(attend)}` : prive && 'masqué', programme && 'programmé', ...regles].filter(Boolean).join(', ');
+  return { attend, prive, programme, regles, puces, dit };
+}
+
+/** Le bloc entier répond : ses liens, sa vidéo et son formulaire sortent de l'ordre de tabulation, même arrivés après coup (la dernière vidéo, chargée à part). */
+function useFige(noeud: RefObject<HTMLElement | null>) {
+  useEffect(() => {
+    const n = noeud.current;
+    if (!n) return;
+    const figer = () => n.querySelectorAll(':scope > :not(.lp-ed-puces):not([inert])').forEach(x => x.setAttribute('inert', ''));
+    figer();
+    const veille = new MutationObserver(figer);
+    veille.observe(n, { childList: true });
+    return () => veille.disconnect();
+  });
+}
+
+/** La rangée ouverte se montre en entier si elle tient, sinon par son haut : son en-tête ne passe jamais sous les onglets collés. */
+function montrerRangee(li: HTMLElement) {
+  const marge = margeHaut(), r = li.getBoundingClientRect(), bas = innerHeight - 16;
+  const ecart = r.top < marge ? r.top - marge : r.bottom > bas ? Math.min(r.bottom - bas, r.top - marge) : 0;
+  if (Math.abs(ecart) > 1) scrollBy({ top: ecart, behavior: reduit() ? 'auto' : 'smooth' });
+}
+
+/** Au bureau, une rangée ne se déplace que de haut en bas. */
+const vertical: Modifier = ({ transform }) => ({ ...transform, x: 0 });
+
+/**
+ * La liste des blocs, au bureau : une rangée par bloc, déplacée par sa poignée,
+ * dépliée d'un clic sur ses réglages. Une seule ouverte à la fois : en passant
+ * d'une rangée à l'autre, celle qu'on vient de cliquer reste sous la souris.
+ */
+function ListeBlocs({ blocs, clics, choisi, editeur, neuf, gestes, onOrdonner, onOuvrir, fermer, onAjouter }: {
+  blocs: Bloc[]; clics: Record<string, number>; choisi: string | null; editeur: ReactNode; neuf: { bloc: Bloc; enBas: boolean } | null;
+  gestes: Gestes; onOrdonner: (blocs: Bloc[]) => void; onOuvrir: (bloc: Bloc) => void; fermer: () => boolean; onAjouter: () => void;
+}) {
+  const droits = useDroits();
+  const liste = useRef<HTMLUListElement>(null);
+  const capteurs = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates, keyboardCodes: { start: ['Space'], cancel: ['Escape'], end: ['Space'] } }),
+  );
+  function deplacer({ active, over }: DragEndEvent) {
+    if (!over || active.id === over.id) return;
+    const de = blocs.findIndex(b => b.id === active.id), vers = blocs.findIndex(b => b.id === over.id);
+    if (de < 0 || vers < 0) return;
+    vibrer(10);
+    onOrdonner(arrayMove(blocs, de, vers));
+  }
+
+  const ouvert = choisi ?? neuf?.bloc.id ?? null;
+  const rangee = (id: string) => liste.current?.querySelector<HTMLElement>(`.adm-rangee[data-id="${CSS.escape(id)}"]`) ?? null;
+  // La rangée cliquée et sa hauteur à l'écran avant le clic : celle qui se replie au-dessus d'elle ne la fait pas sauter.
+  const ancre = useRef<{ id: string; haut: number; quand: number } | null>(null);
+  const ouvrir = (b: Bloc) => {
+    const li = rangee(b.id);
+    ancre.current = li ? { id: b.id, haut: li.getBoundingClientRect().top, quand: Date.now() } : null;
+    onOuvrir(b);
+  };
+  const precedent = useRef(ouvert);
+  useLayoutEffect(() => {
+    const avant = precedent.current;
+    precedent.current = ouvert;
+    if (ouvert === avant) return;
+    const a = ancre.current;
+    ancre.current = null;
+    if (ouvert) {
+      const li = rangee(ouvert);
+      if (!li) return;
+      if (a && a.id === ouvert && Date.now() - a.quand < 1000) {
+        const ecart = li.getBoundingClientRect().top - a.haut;
+        if (Math.abs(ecart) > 0.5) scrollBy({ top: ecart });
+      }
+      montrerRangee(li);
+    } else if (avant) {
+      // Repliée (Échap, son chevron, un clic sur son nom) : son en-tête revient en vue, et le focus s'y pose s'il était dedans.
+      const li = rangee(avant);
+      if (!li) return;
+      const haut = li.getBoundingClientRect().top - margeHaut();
+      if (haut < 0) scrollBy({ top: haut - 8 });
+      const ici = document.activeElement;
+      if (!ici || ici === document.body) li.querySelector<HTMLElement>('.adm-rangee-bouton')?.focus({ preventScroll: true });
+    }
+  }, [ouvert]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Le bloc neuf a sa rangée, en haut ou en bas, à la place qu'il prendra : une fois ajouté, elle reste la même.
+  const rangees = neuf ? (neuf.enBas ? [...blocs, neuf.bloc] : [neuf.bloc, ...blocs]) : blocs;
+  if (!rangees.length) return (
+    <div className="adm-liste-vide">
+      <p>Ta page n’a encore aucun bloc.</p>
+      <BoutonSecondaire onClick={onAjouter}><Icone nom="ui-plus" taille={15} className="shrink-0" />Ajouter un bloc</BoutonSecondaire>
+    </div>
+  );
+  return (
+    <DndContext accessibility={ACCESSIBILITE} sensors={capteurs} collisionDetection={closestCenter} modifiers={[vertical]} onDragStart={() => vibrer(6)} onDragEnd={deplacer}>
+      <SortableContext items={blocs.map(b => b.id)} strategy={verticalListSortingStrategy}>
+        <ul ref={liste} className="adm-liste-blocs" aria-label="Les blocs de ta page">
+          {rangees.map(b => (
+            <Rangee key={b.id} bloc={b} droits={droits} clics={clics[b.id] ?? 0} neuf={b.id === neuf?.bloc.id} ouvert={b.id === ouvert}
+              editeur={b.id === ouvert ? editeur : null} ouvrir={ouvrir} fermer={fermer} gestes={gestes} />
+          ))}
+        </ul>
+      </SortableContext>
+    </DndContext>
+  );
+}
+
+function Rangee({ bloc, droits, clics, neuf, ouvert, editeur, ouvrir, fermer, gestes }: {
+  bloc: Bloc; droits: Droits; clics: number; neuf: boolean; ouvert: boolean; editeur: ReactNode;
+  ouvrir: (b: Bloc) => void; fermer: () => boolean; gestes: Gestes;
+}) {
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({ id: bloc.id, disabled: neuf, attributes: { roleDescription: 'bloc déplaçable' } });
+  const type = TYPES.find(t => t.type === bloc.type);
+  const etat = etatBloc(bloc, droits);
+  const nom = neuf ? `Nouveau bloc : ${type?.nom ?? ''}` : nomBloc(bloc);
+  const sous = neuf ? '' : sousBloc(bloc, nom);
+  const idReglages = useId();
+  // Le picto du bloc s'il en a un (un réseau, un picto choisi), sinon celui de son genre.
+  const picto = bloc.icone && ICONES[bloc.icone] ? bloc.icone : type?.picto ?? 'bloc-lien';
+  return (
+    <li ref={setNodeRef} className="adm-rangee" data-id={bloc.id} data-nom={nom} data-ouvert={ouvert || undefined} data-glisse={isDragging || undefined}
+      data-prive={(!neuf && (etat.prive || etat.programme)) || undefined} style={{ transform: CssDnd.Translate.toString(transform), transition }}>
+      <div className="adm-rangee-tete">
+        {neuf ? <span className="adm-rangee-poignee" aria-hidden="true" /> : (
+          <button ref={setActivatorNodeRef} type="button" {...attributes} {...listeners} className="adm-rangee-poignee" aria-label={`Déplacer ${nom}`} title="Glisser pour déplacer">
+            <Icone nom="ui-poignee" taille={14} />
+          </button>
+        )}
+        {/* Le nom est le bouton : il déplie la rangée, ou la replie. Un bloc neuf ne se replie pas : il s'ajoute ou s'oublie, en bas. */}
+        {neuf ? (
+          <span className="adm-rangee-bouton"><Icone nom={picto} taille={15} className="adm-rangee-picto" /><span className="adm-rangee-nom">{nom}</span></span>
+        ) : (
+          <button type="button" className="adm-rangee-bouton" aria-expanded={ouvert} aria-controls={ouvert ? idReglages : undefined}
+            onClick={() => { vibrer(4); if (ouvert) fermer(); else ouvrir(bloc); }}>
+            <Icone nom={picto} taille={15} className="adm-rangee-picto" />
+            <span className="adm-rangee-nom">{nom}</span>
+            {sous && <span className="adm-rangee-sous">{sous}</span>}
+            {bloc.vedette && (
+              <span className="adm-rangee-marque">
+                <span className="adm-rangee-marque-picto" title="Mis en avant" aria-hidden="true"><Icone nom="etoile" taille={13} /></span>
+                <span className="adm-rangee-marque-mot">Mis en avant</span>
+              </span>
+            )}
+            {/* Un picto par état, sans étiquette : le nom complet se lit au survol, et un lecteur d'écran l'entend. */}
+            {(etat.attend || etat.programme || etat.puces.length > 0) && (
+              <span className="adm-rangee-etats" aria-hidden="true">
+                {etat.attend && <span title={`Pas montré sans Hopla ${offreDe(etat.attend)}`}><Icone nom="masque" taille={13} /></span>}
+                {etat.programme && <span title="Programmé"><Icone nom="horloge" taille={13} /></span>}
+                {etat.puces.map(p => <span key={p.icone} title={p.nom}><Icone nom={p.icone} taille={13} /></span>)}
+              </span>
+            )}
+            {etat.dit && <span className="sr-only">, {etat.dit}</span>}
+            {/* Ouverte, la rangée dit ses clics en entier, en bas de ses réglages. */}
+            {!ouvert && clics > 0 && <span className="adm-rangee-clics" title="Ces 30 derniers jours">{clics.toLocaleString('fr-FR')} clic{clics > 1 ? 's' : ''}</span>}
+          </button>
+        )}
+        {ouvert ? !neuf && (
+          <button type="button" className="adm-rangee-geste" onClick={() => fermer()} aria-label={`Replier ${nom}`} title="Replier (Échap)">
+            <Icone nom="ui-chevron" taille={14} className="rotate-180" />
+          </button>
+        ) : (
+          <>
+            <button type="button" className="adm-rangee-geste" onClick={() => { vibrer(5); gestes.basculer(bloc); }}
+              aria-label={bloc.public ? `Masquer ${nom}` : `Montrer ${nom}`} title={bloc.public ? 'Masquer de ma page' : 'Montrer sur ma page'}>
+              <Icone nom={bloc.public ? 'ui-oeil' : 'ui-masque'} taille={15} />
+            </button>
+            <Menu label={`Gestes : ${nom}`} titre={`Plus de gestes : ${nom}`} className="adm-rangee-geste" elements={[
+              { nom: 'Modifier', icone: 'ui-crayon', action: () => ouvrir(bloc) },
+              { nom: 'Dupliquer', icone: 'ui-copier', action: () => gestes.dupliquer(bloc) },
+              { nom: 'Retirer de ma page', icone: 'ui-corbeille', danger: true, action: () => gestes.supprimer(bloc) },
+            ]}>
+              <Icone nom="ui-points" taille={15} />
+            </Menu>
+          </>
+        )}
+      </div>
+      {ouvert && <div id={idReglages} role="region" aria-label={`Réglages : ${nom}`} className="adm-rangee-reglages">{editeur}</div>}
+    </li>
+  );
+}
+
+/**
+ * La page à droite, au bureau, dans un téléphone : 390 px d'écran, réduit
+ * d'un bloc pour tenir dans la hauteur ou la largeur qui reste. Le bloc
+ * ouvert dans la liste vient en vue sur l'écran s'il n'y est pas.
+ */
+function Telephone({ ecran, choisi, children }: { ecran: RefObject<HTMLDivElement | null>; choisi: string | null; children: ReactNode }) {
+  const lieu = useRef<HTMLDivElement>(null);
+  const [echelle, setEchelle] = useState(0);
+  useLayoutEffect(() => {
+    const el = lieu.current;
+    if (!el) return;
+    const mesurer = () => setEchelle(Math.min(1, el.clientWidth / 408, el.clientHeight / 778));
+    mesurer();
+    const obs = new ResizeObserver(mesurer);
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+  useEffect(() => {
+    const e = ecran.current;
+    if (!choisi || !e) return;
+    const el = e.querySelector<HTMLElement>(`[data-id="${CSS.escape(choisi)}"]`);
+    if (!el) return;
+    const r = el.getBoundingClientRect(), b = e.getBoundingClientRect();
+    if (r.top >= b.top + 8 && r.bottom <= b.bottom - 8) return;
+    // Les mesures sont à l'échelle du téléphone, le défilement de l'écran à la sienne.
+    const s = b.height / e.offsetHeight || 1;
+    const haut = e.scrollTop + (r.top - b.top) / s - Math.max(16, (e.clientHeight - el.offsetHeight) / 2);
+    e.scrollTo({ top: Math.max(0, haut), behavior: reduit() ? 'auto' : 'smooth' });
+  }, [choisi, ecran]);
+  return (
+    <div ref={lieu} className="adm-tel-lieu">
+      <div className="adm-tel-cadre" style={{ width: 408 * echelle, height: 778 * echelle, visibility: echelle ? undefined : 'hidden' }}>
+        <div className="adm-tel" style={{ transform: `scale(${echelle})` }}>
+          {/* L'écran se lit à la souris ; au clavier et pour un lecteur d'écran, tout se fait dans la liste. */}
+          <div ref={ecran} className="adm-tel-ecran adm-apercu" aria-hidden="true">{children}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Les blocs de la page à droite : grisés s'ils sont masqués, cerclés quand leur rangée est ouverte, ouverts d'un clic. */
+function BlocsApercu({ blocs, rendu, choisi, ouvrir }: { blocs: Bloc[]; rendu: (bloc: Bloc) => ReactNode; choisi: string | null; ouvrir: (b: Bloc) => void }) {
+  const droits = useDroits();
+  // Sans Starter, un compte à rebours gardé d'une offre passée ne se montre pas sur la page : l'aperçu le dessine pareil.
+  const programmation = usePermis('programmation');
+  return (
+    <>
+      {blocs.map((bloc, i) => {
+        const e = etatBloc(bloc, droits);
+        return (
+          <BlocApercu key={bloc.id} bloc={bloc} i={i} choisi={choisi === bloc.id} prive={e.prive || e.programme} ouvrir={ouvrir}>
+            {rendu(programmation || !bloc.compteARebours ? bloc : { ...bloc, compteARebours: false })}
+          </BlocApercu>
+        );
+      })}
+    </>
+  );
+}
+
+function BlocApercu({ bloc, i, choisi, prive, ouvrir, children }: { bloc: Bloc; i: number; choisi: boolean; prive: boolean; ouvrir: (b: Bloc) => void; children: ReactNode }) {
+  const noeud = useRef<HTMLDivElement>(null);
+  useFige(noeud);
+  return (
+    <div ref={noeud} className="lp-bloc lp-ed-bloc" data-id={bloc.id} data-type={bloc.type} data-vedette={bloc.vedette ? bloc.format : undefined}
+      data-prive={prive || undefined} data-choisi={choisi || undefined} style={{ '--i': i } as CSSProperties}
+      onClickCapture={e => { e.preventDefault(); e.stopPropagation(); ouvrir(bloc); }}>
+      {children}
     </div>
   );
 }
@@ -377,8 +775,8 @@ export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, chois
 /**
  * La page sur un ordinateur, en aperçu : rendue à 1280 px de large, comme les
  * visiteurs la voient (sa mise en page « Sur ordinateur » comprise), puis
- * réduite pour tenir dans le canevas. Elle ne se modifie pas : la page se
- * règle dans la vue téléphone.
+ * réduite pour tenir dans la colonne. Elle ne se modifie pas : la liste, à
+ * gauche, la règle.
  */
 function ApercuBureau({ page }: { page: PagePublique }) {
   const lieu = useRef<HTMLDivElement>(null);
@@ -402,7 +800,7 @@ function ApercuBureau({ page }: { page: PagePublique }) {
           <PageLiens page={page} apercu />
         </div>
       </div>
-      <p className="adm-ordi-legende">Ta page sur un ordinateur, comme la voient tes visiteurs. Elle se modifie dans la vue téléphone.</p>
+      <p className="adm-ordi-legende">Ta page sur un ordinateur, comme la voient tes visiteurs.</p>
     </div>
   );
 }
@@ -441,8 +839,12 @@ function ApercuDirect({ page }: { page: PagePublique }) {
   );
 }
 
-/** Ce que les lecteurs d'écran disent pendant un déplacement, en français. */
-const nomDe = (id: string | number) => document.querySelector(`[data-id="${id}"]`)?.getAttribute('aria-label')?.replace(/^Modifier /, '').split(',')[0] ?? 'le bloc';
+/** Ce que les lecteurs d'écran disent pendant un déplacement, en français : le nom de la rangée au bureau, du bloc au téléphone. */
+const nomDe = (id: string | number) => {
+  const cle = CSS.escape(String(id));
+  const el = document.querySelector<HTMLElement>(`.adm-rangee[data-id="${cle}"], .lp-ed-bloc[data-id="${cle}"]`);
+  return el?.dataset.nom ?? el?.getAttribute('aria-label')?.replace(/^Modifier /, '').split(',')[0] ?? 'le bloc';
+};
 const ACCESSIBILITE = {
   screenReaderInstructions: { draggable: 'Pour déplacer un bloc, appuie sur Espace, puis sur les flèches haut et bas. Espace de nouveau pour le poser, Échap pour annuler.' },
   announcements: {
@@ -453,14 +855,13 @@ const ACCESSIBILITE = {
   },
 };
 
-function BlocsEditables({ blocs, rendu, clics, onOrdonner, onOuvrir, onAjouter }: {
-  blocs: Bloc[]; rendu: (bloc: Bloc) => ReactNode; clics: Record<string, number>;
+/** Au téléphone : la page elle-même, dont chaque bloc s'ouvre d'un toucher et se déplace en le maintenant. */
+function BlocsEditables({ blocs, rendu, choisi, onOrdonner, onOuvrir, onAjouter }: {
+  blocs: Bloc[]; rendu: (bloc: Bloc) => ReactNode; choisi: string | null;
   onOrdonner: (blocs: Bloc[]) => void; onOuvrir: (bloc: Bloc) => void; onAjouter: () => void;
 }) {
   // Un glisser se termine par un clic : il ne doit pas ouvrir le bloc lâché.
   const glisse = useRef(0);
-  // Pendant un glisser, les gestes posés à côté des blocs s'effacent : ils ne suivraient pas.
-  const [enCours, setEnCours] = useState(false);
   const capteurs = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 260, tolerance: 8 } }),
@@ -468,7 +869,6 @@ function BlocsEditables({ blocs, rendu, clics, onOrdonner, onOuvrir, onAjouter }
   );
   function deplacer({ active, over }: DragEndEvent) {
     glisse.current = Date.now();
-    setEnCours(false);
     if (!over || active.id === over.id) return;
     vibrer(10);
     onOrdonner(arrayMove(blocs, blocs.findIndex(b => b.id === active.id), blocs.findIndex(b => b.id === over.id)));
@@ -480,9 +880,9 @@ function BlocsEditables({ blocs, rendu, clics, onOrdonner, onOuvrir, onAjouter }
   const dessin = (bloc: Bloc) => rendu(programmation || !bloc.compteARebours ? bloc : { ...bloc, compteARebours: false });
   return (
     <>
-      <DndContext accessibility={ACCESSIBILITE} sensors={capteurs} collisionDetection={closestCenter} onDragStart={() => { vibrer(6); setEnCours(true); }} onDragEnd={deplacer} onDragCancel={() => { glisse.current = Date.now(); setEnCours(false); }}>
+      <DndContext accessibility={ACCESSIBILITE} sensors={capteurs} collisionDetection={closestCenter} onDragStart={() => vibrer(6)} onDragEnd={deplacer} onDragCancel={() => { glisse.current = Date.now(); }}>
         <SortableContext items={blocs.map(b => b.id)} strategy={verticalListSortingStrategy}>
-          {blocs.map((bloc, i) => <BlocEditable key={bloc.id} bloc={bloc} i={i} clics={clics[bloc.id]} ouvrir={ouvrir} glisse={enCours}>{dessin(bloc)}</BlocEditable>)}
+          {blocs.map((bloc, i) => <BlocEditable key={bloc.id} bloc={bloc} i={i} choisi={choisi === bloc.id} ouvrir={ouvrir}>{dessin(bloc)}</BlocEditable>)}
         </SortableContext>
       </DndContext>
       {/* Sous le dernier bloc, à portée du pouce : le même geste que le bouton Ajouter du haut. */}
@@ -491,105 +891,32 @@ function BlocsEditables({ blocs, rendu, clics, onOrdonner, onOuvrir, onAjouter }
   );
 }
 
-function BlocEditable({ bloc, i, clics, ouvrir, glisse, children }: { bloc: Bloc; i: number; clics?: number; ouvrir: (b: Bloc) => void; glisse: boolean; children: ReactNode }) {
+function BlocEditable({ bloc, i, choisi, ouvrir, children }: { bloc: Bloc; i: number; choisi: boolean; ouvrir: (b: Bloc) => void; children: ReactNode }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: bloc.id });
   const droits = useDroits();
-  const toile = useContext(ContexteToile);
-  // Un bloc que l'offre ne comprend plus reste là, grisé comme un bloc masqué : il revient avec l'offre.
-  const attend = ([[!!bloc.acces, 'drops'], [bloc.type === 'inscription', 'listeEmail'], [bloc.type === 'preuve', 'avis']] as [boolean, Fonction][]).find(([oui, f]) => oui && !droits[f])?.[1];
-  const prive = !bloc.public || !!attend;
-  // Une règle que l'offre ne comprend plus n'est pas dite : sans Starter, un lancement attend sa date sans compte à rebours (« programmé »).
-  const regles = etiquettes(bloc, droits);
-  const programme = bloc.public && !estEnLigne(bloc) && !regles.includes('Compte à rebours');
-  const puces = [
-    { oui: !programme && !!((bloc.creneau && droits.heure) || (bloc.compteARebours && bloc.debut && droits.programmation)), icone: 'horloge', nom: 'Quand l’afficher' },
-    { oui: !!(bloc.cache?.length || bloc.audience?.sources.length), icone: 'cible', nom: 'Afficher sur' },
-    { oui: !!bloc.acces, icone: 'cadenas', nom: 'Accès réservé' },
-  ].filter(p => p.oui);
+  const { attend, prive, programme, puces, dit } = etatBloc(bloc, droits);
   const nom = bloc.titre || bloc.url || 'ce bloc';
-  const choisi = toile?.choisi === bloc.id;
-  const survol = !glisse && toile?.survole === bloc.id;
-  // Le menu « … » ouvert garde ses gestes affichés, même si la souris part sur une autre rangée.
-  const [menu, setMenu] = useState(false);
-  const calque = toile?.calque ?? null;
-  const montre = !!calque && !glisse && (choisi || survol || menu);
-
   // Le bloc entier est un seul bouton : ses liens et champs intérieurs sortent de l'ordre de tabulation.
   const noeud = useRef<HTMLDivElement | null>(null);
-  // Un contenu qui arrive après coup (la dernière vidéo, chargée à part) devient inerte lui aussi.
-  useEffect(() => {
-    const n = noeud.current;
-    if (!n) return;
-    const figer = () => n.querySelectorAll(':scope > :not(.lp-ed-puces):not([inert])').forEach(x => x.setAttribute('inert', ''));
-    figer();
-    const veille = new MutationObserver(figer);
-    veille.observe(n, { childList: true });
-    return () => veille.disconnect();
-  });
-
-  // Les gestes se posent à la hauteur du bloc : centrés sur un bloc court, sur sa première ligne pour un grand (une vidéo).
-  const [haut, setHaut] = useState<number | null>(null);
-  useLayoutEffect(() => {
-    const n = noeud.current;
-    if (!montre || !calque || !n) return;
-    const mesurer = () => { const r = n.getBoundingClientRect(), c = calque.getBoundingClientRect(); setHaut(Math.round(r.top - c.top + (Math.min(r.height, 64) - 32) / 2)); };
-    mesurer();
-    // Après un déplacement, les blocs glissent à leur place : on remesure une fois qu'ils y sont.
-    const t = setTimeout(mesurer, 320);
-    const obs = new ResizeObserver(mesurer);
-    obs.observe(calque); obs.observe(n);
-    return () => { clearTimeout(t); obs.disconnect(); };
-  }, [montre, calque, i]);
-
-  const actions = montre && calque && haut !== null && toile && createPortal(
-    <>
-      {/* La poignée : on la saisit pour déplacer le bloc, un clic l'ouvre. Des raccourcis de la souris : au clavier, le bloc lui-même se déplace et s'ouvre. */}
-      <div className="adm-actions-bloc adm-actions-gauche" style={{ top: haut }}>
-        <button type="button" tabIndex={-1} {...listeners} onClick={() => ouvrir(bloc)} aria-label={`Déplacer ${nom}`} title="Glisser pour déplacer" className="adm-action-bloc cursor-grab active:cursor-grabbing">
-          <Icone nom="ui-poignee" taille={15} />
-        </button>
-      </div>
-      {/* Le bloc choisi a ses gestes dans le panneau : il ne garde que sa poignée. */}
-      {!choisi && (
-        <div className="adm-actions-bloc adm-actions-droite" style={{ top: haut }}>
-          <button type="button" tabIndex={-1} onClick={() => { vibrer(5); toile.basculer(bloc); }} aria-label={bloc.public ? `Masquer ${nom}` : `Montrer ${nom}`} title={bloc.public ? 'Masquer de ma page' : 'Montrer sur ma page'} className="adm-action-bloc">
-            <Icone nom={bloc.public ? 'ui-oeil' : 'ui-masque'} taille={15} />
-          </button>
-          <Menu label={`Gestes : ${nom}`} titre="Plus de gestes" tabIndex={-1} onBascule={setMenu} className="adm-action-bloc" elements={[
-            { nom: 'Modifier', icone: 'ui-crayon', action: () => ouvrir(bloc) },
-            { nom: 'Dupliquer', icone: 'ui-copier', action: () => toile.dupliquer(bloc) },
-            { nom: 'Retirer de ma page', icone: 'ui-corbeille', danger: true, action: () => toile.supprimer(bloc) },
-          ]}>
-            <Icone nom="ui-points" taille={15} />
-          </Menu>
-        </div>
-      )}
-    </>,
-    calque,
-  );
-
+  useFige(noeud);
   return (
-    <>
-      <div ref={n => { setNodeRef(n); noeud.current = n; }} {...attributes} {...listeners} aria-label={[`Modifier ${nom}`, attend ? `pas montré sans Hopla ${offreDe(attend)}` : prive && 'masqué', programme && 'programmé', ...regles].filter(Boolean).join(', ')} aria-roledescription="bloc déplaçable"
-        aria-current={choisi || undefined}
-        className="lp-bloc lp-ed-bloc" data-id={bloc.id} data-type={bloc.type} data-vedette={bloc.vedette ? bloc.format : undefined} data-glisse={isDragging || undefined} data-prive={prive || programme || undefined}
-        data-choisi={choisi || undefined} data-survol={survol || undefined}
-        style={{ '--i': i, transform: CSS.Transform.toString(transform), transition } as CSSProperties}
-        onClickCapture={e => { e.preventDefault(); e.stopPropagation(); ouvrir(bloc); }}
-        onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); ouvrir(bloc); } else listeners?.onKeyDown?.(e); }}>
-        {children}
-        {(prive || programme || puces.length > 0) && (
-          <span className="lp-ed-puces" aria-hidden="true">
-            {/* Un picto par état, sans étiquette : le nom complet est dans l'aria-label du bloc. */}
-            {prive && <span className="lp-ed-puce" title={attend ? `Pas montré sans Hopla ${offreDe(attend)}` : 'Masqué'}><Icone nom="masque" taille={13} /></span>}
-            {programme && <span className="lp-ed-puce" title="Programmé"><Icone nom="horloge" taille={13} /></span>}
-            {/* Chaque règle porte le picto de sa ligne dans l'éditeur : on la reconnaît sans l'ouvrir. */}
-            {puces.map(p => <span key={p.icone} className="lp-ed-puce" title={p.nom}><Icone nom={p.icone} taille={13} /></span>)}
-          </span>
-        )}
-      </div>
-      {/* Le bloc reste un seul élément pour le glisser : ses gestes vivent à côté de lui, hors de la page. */}
-      {actions}
-    </>
+    <div ref={n => { setNodeRef(n); noeud.current = n; }} {...attributes} {...listeners} aria-label={[`Modifier ${nom}`, dit].filter(Boolean).join(', ')} aria-roledescription="bloc déplaçable"
+      aria-current={choisi || undefined}
+      className="lp-bloc lp-ed-bloc" data-id={bloc.id} data-type={bloc.type} data-vedette={bloc.vedette ? bloc.format : undefined} data-glisse={isDragging || undefined} data-prive={prive || programme || undefined}
+      data-choisi={choisi || undefined}
+      style={{ '--i': i, transform: CssDnd.Transform.toString(transform), transition } as CSSProperties}
+      onClickCapture={e => { e.preventDefault(); e.stopPropagation(); ouvrir(bloc); }}
+      onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); ouvrir(bloc); } else listeners?.onKeyDown?.(e); }}>
+      {children}
+      {(prive || programme || puces.length > 0) && (
+        <span className="lp-ed-puces" aria-hidden="true">
+          {/* Un picto par état, sans étiquette : le nom complet est dans l'aria-label du bloc. */}
+          {prive && <span className="lp-ed-puce" title={attend ? `Pas montré sans Hopla ${offreDe(attend)}` : 'Masqué'}><Icone nom="masque" taille={13} /></span>}
+          {programme && <span className="lp-ed-puce" title="Programmé"><Icone nom="horloge" taille={13} /></span>}
+          {/* Chaque règle porte le picto de sa ligne dans l'éditeur : on la reconnaît sans l'ouvrir. */}
+          {puces.map(p => <span key={p.icone} className="lp-ed-puce" title={p.nom}><Icone nom={p.icone} taille={13} /></span>)}
+        </span>
+      )}
+    </div>
   );
 }
