@@ -32,6 +32,8 @@ import type { Periode, PlanPayant } from '../lib/abonnement.ts';
 
 // Le résumé de la semaine part le lundi matin (voir resume.ts).
 planifierResumes();
+// Les prix des produits sont relus dans Creem au démarrage, puis toutes les heures (voir creem.ts).
+creem.planifierRelecture();
 
 const enProduction = () => process.env.NODE_ENV === 'production';
 /** Les pages sur hopla.page, le back office sur app.hopla.page ; en dev, tout sur l'adresse de la requête. */
@@ -310,10 +312,13 @@ export const resilierAbonnement = createServerFn({ method: 'POST' })
     return db.abonnement(db.compteParId(context.compte)!);
   });
 
-/** Les offres dans Creem, pour le compte principal : l'état, et la création des produits qui manquent. */
+/** Les offres dans Creem, pour le compte principal : l'état, relu dans Creem quand il répond, et la création des produits qui manquent. */
 export const lireOffresCreem = createServerFn({ method: 'GET' })
   .middleware([proprietaire])
-  .handler(async () => creem.etatOffres(process.env));
+  .handler(async () => creem.relireCatalogue(process.env, fetch).catch((error: Error) => {
+    if (creem.config(process.env)) console.error('[liens] Creem, relecture des produits', error.message);
+    return creem.etatOffres(process.env);
+  }));
 
 export const creerOffresCreem = createServerFn({ method: 'POST' })
   .middleware([proprietaire])

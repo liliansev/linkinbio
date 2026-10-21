@@ -14,7 +14,7 @@ import { MOTS, QUESTION_LINKTREE, appel, questions, useInscription } from './tex
 
 /** Mensuel d'abord : c'est la période choisie à l'arrivée, l'annuel se lit à côté avec ce qu'il fait gagner. */
 const PERIODES: Periode[] = ['mois', 'an'];
-/** Ce que l'annuel fait gagner au mieux, pour l'onglet (27 % sur le Pro). */
+/** Ce que l'annuel fait gagner au mieux, pour l'onglet (27 % sur Starter). */
 const MEILLEURE = Math.max(...PLANS_PAYANTS.filter(p => OFFRES[p].enVente).map(economie));
 
 /** Un avantage ne laisse ni guillemet ni dernier mot seul sur sa ligne (« Brevo ou Mailchimp »). */

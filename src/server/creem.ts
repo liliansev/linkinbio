@@ -24,7 +24,9 @@ import { appliquerAbonnement, compteParAbonnement, compteParClientCreem, compteP
  *   CREEM_PRODUIT_AN       le produit « Pro annuel » d'avant les quatre offres, facultatif
  *   CREEM_TEST=1           pour l'API de test (test-api.creem.io), avec une clé de test
  * Les produits des offres se créent depuis l'onglet Comptes (« Créer les offres dans Creem ») et
- * vivent dans la base (`lireCatalogue`).
+ * vivent dans la base (`lireCatalogue`). Hopla les relit dans Creem au démarrage, toutes les heures
+ * et à l'ouverture de l'onglet Comptes (`relireCatalogue`) : un prix changé dans le tableau de bord
+ * de Creem y est repris, sans rien créer ni changer chez Creem.
  */
 
 export interface ConfigCreem { cle: string; secret: string; api: string; anciens: Partial<Record<Periode, string>> }
@@ -77,7 +79,7 @@ async function appeler(c: ConfigCreem, fetchImpl: typeof fetch, chemin: string, 
   if (!r.ok) {
     console.error('[liens] Creem', chemin, r.status, (await r.text().catch(() => '')).slice(0, 300));
     // Une clé sans le droit demandé : Creem répond 401 ou 403.
-    if (r.status === 401 || r.status === 403) throw new ErreurDroits(chemin, r.status);
+    if (r.status === 401 || r.status === 403) throw new ErreurDroits(chemin, r.status, corps === undefined);
     throw new ErreurCreem(INJOIGNABLE, r.status);
   }
   return (await r.json().catch(() => ({}))) as Record<string, unknown>;
@@ -91,8 +93,8 @@ export class ErreurCreem extends Error {
 }
 
 class ErreurDroits extends ErreurCreem {
-  constructor(chemin: string, status: number) {
-    super(chemin.startsWith('/v1/products') ? 'La clé Creem n’a pas le droit de créer des produits : ajoute-lui « Products » dans Creem, Developers, API keys.'
+  constructor(chemin: string, status: number, lecture: boolean) {
+    super(chemin.startsWith('/v1/products') ? `La clé Creem n’a pas le droit de ${lecture ? 'lire' : 'créer'} des produits : ajoute-lui « Products » dans Creem, Developers, API keys.`
       : chemin.startsWith('/v1/subscriptions') && chemin.endsWith('/cancel') ? 'La résiliation ne passe pas encore par Hopla : fais-la depuis le portail Creem.'
         : chemin.startsWith('/v1/subscriptions') ? 'Le changement d’offre n’est pas encore ouvert. Écris-nous, on s’en occupe.'
           : INJOIGNABLE, status);
@@ -133,60 +135,169 @@ export async function ouvrirPaiement(env: Env, fetchImpl: typeof fetch, compte: 
 
 /* ---- Les produits des offres, dans Creem ---- */
 
-/** Pour l'onglet Comptes : chaque offre et période, avec son produit Creem s'il existe au prix du jour. */
+/**
+ * Pour l'onglet Comptes : chaque offre et période, avec son produit Creem s'il existe au prix du jour, et sinon
+ * le prix que Creem facture pour le produit de l'offre, quand on le connaît.
+ */
 export function etatOffres(env: Env): EtatOffre[] {
   const c = config(env);
   const catalogue = lireCatalogue();
-  return PLANS_PAYANTS.flatMap(plan => PERIODES.map(periode => ({
-    plan, periode, prix: OFFRES[plan].prix[periode], enVente: OFFRES[plan].enVente,
-    produit: c ? produitEnVente(c, plan, periode, catalogue) : null,
-  })));
+  return PLANS_PAYANTS.flatMap(plan => PERIODES.map(periode => {
+    const produit = c ? produitEnVente(c, plan, periode, catalogue) : null;
+    const actuel = catalogue.find(x => x.actuel && x.plan === plan && x.periode === periode);
+    return { plan, periode, prix: OFFRES[plan].prix[periode], enVente: OFFRES[plan].enVente, produit, prixCreem: !produit && actuel ? actuel.prix / 100 : null };
+  }));
 }
 
 const NOMS_PERIODES: Record<Periode, string> = { mois: 'mensuel', an: 'annuel' };
+const PERIODES_CREEM: Record<string, Periode> = { 'every-month': 'mois', 'every-year': 'an' };
+
+/** Un produit tel que Creem le décrit. `vendable` : ni archivé, ni supprimé, ni dans une autre monnaie qu'en euros. */
+interface ProduitLu { id: string; nom: string; prix: number; periode: Periode | null; vendable: boolean }
+
+function produitLu(r: Record<string, unknown>): ProduitLu | null {
+  const id = typeof r.id === 'string' ? r.id : '', prix = Number(r.price);
+  if (!/^prod_/.test(id) || !Number.isInteger(prix) || prix < 0) return null;
+  const monnaie = typeof r.currency === 'string' ? r.currency.toUpperCase() : 'EUR';
+  return {
+    id, nom: typeof r.name === 'string' ? r.name : '', prix,
+    periode: PERIODES_CREEM[String(r.billing_period)] ?? null,
+    vendable: r.status !== 'archived' && r.billing_type !== 'onetime' && monnaie === 'EUR',
+  };
+}
+
+/** Un produit fait à la main dans Creem, nommé comme ceux de Hopla (« Hopla Starter mensuel »). */
+const nommePour = (nom: string, plan: PlanPayant) => /\bhopla\b/i.test(nom) && new RegExp(`\\b${OFFRES[plan].nom}\\b`, 'i').test(nom);
+
+/** Tous les produits de la boutique, page après page. Elle vend aussi des formations : on trie ensuite. */
+async function produitsDeLaBoutique(c: ConfigCreem, fetchImpl: typeof fetch): Promise<ProduitLu[]> {
+  const produits: ProduitLu[] = [];
+  for (let page = 1; page <= 10; page++) {
+    const r = await appeler(c, fetchImpl, `/v1/products/search?page_number=${page}&page_size=50`);
+    const items = Array.isArray(r.items) ? (r.items as Record<string, unknown>[]) : [];
+    produits.push(...items.flatMap(x => produitLu(x) ?? []));
+    const suite = (r.pagination as Record<string, unknown> | undefined)?.next_page;
+    if (!items.length || typeof suite !== 'number' || suite <= page) break;
+  }
+  return produits;
+}
+
+// Relire et créer écrivent tous deux le catalogue : l'un attend que l'autre ait fini.
+let file: Promise<unknown> = Promise.resolve();
+function chacunSonTour<T>(tache: () => Promise<T>): Promise<T> {
+  const r = file.then(tache, tache);
+  file = r.catch(() => undefined);
+  return r;
+}
+
+async function relire(c: ConfigCreem, fetchImpl: typeof fetch): Promise<void> {
+  const avant = lireCatalogue();
+  const anciens = PERIODES.flatMap(periode => { const id = c.anciens[periode]; return id ? [{ id, periode }] : []; });
+  const lus = new Map<string, ProduitLu | null>();
+  await Promise.all([...new Set([...avant.map(x => x.id), ...anciens.map(a => a.id)])].map(async id => {
+    try {
+      lus.set(id, produitLu(await appeler(c, fetchImpl, `/v1/products/${encodeURIComponent(id)}`)));
+    } catch (error) {
+      // Un produit supprimé dans Creem ne se vend plus ; toute autre erreur laisse le catalogue tel qu'il était.
+      if (error instanceof ErreurCreem && error.status === 404) lus.set(id, null);
+      else throw error;
+    }
+  }));
+  // Une entrée vendable : Creem la connaît, en euros, ni archivée, et toujours à la période qu'on lui connaît.
+  const vendable = (x: ProduitCreem) => { const l = lus.get(x.id); return !!l && l.vendable && (!l.periode || l.periode === x.periode); };
+  let catalogue = avant.map(x => {
+    const l = lus.get(x.id);
+    return { ...x, ...(l ? { prix: l.prix } : {}), ...(vendable(x) ? {} : { actuel: false }) };
+  });
+  // L'ancien Pro entre au catalogue, à son prix : ses abonnés gardent le Pro, et il peut redevenir le produit de l'offre.
+  for (const a of anciens) {
+    const l = lus.get(a.id);
+    if (l && !catalogue.some(x => x.id === a.id)) catalogue.push({ id: a.id, plan: 'pro', periode: a.periode, prix: l.prix, actuel: false });
+  }
+  const manquent: { plan: PlanPayant; periode: Periode; prix: number }[] = [];
+  for (const plan of PLANS_PAYANTS.filter(p => OFFRES[p].enVente)) {
+    for (const periode of PERIODES) {
+      const prix = centimes(OFFRES[plan].prix[periode]);
+      const auPrix = (x: ProduitCreem) => x.plan === plan && x.periode === periode && x.prix === prix && vendable(x);
+      if (catalogue.some(x => x.actuel && auPrix(x))) continue;
+      // Un produit déjà connu, remis au prix du jour dans Creem, redevient celui de l'offre (le plus récent d'abord).
+      const repris = catalogue.findLast(auPrix);
+      if (repris) catalogue = catalogue.map(x => (x.plan === plan && x.periode === periode ? { ...x, actuel: x.id === repris.id } : x));
+      else manquent.push({ plan, periode, prix });
+    }
+  }
+  if (manquent.length) {
+    // Faute de mieux, un produit fait à la main dans Creem, au nom, au prix et à la période de l'offre.
+    let boutique: ProduitLu[] = [];
+    try { boutique = await produitsDeLaBoutique(c, fetchImpl); } catch (error) { console.error('[liens] Creem, liste des produits', (error as Error).message); }
+    for (const m of manquent) {
+      const p = boutique.find(x => x.vendable && x.periode === m.periode && x.prix === m.prix && nommePour(x.nom, m.plan) && !catalogue.some(y => y.id === x.id));
+      if (!p) continue;
+      lus.set(p.id, p);
+      catalogue = [...catalogue.map(x => (x.plan === m.plan && x.periode === m.periode ? { ...x, actuel: false } : x)), { id: p.id, plan: m.plan, periode: m.periode, prix: p.prix, actuel: true }];
+    }
+  }
+  if (JSON.stringify(catalogue) !== JSON.stringify(avant)) ecrireCatalogue(catalogue);
+}
 
 /**
- * Crée dans Creem les produits qui manquent, au prix du jour : abonnement, TTC,
- * catégorie SaaS, sans essai. Un ancien Pro au bon prix est repris tel quel.
- * Un produit dont le prix a changé reste connu (ses abonnés gardent leur offre),
- * mais n'est plus vendu. Rejouer ne crée rien deux fois.
+ * Relit dans Creem chaque produit que Hopla connaît (le catalogue, et l'ancien Pro) : un prix changé dans le
+ * tableau de bord de Creem y est repris (Lilian, 21 octobre 2026), et un produit remis au prix du jour redevient
+ * celui de son offre. Un produit fait à la main, nommé comme les nôtres, au bon prix et à la bonne période, est
+ * repris aussi. Rien n'est créé ni changé chez Creem : des lectures seulement. Un produit archivé ne se vend
+ * plus. Si Creem ne répond pas, le catalogue reste tel qu'il était et l'erreur remonte.
+ */
+export async function relireCatalogue(env: Env, fetchImpl: typeof fetch): Promise<EtatOffre[]> {
+  const c = config(env);
+  if (!c) throw new Error('Le paiement n’est pas encore branché.');
+  await chacunSonTour(() => relire(c, fetchImpl));
+  return etatOffres(env);
+}
+
+let relecture: ReturnType<typeof setInterval> | null = null;
+/** Relit les produits dans Creem peu après le démarrage, puis toutes les heures. Sans Creem, rien. */
+export function planifierRelecture(env: Env = process.env) {
+  if (relecture || !config(env)) return;
+  const tour = () => { relireCatalogue(env, fetch).catch(error => console.error('[liens] Creem, relecture des produits', (error as Error).message)); };
+  relecture = setInterval(tour, 3_600_000);
+  relecture.unref?.();
+  setTimeout(tour, 10_000).unref?.();
+}
+
+/**
+ * Crée dans Creem les produits qui manquent, au prix du jour : abonnement, TTC, catégorie SaaS, sans essai.
+ * Avant, Hopla relit ceux qu'il connaît : un produit remis au bon prix dans Creem, ou l'ancien Pro au bon prix,
+ * est repris tel quel, et rien n'est créé en double. Un produit dont le prix a changé reste connu (ses abonnés
+ * gardent leur offre), mais n'est plus vendu. Rejouer ne crée rien deux fois.
  */
 export async function creerOffres(env: Env, fetchImpl: typeof fetch): Promise<EtatOffre[]> {
   const c = config(env);
   if (!c) throw new Error('Le paiement n’est pas encore branché.');
-  let catalogue = lireCatalogue();
-  // Une offre pas encore en vente (Premium) n'a pas de produit : rien ne pourrait la vendre par erreur.
-  for (const plan of PLANS_PAYANTS.filter(p => OFFRES[p].enVente)) {
-    for (const periode of PERIODES) {
-      const prix = centimes(OFFRES[plan].prix[periode]);
-      if (catalogue.some(x => x.actuel && x.plan === plan && x.periode === periode && x.prix === prix)) continue;
-      let id = '';
-      // L'ancien Pro, s'il est au bon prix, devient le produit de l'offre : ses abonnés n'ont rien à faire.
-      const ancien = plan === 'pro' ? c.anciens[periode] : undefined;
-      if (ancien && !catalogue.some(x => x.id === ancien)) {
-        const lu = await appeler(c, fetchImpl, `/v1/products/${encodeURIComponent(ancien)}`);
-        const prixLu = Number(lu.price);
-        catalogue = [...catalogue, { id: ancien, plan, periode, prix: prixLu, actuel: false }];
-        if (prixLu === prix) id = ancien;
-      }
-      if (!id) {
+  await chacunSonTour(async () => {
+    await relire(c, fetchImpl);
+    let catalogue = lireCatalogue();
+    // Une offre pas encore en vente (Premium) n'a pas de produit : rien ne pourrait la vendre par erreur.
+    for (const plan of PLANS_PAYANTS.filter(p => OFFRES[p].enVente)) {
+      for (const periode of PERIODES) {
+        const prix = centimes(OFFRES[plan].prix[periode]);
+        if (catalogue.some(x => x.actuel && x.plan === plan && x.periode === periode && x.prix === prix)) continue;
         const cree = await appeler(c, fetchImpl, '/v1/products', {
           name: `Hopla ${OFFRES[plan].nom} ${NOMS_PERIODES[periode]}`,
           description: OFFRES[plan].phrase,
           price: prix, currency: 'EUR', billing_type: 'recurring', billing_period: periode === 'an' ? 'every-year' : 'every-month',
           tax_mode: 'inclusive', tax_category: 'saas',
         }, { 'Idempotency-Key': `hopla-${plan}-${periode}-${prix}` });
-        id = typeof cree.id === 'string' ? cree.id : '';
+        const id = typeof cree.id === 'string' ? cree.id : '';
         if (!/^prod_/.test(id)) throw new Error(INJOIGNABLE);
+        catalogue = [
+          ...catalogue.filter(x => x.id !== id).map(x => (x.plan === plan && x.periode === periode ? { ...x, actuel: false } : x)),
+          { id, plan, periode, prix, actuel: true } satisfies ProduitCreem,
+        ];
+        // Noté à chaque produit : une erreur au suivant ne perd pas ceux déjà créés.
+        ecrireCatalogue(catalogue);
       }
-      catalogue = [
-        ...catalogue.filter(x => x.id !== id).map(x => (x.plan === plan && x.periode === periode ? { ...x, actuel: false } : x)),
-        { id, plan, periode, prix, actuel: true } satisfies ProduitCreem,
-      ];
-      // Noté à chaque produit : une erreur au suivant ne perd pas ceux déjà créés.
-      ecrireCatalogue(catalogue);
     }
-  }
+  });
   return etatOffres(env);
 }
 
