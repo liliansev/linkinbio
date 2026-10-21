@@ -386,24 +386,41 @@
 }
 @keyframes lp-toast { from { opacity: 0; translate: -50% 8px; } }
 
-/* ---- L'écran qui propose le navigateur ----
- * Dans le navigateur intégré de LinkedIn, d'Instagram…, il passe avant la
- * page (lib/sortie.ts) : l'en-tête de la page et une phrase, puis ses boutons
- * (l'accent pour ouvrir, un trait pour copier) et « Continuer ici ».
- * Centré dans l'écran, il entre une fois, comme la page.
+/* ---- La feuille qui propose le navigateur ----
+ * Dans le navigateur intégré de LinkedIn, d'Instagram…, elle monte par-dessus
+ * la page (lib/sortie.ts), qui reste visible sous un voile : une phrase, ses
+ * boutons (l'accent pour ouvrir, un trait pour copier) et « Continuer ici ».
+ * Elle est faite du fond et des polices du thème ; elle monte une fois et
+ * redescend quand on continue ici.
  */
-.lp-sortie {
-  min-height: 100dvh; display: grid; place-items: center;
-  padding: 40px 20px 32px;
-  position: relative; isolation: isolate;
+.lp-sortie { position: fixed; inset: 0; z-index: 20; display: grid; align-items: end; justify-items: center; }
+.lp-sortie-voile {
+  position: absolute; inset: 0; cursor: default; touch-action: none;
+  background: rgb(0 0 0 / 0.42); -webkit-tap-highlight-color: transparent;
+  animation: lp-voile 0.3s ease-out both;
 }
-.lp-sortie-col { width: 100%; max-width: 400px; display: flex; flex-direction: column; align-items: center; }
-.lp-sortie .lp-tete { margin-bottom: 32px; }
-.lp-sortie .lp-bio { max-width: 30ch; }
+.lp-sortie-feuille {
+  position: relative; width: 100%; max-width: 480px; max-height: 100dvh; overflow-y: auto; overscroll-behavior: contain;
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+  padding: 28px 20px calc(12px + env(safe-area-inset-bottom));
+  border-radius: max(var(--rc), 16px) max(var(--rc), 16px) 0 0;
+  background: var(--fond-uni); color: var(--texte);
+  box-shadow: 0 -1px 0 color-mix(in srgb, var(--texte) 10%, transparent), 0 -24px 48px -24px rgb(0 0 0 / 0.45);
+  animation: lp-feuille 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.lp-sortie-feuille:focus { outline: none; }
+.lp-sortie[data-sort] .lp-sortie-voile { animation: lp-voile 0.22s ease-in reverse both; }
+.lp-sortie[data-sort] .lp-sortie-feuille { animation: lp-feuille-sort 0.22s ease-in both; }
+@keyframes lp-voile { from { opacity: 0; } }
+/* « Lien copié » passe au-dessus de la feuille, en haut : en bas, il cacherait ses boutons. */
+.lp-sortie ~ .lp-toast { z-index: 30; top: calc(16px + env(safe-area-inset-top)); bottom: auto; }
+@keyframes lp-feuille { from { translate: 0 100%; } }
+@keyframes lp-feuille-sort { to { translate: 0 100%; } }
+.lp-sortie-titre { margin: 0; max-width: 28ch; font-size: 1.08rem; line-height: 1.45; font-weight: 560; color: var(--texte); text-wrap: balance; }
 /* La phrase et l'aide occupent la même place, celle de la plus longue : l'aide arrive sans rien pousser. */
-.lp-sortie-mots { display: grid; justify-items: center; }
+.lp-sortie-mots { display: grid; justify-items: center; margin-bottom: 22px; }
 .lp-sortie-mots > p { grid-area: 1 / 1; }
-.lp-sortie-aide { visibility: hidden; color: var(--texte); }
+.lp-sortie-aide { visibility: hidden; font-weight: 500; }
 .lp-sortie-mots[data-aide] > p:first-child { visibility: hidden; }
 .lp-sortie-mots[data-aide] > .lp-sortie-aide { visibility: visible; animation: lp-entree 0.45s cubic-bezier(0.16, 1, 0.3, 1) both; }
 /* Le bouton du menu de l'app, dessiné : trois points couchés sur iPhone, debout sur Android. */
@@ -425,7 +442,7 @@
 .lp[data-bouton] .lp-sortie-gestes .lp-btn:not(.lp-accent):hover { background: color-mix(in srgb, var(--texte) 8%, transparent); }
 .lp-sortie-ici {
   display: inline-flex; align-items: center;
-  margin-top: 10px; min-height: 48px; padding: 0 20px; border-radius: 999px;
+  margin-top: 6px; min-height: 48px; padding: 0 20px; border-radius: 999px;
   font-size: 0.95rem; font-weight: 560; color: var(--texte);
   text-decoration: underline; text-decoration-thickness: 1.5px; text-underline-offset: 4px;
   text-decoration-color: color-mix(in srgb, var(--texte) 35%, transparent);
@@ -434,11 +451,9 @@
 }
 .lp-sortie-ici:hover { text-decoration-color: currentColor; }
 .lp-sortie-ici:focus-visible { outline: 3px solid var(--texte); outline-offset: 2px; }
-/* Les boutons suivent l'en-tête, comme les blocs de la page. */
-.lp-sortie-gestes, .lp-sortie-ici { animation: lp-entree 0.6s cubic-bezier(0.16, 1, 0.3, 1) both; }
-.lp-sortie-gestes { animation-delay: 90ms; }
-.lp-sortie-ici { animation-delay: 150ms; }
-@media (prefers-reduced-motion: reduce) { .lp-sortie-gestes, .lp-sortie-ici, .lp-sortie-mots[data-aide] > .lp-sortie-aide { animation: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .lp-sortie-voile, .lp-sortie-feuille, .lp-sortie-mots[data-aide] > .lp-sortie-aide { animation: none; }
+}
 
 /* Les échantillons du back office : la vraie page, en miniature. */
 .lp.lp-mini { min-height: 0; background-attachment: scroll; }
@@ -454,7 +469,7 @@
  */
 [data-decor] { --decor-encre: color-mix(in srgb, var(--texte) 10%, transparent); }
 [data-decor]::before { content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0; }
-.lp[data-decor] > :not(.lp-toast) { position: relative; z-index: 1; }
+.lp[data-decor] > :not(.lp-toast, .lp-sortie) { position: relative; z-index: 1; }
 .lp-mini[data-decor], .adm-apercu .lp[data-decor] { overflow: hidden; }
 :is(.lp-mini, .lp-pastille, .adm-apercu .lp)[data-decor]::before { position: absolute; }
 .lp-toast { z-index: 10; }

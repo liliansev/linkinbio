@@ -180,7 +180,7 @@ export interface PagePublique {
   compte: ComptePage & { plan: Plan };
   /** L'instant où la page a été composée : le compte à rebours part de là, au serveur comme au navigateur. */
   maintenant?: number;
-  /** Ouverte dans le navigateur intégré d'une app qui laisse sortir : l'écran qui propose Safari ou Chrome passe avant la page. */
+  /** Ouverte dans le navigateur intégré d'une app qui laisse sortir : une feuille propose Safari ou Chrome par-dessus la page. */
   sortie?: Sortie;
 }
 

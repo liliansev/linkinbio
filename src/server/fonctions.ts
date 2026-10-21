@@ -96,7 +96,7 @@ export const lirePagePublique = createServerFn({ method: 'GET' })
     const blocs = composerAudience(composerMoment(permis, maintenant), provenance({ s: data.s, ua, referent: getRequestHeader('referer') ?? '' }));
     const prises = db.placesParBloc(compte.id);
     const proprietaire = { pseudo: compte.pseudo, principal: compte.id === PRINCIPAL };
-    // Dans le navigateur intégré de LinkedIn, d'Instagram…, l'écran qui propose Safari ou Chrome, sauf juste après lui (`suite`).
+    // Dans le navigateur intégré de LinkedIn, d'Instagram…, la feuille qui propose Safari ou Chrome, sauf juste après elle (`suite`).
     const sortie = reglages.ouvrirNavigateur && !suiteRecente(data.suite, maintenant) ? sortieDuNavigateur(lienDeSuite(`${origines().page}${cheminPage(proprietaire)}`, data.s || audienceDeLApp(ua), maintenant), ua) : null;
     return {
       reglages,

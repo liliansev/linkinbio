@@ -22,7 +22,7 @@ pnpm start       # deploy/server.mjs sur dist/ (PORT, LIENS_DB, LIENS_ORIGINE, L
 Sans `RESEND_API_KEY` ni `NODE_ENV=production`, les liens de connexion s'affichent
 dans la console. Le bundle se croit toujours en production : pour un essai de
 `pnpm start` en local, donner `LIENS_ORIGINE` et `LIENS_ORIGINE_ADMIN` à
-`http://localhost:<port>`. L'écran qui propose Safari ou Chrome ne se montre qu'avec une
+`http://localhost:<port>`. La feuille qui propose Safari ou Chrome ne se montre qu'avec une
 origine en https (les deux à `https://hopla.page` en local) et un user agent d'app (LinkedIn,
 Instagram…) ; la démo le montre avec `#sortie=<thème>` ou `#sortie-android=<thème>`.
 
@@ -85,10 +85,11 @@ embarque tout : l'image n'a pas de `node_modules`.
   Un compte neuf, juste après les CGU, passe par `PremiersPas.tsx` (nom et bio, liens,
   réseaux, ambiance, page en ligne), avec sa page en miniature qui se remplit ; une
   seule fois, et seulement tant que la page est vide (`pageNeuve`).
-- `components/PageLiens.tsx` : la page publique. Ouverte dans une app qui laisse sortir, un écran passe
-  d'abord (`EcranSortie`, rendu par le serveur, réglage `ouvrirNavigateur`, actif par défaut) : ouvrir
-  dans Safari ou le navigateur, copier le lien, continuer ici. L'adresse rouverte porte `?suite=<minute>`,
-  valable 15 minutes à l'heure du serveur : pas d'écran, et la visite, déjà comptée dans l'app, ne l'est
+- `components/PageLiens.tsx` : la page publique. Ouverte dans une app qui laisse sortir, une feuille monte
+  par-dessus la page, voilée et `inert` (`FeuilleSortie`, rendue par le serveur, réglage `ouvrirNavigateur`,
+  actif par défaut ; 21 octobre 2026, demandé par Lilian) : ouvrir dans Safari ou le navigateur, copier le
+  lien, continuer ici (le voile et Échap aussi). L'adresse rouverte porte `?suite=<minute>`,
+  valable 15 minutes à l'heure du serveur : pas de feuille, et la visite, déjà comptée dans l'app, ne l'est
   pas deux fois ; copié puis partagé, le lien redevient une visite comme une autre.
 - `accueil/` : l'accueil de hopla.page (`routes/index.tsx`, styles dans `styles/accueil.css` et, pour la
   version « des visages » du 21 octobre 2026, `styles/accueil-profils.css` sous `.hl-humain`), en bleu, vert
@@ -103,7 +104,7 @@ embarque tout : l'image n'a pas de `node_modules`.
   image de partage dans `public/`. `server/referencement.ts` écrit `robots.txt`, `sitemap.xml` et
   `llms.txt` (routes `robots[.]txt.ts`…) ; le back office ne s'indexe pas.
 - `demo/` : aperçu statique avec une API simulée, publié en Artifact ; `#nouveau` y
-  rejoue l'arrivée d'un nouvel inscrit, `#sortie=<thème>` montre l'écran qui propose Safari.
+  rejoue l'arrivée d'un nouvel inscrit, `#sortie=<thème>` montre la feuille qui propose Safari.
 
 ## Règles
 
