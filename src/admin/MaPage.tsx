@@ -54,7 +54,7 @@ interface Toile {
 }
 const ContexteToile = createContext<Toile | null>(null);
 
-export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, choisi, panneau, onReglages, onOrdonner, onOuvrir, onAjouter, liberer, fermerEdition, gestes, envoyerImage, annoncer, demarrage, demarrageOuvert, fermerDemarrage, demandeDesign, designOuvert }: {
+export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, choisi, panneau, onReglages, onOrdonner, onOuvrir, onAjouter, liberer, fermerEdition, gestes, envoyerImage, annoncer, demarrage, demarrageOuvert, fermerDemarrage, demandeDesign, designOuvert, appel }: {
   compte: PagePublique['compte'];
   reglages: Reglages;
   /** Les blocs tels qu'on les voit : celui qu'on règle se redessine à chaque frappe. */
@@ -89,6 +89,8 @@ export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, chois
   /** Ouvre le design sur un tiroir (« Essayer tes couleurs », après l'achat) ; `designOuvert` dit que c'est fait. */
   demandeDesign?: Tiroir | null;
   designOuvert?: () => void;
+  /** Au téléphone, sous la page : l'offre du dessus, en une ligne (voir `AppelOffre`). Au bureau, elle est dans la barre latérale. */
+  appel?: ReactNode;
 }) {
   // Le design ou les réseaux : dans le panneau de droite au bureau, dans une feuille au téléphone.
   const [cote, setCote] = useState<Cote | null>(null);
@@ -354,6 +356,7 @@ export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, chois
             </div>
           </div>
         )}
+        {appel && <div className="adm-appel-sous">{appel}</div>}
       </div>
 
       {/* Le panneau de droite, au bureau : les réglages du bloc choisi, ou le design. Il s'ouvre sans voile, la page reste à portée. */}

@@ -109,8 +109,16 @@ export function OngletComptes({ api, avatar }: { api: ApiComptes; avatar?: strin
       { nom: 'Supprimer…', icone: 'ui-corbeille', danger: true, action: () => setDecision({
         titre: `Supprimer ${c.pseudo}`, label: 'Motif de la suppression (facultatif)', requis: false, bouton: 'Supprimer définitivement', danger: true,
         aide: 'Laisse vide si la personne l’a demandé. Sinon, le motif lui est envoyé par e-mail.',
-        avertissement: 'Sa page, ses liens, ses images et ses statistiques seront effacés. Rien ne se récupère.',
-        valider: m => agir(async () => { await api.supprimer(c.id, m); return { ok: true, message: `${c.pseudo} est supprimé.` }; }),
+        // Un abonnement en cours est résilié d'abord, tout de suite : la phrase le dit à côté de ce qui s'efface.
+        avertissement: c.plan === 'gratuit'
+          ? 'Sa page, ses liens, ses images et ses statistiques seront effacés. Rien ne se récupère.'
+          : `Sa page, ses liens, ses images et ses statistiques seront effacés, et son abonnement ${OFFRES[c.plan].nom} résilié tout de suite chez Creem, sans remboursement automatique. Rien ne se récupère.`,
+        valider: m => agir(async () => {
+          const r = await api.supprimer(c.id, m);
+          // Creem n'a pas confirmé deux fois de suite : le compte est parti, l'abonnement reste à résilier à la main.
+          if (r === 'a-la-main') return { ok: false, message: `${c.pseudo} est supprimé, mais Creem n’a pas confirmé la résiliation : résilie son abonnement à la main, les détails sont dans ta boîte mail.` };
+          return { ok: true, message: r === 'faite' ? `${c.pseudo} est supprimé, son abonnement résilié chez Creem.` : `${c.pseudo} est supprimé.` };
+        }),
       }) },
     ];
   };

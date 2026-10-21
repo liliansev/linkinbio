@@ -13,6 +13,9 @@ test('le retour du paiement se lit dans l’adresse, et la note ne le complète 
   assert.deepEqual(achatDeRetour('?paiement=starter', { ...note, ts: maintenant - 86_400_000 }, maintenant), { plan: 'starter', periode: null });
   // Le bloc d'où l'on venait revient avec l'achat, pour s'en resservir aussitôt.
   assert.deepEqual(achatDeRetour('?paiement=starter', { ...note, pour: 'programmation', bloc: 'n1a2b' }, maintenant), { plan: 'starter', periode: 'an', pour: 'programmation', avant: 'gratuit', bloc: 'n1a2b' });
+  // Un abonné qui change d'offre : la période d'avant revient aussi, pour dire si Creem facture ou rend la différence.
+  assert.deepEqual(achatDeRetour('?paiement=starter', { ...note, avant: 'pro', periodeAvant: 'an' }, maintenant), { plan: 'starter', periode: 'an', pour: 'couleurs', avant: 'pro', periodeAvant: 'an' });
+  assert.deepEqual(achatDeRetour('?paiement=starter', { ...note, periodeAvant: 'jour' }, maintenant), { plan: 'starter', periode: 'an', pour: 'couleurs', avant: 'gratuit' });
   // Une note abîmée garde ce qui se lit.
   assert.deepEqual(achatDeRetour('?paiement=starter', { ...note, periode: 'semaine', pour: 'toString', avant: 'or', bloc: '"><img>' }, maintenant), { plan: 'starter', periode: null });
   assert.deepEqual(achatDeRetour('?paiement=starter', null, maintenant), { plan: 'starter', periode: null });
