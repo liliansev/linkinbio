@@ -9,8 +9,8 @@ import { mouvementReduit, useCompte, useGlisse, useSequence, useVu } from './mou
  * Ce que fait Hopla, en trois sections : 02 les liens qui s'ouvrent dans
  * leur app, 03 la page qui change selon l'heure, avant un lancement et pour les drops (le réseau se
  * voit dans l'ouverture),
- * 05 les stats en phrases, lues comme l'e-mail du lundi (le reste de l'offre
- * gratuite se lit dans les prix). Les téléphones y
+ * 05 les stats en phrases, lues comme l'e-mail du lundi (ce que comprend
+ * chaque offre se lit dans les prix). Les téléphones y
  * sont des croquis gris : on lit le mouvement, pas un thème. Au téléphone,
  * chaque démo part quand son téléphone est à l'écran, ses onglets juste
  * au-dessus et sa légende dessous. Les légendes ne s'annoncent aux lecteurs d'écran

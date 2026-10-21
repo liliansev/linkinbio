@@ -43,16 +43,25 @@ embarque tout : l'image n'a pas de `node_modules`.
   `server/courriel.ts` (Resend), `server/analytique.ts` (stats sans cookie, IP
   jamais stockée), `server/moderation.ts` (DSA), `server/creem.ts` (paiement,
   webhooks signés), `server/apercu.ts` (aperçu de site, anti-SSRF : l'adresse se
-  vérifie au moment de la connexion).
+  vérifie au moment de la connexion), `server/droits.ts` (`droits()` d'un compte,
+  `verifierDates` avant d'enregistrer un bloc, `joursLisibles` pour les stats).
 - `server/limites.ts` : les limites anti-abus en mémoire (`limiteur`, `cleIp` qui
   compte une IPv6 pour son /64) et `destinataireSature`, cinq e-mails par heure et
   dix par jour vers une adresse tapée par un inconnu. `server/turnstile.ts` vérifie
   le jeton Turnstile des formulaires publics, que `lib/turnstile.ts` obtient dans la
   page (`avecJeton`) ; en sommeil sans `TURNSTILE_SITE_KEY` et `TURNSTILE_SECRET`.
 - `lib/` : `types.ts` (origines, `cheminPage`, `urlPage`), `valider.ts`, `themes.ts`, `legal.ts` (`VERSION_CGU`),
-  `abonnement.ts` (les quatre offres Gratuit, Starter, Pro, Premium : prix, `peut()`, `estPaye()`), `droits.ts`
-  (`selonDroits` retire de la page publique ce que l'offre ne comprend pas, sans rien effacer).
-- `admin/` : onglets Ma page, Stats, Comptes (principal seulement), Réglages.
+  `abonnement.ts` (les quatre offres Gratuit, Starter, Pro, Premium : prix, `FONCTIONS`, `peut()`, `joursStats()`, `estPaye()`), `droits.ts`
+  (`selonDroits` retire de la page publique ce que l'offre ne comprend pas, sans rien effacer ; `nouvellesDates`),
+  `mots.ts` (les mots de la page publique, au « tu » ou au « vous »), `stats.ts` (les quatre chiffres de l'onglet Stats, leurs écarts,
+  l'échelle de la courbe), `resume.ts` (« En bref », et le résumé du lundi), `comptes.ts` (statut, dernière connexion et recherche de l'onglet Comptes),
+  `achat.ts` (le retour d'un paiement : la note posée avant Creem, puis « On active », « C'est fait » ou l'attente, d'après l'abonnement relu).
+- `admin/` : onglets Ma page, Stats, Comptes (principal seulement), Réglages. Réglages tient sur une seule page de lignes
+  (`Groupe`, `Ligne`, `LigneLien` dans `ui.tsx`) ; un détail s'y ouvre en sous-page (`SousPage`), avec un fil dans l'en-tête,
+  comme `Facturation.tsx` (l'offre, son échéance, puis le portail client de Creem pour la carte, les factures et la résiliation).
+  Les offres s'ouvrent dans une fenêtre par-dessus l'écran en cours, depuis une fonction réservée (`Reserve`, `voirOffres(fonction)`
+  dans `offre.tsx`), les stats ou Réglages : `Offres.tsx` (`FenetreOffres`, le récapitulatif avant Creem, `RetourPaiement` au retour,
+  dont le geste ramène où servir l'offre ; parti d'une règle de bloc, au bloc, la règle ouverte par `RegleAOuvrir` dans `ReglesBloc.tsx`).
   `MaPage.tsx` édite la page elle-même : `PageLiens` reçoit `edition` (nom et bio
   tapés en place, photo, réseaux et blocs ouverts d'un toucher, blocs déplacés en
   les maintenant), le design s'ouvre dans une feuille `cote` qui laisse voir la page,
@@ -89,5 +98,6 @@ embarque tout : l'image n'a pas de `node_modules`.
 - Un formulaire public qui fait partir un e-mail ou garde une adresse passe par Turnstile (`avecJeton` dans la page, `verifierTurnstile` sur le serveur), et tout e-mail vers une adresse tapée par un inconnu par `destinataireSature`. Une limite par adresse IP passe par `limites.ts`.
 - Chez Cloudflare, ni cookie ni défi : Bot Fight Mode éteint, des règles qui bloquent sans défier (voir `deploy/README.md`, « Cloudflare »).
 - Une offre payante (Starter, Pro, Premium) n'est accordée que par un webhook Creem signé, jamais par le retour du paiement. Les produits Creem se créent depuis l'onglet Comptes (« Créer les offres dans Creem ») : la clé a besoin des droits Products et Subscriptions.
+- Les offres (20 octobre 2026), avec `FONCTIONS` pour seule source : Gratuit garde des liens sans limite, la page selon le réseau du visiteur et les vingt thèmes ; Starter ajoute la page sans mention, les couleurs, la programmation (début, fin, compte à rebours), les avis et 30 jours de stats ; Pro le créneau selon l'heure, les drops, la liste e-mail et un an de stats ; Premium (pas en vente) le nom de domaine et trois pages. Ce que l'offre ne comprend pas s'efface de la page publique (`selonDroits`) sans rien effacer de la base. Les dates d'un bloc tiennent toujours, mais sans Starter le serveur refuse d'en poser de nouvelles (`verifierDates`). Les stats se comptent pour tous ; leur lecture et le résumé du lundi sont réservés. Les pages créées avant `BASCULE_OFFRES` (21 octobre 2026) gardent tout sauf la page sans mention, avec 7 jours de stats. La place pour les images (`quota`) est un garde-fou qu'on n'annonce pas. La page en plusieurs langues a été retirée le 20 octobre 2026 : `valider.ts` laisse de côté les anciennes traductions.
 - Aucun secret dans le dépôt ; ils vivent dans `/opt/linkinbio/secrets/runtime.env`.
 - Ne jamais tuer un serveur local avec un `pkill -f` dont le motif correspond à sa propre commande.

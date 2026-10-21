@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { THEMES_ACCUEIL, etapesDemarrage, nomSite, pageNeuve, pseudoReseau, urlReseau } from './demarrage.ts';
+import { THEMES_ACCUEIL, demarrageUtile, etapesDemarrage, nomSite, pageNeuve, pseudoReseau, urlReseau } from './demarrage.ts';
 import { REGLAGES_DEFAUT, reglagesNouveauCompte } from './defauts.ts';
 import { THEMES } from './themes.ts';
 import { nouveauBloc } from './types.ts';
@@ -25,6 +25,13 @@ test('seuls les liens publics avec une adresse comptent', () => {
   const etape = (blocs: Bloc[]) => etapesDemarrage(r, blocs, false).find(x => x.id === 'lien')!;
   assert.equal(etape([lien('b', ''), lien('c', 'https://c.fr', false)]).faite, false);
   assert.equal(etape([lien('a', 'https://a.fr'), lien('b', '')]).faite, true);
+});
+
+test('« Bien démarrer » ne se montre qu’à une page qui n’a pas commencé', () => {
+  assert.equal(demarrageUtile({ principal: false, dejaVue: false, blocs: 0 }), true);
+  assert.equal(demarrageUtile({ principal: true, dejaVue: false, blocs: 0 }), false, 'jamais au compte principal');
+  assert.equal(demarrageUtile({ principal: false, dejaVue: true, blocs: 0 }), false, 'une page déjà vue a commencé');
+  assert.equal(demarrageUtile({ principal: false, dejaVue: false, blocs: 1 }), false, 'une page avec des blocs a commencé');
 });
 
 test('les premiers pas ne s’ouvrent que sur une page où rien n’est posé', () => {

@@ -489,6 +489,9 @@ export function clicsParBloc(compte: string, jours = 30): Record<string, number>
   return Object.fromEntries(lignes.map(l => [l.bloc, l.n]));
 }
 
+/** Quelqu'un a-t-il déjà vu la page (sur toute la durée de conservation) ? Une page vue a commencé : « Bien démarrer » se tait. */
+export const pageDejaVue = (compte: string) => !!base().prepare("SELECT 1 FROM evenements WHERE compte = ? AND type = 'vue' LIMIT 1").get(compte);
+
 export function stats(compte: string, jours: number, maintenant = Date.now()): Stats {
   const d = base();
   const jourListe: string[] = [];
@@ -500,7 +503,8 @@ export function stats(compte: string, jours: number, maintenant = Date.now()): S
     FROM evenements WHERE compte = ? AND jour BETWEEN ? AND ?`).get(compte, de, a) as { vues: number | null; clics: number | null; visiteurs: number };
   const actuel = totaux(debut, fin);
   const avant = totaux(debutPrecedent, jourListe.length > 1 ? jourDe(maintenant - jours * 86_400_000) : debutPrecedent);
-  const parJour = new Map((d.prepare(`SELECT jour, SUM(type = 'vue') AS vues, SUM(type = 'clic') AS clics FROM evenements WHERE compte = ? AND jour BETWEEN ? AND ? GROUP BY jour`).all(compte, debut, fin) as { jour: string; vues: number; clics: number }[]).map(l => [l.jour, l]));
+  const parJour = new Map((d.prepare(`SELECT jour, SUM(type = 'vue') AS vues, SUM(type = 'clic') AS clics, COUNT(DISTINCT CASE WHEN type = 'vue' THEN visiteur END) AS visiteurs
+    FROM evenements WHERE compte = ? AND jour BETWEEN ? AND ? GROUP BY jour`).all(compte, debut, fin) as { jour: string; vues: number; clics: number; visiteurs: number }[]).map(l => [l.jour, l]));
   const titres = new Map(lireBlocs(compte).map(b => [b.id, b.titre || b.url]));
   const finPrecedent = jourListe.length > 1 ? jourDe(maintenant - jours * 86_400_000) : debutPrecedent;
   // La période d'avant, pour dire ce qui monte : « ton lien YouTube a fait +40 % ».
@@ -519,13 +523,13 @@ export function stats(compte: string, jours: number, maintenant = Date.now()): S
     if (appDe(urls.get(l.bloc) ?? '')) apps.versApp += l.n;
   }
   // Une page que personne n'a jamais vue n'a pas de courbe à montrer : sans vue sur les deux périodes, on regarde plus loin.
-  const dejaVue = !!(actuel.vues || avant.vues) || !!d.prepare("SELECT 1 FROM evenements WHERE compte = ? AND type = 'vue' LIMIT 1").get(compte);
+  const dejaVue = !!(actuel.vues || avant.vues) || pageDejaVue(compte);
   const groupe = (colonne: 'source' | 'appareil') => (d.prepare(`SELECT ${colonne} AS nom, COUNT(*) AS n FROM evenements WHERE compte = ? AND type = 'vue' AND jour BETWEEN ? AND ? GROUP BY ${colonne} ORDER BY n DESC LIMIT 8`).all(compte, debut, fin) as { nom: string; n: number }[])
     .map(l => ({ nom: l.nom, vues: l.n, avant: colonne === 'source' ? vuesAvant.get(l.nom) ?? 0 : 0 }));
   return {
     jours,
     vues: actuel.vues ?? 0, visiteurs: actuel.visiteurs ?? 0, clics: actuel.clics ?? 0,
-    serie: jourListe.map(jour => ({ jour, vues: parJour.get(jour)?.vues ?? 0, clics: parJour.get(jour)?.clics ?? 0 })),
+    serie: jourListe.map(jour => ({ jour, vues: parJour.get(jour)?.vues ?? 0, visiteurs: parJour.get(jour)?.visiteurs ?? 0, clics: parJour.get(jour)?.clics ?? 0 })),
     blocs, sources: groupe('source'), appareils: groupe('appareil'), apps,
     precedent: { vues: avant.vues ?? 0, visiteurs: avant.visiteurs ?? 0, clics: avant.clics ?? 0 },
     dejaVue,

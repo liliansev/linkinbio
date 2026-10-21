@@ -32,8 +32,6 @@ export const REGLAGES_DEFAUT: Reglages = {
   partage: true,
   ouvrirApps: true,
   resumeHebdo: true,
-  langues: [],
-  bioTraduite: {},
   vouvoiement: false,
   animation: 'orbite',
   bureau: 'onepage',

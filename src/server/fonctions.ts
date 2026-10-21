@@ -7,7 +7,6 @@ import { planifierResumes } from './resume.ts';
 import { VERSION_CGU } from '../lib/legal.ts';
 import { ORIGINE_ADMIN, ORIGINE_PUBLIQUE, PRINCIPAL, TYPES_PRINCIPAL } from '../lib/types.ts';
 import { masquerAcces } from '../lib/acces.ts';
-import { langueDuVisiteur, traduirePage } from '../lib/langues.ts';
 import { composerMoment } from '../lib/moments.ts';
 import { composerAudience, provenance } from '../lib/provenance.ts';
 import { adresse, email, pseudo, validerBloc, validerReglages } from '../lib/valider.ts';
@@ -19,9 +18,9 @@ import { COOKIE_SESSION, DUREE_SESSION, adresseAdmin, compteDeSession, demanderC
 import { changerStatutMotive, signaler, supprimerMotive, traiter } from './moderation.ts';
 import { corrigerAdresse as corriger, creerHopla, inscriptionLibre, inviterReservation, renommerPage as renommer, renvoyerInscription, reserverNom as reserver, verifierNom as verifier } from './attente.ts';
 import * as creem from './creem.ts';
-import { droits } from './droits.ts';
+import { droits, joursLisibles, verifierDates } from './droits.ts';
 import { selonDroits } from '../lib/droits.ts';
-import { OFFRES, estPlanPayant } from '../lib/abonnement.ts';
+import { estPlanPayant } from '../lib/abonnement.ts';
 import type { Periode, PlanPayant } from '../lib/abonnement.ts';
 
 /*
@@ -90,9 +89,9 @@ function reglagesPourCompte(compte: string, r: Reglages): Reglages {
 /** La page de Lilian sans pseudo, celle d'un autre compte avec. Null si elle n'existe pas ou est suspendue. */
 export const lirePagePublique = createServerFn({ method: 'GET' })
   .validator((data: unknown) => {
-    const o = (typeof data === 'string' ? { pseudo: data } : data ?? {}) as { pseudo?: unknown; s?: unknown; lang?: unknown };
+    const o = (typeof data === 'string' ? { pseudo: data } : data ?? {}) as { pseudo?: unknown; s?: unknown };
     const court = (v: unknown, n: number) => (typeof v === 'string' ? v.slice(0, n) : '');
-    return { pseudo: court(o.pseudo, 40).toLowerCase(), s: court(o.s, 40), lang: court(o.lang, 5) };
+    return { pseudo: court(o.pseudo, 40).toLowerCase(), s: court(o.s, 40) };
   })
   .handler(async ({ data }): Promise<PagePublique | null> => {
     const compte = data.pseudo ? db.compteParPseudo(data.pseudo) : db.compteParId(PRINCIPAL);
@@ -103,22 +102,23 @@ export const lirePagePublique = createServerFn({ method: 'GET' })
     // Le référent d'une page qui se recharge elle-même (hopla.page) ne dit rien de la provenance.
     const blocs = composerAudience(composerMoment(permis, maintenant), provenance({ s: data.s, ua: getRequestHeader('user-agent') ?? '', referent: getRequestHeader('referer') ?? '' }));
     const prises = db.placesParBloc(compte.id);
-    const page: PagePublique = {
+    return {
       reglages,
       blocs: masquerAcces(blocs, id => prises[id] ?? 0),
       compte: { pseudo: compte.pseudo, principal: compte.id === PRINCIPAL, plan: db.abonnement(compte, maintenant).plan },
       maintenant,
     };
-    return traduirePage(page, langueDuVisiteur(getRequestHeader('accept-language') ?? '', reglages.langues, data.lang));
   });
 
 function etat(compte: string): EtatAdmin {
   const c = db.compteParId(compte)!;
   const abonnement = db.abonnement(c);
+  const d = droits(c);
   return {
-    reglages: db.lireReglages(compte), blocs: db.lireBlocs(compte), clics: db.clicsParBloc(compte, 30), places: db.placesParBloc(compte), stockageEphemere: db.stockageEphemere(),
+    // Les clics de chaque bloc sont des stats : sans elles, l'éditeur n'en montre pas.
+    reglages: db.lireReglages(compte), blocs: db.lireBlocs(compte), clics: d.stats ? db.clicsParBloc(compte, 30) : {}, places: db.placesParBloc(compte), stockageEphemere: db.stockageEphemere(), dejaVue: db.pageDejaVue(compte),
     compte: { pseudo: c.pseudo, principal: compte === PRINCIPAL, email: c.email, plan: abonnement.plan }, cguAJour: cguAJour(compte),
-    abonnement, paiement: compte !== PRINCIPAL && !!creem.config(process.env), enVente: creem.offresEnVente(process.env), droits: droits(c),
+    abonnement, paiement: compte !== PRINCIPAL && !!creem.config(process.env), enVente: creem.offresEnVente(process.env), droits: d,
   };
 }
 
@@ -186,6 +186,8 @@ export const enregistrerBloc = createServerFn({ method: 'POST' })
   })
   .handler(async ({ data, context }): Promise<Bloc> => {
     if (context.compte !== PRINCIPAL && TYPES_PRINCIPAL.includes(data.type)) throw new Error('Ce type de bloc n’est pas encore disponible.');
+    // La page publique tient toujours les dates d'un bloc : sans Starter, on peut les retirer, pas en poser de nouvelles.
+    verifierDates(db.compteParId(context.compte)!, data);
     db.enregistrerBloc(context.compte, data);
     return data;
   });
@@ -238,10 +240,10 @@ export const apercuSite = createServerFn({ method: 'POST' })
 export const lireStats = createServerFn({ method: 'GET' })
   .middleware([session])
   .validator((data: unknown) => ([7, 30, 90, 365].includes(Number(data)) ? Number(data) : 30))
-  // L'historique visible suit l'offre : 7 jours en Gratuit, 30 en Starter, un an en Pro (tout est gardé : changer d'offre le rend visible).
-  // Tant que le paiement n'est pas branché, il n'y a pas d'offre à proposer : rien n'est limité.
+  // L'historique visible suit l'offre (`joursLisibles`) : tout est gardé, changer d'offre le rend visible. Sans historique, rien ne se lit.
   .handler(async ({ data, context }): Promise<Stats> => {
-    const plafond = creem.config(process.env) ? OFFRES[db.planDuCompte(context.compte)].jours : 365;
+    const plafond = joursLisibles(db.compteParId(context.compte)!);
+    if (!plafond) throw new Error('Tes stats demandent Hopla Starter.');
     return db.stats(context.compte, Math.min(data, plafond));
   });
 

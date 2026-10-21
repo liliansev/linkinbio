@@ -1,168 +1,446 @@
-import { useState } from 'react';
-import type { Abonnement as EtatAbonnement, Periode, Plan, PlanPayant } from '../lib/abonnement.ts';
-import { OFFRES, PLANS, estResilie, euros, libellePrix, parMoisAnnuel } from '../lib/abonnement.ts';
+import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import type { KeyboardEvent, ReactNode } from 'react';
+import type { Abonnement as EtatAbonnement, Fonction, Periode, Plan, PlanPayant } from '../lib/abonnement.ts';
+import { FONCTIONS, FONCTIONS_EN_MOTS, OFFRES, PLANS, avantagesEntre, echeance, economieAnnuelle, estResilie, euros, moisOfferts, rang } from '../lib/abonnement.ts';
+import type { Achat, EtapeRetour, NoteAchat } from '../lib/achat.ts';
+import { CLE_ACHAT } from '../lib/achat.ts';
+import type { PagePublique } from '../lib/types.ts';
+import { CONTACT_LEGAL } from '../lib/legal.ts';
+import { PageLiens } from '../components/PageLiens.tsx';
 import { Icone } from '../components/Icone.tsx';
-import { Carte, classeBadge, classeBouton, flechesRadio, vibrer } from './ui.tsx';
+import { Feuille, classeBouton, flechesRadio, useGrandEcran, vibrer } from './ui.tsx';
 
 /*
- * Réglages, Abonnement : les quatre offres côte à côte, à la façon de
- * Linktree (Lilian, 20 octobre 2026). Un onglet Annuel ou Mensuel, une carte
- * par offre (son prix, sa phrase, ses avantages repliés), et un seul bouton
- * qui suit le choix. Un abonné voit d'abord son abonnement, puis peut en
- * changer : Creem facture la différence au prorata.
+ * Le parcours d'achat (direction B, 20 octobre 2026). D'une fonction réservée,
+ * des stats ou de Réglages, les offres s'ouvrent dans une fenêtre par-dessus
+ * l'écran en cours : les quatre côte à côte au bureau, une à la fois sous des
+ * onglets au téléphone, Mensuel ou Annuel, et celle qui débloque la fonction
+ * demandée mise en avant. Choisir mène au récapitulatif (ce qu'on paie
+ * aujourd'hui, la prochaine échéance, ce qu'on débloque, et au bureau la page
+ * telle qu'elle sera), puis chez Creem. Au retour, `RetourPaiement` dit où en
+ * est l'offre : elle n'arrive qu'avec le webhook signé, jamais par l'adresse.
  */
 
-const date = (ms: number) => new Date(ms).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
-const lien = 'text-white/60 underline decoration-white/25 underline-offset-2 hover:text-white';
+const dateLongue = (ms: number) => new Date(ms).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+const dateCourte = (ms: number) => new Date(ms).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+const par = (p: Periode) => (p === 'an' ? 'par an' : 'par mois');
+const reduit = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-export function Abonnement({ abonnement, enVente, ouvrirPaiement, ouvrirPortail }: {
-  abonnement: EtatAbonnement; enVente: PlanPayant[];
-  ouvrirPaiement: (plan: PlanPayant, periode: Periode) => Promise<string>; ouvrirPortail: () => Promise<string>;
-}) {
+/** Ce que la carte d'une offre propose : un bouton, ou un simple état (l'offre en cours, bientôt). */
+type Geste = { bouton: true; texte: string; plan: PlanPayant } | { bouton: false; texte: string };
+
+interface ProprietesOffres {
+  onFermer: () => void;
+  abonnement: EtatAbonnement;
+  /** Les offres qu'on peut acheter maintenant (un produit Creem pour chaque période). */
+  enVente: PlanPayant[];
+  /** La fonction réservée d'où l'on vient : son offre est mise en avant, sa ligne en gras. */
+  pour?: Fonction;
+  /** Sans fonction, l'offre à mettre en avant quand on la connaît (un an de stats : Pro). */
+  vers?: PlanPayant;
+  /** Le bloc d'où l'on vient (une règle réservée) : noté pour y revenir au retour de Creem. */
+  bloc?: string;
+  ouvrirPaiement: (plan: PlanPayant, periode: Periode) => Promise<string>;
+  /** Avant de partir chez Creem : ce qui attend d'être écrit (un bloc ouvert, le design) part d'abord. */
+  avantDePartir?: () => Promise<void>;
+  /** La page telle qu'elle sera avec une offre, montrée au bureau dans le récapitulatif. */
+  apercu?: (plan: PlanPayant) => PagePublique;
+}
+
+export function FenetreOffres({ onFermer, abonnement, enVente, pour, vers, bloc, ouvrirPaiement, avantDePartir, apercu }: ProprietesOffres) {
+  const grand = useGrandEcran();
   const actuelle = abonnement.plan;
   const paye = actuelle !== 'gratuit';
   const resilie = paye && estResilie(abonnement.statut);
   const [periode, setPeriode] = useState<Periode>(abonnement.periode ?? 'an');
   const [choix, setChoix] = useState<PlanPayant | null>(null);
-  const [ouverts, setOuverts] = useState<Plan[]>([]);
   const [envoi, setEnvoi] = useState(false);
   const [erreur, setErreur] = useState('');
+  const idTitre = useId();
 
-  /** Une offre se prend si elle est en vente, et si ce n'est pas déjà la sienne sur cette période. */
-  const prenable = (p: Plan): p is PlanPayant => p !== 'gratuit' && enVente.includes(p) && !resilie
-    && !(p === actuelle && (abonnement.periode === null || abonnement.periode === periode));
-  const pris = choix && prenable(choix) ? choix : null;
+  const vendable = (p: Plan): p is PlanPayant => p !== 'gratuit' && OFFRES[p].enVente && enVente.includes(p);
+  const cible: Plan | null = pour ? FONCTIONS[pour] : vers ?? null;
+  // Sans fonction demandée, l'offre juste au-dessus de la sienne passe devant.
+  const miseEnAvant: Plan | null = cible ?? (resilie ? null : PLANS.find(p => rang(p) > rang(actuelle) && vendable(p)) ?? null);
+  const mois = Math.min(...PLANS.filter(vendable).map(p => moisOfferts(p)), 12);
 
-  async function aller(ouvrir: () => Promise<string>) {
+  function geste(p: Plan): Geste {
+    if (p === 'gratuit') return { bouton: false, texte: paye ? 'Comprise dans ton offre' : 'Ton offre actuelle' };
+    if (!vendable(p)) return { bouton: false, texte: 'Bientôt disponible' };
+    if (p === actuelle && (!abonnement.periode || abonnement.periode === periode)) return { bouton: false, texte: 'Ton offre actuelle' };
+    // Une offre résiliée court jusqu'à sa fin : on en reprend une ensuite.
+    if (resilie) return { bouton: false, texte: abonnement.finPeriode ? `Après le ${dateCourte(abonnement.finPeriode)}` : 'Après ta résiliation' };
+    if (p === actuelle) return { bouton: true, texte: periode === 'an' ? 'Passer à l’annuel' : 'Passer au mensuel', plan: p };
+    return { bouton: true, texte: `Passer en ${OFFRES[p].nom}`, plan: p };
+  }
+  const badge = (p: Plan): { texte: string; fort?: boolean } | null =>
+    p === actuelle ? { texte: 'Ton offre' }
+      : pour && p === FONCTIONS[pour] ? { texte: FONCTIONS_EN_MOTS[pour].pour, fort: true }
+        : p !== 'gratuit' && !OFFRES[p].enVente ? { texte: 'Bientôt' } : null;
+  const note = resilie && abonnement.finPeriode
+    ? `Ton offre ${OFFRES[actuelle].nom} s’arrête le ${dateLongue(abonnement.finPeriode)} : tu pourras en prendre une autre ensuite.`
+    : 'Prix TTC. Paiement sécurisé chez Creem, résiliable à tout moment.';
+
+  // Revenir aux offres rend le focus au bouton de l'offre choisie ; entrer dans le récapitulatif le pose sur son titre.
+  const dernierChoix = useRef<PlanPayant | null>(null);
+  useEffect(() => {
+    if (choix) { dernierChoix.current = choix; document.getElementById(`${idTitre}-recap`)?.focus({ preventScroll: true }); return; }
+    if (dernierChoix.current) document.getElementById(`${idTitre}-${dernierChoix.current}-geste`)?.focus({ preventScroll: true });
+  }, [choix, idTitre]);
+
+  function choisir(p: PlanPayant) { vibrer(6); setErreur(''); setChoix(p); }
+
+  async function payer() {
+    if (!choix) return;
     setEnvoi(true);
     setErreur('');
-    try { location.href = await ouvrir(); return; }
-    catch (error) { setErreur((error as Error).message || 'Le paiement ne répond pas. Réessaie dans un instant.'); }
+    try {
+      await avantDePartir?.();
+      const url = await ouvrirPaiement(choix, periode);
+      // De quoi dire au retour ce qui vient de s'ouvrir. Rien n'est accordé d'après cette note.
+      const n: NoteAchat = { plan: choix, periode, ...(pour ? { pour } : {}), avant: actuelle, ...(bloc ? { bloc } : {}), ts: Date.now() };
+      try { sessionStorage.setItem(CLE_ACHAT, JSON.stringify(n)); } catch { /* onglet privé : le retour dira seulement l'offre */ }
+      location.href = url;
+      return;
+    } catch (error) { setErreur((error as Error).message || 'Le paiement ne répond pas. Réessaie dans un instant.'); }
     setEnvoi(false);
   }
 
-  const libelle = !pris ? 'Choisis ton offre'
-    : envoi ? (paye ? 'Changement d’offre…' : 'Ouverture du paiement…')
-    : pris === actuelle ? `Passer à l’${periode === 'an' ? 'annuel' : 'mensuel'}, ${libellePrix(pris, periode)}`
-    : `Passer en ${OFFRES[pris].nom}, ${libellePrix(pris, periode)}`;
-
   return (
-    <div id="abonnement" className="scroll-mt-24 flex flex-col gap-5">
-      {paye && <TonAbonnement abonnement={abonnement} envoi={envoi} gerer={() => aller(ouvrirPortail)} />}
-      {!paye && ['canceled', 'expired', 'unpaid', 'paused'].includes(abonnement.statut) && (
-        <p className="text-[13.5px] leading-snug text-white/60">Ton abonnement est terminé. Ta page est en Gratuit, avec tout son contenu.</p>
+    <Feuille ouverte large nue titre={choix ? `Passer en ${OFFRES[choix].nom}` : 'Les offres'} onFermer={onFermer}>
+      {fermer => choix ? (
+        <Recapitulatif plan={choix} periode={periode} setPeriode={setPeriode} abonnement={abonnement} grand={grand} id={idTitre} mois={moisOfferts(choix)}
+          retour={() => setChoix(null)} fermer={() => fermer()} payer={payer} envoi={envoi} erreur={erreur} apercu={apercu} />
+      ) : (
+        <div className="adm-offres" aria-labelledby={idTitre}>
+          <header className="adm-offres-tete">
+            <h2 id={idTitre} className="adm-offres-titre">Les offres</h2>
+            {grand && <span className="flex-1" />}
+            {grand && mois > 0 && <span className="adm-offres-badge">{mois} mois offerts</span>}
+            {grand && <Periodes periode={periode} onChange={setPeriode} />}
+            <button type="button" onClick={() => fermer()} className={`${classeBouton.icone} ml-auto lg:ml-1.5`} aria-label="Fermer"><Icone nom="ui-fermer" taille={18} /></button>
+          </header>
+          {grand ? (
+            <div className="adm-offres-corps">
+              <div className="adm-offres-grille">
+                {PLANS.map(p => (
+                  <CarteOffre key={p} id={`${idTitre}-${p}`} plan={p} periode={periode} badge={badge(p)} mis={p === miseEnAvant} pour={pour}
+                    geste={geste(p)} onChoisir={choisir} />
+                ))}
+              </div>
+              <p className="adm-offres-note">{note}</p>
+            </div>
+          ) : (
+            <OffresMobile id={idTitre} periode={periode} setPeriode={setPeriode} mois={mois} depart={miseEnAvant ?? actuelle}
+              carte={(p, mis) => <CarteOffre id={`${idTitre}-${p}`} plan={p} periode={periode} badge={badge(p)} mis={mis} pour={pour} panneau />}
+              miseEnAvant={miseEnAvant} geste={geste} onChoisir={choisir} note={resilie ? note : 'Prix TTC, paiement chez Creem.'} />
+          )}
+        </div>
       )}
+    </Feuille>
+  );
+}
 
-      {!resilie && (
-        <section aria-labelledby="offres-titre" className="flex flex-col gap-4">
-          <h3 id="offres-titre" className={paye ? 'text-[15px] font-semibold' : 'sr-only'}>{paye ? 'Changer d’offre' : 'Les offres'}</h3>
-          {/* Deux onglets soulignés, comme sur Linktree : l'annuel d'abord, il revient moins cher. */}
-          <div role="radiogroup" aria-label="Paiement" onKeyDown={e => flechesRadio(e)} className="adm-offres-onglets">
-            {(['an', 'mois'] as Periode[]).map(p => (
-              <button key={p} type="button" role="radio" aria-checked={periode === p} tabIndex={periode === p ? 0 : -1}
-                onClick={() => { vibrer(4); setPeriode(p); }}>{p === 'an' ? 'Annuel' : 'Mensuel'}</button>
-            ))}
-          </div>
-
-          <div role="radiogroup" aria-label="Offre" onKeyDown={e => flechesRadio(e)} className="flex flex-col gap-3">
-            {PLANS.map(p => (
-              <CarteOffre key={p} plan={p} periode={periode} actuelle={p === actuelle} pris={pris === p} prenable={prenable(p)}
-                enVente={p === 'gratuit' || enVente.includes(p)} premier={!pris && PLANS.find(prenable) === p}
-                ouvert={ouverts.includes(p)} basculer={() => setOuverts(o => (o.includes(p) ? o.filter(x => x !== p) : [...o, p]))}
-                choisir={() => { if (prenable(p)) { vibrer(6); setChoix(p); } }} />
-            ))}
-          </div>
-
-          <div className="adm-offres-pied">
-            <button type="button" disabled={!pris || envoi} onClick={() => pris && aller(() => ouvrirPaiement(pris, periode))} className={`${classeBouton.principal} w-full`}>
-              {libelle}
-            </button>
-            {erreur && <p role="alert" className="mt-2 text-[13.5px] text-red-300">{erreur}</p>}
-          </div>
-
-          <p className="text-[12.5px] leading-snug text-white/55">
-            Prix TTC. Paiement sécurisé par Creem, revendeur officiel de l’abonnement : il encaisse, envoie la facture et gère la TVA.{' '}
-            {paye ? 'Un changement d’offre compte tout de suite : Creem facture ou rembourse la différence au prorata.' : 'Résiliable à tout moment, effet à la fin de la période payée.'}{' '}
-            {abonnement.portail && <button type="button" onClick={() => aller(ouvrirPortail)} className={lien}>Mes factures</button>}
-          </p>
-        </section>
-      )}
+/** Mensuel ou Annuel : un seul arrêt de tabulation, les flèches passent de l'un à l'autre. */
+function Periodes({ periode, onChange, mois = 0 }: { periode: Periode; onChange: (p: Periode) => void; mois?: number }) {
+  return (
+    <div role="radiogroup" aria-label="Paiement" onKeyDown={e => flechesRadio(e)} className="adm-offres-periodes">
+      {(['mois', 'an'] as Periode[]).map(p => (
+        <button key={p} type="button" role="radio" aria-checked={periode === p} tabIndex={periode === p ? 0 : -1} onClick={() => { vibrer(4); onChange(p); }}>
+          {p === 'an' ? 'Annuel' : 'Mensuel'}
+          {p === 'an' && mois > 0 && <span className="adm-offres-badge">{mois} mois offerts</span>}
+        </button>
+      ))}
     </div>
   );
 }
 
-/** L'abonnement en cours : son état, le portail Creem, la résiliation nommée comme telle. */
-function TonAbonnement({ abonnement, envoi, gerer }: { abonnement: EtatAbonnement; envoi: boolean; gerer: () => void }) {
-  const nom = OFFRES[abonnement.plan].nom;
-  const fin = abonnement.finPeriode ? date(abonnement.finPeriode) : '';
-  const etat = estResilie(abonnement.statut)
-    ? { texte: fin ? `Résilié. Ton offre ${nom} reste active jusqu’au ${fin}, puis ta page repasse en Gratuit, avec tout son contenu.` : `Résilié. Ton offre ${nom} reste active jusqu’à la fin de la période payée.`, alerte: false }
-    : abonnement.statut === 'past_due'
-      ? { texte: `Le dernier paiement n’est pas passé. Mets à jour ta carte pour garder ton offre ${nom}.`, alerte: true }
-      : { texte: fin ? `${abonnement.periode === 'an' ? 'Annuel' : abonnement.periode === 'mois' ? 'Mensuel' : 'Actif'}, se renouvelle le ${fin}.` : 'Ton abonnement est actif.', alerte: false };
+/** Le prix d'une offre : à l'année, le prix de douze mois en gris lisible, et l'économie réelle en euros. */
+function Tarif({ plan, periode }: { plan: Plan; periode: Periode }) {
+  if (plan === 'gratuit') return (
+    <div className="adm-offre-tarif">
+      <p><span className="adm-offre-prix">{euros(0)}</span></p>
+      <p className="adm-offre-sous">pour toujours</p>
+    </div>
+  );
+  const o = OFFRES[plan];
   return (
-    <Carte titre="Ton abonnement" action={<span className={classeBadge}>{nom}</span>}>
-      <p className={`text-[14px] leading-snug ${etat.alerte ? 'text-amber-200' : 'text-white/75'}`}>{etat.texte}</p>
-      {abonnement.portail && (
-        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
-          <button type="button" disabled={envoi} onClick={gerer} className={classeBouton.secondaire}>
-            Gérer mon abonnement <Icone nom="ui-ouvrir" taille={15} />
-          </button>
-          {/* La loi demande une résiliation nommée comme telle, accessible sans détour. */}
-          {!estResilie(abonnement.statut) && <button type="button" disabled={envoi} onClick={gerer} className={`min-h-11 text-[13px] ${lien}`}>Résilier mon abonnement</button>}
-        </div>
-      )}
-    </Carte>
+    <div className="adm-offre-tarif">
+      <p><span className="adm-offre-prix">{euros(o.prix[periode])}</span><span className="adm-offre-unite">{par(periode)}</span></p>
+      {periode === 'an' ? (
+        <>
+          <p className="adm-offre-sous">au lieu de {euros(o.prix.mois * 12)}</p>
+          <p className="adm-offre-gain">{euros(economieAnnuelle(plan))} d’économie</p>
+        </>
+      ) : <p className="adm-offre-sous">ou {euros(o.prix.an)} par an</p>}
+    </div>
   );
 }
 
-function CarteOffre({ plan, periode, actuelle, pris, prenable, enVente, premier, ouvert, basculer, choisir }: {
-  plan: Plan; periode: Periode; actuelle: boolean; pris: boolean; prenable: boolean; enVente: boolean; premier: boolean;
-  ouvert: boolean; basculer: () => void; choisir: () => void;
+function CarteOffre({ id, plan, periode, badge, mis, pour, geste, onChoisir, panneau = false }: {
+  id: string; plan: Plan; periode: Periode; badge: { texte: string; fort?: boolean } | null; mis: boolean; pour?: Fonction;
+  geste?: Geste; onChoisir?: (p: PlanPayant) => void; panneau?: boolean;
 }) {
   const o = OFFRES[plan];
-  const avant = plan === 'gratuit' ? null : OFFRES[PLANS[PLANS.indexOf(plan) - 1]].nom;
-  const badge = actuelle ? 'Offre actuelle' : !enVente ? 'Bientôt' : plan === 'pro' ? 'Recommandé' : null;
-  const tete = (
-    <>
-      <span className="flex min-h-6 items-center gap-2">
-        <span className="text-[17px] font-semibold tracking-[-0.02em] text-white">{o.nom}</span>
-        <span className="ml-auto flex items-center gap-2.5">
-          {badge && <span className={badge === 'Recommandé' ? 'adm-offre-reco' : classeBadge}>{badge}</span>}
-          {prenable && <span className="adm-offre-radio" aria-hidden="true">{pris && <Icone nom="ui-ok" taille={14} />}</span>}
-        </span>
-      </span>
-      {plan !== 'gratuit' && (
-        periode === 'an' ? (
-          <>
-            <span className="mt-2 flex items-baseline gap-1.5"><span className="text-[26px] font-semibold leading-none tracking-[-0.03em] text-white tabular-nums">{euros(parMoisAnnuel(plan))}</span><span className="text-[14px] text-white/60">par mois</span></span>
-            <span className="mt-1.5 text-[13.5px] text-white/60 tabular-nums">{euros(o.prix.an)} par an <s className="text-white/40">{euros(o.prix.mois * 12)}</s></span>
-          </>
-        ) : (
-          <span className="mt-2 flex items-baseline gap-1.5"><span className="text-[26px] font-semibold leading-none tracking-[-0.03em] text-white tabular-nums">{euros(o.prix.mois)}</span><span className="text-[14px] text-white/60">par mois</span></span>
-        )
-      )}
-      <span className="mt-2 text-[14px] leading-snug text-white/65">{o.phrase}</span>
-    </>
-  );
+  const fort = pour ? FONCTIONS_EN_MOTS[pour].avantage : '';
   return (
-    <div className="adm-offre" data-pris={pris || undefined} data-actuelle={actuelle || undefined}>
-      {prenable
-        ? <button type="button" role="radio" aria-checked={pris} tabIndex={pris || premier ? 0 : -1} onClick={choisir} className="adm-offre-tete">{tete}</button>
-        : <div className="adm-offre-tete">{tete}</div>}
-      <button type="button" onClick={basculer} aria-expanded={ouvert} aria-controls={`avantages-${plan}`} className="adm-offre-plus">
-        Découvre les avantages <Icone nom="ui-chevron" taille={16} className={`transition-transform duration-300 ${ouvert ? 'rotate-180' : ''}`} />
-      </button>
-      <div id={`avantages-${plan}`} hidden={!ouvert} className="px-[18px] pb-4">
-        {avant && <p className="mb-2 text-[13px] text-white/55">Tout {avant}, et :</p>}
-        <ul className="flex flex-col gap-2">
+    <section id={id} role={panneau ? 'tabpanel' : undefined} aria-labelledby={`${id}-nom`} className="adm-offre" data-mis={mis || undefined}>
+      <div className="adm-offre-tete">
+        <h3 id={`${id}-nom`} className="adm-offre-nom">{o.nom}</h3>
+        {badge && <span className="adm-offres-badge" data-fort={badge.fort || undefined}>{badge.texte}</span>}
+      </div>
+      <Tarif plan={plan} periode={periode} />
+      {geste && (geste.bouton
+        ? <button id={`${id}-geste`} type="button" onClick={() => onChoisir?.(geste.plan)} className={`${mis ? classeBouton.principal : classeBouton.secondaire} w-full`}>{geste.texte}</button>
+        : <p id={`${id}-geste`} tabIndex={-1} className="adm-offre-etat">{geste.texte}</p>)}
+      <div>
+        <p className="adm-offre-inclus">{plan === 'gratuit' ? 'Inclus :' : `Tout ${OFFRES[PLANS[rang(plan) - 1]].nom}, et :`}</p>
+        <ul className="adm-offre-liste">
           {o.avantages.map(a => (
-            <li key={a} className="flex gap-2.5 text-[14px] leading-snug text-white/80">
-              <span className="mt-0.5 shrink-0 text-white" aria-hidden="true"><Icone nom="ui-ok" taille={16} /></span>{a}
-            </li>
+            <li key={a} data-fort={a === fort || undefined}><Icone nom="ui-ok" taille={16} />{a}</li>
           ))}
         </ul>
       </div>
+    </section>
+  );
+}
+
+/**
+ * Au téléphone : Mensuel ou Annuel, les quatre offres en onglets, une carte à la
+ * fois (la suivante dépasse, on la fait glisser), et un seul bouton en bas, celui
+ * de l'offre en vue.
+ */
+function OffresMobile({ id, periode, setPeriode, mois, depart, carte, miseEnAvant, geste, onChoisir, note }: {
+  id: string; periode: Periode; setPeriode: (p: Periode) => void; mois: number; depart: Plan;
+  carte: (p: Plan, mis: boolean) => ReactNode; miseEnAvant: Plan | null; geste: (p: Plan) => Geste; onChoisir: (p: PlanPayant) => void; note: string;
+}) {
+  const rail = useRef<HTMLDivElement>(null);
+  const [vue, setVue] = useState<Plan>(depart);
+  const position = (p: Plan) => (document.getElementById(`${id}-${p}`)?.offsetLeft ?? 0) - 16;
+  // L'offre mise en avant est déjà en vue à l'ouverture, sans glisser jusqu'à elle.
+  useLayoutEffect(() => { if (rail.current) rail.current.scrollLeft = position(depart); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const suivre = () => {
+    const r = rail.current;
+    if (!r) return;
+    const proche = PLANS.reduce((a, p) => (Math.abs(position(p) - r.scrollLeft) < Math.abs(position(a) - r.scrollLeft) ? p : a), PLANS[0]);
+    if (proche !== vue) setVue(proche);
+  };
+  const aller = (p: Plan) => { setVue(p); rail.current?.scrollTo({ left: position(p), behavior: reduit() ? 'auto' : 'smooth' }); };
+  function fleches(e: KeyboardEvent<HTMLDivElement>) {
+    const pas = { ArrowRight: 1, ArrowLeft: -1, Home: -9, End: 9 }[e.key];
+    if (pas === undefined) return;
+    e.preventDefault();
+    const p = PLANS[Math.max(0, Math.min(PLANS.length - 1, rang(vue) + pas))];
+    aller(p);
+    document.getElementById(`${id}-onglet-${p}`)?.focus();
+  }
+  const g = geste(vue);
+  return (
+    <>
+      <div className="adm-offres-entete-mobile">
+        <Periodes periode={periode} onChange={setPeriode} mois={mois} />
+      </div>
+      <div role="tablist" aria-label="Offres" onKeyDown={fleches} className="adm-offres-onglets">
+        {PLANS.map(p => (
+          <button key={p} id={`${id}-onglet-${p}`} type="button" role="tab" aria-selected={vue === p} aria-controls={`${id}-${p}`} tabIndex={vue === p ? 0 : -1} onClick={() => aller(p)}>
+            {OFFRES[p].nom}
+          </button>
+        ))}
+      </div>
+      <div className="adm-offres-corps">
+        <div ref={rail} onScroll={suivre} className="adm-offres-rail">
+          {/* Seule l'offre en vue est lue : les autres dépassent à l'écran, comme des onglets fermés. */}
+          {PLANS.map(p => <div key={p} className="contents" inert={p !== vue || undefined}>{carte(p, p === miseEnAvant)}</div>)}
+        </div>
+      </div>
+      <footer className="adm-offres-pied">
+        {g.bouton
+          ? <button type="button" onClick={() => onChoisir(g.plan)} className={`${classeBouton.principal} w-full`}>{g.texte}, {euros(OFFRES[g.plan].prix[periode])} {par(periode)}</button>
+          : <p className="adm-offre-etat">{g.texte}</p>}
+        <p className="adm-offres-note">{note}</p>
+      </footer>
+    </>
+  );
+}
+
+/**
+ * Le récapitulatif, avant Creem : la période, ce qu'on paie aujourd'hui et
+ * ensuite, l'absence d'engagement, ce qu'on débloque (ou ce qui s'arrête), et au
+ * bureau, la page telle qu'elle sera. Un abonné qui change d'offre ne repasse pas
+ * par la page de paiement : Creem facture ou rembourse la différence au prorata.
+ */
+function Recapitulatif({ plan, periode, setPeriode, abonnement, grand, id, mois, retour, fermer, payer, envoi, erreur, apercu }: {
+  plan: PlanPayant; periode: Periode; setPeriode: (p: Periode) => void; abonnement: EtatAbonnement; grand: boolean; id: string; mois: number;
+  retour: () => void; fermer: () => void; payer: () => void; envoi: boolean; erreur: string; apercu?: (plan: PlanPayant) => PagePublique;
+}) {
+  const actuelle = abonnement.plan;
+  const changement = actuelle !== 'gratuit' && !estResilie(abonnement.statut);
+  const meme = plan === actuelle;
+  const deja = meme && abonnement.periode === periode;
+  const o = OFFRES[plan];
+  const titre = meme ? (periode === 'an' ? 'Passer à l’annuel' : 'Passer au mensuel') : `Passer en ${o.nom}`;
+  const monte = rang(plan) > rang(actuelle);
+  const liste = meme ? [] : avantagesEntre(actuelle, plan);
+  const lignes: [string, string, boolean?][] = changement
+    ? [['Aujourd’hui', 'La différence, au prorata'], ['Ensuite', `${euros(o.prix[periode])} ${par(periode)}`], ['Engagement', 'Aucun, résiliable à tout moment']]
+    : [['Dû aujourd’hui', euros(o.prix[periode]), true], ['Prochaine échéance', dateLongue(echeance(Date.now(), periode))], ['Engagement', 'Aucun, résiliable à tout moment']];
+
+  const revenir = (classe: string) => (
+    <button type="button" onClick={retour} className={`adm-fil-retour ${classe}`}><Icone nom="ui-chevron" taille={16} className="rotate-90" />Les offres</button>
+  );
+  const corps = (
+    <>
+      {grand && revenir('-ml-2 self-start')}
+      <h2 id={`${id}-recap`} tabIndex={-1} className="adm-recap-titre">{titre}</h2>
+      <fieldset className="adm-recap-periodes">
+        <legend className="sr-only">Paiement</legend>
+        {(['an', 'mois'] as Periode[]).map(p => (
+          <label key={p} data-choisi={periode === p || undefined}>
+            <input type="radio" name={`${id}-periode`} value={p} checked={periode === p} onChange={() => { vibrer(4); setPeriode(p); }} />
+            <span>
+              <span className="adm-recap-periode-nom">{p === 'an' ? 'À l’année' : 'Au mois'}</span>
+              <span className="adm-recap-periode-detail">{p === 'an' ? `${euros(o.prix.an)} par an${mois > 0 ? `, ${mois} mois offerts` : ''}` : `${euros(o.prix.mois)} par mois`}</span>
+            </span>
+          </label>
+        ))}
+      </fieldset>
+      <dl className="adm-recap-lignes">
+        {lignes.map(([nom, valeur, fort]) => <div key={nom}><dt>{nom}</dt><dd data-fort={fort || undefined}>{valeur}</dd></div>)}
+      </dl>
+      {liste.length > 0 && (
+        <div className="flex flex-col gap-2.5">
+          <h3 className="adm-recap-sous-titre">{monte ? 'Ce que tu débloques' : 'Ce qui s’arrête'}</h3>
+          <ul className="adm-offre-liste adm-recap-liste" data-perte={!monte || undefined}>
+            {liste.map(a => <li key={a}>{monte && <Icone nom="ui-ok" taille={16} />}{a}</li>)}
+          </ul>
+        </div>
+      )}
+      {meme && !deja && <p className="adm-recap-periode-detail">Tu gardes tout {o.nom}, payé {periode === 'an' ? 'à l’année' : 'au mois'}.</p>}
+    </>
+  );
+  const paiement = (
+    <div className="flex flex-col gap-2.5">
+      <button type="button" onClick={payer} disabled={envoi || deja} className={`${classeBouton.principal} w-full`}>
+        {envoi ? (changement ? 'Changement d’offre…' : 'Ouverture du paiement…')
+          : deja ? 'C’est ton offre actuelle'
+            : changement ? titre : <>Payer avec Creem<Icone nom="ui-ouvrir" taille={15} className="shrink-0" /></>}
+      </button>
+      <p className="adm-offres-note">
+        {changement ? 'Prix TTC. Creem facture ou rembourse la différence au prorata, sur ta carte enregistrée.' : 'Prix TTC. Creem encaisse, envoie la facture et gère la TVA.'}
+        {' '}Voir les <a href="/legal/cgu" target="_blank" rel="noopener">conditions d’utilisation</a>.
+      </p>
+      {erreur && <p role="alert" className="text-[13.5px] text-red-300">{erreur}</p>}
     </div>
+  );
+
+  if (!grand) return (
+    <div className="adm-offres" aria-labelledby={`${id}-recap`}>
+      <header className="adm-offres-tete">
+        {revenir('-ml-2')}
+        <button type="button" onClick={fermer} className={`${classeBouton.icone} ml-auto`} aria-label="Fermer"><Icone nom="ui-fermer" taille={18} /></button>
+      </header>
+      <div className="adm-offres-corps"><div className="adm-recap-corps">{corps}</div></div>
+      <footer className="adm-offres-pied">{paiement}</footer>
+    </div>
+  );
+  return (
+    <div className="adm-recap" data-apercu={apercu ? '' : undefined} aria-labelledby={`${id}-recap`}>
+      <div className="adm-recap-corps">{corps}<div className="mt-1">{paiement}</div></div>
+      {apercu ? (
+        <aside className="adm-recap-apercu" aria-label={`Ta page avec ${o.nom}`}>
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-[12px] font-medium text-[#5f5f5a]">Ta page avec {o.nom}</p>
+            <button type="button" onClick={fermer} className={classeBouton.icone} aria-label="Fermer"><Icone nom="ui-fermer" taille={18} /></button>
+          </div>
+          {/* La vraie page, rendue à 390 px puis réduite : sans la mention, avec ce que l'offre ouvre. On la regarde, on n'y touche pas. */}
+          <div className="adm-recap-cadre" inert>
+            <div className="adm-apercu" style={{ width: 390, height: 880, transform: 'scale(0.6)', transformOrigin: '0 0' }}>
+              <PageLiens page={apercu(plan)} apercu />
+            </div>
+          </div>
+        </aside>
+      ) : <button type="button" onClick={fermer} className={`${classeBouton.icone} absolute right-3 top-3`} aria-label="Fermer"><Icone nom="ui-fermer" taille={18} /></button>}
+    </div>
+  );
+}
+
+/* ---- Le retour du paiement ---- */
+
+/** Le picto de chaque avantage, celui que la fonction porte ailleurs dans le back office. Un avantage inconnu prend la coche. */
+const PICTOS: { avantage: string; picto: string }[] = [
+  { avantage: 'Sans la mention « Une page faite avec Hopla »', picto: 'check' },
+  { avantage: 'Tes couleurs', picto: 'pinceau' },
+  { avantage: 'Tes liens programmés à l’avance', picto: 'agenda' },
+  { avantage: 'Les avis de tes clients', picto: 'etoile' },
+  { avantage: 'Analytics détaillées sur 30 jours', picto: 'courbe' },
+  { avantage: 'Ta page selon l’heure', picto: 'horloge' },
+  { avantage: 'Les drops : un code, des places comptées', picto: 'cadenas' },
+  { avantage: 'Ta liste e-mail, vers Brevo ou Mailchimp', picto: 'courrier' },
+  { avantage: 'Analytics sur un an', picto: 'courbe' },
+  { avantage: 'Ton propre nom de domaine', picto: 'globe' },
+  { avantage: 'Jusqu’à trois pages', picto: 'document' },
+];
+const pictoDe = (a: string) => PICTOS.find(x => x.avantage === a)?.picto ?? 'check';
+
+/**
+ * Au retour de Creem : « On active ton offre… » tant que le webhook n'est pas
+ * passé (le back office relit l'abonnement, il ne l'accorde jamais), puis
+ * « C'est fait » et ce qui vient de s'ouvrir. Sans nouvelles au bout de trente
+ * secondes, on le dit, sans rien promettre de plus : l'offre arrivera seule.
+ */
+export function RetourPaiement({ achat, etape, onFermer, action }: { achat: Achat; etape: EtapeRetour; onFermer: () => void; action?: { texte: string; faire: () => void } }) {
+  const id = useId();
+  const nom = OFFRES[achat.plan].nom;
+  const meme = achat.avant === achat.plan;
+  const toutes = etape !== 'fait' || meme ? [] : achat.avant ? (rang(achat.plan) > rang(achat.avant) ? avantagesEntre(achat.avant, achat.plan) : []) : OFFRES[achat.plan].avantages;
+  // Ce qu'on était venu chercher passe en tête (« Tes couleurs »), le reste dans l'ordre de l'offre.
+  const voulu = achat.pour ? FONCTIONS_EN_MOTS[achat.pour].avantage : '';
+  const ouvertes = [...toutes.filter(a => a === voulu), ...toutes.filter(a => a !== voulu)];
+  const titre = etape === 'fait'
+    ? (meme && achat.periode ? `C’est fait, tu passes ${achat.periode === 'an' ? 'à l’annuel' : 'au mensuel'}` : `C’est fait, tu es en ${nom}`)
+    : etape === 'attente' ? `Ton offre ${nom} arrive` : `On active ton offre ${nom}…`;
+  const mention = FONCTIONS_EN_MOTS.sansMention.avantage;
+  return (
+    <Feuille ouverte moyenne nue titre={titre} onFermer={onFermer}>
+      {fermer => (
+        <div className="adm-retour" aria-labelledby={id}>
+          <div className="adm-retour-tete" aria-live="polite">
+            {etape === 'fait' ? <Icone nom="check" taille={44} />
+              : etape === 'attente' ? <Icone nom="horloge" taille={44} />
+                : <span className="adm-retour-roue" aria-hidden="true" />}
+            <h2 id={id} className="adm-recap-titre">{titre}</h2>
+            {etape === 'fait' ? (
+              <ol className="adm-retour-etapes" aria-label="Étapes">
+                <li><Icone nom="ui-ok" taille={16} />Paiement reçu</li>
+                <li><Icone nom="ui-ok" taille={16} />Offre activée</li>
+              </ol>
+            ) : etape === 'attente' ? (
+              <p className="adm-retour-texte">Creem ne nous a pas encore confirmé ton paiement. Ton offre s’activera d’elle-même dès que ce sera fait : tu peux fermer cette fenêtre. Si rien n’a changé dans une heure, <a href={`mailto:${CONTACT_LEGAL}?subject=${encodeURIComponent(`Hopla : mon offre ${nom}`)}`}>écris-nous</a>.</p>
+            ) : <p className="adm-retour-texte">Creem nous confirme ton paiement. Ça prend quelques secondes.</p>}
+          </div>
+          {ouvertes.length > 0 && (
+            <div className="flex flex-col gap-2">
+              <h3 className="adm-recap-sous-titre">Ce qui vient de s’ouvrir</h3>
+              <ul className="adm-retour-liste">
+                {ouvertes.map(a => (
+                  <li key={a}><Icone nom={pictoDe(a)} taille={16} /><span className="flex-1">{a}</span>{a === mention && <span className="adm-retour-deja">déjà sur ta page</span>}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          <div className="flex flex-col gap-3">
+            <div className="adm-retour-gestes">
+              {etape === 'fait' && action ? (
+                <>
+                  <button type="button" onClick={() => fermer()} className={classeBouton.secondaire}>Fermer</button>
+                  <button type="button" onClick={() => fermer(() => { onFermer(); action.faire(); })} className={classeBouton.principal}>{action.texte}</button>
+                </>
+              ) : <button type="button" onClick={() => fermer()} className={etape === 'fait' ? classeBouton.principal : classeBouton.secondaire}>Fermer</button>}
+            </div>
+            {etape === 'fait' && <p className="adm-offres-note">Ta facture arrive par e-mail, envoyée par Creem.</p>}
+          </div>
+        </div>
+      )}
+    </Feuille>
   );
 }

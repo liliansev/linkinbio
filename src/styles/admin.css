@@ -3,6 +3,8 @@
  * court (150 à 300 ms) et décéléré : l'interface répond, elle ne se montre pas.
  */
 :root { --adm-sortie: cubic-bezier(0.16, 1, 0.3, 1); }
+/* Une feuille qui fige le défilement ne fait pas sauter la page : la place de la barre reste réservée. */
+html:has(.adm) { scrollbar-gutter: stable; }
 
 /*
  * La tenue noir et blanc (19 octobre 2026) : le back office parle à tout le
@@ -86,10 +88,12 @@
 .adm ::selection { background: #0a0a0a; color: #fff; }
 .adm { scrollbar-color: rgb(0 0 0 / 0.2) transparent; -webkit-tap-highlight-color: transparent; }
 .adm :is(button, a, input, textarea, select, summary, [tabindex]):focus-visible { outline: 2px solid #0a0a0a; outline-offset: 2px; }
+/* Dans la page qu'on modifie (et ses aperçus), l'anneau prend la couleur du texte du thème : l'encre du back office disparaîtrait sur un thème sombre. */
+.adm .lp :is(button, a, input, textarea, select, summary, [tabindex]):focus-visible { outline-color: var(--texte); }
 /* La feuille prend le focus pour qu'on y entre au clavier, mais elle n'est pas un contrôle : pas d'anneau autour d'elle. */
 .adm .adm-feuille:focus-visible { outline: none; }
-/* Un titre qui reçoit le focus quand l'écran change (premiers pas, lien envoyé) n'est pas un contrôle non plus. */
-.adm h1[tabindex='-1']:focus-visible { outline: none; }
+/* Un titre qui reçoit le focus quand l'écran change (premiers pas, lien envoyé, panneau ouvert au clavier) n'est pas un contrôle non plus. */
+.adm :is(h1, h2)[tabindex='-1']:focus-visible { outline: none; }
 
 /* Les premiers pas : la vraie page en miniature, à la largeur d'un téléphone. */
 .adm-miroir { --z: 0.62; width: calc(390px * var(--z)); flex-shrink: 0; }
@@ -118,12 +122,32 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
   --adm-secondaire: #656560;
 }
 .adm-shell { background: var(--adm-fond); color: var(--adm-encre); }
-.adm-sidebar { padding: 26px 16px 24px; background: #fdfdfc; border-right: 1px solid var(--adm-trait); }
-.adm-nav-item { display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 0 14px; border: 1px solid transparent; border-radius: 12px; color: var(--adm-secondaire); font-size: 14px; font-weight: 500; text-align: left; transition: background-color 150ms, color 150ms; }
-.adm-nav-item:hover { background: #f1f1ee; color: var(--adm-encre); }
-.adm-nav-item[aria-current='page'] { border-color: var(--adm-trait); background: #fff; color: var(--adm-encre); font-weight: 600; }
-.adm-nav-count { margin-left: auto; display: grid; min-width: 23px; height: 23px; place-items: center; padding: 0 5px; border-radius: 7px; background: #efefec; color: #565651; font-size: 11.5px; font-variant-numeric: tabular-nums; }
+/*
+ * La coquille du bureau (direction B, 20 octobre 2026) : une barre latérale
+ * fine, une seule rangée d'en-tête de 56 px, le contenu sur le blanc. L'onglet
+ * courant est un gris uni, sans bordure ; le survol est plus pâle que lui.
+ */
+@media (min-width: 1024px) { .adm-shell { background: #fff; } }
+.adm-sidebar { padding: 0 10px 10px; background: #fafaf9; border-right: 1px solid #ececea; }
+.adm-nav-item { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 10px; border-radius: 7px; color: #55554f; font-size: 14px; font-weight: 500; text-align: left; transition: background-color 150ms, color 150ms; }
+.adm-nav-item:hover { background: #f2f2ef; color: var(--adm-encre); }
+.adm-nav-item[aria-current='page'] { background: #ebebe7; color: #0a0a0a; }
+.adm-compte { display: flex; min-height: 44px; width: 100%; align-items: center; gap: 10px; padding: 0 8px; border-radius: 7px; text-align: left; transition: background-color 150ms; }
+.adm-compte:hover, .adm-compte[aria-expanded='true'] { background: #f2f2ef; }
 .adm-topbar { border-bottom: 1px solid var(--adm-trait); background: #fdfdfc; }
+@media (min-width: 1024px) { .adm-topbar { border-bottom-color: #ececea; background: #fff; } }
+.adm-entete-titre { font-size: 15px; font-weight: 600; letter-spacing: -0.015em; }
+/* L'adresse dans l'en-tête : le domaine en gris, le pseudo à l'encre, et Copier collé à elle. */
+.adm-adresse-entete { display: flex; align-items: stretch; overflow: hidden; border: 1px solid #dcdcd7; border-radius: 8px; background: #fff; }
+.adm-adresse-entete > button { border-left: 1px solid #dcdcd7; transition: background-color 150ms; }
+.adm-adresse-entete > button:hover { background: #f4f4f0; }
+.adm-etat { display: flex; align-items: center; gap: 5px; color: #5f5f5a; font-size: 12px; }
+.adm-etat[data-erreur] { color: #c62828; }
+/* Un menu (compte, actions d'un bloc, période) : une petite surface posée au-dessus du travail. */
+.adm-menu { padding: 4px; border: 1px solid #e3e3df; border-radius: 10px; background: #fff; box-shadow: 0 14px 34px -14px rgb(0 0 0 / 0.22), 0 2px 6px -2px rgb(0 0 0 / 0.06); }
+.adm-menu-item { display: flex; width: 100%; min-height: 44px; align-items: center; gap: 9px; padding: 0 10px; border-radius: 6px; font-size: 14px; font-weight: 500; transition: background-color 120ms; }
+.adm-menu-item:hover, .adm-menu-item:focus-visible { background: #f2f2ef; }
+.adm .adm-menu-item:focus-visible { outline-offset: -2px; }
 /* Le titre d'un écran, le même partout : les onglets, la connexion, les CGU, les premiers pas. */
 .adm-page-heading { margin-bottom: 24px; }
 .adm-titre, .adm-page-heading h1 { font-size: 32px; line-height: 1.2; font-weight: 600; letter-spacing: -0.035em; text-wrap: balance; }
@@ -139,26 +163,12 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
 .adm-field:hover { border-color: #b2b2ab; }
 .adm-mobile-nav { border-top: 1px solid var(--adm-trait); background: #fff; }
 .adm-mobile-nav button { height: 64px; }
-.adm-editor-layout { display: flex; flex-direction: column; gap: 18px; }
-.adm-editor-content { display: flex; min-width: 0; flex-direction: column; gap: 16px; }
-.adm-editor-content > :first-child:empty { display: none; }
 /* La page posée sur le gris : un trait fin pour son bord (un thème clair se confond sinon avec le fond), une ombre courte dessous. */
 .adm-toile { box-shadow: 0 0 0 1px var(--adm-trait), 0 8px 28px -16px rgb(0 0 0 / 0.25); }
 /* La fin des premiers pas : la page passe au premier plan, cernée d'encre. */
 .adm-toile.adm-miroir-fin { box-shadow: 0 0 0 1.5px #0a0a0a, 0 30px 90px -24px rgb(0 0 0 / 0.3); }
 .adm-address { background: var(--adm-surface); border: 1px solid var(--adm-trait); border-radius: 14px; }
 .adm-checklist { background: var(--adm-surface); border: 1px solid var(--adm-trait); border-radius: 14px; }
-.adm-settings, .adm-settings-detail { max-width: 760px; }
-.adm-settings-list { border: 1px solid var(--adm-trait); border-radius: 16px; background: var(--adm-surface); }
-.adm-settings-list > li + li { border-top: 1px solid var(--adm-trait); }
-.adm-settings-row { display: flex; min-height: 68px; width: 100%; align-items: center; gap: 14px; padding: 12px 16px; text-align: left; }
-button.adm-settings-row { transition: background-color 150ms; }
-button.adm-settings-row:hover { background: #f7f7f5; }
-.adm-settings-list > li:first-child .adm-settings-row { border-radius: 15px 15px 0 0; }
-.adm-settings-list > li:last-child .adm-settings-row { border-radius: 0 0 15px 15px; }
-.adm-settings-list > li:only-child .adm-settings-row { border-radius: 15px; }
-/* Le picto d'une ligne, sans tuile derrière : plein, d'une seule couleur (Lilian, 19 octobre 2026). */
-.adm-settings-icon { display: grid; width: 24px; height: 24px; flex-shrink: 0; place-items: center; color: var(--adm-secondaire); }
 /* Un groupe de lignes dans une feuille : un trait fin, l'arrondi des surfaces compactes, sans fond
  * (la feuille est déjà du papier), pour qu'un survol posé sur une ligne reste visible. La première et
  * la dernière ligne épousent l'arrondi, sans couper le contour du focus comme le ferait un overflow. */
@@ -174,17 +184,79 @@ button.adm-settings-row:hover { background: #f7f7f5; }
   .adm-editor-tools { position: fixed; inset-inline: 0; bottom: calc(64px + env(safe-area-inset-bottom)); z-index: 30; padding: 10px 16px 2px; border-top: 1px solid var(--adm-trait); background: #fff; }
   .adm-editor-tools > div { max-width: 28rem; margin-inline: auto; }
   .adm:has(.adm-editor-tools) .adm-mobile-nav { border-top-color: transparent; }
-  .adm-editor-layout { padding-bottom: 57px; }
+  .adm-studio { padding-bottom: 57px; }
+  .adm-outils-page, .adm-panneau-cote { display: none; }
+  /* Une feuille ouverte couvre le bas de l'écran : la page gagne de quoi faire monter son dernier bloc au-dessus d'elle. */
+  .adm:has(.adm-feuille) .adm-studio { padding-bottom: 60dvh; }
 }
 /* Un onglet qui glisse prête son cadre à ce qui est fixe en lui : Ma page arrive en fondu, pour que ses gestes soient déjà à leur place. */
 @media (max-width: 1023px) and (prefers-reduced-motion: no-preference) {
   .adm-onglet:has(.adm-editor-tools) { animation-name: adm-fondu; }
 }
+/*
+ * Ma page au bureau (direction B, 20 octobre 2026) : le canevas gris, la page
+ * au centre à la largeur d'un téléphone, et à droite un panneau de 380 px qui
+ * s'ouvre sur le bloc choisi ou le design. Le canevas rétrécit pour lui faire
+ * place : la page reste entière et centrée dans ce qui reste.
+ */
 @media (min-width: 1024px) {
-  .adm-editor-layout { display: grid; grid-template-columns: minmax(0, 1fr) 248px; align-items: start; gap: 32px; }
-  .adm-editor-tools { grid-column: 2; grid-row: 1; position: sticky; top: 108px; padding: 23px; border: 1px solid var(--adm-trait); border-radius: 16px; background: var(--adm-surface); }
-  .adm-editor-tools .adm-button-primary, .adm-editor-tools .adm-button-outline { font-size: 13px; padding-left: 10px; padding-right: 10px; }
-  .adm-editor-content { grid-column: 1; grid-row: 1; }
+  .adm-studio { display: grid; grid-template-columns: minmax(0, 1fr) 0px; min-height: calc(100dvh - 57px); transition: grid-template-columns 0.28s var(--adm-sortie); }
+  .adm-studio[data-cote] { grid-template-columns: minmax(0, 1fr) 380px; }
+  .adm-editor-tools { display: none; }
+  .adm-canevas { container: canevas / inline-size; min-width: 0; padding: 16px clamp(16px, 2.5vw, 32px) 72px; background: #f3f3f1; }
+  /* La barre du haut flotte au-dessus de la page et la suit quand on descend. */
+  .adm-outils-page { position: sticky; top: 73px; z-index: 20; display: flex; width: fit-content; height: 36px; align-items: center; gap: 4px; margin: 0 auto 20px; padding: 0 4px; border: 1px solid #e3e3df; border-radius: 10px; background: #fff; box-shadow: 0 1px 2px rgb(10 10 10 / 0.05); }
+  .adm-outil { display: inline-flex; height: 28px; align-items: center; gap: 6px; padding: 0 10px; border-radius: 7px; color: #0a0a0a; font-size: 13.5px; font-weight: 500; transition: background-color 150ms, color 150ms; }
+  .adm-outil:hover { background: #f2f2ef; }
+  .adm-outil:is([aria-pressed='true'], [aria-checked='true']) { background: #ebebe7; }
+  .adm-outil-carre { width: 28px; justify-content: center; padding: 0; color: #55554f; }
+  .adm-outil-carre[aria-checked='true'] { color: #0a0a0a; }
+  .adm-outils-trait { width: 1px; height: 18px; background: #e3e3df; }
+  .adm-demarrage { width: 390px; max-width: 100%; margin: 0 auto 16px; }
+  .adm-demarrage:empty { display: none; }
+  .adm-cadre-lieu { position: relative; width: 390px; max-width: 100%; margin: 0 auto; }
+  .adm-cadre { display: flex; min-height: 760px; flex-direction: column; border-radius: 28px; box-shadow: 0 0 0 1px rgb(10 10 10 / 0.08), 0 24px 60px -24px rgb(10 10 10 / 0.35); }
+  .adm-cadre > .lp { flex: 1 0 auto; }
+  .adm-calque { position: absolute; inset: 0; z-index: 10; pointer-events: none; }
+  /* Le panneau : collé sous l'en-tête, il défile seul ; la colonne s'ouvre de 0 à 380 px sans couper la page. */
+  .adm-panneau-cote { min-width: 0; overflow-x: clip; background: #fff; }
+  .adm-panneau-colle { position: sticky; top: 57px; width: 380px; height: calc(100dvh - 57px); border-left: 1px solid #ececea; }
+  /* Le message du bas se centre sur ce qui reste visible : la page, pas le panneau. */
+  .adm:has(.adm-studio[data-cote]) .adm-toast { right: 396px; }
+}
+@media (min-width: 1024px) and (prefers-reduced-motion: reduce) { .adm-studio { transition: none; } }
+
+/* Les gestes d'un bloc au survol, hors de la page : la poignée à gauche, l'œil et « … » à droite. */
+.adm-actions-bloc { position: absolute; display: flex; gap: 4px; pointer-events: auto; }
+.adm-actions-gauche { left: -44px; }
+.adm-actions-droite { left: calc(100% + 12px); }
+/* Un canevas étroit (le panneau ouvert sur un petit écran) : les gestes rentrent dans la marge de la page. */
+@container canevas (max-width: 559px) {
+  .adm-actions-gauche { left: 4px; }
+  .adm-actions-droite { left: auto; right: 4px; }
+}
+.adm-action-bloc { display: grid; width: 32px; height: 32px; place-items: center; border: 1px solid #e3e3df; border-radius: 8px; background: #fff; color: #55554f; box-shadow: 0 1px 2px rgb(10 10 10 / 0.05); transition: color 150ms, border-color 150ms; }
+.adm-action-bloc:hover, .adm-action-bloc[aria-expanded='true'] { border-color: #c7c7c0; color: #0a0a0a; }
+
+/* L'aperçu sur ordinateur : la page des visiteurs à 1280 px, réduite pour tenir dans le canevas. */
+.adm-ordi-lieu { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.adm-ordi { overflow: hidden; border-radius: 14px; }
+.adm-ordi-page { display: flex; min-height: 800px; flex-direction: column; transform-origin: 0 0; }
+.adm-ordi-page > .lp { flex: 1 0 auto; }
+.adm-ordi-legende { color: #5f5f5a; font-size: 12px; }
+
+/*
+ * Le panneau d'un bloc : une rangée par réglage, son nom à gauche, sa valeur à
+ * droite dans un petit bouton bordé (36 px de haut, bouton de 32).
+ */
+.adm-section-panneau { margin: 0 0 6px; color: #3d3d39; font-size: 12px; font-weight: 600; }
+.adm-valeur { display: inline-flex; min-width: 0; max-width: 62%; height: 44px; flex-shrink: 0; align-items: center; gap: 6px; padding: 0 10px; border: 1px solid #e3e3df; border-radius: 10px; background: #fff; color: #0a0a0a; font-size: 13.5px; white-space: nowrap; transition: border-color 150ms, background-color 150ms; }
+.adm-valeur:hover { border-color: #c7c7c0; }
+.adm-valeur:disabled { opacity: 0.45; }
+.adm-field.adm-field-ligne { min-height: 44px; padding: 0 10px; border-color: #e3e3df; border-radius: 10px; background: #fff; font-size: 16px; }
+@media (min-width: 1024px) and (pointer: fine) {
+  .adm-valeur { height: 32px; border-radius: 8px; }
+  .adm-field.adm-field-ligne { min-height: 32px; height: 32px; border-radius: 8px; font-size: 13.5px; }
 }
 @media (max-width: 639px) {
   .adm-page-heading { margin-bottom: 20px; }
@@ -194,23 +266,356 @@ button.adm-settings-row:hover { background: #f7f7f5; }
   .adm-editor-tools [data-principal], .adm-editor-tools .adm-button-outline { font-size: 13px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .adm-nav-item, .adm-button-outline, .adm-button-primary, .adm-button-danger, button.adm-settings-row { transition: none; }
+  .adm-nav-item, .adm-compte, .adm-menu-item, .adm-button-outline, .adm-button-primary, .adm-button-danger { transition: none; }
 }
 
-/* Réglages, Abonnement : les offres en cartes, à la façon de Linktree, en noir et blanc. */
-.adm-offres-onglets { display: grid; grid-template-columns: 1fr 1fr; border-bottom: 1px solid var(--adm-trait); }
-.adm-offres-onglets > button { min-height: 48px; color: var(--adm-secondaire); font-size: 15px; font-weight: 500; transition: color 150ms, box-shadow 200ms var(--adm-sortie); }
-.adm-offres-onglets > button:hover { color: var(--adm-encre); }
-.adm-offres-onglets > button[aria-checked='true'] { color: var(--adm-encre); font-weight: 600; box-shadow: inset 0 -2px 0 var(--adm-encre); }
-.adm-offre { border: 1px solid var(--adm-trait); border-radius: 16px; background: var(--adm-surface); transition: border-color 150ms, box-shadow 150ms; }
-.adm-offre[data-pris] { border-color: var(--adm-encre); box-shadow: 0 0 0 1px var(--adm-encre); }
-.adm-offre-tete { display: flex; width: 100%; flex-direction: column; align-items: stretch; padding: 18px 18px 4px; border-radius: 15px 15px 0 0; text-align: left; }
-button.adm-offre-tete:active { background: #fafaf8; }
-.adm-offre-plus { display: inline-flex; min-height: 44px; align-items: center; gap: 6px; padding: 0 18px 4px; color: var(--adm-encre); font-size: 14px; font-weight: 600; }
-.adm-offre-reco { display: inline-flex; align-items: center; border-radius: 7px; background: var(--adm-encre); padding: 2px 7px; color: #fff; font-size: 11.5px; font-weight: 600; }
-.adm-offre-radio { display: grid; width: 22px; height: 22px; flex-shrink: 0; place-items: center; border: 1.5px solid #b5b5ae; border-radius: 50%; transition: background-color 150ms, border-color 150ms; }
-.adm-offre[data-pris] .adm-offre-radio { border-color: var(--adm-encre); background: var(--adm-encre); color: #fff; }
-/* Le bouton suit le pouce : collé au-dessus de la barre des onglets, sur un fond qui se fond dans la page. */
-.adm-offres-pied { position: sticky; bottom: calc(56px + env(safe-area-inset-bottom)); z-index: 5; margin: 0 -4px; padding: 14px 4px 12px; background: linear-gradient(to top, var(--adm-fond) 78%, transparent); }
-@media (min-width: 1024px) { .adm-offres-pied { bottom: 0; padding-bottom: 20px; } }
-@media (prefers-reduced-motion: reduce) { .adm-offres-onglets > button, .adm-offre, .adm-offre-radio { transition: none; } }
+/*
+ * Au bureau, à la souris (20 octobre 2026) : la même interface, resserrée.
+ * Rangées de 32 px, boutons de 36, champs de 40, et une échelle de texte à
+ * cinq marches, 12 / 13,5 / 15 / 18 / 24. Les tailles écrites pour le doigt
+ * (de 11,5 à 32 px) se rangent sur la marche la plus proche ; la page
+ * publique, qui n'utilise aucune de ces classes, garde sa typographie.
+ */
+@media (min-width: 1024px) and (pointer: fine) {
+  .adm-nav-item { min-height: 32px; font-size: 13.5px; }
+  .adm-menu-item { min-height: 32px; font-size: 13.5px; }
+  .adm-button-outline { border-radius: 8px; }
+  .adm-field { min-height: 40px; padding: 8px 12px; border-radius: 8px; font-size: 13.5px; }
+  .adm-titre, .adm-page-heading h1 { font-size: 24px; letter-spacing: -0.025em; }
+}
+/* Une classe `bureau:` écrite sur l'élément garde la main : la correspondance ne s'applique qu'aux autres. */
+@layer utilities {
+  @media (min-width: 1024px) and (pointer: fine) {
+    :where(.adm) :is(.text-\[11\.5px\], .text-\[12px\], .text-\[12\.5px\]):not([class*='bureau:text-']) { font-size: 12px; }
+    :where(.adm) :is(.text-\[13px\], .text-\[13\.5px\], .text-\[14px\], .text-\[14\.5px\]):not([class*='bureau:text-']) { font-size: 13.5px; }
+    :where(.adm) :is(.text-\[15px\], .text-\[15\.5px\], .text-\[16px\]):not([class*='bureau:text-']) { font-size: 15px; }
+    :where(.adm) :is(.text-\[17px\], .text-\[18px\]):not([class*='bureau:text-']) { font-size: 18px; }
+    :where(.adm) :is(.text-\[26px\], .text-\[28px\], .text-\[30px\], .text-\[32px\]):not([class*='bureau:text-']) { font-size: 24px; }
+    /* Un bouton écrit à la main pour le pouce (44 px) se resserre comme ceux de `classeBouton`. */
+    :where(.adm) :is(button, a).min-h-11:not([class*='bureau:min-h'], [class*='bureau:h-']) { min-height: 36px; }
+    :where(.adm) :is(button, a).min-h-12:not([class*='bureau:min-h'], [class*='bureau:h-']) { min-height: 40px; }
+  }
+}
+
+/*
+ * Le parcours d'achat (direction B, 20 octobre 2026). Les offres s'ouvrent dans
+ * une fenêtre par-dessus l'écran en cours : 1000 px au bureau, les quatre côte à
+ * côte ; plein écran au téléphone, une offre à la fois sous des onglets, et un
+ * seul bouton en bas. Puis le récapitulatif, et au retour de Creem, une fenêtre
+ * de 560 px qui dit où en est l'offre. Le texte y est à 15 px au doigt, 13,5 à
+ * la souris ; le prix tient le rôle `metric` (24 px) à toutes les largeurs.
+ */
+.adm-feuille.adm-feuille-large { height: 100dvh; border: 0; border-radius: 0; }
+@media (min-width: 640px) {
+  .adm-feuille.adm-feuille-large { height: auto; max-height: min(92dvh, 880px); max-width: 640px; border: 1px solid #e3e3df; border-radius: 16px; }
+}
+@media (min-width: 1024px) {
+  .adm-feuille.adm-feuille-large { max-width: 1000px; }
+}
+@media (min-width: 640px) {
+  .adm-feuille:is(.adm-feuille-large, .adm-feuille-moyenne) { border: 0; border-radius: 14px; box-shadow: 0 0 0 1px rgb(10 10 10 / 0.08), 0 32px 64px -16px rgb(10 10 10 / 0.35); }
+}
+.adm-offres, .adm-recap, .adm-retour { font-size: 15px; line-height: 1.4; }
+.adm-offres { display: flex; min-height: 0; flex: 1; flex-direction: column; }
+.adm-offres-tete { display: flex; height: 56px; flex: none; align-items: center; gap: 12px; padding: 0 4px 0 16px; }
+.adm-offres-titre { font-size: 18px; font-weight: 600; letter-spacing: -0.01em; }
+.adm-offres-corps { min-height: 0; flex: 1; overflow-y: auto; overscroll-behavior: contain; }
+.adm-offres-badge { display: inline-flex; height: 22px; flex: none; align-items: center; padding: 0 8px; border-radius: 7px; background: rgb(10 10 10 / 0.07); color: #3d3d39; font-size: 12px; font-weight: 500; white-space: nowrap; }
+.adm-offres-badge[data-fort] { background: #0a0a0a; color: #fff; }
+/* Mensuel ou Annuel : un segment, le choix sur du papier blanc. */
+.adm-offres-periodes { display: grid; height: 44px; grid-template-columns: 1fr 1.45fr; gap: 2px; padding: 3px; border-radius: 10px; background: #f3f3f1; }
+.adm-offres-periodes > button { display: flex; align-items: center; justify-content: center; gap: 8px; border-radius: 8px; color: #55554f; transition: background-color 150ms, color 150ms, box-shadow 150ms; }
+.adm-offres-periodes > button:hover { color: #0a0a0a; }
+.adm-offres-periodes > button[aria-checked='true'] { background: #fff; color: #0a0a0a; font-weight: 500; box-shadow: 0 1px 2px rgb(10 10 10 / 0.1), 0 0 0 1px rgb(10 10 10 / 0.06); }
+.adm-offres-entete-mobile { flex: none; padding: 4px 16px 12px; }
+.adm-offres-onglets { display: grid; height: 44px; flex: none; grid-template-columns: repeat(4, minmax(0, 1fr)); padding: 0 8px; border-bottom: 1px solid #ececea; }
+.adm-offres-onglets > button { color: #55554f; transition: color 150ms, box-shadow 200ms var(--adm-sortie); }
+.adm-offres-onglets > button:hover { color: #0a0a0a; }
+.adm-offres-onglets > button[aria-selected='true'] { color: #0a0a0a; font-weight: 500; box-shadow: inset 0 -2px 0 #0a0a0a; }
+.adm .adm-offres-onglets > button:focus-visible { outline-offset: -2px; }
+/* Une carte à la fois : la suivante dépasse à droite, on la fait glisser. */
+/* Le rail est le repère de ses cartes : leur position se lit sans tenir compte du défilement. */
+.adm-offres-rail { position: relative; display: flex; align-items: flex-start; gap: 12px; padding: 16px 16px 24px; overflow-x: auto; scroll-padding-inline: 16px; scroll-snap-type: x mandatory; scrollbar-width: none; }
+.adm-offres-rail::-webkit-scrollbar { display: none; }
+.adm-offres-rail .adm-offre { width: min(318px, calc(100vw - 72px)); flex: none; scroll-snap-align: start; }
+.adm-offres-pied { display: flex; flex: none; flex-direction: column; gap: 8px; padding: 12px 16px max(22px, env(safe-area-inset-bottom)); border-top: 1px solid #ececea; background: #fff; }
+.adm-offres-pied > button { min-height: 48px; }
+.adm-offres-pied > .adm-offres-note { text-align: center; }
+.adm-offres-note { color: #5f5f5a; font-size: 12px; }
+
+.adm-offre { display: flex; flex-direction: column; gap: 16px; padding: 19px; border: 1px solid #e3e3df; border-radius: 14px; background: #fff; }
+.adm-offre[data-mis] { padding: 18px; border: 2px solid #0a0a0a; }
+/* Une pastille trop longue passe sous le nom plutôt que de déborder de la carte. */
+.adm-offre-tete { display: flex; min-height: 22px; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 8px; }
+.adm-offre-nom { font-size: 18px; font-weight: 600; }
+.adm-offre-tarif { display: flex; flex-direction: column; gap: 2px; }
+.adm-offre-tarif > p:first-child { display: flex; align-items: baseline; gap: 6px; }
+.adm-offre-prix { font-size: 24px; line-height: 1.25; font-weight: 600; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.adm-offre-unite { color: #5f5f5a; }
+/* Le prix de douze mois, en gris lisible (6,5:1), pas barré ; l'économie en euros, à l'encre. */
+.adm-offre-sous { color: #5f5f5a; font-size: 13.5px; }
+.adm-offre-gain { color: #0a0a0a; font-size: 13.5px; font-weight: 500; }
+.adm-offre-etat { display: grid; min-height: 48px; place-items: center; padding: 0 12px; border-radius: 12px; background: #f3f3f1; color: #5f5f5a; font-weight: 500; text-align: center; }
+.adm .adm-offre-etat:focus-visible { outline: none; }
+.adm-offre-inclus { margin-bottom: 4px; color: #5f5f5a; font-size: 13.5px; font-weight: 500; }
+.adm-offre-liste > li { display: flex; min-height: 44px; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid #efefec; }
+.adm-offre-liste > li > svg { flex: none; }
+.adm-offre-liste > li[data-fort] { font-weight: 600; }
+
+/* Le récapitulatif : la période, ce qu'on paie, ce qu'on débloque ; au bureau, la page telle qu'elle sera. */
+.adm-recap-corps { display: flex; flex-direction: column; gap: 20px; padding: 4px 16px 24px; }
+.adm-recap-corps > .adm-fil-retour + .adm-recap-titre { margin-top: -12px; }
+.adm-recap-titre { font-size: 24px; line-height: 1.2; font-weight: 600; letter-spacing: -0.02em; text-wrap: balance; }
+.adm-recap-periodes { display: grid; grid-template-columns: 1fr; gap: 10px; margin: 0; padding: 0; border: 0; }
+.adm-recap-periodes > label { display: flex; align-items: flex-start; gap: 10px; padding: 14px 15px; border: 1px solid #dcdcd7; border-radius: 10px; cursor: pointer; transition: border-color 150ms; }
+.adm-recap-periodes > label:hover { border-color: #b5b5ae; }
+.adm-recap-periodes > label[data-choisi] { padding: 13px 14px; border: 2px solid #0a0a0a; }
+.adm-recap-periodes > label:has(input:focus-visible) { outline: 2px solid #0a0a0a; outline-offset: 2px; }
+.adm .adm-recap-periodes input:focus-visible { outline: none; }
+.adm-recap-periodes input { width: 16px; height: 16px; flex: none; margin: 2px 0 0; accent-color: #0a0a0a; }
+.adm-recap-periodes label > span { display: flex; flex-direction: column; gap: 2px; }
+.adm-recap-periode-nom { font-weight: 500; }
+[data-choisi] .adm-recap-periode-nom { font-weight: 600; }
+.adm-recap-periode-detail { color: #5f5f5a; }
+.adm-recap-lignes { margin: 0; border-top: 1px solid #efefec; }
+.adm-recap-lignes > div { display: flex; min-height: 44px; align-items: center; justify-content: space-between; gap: 16px; padding: 6px 0; border-bottom: 1px solid #efefec; }
+.adm-recap-lignes dt { color: #5f5f5a; }
+.adm-recap-lignes dd { margin: 0; text-align: right; }
+.adm-recap-lignes dd[data-fort] { font-weight: 600; font-variant-numeric: tabular-nums; }
+.adm-recap-sous-titre { font-size: 15px; font-weight: 600; }
+.adm-recap-liste { display: flex; flex-direction: column; gap: 8px; }
+.adm-recap-liste > li { min-height: 0; align-items: flex-start; padding: 0; border-top: 0; }
+.adm-recap-liste > li > svg { margin-top: 2px; }
+.adm-recap-liste[data-perte] > li { color: #3d3d39; }
+.adm-recap-apercu { display: flex; height: 592px; flex-direction: column; gap: 12px; align-self: start; overflow: hidden; padding: 10px 12px 0 20px; border-radius: 12px; background: #f5f5f3; }
+.adm-recap-cadre { width: 234px; height: 528px; flex: none; align-self: center; overflow: hidden; border-radius: 16px; box-shadow: 0 18px 40px -22px rgb(10 10 10 / 0.5); }
+
+/* Au retour de Creem : où en est l'offre, puis ce qui vient de s'ouvrir. */
+.adm-retour { display: flex; min-height: 0; flex-direction: column; gap: 20px; overflow-y: auto; overscroll-behavior: contain; padding: 24px 20px max(20px, env(safe-area-inset-bottom)); }
+.adm-retour-tete { display: flex; flex-direction: column; align-items: flex-start; gap: 14px; }
+.adm-retour-roue { width: 44px; height: 44px; border: 3px solid #e3e3df; border-top-color: #0a0a0a; border-radius: 50%; animation: adm-roue 0.9s linear infinite; }
+@keyframes adm-roue { to { transform: rotate(360deg); } }
+.adm-retour-etapes { display: flex; flex-wrap: wrap; gap: 6px 18px; color: #3d3d39; }
+.adm-retour-etapes > li { display: inline-flex; align-items: center; gap: 6px; }
+.adm-retour-texte { max-width: 46ch; color: #3d3d39; text-wrap: pretty; }
+.adm-retour-texte a { color: #0a0a0a; text-decoration: underline; text-decoration-color: rgb(10 10 10 / 0.35); text-underline-offset: 2px; }
+.adm-retour-liste { border-top: 1px solid #efefec; }
+.adm-retour-liste > li { display: flex; min-height: 44px; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 1px solid #efefec; }
+.adm-retour-liste > li > svg { flex: none; color: #3d3d39; }
+.adm-retour-deja { flex: none; color: #5f5f5a; font-size: 12px; }
+.adm-retour-gestes { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+@media (max-width: 639px) { .adm-retour-gestes > * { flex: 1 1 auto; } }
+@media (min-width: 520px) { .adm-recap-periodes { grid-template-columns: 1fr 1fr; } }
+@media (min-width: 640px) {
+  .adm-retour { padding: 28px 28px 24px; }
+}
+/* Au bureau : les quatre offres côte à côte, l'en-tête porte la période. */
+@media (min-width: 1024px) {
+  .adm-offres-tete { height: auto; padding: 16px 14px 16px 24px; }
+  .adm-offres-periodes { display: flex; height: 36px; }
+  .adm-offres-periodes > button { height: 30px; padding: 0 12px; border-radius: 7px; }
+  .adm-offres-badge { height: 20px; padding: 0 7px; }
+  .adm-offres-grille { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; padding: 4px 24px 0; }
+  .adm-offres-grille + .adm-offres-note { padding: 16px 24px 20px; }
+  .adm-offre { padding: 20px; border-radius: 12px; }
+  .adm-offre[data-mis] { padding: 19px; }
+  .adm-offre-nom { font-size: 15px; }
+  .adm-offre-etat { min-height: 36px; border-radius: 8px; }
+  .adm-offre-inclus { margin-bottom: 0; font-size: 12px; }
+  .adm-offre > div:last-child { display: flex; flex-direction: column; gap: 9px; }
+  .adm-offre-liste { display: flex; flex-direction: column; gap: 9px; }
+  .adm-offre-liste > li { min-height: 0; align-items: flex-start; gap: 8px; padding: 0; border-top: 0; }
+  .adm-offre-liste > li > svg { width: 14px; height: 14px; margin-top: 2px; }
+  .adm-offre-sous, .adm-offre-gain { font-size: 12px; }
+  /* Gratuit n'a qu'une ligne sous son prix, l'annuel en a deux : les boutons restent alignés d'une carte à l'autre. */
+  .adm-offres-grille .adm-offre-tarif { min-height: 68px; }
+  .adm-recap { position: relative; display: grid; min-height: 0; grid-template-columns: minmax(0, 1fr); gap: 32px; overflow-y: auto; padding: 16px 24px 24px; }
+  .adm-recap[data-apercu] { grid-template-columns: minmax(0, 1fr) 360px; padding: 16px 16px 24px 24px; }
+  .adm-recap .adm-recap-corps { padding: 0; }
+  .adm-recap-lignes > div { min-height: 40px; padding: 0; }
+  .adm-recap-sous-titre { font-size: 13.5px; }
+  .adm-recap-liste > li > svg { width: 14px; height: 14px; }
+  .adm-retour-liste > li { min-height: 40px; padding: 0; }
+  .adm-retour-etapes > li > svg { width: 14px; height: 14px; }
+}
+@media (min-width: 1024px) and (pointer: fine) {
+  .adm-offres, .adm-recap, .adm-retour { font-size: 13.5px; }
+  .adm-recap .adm-button-primary { min-height: 40px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .adm-offres-periodes > button, .adm-offres-onglets > button, .adm-recap-periodes > label { transition: none; }
+  .adm-retour-roue { animation: none; }
+}
+
+/*
+ * Stats (direction B, 20 octobre 2026) : une phrase, une courbe à onglets, des
+ * listes à barre pâle. Un encart est un trait fin sur le blanc, arrondi à 10 au
+ * bureau ; les gris de texte sont ceux des maquettes (#5f5f5a, 6,5:1 sur le blanc).
+ */
+.adm-encart { border: 1px solid #e6e6e2; border-radius: 12px; background: #fff; }
+.adm-stats-phrase { max-width: 62rem; font-size: 18px; line-height: 1.4; font-weight: 500; letter-spacing: -0.01em; text-wrap: pretty; }
+.adm-stats .adm-card { border-color: #e6e6e2; border-radius: 12px; padding: 16px; }
+.adm-courbe { overflow: hidden; }
+.adm-courbe-onglets { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-bottom: 1px solid #ececea; }
+.adm-courbe-onglets > button { display: flex; min-width: 0; min-height: 72px; flex-direction: column; align-items: flex-start; justify-content: center; gap: 2px; padding: 0 16px; background: #fafaf9; text-align: left; transition: background-color 150ms; }
+.adm-courbe-onglets > button:nth-child(even) { border-left: 1px solid #ececea; }
+.adm-courbe-onglets > button:nth-child(n + 3) { border-top: 1px solid #ececea; }
+.adm-courbe-onglets > button:hover { background: #f4f4f2; }
+.adm-courbe-onglets > button[aria-selected='true'] { background: #fff; box-shadow: inset 0 -2px 0 #0a0a0a; }
+.adm .adm-courbe-onglets > button:focus-visible { outline-offset: -3px; }
+.adm-courbe-nom { font-size: 12px; font-weight: 500; color: #5f5f5a; }
+[aria-selected='true'] > .adm-courbe-nom { color: #3d3d39; }
+.adm-courbe-chiffre { font-size: 24px; line-height: 1.25; font-weight: 600; letter-spacing: -0.02em; color: #3d3d39; font-variant-numeric: proportional-nums; white-space: nowrap; }
+[aria-selected='true'] .adm-courbe-chiffre { color: #0a0a0a; }
+.adm-courbe-vide { font-size: 14px; line-height: 30px; font-weight: 500; color: #5f5f5a; }
+.adm-courbe-ecart { font-size: 12px; color: #5f5f5a; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.adm-courbe-svg { font-family: inherit; }
+.adm .adm-courbe-svg:focus-visible { outline-offset: -2px; border-radius: 0 0 10px 10px; }
+.adm-courbe-texte { fill: #5f5f5a; font-size: 12px; font-variant-numeric: tabular-nums; }
+.adm-courbe-dernier { fill: #0a0a0a; font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.adm-voir-tableau { display: inline-flex; min-height: 36px; align-items: center; padding: 0 12px; border: 1px solid #e3e3df; border-radius: 8px; background: #fff; font-size: 12px; font-weight: 500; transition: background-color 150ms; }
+.adm-voir-tableau:hover { background: #f4f4f0; }
+.adm-bulle { z-index: 2; display: flex; flex-direction: column; gap: 1px; padding: 8px 10px; border: 1px solid #e3e3df; border-radius: 8px; background: #fff; box-shadow: 0 8px 24px -12px rgb(10 10 10 / 0.25); white-space: nowrap; font-size: 13.5px; }
+.adm-tableau-jours { border-collapse: collapse; font-size: 13.5px; font-variant-numeric: tabular-nums; }
+.adm-tableau-jours thead th { position: sticky; top: 0; z-index: 1; height: 36px; padding: 0 16px; border-bottom: 1px solid #ececea; background: #fff; color: #5f5f5a; font-size: 12px; font-weight: 500; text-align: right; }
+.adm-tableau-jours th:first-child { text-align: left; }
+.adm-tableau-jours tbody th { font-weight: 400; text-align: left; white-space: nowrap; }
+.adm-tableau-jours tbody th, .adm-tableau-jours td { height: 36px; padding: 0 16px; border-bottom: 1px solid #efefec; }
+.adm-tableau-jours td { text-align: right; }
+.adm-repartition { padding: 14px 16px 12px; }
+.adm-repartition li { display: grid; grid-template-columns: minmax(0, 1fr) 52px 40px; align-items: center; gap: 8px; min-height: 32px; }
+.adm-repartition-nom { position: relative; display: flex; min-width: 0; height: 32px; align-items: center; gap: 8px; padding-left: 10px; font-size: 14px; }
+.adm-repartition-barre { position: absolute; inset: 0 auto 0 0; min-width: 4px; border-radius: 6px; background: #efefec; }
+.adm-repartition-valeur { text-align: right; font-size: 14px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.adm-repartition-part { text-align: right; font-size: 12px; color: #5f5f5a; font-variant-numeric: tabular-nums; }
+@media (min-width: 640px) {
+  .adm-courbe-onglets { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .adm-courbe-onglets > button { min-height: 84px; padding: 0 20px; }
+  .adm-courbe-onglets > button:nth-child(n + 3) { border-top: 0; }
+  .adm-courbe-onglets > button + button { border-left: 1px solid #ececea; }
+}
+@media (min-width: 1024px) {
+  .adm-encart, .adm-stats .adm-card { border-radius: 10px; }
+  .adm-stats .adm-card { padding: 14px 16px; }
+}
+@media (min-width: 1024px) and (pointer: fine) {
+  .adm-voir-tableau { min-height: 28px; padding: 0 10px; }
+  .adm-repartition-nom, .adm-repartition-valeur, .adm-tableau-jours { font-size: 13.5px; }
+}
+@media (prefers-reduced-motion: reduce) { .adm-courbe-onglets > button, .adm-voir-tableau { transition: none; } }
+
+/*
+ * Réglages (direction B, 20 octobre 2026) : une seule page de 680 px, sans
+ * tiroir. Des groupes de lignes dans un trait fin, le libellé à gauche, la
+ * valeur en gris, le contrôle à droite. Une ligne fait 56 px au doigt, 48 à la
+ * souris ; sur un téléphone, la valeur passe sous le libellé.
+ */
+.adm-reglages { display: flex; width: 100%; max-width: 680px; flex-direction: column; gap: 24px; margin-inline: auto; }
+.adm-lignes { border: 1px solid #e3e3df; border-radius: 12px; background: #fff; }
+.adm-lignes > :first-child { border-top-left-radius: 11px; border-top-right-radius: 11px; }
+.adm-lignes > :last-child { border-bottom-left-radius: 11px; border-bottom-right-radius: 11px; }
+.adm-ligne { display: flex; width: 100%; min-height: 56px; align-items: center; gap: 12px; padding: 6px 16px; font-size: 15px; text-align: left; }
+.adm-ligne + .adm-ligne { border-top: 1px solid #efefec; }
+.adm-ligne-controle { padding-right: 8px; }
+.adm-ligne.adm-ligne-bascule { padding-right: 16px; }
+.adm-ligne-lien { padding-right: 12px; transition: background-color 150ms; }
+.adm-ligne-lien:hover { background: #fafaf9; }
+.adm .adm-ligne-lien:focus-visible { outline-offset: -2px; }
+.adm-ligne-texte { display: flex; min-width: 0; flex: 1; flex-direction: column; gap: 1px; }
+.adm-ligne-nom { min-width: 0; }
+.adm-ligne-valeur { display: -webkit-box; min-width: 0; overflow: hidden; color: #5f5f5a; font-size: 13.5px; overflow-wrap: anywhere; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; }
+.adm-ligne-valeur strong { color: #3d3d39; font-weight: 500; }
+.adm-ligne-valeur [data-alerte] { color: #a16207; }
+/* Une phrase et son bouton (Résilier) : au téléphone, le bouton passe sous la phrase au lieu de la tasser en colonne. */
+.adm-ligne-pile { flex-wrap: wrap; padding: 12px 16px; }
+.adm-ligne-pile > .adm-ligne-texte { flex-basis: 100%; }
+.adm-reglages-pied { display: flex; flex-direction: column; gap: 6px; color: #5f5f5a; font-size: 12px; }
+.adm-reglages-pied a, .adm-offres-note a { color: #0a0a0a; text-decoration: underline; text-decoration-color: rgb(10 10 10 / 0.35); text-underline-offset: 2px; }
+.adm-reglages-pied a:hover, .adm-offres-note a:hover { text-decoration-color: currentColor; }
+/* Le fil d'une sous-page dans l'en-tête : « ‹ Réglages / Facturation ». */
+.adm-fil-retour { display: inline-flex; min-height: 44px; align-items: center; gap: 4px; padding: 0 8px; border-radius: 7px; color: #55554f; font-size: 13.5px; font-weight: 500; transition: background-color 150ms, color 150ms; }
+.adm-fil-retour:hover { background: #f2f2ef; color: #0a0a0a; }
+@media (min-width: 640px) {
+  .adm-ligne-texte { flex-direction: row; align-items: center; gap: 16px; }
+  .adm-ligne-nom { flex: 0 1 auto; }
+  .adm-ligne-valeur { display: block; flex: 1 1 0; font-size: inherit; text-align: right; text-overflow: ellipsis; white-space: nowrap; }
+}
+@media (min-width: 1024px) {
+  .adm-ligne-pile { flex-wrap: nowrap; padding: 6px 8px 6px 16px; }
+  .adm-ligne-pile > .adm-ligne-texte { flex-basis: auto; }
+  .adm-lignes { border-radius: 10px; }
+  .adm-lignes > :first-child { border-top-left-radius: 9px; border-top-right-radius: 9px; }
+  .adm-lignes > :last-child { border-bottom-left-radius: 9px; border-bottom-right-radius: 9px; }
+}
+@media (min-width: 640px) { .adm-feuille.adm-feuille-petite { border-radius: 12px; } }
+@media (min-width: 1024px) and (pointer: fine) {
+  .adm-ligne { min-height: 48px; font-size: 13.5px; }
+  .adm-ligne-controle { padding-right: 6px; }
+  .adm-fil-retour { min-height: 32px; }
+}
+@media (prefers-reduced-motion: reduce) { .adm-ligne-lien, .adm-fil-retour { transition: none; } }
+
+/* Un champ précédé d'un texte fixe (« hopla.page/ ») : un seul cadre, le focus l'entoure en entier. */
+.adm-champ-prefixe { display: flex; min-height: 48px; align-items: center; overflow: hidden; border: 1px solid rgb(10 10 10 / 0.15); border-radius: 12px; background: #fdfdfc; font-size: 16px; transition: border-color 150ms; }
+.adm-champ-prefixe:hover { border-color: #b2b2ab; }
+.adm-champ-prefixe:focus-within { border-color: rgb(10 10 10 / 0.7); outline: 2px solid #0a0a0a; outline-offset: 2px; }
+.adm-champ-prefixe > span { padding-left: 14px; color: #5f5f5a; white-space: nowrap; }
+.adm-champ-prefixe > input { min-width: 0; flex: 1; align-self: stretch; padding: 0 14px 0 0; background: transparent; color: #0a0a0a; }
+.adm-champ-prefixe > input::placeholder { color: #737373; }
+.adm .adm-champ-prefixe > input:focus-visible { outline: none; }
+@media (min-width: 1024px) and (pointer: fine) {
+  .adm-champ-prefixe { min-height: 40px; border-radius: 8px; font-size: 13.5px; }
+  .adm-champ-prefixe > span { padding-left: 12px; }
+  .adm-champ-prefixe > input { padding-right: 12px; }
+}
+
+/*
+ * Comptes (direction B, 20 octobre 2026) : les onglets avec leur compte et la
+ * recherche sur une barre pleine largeur, puis un tableau. Au téléphone, le
+ * tableau devient une liste. Le seul ambre : un signalement à traiter.
+ */
+.adm-comptes-barre { display: flex; flex-direction: column; gap: 12px; }
+.adm-comptes-onglets { display: flex; gap: 22px; overflow-x: auto; border-bottom: 1px solid #ececea; scrollbar-width: none; }
+.adm-comptes-onglets > button { display: flex; min-height: 44px; flex-shrink: 0; align-items: center; gap: 7px; color: #55554f; font-size: 14px; font-weight: 500; white-space: nowrap; transition: color 150ms, box-shadow 200ms var(--adm-sortie); }
+.adm-comptes-onglets > button:hover { color: #0a0a0a; }
+.adm-comptes-onglets > button[aria-selected='true'] { color: #0a0a0a; box-shadow: inset 0 -2px 0 #0a0a0a; }
+.adm .adm-comptes-onglets > button:focus-visible { outline-offset: -2px; }
+.adm-compteur { display: inline-flex; height: 20px; min-width: 20px; align-items: center; justify-content: center; padding: 0 7px; border-radius: 7px; background: rgb(10 10 10 / 0.07); color: #3d3d39; font-size: 12px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.adm-compteur[data-alerte] { background: #a16207; color: #fff; font-weight: 600; }
+.adm-recherche { position: relative; display: flex; min-width: 0; flex: 1; align-items: center; }
+.adm-recherche > svg { position: absolute; left: 12px; color: #5f5f5a; pointer-events: none; }
+.adm-recherche > input { width: 100%; min-height: 44px; padding: 0 12px 0 34px; border: 1px solid #dcdcd7; border-radius: 10px; background: #fff; font-size: 16px; }
+.adm-recherche > input::placeholder { color: #737373; }
+.adm-recherche > input::-webkit-search-cancel-button { cursor: pointer; }
+.adm-tableau { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 13.5px; }
+.adm-tableau th { height: 36px; padding: 0 12px 0 0; border-bottom: 1px solid #ececea; color: #5f5f5a; font-size: 12px; font-weight: 500; text-align: left; }
+.adm-tableau td { height: 48px; padding: 0 12px 0 0; border-bottom: 1px solid #efefec; }
+.adm-tableau .adm-nombre { padding-right: 24px; text-align: right; font-variant-numeric: tabular-nums; }
+.adm-tableau .adm-gris { overflow: hidden; color: #5f5f5a; text-overflow: ellipsis; white-space: nowrap; }
+.adm-tableau tbody tr { transition: background-color 120ms; }
+.adm-tableau tbody tr:hover { background: #fafaf9; }
+.adm-pastille { display: grid; width: 24px; height: 24px; flex-shrink: 0; place-items: center; overflow: hidden; border-radius: 50%; background: #ebebe7; color: #3d3d39; font-size: 12px; font-weight: 600; text-transform: uppercase; }
+.adm-pastille > img { width: 100%; height: 100%; object-fit: cover; }
+.adm-statut { display: inline-flex; align-items: center; gap: 6px; color: #5f5f5a; white-space: nowrap; }
+.adm-statut[data-alerte] { color: #a16207; font-weight: 500; }
+.adm-points { display: grid; width: 32px; height: 32px; place-items: center; border-radius: 8px; color: #55554f; transition: background-color 150ms, color 150ms; }
+.adm-points:hover, .adm-points[aria-expanded='true'] { background: #f2f2ef; color: #0a0a0a; }
+.adm-liste-comptes > li { display: flex; min-height: 64px; align-items: center; gap: 12px; padding: 10px 0; }
+.adm-liste-comptes > li + li { border-top: 1px solid #efefec; }
+.adm-liste-comptes .adm-pastille { width: 36px; height: 36px; font-size: 14px; }
+.adm-bandeau { display: flex; align-items: flex-start; gap: 12px; padding: 10px 8px 10px 14px; border: 1px solid #e3e3df; border-radius: 10px; background: #fafaf9; font-size: 14px; }
+.adm-bandeau[data-erreur] { border-color: #f1c7c7; background: #fdf3f3; color: #a51f1f; }
+@media (max-width: 1023px) { .adm-points { width: 44px; height: 44px; border-radius: 10px; } }
+@media (min-width: 1024px) {
+  .adm-comptes-barre { height: 48px; flex-direction: row; align-items: stretch; justify-content: space-between; gap: 16px; padding: 0 16px 0 24px; border-bottom: 1px solid #ececea; }
+  .adm-comptes-onglets { border-bottom: 0; }
+  .adm-comptes-onglets > button { min-height: 0; }
+  .adm-recherche { width: 260px; flex: none; }
+  .adm-comptes-contenu { padding: 8px 16px 0 24px; }
+}
+@media (min-width: 1024px) and (pointer: fine) {
+  .adm-comptes-onglets > button { font-size: 13.5px; }
+  .adm-recherche > input { min-height: 36px; border-radius: 8px; font-size: 13.5px; }
+  .adm-bandeau { font-size: 13.5px; }
+}
+@media (prefers-reduced-motion: reduce) { .adm-comptes-onglets > button, .adm-tableau tbody tr, .adm-points { transition: none; } }

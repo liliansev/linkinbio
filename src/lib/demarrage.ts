@@ -24,6 +24,14 @@ export function etapesDemarrage(reglages: Reglages, blocs: Bloc[], partagee: boo
   ];
 }
 
+/**
+ * « Bien démarrer » ne sert qu'à une page qui n'a pas encore commencé : jamais
+ * au compte principal, ni à une page que quelqu'un a déjà vue, ni à une page
+ * qui a déjà des blocs. Ce sont des faits du serveur, pas des marques du
+ * navigateur : la liste ne revient pas sur un autre appareil (20 octobre 2026).
+ */
+export const demarrageUtile = (f: { principal: boolean; dejaVue: boolean; blocs: number }) => !f.principal && !f.dejaVue && f.blocs === 0;
+
 /* ---- Les premiers pas : l'arrivée d'un compte neuf ---- */
 
 /** Une page tout juste créée : rien n'y a encore été posé. Les premiers pas ne s'ouvrent que sur elle. */

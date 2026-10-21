@@ -2,18 +2,18 @@ import { useState, useSyncExternalStore } from 'react';
 import type { CSSProperties } from 'react';
 import type { Bloc, ComptePage, Reglages } from '../lib/types.ts';
 import { urlPage } from '../lib/types.ts';
-import { etapesDemarrage } from '../lib/demarrage.ts';
+import { demarrageUtile, etapesDemarrage } from '../lib/demarrage.ts';
 import type { Destination, Etape } from '../lib/demarrage.ts';
 import { Icone } from '../components/Icone.tsx';
-import { BoutonCopier, Feuille, classeBouton, copierTexte, vibrer } from './ui.tsx';
+import { Feuille, classeBouton, copierTexte, vibrer } from './ui.tsx';
 
 /*
- * « Bien démarrer » : l'adresse de la page, à copier ou partager en un geste,
- * et, tant que la page n'est pas prête, les étapes qui restent. Sur
- * ordinateur, en tête de Ma page ; sur téléphone, un anneau dans l'en-tête
- * ouvre la liste dans une feuille, pour que la page commence juste sous
- * l'en-tête. Ce que le navigateur retient ici (page partagée, liste masquée,
- * thèmes vus) n'est qu'un confort.
+ * « Bien démarrer » : les étapes qui restent à une page qui n'a pas encore
+ * commencé. Sur ordinateur, au-dessus de la page ; sur téléphone, un anneau
+ * dans l'en-tête ouvre la liste dans une feuille, pour que la page commence
+ * juste sous l'en-tête. Qu'elle se montre ou non tient à des faits du serveur
+ * (compte principal, page déjà vue, blocs posés) : ce que le navigateur
+ * retient ici (page partagée, liste masquée, thèmes vus) n'est qu'un confort.
  */
 
 const CLE_PARTAGE = 'hopla-page-partagee';
@@ -30,12 +30,20 @@ const EVENEMENTS = [CHANGE, CLE_THEME, 'storage'];
 const ecouter = (f: () => void) => { for (const e of EVENEMENTS) addEventListener(e, f); return () => { for (const e of EVENEMENTS) removeEventListener(e, f); }; };
 const marques = () => [CLE_PARTAGE, CLE_MASQUE, CLE_THEME].map(c => (lire(c) ? '1' : '0')).join('');
 
-/** Les étapes et leur compte ; `actif` tant que la page n'est pas prête et que la liste n'a pas été masquée. */
-export function useDemarrage(reglages: Reglages, blocs: Bloc[]) {
+/** Ce que le serveur sait de la page : « Bien démarrer » ne sert ni au compte principal, ni à une page déjà vue. */
+export interface FaitsPage { principal: boolean; dejaVue: boolean }
+export type Demarrage = ReturnType<typeof useDemarrage>;
+
+/**
+ * Les étapes et leur compte ; `actif` tant que la page n'a pas commencé (voir
+ * `demarrageUtile`), qu'il reste une étape et que la liste n'a pas été masquée.
+ * Une page déjà vue a été partagée : l'étape se coche sans attendre le navigateur.
+ */
+export function useDemarrage(reglages: Reglages, blocs: Bloc[], faits: FaitsPage) {
   const m = useSyncExternalStore(ecouter, marques, () => '000');
-  const etapes = etapesDemarrage(reglages, blocs, m[0] === '1', m[2] === '1');
+  const etapes = etapesDemarrage(reglages, blocs, m[0] === '1' || faits.dejaVue, m[2] === '1');
   const faites = etapes.filter(e => e.faite).length;
-  return { etapes, faites, actif: m[1] !== '1' && faites < etapes.length };
+  return { etapes, faites, actif: demarrageUtile({ ...faits, blocs: blocs.length }) && m[1] !== '1' && faites < etapes.length };
 }
 
 /** L'anneau de progression : un trait d'encre sur un trait pâle, sans couleur. */
@@ -79,17 +87,16 @@ function ListeEtapes({ etapes, choisir, feuille = false }: { etapes: Etape[]; ch
 }
 
 /**
- * Le haut de Ma page sur ordinateur (l'adresse, puis la liste repliée sur une
- * ligne) et, au téléphone, la feuille que l'anneau de l'en-tête ouvre.
+ * Au-dessus de la page sur ordinateur (la liste repliée sur une ligne) et, au
+ * téléphone, la feuille que l'anneau de l'en-tête ouvre.
  */
-export function HautLiens({ compte, reglages, blocs, aller, annoncer, feuille, fermerFeuille }: {
-  compte: ComptePage; reglages: Reglages; blocs: Bloc[]; aller: (d: Destination) => void; annoncer?: (t: { texte: string }) => void;
+export function HautLiens({ compte, reglages, demarrage, aller, annoncer, feuille, fermerFeuille }: {
+  compte: ComptePage; reglages: Reglages; demarrage: Demarrage; aller: (d: Destination) => void; annoncer?: (t: { texte: string }) => void;
   /** La liste ouverte depuis l'en-tête du téléphone. */
   feuille: boolean; fermerFeuille: () => void;
 }) {
   const adresse = urlPage(compte);
-  const courte = adresse.replace(/^https?:\/\//, '');
-  const { etapes, faites, actif } = useDemarrage(reglages, blocs);
+  const { etapes, faites, actif } = demarrage;
   const [ouvert, setOuvert] = useState(false);
   const peutPartager = typeof navigator !== 'undefined' && typeof navigator.share === 'function';
 
@@ -107,16 +114,7 @@ export function HautLiens({ compte, reglages, blocs, aller, annoncer, feuille, f
   return (
     <>
       {/* Sur téléphone, l'adresse, Copier et l'anneau sont dans l'en-tête : rien ne passe ici avant la page. */}
-      <div className="hidden flex-col gap-3 lg:flex">
-        <div className="adm-address flex items-center gap-2 p-1 pl-4">
-          <a href={adresse} target="_blank" rel="noopener" title="Ouvrir ma page" className="min-w-0 flex-1 truncate text-[14px] font-medium text-white underline-offset-4 hover:underline" translate="no">{courte}</a>
-          <BoutonCopier texte={adresse} onCopie={noterPartage} label="Copier l’adresse de ta page" />
-          {peutPartager && (
-            <button type="button" onClick={partager} aria-label="Partager ta page"
-              className="adm-button-primary grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-white text-nuit transition active:scale-95"><Icone nom="partage" taille={19} /></button>
-          )}
-        </div>
-
+      <div className="adm-demarrage hidden flex-col gap-3 lg:flex">
         {/* Une seule ligne tant qu'on ne l'ouvre pas : la page qu'on modifie reste dans le premier écran. */}
         {actif && (
           <section className="adm-checklist adm-cascade" aria-label="Bien démarrer">

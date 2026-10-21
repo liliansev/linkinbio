@@ -42,33 +42,41 @@ export const MOTS: Record<Inscription, { note: string; adresse: string; rassure:
   },
 };
 
-export const DESCRIPTION = 'Ta page de liens sur hopla.page/ton-nom : elle se réorganise selon le réseau et l’heure, ouvre tes liens dans leurs apps et se modifie depuis ton téléphone. Gratuit pour toujours, avec des offres pour aller plus loin.';
+export const DESCRIPTION = 'Ta page de liens sur hopla.page/ton-nom : elle se réorganise selon le réseau d’où arrive ton visiteur, ouvre tes liens dans leurs apps et se modifie depuis ton téléphone. Gratuit pour toujours ; Starter et Pro y ajoutent tes couleurs, tes liens programmés, la page selon l’heure et tes stats.';
 
-/** Ce que fait Hopla, en une liste, pour les données structurées et llms.txt ; l'offre qui débloque une fonction est dite entre parenthèses. */
+/**
+ * Ce que fait Hopla, en une liste, pour les données structurées et llms.txt ;
+ * l'offre qui débloque une fonction est dite entre parenthèses (comme dans
+ * `OFFRES`, lib/abonnement.ts), le reste est dans Gratuit.
+ */
 export const FONCTIONS = [
+  'Ordre des liens selon le réseau d’origine du visiteur',
   'Liens YouTube, Spotify et autres ouverts dans leur app depuis Instagram ou TikTok',
-  'Liens programmés à l’avance, compte à rebours avant un lancement',
-  'Vidéos lues sur la page et QR code',
-  'Vingt thèmes et couleurs personnalisées',
-  'Statistiques sans cookie, résumées en phrases, et e-mail du lundi',
+  'Liens sans limite, vidéos lues sur la page et QR code',
+  'Vingt thèmes',
   'Modification de la page depuis le téléphone',
-  'Avis de clients et page en cinq langues (Starter)',
-  'Ordre des liens selon le réseau d’origine du visiteur et selon l’heure (Pro)',
+  'Page sans la mention « Une page faite avec Hopla » (Starter)',
+  'Couleurs personnalisées par-dessus le thème (Starter)',
+  'Liens programmés à l’avance, compte à rebours avant un lancement (Starter)',
+  'Avis de clients (Starter)',
+  'Statistiques sans cookie sur 30 jours, résumées en phrases, et e-mail du lundi (Starter)',
+  'Ordre des liens selon l’heure (Pro)',
   'Drops : liens débloqués avec un code ou pour un nombre de places (Pro)',
   'Collecte d’e-mails vers Brevo, Mailchimp ou un fichier CSV (Pro)',
+  'Statistiques sur un an (Pro)',
 ];
 
 export function questions(m: Inscription): [string, string][] {
   return [
-    ['C’est quoi, Hopla ?', 'Une page de liens à mettre dans ta bio Instagram, TikTok ou YouTube, sur hopla.page/ton-nom. Elle change l’ordre de ses liens selon le réseau d’où arrive ton visiteur et l’heure qu’il est, ouvre tes liens dans leurs apps et se modifie depuis ton téléphone.'],
-    ['C’est vraiment gratuit ?', 'Oui, pour toujours : ta page, des liens sans limite, les vingt thèmes, tes vidéos et tes stats sur 7 jours. Starter retire la mention « Une page faite avec Hopla » et ajoute les avis et les langues ; Pro réorganise ta page selon le réseau et l’heure, avec les drops et ta liste e-mail.'],
+    ['C’est quoi, Hopla ?', 'Une page de liens à mettre dans ta bio Instagram, TikTok ou YouTube, sur hopla.page/ton-nom. Elle change l’ordre de ses liens selon le réseau d’où arrive ton visiteur (et selon l’heure, avec Pro), ouvre tes liens dans leurs apps et se modifie depuis ton téléphone.'],
+    ['C’est vraiment gratuit ?', 'Oui, pour toujours : des liens sans limite, une page qui se réorganise selon le réseau du visiteur, et les vingt thèmes. Starter retire la mention « Une page faite avec Hopla » et ajoute tes couleurs, tes liens programmés à l’avance, les avis de tes clients et tes stats sur 30 jours ; Pro réorganise ta page selon l’heure, avec les drops, ta liste e-mail et un an de stats.'],
     m === 'libre'
       ? ['Combien de temps pour avoir ma page ?', 'Deux minutes. Tu choisis ton nom, tu laisses ton e-mail, et le lien pour entrer dans ta page arrive par e-mail. Quatre questions plus tard, elle est en ligne.']
       : ['Quand aurai-je ma page ?', 'On ouvre les pages petit à petit, dans l’ordre des réservations. Ton invitation arrive par e-mail, avec un lien valable une semaine ; quatre questions plus tard, ta page est en ligne.'],
     m === 'libre'
       ? ['Quelle sera mon adresse ?', 'hopla.page/ suivi du nom que tu choisis ici : 3 à 30 caractères, lettres, chiffres et tirets. Une fois pris, un nom n’est donné à personne d’autre, sauf si personne n’entre jamais dans la page : elle s’efface au bout d’un mois. Une faute de frappe ? Juste après l’envoi, tant que tu n’es pas entré dans ta page, tu peux encore le changer.']
       : ['Quelle sera mon adresse ?', 'hopla.page/ suivi du nom que tu réserves ici : 3 à 30 caractères, lettres, chiffres et tirets. Un nom réservé n’est donné à personne d’autre. Une faute de frappe ? Juste après la réservation, tu peux encore le changer.'],
-    ['En quoi Hopla change d’une page de liens classique ?', 'Ta page se réorganise toute seule selon le réseau et l’heure, tes liens s’ouvrent dans leurs apps plutôt que dans le navigateur d’Instagram, et tes stats se lisent en une phrase, sans cookie.'],
+    ['En quoi Hopla change d’une page de liens classique ?', 'Ta page se réorganise toute seule selon le réseau d’où arrive ton visiteur (et selon l’heure, avec Pro), tes liens s’ouvrent dans leurs apps plutôt que dans le navigateur d’Instagram, et tes stats se lisent en une phrase, sans cookie (avec Starter).'],
     ['Comment Hopla sait d’où vient un visiteur ?', 'Instagram, TikTok et les autres apps se signalent quand elles ouvrent ta page. Tu mets un seul lien dans toutes tes bios, Hopla fait le tri. Quand rien ne le dit, par exemple un lien envoyé sur WhatsApp ou tapé dans Safari, ta page garde l’ordre que tu as choisi.'],
     ['Mes visiteurs sont-ils pistés ?', 'Non. Aucun cookie, aucune publicité, aucun traceur d’un site à l’autre. Les stats comptent les visites sans garder l’adresse IP : pas de bannière à imposer à tes visiteurs.'],
     ['Je peux partir avec mes données ?', 'Oui. Ta page, tes stats et ta liste e-mail s’exportent en un clic depuis Réglages, et ton compte se supprime de la même façon.'],

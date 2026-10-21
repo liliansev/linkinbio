@@ -6,11 +6,11 @@ import { estEnLigne } from '../src/lib/types.ts';
 import { Admin } from '../src/admin/Admin.tsx';
 import { THEMES } from '../src/lib/themes.ts';
 import { PageLiens } from '../src/components/PageLiens.tsx';
-import { apiDemo, apiNouveau, pageDemo, recommencerNouveau } from './api-demo.ts';
+import { apiDemo, apiGratuit, apiNouveau, pageDemo, recommencerNouveau } from './api-demo.ts';
 
 /* L'aperçu navigable : le vrai back office et la vraie page, sans serveur. */
 function Demo() {
-  const lireVue = () => (location.hash.startsWith('#page') ? 'page' : location.hash === '#nouveau' ? 'nouveau' : 'admin');
+  const lireVue = () => (location.hash.startsWith('#page') ? 'page' : location.hash === '#nouveau' ? 'nouveau' : location.hash === '#gratuit' ? 'gratuit' : 'admin');
   const [vue, setVue] = useState(lireVue);
   const [etat, setEtat] = useState<EtatAdmin | null>(null);
   // Chaque « Recommencer » remonte le back office du nouvel inscrit à zéro.
@@ -18,7 +18,7 @@ function Demo() {
   // Dans l'aperçu, on passe d'une mise en page à l'autre sans repasser par le back office.
   const [bureauChoisi, choisirBureau] = useState<MiseEnPageBureau | null>(null);
   useEffect(() => { const f = () => { setEtat(null); setVue(lireVue()); }; addEventListener('hashchange', f); return () => removeEventListener('hashchange', f); }, []);
-  useEffect(() => { if (vue !== 'page') (vue === 'nouveau' ? apiNouveau : apiDemo).charger().then(setEtat); }, [vue, tour]);
+  useEffect(() => { if (vue !== 'page') (vue === 'nouveau' ? apiNouveau : vue === 'gratuit' ? apiGratuit : apiDemo).charger().then(setEtat); }, [vue, tour]);
   if (vue === 'page') {
     const p = pageDemo();
     const bureau = bureauChoisi ?? p.reglages.bureau;
@@ -47,6 +47,17 @@ function Demo() {
           <a href="#" className="underline">Retour à la démo</a>
         </p>
         <Admin key={tour} api={apiNouveau} initial={etat} demo />
+      </>
+    );
+  }
+  if (vue === 'gratuit') {
+    return (
+      <>
+        <p className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 bg-[#0a0a0a] px-4 py-2 text-center font-sans text-[13px] font-medium text-white">
+          <span>Un compte en Gratuit et le chemin vers les offres. Paiement simulé ; se déconnecter remet tout à zéro.</span>
+          <a href="#" className="underline">Retour à la démo</a>
+        </p>
+        <Admin api={apiGratuit} initial={etat} demo />
       </>
     );
   }

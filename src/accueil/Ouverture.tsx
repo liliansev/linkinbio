@@ -149,7 +149,7 @@ export function Ouverture({ api }: { api: ApiAccueil }) {
         <h1 id="titre" className="hl-h1 hl-heros-titre hl-mots">{mots('La page de liens qui s’adapte à chaque visiteur.', 0, 2)}</h1>
         <p className="hl-chapo hl-apparait" style={d(420)}>
           Rends ta page dynamique selon <span className="hl-insecable">le réseau</span> social.<br />
-          Programme tes liens selon <span className="hl-insecable">le moment</span> de la journée.
+          Programme tes liens selon <span className="hl-insecable">le moment</span> <span className="hl-insecable">de la journée</span>, <span className="hl-insecable">avec Pro</span>.
         </p>
         <div className="hl-apparait" style={d(540)} data-zone-appel="">
           <Reserver api={api} id="reserver" grand premier note={<>{MOTS[mode].note} <a href="/lilian">Voir une vraie page</a></>} apercu={pseudo && !pris && (
