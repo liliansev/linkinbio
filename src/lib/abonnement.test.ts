@@ -12,8 +12,9 @@ import { composerMoment } from './moments.ts';
 test('les prix s’écrivent à la française', () => {
   assert.equal(euros(9), '9\u00a0€');
   assert.equal(euros(86.4), '86,40\u00a0€');
-  assert.equal(libellePrix('pro', 'mois'), '9\u00a0€ par mois');
-  assert.equal(libellePrix('pro', 'an'), '79\u00a0€ par an');
+  assert.equal(libellePrix('starter', 'mois'), '9\u00a0€ par mois');
+  assert.equal(libellePrix('pro', 'mois'), '19\u00a0€ par mois');
+  assert.equal(libellePrix('pro', 'an'), '169\u00a0€ par an');
 });
 
 test('chaque offre coûte plus que la précédente, et l’annuel revient moins cher que douze mois', () => {
@@ -23,8 +24,10 @@ test('chaque offre coûte plus que la précédente, et l’annuel revient moins 
     assert.ok(economie(p) > 0 && economie(p) < 50, p);
     if (i) assert.ok(o.prix.mois > OFFRES[PLANS_PAYANTS[i - 1]].prix.mois, p);
   }
-  assert.equal(economie('pro'), 27);
-  assert.equal(parMoisAnnuel('pro'), 6.58);
+  assert.equal(economie('starter'), 27);
+  assert.equal(economie('pro'), 26);
+  assert.equal(parMoisAnnuel('starter'), 6.58);
+  assert.equal(parMoisAnnuel('pro'), 14.08);
   // Chaque offre lit au moins l'historique et la place de la précédente.
   for (let i = 1; i < PLANS.length; i++) {
     assert.ok(OFFRES[PLANS[i]].jours >= OFFRES[PLANS[i - 1]].jours);
@@ -34,9 +37,9 @@ test('chaque offre coûte plus que la précédente, et l’annuel revient moins 
 });
 
 test('l’annuel : l’économie réelle en euros, et les mois offerts', () => {
-  assert.equal(economieAnnuelle('starter'), 12);
-  assert.equal(economieAnnuelle('pro'), 29);
-  assert.equal(economieAnnuelle('premium'), 59);
+  assert.equal(economieAnnuelle('starter'), 29);
+  assert.equal(economieAnnuelle('pro'), 59);
+  assert.equal(economieAnnuelle('premium'), 89);
   for (const p of PLANS_PAYANTS) {
     assert.equal(economieAnnuelle(p), OFFRES[p].prix.mois * 12 - OFFRES[p].prix.an, p);
     assert.equal(moisOfferts(p), 3, p);

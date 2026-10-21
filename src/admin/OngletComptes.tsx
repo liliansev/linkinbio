@@ -465,7 +465,9 @@ function Signalements({ liste, vide, recherche, decider, api, agir }: {
 
 /**
  * Les offres dans Creem : pour chaque offre et chaque période, le produit qui
- * la vend. « Créer les offres dans Creem » fabrique ceux qui manquent, au prix
+ * la vend, relu dans Creem à l'ouverture de l'onglet. Un prix changé dans Creem
+ * y est repris ; s'il diffère de celui de `OFFRES`, la ligne dit le prix de
+ * Creem. « Créer les offres dans Creem » fabrique ceux qui manquent, au prix
  * de `OFFRES` ; un prix changé dans le code donne un nouveau produit, et
  * l'ancien reste en place pour les abonnés qui l'ont. L'encart ne se montre
  * que s'il reste un produit à créer (ou juste après la création, pour le dire).
@@ -499,7 +501,7 @@ function OffresCreem({ api }: { api: ApiComptes }) {
           <li key={`${o.plan}-${o.periode}`} className="flex min-h-11 items-center gap-3 py-2 bureau:min-h-9">
             <span className="min-w-0 flex-1 text-[14px]">{OFFRES[o.plan].nom} {o.periode === 'an' ? 'annuel' : 'mensuel'}</span>
             <span className="text-[13.5px] tabular-nums text-white/60">{euros(o.prix)}</span>
-            <span className={`w-24 text-right text-[13px] ${o.produit ? 'text-white' : 'text-white/60'}`}>{o.produit ? 'En vente' : o.enVente ? 'À créer' : 'Plus tard'}</span>
+            <span className={`w-32 text-right text-[13px] ${o.produit ? 'text-white' : 'text-white/60'}`}>{o.produit ? 'En vente' : o.prixCreem !== null ? `${euros(o.prixCreem)} dans Creem` : o.enVente ? 'À créer' : 'Plus tard'}</span>
           </li>
         ))}
       </ul>

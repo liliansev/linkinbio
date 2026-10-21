@@ -512,25 +512,41 @@ test('offres : la page de paiement, le changement d’offre et le portail passen
   assert.equal(appels.length, avant);
 });
 
+/** Une boutique Creem pour les tests : ses produits se relisent, se listent et se créent comme par l'API. */
+function boutiqueCreem(produits: Record<string, { price: number; billing_period: string; name?: string; status?: string; billing_type?: string }>) {
+  const appels: { chemin: string; methode: string; cle: string | null; corps: any }[] = [];
+  let n = 0;
+  const decrire = (id: string) => ({ id, name: '', currency: 'EUR', billing_type: 'recurring', status: 'active', ...produits[id] });
+  const fetchFaux = (async (url: string, init: RequestInit) => {
+    const chemin = new URL(url).pathname, methode = String(init.method);
+    const corps = init.body ? JSON.parse(String(init.body)) : null;
+    appels.push({ chemin, methode, cle: new Headers(init.headers).get('Idempotency-Key'), corps });
+    if (methode === 'POST' && chemin === '/v1/products') {
+      const id = `prod_neuf_${++n}`;
+      produits[id] = { price: corps.price, billing_period: corps.billing_period, name: corps.name };
+      return Response.json(decrire(id));
+    }
+    if (chemin === '/v1/products/search') return Response.json({ items: Object.keys(produits).map(decrire), pagination: { current_page: 1, next_page: null } });
+    const id = chemin.replace('/v1/products/', '');
+    return produits[id] ? Response.json(decrire(id)) : new Response('not found', { status: 404 });
+  }) as typeof fetch;
+  return { appels, fetchFaux, produits, crees: () => appels.filter(a => a.methode === 'POST') };
+}
+
 test('offres : « Créer les offres dans Creem » crée ce qui manque, une fois, et reprend l’ancien Pro au bon prix', async () => {
   const creem = await import('./creem.ts');
   const env = { CREEM_API_KEY: 'creem_test_x', CREEM_WEBHOOK_SECRET: 'whsec_test', CREEM_PRODUIT_MOIS: 'prod_mois', CREEM_PRODUIT_AN: 'prod_an', CREEM_TEST: '1' };
-  const appels: { url: string; methode: string; cle: string | null; corps: any }[] = [];
-  let n = 0;
-  const fetchFaux = (async (url: string, init: RequestInit) => {
-    appels.push({ url, methode: String(init.method), cle: new Headers(init.headers).get('Idempotency-Key'), corps: init.body ? JSON.parse(String(init.body)) : null });
-    // L'ancien Pro mensuel est déjà à 9 € ; l'ancien annuel était à 86,40 €.
-    if (url.endsWith('/v1/products/prod_mois')) return Response.json({ id: 'prod_mois', price: 900 });
-    if (url.endsWith('/v1/products/prod_an')) return Response.json({ id: 'prod_an', price: 8640 });
-    return Response.json({ id: `prod_neuf_${++n}` });
-  }) as typeof fetch;
+  // L'ancien Pro mensuel a été remis à 19 € dans Creem ; l'ancien annuel est resté à 86,40 €.
+  const { appels, fetchFaux, crees } = boutiqueCreem({
+    prod_mois: { price: 1900, billing_period: 'every-month', name: 'Hopla Pro mensuel' },
+    prod_an: { price: 8640, billing_period: 'every-year', name: 'Hopla Pro annuel' },
+  });
   const etat = await creem.creerOffres(env, fetchFaux);
-  const crees = appels.filter(a => a.methode === 'POST');
-  assert.deepEqual(crees.map(a => a.corps.name), ['Hopla Starter mensuel', 'Hopla Starter annuel', 'Hopla Pro annuel'], 'Premium n’est pas en vente : aucun produit');
-  assert.deepEqual(crees.map(a => a.corps.price), [400, 3600, 7900]);
-  assert.deepEqual(crees.map(a => a.cle), ['hopla-starter-mois-400', 'hopla-starter-an-3600', 'hopla-pro-an-7900']);
-  assert.equal(crees[0].corps.billing_period, 'every-month');
-  assert.equal(crees[0].corps.tax_mode, 'inclusive');
+  assert.deepEqual(crees().map(a => a.corps.name), ['Hopla Starter mensuel', 'Hopla Starter annuel', 'Hopla Pro annuel'], 'Premium n’est pas en vente : aucun produit');
+  assert.deepEqual(crees().map(a => a.corps.price), [900, 7900, 16900]);
+  assert.deepEqual(crees().map(a => a.cle), ['hopla-starter-mois-900', 'hopla-starter-an-7900', 'hopla-pro-an-16900']);
+  assert.equal(crees()[0].corps.billing_period, 'every-month');
+  assert.equal(crees()[0].corps.tax_mode, 'inclusive');
   assert.equal(etat.find(e => e.plan === 'pro' && e.periode === 'mois')?.produit, 'prod_mois', 'l’ancien Pro au bon prix est repris');
   assert.equal(etat.find(e => e.plan === 'pro' && e.periode === 'an')?.produit, 'prod_neuf_3');
   assert.equal(etat.find(e => e.plan === 'premium' && e.periode === 'an')?.produit, null);
@@ -538,14 +554,97 @@ test('offres : « Créer les offres dans Creem » crée ce qui manque, une fois,
   // L'ancien annuel reste connu : ses abonnés gardent le Pro, ses webhooks passent.
   assert.equal(db.produitConnu('prod_an')?.plan, 'pro');
   assert.equal(db.produitConnu('prod_an')?.actuel, false);
-  // Rejouer ne crée rien.
+  // Rejouer relit Creem, mais ne crée rien.
   const avant = appels.length;
   await creem.creerOffres(env, fetchFaux);
-  assert.equal(appels.length, avant);
+  assert.ok(appels.length > avant);
+  assert.equal(crees().length, 3);
   // Une clé sans le droit « Products » : le message dit quoi faire.
   db.ecrireCatalogue([]);
   const refuse = (async () => new Response('forbidden', { status: 403 })) as unknown as typeof fetch;
-  await assert.rejects(creem.creerOffres({ CREEM_API_KEY: 'k', CREEM_WEBHOOK_SECRET: 's' }, refuse), /Products/);
+  await assert.rejects(creem.creerOffres({ CREEM_API_KEY: 'k', CREEM_WEBHOOK_SECRET: 's' }, refuse), /droit de créer des produits/);
+  db.ecrireCatalogue([{ id: 'prod_x', plan: 'starter', periode: 'mois', prix: 900, actuel: true }]);
+  await assert.rejects(creem.relireCatalogue({ CREEM_API_KEY: 'k', CREEM_WEBHOOK_SECRET: 's' }, refuse), /droit de lire des produits/);
+});
+
+test('offres : un prix changé dans Creem est repris, sans rien créer en double', async () => {
+  const creem = await import('./creem.ts');
+  const env = { CREEM_API_KEY: 'creem_test_x', CREEM_WEBHOOK_SECRET: 'whsec_test', CREEM_PRODUIT_MOIS: 'prod_mois', CREEM_PRODUIT_AN: 'prod_an', CREEM_TEST: '1' };
+  // Le catalogue d'avant (Starter 4 € et 36 €, Pro 9 € et 79 €), et Creem tel que Lilian l'a ajusté le 21 octobre 2026.
+  db.ecrireCatalogue([
+    { id: 'prod_s_mois', plan: 'starter', periode: 'mois', prix: 400, actuel: true },
+    { id: 'prod_s_an', plan: 'starter', periode: 'an', prix: 3600, actuel: true },
+    { id: 'prod_mois', plan: 'pro', periode: 'mois', prix: 900, actuel: true },
+    { id: 'prod_an', plan: 'pro', periode: 'an', prix: 8640, actuel: false },
+    { id: 'prod_p_an', plan: 'pro', periode: 'an', prix: 7900, actuel: true },
+  ]);
+  const { fetchFaux, produits, crees } = boutiqueCreem({
+    prod_s_mois: { price: 900, billing_period: 'every-month' },
+    prod_s_an: { price: 7900, billing_period: 'every-year' },
+    prod_mois: { price: 1900, billing_period: 'every-month' },
+    prod_an: { price: 8640, billing_period: 'every-year' },
+    prod_p_an: { price: 16900, billing_period: 'every-year' },
+  });
+  // Tant que Hopla n'a pas relu Creem, rien n'est vendu à un prix qu'il n'affiche pas.
+  assert.deepEqual(creem.offresEnVente(env), []);
+  assert.equal(creem.etatOffres(env).find(e => e.plan === 'starter' && e.periode === 'mois')?.prixCreem, 4);
+  const etat = await creem.relireCatalogue(env, fetchFaux);
+  assert.equal(crees().length, 0, 'rien n’est créé ni changé chez Creem');
+  assert.deepEqual(creem.offresEnVente(env), ['starter', 'pro']);
+  assert.deepEqual(etat.filter(e => e.enVente).map(e => [e.plan, e.periode, e.produit, e.prixCreem]), [
+    ['starter', 'mois', 'prod_s_mois', null], ['starter', 'an', 'prod_s_an', null], ['pro', 'mois', 'prod_mois', null], ['pro', 'an', 'prod_p_an', null],
+  ]);
+  assert.equal(db.produitConnu('prod_s_mois')?.prix, 900);
+  // « Créer les offres dans Creem » n'a alors plus rien à créer.
+  await creem.creerOffres(env, fetchFaux);
+  assert.equal(crees().length, 0);
+
+  // Un prix que le code n'affiche pas : l'offre ne se vend plus, et l'onglet Comptes dit le prix de Creem.
+  produits.prod_p_an.price = 17900;
+  await creem.relireCatalogue(env, fetchFaux);
+  assert.deepEqual(creem.offresEnVente(env), ['starter']);
+  assert.equal(creem.etatOffres(env).find(e => e.plan === 'pro' && e.periode === 'an')?.prixCreem, 179);
+  produits.prod_p_an.price = 16900;
+
+  // Un produit archivé dans Creem ne se vend plus ; le créer à nouveau ne refait que lui.
+  produits.prod_s_an.status = 'archived';
+  await creem.relireCatalogue(env, fetchFaux);
+  assert.deepEqual(creem.offresEnVente(env), ['pro']);
+  assert.equal(db.produitConnu('prod_s_an')?.plan, 'starter', 'ses abonnés gardent Starter');
+  await creem.creerOffres(env, fetchFaux);
+  assert.deepEqual(crees().map(a => a.corps.name), ['Hopla Starter annuel']);
+  assert.deepEqual(creem.offresEnVente(env), ['starter', 'pro']);
+
+  // Creem injoignable : le catalogue reste tel qu'il était, l'erreur remonte.
+  const avant = db.lireCatalogue();
+  const panne = (async () => new Response('erreur', { status: 500 })) as unknown as typeof fetch;
+  await assert.rejects(creem.relireCatalogue(env, panne), /ne répond pas/);
+  assert.deepEqual(db.lireCatalogue(), avant);
+  await assert.rejects(creem.relireCatalogue({}, fetchFaux), /pas encore branché/);
+});
+
+test('offres : un produit fait à la main dans Creem, au nom et au prix de l’offre, est repris', async () => {
+  const creem = await import('./creem.ts');
+  const env = { CREEM_API_KEY: 'creem_test_x', CREEM_WEBHOOK_SECRET: 'whsec_test', CREEM_TEST: '1' };
+  db.ecrireCatalogue([{ id: 'prod_s_mois', plan: 'starter', periode: 'mois', prix: 400, actuel: true }]);
+  const { fetchFaux, crees } = boutiqueCreem({
+    prod_s_mois: { price: 400, billing_period: 'every-month', name: 'Hopla Starter mensuel' },
+    // La boutique vend aussi des formations, et parfois à un prix qui tombe juste : seuls les produits nommés Hopla comptent.
+    prod_n8n: { price: 900, billing_period: 'every-month', name: 'Formation n8n' },
+    prod_main: { price: 900, billing_period: 'every-month', name: 'Hopla Starter (mensuel)' },
+    prod_main_an: { price: 7900, billing_period: 'every-year', name: 'HOPLA starter annuel' },
+    prod_pro_vieux: { price: 1900, billing_period: 'every-month', name: 'Hopla Pro mensuel', status: 'archived' },
+    prod_premium: { price: 1900, billing_period: 'every-month', name: 'Hopla Premium mensuel' },
+  });
+  await creem.relireCatalogue(env, fetchFaux);
+  assert.equal(crees().length, 0);
+  assert.equal(creem.etatOffres(env).find(e => e.plan === 'starter' && e.periode === 'mois')?.produit, 'prod_main');
+  assert.equal(creem.etatOffres(env).find(e => e.plan === 'starter' && e.periode === 'an')?.produit, 'prod_main_an');
+  assert.equal(db.produitConnu('prod_s_mois')?.actuel, false, 'l’ancien produit reste connu, sans plus se vendre');
+  // Ni un produit archivé ni celui d'une autre offre ne passent pour Pro.
+  assert.equal(creem.etatOffres(env).find(e => e.plan === 'pro' && e.periode === 'mois')?.produit, null);
+  assert.equal(db.produitConnu('prod_n8n'), undefined);
+  assert.deepEqual(creem.offresEnVente(env), ['starter']);
 });
 
 test('statistiques : un navigateur intégré sans référent est rangé sous son app', () => {

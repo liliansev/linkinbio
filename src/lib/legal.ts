@@ -10,10 +10,10 @@
 
 import { OFFRES, euros } from './abonnement.ts';
 
-/** « 4 € par mois ou 36 € par an » : le prix d'une offre, tel que Creem le facture. */
+/** « 9 € par mois ou 79 € par an » : le prix d'une offre, tel que Creem le facture. */
 const prixDe = (p: 'starter' | 'pro' | 'premium') => `${euros(OFFRES[p].prix.mois)} par mois ou ${euros(OFFRES[p].prix.an)} par an`;
 
-export const VERSION_CGU = '2026-10-21.1';
+export const VERSION_CGU = '2026-10-21.2';
 export const CONTACT_LEGAL = 'bonjour@liliansevoumian.fr';
 
 export interface DocumentLegal { titre: string; resume: string; sections: { titre: string; texte: string[] }[] }

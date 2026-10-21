@@ -1,7 +1,8 @@
 /*
  * Les offres, en un seul endroit : Gratuit, Starter, Pro et Premium (choix de
- * Lilian, 20 octobre 2026), leurs prix (ceux des produits Creem, que « Créer
- * les offres dans Creem » tient à jour), ce que chacune débloque, et la lecture
+ * Lilian, 20 octobre 2026), leurs prix (Starter 9 € et Pro 19 € par mois depuis
+ * le 21 octobre 2026 ; ceux des produits Creem, que Hopla relit et que « Créer
+ * les offres dans Creem » complète), ce que chacune débloque, et la lecture
  * d'un abonnement. Le compte principal (Lilian) a tout, sans abonnement.
  * Gratuit garde l'essentiel pour essayer : des liens sans limite, la page selon
  * le réseau du visiteur (la promesse de Hopla) et tous les thèmes.
@@ -47,15 +48,15 @@ export const OFFRES: Record<Plan, Offre> = {
     avantages: ['Des liens sans limite', 'Ta page selon le réseau du visiteur', 'Les vingt thèmes'],
   },
   starter: {
-    nom: 'Starter', phrase: 'Ta page, sans la mention Hopla.', prix: { mois: 4, an: 36 }, quota: 100 * Mo, jours: 30, enVente: true,
+    nom: 'Starter', phrase: 'Ta page, sans la mention Hopla.', prix: { mois: 9, an: 79 }, quota: 100 * Mo, jours: 30, enVente: true,
     avantages: ['Sans la mention « Une page faite avec Hopla »', 'Tes couleurs', 'Tes liens programmés à l’avance', 'Les avis de tes clients', 'Tes stats sur 30 jours'],
   },
   pro: {
-    nom: 'Pro', phrase: 'Le bon lien, au bon moment.', prix: { mois: 9, an: 79 }, quota: 200 * Mo, jours: 365, enVente: true,
+    nom: 'Pro', phrase: 'Le bon lien, au bon moment.', prix: { mois: 19, an: 169 }, quota: 200 * Mo, jours: 365, enVente: true,
     avantages: ['Ta page selon l’heure', 'Les drops : un code, des places comptées', 'Ta liste e-mail, vers Brevo ou Mailchimp', 'Tes stats sur un an'],
   },
   premium: {
-    nom: 'Premium', phrase: 'Ta page à ton nom de domaine.', prix: { mois: 19, an: 169 }, quota: 1024 * Mo, jours: 365, enVente: false,
+    nom: 'Premium', phrase: 'Ta page à ton nom de domaine.', prix: { mois: 29, an: 259 }, quota: 1024 * Mo, jours: 365, enVente: false,
     avantages: ['Ton propre nom de domaine', 'Jusqu’à trois pages'],
   },
 };
@@ -63,15 +64,15 @@ export const OFFRES: Record<Plan, Offre> = {
 /** Le rang d'une offre : chacune contient celles d'avant. */
 export const rang = (p: Plan) => PLANS.indexOf(p);
 
-/** Ce que l'annuel fait gagner sur douze mois, en pourcentage arrondi (27 pour le Pro). */
+/** Ce que l'annuel fait gagner sur douze mois, en pourcentage arrondi (27 pour Starter, 26 pour Pro). */
 export const economie = (p: PlanPayant) => Math.round((1 - OFFRES[p].prix.an / (OFFRES[p].prix.mois * 12)) * 100);
-/** Ce que l'annuel fait gagner en un an, en euros : douze mois moins l'année (12 € pour Starter, 29 € pour Pro). */
+/** Ce que l'annuel fait gagner en un an, en euros : douze mois moins l'année (29 € pour Starter, 59 € pour Pro). */
 export const economieAnnuelle = (p: PlanPayant) => Math.round((OFFRES[p].prix.mois * 12 - OFFRES[p].prix.an) * 100) / 100;
-/** Les mois entiers que l'annuel offre : trois pour Starter (36 € au lieu de 48 €), trois pour Pro (29 € de moins, plus de trois fois 9 €). */
+/** Les mois entiers que l'annuel offre : trois pour Starter (29 € de moins, plus de trois fois 9 €), trois pour Pro (59 € de moins, plus de trois fois 19 €). */
 export const moisOfferts = (p: PlanPayant) => Math.floor(economieAnnuelle(p) / OFFRES[p].prix.mois + 1e-9);
-/** Le prix d'une offre par mois quand on la paie à l'année (6,58 € pour le Pro). */
+/** Le prix d'une offre par mois quand on la paie à l'année (6,58 € pour Starter, 14,08 € pour Pro). */
 export const parMoisAnnuel = (p: PlanPayant) => Math.round((OFFRES[p].prix.an / 12) * 100) / 100;
-/** « 79 € par an », « 9 € par mois ». */
+/** « 169 € par an », « 19 € par mois ». */
 export const libellePrix = (p: PlanPayant, periode: Periode) => `${euros(OFFRES[p].prix[periode])} par ${periode === 'an' ? 'an' : 'mois'}`;
 
 /**
@@ -182,8 +183,11 @@ export function peut(plan: Plan, f: Fonction, cree = Number.POSITIVE_INFINITY): 
  */
 export const joursStats = (plan: Plan, permis: boolean) => (permis ? Math.max(OFFRES[plan].jours, JOURS_AVANT_OFFRES) : 0);
 
-/** Une offre et une période dans Creem, pour l'onglet Comptes : son prix du jour et le produit qui le vend, s'il existe. */
-export interface EtatOffre { plan: PlanPayant; periode: Periode; prix: number; enVente: boolean; produit: string | null }
+/**
+ * Une offre et une période dans Creem, pour l'onglet Comptes : son prix du jour et le produit qui le vend, s'il existe.
+ * Sans produit à ce prix, `prixCreem` dit celui du produit de l'offre tel que Creem le facture (un prix changé là-bas).
+ */
+export interface EtatOffre { plan: PlanPayant; periode: Periode; prix: number; enVente: boolean; produit: string | null; prixCreem: number | null }
 
 /** Les statuts d'abonnement Creem qui donnent accès à l'offre payée. Un impayé la garde le temps des relances. */
 export const STATUTS_PRO = ['active', 'trialing', 'scheduled_cancel', 'past_due'] as const;
