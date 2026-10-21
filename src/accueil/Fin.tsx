@@ -1,9 +1,10 @@
+import { RubanProfils, Avatar } from './Profils.tsx';
 import { useState } from 'react';
 import type { CSSProperties, KeyboardEvent, MouseEvent } from 'react';
 import { Icone } from '../components/Icone.tsx';
 import { OFFRES, PLANS, PLANS_PAYANTS, economie, euros, parMoisAnnuel } from '../lib/abonnement.ts';
 import { CONTACT_LEGAL } from '../lib/legal.ts';
-import type { Periode, Plan } from '../lib/abonnement.ts';
+import type { Periode } from '../lib/abonnement.ts';
 import { Marque } from './Ouverture.tsx';
 import { Reserver, allerAuChamp, useReservation } from './Reserver.tsx';
 import type { ApiAccueil } from './Reserver.tsx';
@@ -22,9 +23,7 @@ function useEnvoye() {
 }
 
 export function Prix() {
-  const [periode, setPeriode] = useState<Periode>('an');
-  // Au téléphone, les avantages se replient sous chaque carte ; au bureau, ils sont toujours ouverts.
-  const [ouverts, setOuverts] = useState<Plan[]>([]);
+  const [periode, setPeriode] = useState<Periode>('mois');
   const mode = useInscription();
   const envoye = useEnvoye();
   const libelle = appel(mode);
@@ -40,7 +39,7 @@ export function Prix() {
   return (
     <section className="hl-section" id="prix" aria-labelledby="titre-prix">
       <div className="hl-tete-section hl-entre">
-        <h2 id="titre-prix" className="hl-h2">Gratuit pour commencer. Une offre quand ta page grandit.</h2>
+        <h2 id="titre-prix" className="hl-h2">Ta place sur internet<br /><span>À ton rythme</span></h2>
       </div>
       <div className="hl-periode hl-entre" role="radiogroup" aria-label="Paiement" onKeyDown={fleches}>
         {PERIODES.map(p => (
@@ -50,15 +49,15 @@ export function Prix() {
         ))}
       </div>
       <div className="hl-offres">
-        {PLANS.map((plan, i) => {
+        {PLANS.filter(plan => OFFRES[plan].enVente).map((plan, i) => {
           const o = OFFRES[plan];
-          const ouvert = ouverts.includes(plan);
           const avant = i ? OFFRES[PLANS[i - 1]].nom : null;
           return (
             <article key={plan} className={`hl-offre hl-entre ${plan === 'pro' ? 'hl-offre-pro' : ''}`} style={{ '--d': `${i * 60}ms` } as CSSProperties}>
+              <div className="hp-offre-personne"><Avatar profil={plan === 'gratuit' ? 'ines' : plan === 'starter' ? 'hugo' : 'malik'} /><span>{plan === 'gratuit' ? 'Pour partager ce que tu fais' : plan === 'starter' ? 'Pour affirmer ton univers' : 'Pour une page qui travaille avec toi'}</span></div>
               <div className="hl-offre-tete">
                 <h3 className="hl-h3">{o.nom}</h3>
-                {plan === 'pro' && <span className="hl-offre-badge">Recommandé</span>}
+                {plan === 'pro' && <span className="hl-offre-badge">Le plus complet</span>}
                 {!o.enVente && <span className="hl-offre-badge hl-offre-badge-pale">Bientôt</span>}
               </div>
               {plan === 'gratuit' ? (
@@ -73,19 +72,18 @@ export function Prix() {
                 </div>
               )}
               <p className="hl-offre-phrase">{o.phrase}</p>
-              <button type="button" className="hl-offre-plus" aria-expanded={ouvert} aria-controls={`offre-${plan}`}
-                onClick={() => setOuverts(l => (l.includes(plan) ? l.filter(x => x !== plan) : [...l, plan]))}>
-                Ce qu’elle comprend <Icone nom="ui-chevron" taille={16} />
-              </button>
-              <ul id={`offre-${plan}`} data-ouvert={ouvert || undefined}>
+              <ul id={`offre-${plan}`} data-ouvert="">
                 {avant && <li className="hl-offre-avant">Tout {avant}, et :</li>}
-                {o.avantages.map(g => <li key={g}><Icone nom="check" taille={18} />{g}</li>)}
+                {o.avantages.map(g => <li key={g}><Icone nom="check" taille={18} /><span>{g.replace(/« /g, '«\u00a0').replace(/ »/g, '\u00a0»')}</span></li>)}
               </ul>
               {/* On commence toujours en Gratuit : l'offre se prend ensuite depuis les réglages. */}
               {!envoye && o.enVente && (
-                <a href="#reserver" className={`hl-btn ${plan === 'gratuit' ? '' : 'hl-btn-contour'}`} onClick={reserver}>
-                  {plan === 'gratuit' || mode !== 'libre' ? libelle : 'Commencer gratuitement'}
-                </a>
+                <div className="hp-offre-action">
+                  <a href="#reserver" className={`hl-btn ${plan === 'gratuit' ? '' : 'hl-btn-contour'}`} onClick={reserver}>
+                    {plan === 'gratuit' || mode !== 'libre' ? libelle : 'Créer mon compte'}
+                  </a>
+                  {plan !== 'gratuit' && mode === 'libre' && <p>Puis active {o.nom} dans tes réglages.</p>}
+                </div>
               )}
             </article>
           );
@@ -118,9 +116,10 @@ export function DernierAppel({ api }: { api: ApiAccueil }) {
   // Pour qui vient d'envoyer, la fin dit où l'attend la suite au lieu de relancer.
   const envoye = useEnvoye();
   return (
-    <section className="hl-section hl-dernier" data-teinte="rose" aria-labelledby="dernier">
-      <h2 id="dernier" className="hl-h2 hl-h2-grand hl-entre">{envoye ? MOTS[mode].fin : <>Ton nom est <span className="hl-insecable">peut-être</span> <span className="hl-insecable">encore libre.</span></>}</h2>
-      <div className="hl-entre" style={{ '--d': '120ms' } as CSSProperties} data-zone-appel=""><Reserver api={api} id="reserver-fin" grand note={MOTS[mode].note} /></div>
+    <section className="hl-section hl-dernier" data-teinte="klein" aria-labelledby="dernier">
+      <RubanProfils />
+      <h2 id="dernier" className="hl-h2 hl-h2-grand hl-entre">{envoye ? MOTS[mode].fin : <>Réserve ton nom<br />en premier</>}</h2>
+      <div className="hl-entre" style={{ '--d': '120ms' } as CSSProperties} data-zone-appel=""><Reserver api={api} id="reserver-fin" grand libelleNom={mode === 'libre' ? 'Réserver mon nom' : undefined} note={MOTS[mode].note} /></div>
       <a href="/lilian" className="hl-lien-gris">Voir une vraie page</a>
     </section>
   );

@@ -3,7 +3,7 @@ import type { CSSProperties } from 'react';
 import { Icone } from '../components/Icone.tsx';
 import { THEMES } from '../lib/themes.ts';
 import { CroquisLien, EcranPage, Telephone } from './Telephone.tsx';
-import { BLOCS_MARIE, pageMarie } from './exemples.ts';
+import { BLOCS_EXEMPLES, PROFILS, pageExemple } from './exemples.ts';
 import { mouvementReduit, useGlisse, useSequence, useVu } from './mouvement.ts';
 
 /*
@@ -36,9 +36,9 @@ const ETAPE_DU_GESTE = [1, 4, 6];
 const AVANT_MODIFIER = 4700 + 1600;
 
 function pageEtape(n: number) {
-  return pageMarie(n >= 4 ? 'champagne' : 'neige', {
-    profil: n >= 1 ? {} : { nom: '', bio: '', avatar: '' },
-    blocs: n >= 2 ? BLOCS_MARIE.slice(0, 2) : [],
+  return pageExemple('lea', n >= 4 ? 'sauge' : 'neige', {
+    profil: n >= 1 ? {} : { nom: '', bio: '', avatar: PROFILS.lea.avatar },
+    blocs: n >= 2 ? BLOCS_EXEMPLES.lea.slice(0, 2) : [],
     reseaux: n >= 3,
   });
 }
@@ -48,7 +48,7 @@ function Silhouette() {
   return (
     <div className="hl-cq" aria-hidden="true">
       <div className="hl-cq-tete">
-        <span className="hl-cq-avatar" />
+        <img className="hl-cq-avatar" src={PROFILS.lea.avatar} alt="" width="62" height="62" loading="lazy" />
         <span className="hl-cq-trait" style={{ width: '46%', height: 12 }} />
         <span className="hl-cq-trait" style={{ width: '64%' }} />
       </div>
@@ -56,8 +56,8 @@ function Silhouette() {
   );
 }
 
-const SUITE = ' Lambert';
-const TITRES: Record<string, string> = { atelier: 'Réserver un atelier', tiktok: 'Mon dernier TikTok', boutique: 'Ma boutique' };
+const SUITE = ' Morel';
+const TITRES: Record<string, string> = { atelier: 'Réserver un cours', tiktok: '10 minutes pour respirer', boutique: 'Le planning de la semaine' };
 
 /** Le back office au téléphone : le nom s'écrit sur la page, un bloc change de place, le design s'ouvre dans une feuille. */
 function BackOffice({ etape }: { etape: number }) {
@@ -78,10 +78,10 @@ function BackOffice({ etape }: { etape: number }) {
   const klein = swatches[2];
   return (
     <div className="hl-bo">
-      <div className="hl-bo-tete"><b>Ma page</b><span className="hl-gris">hopla.page/marie-lambert</span></div>
+      <div className="hl-bo-tete"><b>Ma page</b><span className="hl-gris">hopla.page/lea-respire</span></div>
       <div className="hl-bo-page" style={etape >= 6 ? { background: klein.fondUni, color: klein.texte } : undefined}>
-        <span className="hl-cq-avatar" />
-        <span className="hl-bo-nom" data-edite={(etape >= 1 && etape < 2) || undefined}>Marie{SUITE.slice(0, lettres)}{etape >= 1 && etape < 2 && <i className="hl-curseur" />}</span>
+        <img className="hl-cq-avatar" src={PROFILS.lea.avatar} alt="" width="62" height="62" loading="lazy" />
+        <span className="hl-bo-nom" data-edite={(etape >= 1 && etape < 2) || undefined}>Léa{SUITE.slice(0, lettres)}{etape >= 1 && etape < 2 && <i className="hl-curseur" />}</span>
         <span className="hl-cq-trait" style={{ width: '58%' }} />
         <div className="hl-cq-liens" ref={liste}>
           {ordre.map(c => <CroquisLien key={c} cle={c} titre={TITRES[c]} vedette={c === 'boutique'} data-souleve={c === 'boutique' && etape >= 2 && etape < 4 ? '' : undefined} />)}
@@ -134,7 +134,7 @@ export function Prise() {
   return (
     <section className="hl-section" data-teinte="lilas" aria-labelledby="prise">
       <div className="hl-tete-section hl-entre">
-        <h2 id="prise" className="hl-h2">Ta page en deux minutes, depuis ton téléphone.</h2>
+        <h2 id="prise" className="hl-h2">Ta page en deux minutes<br />Depuis ton téléphone</h2>
         <p className="hl-chapo">Quatre questions pour la créer. Ensuite, tu la modifies en la touchant : pas de formulaire à part.</p>
       </div>
       <div className="hl-prise">
@@ -160,7 +160,7 @@ export function Prise() {
         </div>
         <div ref={ref} className="hl-prise-tel">
           <Telephone largeur={290} label={onglet === 'creer'
-            ? 'La page de Marie se remplit à chaque étape de l’inscription.'
+            ? 'La page de Léa se remplit à chaque étape de l’inscription.'
             : 'Le back office de Hopla au téléphone : le nom s’écrit sur la page, un lien se déplace, le design s’ouvre dans une feuille.'}>
             <div key={jeu} className="hl-fondu">{onglet === 'modifier' ? <BackOffice etape={etape} />
               : etape === 0 ? <Silhouette /> : <div className="hl-fondu"><EcranPage page={pageEtape(etape)} /></div>}</div>

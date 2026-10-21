@@ -82,8 +82,11 @@ embarque tout : l'image n'a pas de `node_modules`.
   réseaux, ambiance, page en ligne), avec sa page en miniature qui se remplit ; une
   seule fois, et seulement tant que la page est vide (`pageNeuve`).
 - `components/PageLiens.tsx` : la page publique.
-- `accueil/` : l'accueil de hopla.page (`routes/index.tsx`, styles dans `styles/accueil.css`), en noir et
-  blanc, chaque mouvement joué une fois (les onglets Sans / Avec Hopla rejouent leur scène). On y prend
+- `accueil/` : l'accueil de hopla.page (`routes/index.tsx`, styles dans `styles/accueil.css` et, pour la
+  version « des visages » du 21 octobre 2026, `styles/accueil-profils.css` sous `.hl-humain`), en bleu, vert
+  citron et papiers crème, autour de six profils imaginés (portraits générés, provenance en `.webp.json`) ;
+  sa charte est `docs/DESIGN-LP.md`. Chaque mouvement est joué une fois (les onglets Sans / Avec Hopla
+  rejouent leur scène). On y prend
   son nom : par défaut la page se crée aussitôt et le lien part (`creerHopla` dans `server/attente.ts`) ;
   avec `LIENS_INSCRIPTION=attente`, on retrouve la liste d'attente (table `attente`, un an au plus,
   invitée depuis l'onglet Comptes). Les mots qui changent d'un mode à l'autre et les questions vivent

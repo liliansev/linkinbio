@@ -3,7 +3,8 @@ import type { CSSProperties } from 'react';
 import { Icone } from '../components/Icone.tsx';
 import { Symbole } from '../components/Logo.tsx';
 import { POLICES, THEMES } from '../lib/themes.ts';
-import { NOMS_AUDIENCES } from '../lib/provenance.ts';
+import { NOMS_AUDIENCES, composerAudience } from '../lib/provenance.ts';
+import { PROFILS, BLOCS_EXEMPLES } from './exemples.ts';
 import { mouvementReduit, useVu } from './mouvement.ts';
 
 /*
@@ -12,8 +13,8 @@ import { mouvementReduit, useVu } from './mouvement.ts';
  * même lien Hopla, puis descend vers la page rangée pour son réseau. À son
  * arrivée, la page fait un petit bond ; la première fois, le lien de ce
  * réseau se glisse en tête, dans la couleur du réseau, avant de prendre celle
- * du thème. Inès Durand, une coach inventée, dans le thème
- * Couchant (celui de la démo d'en dessous est Champagne). Le trafic se joue
+ * du thème. Camille Nguyen, une photographe inventée, dans le thème
+ * Neige. Le trafic se joue
  * une fois, puis la roue ralentit et s'arrête ; « Revoir » le rejoue. Avec
  * moins de mouvement, les quatre pages sont déjà rangées.
  *
@@ -26,18 +27,9 @@ const RESEAUX = ['instagram', 'tiktok', 'youtube', 'linkedin'] as const;
 type Reseau = (typeof RESEAUX)[number];
 const COULEURS: Record<Reseau, string> = { instagram: '#d62976', tiktok: '#111111', youtube: '#e00000', linkedin: '#0a66c2' };
 /** Le lien que la page met en tête pour chaque réseau. */
-const EN_TETE: Record<Reseau, { titre: string; icone: string }> = {
-  instagram: { titre: 'Mon programme', icone: 'cible' },
-  tiktok: { titre: 'Le défi 30 jours', icone: 'flamme' },
-  youtube: { titre: 'La séance complète', icone: 'youtube' },
-  linkedin: { titre: 'Coaching en entreprise', icone: 'equipe' },
-};
-const LIENS = [
-  { titre: 'Réserver une séance', icone: 'agenda' },
-  { titre: 'Mes conseils', icone: 'courrier' },
-  { titre: 'La boutique', icone: 'boutique' },
-];
-const THEME = THEMES.find(t => t.id === 'coucher')!;
+const PAGES = Object.fromEntries(RESEAUX.map(r => [r, composerAudience(BLOCS_EXEMPLES.camille, r)])) as Record<Reseau, typeof BLOCS_EXEMPLES.camille>;
+const EN_TETE = Object.fromEntries(RESEAUX.map(r => [r, PAGES[r][0]])) as Record<Reseau, typeof BLOCS_EXEMPLES.camille[number]>;
+const THEME = THEMES.find(t => t.id === 'neige')!;
 const POLICE = POLICES[THEME.police];
 
 /** Qui arrive, et quand (ms) : les quatre premiers un par un, le temps de voir chaque page se ranger, puis la foule. */
@@ -55,7 +47,7 @@ const facile = (p: number) => (p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2
 
 interface Geo { cx: number; cy: number; r: number; bas: number; pages: { x: number; y: number }[]; w: number; h: number; base: number[] }
 
-export function Roue({ pseudo, nom }: { pseudo: string; nom: string }) {
+export function Roue() {
   const [refVu, vu] = useVu<HTMLDivElement>(0.35);
   const scene = useRef<HTMLDivElement>(null);
   const anneau = useRef<HTMLDivElement>(null);
@@ -187,9 +179,8 @@ export function Roue({ pseudo, nom }: { pseudo: string; nom: string }) {
     };
   }, [vu, tour]);
 
-  const adresse = `hopla.page/${pseudo || 'ines-durand'}`;
-  const qui = nom || 'Inès Durand';
-  const initiales = qui.split(' ').slice(0, 2).map(m => m[0]).join('');
+  const adresse = `hopla.page/${PROFILS.camille.pseudo}`;
+  const qui = PROFILS.camille.nom;
   const page = {
     '--fond': THEME.fond, '--texte': THEME.texte, '--surface': THEME.surface, '--surface-texte': THEME.surfaceTexte,
     '--vedette': THEME.vedette, '--vedette-texte': THEME.vedetteTexte, '--police': POLICE.titre,
@@ -236,13 +227,13 @@ export function Roue({ pseudo, nom }: { pseudo: string; nom: string }) {
               <div key={r} className="hl-roue-colonne" style={{ '--reseau': COULEURS[r] } as CSSProperties}>
                 <span ref={el => { ondes.current[i] = el; }} className="hl-roue-onde" />
                 <div ref={el => { pages.current[i] = el; }} className="hl-roue-page" style={page} data-rangee={rangee || undefined}>
-                  <span className="hl-roue-avatar">{initiales}</span>
+                  <img className="hl-roue-avatar" src={PROFILS.camille.avatar} alt="" width="64" height="64" loading="lazy" />
                   <b className="hl-roue-nom">{qui}</b>
                   <div className="hl-roue-liens">
                     <div className="hl-roue-ligne hl-roue-nouvelle" data-vedette={rangee || undefined}>
                       <Icone nom={EN_TETE[r].icone} taille={10} /><span>{EN_TETE[r].titre}</span>
                     </div>
-                    {LIENS.map((l, k) => (
+                    {PAGES[r].slice(1).map((l, k) => (
                       <div key={l.titre} className="hl-roue-ligne" data-vedette={(!rangee && k === 0) || undefined}>
                         <Icone nom={l.icone} taille={10} /><span>{l.titre}</span>
                       </div>

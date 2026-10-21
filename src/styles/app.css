@@ -15,6 +15,7 @@
 @import './page.css';
 @import './admin.css';
 @import './accueil.css';
+@import './accueil-profils.css';
 
 @theme {
   --font-sans: 'Geist Variable', ui-sans-serif, system-ui, sans-serif;
