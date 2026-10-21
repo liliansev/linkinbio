@@ -48,11 +48,11 @@ export const OFFRES: Record<Plan, Offre> = {
   },
   starter: {
     nom: 'Starter', phrase: 'Ta page, sans la mention Hopla.', prix: { mois: 4, an: 36 }, quota: 100 * Mo, jours: 30, enVente: true,
-    avantages: ['Sans la mention « Une page faite avec Hopla »', 'Tes couleurs', 'Tes liens programmés à l’avance', 'Les avis de tes clients', 'Analytics détaillées sur 30 jours'],
+    avantages: ['Sans la mention « Une page faite avec Hopla »', 'Tes couleurs', 'Tes liens programmés à l’avance', 'Les avis de tes clients', 'Tes stats sur 30 jours'],
   },
   pro: {
     nom: 'Pro', phrase: 'Le bon lien, au bon moment.', prix: { mois: 9, an: 79 }, quota: 200 * Mo, jours: 365, enVente: true,
-    avantages: ['Ta page selon l’heure', 'Les drops : un code, des places comptées', 'Ta liste e-mail, vers Brevo ou Mailchimp', 'Analytics sur un an'],
+    avantages: ['Ta page selon l’heure', 'Les drops : un code, des places comptées', 'Ta liste e-mail, vers Brevo ou Mailchimp', 'Tes stats sur un an'],
   },
   premium: {
     nom: 'Premium', phrase: 'Ta page à ton nom de domaine.', prix: { mois: 19, an: 169 }, quota: 1024 * Mo, jours: 365, enVente: false,
@@ -103,7 +103,7 @@ export const FONCTIONS_EN_MOTS: Record<Fonction, { avantage: string; pour: strin
   couleurs: { avantage: 'Tes couleurs', pour: 'Pour tes couleurs' },
   programmation: { avantage: 'Tes liens programmés à l’avance', pour: 'Pour programmer' },
   avis: { avantage: 'Les avis de tes clients', pour: 'Pour les avis' },
-  stats: { avantage: 'Analytics détaillées sur 30 jours', pour: 'Pour tes stats' },
+  stats: { avantage: 'Tes stats sur 30 jours', pour: 'Pour tes stats' },
   heure: { avantage: 'Ta page selon l’heure', pour: 'Pour tes créneaux' },
   drops: { avantage: 'Les drops : un code, des places comptées', pour: 'Pour les drops' },
   listeEmail: { avantage: 'Ta liste e-mail, vers Brevo ou Mailchimp', pour: 'Pour ta liste e-mail' },

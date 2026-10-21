@@ -44,6 +44,13 @@ export function adresseSuggeree(saisie: string): string | null {
   return meilleur ? `${local}@${meilleur}` : null;
 }
 
+const LIEN = /^(?:https?:\/\/)?(?:www\.)?[a-z0-9-]+(?:\.[a-z0-9-]+)+\/+@?([^/?#\s]+)/i;
+
+/** Le premier morceau du chemin d'un lien (https://linktr.ee/marie donne « marie ») ; rien si ce n'est pas un lien. */
+export function nomDansLien(valeur: string): string {
+  return valeur.trim().match(LIEN)?.[1] ?? '';
+}
+
 /**
  * Ce qu'on colle dans le champ du nom : une adresse entière ne garde que son
  * nom, le premier morceau de son chemin (hopla.page/marie, https://linktr.ee/marie,
@@ -52,8 +59,8 @@ export function adresseSuggeree(saisie: string): string | null {
 export function nomDansAdresse(valeur: string): string {
   const v = valeur.trim();
   if (/^(?:https?:\/\/)?(?:www\.)?hopla\.page\/*$/i.test(v)) return '';
-  const chemin = v.match(/^(?:https?:\/\/)?(?:www\.)?[a-z0-9-]+(?:\.[a-z0-9-]+)+\/+@?([^/?#\s]+)/i);
-  if (chemin) return chemin[1];
+  const chemin = nomDansLien(v);
+  if (chemin) return chemin;
   const courriel = v.match(/^([^\s@/]+)@[a-z0-9-]+(?:\.[a-z0-9-]+)+$/i);
   return courriel ? courriel[1] : valeur;
 }
