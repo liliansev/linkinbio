@@ -37,7 +37,7 @@ export function HeroProfils() {
       </div>;
     })}
     <span className="hp-note hp-note-haut">Ton visage<br />Tout ton univers</span>
-    <span className="hp-note hp-note-bas">Et bientôt, toi</span>
+    <span className="hp-note hp-note-bas">Et bientôt,<span className="hp-note-fin"> toi</span></span>
     <Avatar profil="lea" className="hp-visage-libre hp-visage-lea" prioritaire />
     <Avatar profil="hugo" className="hp-visage-libre hp-visage-hugo" prioritaire />
   </div>;
@@ -49,7 +49,7 @@ export function GalerieProfils() {
   const ouvrir = (id: ProfilExemple) => { setProfil(id); boite.current?.showModal(); };
   const p = PROFILS[profil];
   return <section id="inspiration" className="hl-section hp-inspiration" aria-labelledby="titre-inspiration">
-    <div className="hp-inspiration-tete"><div><p className="hp-surtitre">Une page, mille personnalités</p><h2 id="titre-inspiration" className="hl-h2">Il y a tout un monde<br />derrière un lien</h2></div><p>Ton activité ne ressemble à aucune autre.<br />Ta page non plus.<small>Explore ces six profils imaginés pour te donner des idées.</small></p></div>
+    <div className="hp-inspiration-tete"><div><h2 id="titre-inspiration" className="hl-h2">Il y a tout un monde<br />derrière un lien</h2></div><p>Ton activité ne ressemble à aucune autre.<br />Ta page non plus.<small>Explore ces six profils imaginés pour te donner des idées.</small></p></div>
     <div className="hp-galerie">{IDS_PROFILS.map(id => <button key={id} className="hp-profil" type="button" onClick={() => ouvrir(id)} aria-label={`Découvrir la page de ${PROFILS[id].nom}`}><span className="hp-profil-photo"><Avatar profil={id} /><span><Icone nom="ui-fleche" taille={18} /></span></span><b>{PROFILS[id].nom}</b><small>{PROFILS[id].metier} · {PROFILS[id].ville}</small></button>)}</div>
     <dialog ref={boite} className="hp-dialogue" aria-labelledby="profil-titre" onClick={e => { if (e.target === e.currentTarget) boite.current?.close(); }}>
       <div className="hp-dialogue-tete"><h3 id="profil-titre">La page de {p.nom}</h3><button type="button" autoFocus onClick={() => boite.current?.close()} aria-label="Fermer l’aperçu"><Icone nom="ui-fermer" taille={24} /></button></div>

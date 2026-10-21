@@ -340,7 +340,7 @@ export function Stats() {
   return (
     <section className="hl-section hl-section-stats" data-teinte="menthe" aria-labelledby="stats">
       <div className="hl-tete-section hl-entre">
-        <h2 id="stats" className="hl-h2">Tes stats, en clair.</h2>
+        <h2 id="stats" className="hl-h2">Tes stats, en clair</h2>
         <p className="hl-chapo">Ton dashboard pour suivre tes vues, tes clics et d’où viennent tes visiteurs. Et chaque lundi à 9 h, l’essentiel par e‑mail.</p>
         <p className="hp-stats-confidentialite">Sans cookie ni bannière, l’adresse IP de tes visiteurs n’est jamais gardée.</p>
       </div>

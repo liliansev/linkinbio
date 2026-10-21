@@ -55,12 +55,6 @@ typography:
     fontWeight: 750
     lineHeight: 1
     letterSpacing: "0.03em"
-  section-intro:
-    fontFamily: "Geist Variable, ui-sans-serif, system-ui, sans-serif"
-    fontSize: "12px"
-    fontWeight: 650
-    lineHeight: 1.4
-    letterSpacing: "0.09em"
 rounded:
   badge: "6px"
   button: "10px"
@@ -177,13 +171,13 @@ Le bleu Hopla et le citron forment le contraste principal, soutenu par une palet
 
 ### Hierarchy
 
-- **Display** : promesse du hero, selon le rôle `display`. À moins de 600 px, sa taille est fixée à 44 px. Entre 600 et 1023 px, elle utilise `clamp(48px, 8.5vw, 76px)`. Sur un bureau d’au moins 1024 px et d’au plus 850 px de haut, elle utilise `clamp(50px, 6.8vh, 64px)`.
+- **Display** : promesse du hero, selon le rôle `display`, en quatre lignes à toutes les tailles : « Un lien qui / te ressemble », puis « Et s’adapte à / chaque visiteur » en vert citron. Sur bureau, `clamp(52px, 5vw, 72px)`. À moins de 600 px, `clamp(32px, 11vw, 44px)`. Entre 600 et 1023 px, `clamp(48px, 8.5vw, 76px)`. Sur un bureau d’au moins 1024 px et d’au plus 850 px de haut, `clamp(50px, 6.8vh, 64px)`.
 - **Headline** : titres de section, selon `headline`, avec retour à la ligne équilibré.
 - **Title** : sous-titres, selon `title`. Les titres des offres et les explications de la scène vivante passent à 28 px.
 - **Body** : explications et contrôles, selon `body`. Le chapeau du hero est limité à 40 caractères environ (`40ch`), avec un interligne de 1,7. Il passe à 14 px sur petit mobile.
 - **Annotation** : notes courtes et légèrement inclinées. Elles passent à 18 px sur petit mobile.
 - **Offer label** : Starter et Pro restent explicitement lisibles avec le rôle `offer-label`.
-- **Section intro** : les surtitres en capitales `.hp-surtitre` font partie du prototype approuvé pour cette LP. Ils utilisent `section-intro` et passent à 10 px sous 600 px. Leur présence est propre à cette surface ; elle n’introduit pas une règle pour les écrans du produit.
+- **Pas de surtitre** : aucun texte en capitales au-dessus d’un titre (retirés le 21 octobre 2026, validé par Lilian). Un titre fait de deux phrases courtes les coupe par `<br />`, la seconde avec sa majuscule (« Toi, tu avances / Ta page suit ») ; une phrase qui continue garde sa minuscule (« Un lien qui / te ressemble »). Aucun titre ne finit par un point.
 
 **The Deux voix et une note Rule.** Bricolage structure la promesse et les titres, Geist porte la lecture et l’action, Instrument Serif ajoute une note ponctuelle. Les thèmes des pages montrées gardent leurs polices.
 
@@ -191,9 +185,9 @@ Le bleu Hopla et le citron forment le contraste principal, soutenu par une palet
 
 Les sections ordinaires et la navigation utilisent un conteneur maximal de 1280 px. Les panneaux colorés prennent la largeur disponible, avec des marges internes calculées autour d’un contenu de 1200 px. Leur contenu est réparti en colonnes sur bureau, puis empilé sur mobile. Le rythme principal commence les sections à 100 px du contenu précédent ; il descend à 68 px sous 600 px.
 
-Le hero place le texte et le formulaire à gauche, la composition de profils à droite à partir de 1024 px, dans un rapport `.9fr / 1.1fr`. Le mobile conserve l’ordre texte, inscription, profils. La composition utilise un carré relatif, avec Inès au premier plan, Sacha à gauche et Camille à droite. Les aperçus sont inclinés et se chevauchent, sans devenir des blocs de navigation.
+Le hero place le texte et le formulaire à gauche, la composition de profils à droite à partir de 1024 px, dans un rapport `.9fr / 1.1fr`. Le mobile conserve l’ordre texte, inscription, profils. La composition utilise un carré relatif, avec Inès au premier plan, Sacha à gauche et Camille à droite. Les aperçus sont inclinés et se chevauchent, sans devenir des blocs de navigation. Rien de ce qui est écrit en blanc ne passe sur une carte claire : la note « Et bientôt, toi » se range contre le bord sous 1280 px, puis sous Hugo, sur deux lignes, au téléphone, et la ligne du bas du hero s’écarte de la carte d’Inès (36 px sous 1024 px, 48 px sous 600 px, 54 px sous 360 px).
 
-Sous 600 px, le hero resserre ce parcours : 30 px de marge intérieure en haut, 16 px entre ses blocs de grille, 18 px avant le chapeau et 20 px avant l’inscription. Le surtitre conserve 16 px sous son texte. La note du formulaire passe à 12 px avec 10 px de marge supérieure ; le lien de découverte garde 12 px de marge supérieure et 10 px de marge intérieure verticale.
+Sous 600 px, le hero resserre ce parcours : 30 px de marge intérieure en haut, 16 px entre ses blocs de grille, 18 px avant le chapeau et 20 px avant l’inscription. La note du formulaire passe à 12 px avec 10 px de marge supérieure ; le lien de découverte garde 12 px de marge supérieure et 10 px de marge intérieure verticale.
 
 La galerie dispose les six portraits en six colonnes, trois sous 1024 px et deux sous 600 px. Elle garde les noms, métiers et villes avec les photos. La phrase « six profils imaginés » reste dans son introduction ; aucune légende séparée sous la galerie n’est prévue.
 

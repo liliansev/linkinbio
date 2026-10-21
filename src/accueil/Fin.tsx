@@ -39,7 +39,6 @@ export function Prix() {
   return (
     <section className="hl-section" id="prix" aria-labelledby="titre-prix">
       <div className="hl-tete-section hl-entre">
-        <p className="hp-surtitre">De la première idée aux grands projets</p>
         <h2 id="titre-prix" className="hl-h2">Ta place sur internet<br /><span>À ton rythme</span></h2>
       </div>
       <div className="hl-periode hl-entre" role="radiogroup" aria-label="Paiement" onKeyDown={fleches}>

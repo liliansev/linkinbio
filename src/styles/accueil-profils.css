@@ -11,18 +11,16 @@
 .hl-humain .hl-section { max-width: 1280px; padding-top: 100px; }
 .hl-humain .hl-section[data-teinte] { max-width: none; }
 .hl-humain .hl-barre-dedans { max-width: 1280px; }
-.hp-surtitre { font-size: 12px; line-height: 1.4; font-weight: 650; letter-spacing: .09em; text-transform: uppercase; margin-bottom: 26px; }
 .hl-humain .hp-heros { padding-top: 72px; padding-bottom: 25px; gap: 30px; text-align: left; }
 .hl-humain .hl-heros-texte { padding-top: 0; }
-.hl-humain .hl-heros-titre { margin: 0; max-width: none; font-size: clamp(52px, 5.6vw, 82px); line-height: .99; letter-spacing: -.04em; }
-.hl-humain .hl-heros-titre > span { color: #e3fc96; }
+.hl-humain .hl-heros-titre { margin: 0; max-width: none; font-size: clamp(52px, 5vw, 72px); line-height: .99; letter-spacing: -.04em; }
+.hl-humain .hl-heros-titre > span { display: block; color: #e3fc96; }
 .hl-humain .hl-heros .hl-chapo { margin: 28px 0 0; max-width: 40ch; font-size: 17px; line-height: 1.7; }
 .hl-humain .hl-heros .hl-reserver { margin: 28px 0 0; }
 .hl-humain .hl-heros :is(.hl-reserver-etat,.hl-reserver-note) { text-align: left; }
 .hl-humain :is(.hp-heros,.hl-dernier) .hl-reserver .hl-btn { background: #e3fc96; border-color: #e3fc96; color: #233016; }
 .hp-decouvrir { display: inline-flex; align-items: center; gap: 26px; padding-block: 12px; margin-top: 25px; border-bottom: 1px solid #e3fc96; color: #fff; font-size: 14px; font-weight: 600; text-decoration: none; }
 .hp-heros-pied { grid-column: 1 / -1; display: flex; justify-content: space-between; gap: 16px; width: 100%; padding-top: 20px; color: #d9dcff; font-size: 11px; }
-.hp-heros-pied > span:first-child { text-transform: uppercase; letter-spacing: .06em; }
 .hp-avatar { display: block; object-fit: cover; aspect-ratio: 1; width: 100%; height: auto; }
 .hp-composition { width: 100%; max-width: 660px; aspect-ratio: 1; position: relative; align-self: center; isolation: isolate; }
 .hp-page { width: 37%; border: 6px solid #fff; border-radius: 25px; position: absolute; overflow: hidden; text-align: center; box-shadow: 0 25px 60px -35px #0c0e4f80; }
@@ -47,12 +45,11 @@
 .hp-page-marque svg { width: 20px; height: 20px; }
 .hp-note { position: absolute; z-index: 4; font-family: 'Instrument Serif', serif; font-style: italic; font-size: 26px; line-height: 1; color: #fff; }
 .hp-note-haut { right: 5%; top: 2%; transform: rotate(7deg); }
-.hp-note-bas { left: 10%; bottom: 2%; transform: rotate(-7deg); }
+.hp-note-bas { left: 6%; bottom: 2%; transform: rotate(-7deg); }
 .hp-visage-libre { position: absolute; width: 64px; border-radius: 50%; border: 4px solid #fff; z-index: 4; }
-.hp-visage-lea { right: 6%; top: 21%; transform: rotate(8deg); }
+.hp-visage-lea { right: -1%; top: 12%; transform: rotate(8deg); }
 .hp-visage-hugo { left: 3%; bottom: 12%; transform: rotate(-8deg); }
 .hp-inspiration-tete { display: flex; align-items: end; justify-content: space-between; gap: 36px; margin-bottom: 40px; }
-.hp-inspiration .hp-surtitre { color: #292bff; }
 .hp-inspiration-tete > p { font-size: 15px; line-height: 1.7; max-width: 330px; }
 .hp-inspiration-tete small { display: block; margin-top: 16px; font-size: 12px; color: #62685f; }
 .hp-galerie { display: grid; grid-template-columns: repeat(6,minmax(0,1fr)); gap: 16px; }
@@ -141,7 +138,6 @@
 }
 .hl-humain #prix { max-width: none; padding: 90px max(28px, calc((100% - 1200px) / 2)); margin: 100px 14px 0; background: #f6f5ef; border-radius: 30px; }
 .hl-humain #prix .hl-tete-section { margin-bottom: 28px; max-width: 760px; }
-.hl-humain #prix .hp-surtitre { color: #292bff; }
 .hl-humain #prix .hl-h2 > span { color: #292bff; }
 .hl-humain .hl-periode { margin-inline: 0; }
 .hl-humain .hl-offres { grid-template-columns: repeat(3,minmax(0,1fr)); gap: 18px; margin-top: 36px; margin-bottom: 28px; }
@@ -169,10 +165,17 @@
 @media (min-width: 1024px) {
   .hl-humain .hp-heros { grid-template-columns: minmax(0,.9fr) minmax(0,1.1fr); }
 }
+/* Entre 1024 et 1279 px, les cartes gardent leurs textes à taille fixe : la composition s’allonge pour les contenir. */
+@media (min-width: 1024px) and (max-width: 1279px) {
+  .hp-composition { aspect-ratio: .84; }
+}
+/* Sous 1280 px, la carte d’Inès prend plus de place : « Et bientôt, toi » se range contre le bord, hors du papier crème où le blanc disparaît. */
+@media (max-width: 1279px) {
+  .hp-note-bas { left: 0; }
+}
 @media (min-width: 1024px) and (max-height: 850px) {
   .hl-humain .hp-heros { padding-top: 38px; gap: 20px; }
   .hl-humain .hl-heros-titre { font-size: clamp(50px, 6.8vh, 64px); }
-  .hl-humain .hp-heros .hp-surtitre { margin-bottom: 16px; }
   .hl-humain .hl-heros .hl-chapo { margin-top: 18px; }
   .hl-humain .hp-decouvrir { margin-top: 10px; }
 }
@@ -181,7 +184,7 @@
   .hl-humain .hl-heros-titre { font-size: clamp(48px, 8.5vw, 76px); }
   .hp-composition { width: min(100%, 640px); margin-inline: auto; }
   .hp-page-nom { font-size: clamp(18px, 3.2vw, 25px); }
-  .hp-heros-pied { flex-direction: column; gap: 7px; }
+  .hp-heros-pied { flex-direction: column; gap: 7px; padding-top: 36px; }
   .hp-inspiration-tete { display: block; }
   .hp-inspiration-tete > p { margin-top: 24px; max-width: none; }
   .hp-galerie { grid-template-columns: repeat(3,minmax(0,1fr)); row-gap: 28px; }
@@ -196,16 +199,14 @@
 @media (max-width: 599px) {
   .hl-humain :is(.hl-section,.hl-heros)[data-teinte] { margin-inline: 8px; padding-inline: 22px; border-radius: 24px; }
   .hl-humain .hl-section { padding-top: 68px; }
-  .hl-humain .hl-heros-titre { font-size: 44px; }
+  .hl-humain .hl-heros-titre { font-size: clamp(32px, 11vw, 44px); }
   .hl-humain .hp-heros { gap: 16px; padding-top: 30px; }
-  .hl-humain .hp-heros .hp-surtitre { margin-bottom: 16px; }
   .hl-humain .hp-heros .hl-chapo { margin-top: 18px; }
   .hl-humain .hp-heros .hl-reserver { margin-top: 20px; }
   .hl-humain .hp-heros .hl-reserver-grand :is(.hl-champ, .hl-btn) { min-height: 48px; }
   .hl-humain .hp-heros .hl-champ input { height: 46px; }
   .hl-humain .hp-heros .hl-reserver-note { margin-top: 10px; font-size: 12px; }
   .hl-humain .hp-heros .hp-decouvrir { margin-top: 12px; padding-block: 10px; }
-  .hp-surtitre { font-size: 10px; margin-bottom: 20px; }
   .hl-humain .hl-heros .hl-chapo { font-size: 14px; }
   .hp-composition { width: calc(100% + 20px); max-width: none; margin-left: -10px; aspect-ratio: .87; }
   .hp-page { border-width: 3px; border-radius: 14px; }
@@ -222,9 +223,11 @@
   .hp-page-ines .hp-page-corps > .hp-avatar { margin-top: -16px; }
   .hp-note { font-size: 18px; }
   .hp-note-haut { right: 2%; top: 0; }
-  .hp-note-bas { bottom: 3%; }
+  /* Au téléphone, il passe sous Hugo, sur deux lignes. */
+  .hp-note-bas { left: 0; bottom: -12%; }
+  .hp-note-fin { display: block; }
   .hp-visage-libre { width: 38px; border-width: 3px; }
-  .hp-heros-pied { padding-top: 0; font-size: 9px; }
+  .hp-heros-pied { padding-top: 48px; font-size: 9px; }
   .hp-galerie { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 24px 14px; }
   .hp-profil > b { font-size: 16px; }
   .hl-humain .hp-selon { margin: 65px 8px 0; padding: 55px 22px; }
@@ -241,6 +244,12 @@
   .hl-humain .hl-dernier { margin-top: 60px; }
   .hp-ruban .hp-avatar { width: 50px; height: 50px; }
 }
+/* Sous 360 px, la carte d’Inès dépasse davantage de la composition : la ligne du bas s’écarte d’autant. */
+@media (max-width: 359px) {
+  .hp-heros-pied { padding-top: 54px; }
+  .hp-note-bas { bottom: -18%; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .hp-profil .hp-avatar { transition: none; }
 }

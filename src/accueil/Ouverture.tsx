@@ -93,9 +93,8 @@ export function Ouverture({ api }: { api: ApiAccueil }) {
   return (
     <section className="hl-heros hp-heros" data-teinte="klein" aria-labelledby="titre">
       <div className="hl-heros-texte">
-        <p className="hp-surtitre">Ton petit coin d’internet</p>
-        <h1 id="titre" className="hl-h1 hl-heros-titre">Tout ce que<br />tu fais<br /><span>Un lien qui<br />te ressemble</span></h1>
-        <p className="hl-chapo">Tes créations, tes projets, tes coups de cœur.<br />Une page à ton image, qui s’adapte à ceux<br className="hl-large" /> qui viennent te découvrir.</p>
+        <h1 id="titre" className="hl-h1 hl-heros-titre">Un lien qui<br />te ressemble<span>Et s’adapte à<br />chaque visiteur</span></h1>
+        <p className="hl-chapo">Tes créations, tes projets, tes coups de cœur. Qu’on arrive d’Instagram, de TikTok ou de LinkedIn, ta page met le bon lien en premier.</p>
         <div data-zone-appel=""><Reserver api={api} id="reserver" grand premier note={MOTS[mode].note} /></div>
         <a className="hp-decouvrir" href="#inspiration">Trouve l’inspiration <Icone nom="ui-chevron" taille={20} /></a>
       </div>
@@ -109,7 +108,6 @@ export function Selon() {
   return (
     <section className="hl-section hp-selon" id="fonctionnement" aria-labelledby="selon">
       <div className="hp-selon-texte">
-        <p className="hp-surtitre">Le bon lien, pour la bonne personne</p>
         <h2 id="selon" className="hl-h2">Camille partage<br /><span>Hopla s’adapte</span></h2>
         <p className="hl-chapo">Un seul lien dans toutes ses bios. Hopla reconnaît le réseau d’où vient son visiteur et met le bon lien en premier.</p>
         <ol className="hp-source-legendes">
