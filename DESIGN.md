@@ -203,6 +203,25 @@ components:
     rounded: "{rounded.pill}"
     width: "32px"
     height: "18px"
+  offer-window-desk:
+    backgroundColor: "{colors.paper}"
+    rounded: "14px"
+    width: "1000px"
+  offer-card:
+    backgroundColor: "{colors.paper}"
+    textColor: "{colors.ink}"
+    rounded: "14px"
+    padding: "19px"
+  offer-card-desk:
+    rounded: "12px"
+    padding: "20px"
+  offer-price:
+    typography: "{typography.metric}"
+  badge-offer-for:
+    backgroundColor: "{colors.ink}"
+    textColor: "{colors.paper}"
+    typography: "{typography.caption}"
+    rounded: "{rounded.segment}"
 ---
 
 # Design System: Hopla back office
@@ -267,7 +286,7 @@ Les tokens `error` et `pending` correspondent aux états d'erreur et d'enregistr
 - **Label** : nom de champ et aide courte.
 - **Caption** : légende d'onglet mobile, nom sous un picto, axe de courbe, compteur, et badge en semi-gras.
 - **Field** : texte saisi, conservé à une taille lisible sur mobile.
-- **Metric** : chiffre clé, (24px) à toutes les largeurs ; dans les onglets de la courbe des stats (`.adm-courbe-chiffre`), en chiffres proportionnels. Les listes et les tableaux gardent des chiffres tabulaires, alignés à droite.
+- **Metric** : chiffre clé, (24px) à toutes les largeurs ; dans les onglets de la courbe des stats (`.adm-courbe-chiffre`), en chiffres proportionnels. Le prix d'une offre le reprend, au téléphone comme au bureau (`.adm-offre-prix`). Les listes et les tableaux gardent des chiffres tabulaires, alignés à droite.
 - **Wordmark** : « Hopla » dans la marque, et nulle part ailleurs ; en petit (`wordmark-desk`) dans la barre latérale du bureau.
 
 ### Au bureau
@@ -282,7 +301,7 @@ Sur un écran d'au moins (1024px) tenu à la souris ou au pavé (variante Tailwi
 
 Au téléphone, le shell partage une barre supérieure d'au moins (72px) et un contenu centré, avec une largeur maximale de (1120px) et des gouttières de (16px).
 
-À partir de (1024px), une barre latérale fixe de (216px) remplace la navigation basse : la petite marque à la hauteur de l'en-tête, les sections (Comptes à part, après un écart de (14px)) et, en bas, le compte, qui s'ouvre sur un menu avec « Me déconnecter ». L'en-tête du bureau est une seule rangée de (56px) : le nom de l'écran à gauche (rôle `screen-title-desk`, c'est le seul titre de l'écran), puis ce qui sert ici, à droite. Ma page y met l'état d'enregistrement, l'adresse courte avec Copier, Voir ma page et le bouton noir Ajouter un bloc ; Réglages, l'état ; Stats, la période ; Comptes, Inviter. Chaque onglet y pose son geste par `ActionEntete`. Pas de barre vide, pas de titre qui répète le menu. Le contenu est posé sur le blanc. Un détail qui ne tient pas dans une ligne de réglage s'ouvre en sous-page (`SousPage`, `PoserFil`) : l'en-tête devient un fil court, « ‹ Réglages / Les offres », dont le premier terme ramène à l'écran et rend le focus à la ligne qui l'a ouvert ; au téléphone, un retour se pose au-dessus du titre. Comptes pose sa barre d'onglets et sa recherche sur toute la largeur, sous l'en-tête, puis son tableau.
+À partir de (1024px), une barre latérale fixe de (216px) remplace la navigation basse : la petite marque à la hauteur de l'en-tête, les sections (Comptes à part, après un écart de (14px)) et, en bas, le compte, qui s'ouvre sur un menu avec « Me déconnecter ». L'en-tête du bureau est une seule rangée de (56px) : le nom de l'écran à gauche (rôle `screen-title-desk`, c'est le seul titre de l'écran), puis ce qui sert ici, à droite. Ma page y met l'état d'enregistrement, l'adresse courte avec Copier, Voir ma page et le bouton noir Ajouter un bloc ; Réglages, l'état ; Stats, la période ; Comptes, Inviter. Chaque onglet y pose son geste par `ActionEntete`. Pas de barre vide, pas de titre qui répète le menu. Le contenu est posé sur le blanc. Un détail qui ne tient pas dans une ligne de réglage s'ouvre en sous-page (`SousPage`, `PoserFil`) : l'en-tête devient un fil court, « ‹ Réglages / Facturation », dont le premier terme ramène à l'écran et rend le focus à la ligne qui l'a ouvert ; au téléphone, un retour se pose au-dessus du titre. Comptes pose sa barre d'onglets et sa recherche sur toute la largeur, sous l'en-tête, puis son tableau.
 
 La forme suit la largeur et la densité suit la souris : une tablette en paysage a la barre latérale, avec des cibles de (44px).
 
@@ -337,7 +356,7 @@ Dans une feuille, une liste de lignes est un groupe bordé sans fond (`.adm-grou
 
 ### Badges
 
-Rectangle à l'arrondi `segment`, fond d'encre à 7 %, texte au rôle `caption` en semi-gras (`classeBadge`). Un état d'alerte n'est pas un badge : dans Comptes, « Signalé » et « Suspendu » s'écrivent à l'ambre, précédés de leur picto, et seul le compteur des signalements à traiter prend un fond ambre.
+Rectangle à l'arrondi `segment`, fond d'encre à 7 %, texte au rôle `caption` en semi-gras (`classeBadge`). Un seul badge est plein, à l'encre : celui de l'offre qui débloque la fonction demandée, dans la fenêtre des offres (« Pour tes couleurs »). Un état d'alerte n'est pas un badge : dans Comptes, « Signalé » et « Suspendu » s'écrivent à l'ambre, précédés de leur picto, et seul le compteur des signalements à traiter prend un fond ambre.
 
 ### Inputs / Fields
 
@@ -355,7 +374,7 @@ Groupe de choix exclusifs neutre, composé de boutons avec une cible minimale de
 
 ### Settings rows
 
-Réglages tient sur une seule page, (680px) au plus : des groupes titrés (`Groupe`), chacun une liste bordée de lignes (`.adm-lignes`, arrondi (12px), (10px) au bureau). Une ligne (`Ligne`, `LigneBascule`, `LigneLien` dans `ui.tsx`) porte son nom à gauche, sa valeur au gris secondaire, son contrôle à droite : un bouton au contour, une bascule ou un chevron. Elle mesure (56px), (48px) au bureau, sous un trait de (1px) `#efefec`. À partir de (640px), la valeur se range à droite du nom et se coupe d'une ellipse ; plus étroit, elle passe dessous, sur deux lignes au plus. Pas de picto, pas de tiroir : ce qui ne tient pas dans une ligne s'ouvre dans une fenêtre ou une sous-page. Une fonction réservée montre le badge de son offre (« Starter ») et un chevron qui mène aux offres ; le badge s'écrit sans picto décoratif. Les liens légaux et l'adresse de contact passent en pied de page, au rôle `caption`.
+Réglages tient sur une seule page, (680px) au plus : des groupes titrés (`Groupe`), chacun une liste bordée de lignes (`.adm-lignes`, arrondi (12px), (10px) au bureau). Une ligne (`Ligne`, `LigneBascule`, `LigneLien` dans `ui.tsx`) porte son nom à gauche, sa valeur au gris secondaire, son contrôle à droite : un bouton au contour, une bascule ou un chevron. Elle mesure (56px), (48px) au bureau, sous un trait de (1px) `#efefec`. À partir de (640px), la valeur se range à droite du nom et se coupe d'une ellipse ; plus étroit, elle passe dessous, sur deux lignes au plus. Pas de picto, pas de tiroir : ce qui ne tient pas dans une ligne s'ouvre dans une fenêtre ou une sous-page. Une fonction réservée montre le badge de son offre (« Starter ») et un chevron qui ouvre la fenêtre des offres ; le badge s'écrit sans picto décoratif. Les liens légaux et l'adresse de contact passent en pied de page, au rôle `caption`.
 
 ### Tables
 
@@ -372,6 +391,10 @@ Les feuilles nomment leur tâche, gardent la fermeture accessible et gèrent le 
 Une confirmation ou un formulaire court (Inviter, Supprimer mon compte, Suspendre, Retirer de la liste) s'ouvre dans une petite fenêtre (`Feuille` avec `petite`) : (440px) de large, arrondi (12px), titre de (15px) au bureau, le geste définitif à droite. Au téléphone, elle monte du bas comme les autres feuilles.
 
 Au bureau, les réglages d'un bloc, le Design et les Réseaux s'ouvrent dans un panneau latéral non modal de (380px) (`Panneau` dans `ui.tsx`) : en-tête de (52px) avec le nom, le menu « … » et la croix, sections titrées en (12px) semi-gras, rangées de (36px) avec le libellé à gauche et la valeur à droite (`.adm-valeur`, (32px)). Il n'a pas de Terminé : ce qui est valable s'enregistre seul. Il ne prend le focus que s'il a été ouvert au clavier, et le rend à la fermeture. Sur la page éditée, la sélection est un anneau de (2px) à la couleur du texte du thème, jamais une couleur du shell : il se lit sur tous les thèmes.
+
+Le parcours d'achat (20 octobre 2026). Une fonction réservée, les stats ou Réglages ouvrent les offres dans une fenêtre par-dessus l'écran en cours (`FenetreOffres` dans `Offres.tsx`, une `Feuille` `large` et `nue`) : la fermer rend l'écran tel qu'il était, panneau compris. Au bureau, elle mesure (1000px) au plus, arrondi (14px), avec une ombre de fenêtre ; son en-tête porte le titre, le badge « 3 mois offerts », la bascule Mensuel / Annuel (un segment) et la croix. Dessous, les quatre offres de front, en cartes au trait de (1px) : le nom, le prix au rôle `metric`, puis, à l'année, « au lieu de 48 € » au gris lisible (`#5f5f5a`, 6,4:1, jamais barré) et l'économie réelle à l'encre (« 12 € d'économie », calculée depuis `OFFRES`), le bouton, et ce que l'offre ajoute. L'offre qui débloque la fonction demandée est cernée d'un trait d'encre de (2px), avec son badge plein et sa ligne en semi-gras ; sans fonction, c'est l'offre juste au-dessus de la sienne qui passe devant. Premium dit « Bientôt ». Au téléphone, la fenêtre prend l'écran : la bascule, quatre onglets, une carte à la fois dans un rail qui s'aimante (la suivante dépasse, les autres sont inertes), et un seul bouton en bas, celui de l'offre en vue, avec son prix. Posée sur une autre fenêtre (les offres par-dessus Ajouter), une `Feuille` ne rajoute pas de voile : un seul assombrissement, celui du dessous.
+
+Choisir ouvre le récapitulatif dans la même fenêtre : « ‹ Les offres », la période en deux cartes, ce qu'on paie aujourd'hui (pour un abonné qui change d'offre, la différence au prorata), la prochaine échéance, l'absence d'engagement, ce qu'on débloque et, au bureau, la page telle qu'elle sera ; puis « Payer avec Creem », au signe `ui-ouvrir`, et dessous la note au gris (prix TTC, ce que fait Creem, le lien vers les conditions d'utilisation). Au retour, une fenêtre moyenne dit « On active ton offre… » tant que le webhook signé n'est pas passé, puis « C'est fait, tu es en Starter », ce qui vient de s'ouvrir (la fonction demandée en tête) et un geste pour s'en servir (« Essayer tes couleurs » ouvre le Design sur Couleurs ; « Programmer ce bloc » rouvre le bloc d'où l'on était parti, sur la règle tout juste débloquée). Après trente secondes sans webhook, elle dit que l'offre arrive et qu'on peut fermer. L'offre ne s'accorde jamais d'après l'adresse de retour. Facturation est une sous-page de Réglages, en lignes : l'offre et « Changer d'offre », le prix, la prochaine échéance (ou la fin d'une offre résiliée), puis la carte, les factures et « Résilier mon abonnement » (le nom que lui donnent les conditions d'utilisation), qui mènent au portail client de Creem ; au téléphone, ce dernier bouton passe sous sa phrase (`.adm-ligne-pile`).
 
 Un menu (le compte, puis les actions d'un bloc ou d'une ligne, la période) est une petite surface blanche bordée, avec une ombre courte : les flèches le parcourent, Échap le referme et rend le focus à son bouton (`Menu` dans `ui.tsx`). Les durées et courbes observées figurent dans le sidecar.
 

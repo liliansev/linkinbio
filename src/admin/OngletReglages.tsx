@@ -2,10 +2,10 @@ import { useEffect, useRef, useState } from 'react';
 import { CONTACT_LEGAL } from '../lib/legal.ts';
 import type { ComptePage, Reglages } from '../lib/types.ts';
 import { sansSchema, urlPage } from '../lib/types.ts';
-import type { Abonnement as EtatAbonnement, Periode, Plan, PlanPayant } from '../lib/abonnement.ts';
+import type { Abonnement as EtatAbonnement, Fonction, Plan } from '../lib/abonnement.ts';
 import { OFFRES, estPaye, estResilie, euros } from '../lib/abonnement.ts';
 import { BoutonCopier, BoutonPrincipal, BoutonSecondaire, Champ, Feuille, Groupe, Interrupteur, Ligne, LigneBascule, LigneLien, SousPage, classeBouton, classeSaisie } from './ui.tsx';
-import { Abonnement } from './Offres.tsx';
+import { Facturation, nomOffre } from './Facturation.tsx';
 import { Etiquette, usePermis } from './offre.tsx';
 import { telechargerQR } from './CodeQR.tsx';
 import { noterPartage } from './BienDemarrer.tsx';
@@ -15,34 +15,34 @@ import { noterPartage } from './BienDemarrer.tsx';
  * Page, Compte et Abonnement, une ligne par réglage, le libellé à gauche, le
  * contrôle à droite. Rien ne se cache dans un tiroir : ce qui demande plus
  * qu'un geste (l'aperçu dans Google, supprimer son compte) s'ouvre dans une
- * fenêtre, et les offres dans une sous-page, avec le fil « Réglages / Les
- * offres » dans l'en-tête.
+ * fenêtre, les offres aussi, par-dessus ; Facturation est une sous-page, avec
+ * le fil « Réglages / Facturation » dans l'en-tête.
  */
 
 const dateLongue = (ms: number) => new Date(ms).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
-const NOM_PERIODE: Record<Periode, string> = { mois: 'mensuel', an: 'annuel' };
 
-export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlExport, supprimerMonCompte, abonnement, paiement, enVente = [], ouvrirPaiement, ouvrirPortail, sectionInitiale }: {
+export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlExport, supprimerMonCompte, abonnement, onOffres, ouvrirPortail }: {
   reglages: Reglages; compte: ComptePage & { email?: string; plan: Plan }; onChange: (r: Reglages) => void; onDeconnexion: () => void;
   urlExport: string | null; supprimerMonCompte: (confirmation: string) => Promise<{ ok: boolean; message: string }>;
-  abonnement: EtatAbonnement; paiement: boolean; enVente?: PlanPayant[];
-  ouvrirPaiement: (plan: PlanPayant, periode: Periode) => Promise<string>; ouvrirPortail: () => Promise<string>;
-  sectionInitiale?: 'abonnement';
+  abonnement: EtatAbonnement;
+  /** Ouvre les offres par-dessus Réglages ; absent quand le compte ne peut pas s'abonner (compte principal, paiement pas branché). */
+  onOffres?: (pour?: Fonction) => void;
+  ouvrirPortail: () => Promise<string>;
 }) {
   const adresse = urlPage(compte);
-  const [sous, setSous] = useState<'offres' | null>(sectionInitiale === 'abonnement' ? 'offres' : null);
+  const [sous, setSous] = useState<'facturation' | null>(null);
   const [fenetre, setFenetre] = useState<'apercu' | 'supprimer' | null>(null);
   const [portail, setPortail] = useState<'' | 'ouverture' | string>('');
   // Ce qui a ouvert la sous-page reprend le focus quand on en revient (la page se redessine : on le retrouve par son id).
   const ouvreur = useRef('');
-  const ouvrirSous = (id: string) => () => { ouvreur.current = id; setSous('offres'); scrollTo({ top: 0 }); };
+  const ouvrirSous = (id: string) => () => { ouvreur.current = id; setSous('facturation'); scrollTo({ top: 0 }); };
   useEffect(() => {
     if (sous || !ouvreur.current) return;
     document.getElementById(ouvreur.current)?.focus({ preventScroll: true });
     ouvreur.current = '';
   }, [sous]);
 
-  const offres = !compte.principal && paiement;
+  const offres = !compte.principal && !!onOffres;
   // Le résumé du lundi fait partie des stats : sans elles, la ligne porte le nom de l'offre et mène aux offres.
   const stats = usePermis('stats');
   const seo = (champs: Partial<Reglages['seo']>) => onChange({ ...reglages, seo: { ...reglages.seo, ...champs } });
@@ -53,16 +53,15 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
     catch (error) { setPortail((error as Error).message || 'Creem ne répond pas. Réessaie dans un instant.'); }
   }
 
-  if (sous === 'offres') return (
+  if (sous === 'facturation') return (
     <div className="adm-reglages">
-      <SousPage nom="Les offres" retour={() => setSous(null)} />
-      <Abonnement abonnement={abonnement} enVente={enVente} ouvrirPaiement={ouvrirPaiement} ouvrirPortail={ouvrirPortail} />
+      <SousPage nom="Facturation" retour={() => setSous(null)} />
+      <Facturation abonnement={abonnement} onOffres={offres ? () => onOffres?.() : undefined} ouvrirPortail={ouvrirPortail} />
     </div>
   );
 
   const paye = abonnement.plan !== 'gratuit';
   const resilie = paye && estResilie(abonnement.statut);
-  const nomOffre = `${OFFRES[abonnement.plan].nom}${paye && abonnement.periode ? `, ${NOM_PERIODE[abonnement.periode]}` : ''}`;
   const prix = paye && abonnement.periode ? OFFRES[abonnement.plan].prix[abonnement.periode] : null;
   const titreSeo = reglages.seo.titre || reglages.profil.nom;
   const descriptionSeo = reglages.seo.description || reglages.profil.bio;
@@ -88,7 +87,7 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
         {stats
           ? <LigneBascule nom="Mes stats par e-mail chaque lundi" actif={reglages.resumeHebdo} changer={v => onChange({ ...reglages, resumeHebdo: v })} />
           // Réservée : pas d'interrupteur qui ne ferait rien, l'offre qui la débloque à la place, et le chemin vers les offres.
-          : <LigneLien id="reglage-lundi" nom="Mes stats par e-mail chaque lundi" apres={<Etiquette fonction="stats" />} onClick={offres ? ouvrirSous('reglage-lundi') : undefined}
+          : <LigneLien nom="Mes stats par e-mail chaque lundi" apres={<Etiquette fonction="stats" />} onClick={offres ? () => onOffres?.('stats') : undefined}
               label={offres ? 'Mes stats par e-mail chaque lundi, avec Starter : voir les offres' : undefined} />}
         <Ligne nom="Mes données" valeur={urlExport ? undefined : 'Pas dans l’aperçu'}>
           {urlExport && <a href={urlExport} download className={classeBouton.secondaire} aria-label="Télécharger mes données">Télécharger</a>}
@@ -103,8 +102,8 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
 
       {offres && (
         <Groupe titre="Abonnement">
-          <Ligne nom="Offre" valeur={<strong>{nomOffre}</strong>}>
-            {!resilie && <BoutonSecondaire id="reglage-offre" onClick={ouvrirSous('reglage-offre')}>{paye ? 'Changer d’offre' : 'Voir les offres'}</BoutonSecondaire>}
+          <Ligne nom="Offre" valeur={<strong>{nomOffre(abonnement)}</strong>}>
+            {!resilie && <BoutonSecondaire onClick={() => onOffres?.()} aria-haspopup="dialog">{paye ? 'Changer d’offre' : 'Voir les offres'}</BoutonSecondaire>}
           </Ligne>
           {paye && abonnement.statut === 'past_due' ? (
             <Ligne nom="Paiement" valeur={<span data-alerte="">Le dernier paiement n’est pas passé</span>}>
@@ -114,8 +113,8 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
             <Ligne nom={resilie ? 'Fin de l’offre' : 'Prochaine échéance'}
               valeur={<span className="tabular-nums">{resilie ? `${dateLongue(abonnement.finPeriode)}, puis Gratuit` : `${dateLongue(abonnement.finPeriode)}${prix ? ` · ${euros(prix)}` : ''}`}</span>} />
           ) : null}
-          {abonnement.portail && (
-            <LigneLien nom="Facturation" valeur={portail === 'ouverture' ? 'Ouverture…' : 'Factures et moyen de paiement'} onClick={versPortail} disabled={portail === 'ouverture'} />
+          {(paye || abonnement.portail) && (
+            <LigneLien id="reglage-facturation" nom="Facturation" valeur={abonnement.portail ? 'Factures et moyen de paiement' : 'Ton offre et son échéance'} onClick={ouvrirSous('reglage-facturation')} />
           )}
         </Groupe>
       )}

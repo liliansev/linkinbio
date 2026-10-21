@@ -1,4 +1,4 @@
-import { cloneElement, createContext, isValidElement, useCallback, useContext, useEffect, useId, useRef, useState, useSyncExternalStore } from 'react';
+import { cloneElement, createContext, isValidElement, useCallback, useContext, useEffect, useId, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import { Icone } from '../components/Icone.tsx';
 import type { Animation } from '../lib/types.ts';
@@ -197,15 +197,29 @@ export function vibrer(ms = 8) {
  * `apercu`, sur téléphone, se pose au-dessus de la feuille : la page en direct,
  * en miniature, qui suit chaque réglage (Lilian, 18 octobre 2026).
  */
-export function Feuille({ ouverte, onFermer, retenir, titre, children, pied, cote = false, apercu, petite = false }: { ouverte: boolean; onFermer: () => void; retenir?: () => boolean; titre: string; children: Contenu; pied?: Contenu; cote?: boolean; apercu?: React.ReactNode;
+export function Feuille({ ouverte, onFermer, retenir, titre, children, pied, cote = false, apercu, petite = false, moyenne = false, large = false, nue = false }: { ouverte: boolean; onFermer: () => void; retenir?: () => boolean; titre: string; children: Contenu; pied?: Contenu; cote?: boolean; apercu?: React.ReactNode;
   /** Une petite fenêtre au bureau (440 px, titre de 15) : une question courte, comme Inviter. */
-  petite?: boolean }) {
+  petite?: boolean;
+  /** Une fenêtre de 560 px : un message qui se lit, comme « C'est fait ». */
+  moyenne?: boolean;
+  /** Plein écran au téléphone, 1000 px au bureau : les offres. */
+  large?: boolean;
+  /** Sans en-tête ni marges : le contenu pose lui-même son titre, sa croix et son défilement. */
+  nue?: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
   const [sortie, setSortie] = useState(false);
   const [tire, setTire] = useState(0);
   // La hauteur visible quand le clavier est ouvert (iOS ne réduit ni la fenêtre ni les dvh) : la feuille s'y tient.
   const [visible, setVisible] = useState<{ h: number; haut: number } | null>(null);
   const geste = useRef<{ y: number; t: number } | null>(null);
+  // Posée sur une autre fenêtre (les offres par-dessus Ajouter), la feuille ne rajoute pas de voile : un seul assombrissement,
+  // celui du dessous. Lu une fois la page à jour, avant d'être peint : une fenêtre qui se ferme au même moment ne compte pas.
+  const [pardessus, setPardessus] = useState(false);
+  useLayoutEffect(() => {
+    if (!ouverte) return;
+    const moi = ref.current?.closest('[role=dialog]');
+    setPardessus([...document.querySelectorAll('[role=dialog][aria-modal=true]')].some(d => d !== moi));
+  }, [ouverte]);
   const fermer = useCallback<Fermer>(apres => {
     // Un geste qui fermerait sur un travail pas valable laisse la feuille ouverte (retenir dit pourquoi).
     if (!apres && retenir?.()) { setTire(0); vibrer(20); return; }
@@ -222,6 +236,9 @@ export function Feuille({ ouverte, onFermer, retenir, titre, children, pied, cot
     // Une vraie fenêtre : Tab tourne dans la feuille, et le focus revient d'où il venait à la fermeture.
     const avantFocus = document.activeElement as HTMLElement | null;
     const touche = (e: KeyboardEvent) => {
+      // Deux feuilles l'une sur l'autre (les offres par-dessus le design) : seule celle du dessus écoute le clavier.
+      const fenetres = document.querySelectorAll('[role="dialog"][aria-modal="true"]');
+      if (fenetres[fenetres.length - 1] !== ref.current?.parentElement) return;
       if (e.key === 'Escape') fermerRef.current();
       // Ctrl ou Cmd + Entrée : le bouton principal du pied, comme un clic sur Terminé.
       if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && ref.current) {
@@ -277,11 +294,12 @@ export function Feuille({ ouverte, onFermer, retenir, titre, children, pied, cot
   return (
     <div className={`fixed inset-0 z-50 flex items-end justify-center ${cote ? 'sm:items-stretch sm:justify-end sm:p-4' : 'sm:items-center'}`} role="dialog" aria-modal="true" aria-label={titre} data-sortie={sortie || undefined}
       style={visible ? { top: visible.haut, height: visible.h, bottom: 'auto' } : undefined}>
-      <button type="button" tabIndex={-1} aria-hidden="true" className={`adm-fondu absolute inset-0 ${apercu ? 'bg-[#f4f4f4] sm:bg-black/[0.04]' : cote ? 'bg-black/[0.04]' : 'bg-black/40 backdrop-blur-[2px]'}`} onClick={() => fermer()} />
+      <button type="button" tabIndex={-1} aria-hidden="true" className={`adm-fondu absolute inset-0 ${apercu ? 'bg-[#f4f4f4] sm:bg-black/[0.04]' : cote ? 'bg-black/[0.04]' : pardessus ? '' : 'bg-black/40 backdrop-blur-[2px]'}`} onClick={() => fermer()} />
       {apercu && <div inert className="adm-fondu pointer-events-none absolute inset-x-0 top-0 bottom-[57dvh] flex items-center justify-center px-4 pt-[max(12px,env(safe-area-inset-top))] pb-3 sm:hidden">{apercu}</div>}
       <div ref={ref} tabIndex={-1}
         style={{ ...(tire ? { transform: `translateY(${tire}px)`, transition: 'none' } : {}), ...(visible ? { maxHeight: visible.h - 8, height: 'auto' } : {}) }}
-        className={`adm-feuille relative flex ${apercu ? 'h-[57dvh] sm:h-auto sm:w-[400px]' : cote ? 'max-h-[58dvh] sm:max-h-none sm:w-[400px]' : 'max-h-[92dvh]'} w-full flex-col border border-b-0 border-white/10 bg-nuit shadow-[0_-12px_40px_-16px_rgba(0,0,0,0.18)] sm:border-b ${petite ? 'adm-feuille-petite sm:max-w-[440px]' : 'sm:max-w-lg'}`}>
+        className={`adm-feuille relative flex ${large ? 'adm-feuille-large' : apercu ? 'h-[57dvh] sm:h-auto sm:w-[400px]' : cote ? 'max-h-[58dvh] sm:max-h-none sm:w-[400px]' : 'max-h-[92dvh]'} w-full flex-col border border-b-0 border-white/10 bg-nuit shadow-[0_-12px_40px_-16px_rgba(0,0,0,0.18)] sm:border-b ${large ? '' : petite ? 'adm-feuille-petite sm:max-w-[440px]' : moyenne ? 'adm-feuille-moyenne sm:max-w-[560px]' : 'sm:max-w-lg'}`}>
+        {nue ? rendre(children) : <>
         <div {...tirer} className="shrink-0 touch-none select-none">
           <div className="mx-auto mt-2 h-1 w-9 rounded-full bg-white/20 sm:hidden" />
           <header className="flex items-center justify-between gap-3 px-5 pt-2.5 pb-2 sm:pt-4">
@@ -293,6 +311,7 @@ export function Feuille({ ouverte, onFermer, retenir, titre, children, pied, cot
         </div>
         <div className={`min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 ${pied ? 'pb-4' : 'pb-[max(16px,env(safe-area-inset-bottom))]'}`}>{rendre(children)}</div>
         {pied && <footer className="shrink-0 border-t border-white/[0.07] px-5 pt-3 pb-[max(12px,env(safe-area-inset-bottom))]">{rendre(pied)}</footer>}
+        </>}
       </div>
     </div>
   );

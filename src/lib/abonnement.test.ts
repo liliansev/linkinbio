@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { BASCULE_OFFRES, FONCTIONS, OFFRES, PLANS, PLANS_PAYANTS, economie, euros, joursStats, libellePrix, parMoisAnnuel, peut } from './abonnement.ts';
+import { BASCULE_OFFRES, FONCTIONS, FONCTIONS_EN_MOTS, OFFRES, PLANS, PLANS_PAYANTS, avantagesEntre, echeance, economie, economieAnnuelle, euros, joursStats, libellePrix, moisOfferts, parMoisAnnuel, peut } from './abonnement.ts';
+import type { Fonction } from './abonnement.ts';
 import { nouvellesDates, selonDroits } from './droits.ts';
 import type { Droits } from './droits.ts';
 import { LEGAL } from './legal.ts';
@@ -30,6 +31,42 @@ test('chaque offre coûte plus que la précédente, et l’annuel revient moins 
     assert.ok(OFFRES[PLANS[i]].quota > OFFRES[PLANS[i - 1]].quota);
   }
   assert.equal(OFFRES.premium.enVente, false);
+});
+
+test('l’annuel : l’économie réelle en euros, et les mois offerts', () => {
+  assert.equal(economieAnnuelle('starter'), 12);
+  assert.equal(economieAnnuelle('pro'), 29);
+  assert.equal(economieAnnuelle('premium'), 59);
+  for (const p of PLANS_PAYANTS) {
+    assert.equal(economieAnnuelle(p), OFFRES[p].prix.mois * 12 - OFFRES[p].prix.an, p);
+    assert.equal(moisOfferts(p), 3, p);
+  }
+});
+
+test('chaque fonction réservée se lit, mot pour mot, dans les avantages de son offre', () => {
+  for (const f of Object.keys(FONCTIONS) as Fonction[]) {
+    assert.ok(OFFRES[FONCTIONS[f]].avantages.includes(FONCTIONS_EN_MOTS[f].avantage), f);
+    assert.match(FONCTIONS_EN_MOTS[f].pour, /^Pour /, f);
+    // La pastille tient à côté du nom de l'offre, sur une carte de la grille du bureau.
+    assert.ok(FONCTIONS_EN_MOTS[f].pour.length <= 20, f);
+  }
+});
+
+test('ce qu’on gagne d’une offre à l’autre, dans les deux sens', () => {
+  assert.deepEqual(avantagesEntre('gratuit', 'starter'), OFFRES.starter.avantages);
+  assert.deepEqual(avantagesEntre('gratuit', 'pro'), [...OFFRES.starter.avantages, ...OFFRES.pro.avantages]);
+  assert.deepEqual(avantagesEntre('pro', 'starter'), OFFRES.pro.avantages);
+  assert.deepEqual(avantagesEntre('starter', 'starter'), []);
+});
+
+test('la prochaine échéance : un mois ou un an plus tard, le même jour ou le dernier du mois', () => {
+  const jour = (a: number, m: number, j: number) => new Date(a, m - 1, j, 10).getTime();
+  const lu = (t: number) => { const d = new Date(t); return [d.getFullYear(), d.getMonth() + 1, d.getDate()]; };
+  assert.deepEqual(lu(echeance(jour(2026, 10, 20), 'an')), [2027, 10, 20]);
+  assert.deepEqual(lu(echeance(jour(2026, 10, 20), 'mois')), [2026, 11, 20]);
+  assert.deepEqual(lu(echeance(jour(2026, 1, 31), 'mois')), [2026, 2, 28]);
+  assert.deepEqual(lu(echeance(jour(2028, 2, 29), 'an')), [2029, 2, 28]);
+  assert.deepEqual(lu(echeance(jour(2026, 12, 15), 'mois')), [2027, 1, 15]);
 });
 
 test('une fonction se débloque avec son offre et celles du dessus', () => {

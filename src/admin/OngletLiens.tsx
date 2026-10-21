@@ -31,7 +31,7 @@ export function FeuilleAjout({ ouverte, onFermer, onChoisir, principal }: { ouve
             const reserve = !!t.fonction && !droits[t.fonction];
             return (
             <li key={t.type} style={{ '--i': i } as CSSProperties}>
-              <button type="button" disabled={reserve && !voirOffres} onClick={() => fermer(() => (reserve ? voirOffres?.() : onChoisir(t.type)))}
+              <button type="button" disabled={reserve && !voirOffres} onClick={() => fermer(() => (reserve ? voirOffres?.(t.fonction) : onChoisir(t.type)))}
                 className="group flex min-h-12 w-full items-center gap-3 rounded-xl px-2 py-1 text-left transition duration-150 hover:bg-white/[0.05] active:scale-[0.985] active:bg-white/[0.07]">
                 {/* Pas de pastille ni d'effet : le picto plein, d'une couleur, se suffit. */}
                 <span className="grid h-10 w-9 shrink-0 place-items-center transition duration-150 ">

@@ -20,6 +20,7 @@ import { HautLiens } from './BienDemarrer.tsx';
 import type { Demarrage } from './BienDemarrer.tsx';
 import { FeuilleAjout } from './OngletLiens.tsx';
 import { DesignTiroirs, OngletApparence } from './OngletApparence.tsx';
+import type { Tiroir } from './OngletApparence.tsx';
 import { ActionEntete, BoutonPrincipal, BoutonSecondaire, Feuille, Interrupteur, Menu, Panneau, choisirFichier, flechesRadio, preparerImage, vibrer } from './ui.tsx';
 import type { ElementMenu } from './ui.tsx';
 import { offreDe, useDroits, usePermis } from './offre.tsx';
@@ -53,7 +54,7 @@ interface Toile {
 }
 const ContexteToile = createContext<Toile | null>(null);
 
-export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, choisi, panneau, onReglages, onOrdonner, onOuvrir, onAjouter, liberer, fermerEdition, gestes, envoyerImage, annoncer, demarrage, demarrageOuvert, fermerDemarrage }: {
+export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, choisi, panneau, onReglages, onOrdonner, onOuvrir, onAjouter, liberer, fermerEdition, gestes, envoyerImage, annoncer, demarrage, demarrageOuvert, fermerDemarrage, demandeDesign, designOuvert }: {
   compte: PagePublique['compte'];
   reglages: Reglages;
   /** Les blocs tels qu'on les voit : celui qu'on règle se redessine à chaque frappe. */
@@ -85,9 +86,16 @@ export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, chois
   /** « Bien démarrer », ouvert depuis l'anneau de l'en-tête du téléphone. */
   demarrageOuvert: boolean;
   fermerDemarrage: () => void;
+  /** Ouvre le design sur un tiroir (« Essayer tes couleurs », après l'achat) ; `designOuvert` dit que c'est fait. */
+  demandeDesign?: Tiroir | null;
+  designOuvert?: () => void;
 }) {
   // Le design ou les réseaux : dans le panneau de droite au bureau, dans une feuille au téléphone.
   const [cote, setCote] = useState<Cote | null>(null);
+  // Le tiroir du design ouvert d'emblée (les couleurs, juste après les avoir prises), le temps d'une ouverture ;
+  // la clé remonte le design s'il était déjà ouvert sur un autre tiroir.
+  const [tiroirDepart, setTiroirDepart] = useState<Tiroir | undefined>();
+  const [cleDesign, setCleDesign] = useState(0);
   const [ajout, setAjout] = useState(false);
   // La page à la largeur d'un téléphone, qu'on modifie, ou sur un ordinateur, en aperçu.
   const [largeur, setLargeur] = useState<'telephone' | 'ordinateur'>('telephone');
@@ -137,6 +145,7 @@ export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, chois
     // Au téléphone, la page revient en vue : on a pu descendre loin en la regardant changer.
     if (!grand && (toile.current?.getBoundingClientRect().top ?? 0) < 0) toile.current?.scrollIntoView({ block: 'start', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
     depart.current = null;
+    setTiroirDepart(undefined);
     setCote(null);
   }
   /** Avant de passer à autre chose : le design se ferme, les réseaux aussi s'ils mènent quelque part. */
@@ -154,6 +163,14 @@ export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, chois
     // Au téléphone, le design s'ouvre en laissant voir le haut de la page, au-dessus de la feuille.
     if (!grand && c === 'design' && toile.current) scrollTo({ top: Math.max(0, toile.current.getBoundingClientRect().top + scrollY - 96) });
   }
+  // Une demande venue d'ailleurs (après l'achat des couleurs) : le design s'ouvre sur le bon tiroir, une fois.
+  useEffect(() => {
+    if (!demandeDesign) return;
+    setTiroirDepart(demandeDesign);
+    setCleDesign(k => k + 1);
+    if (cote !== 'design') ouvrirCote('design');
+    designOuvert?.();
+  }, [demandeDesign]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function photo(f: File | undefined) {
     if (!f) return;
@@ -269,7 +286,7 @@ export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, chois
   const menuCote: ElementMenu[] = change ? [{ nom: 'Annuler mes changements', icone: 'ui-retour', action: () => { if (depart.current) onReglages(depart.current); annoncer({ texte: 'Changements annulés', genre: 'info' }); } }] : [];
   const badge = principal && <Interrupteur label="Badge vérifié" actif={reglages.profil.badge} onChange={v => profil({ badge: v })} />;
   const contenuCote = cote === 'design'
-    ? <DesignTiroirs reglages={reglages} onChange={onReglages} envoyerImage={envoyerImage} principal={principal} vedettes={blocs.filter(b => b.vedette).length} pied={badge} />
+    ? <DesignTiroirs key={cleDesign} reglages={reglages} onChange={onReglages} envoyerImage={envoyerImage} principal={principal} vedettes={blocs.filter(b => b.vedette).length} pied={badge} initial={tiroirDepart} />
     : cote === 'reseaux' && <OngletApparence reglages={reglages} onChange={onReglages} envoyerImage={envoyerImage} principal={principal} parties={['reseaux']} />;
   const aDroite = grand && (panneau || (cote && (
     <Panneau key={cote} titre={cote === 'design' ? 'Design' : 'Réseaux'} onFermer={quitterCote} menu={menuCote}>

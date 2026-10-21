@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useContext, useEffect, useRef, useState } from 'react';
 import type { CSSProperties, MutableRefObject } from 'react';
 import type { Api, Bloc, Reglages } from '../lib/types.ts';
 import { ANIMATIONS_BLOC, SANS_COULEURS, estEnLigne } from '../lib/types.ts';
@@ -15,10 +15,11 @@ import { BoutonPrincipal, BoutonSecondaire, Champ, Feuille, Interrupteur, ListeC
 import type { ElementMenu } from './ui.tsx';
 import { TYPES } from './OngletLiens.tsx';
 import { appDe } from '../lib/ouvrirApp.ts';
-import { ChampsPreuve, RangeesCompactes, RegleAcces, RegleMoment, RegleReseaux, Repli } from './ReglesBloc.tsx';
+import { ChampsPreuve, RangeesCompactes, RegleAOuvrir, RegleAcces, RegleMoment, RegleReseaux, Repli } from './ReglesBloc.tsx';
 import { reseauxDePartage } from '../lib/provenance.ts';
 import { etiquettes } from '../lib/etiquettes.ts';
 import { FournisseurOffre, Reserve, offreDe, useDroits, useVoirOffres } from './offre.tsx';
+import type { Fonction } from '../lib/abonnement.ts';
 
 export interface OptionsEnregistrement {
   /** L'éditeur reste ouvert sur le bloc enregistré (le panneau du bureau). */
@@ -74,7 +75,9 @@ export function EditeurBloc({ bloc, reglages, nouveau, panneau = false, garde, o
   const voir = useVoirOffres();
   const [icones, setIcones] = useState(false);
   // L'essentiel d'abord, neuf ou pas ; le reste attend derrière « Plus de réglages ». Au bureau, la place ne manque pas : tout est déplié.
-  const [plus, setPlus] = useState(false);
+  // Ouvert pour y régler une règle tout juste débloquée (au retour des offres), il arrive déplié.
+  const aRegler = useContext(RegleAOuvrir) !== null;
+  const [plus, setPlus] = useState(aRegler);
   const deplie = panneau || plus;
   const fichier = useRef<HTMLInputElement>(null);
   // Ce qui est écrit : la saisie telle qu'elle était au dernier enregistrement (ou à l'ouverture), et sa version enregistrée.
@@ -230,8 +233,9 @@ export function EditeurBloc({ bloc, reglages, nouveau, panneau = false, garde, o
   }
   /** Un changement pas valable, neuf ou pas : la feuille reste ouverte et l'erreur dit quoi faire, rien ne se perd en silence. */
   const retenir = () => commence() && !valider();
-  // « Voir les offres » ferme l'éditeur comme un glissé, en gardant ce qui a changé, puis ouvre l'abonnement.
-  const offre = { droits, voirOffres: voir && (() => { if (retenir()) return; fermerEnGardant(); voir(); }) };
+  // « Voir les offres » ouvre les offres par-dessus. Au téléphone, la feuille du bloc se ferme d'abord comme un glissé, en gardant
+  // ce qui a changé ; au bureau, le panneau reste ouvert derrière la fenêtre, et ce qui y est tapé part avant le paiement.
+  const offre = { droits, voirOffres: voir && ((f?: Fonction) => { if (retenir()) return; if (!panneau) fermerEnGardant(); voir(f); }) };
 
   /** Une copie juste en dessous : ce qui est tapé s'écrit d'abord, la copie le reprend. */
   function dupliquer() {
@@ -339,7 +343,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, panneau = false, garde, o
       {nouveau && <p className="text-[13.5px] leading-snug text-white/60">{type.aide}.</p>}
       {!nouveau && etiquettes(b, droits).length > 0 && <p className="text-[13px] leading-snug text-white/60">{etiquettes(b, droits).join(' · ')}</p>}
       {/* Un avis ou une liste gardés d'une offre passée : ils attendent, rien n'est perdu. */}
-      {type.fonction && !droits[type.fonction] && <Reserve phrase={`Ce bloc n’est pas montré sur ta page sans Hopla ${offreDe(type.fonction)}. Il revient tel quel dès que tu la prends.`} />}
+      {type.fonction && !droits[type.fonction] && <Reserve fonction={type.fonction} phrase={`Ce bloc n’est pas montré sur ta page sans Hopla ${offreDe(type.fonction)}. Il revient tel quel dès que tu la prends.`} />}
       {apercu}
       {b.type === 'preuve' && nouveau && !preuveRemplie && !clavier && (
         // La place de l'aperçu est gardée dès l'ouverture : le formulaire ne saute pas quand la première valeur arrive.

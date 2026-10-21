@@ -3,6 +3,8 @@ import { nouveauBloc } from '../src/lib/types.ts';
 import { REGLAGES_DEFAUT, blocsDefaut, reglagesNouveauCompte } from '../src/lib/defauts.ts';
 import { CONTACT_LEGAL } from '../src/lib/legal.ts';
 import type { Droits } from '../src/lib/droits.ts';
+import type { Abonnement, Fonction, Periode, PlanPayant } from '../src/lib/abonnement.ts';
+import { FONCTIONS, echeance, peut } from '../src/lib/abonnement.ts';
 import avatar from '../public/avatar.webp?inline';
 
 /*
@@ -28,7 +30,7 @@ const pause = () => new Promise(r => setTimeout(r, 180));
 // Un générateur pseudo-aléatoire fixe : les mêmes chiffres à chaque visite.
 function hasard(graine: number) { return () => { graine = (graine * 16807) % 2147483647; return graine / 2147483647; }; }
 
-function statsFictives(jours: number): Stats {
+function statsFictives(jours: number, blocs: Bloc[] = etat.blocs): Stats {
   const r = hasard(42);
   const serieComplete = Array.from({ length: 730 }, (_, i) => {
     const base = 60 + 40 * Math.sin(i / 9) + i * 0.08;
@@ -41,7 +43,7 @@ function statsFictives(jours: number): Stats {
   type Cle = 'vues' | 'visiteurs' | 'clics';
   const somme = (l: Record<Cle, number>[], k: Cle) => l.reduce((t, s) => t + s[k], 0);
   const vues = somme(serie, 'vues'), clics = somme(serie, 'clics'), clicsAvant = somme(avant, 'clics'), vuesAvant = somme(avant, 'vues');
-  const liens = etat.blocs.filter(b => b.type === 'lien');
+  const liens = blocs.filter(b => b.type === 'lien');
   const poids = liens.map((_, i) => 1 / (i + 1.4));
   const total = poids.reduce((a, b) => a + b, 0);
   return {
@@ -212,26 +214,51 @@ export const apiNouveau: Api = {
 };
 export const pageNouveau = () => ({ reglages: nouveau.reglages, blocs: nouveau.blocs, compte: { pseudo: 'camille', principal: false, plan: 'gratuit' as const } });
 
-/* ---- Un compte ordinaire en Gratuit, pour voir ce que l'offre réserve (#gratuit) ---- */
+/* ---- Un compte ordinaire en Gratuit, pour voir ce que l'offre réserve, et la prendre (#gratuit) ---- */
 
-const CLE_GRATUIT = 'liens-demo-gratuit-v1';
-const RIEN: Droits = { sansMention: false, couleurs: false, programmation: false, avis: false, stats: false, heure: false, drops: false, listeEmail: false };
-function gratuitNeuf(): { reglages: Reglages; blocs: Bloc[] } {
+const CLE_GRATUIT = 'liens-demo-gratuit-v2';
+const SANS_ABONNEMENT: Abonnement = { plan: 'gratuit', statut: '', finPeriode: null, periode: null, portail: false };
+interface CompteGratuit { reglages: Reglages; blocs: Bloc[]; abonnement: Abonnement; achat?: { plan: PlanPayant; periode: Periode; ts: number } }
+function gratuitNeuf(): CompteGratuit {
   const bloc = (titre: string, url: string, icone: string): Bloc => ({ ...nouveauBloc('lien', id()), titre, url, icone });
   return {
     reglages: { ...reglagesNouveauCompte('sarah-coach'), profil: { nom: 'Sarah Martin', bio: 'Coach sportive à Lyon. Séances en salle et en ligne.', avatar: '', badge: false } },
     blocs: [bloc('Réserver une séance', 'https://exemple.fr/reserver', 'agenda'), bloc('Mes programmes', 'https://exemple.fr/programmes', 'flamme'), bloc('Ma chaîne YouTube', 'https://www.youtube.com/@exemple', 'youtube')],
+    abonnement: SANS_ABONNEMENT,
   };
 }
-let gratuit = (() => { try { const v = localStorage.getItem(CLE_GRATUIT); if (v) return JSON.parse(v) as ReturnType<typeof gratuitNeuf>; } catch { /* stockage indisponible */ } return gratuitNeuf(); })();
+let gratuit: CompteGratuit = (() => { try { const v = localStorage.getItem(CLE_GRATUIT); if (v) return { abonnement: SANS_ABONNEMENT, ...JSON.parse(v) } as CompteGratuit; } catch { /* stockage indisponible */ } return gratuitNeuf(); })();
 const ecrireGratuit = () => { try { localStorage.setItem(CLE_GRATUIT, JSON.stringify(gratuit)); } catch { /* idem */ } };
+const droitsDe = (a: Abonnement) => Object.fromEntries((Object.keys(FONCTIONS) as Fonction[]).map(f => [f, peut(a.plan, f)])) as Droits;
+
+/**
+ * Le paiement simulé : « Payer » note l'achat et revient aussitôt, comme Creem, sur `?paiement=<offre>`.
+ * Le faux webhook passe quatre secondes plus tard : jusque-là, l'abonnement relu n'a pas changé. Sans achat
+ * noté (`?paiement=pro#gratuit` tapé à la main), rien n'arrive : on voit l'attente.
+ */
+function webhookSimule() {
+  const a = gratuit.achat;
+  if (!a || Date.now() - a.ts < 4000) return;
+  gratuit.abonnement = { plan: a.plan, statut: 'active', finPeriode: echeance(a.ts, a.periode), periode: a.periode, portail: true };
+  delete gratuit.achat;
+  ecrireGratuit();
+}
 
 export const apiGratuit: Api = {
   ...apiDemo,
   async charger(): Promise<EtatAdmin> {
-    return { reglages: gratuit.reglages, blocs: gratuit.blocs, clics: {}, places: {}, stockageEphemere: false, cguAJour: true, dejaVue: true, compte: { pseudo: 'sarah-coach', principal: false, email: 'sarah@exemple.fr', plan: 'gratuit' },
-      abonnement: { plan: 'gratuit', statut: '', finPeriode: null, periode: null, portail: false }, paiement: true, enVente: ['starter', 'pro'], droits: RIEN };
+    webhookSimule();
+    const a = gratuit.abonnement;
+    return { reglages: gratuit.reglages, blocs: gratuit.blocs, clics: {}, places: {}, stockageEphemere: false, cguAJour: true, dejaVue: true, compte: { pseudo: 'sarah-coach', principal: false, email: 'sarah@exemple.fr', plan: a.plan },
+      abonnement: a, paiement: true, enVente: ['starter', 'pro'], droits: droitsDe(a) };
   },
+  async ouvrirPaiement(plan, periode) {
+    await pause();
+    gratuit.achat = { plan, periode, ts: Date.now() };
+    ecrireGratuit();
+    return `${location.pathname}?paiement=${plan}#gratuit`;
+  },
+  async ouvrirPortail() { await pause(); throw new Error('Dans l’aperçu, le portail de Creem ne s’ouvre pas : en vrai, la carte, les factures et la résiliation sont là-bas.'); },
   async enregistrerBloc(bloc) {
     await pause();
     const existe = gratuit.blocs.some(b => b.id === bloc.id);
@@ -243,6 +270,9 @@ export const apiGratuit: Api = {
   async ordonner(ids) { await pause(); gratuit.blocs = ids.map(i => gratuit.blocs.find(b => b.id === i)).filter((b): b is Bloc => !!b); ecrireGratuit(); },
   async enregistrerReglages(reglages) { await pause(); gratuit.reglages = reglages; ecrireGratuit(); return reglages; },
   async liste() { await pause(); return { total: 0, semaine: 0, derniers: [], integration: null, enAttente: 0 }; },
+  // Une fois l'offre prise, les stats fictives parlent des liens de Sarah.
+  async stats(jours) { await pause(); return statsFictives(jours, gratuit.blocs); },
+  // Se déconnecter remet le compte d'essai à zéro, abonnement compris : on peut rejouer l'achat.
   async deconnexion() { try { localStorage.removeItem(CLE_GRATUIT); } catch { /* idem */ } gratuit = gratuitNeuf(); },
   async supprimerMonCompte() { await pause(); return { ok: false, message: 'Pas de suppression dans l’aperçu.' }; },
   comptes: undefined,

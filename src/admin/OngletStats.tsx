@@ -9,6 +9,7 @@ import { enUnePhrase } from '../lib/resume.ts';
 import type { Mesure, Point } from '../lib/stats.ts';
 import { MESURES, NOMS_MESURES, chiffre, ecart, graduation, parSemaine, reperes, totalDe, valeurDuJour } from '../lib/stats.ts';
 import { OFFRES, PLANS_PAYANTS } from '../lib/abonnement.ts';
+import type { Fonction, PlanPayant } from '../lib/abonnement.ts';
 import { noterPartage } from './BienDemarrer.tsx';
 import { CodeQR } from './CodeQR.tsx';
 import { Etiquette } from './offre.tsx';
@@ -336,7 +337,7 @@ function PageJamaisVue({ adresse, pseudo }: { adresse: string; pseudo: string })
 const duree = (jours: number) => (jours >= 365 ? 'un an' : `${jours} jours`);
 
 /** Ce que lire ses stats apporte, pour une offre qui ne les montre pas (Gratuit) : elles se comptent déjà, Starter les ouvre. */
-function StatsReservees({ onOffres, liste }: { onOffres?: () => void; liste?: ReactNode }) {
+function StatsReservees({ onOffres, liste }: { onOffres?: Proprietes['onOffres']; liste?: ReactNode }) {
   const lignes = ['Tes vues, tes visiteurs et tes clics, jour par jour', 'Tes liens les plus cliqués', 'D’où viennent tes visiteurs, et sur quel appareil', 'Le résumé de ta semaine, chaque lundi par e-mail'];
   return (
     <div className="flex flex-col gap-5">
@@ -354,7 +355,7 @@ function StatsReservees({ onOffres, liste }: { onOffres?: () => void; liste?: Re
             </li>
           ))}
         </ul>
-        {onOffres && <button type="button" onClick={onOffres} className={`${classeBouton.principal} mt-5`}>Voir les offres</button>}
+        {onOffres && <button type="button" onClick={() => onOffres('stats')} aria-haspopup="dialog" className={`${classeBouton.principal} mt-5`}>Voir les offres</button>}
       </section>
       {liste}
     </div>
@@ -362,7 +363,9 @@ function StatsReservees({ onOffres, liste }: { onOffres?: () => void; liste?: Re
 }
 
 type Proprietes = {
-  charger: (jours: number) => Promise<Stats>; adresse: string; pseudo: string; joursMax?: number; onOffres?: () => void;
+  charger: (jours: number) => Promise<Stats>; adresse: string; pseudo: string; joursMax?: number;
+  /** Ouvre les offres par-dessus les stats, sur celle qui débloque `pour`, ou sur `vers` (un an de stats : Pro). */
+  onOffres?: (pour?: Fonction, vers?: PlanPayant) => void;
   ouvrirApps?: boolean; onActiverApps?: () => void; liste?: ReactNode;
   /** Les blocs de la page : chaque lien de la liste prend son picto. */
   blocs?: Bloc[];
@@ -399,7 +402,7 @@ function TableauStats({ charger, adresse, pseudo, joursMax = 365, onOffres, ouvr
   const elements: ElementMenu[] = PERIODES.flatMap((p): ElementMenu[] => {
     if (p.jours <= joursMax) return [{ nom: p.nom, coche: p.jours === jours, action: () => setJours(p.jours) }];
     const offre = PLANS_PAYANTS.find(o => OFFRES[o].enVente && OFFRES[o].jours >= p.jours);
-    return onOffres && offre ? [{ nom: p.nom, etiquette: OFFRES[offre].nom, action: onOffres }] : [];
+    return onOffres && offre ? [{ nom: p.nom, etiquette: OFFRES[offre].nom, action: () => onOffres(undefined, offre) }] : [];
   });
   const nomPeriode = PERIODES.find(p => p.jours === jours)!.nom;
   // La période ne se montre qu'à une page déjà vue : avant, il n'y a rien à comparer. Pendant le premier chargement, elle reste.

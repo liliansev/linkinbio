@@ -28,7 +28,7 @@ export function MaListe({ api }: { api: Pick<Api, 'liste' | 'brancherListe' | 's
   // Sans l'offre et sans inscrit, la carte dit ce que la liste ferait ; des inscrits déjà là restent à toi (export, Brevo).
   if (!permis && !liste.total) return (
     <Carte titre="Ta liste" action={<Etiquette fonction="listeEmail" />}>
-      <Reserve phrase="Avec Hopla Pro, tes visiteurs laissent leur e-mail sur ta page : chaque adresse arrive ici, et chez Brevo ou Mailchimp si tu les branches." />
+      <Reserve fonction="listeEmail" phrase="Avec Hopla Pro, tes visiteurs laissent leur e-mail sur ta page : chaque adresse arrive ici, et chez Brevo ou Mailchimp si tu les branches." />
     </Carte>
   );
   return (

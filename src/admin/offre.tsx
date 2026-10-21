@@ -13,8 +13,11 @@ import { classeBadge, classeBouton } from './ui.tsx';
 
 interface ContexteOffre {
   droits: Droits;
-  /** Ouvre Réglages, Abonnement. Absent quand le compte ne peut pas s'abonner (aperçu, compte principal). */
-  voirOffres?: () => void;
+  /**
+   * Ouvre les offres dans une fenêtre, par-dessus l'écran en cours ; `pour` : la fonction réservée d'où l'on vient,
+   * dont l'offre passe devant. Absent quand le compte ne peut pas s'abonner (aperçu, compte principal).
+   */
+  voirOffres?: (pour?: Fonction) => void;
 }
 
 const TOUT = Object.fromEntries(Object.keys(FONCTIONS).map(f => [f, true])) as Droits;
@@ -35,15 +38,16 @@ export function Etiquette({ fonction }: { fonction: Fonction }) {
 }
 
 /**
- * À la place des réglages d'une fonction réservée : une phrase qui nomme l'offre, et le chemin vers les offres.
- * `bouton={false}` quand ce chemin est déjà juste au-dessus : un seul « Voir les offres » par endroit.
+ * À la place des réglages d'une fonction réservée : une phrase qui nomme l'offre, et le chemin vers les offres,
+ * ouvertes sur celle qui débloque `fonction`. `bouton={false}` quand ce chemin est déjà juste au-dessus : un seul
+ * « Voir les offres » par endroit.
  */
-export function Reserve({ phrase, bouton = true, children }: { phrase: string; bouton?: boolean; children?: ReactNode }) {
+export function Reserve({ phrase, fonction, bouton = true, children }: { phrase: string; fonction: Fonction; bouton?: boolean; children?: ReactNode }) {
   const voir = useVoirOffres();
   return (
     <div className="flex flex-col items-start gap-3">
       <p className="text-[13.5px] leading-snug text-white/70">{phrase}</p>
-      {voir && bouton && <button type="button" onClick={voir} className={classeBouton.secondaire}>Voir les offres</button>}
+      {voir && bouton && <button type="button" onClick={() => voir(fonction)} aria-haspopup="dialog" className={classeBouton.secondaire}>Voir les offres</button>}
       {children}
     </div>
   );

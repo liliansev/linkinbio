@@ -54,7 +54,7 @@ function Demo() {
     return (
       <>
         <p className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 bg-[#0a0a0a] px-4 py-2 text-center font-sans text-[13px] font-medium text-white">
-          <span>Un compte ordinaire en Gratuit : ce que l’offre réserve, et le chemin vers les offres.</span>
+          <span>Un compte en Gratuit et le chemin vers les offres. Paiement simulé ; se déconnecter remet tout à zéro.</span>
           <a href="#" className="underline">Retour à la démo</a>
         </p>
         <Admin api={apiGratuit} initial={etat} demo />

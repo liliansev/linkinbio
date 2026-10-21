@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import type { Api, Bloc, EtatAdmin, Reglages } from '../lib/types.ts';
+import type { Api, Bloc, EtatAdmin, PagePublique, Reglages } from '../lib/types.ts';
 import { TYPES_PRINCIPAL, nouveauBloc, urlPage } from '../lib/types.ts';
 import { composerMoment } from '../lib/moments.ts';
 import { PageLiens } from '../components/PageLiens.tsx';
 import { MaPage } from './MaPage.tsx';
+import type { Tiroir } from './OngletApparence.tsx';
 import { EditeurBloc } from './EditeurBloc.tsx';
+import { RegleAOuvrir } from './ReglesBloc.tsx';
 import type { OptionsEnregistrement } from './EditeurBloc.tsx';
 import { OngletStats } from './OngletStats.tsx';
 import { MaListe } from './MaListe.tsx';
@@ -20,8 +22,13 @@ import type { Fil } from './ui.tsx';
 import { Marque } from './Marque.tsx';
 import { AnneauDemarrage, noterPartage, useDemarrage } from './BienDemarrer.tsx';
 import { FournisseurOffre } from './offre.tsx';
-import { OFFRES, estPlanPayant, joursStats } from '../lib/abonnement.ts';
+import { FenetreOffres, RetourPaiement } from './Offres.tsx';
+import type { Fonction, PlanPayant } from '../lib/abonnement.ts';
+import { FONCTIONS, OFFRES, joursStats, peut } from '../lib/abonnement.ts';
+import type { Droits } from '../lib/droits.ts';
 import { REFUS_PROGRAMMATION, nouvellesDates, selonDroits } from '../lib/droits.ts';
+import type { Achat, EtapeRetour } from '../lib/achat.ts';
+import { CLE_ACHAT, achatDeRetour, delaiAvantEssai, etapeRetour } from '../lib/achat.ts';
 
 /*
  * Le back office. Tout s'enregistre tout seul : un bloc une fraction de
@@ -42,13 +49,39 @@ const ONGLETS: { id: Onglet; nom: string; icone: string }[] = [
   { id: 'comptes', nom: 'Comptes', icone: 'equipe' },
 ];
 
+const nouvelId = () => `n${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+/** Les fonctions qui se règlent dans un bloc (ses dates, son créneau, son drop). */
+const FONCTIONS_DE_BLOC: Fonction[] = ['programmation', 'heure', 'drops'];
+
+/**
+ * Le retour de Creem, lu une fois : l'adresse (`?paiement=pro`) et la note posée avant de partir. L'adresse
+ * redevient propre et la note s'efface, pour qu'un rechargement ne rejoue rien. Ce retour n'accorde rien.
+ */
+function lireRetour(): Achat | null {
+  const recherche = location.search;
+  if (!new URLSearchParams(recherche).has('paiement')) return null;
+  let note: unknown = null;
+  try { note = JSON.parse(sessionStorage.getItem(CLE_ACHAT) ?? 'null'); sessionStorage.removeItem(CLE_ACHAT); } catch { /* onglet privé : le retour dira seulement l'offre */ }
+  history.replaceState(null, '', location.pathname + location.hash);
+  return achatDeRetour(recherche, note);
+}
+
 export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatAdmin; demo?: boolean }) {
   const [blocs, setBlocs] = useState(initial.blocs);
   const [reglages, setReglages] = useState(initial.reglages);
   const [clics, setClics] = useState(initial.clics);
   const [onglet, setOnglet] = useState<Onglet>('page');
-  const [sectionReglage, setSectionReglage] = useState<'abonnement' | undefined>();
+  // Les offres, par-dessus l'écran en cours : `pour`, la fonction réservée d'où l'on vient ; `vers`, l'offre à mettre en avant sans fonction.
+  const [offres, setOffres] = useState<{ pour?: Fonction; vers?: PlanPayant; bloc?: string } | null>(null);
+  // Au retour de Creem : ce qu'on vient de prendre, et où en est l'offre (voir `lib/achat.ts`).
+  const [retour, setRetour] = useState<{ achat: Achat; etape: EtapeRetour } | null>(null);
+  // « Essayer tes couleurs » : Ma page ouvre le design sur ses couleurs.
+  const [demandeDesign, setDemandeDesign] = useState<Tiroir | null>(null);
+  // « Programmer ce bloc », au retour de Creem : le bloc s'ouvre sur la règle que l'offre vient de débloquer.
+  const [regleOuverte, setRegleOuverte] = useState<{ bloc: string; regle: 'moment' | 'acces' } | null>(null);
   const [edition, setEdition] = useState<{ bloc: Bloc; nouveau: boolean; enBas?: boolean } | null>(null);
+  // Une seule fois : le bloc refermé (ou un autre ouvert), sa règle ne s'ouvre plus d'elle-même.
+  useEffect(() => { if (regleOuverte && edition?.bloc.id !== regleOuverte.bloc) setRegleOuverte(null); }, [edition, regleOuverte]);
   // Le bloc tel qu'il se tape dans l'éditeur : la page le redessine à chaque frappe, avant même qu'il soit écrit.
   const [brouillon, setBrouillon] = useState<Bloc | null>(null);
   // Ce que l'éditeur ouvert fait avant qu'on passe à autre chose : écrire ce qui est valable, ou retenir (voir `EditeurBloc`).
@@ -121,9 +154,12 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
 
   const ecrireRef = useRef(ecrire);
   ecrireRef.current = ecrire;
-  // Le chemin vers les offres, pour un refus du serveur (absent quand le compte ne peut pas s'abonner) : la feuille d'un bloc encore ouverte se ferme.
+  // Le compte peut-il prendre une offre : le paiement est branché, et ce n'est pas le compte principal, qui a tout.
+  const peutAcheter = initial.paiement && !initial.compte.principal;
+  const ouvrirOffres = (pour?: Fonction, vers?: PlanPayant, bloc?: string) => setOffres({ pour, vers, bloc });
+  // Le chemin vers les offres, pour un refus du serveur (absent quand le compte ne peut pas s'abonner) : elles s'ouvrent par-dessus.
   const versOffres = useRef<(() => void) | undefined>(undefined);
-  versOffres.current = initial.paiement ? () => { setEdition(null); versAbonnement(); } : undefined;
+  versOffres.current = peutAcheter ? () => ouvrirOffres('programmation') : undefined;
   const refusProgrammation = () => ({ texte: REFUS_PROGRAMMATION, long: true, ...(versOffres.current ? { action: 'Voir les offres', annuler: () => { setToast(null); versOffres.current?.(); } } : {}) });
   useEffect(() => { if (!toast) setToastTenu(false); }, [toast]);
   // Après un retrait, le bloc qui avait le focus n'existe plus : le focus va à « Annuler » plutôt qu'au vide.
@@ -157,30 +193,47 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
   useEffect(() => { setToastTenu(false); }, [toast]);
   useEffect(() => () => clearTimeout(minuteur.current), []);
 
-  // Au retour de la page de paiement (ou d'un changement d'offre) : l'offre arrive par webhook, quelques secondes plus tard.
+  /*
+   * Au retour de Creem (ou d'un changement d'offre) : l'offre n'arrive qu'avec le webhook signé, que le serveur écrit,
+   * quelques secondes plus tard. On relit l'abonnement jusqu'à la voir, sans jamais l'accorder ici : « On active ton
+   * offre… », puis « C'est fait ». Fermée avant, la fenêtre laisse la relecture finir et un message le dira.
+   */
+  const retourLu = useRef<Achat | null | undefined>(undefined);
+  const retourFerme = useRef(false);
   useEffect(() => {
-    const voulue = new URLSearchParams(location.search).get('paiement');
-    if (demo || voulue === null) return;
-    history.replaceState(null, '', location.pathname);
-    versAbonnement();
-    const plan = estPlanPayant(voulue) ? voulue : 'pro';
-    setToast({ texte: `Merci ! Ton offre ${OFFRES[plan].nom} arrive dans un instant.` });
+    // Lu une seule fois, même si l'effet est rejoué (mode strict) : l'adresse est déjà nettoyée au deuxième passage.
+    if (retourLu.current === undefined) retourLu.current = lireRetour();
+    const achat = retourLu.current;
+    if (!achat) return;
     let essais = 0;
-    const t = setInterval(async () => {
-      essais++;
-      try {
-        const e = await api.charger();
-        const arrivee = e.abonnement.plan === plan;
-        if (arrivee || essais >= 15) {
-          clearInterval(t);
-          setAbonnement(e.abonnement);
-          setDroits(e.droits);
-          if (arrivee) setToast({ texte: `Bienvenue en ${OFFRES[plan].nom}` });
-        }
-      } catch { if (essais >= 15) clearInterval(t); }
-    }, 2000);
-    return () => clearInterval(t);
-  }, [api, demo]);
+    let fini = false;
+    let minuterie: ReturnType<typeof setTimeout> | undefined;
+    const dire = (etape: EtapeRetour) => { if (!retourFerme.current) setRetour({ achat, etape }); };
+    if (etapeRetour(achat, initial.abonnement, 0) === 'fait') { dire('fait'); return; }
+    dire('activation');
+    const relire = () => {
+      const delai = delaiAvantEssai(essais);
+      if (delai === null) return;
+      minuterie = setTimeout(async () => {
+        essais++;
+        try {
+          const e = await api.charger();
+          if (fini) return;
+          const etape = etapeRetour(achat, e.abonnement, essais);
+          if (etape === 'fait' || delaiAvantEssai(essais) === null) { setAbonnement(e.abonnement); setDroits(e.droits); }
+          if (etape === 'fait') {
+            if (retourFerme.current) setToast({ texte: `C’est fait, tu es en ${OFFRES[achat.plan].nom}` });
+            dire('fait');
+            return;
+          }
+          dire(etape);
+        } catch { if (fini) return; }
+        relire();
+      }, delai);
+    };
+    relire();
+    return () => { fini = true; clearTimeout(minuterie); };
+  }, [api]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /** Avant un autre geste : ce que l'éditeur ouvert a de valable s'écrit ; un champ faux le retient (faux). */
   const libererEdition = () => !garde.current || garde.current();
@@ -193,11 +246,44 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
   }
   function choisirOnglet(o: Onglet) {
     if (!fermerEdition()) return;
-    setSectionReglage(undefined);
     setOnglet(o);
     scrollTo({ top: 0 });
   }
-  function versAbonnement() { setEdition(null); setSectionReglage('abonnement'); setOnglet('reglages'); scrollTo({ top: 0 }); }
+
+  /** Avant de partir chez Creem : les réglages qui attendaient leur envoi partent, le bloc ouvert s'écrit, et on attend que tout soit gardé (4 secondes au plus). */
+  async function avantDePartir() {
+    if (reglagesEnAttente.current) {
+      clearTimeout(minuteur.current);
+      const r = reglagesEnAttente.current;
+      reglagesEnAttente.current = null;
+      void ecrire(() => api.enregistrerReglages(r));
+    }
+    libererEdition();
+    for (let i = 0; i < 40 && enCours.current > 0; i++) await new Promise(r => setTimeout(r, 100));
+  }
+
+  /** La page telle qu'elle sera avec une offre, pour le récapitulatif : ce que l'offre ouvre s'y montre, sans la mention dès Starter. */
+  function apercuAvec(plan: PlanPayant): PagePublique {
+    const d = Object.fromEntries((Object.keys(FONCTIONS) as Fonction[]).map(f => [f, droits[f] || peut(plan, f)])) as Droits;
+    const permis = selonDroits(reglages, blocs.filter(b => !TYPES_PRINCIPAL.includes(b.type)), d);
+    const maintenant = Date.now();
+    return { reglages: permis.reglages, blocs: composerMoment(permis.blocs, maintenant), compte: { ...compte, plan }, maintenant };
+  }
+
+  /** Après « C'est fait » : le geste qui mène à ce qu'on était venu chercher. */
+  function actionApres({ pour, bloc }: Achat): { texte: string; faire: () => void } | undefined {
+    if (pour === 'couleurs') return { texte: 'Essayer tes couleurs', faire: () => { choisirOnglet('page'); setDemandeDesign('couleurs'); } };
+    if (pour === 'stats') return { texte: 'Voir tes stats', faire: () => choisirOnglet('stats') };
+    if (pour === 'avis') return { texte: 'Ajouter un avis', faire: () => { choisirOnglet('page'); ajouterBloc(nouveauBloc('preuve', nouvelId())); } };
+    if (pour === 'listeEmail') return { texte: 'Ajouter ta liste d’inscrits', faire: () => { choisirOnglet('page'); ajouterBloc(nouveauBloc('inscription', nouvelId())); } };
+    // Une règle de bloc (dates, créneau, drop) : on revient au bloc d'où l'on était parti, s'il est toujours là.
+    const b = pour && FONCTIONS_DE_BLOC.includes(pour) && bloc ? blocs.find(x => x.id === bloc) : undefined;
+    if (b) return {
+      texte: pour === 'programmation' ? 'Programmer ce bloc' : pour === 'heure' ? 'Choisir son créneau' : 'Régler ce drop',
+      faire: () => { setRegleOuverte({ bloc: b.id, regle: pour === 'drops' ? 'acces' : 'moment' }); choisirOnglet('page'); ouvrirBloc(b); },
+    };
+    return undefined;
+  }
 
   /** Un clic sur un bloc l'ouvre ; au bureau, le panneau passe d'un bloc à l'autre en écrivant le précédent. */
   function ouvrirBloc(bloc: Bloc) {
@@ -220,11 +306,14 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
     if (r.top < haut || r.bottom > bas) scrollTo({ top: Math.max(0, scrollY + r.top - haut) });
   }, [idOuvert, grand]);
 
+  // Les réglages tapés qui attendent leur envoi : ils partent tout de suite si l'on quitte la page pour Creem.
+  const reglagesEnAttente = useRef<Reglages | null>(null);
   function changerReglages(r: Reglages) {
     setReglages(r);
     clearTimeout(minuteur.current);
     setSauvegarde('encours');
-    minuteur.current = setTimeout(() => { ecrire(() => api.enregistrerReglages(r)); }, 650);
+    reglagesEnAttente.current = r;
+    minuteur.current = setTimeout(() => { reglagesEnAttente.current = null; ecrire(() => api.enregistrerReglages(r)); }, 650);
   }
 
   /** Un bloc qui vient d'arriver se montre : la page défile jusqu'à lui et il s'éclaire un instant. */
@@ -382,16 +471,18 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
     </div>
   );
 
-  const offre = { droits, voirOffres: initial.paiement ? versAbonnement : undefined };
+  // Ouvertes depuis la règle d'un bloc, les offres retiennent ce bloc : au retour de Creem, on y revient d'un geste.
+  const offre = { droits, voirOffres: peutAcheter ? (pour?: Fonction) => ouvrirOffres(pour, undefined, pour && FONCTIONS_DE_BLOC.includes(pour) && edition && !edition.nouveau ? edition.bloc.id : undefined) : undefined };
 
   if (premiersPas) {
+    // Les premiers pas n'ont aucune fonction réservée : pas de chemin vers les offres.
     return (
-      <FournisseurOffre value={offre}>
+      <FournisseurOffre value={{ droits }}>
         <PremiersPas compte={compte} reglages={reglages} blocs={blocs} onReglages={changerReglages} onPoserBlocs={poserBlocs}
           envoyerImage={d => api.envoyerImage(d)} apercuSite={u => api.apercuSite(u)} onFin={suite => {
             setPremiersPas(false); setOnglet('page'); scrollTo({ top: 0 });
             // « Ajouter mon premier lien » : l'éditeur s'ouvre déjà sur un lien neuf.
-            if (suite === 'lien') setEdition({ bloc: nouveauBloc('lien', `n${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`), nouveau: true });
+            if (suite === 'lien') setEdition({ bloc: nouveauBloc('lien', nouvelId()), nouveau: true });
           }} />
         {bulle}
       </FournisseurOffre>
@@ -400,9 +491,11 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
 
   // Un éditeur par bloc (la clé) : passer d'un bloc à l'autre repart de la version enregistrée du suivant.
   const editeur = edition && (
+    <RegleAOuvrir.Provider value={regleOuverte?.bloc === edition.bloc.id ? regleOuverte.regle : null}>
     <EditeurBloc key={edition.bloc.id} panneau={grand} garde={garde} onBrouillon={setBrouillon}
       adressePage={urlPage(compte)} principal={compte.principal} bloc={edition.bloc} reglages={reglages} nouveau={edition.nouveau} clics={clics[edition.bloc.id] ?? 0} prises={initial.places?.[edition.bloc.id] ?? 0} onFermer={() => setEdition(null)}
       onEnregistrer={enregistrerBloc} onSupprimer={supprimer} onDupliquer={dupliquer} onDeplacer={deplacer} place={{ rang: blocs.findIndex(b => b.id === edition.bloc.id), total: blocs.length }} envoyerImage={d => api.envoyerImage(d)} apercuSite={u => api.apercuSite(u)} />
+    </RegleAOuvrir.Provider>
   );
   const indicateur = sauvegarde === 'encours' ? 'Enregistrement…' : sauvegarde === 'erreur' ? 'Non enregistré' : 'Enregistré';
   // Le même signe au téléphone et au bureau : une coche quand tout est gardé, un point qui bat pendant l'envoi, du rouge seulement en cas d'échec.
@@ -506,11 +599,11 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
             choisi={idOuvert} panneau={grand && editeur} onReglages={changerReglages} onOrdonner={l => ordonner(l)}
             onOuvrir={ouvrirBloc} onAjouter={ajouterBloc} liberer={libererEdition} fermerEdition={fermerEdition} gestes={{ basculer, dupliquer, supprimer }}
             envoyerImage={d => api.envoyerImage(d)} annoncer={t => setToast(t)}
-            demarrage={demarrage} demarrageOuvert={demarrageOuvert} fermerDemarrage={() => setDemarrageOuvert(false)} />}
-          {onglet === 'stats' && <OngletStats charger={chargerStats} adresse={urlPage(compte)} pseudo={compte.pseudo} joursMax={initial.paiement ? joursStats(compte.plan, droits.stats) : 365} onOffres={initial.paiement ? versAbonnement : undefined}
+            demarrage={demarrage} demarrageOuvert={demarrageOuvert} fermerDemarrage={() => setDemarrageOuvert(false)} demandeDesign={demandeDesign} designOuvert={() => setDemandeDesign(null)} />}
+          {onglet === 'stats' && <OngletStats charger={chargerStats} adresse={urlPage(compte)} pseudo={compte.pseudo} joursMax={initial.paiement ? joursStats(compte.plan, droits.stats) : 365} onOffres={peutAcheter ? ouvrirOffres : undefined}
             ouvrirApps={reglages.ouvrirApps} onActiverApps={() => changerReglages({ ...reglages, ouvrirApps: true })} liste={<MaListe api={api} />} blocs={blocs} />}
           {onglet === 'reglages' && <OngletReglages reglages={reglages} compte={compte} onChange={changerReglages} onDeconnexion={deconnexion} urlExport={api.urlExport} supprimerMonCompte={api.supprimerMonCompte}
-            abonnement={abonnement} paiement={initial.paiement} enVente={initial.enVente} ouvrirPaiement={api.ouvrirPaiement} ouvrirPortail={api.ouvrirPortail} sectionInitiale={sectionReglage} />}
+            abonnement={abonnement} onOffres={peutAcheter ? (pour?: Fonction) => ouvrirOffres(pour) : undefined} ouvrirPortail={api.ouvrirPortail} />}
           {onglet === 'comptes' && api.comptes && <OngletComptes api={api.comptes} avatar={reglages.profil.avatar} />}
           </div>
         </main>
@@ -546,6 +639,16 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
 
       {/* Au téléphone, l'éditeur est une feuille du bas ; au bureau, il occupe le panneau à droite de la page (voir MaPage). */}
       {!grand && editeur}
+
+      {/* Les offres et le retour de Creem s'ouvrent par-dessus l'écran en cours, qu'on retrouve en les fermant. */}
+      {offres && (
+        <FenetreOffres onFermer={() => setOffres(null)} abonnement={abonnement} enVente={initial.enVente} pour={offres.pour} vers={offres.vers} bloc={offres.bloc}
+          ouvrirPaiement={api.ouvrirPaiement} avantDePartir={avantDePartir} apercu={apercuAvec} />
+      )}
+      {retour && (
+        <RetourPaiement achat={retour.achat} etape={retour.etape} action={actionApres(retour.achat)}
+          onFermer={() => { retourFerme.current = true; setRetour(null); }} />
+      )}
 
       {bulle}
     </div>

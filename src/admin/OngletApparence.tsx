@@ -8,7 +8,7 @@ import { Icone, NOMS_RESEAUX } from '../components/Icone.tsx';
 import { Carte, Champ, Interrupteur, NOMS_ANIMATIONS, Segments, choisirFichier, classeBouton, classeSaisie, flechesRadio, preparerImage, vibrer } from './ui.tsx';
 import { pseudoReseau, urlReseau } from '../lib/demarrage.ts';
 import { adresseSaisie, pourquoiPasReseau } from '../lib/valider.ts';
-import { Etiquette, Reserve, usePermis } from './offre.tsx';
+import { Etiquette, Reserve, usePermis, useVoirOffres } from './offre.tsx';
 
 const STYLES: { id: StyleBouton; nom: string }[] = [
   { id: 'plein', nom: 'Plein' }, { id: 'contour', nom: 'Contour' }, { id: 'doux', nom: 'Doux' }, { id: 'relief', nom: 'Relief' }, { id: 'verre', nom: 'Verre' },
@@ -129,7 +129,7 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
           </div>
         ) : (
           // Des couleurs gardées d'une offre passée restent en base : elles reviennent avec Starter.
-          <Reserve phrase={perso ? 'Tes couleurs attendent Hopla Starter : pour l’instant, ta page garde celles de son thème.' : 'Avec Hopla Starter, tu changes le fond, les boutons et le lien mis en avant, par-dessus ton thème.'} />
+          <Reserve fonction="couleurs" phrase={perso ? 'Tes couleurs attendent Hopla Starter : pour l’instant, ta page garde celles de son thème.' : 'Avec Hopla Starter, tu changes le fond, les boutons et le lien mis en avant, par-dessus ton thème.'} />
         )}
       </Carte>}
 
@@ -282,14 +282,16 @@ function SchemaBureau({ id }: { id: MiseEnPageBureau }) {
   );
 }
 
-type Tiroir = 'theme' | 'couleurs' | 'boutons' | 'animation' | 'bureau';
+export type Tiroir = 'theme' | 'couleurs' | 'boutons' | 'animation' | 'bureau';
 
 /**
  * Le design en liste à tiroirs : une icône et un titre par ligne, un toucher
  * l'ouvre à la place de la liste, la flèche ramène.
  */
-export function DesignTiroirs({ reglages, onChange, envoyerImage, principal, pied, vedettes }: { reglages: Reglages; onChange: (r: Reglages) => void; envoyerImage: (d: string) => Promise<string>; principal: boolean; pied?: ReactNode; vedettes?: number }) {
-  const [ouvert, setOuvert] = useState<Tiroir | null>(null);
+export function DesignTiroirs({ reglages, onChange, envoyerImage, principal, pied, vedettes, initial }: { reglages: Reglages; onChange: (r: Reglages) => void; envoyerImage: (d: string) => Promise<string>; principal: boolean; pied?: ReactNode; vedettes?: number;
+  /** Le tiroir ouvert d'emblée. */
+  initial?: Tiroir }) {
+  const [ouvert, setOuvert] = useState<Tiroir | null>(initial ?? null);
   // Le focus suit le tiroir : sur son retour en entrant, sur sa ligne en revenant.
   const retour = useRef<HTMLButtonElement>(null);
   const dernier = useRef<Tiroir | null>(null);
@@ -306,7 +308,9 @@ export function DesignTiroirs({ reglages, onChange, envoyerImage, principal, pie
     else if (dernier.current) document.getElementById(`design-${dernier.current}`)?.focus({ preventScroll: true });
   }, [ouvert]);
   const couleurs = usePermis('couleurs');
+  const voirOffres = useVoirOffres();
   // Chaque ligne dit ce qui est réglé, à droite : on sait sans ouvrir. Une partie réservée porte le nom de son offre.
+  // Réservées, les couleurs ouvrent les offres par-dessus le design, Starter en avant ; sans chemin vers les offres, leur tiroir dit pourquoi.
   const lignes: { id: Tiroir; nom: string; icone: string; valeur: ReactNode }[] = [
     { id: 'theme', nom: 'Thème', icone: 'palette', valeur: themeParId(reglages.theme).nom },
     { id: 'couleurs', nom: 'Couleurs', icone: 'pinceau', valeur: !couleurs ? <Etiquette fonction="couleurs" /> : Object.values(reglages.couleurs).some(Boolean) ? 'Personnalisées' : 'Celles du thème' },
@@ -333,7 +337,9 @@ export function DesignTiroirs({ reglages, onChange, envoyerImage, principal, pie
       <ul className="adm-groupe">
         {lignes.map((l, i) => (
           <li key={l.id} className={i > 0 ? 'border-t border-white/[0.07]' : ''}>
-            <button id={`design-${l.id}`} type="button" onClick={() => { vibrer(4); setOuvert(l.id); if (l.id === 'theme') themesVus(); }} className="flex min-h-[52px] w-full items-center gap-3 rounded-[inherit] px-3.5 py-2 text-left transition hover:bg-white/[0.04] active:bg-white/[0.06]">
+            <button id={`design-${l.id}`} type="button" aria-haspopup={l.id === 'couleurs' && !couleurs && voirOffres ? 'dialog' : undefined}
+              onClick={() => { vibrer(4); if (l.id === 'couleurs' && !couleurs && voirOffres) return voirOffres('couleurs'); setOuvert(l.id); if (l.id === 'theme') themesVus(); }}
+              className="flex min-h-[52px] w-full items-center gap-3 rounded-[inherit] px-3.5 py-2 text-left transition hover:bg-white/[0.04] active:bg-white/[0.06]">
               <Icone nom={l.icone} taille={20} className="shrink-0 text-white/70" />
               <span className="min-w-0 flex-1 truncate text-[14px] font-medium text-white">{l.nom}</span>
               <span className="min-w-0 max-w-[45%] truncate text-[13px] text-white/55">{l.valeur}</span>

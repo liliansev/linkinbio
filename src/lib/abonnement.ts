@@ -65,6 +65,10 @@ export const rang = (p: Plan) => PLANS.indexOf(p);
 
 /** Ce que l'annuel fait gagner sur douze mois, en pourcentage arrondi (27 pour le Pro). */
 export const economie = (p: PlanPayant) => Math.round((1 - OFFRES[p].prix.an / (OFFRES[p].prix.mois * 12)) * 100);
+/** Ce que l'annuel fait gagner en un an, en euros : douze mois moins l'année (12 € pour Starter, 29 € pour Pro). */
+export const economieAnnuelle = (p: PlanPayant) => Math.round((OFFRES[p].prix.mois * 12 - OFFRES[p].prix.an) * 100) / 100;
+/** Les mois entiers que l'annuel offre : trois pour Starter (36 € au lieu de 48 €), trois pour Pro (29 € de moins, plus de trois fois 9 €). */
+export const moisOfferts = (p: PlanPayant) => Math.floor(economieAnnuelle(p) / OFFRES[p].prix.mois + 1e-9);
 /** Le prix d'une offre par mois quand on la paie à l'année (6,58 € pour le Pro). */
 export const parMoisAnnuel = (p: PlanPayant) => Math.round((OFFRES[p].prix.an / 12) * 100) / 100;
 /** « 79 € par an », « 9 € par mois ». */
@@ -88,6 +92,38 @@ export const FONCTIONS = {
   listeEmail: 'pro',
 } as const satisfies Record<string, PlanPayant>;
 export type Fonction = keyof typeof FONCTIONS;
+
+/**
+ * Chaque fonction réservée en mots, pour les offres : la ligne de son offre qui
+ * l'annonce (`avantage`, mot pour mot dans `OFFRES`), et ce pour quoi on vient
+ * la prendre, sur l'étiquette de l'offre mise en avant (« Pour tes couleurs »).
+ */
+export const FONCTIONS_EN_MOTS: Record<Fonction, { avantage: string; pour: string }> = {
+  sansMention: { avantage: 'Sans la mention « Une page faite avec Hopla »', pour: 'Pour ôter la mention' },
+  couleurs: { avantage: 'Tes couleurs', pour: 'Pour tes couleurs' },
+  programmation: { avantage: 'Tes liens programmés à l’avance', pour: 'Pour programmer' },
+  avis: { avantage: 'Les avis de tes clients', pour: 'Pour les avis' },
+  stats: { avantage: 'Analytics détaillées sur 30 jours', pour: 'Pour tes stats' },
+  heure: { avantage: 'Ta page selon l’heure', pour: 'Pour tes créneaux' },
+  drops: { avantage: 'Les drops : un code, des places comptées', pour: 'Pour les drops' },
+  listeEmail: { avantage: 'Ta liste e-mail, vers Brevo ou Mailchimp', pour: 'Pour ta liste e-mail' },
+};
+
+/** Ce qu'on gagne (ou perd) en passant d'une offre à l'autre : les avantages des offres entre les deux, dans l'ordre où on les lit. */
+export function avantagesEntre(depuis: Plan, vers: Plan): string[] {
+  const [bas, haut] = rang(depuis) <= rang(vers) ? [depuis, vers] : [vers, depuis];
+  return PLANS.slice(rang(bas) + 1, rang(haut) + 1).flatMap(p => OFFRES[p].avantages);
+}
+
+/** La prochaine échéance d'un abonnement pris le jour `debut` : un mois ou un an plus tard, le même jour, ou le dernier du mois s'il n'existe pas. */
+export function echeance(debut: number, periode: Periode): number {
+  const d = new Date(debut);
+  const jour = d.getDate();
+  d.setDate(1);
+  if (periode === 'an') d.setFullYear(d.getFullYear() + 1); else d.setMonth(d.getMonth() + 1);
+  d.setDate(Math.min(jour, new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()));
+  return d.getTime();
+}
 
 /**
  * Les pages créées avant les quatre offres gardent ce qu'elles faisaient en
