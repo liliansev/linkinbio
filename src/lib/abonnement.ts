@@ -3,6 +3,8 @@
  * Lilian, 20 octobre 2026), leurs prix (ceux des produits Creem, que « Créer
  * les offres dans Creem » tient à jour), ce que chacune débloque, et la lecture
  * d'un abonnement. Le compte principal (Lilian) a tout, sans abonnement.
+ * Gratuit garde l'essentiel pour essayer : des liens sans limite, la page selon
+ * le réseau du visiteur (la promesse de Hopla) et tous les thèmes.
  */
 
 /** Un prix en euros à la française : « 9 € », « 86,40 € » (espace insécable avant le symbole). */
@@ -28,9 +30,12 @@ export interface Offre {
   prix: Record<Periode, number>;
   /** Ce qu'elle ajoute à l'offre d'avant, dans l'ordre où on le lit. */
   avantages: string[];
-  /** La place pour les images, en octets. */
+  /**
+   * La place pour les images, en octets : un garde-fou contre les abus, qu'on
+   * n'annonce pas (seul le message d'un envoi refusé en parle).
+   */
   quota: number;
-  /** L'historique des statistiques qu'on peut lire, en jours. */
+  /** L'historique des statistiques qu'on peut lire, en jours (0 : pas de stats). */
   jours: number;
   /** En vente aujourd'hui. Premium attend son nom de domaine et ses pages. */
   enVente: boolean;
@@ -38,20 +43,20 @@ export interface Offre {
 
 export const OFFRES: Record<Plan, Offre> = {
   gratuit: {
-    nom: 'Gratuit', phrase: 'Ta page et tous tes liens, pour toujours.', prix: { mois: 0, an: 0 }, quota: 25 * Mo, jours: 7, enVente: true,
-    avantages: ['Des liens sans limite', 'Vingt thèmes et tes couleurs', 'Tes réseaux, tes vidéos, ton QR code', 'Tes liens programmés à l’avance', 'Stats sur 7 jours', '25 Mo d’images'],
+    nom: 'Gratuit', phrase: 'Ta page et tous tes liens, pour toujours.', prix: { mois: 0, an: 0 }, quota: 25 * Mo, jours: 0, enVente: true,
+    avantages: ['Des liens sans limite', 'Ta page selon le réseau du visiteur', 'Les vingt thèmes'],
   },
   starter: {
     nom: 'Starter', phrase: 'Ta page, sans la mention Hopla.', prix: { mois: 4, an: 36 }, quota: 100 * Mo, jours: 30, enVente: true,
-    avantages: ['Sans la mention « Une page faite avec Hopla »', 'Les avis de tes clients', 'Ta page en cinq langues', 'Stats sur 30 jours', '100 Mo d’images'],
+    avantages: ['Sans la mention « Une page faite avec Hopla »', 'Tes couleurs', 'Tes liens programmés à l’avance', 'Les avis de tes clients', 'Analytics détaillées sur 30 jours'],
   },
   pro: {
-    nom: 'Pro', phrase: 'Le bon lien, pour chaque visiteur.', prix: { mois: 9, an: 79 }, quota: 200 * Mo, jours: 365, enVente: true,
-    avantages: ['Ta page selon le réseau et l’heure', 'Les drops : un code, des places comptées', 'Ta liste e-mail, vers Brevo ou Mailchimp', 'Stats sur un an', '200 Mo d’images'],
+    nom: 'Pro', phrase: 'Le bon lien, au bon moment.', prix: { mois: 9, an: 79 }, quota: 200 * Mo, jours: 365, enVente: true,
+    avantages: ['Ta page selon l’heure', 'Les drops : un code, des places comptées', 'Ta liste e-mail, vers Brevo ou Mailchimp', 'Analytics sur un an'],
   },
   premium: {
     nom: 'Premium', phrase: 'Ta page à ton nom de domaine.', prix: { mois: 19, an: 169 }, quota: 1024 * Mo, jours: 365, enVente: false,
-    avantages: ['Ton propre nom de domaine', 'Jusqu’à trois pages', '1 Go d’images'],
+    avantages: ['Ton propre nom de domaine', 'Jusqu’à trois pages'],
   },
 };
 
@@ -60,33 +65,85 @@ export const rang = (p: Plan) => PLANS.indexOf(p);
 
 /** Ce que l'annuel fait gagner sur douze mois, en pourcentage arrondi (27 pour le Pro). */
 export const economie = (p: PlanPayant) => Math.round((1 - OFFRES[p].prix.an / (OFFRES[p].prix.mois * 12)) * 100);
+/** Ce que l'annuel fait gagner en un an, en euros : douze mois moins l'année (12 € pour Starter, 29 € pour Pro). */
+export const economieAnnuelle = (p: PlanPayant) => Math.round((OFFRES[p].prix.mois * 12 - OFFRES[p].prix.an) * 100) / 100;
+/** Les mois entiers que l'annuel offre : trois pour Starter (36 € au lieu de 48 €), trois pour Pro (29 € de moins, plus de trois fois 9 €). */
+export const moisOfferts = (p: PlanPayant) => Math.floor(economieAnnuelle(p) / OFFRES[p].prix.mois + 1e-9);
 /** Le prix d'une offre par mois quand on la paie à l'année (6,58 € pour le Pro). */
 export const parMoisAnnuel = (p: PlanPayant) => Math.round((OFFRES[p].prix.an / 12) * 100) / 100;
 /** « 79 € par an », « 9 € par mois ». */
 export const libellePrix = (p: PlanPayant, periode: Periode) => `${euros(OFFRES[p].prix[periode])} par ${periode === 'an' ? 'an' : 'mois'}`;
 
-/** Les fonctions réservées, et l'offre qui les débloque. Tout le reste est dans Gratuit. */
+/**
+ * Les fonctions réservées, et l'offre qui les débloque. Tout le reste est dans
+ * Gratuit, dont la page selon le réseau du visiteur (« Afficher sur »).
+ * `programmation` : les dates d'un bloc (début, fin, compte à rebours) ;
+ * `heure` : le créneau qui revient chaque semaine ; `stats` : lire ses stats
+ * (elles se comptent pour tout le monde, seule leur lecture est réservée).
+ */
 export const FONCTIONS = {
   sansMention: 'starter',
+  couleurs: 'starter',
+  programmation: 'starter',
   avis: 'starter',
-  langues: 'starter',
-  reseauHeure: 'pro',
+  stats: 'starter',
+  heure: 'pro',
   drops: 'pro',
   listeEmail: 'pro',
 } as const satisfies Record<string, PlanPayant>;
 export type Fonction = keyof typeof FONCTIONS;
 
 /**
+ * Chaque fonction réservée en mots, pour les offres : la ligne de son offre qui
+ * l'annonce (`avantage`, mot pour mot dans `OFFRES`), et ce pour quoi on vient
+ * la prendre, sur l'étiquette de l'offre mise en avant (« Pour tes couleurs »).
+ */
+export const FONCTIONS_EN_MOTS: Record<Fonction, { avantage: string; pour: string }> = {
+  sansMention: { avantage: 'Sans la mention « Une page faite avec Hopla »', pour: 'Pour ôter la mention' },
+  couleurs: { avantage: 'Tes couleurs', pour: 'Pour tes couleurs' },
+  programmation: { avantage: 'Tes liens programmés à l’avance', pour: 'Pour programmer' },
+  avis: { avantage: 'Les avis de tes clients', pour: 'Pour les avis' },
+  stats: { avantage: 'Analytics détaillées sur 30 jours', pour: 'Pour tes stats' },
+  heure: { avantage: 'Ta page selon l’heure', pour: 'Pour tes créneaux' },
+  drops: { avantage: 'Les drops : un code, des places comptées', pour: 'Pour les drops' },
+  listeEmail: { avantage: 'Ta liste e-mail, vers Brevo ou Mailchimp', pour: 'Pour ta liste e-mail' },
+};
+
+/** Ce qu'on gagne (ou perd) en passant d'une offre à l'autre : les avantages des offres entre les deux, dans l'ordre où on les lit. */
+export function avantagesEntre(depuis: Plan, vers: Plan): string[] {
+  const [bas, haut] = rang(depuis) <= rang(vers) ? [depuis, vers] : [vers, depuis];
+  return PLANS.slice(rang(bas) + 1, rang(haut) + 1).flatMap(p => OFFRES[p].avantages);
+}
+
+/** La prochaine échéance d'un abonnement pris le jour `debut` : un mois ou un an plus tard, le même jour, ou le dernier du mois s'il n'existe pas. */
+export function echeance(debut: number, periode: Periode): number {
+  const d = new Date(debut);
+  const jour = d.getDate();
+  d.setDate(1);
+  if (periode === 'an') d.setFullYear(d.getFullYear() + 1); else d.setMonth(d.getMonth() + 1);
+  d.setDate(Math.min(jour, new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()));
+  return d.getTime();
+}
+
+/**
  * Les pages créées avant les quatre offres gardent ce qu'elles faisaient en
  * gratuit (promis par Lilian le 20 octobre 2026) : tout, sauf la page sans mention.
  */
 export const BASCULE_OFFRES = Date.UTC(2026, 9, 21);
+/** Les jours de stats qu'une page d'avant les offres lisait en gratuit : elle les garde. */
+export const JOURS_AVANT_OFFRES = 7;
 
 /** Ce compte peut-il se servir de cette fonction ? `cree` : la création du compte (ms), pour les pages d'avant. */
 export function peut(plan: Plan, f: Fonction, cree = Number.POSITIVE_INFINITY): boolean {
   if (rang(plan) >= rang(FONCTIONS[f])) return true;
   return f !== 'sansMention' && cree < BASCULE_OFFRES;
 }
+
+/**
+ * Les jours de stats qu'un compte peut lire : ceux de son offre, au moins ceux
+ * d'une page d'avant les offres quand il a le droit aux stats, aucun sinon.
+ */
+export const joursStats = (plan: Plan, permis: boolean) => (permis ? Math.max(OFFRES[plan].jours, JOURS_AVANT_OFFRES) : 0);
 
 /** Une offre et une période dans Creem, pour l'onglet Comptes : son prix du jour et le produit qui le vend, s'il existe. */
 export interface EtatOffre { plan: PlanPayant; periode: Periode; prix: number; enVente: boolean; produit: string | null }

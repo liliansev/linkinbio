@@ -1,5 +1,6 @@
 import type { Bloc } from './types.ts';
-import type { Textes } from './langues.ts';
+import { LOCALE } from './mots.ts';
+import type { Textes } from './mots.ts';
 
 /*
  * Le mode drop : un lien qui se débloque avec un code, ou pour les N premiers.
@@ -21,10 +22,10 @@ export function masquerAcces(blocs: Bloc[], prises: (bloc: string) => number): B
 /** Deux codes égaux, sans tenir compte des majuscules ni des espaces autour. */
 export const normaliserCode = (code: string) => code.trim().toLocaleLowerCase('fr').normalize('NFC');
 
-/** « Plus que 3 places », « Complet », dans la langue de la page. Rien tant qu'il en reste beaucoup. */
-export function etatPlaces(restantes: number | null | undefined, places: number, t: Textes, locale: string): string {
+/** « Plus que 3 places », « Complet », avec les mots de la page. Rien tant qu'il en reste beaucoup. */
+export function etatPlaces(restantes: number | null | undefined, places: number, t: Textes): string {
   if (!places || restantes === null || restantes === undefined) return '';
   if (restantes <= 0) return t.complet;
   if (restantes === 1) return t.plusQueUne;
-  return restantes <= Math.max(10, places / 5) ? t.plusQue(restantes.toLocaleString(locale)) : t.places(places.toLocaleString(locale));
+  return restantes <= Math.max(10, places / 5) ? t.plusQue(restantes.toLocaleString(LOCALE)) : t.places(places.toLocaleString(LOCALE));
 }

@@ -62,8 +62,6 @@ export interface Bloc {
   restantes?: number | null;
   /** Un avis, un chiffre, un témoignage (bloc `preuve`). */
   preuve: Preuve | null;
-  /** Le titre, le sous-titre et la description dans d'autres langues. */
-  traductions: Partial<Record<Langue, Traduction>>;
 }
 
 export interface Acces {
@@ -84,12 +82,6 @@ export interface Preuve {
   /** Où vit la preuve : Google, Trustpilot, Malt, YouTube… */
   source: string;
 }
-
-/** Les langues dans lesquelles une page peut se traduire, en plus du français. */
-export const LANGUES = ['en', 'es', 'de', 'it'] as const;
-export type Langue = (typeof LANGUES)[number];
-export type LangueVisiteur = Langue | 'fr';
-export interface Traduction { titre: string; sousTitre: string; description: string }
 
 export const FORMATS_VEDETTE = ['bouton', 'bandeau', 'carte'] as const;
 export type FormatVedette = (typeof FORMATS_VEDETTE)[number];
@@ -127,10 +119,6 @@ export interface Reglages {
   ouvrirApps: boolean;
   /** Le lundi matin, le résumé de la semaine par e-mail. */
   resumeHebdo: boolean;
-  /** Les langues proposées en plus du français : la page parle celle du visiteur. */
-  langues: Langue[];
-  /** La bio dans ces langues. */
-  bioTraduite: Partial<Record<Langue, string>>;
   /** Les mots de la page (formulaires, drops) vouvoient le visiteur plutôt que de le tutoyer. */
   vouvoiement: boolean;
   /** Le mouvement des liens mis en avant (un bloc peut choisir le sien). */
@@ -189,8 +177,6 @@ export interface PagePublique {
   compte: ComptePage & { plan: Plan };
   /** L'instant où la page a été composée : le compte à rebours part de là, au serveur comme au navigateur. */
   maintenant?: number;
-  /** La langue dans laquelle la page s'affiche (celle du visiteur, si la page la propose). */
-  langue?: LangueVisiteur;
 }
 
 export interface EtatAdmin {
@@ -212,6 +198,8 @@ export interface EtatAdmin {
   stockageEphemere: boolean;
   /** Faux tant que le compte n'a pas accepté la version en vigueur des CGU (toujours vrai pour le compte principal). */
   cguAJour: boolean;
+  /** Vrai dès qu'un visiteur a vu la page : elle a commencé, « Bien démarrer » ne se montre plus. */
+  dejaVue: boolean;
 }
 
 export interface Stats {
@@ -219,8 +207,8 @@ export interface Stats {
   vues: number;
   visiteurs: number;
   clics: number;
-  /** Une entrée par jour, du plus ancien au plus récent. */
-  serie: { jour: string; vues: number; clics: number }[];
+  /** Une entrée par jour, du plus ancien au plus récent. `visiteurs` : ceux du jour (un visiteur compte une fois par jour). */
+  serie: { jour: string; vues: number; visiteurs: number; clics: number }[];
   /** `avant` : le même chiffre sur la période précédente. */
   blocs: { id: string; titre: string; clics: number; avant: number }[];
   sources: { nom: string; vues: number; avant: number }[];
@@ -332,7 +320,7 @@ export function nouveauBloc(type: TypeBloc, id: string): Bloc {
     id, type, titre: titres[type], url: '', sousTitre: type === 'newsletter' || type === 'inscription' ? 'Un e-mail de temps en temps, rien de plus.' : '', description: '', icone: '', image: '',
     public: true, indexable: true, vedette: false, format: 'bandeau', teinte: 'accent', animation: 'auto', debut: '', fin: '',
     compteARebours: false, creneau: null, audience: null, cache: [], demanderPrenom: false, acces: null,
-    preuve: type === 'preuve' ? { genre: 'note', note: 0, nombre: 0, source: '' } : null, traductions: {},
+    preuve: type === 'preuve' ? { genre: 'note', note: 0, nombre: 0, source: '' } : null,
   };
 }
 

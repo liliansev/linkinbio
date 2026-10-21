@@ -42,7 +42,7 @@ export function appDe(url: string): string | null {
   return PAQUETS.find(([motif]) => motif.test(hote))?.[2] ?? null;
 }
 
-/** Sur iOS, le schéma de l'app pour les liens dont on connaît la traduction. */
+/** Sur iOS, le schéma de l'app pour les liens dont on connaît l'équivalent dans l'app. */
 function schemaIos(u: URL, hote: string): string | null {
   const segments = u.pathname.split('/').filter(Boolean);
   const seul = segments.length === 1 ? decodeURIComponent(segments[0]) : '';

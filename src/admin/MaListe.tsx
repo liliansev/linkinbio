@@ -28,7 +28,7 @@ export function MaListe({ api }: { api: Pick<Api, 'liste' | 'brancherListe' | 's
   // Sans l'offre et sans inscrit, la carte dit ce que la liste ferait ; des inscrits déjà là restent à toi (export, Brevo).
   if (!permis && !liste.total) return (
     <Carte titre="Ta liste" action={<Etiquette fonction="listeEmail" />}>
-      <Reserve phrase="Avec Hopla Pro, tes visiteurs laissent leur e-mail sur ta page : chaque adresse arrive ici, et chez Brevo ou Mailchimp si tu les branches." />
+      <Reserve fonction="listeEmail" phrase="Avec Hopla Pro, tes visiteurs laissent leur e-mail sur ta page : chaque adresse arrive ici, et chez Brevo ou Mailchimp si tu les branches." />
     </Carte>
   );
   return (
@@ -37,7 +37,7 @@ export function MaListe({ api }: { api: Pick<Api, 'liste' | 'brancherListe' | 's
         {liste.total ? (
           <>
             <div className="flex items-end gap-3">
-              <p className="text-[30px] font-semibold leading-none tracking-[-0.03em] tabular-nums">{nombre(liste.total)}</p>
+              <p className="text-[24px] font-semibold leading-none tracking-[-0.02em] tabular-nums">{nombre(liste.total)}</p>
               <p className="pb-1 text-[13.5px] text-white/60">inscrit{liste.total > 1 ? 's' : ''}{liste.semaine ? <>, dont <span className="font-semibold text-white">+{nombre(liste.semaine)}</span> cette semaine</> : ''}</p>
             </div>
             <p className="mt-2.5 flex items-center gap-1.5 text-[13px] text-white/55">

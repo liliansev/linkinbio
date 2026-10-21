@@ -1,155 +1,171 @@
 import { useEffect, useRef, useState } from 'react';
-import type { ReactNode } from 'react';
 import { CONTACT_LEGAL } from '../lib/legal.ts';
-import type { Bloc, ComptePage, Reglages } from '../lib/types.ts';
-import { LANGUES, urlPage } from '../lib/types.ts';
-import type { Abonnement as EtatAbonnement, Periode, PlanPayant } from '../lib/abonnement.ts';
-import { OFFRES } from '../lib/abonnement.ts';
-import { Icone } from '../components/Icone.tsx';
-import { Bascule, BoutonCopier, BoutonSecondaire, Carte, Champ, Interrupteur, classeBouton, classeSaisie, vibrer } from './ui.tsx';
-import { Abonnement } from './Offres.tsx';
-import { Etiquette, Reserve, usePermis } from './offre.tsx';
-import { LANGUES_FR } from './ReglesBloc.tsx';
-import { CodeQR } from './CodeQR.tsx';
+import type { ComptePage, Reglages } from '../lib/types.ts';
+import { sansSchema, urlPage } from '../lib/types.ts';
+import type { Abonnement as EtatAbonnement, Fonction, Plan } from '../lib/abonnement.ts';
+import { OFFRES, estPaye, estResilie, euros } from '../lib/abonnement.ts';
+import { BoutonCopier, BoutonPrincipal, BoutonSecondaire, Champ, Feuille, Groupe, Interrupteur, Ligne, LigneBascule, LigneLien, SousPage, classeBouton, classeSaisie } from './ui.tsx';
+import { Facturation, nomOffre } from './Facturation.tsx';
+import { Etiquette, usePermis } from './offre.tsx';
+import { telechargerQR } from './CodeQR.tsx';
+import { noterPartage } from './BienDemarrer.tsx';
 
-export function OngletReglages({ reglages, compte, blocs = [], traduire, onChange, onDeconnexion, urlExport, supprimerMonCompte, abonnement, paiement, enVente = [], ouvrirPaiement, ouvrirPortail, sectionInitiale }: {
-  reglages: Reglages; compte: ComptePage; blocs?: Bloc[]; traduire?: (b: Bloc) => void; onChange: (r: Reglages) => void; onDeconnexion: () => void;
+/*
+ * Réglages sur une seule page (direction B, 20 octobre 2026) : trois groupes,
+ * Page, Compte et Abonnement, une ligne par réglage, le libellé à gauche, le
+ * contrôle à droite. Rien ne se cache dans un tiroir : ce qui demande plus
+ * qu'un geste (l'aperçu dans Google, supprimer son compte) s'ouvre dans une
+ * fenêtre, les offres aussi, par-dessus ; Facturation est une sous-page, avec
+ * le fil « Réglages / Facturation » dans l'en-tête.
+ */
+
+const dateLongue = (ms: number) => new Date(ms).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+
+export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlExport, supprimerMonCompte, abonnement, onOffres, ouvrirPortail }: {
+  reglages: Reglages; compte: ComptePage & { email?: string; plan: Plan }; onChange: (r: Reglages) => void; onDeconnexion: () => void;
   urlExport: string | null; supprimerMonCompte: (confirmation: string) => Promise<{ ok: boolean; message: string }>;
-  abonnement: EtatAbonnement; paiement: boolean; enVente?: PlanPayant[];
-  ouvrirPaiement: (plan: PlanPayant, periode: Periode) => Promise<string>; ouvrirPortail: () => Promise<string>;
-  sectionInitiale?: 'abonnement';
+  abonnement: EtatAbonnement;
+  /** Ouvre les offres par-dessus Réglages ; absent quand le compte ne peut pas s'abonner (compte principal, paiement pas branché). */
+  onOffres?: (pour?: Fonction) => void;
+  ouvrirPortail: () => Promise<string>;
 }) {
-  const URL_PUBLIQUE = urlPage(compte);
-  const [ouverte, setOuverte] = useState<Section | null>(sectionInitiale ?? null);
-  // Ouvrir ou quitter une section déplace le focus : sur son retour en entrant, sur sa ligne en sortant.
-  const retour = useRef<HTMLButtonElement>(null);
-  const derniere = useRef<Section | null>(null);
+  const adresse = urlPage(compte);
+  const [sous, setSous] = useState<'facturation' | null>(null);
+  const [fenetre, setFenetre] = useState<'apercu' | 'supprimer' | null>(null);
+  const [portail, setPortail] = useState<'' | 'ouverture' | string>('');
+  // Ce qui a ouvert la sous-page reprend le focus quand on en revient (la page se redessine : on le retrouve par son id).
+  const ouvreur = useRef('');
+  const ouvrirSous = (id: string) => () => { ouvreur.current = id; setSous('facturation'); scrollTo({ top: 0 }); };
   useEffect(() => {
-    if (ouverte) { derniere.current = ouverte; retour.current?.focus({ preventScroll: true, focusVisible: false } as FocusOptions); }
-    else if (derniere.current) document.getElementById(`reglage-${derniere.current}`)?.focus({ preventScroll: true });
-  }, [ouverte]);
+    if (sous || !ouvreur.current) return;
+    document.getElementById(ouvreur.current)?.focus({ preventScroll: true });
+    ouvreur.current = '';
+  }, [sous]);
+
+  const offres = !compte.principal && !!onOffres;
+  // Le résumé du lundi fait partie des stats : sans elles, la ligne porte le nom de l'offre et mène aux offres.
+  const stats = usePermis('stats');
   const seo = (champs: Partial<Reglages['seo']>) => onChange({ ...reglages, seo: { ...reglages.seo, ...champs } });
 
-  const offres = !compte.principal && paiement;
-  const langues = usePermis('langues');
-  // Un titre et une icône par ligne, sans sous-titre (Lilian, 18 octobre 2026). À droite, une valeur : l'offre en cours, ou celle qui débloque.
-  const sections: { id: Section; nom: string; icone: string; valeur?: ReactNode }[] = [
-    { id: 'partager', nom: 'QR code et adresse', icone: 'qr' },
-    ...(offres ? [{ id: 'abonnement' as const, nom: 'Abonnement', icone: 'diamant', valeur: <span className="text-[13px] text-white/55">{OFFRES[abonnement.plan].nom}</span> }] : []),
-    { id: 'partage', nom: 'Aperçu dans Google', icone: 'google' },
-    { id: 'langues', nom: 'Langues', icone: 'globe', valeur: langues ? undefined : <Etiquette fonction="langues" /> },
-    { id: 'donnees', nom: 'Mes données', icone: 'cadenas' },
-  ];
-  const bascules: { nom: string; icone: string; actif: boolean; changer: (v: boolean) => void }[] = [
-    { nom: 'Ouvrir YouTube, Spotify… dans leur app', icone: 'lienExterne', actif: reglages.ouvrirApps, changer: v => onChange({ ...reglages, ouvrirApps: v }) },
-    { nom: 'Mes stats par e-mail chaque lundi', icone: 'courrier', actif: reglages.resumeHebdo, changer: v => onChange({ ...reglages, resumeHebdo: v }) },
-  ];
+  async function versPortail() {
+    setPortail('ouverture');
+    try { location.href = await ouvrirPortail(); }
+    catch (error) { setPortail((error as Error).message || 'Creem ne répond pas. Réessaie dans un instant.'); }
+  }
 
-  if (ouverte) return (
-    <div className="adm-settings-detail flex flex-col gap-4">
-      <div>
-        <button ref={retour} type="button" onClick={() => setOuverte(null)} aria-label={`${sections.find(x => x.id === ouverte)?.nom ?? ''}, revenir à tous les réglages`}
-          className="-ml-2 mb-3 flex min-h-11 items-center gap-1 rounded-xl px-2 text-[13px] font-medium text-white/60 hover:bg-white/[0.05] hover:text-white">
-          <Icone nom="ui-chevron" taille={16} className="rotate-90" /> Tous les réglages
-        </button>
-        <h2 className="text-[18px] font-semibold tracking-[-0.025em]">{sections.find(x => x.id === ouverte)?.nom}</h2>
-      </div>
-      {ouverte === 'abonnement' && <Abonnement abonnement={abonnement} enVente={enVente} ouvrirPaiement={ouvrirPaiement} ouvrirPortail={ouvrirPortail} />}
-      {ouverte === 'partager' && <Carte>
-        <div className="adm-address flex items-center gap-2 p-1.5 pl-3.5">
-          <span className="min-w-0 flex-1 truncate text-[15px] text-white">{URL_PUBLIQUE.replace(/^https:\/\//, '').replace(/\/$/, '')}</span>
-          <BoutonCopier texte={URL_PUBLIQUE} />
-        </div>
-        <div className="mt-4 empty:hidden"><CodeQR adresse={URL_PUBLIQUE} pseudo={compte.pseudo} /></div>
-        <div className="mt-4 border-t border-white/[0.06]">
-          <Interrupteur label="Bouton Partager sur ma page" actif={reglages.partage} onChange={v => onChange({ ...reglages, partage: v })} />
-        </div>
-      </Carte>}
-      {ouverte === 'partage' && <Carte>
-        <div className="flex flex-col gap-3">
-          {/* Ce que ces deux champs deviennent : la carte qu'affichent Google, WhatsApp ou iMessage quand on partage ta page. */}
-          <p className="text-[13px] leading-snug text-white/60">Ce que montrent Google et l’aperçu quand tu partages ton lien :</p>
-          <div className="overflow-hidden rounded-[14px] border border-white/10 bg-white/[0.03]" aria-hidden="true">
-            {reglages.profil.avatar && <img src={reglages.profil.avatar} alt="" className="aspect-[1.91/1] w-full object-cover" />}
-            <div className="px-3.5 py-2.5">
-              <span className="block text-[12px] text-white/50" translate="no">{URL_PUBLIQUE.replace(/^https?:\/\//, '').split('/')[0]}</span>
-              <span className="block truncate text-[14.5px] font-semibold text-white">{reglages.seo.titre || reglages.profil.nom}</span>
-              <span className="line-clamp-2 text-[13px] leading-snug text-white/60">{reglages.seo.description || reglages.profil.bio}</span>
-            </div>
-          </div>
-          <Champ label="Titre dans Google et sur les réseaux" aide={`${reglages.seo.titre.length}/60 caractères conseillés`}>
-            <input className={classeSaisie} value={reglages.seo.titre} maxLength={80} onChange={e => seo({ titre: e.target.value })} />
-          </Champ>
-          <Champ label="Description" aide={`${reglages.seo.description.length}/160 caractères conseillés`}>
-            <textarea rows={4} className={classeSaisie} value={reglages.seo.description} maxLength={200} onChange={e => seo({ description: e.target.value })} />
-          </Champ>
-          <div className="divide-y divide-white/[0.06]">
-            {compte.principal
-              ? <Interrupteur label="Page visible par Google" actif={reglages.seo.indexable} onChange={v => seo({ indexable: v })} />
-              : <p className="py-3 text-[13.5px] leading-snug text-white/55">Pendant la bêta, ta page n’apparaît pas dans Google. Le titre et la description servent aux aperçus quand tu partages ton lien.</p>}
-          </div>
-        </div>
-      </Carte>}
-      {ouverte === 'langues' && (langues ? <Langues reglages={reglages} onChange={onChange} adresse={URL_PUBLIQUE} blocs={blocs} traduire={traduire} /> : (
-        <Carte>
-          <Reserve phrase={reglages.langues?.length ? 'Tes langues attendent Hopla Starter : pour l’instant, ta page s’affiche en français pour tout le monde.' : 'Avec Hopla Starter, ta page s’affiche en anglais, en espagnol, en allemand ou en italien, dans la langue du visiteur.'} />
-        </Carte>
-      ))}
-      {ouverte === 'donnees' && <TesDonnees compte={compte} urlExport={urlExport} supprimerMonCompte={supprimerMonCompte} />}
+  if (sous === 'facturation') return (
+    <div className="adm-reglages">
+      <SousPage nom="Facturation" retour={() => setSous(null)} />
+      <Facturation abonnement={abonnement} onOffres={offres ? () => onOffres?.() : undefined} ouvrirPortail={ouvrirPortail} />
     </div>
   );
 
-  const lignes = (ids: Section[]) => sections.filter(l => ids.includes(l.id)).map(l => (
-    <li key={l.id}>
-      <button id={`reglage-${l.id}`} type="button" onClick={() => { setOuverte(l.id); scrollTo({ top: 0 }); }} className="adm-settings-row">
-        <span className="adm-settings-icon"><Icone nom={l.icone} taille={19} /></span>
-        <span className="min-w-0 flex-1 text-[14px] font-medium">{l.nom}</span>
-        {l.valeur}
-        <Icone nom="ui-chevron" taille={16} className="-rotate-90 text-white/55" />
-      </button>
-    </li>
-  ));
+  const paye = abonnement.plan !== 'gratuit';
+  const resilie = paye && estResilie(abonnement.statut);
+  const prix = paye && abonnement.periode ? OFFRES[abonnement.plan].prix[abonnement.periode] : null;
+  const titreSeo = reglages.seo.titre || reglages.profil.nom;
+  const descriptionSeo = reglages.seo.description || reglages.profil.bio;
 
   return (
-    <div className="adm-settings flex flex-col gap-7">
-      <section aria-labelledby="reglages-page">
-        <h2 id="reglages-page" className="mb-3 text-[15px] font-semibold">Ta page</h2>
-        <ul className="adm-settings-list">{lignes(['partager', 'partage', 'langues'])}</ul>
-      </section>
-      <section aria-labelledby="reglages-preferences">
-        <h2 id="reglages-preferences" className="mb-3 text-[15px] font-semibold">Préférences</h2>
-        <ul className="adm-settings-list">
-          {bascules.map(l => (
-            <li key={l.nom}>
-              <div className="adm-settings-row">
-                <span className="adm-settings-icon"><Icone nom={l.icone} taille={19} /></span>
-                <span className="min-w-0 flex-1 text-[14px] font-medium">{l.nom}</span>
-                <Bascule actif={l.actif} label={l.nom} onClick={() => { vibrer(); l.changer(!l.actif); }} />
-              </div>
-            </li>
-          ))}
-        </ul>
-      </section>
-      <section aria-labelledby="reglages-compte">
-        <h2 id="reglages-compte" className="mb-3 text-[15px] font-semibold">Ton compte</h2>
-        <ul className="adm-settings-list">{lignes(['abonnement', 'donnees'])}</ul>
-      </section>
-      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-5">
-      <a href={`mailto:${CONTACT_LEGAL}?subject=${encodeURIComponent('Hopla : une question')}`}
-        className="inline-flex min-h-11 items-center gap-2 rounded-xl px-2 text-[13px] font-medium text-white/60 hover:text-white">
-        <Icone nom="message" taille={18} />Une question ? Écris-nous
-      </a>
-      <BoutonSecondaire onClick={onDeconnexion}>Me déconnecter</BoutonSecondaire>
-      </div>
+    <div className="adm-reglages">
+      <Groupe titre="Page">
+        <Ligne nom="Adresse" valeur={<span translate="no">{sansSchema(adresse)}</span>}>
+          <BoutonCopier texte={adresse} label="Copier l’adresse de ta page" onCopie={noterPartage} />
+        </Ligne>
+        <Ligne nom="QR code">
+          <BoutonSecondaire onClick={() => { void telechargerQR(adresse, compte.pseudo); }} aria-label="Télécharger le QR code">Télécharger</BoutonSecondaire>
+        </Ligne>
+        <Ligne nom="Aperçu dans Google et les réseaux" valeur={[titreSeo, descriptionSeo].filter(Boolean).join(' · ') || 'Rien pour l’instant'}>
+          <BoutonSecondaire onClick={() => setFenetre('apercu')} aria-haspopup="dialog" aria-label="Modifier l’aperçu dans Google et les réseaux">Modifier</BoutonSecondaire>
+        </Ligne>
+        <LigneBascule nom="Bouton Partager sur ma page" actif={reglages.partage} changer={v => onChange({ ...reglages, partage: v })} />
+        <LigneBascule nom="Ouvrir YouTube, Spotify… dans leur app" actif={reglages.ouvrirApps} changer={v => onChange({ ...reglages, ouvrirApps: v })} />
+      </Groupe>
+
+      <Groupe titre="Compte">
+        {compte.email && <Ligne nom="Adresse de connexion" valeur={compte.email} />}
+        {stats
+          ? <LigneBascule nom="Mes stats par e-mail chaque lundi" actif={reglages.resumeHebdo} changer={v => onChange({ ...reglages, resumeHebdo: v })} />
+          // Réservée : pas d'interrupteur qui ne ferait rien, l'offre qui la débloque à la place, et le chemin vers les offres.
+          : <LigneLien nom="Mes stats par e-mail chaque lundi" apres={<Etiquette fonction="stats" />} onClick={offres ? () => onOffres?.('stats') : undefined}
+              label={offres ? 'Mes stats par e-mail chaque lundi, avec Starter : voir les offres' : undefined} />}
+        <Ligne nom="Mes données" valeur={urlExport ? undefined : 'Pas dans l’aperçu'}>
+          {urlExport && <a href={urlExport} download className={classeBouton.secondaire} aria-label="Télécharger mes données">Télécharger</a>}
+        </Ligne>
+        {/* Le compte principal ne se supprime pas. */}
+        {!compte.principal && (
+          <Ligne nom="Supprimer mon compte">
+            <BoutonSecondaire onClick={() => setFenetre('supprimer')} aria-haspopup="dialog" className="!text-red-300">Supprimer</BoutonSecondaire>
+          </Ligne>
+        )}
+      </Groupe>
+
+      {offres && (
+        <Groupe titre="Abonnement">
+          <Ligne nom="Offre" valeur={<strong>{nomOffre(abonnement)}</strong>}>
+            {!resilie && <BoutonSecondaire onClick={() => onOffres?.()} aria-haspopup="dialog">{paye ? 'Changer d’offre' : 'Voir les offres'}</BoutonSecondaire>}
+          </Ligne>
+          {paye && abonnement.statut === 'past_due' ? (
+            <Ligne nom="Paiement" valeur={<span data-alerte="">Le dernier paiement n’est pas passé</span>}>
+              {abonnement.portail && <BoutonSecondaire onClick={versPortail} disabled={portail === 'ouverture'}>Mettre à jour ma carte</BoutonSecondaire>}
+            </Ligne>
+          ) : paye && abonnement.finPeriode ? (
+            <Ligne nom={resilie ? 'Fin de l’offre' : 'Prochaine échéance'}
+              valeur={<span className="tabular-nums">{resilie ? `${dateLongue(abonnement.finPeriode)}, puis Gratuit` : `${dateLongue(abonnement.finPeriode)}${prix ? ` · ${euros(prix)}` : ''}`}</span>} />
+          ) : null}
+          {(paye || abonnement.portail) && (
+            <LigneLien id="reglage-facturation" nom="Facturation" valeur={abonnement.portail ? 'Factures et moyen de paiement' : 'Ton offre et son échéance'} onClick={ouvrirSous('reglage-facturation')} />
+          )}
+        </Groupe>
+      )}
+      {portail && portail !== 'ouverture' && <p role="alert" className="-mt-3 text-[13.5px] text-red-300">{portail}</p>}
+
+      <footer className="adm-reglages-pied">
+        <p>Une question&#8239;? <a href={`mailto:${CONTACT_LEGAL}?subject=${encodeURIComponent('Hopla : une question')}`}>Écris-nous</a></p>
+        <p className="flex flex-wrap gap-x-4 gap-y-1">
+          <a href="/legal/cgu" target="_blank" rel="noopener">Conditions d’utilisation</a>
+          <a href="/legal/confidentialite" target="_blank" rel="noopener">Confidentialité</a>
+          <a href="/legal/traitement-des-donnees" target="_blank" rel="noopener">Accord de traitement</a>
+        </p>
+      </footer>
+      {/* Au bureau, « Me déconnecter » est dans le menu du compte, en bas de la barre latérale. */}
+      <BoutonSecondaire onClick={onDeconnexion} className="w-full lg:hidden">Me déconnecter</BoutonSecondaire>
+
+      <Feuille ouverte={fenetre === 'apercu'} onFermer={() => setFenetre(null)} titre="Aperçu dans Google et les réseaux"
+        pied={fermer => <div className="flex justify-end"><BoutonPrincipal onClick={() => fermer()} className="w-full sm:w-auto">Terminé</BoutonPrincipal></div>}>
+        <div className="flex flex-col gap-4">
+          {/* Ce que ces deux champs deviennent : la carte qu'affichent Google, WhatsApp ou iMessage quand on partage ta page. */}
+          <div className="w-full overflow-hidden rounded-[12px] border border-[#e3e3df] bg-[#fafaf9]" aria-hidden="true">
+            {reglages.profil.avatar && <img src={reglages.profil.avatar} alt="" className="aspect-[1.91/1] w-full object-cover" />}
+            <div className="px-3.5 py-2.5">
+              <span className="block text-[12px] text-white/55" translate="no">{sansSchema(adresse).split('/')[0]}</span>
+              <span className="block truncate text-[14.5px] font-semibold text-white">{titreSeo}</span>
+              <span className="line-clamp-2 text-[13px] leading-snug text-white/60">{descriptionSeo}</span>
+            </div>
+          </div>
+          <Champ label="Titre" aide={`${reglages.seo.titre.length}/60 caractères conseillés. Vide : ton nom.`}>
+            <input className={classeSaisie} value={reglages.seo.titre} maxLength={80} placeholder={reglages.profil.nom} onChange={e => seo({ titre: e.target.value })} />
+          </Champ>
+          <Champ label="Description" aide={`${reglages.seo.description.length}/160 caractères conseillés. Vide : ta bio.`}>
+            <textarea rows={3} className={classeSaisie} value={reglages.seo.description} maxLength={200} placeholder={reglages.profil.bio} onChange={e => seo({ description: e.target.value })} />
+          </Champ>
+          {compte.principal
+            ? <Interrupteur label="Page visible par Google" actif={reglages.seo.indexable} onChange={v => seo({ indexable: v })} />
+            : <p className="text-[13px] leading-snug text-white/60">Pendant la bêta, ta page n’apparaît pas dans Google. Le titre et la description servent aux aperçus quand tu partages ton lien.</p>}
+        </div>
+      </Feuille>
+
+      {!compte.principal && (
+        <Feuille petite ouverte={fenetre === 'supprimer'} onFermer={() => setFenetre(null)} titre="Supprimer mon compte">
+          {fermer => <SupprimerCompte pseudo={compte.pseudo} abonnement={paye && !resilie && estPaye(abonnement) ? OFFRES[abonnement.plan].nom : null} supprimerMonCompte={supprimerMonCompte} annuler={() => fermer()} />}
+        </Feuille>
+      )}
     </div>
   );
 }
 
-type Section = 'partager' | 'abonnement' | 'partage' | 'langues' | 'donnees';
-
-/** Le RGPD en libre-service : tout télécharger, ou tout effacer (sauf le compte principal). */
-function TesDonnees({ compte, urlExport, supprimerMonCompte }: { compte: ComptePage; urlExport: string | null; supprimerMonCompte: (confirmation: string) => Promise<{ ok: boolean; message: string }> }) {
-  const [ouvert, setOuvert] = useState(false);
+/** Tout effacer, pour de bon : le pseudo tapé en entier confirme. */
+function SupprimerCompte({ pseudo, abonnement, supprimerMonCompte, annuler }: { pseudo: string; abonnement: string | null; supprimerMonCompte: (confirmation: string) => Promise<{ ok: boolean; message: string }>; annuler: () => void }) {
   const [saisie, setSaisie] = useState('');
   const [envoi, setEnvoi] = useState(false);
   const [erreur, setErreur] = useState('');
@@ -163,85 +179,18 @@ function TesDonnees({ compte, urlExport, supprimerMonCompte }: { compte: CompteP
     } catch { setErreur('Le serveur ne répond pas. Réessaie dans un instant.'); }
     setEnvoi(false);
   }
-  const lien = 'inline-flex min-h-11 items-center text-white/60 underline decoration-white/25 underline-offset-2 hover:text-white';
   return (
-    <Carte>
-      <p className="text-[13.5px] leading-snug text-white/60">Ta page, tes liens, tes images et tes statistiques, dans un fichier que tu peux garder ou importer ailleurs.</p>
-      {urlExport
-        ? <a href={urlExport} download className={`${classeBouton.secondaire} mt-3`}><Icone nom="telecharger" taille={16} />Télécharger mes données</a>
-        : <p className="mt-3 text-[13px] text-white/55">L’export n’existe pas dans l’aperçu.</p>}
-      {!compte.principal && (
-        <div className="mt-5 border-t border-white/[0.06] pt-4">
-          {ouvert ? (
-            <div className="flex flex-col gap-3">
-              <p className="text-[13.5px] leading-snug text-red-200/90">Ta page disparaît tout de suite, avec tes liens, tes images et tes statistiques. Rien ne se récupère. Pour confirmer, tape ton pseudo, <strong className="text-white">{compte.pseudo}</strong>.</p>
-              <input className={classeSaisie} value={saisie} onChange={e => setSaisie(e.target.value)} autoCapitalize="none" autoComplete="off" spellCheck={false} aria-label="Ton pseudo, pour confirmer" />
-              <div className="flex flex-wrap gap-2">
-                <button type="button" disabled={envoi || saisie.trim().toLowerCase() !== compte.pseudo} onClick={supprimer} className={classeBouton.danger}>{envoi ? 'Suppression…' : 'Supprimer définitivement'}</button>
-                <button type="button" onClick={() => { setOuvert(false); setSaisie(''); }} className={classeBouton.discret}>Annuler</button>
-              </div>
-              {erreur && <p role="alert" className="text-[13.5px] text-red-300">{erreur}</p>}
-            </div>
-          ) : (
-            <button type="button" onClick={() => setOuvert(true)} className="min-h-11 rounded-xl px-1 text-[14px] font-medium text-red-300 hover:text-red-200">Supprimer mon compte</button>
-          )}
-        </div>
-      )}
-      <p className="mt-3 flex flex-wrap gap-x-4 text-[13.5px]">
-        <a href="/legal/cgu" target="_blank" rel="noopener" className={lien}>Conditions d’utilisation</a>
-        <a href="/legal/confidentialite" target="_blank" rel="noopener" className={lien}>Confidentialité</a>
-        <a href="/legal/traitement-des-donnees" target="_blank" rel="noopener" className={lien}>Accord de traitement</a>
-      </p>
-    </Carte>
-  );
-}
-
-
-/** Les langues de la page : le visiteur la voit dans la sienne, là où les textes sont traduits. */
-function Langues({ reglages, onChange, adresse, blocs, traduire }: { reglages: Reglages; onChange: (r: Reglages) => void; adresse: string; blocs: Bloc[]; traduire?: (b: Bloc) => void }) {
-  const actives = reglages.langues ?? [];
-  // Les blocs qui ont un texte à traduire et à qui il manque au moins une des langues proposées.
-  const aTraduire = blocs.filter(b => b.titre.trim() && actives.some(l => !b.traductions?.[l]));
-  const basculer = (l: (typeof LANGUES)[number]) => onChange({ ...reglages, langues: actives.includes(l) ? actives.filter(x => x !== l) : LANGUES.filter(x => x === l || actives.includes(x)) });
-  return (
-    <Carte>
-      <p className="text-[13.5px] leading-snug text-white/60">Ta page s’affiche dans la langue du visiteur. Les boutons, le formulaire et les dates sont traduits tout seuls ; tes textes se traduisent bloc par bloc.</p>
-      <div className="mt-3 divide-y divide-white/[0.06] border-t border-white/[0.06]" role="group" aria-label="Langues proposées">
-        <div className="flex items-center justify-between gap-4 py-3">
-          <span className="text-[15px] font-medium text-white">Français</span>
-          <span className="text-[13px] text-white/55">Langue de ta page</span>
-        </div>
-        {LANGUES.map(l => (
-          <Interrupteur key={l} label={LANGUES_FR[l]} actif={actives.includes(l)} onChange={() => basculer(l)} />
-        ))}
+    <form onSubmit={e => { e.preventDefault(); if (saisie.trim().toLowerCase() === pseudo) void supprimer(); }} className="flex flex-col gap-4 pb-1">
+      <p className="text-[14px] leading-snug text-white/75">Ta page disparaît tout de suite, avec tes liens, tes images et tes statistiques. Rien ne se récupère.</p>
+      {/* Supprimer la page ne touche pas à Creem : un abonnement en cours continuerait d'être payé. */}
+      {abonnement && <p className="text-[14px] font-medium leading-snug text-amber-200">Ton abonnement {abonnement} continue tant que tu ne le résilies pas : résilie-le d’abord, depuis Facturation.</p>}
+      <Champ label={`Pour confirmer, tape ton pseudo, ${pseudo}`} erreur={erreur || undefined}>
+        <input className={classeSaisie} value={saisie} onChange={e => setSaisie(e.target.value)} autoFocus autoCapitalize="none" autoComplete="off" spellCheck={false} />
+      </Champ>
+      <div className="flex flex-wrap justify-end gap-2">
+        <button type="button" onClick={annuler} className={classeBouton.discret}>Annuler</button>
+        <button type="submit" disabled={envoi || saisie.trim().toLowerCase() !== pseudo} className={classeBouton.danger}>{envoi ? 'Suppression…' : 'Supprimer définitivement'}</button>
       </div>
-      {actives.length > 0 && traduire && (
-        <div className="mt-4">
-          <p className="mb-1 text-[13.5px] font-medium text-white/75">{aTraduire.length ? 'À traduire' : 'Tous tes blocs sont traduits.'}</p>
-          {aTraduire.length > 0 && <ul className="divide-y divide-white/[0.06] border-y border-white/[0.06]">
-            {aTraduire.map(b => (
-              <li key={b.id}>
-                <button type="button" onClick={() => traduire(b)} className="flex min-h-12 w-full items-center gap-3 rounded-xl px-1 text-left transition hover:bg-white/[0.04]">
-                  <span className="min-w-0 flex-1 truncate text-[14.5px] font-medium text-white">{b.titre}</span>
-                  <span className="shrink-0 text-[13px] text-white/55">{actives.filter(l => !b.traductions?.[l]).map(l => LANGUES_FR[l]).join(', ')}</span>
-                  <Icone nom="ui-chevron" taille={16} className="-rotate-90 text-white/55" />
-                </button>
-              </li>
-            ))}
-          </ul>}
-        </div>
-      )}
-      {actives.length > 0 && (
-        <div className="mt-4 flex flex-col gap-3">
-          {actives.map(l => (
-            <Champ key={l} label={`Ta bio en ${LANGUES_FR[l].toLowerCase()}`} aide={<a href={`${adresse}?lang=${l}`} target="_blank" rel="noopener" className="underline decoration-white/25 underline-offset-2 hover:text-white">Voir ma page en {LANGUES_FR[l].toLowerCase()}</a>}>
-              <textarea className={`${classeSaisie} min-h-16`} lang={l} maxLength={300} value={reglages.bioTraduite?.[l] ?? ''} placeholder={`Ta bio en ${LANGUES_FR[l].toLowerCase()}`}
-                onChange={e => onChange({ ...reglages, bioTraduite: { ...reglages.bioTraduite, [l]: e.target.value } })} />
-            </Champ>
-          ))}
-        </div>
-      )}
-    </Carte>
+    </form>
   );
 }
-

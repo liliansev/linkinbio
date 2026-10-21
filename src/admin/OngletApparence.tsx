@@ -8,6 +8,7 @@ import { Icone, NOMS_RESEAUX } from '../components/Icone.tsx';
 import { Carte, Champ, Interrupteur, NOMS_ANIMATIONS, Segments, choisirFichier, classeBouton, classeSaisie, flechesRadio, preparerImage, vibrer } from './ui.tsx';
 import { pseudoReseau, urlReseau } from '../lib/demarrage.ts';
 import { adresseSaisie, pourquoiPasReseau } from '../lib/valider.ts';
+import { Etiquette, Reserve, usePermis, useVoirOffres } from './offre.tsx';
 
 const STYLES: { id: StyleBouton; nom: string }[] = [
   { id: 'plein', nom: 'Plein' }, { id: 'contour', nom: 'Contour' }, { id: 'doux', nom: 'Doux' }, { id: 'relief', nom: 'Relief' }, { id: 'verre', nom: 'Verre' },
@@ -56,7 +57,10 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
   // Un thème choisi par-dessus des couleurs à soi : elles partent, mais un toucher les rend.
   const [avantTheme, setAvantTheme] = useState<Reglages | null>(null);
   const fichier = useRef<HTMLInputElement>(null);
-  const theme = themeDe(reglages);
+  // Tes couleurs viennent avec Starter : sans, les aperçus montrent celles du thème, comme la page.
+  const couleurs = usePermis('couleurs');
+  const perso = Object.values(reglages.couleurs).some(Boolean);
+  const theme = themeDe(couleurs ? reglages : { ...reglages, couleurs: SANS_COULEURS });
   const maj = (champs: Partial<Reglages>) => onChange({ ...reglages, ...champs });
   const profil = (champs: Partial<Reglages['profil']>) => maj({ profil: { ...reglages.profil, ...champs } });
   const absents = RESEAUX.filter(r => !reglages.reseaux.some(x => x.reseau === r));
@@ -102,7 +106,6 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
             <li key={t.id}>
               {/* Choisir un thème pose aussi ses boutons et ses couleurs ; on peut les changer ensuite. */}
               <button type="button" onClick={() => {
-                const perso = Object.values(reglages.couleurs).some(Boolean);
                 setAvantTheme(perso ? reglages : null);
                 maj({ theme: t.id, bouton: t.conseil, couleurs: SANS_COULEURS });
               }} role="radio" aria-checked={theme.id === t.id}
@@ -116,13 +119,18 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
       </Carte>}
 
       {/* Seule dans une feuille, « Réinitialiser » monte dans l'en-tête de la feuille, à côté du retour. */}
-      {voir('couleurs') && <Carte nu={nu} titre={titre('Couleurs')} action={nu ? undefined : <Reinitialiser reglages={reglages} onChange={onChange} />}>
-        <div className="flex flex-col gap-5">
-          {CLES_COULEURS.map(c => (
-            <ChoixCouleur key={c.id} nom={c.nom} valeur={reglages.couleurs[c.id]} duTheme={c.duTheme(themeParId(reglages.theme))}
-              onChange={v => maj({ couleurs: { ...reglages.couleurs, [c.id]: v } })} />
-          ))}
-        </div>
+      {voir('couleurs') && <Carte nu={nu} titre={titre('Couleurs')} action={nu || !couleurs ? undefined : <Reinitialiser reglages={reglages} onChange={onChange} />}>
+        {couleurs ? (
+          <div className="flex flex-col gap-5">
+            {CLES_COULEURS.map(c => (
+              <ChoixCouleur key={c.id} nom={c.nom} valeur={reglages.couleurs[c.id]} duTheme={c.duTheme(themeParId(reglages.theme))}
+                onChange={v => maj({ couleurs: { ...reglages.couleurs, [c.id]: v } })} />
+            ))}
+          </div>
+        ) : (
+          // Des couleurs gardées d'une offre passée restent en base : elles reviennent avec Starter.
+          <Reserve fonction="couleurs" phrase={perso ? 'Tes couleurs attendent Hopla Starter : pour l’instant, ta page garde celles de son thème.' : 'Avec Hopla Starter, tu changes le fond, les boutons et le lien mis en avant, par-dessus ton thème.'} />
+        )}
       </Carte>}
 
       {voir('animation') && <Carte nu={nu} titre={titre('Animation')} action={titre('Animation') ? <span className="text-[13px] text-white/50">{NOMS_ANIMATIONS[reglages.animation].nom}</span> : undefined}>
@@ -274,14 +282,16 @@ function SchemaBureau({ id }: { id: MiseEnPageBureau }) {
   );
 }
 
-type Tiroir = 'theme' | 'couleurs' | 'boutons' | 'animation' | 'bureau';
+export type Tiroir = 'theme' | 'couleurs' | 'boutons' | 'animation' | 'bureau';
 
 /**
  * Le design en liste à tiroirs : une icône et un titre par ligne, un toucher
  * l'ouvre à la place de la liste, la flèche ramène.
  */
-export function DesignTiroirs({ reglages, onChange, envoyerImage, principal, pied, vedettes }: { reglages: Reglages; onChange: (r: Reglages) => void; envoyerImage: (d: string) => Promise<string>; principal: boolean; pied?: ReactNode; vedettes?: number }) {
-  const [ouvert, setOuvert] = useState<Tiroir | null>(null);
+export function DesignTiroirs({ reglages, onChange, envoyerImage, principal, pied, vedettes, initial }: { reglages: Reglages; onChange: (r: Reglages) => void; envoyerImage: (d: string) => Promise<string>; principal: boolean; pied?: ReactNode; vedettes?: number;
+  /** Le tiroir ouvert d'emblée. */
+  initial?: Tiroir }) {
+  const [ouvert, setOuvert] = useState<Tiroir | null>(initial ?? null);
   // Le focus suit le tiroir : sur son retour en entrant, sur sa ligne en revenant.
   const retour = useRef<HTMLButtonElement>(null);
   const dernier = useRef<Tiroir | null>(null);
@@ -297,10 +307,13 @@ export function DesignTiroirs({ reglages, onChange, envoyerImage, principal, pie
     if (ouvert) { dernier.current = ouvert; retour.current?.focus({ preventScroll: true, focusVisible: false } as FocusOptions); }
     else if (dernier.current) document.getElementById(`design-${dernier.current}`)?.focus({ preventScroll: true });
   }, [ouvert]);
-  // Chaque ligne dit ce qui est réglé, à droite : on sait sans ouvrir.
-  const lignes: { id: Tiroir; nom: string; icone: string; valeur: string }[] = [
+  const couleurs = usePermis('couleurs');
+  const voirOffres = useVoirOffres();
+  // Chaque ligne dit ce qui est réglé, à droite : on sait sans ouvrir. Une partie réservée porte le nom de son offre.
+  // Réservées, les couleurs ouvrent les offres par-dessus le design, Starter en avant ; sans chemin vers les offres, leur tiroir dit pourquoi.
+  const lignes: { id: Tiroir; nom: string; icone: string; valeur: ReactNode }[] = [
     { id: 'theme', nom: 'Thème', icone: 'palette', valeur: themeParId(reglages.theme).nom },
-    { id: 'couleurs', nom: 'Couleurs', icone: 'pinceau', valeur: Object.values(reglages.couleurs).some(Boolean) ? 'Personnalisées' : 'Celles du thème' },
+    { id: 'couleurs', nom: 'Couleurs', icone: 'pinceau', valeur: !couleurs ? <Etiquette fonction="couleurs" /> : Object.values(reglages.couleurs).some(Boolean) ? 'Personnalisées' : 'Celles du thème' },
     { id: 'boutons', nom: 'Boutons', icone: 'etiquette', valeur: STYLES.find(x => x.id === reglages.bouton.style)?.nom ?? '' },
     { id: 'animation', nom: 'Animation', icone: 'eclair', valeur: NOMS_ANIMATIONS[reglages.animation].nom },
     { id: 'bureau', nom: 'Sur ordinateur', icone: 'ordinateur', valeur: BUREAUX.find(x => x.id === reglages.bureau)?.nom ?? '' },
@@ -313,7 +326,7 @@ export function DesignTiroirs({ reglages, onChange, envoyerImage, principal, pie
         <button ref={retour} type="button" onClick={() => { vibrer(4); setOuvert(null); }} aria-label={`${lignes.find(l => l.id === ouvert)?.nom ?? ''}, revenir au design`} className="flex min-h-11 items-center gap-1 rounded-xl pr-3 text-[14px] font-medium text-white/75 hover:text-white">
           <Icone nom="ui-chevron" taille={18} className="rotate-90" /> {lignes.find(l => l.id === ouvert)?.nom}
         </button>
-        {ouvert === 'couleurs' && <span className="ml-auto pl-1"><Reinitialiser reglages={reglages} onChange={onChange} /></span>}
+        {ouvert === 'couleurs' && couleurs && <span className="ml-auto pl-1"><Reinitialiser reglages={reglages} onChange={onChange} /></span>}
       </div>
       <OngletApparence reglages={reglages} onChange={onChange} envoyerImage={envoyerImage} principal={principal} parties={[ouvert]} vedettes={vedettes} />
     </div>
@@ -324,7 +337,9 @@ export function DesignTiroirs({ reglages, onChange, envoyerImage, principal, pie
       <ul className="adm-groupe">
         {lignes.map((l, i) => (
           <li key={l.id} className={i > 0 ? 'border-t border-white/[0.07]' : ''}>
-            <button id={`design-${l.id}`} type="button" onClick={() => { vibrer(4); setOuvert(l.id); if (l.id === 'theme') themesVus(); }} className="flex min-h-[52px] w-full items-center gap-3 rounded-[inherit] px-3.5 py-2 text-left transition hover:bg-white/[0.04] active:bg-white/[0.06]">
+            <button id={`design-${l.id}`} type="button" aria-haspopup={l.id === 'couleurs' && !couleurs && voirOffres ? 'dialog' : undefined}
+              onClick={() => { vibrer(4); if (l.id === 'couleurs' && !couleurs && voirOffres) return voirOffres('couleurs'); setOuvert(l.id); if (l.id === 'theme') themesVus(); }}
+              className="flex min-h-[52px] w-full items-center gap-3 rounded-[inherit] px-3.5 py-2 text-left transition hover:bg-white/[0.04] active:bg-white/[0.06]">
               <Icone nom={l.icone} taille={20} className="shrink-0 text-white/70" />
               <span className="min-w-0 flex-1 truncate text-[14px] font-medium text-white">{l.nom}</span>
               <span className="min-w-0 max-w-[45%] truncate text-[13px] text-white/55">{l.valeur}</span>

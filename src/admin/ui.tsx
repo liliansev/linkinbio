@@ -1,17 +1,117 @@
-import { cloneElement, isValidElement, useCallback, useEffect, useId, useRef, useState } from 'react';
+import { cloneElement, createContext, isValidElement, useCallback, useContext, useEffect, useId, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { createPortal } from 'react-dom';
 import { Icone } from '../components/Icone.tsx';
 import type { Animation } from '../lib/types.ts';
 import type { ReactNode } from 'react';
 
-/* Les petites pièces du back office : fines et sobres, 40 px de cible au moins pour le pouce. */
+/*
+ * Les petites pièces du back office : fines et sobres, 44 px de cible pour le
+ * pouce. Au bureau (variante `bureau:`, voir app.css), les mêmes pièces se
+ * resserrent : boutons de 36 px, champs de 40, interrupteur de 32 sur 18.
+ */
 
-export function Interrupteur({ actif, onChange, label, aide, disabled }: { actif: boolean; onChange: (v: boolean) => void; label: string; aide?: ReactNode; disabled?: boolean }) {
+const GRAND = '(min-width: 1024px)';
+/**
+ * Un écran assez large pour la barre latérale et un panneau à côté de la page
+ * (1024 px). La forme suit la largeur, la densité suit la souris : une tablette
+ * en paysage a la mise en page du bureau avec des cibles pour le doigt.
+ */
+export function useGrandEcran() {
+  return useSyncExternalStore(
+    f => { const m = matchMedia(GRAND); m.addEventListener('change', f); return () => m.removeEventListener('change', f); },
+    () => matchMedia(GRAND).matches,
+    () => false,
+  );
+}
+
+/**
+ * Une sous-page d'un onglet (Réglages, puis Facturation) : l'en-tête montre le
+ * fil « Réglages / Facturation », dont le premier nom ramène en arrière.
+ * L'onglet pose `SousPage` tant que la sous-page est ouverte.
+ */
+export interface Fil { nom: string; retour: () => void }
+export const PoserFil = createContext<(f: Fil | null) => void>(() => {});
+export function SousPage({ nom, retour }: Fil) {
+  const poser = useContext(PoserFil);
+  const retourRef = useRef(retour);
+  retourRef.current = retour;
+  useEffect(() => { poser({ nom, retour: () => retourRef.current() }); return () => poser(null); }, [nom, poser]);
+  return null;
+}
+
+/** Un groupe de réglages : son titre, puis ses lignes dans un cadre fin (Réglages, Facturation). */
+export function Groupe({ titre, children }: { titre: string; children: ReactNode }) {
   const id = useId();
   return (
-    <div className="flex items-center justify-between gap-4 py-2.5">
-      <label htmlFor={id} className="min-w-0 flex-1 cursor-pointer">
-        <span className="block text-[14.5px] font-medium text-white">{label}</span>
-        {aide && <span className="mt-0.5 block text-[12.5px] leading-snug text-white/50">{aide}</span>}
+    <section aria-labelledby={id} className="flex flex-col gap-2.5">
+      <h2 id={id} className="text-[15px] font-semibold tracking-[-0.015em] text-white">{titre}</h2>
+      <div className="adm-lignes">{children}</div>
+    </section>
+  );
+}
+
+/**
+ * Une ligne de réglage : le libellé à gauche, le contrôle à droite. `valeur`
+ * se lit en gris entre les deux au bureau, sous le libellé au téléphone.
+ */
+export function Ligne({ nom, valeur, children, className = '' }: { nom: ReactNode; valeur?: ReactNode; children?: ReactNode; className?: string }) {
+  return (
+    <div className={`adm-ligne ${children ? 'adm-ligne-controle' : ''} ${className}`}>
+      <span className="adm-ligne-texte">
+        <span className="adm-ligne-nom">{nom}</span>
+        {valeur && <span className="adm-ligne-valeur">{valeur}</span>}
+      </span>
+      {children}
+    </div>
+  );
+}
+
+/** Une ligne à interrupteur : le libellé l'actionne aussi. */
+export function LigneBascule({ nom, actif, changer, disabled }: { nom: string; actif: boolean; changer: (v: boolean) => void; disabled?: boolean }) {
+  const id = useId();
+  return (
+    <Ligne className="adm-ligne-bascule" nom={<label htmlFor={id} className="cursor-pointer">{nom}</label>}>
+      <Bascule id={id} actif={actif} disabled={disabled} onClick={() => { vibrer(); changer(!actif); }} />
+    </Ligne>
+  );
+}
+
+/**
+ * Une ligne qui mène ailleurs (Facturation, une fonction réservée) : toute la
+ * ligne se touche, un chevron au bout. `apres` se pose avant lui (l'offre qui
+ * débloque). Sans `onClick`, la ligne se lit sans mener nulle part.
+ */
+export function LigneLien({ nom, valeur, apres, onClick, label, disabled, id }: { nom: ReactNode; valeur?: ReactNode; apres?: ReactNode; onClick?: () => void; label?: string; disabled?: boolean; id?: string }) {
+  const texte = (
+    <span className="adm-ligne-texte">
+      <span className="adm-ligne-nom">{nom}</span>
+      {valeur && <span className="adm-ligne-valeur">{valeur}</span>}
+    </span>
+  );
+  if (!onClick) return <div className="adm-ligne">{texte}{apres}</div>;
+  return (
+    <button id={id} type="button" onClick={onClick} aria-label={label} disabled={disabled} className="adm-ligne adm-ligne-lien">
+      {texte}{apres}
+      <Icone nom="ui-chevron" taille={16} className="-rotate-90 shrink-0 text-[#55554f]" />
+    </button>
+  );
+}
+
+/** L'endroit de l'en-tête où chaque onglet pose son geste, au bureau (Ajouter un bloc, la période, Inviter). */
+export const EmplacementEntete = createContext<HTMLElement | null>(null);
+export function ActionEntete({ children }: { children: ReactNode }) {
+  const lieu = useContext(EmplacementEntete);
+  return lieu ? createPortal(children, lieu) : null;
+}
+
+/** `compact` : une rangée du panneau du bureau, le nom à gauche, sans phrase d'aide (elle passe en infobulle). */
+export function Interrupteur({ actif, onChange, label, aide, disabled, compact = false }: { actif: boolean; onChange: (v: boolean) => void; label: string; aide?: ReactNode; disabled?: boolean; compact?: boolean }) {
+  const id = useId();
+  return (
+    <div className={`flex items-center justify-between gap-4 ${compact ? 'min-h-11 bureau:min-h-9' : 'py-2.5'}`}>
+      <label htmlFor={id} className="min-w-0 flex-1 cursor-pointer" title={compact && typeof aide === 'string' ? aide : undefined}>
+        <span className={`block text-white ${compact ? 'text-[13.5px]' : 'text-[14.5px] font-medium'}`}>{label}</span>
+        {aide && !compact && <span className="mt-0.5 block text-[12.5px] leading-snug text-white/50">{aide}</span>}
       </label>
       <Bascule id={id} actif={actif} disabled={disabled} onClick={() => { vibrer(); onChange(!actif); }} />
     </div>
@@ -25,8 +125,8 @@ export function Interrupteur({ actif, onChange, label, aide, disabled }: { actif
 export function Bascule({ actif, onClick, id, disabled, label, decrit }: { actif: boolean; onClick: () => void; id?: string; disabled?: boolean; label?: string; decrit?: string }) {
   return (
     <button id={id} type="button" role="switch" aria-checked={actif} aria-label={label} aria-describedby={decrit} disabled={disabled} onClick={onClick}
-      className={`adm-interrupteur relative h-6 w-10 shrink-0 rounded-full before:absolute before:-inset-2 before:content-[''] disabled:opacity-40 ${actif ? 'bg-white' : 'bg-white/45'}`}>
-      <span className={`absolute top-[3px] left-[3px] h-[18px] w-[18px] rounded-full shadow-[0_1px_3px_rgba(0,0,0,0.3)] bg-nuit ${actif ? 'translate-x-4' : ''}`} />
+      className={`adm-interrupteur relative h-6 w-10 shrink-0 rounded-full before:absolute before:-inset-2 before:content-[''] disabled:opacity-40 bureau:h-[18px] bureau:w-8 ${actif ? 'bg-white' : 'bg-white/45'}`}>
+      <span className={`absolute top-[3px] left-[3px] h-[18px] w-[18px] rounded-full shadow-[0_1px_3px_rgba(0,0,0,0.3)] bg-nuit bureau:top-[2px] bureau:left-[2px] bureau:h-3.5 bureau:w-3.5 ${actif ? 'translate-x-4 bureau:translate-x-3.5' : ''}`} />
     </button>
   );
 }
@@ -39,7 +139,7 @@ export function Champ({ label, aide, erreur, children }: { label: string; aide?:
     : children;
   return (
     <label className="block">
-      <span className="mb-1.5 block text-[12.5px] font-medium text-white/60">{label}</span>
+      <span className="mb-1.5 block text-[12.5px] font-medium text-white/60 bureau:text-white/75">{label}</span>
       {champ}
       {erreur && <span id={id} role="alert" className="mt-1.5 block text-[13px] font-medium leading-snug text-red-300">{erreur}</span>}
       {aide && !erreur && <span className="mt-1.5 block text-[12.5px] leading-snug text-white/55">{aide}</span>}
@@ -97,13 +197,29 @@ export function vibrer(ms = 8) {
  * `apercu`, sur téléphone, se pose au-dessus de la feuille : la page en direct,
  * en miniature, qui suit chaque réglage (Lilian, 18 octobre 2026).
  */
-export function Feuille({ ouverte, onFermer, retenir, titre, children, pied, cote = false, apercu }: { ouverte: boolean; onFermer: () => void; retenir?: () => boolean; titre: string; children: Contenu; pied?: Contenu; cote?: boolean; apercu?: React.ReactNode }) {
+export function Feuille({ ouverte, onFermer, retenir, titre, children, pied, cote = false, apercu, petite = false, moyenne = false, large = false, nue = false }: { ouverte: boolean; onFermer: () => void; retenir?: () => boolean; titre: string; children: Contenu; pied?: Contenu; cote?: boolean; apercu?: React.ReactNode;
+  /** Une petite fenêtre au bureau (440 px, titre de 15) : une question courte, comme Inviter. */
+  petite?: boolean;
+  /** Une fenêtre de 560 px : un message qui se lit, comme « C'est fait ». */
+  moyenne?: boolean;
+  /** Plein écran au téléphone, 1000 px au bureau : les offres. */
+  large?: boolean;
+  /** Sans en-tête ni marges : le contenu pose lui-même son titre, sa croix et son défilement. */
+  nue?: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
   const [sortie, setSortie] = useState(false);
   const [tire, setTire] = useState(0);
   // La hauteur visible quand le clavier est ouvert (iOS ne réduit ni la fenêtre ni les dvh) : la feuille s'y tient.
   const [visible, setVisible] = useState<{ h: number; haut: number } | null>(null);
   const geste = useRef<{ y: number; t: number } | null>(null);
+  // Posée sur une autre fenêtre (les offres par-dessus Ajouter), la feuille ne rajoute pas de voile : un seul assombrissement,
+  // celui du dessous. Lu une fois la page à jour, avant d'être peint : une fenêtre qui se ferme au même moment ne compte pas.
+  const [pardessus, setPardessus] = useState(false);
+  useLayoutEffect(() => {
+    if (!ouverte) return;
+    const moi = ref.current?.closest('[role=dialog]');
+    setPardessus([...document.querySelectorAll('[role=dialog][aria-modal=true]')].some(d => d !== moi));
+  }, [ouverte]);
   const fermer = useCallback<Fermer>(apres => {
     // Un geste qui fermerait sur un travail pas valable laisse la feuille ouverte (retenir dit pourquoi).
     if (!apres && retenir?.()) { setTire(0); vibrer(20); return; }
@@ -120,6 +236,9 @@ export function Feuille({ ouverte, onFermer, retenir, titre, children, pied, cot
     // Une vraie fenêtre : Tab tourne dans la feuille, et le focus revient d'où il venait à la fermeture.
     const avantFocus = document.activeElement as HTMLElement | null;
     const touche = (e: KeyboardEvent) => {
+      // Deux feuilles l'une sur l'autre (les offres par-dessus le design) : seule celle du dessus écoute le clavier.
+      const fenetres = document.querySelectorAll('[role="dialog"][aria-modal="true"]');
+      if (fenetres[fenetres.length - 1] !== ref.current?.parentElement) return;
       if (e.key === 'Escape') fermerRef.current();
       // Ctrl ou Cmd + Entrée : le bouton principal du pied, comme un clic sur Terminé.
       if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && ref.current) {
@@ -175,15 +294,16 @@ export function Feuille({ ouverte, onFermer, retenir, titre, children, pied, cot
   return (
     <div className={`fixed inset-0 z-50 flex items-end justify-center ${cote ? 'sm:items-stretch sm:justify-end sm:p-4' : 'sm:items-center'}`} role="dialog" aria-modal="true" aria-label={titre} data-sortie={sortie || undefined}
       style={visible ? { top: visible.haut, height: visible.h, bottom: 'auto' } : undefined}>
-      <button type="button" tabIndex={-1} aria-hidden="true" className={`adm-fondu absolute inset-0 ${apercu ? 'bg-[#f4f4f4] sm:bg-black/[0.04]' : cote ? 'bg-black/[0.04]' : 'bg-black/40 backdrop-blur-[2px]'}`} onClick={() => fermer()} />
+      <button type="button" tabIndex={-1} aria-hidden="true" className={`adm-fondu absolute inset-0 ${apercu ? 'bg-[#f4f4f4] sm:bg-black/[0.04]' : cote ? 'bg-black/[0.04]' : pardessus ? '' : 'bg-black/40 backdrop-blur-[2px]'}`} onClick={() => fermer()} />
       {apercu && <div inert className="adm-fondu pointer-events-none absolute inset-x-0 top-0 bottom-[57dvh] flex items-center justify-center px-4 pt-[max(12px,env(safe-area-inset-top))] pb-3 sm:hidden">{apercu}</div>}
       <div ref={ref} tabIndex={-1}
         style={{ ...(tire ? { transform: `translateY(${tire}px)`, transition: 'none' } : {}), ...(visible ? { maxHeight: visible.h - 8, height: 'auto' } : {}) }}
-        className={`adm-feuille relative flex ${apercu ? 'h-[57dvh] sm:h-auto sm:w-[400px]' : cote ? 'max-h-[58dvh] sm:max-h-none sm:w-[400px]' : 'max-h-[92dvh]'} w-full flex-col border border-b-0 border-white/10 bg-nuit shadow-[0_-12px_40px_-16px_rgba(0,0,0,0.18)] sm:max-w-lg sm:border-b`}>
+        className={`adm-feuille relative flex ${large ? 'adm-feuille-large' : apercu ? 'h-[57dvh] sm:h-auto sm:w-[400px]' : cote ? 'max-h-[58dvh] sm:max-h-none sm:w-[400px]' : 'max-h-[92dvh]'} w-full flex-col border border-b-0 border-white/10 bg-nuit shadow-[0_-12px_40px_-16px_rgba(0,0,0,0.18)] sm:border-b ${large ? '' : petite ? 'adm-feuille-petite sm:max-w-[440px]' : moyenne ? 'adm-feuille-moyenne sm:max-w-[560px]' : 'sm:max-w-lg'}`}>
+        {nue ? rendre(children) : <>
         <div {...tirer} className="shrink-0 touch-none select-none">
           <div className="mx-auto mt-2 h-1 w-9 rounded-full bg-white/20 sm:hidden" />
           <header className="flex items-center justify-between gap-3 px-5 pt-2.5 pb-2 sm:pt-4">
-            <h2 className="text-[18px] font-semibold tracking-[-0.025em] text-white">{titre}</h2>
+            <h2 className={`text-[18px] font-semibold tracking-[-0.025em] text-white ${petite ? 'bureau:text-[15px] bureau:tracking-[-0.015em]' : ''}`}>{titre}</h2>
             <button type="button" onClick={() => fermer()} className={`-mr-3 ${classeBouton.icone} active:scale-90`} aria-label="Fermer">
               <Icone nom="ui-fermer" taille={18} />
             </button>
@@ -191,8 +311,64 @@ export function Feuille({ ouverte, onFermer, retenir, titre, children, pied, cot
         </div>
         <div className={`min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 ${pied ? 'pb-4' : 'pb-[max(16px,env(safe-area-inset-bottom))]'}`}>{rendre(children)}</div>
         {pied && <footer className="shrink-0 border-t border-white/[0.07] px-5 pt-3 pb-[max(12px,env(safe-area-inset-bottom))]">{rendre(pied)}</footer>}
+        </>}
       </div>
     </div>
+  );
+}
+
+/**
+ * Le panneau du bureau, à droite de la page (direction B, 20 octobre 2026) :
+ * non modal. Pas de voile, pas de piège à focus : la page reste à portée, on
+ * clique un autre bloc, on la fait défiler. Tout s'enregistre en route, il n'y
+ * a donc pas de « Terminé ». Échap ou la croix le ferment ; le focus revient
+ * d'où il venait. `menu` range les gestes rares derrière « … ».
+ */
+export function Panneau({ titre, onFermer, menu, pied, children }: { titre: string; onFermer: () => void; menu?: ElementMenu[]; pied?: ReactNode; children: ReactNode }) {
+  const id = useId();
+  const racine = useRef<HTMLElement>(null);
+  const tete = useRef<HTMLHeadingElement>(null);
+  const fermerRef = useRef(onFermer);
+  fermerRef.current = onFermer;
+  // Ce qui avait le focus avant le panneau, lu avant qu'un champ du panneau (autoFocus) ne le prenne : il le retrouve à la fermeture.
+  const [avant] = useState(() => (typeof document === 'undefined' ? null : document.activeElement as HTMLElement | null));
+  useEffect(() => {
+    // Ouvert au clavier, le panneau prend le focus sur son titre (Tab mène aux champs). Ouvert à la souris, le focus reste
+    // où l'on a cliqué : la page garde la main, et les raccourcis (A, coller une adresse) marchent toujours.
+    const ici = document.activeElement as HTMLElement | null;
+    const auClavier = !ici || ici === document.body || ici.matches(':focus-visible');
+    if (!racine.current?.contains(ici) && auClavier) tete.current?.focus({ preventScroll: true });
+    const touche = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape' || e.defaultPrevented || document.querySelector('[role="dialog"][aria-modal="true"]')) return;
+      // Dans un champ de la page (le nom, la bio), Échap ne ferme pas le panneau.
+      const ici = document.activeElement;
+      if (ici?.closest('input, textarea, select, [contenteditable]') && !racine.current?.contains(ici)) return;
+      e.preventDefault();
+      fermerRef.current();
+    };
+    document.addEventListener('keydown', touche);
+    return () => {
+      document.removeEventListener('keydown', touche);
+      const ici = document.activeElement;
+      if ((!ici || ici === document.body) && avant?.isConnected) avant.focus({ preventScroll: true });
+    };
+  }, []);
+  return (
+    <section ref={racine} aria-labelledby={id} className="adm-panneau flex h-full min-h-0 flex-col">
+      <header className="flex h-[52px] shrink-0 items-center gap-1 pl-5 pr-3">
+        <h2 ref={tete} id={id} tabIndex={-1} className="min-w-0 flex-1 truncate text-[15px] font-semibold tracking-[-0.015em] text-white">{titre}</h2>
+        {menu && menu.length > 0 && (
+          <Menu label={`Gestes : ${titre}`} titre="Plus de gestes" elements={menu} className={classeBouton.icone}>
+            <Icone nom="ui-points" taille={18} />
+          </Menu>
+        )}
+        <button type="button" onClick={() => fermerRef.current()} className={classeBouton.icone} aria-label="Fermer le panneau" title="Fermer (Échap)">
+          <Icone nom="ui-fermer" taille={18} />
+        </button>
+      </header>
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-6">{children}</div>
+      {pied && <footer className="shrink-0 border-t border-white/[0.07] px-5 py-3">{pied}</footer>}
+    </section>
   );
 }
 
@@ -242,29 +418,112 @@ export function BoutonCopier({ texte, onCopie, label, compact = false }: { texte
   }
   if (compact) return (
     <button type="button" onClick={copier} aria-label={copie ? 'Adresse copiée' : label ?? 'Copier'}
-      className="adm-button-outline grid h-11 w-11 shrink-0 place-items-center text-white transition active:scale-95">
+      className="adm-button-outline grid h-11 w-11 shrink-0 place-items-center text-white transition active:scale-95 bureau:h-9 bureau:w-9">
       <Icone nom={copie ? 'ui-ok' : 'ui-copier'} taille={18} />
     </button>
   );
   return (
     <button type="button" onClick={copier} aria-label={label}
-      className="adm-button-outline flex min-h-11 shrink-0 items-center gap-1.5 px-3.5 text-[14px] font-medium text-white transition active:scale-95">
+      className="adm-button-outline flex min-h-11 shrink-0 items-center gap-1.5 px-3.5 text-[14px] font-medium text-white transition active:scale-95 bureau:min-h-9 bureau:px-3">
       <Icone nom={copie ? 'ui-ok' : 'ui-copier'} taille={16} />{copie ? 'Copié' : 'Copier'}
     </button>
   );
 }
 
+export interface ElementMenu {
+  nom: string;
+  action: () => void;
+  icone?: string;
+  /** Effacer pour de bon : le seul élément en rouge. */
+  danger?: boolean;
+  /** Un choix exclusif (une période) : l'élément devient une option cochée ou non. */
+  coche?: boolean;
+  /** Le nom de l'offre qui ouvre ce choix (« Pro ») : l'élément mène aux offres plutôt qu'au choix. */
+  etiquette?: string;
+}
+
+/**
+ * Un bouton qui ouvre une courte liste d'actions (motif ARIA « menu bouton ») :
+ * les flèches parcourent la liste, Échap la referme et rend le focus au
+ * bouton, un clic ailleurs la range. `entete` se pose au-dessus de la liste
+ * sans en faire partie (l'adresse du compte, par exemple).
+ */
+export function Menu({ label, elements, children, className = '', titre, haut = false, aligne = 'droite', entete, tabIndex, onBascule }: {
+  label: string; elements: ElementMenu[]; children: ReactNode; className?: string;
+  /** Le nom du bouton pour un lecteur d'écran, quand il ne montre qu'un picto. */
+  titre?: string;
+  haut?: boolean; aligne?: 'gauche' | 'droite' | 'largeur'; entete?: ReactNode;
+  /** -1 pour un raccourci de la souris dont le clavier a déjà le chemin (les actions posées à côté d'un bloc). */
+  tabIndex?: number;
+  /** Prévenu quand la liste s'ouvre ou se ferme : ce qui porte le menu reste affiché tant qu'elle est ouverte. */
+  onBascule?: (ouvert: boolean) => void;
+}) {
+  const [ouvert, setOuvert] = useState(false);
+  const id = useId();
+  const bouton = useRef<HTMLButtonElement>(null);
+  const boite = useRef<HTMLDivElement>(null);
+  const options = () => [...(boite.current?.querySelectorAll<HTMLElement>('[role^=menuitem]') ?? [])];
+  const basculeRef = useRef(onBascule);
+  basculeRef.current = onBascule;
+  useEffect(() => { basculeRef.current?.(ouvert); }, [ouvert]);
+  useEffect(() => {
+    if (!ouvert) return;
+    const o = options();
+    (o.find(x => x.getAttribute('aria-checked') === 'true') ?? o[0])?.focus();
+    const dehors = (e: PointerEvent) => { const t = e.target as Node; if (!boite.current?.contains(t) && !bouton.current?.contains(t)) setOuvert(false); };
+    document.addEventListener('pointerdown', dehors);
+    return () => document.removeEventListener('pointerdown', dehors);
+  }, [ouvert]);
+  function touche(e: React.KeyboardEvent) {
+    const o = options();
+    const i = o.indexOf(document.activeElement as HTMLElement);
+    // Échap ne referme que le menu : la feuille ou le panneau qui le porte reste ouvert.
+    if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); setOuvert(false); bouton.current?.focus(); }
+    else if (e.key === 'Tab') setOuvert(false);
+    else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); o[(i + (e.key === 'ArrowDown' ? 1 : -1) + o.length) % o.length]?.focus(); }
+    else if (e.key === 'Home' || e.key === 'End') { e.preventDefault(); o[e.key === 'Home' ? 0 : o.length - 1]?.focus(); }
+  }
+  const place = `${haut ? 'bottom-full mb-1.5' : 'top-full mt-1.5'} ${aligne === 'gauche' ? 'left-0' : aligne === 'droite' ? 'right-0' : 'inset-x-0'}`;
+  return (
+    <div className="relative">
+      <button ref={bouton} type="button" aria-haspopup="menu" aria-expanded={ouvert} aria-controls={ouvert ? id : undefined} aria-label={titre} title={titre} tabIndex={tabIndex}
+        onClick={() => setOuvert(o => !o)} onKeyDown={e => { if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && !ouvert) { e.preventDefault(); setOuvert(true); } }} className={className}>
+        {children}
+      </button>
+      {ouvert && (
+        <div ref={boite} onKeyDown={touche} className={`adm-menu adm-fondu absolute z-50 min-w-[180px] ${place}`}>
+          {entete}
+          <div role="menu" id={id} aria-label={label}>
+            {elements.map(el => (
+              <button key={el.nom} type="button" tabIndex={-1} role={el.coche === undefined ? 'menuitem' : 'menuitemradio'} aria-checked={el.coche}
+                aria-label={el.etiquette ? `${el.nom}, avec ${el.etiquette} : voir les offres` : undefined}
+                onClick={() => { setOuvert(false); bouton.current?.focus({ preventScroll: true }); el.action(); }}
+                className={`adm-menu-item ${el.danger ? 'text-red-300' : 'text-white'}`}>
+                {el.icone && <Icone nom={el.icone} taille={16} className="shrink-0" />}
+                <span className={`min-w-0 flex-1 truncate text-left ${el.etiquette ? 'text-white/60' : ''}`}>{el.nom}</span>
+                {el.etiquette && <span className={classeBadge}>{el.etiquette}</span>}
+                {el.coche && <Icone nom="ui-ok" taille={15} className="shrink-0" />}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /**
  * Les cinq boutons du back office, en classes : un lien (télécharger, ouvrir)
- * prend la même allure qu'un bouton. Tous en rectangle arrondi à 12 px : pas
- * de pilule (Lilian, 19 octobre 2026). Le rouge ne sert qu'à effacer pour de bon.
+ * prend la même allure qu'un bouton. Tous en rectangle arrondi à 12 px, 8 au
+ * bureau : pas de pilule (Lilian, 19 octobre 2026). Le rouge ne sert qu'à
+ * effacer pour de bon.
  */
 export const classeBouton = {
-  principal: 'adm-button-primary inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-white px-5 text-[14px] font-semibold text-nuit transition active:scale-[0.98] disabled:opacity-50',
-  secondaire: 'adm-button-outline inline-flex min-h-11 items-center justify-center gap-2 px-4 text-[14px] font-medium text-white transition active:scale-[0.98] disabled:opacity-50',
-  danger: 'adm-button-danger inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 text-[14px] font-semibold transition active:scale-[0.98] disabled:opacity-40',
-  discret: 'inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl px-3 text-[14px] font-medium text-white/60 transition hover:bg-white/[0.06] hover:text-white disabled:opacity-50',
-  icone: 'grid h-11 w-11 shrink-0 place-items-center rounded-xl text-white/55 transition hover:bg-white/[0.06] hover:text-white',
+  principal: 'adm-button-primary inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-white px-5 text-[14px] font-semibold text-nuit transition active:scale-[0.98] disabled:opacity-50 bureau:min-h-9 bureau:gap-1.5 bureau:rounded-lg bureau:px-3.5 bureau:font-medium',
+  secondaire: 'adm-button-outline inline-flex min-h-11 items-center justify-center gap-2 px-4 text-[14px] font-medium text-white transition active:scale-[0.98] disabled:opacity-50 bureau:min-h-9 bureau:gap-1.5 bureau:px-3',
+  danger: 'adm-button-danger inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 text-[14px] font-semibold transition active:scale-[0.98] disabled:opacity-40 bureau:min-h-9 bureau:rounded-lg bureau:px-3 bureau:font-medium',
+  discret: 'inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl px-3 text-[14px] font-medium text-white/60 transition hover:bg-white/[0.06] hover:text-white disabled:opacity-50 bureau:min-h-9 bureau:rounded-lg bureau:px-2.5',
+  icone: 'grid h-11 w-11 shrink-0 place-items-center rounded-xl text-white/55 transition hover:bg-white/[0.06] hover:text-white bureau:h-8 bureau:w-8 bureau:rounded-lg',
 };
 
 /** Une étiquette d'état (Pro, Suspendu) : petite et rectangulaire, comme les boutons. */
@@ -322,7 +581,7 @@ export function Segments<T extends string>({ valeur, options, onChange, label }:
     <div role="radiogroup" aria-label={label} onKeyDown={e => flechesRadio(e)} className="flex gap-0.5 rounded-[10px] bg-white/[0.06] p-[3px]">
       {options.map((o, i) => (
         <button key={o.id} type="button" role="radio" aria-checked={valeur === o.id} tabIndex={arretRadio(valeur === o.id, i === 0, !options.some(x => x.id === valeur))} onClick={() => { vibrer(5); onChange(o.id); }}
-          className={`min-h-10 flex-1 rounded-[7px] px-2.5 text-[13.5px] font-medium transition duration-200 ${valeur === o.id ? 'bg-nuit text-white shadow-[0_1px_3px_rgba(0,0,0,0.14)]' : 'text-white/55 hover:text-white'}`}>
+          className={`min-h-10 flex-1 rounded-[7px] px-2.5 text-[13.5px] font-medium transition duration-200 bureau:min-h-[30px] ${valeur === o.id ? 'bg-nuit text-white shadow-[0_1px_3px_rgba(0,0,0,0.14)]' : 'text-white/55 hover:text-white'}`}>
           {o.nom}
         </button>
       ))}

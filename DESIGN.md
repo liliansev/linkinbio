@@ -11,7 +11,10 @@ colors:
   control-border: "#deded9"
   secondary: "#656560"
   muted-text: "#666666"
-  nav-hover: "#f1f1ee"
+  nav-hover: "#f2f2ef"
+  nav-current: "#ebebe7"
+  sidebar: "#fafaf9"
+  shell-divider: "#ececea"
   control-hover: "#f4f4f0"
   error: "#c62828"
   pending: "#d97706"
@@ -49,17 +52,34 @@ typography:
     fontSize: "16px"
   metric:
     fontFamily: "Geist Variable, ui-sans-serif, system-ui, sans-serif"
-    fontSize: "30px"
+    fontSize: "24px"
     fontWeight: 600
     lineHeight: 1.25
-    letterSpacing: "-0.03em"
+    letterSpacing: "-0.02em"
   wordmark:
     fontFamily: "Geist Variable, ui-sans-serif, system-ui, sans-serif"
     fontSize: "23px"
     fontWeight: 600
     lineHeight: 1
     letterSpacing: "-0.035em"
+  wordmark-desk:
+    fontFamily: "Geist Variable, ui-sans-serif, system-ui, sans-serif"
+    fontSize: "15px"
+    fontWeight: 600
+    lineHeight: 1
+    letterSpacing: "-0.02em"
+  screen-title-desk:
+    fontFamily: "Geist Variable, ui-sans-serif, system-ui, sans-serif"
+    fontSize: "15px"
+    fontWeight: 600
+    letterSpacing: "-0.015em"
+  body-desk:
+    fontFamily: "Geist Variable, ui-sans-serif, system-ui, sans-serif"
+    fontSize: "13.5px"
+    lineHeight: 1.5
 rounded:
+  nav: "7px"
+  control-desk: "8px"
   segment: "7px"
   segment-group: "10px"
   control: "12px"
@@ -123,14 +143,36 @@ components:
     backgroundColor: "{colors.paper}"
     rounded: "{rounded.surface}"
     padding: "22px"
-  nav-item:
-    textColor: "{colors.secondary}"
-    rounded: "{rounded.control}"
+  button-desk:
+    rounded: "{rounded.control-desk}"
     padding: "0 14px"
-    height: "48px"
+    height: "36px"
+  button-icon-desk:
+    rounded: "{rounded.control-desk}"
+    width: "32px"
+    height: "32px"
+  field-desk:
+    typography: "{typography.body-desk}"
+    rounded: "{rounded.control-desk}"
+    padding: "8px 12px"
+    height: "40px"
+  nav-item:
+    textColor: "#55554f"
+    rounded: "{rounded.nav}"
+    padding: "0 10px"
+    height: "44px"
+  nav-item-desk:
+    typography: "{typography.body-desk}"
+    height: "32px"
   nav-item-current:
+    backgroundColor: "{colors.nav-current}"
+    textColor: "{colors.ink}"
+  sidebar:
+    backgroundColor: "{colors.sidebar}"
+    width: "216px"
+  header-desk:
     backgroundColor: "{colors.paper}"
-    textColor: "{colors.shell-ink}"
+    height: "56px"
   segment:
     textColor: "{colors.muted-text}"
     rounded: "{rounded.segment}"
@@ -141,13 +183,45 @@ components:
     textColor: "{colors.ink}"
   settings-row:
     textColor: "{colors.ink}"
-    padding: "12px 16px"
-    height: "68px"
+    padding: "6px 16px"
+    height: "56px"
+  settings-row-desk:
+    textColor: "{colors.ink}"
+    padding: "6px 16px"
+    height: "48px"
+  table-row-desk:
+    textColor: "{colors.ink}"
+    padding: "0 12px"
+    height: "48px"
   switch:
     backgroundColor: "{colors.ink}"
     rounded: "{rounded.pill}"
     width: "40px"
     height: "24px"
+  switch-desk:
+    backgroundColor: "{colors.ink}"
+    rounded: "{rounded.pill}"
+    width: "32px"
+    height: "18px"
+  offer-window-desk:
+    backgroundColor: "{colors.paper}"
+    rounded: "14px"
+    width: "1000px"
+  offer-card:
+    backgroundColor: "{colors.paper}"
+    textColor: "{colors.ink}"
+    rounded: "14px"
+    padding: "19px"
+  offer-card-desk:
+    rounded: "12px"
+    padding: "20px"
+  offer-price:
+    typography: "{typography.metric}"
+  badge-offer-for:
+    backgroundColor: "{colors.ink}"
+    textColor: "{colors.paper}"
+    typography: "{typography.caption}"
+    rounded: "{rounded.segment}"
 ---
 
 # Design System: Hopla back office
@@ -185,6 +259,8 @@ Dans le code hérité, `.adm` inverse les noms de couleur : `white` désigne l�
 - **Trait** (`divider`) et **Contour de contrôle** (`control-border`) : séparation des régions et limites des boutons secondaires.
 - **Secondaire** (`secondary`) et **Texte atténué** (`muted-text`) : descriptions et aides lisibles ; le second correspond aux utilitaires corrigés pour le fond clair.
 - **Survol de navigation** (`nav-hover`) et **Survol de contrôle** (`control-hover`) : réponse locale sans nouvel accent.
+- **Onglet courant** (`nav-current`) : le gris uni de la section ouverte dans la barre latérale ; le survol (`nav-hover`) est plus pâle que lui, pour que l'endroit où l'on est se voie mieux que celui qu'on survole.
+- **Barre latérale** (`sidebar`) et **Trait de la coquille** (`shell-divider`) : la barre latérale du bureau et les traits qui la séparent de l'en-tête et du contenu.
 
 Les tokens `error` et `pending` correspondent aux états d'erreur et d'enregistrement en cours. Ils ne constituent pas des accents de marque. Les variantes d'alerte déjà présentes dans le code restent contextuelles.
 
@@ -210,8 +286,12 @@ Les tokens `error` et `pending` correspondent aux états d'erreur et d'enregistr
 - **Label** : nom de champ et aide courte.
 - **Caption** : légende d'onglet mobile, nom sous un picto, axe de courbe, compteur, et badge en semi-gras.
 - **Field** : texte saisi, conservé à une taille lisible sur mobile.
-- **Metric** : valeur statistique, (30px) à toutes les largeurs, avec chiffres tabulaires.
-- **Wordmark** : « Hopla. » dans la marque, et nulle part ailleurs.
+- **Metric** : chiffre clé, (24px) à toutes les largeurs ; dans les onglets de la courbe des stats (`.adm-courbe-chiffre`), en chiffres proportionnels. Le prix d'une offre le reprend, au téléphone comme au bureau (`.adm-offre-prix`). Les listes et les tableaux gardent des chiffres tabulaires, alignés à droite.
+- **Wordmark** : « Hopla » dans la marque, et nulle part ailleurs ; en petit (`wordmark-desk`) dans la barre latérale du bureau.
+
+### Au bureau
+
+Sur un écran d'au moins (1024px) tenu à la souris ou au pavé (variante Tailwind `bureau:`, `@media (min-width: 1024px) and (pointer: fine)`), le texte se range sur cinq marches : (12px) pour les libellés, légendes et aides, (13.5px) pour le texte courant, (15px) pour les titres de carte, de panneau et d'écran, (18px) pour un titre de dialogue, (24px) pour un chiffre clé. Les tailles écrites pour le doigt se rangent sur la marche la plus proche (`admin.css`) ; une classe `bureau:text-…` posée sur l'élément garde la main. La page publique n'utilise aucune de ces classes et garde sa typographie.
 
 ### Named Rules
 
@@ -219,7 +299,11 @@ Les tokens `error` et `pending` correspondent aux états d'erreur et d'enregistr
 
 ## Layout
 
-Le shell partage une barre supérieure et un contenu centré, avec une largeur maximale observée de (1120px). Les gouttières passent de (16px) à (32px) à partir de (1024px). À cette même largeur, une navigation latérale fixe de (240px) remplace la navigation basse ; le contenu garde l'espace correspondant. La barre supérieure mesure au moins (72px), puis (80px) sur desktop.
+Au téléphone, le shell partage une barre supérieure d'au moins (72px) et un contenu centré, avec une largeur maximale de (1120px) et des gouttières de (16px).
+
+À partir de (1024px), une barre latérale fixe de (216px) remplace la navigation basse : la petite marque à la hauteur de l'en-tête, les sections (Comptes à part, après un écart de (14px)) et, en bas, le compte, qui s'ouvre sur un menu avec « Me déconnecter ». L'en-tête du bureau est une seule rangée de (56px) : le nom de l'écran à gauche (rôle `screen-title-desk`, c'est le seul titre de l'écran), puis ce qui sert ici, à droite. Ma page y met l'état d'enregistrement, l'adresse courte avec Copier, Voir ma page et le bouton noir Ajouter un bloc ; Réglages, l'état ; Stats, la période ; Comptes, Inviter. Chaque onglet y pose son geste par `ActionEntete`. Pas de barre vide, pas de titre qui répète le menu. Le contenu est posé sur le blanc. Un détail qui ne tient pas dans une ligne de réglage s'ouvre en sous-page (`SousPage`, `PoserFil`) : l'en-tête devient un fil court, « ‹ Réglages / Facturation », dont le premier terme ramène à l'écran et rend le focus à la ligne qui l'a ouvert ; au téléphone, un retour se pose au-dessus du titre. Comptes pose sa barre d'onglets et sa recherche sur toute la largeur, sous l'en-tête, puis son tableau.
+
+La forme suit la largeur et la densité suit la souris : une tablette en paysage a la barre latérale, avec des cibles de (44px).
 
 La navigation mobile tient compte de la zone sûre inférieure et réserve (64px) à ses boutons. Le contenu garde un espace bas pour rester accessible au-dessus d'elle. Sous (1024px), les gestes de Ma page (Ajouter un bloc, Personnaliser) se posent sur cette barre, à portée du pouce : les deux font un seul socle blanc sous un seul trait, et la page commence juste sous l'en-tête. Dans ce même en-tête, tant que la page n'est pas prête, l'anneau de Bien démarrer prend la place de la photo et ouvre ses étapes dans une feuille. Le rythme récurrent utilise de petits écarts entre contrôles et des écarts plus larges entre groupes, selon les tokens de spacing.
 
@@ -231,7 +315,7 @@ Les cartes ordinaires sont plates : leur papier, leur bordure et le fond de trav
 
 ### Shadow Vocabulary
 
-- **Page éditée** : l'ombre légère détache la vraie page du shell.
+- **Page éditée** : l'ombre légère détache la vraie page du shell ; au bureau, le cadre de (390px) au centre de la toile (`0 0 0 1px` à 8 %, `0 24px 60px -24px` à 35 %).
 - **Feuille** : l'ombre signale une surface temporaire au-dessus du travail.
 - **Segment choisi** : petite ombre locale sur le choix actif.
 - **Retour flottant** : contraste inversé et ombre pour le message, sans masquer l'action de la feuille.
@@ -257,6 +341,7 @@ Les bordures de surface sont fines (1px). Le focus observable est un contour noi
 Actions nettes, avec un libellé court et un picto plein lorsque cela aide à reconnaître le geste. Les cinq variantes viennent d'une seule source, `classeBouton` dans `src/admin/ui.tsx`, pour qu'un lien prenne la même allure qu'un bouton. Ne pas ajouter derrière elles un padding ou une hauteur qui les contredit.
 
 - **Primary (`principal`):** noir, texte blanc, semi-gras ; cible minimale (44px), avec pression à l'échelle (0.98) et opacité réduite si désactivé. Il porte l'action principale de la vue.
+- **Au bureau (`bureau:`):** chaque variante descend à (36px) de haut, arrondi (8px), graisse moyenne ; le bouton icône à (32px). Un bouton écrit à la main avec `min-h-11` suit la même règle.
 - **Secondary (`secondaire`):** papier blanc, contour léger, texte noir et graisse moyenne. Le survol modifie le fond et le trait.
 - **Danger (`danger`):** rouge plein, texte blanc ; réservé à l'effacement définitif, après une confirmation.
 - **Quiet (`discret`):** texte secondaire sans fond ; Annuler, Plus tard, Me déconnecter.
@@ -265,23 +350,23 @@ Actions nettes, avec un libellé court et un picto plein lorsque cela aide à re
 
 ### Cards / Containers
 
-Conteneurs blancs, arrondis et bordés. Un titre de carte et son action éventuelle occupent la même rangée. Les KPI partagent la forme des cartes avec un padding plus compact : (20px), puis (16px) sous (640px).
+Conteneurs blancs, arrondis et bordés. Un titre de carte et son action éventuelle occupent la même rangée. Dans les stats, les encarts (`.adm-encart`) sont un trait fin sur le blanc, arrondi (12px), (10px) à partir de (1024px). Les chiffres clés sont les onglets de leur courbe, dans un seul encart : deux par rangée et (72px) de haut au téléphone, quatre de front et (84px) à partir de (640px) ; l'onglet choisi passe au blanc avec un trait d'encre de (2px) en bas. Une répartition (liens, réseaux, appareils) est une liste dont chaque libellé porte derrière lui une barre pâle `#efefec`, à la longueur de sa part, le nombre et le pourcentage à droite au gris secondaire (6,5:1).
 
 Dans une feuille, une liste de lignes est un groupe bordé sans fond (`.adm-groupe`). Dans une carte, les groupes deviennent de simples traits de séparation : jamais de boîte grise dans une carte. Un choix entre cartes (formule, aperçu de bureau) est marqué par un contour noir de (2px), pas par une couleur.
 
 ### Badges
 
-Rectangle à l'arrondi `segment`, fond d'encre à 7 %, texte au rôle `caption` en semi-gras (`classeBadge`). Seul « Suspendu » prend l'ambre des alertes.
+Rectangle à l'arrondi `segment`, fond d'encre à 7 %, texte au rôle `caption` en semi-gras (`classeBadge`). Un seul badge est plein, à l'encre : celui de l'offre qui débloque la fonction demandée, dans la fenêtre des offres (« Pour tes couleurs »). Un état d'alerte n'est pas un badge : dans Comptes, « Signalé » et « Suspendu » s'écrivent à l'ambre, précédés de leur picto, et seul le compteur des signalements à traiter prend un fond ambre.
 
 ### Inputs / Fields
 
-Fond calme, contour discret, arrondi de contrôle et texte de saisie au rôle `field`. Hauteur minimale observée (48px). Le contour se renforce au survol et au focus. Une erreur est attachée au champ par `aria-invalid` et `aria-describedby` et s'affiche sous lui.
+Fond calme, contour discret, arrondi de contrôle et texte de saisie au rôle `field`. Hauteur minimale observée (48px) ; au bureau, (40px), arrondi (8px) et texte de (13.5px) (`field-desk`). Le contour se renforce au survol et au focus. Une erreur est attachée au champ par `aria-invalid` et `aria-describedby` et s'affiche sous lui.
 
 ### Navigation
 
-La marque (`Marque.tsx`) est la même partout : le carré noir au lien blanc de (28px), puis « Hopla. » au rôle `wordmark`, sans accroche. La barre latérale, la connexion, les CGU et le lien de connexion périmé la reprennent telle quelle. Aucun fil d'Ariane ne répète la navigation.
+La marque (`Marque.tsx`) est la même partout : le carré noir au lien blanc de (28px), puis « Hopla » au rôle `wordmark`, sans accroche. La connexion, les CGU et le lien de connexion périmé la reprennent telle quelle ; la barre latérale du bureau la prend en petit (`petite` : (22px) et `wordmark-desk`). Aucun fil d'Ariane ne répète la navigation : seule une sous-page en montre un, d'un seul cran, à la place du titre de l'en-tête.
 
-Sur desktop, une ligne associe un picto plein (20px), un nom et éventuellement un compteur réel. Le choix actif est blanc, bordé et plus gras ; le survol utilise une surface neutre. Sur mobile, la même navigation devient une barre basse avec picto (21px) et label court ; l'onglet courant se reconnaît à son picto noir et à son label en semi-gras, sans pastille de fond.
+Sur desktop, une rangée de (32px) à la souris ((44px) au doigt) associe un picto plein (16px) et un nom, sans compteur. Le choix actif est un gris uni (`nav-current`), sans bordure ni graisse de plus ; le survol, plus pâle (`nav-hover`). Sur mobile, la même navigation devient une barre basse avec picto (21px) et label court ; l'onglet courant se reconnaît à son picto noir et à son label en semi-gras, sans pastille de fond.
 
 ### Segments
 
@@ -289,15 +374,29 @@ Groupe de choix exclusifs neutre, composé de boutons avec une cible minimale de
 
 ### Settings rows
 
-Une ligne de réglage porte un picto plein nu, sans tuile de fond, dans une case de (24px) au gris secondaire, puis son nom et un chevron ou une bascule. Les badges « Pro » s'écrivent sans picto décoratif.
+Réglages tient sur une seule page, (680px) au plus : des groupes titrés (`Groupe`), chacun une liste bordée de lignes (`.adm-lignes`, arrondi (12px), (10px) au bureau). Une ligne (`Ligne`, `LigneBascule`, `LigneLien` dans `ui.tsx`) porte son nom à gauche, sa valeur au gris secondaire, son contrôle à droite : un bouton au contour, une bascule ou un chevron. Elle mesure (56px), (48px) au bureau, sous un trait de (1px) `#efefec`. À partir de (640px), la valeur se range à droite du nom et se coupe d'une ellipse ; plus étroit, elle passe dessous, sur deux lignes au plus. Pas de picto, pas de tiroir : ce qui ne tient pas dans une ligne s'ouvre dans une fenêtre ou une sous-page. Une fonction réservée montre le badge de son offre (« Starter ») et un chevron qui ouvre la fenêtre des offres ; le badge s'écrit sans picto décoratif. Les liens légaux et l'adresse de contact passent en pied de page, au rôle `caption`.
+
+### Tables
+
+Au bureau, Comptes est un tableau (`.adm-tableau`, colonnes fixes) : en-têtes de (12px) au gris secondaire, rangées de (48px) séparées d'un trait, survol `#fafaf9`, nombres alignés à droite en chiffres tabulaires, menu « … » de (32px) en bout de ligne. Page, e-mail, offre, vues sur 30 jours, dernière connexion en mots (« Aujourd’hui », « 11 oct. »), statut. Les onglets du tableau portent un compteur ; la recherche ignore les accents et les majuscules. Sous (1024px), le tableau devient une liste : une ligne de (64px) au moins par compte, le pseudo, puis l'e-mail et le reste en gris, et le statut seulement s'il alerte.
 
 ### Switches
 
-Piste de (40px) sur (24px), pastille blanche de (18px), cible tactile étendue. Allumée, la piste est à l'encre ; éteinte, à 45 % d'encre, soit 3:1 sur le papier, pour qu'on voie l'interrupteur et son état (WCAG 1.4.11). Le déplacement et l'étirement à la pression répondent au geste. L'état est porté par `role="switch"` et `aria-checked`.
+Piste de (40px) sur (24px), pastille blanche de (18px), cible tactile étendue ; au bureau, (32px) sur (18px), pastille de (14px) (`switch-desk`). Allumée, la piste est à l'encre ; éteinte, à 45 % d'encre, soit 3:1 sur le papier, pour qu'on voie l'interrupteur et son état (WCAG 1.4.11). Le déplacement et l'étirement à la pression répondent au geste. L'état est porté par `role="switch"` et `aria-checked`.
 
 ### Sheets and feedback
 
-Les feuilles nomment leur tâche, gardent la fermeture accessible et gèrent le focus. Les mouvements d'entrée et de sortie sont courts et décélérés ; `prefers-reduced-motion` retire les animations prévues. Les retours utilisent un message explicite, et proposent Annuler lorsque l'action le permet. L'état d'enregistrement est le même au téléphone et au bureau : un point gris suivi de son mot, qui bat pendant l'envoi ; seul l'échec passe au rouge. Les durées et courbes observées figurent dans le sidecar.
+Les feuilles nomment leur tâche, gardent la fermeture accessible et gèrent le focus. Les mouvements d'entrée et de sortie sont courts et décélérés ; `prefers-reduced-motion` retire les animations prévues. Les retours utilisent un message explicite, et proposent Annuler lorsque l'action le permet. L'état d'enregistrement est le même au téléphone et au bureau : une coche suivie de « Enregistré », un point gris qui bat pendant l'envoi ; seul l'échec passe au rouge. Au bureau, il ne se montre que sur les écrans où l'on écrit (Ma page, Réglages), ou quand il a quelque chose à dire.
+
+Une confirmation ou un formulaire court (Inviter, Supprimer mon compte, Suspendre, Retirer de la liste) s'ouvre dans une petite fenêtre (`Feuille` avec `petite`) : (440px) de large, arrondi (12px), titre de (15px) au bureau, le geste définitif à droite. Au téléphone, elle monte du bas comme les autres feuilles.
+
+Au bureau, les réglages d'un bloc, le Design et les Réseaux s'ouvrent dans un panneau latéral non modal de (380px) (`Panneau` dans `ui.tsx`) : en-tête de (52px) avec le nom, le menu « … » et la croix, sections titrées en (12px) semi-gras, rangées de (36px) avec le libellé à gauche et la valeur à droite (`.adm-valeur`, (32px)). Il n'a pas de Terminé : ce qui est valable s'enregistre seul. Il ne prend le focus que s'il a été ouvert au clavier, et le rend à la fermeture. Sur la page éditée, la sélection est un anneau de (2px) à la couleur du texte du thème, jamais une couleur du shell : il se lit sur tous les thèmes.
+
+Le parcours d'achat (20 octobre 2026). Une fonction réservée, les stats ou Réglages ouvrent les offres dans une fenêtre par-dessus l'écran en cours (`FenetreOffres` dans `Offres.tsx`, une `Feuille` `large` et `nue`) : la fermer rend l'écran tel qu'il était, panneau compris. Au bureau, elle mesure (1000px) au plus, arrondi (14px), avec une ombre de fenêtre ; son en-tête porte le titre, le badge « 3 mois offerts », la bascule Mensuel / Annuel (un segment) et la croix. Dessous, les quatre offres de front, en cartes au trait de (1px) : le nom, le prix au rôle `metric`, puis, à l'année, « au lieu de 48 € » au gris lisible (`#5f5f5a`, 6,4:1, jamais barré) et l'économie réelle à l'encre (« 12 € d'économie », calculée depuis `OFFRES`), le bouton, et ce que l'offre ajoute. L'offre qui débloque la fonction demandée est cernée d'un trait d'encre de (2px), avec son badge plein et sa ligne en semi-gras ; sans fonction, c'est l'offre juste au-dessus de la sienne qui passe devant. Premium dit « Bientôt ». Au téléphone, la fenêtre prend l'écran : la bascule, quatre onglets, une carte à la fois dans un rail qui s'aimante (la suivante dépasse, les autres sont inertes), et un seul bouton en bas, celui de l'offre en vue, avec son prix. Posée sur une autre fenêtre (les offres par-dessus Ajouter), une `Feuille` ne rajoute pas de voile : un seul assombrissement, celui du dessous.
+
+Choisir ouvre le récapitulatif dans la même fenêtre : « ‹ Les offres », la période en deux cartes, ce qu'on paie aujourd'hui (pour un abonné qui change d'offre, la différence au prorata), la prochaine échéance, l'absence d'engagement, ce qu'on débloque et, au bureau, la page telle qu'elle sera ; puis « Payer avec Creem », au signe `ui-ouvrir`, et dessous la note au gris (prix TTC, ce que fait Creem, le lien vers les conditions d'utilisation). Au retour, une fenêtre moyenne dit « On active ton offre… » tant que le webhook signé n'est pas passé, puis « C'est fait, tu es en Starter », ce qui vient de s'ouvrir (la fonction demandée en tête) et un geste pour s'en servir (« Essayer tes couleurs » ouvre le Design sur Couleurs ; « Programmer ce bloc » rouvre le bloc d'où l'on était parti, sur la règle tout juste débloquée). Après trente secondes sans webhook, elle dit que l'offre arrive et qu'on peut fermer. L'offre ne s'accorde jamais d'après l'adresse de retour. Facturation est une sous-page de Réglages, en lignes : l'offre et « Changer d'offre », le prix, la prochaine échéance (ou la fin d'une offre résiliée), puis la carte, les factures et « Résilier mon abonnement » (le nom que lui donnent les conditions d'utilisation), qui mènent au portail client de Creem ; au téléphone, ce dernier bouton passe sous sa phrase (`.adm-ligne-pile`).
+
+Un menu (le compte, puis les actions d'un bloc ou d'une ligne, la période) est une petite surface blanche bordée, avec une ombre courte : les flèches le parcourent, Échap le referme et rend le focus à son bouton (`Menu` dans `ui.tsx`). Les durées et courbes observées figurent dans le sidecar.
 
 ## Do's and Don'ts
 

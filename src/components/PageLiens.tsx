@@ -9,9 +9,8 @@ import { lienApp } from '../lib/ouvrirApp.ts';
 import { enAttente } from '../lib/moments.ts';
 import { etatPlaces } from '../lib/acces.ts';
 import { adresseSaisie } from '../lib/valider.ts';
-import { LOCALES, NOMS_LANGUES, textes } from '../lib/langues.ts';
-import type { Textes } from '../lib/langues.ts';
-import type { LangueVisiteur } from '../lib/types.ts';
+import { LOCALE, textes } from '../lib/mots.ts';
+import type { Textes } from '../lib/mots.ts';
 import { Icone, NOMS_RESEAUX } from './Icone.tsx';
 import { peut } from '../lib/abonnement.ts';
 
@@ -57,8 +56,7 @@ export function PageLiens({ page, apercu = false, edition }: { page: PagePubliqu
   // La page de Lilian s'annonce sans pseudo ; les autres avec le leur.
   const pseudo = compte.principal ? '' : compte.pseudo;
   const theme = themeDe(reglages);
-  const langue = page.langue ?? 'fr';
-  const t = textes(langue, reglages.vouvoiement);
+  const t = textes(reglages.vouvoiement);
   const [toast, setToast] = useState('');
 
   useEffect(() => { if (!apercu) suivre(pseudo, 'vue'); }, [apercu, pseudo]);
@@ -108,7 +106,7 @@ export function PageLiens({ page, apercu = false, edition }: { page: PagePubliqu
   );
 
   return (
-    <div className="lp" lang={langue} onClick={ouvrirDansApp} style={variablesTheme(theme) as CSSProperties} data-bouton={reglages.bouton.style} data-forme={reglages.bouton.forme} data-ombre={reglages.bouton.ombre} data-police={theme.police} data-decor={theme.decor} data-bureau={reglages.bureau}>
+    <div className="lp" onClick={ouvrirDansApp} style={variablesTheme(theme) as CSSProperties} data-bouton={reglages.bouton.style} data-forme={reglages.bouton.forme} data-ombre={reglages.bouton.ombre} data-police={theme.police} data-decor={theme.decor} data-bureau={reglages.bureau}>
       <div className="lp-scene">
       <div className="lp-col">
         {reglages.partage && !edition && (
@@ -140,10 +138,10 @@ export function PageLiens({ page, apercu = false, edition }: { page: PagePubliqu
         </header>
 
         <main className="lp-blocs">
-          {edition ? edition.liste(blocs, bloc => <BlocPublic bloc={bloc} reglages={reglages} clic={() => {}} cible={cible} apercu t={t} langue={langue} />) : <>
+          {edition ? edition.liste(blocs, bloc => <BlocPublic bloc={bloc} reglages={reglages} clic={() => {}} cible={cible} apercu t={t} />) : <>
             {blocs.map((bloc, i) => (
               <div key={bloc.id} className="lp-bloc" data-type={bloc.type} data-vedette={bloc.vedette ? bloc.format : undefined} style={{ '--i': i } as CSSProperties}>
-                <BlocPublic bloc={bloc} reglages={reglages} clic={() => clic(bloc)} cible={cible} apercu={apercu} maintenant={page.maintenant} pseudo={pseudo} t={t} langue={langue} />
+                <BlocPublic bloc={bloc} reglages={reglages} clic={() => clic(bloc)} cible={cible} apercu={apercu} maintenant={page.maintenant} pseudo={pseudo} t={t} />
               </div>
             ))}
             {blocs.length === 0 && !apercu && <p className="lp-texte">{t.rien}</p>}
@@ -151,13 +149,6 @@ export function PageLiens({ page, apercu = false, edition }: { page: PagePubliqu
         </main>
 
         {reglages.reseauxPosition === 'bas' && <footer className="lp-pied">{reseaux}</footer>}
-        {!edition && reglages.langues?.length > 0 && (
-          <nav className="lp-langues" aria-label={t.langue}>
-            {(['fr', ...reglages.langues] as LangueVisiteur[]).map(l => (
-              <a key={l} href={`?lang=${l}`} hrefLang={l} lang={l} aria-current={l === langue ? 'true' : undefined} rel="alternate">{NOMS_LANGUES[l]}</a>
-            ))}
-          </nav>
-        )}
         <p className="lp-signature">{compte.principal
           ? <a href="https://liliansevoumian.fr" {...cible}>liliansevoumian.fr</a>
           : <>
@@ -203,8 +194,8 @@ function Pictogramme({ bloc }: { bloc: Bloc }) {
   return null;
 }
 
-export function BlocPublic({ bloc, reglages, clic, cible, apercu, maintenant, pseudo, t = textes('fr'), langue = 'fr' }: { bloc: Bloc; reglages: Reglages; clic: () => void; cible: object; apercu: boolean; maintenant?: number; pseudo?: string; t?: Textes; langue?: LangueVisiteur }) {
-  if (bloc.type === 'lien' && enAttente(bloc, maintenant ?? Date.now())) return <CompteARebours bloc={bloc} depart={maintenant ?? Date.now()} apercu={apercu} t={t} langue={langue} />;
+export function BlocPublic({ bloc, reglages, clic, cible, apercu, maintenant, pseudo, t = textes(reglages.vouvoiement) }: { bloc: Bloc; reglages: Reglages; clic: () => void; cible: object; apercu: boolean; maintenant?: number; pseudo?: string; t?: Textes }) {
+  if (bloc.type === 'lien' && enAttente(bloc, maintenant ?? Date.now())) return <CompteARebours bloc={bloc} depart={maintenant ?? Date.now()} apercu={apercu} t={t} />;
   const rel = bloc.indexable ? 'noopener' : 'nofollow noopener';
   const nosnippet = bloc.indexable ? {} : { 'data-nosnippet': true };
   const mouvement = animationDe(bloc, reglages);
@@ -223,9 +214,9 @@ export function BlocPublic({ bloc, reglages, clic, cible, apercu, maintenant, ps
     case 'inscription':
       return <Inscription bloc={bloc} apercu={apercu} pseudo={pseudo ?? ''} t={t} />;
     case 'preuve':
-      return <PreuveSociale bloc={bloc} t={t} langue={langue} clic={clic} cible={cible} />;
+      return <PreuveSociale bloc={bloc} t={t} clic={clic} cible={cible} />;
     default:
-      if (bloc.acces) return <Drop bloc={bloc} t={t} langue={langue} apercu={apercu} pseudo={pseudo ?? ''} clic={clic} cible={cible} />;
+      if (bloc.acces) return <Drop bloc={bloc} t={t} apercu={apercu} pseudo={pseudo ?? ''} clic={clic} cible={cible} />;
       if (!bloc.url) return null;
       if (bloc.vedette) {
         const teinte = bloc.teinte === 'accent' ? 'lp-accent' : '';
@@ -294,7 +285,7 @@ export function BlocPublic({ bloc, reglages, clic, cible, apercu, maintenant, ps
 const deux = (n: number) => String(n).padStart(2, '0');
 
 /** Un lien pas encore ouvert : son titre et le temps qui reste. Son adresse n'arrive qu'à l'ouverture. */
-function CompteARebours({ bloc, depart, apercu, t, langue }: { bloc: Bloc; depart: number; apercu: boolean; t: Textes; langue: LangueVisiteur }) {
+function CompteARebours({ bloc, depart, apercu, t }: { bloc: Bloc; depart: number; apercu: boolean; t: Textes }) {
   const [maintenant, setMaintenant] = useState(depart);
   const ouverture = Date.parse(bloc.debut);
   useEffect(() => {
@@ -306,7 +297,7 @@ function CompteARebours({ bloc, depart, apercu, t, langue }: { bloc: Bloc; depar
   // À l'heure dite, la page se recharge : le serveur donne alors l'adresse du lien.
   useEffect(() => { if (!apercu && reste === 0) { const t = setTimeout(() => location.reload(), 800); return () => clearTimeout(t); } }, [reste, apercu]);
   const s = Math.floor(reste / 1000), j = Math.floor(s / 86_400), h = Math.floor((s % 86_400) / 3600), m = Math.floor((s % 3600) / 60);
-  const quand = new Date(ouverture).toLocaleString(LOCALES[langue], { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
+  const quand = new Date(ouverture).toLocaleString(LOCALE, { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
   return (
     <div className={`lp-carte lp-rebours ${bloc.vedette && bloc.teinte === 'accent' ? 'lp-accent' : ''}`} data-format="bandeau" role="timer" aria-label={`${bloc.titre} : ${t.ouvreLe(quand)}`}>
       <span className="lp-carte-tuile" aria-hidden="true"><Icone nom={bloc.icone && ICONES[bloc.icone] ? bloc.icone : 'horloge'} taille={22} /></span>
@@ -411,7 +402,7 @@ function Inscription({ bloc, apercu, pseudo, t }: { bloc: Bloc; apercu: boolean;
       const params = new URLSearchParams(location.search);
       const r = await fetch('/api/inscription', { method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ page: pseudo, bloc: bloc.id, email: f.get('email'), prenom: f.get('prenom') ?? '', website: f.get('website') ?? '', utm: params.get('utm_source') ?? params.get('s') ?? '', referent: document.referrer }) });
-      // Les messages viennent de la page, dans la langue du visiteur ; le serveur ne donne que le statut.
+      // Les messages viennent de la page, dans son ton (tu ou vous) ; le serveur ne donne que le statut.
       setEtat(r.ok ? { type: 'ok', message: t.merci } : { type: 'erreur', message: r.status === 400 ? t.emailInvalide : r.status === 429 ? t.tropDEssais : r.status === 404 ? t.indisponible : t.echec });
     } catch { setEtat({ type: 'erreur', message: t.echec }); }
   }
@@ -444,7 +435,7 @@ function Inscription({ bloc, apercu, pseudo, t }: { bloc: Bloc; apercu: boolean;
  * arrivés. L'adresse n'est pas dans la page : `/api/acces` la donne une fois
  * le code vérifié et la place prise.
  */
-function Drop({ bloc, t, langue, apercu, pseudo, clic, cible }: { bloc: Bloc; t: Textes; langue: LangueVisiteur; apercu: boolean; pseudo: string; clic: () => void; cible: object }) {
+function Drop({ bloc, t, apercu, pseudo, clic, cible }: { bloc: Bloc; t: Textes; apercu: boolean; pseudo: string; clic: () => void; cible: object }) {
   const avecCode = !!bloc.acces?.code;
   const places = bloc.acces?.places ?? 0;
   const [restantes, setRestantes] = useState(bloc.restantes ?? null);
@@ -453,7 +444,7 @@ function Drop({ bloc, t, langue, apercu, pseudo, clic, cible }: { bloc: Bloc; t:
   const [garde, setGarde] = useState(false);
   const [etat, setEtat] = useState<{ type: 'repos' | 'envoi' | 'erreur'; message?: string }>({ type: 'repos' });
   const complet = places > 0 && restantes !== null && restantes <= 0 && !url;
-  const badge = url ? '' : etatPlaces(restantes, places, t, LOCALES[langue]);
+  const badge = url ? '' : etatPlaces(restantes, places, t);
 
   async function debloquer(code = '') {
     // Dans l'aperçu du back office, le bloc a encore son adresse : on la montre sans prendre de place.
@@ -508,10 +499,10 @@ function Etoiles({ note }: { note: number }) {
 }
 
 /** Une preuve : la note des avis, un chiffre qui compte, ou un témoignage. */
-function PreuveSociale({ bloc, t, langue, clic, cible }: { bloc: Bloc; t: Textes; langue: LangueVisiteur; clic: () => void; cible: object }) {
+function PreuveSociale({ bloc, t, clic, cible }: { bloc: Bloc; t: Textes; clic: () => void; cible: object }) {
   const p = bloc.preuve;
   if (!p) return null;
-  const locale = LOCALES[langue];
+  const locale = LOCALE;
   const nombre = (n: number) => n.toLocaleString(locale);
   let corps: ReactNode;
   if (p.genre === 'note') {

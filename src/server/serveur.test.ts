@@ -97,7 +97,7 @@ test('statistiques : sources lisibles, robots et admin écartés, totaux et tend
   enregistrer({ type: 'vue', bloc: null, utm: '', referent: '' }, { ip: '3.3.3.3', ua: iphone, session: null }, maintenant - 10 * 86_400_000);
   const s = db.stats(P, 7, maintenant);
   assert.equal(s.vues, 3); assert.equal(s.visiteurs, 2); assert.equal(s.clics, 1);
-  assert.equal(s.serie.length, 7); assert.equal(s.serie[6].vues, 3);
+  assert.equal(s.serie.length, 7); assert.equal(s.serie[6].vues, 3); assert.equal(s.serie[6].visiteurs, 2);
   assert.equal(s.precedent.vues, 1);
   assert.equal(s.dejaVue, true);
   assert.deepEqual(s.blocs.map(b => b.id), [id]);
@@ -412,24 +412,68 @@ test('offres : webhooks Creem signés, idempotents, dans le désordre', async ()
   assert.equal(passe.periode, 'an');
   assert.equal(db.listerComptes(t + 43 * jour).find(x => x.id === lea.id)?.plan, 'starter');
 
-  // Ce que l'offre permet : Starter ouvre les avis et la page sans mention, pas les drops.
+  // Ce que l'offre permet : Starter ouvre la page sans mention, les couleurs, les dates, les avis et les stats ; pas l'heure ni les drops.
+  const { joursLisibles } = await import('./droits.ts');
   const neuve = { ...db.compteParId(lea.id)!, cree: BASCULE_OFFRES + 1 };
   const d = droits(neuve, env, t + 43 * jour);
-  assert.equal(d.sansMention, true);
-  assert.equal(d.avis, true);
-  assert.equal(d.drops, false);
-  assert.equal(d.reseauHeure, false);
-  // Une page d'avant les offres garde tout, sauf la page sans mention.
-  const ancienne = droits({ ...db.compteParId(max.id)!, cree: BASCULE_OFFRES - 1 }, env, t);
-  assert.equal(ancienne.drops, true);
-  assert.equal(ancienne.sansMention, false);
-  assert.equal(droits({ ...db.compteParId(max.id)!, cree: BASCULE_OFFRES + 1 }, env, t).drops, false);
+  for (const f of ['sansMention', 'couleurs', 'programmation', 'avis', 'stats'] as const) assert.equal(d[f], true, f);
+  for (const f of ['heure', 'drops', 'listeEmail'] as const) assert.equal(d[f], false, f);
+  assert.equal(joursLisibles(neuve, env, t + 43 * jour), 30);
+  // Gratuit : des liens sans limite, la page selon le réseau et les thèmes ; rien de réservé, pas de stats à lire.
+  const gratuite = { ...db.compteParId(max.id)!, cree: BASCULE_OFFRES + 1 };
+  assert.ok(Object.values(droits(gratuite, env, t)).every(v => !v));
+  assert.equal(joursLisibles(gratuite, env, t), 0);
+  // Une page d'avant les offres garde tout, sauf la page sans mention, et ses sept jours de stats.
+  const ancienne = { ...db.compteParId(max.id)!, cree: BASCULE_OFFRES - 1 };
+  for (const f of ['couleurs', 'programmation', 'avis', 'stats', 'heure', 'drops', 'listeEmail'] as const) assert.equal(droits(ancienne, env, t)[f], true, f);
+  assert.equal(droits(ancienne, env, t).sansMention, false);
+  assert.equal(joursLisibles(ancienne, env, t), 7);
   // Sans paiement branché (en local), rien n'est réservé, sauf la page sans mention.
-  const libre = droits({ ...db.compteParId(max.id)!, cree: BASCULE_OFFRES + 1 }, {}, t);
+  const libre = droits(gratuite, {}, t);
   assert.equal(libre.drops, true);
   assert.equal(libre.sansMention, false);
+  assert.equal(joursLisibles(gratuite, {}, t), 365);
   // Le compte principal a tout.
   assert.ok(Object.values(droits(db.compteParId(P)!, env, t)).every(Boolean));
+  assert.equal(joursLisibles(db.compteParId(P)!, env, t), 365);
+});
+
+test('programmer un bloc demande Starter : refusé en Gratuit, permis en Starter, gardé par une page d’avant les offres', async () => {
+  const { verifierDates } = await import('./droits.ts');
+  const { REFUS_PROGRAMMATION } = await import('../lib/droits.ts');
+  const env = { CREEM_API_KEY: 'creem_test_x', CREEM_WEBHOOK_SECRET: 'whsec_test', CREEM_PRODUIT_MOIS: 'prod_mois', CREEM_PRODUIT_AN: 'prod_an' };
+  const t = BASCULE_OFFRES + 86_400_000, jour = 86_400_000;
+  const refus = { message: REFUS_PROGRAMMATION };
+  // Comme le serveur, qui valide un bloc avant de le vérifier : les dates y sont déjà au format ISO.
+  const bloc = (o: object, id = 'l1') => validerBloc({ type: 'lien', titre: 'Lancement', url: 'exemple.fr', ...o }, id);
+  const lien = bloc({});
+  const lancement = { debut: '2099-01-01T10:00:00Z', compteARebours: true };
+  const date = bloc(lancement);
+
+  // Gratuit : un bloc sans dates s'enregistre ; un début, une fin ou un compte à rebours, non.
+  const noa = db.creerCompte('noa@exemple.fr', 'noa', t);
+  assert.doesNotThrow(() => verifierDates(noa, lien, env, t));
+  db.enregistrerBloc(noa.id, lien);
+  assert.throws(() => verifierDates(noa, date, env, t), refus);
+  assert.throws(() => verifierDates(noa, bloc({ fin: '2099-01-01T10:00:00Z' }), env, t), refus);
+  assert.throws(() => verifierDates(noa, bloc(lancement, 'l2'), env, t), refus, 'un bloc neuf non plus');
+  // Des dates posées avant (une offre quittée) se gardent et se retirent, mais ne se changent pas.
+  db.enregistrerBloc(noa.id, date);
+  assert.doesNotThrow(() => verifierDates(noa, bloc({ ...lancement, titre: 'Lancement !' }), env, t));
+  assert.doesNotThrow(() => verifierDates(noa, bloc({ ...lancement, compteARebours: false }), env, t));
+  assert.doesNotThrow(() => verifierDates(noa, lien, env, t));
+  assert.throws(() => verifierDates(noa, bloc({ ...lancement, debut: '2099-02-01T10:00:00Z' }), env, t), refus);
+
+  // Starter : tout est permis.
+  db.ecrireCatalogue([{ id: 'prod_starter_an', plan: 'starter', periode: 'an', prix: 3600, actuel: true }]);
+  const sam = db.creerCompte('sam@exemple.fr', 'sam', t);
+  db.appliquerAbonnement(sam.id, { client: 'cust_s', abonnement: 'sub_s', statut: 'active', finPeriode: t + 365 * jour, maj: t, produit: 'prod_starter_an' });
+  assert.doesNotThrow(() => verifierDates(db.compteParId(sam.id)!, bloc({ ...lancement, fin: '2099-02-01T10:00:00Z' }), env, t));
+
+  // Une page d'avant les offres programme sans abonnement ; sans paiement branché, rien n'est réservé.
+  const zoe = db.creerCompte('zoe@exemple.fr', 'zoe', BASCULE_OFFRES - jour);
+  assert.doesNotThrow(() => verifierDates(zoe, date, env, t));
+  assert.doesNotThrow(() => verifierDates(noa, bloc(lancement, 'l3'), {}, t));
 });
 
 test('offres : la page de paiement, le changement d’offre et le portail passent par l’API Creem', async () => {
@@ -567,6 +611,24 @@ test('le résumé de la semaine part le lundi matin, une fois, seulement après 
   assert.equal(await envoyerResumes(env, fetchFaux, lundi10h + 3_600_000), 0, 'une fois par semaine');
 });
 
+test('le résumé du lundi ne part qu’aux pages qui lisent leurs stats', async () => {
+  const { envoyerResumes } = await import('./resume.ts');
+  const lundi10h = Date.parse('2026-10-26T09:00:00Z'), jour = 86_400_000;
+  const envois: { to: string[] }[] = [];
+  const fetchFaux = (async (_: string, init: RequestInit) => { envois.push(JSON.parse(String(init.body))); return new Response('{}'); }) as typeof fetch;
+  const env = { RESEND_API_KEY: 'cle', LIENS_ADMIN_EMAIL: 'moi@exemple.fr', CREEM_API_KEY: 'creem_test_x', CREEM_WEBHOOK_SECRET: 'whsec_test', CREEM_PRODUIT_MOIS: 'prod_mois', CREEM_PRODUIT_AN: 'prod_an' };
+  db.ecrireCatalogue([{ id: 'prod_starter_an', plan: 'starter', periode: 'an', prix: 3600, actuel: true }]);
+  const gratuite = db.creerCompte('noa@exemple.fr', 'noa', BASCULE_OFFRES + jour);
+  const starter = db.creerCompte('sam@exemple.fr', 'sam', BASCULE_OFFRES + jour);
+  db.appliquerAbonnement(starter.id, { client: 'cust_s', abonnement: 'sub_s', statut: 'active', finPeriode: lundi10h + 300 * jour, maj: lundi10h - 3 * jour, produit: 'prod_starter_an' });
+  const ancienne = db.creerCompte('zoe@exemple.fr', 'zoe', BASCULE_OFFRES - jour);
+  for (const c of [gratuite, starter, ancienne]) db.ajouterEvenement({ compte: c.id, type: 'vue', bloc: null, visiteur: 'v', source: 'TikTok', appareil: 'Mobile', ts: lundi10h - jour });
+  // Les visites se comptent pour tout le monde ; seul le résumé est réservé aux offres qui montrent les stats.
+  assert.equal(db.stats(gratuite.id, 7, lundi10h).vues, 1);
+  assert.equal(await envoyerResumes(env, fetchFaux, lundi10h), 2);
+  assert.deepEqual(envois.flatMap(e => e.to).sort(), ['sam@exemple.fr', 'zoe@exemple.fr']);
+});
+
 test('mode drop : le bon code, une place par visiteur, puis complet', async () => {
   const { debloquer } = await import('./acces.ts');
   const { masquerAcces } = await import('../lib/acces.ts');
@@ -591,24 +653,25 @@ test('mode drop : le bon code, une place par visiteur, puis complet', async () =
   assert.equal(dernier, 429);
 });
 
-test('page en plusieurs langues : la langue du visiteur, les textes traduits', async () => {
-  const { langueDuVisiteur, traduirePage } = await import('../lib/langues.ts');
-  assert.equal(langueDuVisiteur('en-US,en;q=0.9', []), 'fr');
-  assert.equal(langueDuVisiteur('en-US,en;q=0.9', ['en']), 'en');
-  assert.equal(langueDuVisiteur('fr-FR,en;q=0.8', ['en']), 'fr');
-  assert.equal(langueDuVisiteur('de;q=0.5,es;q=0.9', ['en', 'de', 'es']), 'es');
-  assert.equal(langueDuVisiteur('ja', ['en']), 'en');
-  assert.equal(langueDuVisiteur('ja', ['es']), 'fr');
-  assert.equal(langueDuVisiteur('en', ['en', 'it'], 'it'), 'it');
-  assert.equal(langueDuVisiteur('en', ['en'], 'fr'), 'fr');
-  const bloc = validerBloc({ type: 'lien', titre: 'Mon cours', url: 'x.fr', traductions: { en: { titre: 'My course' }, xx: { titre: 'non' }, es: { titre: '' } } }, 't');
-  assert.deepEqual(Object.keys(bloc.traductions), ['en']);
-  const reglages = validerReglages({ ...REGLAGES_DEFAUT, langues: ['en', 'zz'], bioTraduite: { en: 'Hi', zz: 'x' } }, REGLAGES_DEFAUT);
-  assert.deepEqual(reglages.langues, ['en']); assert.deepEqual(reglages.bioTraduite, { en: 'Hi' });
-  const page = traduirePage({ reglages, blocs: [bloc], compte: { pseudo: 'x', principal: false, plan: 'gratuit' as const } }, 'en');
-  assert.equal(page.blocs[0].titre, 'My course'); assert.equal(page.reglages.profil.bio, 'Hi'); assert.equal(page.langue, 'en');
-  // En français, la page reste telle que la personne l'a écrite.
-  assert.equal(traduirePage({ reglages, blocs: [bloc], compte: { pseudo: 'x', principal: false, plan: 'gratuit' as const } }, 'fr').blocs[0].titre, 'Mon cours');
+test('les traductions d’avant (retirées le 20 octobre 2026) se lisent sans casser la page', () => {
+  const d = db.base();
+  const brut = (id: string) => (d.prepare('SELECT donnees FROM blocs WHERE id = ?').get(id) as { donnees: string }).donnees;
+  // Une base qui garde des traductions : sur un bloc, et la liste des langues avec la bio traduite dans les réglages.
+  db.enregistrerBloc(P, validerBloc({ type: 'lien', titre: 'Mon cours', url: 'x.fr' }, 't'));
+  d.prepare('UPDATE blocs SET donnees = ? WHERE id = ?').run(JSON.stringify({ ...JSON.parse(brut('t')), traductions: { en: { titre: 'My course' } } }), 't');
+  d.prepare('UPDATE pages SET valeur = ? WHERE compte = ?').run(JSON.stringify({ ...db.lireReglages(P), langues: ['en'], bioTraduite: { en: 'Hi' } }), P);
+  // La page se lit en français, telle que la personne l'a écrite ; les traductions sont laissées de côté.
+  const bloc = db.lireBlocs(P).find(b => b.id === 't')!;
+  assert.equal(bloc.titre, 'Mon cours');
+  assert.equal('traductions' in bloc, false);
+  const reglages = db.lireReglages(P);
+  assert.equal('langues' in reglages, false);
+  assert.equal('bioTraduite' in reglages, false);
+  // Réenregistrés, le bloc et les réglages les perdent pour de bon.
+  db.enregistrerBloc(P, bloc);
+  assert.doesNotMatch(brut('t'), /traductions/);
+  db.ecrireReglages(P, reglages);
+  assert.doesNotMatch((d.prepare('SELECT valeur FROM pages WHERE compte = ?').get(P) as { valeur: string }).valeur, /langues|bioTraduite/);
 });
 
 test('avis et preuves : la note bornée, le genre vérifié', () => {
