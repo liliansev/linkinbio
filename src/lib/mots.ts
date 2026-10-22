@@ -1,6 +1,7 @@
 /*
  * Les mots de la page publique elle-même (le formulaire, le compte à rebours,
- * les places d'un drop, le pied de page, l'écran qui propose le navigateur),
+ * les places d'un drop, le pied de page, l'écran qui propose le navigateur,
+ * la vitrine),
  * au « tu » ou au « vous » selon ce que la personne a choisi pour ses visiteurs.
  */
 
@@ -27,6 +28,11 @@ const tu = {
   ouvrirDans: (safari: boolean) => (safari ? 'Ouvrir dans Safari' : 'Ouvrir mon navigateur'),
   copierLien: 'Copier le lien', copieRatee: 'La copie n’a pas marché.', continuerIci: 'Continuer ici',
   aideAvant: 'Rien ne s’ouvre ? Touche', aideApres: 'en haut à droite et choisis d’ouvrir dans le navigateur.', troisPoints: 'les trois points',
+  // La vitrine : la mention d'un lien partenaire (loi du 9 juin 2023), son code promo, « Me soutenir » et la réservation.
+  publicite: 'Publicité', collaboration: 'Collaboration commerciale',
+  codePromo: 'Code', codeCopie: (code: string) => `Code ${code} copié`, copierCode: (code: string) => `Copier le code ${code}`,
+  autreMontant: 'Autre montant', paiementSur: (site: string) => `Le paiement se fait sur ${site}.`, soutenirSur: (site: string) => `Soutenir sur ${site}`,
+  ouvrirSur: (site: string) => `Ouvrir sur ${site}`, fermer: 'Fermer', chargement: 'Chargement…',
 };
 export type Textes = typeof tu;
 

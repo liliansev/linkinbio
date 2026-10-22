@@ -6,7 +6,7 @@ import { estEnLigne } from '../src/lib/types.ts';
 import { Admin } from '../src/admin/Admin.tsx';
 import { THEMES } from '../src/lib/themes.ts';
 import { PageLiens } from '../src/components/PageLiens.tsx';
-import { apiDemo, apiGratuit, apiNouveau, pageDemo, recommencerNouveau } from './api-demo.ts';
+import { apiDemo, apiGratuit, apiNouveau, blocsVitrine, pageDemo, recommencerNouveau } from './api-demo.ts';
 import type { Sortie } from '../src/lib/sortie.ts';
 
 /** La feuille qui monte par-dessus la page dans LinkedIn sur iPhone (`#sortie`), ou dans Instagram sur Android (`#sortie-android`). */
@@ -16,7 +16,7 @@ const sortieDemo = (android: boolean): Sortie => (android
 
 /* L'aperçu navigable : le vrai back office et la vraie page, sans serveur. */
 function Demo() {
-  const lireVue = () => (/^#(page|sortie)/.test(location.hash) ? 'page' : location.hash === '#nouveau' ? 'nouveau' : location.hash === '#gratuit' ? 'gratuit' : 'admin');
+  const lireVue = () => (/^#(page|sortie|vitrine)/.test(location.hash) ? 'page' : location.hash === '#nouveau' ? 'nouveau' : location.hash === '#gratuit' ? 'gratuit' : 'admin');
   const [vue, setVue] = useState(lireVue);
   // Passer de `#sortie=klein` à `#sortie=riso` ne change pas de vue : l'adresse elle-même redessine la page.
   const [hash, setHash] = useState(() => location.hash);
@@ -33,6 +33,10 @@ function Demo() {
     // `#page=klein` montre la page dans un autre thème, avec ses boutons conseillés : pour revoir chaque thème d'un coup d'œil.
     const autre = THEMES.find(t => t.id === hash.split('=')[1]);
     if (autre) p.reglages = { ...p.reglages, theme: autre.id, couleurs: { fond: '', boutons: '', accent: '' }, bouton: { ...p.reglages.bouton, ...autre.conseil } };
+    // `#vitrine=klein` : la vitrine d'exemple dans un thème, pour la planche de captures.
+    if (hash.startsWith('#vitrine')) {
+      return <PageLiens key={hash} page={{ reglages: { ...p.reglages, bureau }, blocs: blocsVitrine(), compte: p.compte }} apercu />;
+    }
     // `#sortie=klein` : la feuille qui propose Safari, dans un thème, pour la planche de captures ; rien d'autre par-dessus.
     if (hash.startsWith('#sortie')) {
       const sortie = sortieDemo(hash.startsWith('#sortie-android'));

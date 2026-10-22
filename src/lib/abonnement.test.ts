@@ -75,7 +75,7 @@ test('la prochaine échéance : un mois ou un an plus tard, le même jour ou le 
 test('une fonction se débloque avec son offre et celles du dessus', () => {
   // Gratuit : des liens sans limite, la page selon le réseau et les thèmes, rien de réservé.
   for (const f of Object.keys(FONCTIONS) as (keyof typeof FONCTIONS)[]) assert.equal(peut('gratuit', f), false, f);
-  for (const f of ['sansMention', 'couleurs', 'programmation', 'avis', 'stats'] as const) assert.equal(peut('starter', f), true, f);
+  for (const f of ['sansMention', 'vitrine', 'couleurs', 'programmation', 'avis', 'stats'] as const) assert.equal(peut('starter', f), true, f);
   for (const f of ['heure', 'drops', 'listeEmail'] as const) {
     assert.equal(peut('starter', f), false, f);
     assert.equal(peut('pro', f), true, f);
@@ -83,10 +83,12 @@ test('une fonction se débloque avec son offre et celles du dessus', () => {
   assert.equal(peut('premium', 'listeEmail'), true);
 });
 
-test('une page d’avant les offres garde tout, sauf la page sans mention', () => {
+test('une page d’avant les offres garde tout, sauf la page sans mention et la vitrine, venue après', () => {
   const avant = BASCULE_OFFRES - 86_400_000;
   for (const f of ['drops', 'couleurs', 'programmation', 'heure', 'stats', 'avis', 'listeEmail'] as const) assert.equal(peut('gratuit', f, avant), true, f);
   assert.equal(peut('gratuit', 'sansMention', avant), false);
+  assert.equal(peut('gratuit', 'vitrine', avant), false);
+  assert.equal(peut('starter', 'vitrine', avant), true);
   assert.equal(peut('gratuit', 'drops', BASCULE_OFFRES + 1), false);
   assert.equal(peut('gratuit', 'programmation', BASCULE_OFFRES + 1), false);
 });
@@ -136,6 +138,21 @@ test('ce que l’offre ne comprend pas s’efface de la page, sans rien perdre',
   const avantLancement = Date.parse('2098-12-31T10:00:00Z');
   assert.ok(!composerMoment(page.blocs, avantLancement).some(b => b.id === 'e'));
   assert.ok(composerMoment(pleine.blocs, avantLancement).some(b => b.id === 'e'));
+});
+
+test('la vitrine demande Starter ; la mention d’un lien partenaire reste à tous, son code promo non', () => {
+  const produit = { ...nouveauBloc('produit', 'p'), url: 'https://boutique.exemple/p', titre: 'Le carnet', prix: '24\u00a0€' };
+  const soutien = { ...nouveauBloc('soutien', 's'), url: 'https://paypal.me/lilian' };
+  const rdv = { ...nouveauBloc('reservation', 'r'), url: 'https://calendly.com/lilian/30min' };
+  const partenaire = { ...nouveauBloc('lien', 'l'), url: 'https://marque.exemple', partenariat: { mention: 'collaboration' as const, code: 'LILIAN20' } };
+  const page = selonDroits(REGLAGES_DEFAUT, [produit, soutien, rdv, partenaire], RIEN);
+  assert.deepEqual(page.blocs.map(b => b.id), ['l']);
+  assert.deepEqual(page.blocs[0].partenariat, { mention: 'collaboration', code: '' });
+  // Rien n'est effacé : reprendre Starter remet le code.
+  assert.equal(partenaire.partenariat.code, 'LILIAN20');
+  const pleine = selonDroits(REGLAGES_DEFAUT, [produit, soutien, rdv, partenaire], { ...RIEN, vitrine: true });
+  assert.deepEqual(pleine.blocs.map(b => b.id), ['p', 's', 'r', 'l']);
+  assert.equal(pleine.blocs[3], partenaire);
 });
 
 test('la page selon le réseau et la page selon l’heure se séparent : le réseau pour tous, l’heure avec Pro', () => {

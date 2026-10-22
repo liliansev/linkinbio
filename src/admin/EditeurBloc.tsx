@@ -1,9 +1,10 @@
 import { useContext, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import type { CSSProperties, MutableRefObject } from 'react';
-import type { Api, Bloc, Reglages } from '../lib/types.ts';
-import { ANIMATIONS_BLOC, SANS_COULEURS, estEnLigne } from '../lib/types.ts';
+import type { Api, Bloc, MentionPartenaire, Partenariat, Reglages } from '../lib/types.ts';
+import { ANIMATIONS_BLOC, MONTANTS_DEFAUT, SANS_COULEURS, TYPES_ADRESSE, TYPES_VITRINE, estEnLigne, nouveauBloc } from '../lib/types.ts';
 import { RESEAUX } from '../lib/types.ts';
-import { adresse, adresseSaisie, pourquoiPasAdresse } from '../lib/valider.ts';
+import { adresse, adresseSaisie, montants as lireMontants, pourquoiPasAdresse } from '../lib/valider.ts';
+import { avecMontants, nomAgenda, nomSoutien, seIntegre, soutienDe } from '../lib/vitrine.ts';
 import { nomSite, reseauDeUrl } from '../lib/demarrage.ts';
 import { memeBloc, verifierBloc } from '../lib/editionBloc.ts';
 import type { ChampErreur, Erreurs } from '../lib/editionBloc.ts';
@@ -13,14 +14,14 @@ import { Icone, NOMS_RESEAUX, PICTOS } from '../components/Icone.tsx';
 import { BlocPublic } from '../components/PageLiens.tsx';
 import { BoutonPrincipal, BoutonSecondaire, Champ, Feuille, Interrupteur, ListeChoix, NOMS_ANIMATIONS, Segments, choisirFichier, classeBouton, classeSaisie, flechesRadio, preparerImage, useFilFeuille, vibrer } from './ui.tsx';
 import type { FilFeuille } from './ui.tsx';
-import { TYPES } from './OngletLiens.tsx';
+import { typeDe } from './OngletLiens.tsx';
 import { appDe } from '../lib/ouvrirApp.ts';
 import { ChampsPreuve, PagesBloc, RangeesCompactes, RegleAOuvrir, RegleAcces, RegleMoment, RegleReseaux, Repli } from './ReglesBloc.tsx';
 import type { PageRegle } from './ReglesBloc.tsx';
 import { useCouche } from './couches.ts';
 import { reseauxDePartage } from '../lib/provenance.ts';
 import { etiquettes } from '../lib/etiquettes.ts';
-import { FournisseurOffre, Reserve, offreDe, useDroits, useVoirOffres } from './offre.tsx';
+import { Etiquette, FournisseurOffre, Reserve, offreDe, useDroits, useVoirOffres } from './offre.tsx';
 import type { Fonction } from '../lib/abonnement.ts';
 
 /** Au téléphone, la page ouverte dans la feuille d'un bloc : l'essentiel (`null`), « Plus de réglages », ou une règle. */
@@ -32,6 +33,37 @@ const niveau = (p: PageBloc) => (p === null ? 0 : p === 'plus' ? 1 : 2);
 function FilPage({ fil }: { fil: FilFeuille | null }) {
   useFilFeuille(fil);
   return null;
+}
+
+/** Les deux mentions qu'un lien partenaire peut porter (loi du 9 juin 2023). */
+const MENTIONS: { id: MentionPartenaire; nom: string }[] = [{ id: 'publicite', nom: 'Publicité' }, { id: 'collaboration', nom: 'Collaboration commerciale' }];
+const PARTENARIAT_NEUF: Partenariat = { mention: 'publicite', code: '' };
+
+/**
+ * Les montants de « Me soutenir » chez PayPal : quatre cases, en euros entiers ; une case vide n'est pas proposée.
+ * Les cases se remettent dans l'ordre en les quittant, jamais pendant la frappe.
+ */
+function ChampMontants({ montants, onChange, compact = false }: { montants: number[]; onChange: (m: number[]) => void; compact?: boolean }) {
+  const remplir = (l: number[]) => [0, 1, 2, 3].map(i => (l[i] ? String(l[i]) : ''));
+  const [cases, setCases] = useState(() => remplir(montants));
+  // Revenus d'ailleurs (« Annuler mes changements ») : les cases reprennent les montants du bloc.
+  useEffect(() => {
+    if (JSON.stringify(lireMontants(cases.map(Number))) !== JSON.stringify(montants)) setCases(remplir(montants));
+  }, [montants]); // eslint-disable-line react-hooks/exhaustive-deps
+  function changer(i: number, v: string) {
+    const l = cases.map((c, j) => (j === i ? v.replace(/\D/g, '').slice(0, 4) : c));
+    setCases(l);
+    onChange(lireMontants(l.map(Number)));
+  }
+  return (
+    <div role="group" aria-label="Montants proposés, en euros" className="grid grid-cols-4 gap-2 bureau:gap-1.5"
+      onBlur={e => { if (!e.currentTarget.contains(e.relatedTarget)) setCases(remplir(montants)); }}>
+      {cases.map((c, i) => (
+        <input key={i} className={`${classeSaisie} ${compact ? 'adm-field-ligne' : ''} text-center tabular-nums`} inputMode="numeric" enterKeyHint="done" value={c}
+          onChange={e => changer(i, e.target.value)} aria-label={`Montant ${i + 1}, en euros`} />
+      ))}
+    </div>
+  );
 }
 
 export interface OptionsEnregistrement {
@@ -208,8 +240,11 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
     setB({ ...b, ...champs });
     if (erreur && touches.some(k => erreurs[k])) setErreurs(e => Object.fromEntries(Object.entries(e).filter(([k]) => !touches.includes(k as ChampErreur))));
   };
-  const type = TYPES.find(t => t.type === b.type)!;
-  const avecUrl = b.type === 'lien' || b.type === 'video';
+  // Un lien partenaire a son nom et son aide à lui : c'est un lien, avec sa mention.
+  const type = typeDe(b);
+  const avecUrl = TYPES_ADRESSE.includes(b.type);
+  /** L'adresse tapée, si c'en est une (complétée de son https). */
+  const adresseValide = adresseSaisie(b.url);
 
   /** Vérifie le bloc ; renvoie la version à enregistrer, ou montre ce qui manque et mène au champ. */
   function valider(): Bloc | null {
@@ -250,19 +285,27 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
   const preuveRemplie = !!b.preuve && (b.preuve.genre === 'note' ? b.preuve.note > 0 && b.preuve.note <= 5 : b.preuve.genre === 'compteur' ? b.preuve.nombre > 0 : !!b.description.trim());
   // Ce qui est réglé derrière « Plus de réglages », nommé à droite de la ligne : on sait quoi sans ouvrir.
   // Au bureau, « Mis en avant » se règle dehors, à côté de « Visible sur ma page » : la ligne ne le répète pas.
-  const reglages_ = ([[b.vedette && !bureau, 'Mis en avant'], [!!b.sousTitre, 'Sous-titre'], [!!b.icone, 'Icône'], [!!b.image, 'Image'], [b.vedette && b.animation !== 'auto', 'Animation'],
+  // La photo d'un produit est dans l'essentiel, sous les yeux ; des montants de soutien se disent s'ils ne sont plus ceux de départ.
+  const montantsAMoi = b.type === 'soutien' && avecMontants(adresseValide) && b.montants.join() !== MONTANTS_DEFAUT.join();
+  const reglages_ = ([[b.vedette && !bureau, 'Mis en avant'], [!!b.sousTitre, 'Sous-titre'], [montantsAMoi, 'Montants'], [!!b.icone, 'Icône'], [!!b.image && b.type !== 'produit', 'Image'], [b.vedette && b.animation !== 'auto', 'Animation'],
     [!!b.acces, 'Accès réservé'], [!!(b.debut || b.fin || b.creneau), 'Quand l’afficher'], [!!(b.cache.length || b.audience), 'Afficher sur']] as [boolean, string][])
     .filter(([oui]) => oui).map(([, nom]) => nom);
   const reglees = reglages_.length > 2 ? `${reglages_.slice(0, 2).join(', ')} et ${reglages_.length - 2} de plus` : reglages_.join(', ');
   // Rien de réglé : la ligne dit ce qu'elle cache.
-  const cache = b.type === 'lien' ? 'Icône, image, règles' : (b.type === 'video' || b.type === 'derniere-video') && !bureau ? 'Mise en avant, règles' : b.type === 'newsletter' ? 'Sous-titre, règles' : b.type === 'inscription' ? 'Sous-titre, prénom, règles' : 'Règles';
+  const cache = b.type === 'lien' ? 'Icône, image, règles'
+    : b.type === 'reservation' ? 'Sous-titre, icône, règles'
+    : b.type === 'soutien' ? (avecMontants(adresseValide) ? 'Sous-titre, montants, règles' : 'Sous-titre, règles')
+    : b.type === 'produit' ? (bureau ? 'Lien partenaire, règles' : 'Mise en avant, règles')
+    : (b.type === 'video' || b.type === 'derniere-video') && !bureau ? 'Mise en avant, règles' : b.type === 'newsletter' ? 'Sous-titre, règles' : b.type === 'inscription' ? 'Sous-titre, prénom, règles' : 'Règles';
   const nomAuto = `Comme ma page (${NOMS_ANIMATIONS[reglages.animation].nom})`;
   const nomIcone = b.icone ? NOMS_RESEAUX[b.icone] ?? PICTOS.find(p => p.nom === b.icone)?.libelle ?? '' : 'Aucune';
 
   async function choisirImage(f: File | undefined) {
     if (!f) return;
     setEnvoi(true); setErreur('');
-    try { maj({ image: await envoyerImage(await preparerImage(f, b.vedette && b.format === 'carte' ? 'large' : 'carre')) }); }
+    // Une photo de produit sert en tuile comme en grande carte : carrée, et assez grande pour les deux.
+    const format = b.type === 'produit' ? 'photo' : b.vedette && b.format === 'carte' ? 'large' : 'carre';
+    try { maj({ image: await envoyerImage(await preparerImage(f, format)) }); }
     catch { setErreur('L’image n’est pas passée. Essaie une autre photo.', 'image'); }
     finally { setEnvoi(false); if (fichier.current) fichier.current.value = ''; }
   }
@@ -289,18 +332,21 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
   }
 
   /**
-   * Une adresse de lien sans texte (quittée, collée, ou arrivée toute faite) : le texte se remplit du nom du site,
-   * puis de son vrai titre. Seul le titre est demandé au serveur : il ne télécharge ni image ni capture pour si peu.
+   * Une adresse quittée, collée, ou arrivée toute faite. Elle se vérifie en quittant le champ, comme aux premiers pas.
+   * Un lien sans texte prend le nom du site, puis son vrai titre : seul le titre est demandé au serveur, il ne
+   * télécharge ni image ni capture pour si peu ; un profil de réseau prend son icône. Un produit lit sa boutique.
    */
-  async function titreDepuisSite(saisie = b.url) {
-    if (b.type !== 'lien') return;
+  async function lireAdresse(saisie = b.url) {
+    if (b.type === 'video' || !TYPES_ADRESSE.includes(b.type)) return;
     const url = adresseSaisie(saisie);
-    // L'adresse se vérifie en quittant le champ, comme aux premiers pas ; un profil de réseau prend son icône.
     if (saisie.trim() && !url) { setErreur(pourquoiPasAdresse(saisie)); return; }
-    const reseau = url && !b.icone ? reseauDeUrl(url) : null;
+    if (!url) return;
+    if (b.type === 'produit') return lireBoutique(url);
+    if (b.type !== 'lien') return;
+    const reseau = !b.icone ? reseauDeUrl(url) : null;
     if (reseau) setB(avant => (avant.icone ? avant : { ...avant, icone: reseau }));
     if (b.titre.trim()) return;
-    const repli = url && nomSite(url);
+    const repli = nomSite(url);
     if (!repli) return;
     setB(avant => (avant.titre.trim() ? avant : { ...avant, titre: repli }));
     try {
@@ -309,7 +355,40 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
     } catch { /* le nom du site suffit */ }
   }
   // Un lien neuf qui arrive avec son adresse (collée sur la page ou dans Ajouter) cherche son texte tout de suite.
-  useEffect(() => { if (nouveau && bloc.url && !bloc.titre.trim()) void titreDepuisSite(bloc.url); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (nouveau && bloc.url && !bloc.titre.trim()) void lireAdresse(bloc.url); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /** Ce que la dernière lecture de la boutique a écrit : une autre adresse le remplace, jamais ce qu'on a tapé. */
+  const lu = useRef<{ url: string; titre: string; prix: string; image: string } | null>(null);
+  /** La mention et le code d'un lien qui cesse d'être partenaire : rallumé, il les retrouve. */
+  const partenariatGarde = useRef<Partenariat | null>(bloc.partenariat);
+  /**
+   * Un produit lit sa boutique dès qu'on colle son adresse : son nom, son prix et sa photo de partage, jamais une
+   * capture de la page. `encore` : le bouton « Depuis la boutique », qui relit la même adresse.
+   */
+  async function lireBoutique(url: string, encore = false) {
+    const ecrit = lu.current;
+    const libre = (k: 'titre' | 'prix' | 'image', v: string) => !v.trim() || v === ecrit?.[k];
+    if (!encore && (ecrit?.url === url || !(libre('titre', b.titre) || libre('prix', b.prix) || libre('image', b.image)))) return;
+    lu.current = { url, titre: '', prix: '', image: '' };
+    setLecture(true); setErreur('');
+    try {
+      const site = await apercuSite(url, 'partage');
+      const image = site.image && libre('image', b.image) ? await envoyerImage(await preparerImage(await (await fetch(site.image)).blob(), 'photo')) : '';
+      const neuf = { url, titre: site.titre.slice(0, 80), prix: site.prix, image };
+      setB(avant => (adresseSaisie(avant.url) !== url ? avant : {
+        ...avant,
+        titre: libre('titre', avant.titre) ? neuf.titre : avant.titre,
+        prix: libre('prix', avant.prix) ? neuf.prix : avant.prix,
+        image: libre('image', avant.image) ? neuf.image : avant.image,
+      }));
+      lu.current = neuf;
+      if (neuf.titre || neuf.prix || neuf.image) vibrer(10);
+      else setErreur('Cette boutique ne donne ni nom ni prix. Ajoute-les à la main.', 'image');
+    } catch {
+      lu.current = ecrit;
+      setErreur('Impossible de lire cette boutique pour l’instant. Ajoute le nom, le prix et la photo à la main.', 'image');
+    } finally { setLecture(false); }
+  }
 
   /**
    * Fermer d'un glissé, d'Échap, de la croix ou d'un toucher à côté garde ce qui a changé, comme partout
@@ -368,13 +447,14 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
 
   // Un bloc neuf n'est pas encore sur la page : au téléphone, son aperçu reste collé en haut de la feuille, chaque réglage se voit sans remonter.
   // Au bureau, il se voit sur la page, à droite, à la place qu'il prendra (voir MaPage).
-  const apercu = nouveau && !bureau && (b.type === 'lien' || (b.type === 'preuve' && preuveRemplie)) && !clavier && (
+  // Un bloc de la vitrine s'aperçoit dès son adresse : avant, il n'a rien à montrer.
+  const apercu = nouveau && !bureau && (b.type === 'lien' || (TYPES_VITRINE.includes(b.type) && !!adresseValide) || (b.type === 'preuve' && preuveRemplie)) && !clavier && (
     <div className="sticky top-0 z-10 -mx-5 bg-nuit px-5 pb-3 pt-1 shadow-[0_14px_14px_-12px_#ffffff]">
       <div className="lp lp-mini -mx-1 rounded-[20px] p-4 ring-1 ring-white/[0.06]" style={variablesTheme(theme) as CSSProperties}
         data-bouton={reglages.bouton.style} data-forme={reglages.bouton.forme} data-ombre={reglages.bouton.ombre} data-police={theme.police} data-decor={theme.decor} aria-label="Aperçu du bouton">
         <div className="pointer-events-none" inert>
           {/* Sans Starter, un compte à rebours gardé se tait sur la page : l'aperçu montre le bouton tel qu'il s'ouvrira. */}
-          <BlocPublic key={`${b.format}-${b.teinte}-${b.animation}-${b.vedette}`} bloc={{ ...b, url: b.type === 'preuve' ? b.url : b.url || '#', titre: b.titre || (b.type === 'lien' ? 'Texte du bouton' : ''), public: true, restantes: b.acces?.places ? Math.max(0, b.acces.places - prises) : null, compteARebours: b.compteARebours && droits.programmation }} reglages={vue} clic={() => {}} cible={{}} apercu />
+          <BlocPublic key={`${b.format}-${b.teinte}-${b.animation}-${b.vedette}`} bloc={{ ...b, url: b.type === 'preuve' ? b.url : adresseValide || b.url || '#', titre: b.titre || (b.type === 'lien' ? 'Texte du bouton' : b.type === 'produit' ? 'Nom du produit' : b.type === 'soutien' || b.type === 'reservation' ? nouveauBloc(b.type, b.id).titre : ''), public: true, restantes: b.acces?.places ? Math.max(0, b.acces.places - prises) : null, compteARebours: b.compteARebours && droits.programmation }} reglages={vue} clic={() => {}} cible={{}} apercu />
         </div>
       </div>
     </div>
@@ -396,8 +476,8 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
   );
   const champFichier = <input ref={fichier} type="file" accept="image/*" className="adm-fichier" tabIndex={-1} aria-hidden="true" onChange={e => choisirImage(e.target.files?.[0])} />;
   const erreurImage = erreurDe('image') && <p role="alert" className="text-[13px] font-medium text-red-300">{erreurDe('image')}</p>;
-  const description = b.type === 'lien' && b.vedette && b.format !== 'bouton' && (
-    <Champ label="Description (facultatif)" aide={b.format === 'carte' ? 'Trois lignes au plus sous le titre de la carte.' : 'Deux lignes au plus sous le titre.'}>
+  const description = ((b.type === 'lien' && b.vedette && b.format !== 'bouton') || (b.type === 'produit' && b.vedette)) && (
+    <Champ label="Description (facultatif)" aide={b.type === 'produit' ? 'Trois lignes au plus sous le nom du produit.' : b.format === 'carte' ? 'Trois lignes au plus sous le titre de la carte.' : 'Deux lignes au plus sous le titre.'}>
       <textarea className={`${classeSaisie} min-h-20`} value={b.description} onChange={e => maj({ description: e.target.value })} maxLength={400}
         placeholder="Ce qu’on trouve en cliquant, en une ou deux phrases." />
     </Champ>
@@ -416,7 +496,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
       </div>
     </div>
   );
-  const animation = b.type === 'lien' && b.vedette && (
+  const animation = (b.type === 'lien' || b.type === 'produit' || b.type === 'reservation') && b.vedette && (
     <Repli id="animation" key={`animation-${b.id}`} titre="Animation" icone="eclair" resume={b.animation === 'auto' ? 'Comme ma page' : NOMS_ANIMATIONS[b.animation].nom} ouvert={false}>
       {/* Une liste, pas une rangée de pastilles : le bloc sur la page (ou l'aperçu en haut) joue l'animation choisie. */}
       <ListeChoix label="Animation" valeur={b.animation} onChange={a => maj({ animation: a })}
@@ -425,11 +505,17 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
           : { id: a, nom: NOMS_ANIMATIONS[a].nom })} />
     </Repli>
   );
-  const enAvant = !['titre', 'texte', 'newsletter', 'inscription', 'preuve'].includes(b.type);
-  const vedette = (compact: boolean) => enAvant && <Interrupteur key="vedette" compact={compact} label="Mis en avant" aide="En plus grand, de la couleur d’accent de ta page." actif={b.vedette} onChange={v => maj({ vedette: v })} />;
+  const enAvant = !['titre', 'texte', 'newsletter', 'inscription', 'preuve', 'soutien'].includes(b.type);
+  const aideVedette = b.type === 'produit' ? 'Une grande carte, de la couleur d’accent de ta page.' : b.type === 'reservation' ? 'De la couleur d’accent de ta page.' : 'En plus grand, de la couleur d’accent de ta page.';
+  const vedette = (compact: boolean) => enAvant && <Interrupteur key="vedette" compact={compact} label="Mis en avant" aide={aideVedette} actif={b.vedette} onChange={v => maj({ vedette: v })} />;
   const bascules = (compact: boolean, sansVedette = false) => [
     b.type === 'inscription' && <Interrupteur key="prenom" compact={compact} label="Demander le prénom" actif={b.demanderPrenom} onChange={v => maj({ demanderPrenom: v })} />,
     !sansVedette && vedette(compact),
+    // Un lien qui devient partenaire prend sa mention ; éteint puis rallumé, il retrouve celle d'avant, et son code.
+    (b.type === 'lien' || b.type === 'produit') && (
+      <Interrupteur key="partenaire" compact={compact} label="Lien partenaire" aide="Affiliation ou collaboration payée : la mention « Publicité » s’affiche." actif={!!b.partenariat}
+        onChange={v => { if (!v) partenariatGarde.current = b.partenariat; maj({ partenariat: v ? partenariatGarde.current ?? PARTENARIAT_NEUF : null }); }} />
+    ),
     b.type === 'lien' && principal && <Interrupteur key="google" compact={compact} label="Visible par Google" actif={b.indexable} onChange={v => maj({ indexable: v })} />,
   ].filter(Boolean);
   const regles = (
@@ -448,24 +534,86 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
     </button>
   );
 
+  // Ce que fera l'adresse, dit sous son champ : l'app qui s'ouvre, l'agenda dans la page, le site où l'on paie.
+  const ok = (texte: string) => <span className="inline-flex items-center gap-1.5 text-white/75"><Icone nom="ui-ok" taille={13} className="shrink-0" />{texte}</span>;
+  const app = b.type === 'lien' && reglages.ouvrirApps ? appDe(adresse(b.url)) : null;
+  const aideUrl = app ? ok(`Ce lien s’ouvre directement dans l’app ${app}, même depuis ${['Instagram', 'TikTok'].filter(n => n !== app).join(' ou ')}.`)
+    // Avant l'adresse, rien : l'aide du bloc neuf dit déjà quels sites conviennent.
+    : !adresseValide ? undefined
+    : b.type === 'reservation' ? (seIntegre(adresseValide) ? ok('La réservation s’ouvre dans ta page, sans la quitter.') : `${nomAgenda(adresseValide)} s’ouvre sur son site.`)
+    : b.type === 'soutien' ? (avecMontants(adresseValide) ? 'Tes visiteurs choisissent un montant, puis paient sur PayPal.' : soutienDe(adresseValide) ? `Tes visiteurs choisissent le montant sur ${nomSoutien(adresseValide)}.` : undefined)
+    : undefined;
   const champUrl = avecUrl && (
-    <Champ label={b.type === 'video' ? 'Adresse de la vidéo YouTube' : 'Adresse'} erreur={erreurDe('url')}
-      aide={b.type === 'lien' && reglages.ouvrirApps && appDe(adresse(b.url)) ? <span className="inline-flex items-center gap-1.5 text-white/75"><Icone nom="ui-ok" taille={13} />Ce lien s’ouvre directement dans l’app {appDe(adresse(b.url))}, même depuis {['Instagram', 'TikTok'].filter(n => n !== appDe(adresse(b.url))).join(' ou ')}.</span> : undefined}>
-      <input className={classeSaisie} type="url" inputMode="url" autoCapitalize="none" autoCorrect="off" placeholder={b.type === 'video' ? 'https://youtu.be/…' : 'https://…'}
-        value={b.url} onChange={e => maj({ url: e.target.value })} onBlur={() => titreDepuisSite()} autoFocus={nouveau && !bloc.url}
-        onPaste={e => { const texte = e.clipboardData.getData('text'); if (!b.url.trim() && adresseSaisie(texte)) setTimeout(() => titreDepuisSite(texte)); }}
+    <Champ label={b.type === 'video' ? 'Adresse de la vidéo YouTube' : b.type === 'produit' ? 'Adresse du produit' : b.type === 'reservation' ? 'Adresse de ton agenda' : 'Adresse'} erreur={erreurDe('url')} aide={aideUrl}>
+      <input className={classeSaisie} type="url" inputMode="url" autoCapitalize="none" autoCorrect="off"
+        placeholder={b.type === 'video' ? 'https://youtu.be/…' : b.type === 'soutien' ? 'https://paypal.me/…' : b.type === 'reservation' ? 'https://calendly.com/…' : 'https://…'}
+        value={b.url} onChange={e => maj({ url: e.target.value })} onBlur={() => lireAdresse()} autoFocus={nouveau && !bloc.url}
+        onPaste={e => { const texte = e.clipboardData.getData('text'); if (!b.url.trim() && adresseSaisie(texte)) setTimeout(() => lireAdresse(texte)); }}
         onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); document.getElementById('bloc-titre')?.focus(); } }} />
     </Champ>
   );
   const champTitre = b.type !== 'derniere-video' && b.type !== 'preuve' && (
-    <Champ erreur={erreurDe('titre')} label={b.type === 'lien' ? 'Texte du bouton' : b.type === 'texte' ? 'Texte' : 'Titre'}>
+    <Champ erreur={erreurDe('titre')} label={b.type === 'lien' || b.type === 'reservation' ? 'Texte du bouton' : b.type === 'produit' ? 'Nom du produit' : b.type === 'texte' ? 'Texte' : 'Titre'}>
       {b.type === 'texte'
         ? <textarea className={`${classeSaisie} min-h-28`} value={b.titre} onChange={e => maj({ titre: e.target.value })} maxLength={1000} autoFocus={nouveau} />
-        : <input id="bloc-titre" className={classeSaisie} value={b.titre} onChange={e => maj({ titre: e.target.value })} maxLength={160} placeholder={b.type === 'lien' ? 'Mon super lien' : ''} autoFocus={nouveau && !avecUrl} />}
+        : <input id="bloc-titre" className={classeSaisie} value={b.titre} onChange={e => maj({ titre: e.target.value })} maxLength={160} autoFocus={nouveau && !avecUrl}
+            placeholder={b.type === 'lien' ? 'Mon super lien' : b.type === 'produit' ? (lecture ? 'Lecture de la boutique…' : '') : b.type === 'soutien' || b.type === 'reservation' ? nouveauBloc(b.type, b.id).titre : ''} />}
     </Champ>
+  );
+  // Un produit : son prix et sa photo, lus sur la boutique, sous les yeux ; ils se corrigent à la main.
+  const champPrix = b.type === 'produit' && (
+    <Champ label="Prix (facultatif)">
+      <input className={classeSaisie} value={b.prix} onChange={e => maj({ prix: e.target.value })} maxLength={24} placeholder={lecture ? 'Lecture de la boutique…' : '24 €'} />
+    </Champ>
+  );
+  const photoProduit = b.type === 'produit' && (
+    <div>
+      <span className="mb-1.5 block text-[12.5px] font-medium text-white/60 bureau:text-white/75">Photo</span>
+      <div className="flex min-h-12 items-center gap-3 bureau:min-h-11 bureau:gap-2">
+        {b.image && <img src={b.image} alt="" className="h-12 w-12 shrink-0 rounded-lg object-cover bureau:h-11 bureau:w-11" />}
+        <div className="flex flex-wrap items-center gap-2 bureau:gap-1.5">
+          {!b.image && !!adresseValide && (
+            <button type="button" onClick={() => lireBoutique(adresseValide, true)} disabled={lecture || envoi} className={classeBouton.secondaire}>{lecture ? 'Lecture de la boutique…' : 'Depuis la boutique'}</button>
+          )}
+          <button type="button" onClick={e => choisirFichier(fichier.current, e.currentTarget)} disabled={envoi} className={classeBouton.secondaire}>{envoi ? 'Envoi…' : b.image ? 'Changer' : 'Ajouter une photo'}</button>
+          {b.image && <button type="button" onClick={() => maj({ image: '' })} className={classeBouton.discret}>Retirer</button>}
+        </div>
+        {champFichier}
+      </div>
+      {erreurImage && <div className="mt-1.5">{erreurImage}</div>}
+    </div>
+  );
+  // Un lien partenaire : la mention que la loi demande à tous, puis le code promo, avec Starter.
+  const partenaire = b.partenariat && (
+    <>
+      <div>
+        <span className="mb-1.5 block text-[12.5px] font-medium text-white/60 bureau:text-white/75">Mention</span>
+        <Segments label="Mention du lien partenaire" souple valeur={b.partenariat.mention} options={MENTIONS} onChange={v => maj({ partenariat: { ...b.partenariat!, mention: v } })} />
+      </div>
+      {droits.vitrine ? (
+        <Champ label="Code promo (facultatif)">
+          <input className={classeSaisie} value={b.partenariat.code} onChange={e => maj({ partenariat: { ...b.partenariat!, code: e.target.value } })} maxLength={40}
+            autoCapitalize="characters" autoCorrect="off" spellCheck={false} placeholder="BIENVENUE10" />
+        </Champ>
+      ) : (
+        <div>
+          <span className="mb-1.5 flex items-center gap-2 text-[12.5px] font-medium text-white/60 bureau:text-white/75">Code promo <Etiquette fonction="vitrine" /></span>
+          {/* Un produit non compris dans l'offre dit déjà, plus haut, où voir les offres : un seul chemin par endroit. */}
+          <Reserve fonction="vitrine" bouton={!type.fonction} phrase={b.partenariat.code
+            ? `Ton code ${b.partenariat.code} n’est pas montré sans Hopla Starter. Il revient dès que tu la prends.`
+            : 'Avec Hopla Starter, ton code promo s’affiche sous le lien, et se copie d’un geste.'} />
+        </div>
+      )}
+    </>
   );
   // Au bureau, l'adresse et son texte côte à côte, comme dans la maquette A2 : la rangée dépliée reste courte.
   const paire = bureau && !!champUrl && !!champTitre;
+  // Ce qui se règle derrière « Plus de réglages » selon le bloc : l'icône et l'image d'un lien ou d'une réservation,
+  // les montants de « Me soutenir » chez PayPal, le sous-titre qu'une réservation montre déjà sans rien taper.
+  const avecVisuel = b.type === 'lien' || b.type === 'reservation';
+  const montants = b.type === 'soutien' && avecMontants(adresseValide) && ((compact: boolean) => <ChampMontants compact={compact} montants={b.montants} onChange={m => maj({ montants: m })} />);
+  const placeholderSousTitre = b.type === 'reservation' && adresseValide ? nomAgenda(adresseValide) : '';
+  const compteClics = b.type === 'lien' || TYPES_VITRINE.includes(b.type);
 
   /** Le haut, commun aux deux formes : à quoi sert le bloc, ce qu'il a de particulier, puis ses champs essentiels. */
   const essentiel = (
@@ -494,6 +642,8 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
       {b.type === 'preuve' && <p className="text-[12.5px] leading-snug text-white/55">Des chiffres vrais, des avis réels, avec l’accord de leurs auteurs.</p>}
 
       {!paire && champTitre}
+      {b.type === 'produit' && (bureau ? <div className="adm-paire">{champPrix}{photoProduit}</div> : <>{champPrix}{photoProduit}</>)}
+      {partenaire}
       {b.type === 'derniere-video' && (
         <Champ label="Petit titre au-dessus" aide="La vidéo elle-même change toute seule à chaque nouvelle publication sur la chaîne.">
           <input className={classeSaisie} value={b.titre} onChange={e => maj({ titre: e.target.value })} maxLength={160} />
@@ -503,8 +653,9 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
   );
 
   if (bureau) {
-    // L'allure : le sous-titre, l'icône et l'image d'un lien, le prénom d'une liste ; « Mis en avant » est dehors.
-    const aApparence = b.type === 'lien' || b.type === 'newsletter' || b.type === 'inscription';
+    // L'allure : le sous-titre, l'icône et l'image d'un lien ou d'une réservation, le prénom d'une liste, les montants d'un soutien ;
+    // « Mis en avant » est dehors.
+    const aApparence = ['lien', 'newsletter', 'inscription', 'produit', 'soutien', 'reservation'].includes(b.type);
     // Les deux côtés passent par la même vérification : une adresse rangée sans sa barre finale n'est pas un changement.
     const norme = (x: Bloc) => verifierBloc(x).bloc ?? x;
     const annulable = !nouveau && !!depart.current && !memeBloc(norme(b), norme(depart.current));
@@ -531,11 +682,19 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
               {aApparence && (
                 <section aria-label="Apparence" className="flex flex-col">
                   <h3 className="adm-section-panneau">Apparence</h3>
-                  <label className={ligne}>
-                    <span className="flex-1 text-[13.5px] text-white">Sous-titre</span>
-                    <input className={`${classeSaisie} adm-field-ligne max-w-[260px]`} value={b.sousTitre} onChange={e => maj({ sousTitre: e.target.value })} maxLength={240} placeholder="Facultatif" />
-                  </label>
-                  {b.type === 'lien' && (
+                  {b.type !== 'produit' && (
+                    <label className={ligne}>
+                      <span className="flex-1 text-[13.5px] text-white">Sous-titre</span>
+                      <input className={`${classeSaisie} adm-field-ligne max-w-[260px]`} value={b.sousTitre} onChange={e => maj({ sousTitre: e.target.value })} maxLength={240} placeholder={placeholderSousTitre || 'Facultatif'} />
+                    </label>
+                  )}
+                  {montants && (
+                    <div className={ligne}>
+                      <span className="flex-1 text-[13.5px] text-white">Montants en euros</span>
+                      <div className="w-[216px] shrink-0">{montants(true)}</div>
+                    </div>
+                  )}
+                  {avecVisuel && (
                     <div>
                       <div className={ligne}>
                         <span className="flex-1 text-[13.5px] text-white">Icône</span>
@@ -547,11 +706,11 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
                       {grilleIcones}
                     </div>
                   )}
-                  {b.type === 'lien' && (
+                  {avecVisuel && (
                     <div className={ligne}>
                       <span className="flex-1 text-[13.5px] text-white">Image</span>
                       {b.image && <img src={b.image} alt="" className="h-8 w-8 rounded-md object-cover" />}
-                      {!b.image && !!adresseSaisie(b.url) && (
+                      {!b.image && b.type === 'lien' && !!adresseValide && (
                         <button type="button" onClick={recupererApercu} disabled={lecture || envoi} className="adm-valeur">{lecture ? 'Lecture du site…' : 'Depuis le site'}</button>
                       )}
                       <button type="button" onClick={e => choisirFichier(fichier.current, e.currentTarget)} disabled={envoi} className="adm-valeur">{envoi ? 'Envoi…' : b.image ? 'Changer' : 'Ajouter'}</button>
@@ -559,7 +718,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
                       {champFichier}
                     </div>
                   )}
-                  {erreurImage}
+                  {b.type !== 'produit' && erreurImage}
                   {bascules(true, true)}
                   {description && <div className="pt-2">{description}</div>}
                   {formeCouleur && <div className="pt-2">{formeCouleur}</div>}
@@ -576,7 +735,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
 
         {/* Le bas de la rangée : un bloc neuf s'ajoute ou s'oublie ; un bloc posé se duplique ou se retire, et revient d'un geste à ce qu'il était. */}
         <div className="adm-editeur-pied">
-          {!nouveau && b.type === 'lien' && clics > 0 && <p className="mr-auto text-[12px] tabular-nums text-white/55">{clics.toLocaleString('fr-FR')} clic{clics > 1 ? 's' : ''} ces 30 derniers jours</p>}
+          {!nouveau && compteClics && clics > 0 && <p className="mr-auto text-[12px] tabular-nums text-white/55">{clics.toLocaleString('fr-FR')} clic{clics > 1 ? 's' : ''} ces 30 derniers jours</p>}
           {nouveau ? (
             <div className="ml-auto flex items-center gap-2">
               {/* Le seul moyen d'oublier un bloc neuf : replier la rangée, elle, l'ajoute s'il est valable. */}
@@ -648,7 +807,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
           <Icone nom="ui-chevron" taille={16} className="-rotate-90 shrink-0 text-white/55" />
         </button>
 
-        {!nouveau && b.type === 'lien' && clics > 0 && <p className="text-center text-[13px] text-white/55">{clics} clic{clics > 1 ? 's' : ''} ces 30 derniers jours</p>}
+        {!nouveau && compteClics && clics > 0 && <p className="text-center text-[13px] text-white/55">{clics} clic{clics > 1 ? 's' : ''} ces 30 derniers jours</p>}
 
         {/* Les gestes rares, nommés en toutes lettres, au bout de la feuille plutôt qu'en pictos à côté de Terminé. */}
         {!nouveau && (
@@ -674,16 +833,22 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
         <div className="adm-editeur flex flex-col gap-4 pt-1">
           {page === 'plus' && (<>
             {/* Deux groupes nommés, l'allure puis les règles : on trouve sans tout lire. */}
-            {['lien', 'video', 'newsletter', 'inscription'].includes(b.type) && <h3 className="-mb-1 text-[13px] font-medium text-white/55">Apparence</h3>}
-            {(b.type === 'lien' || b.type === 'newsletter' || b.type === 'inscription') && (
+            {['lien', 'video', 'newsletter', 'inscription', 'produit', 'soutien', 'reservation'].includes(b.type) && <h3 className="-mb-1 text-[13px] font-medium text-white/55">Apparence</h3>}
+            {['lien', 'newsletter', 'inscription', 'soutien', 'reservation'].includes(b.type) && (
               <Champ label="Sous-titre (facultatif)">
-                <input className={classeSaisie} value={b.sousTitre} onChange={e => maj({ sousTitre: e.target.value })} maxLength={240} />
+                <input className={classeSaisie} value={b.sousTitre} onChange={e => maj({ sousTitre: e.target.value })} maxLength={240} placeholder={placeholderSousTitre} />
               </Champ>
+            )}
+            {montants && (
+              <div>
+                <span className="mb-1.5 block text-[12.5px] font-medium text-white/60">Montants proposés, en euros</span>
+                {montants(false)}
+              </div>
             )}
 
             {description}
 
-            {b.type === 'lien' && (
+            {avecVisuel && (
               <>
                 <div>
                   <button type="button" onClick={() => setIcones(!icones)} aria-expanded={icones}
@@ -699,7 +864,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
                   {b.image && <img src={b.image} alt="" className="h-14 w-14 rounded-xl object-cover" />}
                   <div className="flex flex-1 flex-wrap gap-2">
                     <button type="button" onClick={e => choisirFichier(fichier.current, e.currentTarget)} disabled={envoi} className={classeBouton.secondaire}>{envoi ? 'Envoi…' : b.image ? 'Changer l’image' : 'Ajouter une image'}</button>
-                    {!!adresseSaisie(b.url) && (
+                    {b.type === 'lien' && !!adresseValide && (
                       <button type="button" onClick={recupererApercu} disabled={lecture || envoi} className={classeBouton.secondaire}>
                         {lecture ? 'Lecture du site…' : 'Remplir depuis le site'}
                       </button>

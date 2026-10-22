@@ -19,12 +19,12 @@ export function tetePage(page: PagePublique | null | undefined) {
   const description = reglages.seo.description || reglages.profil.bio;
   const image = reglages.profil.avatar ? absolue(reglages.profil.avatar) : undefined;
   const indexable = compte.principal && reglages.seo.indexable;
-  // Seuls les liens « visibles par Google » entrent dans les données structurées.
+  // Seuls les liens « visibles par Google » entrent dans les données structurées ; un lien partenaire n'est pas la personne.
   const personne = {
     '@context': 'https://schema.org', '@type': 'ProfilePage', url, name: titre,
     mainEntity: {
       '@type': 'Person', name: reglages.profil.nom, description: reglages.profil.bio, image, url: SITE_LILIAN,
-      sameAs: [...reglages.reseaux.filter(r => r.url.startsWith('http')).map(r => r.url), ...blocs.filter(b => b.type === 'lien' && b.indexable && b.url.startsWith('http')).map(b => b.url)],
+      sameAs: [...reglages.reseaux.filter(r => r.url.startsWith('http')).map(r => r.url), ...blocs.filter(b => b.type === 'lien' && b.indexable && !b.partenariat && b.url.startsWith('http')).map(b => b.url)],
     },
   };
   return {

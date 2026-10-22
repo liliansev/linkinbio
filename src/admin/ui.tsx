@@ -596,12 +596,13 @@ export function ListeChoix<T extends string>({ valeur, options, onChange, label 
   );
 }
 
-export function Segments<T extends string>({ valeur, options, onChange, label }: { valeur: T; options: { id: T; nom: string }[]; onChange: (v: T) => void; label: string }) {
+/** Un choix parmi quelques-uns. `souple` : chaque option prend la largeur de son nom, pour un nom long qui doit tenir sur une ligne. */
+export function Segments<T extends string>({ valeur, options, onChange, label, souple }: { valeur: T; options: { id: T; nom: string }[]; onChange: (v: T) => void; label: string; souple?: boolean }) {
   return (
     <div role="radiogroup" aria-label={label} onKeyDown={e => flechesRadio(e)} className="flex gap-0.5 rounded-[10px] bg-white/[0.06] p-[3px]">
       {options.map((o, i) => (
         <button key={o.id} type="button" role="radio" aria-checked={valeur === o.id} tabIndex={arretRadio(valeur === o.id, i === 0, !options.some(x => x.id === valeur))} onClick={() => { vibrer(5); onChange(o.id); }}
-          className={`min-h-10 flex-1 rounded-[7px] px-2.5 text-[13.5px] font-medium transition duration-200 bureau:min-h-[30px] ${valeur === o.id ? 'bg-nuit text-bleu shadow-[0_1px_3px_rgba(0,0,0,0.14)]' : 'text-white/55 hover:text-white'}`}>
+          className={`min-h-10 ${souple ? 'flex-auto whitespace-nowrap' : 'flex-1'} rounded-[7px] px-2.5 text-[13.5px] font-medium transition duration-200 bureau:min-h-[30px] ${valeur === o.id ? 'bg-nuit text-bleu shadow-[0_1px_3px_rgba(0,0,0,0.14)]' : 'text-white/55 hover:text-white'}`}>
           {o.nom}
         </button>
       ))}
@@ -609,10 +610,10 @@ export function Segments<T extends string>({ valeur, options, onChange, label }:
   );
 }
 
-/** Réduit une image choisie sur le téléphone, carrée ou en 16:9, côté navigateur. */
-export async function preparerImage(fichier: Blob, format: 'carre' | 'large'): Promise<string> {
+/** Réduit une image choisie sur le téléphone, côté navigateur : carrée, en 16:9, ou la photo d'un produit, carrée et plus grande. */
+export async function preparerImage(fichier: Blob, format: 'carre' | 'large' | 'photo'): Promise<string> {
   const bitmap = await createImageBitmap(fichier);
-  const [w, h] = format === 'carre' ? [400, 400] : [960, 540];
+  const [w, h] = format === 'carre' ? [400, 400] : format === 'photo' ? [800, 800] : [960, 540];
   const canvas = document.createElement('canvas');
   canvas.width = w; canvas.height = h;
   const ctx = canvas.getContext('2d')!;

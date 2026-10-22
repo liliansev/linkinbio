@@ -8,7 +8,7 @@ import type { LookupFunction } from 'node:net';
 
 /*
  * L'aperçu d'un site, pour habiller un lien : son titre, sa description et son
- * image de partage (`og:image`), lus dans la page. Sans image de partage, une
+ * image de partage (`og:image`), lus dans la page, et le prix d'un produit. Sans image de partage, une
  * capture de la page la remplace. Seul le back office l'appelle, et le serveur
  * ne suit que des adresses publiques.
  *
@@ -23,7 +23,7 @@ import type { LookupFunction } from 'node:net';
  * vérification (« Just a moment… ») ne se prend jamais pour un titre.
  */
 
-export interface ApercuSite { titre: string; description: string; image: string | null }
+export interface ApercuSite { titre: string; description: string; image: string | null; prix: string }
 
 /** Au plus ce qu'on lit d'une page : son `<head>` suffit, la lecture s'arrête dès qu'il se ferme. */
 const LIMITE_PAGE = 2_000_000;
@@ -207,9 +207,79 @@ const BARRAGES = [
 ];
 export const estBarrage = (titre: string) => [titre, titreCourt(titre)].some(t => BARRAGES.some(m => m.test(t.replace(/[.…!\s]+$/, '').trim())));
 
-interface Meta { titre: string; description: string; image: string; oembed: string; rafraichir: string }
+interface Meta { titre: string; description: string; image: string; oembed: string; rafraichir: string; prix: string }
 
-/** Le titre, la description et l'image de partage déclarés dans le `<head>` d'une page, et son oEmbed s'il en a un. */
+/** Un montant écrit à la façon de n'importe quel pays (« 24,00 », « 1.234,56 », « 1,234.56 », « 1 234 ») ; null s'il n'y en a pas, ou s'il est nul. */
+export function montant(brut: string): number | null {
+  const t = /\d[\d.,]*/.exec(brut.replace(/[\s\u00a0\u202f']/g, ''))?.[0];
+  if (!t) return null;
+  // Le dernier séparateur suivi d'un ou deux chiffres est la virgule ; suivi de trois, il ne sépare que des milliers.
+  const dernier = Math.max(t.lastIndexOf(','), t.lastIndexOf('.'));
+  const apres = t.length - dernier - 1;
+  const decimal = dernier >= 0 && apres >= 1 && apres <= 2;
+  const entier = (decimal ? t.slice(0, dernier) : t).replace(/[.,]/g, '');
+  const n = Number(decimal ? `${entier}.${t.slice(dernier + 1)}` : entier);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+/** La devise d'un prix écrit avec son symbole, quand la page ne l'a pas déclarée. */
+const SYMBOLES: [RegExp, string][] = [[/€|\beur\b/i, 'EUR'], [/£|\bgbp\b/i, 'GBP'], [/\bchf\b/i, 'CHF'], [/ca\$|\bcad\b/i, 'CAD'], [/\$|\busd\b/i, 'USD']];
+
+/** Un prix comme on l'écrit en France : « 24 € », « 12,50 € », « 10 $ » ; vide pour une devise inconnue. */
+export function ecrirePrix(n: number, devise: string): string {
+  if (!/^[A-Z]{3}$/.test(devise)) return '';
+  try {
+    return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: devise, currencyDisplay: 'narrowSymbol', minimumFractionDigits: Number.isInteger(n) ? 0 : 2, maximumFractionDigits: 2 }).format(n);
+  } catch { return ''; }
+}
+
+const enTexte = (v: unknown) => (typeof v === 'number' || typeof v === 'string' ? String(v).trim() : '');
+
+/** L'offre d'un produit décrit en JSON-LD (`offers`, une ou plusieurs) : son prix, le plus bas s'il y en a plusieurs. */
+function offreJsonLd(html: string): { brut: string; devise: string; des: boolean } | null {
+  for (const [, texte] of html.matchAll(/<script\b[^>]*application\/ld\+json[^>]*>([\s\S]*?)<\/script>/gi)) {
+    let pile: unknown[];
+    try { pile = [JSON.parse(texte)]; } catch { continue; }
+    for (let n = pile.pop(); n !== undefined; n = pile.pop()) {
+      if (!n || typeof n !== 'object') continue;
+      if (Array.isArray(n)) { pile.push(...n); continue; }
+      const o = n as Record<string, unknown>;
+      const offres = ([o.offers].flat().filter(x => x && typeof x === 'object') as Record<string, unknown>[])
+        .map(x => ({ ...x, ...(x.priceSpecification && typeof x.priceSpecification === 'object' ? x.priceSpecification as Record<string, unknown> : {}) }));
+      const prix = offres.flatMap(x => [enTexte(x.price) || enTexte(x.lowPrice)].filter(p => montant(p) !== null));
+      if (prix.length) {
+        const bas = prix.reduce((a, b) => (montant(b)! < montant(a)! ? b : a));
+        const haut = offres.map(x => montant(enTexte(x.highPrice))).find(h => h !== null);
+        const des = new Set(prix.map(montant)).size > 1 || (!!haut && haut > montant(bas)!);
+        return { brut: bas, devise: enTexte(offres.find(x => enTexte(x.priceCurrency))?.priceCurrency), des };
+      }
+      pile.push(...Object.values(o).filter(v => v && typeof v === 'object'));
+    }
+  }
+  return null;
+}
+
+/**
+ * Le prix d'un produit, tel que les boutiques le déclarent pour leurs aperçus : Shopify (`og:price:amount`),
+ * WooCommerce et Gumroad (`product:price:amount`), Etsy (`etsymarketplace:price_value`), les microdonnées
+ * (`itemprop="price"`), une étiquette Twitter (« Price »), et sinon le JSON-LD d'un produit. Vide s'il n'y en a pas.
+ */
+function lirePrix(meta: Record<string, string>, html: string): string {
+  let brut = meta['og:price:amount'] || meta['product:price:amount'] || meta['etsymarketplace:price_value'] || meta.price || '';
+  let devise = meta['og:price:currency'] || meta['product:price:currency'] || meta['etsymarketplace:currency_code'] || meta.pricecurrency || '';
+  let des = false;
+  for (let i = 1; i <= 4 && !brut; i++) if (/^(price|prix)$/i.test(meta[`twitter:label${i}`] ?? '')) brut = meta[`twitter:data${i}`] ?? '';
+  if (!brut) {
+    const offre = offreJsonLd(html);
+    if (offre) { brut = offre.brut; devise = offre.devise || devise; des = offre.des; }
+  }
+  const n = montant(brut);
+  if (n === null) return '';
+  const texte = ecrirePrix(n, devise.trim().toUpperCase() || (SYMBOLES.find(([motif]) => motif.test(brut))?.[1] ?? ''));
+  return texte && des ? `Dès ${texte}` : texte;
+}
+
+/** Le titre, la description, l'image de partage et le prix (une boutique) déclarés dans le `<head>` d'une page, et son oEmbed s'il en a un. */
 export function lireMeta(html: string, base: string): Meta {
   const meta: Record<string, string> = {};
   const attr = (balise: string, nom: string) => {
@@ -244,6 +314,7 @@ export function lireMeta(html: string, base: string): Meta {
     image: barre ? '' : absolue(image),
     oembed: absolue(liens.oembed ?? ''),
     rafraichir: absolue(rafraichir),
+    prix: barre ? '' : lirePrix(meta, html),
   };
 }
 
@@ -311,10 +382,11 @@ async function imageEnDataUrl(url: string, referent?: string): Promise<string | 
 }
 
 /**
- * L'aperçu d'un site. `image` à faux : le titre et la description seuls, pour remplir le texte d'un lien
- * sans attendre une image ni une capture.
+ * L'aperçu d'un site. `image` à faux : le titre, la description et le prix seuls, pour remplir le texte d'un lien
+ * sans attendre une image ni une capture. `'partage'` : l'image de partage, ou rien, jamais une capture (la photo
+ * d'un produit ne peut pas être un morceau de sa page).
  */
-export async function apercuSite(url: string, { image: avecImage = true }: { image?: boolean } = {}): Promise<ApercuSite> {
+export async function apercuSite(url: string, { image: avecImage = true }: { image?: boolean | 'partage' } = {}): Promise<ApercuSite> {
   const viaOembed = adresseOembed(url);
   const [page, o] = await Promise.all([
     lirePage(url).catch(e => (viaOembed ? null : Promise.reject(e))),
@@ -324,8 +396,9 @@ export async function apercuSite(url: string, { image: avecImage = true }: { ima
   const annonce = !o && page && !page.titre && page.oembed ? await oembed(page.oembed) : null;
   const titre = o?.titre || page?.titre || annonce?.titre || '';
   const description = page?.description ?? '';
-  if (!avecImage) return { titre, description, image: null };
+  const prix = page?.prix ?? '';
+  if (!avecImage) return { titre, description, image: null, prix };
   const source = page?.image || o?.image || annonce?.image || '';
-  const visuel = (source && (await imageEnDataUrl(source, page?.url))) || (await imageEnDataUrl(CAPTURE(page?.url ?? url)));
-  return { titre, description, image: visuel };
+  const visuel = (source && (await imageEnDataUrl(source, page?.url))) || (avecImage === 'partage' ? null : await imageEnDataUrl(CAPTURE(page?.url ?? url)));
+  return { titre, description, image: visuel, prix };
 }

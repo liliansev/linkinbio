@@ -49,7 +49,7 @@ export const OFFRES: Record<Plan, Offre> = {
   },
   starter: {
     nom: 'Starter', phrase: 'Ta page, sans la mention Hopla.', prix: { mois: 9, an: 79 }, quota: 100 * Mo, jours: 30, enVente: true,
-    avantages: ['Sans la mention « Une page faite avec Hopla »', 'Tes couleurs', 'Tes liens programmés à l’avance', 'Les avis de tes clients', 'Tes stats sur 30 jours'],
+    avantages: ['Sans la mention « Une page faite avec Hopla »', 'Ta vitrine : produits, réservations, soutien', 'Tes couleurs', 'Tes liens programmés à l’avance', 'Les avis de tes clients', 'Tes stats sur 30 jours'],
   },
   pro: {
     nom: 'Pro', phrase: 'Le bon lien, au bon moment.', prix: { mois: 19, an: 169 }, quota: 200 * Mo, jours: 365, enVente: true,
@@ -77,13 +77,17 @@ export const libellePrix = (p: PlanPayant, periode: Periode) => `${euros(OFFRES[
 
 /**
  * Les fonctions réservées, et l'offre qui les débloque. Tout le reste est dans
- * Gratuit, dont la page selon le réseau du visiteur (« Afficher sur »).
+ * Gratuit, dont la page selon le réseau du visiteur (« Afficher sur ») et la
+ * mention « Publicité » d'un lien partenaire, que la loi demande à tous.
  * `programmation` : les dates d'un bloc (début, fin, compte à rebours) ;
  * `heure` : le créneau qui revient chaque semaine ; `stats` : lire ses stats
- * (elles se comptent pour tout le monde, seule leur lecture est réservée).
+ * (elles se comptent pour tout le monde, seule leur lecture est réservée) ;
+ * `vitrine` : les blocs produit, soutien et réservation, et le code promo d'un
+ * lien partenaire (22 octobre 2026).
  */
 export const FONCTIONS = {
   sansMention: 'starter',
+  vitrine: 'starter',
   couleurs: 'starter',
   programmation: 'starter',
   avis: 'starter',
@@ -101,6 +105,7 @@ export type Fonction = keyof typeof FONCTIONS;
  */
 export const FONCTIONS_EN_MOTS: Record<Fonction, { avantage: string; pour: string }> = {
   sansMention: { avantage: 'Sans la mention « Une page faite avec Hopla »', pour: 'Pour ôter la mention' },
+  vitrine: { avantage: 'Ta vitrine : produits, réservations, soutien', pour: 'Pour ta vitrine' },
   couleurs: { avantage: 'Tes couleurs', pour: 'Pour tes couleurs' },
   programmation: { avantage: 'Tes liens programmés à l’avance', pour: 'Pour programmer' },
   avis: { avantage: 'Les avis de tes clients', pour: 'Pour les avis' },
@@ -170,11 +175,13 @@ export function echeance(debut: number, periode: Periode): number {
 export const BASCULE_OFFRES = Date.UTC(2026, 9, 21);
 /** Les jours de stats qu'une page d'avant les offres lisait en gratuit : elle les garde. */
 export const JOURS_AVANT_OFFRES = 7;
+/** Ce que ces pages ne faisaient pas en gratuit, et ne gardent donc pas : la page sans mention, et la vitrine, venue après. */
+const PAS_AVANT_OFFRES: readonly Fonction[] = ['sansMention', 'vitrine'];
 
 /** Ce compte peut-il se servir de cette fonction ? `cree` : la création du compte (ms), pour les pages d'avant. */
 export function peut(plan: Plan, f: Fonction, cree = Number.POSITIVE_INFINITY): boolean {
   if (rang(plan) >= rang(FONCTIONS[f])) return true;
-  return f !== 'sansMention' && cree < BASCULE_OFFRES;
+  return !PAS_AVANT_OFFRES.includes(f) && cree < BASCULE_OFFRES;
 }
 
 /**

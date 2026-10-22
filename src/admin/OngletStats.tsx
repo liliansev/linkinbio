@@ -15,7 +15,7 @@ import type { Fonction, PlanPayant } from '../lib/abonnement.ts';
 import { noterPartage } from './BienDemarrer.tsx';
 import { CodeQR } from './CodeQR.tsx';
 import { Etiquette } from './offre.tsx';
-import { TYPES } from './OngletLiens.tsx';
+import { typeDe } from './OngletLiens.tsx';
 
 /*
  * Stats (direction B, 20 octobre 2026) : une phrase qui dit l'essentiel, les
@@ -413,7 +413,7 @@ function TableauStats({ charger, adresse, pseudo, joursMax = 365, onOffres, ouvr
 
   const lignesLiens: Ligne[] = (stats?.blocs ?? []).map(b => {
     const bloc = blocs.find(x => x.id === b.id);
-    return { cle: b.id, nom: b.titre, valeur: b.clics, icone: bloc?.icone || TYPES.find(t => t.type === bloc?.type)?.picto || 'bloc-lien' };
+    return { cle: b.id, nom: b.titre, valeur: b.clics, icone: bloc?.icone || (bloc ? typeDe(bloc).picto : 'bloc-lien') };
   });
   const lignesSources: Ligne[] = (stats?.sources ?? []).map(s => ({ cle: s.nom, nom: s.nom, valeur: s.vues, icone: ICONES_SOURCES[s.nom] ?? 'site', couleur: COULEURS_SOURCES[s.nom] ?? SANS_MARQUE }));
   const lignesAppareils: Ligne[] = (stats?.appareils ?? []).map(s => ({ cle: s.nom, nom: s.nom, valeur: s.vues, icone: ICONES_APPAREILS[s.nom] ?? 'ordinateur' }));

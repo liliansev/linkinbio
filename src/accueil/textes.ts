@@ -42,7 +42,7 @@ export const MOTS: Record<Inscription, { note: string; adresse: string; rassure:
   },
 };
 
-export const DESCRIPTION = 'Ta page de liens sur hopla.page/ton-nom : elle se réorganise selon le réseau d’où arrive ton visiteur, ouvre tes liens dans leurs apps et se modifie depuis ton téléphone. Gratuit pour toujours ; Starter et Pro y ajoutent tes couleurs, tes liens programmés, la page selon l’heure et tes stats.';
+export const DESCRIPTION = 'Ta page de liens sur hopla.page/ton-nom : elle se réorganise selon le réseau d’où arrive ton visiteur, ouvre tes liens dans leurs apps et se modifie depuis ton téléphone. Gratuit pour toujours ; Starter et Pro y ajoutent ta vitrine, tes couleurs, tes liens programmés, la page selon l’heure et tes stats.';
 
 /**
  * Ce que fait Hopla, en une liste, pour les données structurées et llms.txt ;
@@ -55,7 +55,9 @@ export const FONCTIONS = [
   'Liens sans limite, vidéos lues sur la page et QR code',
   'Vingt thèmes',
   'Modification de la page depuis le téléphone',
+  'Liens partenaires avec la mention « Publicité » que demande la loi',
   'Page sans la mention « Une page faite avec Hopla » (Starter)',
+  'Vitrine sans commission : produits avec leur photo et leur prix lus sur la boutique, prise de rendez-vous Calendly ou Cal.com dans la page, bouton de soutien PayPal ou Ko‑fi, code promo copié d’un geste (Starter)',
   'Couleurs personnalisées par-dessus le thème (Starter)',
   'Liens programmés à l’avance, compte à rebours avant un lancement (Starter)',
   'Avis de clients (Starter)',
@@ -79,6 +81,7 @@ export function questions(m: Inscription): [string, string][] {
     m === 'libre'
       ? ['Quelle sera mon adresse ?', 'hopla.page/ suivi du nom que tu choisis ici : 3 à 30 caractères, lettres, chiffres et tirets. Une fois pris, un nom n’est donné à personne d’autre, sauf si personne n’entre jamais dans la page : elle s’efface au bout d’un mois. Une faute de frappe ? Juste après l’envoi, tant que tu n’es pas entré dans ta page, tu peux encore le changer.']
       : ['Quelle sera mon adresse ?', 'hopla.page/ suivi du nom que tu réserves ici : 3 à 30 caractères, lettres, chiffres et tirets. Un nom réservé n’est donné à personne d’autre. Une faute de frappe ? Juste après la réservation, tu peux encore le changer.'],
+    ['Je peux vendre depuis ma page ?', 'Oui, avec Starter. Colle l’adresse d’un produit (Etsy, Shopify, Gumroad, Payhip…) : Hopla affiche sa photo et son prix. Ajoute ta prise de rendez-vous Calendly, Cal.com ou Planity, et un bouton « Me soutenir » vers PayPal, Ko‑fi ou Tipeee. Le paiement se fait chez eux : Hopla ne prend aucune commission. Tes liens partenaires portent la mention « Publicité » dans toutes les versions, et leur code promo se copie d’un geste.'],
     ['En quoi Hopla change d’une page de liens classique ?', 'Ta page se réorganise toute seule selon le réseau d’où arrive ton visiteur (et selon l’heure, avec Pro), tes liens s’ouvrent dans leurs apps plutôt que dans le navigateur d’Instagram, et tes stats se lisent en une phrase, sans cookie (avec Starter).'],
     [QUESTION_LINKTREE, 'Colle ton adresse Linktree dans le champ : Hopla en garde le nom, s’il est libre ici. Ensuite, dans ta page, colle les adresses de tes liens, Hopla retrouve leurs titres tout seul. Il ne reste qu’à mettre hopla.page/ton-nom à la place de l’ancien lien dans tes bios.'],
     ['Comment Hopla sait d’où vient un visiteur ?', 'Instagram, TikTok et les autres apps se signalent quand elles ouvrent ta page. Tu mets un seul lien dans toutes tes bios, Hopla fait le tri. Quand rien ne le dit, par exemple un lien envoyé sur WhatsApp ou tapé dans Safari, ta page garde l’ordre que tu as choisi.'],

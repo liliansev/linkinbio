@@ -5,7 +5,7 @@ import type { DragEndEvent, Modifier } from '@dnd-kit/core';
 import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS as CssDnd } from '@dnd-kit/utilities';
 import type { Bloc, PagePublique, Reglages, TypeBloc } from '../lib/types.ts';
-import { SANS_COULEURS, TYPES_PRINCIPAL, estEnLigne, nouveauBloc, sansSchema } from '../lib/types.ts';
+import { SANS_COULEURS, TYPES_ADRESSE, TYPES_PRINCIPAL, TYPES_VITRINE, estEnLigne, formatVedette, nouveauBloc, sansSchema } from '../lib/types.ts';
 import { etiquettes } from '../lib/etiquettes.ts';
 import { selonDroits } from '../lib/droits.ts';
 import type { Droits } from '../lib/droits.ts';
@@ -20,11 +20,11 @@ import { Icone, NOMS_RESEAUX } from '../components/Icone.tsx';
 import { themeDe, variablesTheme } from '../lib/themes.ts';
 import { HautLiens } from './BienDemarrer.tsx';
 import type { Demarrage } from './BienDemarrer.tsx';
-import { FeuilleAjout, TYPES } from './OngletLiens.tsx';
+import { FeuilleAjout, typeDe } from './OngletLiens.tsx';
 import { DesignTiroirs, OngletApparence } from './OngletApparence.tsx';
 import type { Tiroir } from './OngletApparence.tsx';
 import { ActionEntete, BoutonPrincipal, BoutonSecondaire, Feuille, Interrupteur, Menu, choisirFichier, classeBouton, couleurReseau, flechesRadio, preparerImage, vibrer } from './ui.tsx';
-import { offreDe, useDroits, usePermis } from './offre.tsx';
+import { offreDe, useDroits } from './offre.tsx';
 import type { Fonction } from '../lib/abonnement.ts';
 
 /*
@@ -216,10 +216,10 @@ export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, chois
     setAjout(true);
     ajoutOuvert?.();
   }, [demandeAjout]); // eslint-disable-line react-hooks/exhaustive-deps
-  const ajouter = (type: TypeBloc) => {
+  const ajouter = (type: TypeBloc, modele?: Partial<Bloc>) => {
     setAjout(false);
     if (!quitterCote()) return;
-    onAjouter(nouveauBloc(type, nouvelId()), enBas.current);
+    onAjouter({ ...nouveauBloc(type, nouvelId()), ...modele }, enBas.current);
     enBas.current = false;
   };
   /** Une adresse collée devient un lien neuf, qu'on règle avant de l'ajouter. Faux si quelque chose le retient. */
@@ -505,20 +505,30 @@ function ChampColler({ ajouter }: { ajouter: (url: string) => boolean }) {
 
 /** Le nom d'un bloc dans sa rangée : son texte, sinon son adresse, sinon son genre. */
 function nomBloc(b: Bloc) {
-  const type = TYPES.find(t => t.type === b.type)?.nom ?? 'Bloc';
   const titre = b.titre.trim().split('\n')[0];
-  return titre || ((b.type === 'lien' || b.type === 'video') && b.url ? sansSchema(b.url).replace(/\/$/, '') : '') || type;
+  return titre || (TYPES_ADRESSE.includes(b.type) && b.url ? sansSchema(b.url).replace(/\/$/, '') : '') || typeDe(b).nom;
 }
-/** Ce qui se lit en gris à côté du nom : l'adresse d'un lien ou d'une vidéo, sinon le genre du bloc. */
+/** Ce qui se lit en gris à côté du nom : le prix d'un produit, l'adresse d'un bloc qui mène quelque part, sinon le genre du bloc. */
 function sousBloc(b: Bloc, nom: string) {
-  const sous = (b.type === 'lien' || b.type === 'video') && b.url ? sansSchema(b.url).replace(/\/$/, '') : TYPES.find(t => t.type === b.type)?.nom ?? '';
+  const sous = b.type === 'produit' && b.prix ? b.prix : TYPES_ADRESSE.includes(b.type) && b.url ? sansSchema(b.url).replace(/\/$/, '') : typeDe(b).nom;
   return sous === nom ? '' : sous;
+}
+
+/**
+ * Le bloc tel que la page des visiteurs le dessine : sans Starter, ni compte à rebours gardé d'une offre
+ * passée, ni code promo. Seul le dessin change : l'éditeur reçoit le bloc tel qu'il est enregistré.
+ */
+function commeSurLaPage(bloc: Bloc, droits: Droits): Bloc {
+  let b = bloc;
+  if (!droits.programmation && b.compteARebours) b = { ...b, compteARebours: false };
+  if (!droits.vitrine && b.partenariat?.code) b = { ...b, partenariat: { ...b.partenariat, code: '' } };
+  return b;
 }
 
 /** Ce qu'un bloc a de particulier, dit de la même façon dans la liste du bureau et sur la page du téléphone. */
 function etatBloc(bloc: Bloc, droits: Droits) {
   // Un bloc que l'offre ne comprend plus reste là, grisé comme un bloc masqué : il revient avec l'offre.
-  const attend = ([[!!bloc.acces, 'drops'], [bloc.type === 'inscription', 'listeEmail'], [bloc.type === 'preuve', 'avis']] as [boolean, Fonction][]).find(([oui, f]) => oui && !droits[f])?.[1];
+  const attend = ([[!!bloc.acces, 'drops'], [bloc.type === 'inscription', 'listeEmail'], [bloc.type === 'preuve', 'avis'], [TYPES_VITRINE.includes(bloc.type), 'vitrine']] as [boolean, Fonction][]).find(([oui, f]) => oui && !droits[f])?.[1];
   const prive = !bloc.public || !!attend;
   // Une règle que l'offre ne comprend plus n'est pas dite : sans Starter, un lancement attend sa date sans compte à rebours (« programmé »).
   const regles = etiquettes(bloc, droits);
@@ -528,9 +538,10 @@ function etatBloc(bloc: Bloc, droits: Droits) {
     { oui: !programme && !!((bloc.creneau && droits.heure) || (bloc.compteARebours && bloc.debut && droits.programmation)), icone: 'horloge', nom: 'Quand l’afficher' },
     { oui: !!(bloc.cache?.length || bloc.audience?.sources.length), icone: 'cible', nom: 'Afficher sur' },
     { oui: !!bloc.acces, icone: 'cadenas', nom: 'Accès réservé' },
+    { oui: !!bloc.partenariat, icone: 'bloc-partenaire', nom: 'Lien partenaire' },
   ].filter(p => p.oui);
   // Ce qu'un lecteur d'écran entend après le nom.
-  const dit = [attend ? `pas montré sans Hopla ${offreDe(attend)}` : prive && 'masqué', programme && 'programmé', ...regles].filter(Boolean).join(', ');
+  const dit = [attend ? `pas montré sans Hopla ${offreDe(attend)}` : prive && 'masqué', programme && 'programmé', bloc.partenariat && 'lien partenaire', ...regles].filter(Boolean).join(', ');
   return { attend, prive, programme, regles, puces, dit };
 }
 
@@ -642,7 +653,7 @@ function Rangee({ bloc, droits, clics, neuf, ouvert, editeur, ouvrir, fermer, ge
   ouvrir: (b: Bloc) => void; fermer: () => boolean; gestes: Gestes;
 }) {
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({ id: bloc.id, disabled: neuf, attributes: { roleDescription: 'bloc déplaçable' } });
-  const type = TYPES.find(t => t.type === bloc.type);
+  const type = typeDe(bloc);
   const etat = etatBloc(bloc, droits);
   const nom = neuf ? `Nouveau bloc : ${type?.nom ?? ''}` : nomBloc(bloc);
   const sous = neuf ? '' : sousBloc(bloc, nom);
@@ -755,15 +766,13 @@ function Telephone({ ecran, choisi, children }: { ecran: RefObject<HTMLDivElemen
 /** Les blocs de la page à droite : grisés s'ils sont masqués, cerclés quand leur rangée est ouverte, ouverts d'un clic. */
 function BlocsApercu({ blocs, rendu, choisi, ouvrir }: { blocs: Bloc[]; rendu: (bloc: Bloc) => ReactNode; choisi: string | null; ouvrir: (b: Bloc) => void }) {
   const droits = useDroits();
-  // Sans Starter, un compte à rebours gardé d'une offre passée ne se montre pas sur la page : l'aperçu le dessine pareil.
-  const programmation = usePermis('programmation');
   return (
     <>
       {blocs.map((bloc, i) => {
         const e = etatBloc(bloc, droits);
         return (
           <BlocApercu key={bloc.id} bloc={bloc} i={i} choisi={choisi === bloc.id} prive={e.prive || e.programme} ouvrir={ouvrir}>
-            {rendu(programmation || !bloc.compteARebours ? bloc : { ...bloc, compteARebours: false })}
+            {rendu(commeSurLaPage(bloc, droits))}
           </BlocApercu>
         );
       })}
@@ -775,7 +784,7 @@ function BlocApercu({ bloc, i, choisi, prive, ouvrir, children }: { bloc: Bloc; 
   const noeud = useRef<HTMLDivElement>(null);
   useFige(noeud);
   return (
-    <div ref={noeud} className="lp-bloc lp-ed-bloc" data-id={bloc.id} data-type={bloc.type} data-vedette={bloc.vedette ? bloc.format : undefined}
+    <div ref={noeud} className="lp-bloc lp-ed-bloc" data-id={bloc.id} data-type={bloc.type} data-vedette={formatVedette(bloc)}
       data-prive={prive || undefined} data-choisi={choisi || undefined} style={{ '--i': i } as CSSProperties}
       onClickCapture={e => { e.preventDefault(); e.stopPropagation(); ouvrir(bloc); }}>
       {children}
@@ -885,10 +894,9 @@ function BlocsEditables({ blocs, rendu, choisi, onOrdonner, onOuvrir, onAjouter 
     onOrdonner(arrayMove(blocs, blocs.findIndex(b => b.id === active.id), blocs.findIndex(b => b.id === over.id)));
   }
   const ouvrir = (bloc: Bloc) => { if (Date.now() - glisse.current > 250) onOuvrir(bloc); };
-  // Sans Starter, un compte à rebours gardé d'une offre passée ne se montre pas sur la page : la toile le dessine pareil.
-  // Seul le dessin change : l'éditeur reçoit le bloc tel qu'il est enregistré.
-  const programmation = usePermis('programmation');
-  const dessin = (bloc: Bloc) => rendu(programmation || !bloc.compteARebours ? bloc : { ...bloc, compteARebours: false });
+  // La toile dessine les blocs comme la page des visiteurs (voir `commeSurLaPage`).
+  const droits = useDroits();
+  const dessin = (bloc: Bloc) => rendu(commeSurLaPage(bloc, droits));
   return (
     <>
       <DndContext accessibility={ACCESSIBILITE} sensors={capteurs} collisionDetection={closestCenter} onDragStart={() => vibrer(6)} onDragEnd={deplacer} onDragCancel={() => { glisse.current = Date.now(); }}>
@@ -913,7 +921,7 @@ function BlocEditable({ bloc, i, choisi, ouvrir, children }: { bloc: Bloc; i: nu
   return (
     <div ref={n => { setNodeRef(n); noeud.current = n; }} {...attributes} {...listeners} aria-label={[`Modifier ${nom}`, dit].filter(Boolean).join(', ')} aria-roledescription="bloc déplaçable"
       aria-current={choisi || undefined}
-      className="lp-bloc lp-ed-bloc" data-id={bloc.id} data-type={bloc.type} data-vedette={bloc.vedette ? bloc.format : undefined} data-glisse={isDragging || undefined} data-prive={prive || programme || undefined}
+      className="lp-bloc lp-ed-bloc" data-id={bloc.id} data-type={bloc.type} data-vedette={formatVedette(bloc)} data-glisse={isDragging || undefined} data-prive={prive || programme || undefined}
       data-choisi={choisi || undefined}
       style={{ '--i': i, transform: CssDnd.Transform.toString(transform), transition } as CSSProperties}
       onClickCapture={e => { e.preventDefault(); e.stopPropagation(); ouvrir(bloc); }}

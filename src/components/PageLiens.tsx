@@ -1,7 +1,7 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, FormEvent, MouseEvent, ReactNode } from 'react';
 import type { Bloc, PagePublique } from '../lib/types.ts';
-import { ORIGINE_PUBLIQUE, animationDe, idYoutube, urlPage } from '../lib/types.ts';
+import { ORIGINE_PUBLIQUE, animationDe, formatVedette, idYoutube, urlPage } from '../lib/types.ts';
 import type { Reglages } from '../lib/types.ts';
 import { themeDe, variablesTheme } from '../lib/themes.ts';
 import { ICONES } from '../lib/icones.ts';
@@ -16,6 +16,7 @@ import { LOCALE, textes } from '../lib/mots.ts';
 import type { Textes } from '../lib/mots.ts';
 import { Icone, NOMS_RESEAUX } from './Icone.tsx';
 import { peut } from '../lib/abonnement.ts';
+import { adresseIntegree, avecMontants, lienMontant, lienSansMontant, nomAgenda, nomSoutien, seIntegre } from '../lib/vitrine.ts';
 
 /*
  * La page publique, rendue côté serveur pour Google et les aperçus de liens,
@@ -23,6 +24,13 @@ import { peut } from '../lib/abonnement.ts';
  * pose ses couleurs en variables CSS ; le style et la forme des boutons sont
  * deux attributs que `page.css` lit.
  */
+
+/**
+ * Ce que la page offre à ses blocs : la bulle (« Code copié »), et la feuille où
+ * s'ouvre une réservation. Hors de la page (l'aperçu collé de l'éditeur), rien :
+ * une réservation s'y ouvre comme un lien.
+ */
+const ActionsPage = createContext<{ annoncer: (texte: string) => void; reserver?: (bloc: Bloc, depuis: HTMLElement) => void }>({ annoncer: () => {} });
 
 function suivre(page: string, type: 'vue' | 'clic', bloc?: string, app = false) {
   try {
@@ -72,6 +80,14 @@ export function PageLiens({ page, apercu = false, edition, liste }: {
   // Après la feuille, le nom de la page reçoit le focus ; il le garde quand la page se recharge sans elle.
   const [apresEcran] = useState(ecran);
   const nomRef = useRef<HTMLHeadingElement>(null);
+  // La réservation ouverte dans sa feuille, et ce qui avait le focus avant elle, pour l'y rendre.
+  const [agenda, setAgenda] = useState<Bloc | null>(null);
+  const avantAgenda = useRef<HTMLElement | null>(null);
+  const actions = useMemo(() => ({
+    annoncer: setToast,
+    // Le focus revient au lien touché : Safari ne le lui donne pas au toucher.
+    reserver: apercu ? undefined : (bloc: Bloc, depuis: HTMLElement) => { avantAgenda.current = depuis; setAgenda(bloc); },
+  }), [apercu]);
 
   useEffect(() => {
     if (apercu) return;
@@ -151,9 +167,10 @@ export function PageLiens({ page, apercu = false, edition, liste }: {
   );
 
   return (
+    <ActionsPage.Provider value={actions}>
     <div className="lp" onClick={ouvrirDansApp} style={variablesTheme(theme) as CSSProperties} data-bouton={reglages.bouton.style} data-forme={reglages.bouton.forme} data-ombre={reglages.bouton.ombre} data-police={theme.police} data-decor={theme.decor} data-bureau={reglages.bureau}>
-      {/* Sous la feuille, la page est là, mais rien n'y répond tant qu'on n'a pas choisi. */}
-      <div className="lp-scene" {...(ecran && page.sortie ? { inert: true } : {})}>
+      {/* Sous une feuille, la page est là, mais rien n'y répond tant qu'on ne l'a pas refermée. */}
+      <div className="lp-scene" {...((ecran && page.sortie) || agenda ? { inert: true } : {})}>
       <div className="lp-col">
         {reglages.partage && !edition && (
           <button type="button" className="lp-partager" onClick={partager} aria-label={t.partager} {...fige}>
@@ -186,7 +203,7 @@ export function PageLiens({ page, apercu = false, edition, liste }: {
         <main className="lp-blocs">
           {edition || liste ? (edition?.liste ?? liste!)(blocs, bloc => <BlocPublic bloc={bloc} reglages={reglages} clic={() => {}} cible={cible} apercu t={t} />) : <>
             {blocs.map((bloc, i) => (
-              <div key={bloc.id} className="lp-bloc" data-type={bloc.type} data-vedette={bloc.vedette ? bloc.format : undefined} style={{ '--i': i } as CSSProperties}>
+              <div key={bloc.id} className="lp-bloc" data-type={bloc.type} data-vedette={formatVedette(bloc)} style={{ '--i': i } as CSSProperties}>
                 <BlocPublic bloc={bloc} reglages={reglages} clic={() => clic(bloc)} cible={cible} apercu={apercu} maintenant={page.maintenant} pseudo={pseudo} t={t} />
               </div>
             ))}
@@ -208,8 +225,10 @@ export function PageLiens({ page, apercu = false, edition, liste }: {
       </div>
       </div>
       {ecran && page.sortie && <FeuilleSortie sortie={page.sortie} t={t} annoncer={setToast} continuer={continuerIci} />}
+      {agenda && <FeuilleAgenda bloc={agenda} t={t} fermer={() => { setAgenda(null); requestAnimationFrame(() => avantAgenda.current?.focus({ preventScroll: true })); }} />}
       {toast && <div className="lp-toast" role="status">{toast}</div>}
     </div>
+    </ActionsPage.Provider>
   );
 }
 
@@ -308,6 +327,50 @@ function FeuilleSortie({ sortie, t, annoncer, continuer }: {
   );
 }
 
+/**
+ * Une réservation Calendly, Cal.com ou Google Agenda, dans une feuille faite comme
+ * celle qui propose le navigateur. L'agenda ne se charge qu'à l'ouverture : avant,
+ * la page ne parle à personne. Il garde ses propres règles (ses témoins compris),
+ * et « Ouvrir sur Calendly » reste là s'il refuse de s'afficher dans la page.
+ */
+function FeuilleAgenda({ bloc, t, fermer }: { bloc: Bloc; t: Textes; fermer: () => void }) {
+  const [sort, setSort] = useState(false);
+  const [charge, setCharge] = useState(false);
+  const feuille = useRef<HTMLElement>(null);
+  const adresse = adresseIntegree(bloc.url, location.hostname);
+
+  function quitter() {
+    if (sort) return;
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) { fermer(); return; }
+    setSort(true);
+    setTimeout(fermer, 220);
+  }
+  useEffect(() => { feuille.current?.focus({ preventScroll: true }); }, []);
+  useEffect(() => {
+    const echap = (e: KeyboardEvent) => { if (e.key === 'Escape') quitter(); };
+    document.addEventListener('keydown', echap);
+    return () => document.removeEventListener('keydown', echap);
+  });
+
+  return (
+    <div className="lp-sortie lp-agenda" data-sort={sort || undefined}>
+      <div className="lp-sortie-voile" aria-hidden="true" onClick={quitter} />
+      <section ref={feuille} className="lp-sortie-feuille" role="dialog" aria-modal="true" aria-labelledby="lp-agenda-titre" tabIndex={-1}>
+        <header className="lp-agenda-tete">
+          <p className="lp-agenda-titre" id="lp-agenda-titre">{bloc.titre}</p>
+          <a className="lp-agenda-apart" href={bloc.url} target="_blank" rel="noopener">{t.ouvrirSur(nomAgenda(bloc.url))}</a>
+          <button type="button" className="lp-agenda-fermer" onClick={quitter} aria-label={t.fermer}><Icone nom="ui-fermer" taille={20} /></button>
+        </header>
+        <div className="lp-agenda-cadre">
+          {!charge && <p className="lp-agenda-attente" aria-hidden="true">{t.chargement}</p>}
+          {adresse && <iframe src={adresse} title={bloc.titre} onLoad={() => setCharge(true)} allow="payment"
+            sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation" />}
+        </div>
+      </section>
+    </div>
+  );
+}
+
 /** Copier sans l'API du presse-papiers, que certains navigateurs intégrés refusent. */
 function copierALAncienne(texte: string): boolean {
   const zone = document.createElement('textarea');
@@ -349,12 +412,40 @@ function Pictogramme({ bloc }: { bloc: Bloc }) {
   return null;
 }
 
+/** La mention d'un lien partenaire, que la loi du 9 juin 2023 demande à tous : « Publicité » ou « Collaboration commerciale ». */
+function Mention({ bloc, t }: { bloc: Bloc; t: Textes }) {
+  if (!bloc.partenariat) return null;
+  return <span className="lp-pub">{bloc.partenariat.mention === 'collaboration' ? t.collaboration : t.publicite}</span>;
+}
+
+/** Le code promo d'un lien partenaire, sous lui, copié d'un geste. */
+function CodePromo({ code, t }: { code: string; t: Textes }) {
+  const { annoncer } = useContext(ActionsPage);
+  async function copier() {
+    try {
+      await navigator.clipboard.writeText(code);
+      annoncer(t.codeCopie(code));
+    } catch { annoncer(copierALAncienne(code) ? t.codeCopie(code) : t.copieRatee); }
+  }
+  return (
+    <button type="button" className="lp-code" onClick={copier} aria-label={t.copierCode(code)}>
+      <span className="lp-code-libelle">{t.codePromo}</span>
+      <span className="lp-code-valeur">{code}</span>
+      <Icone nom="copier" taille={16} />
+    </button>
+  );
+}
+
 export function BlocPublic({ bloc, reglages, clic, cible, apercu, maintenant, pseudo, t = textes(reglages.vouvoiement) }: { bloc: Bloc; reglages: Reglages; clic: () => void; cible: object; apercu: boolean; maintenant?: number; pseudo?: string; t?: Textes }) {
   if (bloc.type === 'lien' && enAttente(bloc, maintenant ?? Date.now())) return <CompteARebours bloc={bloc} depart={maintenant ?? Date.now()} apercu={apercu} t={t} />;
-  const rel = bloc.indexable ? 'noopener' : 'nofollow noopener';
+  // Un lien partenaire se dit à Google (`sponsored`), comme aux visiteurs.
+  const rel = `${bloc.indexable ? '' : 'nofollow '}${bloc.partenariat ? 'sponsored ' : ''}noopener`;
   const nosnippet = bloc.indexable ? {} : { 'data-nosnippet': true };
   const mouvement = animationDe(bloc, reglages);
   const anim = mouvement !== 'aucune' ? `lp-anim-${mouvement}` : '';
+  const mention = <Mention bloc={bloc} t={t} />;
+  // Le code promo se pose sous le lien : deux gestes, deux cibles.
+  const avecCode = (lien: ReactNode) => (bloc.partenariat?.code ? <div className="lp-partenaire">{lien}<CodePromo code={bloc.partenariat.code} t={t} /></div> : lien);
   switch (bloc.type) {
     case 'titre':
       return <h2 className="lp-section">{bloc.titre}</h2>;
@@ -370,16 +461,23 @@ export function BlocPublic({ bloc, reglages, clic, cible, apercu, maintenant, ps
       return <Inscription bloc={bloc} apercu={apercu} pseudo={pseudo ?? ''} t={t} />;
     case 'preuve':
       return <PreuveSociale bloc={bloc} t={t} clic={clic} cible={cible} />;
+    case 'produit':
+      return bloc.url ? avecCode(<Produit bloc={bloc} rel={rel} anim={anim} clic={clic} cible={cible} nosnippet={nosnippet} mention={mention} />) : null;
+    case 'soutien':
+      return bloc.url ? <Soutien bloc={bloc} rel={rel} clic={clic} cible={cible} t={t} /> : null;
+    case 'reservation':
+      return bloc.url ? <Reservation bloc={bloc} rel={rel} anim={anim} clic={clic} cible={cible} nosnippet={nosnippet} /> : null;
     default:
       if (bloc.acces) return <Drop bloc={bloc} t={t} apercu={apercu} pseudo={pseudo ?? ''} clic={clic} cible={cible} />;
       if (!bloc.url) return null;
       if (bloc.vedette) {
         const teinte = bloc.teinte === 'accent' ? 'lp-accent' : '';
         if (bloc.format === 'bouton') {
-          return (
+          return avecCode(
             <a className={`lp-btn lp-btn-vedette ${teinte} ${anim}`} href={bloc.url} rel={rel} onClick={clic} {...cible} {...nosnippet}>
               <Pictogramme bloc={bloc} />
               <span className="lp-btn-texte">
+                {mention}
                 <span className="lp-btn-titre">{bloc.titre || bloc.url}</span>
                 {bloc.sousTitre && <span className="lp-sous">{bloc.sousTitre}</span>}
               </span>
@@ -389,7 +487,7 @@ export function BlocPublic({ bloc, reglages, clic, cible, apercu, maintenant, ps
         const picto = bloc.icone ? (ICONES[bloc.icone] ? <Icone nom={bloc.icone} taille={bloc.format === 'carte' ? 28 : 22} /> : bloc.icone) : null;
         const hote = nomDeDomaine(bloc.url);
         if (bloc.format === 'carte') {
-          return (
+          return avecCode(
             <a className={`lp-carte ${teinte} ${anim}`} data-format="carte" href={bloc.url} rel={rel} onClick={clic} {...cible} {...nosnippet}>
               {bloc.image ? (
                 <span className="lp-carte-visuel">
@@ -402,6 +500,7 @@ export function BlocPublic({ bloc, reglages, clic, cible, apercu, maintenant, ps
                 </span>
               )}
               <span className="lp-carte-corps">
+                {mention}
                 <span className="lp-carte-titre">{bloc.titre || hote}</span>
                 {bloc.sousTitre && <span className="lp-carte-sous">{bloc.sousTitre}</span>}
                 {bloc.description && <span className="lp-carte-description">{bloc.description}</span>}
@@ -413,10 +512,11 @@ export function BlocPublic({ bloc, reglages, clic, cible, apercu, maintenant, ps
             </a>
           );
         }
-        return (
+        return avecCode(
           <a className={`lp-carte ${teinte} ${anim}`} data-format="bandeau" href={bloc.url} rel={rel} onClick={clic} {...cible} {...nosnippet}>
             {bloc.image ? <img className="lp-carte-tuile" src={bloc.image} alt="" loading="lazy" /> : picto && <span className="lp-carte-tuile" aria-hidden="true">{picto}</span>}
             <span className="lp-carte-texte">
+              {mention}
               <span className="lp-carte-titre">{bloc.titre || hote}</span>
               {bloc.sousTitre && <span className="lp-sous">{bloc.sousTitre}</span>}
               {bloc.description && <span className="lp-carte-description">{bloc.description}</span>}
@@ -425,16 +525,120 @@ export function BlocPublic({ bloc, reglages, clic, cible, apercu, maintenant, ps
           </a>
         );
       }
-      return (
+      return avecCode(
         <a className={`lp-btn ${anim}`} href={bloc.url} rel={rel} onClick={clic} {...cible} {...nosnippet}>
           <Pictogramme bloc={bloc} />
           <span className="lp-btn-texte">
+            {mention}
             <span className="lp-btn-titre">{bloc.titre || bloc.url}</span>
             {bloc.sousTitre && <span className="lp-sous">{bloc.sousTitre}</span>}
           </span>
         </a>
       );
   }
+}
+
+/**
+ * Un produit : sa photo, son nom et son prix, lus sur la boutique. Mis en avant,
+ * une grande carte à la couleur d'accent. Le paiement se fait sur la boutique.
+ */
+function Produit({ bloc, rel, anim, clic, cible, nosnippet, mention }: { bloc: Bloc; rel: string; anim: string; clic: () => void; cible: object; nosnippet: object; mention: ReactNode }) {
+  const hote = nomDeDomaine(bloc.url);
+  const ligne = (
+    <span className="lp-produit-ligne">
+      {bloc.prix && <span className="lp-prix">{bloc.prix}</span>}
+      <span className="lp-carte-domaine">{hote}</span>
+    </span>
+  );
+  if (bloc.vedette) {
+    return (
+      <a className={`lp-carte lp-produit lp-accent ${anim}`} data-format="carte" href={bloc.url} rel={rel} onClick={clic} {...cible} {...nosnippet}>
+        {bloc.image
+          ? <span className="lp-carte-visuel"><img src={bloc.image} alt="" loading="lazy" /></span>
+          : <span className="lp-carte-visuel lp-carte-motif" aria-hidden="true"><span className="lp-carte-tuile"><Icone nom="bloc-produit" taille={28} /></span></span>}
+        <span className="lp-carte-corps">
+          {mention}
+          <span className="lp-carte-titre">{bloc.titre || hote}</span>
+          {bloc.description && <span className="lp-carte-description">{bloc.description}</span>}
+          <span className="lp-carte-pied">
+            {ligne}
+            <span className="lp-carte-fleche" aria-hidden="true"><Icone nom="ui-fleche" taille={18} /></span>
+          </span>
+        </span>
+      </a>
+    );
+  }
+  return (
+    <a className={`lp-carte lp-produit ${anim}`} data-format="bandeau" href={bloc.url} rel={rel} onClick={clic} {...cible} {...nosnippet}>
+      {bloc.image
+        ? <img className="lp-carte-tuile" src={bloc.image} alt="" loading="lazy" />
+        : <span className="lp-carte-tuile" aria-hidden="true"><Icone nom="bloc-produit" taille={24} /></span>}
+      <span className="lp-carte-texte">
+        {mention}
+        <span className="lp-carte-titre">{bloc.titre || hote}</span>
+        {ligne}
+      </span>
+      <span className="lp-carte-fleche" aria-hidden="true"><Icone nom="ui-fleche" taille={18} /></span>
+    </a>
+  );
+}
+
+/**
+ * « Me soutenir » : chez PayPal, des montants tout prêts (l'adresse les reprend)
+ * et « Autre montant » ; ailleurs (Ko-fi, Tipeee, Lydia…), un seul bouton vers
+ * le site, qui fait choisir chez lui. Hopla n'encaisse rien.
+ */
+function Soutien({ bloc, rel, clic, cible, t }: { bloc: Bloc; rel: string; clic: () => void; cible: object; t: Textes }) {
+  const site = nomSoutien(bloc.url);
+  const montants = avecMontants(bloc.url) ? bloc.montants : [];
+  const euros = (n: number) => n.toLocaleString(LOCALE, { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
+  return (
+    <section className="lp-newsletter lp-soutien">
+      <div className="lp-newsletter-tete">
+        <span className="lp-newsletter-picto" aria-hidden="true"><Icone nom="bloc-soutien" taille={20} /></span>
+        <span className="lp-newsletter-textes">
+          <h2 className="lp-newsletter-titre">{bloc.titre}</h2>
+          {bloc.sousTitre && <p className="lp-sous">{bloc.sousTitre}</p>}
+        </span>
+      </div>
+      {montants.length ? <>
+        <div className="lp-soutien-montants">
+          {montants.map(n => <a key={n} className="lp-btn lp-btn-compact lp-accent" href={lienMontant(bloc.url, n)} rel={rel} onClick={clic} {...cible}>{euros(n)}</a>)}
+          <a className="lp-btn lp-btn-compact lp-soutien-autre" href={lienSansMontant(bloc.url)} rel={rel} onClick={clic} {...cible}>{t.autreMontant}</a>
+        </div>
+        <p className="lp-mention">{t.paiementSur(site)}</p>
+      </> : <a className="lp-btn lp-btn-compact lp-accent lp-soutien-un" href={bloc.url} rel={rel} onClick={clic} {...cible}>{t.soutenirSur(site)}</a>}
+    </section>
+  );
+}
+
+/**
+ * Une prise de rendez-vous. Calendly, Cal.com et Google Agenda s'ouvrent dans une
+ * feuille, sans quitter la page ; les autres (Planity…) comme un lien. Sans script,
+ * c'est toujours un lien.
+ */
+function Reservation({ bloc, rel, anim, clic, cible, nosnippet }: { bloc: Bloc; rel: string; anim: string; clic: () => void; cible: object; nosnippet: object }) {
+  const { reserver } = useContext(ActionsPage);
+  const dedans = !!reserver && seIntegre(bloc.url);
+  function ouvrir(e: MouseEvent<HTMLAnchorElement>) {
+    clic();
+    if (!dedans || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    e.preventDefault();
+    reserver!(bloc, e.currentTarget);
+  }
+  return (
+    <a className={`lp-carte lp-reservation ${bloc.vedette ? 'lp-accent' : ''} ${anim}`} data-format="bandeau" href={bloc.url} rel={rel} onClick={ouvrir}
+      {...(dedans ? { 'aria-haspopup': 'dialog' as const } : cible)} {...nosnippet}>
+      {bloc.image
+        ? <img className="lp-carte-tuile" src={bloc.image} alt="" loading="lazy" />
+        : <span className="lp-carte-tuile" aria-hidden="true"><Icone nom={bloc.icone && ICONES[bloc.icone] ? bloc.icone : 'bloc-reservation'} taille={22} /></span>}
+      <span className="lp-carte-texte">
+        <span className="lp-carte-titre">{bloc.titre}</span>
+        <span className="lp-sous">{bloc.sousTitre || nomAgenda(bloc.url)}</span>
+      </span>
+      <span className="lp-carte-fleche" aria-hidden="true"><Icone nom="ui-fleche" taille={18} /></span>
+    </a>
+  );
 }
 
 const deux = (n: number) => String(n).padStart(2, '0');
@@ -457,6 +661,7 @@ function CompteARebours({ bloc, depart, apercu, t }: { bloc: Bloc; depart: numbe
     <div className={`lp-carte lp-rebours ${bloc.vedette && bloc.teinte === 'accent' ? 'lp-accent' : ''}`} data-format="bandeau" role="timer" aria-label={`${bloc.titre} : ${t.ouvreLe(quand)}`}>
       <span className="lp-carte-tuile" aria-hidden="true"><Icone nom={bloc.icone && ICONES[bloc.icone] ? bloc.icone : 'horloge'} taille={22} /></span>
       <span className="lp-carte-texte">
+        <Mention bloc={bloc} t={t} />
         <span className="lp-carte-titre">{bloc.titre || t.bientot}</span>
         <span className="lp-sous">{reste === 0 ? t.ouvert : t.ouvreLe(quand)}</span>
       </span>
@@ -621,6 +826,7 @@ function Drop({ bloc, t, apercu, pseudo, clic, cible }: { bloc: Bloc; t: Textes;
         onClick={() => (avecCode ? setOuvert(o => !o) : debloquer())}>
         <span className="lp-carte-tuile" aria-hidden="true"><Icone nom={url ? 'check' : bloc.icone && ICONES[bloc.icone] ? bloc.icone : 'cadenas'} taille={22} /></span>
         <span className="lp-carte-texte">
+          <Mention bloc={bloc} t={t} />
           <span className="lp-carte-titre">{bloc.titre || t.reserve}</span>
           <span className="lp-sous">{url ? (garde ? t.garde : t.debloque) : bloc.sousTitre || (avecCode ? t.reserve : t.reserver)}</span>
           {badge && <span className="lp-drop-places">{badge}</span>}

@@ -15,7 +15,7 @@ import avatar from '../public/avatar.webp?inline';
 
 const CLE = 'liens-demo-v3';
 /** Sans paiement, rien n'est réservé : l'aperçu montre toutes les fonctions (seule la mention reste sans offre). */
-const DROITS_APERCU: Droits = { sansMention: false, couleurs: true, programmation: true, avis: true, stats: true, heure: true, drops: true, listeEmail: true };
+const DROITS_APERCU: Droits = { sansMention: false, vitrine: true, couleurs: true, programmation: true, avis: true, stats: true, heure: true, drops: true, listeEmail: true };
 let n = 0;
 const id = () => `d${Date.now().toString(36)}${n++}`;
 
@@ -82,8 +82,12 @@ export const apiDemo: Api = {
   async ordonner(ids) { await pause(); etat.blocs = ids.map(i => etat.blocs.find(b => b.id === i)).filter((b): b is Bloc => !!b); ecrire(); },
   async enregistrerReglages(reglages) { await pause(); etat.reglages = reglages; ecrire(); return reglages; },
   async envoyerImage(dataUrl) { await pause(); return dataUrl; },
-  // Dans l'aperçu, pas de serveur pour lire le site : une vignette dessinée en tient lieu.
-  async apercuSite(url, image = true) { await pause(); return { titre: '', description: 'Un aperçu de démonstration : en ligne, le serveur lit la vraie description du site.', image: image ? vignetteDemo(url) : null }; },
+  // Dans l'aperçu, pas de serveur pour lire le site : une vignette dessinée en tient lieu. Une boutique donne un produit d'exemple.
+  async apercuSite(url, image = true) {
+    await pause();
+    if (image === 'partage') return { titre: 'Carnet de recettes illustré', description: '', image: photoProduitDemo(), prix: '24 €' };
+    return { titre: '', description: 'Un aperçu de démonstration : en ligne, le serveur lit la vraie description du site.', image: image ? vignetteDemo(url) : null, prix: '' };
+  },
   async stats(jours) { await pause(); return statsFictives(jours); },
   async deconnexion() { localStorage.removeItem(CLE); etat = lire(); },
   async accepterCgu() { await pause(); },
@@ -166,6 +170,41 @@ function vignetteDemo(url: string): string {
   x.fillStyle = '#ffb38a'; x.beginPath(); x.roundRect(140, 360, 220, 64, 32); x.fill();
   x.fillStyle = '#f4f1ec'; x.font = '600 40px system-ui'; let hote = url; try { hote = new URL(url).hostname.replace(/^www\./, ''); } catch { /* adresse brute */ } x.fillText(hote, 140, 540);
   return c.toDataURL('image/png');
+}
+
+/** La photo d'un produit, dessinée : un carnet posé sur un fond chaud. */
+function photoProduitDemo(): string {
+  const c = document.createElement('canvas'); c.width = 800; c.height = 800;
+  const x = c.getContext('2d')!;
+  const g = x.createLinearGradient(0, 0, 800, 800); g.addColorStop(0, '#f3dcc8'); g.addColorStop(1, '#d9a98b');
+  x.fillStyle = g; x.fillRect(0, 0, 800, 800);
+  x.fillStyle = 'rgba(60,30,20,0.18)'; x.beginPath(); x.roundRect(232, 182, 360, 470, 22); x.fill();
+  x.fillStyle = '#2f4a3a'; x.beginPath(); x.roundRect(210, 160, 360, 470, 22); x.fill();
+  x.fillStyle = '#f4ead8'; x.beginPath(); x.roundRect(262, 250, 256, 120, 12); x.fill();
+  x.fillStyle = '#2f4a3a'; x.fillRect(296, 286, 188, 14); x.fillRect(320, 318, 140, 10);
+  x.fillStyle = '#e9b44c'; x.fillRect(250, 160, 18, 470);
+  return c.toDataURL('image/png');
+}
+
+/**
+ * La vitrine d'exemple (`#vitrine=<thème>`), pour la planche de captures : un produit en bandeau et un en carte,
+ * « Me soutenir » chez PayPal et chez Ko-fi, deux prises de rendez-vous, deux liens partenaires.
+ */
+let vitrine: Bloc[] | null = null;
+export function blocsVitrine(): Bloc[] {
+  if (vitrine) return vitrine;
+  const b = (type: Bloc['type'], champs: Partial<Bloc>): Bloc => ({ ...nouveauBloc(type, id()), ...champs });
+  const photo = photoProduitDemo();
+  return vitrine = [
+    b('produit', { titre: 'Carnet de recettes illustré', url: 'https://www.etsy.com/fr/listing/123/carnet', prix: '24 €', image: photo }),
+    b('produit', { titre: 'Atelier céramique, une journée', url: 'https://atelier-camille.fr/products/journee', prix: 'Dès 89 €', image: photo, vedette: true, description: 'Une journée pour tourner ton premier bol, émail et cuisson compris.' }),
+    b('lien', { titre: 'Ma gourde préférée', url: 'https://exemple-gourdes.fr/?ref=camille', partenariat: { mention: 'publicite', code: 'CAMILLE10' } }),
+    b('lien', { titre: 'Mon appareil photo', url: 'https://exemple-photo.fr/boitier', partenariat: { mention: 'collaboration', code: '' }, vedette: true, format: 'bandeau', sousTitre: 'Celui de toutes mes vidéos' }),
+    b('reservation', { url: 'https://calendly.com/camille/decouverte', sousTitre: 'Un appel de 30 minutes, offert' }),
+    b('reservation', { titre: 'Réserver au salon', url: 'https://www.planity.com/salon-camille-75011-paris', vedette: true }),
+    b('soutien', { url: 'https://paypal.me/camille', sousTitre: 'Pour m’aider à continuer, si le cœur t’en dit.' }),
+    b('soutien', { titre: 'Un café pour la route', url: 'https://ko-fi.com/camille' }),
+  ];
 }
 
 export const etatDemo = () => apiDemo.charger();
