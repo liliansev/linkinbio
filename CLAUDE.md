@@ -97,7 +97,7 @@ embarque tout : l'image n'a pas de `node_modules`.
   la fin de la période payée, `RetourPaiement` au retour, dont le geste ramène où servir l'offre ; parti d'une règle de bloc, au bloc,
   la règle ouverte par `RegleAOuvrir` dans `ReglesBloc.tsx`).
   Intégrations (`OngletIntegrations.tsx`, 22 octobre 2026, demandé par Lilian) reprend les lignes de Réglages, une par outil,
-  son logo seul dans la couleur de sa marque (l'enveloppe pour un outil sans logo libre) : Newsletter (une clé, puis la liste
+  son vrai logo seul dans la couleur de sa marque (la bulle de MailerLite, l'abeille de beehiiv ; l'enveloppe tant que Systeme.io n'a pas le sien). Un bloc ouvert depuis Intégrations y ramène quand on le referme (croix, Annuler, retour du téléphone), sur la sous-page d'où l'on venait ; le retour du téléphone depuis un autre onglet que Ma page ramène à Ma page : Newsletter (une clé, puis la liste
   choisie par son nom ; Substack par la copie des adresses ou le fichier), Automatisations (Make, Zapier, n8n, par l'adresse
   d'un webhook), puis Sur ta page (avis, rendez-vous, soutien, produit : un toucher ajoute le bloc à Ma page, ou l'y ouvre).
   Chaque outil s'ouvre en sous-page, avec le fil « Intégrations / Brevo ». La carte « Ta liste » des stats y mène.

@@ -88,6 +88,19 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
   // « Programmer ce bloc », au retour de Creem : le bloc s'ouvre sur la règle que l'offre vient de débloquer.
   const [regleOuverte, setRegleOuverte] = useState<{ bloc: string; regle: 'moment' | 'acces' } | null>(null);
   const [edition, setEdition] = useState<{ bloc: Bloc; nouveau: boolean; enBas?: boolean } | null>(null);
+  // Un bloc ouvert depuis Intégrations (« Produit », « Ma liste d'inscrits »…) : refermé, par sa croix, Annuler, Enregistrer ou le retour
+  // du téléphone, on revient à Intégrations, sur la sous-page d'où l'on venait (22 octobre 2026, Lilian : la croix ramenait à Ma page).
+  const depuisIntegrations = useRef<{ bloc: string; outil: string | null } | null>(null);
+  const [sousIntegration, setSousIntegration] = useState<string | null>(null);
+  useEffect(() => {
+    const d = depuisIntegrations.current;
+    if (!d || edition?.bloc.id === d.bloc) return;
+    depuisIntegrations.current = null;
+    if (edition || onglet !== 'page') return;
+    setSousIntegration(d.outil);
+    setOnglet('integrations');
+    scrollTo({ top: 0 });
+  }, [edition, onglet]);
   // Une seule fois : le bloc refermé (ou un autre ouvert), sa règle ne s'ouvre plus d'elle-même.
   useEffect(() => { if (regleOuverte && edition?.bloc.id !== regleOuverte.bloc) setRegleOuverte(null); }, [edition, regleOuverte]);
   // Le bloc tel qu'il se tape dans l'éditeur : la page le redessine à chaque frappe, avant même qu'il soit écrit.
@@ -269,10 +282,13 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
     return true;
   }
   function choisirOnglet(o: Onglet) {
-    if (!fermerEdition()) return;
+    if (!fermerEdition()) return false;
     setOnglet(o);
     scrollTo({ top: 0 });
+    return true;
   }
+  // Le retour du téléphone, depuis Stats, Intégrations, Réglages ou Comptes, ramène à Ma page au lieu de quitter le back office.
+  useCouche(onglet !== 'page', () => choisirOnglet('page'));
 
   /** Avant de partir chez Creem : les réglages qui attendaient leur envoi partent, le bloc ouvert s'écrit, et on attend que tout soit gardé (4 secondes au plus). */
   async function avantDePartir() {
@@ -525,7 +541,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
     <RegleAOuvrir.Provider value={regleOuverte?.bloc === edition.bloc.id ? regleOuverte.regle : null}>
     <EditeurBloc key={edition.bloc.id} bureau={grand} garde={garde} onBrouillon={setBrouillon}
       adressePage={urlPage(compte)} principal={compte.principal} bloc={edition.bloc} reglages={reglages} nouveau={edition.nouveau} clics={clics[edition.bloc.id] ?? 0} prises={initial.places?.[edition.bloc.id] ?? 0} onFermer={() => setEdition(null)}
-      onRetour={edition.nouveau && !grand ? () => { setEdition(null); setDemandeAjout({ enBas: !!edition.enBas }); } : undefined}
+      onRetour={edition.nouveau && !grand && depuisIntegrations.current?.bloc !== edition.bloc.id ? () => { setEdition(null); setDemandeAjout({ enBas: !!edition.enBas }); } : undefined}
       onEnregistrer={enregistrerBloc} onSupprimer={supprimer} onDupliquer={dupliquer} onDeplacer={deplacer} place={{ rang: blocs.findIndex(b => b.id === edition.bloc.id), total: blocs.length }} envoyerImage={d => api.envoyerImage(d)} apercuSite={(u, i) => api.apercuSite(u, i)} />
     </RegleAOuvrir.Provider>
   );
@@ -641,9 +657,9 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
             appel={grand ? null : appel()} />}
           {onglet === 'stats' && <OngletStats charger={chargerStats} adresse={urlPage(compte)} pseudo={compte.pseudo} joursMax={initial.paiement ? joursStats(compte.plan, droits.stats) : 365} onOffres={peutAcheter ? ouvrirOffres : undefined}
             ouvrirApps={reglages.ouvrirApps} onActiverApps={() => changerReglages({ ...reglages, ouvrirApps: true })} liste={<MaListe api={api} onIntegrations={() => choisirOnglet('integrations')} />} blocs={blocs} />}
-          {onglet === 'integrations' && <OngletIntegrations api={api} blocs={blocs}
-            onAjouter={t => { choisirOnglet('page'); ajouterBloc(nouveauBloc(t, nouvelId())); }}
-            onOuvrir={b => { choisirOnglet('page'); ouvrirBloc(b); }}
+          {onglet === 'integrations' && <OngletIntegrations api={api} blocs={blocs} sousOuverte={sousIntegration} sousLue={() => setSousIntegration(null)}
+            onAjouter={(t, outil) => { const b = nouveauBloc(t, nouvelId()); choisirOnglet('page'); depuisIntegrations.current = { bloc: b.id, outil }; ajouterBloc(b); }}
+            onOuvrir={b => { choisirOnglet('page'); depuisIntegrations.current = { bloc: b.id, outil: null }; ouvrirBloc(b); }}
             onOffres={peutAcheter ? (pour?: Fonction) => ouvrirOffres(pour) : undefined} />}
           {onglet === 'reglages' && <OngletReglages reglages={reglages} compte={compte} onChange={changerReglages} onDeconnexion={deconnexion} urlExport={api.urlExport} supprimerMonCompte={api.supprimerMonCompte}
             abonnement={abonnement} onOffres={peutAcheter ? (pour?: Fonction) => ouvrirOffres(pour) : undefined} ouvrirPortail={api.ouvrirPortail}
