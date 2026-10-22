@@ -317,7 +317,7 @@ const CHAPITRES: { court: string; offre: 'starter' | 'pro'; titre: string; texte
   { court: 'Le lancement', offre: 'starter', titre: 'Les nouvelles pièces d’Inès', texte: 'Ton lien affiche un compte à rebours, sans dévoiler son adresse. À l’heure dite, il s’ouvre tout seul.' },
   { court: 'Les drops', offre: 'pro', titre: 'Les éditions limitées d’Hugo', texte: 'Un drop, c’est un lien réservé : il s’ouvre avec un code, pour le nombre de places que tu choisis. Le compteur se tient à jour tout seul.' },
   { court: 'Les avis', offre: 'starter', titre: 'Les clients d’Inès en parlent', texte: 'Ta note sur 5, le nombre d’avis et le mot d’un client, en bonne place sur ta page. Tu les reprends de Google ou d’ailleurs, Hopla les met en forme.' },
-  { court: 'La liste e-mail', offre: 'pro', titre: 'Malik garde le contact', texte: 'Un visiteur laisse son e-mail sur ta page et rejoint ta liste. Il part tout seul vers Brevo ou Mailchimp si tu les as branchés.' },
+  { court: 'La liste e-mail', offre: 'pro', titre: 'Malik garde le contact', texte: 'Un visiteur laisse son e-mail sur ta page et rejoint ta liste. Il part tout seul vers ta newsletter (Brevo, Kit, Mailchimp…) si tu l’as branchée.' },
 ];
 /** Qui montre chaque chapitre. */
 const PERSONNES: ProfilExemple[] = ['malik', 'ines', 'hugo', 'ines', 'malik'];

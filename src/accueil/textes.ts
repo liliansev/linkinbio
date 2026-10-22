@@ -64,7 +64,7 @@ export const FONCTIONS = [
   'Statistiques sans cookie sur 30 jours, résumées en phrases, et e-mail du lundi (Starter)',
   'Ordre des liens selon l’heure (Pro)',
   'Drops : liens débloqués avec un code ou pour un nombre de places (Pro)',
-  'Collecte d’e-mails vers Brevo, Mailchimp ou un fichier CSV (Pro)',
+  'Collecte d’e-mails vers ta newsletter (Brevo, Mailchimp, Kit, MailerLite, beehiiv, Systeme.io, Substack), vers Make, Zapier ou n8n, ou en fichier CSV (Pro)',
   'Statistiques sur un an (Pro)',
 ];
 

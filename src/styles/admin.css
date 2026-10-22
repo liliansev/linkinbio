@@ -184,7 +184,7 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
     --adm-colonne: 1120px;
     --adm-largeur: min(100% - 216px - 2 * var(--adm-bord), var(--adm-colonne));
   }
-  .adm-shell[data-onglet='reglages'] { --adm-colonne: 680px; }
+  .adm-shell:is([data-onglet='reglages'], [data-onglet='integrations']) { --adm-colonne: 680px; }
   .adm-shell[data-onglet='page'] { --adm-colonne: 1300px; }
   .adm-travail { padding-left: 216px; }
   .adm-colonne { width: min(100% - 2 * var(--adm-bord), var(--adm-colonne)); margin-inline: auto; }

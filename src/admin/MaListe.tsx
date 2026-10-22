@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { Api, Contact, FournisseurListe, Liste } from '../lib/types.ts';
+import type { Api, Contact, Liste } from '../lib/types.ts';
+import { destination } from '../lib/integrations.ts';
 import { Icone } from '../components/Icone.tsx';
-import { BoutonPrincipal, Carte, Champ, Feuille, Segments, classeBouton, classeSaisie } from './ui.tsx';
+import { Carte, Feuille, classeBouton } from './ui.tsx';
 import { Etiquette, Reserve, usePermis } from './offre.tsx';
 
 /*
  * Les inscrits de « Rejoins ma liste », dans l'onglet Stats : combien, les
- * derniers, l'export CSV, et le branchement sur Brevo ou Mailchimp.
+ * derniers, l'export CSV, et où ils partent. La newsletter se branche dans
+ * l'onglet Intégrations (22 octobre 2026) : la carte y mène.
  */
 
 const nombre = (n: number) => n.toLocaleString('fr-FR');
@@ -16,19 +18,22 @@ const quand = (ts: number) => {
   if (h < 24) return `il y a ${Math.floor(h)} h`;
   return new Date(ts).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
 };
-const NOMS: Record<FournisseurListe, string> = { brevo: 'Brevo', mailchimp: 'Mailchimp' };
+const majuscule = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
 
-export function MaListe({ api }: { api: Pick<Api, 'liste' | 'brancherListe' | 'supprimerContact' | 'resynchroniser' | 'urlContacts'> }) {
+type ApiListe = Pick<Api, 'liste' | 'supprimerContact' | 'resynchroniser' | 'urlContacts'>;
+
+/** `onIntegrations` : ouvre l'onglet Intégrations, où la newsletter se branche. */
+export function MaListe({ api, onIntegrations }: { api: ApiListe; onIntegrations?: () => void }) {
   const [liste, setListe] = useState<Liste | null>(null);
   const [ouverte, setOuverte] = useState(false);
   const recharger = useCallback(() => api.liste().then(setListe).catch(() => {}), [api]);
   useEffect(() => { recharger(); }, [recharger]);
   const permis = usePermis('listeEmail');
   if (!liste) return null;
-  // Sans l'offre et sans inscrit, la carte dit ce que la liste ferait ; des inscrits déjà là restent à toi (export, Brevo).
+  // Sans l'offre et sans inscrit, la carte dit ce que la liste ferait ; des inscrits déjà là restent à toi (export, ta newsletter).
   if (!permis && !liste.total) return (
     <Carte titre="Ta liste" action={<Etiquette fonction="listeEmail" />}>
-      <Reserve fonction="listeEmail" phrase="Avec Hopla Pro, tes visiteurs laissent leur e-mail sur ta page : chaque adresse arrive ici, et chez Brevo ou Mailchimp si tu les branches." />
+      <Reserve fonction="listeEmail" phrase="Avec Hopla Pro, tes visiteurs laissent leur e-mail sur ta page : chaque adresse arrive ici, et dans ta newsletter si tu la branches." />
     </Carte>
   );
   return (
@@ -42,21 +47,18 @@ export function MaListe({ api }: { api: Pick<Api, 'liste' | 'brancherListe' | 's
             </div>
             <p className="mt-2.5 flex items-center gap-1.5 text-[13px] text-white/55">
               <Icone nom={liste.integration ? 'ui-ok' : 'courrier'} taille={14} />
-              {liste.integration ? `Envoyés aussi chez ${NOMS[liste.integration.fournisseur]}${liste.integration.nom ? `, liste « ${liste.integration.nom} »` : ''}.` : 'Gardés ici. Exporte-les en CSV, ou branche Brevo ou Mailchimp.'}
+              {liste.integration ? `Envoyés aussi ${destination(liste.integration)}.` : 'Gardés ici. Exporte-les en CSV, ou branche ta newsletter.'}
             </p>
           </>
-        ) : <p className="text-[14px] leading-snug text-white/60">Ajoute « Ma liste d’inscrits » à ta page : chaque adresse arrive ici, et chez Brevo ou Mailchimp si tu les branches.</p>}
+        ) : <p className="text-[14px] leading-snug text-white/60">Ajoute « Ma liste d’inscrits » à ta page : chaque adresse arrive ici, et dans ta newsletter si tu la branches.</p>}
         {!permis && liste.total > 0 && <p className="mt-2.5 text-[13px] leading-snug text-white/55">Le formulaire n’est plus sur ta page sans Hopla Pro. Tes inscrits restent à toi : exporte-les depuis Gérer.</p>}
       </Carte>
-      {ouverte && <FeuilleListe liste={liste} api={api} onFermer={() => setOuverte(false)} onChange={recharger} />}
+      {ouverte && <FeuilleListe liste={liste} api={api} onFermer={() => setOuverte(false)} onChange={recharger} onIntegrations={onIntegrations} />}
     </>
   );
 }
 
-function FeuilleListe({ liste, api, onFermer, onChange }: { liste: Liste; api: Parameters<typeof MaListe>[0]['api']; onFermer: () => void; onChange: () => void }) {
-  const [choix, setChoix] = useState<'hopla' | FournisseurListe>(liste.integration?.fournisseur ?? 'hopla');
-  const [cle, setCle] = useState('');
-  const [id, setId] = useState(liste.integration?.liste ?? '');
+function FeuilleListe({ liste, api, onFermer, onChange, onIntegrations }: { liste: Liste; api: ApiListe; onFermer: () => void; onChange: () => void; onIntegrations?: () => void }) {
   const [message, setMessage] = useState<{ ok: boolean; texte: string } | null>(null);
   const [envoi, setEnvoi] = useState(false);
   const [contacts, setContacts] = useState<Contact[]>(liste.derniers);
@@ -80,22 +82,13 @@ function FeuilleListe({ liste, api, onFermer, onChange }: { liste: Liste; api: P
     const c = retire; setRetire(null);
     setContacts(l => [...l, c].sort((x, y) => y.ts - x.ts));
   }
-  const memeFournisseur = liste.integration?.fournisseur === choix;
+  const branche = liste.integration;
 
-  async function brancher() {
-    setEnvoi(true); setMessage(null);
-    try {
-      const r = await api.brancherListe(choix === 'hopla' ? null : { fournisseur: choix, cle, liste: id });
-      setMessage({ ok: r.ok, texte: r.message });
-      if (r.ok) { setCle(''); onChange(); }
-    } catch { setMessage({ ok: false, texte: 'Le serveur ne répond pas. Réessaie dans un instant.' }); }
-    setEnvoi(false);
-  }
   async function renvoyer() {
     setEnvoi(true);
     try {
       const r = await api.resynchroniser();
-      setMessage({ ok: !r.erreurs, texte: r.erreurs ? `${r.envoyes} envoyés, ${r.erreurs} refusés : vérifie ta clé et ta liste.` : `${r.envoyes} inscrit${r.envoyes > 1 ? 's' : ''} envoyé${r.envoyes > 1 ? 's' : ''}.` });
+      setMessage({ ok: !r.erreurs, texte: r.erreurs ? `${nombre(r.envoyes)} envoyés, ${nombre(r.erreurs)} refusés : vérifie ton branchement dans Intégrations.` : `${nombre(r.envoyes)} inscrit${r.envoyes > 1 ? 's' : ''} envoyé${r.envoyes > 1 ? 's' : ''}.` });
       onChange();
     } catch { setMessage({ ok: false, texte: 'Le serveur ne répond pas.' }); }
     setEnvoi(false);
@@ -105,30 +98,19 @@ function FeuilleListe({ liste, api, onFermer, onChange }: { liste: Liste; api: P
     <Feuille ouverte onFermer={onFermer} titre="Ta liste">
       <div className="flex flex-col gap-5 pt-1">
         <section className="flex flex-col gap-3">
-          <span className="text-[13px] font-medium text-white/70">Où vont les inscrits</span>
-          <Segments label="Fournisseur" valeur={choix} onChange={v => { setChoix(v); setMessage(null); }}
-            options={[{ id: 'hopla', nom: 'Ici seulement' }, { id: 'brevo', nom: 'Brevo' }, { id: 'mailchimp', nom: 'Mailchimp' }]} />
-          {choix !== 'hopla' && (
-            <>
-              <Champ label="Clé d’API" aide={choix === 'brevo' ? 'Brevo : Paramètres, SMTP et API, Clés API.' : 'Mailchimp : Profil, Extras, Clés API. Elle finit par …-us21.'}>
-                <input className={classeSaisie} value={cle} onChange={e => setCle(e.target.value)} autoComplete="off" spellCheck={false} autoCapitalize="none"
-                  placeholder={memeFournisseur && liste.integration?.cle ? `Enregistrée (${liste.integration.cle})` : choix === 'brevo' ? 'xkeysib-…' : '…-us21'} />
-              </Champ>
-              <Champ label={choix === 'brevo' ? 'Numéro de la liste' : 'Identifiant de l’audience'} aide={choix === 'brevo' ? 'Contacts, Listes : le numéro dans la colonne ID.' : 'Audience, Paramètres, « Audience name and defaults ».'}>
-                <input className={classeSaisie} value={id} onChange={e => setId(e.target.value)} inputMode={choix === 'brevo' ? 'numeric' : 'text'} autoCapitalize="none" spellCheck={false} />
-              </Champ>
-              <p className="text-[12.5px] leading-snug text-white/55">Ta clé est chiffrée sur le serveur et ne s’affiche plus jamais. Hopla s’en sert seulement pour ajouter tes inscrits.</p>
-            </>
-          )}
-          {(choix !== 'hopla' || liste.integration) && (
-            <BoutonPrincipal disabled={envoi || (choix !== 'hopla' && (!id || (!cle && !memeFournisseur)))} onClick={brancher}>
-              {envoi ? 'Vérification…' : choix === 'hopla' ? 'Débrancher' : memeFournisseur ? 'Mettre à jour' : `Brancher ${NOMS[choix]}`}
-            </BoutonPrincipal>
-          )}
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+            <p className="min-w-0 flex-1 basis-52">
+              <span className="block text-[13px] font-medium text-white/70">Où vont les inscrits</span>
+              <span className="mt-0.5 block text-[14.5px] text-white">{branche ? majuscule(destination(branche)) : 'Ici seulement'}</span>
+            </p>
+            {onIntegrations && (
+              <button type="button" onClick={() => { onFermer(); onIntegrations(); }} className={classeBouton.secondaire}>{branche ? 'Changer' : 'Brancher ma newsletter'}</button>
+            )}
+          </div>
           {message && <p role="status" className={`flex items-start gap-2 rounded-xl px-3.5 py-2.5 text-[13.5px] ${message.ok ? 'bg-white/[0.05] text-white' : 'bg-red-500/15 text-red-200'}`}>{message.ok && <span className="mt-px shrink-0" aria-hidden="true"><Icone nom="ui-ok" taille={16} /></span>}{message.texte}</p>}
-          {liste.integration && liste.enAttente > 0 && (
+          {branche && liste.enAttente > 0 && (
             <button type="button" disabled={envoi} onClick={renvoyer} className="self-start text-[13.5px] font-medium text-white underline underline-offset-2">
-              Envoyer les {nombre(liste.enAttente)} inscrit{liste.enAttente > 1 ? 's' : ''} pas encore chez {NOMS[liste.integration.fournisseur]}
+              {liste.enAttente > 1 ? `Envoyer les ${nombre(liste.enAttente)} inscrits pas encore partis` : 'Envoyer l’inscrit pas encore parti'} {destination({ fournisseur: branche.fournisseur, nom: '' })}
             </button>
           )}
         </section>

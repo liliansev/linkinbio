@@ -63,10 +63,12 @@ export function Groupe({ titre, children }: { titre: string; children: ReactNode
 /**
  * Une ligne de réglage : le libellé à gauche, le contrôle à droite. `valeur`
  * se lit en gris entre les deux au bureau, sous le libellé au téléphone.
+ * `avant` : ce qui précède le libellé (le logo d'un outil, dans Intégrations) ; la valeur reste alignée sur le libellé.
  */
-export function Ligne({ nom, valeur, children, className = '' }: { nom: ReactNode; valeur?: ReactNode; children?: ReactNode; className?: string }) {
+export function Ligne({ nom, valeur, avant, children, className = '' }: { nom: ReactNode; valeur?: ReactNode; avant?: ReactNode; children?: ReactNode; className?: string }) {
   return (
     <div className={`adm-ligne ${children ? 'adm-ligne-controle' : ''} ${className}`}>
+      {avant}
       <span className="adm-ligne-texte">
         <span className="adm-ligne-nom">{nom}</span>
         {valeur && <span className="adm-ligne-valeur">{valeur}</span>}
@@ -92,17 +94,17 @@ export function LigneBascule({ nom, actif, changer, disabled }: { nom: string; a
  * débloque). `externe` : elle quitte Hopla (le portail de Creem), le signe
  * d'ouverture remplace le chevron. Sans `onClick`, la ligne se lit sans mener nulle part.
  */
-export function LigneLien({ nom, valeur, apres, onClick, label, disabled, id, externe = false }: { nom: ReactNode; valeur?: ReactNode; apres?: ReactNode; onClick?: () => void; label?: string; disabled?: boolean; id?: string; externe?: boolean }) {
+export function LigneLien({ nom, valeur, avant, apres, onClick, label, disabled, id, externe = false }: { nom: ReactNode; valeur?: ReactNode; avant?: ReactNode; apres?: ReactNode; onClick?: () => void; label?: string; disabled?: boolean; id?: string; externe?: boolean }) {
   const texte = (
     <span className="adm-ligne-texte">
       <span className="adm-ligne-nom">{nom}</span>
       {valeur && <span className="adm-ligne-valeur">{valeur}</span>}
     </span>
   );
-  if (!onClick) return <div className="adm-ligne">{texte}{apres}</div>;
+  if (!onClick) return <div className="adm-ligne">{avant}{texte}{apres}</div>;
   return (
     <button id={id} type="button" onClick={onClick} aria-label={label} disabled={disabled} className="adm-ligne adm-ligne-lien">
-      {texte}{apres}
+      {avant}{texte}{apres}
       {externe
         ? <Icone nom="ui-ouvrir" taille={15} className="shrink-0 text-[#55554f]" />
         : <Icone nom="ui-chevron" taille={16} className="-rotate-90 shrink-0 text-[#55554f]" />}

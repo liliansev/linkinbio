@@ -1,5 +1,6 @@
-import type { Api, Bloc, CompteResume, EtatAdmin, Reglages, Reservation, SignalementResume, Stats } from '../src/lib/types.ts';
-import { nouveauBloc } from '../src/lib/types.ts';
+import type { Api, Bloc, CompteResume, EtatAdmin, FournisseurListe, IntegrationListe, ListeFournisseur, Reglages, Reservation, SignalementResume, Stats } from '../src/lib/types.ts';
+import { estWebhook, nouveauBloc } from '../src/lib/types.ts';
+import { ADRESSE_WEBHOOK, LISTE_CHEZ, NOMS_FOURNISSEURS, adresseWebhook } from '../src/lib/integrations.ts';
 import { REGLAGES_DEFAUT, blocsDefaut, reglagesNouveauCompte } from '../src/lib/defauts.ts';
 import { CONTACT_LEGAL } from '../src/lib/legal.ts';
 import type { Droits } from '../src/lib/droits.ts';
@@ -77,6 +78,23 @@ function statsVides(periode: PeriodeStats): Stats {
   return { jours, plage: typeof periode !== 'number', vues: 0, visiteurs: 0, clics: 0, serie, blocs: [], sources: [], appareils: [], apps: { integres: 0, versApp: 0, ouverts: 0 }, precedent: { vues: 0, visiteurs: 0, clics: 0 }, dejaVue: false };
 }
 
+/* ---- « Rejoins ma liste » : des inscrits inventés, et la liste branchée (Brevo au départ) ---- */
+
+function inscritsDemo() {
+  const prenoms = ['Camille', 'Hugo', 'Sarah', 'Léa', 'Malik', 'Inès', 'Tom', 'Jade'];
+  return prenoms.map((p, i) => ({ id: `c${i}`, email: `${p.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')}@exemple.fr`, prenom: p, ts: Date.now() - i * 7_200_000, source: ['Instagram', 'TikTok', 'LinkedIn'][i % 3], synchro: 'ok' as const }));
+}
+let integrationDemo: IntegrationListe | null = { fournisseur: 'brevo', liste: '7', nom: 'Newsletter', cle: '•••• a91f' };
+/** Ce que les newsletters répondraient à « tes listes » : de quoi choisir par le nom. */
+const LISTES_DEMO: Record<Exclude<FournisseurListe, 'make' | 'zapier' | 'n8n'>, ListeFournisseur[]> = {
+  brevo: [{ id: '7', nom: 'Newsletter' }, { id: '12', nom: 'Clients' }, { id: '3', nom: 'Atelier de janvier' }],
+  mailchimp: [{ id: 'a1b2c3d4e5', nom: 'Ma newsletter' }, { id: 'f6a7b8c9d0', nom: 'Clients' }],
+  kit: [{ id: '7123456', nom: 'Inscription à la newsletter' }, { id: '7123457', nom: 'Guide gratuit' }],
+  mailerlite: [{ id: '131072415', nom: 'Newsletter' }, { id: '131072416', nom: 'Clients' }],
+  beehiiv: [{ id: 'pub_3f0c2b1e-5d1a-4c7e-9b52-8a6f0e4d2c11', nom: 'Les lettres de Lilian' }],
+  systeme: [{ id: '4521', nom: 'Hopla' }, { id: '4522', nom: 'Clients' }],
+};
+
 export const apiDemo: Api = {
   async charger(): Promise<EtatAdmin> {
     const s = statsFictives(30);
@@ -111,13 +129,32 @@ export const apiDemo: Api = {
   async resilierAbonnement() { throw new Error('Pas de paiement dans l’aperçu.'); },
   async liste() {
     await pause();
-    const prenoms = ['Camille', 'Hugo', 'Sarah', 'Léa', 'Malik', 'Inès', 'Tom', 'Jade'];
-    const derniers = prenoms.map((p, i) => ({ id: `c${i}`, email: `${p.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')}@exemple.fr`, prenom: p, ts: Date.now() - i * 7_200_000, source: ['Instagram', 'TikTok', 'LinkedIn'][i % 3], synchro: 'ok' as const }));
-    return { total: 184, semaine: 23, derniers, integration: { fournisseur: 'brevo', liste: '7', nom: 'Newsletter', cle: '•••• a91f' }, enAttente: 0 };
+    return { total: 184, semaine: 23, derniers: inscritsDemo(), integration: integrationDemo, enAttente: 0 };
   },
-  async brancherListe(i) { await pause(); return { ok: true, message: i ? 'Dans l’aperçu, rien n’est branché pour de vrai.' : 'Ta liste reste chez Hopla seulement.' }; },
+  async listesFournisseur({ fournisseur, cle }) {
+    await pause();
+    if (estWebhook(fournisseur)) return { ok: false, message: 'Un webhook n’a pas de liste.', listes: [] };
+    if (!cle && integrationDemo?.fournisseur !== fournisseur) return { ok: false, message: 'Colle ta clé d’API.', listes: [] };
+    return { ok: true, message: '', listes: LISTES_DEMO[fournisseur] };
+  },
+  async brancherListe(i) {
+    await pause();
+    if (!i) { integrationDemo = null; return { ok: true, message: 'Ta liste reste chez Hopla seulement.' }; }
+    const nom = NOMS_FOURNISSEURS[i.fournisseur];
+    if (estWebhook(i.fournisseur)) {
+      const u = adresseWebhook(i.fournisseur, i.cle);
+      if (!u) return { ok: false, message: ADRESSE_WEBHOOK[i.fournisseur] };
+      integrationDemo = { fournisseur: i.fournisseur, liste: '', nom: u.host, cle: `${u.host}/…${i.cle.replace(/\/+$/, '').slice(-4)}` };
+      return { ok: true, message: `Branché sur ${nom}. Dans l’aperçu, rien n’y part pour de vrai.` };
+    }
+    const choisie = LISTES_DEMO[i.fournisseur].find(l => l.id === i.liste);
+    if (!choisie && !(i.fournisseur === 'systeme' && !i.liste)) return { ok: false, message: `Choisis ${LISTE_CHEZ[i.fournisseur].la} où vont tes inscrits.` };
+    integrationDemo = { fournisseur: i.fournisseur, liste: i.liste, nom: choisie?.nom ?? '', cle: i.cle ? `•••• ${i.cle.slice(-4)}` : integrationDemo?.cle ?? '•••• a91f' };
+    return { ok: true, message: `Branché sur ${nom}${choisie ? `, ${LISTE_CHEZ[i.fournisseur].la} « ${choisie.nom} »` : ''}. Dans l’aperçu, rien n’y part pour de vrai.` };
+  },
   async supprimerContact() { await pause(); },
   async resynchroniser() { await pause(); return { envoyes: 0, erreurs: 0 }; },
+  async adresses() { await pause(); return inscritsDemo().map(c => c.email); },
   urlContacts: null,
   comptes: {
     async lister() { await pause(); return comptesDemo; },

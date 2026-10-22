@@ -17,7 +17,7 @@ const PERIODES: Periode[] = ['mois', 'an'];
 /** Ce que l'annuel fait gagner au mieux, pour l'onglet (27 % sur Starter). */
 const MEILLEURE = Math.max(...PLANS_PAYANTS.filter(p => OFFRES[p].enVente).map(economie));
 
-/** Un avantage ne laisse ni guillemet ni dernier mot seul sur sa ligne (« Brevo ou Mailchimp »). */
+/** Un avantage ne laisse ni guillemet ni dernier mot seul sur sa ligne (« ta newsletter »). */
 const insecables = (g: string) => g.replace(/« /g, '«\u00a0').replace(/ »/g, '\u00a0»').replace(/ (\S+)$/, '\u00a0$1');
 
 /** Ce que la page a déjà montré : l'avantage ramène à sa démonstration (un chapitre de la page vivante s'ouvre en arrivant). */
@@ -30,7 +30,7 @@ const DEMOS: Record<string, string> = {
   'Tes stats sur 30 jours': '#stats',
   'Ta page selon l’heure': '#vivante-heure',
   'Les drops : un code, des places comptées': '#vivante-drops',
-  'Ta liste e-mail, vers Brevo ou Mailchimp': '#vivante-liste',
+  'Ta liste e-mail, vers ta newsletter': '#vivante-liste',
   'Tes stats sur un an': '#stats',
 };
 

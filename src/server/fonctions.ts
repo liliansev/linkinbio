@@ -1,8 +1,9 @@
 import { createMiddleware, createServerFn } from '@tanstack/react-start';
 import { deleteCookie, getCookie, getRequestHeader, getRequestUrl, setCookie } from '@tanstack/react-start/server';
-import type { Bloc, CompteResume, EtatAdmin, Liste, Origines, PagePublique, Reglages, Reservation, SignalementResume, Stats } from '../lib/types.ts';
+import type { Bloc, CompteResume, EtatAdmin, FournisseurListe, Liste, ListeFournisseur, Origines, PagePublique, Reglages, Reservation, SignalementResume, Stats } from '../lib/types.ts';
 import { FOURNISSEURS_LISTE } from '../lib/types.ts';
 import * as liste from './liste.ts';
+import { requeteSortante } from './sortante.ts';
 import { planifierResumes } from './resume.ts';
 import { VERSION_CGU } from '../lib/legal.ts';
 import { ORIGINE_ADMIN, ORIGINE_PUBLIQUE, PRINCIPAL, TYPES_PRINCIPAL, cheminPage } from '../lib/types.ts';
@@ -270,29 +271,56 @@ export const lireStats = createServerFn({ method: 'GET' })
     return db.stats(context.compte, periode);
   });
 
-/* ---- « Rejoins ma liste » ---- */
+/* ---- « Rejoins ma liste », et où partent ses inscrits (onglet Intégrations) ---- */
 
 export const lireListe = createServerFn({ method: 'GET' })
   .middleware([session])
   .handler(async ({ context }): Promise<Liste> => ({ ...db.resumeContacts(context.compte), integration: liste.resumeIntegration(process.env, context.compte) }));
+
+const lireFournisseur = (v: unknown): FournisseurListe => (FOURNISSEURS_LISTE.includes(v as never) ? v as FournisseurListe : 'brevo');
+/** Une clé laissée vide garde celle déjà enregistrée pour ce fournisseur (le navigateur ne la connaît pas). */
+function cleDuCompte(compte: string, fournisseur: FournisseurListe, collee: string): string {
+  if (collee) return collee;
+  const avant = db.lireIntegration(compte);
+  return avant && avant.fournisseur === fournisseur ? liste.dechiffrer(process.env, avant.cle) : '';
+}
+/** Brancher demande l'offre de la liste e-mail (débrancher, jamais) ; chaque appel aux fournisseurs compte (`tropDAppels`). */
+function refusBranchement(compte: string): string {
+  if (!droits(db.compteParId(compte)!).listeEmail) return 'Ta liste e-mail demande Hopla Pro.';
+  if (liste.tropDAppels(compte)) return 'Trop d’essais. Réessaie dans quelques minutes.';
+  return '';
+}
+
+/** Les listes du compte chez une newsletter, pour en choisir une par son nom. En POST : la clé ne passe pas dans l'adresse. */
+export const listesFournisseur = createServerFn({ method: 'POST' })
+  .middleware([session])
+  .validator((data: unknown) => {
+    const o = (data ?? {}) as { fournisseur?: unknown; cle?: unknown };
+    return { fournisseur: lireFournisseur(o.fournisseur), cle: String(o.cle ?? '').trim().slice(0, 2000) };
+  })
+  .handler(async ({ data, context }): Promise<{ ok: boolean; message: string; listes: ListeFournisseur[] }> => {
+    const refus = refusBranchement(context.compte);
+    if (refus) return { ok: false, message: refus, listes: [] };
+    const cle = cleDuCompte(context.compte, data.fournisseur, data.cle);
+    if (!cle) return { ok: false, message: 'Colle ta clé d’API.', listes: [] };
+    return liste.listes(data.fournisseur, cle, requeteSortante);
+  });
 
 export const brancherListe = createServerFn({ method: 'POST' })
   .middleware([session])
   .validator((data: unknown) => {
     if (data === null) return null;
     const o = (data ?? {}) as { fournisseur?: unknown; cle?: unknown; liste?: unknown };
-    return {
-      fournisseur: FOURNISSEURS_LISTE.includes(o.fournisseur as never) ? o.fournisseur as (typeof FOURNISSEURS_LISTE)[number] : 'brevo',
-      cle: String(o.cle ?? '').trim().slice(0, 200), liste: String(o.liste ?? '').trim().slice(0, 40),
-    };
+    // Une clé MailerLite est longue (un jeton), l'adresse d'un webhook aussi.
+    return { fournisseur: lireFournisseur(o.fournisseur), cle: String(o.cle ?? '').trim().slice(0, 2000), liste: String(o.liste ?? '').trim().slice(0, 80) };
   })
   .handler(async ({ data, context }) => {
     if (!data) { db.ecrireIntegration(context.compte, null); return { ok: true, message: 'Ta liste reste chez Hopla seulement.' }; }
-    // Une clé laissée vide garde celle déjà enregistrée (le navigateur ne la connaît pas).
-    const avant = db.lireIntegration(context.compte);
-    const cle = data.cle || (avant && avant.fournisseur === data.fournisseur ? liste.dechiffrer(process.env, avant.cle) : '');
+    const refus = refusBranchement(context.compte);
+    if (refus) return { ok: false, message: refus };
+    const cle = cleDuCompte(context.compte, data.fournisseur, data.cle);
     if (!cle) return { ok: false, message: 'Colle ta clé d’API.' };
-    const v = await liste.verifier(data.fournisseur, cle, data.liste, fetch);
+    const v = await liste.verifier(data.fournisseur, cle, data.liste, requeteSortante, liste.adressePage(process.env, context.compte));
     if (!v.ok) return v;
     db.ecrireIntegration(context.compte, { fournisseur: data.fournisseur, cle: liste.chiffrer(process.env, cle), liste: data.liste, nom: v.nom ?? '' });
     return { ok: true, message: v.message };
@@ -306,10 +334,16 @@ export const supprimerContact = createServerFn({ method: 'POST' })
 export const resynchroniser = createServerFn({ method: 'POST' })
   .middleware([session])
   .handler(async ({ context }) => {
+    if (liste.tropDAppels(context.compte)) throw new Error('Trop d’essais. Réessaie dans quelques minutes.');
     let envoyes = 0, erreurs = 0;
-    for (const c of db.contactsAEnvoyer(context.compte)) (await liste.pousser(process.env, context.compte, c, fetch)) ? envoyes++ : erreurs++;
+    for (const c of db.contactsAEnvoyer(context.compte)) (await liste.pousser(process.env, context.compte, c, requeteSortante)) ? envoyes++ : erreurs++;
     return { envoyes, erreurs };
   });
+
+/** Toutes les adresses des inscrits, à coller dans Substack. */
+export const lireAdresses = createServerFn({ method: 'GET' })
+  .middleware([session])
+  .handler(async ({ context }) => liste.adressesSubstack(context.compte));
 
 /* ---- Les offres payantes (Creem) ---- */
 
