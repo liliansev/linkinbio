@@ -62,7 +62,9 @@ redir @liens https://hopla.page{uri} permanent
 
 ## Cloudflare
 
-Le code est prêt ; rien ne change tant que ces réglages ne sont pas posés.
+En service depuis le 22 octobre 2026 : la zone `hopla.page` est chez Cloudflare
+(serveurs de noms `cory.ns.cloudflare.com` et `crystal.ns.cloudflare.com`, posés
+dans hPanel) et Turnstile protège les formulaires. Seul le verrou attend.
 
 - **Turnstile**, la vérification anti-robot de la connexion, de l'accueil, du
   signalement et de « Rejoins ma liste » : `TURNSTILE_SITE_KEY` (la clé publique,
@@ -70,20 +72,27 @@ Le code est prêt ; rien ne change tant que ces réglages ne sont pas posés.
   `hopla.page` et `app.hopla.page` (plus `localhost` pour le développement : en
   production, le serveur n'accepte qu'un jeton pris sur les deux noms de Hopla).
   Sans pré-autorisation (« pre-clearance »), qui poserait un cookie.
-- **Proxy** : une fois les enregistrements `hopla.page` et `app.hopla.page` passés
-  en orange, Caddy ne voit plus que des adresses de Cloudflare. `server.mjs` lit
-  alors celle du visiteur dans `CF-Connecting-IP`, qu'il ne croit que venant d'une
+- **Proxy** : `hopla.page`, `app.hopla.page` et `www` sont en orange, et Caddy ne
+  voit plus que des adresses de Cloudflare. `server.mjs` lit alors celle du
+  visiteur dans `CF-Connecting-IP`, qu'il ne croit que venant d'une
   adresse de Cloudflare (liste de https://www.cloudflare.com/ips/, relevée le
   20 octobre 2026 dans `server.mjs`). Chiffrement « Full (strict) », jamais
   « Flexible » ; les enregistrements des e-mails (Resend) restent en gris.
-- **Verrou** : `LIENS_CLOUDFLARE=exclusif` dans `runtime.env`, après la bascule.
+  « Always Use HTTPS » reste éteint : Caddy renouvelle ses certificats par le défi
+  HTTP-01, sur le port 80. Le cache du navigateur suit les en-têtes de l'app.
+- **Verrou** : `LIENS_CLOUDFLARE=exclusif` dans `runtime.env`, puis redéployer.
   Une requête arrivée par Caddy sans passer par Cloudflare reçoit alors 403 ;
   `/healthz` et le réseau interne (sans `X-Real-IP`, comme le contrôle de
-  `deploy.sh`) passent toujours.
+  `deploy.sh`) passent toujours. À poser une fois les anciens serveurs de noms
+  (`lunar` et `solar.dns-parking.com`) oubliés des résolveurs, à partir du
+  24 octobre 2026 : avant, un visiteur encore envoyé en direct au serveur
+  recevrait 403.
 - **Ni cookie ni défi** : Bot Fight Mode reste éteint (il poserait `__cf_bm` et
   bloquerait les webhooks Creem), les règles du pare-feu bloquent sans jamais
   défier (`cf_clearance`), et les limites de débit n'utilisent pas
-  `cf.unique_visitor_id` (`_cfuvid`).
+  `cf.unique_visitor_id` (`_cfuvid`). Une règle de configuration coupe Web
+  Analytics, qui se rallume d'office sur le plan gratuit et ajouterait un script ;
+  une règle du pare-feu bloque les chemins en `.php`, `/.env` et `/.git`.
 
 HSTS : `server.mjs` envoie `Strict-Transport-Security: max-age=31536000` en
 production. Le domaine `.page` est de toute façon préchargé en HTTPS par les
@@ -114,4 +123,5 @@ Le 18 octobre 2026, l'app est passée à la racine de hopla.page (voir « Adress
 ## Reste à faire
 
 - Sauvegarde nocturne de la base hors du VPS, avec un test de restauration.
-- Brancher Cloudflare (voir « Cloudflare »).
+- Poser le verrou `LIENS_CLOUDFLARE=exclusif`, à partir du 24 octobre 2026 (voir
+  « Cloudflare »).
