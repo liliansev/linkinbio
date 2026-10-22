@@ -55,7 +55,7 @@ embarque tout : l'image n'a pas de `node_modules`.
   `offreSuivante()` et ses `ACCROCHES` pour l'appel à l'offre du dessus, `sensDuChangement()`, `accesAbonnement()`), `droits.ts`
   (`selonDroits` retire de la page publique ce que l'offre ne comprend pas, sans rien effacer ; `nouvellesDates`),
   `mots.ts` (les mots de la page publique, au « tu » ou au « vous »), `stats.ts` (les quatre chiffres de l'onglet Stats, leurs écarts,
-  l'échelle de la courbe), `resume.ts` (« En bref », et le résumé du lundi), `comptes.ts` (statut, dernière connexion et recherche de l'onglet Comptes),
+  l'échelle de la courbe, et `COULEURS_SOURCES`, la couleur de chaque réseau), `resume.ts` (« En bref », et le résumé du lundi), `comptes.ts` (statut, dernière connexion et recherche de l'onglet Comptes),
   `achat.ts` (le retour d'un paiement : la note posée avant Creem, puis « On active », « C'est fait » ou l'attente, d'après l'abonnement relu),
   `sortie.ts` (depuis le navigateur intégré de LinkedIn, Instagram, Facebook, Messenger ou Threads, l'adresse qui rouvre la page
   dans Safari ou Chrome, app par app ; TikTok, X et Snapchat n'en ont pas).
@@ -122,7 +122,7 @@ embarque tout : l'image n'a pas de `node_modules`.
 - Pas de DataFast sur Hopla tant qu'il n'a pas son propre site DataFast.
 - QA : agent-browser (headless). Playwright est interdit.
 - Chaque thème ajouté ou retouché passe par la vérification typographique d'Impeccable (`typeset`) et par une planche de captures de tous les thèmes (`demo`, `#page=<id>`) avant d'être poussé : un nom sur une ligne, des cartes lisibles.
-- Le back office est en noir et blanc (19 octobre 2026) : dans `.adm`, `white` est l'encre et `nuit` le papier (voir `src/styles/admin.css`). Un texte posé sur un bouton noir s'écrit donc `text-nuit` ; sur un bouton rouge, `text-nuit` aussi. Pas d'accent de couleur hors des alertes ; les thèmes de la page publique n'en dépendent pas.
+- Le back office est en noir et blanc (19 octobre 2026) : dans `.adm`, `white` est l'encre et `nuit` le papier (voir `src/styles/admin.css`). Un texte posé sur un bouton noir s'écrit donc `text-nuit` ; sur un bouton rouge, `text-nuit` aussi. Pas d'accent de couleur hors des alertes et des réseaux de l'onglet Stats (22 octobre 2026, demandé par Lilian : dans « Réseaux », comme sur l'accueil, le logo d'un réseau dans sa couleur et sa barre dans une teinte claire de celle-ci, `COULEURS_SOURCES`, le nom toujours à l'encre ; Direct, QR code et les sources sans marque restent gris) ; les thèmes de la page publique n'en dépendent pas.
 - Pictos Phosphor pleins, d'une seule couleur (sans dégradé ni duotone), jamais d'emojis. Les signes de commande du back office (`ui-*` : fermer, ajouter, chevrons, coche, flèches, copier) restent au trait, et les deux ne se mêlent pas dans une même rangée. Une icône nommée qui n'existe pas fait échouer `pnpm test` (`src/lib/icones.test.ts`).
 - Le suivi des clics Resend reste désactivé : il casse les liens magiques.
 - Une offre payante (Starter, Pro, Premium) n'est accordée que par un webhook Creem signé, jamais par le retour du paiement. Les produits Creem se créent depuis l'onglet Comptes (« Créer les offres dans Creem ») : la clé a besoin des droits Products et Subscriptions.

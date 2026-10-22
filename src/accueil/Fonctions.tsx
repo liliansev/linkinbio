@@ -6,6 +6,7 @@ import { Icone } from '../components/Icone.tsx';
 import { Symbole } from '../components/Logo.tsx';
 import { CroquisLien, CroquisTete, Telephone } from './Telephone.tsx';
 import { mouvementReduit, useCompte, useEnchainement, useGlisse, useSequence, useVu } from './mouvement.ts';
+import { COULEURS_SOURCES } from '../lib/stats.ts';
 
 /*
  * Ce que fait Hopla, en trois sections : 02 les liens qui s'ouvrent dans
@@ -456,7 +457,11 @@ function DashboardStats() {
         <div className="hp-dashboard-jours" aria-hidden="true">{['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'].map(jour => <span key={jour}>{jour}</span>)}</div>
       </figure>
       <div className="hp-dashboard-details">
-        <div><p>D’où viennent les visites</p><ul>{[['Instagram', 61], ['Accès direct', 24], ['YouTube', 15]].map(([nom, part]) => <li key={nom}><span className="hp-dashboard-barre" style={{ width: `${part}%` }} /><span>{nom}</span><b>{part}&#8239;%</b></li>)}</ul></div>
+        <div><p>D’où viennent les visites</p><ul>{([['Instagram', 'instagram', 61], ['Accès direct', 'lien', 24], ['YouTube', 'youtube', 15]] as const).map(([nom, icone, part]) => {
+          // Comme au back office : le logo du réseau dans sa couleur, sa barre dans une teinte claire de celle-ci.
+          const couleur = COULEURS_SOURCES[nom];
+          return <li key={nom} style={couleur && { '--picto': couleur.picto, '--barre': couleur.barre } as CSSProperties}><span className="hp-dashboard-barre" style={{ width: `${part}%` }} /><span className="hp-dashboard-source"><Icone nom={icone} taille={14} />{nom}</span><b>{part}&#8239;%</b></li>;
+        })}</ul></div>
         <div><p>Les liens les plus cliqués</p><ul>{[['Mes pièces du moment', 35], ['Un samedi à l’atelier', 28], ['Les coulisses en vidéo', 19]].map(([nom, clics]) => <li key={nom}><span>{nom}</span><b>{clics}</b></li>)}</ul></div>
       </div>
     </div>
