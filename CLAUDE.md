@@ -59,7 +59,9 @@ embarque tout : l'image n'a pas de `node_modules`.
   `achat.ts` (le retour d'un paiement : la note posée avant Creem, puis « On active », « C'est fait » ou l'attente, d'après l'abonnement relu),
   `sortie.ts` (depuis le navigateur intégré de LinkedIn, Instagram, Facebook, Messenger ou Threads, l'adresse qui rouvre la page
   dans Safari ou Chrome, app par app ; TikTok, X et Snapchat n'en ont pas).
-- `admin/` : onglets Ma page, Stats, Comptes (principal seulement), Réglages. Réglages tient sur une seule page de lignes
+- `admin/` : onglets Ma page, Stats, Comptes (principal seulement), Réglages. Sur un grand écran (22 octobre 2026), la
+  barre latérale et l'espace de travail (`adm-travail`) tiennent dans un cadre centré de 1600 px au plus (`--adm-cadre`),
+  les premiers pas dans 1200 px (`adm-premiers`). Réglages tient sur une seule page de lignes
   (`Groupe`, `Ligne`, `LigneLien` dans `ui.tsx`) ; un détail s'y ouvre en sous-page (`SousPage`), avec un fil dans l'en-tête,
   comme `Facturation.tsx`, « Mon abonnement » (l'offre, son échéance, la carte et les factures au portail client de Creem,
   puis « Résilier mon abonnement »). Dans le groupe Abonnement, « Mes factures » ouvre ce portail pour tout compte que Creem
