@@ -2,6 +2,7 @@ import { cloneElement, createContext, isValidElement, useCallback, useContext, u
 import { createPortal } from 'react-dom';
 import { Icone } from '../components/Icone.tsx';
 import type { Animation } from '../lib/types.ts';
+import { useCouche } from './couches.ts';
 import type { ReactNode } from 'react';
 
 /*
@@ -36,6 +37,8 @@ export function SousPage({ nom, retour }: Fil) {
   const retourRef = useRef(retour);
   retourRef.current = retour;
   useEffect(() => { poser({ nom, retour: () => retourRef.current() }); return () => poser(null); }, [nom, poser]);
+  // Le retour du téléphone ramène aussi d'où l'on vient, comme le premier nom du fil.
+  useCouche(true, () => { retourRef.current(); return true; });
   return null;
 }
 
@@ -181,6 +184,26 @@ export const NOMS_ANIMATIONS: Record<Animation, { nom: string; aide: string }> =
 type Fermer = (apres?: () => void) => void;
 type Contenu = ReactNode | ((fermer: Fermer) => ReactNode);
 
+/**
+ * Une sous-page dans une feuille (un tiroir du design, les réglages d'un bloc) :
+ * l'en-tête prend son nom, et une flèche à gauche ramène d'un cran.
+ */
+export interface FilFeuille { titre: string; retour: () => void; label: string }
+const PoserFilFeuille = createContext<((f: FilFeuille | null) => void) | null>(null);
+/** Pose le fil de la feuille qui contient ce composant ; faux hors de toute feuille (au bureau, dans la page). */
+export function useFilFeuille(fil: FilFeuille | null): boolean {
+  const poser = useContext(PoserFilFeuille);
+  const filRef = useRef(fil);
+  filRef.current = fil;
+  const cle = fil ? `${fil.titre}\n${fil.label}` : '';
+  useLayoutEffect(() => {
+    if (!poser) return;
+    poser(filRef.current && { ...filRef.current, retour: () => filRef.current?.retour() });
+    return () => poser(null);
+  }, [poser, cle]);
+  return !!poser;
+}
+
 /** Un petit retour tactile sur Android (iOS l'ignore). */
 export function vibrer(ms = 8) {
   try { navigator.vibrate?.(ms); } catch { /* sans vibreur */ }
@@ -200,7 +223,13 @@ export function vibrer(ms = 8) {
  * `apercu`, sur téléphone, se pose au-dessus de la feuille : la page en direct,
  * en miniature, qui suit chaque réglage (Lilian, 18 octobre 2026).
  */
-export function Feuille({ ouverte, onFermer, retenir, titre, children, pied, cote = false, apercu, petite = false, moyenne = false, large = false, nue = false }: { ouverte: boolean; onFermer: () => void; retenir?: () => boolean; titre: string; children: Contenu; pied?: Contenu; cote?: boolean; apercu?: React.ReactNode;
+export function Feuille({ ouverte, onFermer, retenir, titre, children, pied, cote = false, apercu, petite = false, moyenne = false, large = false, nue = false, retour, plafond, classe = '' }: { ouverte: boolean; onFermer: () => void; retenir?: () => boolean; titre: string; children: Contenu; pied?: Contenu; cote?: boolean; apercu?: React.ReactNode;
+  /** Une flèche à gauche du titre, qui ramène d'un cran (une sous-page, le choix du bloc). */
+  retour?: { label: string; action: () => void };
+  /** La hauteur la plus grande, en pixels, à la place de celle de `cote` : la feuille d'un bloc laisse voir le bloc au-dessus d'elle. Elle ne rapetisse pas d'une page à l'autre. */
+  plafond?: number;
+  /** Une classe de plus sur la feuille, pour la retrouver. */
+  classe?: string;
   /** Une petite fenêtre au bureau (440 px, titre de 15) : une question courte, comme Inviter. */
   petite?: boolean;
   /** Une fenêtre de 560 px : un message qui se lit, comme « C'est fait ». */
@@ -223,17 +252,35 @@ export function Feuille({ ouverte, onFermer, retenir, titre, children, pied, cot
     const moi = ref.current?.closest('[role=dialog]');
     setPardessus([...document.querySelectorAll('[role=dialog][aria-modal=true]')].some(d => d !== moi));
   }, [ouverte]);
-  const fermer = useCallback<Fermer>(apres => {
+  // La sous-page posée par le contenu (un tiroir du design) : son nom et sa flèche prennent l'en-tête.
+  const [filEnfant, setFilEnfant] = useState<FilFeuille | null>(null);
+  // Le retour du téléphone fait comme la flèche de l'en-tête quand la feuille en a une (un bloc neuf revient au choix du bloc),
+  // sinon il la referme comme un glissé : un travail pas valable la retient.
+  const fermerRef = useRef<(apres?: () => void) => boolean>(() => false);
+  const retourRef = useRef(retour?.action);
+  retourRef.current = retour?.action;
+  const partir = useCouche(ouverte, () => fermerRef.current(retourRef.current));
+  const fermer = useCallback((apres?: () => void): boolean => {
     // Un geste qui fermerait sur un travail pas valable laisse la feuille ouverte (retenir dit pourquoi).
-    if (!apres && retenir?.()) { setTire(0); vibrer(20); return; }
+    if (!apres && retenir?.()) { setTire(0); vibrer(20); return false; }
     setSortie(true);
+    partir();
     const reduit = matchMedia('(prefers-reduced-motion: reduce)').matches;
     setTimeout(() => { setSortie(false); setTire(0); (apres ?? onFermer)(); }, reduit ? 0 : 190);
-  }, [onFermer, retenir]);
+    return true;
+  }, [onFermer, retenir, partir]);
 
   // L'effet ne dépend que de l'ouverture : un parent qui se redessine ne vole pas le focus du champ en cours.
-  const fermerRef = useRef(fermer);
   fermerRef.current = fermer;
+  // La feuille d'un bloc garde sa plus grande hauteur : passer d'une page de réglages à l'autre ne la fait pas sauter.
+  const [plancher, setPlancher] = useState(0);
+  useEffect(() => {
+    if (!ouverte || !plafond || !ref.current) return;
+    const f = ref.current;
+    const ro = new ResizeObserver(() => setPlancher(h => Math.max(h, Math.min(f.offsetHeight, plafond))));
+    ro.observe(f);
+    return () => { ro.disconnect(); setPlancher(0); };
+  }, [ouverte, plafond]);
   useEffect(() => {
     if (!ouverte) return;
     // Une vraie fenêtre : Tab tourne dans la feuille, et le focus revient d'où il venait à la fermeture.
@@ -300,21 +347,37 @@ export function Feuille({ ouverte, onFermer, retenir, titre, children, pied, cot
       <button type="button" tabIndex={-1} aria-hidden="true" className={`adm-fondu absolute inset-0 ${apercu ? 'bg-[#f4f4f4] sm:bg-black/[0.04]' : cote ? 'bg-black/[0.04]' : pardessus ? '' : 'bg-black/40 backdrop-blur-[2px]'}`} onClick={() => fermer()} />
       {apercu && <div inert className="adm-fondu pointer-events-none absolute inset-x-0 top-0 bottom-[57dvh] flex items-center justify-center px-4 pt-[max(12px,env(safe-area-inset-top))] pb-3 sm:hidden">{apercu}</div>}
       <div ref={ref} tabIndex={-1}
-        style={{ ...(tire ? { transform: `translateY(${tire}px)`, transition: 'none' } : {}), ...(visible ? { maxHeight: visible.h - 8, height: 'auto' } : {}) }}
-        className={`adm-feuille relative flex ${large ? 'adm-feuille-large' : apercu ? 'h-[57dvh] sm:h-auto sm:w-[400px]' : cote ? 'max-h-[58dvh] sm:max-h-none sm:w-[400px]' : 'max-h-[92dvh]'} w-full flex-col border border-b-0 border-white/10 bg-nuit shadow-[0_-12px_40px_-16px_rgba(0,0,0,0.18)] sm:border-b ${large ? '' : petite ? 'adm-feuille-petite sm:max-w-[440px]' : moyenne ? 'adm-feuille-moyenne sm:max-w-[560px]' : 'sm:max-w-lg'}`}>
+        style={{ ...(tire ? { transform: `translateY(${tire}px)`, transition: 'none' } : {}), ...(visible ? { maxHeight: visible.h - 8, height: 'auto' } : plafond ? { maxHeight: plafond, minHeight: Math.min(plancher, plafond) || undefined } : {}) }}
+        className={`adm-feuille relative flex ${large ? 'adm-feuille-large' : apercu ? 'h-[57dvh] sm:h-auto sm:w-[400px]' : cote ? 'max-h-[58dvh] sm:max-h-none sm:w-[400px]' : 'max-h-[92dvh]'} w-full flex-col border border-b-0 border-white/10 bg-nuit shadow-[0_-12px_40px_-16px_rgba(0,0,0,0.18)] sm:border-b ${large ? '' : petite ? 'adm-feuille-petite sm:max-w-[440px]' : moyenne ? 'adm-feuille-moyenne sm:max-w-[560px]' : 'sm:max-w-lg'} ${classe}`}>
+        <PoserFilFeuille.Provider value={setFilEnfant}>
         {nue ? rendre(children) : <>
         <div {...tirer} className="shrink-0 touch-none select-none">
           <div className="mx-auto mt-2 h-1 w-9 rounded-full bg-white/20 sm:hidden" />
           <header className="flex items-center justify-between gap-3 px-5 pt-2.5 pb-2 sm:pt-4">
-            <h2 className={`text-[18px] font-semibold tracking-[-0.025em] text-white ${petite ? 'bureau:text-[15px] bureau:tracking-[-0.015em]' : ''}`}>{titre}</h2>
+            {/* Dans une sous-page, la flèche ramène d'un cran et le titre devient le sien : on sait où l'on est, et comment revenir. */}
+            {/* Une sous-page reste dans la feuille ; la flèche de la feuille elle-même la quitte (en glissant vers le bas, comme une fermeture). */}
+            {(() => {
+              const fil = filEnfant ?? (retour ? { titre, retour: () => { fermer(retour.action); }, label: retour.label } : null);
+              return (
+                <div className="flex min-w-0 items-center gap-1">
+                  {fil && (
+                    <button type="button" onClick={() => { vibrer(4); fil.retour(); }} aria-label={fil.label} title={fil.label} className={`adm-feuille-retour -ml-3 ${classeBouton.icone} text-white/80 active:scale-90`}>
+                      <Icone nom="ui-chevron" taille={18} className="rotate-90" />
+                    </button>
+                  )}
+                  <h2 className={`min-w-0 truncate text-[18px] font-semibold tracking-[-0.025em] text-white ${petite ? 'bureau:text-[15px] bureau:tracking-[-0.015em]' : ''}`}>{fil?.titre ?? titre}</h2>
+                </div>
+              );
+            })()}
             <button type="button" onClick={() => fermer()} className={`-mr-3 ${classeBouton.icone} active:scale-90`} aria-label="Fermer">
               <Icone nom="ui-fermer" taille={18} />
             </button>
           </header>
         </div>
-        <div className={`min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 ${pied ? 'pb-4' : 'pb-[max(16px,env(safe-area-inset-bottom))]'}`}>{rendre(children)}</div>
+        <div className={`adm-feuille-corps min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 ${pied ? 'pb-4' : 'pb-[max(16px,env(safe-area-inset-bottom))]'}`}>{rendre(children)}</div>
         {pied && <footer className="shrink-0 border-t border-white/[0.07] px-5 pt-3 pb-[max(12px,env(safe-area-inset-bottom))]">{rendre(pied)}</footer>}
         </>}
+        </PoserFilFeuille.Provider>
       </div>
     </div>
   );

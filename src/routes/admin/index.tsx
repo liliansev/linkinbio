@@ -20,7 +20,7 @@ function PageAdmin() {
     ordonner: async ids => { await fn.ordonner({ data: ids }); },
     enregistrerReglages: reglages => fn.enregistrerReglages({ data: reglages }),
     envoyerImage: dataUrl => fn.envoyerImage({ data: dataUrl }),
-    apercuSite: url => fn.apercuSite({ data: url }),
+    apercuSite: (url, image = true) => fn.apercuSite({ data: { url, image } }),
     stats: jours => fn.lireStats({ data: jours }),
     deconnexion: async () => { await fn.deconnecter(); },
     accepterCgu: async () => { await fn.accepterCgu(); },

@@ -83,7 +83,7 @@ export const apiDemo: Api = {
   async enregistrerReglages(reglages) { await pause(); etat.reglages = reglages; ecrire(); return reglages; },
   async envoyerImage(dataUrl) { await pause(); return dataUrl; },
   // Dans l'aperçu, pas de serveur pour lire le site : une vignette dessinée en tient lieu.
-  async apercuSite(url) { await pause(); return { titre: '', description: 'Un aperçu de démonstration : en ligne, le serveur lit la vraie description du site.', image: vignetteDemo(url) }; },
+  async apercuSite(url, image = true) { await pause(); return { titre: '', description: 'Un aperçu de démonstration : en ligne, le serveur lit la vraie description du site.', image: image ? vignetteDemo(url) : null }; },
   async stats(jours) { await pause(); return statsFictives(jours); },
   async deconnexion() { localStorage.removeItem(CLE); etat = lire(); },
   async accepterCgu() { await pause(); },

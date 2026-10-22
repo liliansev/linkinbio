@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Api, Bloc, EtatAdmin, PagePublique, Reglages } from '../lib/types.ts';
 import { TYPES_PRINCIPAL, nouveauBloc, urlPage } from '../lib/types.ts';
 import { composerMoment } from '../lib/moments.ts';
@@ -20,6 +20,7 @@ import { Icone } from '../components/Icone.tsx';
 import { BoutonCopier, EmplacementEntete, Menu, PoserFil, classeBouton, copierTexte, useGrandEcran, vibrer } from './ui.tsx';
 import type { Fil } from './ui.tsx';
 import { Marque } from './Marque.tsx';
+import { useCouche } from './couches.ts';
 import { AnneauDemarrage, noterPartage, useDemarrage } from './BienDemarrer.tsx';
 import { AppelOffre, FournisseurOffre } from './offre.tsx';
 import { FenetreOffres, RetourPaiement } from './Offres.tsx';
@@ -94,6 +95,10 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
   // Le doigt ou le focus sur le message le garde affiché : « Annuler » ne file pas pendant qu'on le vise.
   const [toastTenu, setToastTenu] = useState(false);
   const [apercu, setApercu] = useState(false);
+  // Le retour du téléphone ferme l'aperçu plein écran, comme son bouton.
+  useCouche(apercu, () => { setApercu(false); return true; });
+  // Au téléphone, la flèche d'un bloc neuf ramène au choix du bloc : Ma page rouvre sa liste (en bas si le bloc venait du bas).
+  const [demandeAjout, setDemandeAjout] = useState<{ enBas: boolean } | null>(null);
   // L'endroit de l'en-tête du bureau où l'onglet ouvert pose son geste (voir `ActionEntete`).
   const [emplacement, setEmplacement] = useState<HTMLDivElement | null>(null);
   // Une sous-page ouverte (Réglages, puis Les offres) : l'en-tête montre son fil, qui ramène en arrière (voir `SousPage`).
@@ -308,16 +313,8 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
     if (!libererEdition()) return;
     setEdition({ bloc, nouveau: true, enBas });
   }
-  // Au téléphone, la feuille du bloc couvre le bas de l'écran : le bloc ouvert remonte juste sous l'en-tête, au-dessus d'elle.
+  // Au téléphone, la feuille du bloc couvre le bas de l'écran : le bloc ouvert remonte juste sous l'en-tête, au-dessus d'elle (voir `EditeurBloc`).
   const idOuvert = edition && !edition.nouveau ? edition.bloc.id : null;
-  useLayoutEffect(() => {
-    if (!idOuvert || grand) return;
-    const el = document.querySelector<HTMLElement>(`.adm-toile [data-id="${CSS.escape(idOuvert)}"]`);
-    if (!el) return;
-    const r = el.getBoundingClientRect();
-    const haut = 84, bas = innerHeight * 0.42 - 12;
-    if (r.top < haut || r.bottom > bas) scrollTo({ top: Math.max(0, scrollY + r.top - haut) });
-  }, [idOuvert, grand]);
 
   // Les réglages tapés qui attendent leur envoi : ils partent tout de suite si l'on quitte la page pour Creem.
   const reglagesEnAttente = useRef<Reglages | null>(null);
@@ -509,6 +506,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
     <RegleAOuvrir.Provider value={regleOuverte?.bloc === edition.bloc.id ? regleOuverte.regle : null}>
     <EditeurBloc key={edition.bloc.id} bureau={grand} garde={garde} onBrouillon={setBrouillon}
       adressePage={urlPage(compte)} principal={compte.principal} bloc={edition.bloc} reglages={reglages} nouveau={edition.nouveau} clics={clics[edition.bloc.id] ?? 0} prises={initial.places?.[edition.bloc.id] ?? 0} onFermer={() => setEdition(null)}
+      onRetour={edition.nouveau && !grand ? () => { setEdition(null); setDemandeAjout({ enBas: !!edition.enBas }); } : undefined}
       onEnregistrer={enregistrerBloc} onSupprimer={supprimer} onDupliquer={dupliquer} onDeplacer={deplacer} place={{ rang: blocs.findIndex(b => b.id === edition.bloc.id), total: blocs.length }} envoyerImage={d => api.envoyerImage(d)} apercuSite={u => api.apercuSite(u)} />
     </RegleAOuvrir.Provider>
   );
@@ -617,6 +615,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
             onOuvrir={ouvrirBloc} onAjouter={ajouterBloc} liberer={libererEdition} fermerEdition={fermerEdition} gestes={{ basculer, dupliquer, supprimer }}
             envoyerImage={d => api.envoyerImage(d)} annoncer={t => setToast(t)}
             demarrage={demarrage} demarrageOuvert={demarrageOuvert} fermerDemarrage={() => setDemarrageOuvert(false)} demandeDesign={demandeDesign} designOuvert={() => setDemandeDesign(null)}
+            demandeAjout={demandeAjout} ajoutOuvert={() => setDemandeAjout(null)}
             appel={grand ? null : appel()} />}
           {onglet === 'stats' && <OngletStats charger={chargerStats} adresse={urlPage(compte)} pseudo={compte.pseudo} joursMax={initial.paiement ? joursStats(compte.plan, droits.stats) : 365} onOffres={peutAcheter ? ouvrirOffres : undefined}
             ouvrirApps={reglages.ouvrirApps} onActiverApps={() => changerReglages({ ...reglages, ouvrirApps: true })} liste={<MaListe api={api} />} blocs={blocs} />}

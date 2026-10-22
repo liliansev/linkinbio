@@ -58,7 +58,7 @@ const reduit = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 /** Ce que l'en-tête et les onglets collés couvrent en haut de l'écran, au bureau (le `scroll-padding-top` de la page). */
 const margeHaut = () => parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop) || 0;
 
-export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, choisi, editeur, neuf, onReglages, onOrdonner, onOuvrir, onAjouter, liberer, fermerEdition, gestes, envoyerImage, annoncer, demarrage, demarrageOuvert, fermerDemarrage, demandeDesign, designOuvert, appel }: {
+export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, choisi, editeur, neuf, onReglages, onOrdonner, onOuvrir, onAjouter, liberer, fermerEdition, gestes, envoyerImage, annoncer, demarrage, demarrageOuvert, fermerDemarrage, demandeDesign, designOuvert, demandeAjout, ajoutOuvert, appel }: {
   compte: PagePublique['compte'];
   reglages: Reglages;
   /** Les blocs tels qu'on les voit : celui qu'on règle se redessine à chaque frappe. */
@@ -95,6 +95,9 @@ export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, chois
   /** Ouvre le design sur un tiroir (« Essayer tes couleurs », après l'achat) ; `designOuvert` dit que c'est fait. */
   demandeDesign?: Tiroir | null;
   designOuvert?: () => void;
+  /** Rouvre le choix du bloc (la flèche d'un bloc neuf, au téléphone) ; `ajoutOuvert` dit que c'est fait. */
+  demandeAjout?: { enBas: boolean } | null;
+  ajoutOuvert?: () => void;
   /** Au téléphone, sous la page : l'offre du dessus, en une ligne (voir `AppelOffre`). Au bureau, elle est dans la barre latérale. */
   appel?: ReactNode;
 }) {
@@ -206,6 +209,13 @@ export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, chois
     enBas.current = bas;
     setAjout(true);
   }
+  // Revenu d'un bloc neuf par sa flèche : la liste se rouvre telle qu'on l'avait quittée, une fois.
+  useEffect(() => {
+    if (!demandeAjout) return;
+    enBas.current = demandeAjout.enBas;
+    setAjout(true);
+    ajoutOuvert?.();
+  }, [demandeAjout]); // eslint-disable-line react-hooks/exhaustive-deps
   const ajouter = (type: TypeBloc) => {
     setAjout(false);
     if (!quitterCote()) return;
@@ -213,9 +223,9 @@ export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, chois
     enBas.current = false;
   };
   /** Une adresse collée devient un lien neuf, qu'on règle avant de l'ajouter. Faux si quelque chose le retient. */
-  const ajouterAdresse = (url: string) => {
+  const ajouterAdresse = (url: string, bas = false) => {
     if (!quitterCote()) return false;
-    onAjouter({ ...nouveauBloc('lien', nouvelId()), url });
+    onAjouter({ ...nouveauBloc('lien', nouvelId()), url }, bas);
     return true;
   };
   const ordonner = (liste: Bloc[]) => { if (!deplace) { setDeplace(true); try { localStorage.setItem(`hopla-bloc-deplace:${compte.pseudo}`, '1'); } catch { /* stockage refusé */ } } onOrdonner(liste); };
@@ -429,7 +439,8 @@ export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, chois
       </div>
 
       <input ref={fichier} type="file" accept="image/*" className="adm-fichier" tabIndex={-1} aria-hidden="true" onChange={e => photo(e.target.files?.[0])} />
-      <FeuilleAjout ouverte={ajout} onFermer={() => { enBas.current = false; setAjout(false); }} onChoisir={ajouter} principal={principal} />
+      <FeuilleAjout ouverte={ajout} onFermer={() => { enBas.current = false; setAjout(false); }} onChoisir={ajouter} principal={principal}
+        onColler={url => { setAjout(false); ajouterAdresse(url, enBas.current); enBas.current = false; }} />
       <Feuille ouverte={cote === 'reseaux'} onFermer={() => fermerCote()} retenir={reseauFaux} titre="Réseaux" cote apercu={direct} pied={piedAnnuler}>
         {reseaux}
       </Feuille>

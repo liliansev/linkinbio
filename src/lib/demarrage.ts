@@ -101,8 +101,13 @@ export function nomSite(url: string): string {
   const fin = parts.length > 2 && /^(co|com|org|net|gouv)$/.test(parts[parts.length - 2]) ? 3 : 2;
   const nom = parts.length >= 2 ? parts[parts.length - fin] : hote;
   if (!nom || /^\d+$/.test(nom)) return hote;
-  return nom.split('-').filter(Boolean).map(m => m[0].toUpperCase() + m.slice(1)).join(' ');
+  return MARQUES[nom.toLowerCase()] ?? nom.split('-').filter(Boolean).map(m => m[0].toUpperCase() + m.slice(1)).join(' ');
 }
+/** Les noms qui ne s'écrivent pas comme leur adresse (youtube.com donne « YouTube », pas « Youtube »). */
+const MARQUES: Record<string, string> = {
+  youtube: 'YouTube', youtu: 'YouTube', linkedin: 'LinkedIn', tiktok: 'TikTok', github: 'GitHub', paypal: 'PayPal', whatsapp: 'WhatsApp', wa: 'WhatsApp',
+  soundcloud: 'SoundCloud', ebay: 'eBay', linktr: 'Linktree', bandcamp: 'Bandcamp', onlyfans: 'OnlyFans', helloasso: 'HelloAsso', leboncoin: 'leboncoin',
+};
 
 const HOTES_RESEAUX: Record<string, Reseau> = {
   'instagram.com': 'instagram', 'tiktok.com': 'tiktok', 'youtube.com': 'youtube', 'youtu.be': 'youtube', 'linkedin.com': 'linkedin',
