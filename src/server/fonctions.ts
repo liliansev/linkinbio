@@ -20,7 +20,8 @@ import { changerStatutMotive, signaler, supprimerMotive, traiter } from './moder
 import { supprimerAvecAbonnement } from './suppression.ts';
 import { corrigerAdresse as corriger, creerHopla, inscriptionLibre, inviterReservation, renommerPage as renommer, renvoyerInscription, reserverNom as reserver, verifierNom as verifier } from './attente.ts';
 import * as creem from './creem.ts';
-import { droits, joursLisibles, verifierDates } from './droits.ts';
+import { droits, joursLisibles, periodeLisible, verifierDates } from './droits.ts';
+import { lirePeriode } from '../lib/periode.ts';
 import { selonDroits } from '../lib/droits.ts';
 import { estPlanPayant } from '../lib/abonnement.ts';
 import type { Periode, PlanPayant } from '../lib/abonnement.ts';
@@ -258,12 +259,15 @@ export const apercuSite = createServerFn({ method: 'POST' })
 
 export const lireStats = createServerFn({ method: 'GET' })
   .middleware([session])
-  .validator((data: unknown) => ([7, 30, 90, 365].includes(Number(data)) ? Number(data) : 30))
+  // Les derniers jours (7, 14, 30, 90 ou 365), ou des dates choisies dans le calendrier.
+  .validator((data: unknown) => lirePeriode(data) ?? 30)
   // L'historique visible suit l'offre (`joursLisibles`) : tout est gardé, changer d'offre le rend visible. Sans historique, rien ne se lit.
   .handler(async ({ data, context }): Promise<Stats> => {
-    const plafond = joursLisibles(db.compteParId(context.compte)!);
-    if (!plafond) throw new Error('Tes stats demandent Hopla Starter.');
-    return db.stats(context.compte, Math.min(data, plafond));
+    const compte = db.compteParId(context.compte)!;
+    if (!joursLisibles(compte)) throw new Error('Tes stats demandent Hopla Starter.');
+    const periode = periodeLisible(compte, data);
+    if (periode === null) throw new Error('Ces dates sont plus anciennes que ton historique.');
+    return db.stats(context.compte, periode);
   });
 
 /* ---- « Rejoins ma liste » ---- */

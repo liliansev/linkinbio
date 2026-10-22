@@ -23,7 +23,7 @@ function PageAdmin() {
     enregistrerReglages: reglages => fn.enregistrerReglages({ data: reglages }),
     envoyerImage: dataUrl => fn.envoyerImage({ data: dataUrl }),
     apercuSite: (url, image = true) => fn.apercuSite({ data: { url, image } }),
-    stats: jours => fn.lireStats({ data: jours }),
+    stats: periode => fn.lireStats({ data: periode }),
     deconnexion: async () => { await fn.deconnecter(); },
     accepterCgu: async () => { await fn.accepterCgu(); },
     supprimerMonCompte: confirmation => fn.supprimerMonCompte({ data: confirmation }),

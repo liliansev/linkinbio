@@ -4,6 +4,8 @@ import { REGLAGES_DEFAUT, blocsDefaut, reglagesNouveauCompte } from '../src/lib/
 import { CONTACT_LEGAL } from '../src/lib/legal.ts';
 import type { Droits } from '../src/lib/droits.ts';
 import type { Abonnement, Fonction, Periode, PlanPayant } from '../src/lib/abonnement.ts';
+import type { PeriodeStats } from '../src/lib/periode.ts';
+import { ajouterJours, jourDe, joursEntre, longueur, plageDe } from '../src/lib/periode.ts';
 import { FONCTIONS, echeance, peut } from '../src/lib/abonnement.ts';
 import avatar from '../public/avatar.webp?inline';
 
@@ -30,16 +32,24 @@ const pause = () => new Promise(r => setTimeout(r, 180));
 // Un générateur pseudo-aléatoire fixe : les mêmes chiffres à chaque visite.
 function hasard(graine: number) { return () => { graine = (graine * 16807) % 2147483647; return graine / 2147483647; }; }
 
-function statsFictives(jours: number, blocs: Bloc[] = etat.blocs): Stats {
+/**
+ * Deux ans de chiffres inventés, le dernier jour étant aujourd'hui : une période (les derniers jours, ou des
+ * dates choisies dans le calendrier) en prend sa part, et la période d'avant la part qui la précède.
+ */
+function statsFictives(periode: PeriodeStats, blocs: Bloc[] = etat.blocs): Stats {
   const r = hasard(42);
   const serieComplete = Array.from({ length: 730 }, (_, i) => {
     const base = 60 + 40 * Math.sin(i / 9) + i * 0.08;
     const vues = Math.max(5, Math.round(base * (0.7 + r() * 0.6)));
     return { vues, visiteurs: Math.round(vues * (0.7 + r() * 0.08)), clics: Math.round(vues * (0.28 + r() * 0.2)) };
   });
-  const jour = (decalage: number) => new Date(Date.now() - decalage * 86_400_000).toISOString().slice(0, 10);
-  const serie = serieComplete.slice(730 - jours).map((s, i) => ({ jour: jour(jours - 1 - i), ...s }));
-  const avant = serieComplete.slice(730 - 2 * jours, 730 - jours);
+  const aujourdhui = jourDe(Date.now());
+  const { du, au } = plageDe(periode, aujourdhui);
+  const jours = longueur({ du, au });
+  // L'indice du lendemain du dernier jour, dans les deux ans : 730 pour aujourd'hui.
+  const fin = 730 - joursEntre(au, aujourdhui);
+  const serie = serieComplete.slice(fin - jours, fin).map((s, i) => ({ jour: ajouterJours(du, i), ...s }));
+  const avant = serieComplete.slice(Math.max(0, fin - 2 * jours), fin - jours);
   type Cle = 'vues' | 'visiteurs' | 'clics';
   const somme = (l: Record<Cle, number>[], k: Cle) => l.reduce((t, s) => t + s[k], 0);
   const vues = somme(serie, 'vues'), clics = somme(serie, 'clics'), clicsAvant = somme(avant, 'clics'), vuesAvant = somme(avant, 'vues');
@@ -47,7 +57,7 @@ function statsFictives(jours: number, blocs: Bloc[] = etat.blocs): Stats {
   const poids = liens.map((_, i) => 1 / (i + 1.4));
   const total = poids.reduce((a, b) => a + b, 0);
   return {
-    jours, vues, clics, visiteurs: somme(serie, 'visiteurs'),
+    jours, plage: typeof periode !== 'number', vues, clics, visiteurs: somme(serie, 'visiteurs'),
     serie,
     blocs: liens.map((b, i) => ({ id: b.id, titre: b.titre || b.url, clics: Math.round((clics * poids[i]) / total), avant: Math.round((clicsAvant * poids[i]) / total) })).sort((a, b) => b.clics - a.clics),
     sources: [['Instagram', 0.38, 0.33], ['LinkedIn', 0.22, 0.24], ['YouTube', 0.18, 0.2], ['Direct', 0.12, 0.13], ['QR code', 0.06, 0.06], ['Google', 0.04, 0.04]]
@@ -60,9 +70,11 @@ function statsFictives(jours: number, blocs: Bloc[] = etat.blocs): Stats {
 }
 
 /** Un compte neuf : personne n'a encore vu sa page. */
-function statsVides(jours: number): Stats {
-  const serie = Array.from({ length: jours }, (_, i) => ({ jour: new Date(Date.now() - (jours - 1 - i) * 86_400_000).toISOString().slice(0, 10), vues: 0, visiteurs: 0, clics: 0 }));
-  return { jours, vues: 0, visiteurs: 0, clics: 0, serie, blocs: [], sources: [], appareils: [], apps: { integres: 0, versApp: 0, ouverts: 0 }, precedent: { vues: 0, visiteurs: 0, clics: 0 }, dejaVue: false };
+function statsVides(periode: PeriodeStats): Stats {
+  const { du, au } = plageDe(periode, jourDe(Date.now()));
+  const jours = longueur({ du, au });
+  const serie = Array.from({ length: jours }, (_, i) => ({ jour: ajouterJours(du, i), vues: 0, visiteurs: 0, clics: 0 }));
+  return { jours, plage: typeof periode !== 'number', vues: 0, visiteurs: 0, clics: 0, serie, blocs: [], sources: [], appareils: [], apps: { integres: 0, versApp: 0, ouverts: 0 }, precedent: { vues: 0, visiteurs: 0, clics: 0 }, dejaVue: false };
 }
 
 export const apiDemo: Api = {
@@ -88,7 +100,7 @@ export const apiDemo: Api = {
     if (image === 'partage') return { titre: 'Carnet de recettes illustré', description: '', image: photoProduitDemo(), prix: '24 €' };
     return { titre: '', description: 'Un aperçu de démonstration : en ligne, le serveur lit la vraie description du site.', image: image ? vignetteDemo(url) : null, prix: '' };
   },
-  async stats(jours) { await pause(); return statsFictives(jours); },
+  async stats(periode) { await pause(); return statsFictives(periode); },
   async deconnexion() { localStorage.removeItem(CLE); etat = lire(); },
   async accepterCgu() { await pause(); },
   async supprimerMonCompte() { await pause(); return { ok: false, message: 'Le compte principal ne se supprime pas.' }; },
@@ -246,7 +258,7 @@ export const apiNouveau: Api = {
   async supprimerBloc(i) { await pause(); nouveau.blocs = nouveau.blocs.filter(b => b.id !== i); ecrireNouveau(); },
   async ordonner(ids) { await pause(); nouveau.blocs = ids.map(i => nouveau.blocs.find(b => b.id === i)).filter((b): b is Bloc => !!b); ecrireNouveau(); },
   async enregistrerReglages(reglages) { await pause(); nouveau.reglages = reglages; ecrireNouveau(); return reglages; },
-  async stats(jours) { await pause(); return statsVides(jours); },
+  async stats(periode) { await pause(); return statsVides(periode); },
   async liste() { await pause(); return { total: 0, semaine: 0, derniers: [], integration: null, enAttente: 0 }; },
   async deconnexion() { recommencerNouveau(); },
   async accepterCgu() { await pause(); nouveau.cgu = true; ecrireNouveau(); },
@@ -321,7 +333,7 @@ export const apiGratuit: Api = {
   async enregistrerReglages(reglages) { await pause(); gratuit.reglages = reglages; ecrireGratuit(); return reglages; },
   async liste() { await pause(); return { total: 0, semaine: 0, derniers: [], integration: null, enAttente: 0 }; },
   // Une fois l'offre prise, les stats fictives parlent des liens de Sarah.
-  async stats(jours) { await pause(); return statsFictives(jours, gratuit.blocs); },
+  async stats(periode) { await pause(); return statsFictives(periode, gratuit.blocs); },
   // Se déconnecter remet le compte d'essai à zéro, abonnement compris : on peut rejouer l'achat.
   async deconnexion() { try { localStorage.removeItem(CLE_GRATUIT); } catch { /* idem */ } gratuit = gratuitNeuf(); },
   async supprimerMonCompte() { await pause(); return { ok: false, message: 'Pas de suppression dans l’aperçu.' }; },

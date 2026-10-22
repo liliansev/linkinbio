@@ -7,6 +7,7 @@
 import type { Abonnement, EtatOffre, Periode, Plan, PlanPayant } from './abonnement.ts';
 import type { Droits } from './droits.ts';
 import type { Creneau } from './moments.ts';
+import type { PeriodeStats } from './periode.ts';
 import type { Audience, EffetAudience } from './provenance.ts';
 import type { Sortie } from './sortie.ts';
 
@@ -227,7 +228,10 @@ export interface EtatAdmin {
 }
 
 export interface Stats {
+  /** Le nombre de jours de la période, le premier et le dernier compris (ce sont ceux de `serie`). */
   jours: number;
+  /** Des dates choisies dans le calendrier (« Du 12 au 18 octobre »), plutôt que les derniers jours. */
+  plage?: boolean;
   vues: number;
   visiteurs: number;
   clics: number;
@@ -278,7 +282,8 @@ export interface Api {
    * de la page (la photo d'un produit).
    */
   apercuSite(url: string, image?: boolean | 'partage'): Promise<{ titre: string; description: string; image: string | null; prix: string }>;
-  stats(jours: number): Promise<Stats>;
+  /** Les stats des derniers jours (7, 14, 30, 90 ou 365), ou de dates choisies. */
+  stats(periode: PeriodeStats): Promise<Stats>;
   deconnexion(): Promise<void>;
   /** Enregistre l'acceptation des CGU et de l'accord de traitement en vigueur. */
   accepterCgu(): Promise<void>;

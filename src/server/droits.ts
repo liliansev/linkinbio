@@ -3,6 +3,8 @@ import { FONCTIONS, joursStats, peut } from '../lib/abonnement.ts';
 import type { Droits } from '../lib/droits.ts';
 import { REFUS_PROGRAMMATION, nouvellesDates } from '../lib/droits.ts';
 import type { Bloc } from '../lib/types.ts';
+import type { PeriodeStats } from '../lib/periode.ts';
+import { borner, jourDe } from '../lib/periode.ts';
 import type { Env } from './courriel.ts';
 import { config } from './creem.ts';
 import type { Compte } from './db.ts';
@@ -37,3 +39,14 @@ export function verifierDates(c: Compte, bloc: Pick<Bloc, 'id' | 'debut' | 'fin'
  */
 export const joursLisibles = (c: Compte, env: Env = process.env, maintenant = Date.now()) =>
   (config(env) ? joursStats(abonnement(c, maintenant).plan, droits(c, env, maintenant).stats) : 365);
+
+/**
+ * La période qu'un compte demande, ramenée à ce qu'il peut lire : des derniers jours au plus de son
+ * historique (14 jours demandés par une page qui en lit 7 : ses 7), des dates resserrées sur cet
+ * historique, jusqu'à aujourd'hui. Rien quand ses dates tombent toutes avant (ou qu'il n'a pas de stats).
+ */
+export function periodeLisible(c: Compte, p: PeriodeStats, env: Env = process.env, maintenant = Date.now()): PeriodeStats | null {
+  const jours = joursLisibles(c, env, maintenant);
+  if (!jours) return null;
+  return typeof p === 'number' ? Math.min(p, jours) : borner(p, jours, jourDe(maintenant));
+}

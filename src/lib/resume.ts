@@ -1,4 +1,5 @@
 import type { Stats } from './types.ts';
+import { jourDe, nomPlage } from './periode.ts';
 
 /*
  * Les statistiques en quelques phrases, plutôt qu'en graphiques : ce qui a
@@ -8,7 +9,7 @@ import type { Stats } from './types.ts';
 
 const nombre = (n: number) => n.toLocaleString('fr-FR');
 const pourcent = (actuel: number, avant: number) => Math.round(((actuel - avant) / avant) * 100);
-const periode = (jours: number) => (jours === 7 ? 'la semaine d’avant' : `les ${jours} jours d’avant`);
+const periode = (jours: number) => (jours === 1 ? 'la veille' : jours === 7 ? 'la semaine d’avant' : `les ${jours} jours d’avant`);
 const pluriel = (n: number, mot: string) => `${nombre(n)} ${mot}${n > 1 ? 's' : ''}`;
 
 export interface Phrase { texte: string; ton: 'hausse' | 'baisse' | 'neutre' }
@@ -66,11 +67,14 @@ const AMENE: Record<string, string> = { 'QR code': 'ton QR code t’amène', New
  * Les stats en une seule phrase, en tête de l'onglet (Lilian, 20 octobre 2026) :
  * le total, ce qui a bougé s'il y a de quoi comparer, et d'où vient le monde.
  * « En 30 jours, ta page a eu 2 877 vues, 33 % de moins que les 30 jours d’avant,
- * et Instagram t’amène le plus de monde. »
+ * et Instagram t’amène le plus de monde. » Des dates choisies se disent en dates :
+ * « Du 12 au 18 octobre, ta page a eu… » (l'année, si ce n'est pas celle d'`aujourdhui`).
  */
-export function enUnePhrase(s: Stats): string {
-  const sur = s.jours === 365 ? 'En un an' : `En ${s.jours} jours`;
-  if (!s.vues) return `${sur}, pas encore de visite. Partage ton lien en bio pour lancer la machine.`;
+export function enUnePhrase(s: Stats, aujourdhui = jourDe(Date.now())): string {
+  const sur = s.plage && s.serie.length
+    ? nomPlage({ du: s.serie[0].jour, au: s.serie[s.serie.length - 1].jour }, aujourdhui)
+    : s.jours === 365 ? 'En un an' : `En ${s.jours} jours`;
+  if (!s.vues) return s.plage ? `${sur}, aucune visite.` : `${sur}, pas encore de visite. Partage ton lien en bio pour lancer la machine.`;
   let comparaison = '';
   if (s.precedent.vues >= 10) {
     const e = pourcent(s.vues, s.precedent.vues);

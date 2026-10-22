@@ -2,16 +2,18 @@ import { useEffect, useId, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import type { Bloc, Stats } from '../lib/types.ts';
 import { sansSchema } from '../lib/types.ts';
-import { ActionEntete, BoutonCopier, Menu, classeBouton, useGrandEcran, vibrer } from './ui.tsx';
-import type { ElementMenu } from './ui.tsx';
+import { ActionEntete, BoutonCopier, classeBouton, useGrandEcran, vibrer } from './ui.tsx';
 import { Icone } from '../components/Icone.tsx';
 import { enUnePhrase } from '../lib/resume.ts';
 import type { Mesure, Point } from '../lib/stats.ts';
 import { COULEURS_SOURCES, MESURES, NOMS_MESURES, chiffre, ecart, graduation, parSemaine, reperes, totalDe, valeurDuJour } from '../lib/stats.ts';
 import { DEGRADE_COURBE, aireSous, lisse } from '../lib/courbe.ts';
 import type { PointTrace } from '../lib/courbe.ts';
-import { OFFRES, PLANS_PAYANTS } from '../lib/abonnement.ts';
+import { OFFRES } from '../lib/abonnement.ts';
 import type { Fonction, PlanPayant } from '../lib/abonnement.ts';
+import type { PeriodeStats } from '../lib/periode.ts';
+import { DUREES, borner, cleDe, jourDe } from '../lib/periode.ts';
+import { ChoixPeriode } from './ChoixPeriode.tsx';
 import { noterPartage } from './BienDemarrer.tsx';
 import { CodeQR } from './CodeQR.tsx';
 import { Etiquette } from './offre.tsx';
@@ -26,16 +28,10 @@ import { typeDe } from './OngletLiens.tsx';
  * bleu Hopla, chaque réseau dans la couleur de sa marque (une provenance sans
  * marque en gris, pour ne pas se confondre avec les bleus de LinkedIn,
  * Facebook ou Google), un écart en citron quand il monte, en rose quand il
- * baisse. La période se choisit dans un petit menu, dans l'en-tête au bureau,
- * en tête de l'écran au téléphone.
+ * baisse. La période se choisit d'un toucher, ou en dates dans un calendrier
+ * (`ChoixPeriode`), dans l'en-tête au bureau, en tête de l'écran au téléphone.
  */
 
-const PERIODES = [
-  { jours: 7, nom: '7 derniers jours' },
-  { jours: 30, nom: '30 derniers jours' },
-  { jours: 90, nom: '90 derniers jours' },
-  { jours: 365, nom: '12 derniers mois' },
-];
 const nombre = (n: number) => n.toLocaleString('fr-FR');
 const pluriel = (n: number, mot: string) => `${nombre(n)} ${mot}${n > 1 ? 's' : ''}`;
 const jourCourt = (jour: string) => new Date(`${jour}T12:00:00`).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
@@ -131,7 +127,7 @@ function Courbe({ serie, mesure }: { serie: Point[]; mesure: Mesure }) {
           </g>
           <g className="adm-courbe-texte">
             {dates.map((i, k) => (
-              <text key={i} x={x(i)} y={h - 10} textAnchor={k === 0 && i === 0 ? 'start' : x(i) > x1 - 30 ? 'end' : 'middle'}>{nomDate(i)}</text>
+              <text key={i} x={x(i)} y={h - 10} textAnchor={n > 1 && k === 0 && i === 0 ? 'start' : n > 1 && x(i) > x1 - 30 ? 'end' : 'middle'}>{nomDate(i)}</text>
             ))}
           </g>
           <defs>
@@ -362,13 +358,25 @@ function StatsReservees({ onOffres, liste }: { onOffres?: Proprietes['onOffres']
 }
 
 type Proprietes = {
-  charger: (jours: number) => Promise<Stats>; adresse: string; pseudo: string; joursMax?: number;
+  /** Les stats des derniers jours (`30`), ou de dates choisies (`{ du, au }`). */
+  charger: (periode: PeriodeStats) => Promise<Stats>; adresse: string; pseudo: string; joursMax?: number;
   /** Ouvre les offres par-dessus les stats, sur celle qui débloque `pour`, ou sur `vers` (un an de stats : Pro). */
   onOffres?: (pour?: Fonction, vers?: PlanPayant) => void;
   ouvrirApps?: boolean; onActiverApps?: () => void; liste?: ReactNode;
   /** Les blocs de la page : chaque lien de la liste prend son picto. */
   blocs?: Bloc[];
 };
+
+/**
+ * La période ramenée à l'historique de l'offre, s'il change en cours de route (un abonnement qui prend fin) :
+ * les dates resserrées sur lui, une durée trop longue remplacée par la plus longue qu'il ouvre.
+ */
+function dansHistorique(p: PeriodeStats, joursMax: number): PeriodeStats {
+  const ouvertes = DUREES.filter(j => j <= joursMax);
+  const repli = ouvertes[ouvertes.length - 1] ?? DUREES[0];
+  if (typeof p === 'number') return p <= joursMax ? p : repli;
+  return borner(p, joursMax, jourDe(Date.now())) ?? repli;
+}
 
 /**
  * `joursMax` : l'historique que l'offre laisse lire (aucun en Gratuit, 30 jours en Starter, un an en Pro ;
@@ -382,33 +390,25 @@ export function OngletStats(props: Proprietes) {
 
 function TableauStats({ charger, adresse, pseudo, joursMax = 365, onOffres, ouvrirApps = true, onActiverApps, liste, blocs = [] }: Proprietes) {
   const grand = useGrandEcran();
-  const ouvertes = PERIODES.filter(p => p.jours <= joursMax);
-  const [choix, setJours] = useState(Math.min(30, joursMax));
-  const jours = ouvertes.some(p => p.jours === choix) ? choix : ouvertes[ouvertes.length - 1].jours;
+  const [choix, setChoix] = useState<PeriodeStats>(() => Math.min(30, joursMax));
+  const periode = dansHistorique(choix, joursMax);
+  const cle = cleDe(periode);
   const [stats, setStats] = useState<Stats | null>(null);
   const [erreur, setErreur] = useState(false);
   // Pendant qu'une autre période se charge, les chiffres d'avant pâlissent : on voit qu'ils vont changer.
   const [charge, setCharge] = useState(true);
   const [essai, setEssai] = useState(0);
+  // La période se suit par sa clé (`30`, `2026-10-12/2026-10-18`) : les mêmes dates relues ne rechargent rien.
   useEffect(() => {
     let annule = false;
     setErreur(false); setCharge(true);
-    charger(jours).then(s => { if (!annule) setStats(s); }).catch(() => { if (!annule) setErreur(true); }).finally(() => { if (!annule) setCharge(false); });
+    charger(periode).then(s => { if (!annule) setStats(s); }).catch(() => { if (!annule) setErreur(true); }).finally(() => { if (!annule) setCharge(false); });
     return () => { annule = true; };
-  }, [jours, charger, essai]);
+  }, [cle, charger, essai]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Les périodes que l'offre n'ouvre pas restent dans le menu, au nom de l'offre qui les ouvre : elles mènent aux offres.
-  const elements: ElementMenu[] = PERIODES.flatMap((p): ElementMenu[] => {
-    if (p.jours <= joursMax) return [{ nom: p.nom, coche: p.jours === jours, action: () => setJours(p.jours) }];
-    const offre = PLANS_PAYANTS.find(o => OFFRES[o].enVente && OFFRES[o].jours >= p.jours);
-    return onOffres && offre ? [{ nom: p.nom, etiquette: OFFRES[offre].nom, offre, action: () => onOffres(undefined, offre) }] : [];
-  });
-  const nomPeriode = PERIODES.find(p => p.jours === jours)!.nom;
   // La période ne se montre qu'à une page déjà vue : avant, il n'y a rien à comparer. Pendant le premier chargement, elle reste.
-  const periode = stats && !stats.dejaVue ? null : (
-    <Menu label="Période" elements={elements} aligne={grand ? 'droite' : 'gauche'} className={`adm-periode ${classeBouton.secondaire}`}>
-      <span className="sr-only">Période : </span>{nomPeriode}<Icone nom="ui-chevron" taille={14} className="shrink-0 text-[#55554f]" />
-    </Menu>
+  const choixPeriode = stats && !stats.dejaVue ? null : (
+    <ChoixPeriode periode={periode} joursMax={joursMax} onChoisir={setChoix} onOffres={onOffres && (vers => onOffres(undefined, vers))} grand={grand} />
   );
 
   const lignesLiens: Ligne[] = (stats?.blocs ?? []).map(b => {
@@ -421,7 +421,7 @@ function TableauStats({ charger, adresse, pseudo, joursMax = 365, onOffres, ouvr
 
   return (
     <div className="adm-stats mx-auto flex w-full max-w-[1200px] flex-col gap-5">
-      {periode && (grand ? <ActionEntete>{periode}</ActionEntete> : <div className="-mt-2 flex">{periode}</div>)}
+      {choixPeriode && (grand ? <ActionEntete>{choixPeriode}</ActionEntete> : <div className="-mt-2">{choixPeriode}</div>)}
       {erreur && (
         <div role="alert" className="flex items-center justify-between gap-3 rounded-xl bg-red-500/15 py-1.5 pr-1.5 pl-3.5 text-[14px] text-red-200">
           Les statistiques ne se chargent pas.

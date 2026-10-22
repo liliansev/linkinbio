@@ -38,3 +38,18 @@ test('les stats en une phrase, en tête de l’onglet', () => {
   assert.match(enUnePhrase({ ...s, sources: [{ nom: 'QR code', vues: 40, avant: 0 }] }), /, et ton QR code t’amène le plus de monde\.$/);
   assert.match(enUnePhrase({ ...s, vues: 0 }), /^En 30 jours, pas encore de visite\./);
 });
+
+test('des dates choisies se disent en dates, et se comparent aux jours d’avant', () => {
+  const s: Stats = {
+    jours: 7, plage: true, vues: 400, visiteurs: 300, clics: 120, serie: serie([30, 200, 40, 30, 40, 30, 30]),
+    blocs: [], sources: [{ nom: 'Instagram', vues: 150, avant: 100 }],
+    appareils: [], apps: { integres: 0, versApp: 0, ouverts: 0 }, precedent: { vues: 300, visiteurs: 250, clics: 90 }, dejaVue: true,
+  };
+  assert.equal(enUnePhrase(s, '2026-10-22'), 'Du 13 au 19 octobre, ta page a eu 400 vues, 33\u202f% de plus que la semaine d’avant, et Instagram t’amène le plus de monde.');
+  // L'année se dit quand ce n'est pas celle d'aujourd'hui.
+  assert.match(enUnePhrase(s, '2027-01-05'), /^Du 13 au 19 octobre 2026, ta page a eu 400 vues/);
+  // Un seul jour se compare à la veille.
+  assert.equal(enUnePhrase({ ...s, jours: 1, serie: serie([12]), vues: 12, clics: 3, sources: [], precedent: { vues: 20, visiteurs: 15, clics: 5 } }, '2026-10-22'), 'Le 13 octobre, ta page a eu 12 vues, 40\u202f% de moins que la veille.');
+  // Des dates sans visite le disent, sans pousser à partager : elles sont passées.
+  assert.equal(enUnePhrase({ ...s, vues: 0 }, '2026-10-22'), 'Du 13 au 19 octobre, aucune visite.');
+});

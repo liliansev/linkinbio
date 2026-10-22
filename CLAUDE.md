@@ -63,7 +63,9 @@ embarque tout : l'image n'a pas de `node_modules`.
   (`selonDroits` retire de la page publique ce que l'offre ne comprend pas, sans rien effacer ; `nouvellesDates`),
   `mots.ts` (les mots de la page publique, au « tu » ou au « vous »), `stats.ts` (les quatre chiffres de l'onglet Stats, leurs écarts,
   l'échelle de la courbe, et `COULEURS_SOURCES`, la couleur de chaque réseau), `courbe.ts` (le tracé lisse des courbes de stats
-  et leur dégradé, au back office comme sur l'accueil), `resume.ts` (« En bref », et le résumé du lundi), `comptes.ts` (statut,
+  et leur dégradé, au back office comme sur l'accueil), `periode.ts` (la période des stats : une durée de `DUREES` ou des dates
+  `{ du, au }`, en jours de Paris ; `lirePeriode`, `borner` à l'historique de l'offre, `nomPlage`), `resume.ts` (« En bref », et le
+  résumé du lundi), `comptes.ts` (statut,
   dernière connexion et recherche de l'onglet Comptes),
   `achat.ts` (le retour d'un paiement : la note posée avant Creem, puis « On active », « C'est fait » ou l'attente, d'après l'abonnement relu),
   `sortie.ts` (depuis le navigateur intégré de LinkedIn, Instagram, Facebook, Messenger ou Threads, l'adresse qui rouvre la page
@@ -82,6 +84,10 @@ embarque tout : l'image n'a pas de `node_modules`.
   une résiliation ou un impayé) : `Offres.tsx` (`FenetreOffres`, le récapitulatif avant Creem, `RepasserGratuit` qui résilie pour
   la fin de la période payée, `RetourPaiement` au retour, dont le geste ramène où servir l'offre ; parti d'une règle de bloc, au bloc,
   la règle ouverte par `RegleAOuvrir` dans `ReglesBloc.tsx`).
+  Dans Stats (22 octobre 2026, demandé par Lilian), la période se choisit d'un toucher sur un rail (7 j, 14 j, 30 j, 90 j,
+  12 mois, selon l'historique de l'offre ; au-delà, un bouton verrouillé par offre, avec son badge, ouvre les offres) ou en
+  dates : `ChoixPeriode.tsx`, un calendrier dans une feuille au téléphone (un mois, glissé ou fléché), dans une bulle au bureau
+  (deux mois). Le serveur borne toute période à l'historique de l'offre (`periodeLisible` dans `server/droits.ts`).
   `MaPage.tsx`, au bureau (direction A, 21 octobre 2026, choisie par Lilian) : l'édition
   à gauche, la page à droite. À gauche, deux onglets collés : Contenu (le profil, une
   adresse à coller, puis les blocs en rangées, déplacées par leur poignée avec dnd-kit,

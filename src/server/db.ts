@@ -9,6 +9,8 @@ import { validerBloc, validerReglages } from '../lib/valider.ts';
 import type { Abonnement, Periode, Plan, PlanPayant } from '../lib/abonnement.ts';
 import { OFFRES, estPaye } from '../lib/abonnement.ts';
 import { appDe } from '../lib/ouvrirApp.ts';
+import type { PeriodeStats } from '../lib/periode.ts';
+import { ajouterJours, jourDe, longueur, plageDe } from '../lib/periode.ts';
 
 /*
  * Toutes les pages tiennent dans un fichier SQLite (`node:sqlite`, rien à
@@ -463,8 +465,8 @@ export function jetonsRecents(depuis: number, compte?: string, dureeMax?: number
 
 /* ---- Statistiques ---- */
 
-const formatJour = new Intl.DateTimeFormat('fr-CA', { timeZone: 'Europe/Paris', year: 'numeric', month: '2-digit', day: '2-digit' });
-export const jourDe = (ts: number) => formatJour.format(ts);
+/** Le jour de Paris d'un instant (`2026-10-22`), le même que celui du calendrier des stats (`lib/periode.ts`). */
+export { jourDe };
 
 /**
  * Les événements du jour, pour un compte ou pour tout le serveur. Pour tout le serveur, la date seule obligerait
@@ -494,21 +496,25 @@ export function clicsParBloc(compte: string, jours = 30): Record<string, number>
 /** Quelqu'un a-t-il déjà vu la page (sur toute la durée de conservation) ? Une page vue a commencé : « Bien démarrer » se tait. */
 export const pageDejaVue = (compte: string) => !!base().prepare("SELECT 1 FROM evenements WHERE compte = ? AND type = 'vue' LIMIT 1").get(compte);
 
-export function stats(compte: string, jours: number, maintenant = Date.now()): Stats {
+/**
+ * Les stats d'une période : les derniers jours jusqu'à aujourd'hui (`7`), ou des dates choisies
+ * (`{ du, au }`, déjà ramenées à l'historique de l'offre par `lireStats`). Chaque chiffre se compare
+ * à la période d'avant, de même longueur, qui finit la veille du premier jour.
+ */
+export function stats(compte: string, periode: PeriodeStats, maintenant = Date.now()): Stats {
   const d = base();
-  const jourListe: string[] = [];
-  for (let i = jours - 1; i >= 0; i--) jourListe.push(jourDe(maintenant - i * 86_400_000));
-  const debut = jourListe[0], fin = jourListe[jourListe.length - 1];
-  const debutPrecedent = jourDe(maintenant - (2 * jours - 1) * 86_400_000);
+  const { du: debut, au: fin } = plageDe(periode, jourDe(maintenant));
+  const jours = longueur({ du: debut, au: fin });
+  const jourListe = Array.from({ length: jours }, (_, i) => ajouterJours(debut, i));
+  const debutPrecedent = ajouterJours(debut, -jours), finPrecedent = ajouterJours(debut, -1);
   const totaux = (de: string, a: string) => d.prepare(`
     SELECT SUM(type = 'vue') AS vues, SUM(type = 'clic') AS clics, COUNT(DISTINCT CASE WHEN type = 'vue' THEN visiteur END) AS visiteurs
     FROM evenements WHERE compte = ? AND jour BETWEEN ? AND ?`).get(compte, de, a) as { vues: number | null; clics: number | null; visiteurs: number };
   const actuel = totaux(debut, fin);
-  const avant = totaux(debutPrecedent, jourListe.length > 1 ? jourDe(maintenant - jours * 86_400_000) : debutPrecedent);
+  const avant = totaux(debutPrecedent, finPrecedent);
   const parJour = new Map((d.prepare(`SELECT jour, SUM(type = 'vue') AS vues, SUM(type = 'clic') AS clics, COUNT(DISTINCT CASE WHEN type = 'vue' THEN visiteur END) AS visiteurs
     FROM evenements WHERE compte = ? AND jour BETWEEN ? AND ? GROUP BY jour`).all(compte, debut, fin) as { jour: string; vues: number; clics: number; visiteurs: number }[]).map(l => [l.jour, l]));
   const titres = new Map(lireBlocs(compte).map(b => [b.id, b.titre || b.url]));
-  const finPrecedent = jourListe.length > 1 ? jourDe(maintenant - jours * 86_400_000) : debutPrecedent;
   // La période d'avant, pour dire ce qui monte : « ton lien YouTube a fait +40 % ».
   const avantPar = (sql: string) => new Map((d.prepare(sql).all(compte, debutPrecedent, finPrecedent) as { cle: string; n: number }[]).map(l => [l.cle, l.n]));
   const clicsAvant = avantPar(`SELECT bloc AS cle, COUNT(*) AS n FROM evenements WHERE compte = ? AND type = 'clic' AND jour BETWEEN ? AND ? GROUP BY bloc`);
@@ -529,7 +535,7 @@ export function stats(compte: string, jours: number, maintenant = Date.now()): S
   const groupe = (colonne: 'source' | 'appareil') => (d.prepare(`SELECT ${colonne} AS nom, COUNT(*) AS n FROM evenements WHERE compte = ? AND type = 'vue' AND jour BETWEEN ? AND ? GROUP BY ${colonne} ORDER BY n DESC LIMIT 8`).all(compte, debut, fin) as { nom: string; n: number }[])
     .map(l => ({ nom: l.nom, vues: l.n, avant: colonne === 'source' ? vuesAvant.get(l.nom) ?? 0 : 0 }));
   return {
-    jours,
+    jours, plage: typeof periode !== 'number',
     vues: actuel.vues ?? 0, visiteurs: actuel.visiteurs ?? 0, clics: actuel.clics ?? 0,
     serie: jourListe.map(jour => ({ jour, vues: parJour.get(jour)?.vues ?? 0, visiteurs: parJour.get(jour)?.visiteurs ?? 0, clics: parJour.get(jour)?.clics ?? 0 })),
     blocs, sources: groupe('source'), appareils: groupe('appareil'), apps,
