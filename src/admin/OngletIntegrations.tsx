@@ -121,7 +121,6 @@ export function OngletIntegrations({ api, blocs, sousOuverte, sousLue, onAjouter
   return (
     <div className="adm-reglages">
       <Groupe titre="Newsletter">{[...NEWSLETTERS, 'substack' as const].map(ligneOutil)}</Groupe>
-      <Groupe titre="Automatisations">{WEBHOOKS.map(ligneOutil)}</Groupe>
       <Groupe titre="Sur ta page">
         {OUTILS_DES_BLOCS.map(r => {
           const t = TYPES.find(x => x.type === r.type)!;
@@ -140,6 +139,8 @@ export function OngletIntegrations({ api, blocs, sousOuverte, sousLue, onAjouter
           );
         })}
       </Groupe>
+      {/* Les outils techniques viennent en dernier (Lilian, 22 octobre 2026). */}
+      <Groupe titre="Automatisations">{WEBHOOKS.map(ligneOutil)}</Groupe>
     </div>
   );
 }

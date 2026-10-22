@@ -26,6 +26,7 @@ import type { Tiroir } from './OngletApparence.tsx';
 import { ActionEntete, BoutonPrincipal, BoutonSecondaire, Feuille, Interrupteur, Menu, choisirFichier, classeBouton, couleurReseau, flechesRadio, preparerImage, vibrer } from './ui.tsx';
 import { offreDe, useDroits } from './offre.tsx';
 import type { Fonction } from '../lib/abonnement.ts';
+import { focusSaisie } from '../lib/clavier';
 
 /*
  * « Ma page ».
@@ -270,7 +271,7 @@ export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, chois
     setTimeout(() => {
       const bio = grand ? bioBureau.current : toile.current?.querySelector<HTMLTextAreaElement>('.lp-bio');
       bio?.scrollIntoView({ behavior: reduit() ? 'auto' : 'smooth', block: 'center' });
-      bio?.focus({ preventScroll: true });
+      focusSaisie(bio, { preventScroll: true });
     }, 60);
   }
 

@@ -8,6 +8,7 @@ import { nomSaisi } from '../lib/valider.ts';
 import { adresseSuggeree, nomDansAdresse, nomDansLien } from './adresse.ts';
 import { mouvementReduit } from './mouvement.ts';
 import { MOTS, appel, useInscription } from './textes.ts';
+import { focusSaisie } from '../lib/clavier';
 
 /*
  * « Créer ma page » (ou « Réserver mon nom » en liste d'attente), en
@@ -422,5 +423,6 @@ export function allerAuChamp() {
     .sort((a, b) => distance(a) - distance(b))[0];
   if (!cible) return;
   cible.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'center' });
-  cible.querySelector<HTMLElement>('input, .hl-reserver-fait')?.focus({ preventScroll: true });
+  const champ = cible.querySelector<HTMLElement>('input, .hl-reserver-fait');
+  if (champ?.tagName === 'INPUT') focusSaisie(champ, { preventScroll: true }); else champ?.focus({ preventScroll: true });
 }

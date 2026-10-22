@@ -10,6 +10,7 @@ import { NOMS_STATUTS, quand, statutCompte, trouve } from '../lib/comptes.ts';
 import { Icone } from '../components/Icone.tsx';
 import type { ElementMenu } from './ui.tsx';
 import { ActionEntete, Champ, Feuille, Menu, classeBadge, classeBouton, classeSaisie } from './ui.tsx';
+import { focusAuto } from '../lib/clavier';
 
 /*
  * Les comptes, dans le back office de Lilian seulement (direction B, 20
@@ -362,7 +363,7 @@ function FormInviter({ inviter, fini }: { inviter: (email: string, pseudo: strin
   return (
     <form onSubmit={envoyer} className="flex flex-col gap-4 pb-1">
       <Champ label="Son adresse e-mail">
-        <input type="email" required autoFocus className={classeSaisie} value={email} onChange={e => setEmail(e.target.value)} placeholder="prenom@exemple.fr" autoComplete="off" />
+        <input type="email" required autoFocus={focusAuto()} className={classeSaisie} value={email} onChange={e => setEmail(e.target.value)} placeholder="prenom@exemple.fr" autoComplete="off" />
       </Champ>
       <div>
         <label htmlFor={idPseudo} className="mb-1.5 block text-[12.5px] font-medium text-white/60 bureau:text-white/75">Son pseudo</label>
@@ -393,7 +394,7 @@ function FormMotif({ decision, annuler, fini }: { decision: Decision; annuler: (
   return (
     <form onSubmit={valider} className="flex flex-col gap-4 pb-1">
       <Champ label={decision.label} aide={decision.aide}>
-        <textarea autoFocus className={`${classeSaisie} min-h-24`} value={motif} maxLength={2000} required={decision.requis} onChange={e => setMotif(e.target.value)} />
+        <textarea autoFocus={focusAuto()} className={`${classeSaisie} min-h-24`} value={motif} maxLength={2000} required={decision.requis} onChange={e => setMotif(e.target.value)} />
       </Champ>
       {decision.avertissement && <p className="text-[13.5px] font-medium leading-snug text-red-300">{decision.avertissement}</p>}
       <div className="flex flex-wrap justify-end gap-2">

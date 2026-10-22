@@ -23,6 +23,7 @@ import { reseauxDePartage } from '../lib/provenance.ts';
 import { etiquettes } from '../lib/etiquettes.ts';
 import { Etiquette, FournisseurOffre, Reserve, offreDe, useDroits, useVoirOffres } from './offre.tsx';
 import type { Fonction } from '../lib/abonnement.ts';
+import { focusAuto } from '../lib/clavier';
 
 /** Au téléphone, la page ouverte dans la feuille d'un bloc : l'essentiel (`null`), « Plus de réglages », ou une règle. */
 type PageBloc = 'plus' | PageRegle | null;
@@ -548,7 +549,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
     <Champ label={b.type === 'video' ? 'Adresse de la vidéo YouTube' : b.type === 'produit' ? 'Adresse du produit' : b.type === 'reservation' ? 'Adresse de ton agenda' : 'Adresse'} erreur={erreurDe('url')} aide={aideUrl}>
       <input className={classeSaisie} type="url" inputMode="url" autoCapitalize="none" autoCorrect="off"
         placeholder={b.type === 'video' ? 'https://youtu.be/…' : b.type === 'soutien' ? 'https://paypal.me/…' : b.type === 'reservation' ? 'https://calendly.com/…' : 'https://…'}
-        value={b.url} onChange={e => maj({ url: e.target.value })} onBlur={() => lireAdresse()} autoFocus={nouveau && !bloc.url}
+        value={b.url} onChange={e => maj({ url: e.target.value })} onBlur={() => lireAdresse()} autoFocus={focusAuto(nouveau && !bloc.url)}
         onPaste={e => { const texte = e.clipboardData.getData('text'); if (!b.url.trim() && adresseSaisie(texte)) setTimeout(() => lireAdresse(texte)); }}
         onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); document.getElementById('bloc-titre')?.focus(); } }} />
     </Champ>
@@ -556,8 +557,8 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
   const champTitre = b.type !== 'derniere-video' && b.type !== 'preuve' && (
     <Champ erreur={erreurDe('titre')} label={b.type === 'lien' || b.type === 'reservation' ? 'Texte du bouton' : b.type === 'produit' ? 'Nom du produit' : b.type === 'texte' ? 'Texte' : 'Titre'}>
       {b.type === 'texte'
-        ? <textarea className={`${classeSaisie} min-h-28`} value={b.titre} onChange={e => maj({ titre: e.target.value })} maxLength={1000} autoFocus={nouveau} />
-        : <input id="bloc-titre" className={classeSaisie} value={b.titre} onChange={e => maj({ titre: e.target.value })} maxLength={160} autoFocus={nouveau && !avecUrl}
+        ? <textarea className={`${classeSaisie} min-h-28`} value={b.titre} onChange={e => maj({ titre: e.target.value })} maxLength={1000} autoFocus={focusAuto(nouveau)} />
+        : <input id="bloc-titre" className={classeSaisie} value={b.titre} onChange={e => maj({ titre: e.target.value })} maxLength={160} autoFocus={focusAuto(nouveau && !avecUrl)}
             placeholder={b.type === 'lien' ? 'Mon super lien' : b.type === 'produit' ? (lecture ? 'Lecture de la boutique…' : '') : b.type === 'soutien' || b.type === 'reservation' ? nouveauBloc(b.type, b.id).titre : ''} />}
     </Champ>
   );
