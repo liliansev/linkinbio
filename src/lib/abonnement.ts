@@ -77,7 +77,7 @@ export const libellePrix = (p: PlanPayant, periode: Periode) => `${euros(OFFRES[
 
 /**
  * Les fonctions réservées, et l'offre qui les débloque. Tout le reste est dans
- * Gratuit, dont la page selon le réseau du visiteur (« Afficher sur ») et la
+ * Gratuit, dont la page selon le réseau du visiteur (« Pour qui ») et la
  * mention « Publicité » d'un lien partenaire, que la loi demande à tous.
  * `programmation` : les dates d'un bloc (début, fin, compte à rebours) ;
  * `heure` : le créneau qui revient chaque semaine ; `stats` : lire ses stats

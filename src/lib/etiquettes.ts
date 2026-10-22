@@ -15,7 +15,7 @@ export function etiquettes(bloc: Bloc, droits?: Droits): string[] {
   if (bloc.compteARebours && bloc.debut && Date.parse(bloc.debut) > Date.now() && droits?.programmation !== false) l.push('Compte à rebours');
   if (bloc.creneau && droits?.heure !== false) l.push('Selon l’heure');
   const a = bloc.audience;
-  if (a?.sources.length) l.push(a.effet === 'avant' ? `En tête sur ${noms(a.sources)}` : `Seulement ${noms(a.sources)}`);
+  if (a?.sources.length) l.push(a.effet === 'avant' ? `En avant sur ${noms(a.sources)}` : `Seulement ${noms(a.sources)}`);
   if (bloc.cache?.length) l.push(`Pas sur ${noms(bloc.cache)}`);
   if (bloc.acces) l.push(bloc.acces.code ? 'Avec un code' : `${bloc.acces.places} places`);
   return l;

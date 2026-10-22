@@ -7,11 +7,12 @@ import { Icone } from '../components/Icone.tsx';
 import { NOMS_AUDIENCES, RESEAUX_SOCIAUX, basculerPour, deReseau, enTetePour } from '../lib/provenance.ts';
 import type { Audience } from '../lib/provenance.ts';
 import { Bascule, Champ, Interrupteur, Segments, classeSaisie, vibrer } from './ui.tsx';
-import { Etiquette, Reserve, usePermis } from './offre.tsx';
+import { Etiquette, Reserve, usePermis, useVoirOffres } from './offre.tsx';
+import { COULEURS_SOURCES } from '../lib/stats.ts';
 
 /*
- * Les règles d'un bloc, rangées sous la feuille d'édition : chacune se replie
- * et ne s'ouvre d'elle-même que si elle est réglée.
+ * Les réglages d'un bloc : Quand et Pour qui sur sa première page, les règles
+ * rares (accès réservé, animation) derrière « Plus de réglages ».
  */
 
 /** Une date ISO vers la valeur d'un `<input type="datetime-local">`, en heure locale. */
@@ -33,8 +34,8 @@ export const RangeesCompactes = createContext(false);
 /** De retour des offres pour régler ce bloc (« Programmer ce bloc ») : la règle qu'on vient de débloquer s'ouvre d'elle-même. */
 export const RegleAOuvrir = createContext<'moment' | 'acces' | null>(null);
 
-/** Les règles qui s'ouvrent en sous-page, dans la feuille d'un bloc au téléphone. */
-export type PageRegle = 'moment' | 'reseaux' | 'acces' | 'animation';
+/** Les réglages qui s'ouvrent en sous-page, dans la feuille d'un bloc au téléphone : Quand et Pour qui depuis la première page, les autres depuis « Plus de réglages ». */
+export type PageRegle = 'quand' | 'public' | 'acces' | 'animation';
 /**
  * Au téléphone, la feuille d'un bloc mène de page en page (22 octobre 2026) :
  * « Plus de réglages » montre une ligne par règle, qui s'ouvre à la place de la
@@ -108,99 +109,142 @@ const JOURS = ['Lu', 'Ma', 'Me', 'Je', 'Ve', 'Sa', 'Di'];
 const NOMS = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche'];
 const fuseauNavigateur = () => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || FUSEAU_DEFAUT; } catch { return FUSEAU_DEFAUT; } };
 
-/** « 12 novembre à 10:00 » : une date d'un bloc, dite en clair. */
-const quand = (iso: string) => new Date(iso).toLocaleString('fr-FR', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
+/** « 12 nov. » : un jour d'un bloc, en court, pour les résumés. */
+const jourCourt = (iso: string) => new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+/** « mer. 12 nov., 10:00 » : une date d'un bloc, dans sa ligne. */
+const dateLigne = (iso: string) => new Date(iso).toLocaleString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+const majuscule = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
+/*
+ * Les quatre gestes qu'on fait le plus sur un bloc (Lilian, 22 octobre 2026 : « il faut que ce soit vraiment simple ») :
+ * le programmer, le mettre en avant, le montrer ou non selon le réseau, le mettre en avant selon le réseau. Ils se
+ * règlent depuis la première page du bloc, en deux lignes qui disent ce qui est réglé : « Quand » et « Pour qui ».
+ */
+
+/** Ce que « Quand » dit sans s'ouvrir. `heure` : un créneau que l'offre ne comprend pas ne s'applique pas, il ne se dit pas. */
+export function resumeQuand(b: Bloc, heure: boolean): string {
+  const dates = b.debut && b.fin ? `du ${jourCourt(b.debut)} au ${jourCourt(b.fin)}` : b.debut ? `à partir du ${jourCourt(b.debut)}` : b.fin ? `jusqu’au ${jourCourt(b.fin)}` : '';
+  const semaine = heure && b.creneau ? `${b.creneau.effet === 'avant' ? 'en avant ' : ''}${decrireCreneau(b.creneau)}` : '';
+  return majuscule([dates, semaine].filter(Boolean).join(', ')) || 'Tout le temps';
+}
+
+/** Ce que « Pour qui » dit sans s'ouvrir : « Tout le monde », « Pas sur TikTok, en avant sur Instagram ». */
+export function resumePourQui(b: Bloc): string {
+  const noms = (l: Audience[]) => l.map(s => NOMS_AUDIENCES[s]).join(', ');
+  const a = b.audience?.sources.length ? b.audience : null;
+  return majuscule([
+    a?.effet === 'seulement' ? `seulement ${noms(a.sources)}` : '',
+    b.cache?.length ? `pas sur ${noms(b.cache)}` : '',
+    a?.effet === 'avant' ? `en avant sur ${noms(a.sources)}` : '',
+  ].filter(Boolean).join(', ')) || 'Tout le monde';
+}
 
 /**
- * Quand le bloc s'affiche : des dates et un compte à rebours (Starter), un
- * créneau qui revient chaque semaine (Pro). Sans l'offre, la règle se montre
- * quand même, avec ce qu'elle ferait ; des dates déjà posées tiennent toujours
- * et peuvent se retirer, pas se changer.
+ * Une date d'un bloc, comme dans le calendrier du téléphone : son nom, et sa valeur à droite (« Maintenant », « Jamais »).
+ * Le sélecteur natif couvre la ligne, invisible : un toucher l'ouvre tout de suite, sans champ à viser. Sans l'offre, la
+ * ligne mène aux offres ; une date gardée d'une offre passée se retire toujours.
  */
-export function RegleMoment({ b, maj, erreur }: { b: Bloc; maj: (c: Partial<Bloc>) => void; erreur?: string }) {
+function LigneDate({ id, nom, vide, valeur, min, permis, invalide, onChange, retirer }: { id?: string; nom: string; vide: string; valeur: string; min?: string; permis: boolean; invalide?: boolean; onChange: (iso: string) => void; retirer: () => void }) {
+  const voir = useVoirOffres();
+  return (
+    <div className="relative flex min-h-12 items-center gap-3 px-4 transition focus-within:bg-white/[0.05] hover:bg-white/[0.03] bureau:min-h-10 bureau:gap-2 bureau:px-3">
+      <span className="shrink-0 text-[14.5px] font-medium text-white bureau:text-[13.5px] bureau:font-normal">{nom}</span>
+      {!permis && <Etiquette fonction="programmation" />}
+      <span className={`ml-auto min-w-0 truncate text-[14px] tabular-nums bureau:text-[13.5px] ${invalide ? 'text-red-300' : valeur ? 'font-medium text-bleu' : 'text-white/55'}`}>{valeur ? dateLigne(valeur) : vide}</span>
+      {permis ? (
+        <input id={id} type="datetime-local" aria-label={nom} aria-invalid={invalide || undefined} value={versLocal(valeur)} min={min}
+          onChange={e => onChange(depuisLocal(e.target.value))}
+          onClick={e => { try { e.currentTarget.showPicker(); } catch { /* le navigateur ouvre le sien */ } }}
+          className="absolute inset-0 h-full w-full cursor-pointer text-[16px] opacity-0" />
+      ) : (
+        <button type="button" onClick={() => voir?.('programmation')} aria-haspopup="dialog" aria-label={`${nom} : ${valeur ? dateLigne(valeur) : vide}. Voir les offres`} className="absolute inset-0" />
+      )}
+      {valeur && (
+        <button type="button" onClick={() => { vibrer(6); retirer(); }} aria-label={`Retirer la date : ${nom}`} title="Retirer"
+          className="relative z-10 -mr-2 grid h-11 w-9 shrink-0 place-items-center text-white/45 transition hover:text-white bureau:h-8 bureau:w-7">
+          <Icone nom="ui-fermer" taille={15} />
+        </button>
+      )}
+    </div>
+  );
+}
+
+/**
+ * « Quand » : deux lignes, Apparaît (Maintenant) et Disparaît (Jamais), le compte à rebours d'un lancement, puis le
+ * créneau qui revient chaque semaine. Starter pour les dates, Pro pour la semaine : sans l'offre, les mêmes lignes
+ * portent leur étiquette et mènent aux offres.
+ */
+export function ReglageQuand({ b, maj, erreur }: { b: Bloc; maj: (c: Partial<Bloc>) => void; erreur?: string }) {
   const c = b.creneau;
   const dates = usePermis('programmation');
   const semaine = usePermis('heure');
-  const aOuvrir = useContext(RegleAOuvrir) === 'moment';
+  const voir = useVoirOffres();
+  const compact = useContext(RangeesCompactes);
   const majCreneau = (champs: Partial<Creneau>) => maj({ creneau: { ...(c ?? { jours: [1, 2, 3, 4, 5], de: '09:00', a: '12:00', fuseau: fuseauNavigateur(), effet: 'afficher' }), ...champs, fuseau: fuseauNavigateur() } });
-  const avecDates = !!(b.debut || b.fin);
-  // Le résumé dit ce qui s'applique vraiment : un créneau ou un compte à rebours hors offre ne compte pas.
-  const resume = [avecDates ? 'Dates' : '', dates && b.compteARebours && b.debut ? 'compte à rebours' : '', semaine && c ? decrireCreneau(c) : ''].filter(Boolean).join(', ');
-  // Sans aucune des deux offres et sans rien de réglé : une seule phrase, un seul chemin vers les offres.
-  const rienARegler = !dates && !semaine && !avecDates && !c;
-  const retirerDates = avecDates && <button type="button" onClick={() => maj({ debut: '', fin: '', compteARebours: false })} className="self-start text-[13px] text-white/55 underline">Retirer les dates</button>;
+  const lancement = b.type === 'lien' && dates && !!b.debut && Date.parse(b.debut) > Date.now();
   return (
-    <Repli id="moment" key={erreur ? 'erreur' : 'calme'} titre="Quand l’afficher" icone="horloge" etiquette={!dates ? <Etiquette fonction="programmation" /> : undefined} resume={resume || (dates ? 'Toujours' : '')} ouvert={!!(avecDates || c || erreur) || aOuvrir} montrer={aOuvrir}>
-      {rienARegler ? (
-        <Reserve fonction="programmation" phrase="Avec Hopla Starter, ce bloc apparaît et disparaît aux dates que tu choisis, avec un compte à rebours avant un lancement. Avec Hopla Pro, il revient aussi à heure fixe, chaque semaine." />
-      ) : dates ? (<>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <Champ label="À partir du">
-            <input type="datetime-local" className={classeSaisie} value={versLocal(b.debut)} onChange={e => maj({ debut: depuisLocal(e.target.value) })} />
-          </Champ>
-          <Champ label="Jusqu’au" erreur={erreur}>
-            <input id="bloc-fin" type="datetime-local" className={classeSaisie} min={versLocal(b.debut) || undefined} value={versLocal(b.fin)} onChange={e => maj({ fin: depuisLocal(e.target.value) })} />
-          </Champ>
+    <div className="flex flex-col gap-4 bureau:gap-3">
+      <div>
+        <div className="adm-groupe flex flex-col divide-y divide-white/[0.06]">
+          <LigneDate nom="Apparaît" vide="Maintenant" valeur={b.debut} permis={dates}
+            onChange={debut => maj({ debut, ...(debut ? {} : { compteARebours: false }) })} retirer={() => maj({ debut: '', compteARebours: false })} />
+          <LigneDate id="bloc-fin" nom="Disparaît" vide="Jamais" valeur={b.fin} min={versLocal(b.debut) || undefined} permis={dates} invalide={!!erreur}
+            onChange={fin => maj({ fin })} retirer={() => maj({ fin: '' })} />
         </div>
-        {b.type === 'lien' && b.debut && (
-          <Interrupteur label="Compte à rebours avant l’ouverture" aide="Le lien s’annonce avec le temps qui reste, sans dévoiler son adresse. Parfait pour un lancement." actif={b.compteARebours} onChange={v => maj({ compteARebours: v })} />
-        )}
-        {retirerDates}
-      </>) : avecDates ? (
-        // Des dates posées avec une offre passée : elles tiennent toujours, la page ne montre jamais le bloc avant son heure.
-        <Reserve fonction="programmation" phrase={`Ce bloc s’affiche ${[b.debut && `à partir du ${quand(b.debut)}`, b.fin && `jusqu’au ${quand(b.fin)}`].filter(Boolean).join(' et ')}${b.compteARebours && b.debut ? ', sans compte à rebours' : ''}. Pour changer ses dates, il faut Hopla Starter.`}>
-          {retirerDates}
-        </Reserve>
-      ) : (
-        <Reserve fonction="programmation" phrase="Avec Hopla Starter, ce bloc apparaît et disparaît aux dates que tu choisis, avec un compte à rebours avant un lancement." />
+        {erreur && <p role="alert" className="mt-1.5 text-[13px] font-medium text-red-300">{erreur}</p>}
+      </div>
+      {lancement && (
+        <div className="adm-groupe px-4 bureau:px-3">
+          <Interrupteur compact={compact} label="Compte à rebours" actif={b.compteARebours} onChange={v => maj({ compteARebours: v })} />
+        </div>
       )}
 
-      {rienARegler ? null : !semaine ? (
-        <div className="border-t border-white/[0.06] pt-3">
-          <span className="mb-2 flex items-center gap-2 text-[13px] font-medium text-white/70">Chaque semaine <Etiquette fonction="heure" /></span>
-          {/* Le chemin vers les offres est déjà au-dessus quand les dates sont réservées aussi. */}
-          {c || dates ? (
-            <Reserve fonction="heure" phrase={c ? `Ce bloc devait s’afficher ${decrireCreneau(c)}. Sans Hopla Pro, il s’affiche tout le temps.` : 'Avec Hopla Pro, un bloc revient à heure fixe, ou passe en tête de ta page aux bonnes heures.'} bouton={dates}>
-              {c && <button type="button" onClick={() => maj({ creneau: null })} className="text-[13px] text-white/55 underline">Retirer le créneau</button>}
-            </Reserve>
-          ) : <p className="text-[13.5px] leading-snug text-white/70">Avec Hopla Pro, un bloc revient à heure fixe, ou passe en tête de ta page aux bonnes heures.</p>}
-        </div>
-      ) : (
-      <div className="border-t border-white/[0.06] pt-3">
-        <span className="mb-1.5 block text-[13px] font-medium text-white/70">Chaque semaine</span>
-        <div role="group" aria-label="Jours" className="grid grid-cols-7 gap-0.5 rounded-[10px] bg-white/[0.05] p-[3px]">
-          {JOURS.map((j, i) => {
-            const actif = !!c?.jours.includes(i + 1);
-            return (
-              <button key={i} type="button" aria-pressed={actif} aria-label={NOMS[i]} onClick={() => {
-                vibrer(4);
-                const jours = actif ? c!.jours.filter(n => n !== i + 1) : [...(c?.jours ?? []), i + 1];
-                if (!jours.length) maj({ creneau: null }); else majCreneau({ jours: jours.sort() });
-              }} className={`min-h-11 rounded-[7px] text-[14px] font-semibold transition duration-200 active:scale-95 ${actif ? 'bg-bleu text-nuit' : 'text-white/55 hover:text-white'}`}>{j}</button>
-            );
-          })}
-        </div>
-        {c ? (
+      <div>
+        <span className="mb-1.5 flex items-center gap-2 text-[13px] font-medium text-white/70">Chaque semaine {!semaine && <Etiquette fonction="heure" />}</span>
+        {!semaine && c ? (
+          // Un créneau gardé d'une offre passée : il ne s'applique plus, il se retire.
+          <Reserve fonction="heure" phrase={`Ce bloc devait s’afficher ${decrireCreneau(c)}. Sans Hopla Pro, il s’affiche tout le temps.`}>
+            <button type="button" onClick={() => maj({ creneau: null })} className="text-[13px] text-white/55 underline">Retirer le créneau</button>
+          </Reserve>
+        ) : (
+          <div role="group" aria-label="Jours" className="grid grid-cols-7 gap-0.5 rounded-[10px] bg-white/[0.05] p-[3px]">
+            {JOURS.map((j, i) => {
+              const actif = !!c?.jours.includes(i + 1);
+              return (
+                // Sans Hopla Pro, les jours se montrent quand même : un toucher ouvre les offres.
+                <button key={i} type="button" aria-pressed={semaine ? actif : undefined} aria-haspopup={semaine ? undefined : 'dialog'} aria-label={NOMS[i]} onClick={() => {
+                  if (!semaine) { voir?.('heure'); return; }
+                  vibrer(4);
+                  const jours = actif ? c!.jours.filter(n => n !== i + 1) : [...(c?.jours ?? []), i + 1];
+                  if (!jours.length) maj({ creneau: null }); else majCreneau({ jours: jours.sort() });
+                }} className={`min-h-11 rounded-[7px] text-[14px] font-semibold transition duration-200 active:scale-95 bureau:min-h-8 bureau:text-[13px] ${actif ? 'bg-bleu text-nuit' : 'text-white/55 hover:text-white'}`}>{j}</button>
+              );
+            })}
+          </div>
+        )}
+        {semaine && c && (
           <div className="mt-3 flex flex-col gap-3">
             <div className="grid grid-cols-2 gap-3">
               <Champ label="De"><input type="time" className={classeSaisie} value={c.de} onChange={e => e.target.value && majCreneau({ de: e.target.value })} /></Champ>
               <Champ label="À"><input type="time" className={classeSaisie} value={c.a} onChange={e => e.target.value && majCreneau({ a: e.target.value })} /></Champ>
             </div>
-            <Segments label="Ce que fait le créneau" valeur={c.effet} onChange={effet => majCreneau({ effet })}
-              options={[{ id: 'afficher', nom: 'Seulement à ces heures' }, { id: 'avant', nom: 'En tête à ces heures' }]} />
-            <p className="text-[12.5px] leading-snug text-white/50">
-              {c.effet === 'avant' ? `Ce bloc passe en tête de ta page, mis en avant, ${decrireCreneau(c)}.` : `Ce bloc n’apparaît que ${decrireCreneau(c)}.`} Heure de {c.fuseau.split('/').pop()?.replace(/_/g, ' ')}.
-            </p>
+            <div>
+              <span className="mb-1.5 block text-[13px] font-medium text-white/70">À ces heures</span>
+              <Segments label="Ce que fait le créneau" valeur={c.effet} onChange={effet => majCreneau({ effet })}
+                options={[{ id: 'afficher', nom: 'Affiché seulement' }, { id: 'avant', nom: 'En avant' }]} />
+            </div>
           </div>
-        ) : <p className="mt-1.5 text-[12.5px] leading-snug text-white/55">Choisis des jours : par exemple « Réserver » en tête en semaine le matin, « Mon live » le dimanche soir.</p>}
+        )}
       </div>
-      )}
-    </Repli>
+    </div>
   );
 }
 
-/** Sur quels réseaux le bloc s'affiche (tout coché par défaut), et pour lesquels il passe en tête. À tous, dès Gratuit : c'est la promesse de Hopla. */
-export function RegleReseaux({ b, maj, reseaux }: { b: Bloc; maj: (c: Partial<Bloc>) => void; reseaux: Audience[] }) {
+/**
+ * « Pour qui » : une seule liste de réseaux, chacun avec deux interrupteurs côte à côte, Affiché et En avant (en tête de
+ * la page, mis en avant, pour ceux qui arrivent de là). À tous, dès Gratuit : c'est la promesse de Hopla.
+ */
+export function ReglagePourQui({ b, maj, reseaux }: { b: Bloc; maj: (c: Partial<Bloc>) => void; reseaux: Audience[] }) {
   const cache = b.cache ?? [];
   const reserve = b.audience?.effet === 'seulement' ? b.audience.sources : null;
   const visible = (s: Audience) => !cache.includes(s) && (!reserve || reserve.includes(s));
@@ -208,55 +252,41 @@ export function RegleReseaux({ b, maj, reseaux }: { b: Bloc; maj: (c: Partial<Bl
   const autres = RESEAUX_SOCIAUX.filter(s => !reseaux.includes(s));
   const [plus, setPlus] = useState(() => autres.some(s => !visible(s) || tete(s)));
   const liste = plus ? [...reseaux, ...autres] : reseaux;
-  const tous = [...reseaux, ...autres];
-  const caches = tous.filter(s => !visible(s));
-  const enTete = tous.filter(tete);
-  const noms = (l: Audience[]) => l.map(s => NOMS_AUDIENCES[s]).join(', ');
-  const resume = [caches.length ? `Pas sur ${noms(caches)}` : 'Tous les réseaux', enTete.length ? `en tête sur ${noms(enTete)}` : ''].filter(Boolean).join(', ');
-  const [premier, setPremier] = useState(enTete.length > 0);
+  const colonne = 'flex w-[60px] shrink-0 justify-center whitespace-nowrap max-[359px]:w-12 bureau:w-14';
+  // Au plus petit téléphone (320 px), les colonnes et les marges se resserrent : « Instagram » se lit en entier.
+  const rang = 'gap-3 px-4 max-[359px]:gap-2 max-[359px]:px-3 bureau:gap-2 bureau:px-3';
   return (
-    <Repli id="reseaux" titre="Afficher sur" icone="cible" resume={resume} ouvert={false}>
-      <p className="text-[12.5px] leading-snug text-white/55">Coupe un réseau : ceux qui arrivent de là ne verront pas ce bloc. Les autres le voient toujours.</p>
-      <ul className="-my-1 divide-y divide-white/[0.06]" aria-label="Réseaux où ce bloc s’affiche">
+    <div className="adm-groupe">
+      {/* Le nom des deux colonnes, une fois en haut, aligné sur les interrupteurs. */}
+      <div aria-hidden="true" className={`flex items-center pb-0.5 pt-2.5 text-[12px] font-medium text-white/55 bureau:pt-2 ${rang}`}>
+        <span className="flex-1" />
+        <span className={colonne}>Affiché</span>
+        <span className={colonne}>En avant</span>
+      </div>
+      <ul className="divide-y divide-white/[0.06]" aria-label="Pour qui">
         {liste.map(s => {
           const vu = visible(s);
           return (
-            <li key={s} className="flex min-h-12 items-center gap-3">
-              <span className="flex w-4 justify-center text-white/75">{ICONE_AUDIENCE[s] && <Icone nom={ICONE_AUDIENCE[s]} taille={16} />}</span>
-              <span className="flex-1 text-[14.5px] font-medium text-white">{NOMS_AUDIENCES[s]}</span>
-              <Bascule actif={vu} label={`Afficher sur ${NOMS_AUDIENCES[s]}`} onClick={() => { vibrer(); maj(basculerPour({ ...b, ...(vu ? enTetePour(b, s, false) : {}) }, s, !vu)); }} />
+            <li key={s} className={`flex min-h-12 items-center bureau:min-h-10 ${rang}`}>
+              {/* Le logo seul, dans la couleur de son réseau, comme dans les stats. */}
+              <span className="flex w-5 shrink-0 justify-center" style={{ color: COULEURS_SOURCES[NOMS_AUDIENCES[s]]?.picto }}>{ICONE_AUDIENCE[s] && <Icone nom={ICONE_AUDIENCE[s]} taille={18} />}</span>
+              <span className={`min-w-0 flex-1 truncate text-[14.5px] font-medium bureau:text-[13.5px] bureau:font-normal ${vu ? 'text-white' : 'text-white/55'}`}>{NOMS_AUDIENCES[s]}</span>
+              <span className={colonne}>
+                <Bascule actif={vu} label={`Affiché pour ceux qui viennent ${deReseau(s)}`} onClick={() => { vibrer(); maj(basculerPour({ ...b, ...(vu ? enTetePour(b, s, false) : {}) }, s, !vu)); }} />
+              </span>
+              <span className={colonne}>
+                <Bascule actif={vu && tete(s)} disabled={!vu || !!reserve} label={`En avant pour ceux qui viennent ${deReseau(s)}`} onClick={() => { vibrer(4); maj(enTetePour(b, s, !tete(s))); }} />
+              </span>
             </li>
           );
         })}
       </ul>
       {!plus && autres.length > 0 && (
-        <button type="button" onClick={() => setPlus(true)} className="inline-flex min-h-11 items-center gap-1.5 self-start text-[14px] font-medium text-white/80 hover:text-white"><Icone nom="ui-plus" taille={15} />Autres réseaux</button>
+        <button type="button" onClick={() => setPlus(true)} className="flex min-h-12 w-full items-center gap-3 border-t border-white/[0.06] px-4 text-left text-[14px] font-medium text-white/75 transition hover:text-white bureau:min-h-10 bureau:px-3 bureau:text-[13.5px]">
+          <span className="flex w-5 shrink-0 justify-center"><Icone nom="ui-plus" taille={16} /></span>Autres réseaux
+        </button>
       )}
-      {!reserve && (
-        <div className="border-t border-white/[0.06] pt-1">
-          {/* Le même rang que la liste du dessus (picto, nom, interrupteur), replié tant qu'on ne s'en sert pas. */}
-          <button type="button" onClick={() => setPremier(!premier)} aria-expanded={premier}
-            className="flex min-h-12 w-full items-center gap-3 text-left text-[14.5px] font-medium text-white">
-            <span className="flex w-4 justify-center text-white/75"><Icone nom="drapeau" taille={16} /></span>
-            <span className="flex-1">En tête de ta page pour</span>
-            <span className="min-w-0 truncate text-[13px] font-normal text-white/55">{!premier && (enTete.length ? noms(enTete) : 'Aucun réseau')}</span>
-            <Icone nom="ui-chevron" taille={18} className={`shrink-0 text-white/75 transition-transform duration-300 ${premier ? 'rotate-180' : ''}`} />
-          </button>
-          {premier && <p className="-mt-1 mb-1 text-[12.5px] leading-snug text-white/55">Ce bloc passe en tête de ta page pour ceux qui arrivent de ces réseaux.</p>}
-          {premier && (
-            <ul className="-mt-1 divide-y divide-white/[0.06]" aria-label="En tête pour ces visiteurs">
-              {liste.filter(visible).map(s => (
-                <li key={s} className="flex min-h-12 items-center gap-3">
-                  <span className="flex w-4 justify-center text-white/75">{ICONE_AUDIENCE[s] && <Icone nom={ICONE_AUDIENCE[s]} taille={16} />}</span>
-                  <span className="flex-1 text-[14.5px] font-medium text-white">{NOMS_AUDIENCES[s]}</span>
-                  <Bascule actif={tete(s)} label={`En tête pour ceux qui viennent ${deReseau(s)}`} onClick={() => { vibrer(4); maj(enTetePour(b, s, !tete(s))); }} />
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      )}
-    </Repli>
+    </div>
   );
 }
 

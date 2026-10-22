@@ -537,8 +537,8 @@ function etatBloc(bloc: Bloc, droits: Droits) {
   const programme = bloc.public && !estEnLigne(bloc) && !regles.includes('Compte à rebours');
   // Chaque règle porte le picto de sa ligne dans l'éditeur : on la reconnaît sans l'ouvrir.
   const puces = [
-    { oui: !programme && !!((bloc.creneau && droits.heure) || (bloc.compteARebours && bloc.debut && droits.programmation)), icone: 'horloge', nom: 'Quand l’afficher' },
-    { oui: !!(bloc.cache?.length || bloc.audience?.sources.length), icone: 'cible', nom: 'Afficher sur' },
+    { oui: !programme && !!((bloc.creneau && droits.heure) || (bloc.compteARebours && bloc.debut && droits.programmation)), icone: 'horloge', nom: 'Quand' },
+    { oui: !!(bloc.cache?.length || bloc.audience?.sources.length), icone: 'cible', nom: 'Pour qui' },
     { oui: !!bloc.acces, icone: 'cadenas', nom: 'Accès réservé' },
     { oui: !!bloc.partenariat, icone: 'bloc-partenaire', nom: 'Lien partenaire' },
   ].filter(p => p.oui);
