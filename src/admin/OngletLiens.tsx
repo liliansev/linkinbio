@@ -25,7 +25,7 @@ export const TYPES: TypeAjout[] = [
   { type: 'produit', nom: 'Produit', aide: 'Sa photo et son prix, lus sur ta boutique', picto: 'bloc-produit', fonction: 'vitrine' },
   { type: 'reservation', nom: 'Prise de rendez-vous', aide: 'Ton agenda Calendly, Cal.com ou Planity', picto: 'bloc-reservation', fonction: 'vitrine' },
   { type: 'soutien', nom: 'Me soutenir', aide: 'Un bouton vers PayPal, Ko-fi, Tipeee ou Lydia', picto: 'bloc-soutien', fonction: 'vitrine' },
-  { type: 'inscription', nom: 'Ma liste d’inscrits', aide: 'Tes visiteurs laissent leur e-mail, que tu exportes ou envoies vers Brevo ou Mailchimp', picto: 'bloc-inscription', fonction: 'listeEmail' },
+  { type: 'inscription', nom: 'Ma liste d’inscrits', aide: 'Tes visiteurs laissent leur e-mail, que tu exportes ou envoies vers ta newsletter', picto: 'bloc-inscription', fonction: 'listeEmail' },
   { type: 'preuve', nom: 'Avis et preuves', aide: 'Ta note Google, un chiffre clé ou un témoignage, avec sa source', picto: 'bloc-preuve', fonction: 'avis' },
   { type: 'newsletter', nom: 'Ma newsletter Lumail', aide: 'Branchée sur Lumail', picto: 'bloc-newsletter' },
 ];

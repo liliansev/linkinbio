@@ -487,7 +487,7 @@ const PICTOS: { avantage: string; picto: string }[] = [
   { avantage: 'Tes stats sur 30 jours', picto: 'courbe' },
   { avantage: 'Ta page selon l’heure', picto: 'horloge' },
   { avantage: 'Les drops : un code, des places comptées', picto: 'cadenas' },
-  { avantage: 'Ta liste e-mail, vers Brevo ou Mailchimp', picto: 'courrier' },
+  { avantage: 'Ta liste e-mail, vers ta newsletter', picto: 'courrier' },
   { avantage: 'Tes stats sur un an', picto: 'courbe' },
   { avantage: 'Ton propre nom de domaine', picto: 'globe' },
   { avantage: 'Jusqu’à trois pages', picto: 'document' },

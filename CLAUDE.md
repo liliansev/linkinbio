@@ -52,6 +52,15 @@ embarque tout : l'image n'a pas de `node_modules`.
   titre seul ; le prix d'un produit, lu dans les balises des boutiques puis dans le JSON-LD, et `image: 'partage'` pour sa
   photo : l'image de partage ou rien, jamais une capture), `server/droits.ts` (`droits()` d'un compte, `verifierDates`
   avant d'enregistrer un bloc, `joursLisibles` pour les stats).
+- `server/liste.ts` : « Rejoins ma liste ». Les inscrits restent chez Hopla (export CSV) et partent là où la personne a
+  branché sa liste (22 octobre 2026) : six newsletters par leur API (Brevo, Mailchimp, Kit, MailerLite, beehiiv,
+  Systeme.io ; `listes()` pour choisir la liste par son nom, `verifier()`, `pousser()`), ou Make, Zapier et n8n par un
+  webhook, qui reçoit un inscrit d'exemple au branchement. Substack n'a pas d'API : `adressesSubstack` et `csvSubstack`
+  (`/api/contacts?format=substack`). La clé, ou l'adresse du webhook, est chiffrée au repos et ne revient jamais au
+  navigateur. Un inscrit n'attend pas un fournisseur lent plus de 4 secondes. `server/sortante.ts` : `requeteSortante`, le
+  transport des intégrations en production ; les API des newsletters (hôtes fixes) par `fetch`, tout autre hôte par
+  `requetePublique` : https seulement, une adresse publique vérifiée à la connexion (`resolutionPublique`), sans
+  redirection, 2 Mo au plus. Brancher demande Pro et passe par `tropDAppels` (20 appels par 10 minutes et par compte).
 - `server/limites.ts` : les limites anti-abus en mémoire (`limiteur`, `cleIp` qui
   compte une IPv6 pour son /64) et `destinataireSature`, cinq e-mails par heure et
   dix par jour vers une adresse tapée par un inconnu. `server/turnstile.ts` vérifie
@@ -68,14 +77,16 @@ embarque tout : l'image n'a pas de `node_modules`.
   résumé du lundi), `comptes.ts` (statut,
   dernière connexion et recherche de l'onglet Comptes),
   `achat.ts` (le retour d'un paiement : la note posée avant Creem, puis « On active », « C'est fait » ou l'attente, d'après l'abonnement relu),
+  `integrations.ts` (le nom de chaque outil, le mot qu'il emploie pour sa liste, `adresseWebhook` pour la forme d'une adresse
+  de webhook, `destination` : « chez Brevo, la liste « Newsletter » »),
   `sortie.ts` (depuis le navigateur intégré de LinkedIn, Instagram, Facebook, Messenger ou Threads, l'adresse qui rouvre la page
   dans Safari ou Chrome, app par app ; TikTok, X et Snapchat n'en ont pas), `vitrine.ts` (les sites de soutien et les agendas que
   la page sait nommer, l'adresse PayPal.Me d'un montant, et `adresseIntegree` : Calendly, Cal.com et Google Agenda s'ouvrent dans la
   page, les autres sur leur site).
-- `admin/` : onglets Ma page, Stats, Comptes (principal seulement), Réglages. Sur un grand écran (22 octobre 2026, d'après MailCheap et
+- `admin/` : onglets Ma page, Stats, Intégrations, Comptes (principal seulement), Réglages. Sur un grand écran (22 octobre 2026, d'après MailCheap et
   Resend), l'app prend toute la largeur, la barre latérale collée au bord gauche, et l'en-tête comme le contenu de chaque
   onglet tiennent dans une colonne centrée (`adm-colonne`, largeur `--adm-colonne` selon `data-onglet` : 1120 px, 680 pour
-  Réglages, 1300 pour Ma page) ; les premiers pas dans 1200 px (`adm-premiers`). Réglages tient sur une seule page de lignes
+  Réglages et Intégrations, 1300 pour Ma page) ; les premiers pas dans 1200 px (`adm-premiers`). Réglages tient sur une seule page de lignes
   (`Groupe`, `Ligne`, `LigneLien` dans `ui.tsx`) ; un détail s'y ouvre en sous-page (`SousPage`), avec un fil dans l'en-tête,
   comme `Facturation.tsx`, « Mon abonnement » (l'offre, son échéance, la carte et les factures au portail client de Creem,
   puis « Résilier mon abonnement »). Dans le groupe Abonnement, « Mes factures » ouvre ce portail pour tout compte que Creem
@@ -85,6 +96,11 @@ embarque tout : l'image n'a pas de `node_modules`.
   une résiliation ou un impayé) : `Offres.tsx` (`FenetreOffres`, le récapitulatif avant Creem, `RepasserGratuit` qui résilie pour
   la fin de la période payée, `RetourPaiement` au retour, dont le geste ramène où servir l'offre ; parti d'une règle de bloc, au bloc,
   la règle ouverte par `RegleAOuvrir` dans `ReglesBloc.tsx`).
+  Intégrations (`OngletIntegrations.tsx`, 22 octobre 2026, demandé par Lilian) reprend les lignes de Réglages, une par outil,
+  son logo seul dans la couleur de sa marque (l'enveloppe pour un outil sans logo libre) : Newsletter (une clé, puis la liste
+  choisie par son nom ; Substack par la copie des adresses ou le fichier), Automatisations (Make, Zapier, n8n, par l'adresse
+  d'un webhook), puis Sur ta page (avis, rendez-vous, soutien, produit : un toucher ajoute le bloc à Ma page, ou l'y ouvre).
+  Chaque outil s'ouvre en sous-page, avec le fil « Intégrations / Brevo ». La carte « Ta liste » des stats y mène.
   Dans Stats (22 octobre 2026, demandé par Lilian), la période se choisit d'un toucher sur un rail (7 j, 14 j, 30 j, 90 j,
   12 mois, selon l'historique de l'offre ; au-delà, un bouton verrouillé par offre, avec son badge, ouvre les offres) ou en
   dates : `ChoixPeriode.tsx`, un calendrier dans une feuille au téléphone (un mois, glissé ou fléché), dans une bulle au bureau

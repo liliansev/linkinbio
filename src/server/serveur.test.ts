@@ -734,6 +734,178 @@ test('Rejoins ma liste : inscrit gardé, envoyé chez Brevo, export CSV sans for
   assert.equal(db.exporter(P).inscrits.length, 1);
 });
 
+test('Intégrations : la liste se choisit par son nom chez Kit, MailerLite, beehiiv et Systeme.io', async () => {
+  const liste = await import('./liste.ts');
+  const appels: { url: string; entetes: Record<string, string> }[] = [];
+  // Une fausse API par fournisseur : l'adresse dit ce qu'elle rend.
+  const reponses: [RegExp, unknown][] = [
+    [/^https:\/\/api\.kit\.com\/v4\/forms\?/, { forms: [{ id: 123, name: 'Bienvenue' }, { id: 'pas-un-nombre', name: 'Écarté' }] }],
+    [/^https:\/\/connect\.mailerlite\.com\/api\/groups\?/, { data: [{ id: '160328117432862525', name: 'Clients' }] }],
+    [/^https:\/\/api\.beehiiv\.com\/v2\/publications\?/, { data: [{ id: 'pub_00000000-0000-0000-0000-000000000001', name: 'Ma lettre\u0007' }] }],
+    [/^https:\/\/api\.beehiiv\.com\/v2\/publications\/pub_/, { data: { name: 'Ma lettre' } }],
+    [/^https:\/\/api\.systeme\.io\/api\/tags\?/, { items: [{ id: 42, name: 'hopla' }] }],
+    [/^https:\/\/api\.systeme\.io\/api\/tags\/42$/, { id: 42, name: 'hopla' }],
+  ];
+  const fetchFaux = (async (url: string, init: RequestInit = {}) => {
+    appels.push({ url, entetes: init.headers as Record<string, string> });
+    const trouvee = reponses.find(([motif]) => motif.test(url));
+    return trouvee ? Response.json(trouvee[1]) : new Response('{}', { status: 404 });
+  }) as typeof fetch;
+
+  assert.deepEqual(await liste.listes('kit', 'kit-cle', fetchFaux), { ok: true, message: '', listes: [{ id: '123', nom: 'Bienvenue' }] }, 'un identifiant d’une autre forme est écarté');
+  assert.equal(appels.at(-1)!.entetes['X-Kit-Api-Key'], 'kit-cle');
+  assert.deepEqual(await liste.verifier('kit', 'kit-cle', '123', fetchFaux), { ok: true, message: 'Branché sur Kit, le formulaire « Bienvenue ».', nom: 'Bienvenue' });
+  assert.deepEqual(await liste.verifier('kit', 'kit-cle', '999', fetchFaux), { ok: false, message: 'Kit ne trouve pas ce formulaire.' });
+
+  assert.equal((await liste.verifier('mailerlite', 'ml-cle', '160328117432862525', fetchFaux)).message, 'Branché sur MailerLite, le groupe « Clients ».');
+  assert.equal(appels.at(-1)!.entetes.Authorization, 'Bearer ml-cle');
+
+  assert.deepEqual((await liste.listes('beehiiv', 'bh-cle', fetchFaux)).listes, [{ id: 'pub_00000000-0000-0000-0000-000000000001', nom: 'Ma lettre' }], 'un caractère de contrôle ne passe pas');
+  assert.equal((await liste.verifier('beehiiv', 'bh-cle', 'pub_00000000-0000-0000-0000-000000000001', fetchFaux)).nom, 'Ma lettre');
+  const avant = appels.length;
+  assert.equal((await liste.verifier('beehiiv', 'bh-cle', '../admin', fetchFaux)).ok, false, 'un identifiant farfelu ne part pas');
+  assert.equal(appels.length, avant);
+
+  assert.deepEqual(await liste.verifier('systeme', 'sio-cle', '', fetchFaux), { ok: true, message: 'Branché sur Systeme.io.', nom: '' }, 'un tag est facultatif, la clé se vérifie quand même');
+  assert.equal(appels.at(-1)!.entetes['X-API-Key'], 'sio-cle');
+  assert.equal((await liste.verifier('systeme', 'sio-cle', '42', fetchFaux)).message, 'Branché sur Systeme.io, le tag « hopla ».');
+
+  // Les refus se disent dans les mots de chacun.
+  const statut = (s: number) => (async () => new Response('{}', { status: s })) as typeof fetch;
+  assert.equal((await liste.listes('kit', 'x', statut(401))).message, 'Kit refuse cette clé.');
+  assert.equal((await liste.listes('mailerlite', 'x', statut(500))).message, 'MailerLite ne répond pas (500). Réessaie dans un instant.');
+  assert.deepEqual(await liste.listes('beehiiv', 'x', statut(404)), { ok: true, message: 'Aucune publication chez beehiiv.', listes: [] }, 'un compte sans liste peut répondre 404');
+  const panne = (async () => { throw new TypeError('fetch failed'); }) as typeof fetch;
+  assert.equal((await liste.verifier('systeme', 'x', '', panne)).message, 'Systeme.io ne répond pas. Réessaie dans un instant.');
+  assert.equal((await liste.verifier('mailchimp', 'cle-sans-centre', 'abc123', fetchFaux)).message, 'Ta clé Mailchimp finit par son centre de données, comme « -us21 » : copie-la en entier.');
+  assert.equal((await liste.listes('make', 'x', fetchFaux)).ok, false, 'un webhook n’a pas de liste');
+});
+
+test('Intégrations : chaque newsletter reçoit l’inscrit à sa façon, un refus le laisse à renvoyer', async () => {
+  const liste = await import('./liste.ts');
+  const env = { LIENS_CLE_INTEGRATIONS: 'test' };
+  const page = liste.adressePage(env, P);
+  assert.equal(page, 'https://hopla.page/lilian');
+  const appels: { url: string; methode: string; corps: any }[] = [];
+  let trouvesSysteme: unknown[] = [];
+  const fetchFaux = (async (url: string, init: RequestInit = {}) => {
+    const methode = init.method ?? 'GET';
+    appels.push({ url, methode, corps: init.body ? JSON.parse(String(init.body)) : null });
+    if (url.startsWith('https://api.systeme.io/api/contacts?')) return Response.json({ items: trouvesSysteme });
+    if (url === 'https://api.systeme.io/api/contacts') return Response.json({ id: 77 }, { status: 201 });
+    return Response.json({}, { status: 201 });
+  }) as typeof fetch;
+  let n = 0;
+  const envoyer = async (fournisseur: 'kit' | 'mailerlite' | 'beehiiv' | 'systeme' | 'make', cle: string, id: string, f = fetchFaux) => {
+    db.ecrireIntegration(P, { fournisseur, cle: liste.chiffrer(env, cle), liste: id, nom: '' });
+    appels.length = 0;
+    const contact = db.ajouterContact(P, { email: `camille${++n}@exemple.fr`, prenom: 'Camille', source: 'Instagram', bloc: 'liste' }, Date.parse('2026-10-22T09:00:00Z'))!;
+    return { ok: await liste.pousser(env, P, contact, f), contact };
+  };
+
+  // Kit : l'inscrit est créé, puis ajouté au formulaire, avec la page d'où il vient.
+  assert.equal((await envoyer('kit', 'kit-cle', '123')).ok, true);
+  assert.deepEqual(appels.map(a => `${a.methode} ${a.url}`), ['POST https://api.kit.com/v4/subscribers', 'POST https://api.kit.com/v4/forms/123/subscribers']);
+  assert.deepEqual(appels[0].corps, { email_address: 'camille1@exemple.fr', first_name: 'Camille' });
+  assert.deepEqual(appels[1].corps, { email_address: 'camille1@exemple.fr', referrer: page });
+
+  await envoyer('mailerlite', 'ml-cle', '160328117432862525');
+  assert.deepEqual(appels.map(a => a.url), ['https://connect.mailerlite.com/api/subscribers']);
+  assert.deepEqual(appels[0].corps, { email: 'camille2@exemple.fr', groups: ['160328117432862525'], fields: { name: 'Camille' } });
+
+  // beehiiv envoie son e-mail de bienvenue, et ne réinscrit pas une adresse désinscrite.
+  await envoyer('beehiiv', 'bh-cle', 'pub_00000000-0000-0000-0000-000000000001');
+  assert.deepEqual(appels.map(a => a.url), ['https://api.beehiiv.com/v2/publications/pub_00000000-0000-0000-0000-000000000001/subscriptions']);
+  assert.deepEqual(appels[0].corps, { email: 'camille3@exemple.fr', reactivate_existing: false, send_welcome_email: true, utm_source: 'hopla', referring_site: page });
+
+  // Systeme.io : un contact créé, puis marqué de son tag…
+  await envoyer('systeme', 'sio-cle', '42');
+  assert.deepEqual(appels.map(a => `${a.methode} ${a.url}`), ['GET https://api.systeme.io/api/contacts?email=camille4%40exemple.fr&limit=10', 'POST https://api.systeme.io/api/contacts', 'POST https://api.systeme.io/api/contacts/77/tags']);
+  assert.deepEqual(appels[1].corps, { email: 'camille4@exemple.fr', fields: [{ slug: 'first_name', value: 'Camille' }] });
+  assert.deepEqual(appels[2].corps, { tagId: 42 });
+  // … un contact déjà là, et déjà marqué, n'est pas touché…
+  trouvesSysteme = [{ id: 55, email: 'camille5@exemple.fr', tags: [{ id: 42, name: 'hopla' }] }];
+  await envoyer('systeme', 'sio-cle', '42');
+  assert.deepEqual(appels.map(a => a.methode), ['GET']);
+  // … et une recherche qui rendrait quelqu'un d'autre ne mène pas à lui.
+  trouvesSysteme = [{ id: 1, email: 'quelquun@ailleurs.fr', tags: [] }];
+  await envoyer('systeme', 'sio-cle', '');
+  assert.deepEqual(appels.map(a => `${a.methode} ${a.url}`), ['GET https://api.systeme.io/api/contacts?email=camille6%40exemple.fr&limit=10', 'POST https://api.systeme.io/api/contacts'], 'sans tag, rien de plus');
+
+  // Make : l'inscrit en JSON, comme une ligne de l'export.
+  await envoyer('make', 'https://hook.eu1.make.com/abc123', '');
+  assert.equal(appels[0].url, 'https://hook.eu1.make.com/abc123');
+  assert.deepEqual(appels[0].corps, { email: 'camille7@exemple.fr', prenom: 'Camille', inscrit_le: '2026-10-22T09:00:00.000Z', provenance: 'Instagram', page, exemple: false });
+
+  // Un refus : l'inscrit reste marqué, « Envoyer » le reprendra.
+  const { ok, contact } = await envoyer('kit', 'kit-cle', '123', (async () => new Response('{}', { status: 500 })) as typeof fetch);
+  assert.equal(ok, false);
+  assert.equal(db.resumeContacts(P).derniers.find(c => c.id === contact.id)?.synchro, 'erreur');
+});
+
+test('Intégrations : Make, Zapier et n8n se branchent par un webhook de la bonne forme, qui reçoit un inscrit d’exemple', async () => {
+  const liste = await import('./liste.ts');
+  const { adresseWebhook, CHAMPS_WEBHOOK } = await import('../lib/integrations.ts');
+  const bonne = (outil: 'make' | 'zapier' | 'n8n', u: string) => adresseWebhook(outil, u) !== null;
+  assert.ok(bonne('make', ' https://hook.eu1.make.com/abc123 '));
+  assert.ok(bonne('make', 'https://hook.us2.make.celonis.com/abc'));
+  assert.ok(bonne('make', 'https://hook.integromat.com/abc'));
+  assert.ok(!bonne('make', 'http://hook.eu1.make.com/abc'), 'https seulement');
+  assert.ok(!bonne('make', 'https://hook.eu1.make.com.pirate.fr/abc'));
+  assert.ok(!bonne('make', 'https://hook.eu1.make.com:8443/abc'));
+  assert.ok(!bonne('make', 'https://moi:secret@hook.eu1.make.com/abc'));
+  assert.ok(bonne('zapier', 'https://hooks.zapier.com/hooks/catch/123/abc/'));
+  assert.ok(!bonne('zapier', 'https://hooks.zapier.com.pirate.fr/x'));
+  assert.ok(bonne('n8n', 'https://n8n.exemple.fr/webhook/abc'));
+  assert.ok(!bonne('n8n', 'http://n8n.exemple.fr/webhook/abc'));
+  assert.ok(!bonne('n8n', 'pas une adresse'));
+
+  const appels: { url: string; corps: any }[] = [];
+  const fetchFaux = (async (url: string, init: RequestInit = {}) => { appels.push({ url, corps: JSON.parse(String(init.body)) }); return new Response('Accepted'); }) as typeof fetch;
+  assert.deepEqual(await liste.verifier('make', 'https://hook.eu1.make.com/abc123', '', fetchFaux, 'https://hopla.page/camille'),
+    { ok: true, message: 'Branché sur Make. Un inscrit d’exemple vient d’y partir.', nom: 'hook.eu1.make.com' });
+  assert.equal(appels[0].url, 'https://hook.eu1.make.com/abc123');
+  assert.deepEqual(Object.keys(appels[0].corps), [...CHAMPS_WEBHOOK], 'le back office annonce les champs qui partent');
+  assert.equal(appels[0].corps.exemple, true);
+  assert.equal(appels[0].corps.page, 'https://hopla.page/camille');
+  // Une adresse d'une autre forme ne part pas.
+  assert.deepEqual(await liste.verifier('make', 'https://pirate.fr/hook', '', fetchFaux), { ok: false, message: 'Colle l’adresse de ton webhook Make, du type https://hook.eu1.make.com/…' });
+  assert.equal(appels.length, 1);
+  assert.equal((await liste.verifier('zapier', 'https://hooks.zapier.com/hooks/catch/1/a/', '7', fetchFaux)).message, 'Un webhook n’a pas de liste.');
+  const disparu = (async () => new Response('Gone', { status: 410 })) as typeof fetch;
+  assert.equal((await liste.verifier('zapier', 'https://hooks.zapier.com/hooks/catch/1/a/', '', disparu)).message, 'Zapier ne trouve pas ce webhook. Vérifie l’adresse, et que ton Zap est actif.');
+  // Le back office voit l'hôte et la fin de l'adresse, jamais l'adresse entière.
+  const env = { LIENS_CLE_INTEGRATIONS: 'test' };
+  db.ecrireIntegration(P, { fournisseur: 'n8n', cle: liste.chiffrer(env, 'https://n8n.exemple.fr/webhook/9f8e7d6c'), liste: '', nom: 'n8n.exemple.fr' });
+  assert.equal(liste.resumeIntegration(env, P)?.cle, 'n8n.exemple.fr/…7d6c');
+  db.ecrireIntegration(P, { fournisseur: 'kit', cle: liste.chiffrer(env, 'kit-secret-a1b2'), liste: '123', nom: 'Bienvenue' });
+  assert.equal(liste.resumeIntegration(env, P)?.cle, '•••• a1b2');
+});
+
+test('Intégrations : une adresse collée ne vise jamais le serveur ni son réseau', async () => {
+  const { requetePublique, requeteSortante } = await import('./sortante.ts');
+  const liste = await import('./liste.ts');
+  for (const u of ['http://exemple.fr/', 'ftp://exemple.fr/', 'https://moi:secret@exemple.fr/', 'https://127.0.0.1/', 'https://10.1.2.3/x', 'https://[::1]/', 'https://[::ffff:127.0.0.1]/', 'https://169.254.169.254/latest/meta-data'])
+    await assert.rejects(requetePublique(u, { method: 'POST', body: '{}' }), /Adresse refusée/, u);
+  // Un nom qui mène au serveur lui-même est refusé au moment de la connexion.
+  await assert.rejects(requetePublique('https://localhost/webhook', { method: 'POST', body: '{}' }), /Adresse refusée/);
+  await assert.rejects(requetePublique('https://exemple.fr/', { method: 'POST', body: new Blob(['x']) }), /Corps non pris en charge/);
+  assert.deepEqual(await liste.verifier('n8n', 'https://localhost/webhook/abc', '', requeteSortante), { ok: false, message: 'Hopla n’envoie rien à cette adresse.' });
+  // Au plus 20 appels aux fournisseurs par 10 minutes, depuis le back office.
+  for (let i = 0; i < 20; i++) assert.equal(liste.tropDAppels('compte-presse', 1000), false);
+  assert.equal(liste.tropDAppels('compte-presse', 1000), true);
+  assert.equal(liste.tropDAppels('compte-presse', 1000 + 10 * 60_000), false, 'la fenêtre passée, on repart');
+});
+
+test('Substack : les adresses à coller ou à importer, sans formule de tableur', async () => {
+  const liste = await import('./liste.ts');
+  db.ajouterContact(P, { email: 'a@exemple.fr', prenom: 'A', source: 'Direct', bloc: 'liste' }, 1000);
+  db.ajouterContact(P, { email: 'b@exemple.fr', prenom: '', source: 'Direct', bloc: 'liste' }, 2000);
+  db.ajouterContact(P, { email: '=cmd@exemple.fr', prenom: '', source: 'Direct', bloc: 'liste' }, 3000);
+  assert.deepEqual(liste.adressesSubstack(P), ['b@exemple.fr', 'a@exemple.fr']);
+  assert.equal(liste.csvSubstack(P), 'email\nb@exemple.fr\na@exemple.fr\n');
+});
+
 test('le résumé de la semaine part le lundi matin, une fois, seulement après des visites', async () => {
   const { envoyerResumes, heureDuResume } = await import('./resume.ts');
   const lundi10h = Date.parse('2026-10-19T08:00:00Z');

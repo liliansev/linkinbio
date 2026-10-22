@@ -546,11 +546,14 @@ export function stats(compte: string, periode: PeriodeStats, maintenant = Date.n
 
 /* ---- « Rejoins ma liste » : les inscrits et le fournisseur branché ---- */
 
+/** Ce qui part chez le fournisseur pour un inscrit (un webhook reçoit aussi sa date et sa provenance). */
+export interface ContactAEnvoyer { id: string; email: string; prenom: string; ts: number; source: string }
+
 /** Un nouvel inscrit, ou null s'il l'était déjà. */
-export function ajouterContact(compte: string, c: { email: string; prenom: string; source: string; bloc: string }, maintenant = Date.now()): { id: string; email: string; prenom: string } | null {
+export function ajouterContact(compte: string, c: { email: string; prenom: string; source: string; bloc: string }, maintenant = Date.now()): ContactAEnvoyer | null {
   const id = nouvelId();
   const r = base().prepare('INSERT OR IGNORE INTO contacts (id, compte, email, prenom, ts, source, bloc) VALUES (?, ?, ?, ?, ?, ?, ?)').run(id, compte, c.email.toLowerCase(), c.prenom, maintenant, c.source, c.bloc);
-  return Number(r.changes) ? { id, email: c.email.toLowerCase(), prenom: c.prenom } : null;
+  return Number(r.changes) ? { id, email: c.email.toLowerCase(), prenom: c.prenom, ts: maintenant, source: c.source } : null;
 }
 
 export const contactsDuJour = (compte: string, maintenant = Date.now()) => (base().prepare('SELECT COUNT(*) AS n FROM contacts WHERE compte = ? AND ts > ?').get(compte, maintenant - 86_400_000) as { n: number }).n;
@@ -567,7 +570,7 @@ export function resumeContacts(compte: string, maintenant = Date.now()) {
 }
 
 /** Les inscrits pas encore chez le fournisseur, du plus ancien au plus récent. */
-export const contactsAEnvoyer = (compte: string, limite = 200) => base().prepare(`SELECT id, email, prenom FROM contacts WHERE compte = ? AND synchro != 'ok' ORDER BY ts LIMIT ?`).all(compte, limite) as { id: string; email: string; prenom: string }[];
+export const contactsAEnvoyer = (compte: string, limite = 200) => base().prepare(`SELECT id, email, prenom, ts, source FROM contacts WHERE compte = ? AND synchro != 'ok' ORDER BY ts LIMIT ?`).all(compte, limite) as unknown as ContactAEnvoyer[];
 
 export interface Integration { fournisseur: FournisseurListe; cle: string; liste: string; nom: string }
 export const lireIntegration = (compte: string) => base().prepare('SELECT fournisseur, cle, liste, nom FROM integrations WHERE compte = ?').get(compte) as Integration | undefined;

@@ -32,9 +32,11 @@ function PageAdmin() {
     ouvrirPortail: () => fn.ouvrirPortail(),
     resilierAbonnement: () => fn.resilierAbonnement(),
     liste: () => fn.lireListe(),
+    listesFournisseur: i => fn.listesFournisseur({ data: i }),
     brancherListe: i => fn.brancherListe({ data: i }),
     supprimerContact: async id => { await fn.supprimerContact({ data: id }); },
     resynchroniser: () => fn.resynchroniser(),
+    adresses: () => fn.lireAdresses(),
     urlContacts: '/api/contacts',
     comptes: acces.connecte && acces.etat.compte.principal ? {
       lister: () => fn.listerComptes(),

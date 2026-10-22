@@ -743,7 +743,7 @@ function Newsletter({ bloc, apercu }: { bloc: Bloc; apercu: boolean }) {
   );
 }
 
-/** « Rejoins ma liste » : l'inscrit reste chez la personne (et part chez Brevo ou Mailchimp si elle l'a branché). */
+/** « Rejoins ma liste » : l'inscrit reste chez la personne (et part vers sa newsletter si elle l'a branchée, voir l'onglet Intégrations). */
 function Inscription({ bloc, apercu, pseudo, t }: { bloc: Bloc; apercu: boolean; pseudo: string; t: Textes }) {
   const [etat, setEtat] = useState<{ type: 'repos' | 'envoi' | 'ok' | 'erreur'; message?: string }>({ type: 'repos' });
   async function envoyer(event: FormEvent<HTMLFormElement>) {

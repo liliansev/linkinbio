@@ -10,6 +10,7 @@ import { RegleAOuvrir } from './ReglesBloc.tsx';
 import type { OptionsEnregistrement } from './EditeurBloc.tsx';
 import { OngletStats } from './OngletStats.tsx';
 import { MaListe } from './MaListe.tsx';
+import { OngletIntegrations } from './OngletIntegrations.tsx';
 import { OngletReglages } from './OngletReglages.tsx';
 import { OngletComptes } from './OngletComptes.tsx';
 import { AccepterCgu } from './AccepterCgu.tsx';
@@ -40,16 +41,20 @@ import type { PeriodeStats } from '../lib/periode.ts';
  * qu'on modifie est la vraie page, rendue avec l'état en cours.
  */
 
-type Onglet = 'page' | 'stats' | 'reglages' | 'comptes';
+type Onglet = 'page' | 'stats' | 'integrations' | 'reglages' | 'comptes';
 type Sauvegarde = 'ok' | 'encours' | 'erreur';
 
 // Les mêmes pictos pleins que partout ailleurs dans le back office. Comptes, l'outil de Lilian, vient en dernier, à part.
 const ONGLETS: { id: Onglet; nom: string; icone: string }[] = [
   { id: 'page', nom: 'Ma page', icone: 'nav-page' },
   { id: 'stats', nom: 'Stats', icone: 'nav-stats' },
+  { id: 'integrations', nom: 'Intégrations', icone: 'nav-integrations' },
   { id: 'reglages', nom: 'Réglages', icone: 'nav-reglages' },
   { id: 'comptes', nom: 'Comptes', icone: 'nav-comptes' },
 ];
+
+/** La barre du bas : une colonne par onglet (cinq avec Comptes, l'outil de Lilian ; sous 360 px, leurs noms un peu plus petits pour qu'« Intégrations » tienne). */
+const COLONNES: Record<number, string> = { 4: 'grid-cols-4', 5: 'grid-cols-5' };
 
 const nouvelId = () => `n${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 /** Les fonctions qui se règlent dans un bloc (ses dates, son créneau, son drop). */
@@ -616,7 +621,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
 
       <EmplacementEntete.Provider value={emplacement}>
       <PoserFil.Provider value={setFil}>
-      {/* Au bureau, la colonne de l'onglet, sous celle de l'en-tête : 1120 px, 680 pour Réglages, 1300 pour Ma page (l'édition et la page côte à côte). */}
+      {/* Au bureau, la colonne de l'onglet, sous celle de l'en-tête : 1120 px, 680 pour Réglages et Intégrations, 1300 pour Ma page (l'édition et la page côte à côte). */}
       <div className="mx-auto max-w-[1120px] px-4 lg:max-w-none lg:px-0">
         <main id="contenu-admin" className={`adm-colonne mx-auto w-full pb-28 ${onglet === 'page' ? 'pt-4 lg:p-0' : onglet === 'comptes' ? 'pt-6 lg:pb-12 lg:pt-0' : 'pt-6 lg:pb-12 lg:pt-7'}`}>
           <div key={onglet} className="adm-onglet">
@@ -635,7 +640,11 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
             demandeAjout={demandeAjout} ajoutOuvert={() => setDemandeAjout(null)}
             appel={grand ? null : appel()} />}
           {onglet === 'stats' && <OngletStats charger={chargerStats} adresse={urlPage(compte)} pseudo={compte.pseudo} joursMax={initial.paiement ? joursStats(compte.plan, droits.stats) : 365} onOffres={peutAcheter ? ouvrirOffres : undefined}
-            ouvrirApps={reglages.ouvrirApps} onActiverApps={() => changerReglages({ ...reglages, ouvrirApps: true })} liste={<MaListe api={api} />} blocs={blocs} />}
+            ouvrirApps={reglages.ouvrirApps} onActiverApps={() => changerReglages({ ...reglages, ouvrirApps: true })} liste={<MaListe api={api} onIntegrations={() => choisirOnglet('integrations')} />} blocs={blocs} />}
+          {onglet === 'integrations' && <OngletIntegrations api={api} blocs={blocs}
+            onAjouter={t => { choisirOnglet('page'); ajouterBloc(nouveauBloc(t, nouvelId())); }}
+            onOuvrir={b => { choisirOnglet('page'); ouvrirBloc(b); }}
+            onOffres={peutAcheter ? (pour?: Fonction) => ouvrirOffres(pour) : undefined} />}
           {onglet === 'reglages' && <OngletReglages reglages={reglages} compte={compte} onChange={changerReglages} onDeconnexion={deconnexion} urlExport={api.urlExport} supprimerMonCompte={api.supprimerMonCompte}
             abonnement={abonnement} onOffres={peutAcheter ? (pour?: Fonction) => ouvrirOffres(pour) : undefined} ouvrirPortail={api.ouvrirPortail}
             onResilier={peutAcheter ? () => setOffres({ resilier: true }) : undefined} />}
@@ -650,11 +659,11 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
       </div>
 
       <nav className="adm-mobile-nav fixed inset-x-0 bottom-0 z-30 pb-[env(safe-area-inset-bottom)] lg:hidden" aria-label="Sections">
-        <ul className={`mx-auto grid max-w-md ${onglets.length === 4 ? 'grid-cols-4' : 'grid-cols-3'}`}>
+        <ul className={`mx-auto grid max-w-md ${COLONNES[onglets.length] ?? 'grid-cols-4'}`}>
           {onglets.map(o => (
             <li key={o.id}>
               <button key={o.id} type="button" onClick={() => { if (o.id !== onglet) { vibrer(5); choisirOnglet(o.id); } }} aria-current={onglet === o.id ? 'page' : undefined}
-                className={`flex h-14 w-full flex-col items-center justify-center gap-0.5 text-[11.5px] font-medium transition-colors duration-200 ${onglet === o.id ? 'font-semibold text-white' : 'text-white/55'}`}>
+                className={`flex h-14 w-full flex-col items-center justify-center gap-0.5 text-[11.5px] font-medium transition-colors duration-200 ${onglets.length > 4 ? 'max-[359px]:text-[10.5px]' : ''} ${onglet === o.id ? 'font-semibold text-white' : 'text-white/55'}`}>
                 <span className="grid h-7 w-12 place-items-center"><Icone nom={o.icone} taille={21} /></span>{o.nom}
               </button>
             </li>

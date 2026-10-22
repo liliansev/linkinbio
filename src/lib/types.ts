@@ -249,11 +249,24 @@ export interface Stats {
   dejaVue: boolean;
 }
 
-export const FOURNISSEURS_LISTE = ['brevo', 'mailchimp'] as const;
+/** Les newsletters branchées par leur API : une clé, puis la liste choisie parmi celles du compte. */
+export const NEWSLETTERS = ['brevo', 'mailchimp', 'kit', 'mailerlite', 'beehiiv', 'systeme'] as const;
+/** Les outils d'automatisation, branchés par l'adresse d'un webhook. */
+export const WEBHOOKS = ['make', 'zapier', 'n8n'] as const;
+export const FOURNISSEURS_LISTE = [...NEWSLETTERS, ...WEBHOOKS] as const;
+export type Newsletter = (typeof NEWSLETTERS)[number];
+export type Webhook = (typeof WEBHOOKS)[number];
 export type FournisseurListe = (typeof FOURNISSEURS_LISTE)[number];
+export const estWebhook = (f: FournisseurListe): f is Webhook => (WEBHOOKS as readonly string[]).includes(f);
 
-/** Le fournisseur branché, sans jamais la clé (seulement ses quatre derniers caractères). */
+/**
+ * Le fournisseur branché, sans jamais la clé : seulement ses quatre derniers caractères (pour un webhook, son
+ * hôte et la fin de son adresse). `nom` : le nom de la liste chez lui, ou l'hôte d'un webhook.
+ */
 export interface IntegrationListe { fournisseur: FournisseurListe; liste: string; nom: string; cle: string }
+
+/** Une liste du compte chez une newsletter (une audience Mailchimp, un formulaire Kit, un tag Systeme.io…). */
+export interface ListeFournisseur { id: string; nom: string }
 
 export interface Contact { id: string; email: string; prenom: string; ts: number; source: string; synchro: '' | 'ok' | 'erreur' }
 
@@ -301,12 +314,22 @@ export interface Api {
   /** Repasser en Gratuit : l'abonnement est résilié chez Creem pour la fin de la période payée. L'abonnement tel qu'il est ensuite. */
   resilierAbonnement(): Promise<Abonnement>;
   liste(): Promise<Liste>;
-  /** Branche Brevo ou Mailchimp (la clé est vérifiée chez eux), ou débranche avec `null`. */
+  /**
+   * Les listes du compte chez une newsletter, pour en choisir une par son nom. `cle` vide : celle déjà
+   * enregistrée pour ce fournisseur (le navigateur ne la connaît pas).
+   */
+  listesFournisseur(i: { fournisseur: FournisseurListe; cle: string }): Promise<{ ok: boolean; message: string; listes: ListeFournisseur[] }>;
+  /**
+   * Branche une newsletter ou un webhook (la clé ou l'adresse est vérifiée chez eux), ou débranche avec `null`.
+   * Pour un webhook, `cle` est son adresse et `liste` reste vide.
+   */
   brancherListe(i: { fournisseur: FournisseurListe; cle: string; liste: string } | null): Promise<{ ok: boolean; message: string }>;
   supprimerContact(id: string): Promise<void>;
   /** Renvoie chez le fournisseur les inscrits qui n'y sont pas encore. */
   resynchroniser(): Promise<{ envoyes: number; erreurs: number }>;
-  /** L'adresse du CSV des inscrits, ou null dans l'aperçu. */
+  /** Toutes les adresses des inscrits, à coller dans Substack (qui n'a pas d'API). */
+  adresses(): Promise<string[]>;
+  /** L'adresse du CSV des inscrits (`?format=substack` : les adresses seules, pour l'import de Substack), ou null dans l'aperçu. */
   urlContacts: string | null;
   /** Seulement pour le compte principal : gérer les autres comptes. */
   comptes?: ApiComptes;

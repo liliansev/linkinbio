@@ -53,7 +53,7 @@ export const OFFRES: Record<Plan, Offre> = {
   },
   pro: {
     nom: 'Pro', phrase: 'Le bon lien, au bon moment.', prix: { mois: 19, an: 169 }, quota: 200 * Mo, jours: 365, enVente: true,
-    avantages: ['Ta page selon l’heure', 'Les drops : un code, des places comptées', 'Ta liste e-mail, vers Brevo ou Mailchimp', 'Tes stats sur un an'],
+    avantages: ['Ta page selon l’heure', 'Les drops : un code, des places comptées', 'Ta liste e-mail, vers ta newsletter', 'Tes stats sur un an'],
   },
   premium: {
     nom: 'Premium', phrase: 'Ta page à ton nom de domaine.', prix: { mois: 29, an: 259 }, quota: 1024 * Mo, jours: 365, enVente: false,
@@ -112,7 +112,7 @@ export const FONCTIONS_EN_MOTS: Record<Fonction, { avantage: string; pour: strin
   stats: { avantage: 'Tes stats sur 30 jours', pour: 'Pour tes stats' },
   heure: { avantage: 'Ta page selon l’heure', pour: 'Pour tes créneaux' },
   drops: { avantage: 'Les drops : un code, des places comptées', pour: 'Pour les drops' },
-  listeEmail: { avantage: 'Ta liste e-mail, vers Brevo ou Mailchimp', pour: 'Pour ta liste e-mail' },
+  listeEmail: { avantage: 'Ta liste e-mail, vers ta newsletter', pour: 'Pour ta liste e-mail' },
 };
 
 /**
