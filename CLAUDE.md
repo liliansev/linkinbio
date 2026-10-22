@@ -117,9 +117,15 @@ embarque tout : l'image n'a pas de `node_modules`.
   ouverts d'un toucher, blocs déplacés en les maintenant), le design s'ouvre dans une
   feuille `cote` qui laisse voir la page, et la liste d'avant (`OngletLiens`) reste à
   un toucher. La feuille d'un bloc (22 octobre 2026) s'arrête sous lui, entre la moitié
-  et 86 % de l'écran (`plafond`), et garde sa hauteur d'une page à l'autre : ses réglages
-  rares s'ouvrent en pages (« Plus de réglages », puis chaque règle, `PagesBloc` dans
-  `ReglesBloc.tsx`), avec une flèche dans l'en-tête de la feuille (`useFilFeuille`). Un bloc
+  et 86 % de l'écran (`plafond`), et garde sa hauteur d'une page à l'autre. Les quatre gestes
+  courants sont sur sa première page (22 octobre 2026, demandé par Lilian : « vraiment simple ») :
+  Visible, Mis en avant, puis Quand (`ReglageQuand` : Apparaît « Maintenant », Disparaît « Jamais »,
+  le sélecteur natif posé sur la ligne ; le créneau de la semaine dessous) et Pour qui (`ReglagePourQui` :
+  une seule liste de réseaux, deux interrupteurs Affiché et En avant), chacune une ligne qui dit ce qui
+  est réglé (`resumeQuand`, `resumePourQui`) et mène à sa page ; au bureau, les deux mêmes lignes se
+  déplient en place. « Plus de réglages » ne garde que l'apparence, le lien partenaire et l'accès réservé
+  (absent pour un bloc qui n'a rien d'autre), en pages (`PagesBloc` dans `ReglesBloc.tsx`), avec une
+  flèche dans l'en-tête de la feuille (`useFilFeuille`). Un bloc
   neuf revient au choix des blocs par sa flèche ; ce choix s'ouvre sur « Colle une adresse ».
   L'image d'un lien est sous son texte, hors de « Plus de réglages », et une autre adresse relit le site d'elle-même
   dès qu'on cesse de taper (22 octobre 2026, demandé par Lilian) : le texte, l'image et la description qui venaient
