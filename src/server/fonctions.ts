@@ -6,11 +6,10 @@ import * as liste from './liste.ts';
 import { requeteSortante } from './sortante.ts';
 import { planifierResumes } from './resume.ts';
 import { VERSION_CGU } from '../lib/legal.ts';
-import { ORIGINE_ADMIN, ORIGINE_PUBLIQUE, PRINCIPAL, TYPES_PRINCIPAL, cheminPage } from '../lib/types.ts';
+import { ORIGINE_ADMIN, ORIGINE_PUBLIQUE, PRINCIPAL, TYPES_PRINCIPAL } from '../lib/types.ts';
 import { masquerAcces } from '../lib/acces.ts';
 import { composerMoment } from '../lib/moments.ts';
-import { audienceDeLApp, composerAudience, provenance } from '../lib/provenance.ts';
-import { lienDeSuite, sortieDuNavigateur, suiteRecente } from '../lib/sortie.ts';
+import { composerAudience, provenance } from '../lib/provenance.ts';
 import { adresse, email, pseudo, validerBloc, validerReglages } from '../lib/valider.ts';
 import { apercuSite as lireApercu } from './apercu.ts';
 import * as db from './db.ts';
@@ -95,29 +94,24 @@ function reglagesPourCompte(compte: string, r: Reglages): Reglages {
 /** La page de Lilian sans pseudo, celle d'un autre compte avec. Null si elle n'existe pas ou est suspendue. */
 export const lirePagePublique = createServerFn({ method: 'GET' })
   .validator((data: unknown) => {
-    const o = (typeof data === 'string' ? { pseudo: data } : data ?? {}) as { pseudo?: unknown; s?: unknown; suite?: unknown };
+    const o = (typeof data === 'string' ? { pseudo: data } : data ?? {}) as { pseudo?: unknown; s?: unknown };
     const court = (v: unknown, n: number) => (typeof v === 'string' ? v.slice(0, n) : '');
-    return { pseudo: court(o.pseudo, 40).toLowerCase(), s: court(o.s, 40), suite: typeof o.suite === 'number' ? o.suite : 0 };
+    return { pseudo: court(o.pseudo, 40).toLowerCase(), s: court(o.s, 40) };
   })
   .handler(async ({ data }): Promise<PagePublique | null> => {
     const compte = data.pseudo ? db.compteParPseudo(data.pseudo) : db.compteParId(PRINCIPAL);
     if (!compte || compte.statut !== 'actif') return null;
     const maintenant = Date.now();
-    const ua = getRequestHeader('user-agent') ?? '';
     // Ce que l'offre du compte ne comprend pas s'efface avant tout le reste.
     const { reglages, blocs: permis } = selonDroits(reglagesPourCompte(compte.id, db.lireReglages(compte.id)), pourCompte(compte.id, db.lireBlocs(compte.id)), droits(compte, process.env, maintenant));
     // Le référent d'une page qui se recharge elle-même (hopla.page) ne dit rien de la provenance.
-    const blocs = composerAudience(composerMoment(permis, maintenant), provenance({ s: data.s, ua, referent: getRequestHeader('referer') ?? '' }));
+    const blocs = composerAudience(composerMoment(permis, maintenant), provenance({ s: data.s, ua: getRequestHeader('user-agent') ?? '', referent: getRequestHeader('referer') ?? '' }));
     const prises = db.placesParBloc(compte.id);
-    const proprietaire = { pseudo: compte.pseudo, principal: compte.id === PRINCIPAL };
-    // Dans le navigateur intégré de LinkedIn, d'Instagram…, la feuille qui propose Safari ou Chrome, sauf juste après elle (`suite`).
-    const sortie = reglages.ouvrirNavigateur && !suiteRecente(data.suite, maintenant) ? sortieDuNavigateur(lienDeSuite(`${origines().page}${cheminPage(proprietaire)}`, data.s || audienceDeLApp(ua), maintenant), ua) : null;
     return {
       reglages,
       blocs: masquerAcces(blocs, id => prises[id] ?? 0),
-      compte: { ...proprietaire, plan: db.abonnement(compte, maintenant).plan },
+      compte: { pseudo: compte.pseudo, principal: compte.id === PRINCIPAL, plan: db.abonnement(compte, maintenant).plan },
       maintenant,
-      ...(sortie ? { sortie } : {}),
     };
   });
 

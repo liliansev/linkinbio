@@ -9,7 +9,6 @@ import type { Droits } from './droits.ts';
 import type { Creneau } from './moments.ts';
 import type { PeriodeStats } from './periode.ts';
 import type { Audience, EffetAudience } from './provenance.ts';
-import type { Sortie } from './sortie.ts';
 
 export const TYPES_BLOC = ['lien', 'titre', 'texte', 'video', 'derniere-video', 'newsletter', 'inscription', 'preuve', 'produit', 'soutien', 'reservation'] as const;
 export type TypeBloc = (typeof TYPES_BLOC)[number];
@@ -138,8 +137,6 @@ export interface Reglages {
   partage: boolean;
   /** Depuis le navigateur intégré d'Instagram, TikTok…, ouvrir les liens dans leur app (YouTube, Spotify…). */
   ouvrirApps: boolean;
-  /** Depuis le navigateur intégré de LinkedIn, d'Instagram…, proposer d'abord d'ouvrir la page dans Safari ou Chrome (lib/sortie.ts). */
-  ouvrirNavigateur: boolean;
   /** Le lundi matin, le résumé de la semaine par e-mail. */
   resumeHebdo: boolean;
   /** Les mots de la page (formulaires, drops) vouvoient le visiteur plutôt que de le tutoyer. */
@@ -200,8 +197,6 @@ export interface PagePublique {
   compte: ComptePage & { plan: Plan };
   /** L'instant où la page a été composée : le compte à rebours part de là, au serveur comme au navigateur. */
   maintenant?: number;
-  /** Ouverte dans le navigateur intégré d'une app qui laisse sortir : une feuille propose Safari ou Chrome par-dessus la page. */
-  sortie?: Sortie;
 }
 
 export interface EtatAdmin {

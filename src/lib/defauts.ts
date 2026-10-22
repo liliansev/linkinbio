@@ -31,7 +31,6 @@ export const REGLAGES_DEFAUT: Reglages = {
   },
   partage: true,
   ouvrirApps: true,
-  ouvrirNavigateur: true,
   resumeHebdo: true,
   vouvoiement: false,
   animation: 'orbite',

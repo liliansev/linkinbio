@@ -397,12 +397,10 @@
 }
 @keyframes lp-toast { from { opacity: 0; translate: -50% 8px; } }
 
-/* ---- La feuille qui propose le navigateur ----
- * Dans le navigateur intégré de LinkedIn, d'Instagram…, elle monte par-dessus
- * la page (lib/sortie.ts), qui reste visible sous un voile : une phrase, ses
- * boutons (l'accent pour ouvrir, un trait pour copier) et « Continuer ici ».
- * Elle est faite du fond et des polices du thème ; elle monte une fois et
- * redescend quand on continue ici.
+/* ---- La feuille par-dessus la page ----
+ * Elle monte du bas, la page reste visible sous un voile, et elle redescend
+ * quand on la quitte. Elle est faite du fond et des polices du thème. La
+ * réservation s'y ouvre (`.lp-agenda`, plus bas).
  */
 .lp-sortie { position: fixed; inset: 0; z-index: 20; display: grid; align-items: end; justify-items: center; }
 .lp-sortie-voile {
@@ -423,46 +421,12 @@
 .lp-sortie[data-sort] .lp-sortie-voile { animation: lp-voile 0.22s ease-in reverse both; }
 .lp-sortie[data-sort] .lp-sortie-feuille { animation: lp-feuille-sort 0.22s ease-in both; }
 @keyframes lp-voile { from { opacity: 0; } }
-/* « Lien copié » passe au-dessus de la feuille, en haut : en bas, il cacherait ses boutons. */
+/* Un message (« Lien copié »…) passe au-dessus de la feuille, en haut : en bas, il la cacherait. */
 .lp-sortie ~ .lp-toast { z-index: 30; top: calc(16px + env(safe-area-inset-top)); bottom: auto; }
 @keyframes lp-feuille { from { translate: 0 100%; } }
 @keyframes lp-feuille-sort { to { translate: 0 100%; } }
-.lp-sortie-titre { margin: 0; max-width: 28ch; font-size: 1.08rem; line-height: 1.45; font-weight: 560; color: var(--texte); text-wrap: balance; }
-/* La phrase et l'aide occupent la même place, celle de la plus longue : l'aide arrive sans rien pousser. */
-.lp-sortie-mots { display: grid; justify-items: center; margin-bottom: 22px; }
-.lp-sortie-mots > p { grid-area: 1 / 1; }
-.lp-sortie-aide { visibility: hidden; font-weight: 500; }
-.lp-sortie-mots[data-aide] > p:first-child { visibility: hidden; }
-.lp-sortie-mots[data-aide] > .lp-sortie-aide { visibility: visible; animation: lp-entree 0.45s cubic-bezier(0.16, 1, 0.3, 1) both; }
-/* Le bouton du menu de l'app, dessiné : trois points couchés sur iPhone, debout sur Android ; l'icône seule, dans la phrase. */
-.lp-sortie-points {
-  display: inline-grid; place-items: center; vertical-align: -0.2em;
-  color: var(--texte);
-}
-.lp-sortie-annonce { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-.lp-sortie-gestes { align-self: stretch; display: flex; flex-direction: column; gap: 12px; }
-:where(.lp-sortie-gestes) button.lp-btn { border: 0; font: inherit; font-weight: var(--btn-graisse, 560); cursor: pointer; }
-/* Copier le lien n'est qu'un recours : au trait, quel que soit le style des boutons, l'accent reste le seul bouton plein. */
-.lp[data-bouton] .lp-sortie-gestes .lp-btn:not(.lp-accent) {
-  --lp-encre: var(--texte);
-  background: transparent; color: var(--texte); border: 0;
-  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--texte) 32%, transparent);
-  -webkit-backdrop-filter: none; backdrop-filter: none;
-}
-.lp[data-bouton] .lp-sortie-gestes .lp-btn:not(.lp-accent):hover { background: color-mix(in srgb, var(--texte) 8%, transparent); }
-.lp-sortie-ici {
-  display: inline-flex; align-items: center;
-  margin-top: 6px; min-height: 48px; padding: 0 20px; border-radius: 999px;
-  font-size: 0.95rem; font-weight: 560; color: var(--texte);
-  text-decoration: underline; text-decoration-thickness: 1.5px; text-underline-offset: 4px;
-  text-decoration-color: color-mix(in srgb, var(--texte) 35%, transparent);
-  transition: text-decoration-color 0.15s;
-  -webkit-tap-highlight-color: transparent;
-}
-.lp-sortie-ici:hover { text-decoration-color: currentColor; }
-.lp-sortie-ici:focus-visible { outline: 3px solid var(--texte); outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) {
-  .lp-sortie-voile, .lp-sortie-feuille, .lp-sortie-mots[data-aide] > .lp-sortie-aide { animation: none; }
+  .lp-sortie-voile, .lp-sortie-feuille { animation: none; }
 }
 
 /* ---- La réservation, dans une feuille ----

@@ -5,9 +5,7 @@ import { ORIGINE_PUBLIQUE, animationDe, formatVedette, idYoutube, urlPage } from
 import type { Reglages } from '../lib/types.ts';
 import { themeDe, variablesTheme } from '../lib/themes.ts';
 import { ICONES } from '../lib/icones.ts';
-import { lienApp, navigateurIntegre } from '../lib/ouvrirApp.ts';
-import { minuteDe, suiteRecente } from '../lib/sortie.ts';
-import type { Sortie } from '../lib/sortie.ts';
+import { lienApp } from '../lib/ouvrirApp.ts';
 import { enAttente } from '../lib/moments.ts';
 import { etatPlaces } from '../lib/acces.ts';
 import { adresseSaisie } from '../lib/valider.ts';
@@ -76,11 +74,6 @@ export function PageLiens({ page, apercu = false, edition, liste }: {
   const theme = themeDe(reglages);
   const t = textes(reglages.vouvoiement);
   const [toast, setToast] = useState('');
-  // Dans le navigateur intégré d'une app qui laisse sortir, une feuille propose Safari ou Chrome par-dessus la page (lib/sortie.ts).
-  const [ecran, setEcran] = useState(!!page.sortie);
-  // Après la feuille, le nom de la page reçoit le focus ; il le garde quand la page se recharge sans elle.
-  const [apresEcran] = useState(ecran);
-  const nomRef = useRef<HTMLHeadingElement>(null);
   // La réservation ouverte dans sa feuille, et ce qui avait le focus avant elle, pour l'y rendre.
   const [agenda, setAgenda] = useState<Bloc | null>(null);
   const avantAgenda = useRef<HTMLElement | null>(null);
@@ -90,22 +83,7 @@ export function PageLiens({ page, apercu = false, edition, liste }: {
     reserver: apercu ? undefined : (bloc: Bloc, depuis: HTMLElement) => { avantAgenda.current = depuis; setAgenda(bloc); },
   }), [apercu]);
 
-  useEffect(() => {
-    if (apercu) return;
-    const params = new URLSearchParams(location.search);
-    const suite = params.get('suite');
-    if (suite !== null) {
-      // Hors de l'app, le repère n'a plus d'usage : l'adresse redevient celle qu'on partage.
-      if (!navigateurIntegre(navigator.userAgent)) {
-        params.delete('suite');
-        const reste = params.toString();
-        history.replaceState(history.state, '', `${location.pathname}${reste ? `?${reste}` : ''}${location.hash}`);
-      }
-      // Passée par l'écran il y a un instant (rouverte dans le navigateur, ou « Continuer ici ») : la visite est déjà comptée.
-      if (suiteRecente(suite, page.maintenant ?? Date.now())) return;
-    }
-    suivre(pseudo, 'vue');
-  }, [apercu, pseudo]);
+  useEffect(() => { if (!apercu) suivre(pseudo, 'vue'); }, [apercu, pseudo]);
   useEffect(() => { if (!toast) return; const t = setTimeout(() => setToast(''), 2200); return () => clearTimeout(t); }, [toast]);
 
   const clic = (bloc: Bloc) => {
@@ -127,18 +105,6 @@ export function PageLiens({ page, apercu = false, edition, liste }: {
     location.href = app.adresse;
     // iOS ne dit pas si l'app existe : si la page est encore là, on ouvre le site.
     if (app.repli) setTimeout(() => { if (!document.hidden) location.href = a.href; }, 1500);
-  }
-
-  function continuerIci() {
-    setEcran(false);
-    // Un retour ou un rechargement ne remontre pas l'écran, ni ne recompte la visite, le temps que vaut le repère.
-    if (!apercu) {
-      const params = new URLSearchParams(location.search);
-      params.set('suite', String(minuteDe(page.maintenant ?? Date.now())));
-      history.replaceState(history.state, '', `${location.pathname}?${params}${location.hash}`);
-    }
-    // Le bouton disparaît avec la feuille : le focus passe au nom, en tête de la page.
-    requestAnimationFrame(() => nomRef.current?.focus({ preventScroll: true }));
   }
 
   async function partager() {
@@ -171,7 +137,7 @@ export function PageLiens({ page, apercu = false, edition, liste }: {
     <ActionsPage.Provider value={actions}>
     <div className="lp" onClick={ouvrirDansApp} style={variablesTheme(theme) as CSSProperties} data-bouton={reglages.bouton.style} data-forme={reglages.bouton.forme} data-ombre={reglages.bouton.ombre} data-police={theme.police} data-decor={theme.decor} data-bureau={reglages.bureau}>
       {/* Sous une feuille, la page est là, mais rien n'y répond tant qu'on ne l'a pas refermée. */}
-      <div className="lp-scene" {...((ecran && page.sortie) || agenda ? { inert: true } : {})}>
+      <div className="lp-scene" {...(agenda ? { inert: true } : {})}>
       <div className="lp-col">
         {reglages.partage && !edition && (
           <button type="button" className="lp-partager" onClick={partager} aria-label={t.partager} {...fige}>
@@ -187,7 +153,7 @@ export function PageLiens({ page, apercu = false, edition, liste }: {
             </button>
           ) : reglages.profil.avatar && <img className="lp-avatar" src={reglages.profil.avatar} alt="" width={96} height={96} />}
           {/* Dans le back office, la page n'est qu'un aperçu : son nom n'y prend pas le titre principal. */}
-          <Nom className="lp-nom" ref={nomRef} {...(apresEcran ? { tabIndex: -1 } : {})}>
+          <Nom className="lp-nom">
             {edition
               ? <input className="lp-ed-saisie" value={reglages.profil.nom} maxLength={80} placeholder="Ton nom" aria-label="Ton nom"
                   style={{ width: `${Math.max(reglages.profil.nom.length, 7) + 1}ch` }} onChange={e => edition.profil({ nom: e.target.value })}
@@ -226,7 +192,6 @@ export function PageLiens({ page, apercu = false, edition, liste }: {
           </>}</p>
       </div>
       </div>
-      {ecran && page.sortie && <FeuilleSortie sortie={page.sortie} t={t} annoncer={setToast} continuer={continuerIci} />}
       {agenda && <FeuilleAgenda bloc={agenda} t={t} fermer={() => { setAgenda(null); requestAnimationFrame(() => avantAgenda.current?.focus({ preventScroll: true })); }} />}
       {toast && <div className="lp-toast" role="status">{toast}</div>}
     </div>
@@ -235,105 +200,10 @@ export function PageLiens({ page, apercu = false, edition, liste }: {
 }
 
 /**
- * La feuille qui monte par-dessus la page dans le navigateur intégré de
- * LinkedIn, d'Instagram… : la page est déjà là, voilée, et la feuille propose
- * de l'ouvrir dans Safari ou Chrome, de copier son lien, ou de continuer ici
- * (le voile et Échap aussi). Aux couleurs du thème, rendue par le serveur :
- * sans script, « Continuer ici » mène déjà à la page sans elle.
- */
-function FeuilleSortie({ sortie, t, annoncer, continuer }: {
-  sortie: Sortie; t: Textes; annoncer: (texte: string) => void; continuer: () => void;
-}) {
-  const [aide, setAide] = useState(false);
-  const [sort, setSort] = useState(false);
-  const feuille = useRef<HTMLElement>(null);
-  // Partie dans Safari puis revenue dans l'app : la feuille a fait son office, la page prend sa place.
-  const retour = useRef<(() => void) | null>(null);
-  useEffect(() => () => { if (retour.current) document.removeEventListener('visibilitychange', retour.current); }, []);
-  const ici = new URL(sortie.lien);
-
-  // La feuille redescend avant de laisser la page ; d'un coup avec moins de mouvement.
-  function fermer() {
-    if (sort) return;
-    if (matchMedia('(prefers-reduced-motion: reduce)').matches) { continuer(); return; }
-    setSort(true);
-    setTimeout(continuer, 220);
-  }
-
-  // Une fenêtre par-dessus la page : le focus y entre, et Échap la referme comme « Continuer ici ».
-  useEffect(() => { feuille.current?.focus({ preventScroll: true }); }, []);
-  useEffect(() => {
-    const echap = (e: KeyboardEvent) => { if (e.key === 'Escape') fermer(); };
-    document.addEventListener('keydown', echap);
-    return () => document.removeEventListener('keydown', echap);
-  });
-
-  function ouvrir(e: MouseEvent<HTMLAnchorElement>) {
-    // Facebook et Threads n'ouvrent Safari que par une fenêtre ; si elle est refusée, par le lien lui-même.
-    if (sortie.fenetre) {
-      e.preventDefault();
-      if (!window.open(sortie.adresse, '_blank')) location.href = sortie.adresse;
-    }
-    // La page encore là un moment après : rien ne s'est ouvert, le menu de l'app reste.
-    setTimeout(() => { if (!document.hidden) setAide(true); }, 1500);
-    if (!retour.current) {
-      let partie = false;
-      retour.current = () => {
-        if (document.hidden) { partie = true; return; }
-        if (!partie) return;
-        document.removeEventListener('visibilitychange', retour.current!);
-        continuer();
-      };
-      document.addEventListener('visibilitychange', retour.current);
-    }
-  }
-
-  async function copier() {
-    try {
-      await navigator.clipboard.writeText(sortie.lien);
-      annoncer(t.copie);
-    } catch {
-      if (copierALAncienne(sortie.lien)) { annoncer(t.copie); return; }
-      // Ni copie ni ouverture : reste le menu de l'app.
-      annoncer(t.copieRatee);
-      setAide(true);
-    }
-  }
-
-  return (
-    <div className="lp-sortie" data-sort={sort || undefined}>
-      {/* Toucher le voile, c'est continuer ici ; les lecteurs d'écran ont le lien de la feuille. */}
-      <a className="lp-sortie-voile" href={ici.pathname + ici.search} tabIndex={-1} aria-hidden="true" onClick={e => { e.preventDefault(); fermer(); }} />
-      <section ref={feuille} className="lp-sortie-feuille" role="dialog" aria-modal="true" aria-labelledby="lp-sortie-titre" tabIndex={-1}>
-        {/* Si rien ne s'ouvre, l'aide prend la place de la phrase, et la place de la plus longue est gardée : rien ne bouge sous le doigt. */}
-        <div className="lp-sortie-mots" data-aide={aide || undefined}>
-          <p className="lp-sortie-titre" id="lp-sortie-titre">{t.sortieTexte(sortie.safari)}</p>
-          <p className="lp-sortie-titre lp-sortie-aide" aria-hidden="true">
-            {t.aideAvant} <span className="lp-sortie-points"><Icone nom={sortie.android ? 'points-verticaux' : 'points'} taille={16} /></span> {t.aideApres}
-          </p>
-        </div>
-        <div className="lp-sortie-gestes">
-          <a className="lp-btn lp-accent" href={sortie.adresse} onClick={ouvrir}>
-            <span className="lp-picto"><Icone nom={sortie.safari ? 'boussole' : 'globe'} taille={22} /></span>
-            <span className="lp-btn-texte"><span className="lp-btn-titre">{t.ouvrirDans(sortie.safari)}</span></span>
-          </a>
-          <button type="button" className="lp-btn" onClick={copier}>
-            <span className="lp-picto"><Icone nom="copier" taille={22} /></span>
-            <span className="lp-btn-texte"><span className="lp-btn-titre">{t.copierLien}</span></span>
-          </button>
-        </div>
-        <a className="lp-sortie-ici" href={ici.pathname + ici.search} onClick={e => { e.preventDefault(); fermer(); }}>{t.continuerIci}</a>
-        <p className="lp-sortie-annonce" aria-live="polite">{aide ? `${t.aideAvant} ${t.troisPoints} ${t.aideApres}` : ''}</p>
-      </section>
-    </div>
-  );
-}
-
-/**
- * Une réservation Calendly, Cal.com ou Google Agenda, dans une feuille faite comme
- * celle qui propose le navigateur. L'agenda ne se charge qu'à l'ouverture : avant,
- * la page ne parle à personne. Il garde ses propres règles (ses témoins compris),
- * et « Ouvrir sur Calendly » reste là s'il refuse de s'afficher dans la page.
+ * Une réservation Calendly, Cal.com ou Google Agenda, dans une feuille qui monte
+ * par-dessus la page. L'agenda ne se charge qu'à l'ouverture : avant, la page
+ * ne parle à personne. Il garde ses propres règles (ses témoins compris), et
+ * « Ouvrir sur Calendly » reste là s'il refuse de s'afficher dans la page.
  */
 function FeuilleAgenda({ bloc, t, fermer }: { bloc: Bloc; t: Textes; fermer: () => void }) {
   const [sort, setSort] = useState(false);

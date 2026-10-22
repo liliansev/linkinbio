@@ -7,18 +7,12 @@ import { Admin } from '../src/admin/Admin.tsx';
 import { THEMES } from '../src/lib/themes.ts';
 import { PageLiens } from '../src/components/PageLiens.tsx';
 import { apiDemo, apiGratuit, apiNouveau, blocsVitrine, pageDemo, recommencerNouveau } from './api-demo.ts';
-import type { Sortie } from '../src/lib/sortie.ts';
-
-/** La feuille qui monte par-dessus la page dans LinkedIn sur iPhone (`#sortie`), ou dans Instagram sur Android (`#sortie-android`). */
-const sortieDemo = (android: boolean): Sortie => (android
-  ? { adresse: 'intent://hopla.page/lilian?s=instagram#Intent;scheme=https;end', fenetre: false, safari: false, android: true, lien: 'https://hopla.page/lilian?s=instagram' }
-  : { adresse: 'x-safari-https://hopla.page/lilian?s=linkedin', fenetre: false, safari: true, android: false, lien: 'https://hopla.page/lilian?s=linkedin' });
 
 /* L'aperçu navigable : le vrai back office et la vraie page, sans serveur. */
 function Demo() {
-  const lireVue = () => (/^#(page|sortie|vitrine)/.test(location.hash) ? 'page' : location.hash === '#nouveau' ? 'nouveau' : location.hash === '#gratuit' ? 'gratuit' : 'admin');
+  const lireVue = () => (/^#(page|vitrine)/.test(location.hash) ? 'page' : location.hash === '#nouveau' ? 'nouveau' : location.hash === '#gratuit' ? 'gratuit' : 'admin');
   const [vue, setVue] = useState(lireVue);
-  // Passer de `#sortie=klein` à `#sortie=riso` ne change pas de vue : l'adresse elle-même redessine la page.
+  // Passer de `#page=klein` à `#page=riso` ne change pas de vue : l'adresse elle-même redessine la page.
   const [hash, setHash] = useState(() => location.hash);
   const [etat, setEtat] = useState<EtatAdmin | null>(null);
   // Chaque « Recommencer » remonte le back office du nouvel inscrit à zéro.
@@ -36,11 +30,6 @@ function Demo() {
     // `#vitrine=klein` : la vitrine d'exemple dans un thème, pour la planche de captures.
     if (hash.startsWith('#vitrine')) {
       return <PageLiens key={hash} page={{ reglages: { ...p.reglages, bureau }, blocs: blocsVitrine(), compte: p.compte }} apercu />;
-    }
-    // `#sortie=klein` : la feuille qui propose Safari, dans un thème, pour la planche de captures ; rien d'autre par-dessus.
-    if (hash.startsWith('#sortie')) {
-      const sortie = sortieDemo(hash.startsWith('#sortie-android'));
-      return <PageLiens key={hash} page={{ reglages: { ...p.reglages, bureau }, blocs: p.blocs.filter(b => estEnLigne(b)), compte: p.compte, sortie }} apercu />;
     }
     return (
       <>
