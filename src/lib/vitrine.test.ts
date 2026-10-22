@@ -39,6 +39,8 @@ test('Calendly, Cal.com et Google Agenda s’ouvrent dans la page ; Planity et l
   for (const url of ['https://www.planity.com/salon-camille-75011-paris', 'https://calendly.com/', 'http://calendly.com/lilian', 'https://www.doctolib.fr/x', 'nulle part'])
     assert.equal(adresseIntegree(url, 'hopla.page'), null, url);
   assert.equal(agendaDe('https://www.planity.com/salon'), 'planity');
+  assert.equal(agendaDe('https://app.lemcal.com/@lilian/decouverte'), 'lemcal');
+  assert.equal(agendaDe('https://cal.com/lilian'), 'calcom');
   assert.equal(nomAgenda('https://calendly.com/lilian'), 'Calendly');
   assert.equal(nomAgenda('https://www.doctolib.fr/x'), 'doctolib.fr');
 });
