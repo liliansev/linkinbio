@@ -10,6 +10,7 @@ import { useCouche } from './couches.ts';
 import { pseudoReseau, urlReseau } from '../lib/demarrage.ts';
 import { adresseSaisie, pourquoiPasReseau } from '../lib/valider.ts';
 import { Etiquette, Reserve, usePermis, useVoirOffres } from './offre.tsx';
+import { focusSaisie } from '../lib/clavier';
 
 const STYLES: { id: StyleBouton; nom: string }[] = [
   { id: 'plein', nom: 'Plein' }, { id: 'contour', nom: 'Contour' }, { id: 'doux', nom: 'Doux' }, { id: 'relief', nom: 'Relief' }, { id: 'verre', nom: 'Verre' },
@@ -232,7 +233,7 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
             <span className="mb-1.5 block text-[13px] font-medium text-white/70">Ajouter un réseau</span>
             <div className="flex flex-wrap gap-1">
               {absents.map(r => (
-                <button key={r} type="button" aria-label={`Ajouter ${NOMS_RESEAUX[r]}`} onClick={() => { vibrer(4); maj({ reseaux: [...reglages.reseaux, { reseau: r, url: '' }] }); setTimeout(() => document.querySelector<HTMLInputElement>(`[aria-label="${NOMS_RESEAUX[r]}"]`)?.focus(), 40); }}
+                <button key={r} type="button" aria-label={`Ajouter ${NOMS_RESEAUX[r]}`} onClick={() => { vibrer(4); maj({ reseaux: [...reglages.reseaux, { reseau: r, url: '' }] }); setTimeout(() => focusSaisie(document.querySelector<HTMLInputElement>(`[aria-label="${NOMS_RESEAUX[r]}"]`)), 40); }}
                   className="flex w-[62px] flex-col items-center gap-1 rounded-xl py-2 text-white/80 transition hover:bg-white/[0.06] hover:text-white active:scale-95">
                   <Icone nom={r} taille={22} />
                   <span className="w-full truncate text-center text-[11.5px] text-white/55" aria-hidden="true">{NOMS_RESEAUX[r]}</span>

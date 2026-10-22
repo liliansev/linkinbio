@@ -320,7 +320,7 @@ export function Feuille({ ouverte, onFermer, retenir, titre, children, pied, cot
     vv?.addEventListener('scroll', suivre);
     const avant = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
-    // Le champ qui a l'autoFocus garde la main ; sinon la feuille prend le focus.
+    // Le champ qui a l'autoFocus (au bureau seulement, voir lib/clavier.ts) garde la main ; sinon la feuille prend le focus.
     if (!ref.current?.contains(document.activeElement)) ref.current?.focus();
     return () => { vv?.removeEventListener('resize', suivre); vv?.removeEventListener('scroll', suivre); setVisible(null); document.removeEventListener('keydown', touche); document.body.style.overflow = avant; 
       // Le focus revient d'où il venait, sauf si une autre feuille vient de le prendre (Ajouter qui ouvre l'éditeur sur son premier champ).

@@ -9,6 +9,7 @@ import { Facturation, nomOffre } from './Facturation.tsx';
 import { Etiquette, usePermis } from './offre.tsx';
 import { telechargerQR } from './CodeQR.tsx';
 import { noterPartage } from './BienDemarrer.tsx';
+import { focusAuto } from '../lib/clavier';
 
 /*
  * Réglages sur une seule page (direction B, 20 octobre 2026) : trois groupes,
@@ -216,7 +217,7 @@ function SupprimerCompte({ pseudo, abonnement, supprimerMonCompte, annuler }: {
         </p>
       )}
       <Champ label={`Pour confirmer, tape ton pseudo, ${pseudo}`} erreur={erreur || undefined}>
-        <input className={classeSaisie} value={saisie} onChange={e => setSaisie(e.target.value)} autoFocus autoCapitalize="none" autoComplete="off" spellCheck={false} />
+        <input className={classeSaisie} value={saisie} onChange={e => setSaisie(e.target.value)} autoFocus={focusAuto()} autoCapitalize="none" autoComplete="off" spellCheck={false} />
       </Champ>
       <div className="flex flex-wrap justify-end gap-2">
         <button type="button" onClick={annuler} className={classeBouton.discret}>Annuler</button>

@@ -17,6 +17,7 @@ import type { Textes } from '../lib/mots.ts';
 import { Icone, NOMS_RESEAUX } from './Icone.tsx';
 import { peut } from '../lib/abonnement.ts';
 import { adresseIntegree, avecMontants, lienMontant, lienSansMontant, nomAgenda, nomSoutien, seIntegre } from '../lib/vitrine.ts';
+import { focusAuto } from '../lib/clavier';
 
 /*
  * La page publique, rendue côté serveur pour Google et les aperçus de liens,
@@ -828,7 +829,7 @@ function Drop({ bloc, t, apercu, pseudo, clic, cible }: { bloc: Bloc; t: Textes;
       </button>
       {avecCode && ouvert && !url && (
         <form className="lp-drop-form" onSubmit={e => { e.preventDefault(); debloquer(String(new FormData(e.currentTarget).get('code') ?? '')); }}>
-          <input name="code" required maxLength={40} autoComplete="off" autoCapitalize="none" spellCheck={false} placeholder={t.code} aria-label={t.code} autoFocus />
+          <input name="code" required maxLength={40} autoComplete="off" autoCapitalize="none" spellCheck={false} placeholder={t.code} aria-label={t.code} autoFocus={focusAuto()} />
           <button type="submit" className="lp-btn lp-btn-compact lp-accent" disabled={etat.type === 'envoi'}>{etat.type === 'envoi' ? '…' : t.debloquer}</button>
         </form>
       )}

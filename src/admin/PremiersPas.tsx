@@ -10,6 +10,7 @@ import { NOMS_AUDIENCES, RESEAUX_SOCIAUX, reseauxDePartage } from '../lib/proven
 import { Icone, NOMS_RESEAUX } from '../components/Icone.tsx';
 import { Pastille } from './OngletApparence.tsx';
 import { BoutonCopier, BoutonPrincipal, choisirFichier, copierTexte, classeBouton, classeSaisie, flechesRadio, preparerImage, vibrer } from './ui.tsx';
+import { focusSaisie } from '../lib/clavier';
 
 /*
  * L'arrivée d'un compte neuf, juste après les CGU : quatre questions, et la
@@ -119,7 +120,7 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
   function ouvrirReseau(r: Reseau) {
     vibrer(5);
     setSaisies(s => ({ ...s, [r]: s[r] ?? '' }));
-    setTimeout(() => document.getElementById(`reseau-${r}`)?.focus(), 30);
+    setTimeout(() => focusSaisie(document.getElementById(`reseau-${r}`)), 30);
   }
 
   /* ---- La marche ---- */
