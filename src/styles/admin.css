@@ -103,6 +103,8 @@ html:has(.adm) { scrollbar-gutter: stable; }
 .adm-miroir-page { flex: 1 0 auto; display: flex; flex-direction: column; }
 .adm-miroir-page > * { flex: 1 0 auto; }
 @media (min-width: 1024px) { .adm-miroir { --z: 0.86; } }
+/* Sur un grand écran, les questions et la page en miniature restent ensemble : 1200 px au plus, centrés. */
+@media (min-width: 1024px) { .adm-premiers { padding-inline: max(0px, (100% - 1200px) / 2); } }
 
 /* Une feuille ouverte occupe le bas de l'écran : le message passe en haut, sans couvrir ce qu'on touche. */
 body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); bottom: auto; }
@@ -129,6 +131,20 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
  */
 @media (min-width: 1024px) { .adm-shell { background: #fff; } }
 .adm-sidebar { padding: 0 10px 10px; background: #fafaf9; border-right: 1px solid #ececea; }
+/*
+ * Sur un grand écran (22 octobre 2026, demandé par Lilian) : la barre latérale et l'espace de travail
+ * tiennent dans un cadre de 1600 px au plus, centré, au lieu de partir aux deux bords. Autour, le gris
+ * de la barre latérale continue, et un trait fin ferme le cadre à droite. Jusqu'à 1600 px, rien ne bouge.
+ * `--adm-marge` est la place laissée de chaque côté, pour ce qui est fixé à l'écran (barre latérale, message).
+ */
+:root { --adm-cadre: 1600px; --adm-marge: max(0px, (100% - var(--adm-cadre)) / 2); }
+@media (min-width: 1024px) {
+  .adm-shell:has(> .adm-travail) { background: #fafaf9; }
+  .adm-sidebar { left: var(--adm-marge); }
+  .adm-travail { max-width: var(--adm-cadre); min-height: 100dvh; margin-inline: auto; padding-left: 216px; background: #fff; }
+  .adm-shell .adm-toast { left: calc(var(--adm-marge) + 232px); right: calc(var(--adm-marge) + 16px); }
+}
+@media (min-width: 1601px) { .adm-travail { box-shadow: 1px 0 0 #ececea; } }
 .adm-nav-item { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 10px; border-radius: 7px; color: #55554f; font-size: 14px; font-weight: 500; text-align: left; transition: background-color 150ms, color 150ms; }
 .adm-nav-item:hover { background: #f2f2ef; color: var(--adm-encre); }
 .adm-nav-item[aria-current='page'] { background: #ebebe7; color: #0a0a0a; }
@@ -346,7 +362,7 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
   .adm-tel-ecran::-webkit-scrollbar { display: none; }
   .adm-ordi-boite { display: flex; width: 100%; min-height: 0; flex: 1; flex-direction: column; overflow-y: auto; }
   /* Le message du bas se centre sur l'édition, pas sur la page. */
-  .adm:has(.adm-studio-bureau) .adm-toast { right: calc(var(--adm-apercu) + 16px); }
+  .adm:has(.adm-studio-bureau) .adm-toast { right: calc(var(--adm-marge) + var(--adm-apercu) + 16px); }
 }
 /* Une tablette en paysage a la mise en page du bureau, avec des cibles pour le doigt. */
 @media (min-width: 1024px) and (pointer: coarse) {
