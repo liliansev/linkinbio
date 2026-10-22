@@ -13,7 +13,9 @@ import { BoutonPrincipal, Feuille, arretRadio, classeBadge, classeBouton, fleche
  * « d'une date A à une date Z » dans un calendrier). Des boutons collés sur un
  * rail gris, comme Mensuel et Annuel dans les offres : 7 j, 14 j, 30 j, 90 j,
  * 12 mois, puis, après un trait, le calendrier. La période prise est blanche,
- * son nom en bleu. Au-delà de l'historique de l'offre, un bouton par offre qui
+ * son nom en bleu ; l'agenda seul, sans fond ni cadre, passe juste au bleu
+ * (au bureau, les dates écrites à côté, il redevient un bouton blanc). Au-delà
+ * de l'historique de l'offre, un bouton par offre qui
  * va plus loin, à son étiquette (« 30 j Starter », « 12 mois Pro ») : il ouvre
  * les offres sur elle.
  *
@@ -103,7 +105,7 @@ export function ChoixPeriode({ periode, joursMax, onChoisir, onOffres, grand }: 
           </div>
         )}
         <span aria-hidden="true" className="adm-periodes-trait" />
-        <button ref={bouton} type="button" className="adm-periodes-dates" data-pris={plage ? '' : undefined} aria-haspopup="dialog" aria-expanded={ouvert}
+        <button ref={bouton} type="button" className="adm-periodes-dates" data-pris={plage ? '' : undefined} data-texte={plage && grand ? '' : undefined} aria-haspopup="dialog" aria-expanded={ouvert}
           title={grand ? (plage ? 'Changer de dates' : 'Choisir des dates') : undefined}
           onClick={() => (ouvert ? setOuvert(false) : ouvrir())}>
           <Icone nom="agenda" taille={16} className="shrink-0" />

@@ -774,8 +774,11 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
 .adm-periodes-groupe { display: flex; flex: var(--n, 1) 1 0; gap: 2px; }
 .adm-periodes-groupe > button, .adm-periodes-dates { display: flex; align-items: center; justify-content: center; gap: 5px; border-radius: 8px; color: #45453f; font-size: 14px; font-weight: 500; white-space: nowrap; transition: background-color 150ms, color 150ms, box-shadow 150ms; }
 .adm-periodes-groupe > button { flex: 1 1 0; padding: 0 4px; }
-.adm-periodes-groupe > button:hover, .adm-periodes-dates:hover, .adm-periodes-dates[aria-expanded='true'] { background: rgb(255 255 255 / 0.55); color: #0a0a0a; }
-.adm-periodes-groupe > button[aria-checked='true'], .adm-periodes-dates[data-pris] { background: #fff; color: var(--adm-bleu); font-weight: 600; box-shadow: 0 1px 2px rgb(10 10 10 / 0.1), 0 0 0 1px rgb(10 10 10 / 0.06); }
+.adm-periodes-groupe > button:hover, .adm-periodes-dates[data-texte]:hover, .adm-periodes-dates[data-texte][aria-expanded='true'] { background: rgb(255 255 255 / 0.55); color: #0a0a0a; }
+.adm-periodes-groupe > button[aria-checked='true'], .adm-periodes-dates[data-texte][data-pris] { background: #fff; color: var(--adm-bleu); font-weight: 600; box-shadow: 0 1px 2px rgb(10 10 10 / 0.1), 0 0 0 1px rgb(10 10 10 / 0.06); }
+/* L'agenda seul, sans ses dates écrites à côté, ne prend ni fond ni cadre (règle de Lilian, 22 octobre 2026) : survolé, il passe à l'encre ; des dates prises, au bleu. */
+.adm-periodes-dates:not([data-texte]):hover, .adm-periodes-dates:not([data-texte])[aria-expanded='true'] { color: #0a0a0a; }
+.adm-periodes-dates:not([data-texte])[data-pris] { color: var(--adm-bleu); }
 .adm-periodes-groupe > button[data-verrou] { color: #666661; }
 .adm-periodes-groupe > button[data-verrou]:hover { color: #0a0a0a; }
 .adm-periodes-trait { flex: none; width: 1px; margin: 9px 2px; background: rgb(10 10 10 / 0.12); }
