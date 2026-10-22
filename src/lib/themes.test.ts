@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { FAMILLES, REMPLACES, THEMES, contraste, idTheme, personnaliser, themeDe, themeParId, variablesTheme } from './themes.ts';
+import { readFileSync } from 'node:fs';
+import { FAMILLES, REMPLACES, THEMES, contraste, idTheme, meler, personnaliser, themeDe, themeParId, variablesTheme } from './themes.ts';
 
 const couleurs = (fond: string) => fond.match(/#[0-9a-f]{6}/gi) ?? [];
 
@@ -34,6 +35,18 @@ test('chaque thème est lisible : texte sur tout le fond, boutons et accent', ()
     assert.ok(contraste(t.surface, t.surfaceTexte) >= 4.5, `${t.id} : bouton = ${contraste(t.surface, t.surfaceTexte).toFixed(2)}`);
     assert.ok(contraste(t.vedette, t.vedetteTexte) >= 4.5, `${t.id} : carte mise en avant = ${contraste(t.vedette, t.vedetteTexte).toFixed(2)}`);
     assert.ok(contraste(variablesTheme(t)['--titre-section'], t.fondUni) >= 3, `${t.id} : titres de section`);
+  }
+});
+
+test('« Ajouter à ma page », sous les blocs de la page éditée, se voit sur chaque thème', () => {
+  // Le mot a la couleur du texte du thème, lisible plus haut ; son trait, ce texte mêlé au fond (`page.css`), garde 3:1.
+  const regle = readFileSync(new URL('../styles/page.css', import.meta.url), 'utf8').match(/button\.lp-ed-ajout \{([^}]*)\}/)?.[1] ?? '';
+  assert.match(regle, /\bcolor: var\(--texte\);/);
+  const part = Number(regle.match(/inset 0 0 0 [\d.]+px color-mix\(in srgb, var\(--texte\) (\d+)%, transparent\)/)?.[1]) / 100;
+  assert.ok(part > 0, 'trait introuvable dans page.css');
+  for (const t of THEMES) for (const c of couleurs(t.fond)) {
+    const trait = meler(c, t.texte, part);
+    assert.ok(contraste(trait, c) >= 3, `${t.id} : trait sur ${c} = ${contraste(trait, c).toFixed(2)}`);
   }
 });
 
