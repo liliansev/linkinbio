@@ -206,7 +206,7 @@ export function Roue() {
             const r = RESEAUX[Math.floor(c / PAR_RESEAU)];
             return (
               <span key={c} ref={el => { points.current[c] = el; }} className="hl-roue-point" style={{ color: COULEURS[r], opacity: 0 }}>
-                <Icone nom={r} taille={12} />
+                <Icone nom={r} taille={16} />
               </span>
             );
           })}
@@ -215,7 +215,7 @@ export function Roue() {
           <div ref={anneau} className="hl-roue-anneau">
             {RESEAUX.map((r, i) => (
               <span key={r} className="hl-roue-badge" style={{ '--b': `${45 + i * 90}deg`, color: COULEURS[r] } as CSSProperties}>
-                <Icone nom={r} taille={20} />
+                <Icone nom={r} taille={26} />
               </span>
             ))}
           </div>
@@ -242,7 +242,7 @@ export function Roue() {
                     ))}
                   </div>
                 </div>
-                <span className="hl-roue-source" style={{ background: COULEURS[r] }}><Icone nom={r} taille={12} />{NOMS_AUDIENCES[r]}</span>
+                <span className="hl-roue-source"><Icone nom={r} taille={14} />{NOMS_AUDIENCES[r]}</span>
               </div>
             );
           })}

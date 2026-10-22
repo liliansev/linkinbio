@@ -220,8 +220,19 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
 }
 .adm-topbar-etat { color: #dcdcff; }
 .adm-topbar-etat[data-erreur] { color: #ffd4d4; }
-/* La photo absente, dans la barre latérale et l'en-tête du téléphone, tous deux bleus : un voile blanc. */
-.adm-avatar-vide { background: rgb(255 255 255 / 0.16); color: #fff; }
+/* La photo absente, dans la barre latérale et l'en-tête du téléphone, tous deux bleus : l'icône seule, en blanc, sans rond derrière. */
+.adm-avatar-vide { color: #fff; }
+/*
+ * Jamais une icône sur un fond ni dans un cadre (22 octobre 2026, Lilian) : un bouton fait d'une icône est
+ * l'icône seule, qui pâlit au survol. Copier, dans l'en-tête bleu du téléphone, est en blanc ; sous 390 px,
+ * Aperçu perd son mot, et son cadre avec.
+ */
+.adm-icone-seule { border-radius: 12px; transition: opacity 150ms, scale 150ms; }
+.adm-icone-seule:hover { opacity: 0.75; }
+@media (max-width: 1023px) { .adm-topbar .adm-icone-seule { color: #fff; } }
+@media (max-width: 389px) {
+  .adm-topbar .adm-apercu-bouton, .adm-topbar .adm-apercu-bouton:hover { border-color: transparent; background: none; }
+}
 .adm-entete-titre { font-size: 15px; font-weight: 600; letter-spacing: -0.015em; }
 /* L'adresse dans l'en-tête : le domaine en gris, le pseudo à l'encre, et Copier collé à elle. */
 .adm-adresse-entete { display: flex; align-items: stretch; overflow: hidden; border: 1px solid #dcdcd7; border-radius: 8px; background: #fff; }
@@ -319,10 +330,12 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
   /* Le profil : la photo, puis le nom et la bio tapés en place, qui ressemblent à du texte jusqu'au survol. */
   .adm-profil { display: flex; flex-direction: column; gap: 12px; }
   .adm-profil-haut { display: flex; align-items: flex-start; gap: 14px; }
-  .adm-profil-photo { position: relative; display: grid; width: 52px; height: 52px; flex: none; place-items: center; border-radius: 50%; background: #f2f2ef; color: #8b8b86; }
+  /* La photo se clique elle-même, sans pastille dessus ; sans photo, l'icône seule à sa place, qui passe au bleu au survol. */
+  .adm-profil-photo { position: relative; display: grid; width: 52px; height: 52px; flex: none; place-items: center; border-radius: 50%; color: #55554f; transition: color 150ms, opacity 150ms; }
   .adm-profil-photo > img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
-  .adm-profil-pastille { position: absolute; right: -3px; bottom: -3px; display: grid; width: 20px; height: 20px; place-items: center; border-radius: 50%; background: var(--adm-bleu); color: #fff; font-size: 11px; box-shadow: 0 0 0 2px #fff; transition: scale 150ms var(--adm-sortie); }
-  .adm-profil-photo:hover .adm-profil-pastille { scale: 1.1; }
+  .adm-profil-photo:hover { color: var(--adm-bleu); }
+  .adm-profil-photo:has(> img):hover { opacity: 0.85; }
+  .adm-profil-photo[data-envoi] { opacity: 0.5; }
   .adm-profil-texte { display: flex; min-width: 0; flex: 1; flex-direction: column; gap: 1px; padding-top: 3px; }
   .adm-profil-ligne { display: flex; min-width: 0; align-items: center; gap: 2px; }
   .adm-profil-badge { display: inline-flex; flex: none; color: var(--adm-bleu); }
@@ -335,8 +348,8 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
   :is(.adm-profil-nom, .adm-profil-bio)::placeholder { color: #737373; }
   @supports (field-sizing: content) { .adm-profil-nom { field-sizing: content; width: auto !important; min-width: 7ch; } }
   .adm-profil-reseaux { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
-  /* Un réseau a son logo dans la couleur de sa marque, comme dans Stats (`couleurReseau`) ; les autres restent à l'encre. */
-  .adm-reseau { display: grid; width: 30px; height: 30px; place-items: center; border: 1px solid #e3e3df; border-radius: 8px; color: #0a0a0a; }
+  /* Un réseau a son logo dans la couleur de sa marque, comme dans Stats (`couleurReseau`) ; les autres restent à l'encre. Le logo seul, sans cadre. */
+  .adm-reseau { display: grid; width: 24px; height: 30px; place-items: center; color: #0a0a0a; }
   .adm-lien { display: inline-flex; min-height: 30px; align-items: center; padding: 0 6px; border-radius: 6px; color: var(--adm-bleu); font-size: 13.5px; font-weight: 500; text-decoration: underline; text-decoration-color: rgb(41 43 255 / 0.35); text-underline-offset: 3px; transition: color 150ms, text-decoration-color 150ms; }
   .adm-lien:hover { color: var(--adm-bleu-fonce); text-decoration-color: currentColor; }
   /* Seul sur sa ligne (pas encore de réseaux), il s'aligne sur la photo, comme le nom et la bio. */
@@ -374,8 +387,8 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
   @keyframes adm-rangee-neuf { 0%, 35% { background-color: var(--adm-bleu-pale); } }
   .adm-rangee[data-prive] :is(.adm-rangee-nom, .adm-rangee-picto) { color: #6b6b66; }
   .adm-rangee-tete { display: flex; min-height: 44px; align-items: center; gap: 2px; padding: 0 8px 0 6px; }
-  .adm-rangee-poignee { display: grid; width: 24px; height: 32px; flex: none; place-items: center; border-radius: 6px; color: #8b8b86; cursor: grab; touch-action: none; transition: background-color 150ms, color 150ms; }
-  button.adm-rangee-poignee:hover { background: #ebebe7; color: #0a0a0a; }
+  .adm-rangee-poignee { display: grid; width: 24px; height: 32px; flex: none; place-items: center; border-radius: 6px; color: #8b8b86; cursor: grab; touch-action: none; transition: color 150ms; }
+  button.adm-rangee-poignee:hover { color: #0a0a0a; }
   span.adm-rangee-poignee { cursor: default; }
   .adm-rangee[data-glisse] .adm-rangee-poignee { cursor: grabbing; }
   .adm-rangee-bouton { display: flex; min-width: 0; flex: 1; align-self: stretch; align-items: center; gap: 8px; padding: 0 6px; border-radius: 6px; text-align: left; }
@@ -388,14 +401,17 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
   .adm-rangee-marque-picto { display: none; }
   .adm-rangee-etats { display: inline-flex; flex: none; align-items: center; gap: 6px; color: #55554f; }
   .adm-rangee-clics { flex: none; margin-left: auto; padding-left: 8px; color: #5f5f5a; font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
-  .adm-rangee-geste { display: grid; width: 28px; height: 28px; flex: none; place-items: center; border-radius: 6px; color: #55554f; transition: background-color 150ms, color 150ms; }
-  .adm-rangee-geste:hover, .adm-rangee-geste[aria-expanded='true'] { background: #ebebe7; color: #0a0a0a; }
+  /* L'œil et « … » : l'icône seule, qui fonce au survol et passe au bleu, menu ouvert. */
+  .adm-rangee-geste { display: grid; width: 28px; height: 28px; flex: none; place-items: center; border-radius: 6px; color: #55554f; transition: color 150ms; }
+  .adm-rangee-geste:hover { color: #0a0a0a; }
+  .adm-rangee-geste[aria-expanded='true'] { color: var(--adm-bleu); }
   /* Les réglages s'alignent sur le picto du bloc, sous son nom. */
   .adm-rangee-reglages { padding: 2px 16px 16px 40px; }
   /* Une colonne étroite (1024 px) : l'adresse s'efface, « Mis en avant » devient un picto d'état, le nom garde la place. */
   @container edition (max-width: 479px) {
     .adm-rangee-sous { display: none; }
-    .adm-rangee-marque { padding: 0 4px; }
+    /* Le picto seul, sans l'étiquette citron derrière lui. */
+    .adm-rangee-marque { padding: 0; background: none; }
     .adm-rangee-marque-mot { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
     .adm-rangee-marque-picto { display: inline-flex; }
     .adm-rangee-reglages { padding-inline: 12px; }
@@ -417,12 +433,12 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
   /* Sur le papier crème de l'accueil : la page qu'on regarde, à part de l'édition. */
   .adm-apercu-cote { min-width: 0; border-left: 1px solid #e9e3d7; background: var(--adm-creme); }
   .adm-apercu-colle { position: sticky; top: 57px; display: flex; height: calc(100dvh - 57px); flex-direction: column; align-items: center; gap: 14px; padding: 16px 24px 20px; }
-  .adm-vues { display: flex; flex: none; gap: 2px; padding: 3px; border: 1px solid #e3e3df; border-radius: 10px; background: #fff; }
-  .adm-outil { display: inline-flex; height: 28px; align-items: center; gap: 6px; padding: 0 10px; border-radius: 7px; color: #0a0a0a; font-size: 13.5px; font-weight: 500; transition: background-color 150ms, color 150ms; }
-  .adm-outil:hover { background: #f2f2ef; }
-  .adm-outil:is([aria-pressed='true'], [aria-checked='true']) { background: var(--adm-bleu-pale); color: var(--adm-bleu); }
-  .adm-outil-carre { width: 28px; justify-content: center; padding: 0; color: #55554f; }
-  .adm-outil-carre[aria-checked='true'] { color: var(--adm-bleu); }
+  /* Téléphone ou ordinateur : deux icônes seules, sans cadre autour ni fond derrière ; la vue prise en bleu, soulignée comme un onglet. */
+  .adm-vues { display: flex; flex: none; gap: 4px; }
+  .adm-outil { display: inline-flex; height: 30px; align-items: center; gap: 6px; padding: 0 10px; color: #0a0a0a; font-size: 13.5px; font-weight: 500; transition: color 150ms, box-shadow 200ms var(--adm-sortie); }
+  .adm-outil:hover { color: var(--adm-bleu); }
+  .adm-outil:is([aria-pressed='true'], [aria-checked='true']) { color: var(--adm-bleu); box-shadow: inset 0 -2px 0 var(--adm-bleu); }
+  .adm-outil-carre { width: 32px; justify-content: center; padding: 0; color: #6b6b66; }
   /* Le téléphone : 390 px d'écran dans un bord de 9, réduit d'un bloc (voir `Telephone`) ; son écran défile seul. */
   .adm-tel-lieu { display: flex; width: 100%; min-height: 0; flex: 1; align-items: flex-start; justify-content: center; }
   .adm-tel-cadre { flex: none; }
@@ -442,7 +458,7 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
 }
 @media (min-width: 1024px) and (prefers-reduced-motion: reduce) {
   .adm-rangee[data-neuf] { animation: none; }
-  .adm-rangee, .adm-onglets > button, .adm-rangee-poignee, .adm-rangee-geste, .adm-plus, .adm-lien, .adm-profil-pastille, .adm-coller-champ > input { transition: none; }
+  .adm-rangee, .adm-onglets > button, .adm-rangee-poignee, .adm-rangee-geste, .adm-plus, .adm-lien, .adm-profil-photo, .adm-outil, .adm-coller-champ > input { transition: none; }
 }
 
 /* L'aperçu sur ordinateur : la page des visiteurs à 1280 px, réduite pour tenir dans la colonne de droite. */
@@ -721,12 +737,12 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
 .adm-tableau-jours tbody th, .adm-tableau-jours td { height: 36px; padding: 0 16px; border-bottom: 1px solid #efefec; }
 .adm-tableau-jours td { text-align: right; }
 .adm-repartition { padding: 14px 16px 12px; }
-.adm-repartition li { display: grid; grid-template-columns: minmax(0, 1fr) 52px 40px; align-items: center; gap: 8px; min-height: 32px; }
+.adm-repartition li { display: grid; grid-template-columns: 18px minmax(0, 1fr) 52px 40px; align-items: center; gap: 8px; min-height: 32px; }
 .adm-repartition-nom { position: relative; display: flex; min-width: 0; height: 32px; align-items: center; gap: 8px; padding-left: 10px; font-size: 14px; }
 .adm-repartition-barre { position: absolute; inset: 0 auto 0 0; min-width: 4px; border-radius: 6px; background: var(--barre, var(--adm-bleu-pale)); }
 /* Un réseau a son logo dans sa couleur et sa barre dans une teinte claire de celle-ci (`COULEURS_SOURCES`) ; une provenance
- * sans marque, le gris ; les liens et les appareils, le bleu Hopla (5,8:1 sur sa teinte pâle). */
-.adm-repartition-nom > svg { color: var(--picto, var(--adm-bleu)); }
+ * sans marque, le gris ; les liens et les appareils, le bleu Hopla. Le logo se pose devant la barre, jamais dessus. */
+.adm-repartition-picto { color: var(--picto, var(--adm-bleu)); }
 .adm-repartition-valeur { text-align: right; font-size: 14px; font-weight: 500; font-variant-numeric: tabular-nums; }
 .adm-repartition-part { text-align: right; font-size: 12px; color: #5f5f5a; font-variant-numeric: tabular-nums; }
 @media (min-width: 640px) {
@@ -920,8 +936,9 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
 .adm-pastille[data-teinte='creme'] { background: var(--adm-creme); color: #5c4a2e; }
 .adm-statut { display: inline-flex; align-items: center; gap: 6px; color: #5f5f5a; white-space: nowrap; }
 .adm-statut[data-alerte] { color: #a16207; font-weight: 500; }
-.adm-points { display: grid; width: 32px; height: 32px; place-items: center; border-radius: 8px; color: #55554f; transition: background-color 150ms, color 150ms; }
-.adm-points:hover, .adm-points[aria-expanded='true'] { background: #f2f2ef; color: #0a0a0a; }
+.adm-points { display: grid; width: 32px; height: 32px; place-items: center; border-radius: 8px; color: #55554f; transition: color 150ms; }
+.adm-points:hover { color: #0a0a0a; }
+.adm-points[aria-expanded='true'] { color: var(--adm-bleu); }
 .adm-liste-comptes > li { display: flex; min-height: 64px; align-items: center; gap: 12px; padding: 10px 0; }
 .adm-liste-comptes > li + li { border-top: 1px solid #efefec; }
 .adm-liste-comptes .adm-pastille { width: 36px; height: 36px; font-size: 14px; }

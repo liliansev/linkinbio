@@ -68,7 +68,10 @@
 .hp-galerie { display: grid; grid-template-columns: repeat(6,minmax(0,1fr)); gap: 16px; }
 .hp-profil { appearance: none; color: inherit; font: inherit; text-align: left; background: none; border: 0; padding: 0; cursor: pointer; }
 .hp-profil-photo { position: relative; display: block; border-radius: 14px; overflow: hidden; }
-.hp-profil-photo > span { position: absolute; bottom: 10px; right: 10px; display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: #fff; }
+/* L'œil qui dit « voir la page » se pose à côté du nom, seul : jamais dans un rond blanc sur la photo. */
+.hp-profil > .hp-profil-nom { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.hp-profil-nom > svg { flex: none; color: #62685f; transition: color .15s; }
+.hp-profil:hover .hp-profil-nom > svg { color: #292bff; }
 .hp-profil .hp-avatar { transition: transform .25s ease; }
 .hp-profil:hover .hp-avatar { transform: scale(1.04); }
 .hp-profil > b { display: block; margin-top: 12px; font-size: 17px; letter-spacing: -.035em; }
@@ -85,8 +88,9 @@
 .hp-dialogue-qui .hp-badge-offre { padding: 5px 9px; font-size: 13px; }
 .hp-dialogue-pied { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 14px; }
 .hp-dialogue-pied .hl-btn { flex: 1; min-width: 0; padding-inline: 12px; }
-.hp-dialogue-voisin { flex: none; display: grid; place-items: center; width: 46px; height: 48px; border: 1px solid #c9cbc2; border-radius: 10px; background: #fff; color: #20241f; cursor: pointer; }
-.hp-dialogue-voisin:hover { background: #ecebe4; }
+/* Précédent et suivant : les chevrons seuls, sans cadre. */
+.hp-dialogue-voisin { flex: none; display: grid; place-items: center; width: 46px; height: 48px; border: 0; border-radius: 10px; background: none; color: #20241f; cursor: pointer; transition: color .15s; }
+.hp-dialogue-voisin:hover { color: #292bff; }
 .hl-humain .hp-selon { display: grid; grid-template-columns: 1fr 1.12fr; align-items: center; gap: 56px; max-width: none; margin: 95px 14px 14px; padding: 80px max(40px, calc((100% - 1200px) / 2)); background: #f2f0e7; border-radius: 30px; }
 .hp-selon .hl-h2 > span { color: #292bff; }
 .hp-selon .hl-chapo { font-size: 17px; }
@@ -105,6 +109,8 @@
 .hp-vraie-page { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; margin-top: 10px; color: #292bff; font-size: 15px; font-weight: 600; text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 1px; }
 .hp-vraie-page:hover { text-decoration-thickness: 2px; }
 .hp-selon .hl-roue-cadre { max-width: 600px; margin: 0; }
+/* Le fond de la section, pour couper l'anneau sous chaque logo sans rond visible. */
+.hp-selon .hl-roue { --roue-fond: #f2f0e7; }
 .hp-selon .hl-roue-voie { stroke: #292bff40; }
 .hp-selon .hl-roue-traine { stroke: #292bff; }
 .hp-selon .hl-roue-anneau { box-shadow: inset 0 0 0 1.5px #292bff40; }
@@ -154,9 +160,12 @@
 .hp-dashboard-details li { position: relative; isolation: isolate; display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 32px; padding: 5px 7px; font-size: 13px; }
 .hp-dashboard-details li > b { flex: none; font-weight: 550; }
 .hp-dashboard-barre { position: absolute; z-index: -1; inset: 0 auto 0 0; border-radius: 4px; background: var(--barre, #f0f1ed); }
-/* Une provenance a son picto, comme au back office : le logo d'un réseau dans sa couleur, sur sa barre teintée (`COULEURS_SOURCES`). */
-.hp-dashboard-source { display: inline-flex; min-width: 0; align-items: center; gap: 7px; }
+/* Une provenance a son picto, comme au back office : le logo d'un réseau dans sa couleur, devant sa barre teintée
+ * (`COULEURS_SOURCES`), jamais posé dessus. La barre commence après lui. */
+.hp-dashboard-details li[data-source] { padding-left: 0; }
+.hp-dashboard-source { position: relative; display: flex; min-width: 0; flex: 1; align-items: center; gap: 8px; }
 .hp-dashboard-source > svg { flex: none; color: var(--picto, #4b5047); }
+.hp-dashboard-source > span { position: relative; isolation: isolate; display: flex; flex: 1; min-width: 0; min-height: 22px; align-items: center; padding-left: 7px; }
 .hl-humain .hp-mail-vers-dashboard { min-height: 44px; background: #fff; color: #20241f; cursor: pointer; }
 .hl-humain .hp-mail-vers-dashboard:hover { background: #f0f1ed; }
 @media (max-width: 599px) {
@@ -271,7 +280,7 @@
   .hp-source-legendes b { font-size: 15px; }
   .hp-selon .hl-roue { --d: 180px; --ecart: 58px; }
   .hp-selon .hl-roue-pages { gap: 7px; }
-  .hp-selon .hl-roue-source { font-size: 12px; gap: 4px; padding-inline: 5px; }
+  .hp-selon .hl-roue-source { font-size: 12px; gap: 4px; }
   .hp-selon .hl-roue-nom { display: block; }
   .hl-humain #prix { margin: 65px 8px 0; padding: 55px 22px; }
   .hl-humain .hl-offre { padding: 24px; }
@@ -344,8 +353,8 @@
 }
 /* Sous 480 px, les colonnes de la roue sont trop étroites pour un nom : le picto du réseau suffit, plus grand. */
 @media (max-width: 479px) {
-  .hp-selon .hl-roue-source { font-size: 0; gap: 0; min-width: 32px; height: 28px; padding-inline: 7px; }
-  .hp-selon .hl-roue-source svg { width: 16px; height: 16px; }
+  .hp-selon .hl-roue-source { font-size: 0; gap: 0; height: 28px; }
+  .hp-selon .hl-roue-source svg { width: 20px; height: 20px; }
 }
 .hl-couleurs-titre { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
 /* Au téléphone, la pastille passe au coin gauche de la carte d'Inès : la note du haut et le visage de Léa gardent leur place. */
@@ -382,10 +391,9 @@
 .hl-cq-horloge-petite b { font-size: 24px; }
 .hl-cq-horloge-petite span { font-size: 13px; }
 
-/* La preuve du hero en clair : le lien monté porte la pastille de son réseau, et une légende lisible dit ce qui vient de se passer. */
-.hp-lien-source { flex: none; display: grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; color: #fff; box-shadow: 0 0 0 2px #fff; animation: hl-pop .45s var(--ease) both; }
-.hp-lien-source[data-reseau='instagram'] { background: #c42a6e; }
-.hp-lien-source[data-reseau='youtube'] { background: #d40000; }
+/* La preuve du hero en clair : le lien monté porte le logo de son réseau, seul, à la couleur du lien (sans pastille
+ * ronde derrière lui), et une légende lisible dit ce qui vient de se passer. */
+.hp-lien-source { flex: none; display: grid; place-items: center; color: inherit; animation: hl-pop .45s var(--ease) both; }
 /* La légende vient sous la composition, à droite, glissée sous le coin le plus bas de la carte de Camille. */
 .hp-figure { width: 100%; max-width: 660px; align-self: start; }
 .hp-figure > .hp-composition { max-width: none; }
@@ -398,8 +406,7 @@
 @media (max-width: 599px) {
   .hp-figure { width: 100%; }
   .hp-figure > .hp-composition { width: calc(100% + 20px); }
-  .hp-lien-source { width: 13px; height: 13px; box-shadow: 0 0 0 1.5px #fff; }
-  .hp-lien-source svg { width: 8px; height: 8px; }
+  .hp-lien-source svg { width: 14px; height: 14px; }
   /* Les cartes gardent leurs textes à taille fixe : plus l'écran est étroit, plus celle de Camille dépasse sous la composition (environ 360 px moins 87 % de la largeur). La légende passe dessous. */
   .hp-preuve { max-width: 68%; margin-top: max(6px, calc(376px - 87vw)); font-size: 13px; }
   /* « Et bientôt, toi » pend sous la composition, d'autant plus bas que l'écran est large. */

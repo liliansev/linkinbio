@@ -465,13 +465,14 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
       {[{ nom: '', libelle: 'Sans icône' }, ...RESEAUX.map(r => ({ nom: r as string, libelle: NOMS_RESEAUX[r] })), ...PICTOS].map(p => {
         const choisi = b.icone === p.nom;
         return (
+          // L'icône seule, sans fond derrière elle : la prise passe au bleu, un point dessous.
           <button key={p.nom || 'sans'} type="button" role="radio" aria-checked={choisi} aria-label={p.libelle} title={p.libelle} onClick={() => { vibrer(4); maj({ icone: p.nom }); setIcones(false); }}
-            className={`grid aspect-square place-items-center rounded-xl transition duration-150 active:scale-90 bureau:rounded-lg ${choisi ? 'bg-white text-nuit' : 'text-white/80 hover:bg-white/[0.08]'}`}>
+            className={`relative grid aspect-square place-items-center rounded-xl transition duration-150 active:scale-90 bureau:rounded-lg ${choisi ? 'text-bleu after:absolute after:bottom-0.5 after:h-1 after:w-1 after:rounded-full after:bg-bleu' : 'text-white/75 hover:text-white'}`}>
             <Icone nom={p.nom || 'ui-aucun'} taille={20} />
           </button>
         );
       })}
-      {b.icone && !ICONES[b.icone] && <span className="grid aspect-square place-items-center rounded-xl bg-white text-xl" aria-label="Emoji actuel">{b.icone}</span>}
+      {b.icone && !ICONES[b.icone] && <span className="relative grid aspect-square place-items-center text-xl after:absolute after:bottom-0.5 after:h-1 after:w-1 after:rounded-full after:bg-bleu" aria-label="Emoji actuel">{b.icone}</span>}
     </div>
   );
   const champFichier = <input ref={fichier} type="file" accept="image/*" className="adm-fichier" tabIndex={-1} aria-hidden="true" onChange={e => choisirImage(e.target.files?.[0])} />;

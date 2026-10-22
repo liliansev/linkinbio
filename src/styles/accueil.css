@@ -237,18 +237,21 @@ html:has(.hl) { background: #fff; scroll-padding-top: 76px; }
 .hl-roue-voie { fill: none; stroke: rgb(255 255 255 / .28); stroke-width: 1.5; }
 .hl-roue-traine { fill: none; stroke: #fff; stroke-width: 3; stroke-linecap: round; }
 .hl-roue-points { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
+/* Un visiteur : le logo de son réseau, seul, dans sa couleur ; ni rond ni ombre derrière lui (22 octobre 2026). */
 .hl-roue-point {
-  position: absolute; left: -12px; top: -12px; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%;
-  background: #fff; box-shadow: 0 4px 10px -2px rgb(0 0 30 / .4); will-change: transform;
+  position: absolute; left: -12px; top: -12px; display: grid; place-items: center; width: 24px; height: 24px;
+  will-change: transform;
 }
 .hl-roue-haut { position: relative; z-index: 3; display: grid; place-items: center; width: var(--d); height: var(--d); margin: 0 auto; }
-.hl-roue-anneau { position: absolute; inset: 0; border-radius: 50%; box-shadow: inset 0 0 0 1.5px rgb(255 255 255 / .34), 0 0 0 calc(var(--badge) / 2 + 6px) rgb(255 255 255 / .06); transform: rotate(var(--a, 0deg)); }
+.hl-roue-anneau { position: absolute; inset: 0; border-radius: 50%; box-shadow: inset 0 0 0 1.5px rgb(255 255 255 / .34); transform: rotate(var(--a, 0deg)); }
+/* Un réseau sur l'anneau : son logo seul, dans sa couleur. Le rond derrière lui est celui de la section
+ * (`--roue-fond`), invisible : il coupe seulement le trait de l'anneau sous le logo. */
 .hl-roue-badge {
   position: absolute; left: 50%; top: 50%; display: grid; place-items: center; width: var(--badge); height: var(--badge); margin: calc(var(--badge) / -2);
-  border-radius: 50%; background: #fff; box-shadow: 0 8px 18px -8px rgb(0 0 30 / .55);
+  border-radius: 50%; background: var(--roue-fond, transparent);
   transform: rotate(var(--b)) translateY(calc(var(--d) / -2)) rotate(calc(-1 * var(--b) - var(--a, 0deg)));
 }
-.hl-roue-moyeu { position: relative; display: block; width: 60px; height: 60px; border-radius: 17px; color: #0a0a0a; box-shadow: 0 0 0 8px rgb(255 255 255 / .16), 0 14px 28px -10px rgb(0 0 30 / .6); }
+.hl-roue-moyeu { position: relative; display: block; width: 60px; height: 60px; border-radius: 17px; color: #0a0a0a; box-shadow: 0 14px 28px -10px rgb(0 0 30 / .6); }
 .hl-roue-moyeu svg { display: block; width: 100%; height: 100%; }
 .hl-roue-lien {
   position: relative; z-index: 3; width: fit-content; max-width: 100%; margin: calc(var(--badge) / 2 + 10px) auto 0; padding: 8px 14px; border-radius: 10px;
@@ -299,8 +302,9 @@ html:has(.hl) { background: #fff; scroll-padding-top: 76px; }
   .hl-roue-ligne span { display: none; }
   .hl-roue-liens { --place: 25cqi; }
 }
-.hl-roue-source { display: inline-flex; align-items: center; justify-content: center; gap: 5px; min-width: 26px; height: 24px; padding: 0 6px; border-radius: 7px; color: #fff; font-size: 12px; font-weight: 600; white-space: nowrap; }
-.hl-roue-source svg { flex: none; }
+/* Sous chaque page, son réseau : le logo seul dans sa couleur, le nom à l'encre ; sans étiquette de couleur derrière. */
+.hl-roue-source { display: inline-flex; align-items: center; justify-content: center; gap: 5px; min-width: 26px; height: 24px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.hl-roue-source svg { flex: none; color: var(--reseau); }
 @media (max-width: 479px) { .hl-roue-source { font-size: 0; gap: 0; } }
 .hl-roue-pied { min-height: 44px; margin-top: 10px; display: flex; justify-content: center; align-items: center; }
 .hl-roue-pied .hl-revoir { animation: hl-fondu .4s ease both; }
@@ -504,7 +508,8 @@ html:has(.hl-reserver input:focus) { overflow-anchor: none; }
 .hl-cq-drop { display: flex; flex-direction: column; gap: 10px; padding: 12px; border: 1px solid var(--encre); border-radius: 12px; background: #fff; }
 .hl-cq-drop-tete { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 8px 10px; }
 .hl-cq-drop-tete b { display: block; font-size: 13px; }
-.hl-cq-drop-picto { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 8px; background: var(--encre); color: #fff; animation: hl-pop .4s var(--ease) both; }
+/* Le picto du drop et de la liste : seul, à l'encre, sans carré derrière lui. */
+.hl-cq-drop-picto { width: 24px; height: 32px; display: grid; place-items: center; color: var(--encre); animation: hl-pop .4s var(--ease) both; }
 .hl-cq-sous { display: block; font-size: 12px; color: var(--gris); }
 .hl-cq-places { grid-column: 1 / -1; font-size: 12px; font-weight: 600; animation: hl-pop .4s var(--ease) both; }
 .hl-cq-code { display: flex; gap: 6px; }
@@ -536,7 +541,8 @@ html:has(.hl-reserver input:focus) { overflow-anchor: none; }
 .hl-cq-merci { display: flex; align-items: center; justify-content: center; gap: 6px; height: 36px; margin: 0; border-radius: 8px; background: var(--encre); color: #fff; font-weight: 600; animation: hl-pop .4s var(--ease) both; }
 .hl-toast-vite { animation-delay: 0s; }
 /* « Le bon lien, au bon moment » : ce que Hopla vient de faire (le lien passé en tête, ouvert, débloqué) prend son bleu. */
-.hl-tel-vivante :is(.hl-cq-lien[data-vedette], .hl-cq-ouvrir, .hl-cq-drop[data-ouvert] .hl-cq-drop-picto) { background: var(--accent); border-color: var(--accent); color: #fff; }
+.hl-tel-vivante :is(.hl-cq-lien[data-vedette], .hl-cq-ouvrir) { background: var(--accent); border-color: var(--accent); color: #fff; }
+.hl-tel-vivante .hl-cq-drop[data-ouvert] .hl-cq-drop-picto { color: var(--accent); }
 .hl-tel-vivante .hl-cq-drop[data-ouvert] { border-color: var(--accent); }
 .hl-tel-vivante :is(.hl-cq-etoiles > [data-pleine]) { color: var(--accent); }
 .hl-tel-vivante .hl-cq-merci { background: var(--accent); }
@@ -702,8 +708,9 @@ html:has(.hl-reserver input:focus) { overflow-anchor: none; }
 
 .hl-rail-tete { display: flex; justify-content: flex-end; margin: -64px 0 24px; }
 .hl-fleches { display: flex; gap: 8px; }
-.hl-fleches button { display: grid; place-items: center; width: 44px; height: 44px; border: 1px solid var(--filet); border-radius: 10px; background: #fff; color: var(--encre); cursor: pointer; transition: background-color .15s; }
-.hl-fleches button:hover:not([aria-disabled]) { background: var(--pale); }
+/* Les flèches seules, sans cadre ni fond : elles passent à l'accent au survol. */
+.hl-fleches button { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 10px; background: none; color: var(--encre); cursor: pointer; transition: color .15s; }
+.hl-fleches button:hover:not([aria-disabled]) { color: var(--accent); }
 .hl-fleches button[aria-disabled] { color: #b5b5b5; cursor: default; }
 .hl-gauche { transform: rotate(90deg); }
 .hl-droite { transform: rotate(-90deg); }
@@ -751,10 +758,10 @@ html:has(.hl-reserver input:focus) { overflow-anchor: none; }
 @media (min-width: 375px) { .hl-nuances fieldset { flex-wrap: nowrap; } .hl-nuances legend { float: left; width: 68px; margin: 0; } }
 /* L'aperçu change en douceur ; la règle ne vise que lui, pas la page publique. */
 .hl-couleurs-tel :is(.lp, .lp-btn, .lp-carte) { transition: background-color .4s var(--ease), color .4s var(--ease), border-color .4s var(--ease); }
-.hl-nuance { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 1px solid rgb(0 0 0 / .12); border-radius: 12px; cursor: pointer; transition: box-shadow .15s, transform .15s; }
+.hl-nuance { position: relative; display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 1px solid rgb(0 0 0 / .12); border-radius: 12px; cursor: pointer; transition: box-shadow .15s, transform .15s; }
 .hl-nuance:hover { transform: scale(1.06); }
-/* La pastille choisie porte une coche ; l'anneau reste celui du focus. */
-.hl-nuance-coche { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--encre); color: #fff; box-shadow: 0 0 0 2px #fff; animation: hl-pop .25s var(--ease) both; }
+/* La couleur choisie se souligne d'un trait, comme un onglet : pas de coche posée sur elle. L'anneau reste celui du focus. */
+.hl-nuance[aria-pressed='true']::after { content: ''; position: absolute; left: 50%; bottom: -8px; width: 18px; height: 3px; margin-left: -9px; border-radius: 2px; background: var(--encre); animation: hl-pop .25s var(--ease) both; }
 
 /* ---- 07 · Créer et modifier ---- */
 
@@ -777,8 +784,9 @@ html:has(.hl-reserver input:focus) { overflow-anchor: none; }
 }
 .hl-etapes button:hover { color: var(--encre); }
 .hl-etapes li[data-lu] button { color: var(--encre); background: var(--pale); }
-.hl-etape-num { flex: none; display: grid; place-items: center; width: 32px; height: 32px; border: 1px solid currentColor; border-radius: 8px; font-size: 14px; font-weight: 600; transition: background-color .3s, color .3s; }
-.hl-etapes li[data-lu] .hl-etape-num { border-color: var(--accent); background: var(--accent); color: #fff; }
+/* Le numéro ou le picto de l'étape, seul : ni cadre ni carré de couleur ; l'étape lue passe à l'accent. */
+.hl-etape-num { flex: none; display: grid; place-items: center; width: 32px; height: 32px; font-size: 18px; font-weight: 600; font-variant-numeric: tabular-nums; transition: color .3s; }
+.hl-etapes li[data-lu] .hl-etape-num { color: var(--accent); }
 .hl-etapes b { display: block; font-size: 19px; font-weight: 600; letter-spacing: -0.02em; }
 .hl-etape-texte { display: block; margin-top: 2px; font-size: 15px; color: var(--gris); }
 .hl-etapes li[data-lu] .hl-etape-texte { color: var(--encre-2); }

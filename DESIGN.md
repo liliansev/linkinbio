@@ -403,7 +403,7 @@ Fond calme, contour discret, arrondi de contrôle et texte de saisie au rôle `f
 
 La marque (`Marque.tsx`) est la même partout : le symbole de (28px), puis « Hopla » au rôle `wordmark`, sans accroche. Sur le bleu (la barre latérale, les écrans d'entrée), elle passe en blanc, le dessin du symbole en bleu (`surBleu`). La connexion, les CGU et le lien de connexion périmé la reprennent telle quelle ; la barre latérale du bureau la prend en petit (`petite` : (22px) et `wordmark-desk`). Aucun fil d'Ariane ne répète la navigation : seule une sous-page en montre un, d'un seul cran, à la place du titre de l'en-tête.
 
-Sur desktop, la barre latérale est bleue : une rangée de (32px) à la souris ((44px) au doigt) associe un picto plein (16px) et un nom en `on-blue`, sans compteur. Le choix actif est une pastille blanche au texte bleu, en semi-gras (`nav-current`) ; le survol, un voile blanc (`nav-hover`). L'offre du dessus s'y lit en une ligne, son diamant en citron. Sur mobile, l'en-tête est bleu (l'adresse en blanc, Copier et Aperçu sur un voile blanc, l'anneau de « Bien démarrer » en citron) et la navigation devient une barre basse blanche avec picto (21px) et label court ; l'onglet courant se reconnaît à son picto et à son label en bleu, en semi-gras, sans pastille de fond.
+Sur desktop, la barre latérale est bleue : une rangée de (32px) à la souris ((44px) au doigt) associe un picto plein MingCute (16px, `nav-*` dans `icones.ts`) et un nom en `on-blue`, sans compteur. Le choix actif est une pastille blanche au texte bleu, en semi-gras (`nav-current`) ; le survol, un voile blanc (`nav-hover`). L'offre du dessus s'y lit en une ligne, son diamant en citron. Sur mobile, l'en-tête est bleu (l'adresse en blanc, Copier en picto seul et blanc, Aperçu sur un voile blanc puis, sous (390px), son œil seul, sans voile, l'anneau de « Bien démarrer » en citron) et la navigation devient une barre basse blanche avec picto (21px) et label court ; l'onglet courant se reconnaît à son picto et à son label en bleu, en semi-gras, sans pastille de fond.
 
 ### Segments
 
@@ -443,7 +443,8 @@ Un menu (le compte, puis les actions d'un bloc ou d'une ligne, la période) est 
 - **Do** donner son rôle à chaque couleur : le bleu pour agir, choisir et lire les chiffres, le citron pour ce qui se gagne, le crème pour la page.
 - **Do** reprendre Geist et la hiérarchie des rôles déjà utilisés.
 - **Do** conserver un focus visible, les libellés et les états d'enregistrement explicites.
-- **Do** utiliser les pictogrammes Phosphor pleins et monochromes pour ce qu'on montre (un réseau, un bloc, une règle, un état), et les signes de commande au trait (`ui-*`) pour les gestes (fermer, ajouter, déplier, copier, ouvrir), sans mêler les deux dans une même rangée.
+- **Do** utiliser les pictogrammes Phosphor pleins et monochromes pour ce qu'on montre (un réseau, un bloc, une règle, un état), et les signes de commande au trait (`ui-*`) pour les gestes (fermer, ajouter, déplier, copier, ouvrir), sans mêler les deux dans une même rangée. La barre de navigation prend les pictos pleins MingCute (`nav-*`, 22 octobre 2026).
+- **Do** poser une icône seule : en couleur quand elle doit ressortir (le bleu d'un choix, la couleur d'un réseau), à l'encre sinon. Le choix pris se dit par sa couleur, un trait ou un point dessous, jamais par un rond plein derrière lui.
 - **Do** garder les transitions brèves et respecter le mouvement réduit.
 
 ### Don't:
@@ -453,7 +454,7 @@ Un menu (le compte, puis les actions d'un bloc ou d'une ligne, la période) est 
 - **Don't** remplacer les couleurs ou la typographie des thèmes publics par celles du shell.
 - **Don't** transformer chaque carte en fenêtre ombrée.
 - **Don't** utiliser d'emoji ou de picto en duotone dans cet espace.
-- **Don't** faire un bouton en pilule, ni poser un picto sur une tuile de fond.
+- **Don't** faire un bouton en pilule, ni poser une icône sur un fond (tuile, pastille, rond, voile au survol) ou dans un cadre (22 octobre 2026, Lilian : « juste l'icône, d'une couleur ou pas »). Un bouton ou une étiquette qui porte un libellé garde sa forme ; une photo, un avatar et une pastille de couleur sont du contenu, pas des fonds d'icône.
 - **Don't** écrire un sous-titre explicatif sous un titre d'onglet, ni un fil d'Ariane qui répète la navigation.
 - **Don't** dire « en ligne » ou « réussi » en vert : l'encre suffit, et le citron dit ce qui se gagne, pas ce qui a marché.
 - **Don't** imbriquer une boîte grise dans une carte.

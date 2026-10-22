@@ -187,8 +187,9 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
         <div className="flex flex-col gap-3">
           <div className="flex items-center gap-3">
             <button type="button" onClick={e => choisirFichier(fichier.current, e.currentTarget)} className="flex shrink-0 flex-col items-center gap-1 self-start transition active:scale-95">
-              <span className="relative grid h-[60px] w-[60px] place-items-center overflow-hidden rounded-full bg-white/[0.08] text-white/70">
-                {reglages.profil.avatar ? <img src={reglages.profil.avatar} alt="" className="h-full w-full object-cover" /> : <Icone nom="photo" taille={24} />}
+              {/* Sans photo, l'icône seule à sa place : pas de rond vide autour. */}
+              <span className="relative grid h-[60px] w-[60px] place-items-center overflow-hidden rounded-full text-white/70">
+                {reglages.profil.avatar ? <img src={reglages.profil.avatar} alt="" className="h-full w-full object-cover" /> : <Icone nom="photo" taille={34} />}
                 {envoi && <span className="absolute inset-0 grid place-items-center bg-black/55 text-[12px] text-nuit">…</span>}
               </span>
               <span className="text-[12.5px] font-medium text-white/60">{reglages.profil.avatar ? 'Changer' : 'Ta photo'}</span>
@@ -296,10 +297,9 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
                 <button type="button" role="radio" aria-checked={choisi} tabIndex={choisi || (aucun && n === 0) ? 0 : -1}
                   onClick={() => { vibrer(5); onReglages({ ...reglages, theme: t.id, bouton: t.conseil, couleurs: SANS_COULEURS }); }}
                   className="group flex w-full flex-col items-center gap-1.5 rounded-xl transition active:scale-95">
-                  {/* Le thème pris se reconnaît à un trait et une coche, sans fond gris autour. */}
+                  {/* Le thème pris se reconnaît à son trait bleu et à son nom en gras : pas de coche dans une pastille. */}
                   <span className={`relative block w-full rounded-xl outline-offset-2 transition-[outline-color] ${choisi ? 'outline-2 outline-bleu outline' : 'outline-2 outline-transparent outline group-hover:outline-white/20'}`}>
                     <Pastille theme={t} />
-                    {choisi && <span className="absolute -right-1.5 -top-1.5 z-10 grid h-5 w-5 place-items-center rounded-full bg-bleu text-nuit ring-2 ring-nuit"><Icone nom="ui-ok" taille={12} /></span>}
                   </span>
                   <span className={`line-clamp-2 w-full text-center text-[11.5px] leading-tight ${choisi ? 'font-semibold text-white' : 'text-white/70'}`}>{t.nom}</span>
                 </button>

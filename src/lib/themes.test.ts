@@ -53,9 +53,9 @@ test('« Ajouter à ma page », sous les blocs de la page éditée, se voit sur 
 test('le picto d\'une carte se voit sur chaque thème, couleurs changées comprises', () => {
   const essais = [...THEMES, personnaliser(themeParId('klein'), { boutons: '#ffd400' }), personnaliser(themeParId('neige'), { accent: '#ffffff' })];
   for (const t of essais) {
+    // Seul sur la carte, sans rond derrière lui : il se lit sur la carte elle-même.
     const v = variablesTheme(t);
-    const rond = v['--picto-carte-fond'].startsWith('#') ? v['--picto-carte-fond'] : meler(t.surface, t.vedette, 0.16);
-    assert.ok(contraste(v['--picto-carte'], rond) >= 3, `${t.id} : picto sur ${rond} = ${contraste(v['--picto-carte'], rond).toFixed(2)}`);
+    assert.ok(contraste(v['--picto-carte'], t.surface) >= 3, `${t.id} : picto sur ${t.surface} = ${contraste(v['--picto-carte'], t.surface).toFixed(2)}`);
   }
 });
 

@@ -434,9 +434,10 @@ export function BoutonCopier({ texte, onCopie, label, compact = false }: { texte
     if (!(await copierTexte(texte))) return;
     vibrer(8); setCopie(true); onCopie?.(); setTimeout(() => setCopie(false), 1800);
   }
+  // Compact, l'icône seule : ni cadre ni fond derrière elle.
   if (compact) return (
     <button type="button" onClick={copier} aria-label={copie ? 'Adresse copiée' : label ?? 'Copier'}
-      className="adm-button-outline grid h-11 w-11 shrink-0 place-items-center text-white transition active:scale-95 bureau:h-9 bureau:w-9">
+      className="adm-icone-seule grid h-11 w-11 shrink-0 place-items-center text-white transition active:scale-90 bureau:h-9 bureau:w-9">
       <Icone nom={copie ? 'ui-ok' : 'ui-copier'} taille={18} />
     </button>
   );
@@ -543,7 +544,8 @@ export const classeBouton = {
   secondaire: 'adm-button-outline inline-flex min-h-11 items-center justify-center gap-2 px-4 text-[14px] font-medium text-white transition active:scale-[0.98] disabled:opacity-50 bureau:min-h-9 bureau:gap-1.5 bureau:px-3',
   danger: 'adm-button-danger inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 text-[14px] font-semibold transition active:scale-[0.98] disabled:opacity-40 bureau:min-h-9 bureau:rounded-lg bureau:px-3 bureau:font-medium',
   discret: 'inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl px-3 text-[14px] font-medium text-white/60 transition hover:bg-white/[0.06] hover:text-white disabled:opacity-50 bureau:min-h-9 bureau:rounded-lg bureau:px-2.5',
-  icone: 'grid h-11 w-11 shrink-0 place-items-center rounded-xl text-white/55 transition hover:bg-white/[0.06] hover:text-white bureau:h-8 bureau:w-8 bureau:rounded-lg',
+  // Un bouton fait d'une icône : l'icône seule, qui fonce au survol, jamais un fond derrière elle (22 octobre 2026).
+  icone: 'grid h-11 w-11 shrink-0 place-items-center rounded-xl text-white/55 transition hover:text-white bureau:h-8 bureau:w-8 bureau:rounded-lg',
 };
 
 /** Une étiquette d'état (Toi, Bientôt) : petite et rectangulaire, comme les boutons. Avec `data-offre`, elle prend les couleurs de l'offre. */
@@ -586,8 +588,9 @@ export function ListeChoix<T extends string>({ valeur, options, onChange, label 
           <button key={o.id} type="button" role="radio" aria-checked={pris} tabIndex={arretRadio(pris, i === 0, !options.some(x => x.id === valeur))} onClick={() => { vibrer(4); onChange(o.id); }}
             className="flex w-full items-center gap-3 px-3.5 py-2.5 text-left transition-colors duration-150 hover:bg-white/[0.04]">
             <span className={`min-w-0 flex-1 text-[14px] font-medium ${pris ? 'text-white' : 'text-white/80'}`}>{o.nom}</span>
-            <span className={`grid h-5 w-5 shrink-0 place-items-center rounded-full transition duration-150 ${pris ? 'bg-bleu text-nuit' : 'ring-[1.5px] ring-inset ring-white/20'}`} aria-hidden="true">
-              {pris && <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2.5 6.2 5 8.6l4.5-5" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" /></svg>}
+            {/* La coche seule, en bleu, sur le choix pris : ni rond plein ni cercle vide autour. */}
+            <span className="grid h-5 w-5 shrink-0 place-items-center text-bleu" aria-hidden="true">
+              {pris && <Icone nom="ui-ok" taille={18} />}
             </span>
           </button>
         );

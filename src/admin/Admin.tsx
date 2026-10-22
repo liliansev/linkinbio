@@ -45,10 +45,10 @@ type Sauvegarde = 'ok' | 'encours' | 'erreur';
 
 // Les mêmes pictos pleins que partout ailleurs dans le back office. Comptes, l'outil de Lilian, vient en dernier, à part.
 const ONGLETS: { id: Onglet; nom: string; icone: string }[] = [
-  { id: 'page', nom: 'Ma page', icone: 'document' },
-  { id: 'stats', nom: 'Stats', icone: 'courbe' },
-  { id: 'reglages', nom: 'Réglages', icone: 'reglage' },
-  { id: 'comptes', nom: 'Comptes', icone: 'equipe' },
+  { id: 'page', nom: 'Ma page', icone: 'nav-page' },
+  { id: 'stats', nom: 'Stats', icone: 'nav-stats' },
+  { id: 'reglages', nom: 'Réglages', icone: 'nav-reglages' },
+  { id: 'comptes', nom: 'Comptes', icone: 'nav-comptes' },
 ];
 
 const nouvelId = () => `n${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
@@ -534,9 +534,10 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
   const courte = sansSchema(adresse);
   const coupe = courte.lastIndexOf('/') + 1;
   const titre = onglets.find(o => o.id === onglet)!.nom;
-  const avatar = (taille: string) => reglages.profil.avatar
+  // Sans photo, l'icône seule à sa place, en blanc sur le bleu : jamais de rond derrière une icône.
+  const avatar = (taille: string, icone: number) => reglages.profil.avatar
     ? <img src={reglages.profil.avatar} alt="" className={`${taille} shrink-0 rounded-full object-cover`} />
-    : <span className={`${taille} adm-avatar-vide grid shrink-0 place-items-center rounded-full`}><Icone nom="utilisateur" taille={14} /></span>;
+    : <span className={`${taille} adm-avatar-vide grid shrink-0 place-items-center`}><Icone nom="utilisateur" taille={icone} /></span>;
 
   return (
     <FournisseurOffre value={offre}>
@@ -557,7 +558,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
           <Menu label="Ton compte" haut aligne="largeur" className="adm-compte" titre={`${reglages.profil.nom || compte.pseudo}, ton compte`}
             entete={<p className="truncate px-2.5 pb-1.5 pt-2 text-[12px] text-white/55">{compte.email ? `${compte.email} · ` : ''}{compte.principal ? 'Compte principal' : `Hopla ${OFFRES[compte.plan].nom}`}</p>}
             elements={[{ nom: 'Me déconnecter', icone: 'ui-sortir', action: deconnexion }]}>
-            {avatar('h-6 w-6')}
+            {avatar('h-6 w-6', 18)}
             <span className="min-w-0 flex-1 truncate text-[13.5px] font-medium">{reglages.profil.nom || compte.pseudo}</span>
             <Icone nom="ui-chevrons" taille={14} className="shrink-0 text-white/55" />
           </Menu>
@@ -572,7 +573,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
           {/* Tant que la page n'est pas prête, l'anneau de « Bien démarrer » prend la place de la photo : la liste ne passe plus avant la page. */}
           {onglet === 'page' && demarrage.actif
             ? <AnneauDemarrage faites={demarrage.faites} total={demarrage.etapes.length} onClick={() => setDemarrageOuvert(true)} />
-            : avatar('h-9 w-9')}
+            : avatar('h-9 w-9', 24)}
           <div className="min-w-0 flex-1">
             <p className="truncate text-[15px] font-semibold leading-tight" translate="no">{courte}</p>
             <p className="adm-topbar-etat flex items-center gap-1 text-[12px] leading-tight" data-erreur={sauvegarde === 'erreur' || undefined} aria-live="polite">
@@ -580,8 +581,8 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
             </p>
           </div>
           <BoutonCopier compact texte={adresse} label="Copier l’adresse de ta page" onCopie={noterPartage} />
-          {/* Sous 390 px, l'œil seul : l'adresse garde la place d'être lue. */}
-          <button type="button" onClick={() => setApercu(true)} className="adm-button-outline flex min-h-11 items-center justify-center gap-1.5 px-3.5 text-[13px] font-medium max-[389px]:w-11 max-[389px]:px-0"><Icone nom="ui-oeil" taille={17} className="shrink-0" /><span className="max-[389px]:sr-only">Aperçu</span></button>
+          {/* Sous 390 px, l'œil seul, sans cadre : l'adresse garde la place d'être lue. */}
+          <button type="button" onClick={() => setApercu(true)} className="adm-button-outline adm-apercu-bouton flex min-h-11 items-center justify-center gap-1.5 px-3.5 text-[13px] font-medium max-[389px]:w-11 max-[389px]:px-0"><Icone nom="ui-oeil" taille={17} className="shrink-0" /><span className="max-[389px]:sr-only">Aperçu</span></button>
         </div>
         {/* Au bureau, une seule rangée : le nom de l'écran, puis ce qui sert ici. Pas de barre vide, pas de deuxième titre. */}
         <div className="hidden h-14 items-center gap-2 pl-6 pr-4 lg:flex">

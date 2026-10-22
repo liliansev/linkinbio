@@ -391,6 +391,7 @@ const NOMS_PALETTE: Record<string, string> = {
 /** Une couleur : celle du thème, une de la palette, ou n'importe laquelle au sélecteur. */
 function ChoixCouleur({ nom, valeur, duTheme, onChange }: { nom: string; valeur: string; duTheme: string; onChange: (v: string) => void }) {
   const actuelle = valeur || duTheme;
+  const perso = !!valeur && !PALETTE.includes(valeur);
   const pastille = (c: string, choisie: boolean, etiquette: string, action: () => void) => (
     <button type="button" onClick={() => { vibrer(4); action(); }} aria-pressed={choisie} aria-label={etiquette} title={etiquette}
       className={`relative h-8 w-8 shrink-0 rounded-full ring-1 ring-inset ring-white/20 transition before:absolute before:-inset-1 before:content-[''] active:scale-90 ${choisie ? 'outline-2 outline-offset-2 outline-white' : ''}`} style={{ background: c }} />
@@ -405,9 +406,10 @@ function ChoixCouleur({ nom, valeur, duTheme, onChange }: { nom: string; valeur:
         {pastille(duTheme, !valeur, `${nom} : celle du thème`, () => onChange(''))}
         <span className="mx-0.5 h-8 w-px self-center bg-white/10" aria-hidden="true" />
         {PALETTE.filter(c => c !== duTheme.toLowerCase()).map(c => pastille(c, valeur === c, `${nom} : ${NOMS_PALETTE[c]}`, () => onChange(c)))}
-        <label className={`relative grid h-8 w-8 shrink-0 cursor-pointer place-items-center rounded-full bg-white/[0.08] text-white/80 ring-1 ring-inset ring-white/20 transition before:absolute before:-inset-1 before:content-[''] hover:bg-white/[0.14] ${valeur && !PALETTE.includes(valeur) ? 'outline-2 outline-offset-2 outline-white' : ''}`}
-          title="Une autre couleur" style={valeur && !PALETTE.includes(valeur) ? { background: valeur } : undefined}>
-          <Icone nom="ui-plus" taille={16} />
+        {/* Une autre couleur : le « + » seul, sans rond autour ; prise, elle devient une pastille de couleur comme les autres. */}
+        <label className={`relative grid h-8 w-8 shrink-0 cursor-pointer place-items-center rounded-full transition before:absolute before:-inset-1 before:content-[''] ${perso ? 'ring-1 ring-inset ring-white/20 outline-2 outline-offset-2 outline-white' : 'text-white/60 hover:text-white'}`}
+          title="Une autre couleur" style={perso ? { background: valeur } : undefined}>
+          {!perso && <Icone nom="ui-plus" taille={20} />}
           <input type="color" value={actuelle} onChange={e => onChange(e.target.value.toLowerCase())} className="absolute inset-0 h-full w-full cursor-pointer opacity-0" aria-label={`${nom} : une autre couleur`} />
         </label>
       </div>

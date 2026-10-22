@@ -179,9 +179,10 @@ export function PageLiens({ page, apercu = false, edition, liste }: {
         )}
         <header className="lp-tete" {...fige}>
           {edition ? (
-            <button type="button" className="lp-ed-photo" onClick={e => edition.photo(e.currentTarget)} aria-label={reglages.profil.avatar ? 'Changer la photo' : 'Ajouter une photo'}>
-              {reglages.profil.avatar ? <img className="lp-avatar" src={reglages.profil.avatar} alt="" width={96} height={96} /> : <span className="lp-avatar lp-ed-sans-photo" />}
-              <span className="lp-ed-pastille">{edition.envoiPhoto ? '…' : <Icone nom="photo" taille={16} />}</span>
+            <button type="button" className="lp-ed-photo" onClick={e => edition.photo(e.currentTarget)} aria-label={reglages.profil.avatar ? 'Changer la photo' : 'Ajouter une photo'}
+              aria-busy={edition.envoiPhoto || undefined} data-envoi={edition.envoiPhoto || undefined}>
+              {/* La photo se touche elle-même ; sans photo, l'icône seule à sa place : ni pastille ni rond vide. */}
+              {reglages.profil.avatar ? <img className="lp-avatar" src={reglages.profil.avatar} alt="" width={96} height={96} /> : <span className="lp-ed-sans-photo"><Icone nom="photo" taille={40} /></span>}
             </button>
           ) : reglages.profil.avatar && <img className="lp-avatar" src={reglages.profil.avatar} alt="" width={96} height={96} />}
           {/* Dans le back office, la page n'est qu'un aperçu : son nom n'y prend pas le titre principal. */}
@@ -484,22 +485,15 @@ export function BlocPublic({ bloc, reglages, clic, cible, apercu, maintenant, ps
             </a>
           );
         }
-        const picto = bloc.icone ? (ICONES[bloc.icone] ? <Icone nom={bloc.icone} taille={bloc.format === 'carte' ? 28 : 22} /> : bloc.icone) : null;
+        // Le picto se pose seul, à l'encre du bouton ; sur une photo, il n'a pas sa place.
+        const picto = bloc.icone ? (ICONES[bloc.icone] ? <Icone nom={bloc.icone} taille={bloc.format === 'carte' ? 30 : 24} /> : bloc.icone) : null;
         const hote = nomDeDomaine(bloc.url);
         if (bloc.format === 'carte') {
           return avecCode(
             <a className={`lp-carte ${teinte} ${anim}`} data-format="carte" href={bloc.url} rel={rel} onClick={clic} {...cible} {...nosnippet}>
-              {bloc.image ? (
-                <span className="lp-carte-visuel">
-                  <img src={bloc.image} alt="" loading="lazy" />
-                  {picto && <span className="lp-carte-tuile" aria-hidden="true">{picto}</span>}
-                </span>
-              ) : (
-                <span className="lp-carte-visuel lp-carte-motif" aria-hidden="true">
-                  <span className="lp-carte-tuile">{picto ?? <Icone nom="lien" taille={28} />}</span>
-                </span>
-              )}
+              {bloc.image && <span className="lp-carte-visuel"><img src={bloc.image} alt="" loading="lazy" /></span>}
               <span className="lp-carte-corps">
+                {!bloc.image && <span className="lp-carte-picto" aria-hidden="true">{picto ?? <Icone nom="lien" taille={30} />}</span>}
                 {mention}
                 <span className="lp-carte-titre">{bloc.titre || hote}</span>
                 {bloc.sousTitre && <span className="lp-carte-sous">{bloc.sousTitre}</span>}
@@ -514,7 +508,7 @@ export function BlocPublic({ bloc, reglages, clic, cible, apercu, maintenant, ps
         }
         return avecCode(
           <a className={`lp-carte ${teinte} ${anim}`} data-format="bandeau" href={bloc.url} rel={rel} onClick={clic} {...cible} {...nosnippet}>
-            {bloc.image ? <img className="lp-carte-tuile" src={bloc.image} alt="" loading="lazy" /> : picto && <span className="lp-carte-tuile" aria-hidden="true">{picto}</span>}
+            {bloc.image ? <img className="lp-carte-tuile" src={bloc.image} alt="" loading="lazy" /> : picto && <span className="lp-carte-picto" aria-hidden="true">{picto}</span>}
             <span className="lp-carte-texte">
               {mention}
               <span className="lp-carte-titre">{bloc.titre || hote}</span>
@@ -553,10 +547,9 @@ function Produit({ bloc, rel, anim, clic, cible, nosnippet, mention }: { bloc: B
   if (bloc.vedette) {
     return (
       <a className={`lp-carte lp-produit lp-accent ${anim}`} data-format="carte" href={bloc.url} rel={rel} onClick={clic} {...cible} {...nosnippet}>
-        {bloc.image
-          ? <span className="lp-carte-visuel"><img src={bloc.image} alt="" loading="lazy" /></span>
-          : <span className="lp-carte-visuel lp-carte-motif" aria-hidden="true"><span className="lp-carte-tuile"><Icone nom="bloc-produit" taille={28} /></span></span>}
+        {bloc.image && <span className="lp-carte-visuel"><img src={bloc.image} alt="" loading="lazy" /></span>}
         <span className="lp-carte-corps">
+          {!bloc.image && <span className="lp-carte-picto" aria-hidden="true"><Icone nom="bloc-produit" taille={30} /></span>}
           {mention}
           <span className="lp-carte-titre">{bloc.titre || hote}</span>
           {bloc.description && <span className="lp-carte-description">{bloc.description}</span>}
@@ -572,7 +565,7 @@ function Produit({ bloc, rel, anim, clic, cible, nosnippet, mention }: { bloc: B
     <a className={`lp-carte lp-produit ${anim}`} data-format="bandeau" href={bloc.url} rel={rel} onClick={clic} {...cible} {...nosnippet}>
       {bloc.image
         ? <img className="lp-carte-tuile" src={bloc.image} alt="" loading="lazy" />
-        : <span className="lp-carte-tuile" aria-hidden="true"><Icone nom="bloc-produit" taille={24} /></span>}
+        : <span className="lp-carte-picto" aria-hidden="true"><Icone nom="bloc-produit" taille={24} /></span>}
       <span className="lp-carte-texte">
         {mention}
         <span className="lp-carte-titre">{bloc.titre || hote}</span>
@@ -595,7 +588,7 @@ function Soutien({ bloc, rel, clic, cible, t }: { bloc: Bloc; rel: string; clic:
   return (
     <section className="lp-newsletter lp-soutien">
       <div className="lp-newsletter-tete">
-        <span className="lp-newsletter-picto" aria-hidden="true"><Icone nom="bloc-soutien" taille={20} /></span>
+        <span className="lp-newsletter-picto" aria-hidden="true"><Icone nom="bloc-soutien" taille={26} /></span>
         <span className="lp-newsletter-textes">
           <h2 className="lp-newsletter-titre">{bloc.titre}</h2>
           {bloc.sousTitre && <p className="lp-sous">{bloc.sousTitre}</p>}
@@ -631,7 +624,7 @@ function Reservation({ bloc, rel, anim, clic, cible, nosnippet }: { bloc: Bloc; 
       {...(dedans ? { 'aria-haspopup': 'dialog' as const } : cible)} {...nosnippet}>
       {bloc.image
         ? <img className="lp-carte-tuile" src={bloc.image} alt="" loading="lazy" />
-        : <span className="lp-carte-tuile" aria-hidden="true"><Icone nom={bloc.icone && ICONES[bloc.icone] ? bloc.icone : 'bloc-reservation'} taille={22} /></span>}
+        : <span className="lp-carte-picto" aria-hidden="true"><Icone nom={bloc.icone && ICONES[bloc.icone] ? bloc.icone : 'bloc-reservation'} taille={24} /></span>}
       <span className="lp-carte-texte">
         <span className="lp-carte-titre">{bloc.titre}</span>
         <span className="lp-sous">{bloc.sousTitre || nomAgenda(bloc.url)}</span>
@@ -659,7 +652,7 @@ function CompteARebours({ bloc, depart, apercu, t }: { bloc: Bloc; depart: numbe
   const quand = new Date(ouverture).toLocaleString(LOCALE, { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
   return (
     <div className={`lp-carte lp-rebours ${bloc.vedette && bloc.teinte === 'accent' ? 'lp-accent' : ''}`} data-format="bandeau" role="timer" aria-label={`${bloc.titre} : ${t.ouvreLe(quand)}`}>
-      <span className="lp-carte-tuile" aria-hidden="true"><Icone nom={bloc.icone && ICONES[bloc.icone] ? bloc.icone : 'horloge'} taille={22} /></span>
+      <span className="lp-carte-picto" aria-hidden="true"><Icone nom={bloc.icone && ICONES[bloc.icone] ? bloc.icone : 'horloge'} taille={24} /></span>
       <span className="lp-carte-texte">
         <Mention bloc={bloc} t={t} />
         <span className="lp-carte-titre">{bloc.titre || t.bientot}</span>
@@ -682,7 +675,7 @@ function Lecteur({ id, titre, vignette, clic, legende }: { id: string; titre: st
         ) : (
           <button type="button" className="lp-video-jouer" onClick={() => { setJoue(true); clic(); }} aria-label={`Lire la vidéo : ${titre}`}>
             <img src={vignette} alt="" loading="lazy" />
-            <span className="lp-video-play"><Icone nom="play" taille={26} /></span>
+            <span className="lp-video-play"><Icone nom="play" taille={52} /></span>
           </button>
         )}
       </div>
@@ -732,7 +725,7 @@ function Newsletter({ bloc, apercu }: { bloc: Bloc; apercu: boolean }) {
   return (
     <section className="lp-newsletter">
       <div className="lp-newsletter-tete">
-        <span className="lp-newsletter-picto" aria-hidden="true"><Icone nom="bloc-newsletter" taille={20} /></span>
+        <span className="lp-newsletter-picto" aria-hidden="true"><Icone nom="bloc-newsletter" taille={26} /></span>
         <span className="lp-newsletter-textes">
           <h2 className="lp-newsletter-titre">{bloc.titre}</h2>
           {bloc.sousTitre && <p className="lp-sous">{bloc.sousTitre}</p>}
@@ -770,7 +763,7 @@ function Inscription({ bloc, apercu, pseudo, t }: { bloc: Bloc; apercu: boolean;
   return (
     <section className="lp-newsletter lp-inscription">
       <div className="lp-newsletter-tete">
-        <span className="lp-newsletter-picto" aria-hidden="true"><Icone nom="bloc-inscription" taille={20} /></span>
+        <span className="lp-newsletter-picto" aria-hidden="true"><Icone nom="bloc-inscription" taille={26} /></span>
         <span className="lp-newsletter-textes">
           <h2 className="lp-newsletter-titre">{bloc.titre}</h2>
           {bloc.sousTitre && <p className="lp-sous">{bloc.sousTitre}</p>}
@@ -824,7 +817,7 @@ function Drop({ bloc, t, apercu, pseudo, clic, cible }: { bloc: Bloc; t: Textes;
     <div className="lp-drop" data-complet={complet || undefined} data-debloque={url ? true : undefined}>
       <button type="button" className={`lp-carte lp-drop-tete ${bloc.vedette && bloc.teinte === 'accent' ? 'lp-accent' : ''}`} data-format="bandeau" aria-expanded={avecCode ? ouvert || !!url : undefined} disabled={complet || etat.type === 'envoi' || !!url}
         onClick={() => (avecCode ? setOuvert(o => !o) : debloquer())}>
-        <span className="lp-carte-tuile" aria-hidden="true"><Icone nom={url ? 'check' : bloc.icone && ICONES[bloc.icone] ? bloc.icone : 'cadenas'} taille={22} /></span>
+        <span className="lp-carte-picto" aria-hidden="true"><Icone nom={url ? 'check' : bloc.icone && ICONES[bloc.icone] ? bloc.icone : 'cadenas'} taille={24} /></span>
         <span className="lp-carte-texte">
           <Mention bloc={bloc} t={t} />
           <span className="lp-carte-titre">{bloc.titre || t.reserve}</span>

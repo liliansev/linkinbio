@@ -94,10 +94,10 @@ function BackOffice({ etape }: { etape: number }) {
         </div>
       </div>
       <nav className="hl-bo-onglets">
-        <span data-actif=""><Icone nom="lien" taille={18} />Ma page</span>
-        <span><Icone nom="courbe" taille={18} />Stats</span>
+        <span data-actif=""><Icone nom="nav-page" taille={18} />Ma page</span>
+        <span><Icone nom="nav-stats" taille={18} />Stats</span>
         <span><Icone nom="palette" taille={18} />Personnaliser</span>
-        <span><Icone nom="reglage" taille={18} />Réglages</span>
+        <span><Icone nom="nav-reglages" taille={18} />Réglages</span>
       </nav>
     </div>
   );

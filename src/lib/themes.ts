@@ -274,12 +274,11 @@ const enHex = (n: number) => Math.round(Math.min(255, Math.max(0, n))).toString(
 export const meler = (a: string, b: string, t: number) =>
   '#' + [1, 3, 5].map(i => enHex(parseInt(a.slice(i, i + 2), 16) * (1 - t) + parseInt(b.slice(i, i + 2), 16) * t)).join('');
 /**
- * Le picto d'une carte (newsletter, liste, soutien) : l'accent sur un rond teinté d'accent quand il s'y
- * voit, sinon le texte de l'accent sur un rond plein d'accent (le bleu de bauhaus sur son rouge).
+ * Le picto d'une carte (newsletter, liste, soutien), posé seul sur la carte, sans rond derrière lui
+ * (22 octobre 2026, Lilian : jamais d'icône sur un fond) : l'accent quand il se voit sur la carte,
+ * sinon le texte de la carte.
  */
-export const pictoCarte = (theme: Theme) => (contraste(theme.vedette, meler(theme.surface, theme.vedette, 0.16)) >= 3
-  ? { encre: theme.vedette, fond: `color-mix(in srgb, ${theme.vedette} 16%, transparent)` }
-  : { encre: theme.vedetteTexte, fond: theme.vedette });
+export const pictoCarte = (theme: Theme) => (contraste(theme.vedette, theme.surface) >= 3 ? theme.vedette : theme.surfaceTexte);
 /** Le texte d'une carte fondu dans sa couleur, autant que le permet un contraste de 4,5 : pour ses mentions en petit. */
 export const douxSurCarte = (theme: Theme) => {
   let part = 0.45;
@@ -334,7 +333,7 @@ export function variablesTheme(theme: Theme): Record<string, string> {
   return {
     '--fond': theme.fond, '--fond-uni': theme.fondUni, '--texte': theme.texte, '--doux': theme.doux, '--titre-section': titreSection(theme),
     '--surface': theme.surface, '--surface-texte': theme.surfaceTexte, '--vedette': theme.vedette, '--vedette-texte': theme.vedetteTexte,
-    '--picto-carte': pictoCarte(theme).encre, '--picto-carte-fond': pictoCarte(theme).fond, '--surface-doux': douxSurCarte(theme),
+    '--picto-carte': pictoCarte(theme), '--surface-doux': douxSurCarte(theme),
     '--police': POLICES[theme.police].corps, '--police-titre': POLICES[theme.police].titre, '--ombre-teinte': theme.ombre,
     // La typographie réglée du thème : la page la lit sur le nom, les sections, les boutons et les cartes.
     ...role('nom', theme.typo.nom), ...role('section', theme.typo.section), ...role('btn', theme.typo.bouton), ...role('carte', theme.typo.carte),

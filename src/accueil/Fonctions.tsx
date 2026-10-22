@@ -249,7 +249,7 @@ function EcranDrop({ drop }: { drop: number }) {
         <CroquisLien titre="Mes affiches" />
         <div className="hl-cq-drop" data-ouvert={ouvert || undefined}>
           <div className="hl-cq-drop-tete">
-            <span key={String(ouvert)} className="hl-cq-drop-picto"><Icone nom={ouvert ? 'check' : 'cadenas'} taille={16} /></span>
+            <span key={String(ouvert)} className="hl-cq-drop-picto"><Icone nom={ouvert ? 'check' : 'cadenas'} taille={22} /></span>
             <span><b>Accès en avant-première</b><span className="hl-cq-sous">{ouvert ? 'Débloqué, la place est à toi' : 'Avec un code'}</span></span>
             <span key={drop >= 3 ? 2 : 3} className="hl-cq-places">Plus que {drop >= 3 ? 2 : 3} places</span>
           </div>
@@ -295,7 +295,7 @@ function EcranListe({ liste }: { liste: number }) {
         <CroquisLien titre="Ma recette du dimanche" picto={<Icone nom="youtube" taille={14} />} />
         <div className="hl-cq-liste" data-note={note || undefined}>
           <div className="hl-cq-drop-tete">
-            <span className="hl-cq-drop-picto"><Icone nom="courrier" taille={16} /></span>
+            <span className="hl-cq-drop-picto"><Icone nom="courrier" taille={22} /></span>
             <span><b>Rejoins ma liste</b><span className="hl-cq-sous">Une recette chaque dimanche</span></span>
           </div>
           {note
@@ -467,9 +467,14 @@ function DashboardStats() {
       </figure>
       <div className="hp-dashboard-details">
         <div><p>D’où viennent les visites</p><ul>{([['Instagram', 'instagram', 61], ['Accès direct', 'lien', 24], ['YouTube', 'youtube', 15]] as const).map(([nom, icone, part]) => {
-          // Comme au back office : le logo du réseau dans sa couleur, sa barre dans une teinte claire de celle-ci.
+          // Comme au back office : le logo du réseau dans sa couleur, devant sa barre teintée, jamais posé dessus.
           const couleur = COULEURS_SOURCES[nom];
-          return <li key={nom} style={couleur && { '--picto': couleur.picto, '--barre': couleur.barre } as CSSProperties}><span className="hp-dashboard-barre" style={{ width: `${part}%` }} /><span className="hp-dashboard-source"><Icone nom={icone} taille={14} />{nom}</span><b>{part}&#8239;%</b></li>;
+          return (
+            <li key={nom} data-source="" style={couleur && { '--picto': couleur.picto, '--barre': couleur.barre } as CSSProperties}>
+              <span className="hp-dashboard-source"><Icone nom={icone} taille={16} /><span><span className="hp-dashboard-barre" style={{ width: `${part}%` }} />{nom}</span></span>
+              <b>{part}&#8239;%</b>
+            </li>
+          );
         })}</ul></div>
         <div><p>Les liens les plus cliqués</p><ul>{[['Mes pièces du moment', 35], ['Un samedi à l’atelier', 28], ['Les coulisses en vidéo', 19]].map(([nom, clics]) => <li key={nom}><span>{nom}</span><b>{clics}</b></li>)}</ul></div>
       </div>
