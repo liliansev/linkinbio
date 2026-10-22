@@ -51,13 +51,14 @@ export function lienMontant(url: string, montant: number): string {
 export const lienSansMontant = (url: string) => comptePaypal(url) ?? url;
 
 /** Les agendas que la page sait nommer. */
-export const NOMS_AGENDA = { calendly: 'Calendly', calcom: 'Cal.com', google: 'Google Agenda', planity: 'Planity' } as const;
+export const NOMS_AGENDA = { calendly: 'Calendly', calcom: 'Cal.com', lemcal: 'lemcal', google: 'Google Agenda', planity: 'Planity' } as const;
 export type Agenda = keyof typeof NOMS_AGENDA;
 
 export function agendaDe(url: string): Agenda | null {
   const h = hote(url);
   if (sur(h, 'calendly.com')) return 'calendly';
   if (h === 'cal.com' || h === 'app.cal.com' || h === 'cal.eu') return 'calcom';
+  if (sur(h, 'lemcal.com')) return 'lemcal';
   if (h === 'calendar.google.com' || h === 'calendar.app.google') return 'google';
   if (sur(h, 'planity.com')) return 'planity';
   return null;

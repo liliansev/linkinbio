@@ -27,6 +27,7 @@ import { focusAuto } from '../lib/clavier';
 
 /** Au téléphone, la page ouverte dans la feuille d'un bloc : l'essentiel (`null`), « Plus de réglages », ou une règle. */
 type PageBloc = 'plus' | PageRegle | null;
+const hoteDe = (url: string) => { try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return ''; } };
 const NOMS_PAGES: Record<'plus' | PageRegle, string> = { plus: 'Plus de réglages', moment: 'Quand l’afficher', reseaux: 'Afficher sur', acces: 'Accès réservé', animation: 'Animation' };
 const niveau = (p: PageBloc) => (p === null ? 0 : p === 'plus' ? 1 : 2);
 
@@ -293,7 +294,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
     .filter(([oui]) => oui).map(([, nom]) => nom);
   const reglees = reglages_.length > 2 ? `${reglages_.slice(0, 2).join(', ')} et ${reglages_.length - 2} de plus` : reglages_.join(', ');
   // Rien de réglé : la ligne dit ce qu'elle cache.
-  const cache = b.type === 'lien' ? 'Icône, image, règles'
+  const cache = b.type === 'lien' ? 'Sous-titre, icône, règles'
     : b.type === 'reservation' ? 'Sous-titre, icône, règles'
     : b.type === 'soutien' ? (avecMontants(adresseValide) ? 'Sous-titre, montants, règles' : 'Sous-titre, règles')
     : b.type === 'produit' ? (bureau ? 'Lien partenaire, règles' : 'Mise en avant, règles')
@@ -337,6 +338,10 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
    * Un lien sans texte prend le nom du site, puis son vrai titre : seul le titre est demandé au serveur, il ne
    * télécharge ni image ni capture pour si peu ; un profil de réseau prend son icône. Un produit lit sa boutique.
    */
+  /** L'adresse dont viennent le texte, l'image et la description, et ce que Hopla y a lu. */
+  const luLien = useRef({ url: adresseSaisie(bloc.url), titre: '', image: '', description: '' });
+  /** L'adresse a été effacée : celle qu'on retape remplace tout ce qui venait de l'ancienne. */
+  const efface = useRef(false);
   async function lireAdresse(saisie = b.url) {
     if (b.type === 'video' || !TYPES_ADRESSE.includes(b.type)) return;
     const url = adresseSaisie(saisie);
@@ -346,15 +351,49 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
     if (b.type !== 'lien') return;
     const reseau = !b.icone ? reseauDeUrl(url) : null;
     if (reseau) setB(avant => (avant.icone ? avant : { ...avant, icone: reseau }));
-    if (b.titre.trim()) return;
+    // Une autre adresse relit le site d'elle-même (Lilian, 22 octobre 2026) : le texte, l'image et la description qui venaient
+    // de l'ancienne (vides, lus par Hopla, ou l'adresse effacée puis retapée) prennent ceux de la nouvelle ; ce qu'on a écrit reste.
+    const ancien = luLien.current;
+    if (url === ancien.url && b.titre.trim()) return;
+    const effacee = efface.current;
+    efface.current = false;
+    const autreSite = !!ancien.url && hoteDe(url) !== hoteDe(ancien.url);
+    const titreAuto = !b.titre.trim() || effacee || b.titre === ancien.titre || (!!ancien.url && b.titre === nomSite(ancien.url));
+    const imageAuto = !!b.image && (effacee || autreSite || b.image === ancien.image);
+    const descriptionAuto = !!b.description && (effacee || autreSite || b.description === ancien.description);
+    luLien.current = { url, titre: '', image: '', description: '' };
+    if (!titreAuto && !imageAuto && !descriptionAuto) return;
     const repli = nomSite(url);
-    if (!repli) return;
-    setB(avant => (avant.titre.trim() ? avant : { ...avant, titre: repli }));
+    const titreDepart = b.titre;
+    const pareil = (avant: Bloc) => adresseSaisie(avant.url) === url;
+    if (titreAuto && repli) {
+      luLien.current.titre = repli;
+      setB(avant => (pareil(avant) && avant.titre === titreDepart ? { ...avant, titre: repli } : avant));
+    }
+    const imageDepart = b.image, descriptionDepart = b.description;
+    if (imageAuto || descriptionAuto) setLecture(true);
     try {
-      const site = await apercuSite(url, false);
-      if (site.titre) setB(avant => (avant.titre === repli && adresseSaisie(avant.url) === url ? { ...avant, titre: site.titre.slice(0, 80) } : avant));
+      const site = await apercuSite(url, imageAuto ? 'partage' : false);
+      const image = imageAuto && site.image ? await envoyerImage(await preparerImage(await (await fetch(site.image)).blob(), 'large')) : '';
+      const titre = site.titre.slice(0, 80);
+      luLien.current = { url, titre: titreAuto ? titre || repli : '', image, description: descriptionAuto ? site.description : '' };
+      setB(avant => (!pareil(avant) ? avant : {
+        ...avant,
+        titre: titreAuto && titre && (avant.titre === repli || avant.titre === titreDepart) ? titre : avant.titre,
+        image: imageAuto && avant.image === imageDepart ? image : avant.image,
+        description: descriptionAuto && avant.description === descriptionDepart ? site.description : avant.description,
+      }));
     } catch { /* le nom du site suffit */ }
+    finally { setLecture(false); }
   }
+  // L'adresse tapée se relit d'elle-même dès qu'on cesse de taper : « Terminé » trouve le texte et l'image déjà là.
+  useEffect(() => {
+    if (b.type !== 'lien' && b.type !== 'produit') return;
+    const url = adresseSaisie(b.url);
+    if (!url || url === luLien.current.url) return;
+    const t = setTimeout(() => void lireAdresse(b.url), 900);
+    return () => clearTimeout(t);
+  }, [b.url]); // eslint-disable-line react-hooks/exhaustive-deps
   // Un lien neuf qui arrive avec son adresse (collée sur la page ou dans Ajouter) cherche son texte tout de suite.
   useEffect(() => { if (nouveau && bloc.url && !bloc.titre.trim()) void lireAdresse(bloc.url); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -549,7 +588,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
     <Champ label={b.type === 'video' ? 'Adresse de la vidéo YouTube' : b.type === 'produit' ? 'Adresse du produit' : b.type === 'reservation' ? 'Adresse de ton agenda' : 'Adresse'} erreur={erreurDe('url')} aide={aideUrl}>
       <input className={classeSaisie} type="url" inputMode="url" autoCapitalize="none" autoCorrect="off"
         placeholder={b.type === 'video' ? 'https://youtu.be/…' : b.type === 'soutien' ? 'https://paypal.me/…' : b.type === 'reservation' ? 'https://calendly.com/…' : 'https://…'}
-        value={b.url} onChange={e => maj({ url: e.target.value })} onBlur={() => lireAdresse()} autoFocus={focusAuto(nouveau && !bloc.url)}
+        value={b.url} onChange={e => { if (!e.target.value.trim()) efface.current = true; maj({ url: e.target.value }); }} onBlur={() => lireAdresse()} autoFocus={focusAuto(nouveau && !bloc.url)}
         onPaste={e => { const texte = e.clipboardData.getData('text'); if (!b.url.trim() && adresseSaisie(texte)) setTimeout(() => lireAdresse(texte)); }}
         onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); document.getElementById('bloc-titre')?.focus(); } }} />
     </Champ>
@@ -578,6 +617,24 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
             <button type="button" onClick={() => lireBoutique(adresseValide, true)} disabled={lecture || envoi} className={classeBouton.secondaire}>{lecture ? 'Lecture de la boutique…' : 'Depuis la boutique'}</button>
           )}
           <button type="button" onClick={e => choisirFichier(fichier.current, e.currentTarget)} disabled={envoi} className={classeBouton.secondaire}>{envoi ? 'Envoi…' : b.image ? 'Changer' : 'Ajouter une photo'}</button>
+          {b.image && <button type="button" onClick={() => maj({ image: '' })} className={classeBouton.discret}>Retirer</button>}
+        </div>
+        {champFichier}
+      </div>
+      {erreurImage && <div className="mt-1.5">{erreurImage}</div>}
+    </div>
+  );
+  // L'image d'un lien, sous les yeux comme la photo d'un produit (Lilian, 22 octobre 2026) : plus besoin d'aller la chercher dans « Plus de réglages ».
+  const imageLien = b.type === 'lien' && (
+    <div>
+      <span className="mb-1.5 block text-[12.5px] font-medium text-white/60 bureau:text-white/75">Image (facultatif)</span>
+      <div className="flex min-h-12 items-center gap-3 bureau:min-h-11 bureau:gap-2">
+        {b.image && <img src={b.image} alt="" className="h-12 w-12 shrink-0 rounded-lg object-cover bureau:h-11 bureau:w-11" />}
+        <div className="flex flex-wrap items-center gap-2 bureau:gap-1.5">
+          {!!adresseValide && (
+            <button type="button" onClick={recupererApercu} disabled={lecture || envoi} className={classeBouton.secondaire}>{lecture ? 'Lecture du site…' : b.image ? 'Reprendre celle du site' : 'Depuis le site'}</button>
+          )}
+          <button type="button" onClick={e => choisirFichier(fichier.current, e.currentTarget)} disabled={envoi} className={classeBouton.secondaire}>{envoi ? 'Envoi…' : b.image ? 'Changer' : 'Ajouter'}</button>
           {b.image && <button type="button" onClick={() => maj({ image: '' })} className={classeBouton.discret}>Retirer</button>}
         </div>
         {champFichier}
@@ -644,6 +701,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
       {b.type === 'preuve' && <p className="text-[12.5px] leading-snug text-white/55">Des chiffres vrais, des avis réels, avec l’accord de leurs auteurs.</p>}
 
       {!paire && champTitre}
+      {imageLien}
       {b.type === 'produit' && (bureau ? <div className="adm-paire">{champPrix}{photoProduit}</div> : <>{champPrix}{photoProduit}</>)}
       {partenaire}
       {b.type === 'derniere-video' && (
@@ -708,19 +766,16 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
                       {grilleIcones}
                     </div>
                   )}
-                  {avecVisuel && (
+                  {b.type === 'reservation' && (
                     <div className={ligne}>
                       <span className="flex-1 text-[13.5px] text-white">Image</span>
                       {b.image && <img src={b.image} alt="" className="h-8 w-8 rounded-md object-cover" />}
-                      {!b.image && b.type === 'lien' && !!adresseValide && (
-                        <button type="button" onClick={recupererApercu} disabled={lecture || envoi} className="adm-valeur">{lecture ? 'Lecture du site…' : 'Depuis le site'}</button>
-                      )}
                       <button type="button" onClick={e => choisirFichier(fichier.current, e.currentTarget)} disabled={envoi} className="adm-valeur">{envoi ? 'Envoi…' : b.image ? 'Changer' : 'Ajouter'}</button>
                       {b.image && <button type="button" onClick={() => maj({ image: '' })} aria-label="Retirer l’image" title="Retirer l’image" className={classeBouton.icone}><Icone nom="ui-corbeille" taille={15} /></button>}
                       {champFichier}
                     </div>
                   )}
-                  {b.type !== 'produit' && erreurImage}
+                  {b.type === 'reservation' && erreurImage}
                   {bascules(true, true)}
                   {description && <div className="pt-2">{description}</div>}
                   {formeCouleur && <div className="pt-2">{formeCouleur}</div>}
@@ -862,20 +917,15 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
                   </button>
                   {grilleIcones}
                 </div>
-                <div className="flex items-center gap-3">
+                {b.type === 'reservation' && <div className="flex items-center gap-3">
                   {b.image && <img src={b.image} alt="" className="h-14 w-14 rounded-xl object-cover" />}
                   <div className="flex flex-1 flex-wrap gap-2">
                     <button type="button" onClick={e => choisirFichier(fichier.current, e.currentTarget)} disabled={envoi} className={classeBouton.secondaire}>{envoi ? 'Envoi…' : b.image ? 'Changer l’image' : 'Ajouter une image'}</button>
-                    {b.type === 'lien' && !!adresseValide && (
-                      <button type="button" onClick={recupererApercu} disabled={lecture || envoi} className={classeBouton.secondaire}>
-                        {lecture ? 'Lecture du site…' : 'Remplir depuis le site'}
-                      </button>
-                    )}
                     {b.image && <button type="button" onClick={() => maj({ image: '' })} className={classeBouton.discret}>Retirer</button>}
                   </div>
                   {champFichier}
-                </div>
-                {erreurImage && <div className="-mt-2">{erreurImage}</div>}
+                </div>}
+                {b.type === 'reservation' && erreurImage && <div className="-mt-2">{erreurImage}</div>}
               </>
             )}
 

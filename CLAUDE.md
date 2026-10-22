@@ -121,6 +121,9 @@ embarque tout : l'image n'a pas de `node_modules`.
   rares s'ouvrent en pages (« Plus de réglages », puis chaque règle, `PagesBloc` dans
   `ReglesBloc.tsx`), avec une flèche dans l'en-tête de la feuille (`useFilFeuille`). Un bloc
   neuf revient au choix des blocs par sa flèche ; ce choix s'ouvre sur « Colle une adresse ».
+  L'image d'un lien est sous son texte, hors de « Plus de réglages », et une autre adresse relit le site d'elle-même
+  dès qu'on cesse de taper (22 octobre 2026, demandé par Lilian) : le texte, l'image et la description qui venaient
+  de l'ancienne adresse (vides, lus par Hopla, ou l'adresse effacée puis retapée) prennent ceux de la nouvelle.
   Le retour du téléphone referme une couche à la fois (`couches.ts` : chaque feuille,
   page de bloc, tiroir du design, sous-page de Réglages ou aperçu pose une entrée dans
   l'historique, que le routeur ne voit pas). En tête, `BienDemarrer.tsx` :

@@ -47,7 +47,7 @@ export const LOGOS_OUTILS: Record<FournisseurListe | 'substack', string> = {
  */
 export const OUTILS_DES_BLOCS: { type: 'preuve' | 'reservation' | 'soutien' | 'produit'; logos: string[] }[] = [
   { type: 'preuve', logos: ['google', 'trustpilot', 'malt'] },
-  { type: 'reservation', logos: ['calendly'] },
+  { type: 'reservation', logos: ['calendly', 'calcom'] },
   { type: 'soutien', logos: ['paypal', 'kofi', 'patreon'] },
   { type: 'produit', logos: ['stripe', 'shopify', 'etsy'] },
 ];

@@ -34,7 +34,7 @@ const HORS_LIGNE = 'Le serveur ne répond pas. Réessaie dans un instant.';
  * Un logo seul, sans rien autour, dans la couleur de sa marque. Un picto Phosphor garde une marge dans sa boîte, le mot
  * de Kit et le graphe de n8n sont bas : un peu plus grands, ils pèsent autant qu'un logo.
  */
-const EN_PLUS: Record<string, number> = { courrier: 2, kit: 4, n8n: 4 };
+const EN_PLUS: Record<string, number> = { courrier: 2, kit: 4, n8n: 4, calcom: 12 };
 function Logo({ nom, taille = 18, className = '' }: { nom: string; taille?: number; className?: string }) {
   return (
     <span className={`flex shrink-0 justify-center text-white ${className}`} style={{ color: COULEURS_LOGOS[nom] }}>
