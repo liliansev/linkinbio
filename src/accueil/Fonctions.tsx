@@ -448,9 +448,10 @@ function DashboardStats() {
         <div className="hp-dashboard-dessin">
           <svg viewBox="0 0 500 180" role="img" aria-label="Vues de lundi à dimanche : 42, 54, 48, 88, 62, 70 et 48. Le meilleur jour est jeudi, avec 88 vues.">
             {[20, 95, 170].map(y => <line key={y} x1="16" x2="484" y1={y} y2={y} stroke="#e8e8e3" />)}
-            <polygon points={`16,170 ${points} 484,170`} fill="#20241f" fillOpacity=".06" />
-            <polyline points={points} fill="none" stroke="#20241f" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
-            <circle cx="250" cy="38" r="4" fill="#20241f" />
+            {/* Le bleu de la courbe du back office (22 octobre 2026) : l'accueil montre l'outil tel qu'il est. */}
+            <polygon points={`16,170 ${points} 484,170`} fill="#292bff" fillOpacity=".08" />
+            <polyline points={points} fill="none" stroke="#292bff" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
+            <circle cx="250" cy="38" r="4" fill="#292bff" />
           </svg>
           <b className="hp-dashboard-pic" aria-hidden="true">88</b>
         </div>

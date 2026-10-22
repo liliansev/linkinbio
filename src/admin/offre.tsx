@@ -33,9 +33,9 @@ export const useVoirOffres = () => useContext(Contexte).voirOffres;
 /** Le nom de l'offre qui débloque une fonction : « Starter », « Pro ». */
 export const offreDe = (f: Fonction) => OFFRES[FONCTIONS[f]].nom;
 
-/** Une petite étiquette au nom de l'offre, à côté d'un titre. */
+/** Une petite étiquette au nom de l'offre, à côté d'un titre, dans les couleurs de l'offre (celles de l'accueil). */
 export function Etiquette({ fonction }: { fonction: Fonction }) {
-  return <span className={classeBadge}>{offreDe(fonction)}</span>;
+  return <span className={classeBadge} data-offre={FONCTIONS[fonction]}>{offreDe(fonction)}</span>;
 }
 
 /**
@@ -56,9 +56,9 @@ export function Reserve({ phrase, fonction, bouton = true, children }: { phrase:
 
 /**
  * L'offre du dessus, en une ligne (Lilian, 21 octobre 2026) : son nom et ce qu'elle apporte de plus parlant,
- * « Passer en Starter : sans la mention Hopla ». Au bureau en bas de la barre latérale, au-dessus du compte ;
- * au téléphone sous la page. Ni pastille ni couleur : un picto, l'offre à l'encre, le reste en gris, et les
- * offres s'ouvrent sur elle. Le calcul (qui la voit, laquelle) est dans `offreSuivante`.
+ * « Passer en Starter : sans la mention Hopla ». Au bureau en bas de la barre latérale bleue, au-dessus du
+ * compte ; au téléphone sous la page, sur une carte du même bleu. Le diamant en citron, l'offre en blanc, et
+ * les offres s'ouvrent sur elle. Le calcul (qui la voit, laquelle) est dans `offreSuivante`.
  */
 export function AppelOffre({ suivante, onClick, className = '' }: { suivante: OffreSuivante; onClick: () => void; className?: string }) {
   return (

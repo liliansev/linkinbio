@@ -7,14 +7,22 @@
 html:has(.adm) { scrollbar-gutter: stable; }
 
 /*
- * La tenue noir et blanc (19 octobre 2026) : le back office parle à tout le
- * monde, sans teinte. Les classes écrites pour l'ancien fond de nuit restent,
- * et leurs couleurs s'inversent ici : dans `.adm`, `white` est l'encre (le
- * texte, les traits, le bouton principal) et `nuit` est le papier (le fond,
- * le texte posé sur un bouton noir). `peche` devient l'encre : un seul accent,
- * le noir. Les tons d'alerte clairs, faits pour la nuit, passent à leur
- * version foncée pour rester lisibles sur le blanc. La page publique garde
- * ses thèmes : elle ne lit aucune de ces couleurs.
+ * L'encre et le papier (19 octobre 2026). Les classes écrites pour l'ancien
+ * fond de nuit restent, et leurs couleurs s'inversent ici : dans `.adm`,
+ * `white` est l'encre (le texte, les traits) et `nuit` est le papier (le fond,
+ * le texte posé sur un bouton plein). `peche` devient l'encre. Les tons
+ * d'alerte clairs, faits pour la nuit, passent à leur version foncée pour
+ * rester lisibles sur le blanc. La page publique garde ses thèmes : elle ne
+ * lit aucune de ces couleurs.
+ *
+ * Les couleurs de l'accueil (22 octobre 2026, demandé par Lilian : « le back
+ * office n'est pas aussi bien en termes de couleurs que la landing page ») :
+ * le bleu Hopla est l'action, la sélection et les données (bouton principal,
+ * onglet ouvert, interrupteur, focus, courbe) ; le citron, ce qui se gagne et
+ * ce qui ressort (mis en avant, mois offerts, une hausse) ; les papiers de
+ * l'accueil, les zones (la page à droite, le fond au téléphone). Comme sur
+ * l'accueil, l'appel prend l'accent de sa surface : bleu sur le papier,
+ * citron sur le bleu. Le rouge reste au danger, l'ambre aux alertes.
  */
 .adm {
   --color-white: #0a0a0a;
@@ -85,11 +93,13 @@ html:has(.adm) { scrollbar-gutter: stable; }
 .adm input[type='datetime-local'] { color-scheme: light; }
 /* Un champ de fichier invisible, posé sur ce qu'on touche au moment de l'ouvrir (voir `choisirFichier`). */
 .adm-fichier { position: fixed; left: 0; top: 0; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
-.adm ::selection { background: #0a0a0a; color: #fff; }
-.adm { scrollbar-color: rgb(0 0 0 / 0.2) transparent; -webkit-tap-highlight-color: transparent; }
-.adm :is(button, a, input, textarea, select, summary, [tabindex]):focus-visible { outline: 2px solid #0a0a0a; outline-offset: 2px; }
+.adm ::selection { background: var(--adm-bleu-pale); color: #0a0a0a; }
+.adm { scrollbar-color: rgb(0 0 0 / 0.2) transparent; -webkit-tap-highlight-color: transparent; caret-color: var(--adm-bleu); }
+.adm :is(button, a, input, textarea, select, summary, [tabindex]):focus-visible { outline: 2px solid var(--adm-bleu); outline-offset: 2px; }
 /* Dans la page qu'on modifie (et ses aperçus), l'anneau prend la couleur du texte du thème : l'encre du back office disparaîtrait sur un thème sombre. */
 .adm .lp :is(button, a, input, textarea, select, summary, [tabindex]):focus-visible { outline-color: var(--texte); }
+/* Le curseur de saisie aussi : le nom et la bio tapés sur la page prennent la couleur de son texte. */
+.adm .lp { caret-color: auto; }
 /* La feuille prend le focus pour qu'on y entre au clavier, mais elle n'est pas un contrôle : pas d'anneau autour d'elle. */
 .adm .adm-feuille:focus-visible { outline: none; }
 /* Un titre qui reçoit le focus quand l'écran change (premiers pas, lien envoyé) n'est pas un contrôle non plus. */
@@ -103,6 +113,9 @@ html:has(.adm) { scrollbar-gutter: stable; }
 .adm-miroir-page { flex: 1 0 auto; display: flex; flex-direction: column; }
 .adm-miroir-page > * { flex: 1 0 auto; }
 @media (min-width: 1024px) { .adm-miroir { --z: 0.86; } }
+/* La page en miniature sur le papier crème de l'accueil, comme la page à droite de Ma page ; les questions sur le blanc. */
+@media (max-width: 1023px) { .adm:has(> .adm-premiers-scene) { background: var(--adm-creme); } }
+@media (min-width: 1024px) { .adm-premiers-scene { background: var(--adm-creme); } }
 
 /* Une feuille ouverte occupe le bas de l'écran : le message passe en haut, sans couvrir ce qu'on touche. */
 body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); bottom: auto; }
@@ -115,39 +128,81 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
 /* Un même espace de travail, de l'édition aux réglages. Les thèmes publics
  * gardent leurs propres couleurs et leur typographie dans .adm-apercu. */
 .adm {
-  --adm-fond: #f7f7f5;
+  --adm-fond: #f6f5ef;
   --adm-surface: #fff;
   --adm-trait: #e5e5e1;
   --adm-encre: #18191b;
   --adm-secondaire: #656560;
+  /* Le bleu (7,3:1 sur le blanc), son survol, sa teinte pâle (le bleu y garde 5,8:1) et son voile de sélection. */
+  --adm-bleu: #292bff;
+  --adm-bleu-fonce: #1d1fd6;
+  --adm-bleu-pale: #e4e4ff;
+  --adm-bleu-voile: #f3f3ff;
+  /* Le citron, et l'encre vert foncé qui s'y lit (12,4:1). */
+  --adm-citron: #e3fc96;
+  --adm-citron-fonce: #d4f57c;
+  --adm-citron-encre: #233016;
+  /* Le papier crème de l'accueil, pour la page qu'on regarde. */
+  --adm-creme: #f3eee5;
 }
 .adm-shell { background: var(--adm-fond); color: var(--adm-encre); }
 /*
+ * Les écrans d'entrée (la connexion, le lien reçu, les CGU), 22 octobre 2026 : le bleu du haut de l'accueil,
+ * d'où l'on arrive, la marque en blanc. La carte reste blanche, et son appel y reprend le bleu.
+ */
+.adm-shell.adm-entree { background: var(--adm-bleu); }
+.adm-entree .adm-card { border-color: transparent; box-shadow: 0 1px 2px rgb(8 9 60 / 0.18), 0 18px 48px -12px rgb(8 9 60 / 0.4); }
+.adm-entree-etat { color: #dcdcff; }
+/*
  * La coquille du bureau (direction B, 20 octobre 2026) : une barre latérale
- * fine, une seule rangée d'en-tête de 56 px, le contenu sur le blanc. L'onglet
- * courant est un gris uni, sans bordure ; le survol est plus pâle que lui.
+ * fine, une seule rangée d'en-tête de 56 px, le contenu sur le blanc. La barre
+ * est bleue (22 octobre 2026), le bleu du haut de l'accueil : elle porte la
+ * marque et dit où l'on est. L'onglet courant y est une pastille blanche, en
+ * bleu, comme une carte de l'accueil posée sur le bleu ; le survol, un voile
+ * blanc. Les autres mots sont d'un blanc teinté de bleu (5,4:1). Sur le bleu,
+ * l'anneau de focus passe au citron (6,5:1).
  */
 @media (min-width: 1024px) { .adm-shell { background: #fff; } }
-.adm-sidebar { padding: 0 10px 10px; background: #fafaf9; border-right: 1px solid #ececea; }
-.adm-nav-item { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 10px; border-radius: 7px; color: #55554f; font-size: 14px; font-weight: 500; text-align: left; transition: background-color 150ms, color 150ms; }
-.adm-nav-item:hover { background: #f2f2ef; color: var(--adm-encre); }
-.adm-nav-item[aria-current='page'] { background: #ebebe7; color: #0a0a0a; }
+.adm-sidebar { padding: 0 10px 10px; background: var(--adm-bleu); color: #fff; }
+.adm-sidebar :is(.adm-nav-item, .adm-compte, .adm-appel):focus-visible { outline-color: var(--adm-citron); }
+.adm-nav-item { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 10px; border-radius: 7px; color: #dcdcff; font-size: 14px; font-weight: 500; text-align: left; transition: background-color 150ms, color 150ms; }
+.adm-nav-item:hover { background: rgb(255 255 255 / 0.1); color: #fff; }
+.adm-nav-item[aria-current='page'] { background: #fff; color: var(--adm-bleu); font-weight: 600; }
 .adm-compte { display: flex; min-height: 44px; width: 100%; align-items: center; gap: 10px; padding: 0 8px; border-radius: 7px; text-align: left; transition: background-color 150ms; }
-.adm-compte:hover, .adm-compte[aria-expanded='true'] { background: #f2f2ef; }
+.adm-compte:hover, .adm-compte[aria-expanded='true'] { background: rgb(255 255 255 / 0.1); }
+.adm-sidebar .adm-compte > svg { color: #c9caff; }
 /*
  * L'offre du dessus, en une ligne (21 octobre 2026) : au bureau au-dessus du compte, au téléphone sous la
- * page. Ni pastille ni couleur : le picto et le nom de l'offre à l'encre, ce qu'elle apporte en gris.
+ * page. Sur le bleu, l'accent est le citron (comme le bouton du haut de l'accueil) : le diamant en citron,
+ * le nom de l'offre en blanc, ce qu'elle apporte en blanc teinté (4,6:1).
  */
-.adm-appel { display: flex; width: 100%; align-items: flex-start; gap: 10px; min-height: 44px; padding: 12px 10px; border-radius: 7px; color: #55554f; font-size: 14px; line-height: 1.35; text-align: left; transition: background-color 150ms, color 150ms; }
-.adm-appel:hover { background: #f2f2ef; color: #3d3d39; }
-.adm-appel strong { color: var(--adm-encre); font-weight: 500; }
-.adm-appel-picto { margin-top: 1px; color: var(--adm-encre); }
-/* Sous la page, au téléphone : une ligne bordée comme celles de Réglages, à la largeur de la page. */
+.adm-appel { display: flex; width: 100%; align-items: flex-start; gap: 10px; min-height: 44px; padding: 12px 10px; border-radius: 7px; color: #c9caff; font-size: 14px; line-height: 1.35; text-align: left; transition: background-color 150ms, color 150ms; }
+.adm-appel:hover { background: rgb(255 255 255 / 0.1); color: #dcdcff; }
+.adm-appel strong { color: #fff; font-weight: 500; }
+.adm-appel-picto { margin-top: 1px; color: var(--adm-citron); }
+/* Sous la page, au téléphone : une carte bleue à la largeur de la page, la même ligne qu'au bureau. */
 .adm-appel-sous { margin-top: 12px; }
-.adm-appel-sous > .adm-appel { padding: 13px 14px; border: 1px solid var(--adm-trait); border-radius: 14px; background: var(--adm-surface); }
+.adm-appel-sous > .adm-appel { padding: 14px; border-radius: 14px; background: var(--adm-bleu); }
+.adm-appel-sous > .adm-appel:hover { background: var(--adm-bleu-fonce); }
+.adm-appel-sous > .adm-appel:focus-visible { outline-color: var(--adm-bleu); }
 @media (min-width: 1024px) { .adm-appel-sous { display: none; } }
 .adm-topbar { border-bottom: 1px solid var(--adm-trait); background: #fdfdfc; }
 @media (min-width: 1024px) { .adm-topbar { border-bottom-color: #ececea; background: #fff; } }
+/*
+ * Au téléphone, l'en-tête est bleu (22 octobre 2026), comme la barre latérale au bureau et le haut de
+ * l'accueil : l'adresse en blanc, son état en blanc teinté (5,4:1), la copie et l'aperçu sur un voile
+ * blanc, l'anneau de « Bien démarrer » en citron. Le contenu reste sur le papier.
+ */
+@media (max-width: 1023px) {
+  .adm-topbar { border-bottom-color: transparent; background: var(--adm-bleu); color: #fff; }
+  .adm-topbar .adm-button-outline { border-color: transparent; background: rgb(255 255 255 / 0.14); color: #fff; }
+  .adm-topbar .adm-button-outline:hover { border-color: transparent; background: rgb(255 255 255 / 0.22); }
+  .adm .adm-topbar :focus-visible { outline-color: var(--adm-citron); }
+}
+.adm-topbar-etat { color: #dcdcff; }
+.adm-topbar-etat[data-erreur] { color: #ffd4d4; }
+/* La photo absente, dans la barre latérale et l'en-tête du téléphone, tous deux bleus : un voile blanc. */
+.adm-avatar-vide { background: rgb(255 255 255 / 0.16); color: #fff; }
 .adm-entete-titre { font-size: 15px; font-weight: 600; letter-spacing: -0.015em; }
 /* L'adresse dans l'en-tête : le domaine en gris, le pseudo à l'encre, et Copier collé à elle. */
 .adm-adresse-entete { display: flex; align-items: stretch; overflow: hidden; border: 1px solid #dcdcd7; border-radius: 8px; background: #fff; }
@@ -167,18 +222,25 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
 .adm-kpi { padding: 20px; }
 .adm-button-outline { border: 1px solid #deded9; border-radius: 12px; background: var(--adm-surface); transition: background-color 150ms, border-color 150ms; }
 .adm-button-outline:hover { background: #f4f4f0; border-color: #c7c7c0; }
-.adm-button-primary:hover { background: #30302e; }
+.adm-button-primary:hover { background: var(--adm-bleu-fonce); }
 /* Le seul bouton rouge : effacer pour de bon. */
 .adm-button-danger { background: #c62828; color: #fff; }
 .adm-button-danger:hover { background: #a51f1f; }
+/* Le nom d'une offre, partout où il se montre, dans les couleurs de l'accueil : Starter en bleu sur sa teinte
+ * pâle, Pro en blanc sur le bleu, Premium sur la nuit de l'accueil. */
+.adm span[data-offre='starter'] { background: var(--adm-bleu-pale); color: var(--adm-bleu); }
+.adm span[data-offre='pro'] { background: var(--adm-bleu); color: #fff; }
+.adm span[data-offre='premium'] { background: #292530; color: #eee0fa; }
 .adm-field { min-height: 48px; background: #fdfdfc; }
 .adm-field:hover { border-color: #b2b2ab; }
 .adm-mobile-nav { border-top: 1px solid var(--adm-trait); background: #fff; }
 .adm-mobile-nav button { height: 64px; }
+/* L'onglet ouvert prend le bleu, son picto et son nom, comme une barre d'onglets d'iPhone : sans pastille. */
+.adm-mobile-nav [aria-current='page'] { color: var(--adm-bleu); }
 /* La page posée sur le gris : un trait fin pour son bord (un thème clair se confond sinon avec le fond), une ombre courte dessous. */
 .adm-toile { box-shadow: 0 0 0 1px var(--adm-trait), 0 8px 28px -16px rgb(0 0 0 / 0.25); }
-/* La fin des premiers pas : la page passe au premier plan, cernée d'encre. */
-.adm-toile.adm-miroir-fin { box-shadow: 0 0 0 1.5px #0a0a0a, 0 30px 90px -24px rgb(0 0 0 / 0.3); }
+/* La fin des premiers pas : la page passe au premier plan, cernée de bleu. */
+.adm-toile.adm-miroir-fin { box-shadow: 0 0 0 2px var(--adm-bleu), 0 30px 90px -24px rgb(0 0 0 / 0.3); }
 .adm-address { background: var(--adm-surface); border: 1px solid var(--adm-trait); border-radius: 14px; }
 .adm-checklist { background: var(--adm-surface); border: 1px solid var(--adm-trait); border-radius: 14px; }
 /* Un groupe de lignes dans une feuille : un trait fin, l'arrondi des surfaces compactes, sans fond
@@ -209,9 +271,9 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
  * l'édition à gauche, la page à droite. À gauche, une colonne de 760 px au
  * plus : « Bien démarrer », les onglets Contenu et Design collés sous
  * l'en-tête, le profil, le champ où coller une adresse, puis la liste des
- * blocs, une rangée chacun, dépliée sur ses réglages. À droite, sur un gris
- * pâle, la page dans un téléphone à sa vraie largeur, collée sous l'en-tête et
- * réduite si l'écran est court ou étroit.
+ * blocs, une rangée chacun, dépliée sur ses réglages. À droite, sur le papier
+ * crème de l'accueil, la page dans un téléphone à sa vraie largeur, collée sous
+ * l'en-tête et réduite si l'écran est court ou étroit.
  */
 @media (min-width: 1024px) {
   .adm { --adm-apercu: clamp(360px, 36vw, 520px); }
@@ -229,7 +291,7 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
   .adm-onglets { display: flex; align-self: stretch; gap: 22px; }
   .adm-onglets > button { display: flex; align-items: center; color: #55554f; font-size: 13.5px; font-weight: 500; transition: color 150ms, box-shadow 200ms var(--adm-sortie); }
   .adm-onglets > button:hover { color: #0a0a0a; }
-  .adm-onglets > button[aria-selected='true'] { color: #0a0a0a; box-shadow: inset 0 -2px 0 #0a0a0a; }
+  .adm-onglets > button[aria-selected='true'] { color: var(--adm-bleu); box-shadow: inset 0 -2px 0 var(--adm-bleu); }
   .adm .adm-onglets > button:focus-visible { outline-offset: -2px; }
   .adm-edition-corps { display: flex; flex-direction: column; gap: 16px; padding-top: 20px; }
   /* Le retour d'un tiroir du design se colle sous les onglets, pas sous l'en-tête. */
@@ -240,11 +302,11 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
   .adm-profil-haut { display: flex; align-items: flex-start; gap: 14px; }
   .adm-profil-photo { position: relative; display: grid; width: 52px; height: 52px; flex: none; place-items: center; border-radius: 50%; background: #f2f2ef; color: #8b8b86; }
   .adm-profil-photo > img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
-  .adm-profil-pastille { position: absolute; right: -3px; bottom: -3px; display: grid; width: 20px; height: 20px; place-items: center; border-radius: 50%; background: #0a0a0a; color: #fff; font-size: 11px; box-shadow: 0 0 0 2px #fff; transition: scale 150ms var(--adm-sortie); }
+  .adm-profil-pastille { position: absolute; right: -3px; bottom: -3px; display: grid; width: 20px; height: 20px; place-items: center; border-radius: 50%; background: var(--adm-bleu); color: #fff; font-size: 11px; box-shadow: 0 0 0 2px #fff; transition: scale 150ms var(--adm-sortie); }
   .adm-profil-photo:hover .adm-profil-pastille { scale: 1.1; }
   .adm-profil-texte { display: flex; min-width: 0; flex: 1; flex-direction: column; gap: 1px; padding-top: 3px; }
   .adm-profil-ligne { display: flex; min-width: 0; align-items: center; gap: 2px; }
-  .adm-profil-badge { display: inline-flex; flex: none; color: #0a0a0a; }
+  .adm-profil-badge { display: inline-flex; flex: none; color: var(--adm-bleu); }
   .adm-profil-nom, .adm-profil-bio { min-width: 0; margin-left: -6px; border: 0; border-radius: 6px; background: transparent; transition: background-color 150ms; }
   .adm-profil-nom { max-width: calc(100% + 6px); height: 28px; padding: 0 6px; color: #0a0a0a; font-size: 15px; font-weight: 600; letter-spacing: -0.01em; }
   .adm-profil-bio { display: block; width: calc(100% + 12px); padding: 3px 6px; color: #5f5f5a; font-size: 13.5px; line-height: 1.45; resize: none; overflow: hidden; field-sizing: content; }
@@ -254,9 +316,10 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
   :is(.adm-profil-nom, .adm-profil-bio)::placeholder { color: #737373; }
   @supports (field-sizing: content) { .adm-profil-nom { field-sizing: content; width: auto !important; min-width: 7ch; } }
   .adm-profil-reseaux { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+  /* Un réseau a son logo dans la couleur de sa marque, comme dans Stats (`couleurReseau`) ; les autres restent à l'encre. */
   .adm-reseau { display: grid; width: 30px; height: 30px; place-items: center; border: 1px solid #e3e3df; border-radius: 8px; color: #0a0a0a; }
-  .adm-lien { display: inline-flex; min-height: 30px; align-items: center; padding: 0 6px; border-radius: 6px; color: #3d3d39; font-size: 13.5px; font-weight: 500; text-decoration: underline; text-decoration-color: rgb(10 10 10 / 0.25); text-underline-offset: 3px; transition: color 150ms, text-decoration-color 150ms; }
-  .adm-lien:hover { color: #0a0a0a; text-decoration-color: currentColor; }
+  .adm-lien { display: inline-flex; min-height: 30px; align-items: center; padding: 0 6px; border-radius: 6px; color: var(--adm-bleu); font-size: 13.5px; font-weight: 500; text-decoration: underline; text-decoration-color: rgb(41 43 255 / 0.35); text-underline-offset: 3px; transition: color 150ms, text-decoration-color 150ms; }
+  .adm-lien:hover { color: var(--adm-bleu-fonce); text-decoration-color: currentColor; }
   /* Seul sur sa ligne (pas encore de réseaux), il s'aligne sur la photo, comme le nom et la bio. */
   .adm-profil-reseaux > .adm-lien:first-child { margin-left: -6px; }
   .adm-profil-edition { display: flex; flex-direction: column; gap: 12px; padding: 14px 16px; border: 1px solid #e6e6e2; border-radius: 10px; }
@@ -264,7 +327,7 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
   /* Coller une adresse : un champ comme la recherche de Comptes, son signe à gauche. */
   .adm-coller { display: flex; flex-direction: column; gap: 6px; }
   .adm-coller-champ { position: relative; display: flex; align-items: center; }
-  .adm-coller-signe { position: absolute; left: 12px; color: #737373; pointer-events: none; }
+  .adm-coller-signe { position: absolute; left: 12px; color: var(--adm-bleu); pointer-events: none; }
   .adm-coller-champ > input { width: 100%; height: 40px; padding: 0 12px 0 34px; border: 1px solid #dcdcd7; border-radius: 8px; background: #fff; color: #0a0a0a; font-size: 13.5px; transition: border-color 150ms; }
   .adm-coller-champ > input:hover { border-color: #b5b5ae; }
   .adm-coller-champ > input::placeholder { color: #737373; }
@@ -274,7 +337,7 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
   /*
    * La liste des blocs : un trait fin autour, une rangée de 44 px par bloc. La
    * poignée à gauche, le nom et ce qui le distingue, ses clics, puis l'œil et
-   * « … ». La rangée ouverte passe sur un gris très pâle, ses réglages dessous.
+   * « … ». La rangée ouverte passe sur un voile bleu, ses réglages dessous.
    */
   .adm-liste-vide { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 32px 16px; border: 1px solid #e6e6e2; border-radius: 10px; color: #5f5f5a; font-size: 13.5px; text-align: center; }
   .adm-liste-blocs { margin: 0; padding: 0; list-style: none; border: 1px solid #e6e6e2; border-radius: 10px; background: #fff; overflow-anchor: none; }
@@ -283,11 +346,13 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
   .adm-rangee:first-child { border-top-left-radius: 9px; border-top-right-radius: 9px; }
   .adm-rangee:last-child { border-bottom-left-radius: 9px; border-bottom-right-radius: 9px; }
   .adm-rangee:not([data-ouvert]):hover { background: #fafaf9; }
-  .adm-rangee[data-ouvert] { background: #f7f7f5; }
-  .adm-rangee[data-glisse] { z-index: 3; border-radius: 9px; background: #fff; box-shadow: 0 0 0 1px #e3e3df, 0 14px 30px -14px rgb(10 10 10 / 0.35); }
+  /* La rangée ouverte passe sur un voile bleu, son picto en bleu : c'est la sélection. */
+  .adm-rangee[data-ouvert] { background: var(--adm-bleu-voile); }
+  .adm-rangee[data-ouvert] .adm-rangee-picto { color: var(--adm-bleu); }
+  .adm-rangee[data-glisse] { z-index: 3; border-radius: 9px; background: #fff; box-shadow: 0 0 0 1.5px var(--adm-bleu), 0 14px 30px -14px rgb(10 10 10 / 0.35); }
   /* Un bloc qui vient d'arriver s'éclaire un instant, comme sur la page. */
   .adm-rangee[data-neuf] { animation: adm-rangee-neuf 1.8s ease-out; }
-  @keyframes adm-rangee-neuf { 0%, 35% { background-color: #ececea; } }
+  @keyframes adm-rangee-neuf { 0%, 35% { background-color: var(--adm-bleu-pale); } }
   .adm-rangee[data-prive] :is(.adm-rangee-nom, .adm-rangee-picto) { color: #6b6b66; }
   .adm-rangee-tete { display: flex; min-height: 44px; align-items: center; gap: 2px; padding: 0 8px 0 6px; }
   .adm-rangee-poignee { display: grid; width: 24px; height: 32px; flex: none; place-items: center; border-radius: 6px; color: #8b8b86; cursor: grab; touch-action: none; transition: background-color 150ms, color 150ms; }
@@ -299,7 +364,8 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
   .adm-rangee-picto { flex: none; color: #0a0a0a; }
   .adm-rangee-nom { min-width: 0; flex: 0 1 auto; overflow: hidden; color: #0a0a0a; font-size: 13.5px; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
   .adm-rangee-sous { min-width: 0; flex: 0 4 auto; overflow: hidden; color: #5f5f5a; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
-  .adm-rangee-marque { display: inline-flex; height: 20px; flex: none; align-items: center; padding: 0 7px; border-radius: 6px; background: rgb(10 10 10 / 0.06); color: #3d3d39; font-size: 12px; font-weight: 500; white-space: nowrap; }
+  /* « Mis en avant » : l'étiquette citron de l'accueil, son encre vert foncé (12,4:1). */
+  .adm-rangee-marque { display: inline-flex; height: 20px; flex: none; align-items: center; padding: 0 7px; border-radius: 6px; background: var(--adm-citron); color: var(--adm-citron-encre); font-size: 12px; font-weight: 500; white-space: nowrap; }
   .adm-rangee-marque-picto { display: none; }
   .adm-rangee-etats { display: inline-flex; flex: none; align-items: center; gap: 6px; color: #55554f; }
   .adm-rangee-clics { flex: none; margin-left: auto; padding-left: 8px; color: #5f5f5a; font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
@@ -310,7 +376,7 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
   /* Une colonne étroite (1024 px) : l'adresse s'efface, « Mis en avant » devient un picto d'état, le nom garde la place. */
   @container edition (max-width: 479px) {
     .adm-rangee-sous { display: none; }
-    .adm-rangee-marque { height: auto; padding: 0; background: none; color: #55554f; }
+    .adm-rangee-marque { padding: 0 4px; }
     .adm-rangee-marque-mot { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
     .adm-rangee-marque-picto { display: inline-flex; }
     .adm-rangee-reglages { padding-inline: 12px; }
@@ -328,15 +394,16 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
   .adm-plus-contenu { display: flex; flex-direction: column; gap: 14px; padding: 10px 12px 12px; border-top: 1px solid #efefec; }
   .adm-editeur-pied { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; }
 
-  /* La page, à droite : collée sous l'en-tête, sur un gris pâle, avec le choix de la largeur au-dessus. */
-  .adm-apercu-cote { min-width: 0; border-left: 1px solid #ececea; background: #f5f5f3; }
+  /* La page, à droite : collée sous l'en-tête, avec le choix de la largeur au-dessus. */
+  /* Sur le papier crème de l'accueil : la page qu'on regarde, à part de l'édition. */
+  .adm-apercu-cote { min-width: 0; border-left: 1px solid #e9e3d7; background: var(--adm-creme); }
   .adm-apercu-colle { position: sticky; top: 57px; display: flex; height: calc(100dvh - 57px); flex-direction: column; align-items: center; gap: 14px; padding: 16px 24px 20px; }
   .adm-vues { display: flex; flex: none; gap: 2px; padding: 3px; border: 1px solid #e3e3df; border-radius: 10px; background: #fff; }
   .adm-outil { display: inline-flex; height: 28px; align-items: center; gap: 6px; padding: 0 10px; border-radius: 7px; color: #0a0a0a; font-size: 13.5px; font-weight: 500; transition: background-color 150ms, color 150ms; }
   .adm-outil:hover { background: #f2f2ef; }
-  .adm-outil:is([aria-pressed='true'], [aria-checked='true']) { background: #ebebe7; }
+  .adm-outil:is([aria-pressed='true'], [aria-checked='true']) { background: var(--adm-bleu-pale); color: var(--adm-bleu); }
   .adm-outil-carre { width: 28px; justify-content: center; padding: 0; color: #55554f; }
-  .adm-outil-carre[aria-checked='true'] { color: #0a0a0a; }
+  .adm-outil-carre[aria-checked='true'] { color: var(--adm-bleu); }
   /* Le téléphone : 390 px d'écran dans un bord de 9, réduit d'un bloc (voir `Telephone`) ; son écran défile seul. */
   .adm-tel-lieu { display: flex; width: 100%; min-height: 0; flex: 1; align-items: flex-start; justify-content: center; }
   .adm-tel-cadre { flex: none; }
@@ -444,17 +511,21 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
 .adm-offres-titre { font-size: 18px; font-weight: 600; letter-spacing: -0.01em; }
 .adm-offres-corps { min-height: 0; flex: 1; overflow-y: auto; overscroll-behavior: contain; }
 .adm-offres-badge { display: inline-flex; height: 22px; flex: none; align-items: center; padding: 0 8px; border-radius: 7px; background: rgb(10 10 10 / 0.07); color: #3d3d39; font-size: 12px; font-weight: 500; white-space: nowrap; }
-.adm-offres-badge[data-fort] { background: #0a0a0a; color: #fff; }
-/* Mensuel ou Annuel : un segment, le choix sur du papier blanc. */
+/* Comme sur l'accueil : l'offre qui débloque ce qu'on venait chercher en blanc sur le bleu, la sienne sur le bleu pâle,
+ * et ce que fait gagner l'annuel dans l'étiquette citron. */
+.adm-offres-badge[data-fort] { background: var(--adm-bleu); color: #fff; }
+.adm-offres-badge[data-actuelle] { background: var(--adm-bleu-pale); color: var(--adm-bleu); }
+.adm-offres-badge[data-gain] { background: var(--adm-citron); color: var(--adm-citron-encre); font-weight: 600; }
+/* Mensuel ou Annuel : un segment, le choix sur du papier blanc, en bleu. */
 .adm-offres-periodes { display: grid; height: 44px; grid-template-columns: 1fr 1.45fr; gap: 2px; padding: 3px; border-radius: 10px; background: #f3f3f1; }
 .adm-offres-periodes > button { display: flex; align-items: center; justify-content: center; gap: 8px; border-radius: 8px; color: #55554f; transition: background-color 150ms, color 150ms, box-shadow 150ms; }
 .adm-offres-periodes > button:hover { color: #0a0a0a; }
-.adm-offres-periodes > button[aria-checked='true'] { background: #fff; color: #0a0a0a; font-weight: 500; box-shadow: 0 1px 2px rgb(10 10 10 / 0.1), 0 0 0 1px rgb(10 10 10 / 0.06); }
+.adm-offres-periodes > button[aria-checked='true'] { background: #fff; color: var(--adm-bleu); font-weight: 500; box-shadow: 0 1px 2px rgb(10 10 10 / 0.1), 0 0 0 1px rgb(10 10 10 / 0.06); }
 .adm-offres-entete-mobile { flex: none; padding: 4px 16px 12px; }
 .adm-offres-onglets { display: grid; height: 44px; flex: none; grid-template-columns: repeat(4, minmax(0, 1fr)); padding: 0 8px; border-bottom: 1px solid #ececea; }
 .adm-offres-onglets > button { color: #55554f; transition: color 150ms, box-shadow 200ms var(--adm-sortie); }
 .adm-offres-onglets > button:hover { color: #0a0a0a; }
-.adm-offres-onglets > button[aria-selected='true'] { color: #0a0a0a; font-weight: 500; box-shadow: inset 0 -2px 0 #0a0a0a; }
+.adm-offres-onglets > button[aria-selected='true'] { color: var(--adm-bleu); font-weight: 500; box-shadow: inset 0 -2px 0 var(--adm-bleu); }
 .adm .adm-offres-onglets > button:focus-visible { outline-offset: -2px; }
 /* Une carte à la fois : la suivante dépasse à droite, on la fait glisser. */
 /* Le rail est le repère de ses cartes : leur position se lit sans tenir compte du défilement. */
@@ -467,7 +538,20 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
 .adm-offres-note { color: #5f5f5a; font-size: 12px; }
 
 .adm-offre { display: flex; flex-direction: column; gap: 16px; padding: 19px; border: 1px solid #e3e3df; border-radius: 14px; background: #fff; }
-.adm-offre[data-mis] { padding: 18px; border: 2px solid #0a0a0a; }
+/*
+ * L'offre mise en avant (celle qui débloque ce qu'on venait chercher, ou la suivante) : la carte bleue de
+ * l'accueil. Ses mots en blanc et en blanc teinté (5,4:1), ses coches, son étiquette et son bouton en citron,
+ * l'accent du bleu.
+ */
+.adm-offre[data-mis] { border-color: var(--adm-bleu); background: var(--adm-bleu); color: #fff; }
+.adm-offre[data-mis] :is(.adm-offre-unite, .adm-offre-sous, .adm-offre-inclus) { color: #dcdcff; }
+.adm-offre[data-mis] .adm-offre-liste > li { border-top-color: rgb(255 255 255 / 0.16); }
+.adm-offre[data-mis] .adm-offre-liste > li > svg { color: var(--adm-citron); }
+.adm-offre[data-mis] .adm-offres-badge:not([data-gain]) { background: var(--adm-citron); color: var(--adm-citron-encre); }
+.adm-offre[data-mis] .adm-button-primary { background: var(--adm-citron); color: var(--adm-citron-encre); }
+.adm-offre[data-mis] .adm-button-primary:hover { background: var(--adm-citron-fonce); }
+.adm-offre[data-mis] .adm-offre-etat { background: rgb(255 255 255 / 0.14); color: #fff; }
+.adm-offre[data-mis] :focus-visible { outline-color: var(--adm-citron); }
 /* Une pastille trop longue passe sous le nom plutôt que de déborder de la carte. */
 .adm-offre-tete { display: flex; min-height: 22px; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 8px; }
 .adm-offre-nom { font-size: 18px; font-weight: 600; }
@@ -477,12 +561,13 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
 .adm-offre-unite { color: #5f5f5a; }
 /* Le prix de douze mois, en gris lisible (6,5:1), pas barré ; l'économie en euros, à l'encre. */
 .adm-offre-sous { color: #5f5f5a; font-size: 13.5px; }
-.adm-offre-gain { color: #0a0a0a; font-size: 13.5px; font-weight: 500; }
+/* L'économie de l'annuel : l'étiquette citron de l'accueil, sur le blanc comme sur le bleu. */
+.adm-offre-gain { width: fit-content; margin-top: 2px; padding: 1px 6px; border-radius: 6px; background: var(--adm-citron); color: var(--adm-citron-encre); font-size: 13.5px; font-weight: 600; }
 .adm-offre-etat { display: grid; min-height: 48px; place-items: center; padding: 0 12px; border-radius: 12px; background: #f3f3f1; color: #5f5f5a; font-weight: 500; text-align: center; }
 .adm .adm-offre-etat:focus-visible { outline: none; }
 .adm-offre-inclus { margin-bottom: 4px; color: #5f5f5a; font-size: 13.5px; font-weight: 500; }
 .adm-offre-liste > li { display: flex; min-height: 44px; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid #efefec; }
-.adm-offre-liste > li > svg { flex: none; }
+.adm-offre-liste > li > svg { flex: none; color: var(--adm-bleu); }
 .adm-offre-liste > li[data-fort] { font-weight: 600; }
 
 /* Le récapitulatif : la période, ce qu'on paie, ce qu'on débloque ; au bureau, la page telle qu'elle sera. */
@@ -492,10 +577,10 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
 .adm-recap-periodes { display: grid; grid-template-columns: 1fr; gap: 10px; margin: 0; padding: 0; border: 0; }
 .adm-recap-periodes > label { display: flex; align-items: flex-start; gap: 10px; padding: 14px 15px; border: 1px solid #dcdcd7; border-radius: 10px; cursor: pointer; transition: border-color 150ms; }
 .adm-recap-periodes > label:hover { border-color: #b5b5ae; }
-.adm-recap-periodes > label[data-choisi] { padding: 13px 14px; border: 2px solid #0a0a0a; }
-.adm-recap-periodes > label:has(input:focus-visible) { outline: 2px solid #0a0a0a; outline-offset: 2px; }
+.adm-recap-periodes > label[data-choisi] { padding: 13px 14px; border: 2px solid var(--adm-bleu); background: var(--adm-bleu-voile); }
+.adm-recap-periodes > label:has(input:focus-visible) { outline: 2px solid var(--adm-bleu); outline-offset: 2px; }
 .adm .adm-recap-periodes input:focus-visible { outline: none; }
-.adm-recap-periodes input { width: 16px; height: 16px; flex: none; margin: 2px 0 0; accent-color: #0a0a0a; }
+.adm-recap-periodes input { width: 16px; height: 16px; flex: none; margin: 2px 0 0; accent-color: var(--adm-bleu); }
 .adm-recap-periodes label > span { display: flex; flex-direction: column; gap: 2px; }
 .adm-recap-periode-nom { font-weight: 500; }
 [data-choisi] .adm-recap-periode-nom { font-weight: 600; }
@@ -510,21 +595,22 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
 .adm-recap-liste > li { min-height: 0; align-items: flex-start; padding: 0; border-top: 0; }
 .adm-recap-liste > li > svg { margin-top: 2px; }
 .adm-recap-liste[data-perte] > li { color: #3d3d39; }
-.adm-recap-apercu { display: flex; height: 592px; flex-direction: column; gap: 12px; align-self: start; overflow: hidden; padding: 10px 12px 0 20px; border-radius: 12px; background: #f5f5f3; }
+.adm-recap-liste[data-perte] > li > svg { color: #5f5f5a; }
+.adm-recap-apercu { display: flex; height: 592px; flex-direction: column; gap: 12px; align-self: start; overflow: hidden; padding: 10px 12px 0 20px; border-radius: 12px; background: var(--adm-creme); }
 .adm-recap-cadre { width: 234px; height: 528px; flex: none; align-self: center; overflow: hidden; border-radius: 16px; box-shadow: 0 18px 40px -22px rgb(10 10 10 / 0.5); }
 
 /* Au retour de Creem : où en est l'offre, puis ce qui vient de s'ouvrir. */
 .adm-retour { display: flex; min-height: 0; flex-direction: column; gap: 20px; overflow-y: auto; overscroll-behavior: contain; padding: 24px 20px max(20px, env(safe-area-inset-bottom)); }
 .adm-retour-tete { display: flex; flex-direction: column; align-items: flex-start; gap: 14px; }
-.adm-retour-roue { width: 44px; height: 44px; border: 3px solid #e3e3df; border-top-color: #0a0a0a; border-radius: 50%; animation: adm-roue 0.9s linear infinite; }
+.adm-retour-roue { width: 44px; height: 44px; border: 3px solid var(--adm-bleu-pale); border-top-color: var(--adm-bleu); border-radius: 50%; animation: adm-roue 0.9s linear infinite; }
 @keyframes adm-roue { to { transform: rotate(360deg); } }
 .adm-retour-etapes { display: flex; flex-wrap: wrap; gap: 6px 18px; color: #3d3d39; }
 .adm-retour-etapes > li { display: inline-flex; align-items: center; gap: 6px; }
 .adm-retour-texte { max-width: 46ch; color: #3d3d39; text-wrap: pretty; }
-.adm-retour-texte a { color: #0a0a0a; text-decoration: underline; text-decoration-color: rgb(10 10 10 / 0.35); text-underline-offset: 2px; }
+.adm-retour-texte a { color: var(--adm-bleu); text-decoration: underline; text-decoration-color: rgb(41 43 255 / 0.35); text-underline-offset: 2px; }
 .adm-retour-liste { border-top: 1px solid #efefec; }
 .adm-retour-liste > li { display: flex; min-height: 44px; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 1px solid #efefec; }
-.adm-retour-liste > li > svg { flex: none; color: #3d3d39; }
+.adm-retour-liste > li > svg { flex: none; color: var(--adm-bleu); }
 .adm-retour-deja { flex: none; color: #5f5f5a; font-size: 12px; }
 .adm-retour-gestes { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
 @media (max-width: 639px) { .adm-retour-gestes > * { flex: 1 1 auto; } }
@@ -541,7 +627,6 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
   .adm-offres-grille { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; padding: 4px 24px 0; }
   .adm-offres-grille + .adm-offres-note { padding: 16px 24px 20px; }
   .adm-offre { padding: 20px; border-radius: 12px; }
-  .adm-offre[data-mis] { padding: 19px; }
   .adm-offre-nom { font-size: 15px; }
   .adm-offre-etat { min-height: 36px; border-radius: 8px; }
   .adm-offre-inclus { margin-bottom: 0; font-size: 12px; }
@@ -577,9 +662,13 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
  * Stats (direction B, 20 octobre 2026) : une phrase, une courbe à onglets, des
  * listes à barre pâle. Un encart est un trait fin sur le blanc, arrondi à 10 au
  * bureau ; les gris de texte sont ceux des maquettes (#5f5f5a, 6,5:1 sur le blanc).
+ * En couleur (22 octobre 2026) : le chiffre de la phrase, la courbe, l'onglet
+ * ouvert et les barres en bleu ; un écart en citron s'il monte, en rose s'il
+ * baisse, en gris s'il ne bouge pas, et son signe le dit aussi.
  */
 .adm-encart { border: 1px solid #e6e6e2; border-radius: 12px; background: #fff; }
 .adm-stats-phrase { max-width: 62rem; font-size: 18px; line-height: 1.4; font-weight: 500; letter-spacing: -0.01em; text-wrap: pretty; }
+.adm-stats-chiffre { color: var(--adm-bleu); white-space: nowrap; }
 .adm-stats .adm-card { border-color: #e6e6e2; border-radius: 12px; padding: 16px; }
 .adm-courbe { overflow: hidden; }
 .adm-courbe-onglets { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-bottom: 1px solid #ececea; }
@@ -587,18 +676,22 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
 .adm-courbe-onglets > button:nth-child(even) { border-left: 1px solid #ececea; }
 .adm-courbe-onglets > button:nth-child(n + 3) { border-top: 1px solid #ececea; }
 .adm-courbe-onglets > button:hover { background: #f4f4f2; }
-.adm-courbe-onglets > button[aria-selected='true'] { background: #fff; box-shadow: inset 0 -2px 0 #0a0a0a; }
+.adm-courbe-onglets > button[aria-selected='true'] { background: #fff; box-shadow: inset 0 -2px 0 var(--adm-bleu); }
 .adm .adm-courbe-onglets > button:focus-visible { outline-offset: -3px; }
 .adm-courbe-nom { font-size: 12px; font-weight: 500; color: #5f5f5a; }
 [aria-selected='true'] > .adm-courbe-nom { color: #3d3d39; }
 .adm-courbe-chiffre { font-size: 24px; line-height: 1.25; font-weight: 600; letter-spacing: -0.02em; color: #3d3d39; font-variant-numeric: proportional-nums; white-space: nowrap; }
 [aria-selected='true'] .adm-courbe-chiffre { color: #0a0a0a; }
 .adm-courbe-vide { font-size: 14px; line-height: 30px; font-weight: 500; color: #5f5f5a; }
-.adm-courbe-ecart { font-size: 12px; color: #5f5f5a; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.adm-courbe-ecart { display: inline-flex; height: 20px; align-items: center; padding: 0 6px; border-radius: 6px; background: #efefec; color: #55554f; font-size: 12px; font-weight: 600; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.adm-courbe-ecart[data-sens='hausse'] { background: var(--adm-citron); color: var(--adm-citron-encre); }
+.adm-courbe-ecart[data-sens='baisse'] { background: #fdeaea; color: #a51f1f; }
+/* Ce qui se gagne, dans une phrase (« +23 cette semaine ») : le citron de l'accueil, comme une hausse. */
+.adm-gain { padding: 1px 5px; border-radius: 6px; background: var(--adm-citron); color: var(--adm-citron-encre); font-weight: 600; white-space: nowrap; }
 .adm-courbe-svg { font-family: inherit; }
 .adm .adm-courbe-svg:focus-visible { outline-offset: -2px; border-radius: 0 0 10px 10px; }
 .adm-courbe-texte { fill: #5f5f5a; font-size: 12px; font-variant-numeric: tabular-nums; }
-.adm-courbe-dernier { fill: #0a0a0a; font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.adm-courbe-dernier { fill: var(--adm-bleu); font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .adm-voir-tableau { display: inline-flex; min-height: 36px; align-items: center; padding: 0 12px; border: 1px solid #e3e3df; border-radius: 8px; background: #fff; font-size: 12px; font-weight: 500; transition: background-color 150ms; }
 .adm-voir-tableau:hover { background: #f4f4f0; }
 .adm-bulle { z-index: 2; display: flex; flex-direction: column; gap: 1px; padding: 8px 10px; border: 1px solid #e3e3df; border-radius: 8px; background: #fff; box-shadow: 0 8px 24px -12px rgb(10 10 10 / 0.25); white-space: nowrap; font-size: 13.5px; }
@@ -611,9 +704,10 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
 .adm-repartition { padding: 14px 16px 12px; }
 .adm-repartition li { display: grid; grid-template-columns: minmax(0, 1fr) 52px 40px; align-items: center; gap: 8px; min-height: 32px; }
 .adm-repartition-nom { position: relative; display: flex; min-width: 0; height: 32px; align-items: center; gap: 8px; padding-left: 10px; font-size: 14px; }
-.adm-repartition-barre { position: absolute; inset: 0 auto 0 0; min-width: 4px; border-radius: 6px; background: var(--barre, #efefec); }
-/* Un réseau a son logo dans sa couleur et sa barre dans une teinte claire de celle-ci (`COULEURS_SOURCES`) ; le reste garde le gris. */
-.adm-repartition-nom > svg { color: var(--picto, #3d3d39); }
+.adm-repartition-barre { position: absolute; inset: 0 auto 0 0; min-width: 4px; border-radius: 6px; background: var(--barre, var(--adm-bleu-pale)); }
+/* Un réseau a son logo dans sa couleur et sa barre dans une teinte claire de celle-ci (`COULEURS_SOURCES`) ; une provenance
+ * sans marque, le gris ; les liens et les appareils, le bleu Hopla (5,8:1 sur sa teinte pâle). */
+.adm-repartition-nom > svg { color: var(--picto, var(--adm-bleu)); }
 .adm-repartition-valeur { text-align: right; font-size: 14px; font-weight: 500; font-variant-numeric: tabular-nums; }
 .adm-repartition-part { text-align: right; font-size: 12px; color: #5f5f5a; font-variant-numeric: tabular-nums; }
 @media (min-width: 640px) {
@@ -658,7 +752,7 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
 .adm-ligne-pile { flex-wrap: wrap; padding: 12px 16px; }
 .adm-ligne-pile > .adm-ligne-texte { flex-basis: 100%; }
 .adm-reglages-pied { display: flex; flex-direction: column; gap: 6px; color: #5f5f5a; font-size: 12px; }
-.adm-reglages-pied a, .adm-offres-note a { color: #0a0a0a; text-decoration: underline; text-decoration-color: rgb(10 10 10 / 0.35); text-underline-offset: 2px; }
+.adm-reglages-pied a, .adm-offres-note a { color: var(--adm-bleu); text-decoration: underline; text-decoration-color: rgb(41 43 255 / 0.35); text-underline-offset: 2px; }
 .adm-reglages-pied a:hover, .adm-offres-note a:hover { text-decoration-color: currentColor; }
 /* Le fil d'une sous-page dans l'en-tête : « ‹ Réglages / Facturation ». */
 .adm-fil-retour { display: inline-flex; min-height: 44px; align-items: center; gap: 4px; padding: 0 8px; border-radius: 7px; color: #55554f; font-size: 13.5px; font-weight: 500; transition: background-color 150ms, color 150ms; }
@@ -700,16 +794,19 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
 /*
  * Comptes (direction B, 20 octobre 2026) : les onglets avec leur compte et la
  * recherche sur une barre pleine largeur, puis un tableau. Au téléphone, le
- * tableau devient une liste. Le seul ambre : un signalement à traiter.
+ * tableau devient une liste. Le seul ambre : un signalement à traiter. Les
+ * couleurs de l'accueil (22 octobre 2026) : l'onglet ouvert en bleu, une
+ * teinte de l'accueil par compte, et les offres payantes à leurs couleurs.
  */
 .adm-comptes-barre { display: flex; flex-direction: column; gap: 12px; }
 .adm-comptes-onglets { display: flex; gap: 22px; overflow-x: auto; border-bottom: 1px solid #ececea; scrollbar-width: none; }
 .adm-comptes-onglets > button { display: flex; min-height: 44px; flex-shrink: 0; align-items: center; gap: 7px; color: #55554f; font-size: 14px; font-weight: 500; white-space: nowrap; transition: color 150ms, box-shadow 200ms var(--adm-sortie); }
 .adm-comptes-onglets > button:hover { color: #0a0a0a; }
-.adm-comptes-onglets > button[aria-selected='true'] { color: #0a0a0a; box-shadow: inset 0 -2px 0 #0a0a0a; }
+.adm-comptes-onglets > button[aria-selected='true'] { color: var(--adm-bleu); box-shadow: inset 0 -2px 0 var(--adm-bleu); }
 .adm .adm-comptes-onglets > button:focus-visible { outline-offset: -2px; }
 .adm-compteur { display: inline-flex; height: 20px; min-width: 20px; align-items: center; justify-content: center; padding: 0 7px; border-radius: 7px; background: rgb(10 10 10 / 0.07); color: #3d3d39; font-size: 12px; font-weight: 500; font-variant-numeric: tabular-nums; }
 .adm-compteur[data-alerte] { background: #a16207; color: #fff; font-weight: 600; }
+.adm-comptes-onglets > button[aria-selected='true'] .adm-compteur:not([data-alerte]) { background: var(--adm-bleu-pale); color: var(--adm-bleu); }
 .adm-recherche { position: relative; display: flex; min-width: 0; flex: 1; align-items: center; }
 .adm-recherche > svg { position: absolute; left: 12px; color: #5f5f5a; pointer-events: none; }
 .adm-recherche > input { width: 100%; min-height: 44px; padding: 0 12px 0 34px; border: 1px solid #dcdcd7; border-radius: 10px; background: #fff; font-size: 16px; }
@@ -724,6 +821,12 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
 .adm-tableau tbody tr:hover { background: #fafaf9; }
 .adm-pastille { display: grid; width: 24px; height: 24px; flex-shrink: 0; place-items: center; overflow: hidden; border-radius: 50%; background: #ebebe7; color: #3d3d39; font-size: 12px; font-weight: 600; text-transform: uppercase; }
 .adm-pastille > img { width: 100%; height: 100%; object-fit: cover; }
+/* Les teintes de l'accueil, chacune avec son encre (7:1 et plus). */
+.adm-pastille[data-teinte='bleu'] { background: var(--adm-bleu-pale); color: var(--adm-bleu); }
+.adm-pastille[data-teinte='citron'] { background: var(--adm-citron); color: var(--adm-citron-encre); }
+.adm-pastille[data-teinte='lilas'] { background: #eee6f3; color: #5b3a74; }
+.adm-pastille[data-teinte='menthe'] { background: #e7edde; color: #3c4a33; }
+.adm-pastille[data-teinte='creme'] { background: var(--adm-creme); color: #5c4a2e; }
 .adm-statut { display: inline-flex; align-items: center; gap: 6px; color: #5f5f5a; white-space: nowrap; }
 .adm-statut[data-alerte] { color: #a16207; font-weight: 500; }
 .adm-points { display: grid; width: 32px; height: 32px; place-items: center; border-radius: 8px; color: #55554f; transition: background-color 150ms, color 150ms; }

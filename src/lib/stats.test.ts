@@ -16,6 +16,12 @@ test('l’écart avec la période d’avant : en pourcentage, en points pour le 
   assert.equal(ecart({ ...s, precedent: { vues: 0, visiteurs: 0, clics: 0 } }, 'vues').court, 'nouveau');
   assert.equal(ecart({ ...s, precedent: { vues: 0, visiteurs: 0, clics: 0 } }, 'taux').court, '');
   assert.match(ecart(s, 'vues').long, /^en baisse de 33/);
+  // Le sens donne sa couleur à l'étiquette : une baisse, une hausse, rien à comparer.
+  assert.equal(ecart(s, 'vues').sens, 'baisse');
+  assert.equal(ecart({ ...s, clics: 1351 }, 'taux').sens, 'hausse');
+  assert.equal(ecart({ ...s, precedent: { vues: 2877, visiteurs: 2129, clics: 1096 } }, 'vues').sens, 'stable');
+  assert.equal(ecart({ ...s, precedent: { vues: 0, visiteurs: 0, clics: 0 } }, 'vues').sens, 'nouveau');
+  assert.equal(ecart({ ...s, precedent: { vues: 0, visiteurs: 0, clics: 0 } }, 'taux').sens, undefined);
 });
 
 test('le chiffre d’un jour et de la période', () => {

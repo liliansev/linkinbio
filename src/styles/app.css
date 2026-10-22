@@ -21,6 +21,9 @@
   --font-sans: 'Geist Variable', ui-sans-serif, system-ui, sans-serif;
   --color-nuit: #0c121f;
   --color-peche: #ffb38a;
+  /* Le bleu et le citron de l'accueil, repris au back office (22 octobre 2026). */
+  --color-bleu: #292bff;
+  --color-citron: #e3fc96;
 }
 
 /*

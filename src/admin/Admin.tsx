@@ -17,7 +17,7 @@ import { PremiersPas, premiersPasFaits } from './PremiersPas.tsx';
 import { pageNeuve } from '../lib/demarrage.ts';
 import { sansSchema } from '../lib/types.ts';
 import { Icone } from '../components/Icone.tsx';
-import { BoutonCopier, EmplacementEntete, Menu, PoserFil, classeBouton, copierTexte, useGrandEcran, vibrer } from './ui.tsx';
+import { BoutonCopier, COULEUR_NAVIGATEUR, EmplacementEntete, Menu, PoserFil, classeBouton, copierTexte, useGrandEcran, vibrer } from './ui.tsx';
 import type { Fil } from './ui.tsx';
 import { Marque } from './Marque.tsx';
 import { useCouche } from './couches.ts';
@@ -473,12 +473,18 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
   const chargerStats = useCallback((jours: number) => api.stats(jours).then(s => { if (jours === 30) setClics(Object.fromEntries(s.blocs.map(b => [b.id, b.clics]))); return s; }), [api]);
   const demarrage = useDemarrage(reglages, blocs, { principal: compte.principal, dejaVue: !!initial.dejaVue });
   useEffect(() => { if (!demarrage.actif) setDemarrageOuvert(false); }, [demarrage.actif]);
+  // La barre du navigateur au téléphone suit le haut de l'écran : le bleu de l'en-tête et des CGU, le papier crème des premiers pas.
+  const cremeEnHaut = cguAJour && premiersPas;
+  useEffect(() => {
+    const meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
+    if (meta) meta.content = cremeEnHaut ? '#f3eee5' : COULEUR_NAVIGATEUR;
+  }, [cremeEnHaut]);
 
   if (!cguAJour) return <AccepterCgu accepter={async () => { await api.accepterCgu(); setCguAJour(true); }} deconnexion={deconnexion} />;
 
   const bulle = toast && (
     <div role="status" onPointerEnter={() => setToastTenu(true)} onPointerLeave={() => setToastTenu(false)} onFocus={() => setToastTenu(true)} onBlur={e => { if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setToastTenu(false); }} className={`adm-toast fixed inset-x-4 ${onglet === 'page' && !premiersPas ? 'bottom-[calc(134px+env(safe-area-inset-bottom))]' : 'bottom-[calc(76px+env(safe-area-inset-bottom))]'} z-[60] mx-auto flex max-w-sm items-center justify-between gap-3 rounded-2xl bg-white px-4 py-3 text-[14.5px] font-medium text-nuit shadow-2xl lg:bottom-6 lg:left-[232px]`}>
-      <span className="flex items-center gap-2">{/* La coche confirme ; une simple information n'en a pas. */}{!toast.annuler && toast.genre !== 'info' && sauvegarde !== 'erreur' && <span aria-hidden="true"><Icone nom="ui-ok" taille={18} /></span>}{toast.texte}</span>
+      <span className="flex items-center gap-2">{/* La coche confirme ; une simple information n'en a pas. */}{!toast.annuler && toast.genre !== 'info' && sauvegarde !== 'erreur' && <span aria-hidden="true" className="text-citron"><Icone nom="ui-ok" taille={18} /></span>}{toast.texte}</span>
       {toast.annuler && <button ref={actionToast} type="button" onClick={toast.annuler} className="-my-2 min-h-11 rounded-lg px-3 font-semibold text-nuit underline decoration-nuit/30 underline-offset-4 hover:bg-nuit/10">{toast.action ?? 'Annuler'}</button>}
     </div>
   );
@@ -512,23 +518,24 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
   );
   const indicateur = sauvegarde === 'encours' ? 'Enregistrement…' : sauvegarde === 'erreur' ? 'Non enregistré' : 'Enregistré';
   // Le même signe au téléphone et au bureau : une coche quand tout est gardé, un point qui bat pendant l'envoi, du rouge seulement en cas d'échec.
+  // Le point prend la couleur de l'état, sur le bleu de l'en-tête au téléphone comme sur le blanc au bureau.
   const signe = sauvegarde === 'ok'
     ? <Icone nom="ui-ok" taille={14} className="shrink-0" />
-    : <span aria-hidden="true" className={`mx-1 h-1.5 w-1.5 shrink-0 rounded-full ${sauvegarde === 'encours' ? 'animate-pulse bg-white/40 motion-reduce:animate-none' : 'bg-red-300'}`} />;
+    : <span aria-hidden="true" className={`mx-1 h-1.5 w-1.5 shrink-0 rounded-full bg-current ${sauvegarde === 'encours' ? 'animate-pulse opacity-50 motion-reduce:animate-none' : ''}`} />;
   const adresse = urlPage(compte);
   const courte = sansSchema(adresse);
   const coupe = courte.lastIndexOf('/') + 1;
   const titre = onglets.find(o => o.id === onglet)!.nom;
   const avatar = (taille: string) => reglages.profil.avatar
     ? <img src={reglages.profil.avatar} alt="" className={`${taille} shrink-0 rounded-full object-cover`} />
-    : <span className={`${taille} grid shrink-0 place-items-center rounded-full bg-white/[0.06]`}><Icone nom="utilisateur" taille={14} /></span>;
+    : <span className={`${taille} adm-avatar-vide grid shrink-0 place-items-center rounded-full`}><Icone nom="utilisateur" taille={14} /></span>;
 
   return (
     <FournisseurOffre value={offre}>
     <div className="adm adm-shell min-h-dvh font-sans text-white antialiased">
       {/* Au bureau, une barre latérale fine : la marque, les sections, et le compte en bas, qui s'ouvre sur « Me déconnecter ». */}
       <aside className="adm-sidebar fixed inset-y-0 left-0 z-30 hidden w-[216px] flex-col lg:flex" aria-label="Navigation">
-        <Marque petite className="h-14 shrink-0 px-2" />
+        <Marque petite surBleu className="h-14 shrink-0 px-2" />
         <nav className="flex flex-col gap-0.5 pt-1.5" aria-label="Sections">
           {onglets.map(o => (
             <button key={o.id} type="button" onClick={() => { if (o.id !== onglet) choisirOnglet(o.id); else fil?.retour(); }} aria-current={onglet === o.id ? 'page' : undefined}
@@ -559,7 +566,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
             : avatar('h-9 w-9')}
           <div className="min-w-0 flex-1">
             <p className="truncate text-[15px] font-semibold leading-tight" translate="no">{courte}</p>
-            <p className={`flex items-center gap-1 text-[12px] leading-tight ${sauvegarde === 'erreur' ? 'text-red-300' : 'text-white/55'}`} aria-live="polite">
+            <p className="adm-topbar-etat flex items-center gap-1 text-[12px] leading-tight" data-erreur={sauvegarde === 'erreur' || undefined} aria-live="polite">
               {signe}{indicateur}
             </p>
           </div>

@@ -5,7 +5,7 @@ import { ANIMATIONS, RESEAUX, SANS_COULEURS } from '../lib/types.ts';
 import { THEMES, themeDe, themeParId, variablesTheme } from '../lib/themes.ts';
 import type { Theme } from '../lib/themes.ts';
 import { Icone, NOMS_RESEAUX } from '../components/Icone.tsx';
-import { Carte, Champ, Interrupteur, NOMS_ANIMATIONS, Segments, choisirFichier, classeBouton, classeSaisie, flechesRadio, preparerImage, useFilFeuille, vibrer } from './ui.tsx';
+import { Carte, Champ, Interrupteur, NOMS_ANIMATIONS, Segments, choisirFichier, classeBouton, classeSaisie, couleurReseau, flechesRadio, preparerImage, useFilFeuille, vibrer } from './ui.tsx';
 import { useCouche } from './couches.ts';
 import { pseudoReseau, urlReseau } from '../lib/demarrage.ts';
 import { adresseSaisie, pourquoiPasReseau } from '../lib/valider.ts';
@@ -210,7 +210,7 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
             const faux = enSaisie !== r.reseau && !!r.url.trim() && !urlReseau(r.reseau, r.url);
             return (
             <li key={r.reseau} className="flex flex-wrap items-center gap-1.5" onFocus={() => setLigne(r.reseau)} onBlur={e => { if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setLigne(l => (l === r.reseau ? null : l)); }}>
-              <Icone nom={r.reseau} taille={22} className="w-7 shrink-0 text-white" />
+              <span className="flex w-7 shrink-0 justify-center text-white" style={{ color: couleurReseau(r.reseau) }}><Icone nom={r.reseau} taille={22} /></span>
               {/* Un pseudo suffit, comme aux premiers pas : il devient l'adresse du profil en quittant le champ. */}
               <input className={`${classeSaisie} min-w-0 flex-1 py-2.5`} value={pseudoReseau(r.reseau, r.url)} onFocus={() => setEnSaisie(r.reseau)}
                 aria-invalid={faux || undefined} aria-describedby={faux ? `reseau-faux-${r.reseau}` : undefined} aria-label={NOMS_RESEAUX[r.reseau]} placeholder={EXEMPLES[r.reseau]} inputMode={r.reseau === 'email' ? 'email' : 'url'} autoCapitalize="none" autoCorrect="off"

@@ -3,7 +3,7 @@ import type { FormEvent } from 'react';
 import { BoutonPrincipal, classeBouton, classeSaisie } from './ui.tsx';
 import { Marque } from './Marque.tsx';
 
-/* L'écran de connexion : son adresse, et le lien arrive par e-mail. */
+/* L'écran de connexion : son adresse, et le lien arrive par e-mail. Sur le bleu de l'accueil, d'où l'on arrive. */
 export function Connexion({ demander }: { demander: (email: string) => Promise<{ ok: boolean; message: string; lienDev?: string }> }) {
   const [email, setEmail] = useState('');
   const [etat, setEtat] = useState<{ type: 'repos' | 'envoi' | 'ok' | 'erreur'; message?: string; lienDev?: string }>({ type: 'repos' });
@@ -19,16 +19,16 @@ export function Connexion({ demander }: { demander: (email: string) => Promise<{
     } catch { setEtat({ type: 'erreur', message: 'Le serveur ne répond pas. Réessaie dans un instant.' }); }
   }
   return (
-    <main className="adm adm-shell grid min-h-dvh place-items-center px-5 py-10 font-sans text-white antialiased">
+    <main className="adm adm-shell adm-entree grid min-h-dvh place-items-center px-5 py-10 font-sans text-white antialiased">
       <div className="w-full max-w-[420px]">
-        <Marque className="mb-8 justify-center" />
+        <Marque className="mb-8 justify-center" surBleu />
         {/* Une fois le lien parti, la carte ne parle plus que de lui : la consigne d'avant ne reste pas au-dessus. */}
         {etat.type === 'ok' ? (
           <div className="adm-card adm-onglet p-6 sm:p-8" role="status">
             <h1 ref={titreEnvoye} tabIndex={-1} className="adm-titre">Regarde ta boîte mail</h1>
             <p className="mt-2 text-[14px] leading-relaxed text-white/75">{etat.message}</p>
             <p className="mt-2 text-[14px] leading-relaxed text-white/60">Rien reçu ? Regarde dans les indésirables.</p>
-            {etat.lienDev && <a href={etat.lienDev} className="mt-3 block break-all text-[13px] text-white underline">{etat.lienDev}</a>}
+            {etat.lienDev && <a href={etat.lienDev} className="mt-3 block break-all text-[13px] text-bleu underline">{etat.lienDev}</a>}
             <button type="button" onClick={() => setEtat({ type: 'repos' })} className={`${classeBouton.secondaire} mt-6 w-full`}>Utiliser une autre adresse</button>
           </div>
         ) : (

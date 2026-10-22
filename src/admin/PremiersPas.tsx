@@ -297,9 +297,9 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
                   onClick={() => { vibrer(5); onReglages({ ...reglages, theme: t.id, bouton: t.conseil, couleurs: SANS_COULEURS }); }}
                   className="group flex w-full flex-col items-center gap-1.5 rounded-xl transition active:scale-95">
                   {/* Le thème pris se reconnaît à un trait et une coche, sans fond gris autour. */}
-                  <span className={`relative block w-full rounded-xl outline-offset-2 transition-[outline-color] ${choisi ? 'outline-2 outline-white outline' : 'outline-2 outline-transparent outline group-hover:outline-white/20'}`}>
+                  <span className={`relative block w-full rounded-xl outline-offset-2 transition-[outline-color] ${choisi ? 'outline-2 outline-bleu outline' : 'outline-2 outline-transparent outline group-hover:outline-white/20'}`}>
                     <Pastille theme={t} />
-                    {choisi && <span className="absolute -right-1.5 -top-1.5 z-10 grid h-5 w-5 place-items-center rounded-full bg-white text-nuit ring-2 ring-nuit"><Icone nom="ui-ok" taille={12} /></span>}
+                    {choisi && <span className="absolute -right-1.5 -top-1.5 z-10 grid h-5 w-5 place-items-center rounded-full bg-bleu text-nuit ring-2 ring-nuit"><Icone nom="ui-ok" taille={12} /></span>}
                   </span>
                   <span className={`line-clamp-2 w-full text-center text-[11.5px] leading-tight ${choisi ? 'font-semibold text-white' : 'text-white/70'}`}>{t.nom}</span>
                 </button>
@@ -335,8 +335,8 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
           className={`${classeBouton.icone} disabled:invisible`}><Icone nom="ui-chevron" taille={20} className="rotate-90" /></button>
         <div className="flex flex-1 justify-center gap-1.5" role="progressbar" aria-label="Premiers pas" aria-valuemin={0} aria-valuemax={QUESTIONS} aria-valuenow={Math.min(i, QUESTIONS)} aria-valuetext={i < QUESTIONS ? `Question ${i + 1} sur ${QUESTIONS}` : 'Terminé'}>
           {Array.from({ length: QUESTIONS }, (_, n) => (
-            <span key={n} className="h-1.5 min-w-3 max-w-9 flex-1 overflow-hidden rounded-full bg-white/[0.1]">
-              <span className="block h-full origin-left rounded-full bg-white transition-transform duration-500 motion-reduce:transition-none" style={{ transform: `scaleX(${n < i ? 1 : n === i ? 0.4 : 0})` }} />
+            <span key={n} className="h-1.5 min-w-3 max-w-9 flex-1 overflow-hidden rounded-full bg-[#e4e4ff]">
+              <span className="block h-full origin-left rounded-full bg-bleu transition-transform duration-500 motion-reduce:transition-none" style={{ transform: `scaleX(${n < i ? 1 : n === i ? 0.4 : 0})` }} />
             </span>
           ))}
         </div>
@@ -344,7 +344,7 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
       </header>
 
       {/* L'aperçu : la vraie page, en petit, qui se remplit à chaque réponse. */}
-      <div className="flex min-h-[16dvh] max-h-[38dvh] flex-1 justify-center px-6 pt-1 pb-4 lg:max-h-none lg:order-last lg:min-h-0 lg:items-center lg:p-8" aria-hidden="true" inert>
+      <div className="adm-premiers-scene flex min-h-[16dvh] max-h-[38dvh] flex-1 justify-center px-6 pt-1 pb-4 lg:max-h-none lg:order-last lg:min-h-0 lg:items-center lg:p-8" aria-hidden="true" inert>
         <div className={`adm-miroir adm-apercu adm-toile pointer-events-none relative max-h-[640px] select-none lg:h-[min(640px,calc(100dvh-8rem))] overflow-hidden rounded-[26px] transition-shadow duration-700 ${etape === 'fin' ? 'adm-miroir-fin' : ''}`}>
           <div className="adm-miroir-page"><PageLiens page={{ reglages, blocs: visibles, compte }} apercu /></div>
         </div>

@@ -19,8 +19,11 @@ import { TYPES } from './OngletLiens.tsx';
  * Stats (direction B, 20 octobre 2026) : une phrase qui dit l'essentiel, les
  * quatre chiffres clés en une rangée qui sert d'onglets à une grande courbe,
  * puis d'où viennent les clics et les visiteurs, en listes à barre pâle avec
- * les chiffres à droite (un réseau y a son logo en couleur et sa barre teintée,
- * seule couleur du back office hors des alertes). La période se choisit dans
+ * les chiffres à droite. Les couleurs de l'accueil (22 octobre 2026) : la
+ * courbe et les barres des liens et des appareils en bleu Hopla, chaque réseau
+ * dans la couleur de sa marque (une provenance sans marque en gris, pour ne pas
+ * se confondre avec les bleus de LinkedIn, Facebook ou Google), un écart en
+ * citron quand il monte, en rose quand il baisse. La période se choisit dans
  * un petit menu, dans l'en-tête au bureau, en tête de l'écran au téléphone.
  */
 
@@ -90,6 +93,8 @@ function lisse(p: [number, number][]): string {
  */
 function Courbe({ serie, mesure }: { serie: Point[]; mesure: Mesure }) {
   const [boite, largeur] = useLargeur();
+  // L'aire sous la courbe : un bleu qui s'efface vers le bas. Son id sert dans `url(#…)`, sans les signes que React y met.
+  const degrade = `degrade-${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
   const [survol, setSurvol] = useState<number | null>(null);
   const etroit = largeur > 0 && largeur < 600;
   const h = etroit ? 220 : 288;
@@ -150,11 +155,17 @@ function Courbe({ serie, mesure }: { serie: Point[]; mesure: Mesure }) {
               <text key={i} x={x(i)} y={h - 10} textAnchor={k === 0 && i === 0 ? 'start' : x(i) > x1 - 30 ? 'end' : 'middle'}>{nomDate(i)}</text>
             ))}
           </g>
-          <path d={aire} fill="#0a0a0a" fillOpacity="0.06" />
-          <path d={ligne} fill="none" stroke="#0a0a0a" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
-          {point && <line x1={point.x} x2={point.x} y1={yHaut - 8} y2={yBas} stroke="#b9b9b4" strokeWidth="1" />}
-          {point && <circle cx={point.x} cy={point.y} r="4" fill="#0a0a0a" stroke="#ffffff" strokeWidth="2" />}
-          {survol !== n - 1 && <circle cx={x(n - 1)} cy={y(dernier)} r="4" fill="#0a0a0a" stroke="#ffffff" strokeWidth="2" />}
+          <defs>
+            <linearGradient id={degrade} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stopColor="#292bff" stopOpacity="0.16" />
+              <stop offset="1" stopColor="#292bff" stopOpacity="0.02" />
+            </linearGradient>
+          </defs>
+          <path d={aire} fill={`url(#${degrade})`} />
+          <path d={ligne} fill="none" stroke="#292bff" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+          {point && <line x1={point.x} x2={point.x} y1={yHaut - 8} y2={yBas} stroke="#b9baf5" strokeWidth="1" />}
+          {point && <circle cx={point.x} cy={point.y} r="4" fill="#292bff" stroke="#ffffff" strokeWidth="2" />}
+          {survol !== n - 1 && <circle cx={x(n - 1)} cy={y(dernier)} r="4" fill="#292bff" stroke="#ffffff" strokeWidth="2" />}
           <text x={x(n - 1)} y={yDernier} textAnchor="middle" className="adm-courbe-dernier">{chiffre(dernier, mesure)}</text>
         </svg>
       )}
@@ -192,6 +203,13 @@ function TableauJours({ serie, hauteur }: { serie: Point[]; hauteur: number }) {
   );
 }
 
+/** La phrase des stats, son chiffre de vues en bleu, comme un mot de titre sur l'accueil. */
+function Phrase({ texte }: { texte: string }) {
+  const m = /\d[\d\s\u202f\u00a0]*\svues?\b/.exec(texte);
+  if (!m) return <>{texte}</>;
+  return <>{texte.slice(0, m.index)}<span className="adm-stats-chiffre">{m[0]}</span>{texte.slice(m.index + m[0].length)}</>;
+}
+
 /** Les quatre chiffres clés, qui choisissent la courbe dessous (motif ARIA des onglets, flèches et Début/Fin). */
 function CourbeAOnglets({ stats }: { stats: Stats }) {
   const [mesure, setMesure] = useState<Mesure>('vues');
@@ -221,7 +239,7 @@ function CourbeAOnglets({ stats }: { stats: Stats }) {
               <span className="flex items-baseline gap-2">
                 {/* Chiffres proportionnels : en Geist, le 1 tabulaire prend un pied qui, à cette taille, se lit comme une autre fonte. */}
                 <span className={total === null ? 'adm-courbe-vide' : 'adm-courbe-chiffre'}>{total === null ? 'pas encore' : chiffre(total, m)}</span>
-                {e.court && <span className="adm-courbe-ecart"><span aria-hidden="true">{e.court}</span><span className="sr-only">, {e.long}</span></span>}
+                {e.court && <span className="adm-courbe-ecart" data-sens={e.sens}><span aria-hidden="true">{e.court}</span><span className="sr-only">, {e.long}</span></span>}
               </span>
             </button>
           );
@@ -250,6 +268,8 @@ const ICONES_SOURCES: Record<string, string> = {
   Snapchat: 'snapchat', 'QR code': 'qr', Newsletter: 'courrier', 'E-mail': 'email', Google: 'google', Direct: 'lien',
 };
 const ICONES_APPAREILS: Record<string, string> = { Mobile: 'mobile', Tablette: 'mobile', Ordinateur: 'ordinateur' };
+/** Une provenance sans marque (Direct, QR code, e-mail, un site) : en gris, à côté des réseaux en couleur. Les liens et les appareils prennent le bleu (voir admin.css). */
+const SANS_MARQUE = { picto: '#3d3d39', barre: '#efefec' };
 
 type Ligne = { cle: string; nom: string; icone: string; valeur: number; couleur?: { picto: string; barre: string } };
 
@@ -285,7 +305,7 @@ function Repartition({ titre, unite, lignes, total, vide = 'Pas encore de donné
         </ol>
       )}
       {lignes.length > 8 && (
-        <button type="button" onClick={() => setTout(t => !t)} aria-expanded={tout} className="mt-1.5 min-h-11 text-[13px] font-medium text-[#3d3d39] underline decoration-[#c7c7c0] underline-offset-2 hover:text-white bureau:min-h-8">
+        <button type="button" onClick={() => setTout(t => !t)} aria-expanded={tout} className="mt-1.5 min-h-11 text-[13px] font-medium text-bleu underline decoration-bleu/35 underline-offset-2 hover:text-[#1d1fd6] bureau:min-h-8">
           {tout ? 'Voir moins' : `Tout voir (${lignes.length})`}
         </button>
       )}
@@ -304,11 +324,11 @@ function OuvertsDansLApp({ apps, actif, onActiver }: { apps: Stats['apps']; acti
         <p className="text-[24px] font-semibold leading-none tracking-[-0.02em] proportional-nums">{nombre(apps.ouverts)}</p>
         <p className="text-[13.5px] leading-snug text-[#5f5f5a]">clic{apps.ouverts > 1 ? 's' : ''} ouvert{apps.ouverts > 1 ? 's' : ''} directement dans YouTube, Spotify, Instagram…</p>
       </div>
-      <div className="mt-3 h-2 overflow-hidden rounded-full bg-[#efefec]"><div className="adm-barre h-full origin-left rounded-full bg-white" style={{ width: `${part}%` }} /></div>
+      <div className="mt-3 h-2 overflow-hidden rounded-full bg-[#e4e4ff]"><div className="adm-barre h-full origin-left rounded-full bg-bleu" style={{ width: `${part}%` }} /></div>
       <p className="mt-1.5 text-[12px] text-[#5f5f5a]">{part}{' '}% des {nombre(apps.versApp)} clics vers une app depuis Instagram ou TikTok</p>
       {!actif && (
         <p className="mt-3 border-t border-[#efefec] pt-3 text-[13px] leading-snug text-[#3d3d39]">
-          L’ouverture dans les apps est coupée sur ta page. {onActiver && <button type="button" onClick={onActiver} className="font-semibold text-white underline underline-offset-2">La rallumer</button>}
+          L’ouverture dans les apps est coupée sur ta page. {onActiver && <button type="button" onClick={onActiver} className="font-semibold text-bleu underline underline-offset-2 hover:text-[#1d1fd6]">La rallumer</button>}
         </p>
       )}
     </section>
@@ -403,7 +423,7 @@ function TableauStats({ charger, adresse, pseudo, joursMax = 365, onOffres, ouvr
   const elements: ElementMenu[] = PERIODES.flatMap((p): ElementMenu[] => {
     if (p.jours <= joursMax) return [{ nom: p.nom, coche: p.jours === jours, action: () => setJours(p.jours) }];
     const offre = PLANS_PAYANTS.find(o => OFFRES[o].enVente && OFFRES[o].jours >= p.jours);
-    return onOffres && offre ? [{ nom: p.nom, etiquette: OFFRES[offre].nom, action: () => onOffres(undefined, offre) }] : [];
+    return onOffres && offre ? [{ nom: p.nom, etiquette: OFFRES[offre].nom, offre, action: () => onOffres(undefined, offre) }] : [];
   });
   const nomPeriode = PERIODES.find(p => p.jours === jours)!.nom;
   // La période ne se montre qu'à une page déjà vue : avant, il n'y a rien à comparer. Pendant le premier chargement, elle reste.
@@ -417,7 +437,7 @@ function TableauStats({ charger, adresse, pseudo, joursMax = 365, onOffres, ouvr
     const bloc = blocs.find(x => x.id === b.id);
     return { cle: b.id, nom: b.titre, valeur: b.clics, icone: bloc?.icone || TYPES.find(t => t.type === bloc?.type)?.picto || 'bloc-lien' };
   });
-  const lignesSources: Ligne[] = (stats?.sources ?? []).map(s => ({ cle: s.nom, nom: s.nom, valeur: s.vues, icone: ICONES_SOURCES[s.nom] ?? 'site', couleur: COULEURS_SOURCES[s.nom] }));
+  const lignesSources: Ligne[] = (stats?.sources ?? []).map(s => ({ cle: s.nom, nom: s.nom, valeur: s.vues, icone: ICONES_SOURCES[s.nom] ?? 'site', couleur: COULEURS_SOURCES[s.nom] ?? SANS_MARQUE }));
   const lignesAppareils: Ligne[] = (stats?.appareils ?? []).map(s => ({ cle: s.nom, nom: s.nom, valeur: s.vues, icone: ICONES_APPAREILS[s.nom] ?? 'ordinateur' }));
   const note = <p className="text-[12px] leading-snug text-[#5f5f5a]">Sans cookie : un visiteur compte une fois par jour, toi jamais.</p>;
 
@@ -438,7 +458,7 @@ function TableauStats({ charger, adresse, pseudo, joursMax = 365, onOffres, ouvr
         </>
       ) : (
         <div className={`flex flex-col gap-5 transition-opacity duration-200 ${charge ? 'opacity-50' : ''}`} aria-busy={charge}>
-          <p className="adm-stats-phrase">{enUnePhrase(stats)}</p>
+          <p className="adm-stats-phrase"><Phrase texte={enUnePhrase(stats)} /></p>
           <CourbeAOnglets stats={stats} />
           <div className="grid items-start gap-5 lg:grid-cols-2">
             <Repartition titre="Liens" unite="Clics" lignes={lignesLiens} total={stats.clics} vide="Aucun clic sur cette période." />
