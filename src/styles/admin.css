@@ -171,19 +171,25 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
 .adm-sidebar { padding: 0 10px 10px; background: var(--adm-bleu); color: #fff; }
 .adm-sidebar :is(.adm-nav-item, .adm-compte, .adm-appel):focus-visible { outline-color: var(--adm-citron); }
 /*
- * Sur un grand écran (22 octobre 2026, demandé par Lilian) : la barre latérale et l'espace de travail
- * tiennent dans un cadre de 1600 px au plus, centré, au lieu de partir aux deux bords. Autour, un gris
- * très clair, et un trait fin ferme le cadre à droite. Jusqu'à 1600 px, rien ne bouge.
- * `--adm-marge` est la place laissée de chaque côté, pour ce qui est fixé à l'écran (barre latérale, message).
+ * Sur un grand écran (22 octobre 2026, redit par Lilian, d'après MailCheap et Resend) : l'app prend toute la
+ * largeur, la barre latérale collée au bord gauche, mais le contenu de chaque onglet tient dans une colonne
+ * centrée sur l'espace de travail. L'en-tête suit la même colonne : le titre au-dessus du bord gauche du
+ * contenu, les gestes au-dessus de son bord droit. `--adm-colonne` est sa largeur selon l'onglet (Ma page :
+ * l'édition et la page ensemble), `--adm-bord` la marge qu'elle garde quand l'écran est plus étroit, et
+ * `--adm-largeur` la largeur qu'elle prend, pour ce qui est fixé à l'écran (le message du bas).
  */
-:root { --adm-cadre: 1600px; --adm-marge: max(0px, (100% - var(--adm-cadre)) / 2); }
 @media (min-width: 1024px) {
-  .adm-shell:has(> .adm-travail) { background: #fafaf9; }
-  .adm-sidebar { left: var(--adm-marge); }
-  .adm-travail { max-width: var(--adm-cadre); min-height: 100dvh; margin-inline: auto; padding-left: 216px; background: #fff; }
-  .adm-shell .adm-toast { left: calc(var(--adm-marge) + 232px); right: calc(var(--adm-marge) + 16px); }
+  .adm-shell {
+    --adm-bord: clamp(20px, 2.5vw, 40px);
+    --adm-colonne: 1120px;
+    --adm-largeur: min(100% - 216px - 2 * var(--adm-bord), var(--adm-colonne));
+  }
+  .adm-shell[data-onglet='reglages'] { --adm-colonne: 680px; }
+  .adm-shell[data-onglet='page'] { --adm-colonne: 1300px; }
+  .adm-travail { padding-left: 216px; }
+  .adm-colonne { width: min(100% - 2 * var(--adm-bord), var(--adm-colonne)); margin-inline: auto; }
+  .adm-shell .adm-toast { left: 232px; right: 16px; }
 }
-@media (min-width: 1601px) { .adm-travail { box-shadow: 1px 0 0 #ececea; } }
 .adm-nav-item { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 10px; border-radius: 7px; color: #dcdcff; font-size: 14px; font-weight: 500; text-align: left; transition: background-color 150ms, color 150ms; }
 .adm-nav-item:hover { background: rgb(255 255 255 / 0.1); color: #fff; }
 .adm-nav-item[aria-current='page'] { background: #fff; color: var(--adm-bleu); font-weight: 600; }
@@ -303,16 +309,17 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
  * l'en-tête, le profil, le champ où coller une adresse, puis la liste des
  * blocs, une rangée chacun, dépliée sur ses réglages. À droite, sur le papier
  * crème de l'accueil, la page dans un téléphone à sa vraie largeur, collée sous
- * l'en-tête et réduite si l'écran est court ou étroit.
+ * l'en-tête et réduite si l'écran est court ou étroit. Les deux tiennent
+ * ensemble dans la colonne centrée de l'onglet (1300 px au plus).
  */
 @media (min-width: 1024px) {
-  .adm { --adm-apercu: clamp(360px, 36vw, 520px); }
+  .adm { --adm-apercu: clamp(340px, 34vw, 500px); --adm-entre: clamp(24px, 2.5vw, 40px); }
   /* L'en-tête (57 px) et les onglets collés (44 px) couvrent le haut : ce qu'on amène en vue s'arrête dessous. */
   html:has(.adm-studio-bureau) { scroll-padding-top: 113px; }
   .adm-editor-tools { display: none; }
-  .adm-studio-bureau { display: grid; grid-template-columns: minmax(0, 1fr) var(--adm-apercu); min-height: calc(100dvh - 57px); }
-  .adm-edition { min-width: 0; padding: 0 clamp(20px, 3vw, 40px) 96px; }
-  .adm-edition-col { container: edition / inline-size; max-width: 760px; margin-inline: auto; padding-top: 16px; }
+  .adm-studio-bureau { display: grid; grid-template-columns: minmax(0, 1fr) var(--adm-apercu); gap: var(--adm-entre); min-height: calc(100dvh - 57px); }
+  .adm-edition { min-width: 0; padding-bottom: 96px; }
+  .adm-edition-col { container: edition / inline-size; padding-top: 16px; }
   .adm-demarrage { margin-bottom: 12px; }
   .adm-demarrage:empty { display: none; }
 
@@ -430,9 +437,9 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
   .adm-editeur-pied { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; }
 
   /* La page, à droite : collée sous l'en-tête, avec le choix de la largeur au-dessus. */
-  /* Sur le papier crème de l'accueil : la page qu'on regarde, à part de l'édition. */
-  .adm-apercu-cote { min-width: 0; border-left: 1px solid #e9e3d7; background: var(--adm-creme); }
-  .adm-apercu-colle { position: sticky; top: 57px; display: flex; height: calc(100dvh - 57px); flex-direction: column; align-items: center; gap: 14px; padding: 16px 24px 20px; }
+  /* Sur le papier crème de l'accueil, une scène arrondie à côté de l'édition (comme aux premiers pas), et non plus une bande collée au bord de l'écran. */
+  .adm-apercu-cote { min-width: 0; }
+  .adm-apercu-colle { position: sticky; top: 73px; display: flex; height: calc(100dvh - 57px - 32px); flex-direction: column; align-items: center; gap: 14px; margin: 16px 0; padding: 16px 24px 20px; border-radius: 20px; background: var(--adm-creme); }
   /* Téléphone ou ordinateur : deux icônes seules, sans cadre autour ni fond derrière ; la vue prise en bleu, soulignée comme un onglet. */
   .adm-vues { display: flex; flex: none; gap: 4px; }
   .adm-outil { display: inline-flex; height: 30px; align-items: center; gap: 6px; padding: 0 10px; color: #0a0a0a; font-size: 13.5px; font-weight: 500; transition: color 150ms, box-shadow 200ms var(--adm-sortie); }
@@ -448,7 +455,7 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
   .adm-tel-ecran::-webkit-scrollbar { display: none; }
   .adm-ordi-boite { display: flex; width: 100%; min-height: 0; flex: 1; flex-direction: column; overflow-y: auto; }
   /* Le message du bas se centre sur l'édition, pas sur la page. */
-  .adm:has(.adm-studio-bureau) .adm-toast { right: calc(var(--adm-marge) + var(--adm-apercu) + 16px); }
+  .adm-shell:has(.adm-studio-bureau) .adm-toast { left: calc(216px + (100% - 216px - var(--adm-largeur)) / 2); right: calc((100% - 216px - var(--adm-largeur)) / 2 + var(--adm-entre) + var(--adm-apercu)); }
 }
 /* Une tablette en paysage a la mise en page du bureau, avec des cibles pour le doigt. */
 @media (min-width: 1024px) and (pointer: coarse) {
@@ -949,11 +956,11 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
 .adm-bandeau[data-erreur] { border-color: #f1c7c7; background: #fdf3f3; color: #a51f1f; }
 @media (max-width: 1023px) { .adm-points { width: 44px; height: 44px; border-radius: 10px; } }
 @media (min-width: 1024px) {
-  .adm-comptes-barre { height: 48px; flex-direction: row; align-items: stretch; justify-content: space-between; gap: 16px; padding: 0 16px 0 24px; border-bottom: 1px solid #ececea; }
+  .adm-comptes-barre { height: 48px; flex-direction: row; align-items: stretch; justify-content: space-between; gap: 16px; border-bottom: 1px solid #ececea; }
   .adm-comptes-onglets { border-bottom: 0; }
   .adm-comptes-onglets > button { min-height: 0; }
   .adm-recherche { width: 260px; flex: none; }
-  .adm-comptes-contenu { padding: 8px 16px 0 24px; }
+  .adm-comptes-contenu { padding-top: 8px; }
 }
 @media (min-width: 1024px) and (pointer: fine) {
   .adm-comptes-onglets > button { font-size: 13.5px; }
