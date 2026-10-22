@@ -72,9 +72,10 @@ embarque tout : l'image n'a pas de `node_modules`.
   dans Safari ou Chrome, app par app ; TikTok, X et Snapchat n'en ont pas), `vitrine.ts` (les sites de soutien et les agendas que
   la page sait nommer, l'adresse PayPal.Me d'un montant, et `adresseIntegree` : Calendly, Cal.com et Google Agenda s'ouvrent dans la
   page, les autres sur leur site).
-- `admin/` : onglets Ma page, Stats, Comptes (principal seulement), Réglages. Sur un grand écran (22 octobre 2026), la
-  barre latérale et l'espace de travail (`adm-travail`) tiennent dans un cadre centré de 1600 px au plus (`--adm-cadre`),
-  les premiers pas dans 1200 px (`adm-premiers`). Réglages tient sur une seule page de lignes
+- `admin/` : onglets Ma page, Stats, Comptes (principal seulement), Réglages. Sur un grand écran (22 octobre 2026, d'après MailCheap et
+  Resend), l'app prend toute la largeur, la barre latérale collée au bord gauche, et l'en-tête comme le contenu de chaque
+  onglet tiennent dans une colonne centrée (`adm-colonne`, largeur `--adm-colonne` selon `data-onglet` : 1120 px, 680 pour
+  Réglages, 1300 pour Ma page) ; les premiers pas dans 1200 px (`adm-premiers`). Réglages tient sur une seule page de lignes
   (`Groupe`, `Ligne`, `LigneLien` dans `ui.tsx`) ; un détail s'y ouvre en sous-page (`SousPage`), avec un fil dans l'en-tête,
   comme `Facturation.tsx`, « Mon abonnement » (l'offre, son échéance, la carte et les factures au portail client de Creem,
   puis « Résilier mon abonnement »). Dans le groupe Abonnement, « Mes factures » ouvre ce portail pour tout compte que Creem

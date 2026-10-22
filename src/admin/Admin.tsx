@@ -541,7 +541,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
 
   return (
     <FournisseurOffre value={offre}>
-    <div className="adm adm-shell min-h-dvh font-sans text-white antialiased">
+    <div className="adm adm-shell min-h-dvh font-sans text-white antialiased" data-onglet={onglet}>
       {/* Au bureau, une barre latérale fine : la marque, les sections, et le compte en bas, qui s'ouvre sur « Me déconnecter ». */}
       <aside className="adm-sidebar fixed inset-y-0 left-0 z-30 hidden w-[216px] flex-col lg:flex" aria-label="Navigation">
         <Marque petite surBleu className="h-14 shrink-0 px-2" />
@@ -565,7 +565,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
         </div>
       </aside>
 
-      {/* L'en-tête et l'écran en cours ; au bureau, avec la barre latérale, dans un cadre centré de 1600 px au plus (voir admin.css). */}
+      {/* L'en-tête et l'écran en cours ; au bureau, à droite de la barre latérale, dans une colonne centrée (voir admin.css). */}
       <div className="adm-travail">
       <header className="adm-topbar sticky top-0 z-30">
         {/* Au téléphone, l'en-tête porte l'adresse de la page et son état : la copier ne prend plus une ligne au-dessus de la page. */}
@@ -585,7 +585,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
           <button type="button" onClick={() => setApercu(true)} className="adm-button-outline adm-apercu-bouton flex min-h-11 items-center justify-center gap-1.5 px-3.5 text-[13px] font-medium max-[389px]:w-11 max-[389px]:px-0"><Icone nom="ui-oeil" taille={17} className="shrink-0" /><span className="max-[389px]:sr-only">Aperçu</span></button>
         </div>
         {/* Au bureau, une seule rangée : le nom de l'écran, puis ce qui sert ici. Pas de barre vide, pas de deuxième titre. */}
-        <div className="hidden h-14 items-center gap-2 pl-6 pr-4 lg:flex">
+        <div className="adm-colonne hidden h-14 items-center gap-2 lg:flex">
           {fil ? (
             <div className="flex min-w-0 flex-1 items-center gap-1.5">
               <button type="button" onClick={fil.retour} className="adm-fil-retour -ml-2"><Icone nom="ui-chevron" taille={14} className="rotate-90" />{titre}</button>
@@ -616,9 +616,9 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
 
       <EmplacementEntete.Provider value={emplacement}>
       <PoserFil.Provider value={setFil}>
-      {/* Ma page et Comptes prennent toute la largeur au bureau (l'édition et la page côte à côte, la barre des onglets de Comptes) ; les autres gardent leurs marges. */}
-      <div className={`mx-auto max-w-[1120px] px-4 lg:max-w-none ${onglet === 'page' || onglet === 'comptes' ? 'lg:px-0' : 'lg:px-10'}`}>
-        <main id="contenu-admin" className={`mx-auto w-full pb-28 ${onglet === 'page' ? 'pt-4 lg:p-0' : onglet === 'comptes' ? 'pt-6 lg:pb-12 lg:pt-0' : 'pt-6 lg:pb-12 lg:pt-7'}`}>
+      {/* Au bureau, la colonne de l'onglet, sous celle de l'en-tête : 1120 px, 680 pour Réglages, 1300 pour Ma page (l'édition et la page côte à côte). */}
+      <div className="mx-auto max-w-[1120px] px-4 lg:max-w-none lg:px-0">
+        <main id="contenu-admin" className={`adm-colonne mx-auto w-full pb-28 ${onglet === 'page' ? 'pt-4 lg:p-0' : onglet === 'comptes' ? 'pt-6 lg:pb-12 lg:pt-0' : 'pt-6 lg:pb-12 lg:pt-7'}`}>
           <div key={onglet} className="adm-onglet">
           {/* Au téléphone, le titre de l'écran ouvre le contenu (Ma page n'affiche pas le sien : l'en-tête et la barre du bas disent déjà où l'on est,
               il reste pour les lecteurs d'écran). Au bureau, il est dans l'en-tête. */}
