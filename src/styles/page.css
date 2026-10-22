@@ -185,9 +185,9 @@
   transition: translate 0.3s cubic-bezier(0.16, 1, 0.3, 1), rotate 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .lp-carte:hover .lp-carte-fleche { rotate: 45deg; }
-/* La vignette : une photo, dans son cadre arrondi. */
+/* La vignette : une photo, dans son cadre arrondi, à la taille de la place de l'icône. */
 .lp-carte-tuile {
-  flex: none; display: block; width: 50px; height: 50px; object-fit: cover;
+  flex: none; display: block; width: var(--lp-place, 50px); height: var(--lp-place, 50px); object-fit: cover;
   border-radius: calc(min(var(--r), 22px) - 6px);
   background: color-mix(in srgb, var(--lp-encre) 12%, transparent);
 }
@@ -195,19 +195,16 @@
 /* Le picto : seul, à l'encre du bouton. */
 .lp-carte-picto { flex: none; display: flex; align-items: center; justify-content: center; min-width: 28px; line-height: 1; font-size: 1.5rem; }
 
-/* Bandeau */
-.lp-carte[data-format='bandeau'] { align-items: center; gap: 14px; min-height: 78px; padding: 12px 14px 12px 12px; }
-/* Sans vignette, le picto s'aligne sur la marge du texte. */
-.lp-carte[data-format='bandeau'] > .lp-carte-picto:first-child { margin-left: 6px; }
 /*
- * En pilule, les bouts du bandeau sont des demi-cercles de 40 px : la vignette (50 px, à 14 px du bord), le
- * picto (28 px, à 25 px) et la flèche (34 px, à 22 px) se centrent dessus, chacun dans sa courbe. Sans
- * vignette ni picto, le texte ouvre le bandeau : il recule à 24 px, sinon ses premières et dernières lignes
- * touchent la courbe (22 octobre 2026).
+ * Bandeau. La place de l'icône est toujours gardée (22 octobre 2026, Lilian) : une colonne de 50 px à gauche
+ * reçoit la vignette, la photo d'un produit ou le picto, centré, et reste vide sans eux. Le texte commence
+ * ainsi au même endroit dans chaque bandeau de la page, avec ou sans icône, et jamais contre le bord.
  */
+.lp-carte[data-format='bandeau'] { --lp-place: 50px; align-items: center; gap: 14px; min-height: 78px; padding: 12px 14px 12px 12px; }
+.lp-carte[data-format='bandeau'] > .lp-carte-picto:first-child { width: var(--lp-place); }
+.lp-carte[data-format='bandeau'] > .lp-carte-texte:first-child { margin-left: calc(var(--lp-place) + 14px); }
+/* En pilule, les bouts du bandeau sont des demi-cercles de 40 px : la place de l'icône (à 14 px du bord) et la flèche (34 px, à 22 px) se centrent dessus. */
 .lp[data-forme='pilule'] .lp-carte[data-format='bandeau'] { padding-left: 14px; padding-right: 22px; border-radius: 40px; }
-.lp[data-forme='pilule'] .lp-carte[data-format='bandeau'] > .lp-carte-picto:first-child { margin-left: 11px; }
-.lp[data-forme='pilule'] .lp-carte[data-format='bandeau'] > .lp-carte-texte:first-child { padding-left: 10px; }
 
 /* Carte */
 .lp-carte[data-format='carte'] { flex-direction: column; padding: 6px; border-radius: var(--rc); }
@@ -901,12 +898,11 @@ a.lp-preuve:focus-visible { outline: 3px solid var(--texte); outline-offset: 3px
 .lp-code svg { flex: none; width: 15px; height: 15px; opacity: 0.72; }
 
 /*
- * Le produit : sa photo en grande tuile, puis son prix et la boutique. Pas de mot seul en fin de nom. Le prix
- * suit la graisse des cartes du thème (bornée), sous le titre : il ne le dispute plus, en serif fine comme en grasse.
+ * Le produit : sa photo, puis son prix et la boutique. En bandeau, la photo prend la place de l'icône, comme
+ * toute vignette : son nom s'aligne sur les autres bandeaux. Pas de mot seul en fin de nom. Le prix suit la
+ * graisse des cartes du thème (bornée), sous le titre : il ne le dispute plus, en serif fine comme en grasse.
  */
 .lp-produit :is(.lp-carte-titre, .lp-carte-description) { text-wrap: pretty; }
-.lp-produit[data-format='bandeau'] .lp-carte-tuile { width: 64px; height: 64px; }
-.lp-produit[data-format='bandeau'] > .lp-carte-picto:first-child { margin-left: 6px; }
 .lp-produit[data-format='carte'] .lp-carte-visuel { aspect-ratio: 4 / 3; }
 .lp-produit-ligne { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
 .lp-prix { flex: none; font-size: 0.98rem; font-weight: clamp(580, var(--carte-graisse, 650), 680); font-variant-numeric: tabular-nums; white-space: nowrap; }
