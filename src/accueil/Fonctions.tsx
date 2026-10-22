@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { Avatar, OffreFonction, Personne } from './Profils.tsx';
 import type { ProfilExemple } from './exemples.ts';
@@ -7,6 +7,8 @@ import { Symbole } from '../components/Logo.tsx';
 import { CroquisLien, CroquisTete, Telephone } from './Telephone.tsx';
 import { mouvementReduit, useCompte, useEnchainement, useGlisse, useSequence, useVu } from './mouvement.ts';
 import { COULEURS_SOURCES } from '../lib/stats.ts';
+import { DEGRADE_COURBE, aireSous, lisse } from '../lib/courbe.ts';
+import type { PointTrace } from '../lib/courbe.ts';
 
 /*
  * Ce que fait Hopla, en trois sections : 02 les liens qui s'ouvrent dans
@@ -434,7 +436,8 @@ function Nombre({ n, avant = '', suite = '', joue, delai }: { n: number; avant?:
 /** Un aperçu des mêmes mesures que le dashboard, avec les chiffres de l'e-mail ci-dessous. */
 function DashboardStats() {
   const vues = [42, 54, 48, 88, 62, 70, 48];
-  const points = vues.map((v, i) => `${16 + i * 78},${170 - v * 1.5}`).join(' ');
+  const trace = vues.map((v, i): PointTrace => [16 + i * 78, 170 - v * 1.5]);
+  const degrade = `hp-degrade-${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
   return (
     <div className="hp-dashboard">
       <div className="hp-dashboard-titre"><b>Mes statistiques</b><span>7 derniers jours</span></div>
@@ -448,9 +451,15 @@ function DashboardStats() {
         <div className="hp-dashboard-dessin">
           <svg viewBox="0 0 500 180" role="img" aria-label="Vues de lundi à dimanche : 42, 54, 48, 88, 62, 70 et 48. Le meilleur jour est jeudi, avec 88 vues.">
             {[20, 95, 170].map(y => <line key={y} x1="16" x2="484" y1={y} y2={y} stroke="#e8e8e3" />)}
-            <polygon points={`16,170 ${points} 484,170`} fill="#20241f" fillOpacity=".06" />
-            <polyline points={points} fill="none" stroke="#20241f" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
-            <circle cx="250" cy="38" r="4" fill="#20241f" />
+            {/* La courbe du back office, lisse sur son dégradé bleu (22 octobre 2026) : l'accueil montre l'outil tel qu'il est. */}
+            <defs>
+              <linearGradient id={degrade} x1="0" y1="0" x2="0" y2="1">
+                {DEGRADE_COURBE.map(s => <stop key={s.arret} offset={s.arret} stopColor="#292bff" stopOpacity={s.opacite} />)}
+              </linearGradient>
+            </defs>
+            <path d={aireSous(trace, 170)} fill={`url(#${degrade})`} />
+            <path d={lisse(trace)} fill="none" stroke="#292bff" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
+            <circle cx="250" cy="38" r="4" fill="#292bff" />
           </svg>
           <b className="hp-dashboard-pic" aria-hidden="true">88</b>
         </div>

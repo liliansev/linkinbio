@@ -46,24 +46,27 @@ export function useDemarrage(reglages: Reglages, blocs: Bloc[], faits: FaitsPage
   return { etapes, faites, actif: demarrageUtile({ ...faits, blocs: blocs.length }) && m[1] !== '1' && faites < etapes.length };
 }
 
-/** L'anneau de progression : un trait d'encre sur un trait pâle, sans couleur. */
-function Anneau({ faites, total, taille, epaisseur }: { faites: number; total: number; taille: number; epaisseur: number }) {
+/**
+ * L'anneau de progression : un trait bleu sur sa teinte pâle, le bleu de l'action. Sur le bleu de l'en-tête
+ * du téléphone (`surBleu`), le trait passe au citron, sur un voile blanc.
+ */
+function Anneau({ faites, total, taille, epaisseur, surBleu = false }: { faites: number; total: number; taille: number; epaisseur: number; surBleu?: boolean }) {
   const trait = (epaisseur * 24) / taille, r = 12 - trait / 2 - 0.25, tour = 2 * Math.PI * r;
   return (
     <svg viewBox="0 0 24 24" width={taille} height={taille} className="-rotate-90" aria-hidden="true">
-      <circle cx="12" cy="12" r={r} fill="none" stroke="rgb(0 0 0 / 0.1)" strokeWidth={trait} />
-      <circle cx="12" cy="12" r={r} fill="none" stroke="#0a0a0a" strokeWidth={trait} strokeLinecap="round" strokeDasharray={`${(faites / total) * tour} ${tour}`} />
+      <circle cx="12" cy="12" r={r} fill="none" stroke={surBleu ? 'rgb(255 255 255 / 0.28)' : '#e4e4ff'} strokeWidth={trait} />
+      <circle cx="12" cy="12" r={r} fill="none" stroke={surBleu ? '#e3fc96' : '#292bff'} strokeWidth={trait} strokeLinecap="round" strokeDasharray={`${(faites / total) * tour} ${tour}`} />
     </svg>
   );
 }
 
-/** Au téléphone, dans l'en-tête, à la place de la photo : l'anneau et son compte, qui ouvrent la liste. */
+/** Au téléphone, dans l'en-tête bleu, à la place de la photo : l'anneau et son compte, qui ouvrent la liste. */
 export function AnneauDemarrage({ faites, total, onClick, className = '' }: { faites: number; total: number; onClick: () => void; className?: string }) {
   return (
     <button type="button" onClick={() => { vibrer(5); onClick(); }} aria-haspopup="dialog" aria-label={`Bien démarrer, ${faites} sur ${total}`}
       className={`relative -m-1 grid h-11 w-11 shrink-0 place-items-center rounded-full transition active:scale-95 ${className}`}>
-      <Anneau faites={faites} total={total} taille={36} epaisseur={2.5} />
-      <span aria-hidden="true" className="absolute inset-0 grid place-items-center text-[11.5px] font-semibold tracking-[-0.02em] text-white tabular-nums">{faites}/{total}</span>
+      <Anneau faites={faites} total={total} taille={36} epaisseur={2.5} surBleu />
+      <span aria-hidden="true" className="absolute inset-0 grid place-items-center text-[11.5px] font-semibold tracking-[-0.02em] text-[#fff] tabular-nums">{faites}/{total}</span>
     </button>
   );
 }
@@ -76,7 +79,7 @@ function ListeEtapes({ etapes, choisir, feuille = false }: { etapes: Etape[]; ch
         <li key={e.id} style={{ '--i': i } as CSSProperties}>
           <button type="button" onClick={() => choisir(e)}
             className={`group flex w-full items-center gap-3 rounded-xl text-left transition hover:bg-white/[0.05] active:scale-[0.99] ${feuille ? 'min-h-12 px-2 py-1' : 'min-h-11 px-1.5 py-1.5'}`}>
-            <span className="h-5 w-5 shrink-0 rounded-full border-[1.5px] border-white/25 transition group-hover:border-white/30" />
+            <span className="h-5 w-5 shrink-0 rounded-full border-[1.5px] border-bleu/35 transition group-hover:border-bleu" />
             <span className={`min-w-0 flex-1 font-medium text-white ${feuille ? 'text-[14.5px]' : 'text-[14px]'}`}>{e.nom}</span>
             <Icone nom="ui-chevron" taille={16} className="-rotate-90 text-white/30 group-hover:text-white/60" />
           </button>

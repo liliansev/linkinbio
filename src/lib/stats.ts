@@ -30,26 +30,31 @@ export const totalDe = (s: Totaux, m: Mesure) => (m === 'taux' ? taux(s.clics, s
 /** Un chiffre à la française : « 2 877 », « 38 % ». */
 export const chiffre = (n: number, m: Mesure) => `${n.toLocaleString('fr-FR')}${m === 'taux' ? `${FINE}%` : ''}`;
 
+/** Le sens d'un écart : il donne sa couleur à l'étiquette (citron pour une hausse, rose pour une baisse), que le signe dit aussi. */
+export type Sens = 'hausse' | 'baisse' | 'stable' | 'nouveau';
+
 /**
  * L'écart avec la période d'avant. `court` se lit à côté du chiffre (« −33 % »,
  * « +1 pt » pour le taux, « stable », « nouveau ») ; `long` le dit en entier
- * pour un lecteur d'écran. Rien quand il n'y a rien à comparer.
+ * pour un lecteur d'écran ; `sens`, dans quel sens il va. Rien quand il n'y a
+ * rien à comparer.
  */
-export function ecart(s: Totaux & Pick<Stats, 'precedent'>, m: Mesure): { court: string; long: string } {
+export function ecart(s: Totaux & Pick<Stats, 'precedent'>, m: Mesure): { court: string; long: string; sens?: Sens } {
   const rien = { court: '', long: '' };
+  const stable = { court: 'stable', long: 'stable par rapport à la période d’avant', sens: 'stable' as const };
   if (m === 'taux') {
     const actuel = taux(s.clics, s.vues), avant = taux(s.precedent.clics, s.precedent.vues);
     if (actuel === null || avant === null) return rien;
     const d = actuel - avant;
-    if (d === 0) return { court: 'stable', long: 'stable par rapport à la période d’avant' };
+    if (d === 0) return stable;
     const pts = `${Math.abs(d)}${FINE}${Math.abs(d) > 1 ? 'pts' : 'pt'}`;
-    return { court: `${d > 0 ? '+' : MOINS}${pts}`, long: `${d > 0 ? 'en hausse' : 'en baisse'} de ${Math.abs(d)} point${Math.abs(d) > 1 ? 's' : ''} par rapport à la période d’avant` };
+    return { court: `${d > 0 ? '+' : MOINS}${pts}`, long: `${d > 0 ? 'en hausse' : 'en baisse'} de ${Math.abs(d)} point${Math.abs(d) > 1 ? 's' : ''} par rapport à la période d’avant`, sens: d > 0 ? 'hausse' : 'baisse' };
   }
   const actuel = s[m], avant = s.precedent[m];
-  if (!avant) return actuel ? { court: 'nouveau', long: 'rien sur la période d’avant' } : rien;
+  if (!avant) return actuel ? { court: 'nouveau', long: 'rien sur la période d’avant', sens: 'nouveau' } : rien;
   const e = Math.round(((actuel - avant) / avant) * 100);
-  if (e === 0) return { court: 'stable', long: 'stable par rapport à la période d’avant' };
-  return { court: `${e > 0 ? '+' : MOINS}${Math.abs(e)}${FINE}%`, long: `${e > 0 ? 'en hausse' : 'en baisse'} de ${Math.abs(e)}${FINE}% par rapport à la période d’avant` };
+  if (e === 0) return stable;
+  return { court: `${e > 0 ? '+' : MOINS}${Math.abs(e)}${FINE}%`, long: `${e > 0 ? 'en hausse' : 'en baisse'} de ${Math.abs(e)}${FINE}% par rapport à la période d’avant`, sens: e > 0 ? 'hausse' : 'baisse' };
 }
 
 /**

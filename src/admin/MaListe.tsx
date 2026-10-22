@@ -38,7 +38,7 @@ export function MaListe({ api }: { api: Pick<Api, 'liste' | 'brancherListe' | 's
           <>
             <div className="flex items-end gap-3">
               <p className="text-[24px] font-semibold leading-none tracking-[-0.02em] tabular-nums">{nombre(liste.total)}</p>
-              <p className="pb-1 text-[13.5px] text-white/60">inscrit{liste.total > 1 ? 's' : ''}{liste.semaine ? <>, dont <span className="font-semibold text-white">+{nombre(liste.semaine)}</span> cette semaine</> : ''}</p>
+              <p className="pb-1 text-[13.5px] text-white/60">inscrit{liste.total > 1 ? 's' : ''}{liste.semaine ? <>, dont <span className="adm-gain">+{nombre(liste.semaine)}</span> cette semaine</> : ''}</p>
             </div>
             <p className="mt-2.5 flex items-center gap-1.5 text-[13px] text-white/55">
               <Icone nom={liste.integration ? 'ui-ok' : 'courrier'} taille={14} />

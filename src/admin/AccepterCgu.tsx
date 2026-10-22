@@ -18,19 +18,19 @@ export function AccepterCgu({ accepter, deconnexion }: { accepter: () => Promise
     setErreur('');
     try { await accepter(); } catch { setErreur('Pas enregistré. Vérifie ta connexion et réessaie.'); setEnvoi(false); }
   }
-  const lien = (doc: string, texte: string) => <a href={`/legal/${doc}`} target="_blank" rel="noopener" className="text-white underline">{texte}</a>;
+  const lien = (doc: string, texte: string) => <a href={`/legal/${doc}`} target="_blank" rel="noopener" className="text-bleu underline decoration-bleu/35 underline-offset-2 hover:text-[#1d1fd6] hover:decoration-current">{texte}</a>;
   return (
-    <main className="adm adm-shell grid min-h-dvh place-items-center px-5 py-10 font-sans text-white antialiased">
+    <main className="adm adm-shell adm-entree grid min-h-dvh place-items-center px-5 py-10 font-sans text-white antialiased">
       <div className="adm-onglet w-full max-w-[420px]">
-        {/* La marque d'abord, comme à la connexion : le premier écran dit chez qui l'on arrive et ce qui vient ensuite. */}
-        <Marque className="mb-8 justify-center" />
+        {/* La marque d'abord, sur le bleu, comme à la connexion : le premier écran dit chez qui l'on arrive et ce qui vient ensuite. */}
+        <Marque className="mb-8 justify-center" surBleu />
         <div className="adm-card p-6 sm:p-8">
           <h1 className="adm-titre">Ta page de liens, en deux minutes</h1>
           <p className="mt-2 text-[14px] leading-relaxed text-white/65">
             Encore une case à cocher, puis quatre questions et ta page est en ligne. Hopla l’héberge et mesure ses visites pour toi, sans cookie.
           </p>
-          <label className="mt-6 flex cursor-pointer items-start gap-3 rounded-xl border border-white/15 p-4 text-[14.5px] leading-snug transition hover:border-white/30">
-            <input id="cgu-case" type="checkbox" checked={coche} onChange={e => { setCoche(e.target.checked); setErreur(''); }} aria-describedby={erreur ? 'cgu-erreur' : undefined} aria-invalid={erreur && !coche ? true : undefined} className="mt-0.5 h-5 w-5 shrink-0 accent-white" />
+          <label className="mt-6 flex cursor-pointer items-start gap-3 rounded-xl border border-white/15 p-4 text-[14.5px] leading-snug transition hover:border-white/30 has-[:checked]:border-bleu has-[:checked]:bg-[#f3f3ff]">
+            <input id="cgu-case" type="checkbox" checked={coche} onChange={e => { setCoche(e.target.checked); setErreur(''); }} aria-describedby={erreur ? 'cgu-erreur' : undefined} aria-invalid={erreur && !coche ? true : undefined} className="mt-0.5 h-5 w-5 shrink-0 accent-bleu" />
             <span>J’accepte les {lien('cgu', 'conditions d’utilisation')} et l’{lien('traitement-des-donnees', 'accord de traitement des données')}, et j’ai lu la {lien('confidentialite', 'politique de confidentialité')}.</span>
           </label>
           {/* L'erreur sous la case qu'elle concerne, pas sous le bouton. */}

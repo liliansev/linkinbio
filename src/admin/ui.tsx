@@ -1,7 +1,8 @@
 import { cloneElement, createContext, isValidElement, useCallback, useContext, useEffect, useId, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
-import { Icone } from '../components/Icone.tsx';
+import { Icone, NOMS_RESEAUX } from '../components/Icone.tsx';
 import type { Animation } from '../lib/types.ts';
+import { COULEURS_SOURCES } from '../lib/stats.ts';
 import { useCouche } from './couches.ts';
 import type { ReactNode } from 'react';
 
@@ -10,6 +11,12 @@ import type { ReactNode } from 'react';
  * pouce. Au bureau (variante `bureau:`, voir app.css), les mêmes pièces se
  * resserrent : boutons de 36 px, champs de 40, interrupteur de 32 sur 18.
  */
+
+/** Le logo d'un réseau du profil dans la couleur de sa marque, celle de « D'où viennent les visites » ; rien (l'encre) pour les autres. */
+export const couleurReseau = (reseau: string): string | undefined => COULEURS_SOURCES[NOMS_RESEAUX[reseau]]?.picto;
+
+/** La barre du navigateur au téléphone (`theme-color`) : le bleu de l'en-tête et des écrans d'entrée (connexion, lien reçu, CGU). */
+export const COULEUR_NAVIGATEUR = '#292bff';
 
 const GRAND = '(min-width: 1024px)';
 /**
@@ -131,7 +138,7 @@ export function Interrupteur({ actif, onChange, label, aide, disabled, compact =
 export function Bascule({ actif, onClick, id, disabled, label, decrit }: { actif: boolean; onClick: () => void; id?: string; disabled?: boolean; label?: string; decrit?: string }) {
   return (
     <button id={id} type="button" role="switch" aria-checked={actif} aria-label={label} aria-describedby={decrit} disabled={disabled} onClick={onClick}
-      className={`adm-interrupteur relative h-6 w-10 shrink-0 rounded-full before:absolute before:-inset-2 before:content-[''] disabled:opacity-40 bureau:h-[18px] bureau:w-8 ${actif ? 'bg-white' : 'bg-white/45'}`}>
+      className={`adm-interrupteur relative h-6 w-10 shrink-0 rounded-full before:absolute before:-inset-2 before:content-[''] disabled:opacity-40 bureau:h-[18px] bureau:w-8 ${actif ? 'bg-bleu' : 'bg-white/45'}`}>
       <span className={`absolute top-[3px] left-[3px] h-[18px] w-[18px] rounded-full shadow-[0_1px_3px_rgba(0,0,0,0.3)] bg-nuit bureau:top-[2px] bureau:left-[2px] bureau:h-3.5 bureau:w-3.5 ${actif ? 'translate-x-4 bureau:translate-x-3.5' : ''}`} />
     </button>
   );
@@ -344,7 +351,7 @@ export function Feuille({ ouverte, onFermer, retenir, titre, children, pied, cot
   return (
     <div className={`fixed inset-0 z-50 flex items-end justify-center ${cote ? 'sm:items-stretch sm:justify-end sm:p-4' : 'sm:items-center'}`} role="dialog" aria-modal="true" aria-label={titre} data-sortie={sortie || undefined}
       style={visible ? { top: visible.haut, height: visible.h, bottom: 'auto' } : undefined}>
-      <button type="button" tabIndex={-1} aria-hidden="true" className={`adm-fondu absolute inset-0 ${apercu ? 'bg-[#f4f4f4] sm:bg-black/[0.04]' : cote ? 'bg-black/[0.04]' : pardessus ? '' : 'bg-black/40 backdrop-blur-[2px]'}`} onClick={() => fermer()} />
+      <button type="button" tabIndex={-1} aria-hidden="true" className={`adm-fondu absolute inset-0 ${apercu ? 'bg-[#f3eee5] sm:bg-black/[0.04]' : cote ? 'bg-black/[0.04]' : pardessus ? '' : 'bg-black/40 backdrop-blur-[2px]'}`} onClick={() => fermer()} />
       {apercu && <div inert className="adm-fondu pointer-events-none absolute inset-x-0 top-0 bottom-[57dvh] flex items-center justify-center px-4 pt-[max(12px,env(safe-area-inset-top))] pb-3 sm:hidden">{apercu}</div>}
       <div ref={ref} tabIndex={-1}
         style={{ ...(tire ? { transform: `translateY(${tire}px)`, transition: 'none' } : {}), ...(visible ? { maxHeight: visible.h - 8, height: 'auto' } : plafond ? { maxHeight: plafond, minHeight: Math.min(plancher, plafond) || undefined } : {}) }}
@@ -451,6 +458,8 @@ export interface ElementMenu {
   coche?: boolean;
   /** Le nom de l'offre qui ouvre ce choix (« Pro ») : l'élément mène aux offres plutôt qu'au choix. */
   etiquette?: string;
+  /** L'offre elle-même (`pro`) : son étiquette prend ses couleurs, celles de l'accueil. */
+  offre?: string;
 }
 
 /**
@@ -512,7 +521,7 @@ export function Menu({ label, elements, children, className = '', titre, haut = 
                 className={`adm-menu-item ${el.danger ? 'text-red-300' : 'text-white'}`}>
                 {el.icone && <Icone nom={el.icone} taille={16} className="shrink-0" />}
                 <span className={`min-w-0 flex-1 truncate text-left ${el.etiquette ? 'text-white/60' : ''}`}>{el.nom}</span>
-                {el.etiquette && <span className={classeBadge}>{el.etiquette}</span>}
+                {el.etiquette && <span className={classeBadge} data-offre={el.offre}>{el.etiquette}</span>}
                 {el.coche && <Icone nom="ui-ok" taille={15} className="shrink-0" />}
               </button>
             ))}
@@ -530,14 +539,14 @@ export function Menu({ label, elements, children, className = '', titre, haut = 
  * effacer pour de bon.
  */
 export const classeBouton = {
-  principal: 'adm-button-primary inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-white px-5 text-[14px] font-semibold text-nuit transition active:scale-[0.98] disabled:opacity-50 bureau:min-h-9 bureau:gap-1.5 bureau:rounded-lg bureau:px-3.5 bureau:font-medium',
+  principal: 'adm-button-primary inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-bleu px-5 text-[14px] font-semibold text-nuit transition active:scale-[0.98] disabled:opacity-50 bureau:min-h-9 bureau:gap-1.5 bureau:rounded-lg bureau:px-3.5 bureau:font-medium',
   secondaire: 'adm-button-outline inline-flex min-h-11 items-center justify-center gap-2 px-4 text-[14px] font-medium text-white transition active:scale-[0.98] disabled:opacity-50 bureau:min-h-9 bureau:gap-1.5 bureau:px-3',
   danger: 'adm-button-danger inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 text-[14px] font-semibold transition active:scale-[0.98] disabled:opacity-40 bureau:min-h-9 bureau:rounded-lg bureau:px-3 bureau:font-medium',
   discret: 'inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl px-3 text-[14px] font-medium text-white/60 transition hover:bg-white/[0.06] hover:text-white disabled:opacity-50 bureau:min-h-9 bureau:rounded-lg bureau:px-2.5',
   icone: 'grid h-11 w-11 shrink-0 place-items-center rounded-xl text-white/55 transition hover:bg-white/[0.06] hover:text-white bureau:h-8 bureau:w-8 bureau:rounded-lg',
 };
 
-/** Une étiquette d'état (Pro, Suspendu) : petite et rectangulaire, comme les boutons. */
+/** Une étiquette d'état (Toi, Bientôt) : petite et rectangulaire, comme les boutons. Avec `data-offre`, elle prend les couleurs de l'offre. */
 export const classeBadge = 'inline-flex items-center rounded-[7px] bg-white/[0.07] px-1.5 py-0.5 text-[11.5px] font-semibold text-white';
 
 export function BoutonPrincipal({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) {
@@ -577,7 +586,7 @@ export function ListeChoix<T extends string>({ valeur, options, onChange, label 
           <button key={o.id} type="button" role="radio" aria-checked={pris} tabIndex={arretRadio(pris, i === 0, !options.some(x => x.id === valeur))} onClick={() => { vibrer(4); onChange(o.id); }}
             className="flex w-full items-center gap-3 px-3.5 py-2.5 text-left transition-colors duration-150 hover:bg-white/[0.04]">
             <span className={`min-w-0 flex-1 text-[14px] font-medium ${pris ? 'text-white' : 'text-white/80'}`}>{o.nom}</span>
-            <span className={`grid h-5 w-5 shrink-0 place-items-center rounded-full transition duration-150 ${pris ? 'bg-white text-nuit' : 'ring-[1.5px] ring-inset ring-white/20'}`} aria-hidden="true">
+            <span className={`grid h-5 w-5 shrink-0 place-items-center rounded-full transition duration-150 ${pris ? 'bg-bleu text-nuit' : 'ring-[1.5px] ring-inset ring-white/20'}`} aria-hidden="true">
               {pris && <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2.5 6.2 5 8.6l4.5-5" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" /></svg>}
             </span>
           </button>
@@ -592,7 +601,7 @@ export function Segments<T extends string>({ valeur, options, onChange, label }:
     <div role="radiogroup" aria-label={label} onKeyDown={e => flechesRadio(e)} className="flex gap-0.5 rounded-[10px] bg-white/[0.06] p-[3px]">
       {options.map((o, i) => (
         <button key={o.id} type="button" role="radio" aria-checked={valeur === o.id} tabIndex={arretRadio(valeur === o.id, i === 0, !options.some(x => x.id === valeur))} onClick={() => { vibrer(5); onChange(o.id); }}
-          className={`min-h-10 flex-1 rounded-[7px] px-2.5 text-[13.5px] font-medium transition duration-200 bureau:min-h-[30px] ${valeur === o.id ? 'bg-nuit text-white shadow-[0_1px_3px_rgba(0,0,0,0.14)]' : 'text-white/55 hover:text-white'}`}>
+          className={`min-h-10 flex-1 rounded-[7px] px-2.5 text-[13.5px] font-medium transition duration-200 bureau:min-h-[30px] ${valeur === o.id ? 'bg-nuit text-bleu shadow-[0_1px_3px_rgba(0,0,0,0.14)]' : 'text-white/55 hover:text-white'}`}>
           {o.nom}
         </button>
       ))}

@@ -23,7 +23,7 @@ import type { Demarrage } from './BienDemarrer.tsx';
 import { FeuilleAjout, TYPES } from './OngletLiens.tsx';
 import { DesignTiroirs, OngletApparence } from './OngletApparence.tsx';
 import type { Tiroir } from './OngletApparence.tsx';
-import { ActionEntete, BoutonPrincipal, BoutonSecondaire, Feuille, Interrupteur, Menu, choisirFichier, classeBouton, flechesRadio, preparerImage, vibrer } from './ui.tsx';
+import { ActionEntete, BoutonPrincipal, BoutonSecondaire, Feuille, Interrupteur, Menu, choisirFichier, classeBouton, couleurReseau, flechesRadio, preparerImage, vibrer } from './ui.tsx';
 import { offreDe, useDroits, usePermis } from './offre.tsx';
 import type { Fonction } from '../lib/abonnement.ts';
 
@@ -345,7 +345,7 @@ export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, chois
                       </div>
                     </div>
                     <div className="adm-profil-reseaux">
-                      {actifs.map(r => <span key={r.reseau + r.url} className="adm-reseau" title={NOMS_RESEAUX[r.reseau]}><Icone nom={r.reseau} taille={15} /></span>)}
+                      {actifs.map(r => <span key={r.reseau + r.url} className="adm-reseau" title={NOMS_RESEAUX[r.reseau]} style={{ color: couleurReseau(r.reseau) }}><Icone nom={r.reseau} taille={15} /></span>)}
                       <button type="button" className="adm-lien" aria-expanded={cote === 'reseaux'} aria-controls={`${id}-reseaux`}
                         onClick={() => { vibrer(4); if (cote === 'reseaux') quitterCote(); else ouvrirCote('reseaux'); }}>
                         {cote === 'reseaux' ? 'Fermer les réseaux' : actifs.length ? 'Modifier mes réseaux' : 'Ajouter tes réseaux'}

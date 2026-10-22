@@ -44,7 +44,7 @@ Le mécanisme déjà implémenté est l'édition de la vraie page : le nom et la
 
 - Le service s'appelle Hopla.
 - Le back office s'adresse en français à la personne en la tutoyant. Aucun tiret cadratin dans les textes.
-- Le back office est noir et blanc. La couleur est réservée aux alertes.
+- Le back office prend les couleurs de l'accueil (22 octobre 2026, demandé par Lilian) : l'encre sur le papier, le bleu Hopla pour agir, choisir et lire les chiffres, le citron pour ce qui se gagne, le crème pour la page qu'on regarde. Aucune couleur n'y décore une section ; le rouge reste au danger, l'ambre aux alertes.
 - Les pictogrammes sont des Phosphor pleins et monochromes, sans emoji, dégradé ni duotone.
 - Les thèmes et la typographie de la page publique gardent leur propre système. La refonte du back office ne les remplace pas.
 

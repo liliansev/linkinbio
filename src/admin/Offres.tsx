@@ -30,6 +30,8 @@ const reduit = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 /** Ce que la carte d'une offre propose : un bouton, ou un simple état (l'offre en cours, bientôt). */
 type Geste = { bouton: true; texte: string; plan: Plan } | { bouton: false; texte: string };
+/** L'étiquette d'une carte : `fort`, l'offre qui débloque la fonction d'où l'on vient (en bleu) ; `actuelle`, la sienne (bleu pâle). */
+type Badge = { texte: string; fort?: boolean; actuelle?: boolean };
 
 interface ProprietesOffres {
   onFermer: () => void;
@@ -86,8 +88,8 @@ export function FenetreOffres({ onFermer, abonnement, enVente, pour, vers, bloc,
     if (p === actuelle) return { bouton: true, texte: periode === 'an' ? 'Passer à l’annuel' : 'Passer au mensuel', plan: p };
     return { bouton: true, texte: `Passer en ${OFFRES[p].nom}`, plan: p };
   }
-  const badge = (p: Plan): { texte: string; fort?: boolean } | null =>
-    p === actuelle ? { texte: 'Ton offre' }
+  const badge = (p: Plan): Badge | null =>
+    p === actuelle ? { texte: 'Ton offre', actuelle: true }
       : pour && p === FONCTIONS[pour] ? { texte: FONCTIONS_EN_MOTS[pour].pour, fort: true }
         : p !== 'gratuit' && !OFFRES[p].enVente ? { texte: 'Bientôt' } : null;
   const note = resilie && abonnement.finPeriode
@@ -131,7 +133,7 @@ export function FenetreOffres({ onFermer, abonnement, enVente, pour, vers, bloc,
           <header className="adm-offres-tete">
             <h2 id={idTitre} className="adm-offres-titre">Les offres</h2>
             {grand && <span className="flex-1" />}
-            {grand && mois > 0 && <span className="adm-offres-badge">{mois} mois offerts</span>}
+            {grand && mois > 0 && <span className="adm-offres-badge" data-gain>{mois} mois offerts</span>}
             {grand && <Periodes periode={periode} onChange={setPeriode} />}
             <button type="button" onClick={() => fermer()} className={`${classeBouton.icone} ml-auto lg:ml-1.5`} aria-label="Fermer"><Icone nom="ui-fermer" taille={18} /></button>
           </header>
@@ -163,7 +165,7 @@ function Periodes({ periode, onChange, mois = 0 }: { periode: Periode; onChange:
       {(['mois', 'an'] as Periode[]).map(p => (
         <button key={p} type="button" role="radio" aria-checked={periode === p} tabIndex={periode === p ? 0 : -1} onClick={() => { vibrer(4); onChange(p); }}>
           {p === 'an' ? 'Annuel' : 'Mensuel'}
-          {p === 'an' && mois > 0 && <span className="adm-offres-badge">{mois} mois offerts</span>}
+          {p === 'an' && mois > 0 && <span className="adm-offres-badge" data-gain>{mois} mois offerts</span>}
         </button>
       ))}
     </div>
@@ -193,7 +195,7 @@ function Tarif({ plan, periode }: { plan: Plan; periode: Periode }) {
 }
 
 function CarteOffre({ id, plan, periode, badge, mis, pour, geste, onChoisir, panneau = false }: {
-  id: string; plan: Plan; periode: Periode; badge: { texte: string; fort?: boolean } | null; mis: boolean; pour?: Fonction;
+  id: string; plan: Plan; periode: Periode; badge: Badge | null; mis: boolean; pour?: Fonction;
   geste?: Geste; onChoisir?: (p: Plan) => void; panneau?: boolean;
 }) {
   const o = OFFRES[plan];
@@ -202,7 +204,7 @@ function CarteOffre({ id, plan, periode, badge, mis, pour, geste, onChoisir, pan
     <section id={id} role={panneau ? 'tabpanel' : undefined} aria-labelledby={`${id}-nom`} className="adm-offre" data-mis={mis || undefined}>
       <div className="adm-offre-tete">
         <h3 id={`${id}-nom`} className="adm-offre-nom">{o.nom}</h3>
-        {badge && <span className="adm-offres-badge" data-fort={badge.fort || undefined}>{badge.texte}</span>}
+        {badge && <span className="adm-offres-badge" data-fort={badge.fort || undefined} data-actuelle={badge.actuelle || undefined}>{badge.texte}</span>}
       </div>
       <Tarif plan={plan} periode={periode} />
       {geste && (geste.bouton

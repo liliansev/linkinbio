@@ -179,7 +179,7 @@ export function OngletComptes({ api, avatar }: { api: ApiComptes; avatar?: strin
                         <tr key={c.id}>
                           <td><NomCompte compte={c} avatar={avatar} /></td>
                           <td className="adm-gris" title={c.email}>{c.email}</td>
-                          <td className="text-[#3d3d39]">{c.principal ? 'Principal' : OFFRES[c.plan].nom}</td>
+                          <td className="text-[#3d3d39]">{c.principal ? 'Principal' : <Offre plan={c.plan} />}</td>
                           <td className="adm-nombre">{nombre(c.vues)}</td>
                           <td className="adm-gris">{quand(c.connexion)}</td>
                           <td><Statut statut={statut} /></td>
@@ -196,9 +196,9 @@ export function OngletComptes({ api, avatar }: { api: ApiComptes; avatar?: strin
                       <li key={c.id}>
                         <Pastille pseudo={c.pseudo} avatar={c.principal ? avatar : undefined} />
                         <div className="min-w-0 flex-1">
-                          <p className="flex items-center gap-2 text-[15px] font-medium"><span className="truncate">{c.pseudo}</span>{c.principal && <span className={classeBadge}>Toi</span>}</p>
+                          <p className="flex items-center gap-2 text-[15px] font-medium"><span className="truncate">{c.pseudo}</span>{c.principal ? <span className={classeBadge}>Toi</span> : c.plan !== 'gratuit' && <Offre plan={c.plan} />}</p>
                           <p className="truncate text-[13px] text-white/60">{c.email}</p>
-                          <p className="text-[13px] text-white/60">{c.principal ? 'Principal' : OFFRES[c.plan].nom} · {nombre(c.vues)} vue{c.vues > 1 ? 's' : ''} en 30&#8239;j · {quand(c.connexion)}</p>
+                          <p className="text-[13px] text-white/60">{c.principal ? 'Principal · ' : c.plan === 'gratuit' ? 'Gratuit · ' : ''}{nombre(c.vues)} vue{c.vues > 1 ? 's' : ''} en 30&#8239;j · {quand(c.connexion)}</p>
                           {statut !== 'actif' && <p className="mt-0.5 text-[13px]"><Statut statut={statut} /></p>}
                         </div>
                         {!c.principal && <MenuGestes nom={c.pseudo} elements={gestesCompte(c)} />}
@@ -276,9 +276,18 @@ export function OngletComptes({ api, avatar }: { api: ApiComptes; avatar?: strin
   );
 }
 
-/** La photo du compte principal, l'initiale pour les autres. */
+const TEINTES = ['bleu', 'citron', 'lilas', 'menthe', 'creme'] as const;
+/** Une des teintes de l'accueil, tirée du pseudo : un compte garde la sienne d'une visite à l'autre. */
+const teinteDe = (pseudo: string) => TEINTES[[...pseudo].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7) % TEINTES.length];
+
+/** La photo du compte principal, l'initiale sur une teinte de l'accueil pour les autres. */
 function Pastille({ pseudo, avatar }: { pseudo: string; avatar?: string }) {
-  return <span className="adm-pastille" aria-hidden="true">{avatar ? <img src={avatar} alt="" /> : pseudo.slice(0, 1)}</span>;
+  return <span className="adm-pastille" data-teinte={avatar ? undefined : teinteDe(pseudo)} aria-hidden="true">{avatar ? <img src={avatar} alt="" /> : pseudo.slice(0, 1)}</span>;
+}
+
+/** L'offre d'un compte : une étiquette aux couleurs de l'offre quand elle est payante, le mot seul pour Gratuit. */
+function Offre({ plan }: { plan: CompteResume['plan'] }) {
+  return plan === 'gratuit' ? <>{OFFRES.gratuit.nom}</> : <span className={classeBadge} data-offre={plan}>{OFFRES[plan].nom}</span>;
 }
 
 function NomCompte({ compte, avatar }: { compte: CompteResume; avatar?: string }) {

@@ -3,12 +3,13 @@ import { useEffect, useMemo } from 'react';
 import type { Api } from '../../lib/types.ts';
 import { Admin } from '../../admin/Admin.tsx';
 import { Connexion } from '../../admin/Connexion.tsx';
+import { COULEUR_NAVIGATEUR } from '../../admin/ui.tsx';
 import * as fn from '../../server/fonctions.ts';
 import { avecJeton, preparerTurnstile } from '../../lib/turnstile.ts';
 
 export const Route = createFileRoute('/admin/')({
   loader: () => fn.lireAdmin(),
-  head: () => ({ meta: [{ title: 'Hopla · back office' }, { name: 'robots', content: 'noindex, nofollow' }, { name: 'theme-color', content: '#fdfdfc' }] }),
+  head: () => ({ meta: [{ title: 'Hopla · back office' }, { name: 'robots', content: 'noindex, nofollow' }, { name: 'theme-color', content: COULEUR_NAVIGATEUR }] }),
   component: PageAdmin,
 });
 
