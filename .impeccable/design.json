@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-20T23:40:00Z",
+  "generatedAt": "2026-10-22T12:55:00Z",
   "title": "Design System: Hopla back office",
   "extensions": {
     "colorMeta": {
@@ -49,15 +49,16 @@
       "workspace": {
         "role": "neutral",
         "displayName": "Fond de travail",
+        "canonical": "oklch(97% 0.008 99)",
         "tonalRamp": [
-          "oklch(15% 0 0)",
-          "oklch(27% 0 0)",
-          "oklch(39% 0 0)",
-          "oklch(51% 0 0)",
-          "oklch(63% 0 0)",
-          "oklch(75% 0 0)",
-          "oklch(87% 0 0)",
-          "oklch(95% 0 0)"
+          "oklch(15% 0.008 99)",
+          "oklch(27% 0.008 99)",
+          "oklch(39% 0.008 99)",
+          "oklch(51% 0.008 99)",
+          "oklch(63% 0.008 99)",
+          "oklch(75% 0.008 99)",
+          "oklch(87% 0.008 99)",
+          "oklch(95% 0.008 99)"
         ]
       },
       "quiet-paper": {
@@ -132,16 +133,17 @@
       },
       "nav-hover": {
         "role": "neutral",
-        "displayName": "Survol de navigation",
+        "displayName": "Survol de navigation (voile blanc sur le bleu)",
+        "canonical": "oklch(52% 0.270 271)",
         "tonalRamp": [
-          "oklch(15% 0 0)",
-          "oklch(27% 0 0)",
-          "oklch(39% 0 0)",
-          "oklch(51% 0 0)",
-          "oklch(63% 0 0)",
-          "oklch(75% 0 0)",
-          "oklch(87% 0 0)",
-          "oklch(95% 0 0)"
+          "oklch(15% 0.270 271)",
+          "oklch(27% 0.270 271)",
+          "oklch(39% 0.270 271)",
+          "oklch(51% 0.270 271)",
+          "oklch(63% 0.270 271)",
+          "oklch(75% 0.270 271)",
+          "oklch(87% 0.270 271)",
+          "oklch(95% 0.270 271)"
         ]
       },
       "control-hover": {
@@ -188,7 +190,8 @@
       },
       "nav-current": {
         "role": "neutral",
-        "displayName": "Onglet courant",
+        "displayName": "Onglet courant (pastille blanche)",
+        "canonical": "oklch(100% 0 0)",
         "tonalRamp": [
           "oklch(15% 0 0)",
           "oklch(27% 0 0)",
@@ -201,17 +204,18 @@
         ]
       },
       "sidebar": {
-        "role": "neutral",
-        "displayName": "Barre latérale",
+        "role": "primary",
+        "displayName": "Barre latérale (bleu Hopla)",
+        "canonical": "oklch(49% 0.291 268)",
         "tonalRamp": [
-          "oklch(15% 0 0)",
-          "oklch(27% 0 0)",
-          "oklch(39% 0 0)",
-          "oklch(51% 0 0)",
-          "oklch(63% 0 0)",
-          "oklch(75% 0 0)",
-          "oklch(87% 0 0)",
-          "oklch(95% 0 0)"
+          "oklch(15% 0.291 268)",
+          "oklch(27% 0.291 268)",
+          "oklch(39% 0.291 268)",
+          "oklch(51% 0.291 268)",
+          "oklch(63% 0.291 268)",
+          "oklch(75% 0.291 268)",
+          "oklch(87% 0.291 268)",
+          "oklch(95% 0.291 268)"
         ]
       },
       "shell-divider": {
@@ -226,6 +230,141 @@
           "oklch(75% 0 0)",
           "oklch(87% 0 0)",
           "oklch(95% 0 0)"
+        ]
+      },
+      "blue": {
+        "role": "primary",
+        "displayName": "Bleu Hopla",
+        "canonical": "oklch(49% 0.291 268)",
+        "tonalRamp": [
+          "oklch(15% 0.291 268)",
+          "oklch(27% 0.291 268)",
+          "oklch(39% 0.291 268)",
+          "oklch(51% 0.291 268)",
+          "oklch(63% 0.291 268)",
+          "oklch(75% 0.291 268)",
+          "oklch(87% 0.291 268)",
+          "oklch(95% 0.291 268)"
+        ]
+      },
+      "blue-hover": {
+        "role": "primary",
+        "displayName": "Bleu au survol",
+        "canonical": "oklch(42% 0.258 268)",
+        "tonalRamp": [
+          "oklch(15% 0.258 268)",
+          "oklch(27% 0.258 268)",
+          "oklch(39% 0.258 268)",
+          "oklch(51% 0.258 268)",
+          "oklch(63% 0.258 268)",
+          "oklch(75% 0.258 268)",
+          "oklch(87% 0.258 268)",
+          "oklch(95% 0.258 268)"
+        ]
+      },
+      "blue-pale": {
+        "role": "primary",
+        "displayName": "Bleu pâle",
+        "canonical": "oklch(93% 0.036 286)",
+        "tonalRamp": [
+          "oklch(15% 0.036 286)",
+          "oklch(27% 0.036 286)",
+          "oklch(39% 0.036 286)",
+          "oklch(51% 0.036 286)",
+          "oklch(63% 0.036 286)",
+          "oklch(75% 0.036 286)",
+          "oklch(87% 0.036 286)",
+          "oklch(95% 0.036 286)"
+        ]
+      },
+      "blue-veil": {
+        "role": "primary",
+        "displayName": "Voile bleu",
+        "canonical": "oklch(97% 0.016 286)",
+        "tonalRamp": [
+          "oklch(15% 0.016 286)",
+          "oklch(27% 0.016 286)",
+          "oklch(39% 0.016 286)",
+          "oklch(51% 0.016 286)",
+          "oklch(63% 0.016 286)",
+          "oklch(75% 0.016 286)",
+          "oklch(87% 0.016 286)",
+          "oklch(95% 0.016 286)"
+        ]
+      },
+      "on-blue": {
+        "role": "neutral",
+        "displayName": "Texte sur le bleu",
+        "canonical": "oklch(91% 0.048 285)",
+        "tonalRamp": [
+          "oklch(15% 0.048 285)",
+          "oklch(27% 0.048 285)",
+          "oklch(39% 0.048 285)",
+          "oklch(51% 0.048 285)",
+          "oklch(63% 0.048 285)",
+          "oklch(75% 0.048 285)",
+          "oklch(87% 0.048 285)",
+          "oklch(95% 0.048 285)"
+        ]
+      },
+      "lime": {
+        "role": "secondary",
+        "displayName": "Citron",
+        "canonical": "oklch(95% 0.130 120)",
+        "tonalRamp": [
+          "oklch(15% 0.130 120)",
+          "oklch(27% 0.130 120)",
+          "oklch(39% 0.130 120)",
+          "oklch(51% 0.130 120)",
+          "oklch(63% 0.130 120)",
+          "oklch(75% 0.130 120)",
+          "oklch(87% 0.130 120)",
+          "oklch(95% 0.130 120)"
+        ]
+      },
+      "lime-hover": {
+        "role": "secondary",
+        "displayName": "Citron au survol",
+        "canonical": "oklch(92% 0.152 122)",
+        "tonalRamp": [
+          "oklch(15% 0.152 122)",
+          "oklch(27% 0.152 122)",
+          "oklch(39% 0.152 122)",
+          "oklch(51% 0.152 122)",
+          "oklch(63% 0.152 122)",
+          "oklch(75% 0.152 122)",
+          "oklch(87% 0.152 122)",
+          "oklch(95% 0.152 122)"
+        ]
+      },
+      "lime-ink": {
+        "role": "secondary",
+        "displayName": "Encre citron",
+        "canonical": "oklch(29% 0.047 131)",
+        "tonalRamp": [
+          "oklch(15% 0.047 131)",
+          "oklch(27% 0.047 131)",
+          "oklch(39% 0.047 131)",
+          "oklch(51% 0.047 131)",
+          "oklch(63% 0.047 131)",
+          "oklch(75% 0.047 131)",
+          "oklch(87% 0.047 131)",
+          "oklch(95% 0.047 131)"
+        ]
+      },
+      "cream": {
+        "role": "neutral",
+        "displayName": "Papier crème",
+        "canonical": "oklch(95% 0.013 82)",
+        "tonalRamp": [
+          "oklch(15% 0.013 82)",
+          "oklch(27% 0.013 82)",
+          "oklch(39% 0.013 82)",
+          "oklch(51% 0.013 82)",
+          "oklch(63% 0.013 82)",
+          "oklch(75% 0.013 82)",
+          "oklch(87% 0.013 82)",
+          "oklch(95% 0.013 82)"
         ]
       }
     },
@@ -357,9 +496,9 @@
       "name": "Bouton principal",
       "kind": "button",
       "refersTo": "button-primary",
-      "description": "Action principale du back office ; au bureau, 36 px de haut, arrondi de 8 px, graisse moyenne.",
+      "description": "Action principale du back office, en bleu Hopla (blanc dessus, 7,3:1) ; au bureau, 36 px de haut, arrondi de 8 px, graisse moyenne.",
       "html": "<button type=\"button\" class=\"ds-primary\"><svg width=\"17\" height=\"17\" viewBox=\"0 0 256 256\" fill=\"currentColor\" aria-hidden=\"true\"><path d=\"M224,128a8,8,0,0,1-8,8H136v80a8,8,0,0,1-16,0V136H40a8,8,0,0,1,0-16h80V40a8,8,0,0,1,16,0v80h80A8,8,0,0,1,224,128Z\"/></svg>Ajouter un bloc</button>",
-      "css": ".ds-primary{font-family:'Geist Variable',ui-sans-serif,system-ui,sans-serif;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 20px;border:0;border-radius:12px;background:var(--color-white,#0a0a0a);color:var(--color-nuit,#fff);font-size:14px;font-weight:600;transition:background-color 150ms,transform 150ms}.ds-primary:hover{background:#30302e}.ds-primary:focus-visible{outline:2px solid var(--color-white,#0a0a0a);outline-offset:2px;}.ds-primary:active{transform:scale(.98)}.ds-primary:disabled{opacity:.5}@media(prefers-reduced-motion:reduce){.ds-primary{transition:none}}@media(min-width:1024px) and (pointer:fine){.ds-primary{min-height:36px;padding:0 14px 0 12px;border-radius:8px;font-size:13.5px;font-weight:500;gap:6px}}"
+      "css": ".ds-primary{font-family:'Geist Variable',ui-sans-serif,system-ui,sans-serif;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 20px;border:0;border-radius:12px;background:var(--adm-bleu,#292bff);color:#fff;font-size:14px;font-weight:600;transition:background-color 150ms,transform 150ms}.ds-primary:hover{background:var(--adm-bleu-fonce,#1d1fd6)}.ds-primary:focus-visible{outline:2px solid var(--adm-bleu,#292bff);outline-offset:2px;}.ds-primary:active{transform:scale(.98)}.ds-primary:disabled{opacity:.5}@media(prefers-reduced-motion:reduce){.ds-primary{transition:none}}@media(min-width:1024px) and (pointer:fine){.ds-primary{min-height:36px;padding:0 14px 0 12px;border-radius:8px;font-size:13.5px;font-weight:500;gap:6px}}"
     },
     {
       "name": "Bouton secondaire",
@@ -367,7 +506,7 @@
       "refersTo": "button-secondary",
       "description": "Action complémentaire bordée ; au bureau, 36 px et arrondi de 8 px.",
       "html": "<button type=\"button\" class=\"ds-secondary\">Personnaliser</button>",
-      "css": ".ds-secondary{font-family:'Geist Variable',ui-sans-serif,system-ui,sans-serif;min-height:44px;padding:0 16px;border:1px solid #deded9;border-radius:12px;background:var(--adm-surface,#fff);color:var(--color-white,#0a0a0a);font-size:14px;font-weight:500;transition:background-color 150ms,border-color 150ms,transform 150ms}.ds-secondary:hover{background:#f4f4f0;border-color:#c7c7c0}.ds-secondary:focus-visible{outline:2px solid var(--color-white,#0a0a0a);outline-offset:2px;}.ds-secondary:active{transform:scale(.98)}.ds-secondary:disabled{opacity:.5}@media(prefers-reduced-motion:reduce){.ds-secondary{transition:none}}@media(min-width:1024px) and (pointer:fine){.ds-secondary{min-height:36px;padding:0 12px;border-radius:8px;font-size:13.5px}}"
+      "css": ".ds-secondary{font-family:'Geist Variable',ui-sans-serif,system-ui,sans-serif;min-height:44px;padding:0 16px;border:1px solid #deded9;border-radius:12px;background:var(--adm-surface,#fff);color:var(--color-white,#0a0a0a);font-size:14px;font-weight:500;transition:background-color 150ms,border-color 150ms,transform 150ms}.ds-secondary:hover{background:#f4f4f0;border-color:#c7c7c0}.ds-secondary:focus-visible{outline:2px solid var(--adm-bleu,#292bff);outline-offset:2px;}.ds-secondary:active{transform:scale(.98)}.ds-secondary:disabled{opacity:.5}@media(prefers-reduced-motion:reduce){.ds-secondary{transition:none}}@media(min-width:1024px) and (pointer:fine){.ds-secondary{min-height:36px;padding:0 12px;border-radius:8px;font-size:13.5px}}"
     },
     {
       "name": "Bouton danger",
@@ -375,7 +514,7 @@
       "refersTo": "button-danger",
       "description": "Effacement définitif, après une confirmation ; le seul bouton rouge.",
       "html": "<button type=\"button\" class=\"ds-danger\">Supprimer définitivement</button>",
-      "css": ".ds-danger{font-family:'Geist Variable',ui-sans-serif,system-ui,sans-serif;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 16px;border:0;border-radius:12px;background:#c62828;color:#fff;font-size:14px;font-weight:600;transition:background-color 150ms,transform 150ms}.ds-danger:hover{background:#a51f1f}.ds-danger:focus-visible{outline:2px solid var(--color-white,#0a0a0a);outline-offset:2px;}.ds-danger:active{transform:scale(.98)}.ds-danger:disabled{opacity:.4}@media(prefers-reduced-motion:reduce){.ds-danger{transition:none}}@media(min-width:1024px) and (pointer:fine){.ds-danger{min-height:36px;padding:0 12px;border-radius:8px;font-size:13.5px;font-weight:500}}"
+      "css": ".ds-danger{font-family:'Geist Variable',ui-sans-serif,system-ui,sans-serif;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 16px;border:0;border-radius:12px;background:#c62828;color:#fff;font-size:14px;font-weight:600;transition:background-color 150ms,transform 150ms}.ds-danger:hover{background:#a51f1f}.ds-danger:focus-visible{outline:2px solid var(--adm-bleu,#292bff);outline-offset:2px;}.ds-danger:active{transform:scale(.98)}.ds-danger:disabled{opacity:.4}@media(prefers-reduced-motion:reduce){.ds-danger{transition:none}}@media(min-width:1024px) and (pointer:fine){.ds-danger{min-height:36px;padding:0 12px;border-radius:8px;font-size:13.5px;font-weight:500}}"
     },
     {
       "name": "Bouton discret",
@@ -383,7 +522,7 @@
       "refersTo": "button-quiet",
       "description": "Annuler, Plus tard, Me déconnecter : du texte secondaire sans fond.",
       "html": "<button type=\"button\" class=\"ds-quiet\">Plus tard</button>",
-      "css": ".ds-quiet{font-family:'Geist Variable',ui-sans-serif,system-ui,sans-serif;display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:44px;padding:0 12px;border:0;border-radius:12px;background:transparent;color:#666;font-size:14px;font-weight:500;transition:background-color 150ms,color 150ms}.ds-quiet:hover{background:#f4f4f0;color:#0a0a0a}.ds-quiet:focus-visible{outline:2px solid var(--color-white,#0a0a0a);outline-offset:2px;}.ds-quiet:disabled{opacity:.5}@media(prefers-reduced-motion:reduce){.ds-quiet{transition:none}}@media(min-width:1024px) and (pointer:fine){.ds-quiet{min-height:36px;padding:0 10px;border-radius:8px;font-size:13.5px}}"
+      "css": ".ds-quiet{font-family:'Geist Variable',ui-sans-serif,system-ui,sans-serif;display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:44px;padding:0 12px;border:0;border-radius:12px;background:transparent;color:#666;font-size:14px;font-weight:500;transition:background-color 150ms,color 150ms}.ds-quiet:hover{background:#f4f4f0;color:#0a0a0a}.ds-quiet:focus-visible{outline:2px solid var(--adm-bleu,#292bff);outline-offset:2px;}.ds-quiet:disabled{opacity:.5}@media(prefers-reduced-motion:reduce){.ds-quiet{transition:none}}@media(min-width:1024px) and (pointer:fine){.ds-quiet{min-height:36px;padding:0 10px;border-radius:8px;font-size:13.5px}}"
     },
     {
       "name": "Bouton icône",
@@ -391,7 +530,7 @@
       "refersTo": "button-icon",
       "description": "Fermer, revenir ou retirer : un carré de 44 px au picto secondaire, 32 px au bureau.",
       "html": "<button type=\"button\" class=\"ds-icon\" aria-label=\"Fermer\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 256 256\" fill=\"currentColor\" aria-hidden=\"true\"><path d=\"M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z\"/></svg></button>",
-      "css": ".ds-icon{display:grid;place-items:center;width:44px;height:44px;flex-shrink:0;border:0;border-radius:12px;background:transparent;color:#666;transition:background-color 150ms,color 150ms}.ds-icon:hover{background:#f4f4f0;color:#0a0a0a}.ds-icon:focus-visible{outline:2px solid var(--color-white,#0a0a0a);outline-offset:2px;}@media(prefers-reduced-motion:reduce){.ds-icon{transition:none}}@media(min-width:1024px) and (pointer:fine){.ds-icon{width:32px;height:32px;border-radius:8px}}"
+      "css": ".ds-icon{display:grid;place-items:center;width:44px;height:44px;flex-shrink:0;border:0;border-radius:12px;background:transparent;color:#666;transition:background-color 150ms,color 150ms}.ds-icon:hover{background:#f4f4f0;color:#0a0a0a}.ds-icon:focus-visible{outline:2px solid var(--adm-bleu,#292bff);outline-offset:2px;}@media(prefers-reduced-motion:reduce){.ds-icon{transition:none}}@media(min-width:1024px) and (pointer:fine){.ds-icon{width:32px;height:32px;border-radius:8px}}"
     },
     {
       "name": "Champ de saisie",
@@ -399,15 +538,15 @@
       "refersTo": "field",
       "description": "Champ nommé avec saisie lisible sur téléphone ; au bureau, 40 px, arrondi de 8 px, texte de 13,5 px.",
       "html": "<label class=\"ds-label\">Adresse e-mail<input class=\"ds-field\" type=\"email\" placeholder=\"toi@exemple.fr\" /></label>",
-      "css": ".ds-label{font-family:'Geist Variable',ui-sans-serif,system-ui,sans-serif;display:block;color:#666;font-size:12.5px;font-weight:500}.ds-field{font-family:'Geist Variable',ui-sans-serif,system-ui,sans-serif;display:block;width:240px;max-width:100%;min-height:48px;margin-top:6px;padding:12px 14px;border:1px solid rgb(10 10 10 / .15);border-radius:12px;background:#fdfdfc;color:var(--color-white,#0a0a0a);font-size:16px;transition:border-color 150ms}.ds-field::placeholder{color:#737373}.ds-field:hover{border-color:#b2b2ab}.ds-field:focus{border-color:rgb(10 10 10 / .7)}.ds-field:focus-visible{outline:2px solid var(--color-white,#0a0a0a);outline-offset:2px;}.ds-field[aria-invalid=true]{border-color:#c62828}@media(prefers-reduced-motion:reduce){.ds-field{transition:none}}@media(min-width:1024px) and (pointer:fine){.ds-label{font-size:12px}.ds-field{min-height:40px;padding:8px 12px;border-radius:8px;font-size:13.5px}}"
+      "css": ".ds-label{font-family:'Geist Variable',ui-sans-serif,system-ui,sans-serif;display:block;color:#666;font-size:12.5px;font-weight:500}.ds-field{font-family:'Geist Variable',ui-sans-serif,system-ui,sans-serif;display:block;width:240px;max-width:100%;min-height:48px;margin-top:6px;padding:12px 14px;border:1px solid rgb(10 10 10 / .15);border-radius:12px;background:#fdfdfc;color:var(--color-white,#0a0a0a);font-size:16px;transition:border-color 150ms}.ds-field::placeholder{color:#737373}.ds-field:hover{border-color:#b2b2ab}.ds-field:focus{border-color:rgb(10 10 10 / .7)}.ds-field:focus-visible{outline:2px solid var(--adm-bleu,#292bff);outline-offset:2px;}.ds-field[aria-invalid=true]{border-color:#c62828}@media(prefers-reduced-motion:reduce){.ds-field{transition:none}}@media(min-width:1024px) and (pointer:fine){.ds-label{font-size:12px}.ds-field{min-height:40px;padding:8px 12px;border-radius:8px;font-size:13.5px}}"
     },
     {
       "name": "Navigation de section",
       "kind": "nav",
       "refersTo": "nav-item",
-      "description": "Navigation du bureau : rangées de 32 px à la souris (44 au doigt), onglet courant en gris uni sans bordure, survol plus pâle.",
+      "description": "Navigation du bureau, sur le bleu Hopla : rangées de 32 px à la souris (44 au doigt), noms en blanc teinté de bleu (5,4:1), onglet courant en pastille blanche au texte bleu, survol en voile blanc, focus citron.",
       "html": "<nav class=\"ds-nav\" aria-label=\"Sections\"><button type=\"button\" aria-current=\"page\" class=\"ds-nav-item\">Ma page<span class=\"ds-count\">4</span></button><button type=\"button\" class=\"ds-nav-item\">Statistiques</button><button type=\"button\" class=\"ds-nav-item\">Réglages</button></nav>",
-      "css": ".ds-nav{display:grid;gap:2px;width:196px;padding:6px 10px 10px;background:#fafaf9}.ds-nav-item{font-family:'Geist Variable',ui-sans-serif,system-ui,sans-serif;display:flex;align-items:center;gap:10px;min-height:44px;padding:0 10px;border:0;border-radius:7px;background:transparent;color:#55554f;font-size:14px;font-weight:500;text-align:left;transition:background-color 150ms,color 150ms}.ds-nav-item:hover{background:#f2f2ef;color:var(--adm-encre,#18191b)}.ds-nav-item[aria-current=page]{background:#ebebe7;color:#0a0a0a}.ds-nav-item:focus-visible{outline:2px solid var(--color-white,#0a0a0a);outline-offset:2px}@media(min-width:1024px) and (pointer:fine){.ds-nav-item{min-height:32px;font-size:13.5px}}@media(prefers-reduced-motion:reduce){.ds-nav-item{transition:none}}"
+      "css": ".ds-nav{display:grid;gap:2px;width:196px;padding:6px 10px 10px;background:var(--adm-bleu,#292bff)}.ds-nav-item{font-family:'Geist Variable',ui-sans-serif,system-ui,sans-serif;display:flex;align-items:center;gap:10px;min-height:44px;padding:0 10px;border:0;border-radius:7px;background:transparent;color:#dcdcff;font-size:14px;font-weight:500;text-align:left;transition:background-color 150ms,color 150ms}.ds-nav-item:hover{background:rgb(255 255 255 / .1);color:#fff}.ds-nav-item[aria-current=page]{background:#fff;color:var(--adm-bleu,#292bff);font-weight:600}.ds-nav-item:focus-visible{outline:2px solid var(--adm-citron,#e3fc96);outline-offset:2px}@media(min-width:1024px) and (pointer:fine){.ds-nav-item{min-height:32px;font-size:13.5px}}@media(prefers-reduced-motion:reduce){.ds-nav-item{transition:none}}"
     },
     {
       "name": "Carte de contenu",
@@ -421,17 +560,17 @@
       "name": "Choix segmenté",
       "kind": "chip",
       "refersTo": "segment",
-      "description": "Choix exclusif de période, état radio visible.",
+      "description": "Choix exclusif de période, état radio visible : le choix sur le papier blanc, son nom en bleu.",
       "html": "<div class=\"ds-segments\" role=\"radiogroup\" aria-label=\"Période\"><button class=\"ds-segment\" type=\"button\" role=\"radio\" aria-checked=\"false\" tabindex=\"-1\">7 j</button><button class=\"ds-segment\" type=\"button\" role=\"radio\" aria-checked=\"true\">30 j</button><button class=\"ds-segment\" type=\"button\" role=\"radio\" aria-checked=\"false\" tabindex=\"-1\">90 j</button></div>",
-      "css": ".ds-segments{display:flex;gap:2px;width:260px;padding:3px;border-radius:10px;background:rgb(10 10 10 / .06)}.ds-segment{font-family:'Geist Variable',ui-sans-serif,system-ui,sans-serif;flex:1;min-height:40px;padding:0 10px;border:0;border-radius:7px;background:transparent;color:#666;font-size:13.5px;font-weight:500;transition:color 200ms}.ds-segment:hover{color:#0a0a0a}.ds-segment[aria-checked=true]{background:var(--color-nuit,#fff);color:var(--color-white,#0a0a0a);box-shadow:0 1px 3px rgba(0,0,0,.14)}.ds-segment:focus-visible{outline:2px solid var(--color-white,#0a0a0a);outline-offset:2px;}@media(prefers-reduced-motion:reduce){.ds-segment{transition:none}}@media(min-width:1024px) and (pointer:fine){.ds-segment{min-height:30px}}"
+      "css": ".ds-segments{display:flex;gap:2px;width:260px;padding:3px;border-radius:10px;background:rgb(10 10 10 / .06)}.ds-segment{font-family:'Geist Variable',ui-sans-serif,system-ui,sans-serif;flex:1;min-height:40px;padding:0 10px;border:0;border-radius:7px;background:transparent;color:#666;font-size:13.5px;font-weight:500;transition:color 200ms}.ds-segment:hover{color:#0a0a0a}.ds-segment[aria-checked=true]{background:var(--color-nuit,#fff);color:var(--adm-bleu,#292bff);box-shadow:0 1px 3px rgba(0,0,0,.14)}.ds-segment:focus-visible{outline:2px solid var(--adm-bleu,#292bff);outline-offset:2px;}@media(prefers-reduced-motion:reduce){.ds-segment{transition:none}}@media(min-width:1024px) and (pointer:fine){.ds-segment{min-height:30px}}"
     },
     {
       "name": "Interrupteur",
       "kind": "custom",
       "refersTo": "switch",
-      "description": "État de préférence, cible étendue autour de la piste ; éteinte, la piste reste à 3:1 sur le papier. Au bureau, 32 sur 18.",
+      "description": "État de préférence, cible étendue autour de la piste ; allumée, la piste est bleue ; éteinte, la piste reste à 3:1 sur le papier. Au bureau, 32 sur 18.",
       "html": "<button class=\"ds-switch\" type=\"button\" role=\"switch\" aria-checked=\"true\" aria-label=\"Mes stats par e-mail chaque lundi\"><span class=\"ds-knob\"></span></button>",
-      "css": ".ds-switch{position:relative;width:40px;height:24px;border:0;border-radius:9999px;background:rgb(10 10 10 / .45);transition:background-color 220ms ease}.ds-switch::before{position:absolute;inset:-8px;content:\"\"}.ds-switch[aria-checked=true]{background:var(--color-white,#0a0a0a)}.ds-knob{position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:9999px;background:var(--color-nuit,#fff);box-shadow:0 1px 3px rgba(0,0,0,.3);transform-origin:left center;transition:translate 280ms cubic-bezier(.16,1,.3,1),scale 200ms cubic-bezier(.16,1,.3,1)}.ds-switch[aria-checked=true] .ds-knob{translate:16px 0}.ds-switch:focus-visible{outline:2px solid var(--color-white,#0a0a0a);outline-offset:2px;}.ds-switch:active .ds-knob{scale:1.5 1}.ds-switch[aria-checked=true]:active .ds-knob{translate:7px 0}.ds-switch:disabled{opacity:.4}@media(prefers-reduced-motion:reduce){.ds-switch,.ds-knob{transition:none}}@media(min-width:1024px) and (pointer:fine){.ds-switch{width:32px;height:18px}.ds-knob{top:2px;left:2px;width:14px;height:14px}.ds-switch[aria-checked=true] .ds-knob{translate:14px 0}}"
+      "css": ".ds-switch{position:relative;width:40px;height:24px;border:0;border-radius:9999px;background:rgb(10 10 10 / .45);transition:background-color 220ms ease}.ds-switch::before{position:absolute;inset:-8px;content:\"\"}.ds-switch[aria-checked=true]{background:var(--adm-bleu,#292bff)}.ds-knob{position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:9999px;background:var(--color-nuit,#fff);box-shadow:0 1px 3px rgba(0,0,0,.3);transform-origin:left center;transition:translate 280ms cubic-bezier(.16,1,.3,1),scale 200ms cubic-bezier(.16,1,.3,1)}.ds-switch[aria-checked=true] .ds-knob{translate:16px 0}.ds-switch:focus-visible{outline:2px solid var(--adm-bleu,#292bff);outline-offset:2px;}.ds-switch:active .ds-knob{scale:1.5 1}.ds-switch[aria-checked=true]:active .ds-knob{translate:7px 0}.ds-switch:disabled{opacity:.4}@media(prefers-reduced-motion:reduce){.ds-switch,.ds-knob{transition:none}}@media(min-width:1024px) and (pointer:fine){.ds-switch{width:32px;height:18px}.ds-knob{top:2px;left:2px;width:14px;height:14px}.ds-switch[aria-checked=true] .ds-knob{translate:14px 0}}"
     },
     {
       "name": "Ligne de réglage",
@@ -439,7 +578,7 @@
       "refersTo": "settings-row",
       "description": "Ligne de Réglages : le nom à gauche, la valeur au gris secondaire, le contrôle à droite (bouton au contour, bascule ou chevron) ; 56 px, 48 px au bureau. Sans picto ni tiroir.",
       "html": "<div class=\"ds-lignes\"><div class=\"ds-ligne\"><span class=\"ds-ligne-texte\"><span class=\"ds-ligne-nom\">Adresse</span><span class=\"ds-ligne-valeur\">hopla.page/sarah-coach</span></span><button type=\"button\" class=\"ds-ligne-bouton\">Copier</button></div><button type=\"button\" class=\"ds-ligne ds-ligne-lien\"><span class=\"ds-ligne-texte\"><span class=\"ds-ligne-nom\">Mes stats par e-mail chaque lundi</span></span><span class=\"ds-badge\">Starter</span><svg width=\"16\" height=\"16\" viewBox=\"0 0 16 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" aria-hidden=\"true\"><path d=\"m6 4 4 4-4 4\"/></svg></button></div>",
-      "css": ".ds-lignes{font-family:'Geist Variable',ui-sans-serif,system-ui,sans-serif;width:560px;max-width:100%;border:1px solid #e3e3df;border-radius:12px;background:#fff;color:#0a0a0a}.ds-ligne{display:flex;align-items:center;gap:12px;width:100%;min-height:56px;padding:6px 8px 6px 16px;border:0;background:transparent;color:inherit;font:inherit;font-size:15px;text-align:left}.ds-ligne+.ds-ligne{border-top:1px solid #efefec}.ds-ligne-lien{padding-right:12px;border-radius:0 0 11px 11px;transition:background-color 150ms}.ds-ligne-lien:hover{background:#fafaf9}.ds-ligne-texte{display:flex;flex:1;min-width:0;flex-direction:column}.ds-ligne-valeur{color:#5f5f5a;font-size:13.5px}.ds-ligne-bouton{min-height:36px;padding:0 14px;border:1px solid rgba(10,10,10,.15);border-radius:8px;background:#fff;color:#0a0a0a;font:inherit;font-size:13.5px;font-weight:500}.ds-badge{padding:2px 6px;border-radius:5px;background:rgba(10,10,10,.07);font-size:11.5px;font-weight:600}.ds-ligne:focus-visible,.ds-ligne-bouton:focus-visible{outline:2px solid #0a0a0a;outline-offset:-2px}@media(min-width:640px){.ds-ligne-texte{flex-direction:row;gap:16px}.ds-ligne-valeur{flex:1;overflow:hidden;font-size:inherit;text-align:right;text-overflow:ellipsis;white-space:nowrap}}@media(min-width:1024px) and (pointer:fine){.ds-ligne{min-height:48px;font-size:13.5px}}@media(prefers-reduced-motion:reduce){.ds-ligne-lien{transition:none}}"
+      "css": ".ds-lignes{font-family:'Geist Variable',ui-sans-serif,system-ui,sans-serif;width:560px;max-width:100%;border:1px solid #e3e3df;border-radius:12px;background:#fff;color:#0a0a0a}.ds-ligne{display:flex;align-items:center;gap:12px;width:100%;min-height:56px;padding:6px 8px 6px 16px;border:0;background:transparent;color:inherit;font:inherit;font-size:15px;text-align:left}.ds-ligne+.ds-ligne{border-top:1px solid #efefec}.ds-ligne-lien{padding-right:12px;border-radius:0 0 11px 11px;transition:background-color 150ms}.ds-ligne-lien:hover{background:#fafaf9}.ds-ligne-texte{display:flex;flex:1;min-width:0;flex-direction:column}.ds-ligne-valeur{color:#5f5f5a;font-size:13.5px}.ds-ligne-bouton{min-height:36px;padding:0 14px;border:1px solid rgba(10,10,10,.15);border-radius:8px;background:#fff;color:#0a0a0a;font:inherit;font-size:13.5px;font-weight:500}.ds-badge{padding:2px 6px;border-radius:5px;background:rgba(10,10,10,.07);font-size:11.5px;font-weight:600}.ds-ligne:focus-visible,.ds-ligne-bouton:focus-visible{outline:2px solid var(--adm-bleu,#292bff);outline-offset:-2px}@media(min-width:640px){.ds-ligne-texte{flex-direction:row;gap:16px}.ds-ligne-valeur{flex:1;overflow:hidden;font-size:inherit;text-align:right;text-overflow:ellipsis;white-space:nowrap}}@media(min-width:1024px) and (pointer:fine){.ds-ligne{min-height:48px;font-size:13.5px}}@media(prefers-reduced-motion:reduce){.ds-ligne-lien{transition:none}}"
     },
     {
       "name": "Badge",
@@ -468,17 +607,22 @@
   ],
   "narrative": {
     "northStar": "Un même espace de travail",
-    "overview": "Ce nom reprend le principe déjà inscrit dans le code : l'édition, les statistiques, les réglages et la connexion appartiennent au même espace. Le système est sobre, clair et compact, avec des surfaces blanches sur un fond gris doux et une hiérarchie obtenue par la typographie, les espacements et les traits.\n\nCette documentation décrit le système observable de la branche `design/back-office-harmonise`, au 19 octobre 2026, resserré le soir même par la revue finale : un seul jeu de boutons sans pilule, une seule marque, un seul titre d'écran, des pictos sans tuile et aucun sous-titre sous les titres. Elle ne propose pas de nouvelle identité et ne prouve aucune mise en production. Son périmètre est le back office : les thèmes publics rendus dans l'éditeur ou dans un aperçu conservent leurs propres couleurs et fontes. La stratégie des écrans est dans `.impeccable/surfaces/back-office.md`.",
+    "overview": "Ce nom reprend le principe déjà inscrit dans le code : l'édition, les statistiques, les réglages et la connexion appartiennent au même espace. Le système est sobre, clair et compact, avec des surfaces blanches sur un fond de papier doux et une hiérarchie obtenue par la typographie, les espacements et les traits.\n\nLe 22 octobre 2026, Lilian a demandé que le back office soit aussi coloré que l'accueil : il en reprend la palette (le bleu Hopla, le citron, les papiers crème) et sa règle, l'appel prend l'accent de sa surface, bleu sur le papier, citron sur le bleu. Chaque couleur y a un rôle ; aucune n'habille une section.\n\nCette documentation décrit le système observable de la branche `design/back-office-harmonise`, au 19 octobre 2026, resserré le soir même par la revue finale : un seul jeu de boutons sans pilule, une seule marque, un seul titre d'écran, des pictos sans tuile et aucun sous-titre sous les titres. Elle ne propose pas de nouvelle identité et ne prouve aucune mise en production. Son périmètre est le back office : les thèmes publics rendus dans l'éditeur ou dans un aperçu conservent leurs propres couleurs et fontes. La stratégie des écrans est dans `.impeccable/surfaces/back-office.md`.",
     "keyCharacteristics": [
-      "Encre noire, papier blanc et gris neutres.",
+      "Encre noire sur papier blanc, et les couleurs de l'accueil : le bleu pour agir, choisir et lire les chiffres, le citron pour ce qui se gagne, le crème pour la page qu'on regarde.",
       "Geist pour une hiérarchie de travail compacte.",
       "Bordures fines et surfaces arrondies, sans ombre sur les cartes ordinaires.",
       "Pictogrammes pleins, retours visibles et gestes courts."
     ],
     "rules": [
       {
-        "name": "The Monochrome Rule",
-        "body": "Le back office garde des actions et contenus neutres ; la couleur est réservée aux alertes, jamais à décorer une section.",
+        "name": "The Surface Accent Rule",
+        "body": "Comme sur l'accueil, l'appel prend l'accent de sa surface : bleu sur le papier, citron sur le bleu. Jamais deux appels pleins côte à côte.",
+        "section": "colors"
+      },
+      {
+        "name": "The Role Rule",
+        "body": "Une couleur a un rôle (agir ou se repérer en bleu, gagner en citron, regarder la page sur le crème, alerter en ambre, effacer en rouge) ; aucune n'habille une section. Une information ne tient jamais à la couleur seule : un écart porte son signe, un onglet ouvert son trait, une offre son nom.",
         "section": "colors"
       },
       {
@@ -503,22 +647,24 @@
       }
     ],
     "dos": [
-      "**Do** conserver le contraste noir sur papier, et du papier sur une action noire.",
+      "**Do** conserver l'encre sur le papier, le blanc sur le bleu et l'encre citron sur le citron, aux contrastes mesurés (Colors).",
+      "**Do** donner son rôle à chaque couleur : le bleu pour agir, choisir et lire les chiffres, le citron pour ce qui se gagne, le crème pour la page.",
       "**Do** reprendre Geist et la hiérarchie des rôles déjà utilisés.",
       "**Do** conserver un focus visible, les libellés et les états d'enregistrement explicites.",
       "**Do** utiliser les pictogrammes Phosphor pleins et monochromes pour ce qu'on montre (un réseau, un bloc, une règle, un état), et les signes de commande au trait (`ui-*`) pour les gestes (fermer, ajouter, déplier, copier, ouvrir), sans mêler les deux dans une même rangée.",
       "**Do** garder les transitions brèves et respecter le mouvement réduit."
     ],
     "donts": [
-      "**Don't** ajouter d'accent décoratif dans le back office.",
+      "**Don't** poser une couleur pour décorer, ni un dégradé ailleurs que sous une courbe de stats.",
+      "**Don't** mettre deux appels pleins côte à côte, ni un bouton bleu sur le bleu : sur le bleu, l'appel est citron.",
       "**Don't** remplacer les couleurs ou la typographie des thèmes publics par celles du shell.",
       "**Don't** transformer chaque carte en fenêtre ombrée.",
       "**Don't** utiliser d'emoji ou de picto en duotone dans cet espace.",
-      "**Don't** présenter une capture locale ou ce document comme une preuve de mise en production.",
       "**Don't** faire un bouton en pilule, ni poser un picto sur une tuile de fond.",
       "**Don't** écrire un sous-titre explicatif sous un titre d'onglet, ni un fil d'Ariane qui répète la navigation.",
-      "**Don't** dire « en ligne » ou « réussi » en vert : le noir suffit, la couleur reste aux alertes.",
-      "**Don't** imbriquer une boîte grise dans une carte."
+      "**Don't** dire « en ligne » ou « réussi » en vert : l'encre suffit, et le citron dit ce qui se gagne, pas ce qui a marché.",
+      "**Don't** imbriquer une boîte grise dans une carte.",
+      "**Don't** présenter une capture locale ou ce document comme une preuve de mise en production."
     ]
   }
 }

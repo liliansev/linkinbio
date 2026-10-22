@@ -8,6 +8,8 @@ import { Icone } from '../components/Icone.tsx';
 import { enUnePhrase } from '../lib/resume.ts';
 import type { Mesure, Point } from '../lib/stats.ts';
 import { COULEURS_SOURCES, MESURES, NOMS_MESURES, chiffre, ecart, graduation, parSemaine, reperes, totalDe, valeurDuJour } from '../lib/stats.ts';
+import { DEGRADE_COURBE, aireSous, lisse } from '../lib/courbe.ts';
+import type { PointTrace } from '../lib/courbe.ts';
 import { OFFRES, PLANS_PAYANTS } from '../lib/abonnement.ts';
 import type { Fonction, PlanPayant } from '../lib/abonnement.ts';
 import { noterPartage } from './BienDemarrer.tsx';
@@ -20,11 +22,12 @@ import { TYPES } from './OngletLiens.tsx';
  * quatre chiffres clés en une rangée qui sert d'onglets à une grande courbe,
  * puis d'où viennent les clics et les visiteurs, en listes à barre pâle avec
  * les chiffres à droite. Les couleurs de l'accueil (22 octobre 2026) : la
- * courbe et les barres des liens et des appareils en bleu Hopla, chaque réseau
- * dans la couleur de sa marque (une provenance sans marque en gris, pour ne pas
- * se confondre avec les bleus de LinkedIn, Facebook ou Google), un écart en
- * citron quand il monte, en rose quand il baisse. La période se choisit dans
- * un petit menu, dans l'en-tête au bureau, en tête de l'écran au téléphone.
+ * courbe, lisse sur un dégradé, et les barres des liens et des appareils en
+ * bleu Hopla, chaque réseau dans la couleur de sa marque (une provenance sans
+ * marque en gris, pour ne pas se confondre avec les bleus de LinkedIn,
+ * Facebook ou Google), un écart en citron quand il monte, en rose quand il
+ * baisse. La période se choisit dans un petit menu, dans l'en-tête au bureau,
+ * en tête de l'écran au téléphone.
  */
 
 const PERIODES = [
@@ -63,29 +66,6 @@ function useLargeur() {
 }
 
 /**
- * Une courbe lisse qui passe par chaque point sans jamais les dépasser
- * (interpolation monotone de Fritsch et Carlson) : pas de bosse sous zéro
- * ni de pic inventé entre deux jours.
- */
-function lisse(p: [number, number][]): string {
-  const n = p.length;
-  if (n < 3) return p.map(([a, b], i) => `${i ? 'L' : 'M'}${a.toFixed(1)},${b.toFixed(1)}`).join(' ');
-  const d = p.slice(1).map(([a, b], i) => (b - p[i][1]) / (a - p[i][0]));
-  const m = p.map((_, i) => (i === 0 ? d[0] : i === n - 1 ? d[n - 2] : d[i - 1] * d[i] <= 0 ? 0 : (d[i - 1] + d[i]) / 2));
-  for (let i = 0; i < n - 1; i++) {
-    if (d[i] === 0) { m[i] = 0; m[i + 1] = 0; continue; }
-    const a = m[i] / d[i], b = m[i + 1] / d[i], t = a * a + b * b;
-    if (t > 9) { const k = 3 / Math.sqrt(t); m[i] = k * a * d[i]; m[i + 1] = k * b * d[i]; }
-  }
-  let chemin = `M${p[0][0].toFixed(1)},${p[0][1].toFixed(1)}`;
-  for (let i = 0; i < n - 1; i++) {
-    const [x0, y0] = p[i], [x1, y1] = p[i + 1], h = (x1 - x0) / 3;
-    chemin += ` C${(x0 + h).toFixed(1)},${(y0 + m[i] * h).toFixed(1)} ${(x1 - h).toFixed(1)},${(y1 - m[i + 1] * h).toFixed(1)} ${x1.toFixed(1)},${y1.toFixed(1)}`;
-  }
-  return chemin;
-}
-
-/**
  * La courbe de la mesure choisie, jour par jour : une échelle ronde à gauche,
  * une date par semaine dessous, le dernier chiffre écrit au bout. Au survol ou
  * aux flèches, le jour se lit dans une bulle. Elle se dessine à sa vraie
@@ -93,7 +73,7 @@ function lisse(p: [number, number][]): string {
  */
 function Courbe({ serie, mesure }: { serie: Point[]; mesure: Mesure }) {
   const [boite, largeur] = useLargeur();
-  // L'aire sous la courbe : un bleu qui s'efface vers le bas. Son id sert dans `url(#…)`, sans les signes que React y met.
+  // L'aire sous la courbe, en dégradé (`lib/courbe.ts`). Son id sert dans `url(#…)`, sans les signes que React y met.
   const degrade = `degrade-${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
   const [survol, setSurvol] = useState<number | null>(null);
   const etroit = largeur > 0 && largeur < 600;
@@ -108,8 +88,7 @@ function Courbe({ serie, mesure }: { serie: Point[]; mesure: Mesure }) {
   const n = serie.length;
   const x = (i: number) => (n > 1 ? x0 + (i * (x1 - x0)) / (n - 1) : (x0 + x1) / 2);
   const y = (v: number) => yBas - (v / max) * (yBas - yHaut);
-  const ligne = lisse(valeurs.map((v, i) => [x(i), y(v)]));
-  const aire = `${ligne} L${x(n - 1).toFixed(1)},${yBas} L${x(0).toFixed(1)},${yBas} Z`;
+  const trace = valeurs.map((v, i): PointTrace => [x(i), y(v)]);
   let dates = reperes(serie);
   // Au téléphone, une date sur deux : elles ne se touchent pas.
   if (etroit && dates.length > 3) dates = dates.filter((_, k) => k % 2 === 0);
@@ -157,12 +136,11 @@ function Courbe({ serie, mesure }: { serie: Point[]; mesure: Mesure }) {
           </g>
           <defs>
             <linearGradient id={degrade} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0" stopColor="#292bff" stopOpacity="0.16" />
-              <stop offset="1" stopColor="#292bff" stopOpacity="0.02" />
+              {DEGRADE_COURBE.map(s => <stop key={s.arret} offset={s.arret} stopColor="#292bff" stopOpacity={s.opacite} />)}
             </linearGradient>
           </defs>
-          <path d={aire} fill={`url(#${degrade})`} />
-          <path d={ligne} fill="none" stroke="#292bff" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+          <path d={aireSous(trace, yBas)} fill={`url(#${degrade})`} />
+          <path d={lisse(trace)} fill="none" stroke="#292bff" strokeWidth="2.25" strokeLinejoin="round" strokeLinecap="round" />
           {point && <line x1={point.x} x2={point.x} y1={yHaut - 8} y2={yBas} stroke="#b9baf5" strokeWidth="1" />}
           {point && <circle cx={point.x} cy={point.y} r="4" fill="#292bff" stroke="#ffffff" strokeWidth="2" />}
           {survol !== n - 1 && <circle cx={x(n - 1)} cy={y(dernier)} r="4" fill="#292bff" stroke="#ffffff" strokeWidth="2" />}

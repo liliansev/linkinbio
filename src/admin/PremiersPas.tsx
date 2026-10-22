@@ -351,7 +351,7 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
       </div>
 
       {/* Les questions, sous le pouce. Le bouton reste visible ; c'est le contenu qui défile s'il déborde. */}
-      <section key={etape} className="adm-onglet flex min-h-0 flex-1 flex-col lg:flex-none rounded-t-2xl border-t border-white/[0.08] bg-nuit lg:max-h-none lg:min-h-0 lg:rounded-none lg:border-t-0 lg:border-r lg:bg-transparent"
+      <section key={etape} className="adm-onglet flex min-h-0 flex-1 flex-col lg:flex-none rounded-t-2xl border-t border-white/[0.08] bg-nuit lg:max-h-none lg:min-h-0 lg:rounded-none lg:border-t-0 lg:bg-transparent"
         aria-labelledby="premiers-pas-titre">
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pt-5 lg:flex-none lg:px-8 lg:pt-10">
           {etape === 'fin' && <Icone nom="check" taille={30} className="mb-2" />}

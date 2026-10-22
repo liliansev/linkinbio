@@ -1,23 +1,32 @@
 ---
 name: Hopla back office
-description: Système monochrome de l’espace de travail Hopla, extrait de la branche design/back-office-harmonise.
+description: Système de l’espace de travail Hopla, extrait de la branche design/back-office-harmonise ; l’encre sur le papier, avec les couleurs de l’accueil (bleu, citron, papier crème) depuis le 22 octobre 2026.
 colors:
   ink: "#0a0a0a"
   shell-ink: "#18191b"
   paper: "#ffffff"
-  workspace: "#f7f7f5"
+  workspace: "#f6f5ef"
   quiet-paper: "#fdfdfc"
   divider: "#e5e5e1"
   control-border: "#deded9"
   secondary: "#656560"
   muted-text: "#666666"
-  nav-hover: "#f2f2ef"
-  nav-current: "#ebebe7"
-  sidebar: "#fafaf9"
+  nav-hover: "#3e40ff"
+  nav-current: "#ffffff"
+  sidebar: "#292bff"
   shell-divider: "#ececea"
   control-hover: "#f4f4f0"
   error: "#c62828"
   pending: "#d97706"
+  blue: "#292bff"
+  blue-hover: "#1d1fd6"
+  blue-pale: "#e4e4ff"
+  blue-veil: "#f3f3ff"
+  on-blue: "#dcdcff"
+  lime: "#e3fc96"
+  lime-hover: "#d4f57c"
+  lime-ink: "#233016"
+  cream: "#f3eee5"
 typography:
   headline:
     fontFamily: "Geist Variable, ui-sans-serif, system-ui, sans-serif"
@@ -99,13 +108,18 @@ spacing:
   wide: "32px"
 components:
   button-primary:
-    backgroundColor: "{colors.ink}"
+    backgroundColor: "{colors.blue}"
     textColor: "{colors.paper}"
     rounded: "{rounded.control}"
     padding: "0 20px"
     height: "44px"
   button-primary-hover:
-    backgroundColor: "#30302e"
+    backgroundColor: "{colors.blue-hover}"
+  button-on-blue:
+    backgroundColor: "{colors.lime}"
+    textColor: "{colors.lime-ink}"
+    rounded: "{rounded.control}"
+    height: "44px"
   button-secondary:
     backgroundColor: "{colors.paper}"
     textColor: "{colors.ink}"
@@ -157,7 +171,7 @@ components:
     padding: "8px 12px"
     height: "40px"
   nav-item:
-    textColor: "#55554f"
+    textColor: "{colors.on-blue}"
     rounded: "{rounded.nav}"
     padding: "0 10px"
     height: "44px"
@@ -166,7 +180,7 @@ components:
     height: "32px"
   nav-item-current:
     backgroundColor: "{colors.nav-current}"
-    textColor: "{colors.ink}"
+    textColor: "{colors.blue}"
   sidebar:
     backgroundColor: "{colors.sidebar}"
     width: "216px"
@@ -180,7 +194,7 @@ components:
     height: "40px"
   segment-current:
     backgroundColor: "{colors.paper}"
-    textColor: "{colors.ink}"
+    textColor: "{colors.blue}"
   settings-row:
     textColor: "{colors.ink}"
     padding: "6px 16px"
@@ -194,12 +208,12 @@ components:
     padding: "0 12px"
     height: "48px"
   switch:
-    backgroundColor: "{colors.ink}"
+    backgroundColor: "{colors.blue}"
     rounded: "{rounded.pill}"
     width: "40px"
     height: "24px"
   switch-desk:
-    backgroundColor: "{colors.ink}"
+    backgroundColor: "{colors.blue}"
     rounded: "{rounded.pill}"
     width: "32px"
     height: "18px"
@@ -215,13 +229,24 @@ components:
   offer-card-desk:
     rounded: "12px"
     padding: "20px"
+  offer-card-featured:
+    backgroundColor: "{colors.blue}"
+    textColor: "{colors.paper}"
+    rounded: "14px"
   offer-price:
     typography: "{typography.metric}"
   badge-offer-for:
-    backgroundColor: "{colors.ink}"
+    backgroundColor: "{colors.blue}"
     textColor: "{colors.paper}"
     typography: "{typography.caption}"
     rounded: "{rounded.segment}"
+  badge-gain:
+    backgroundColor: "{colors.lime}"
+    textColor: "{colors.lime-ink}"
+    typography: "{typography.caption}"
+    rounded: "{rounded.segment}"
+  chart-line:
+    backgroundColor: "{colors.blue}"
 ---
 
 # Design System: Hopla back office
@@ -230,25 +255,35 @@ components:
 
 **Creative North Star: "Un même espace de travail"**
 
-Ce nom reprend le principe déjà inscrit dans le code : l'édition, les statistiques, les réglages et la connexion appartiennent au même espace. Le système est sobre, clair et compact, avec des surfaces blanches sur un fond gris doux et une hiérarchie obtenue par la typographie, les espacements et les traits.
+Ce nom reprend le principe déjà inscrit dans le code : l'édition, les statistiques, les réglages et la connexion appartiennent au même espace. Le système est sobre, clair et compact, avec des surfaces blanches sur un fond de papier doux et une hiérarchie obtenue par la typographie, les espacements et les traits.
+
+Le 22 octobre 2026, Lilian a demandé que le back office soit aussi coloré que l'accueil : il en reprend la palette (le bleu Hopla, le citron, les papiers crème) et sa règle, l'appel prend l'accent de sa surface, bleu sur le papier, citron sur le bleu. Chaque couleur y a un rôle ; aucune n'habille une section.
 
 Cette documentation décrit le système observable de la branche `design/back-office-harmonise`, au 19 octobre 2026, resserré le soir même par la revue finale : un seul jeu de boutons sans pilule, une seule marque, un seul titre d'écran, des pictos sans tuile et aucun sous-titre sous les titres. Elle ne propose pas de nouvelle identité et ne prouve aucune mise en production. Son périmètre est le back office : les thèmes publics rendus dans l'éditeur ou dans un aperçu conservent leurs propres couleurs et fontes. La stratégie des écrans est dans `.impeccable/surfaces/back-office.md`.
 
 **Key Characteristics:**
-- Encre noire, papier blanc et gris neutres.
+- Encre noire sur papier blanc, et les couleurs de l'accueil : le bleu pour agir, choisir et lire les chiffres, le citron pour ce qui se gagne, le crème pour la page qu'on regarde.
 - Geist pour une hiérarchie de travail compacte.
 - Bordures fines et surfaces arrondies, sans ombre sur les cartes ordinaires.
 - Pictogrammes pleins, retours visibles et gestes courts.
 
 ## Colors
 
-La palette du back office repose sur une encre noire et des neutres légèrement chauds. Les valeurs normatives sont dans le frontmatter.
+La palette du back office repose sur une encre noire, des neutres légèrement chauds et les trois couleurs de l'accueil. Les valeurs normatives sont dans le frontmatter ; dans le code, ce sont les variables `--adm-*` de `src/styles/admin.css`.
 
 Dans le code hérité, `.adm` inverse les noms de couleur : `white` désigne l’encre, `nuit` le papier et `peche` l’encre. Un texte sur bouton noir utilise donc `text-nuit`. Cette compatibilité est locale au back office. Les rampes du sidecar sont des aides de visualisation synthétiques ; elles ne sont pas des couleurs supplémentaires implémentées dans l’app.
 
 ### Primary
 
-- **Encre** (`ink`) : textes explicites, pictogrammes, boutons principaux, focus et courbe principale.
+- **Encre** (`ink`) : textes explicites et pictogrammes.
+
+### Accents (les couleurs de l'accueil)
+
+- **Bleu Hopla** (`blue`, 7,3:1 sur le blanc) : l'action, la sélection et les données. Le bouton principal (son survol en `blue-hover`), l'interrupteur allumé, le focus, l'onglet ouvert (un trait de (2px) et son nom), le segment choisi, la rangée ouverte de Ma page (sur `blue-veil`), les liens, la courbe des stats et les barres des liens et des appareils (sur `blue-pale`, où le bleu garde 5,8:1). Il fait aussi les surfaces qui repèrent : la barre latérale du bureau, l'en-tête du téléphone et les écrans d'entrée (connexion, lien reçu, CGU).
+- **Sur le bleu** : le texte est blanc (7,3:1), le texte secondaire `on-blue` (5,4:1), l'onglet courant une pastille blanche au texte bleu, le survol un voile blanc, et le focus passe au citron (6,5:1).
+- **Citron** (`lime`, avec son encre `lime-ink`, 12,4:1) : ce qui se gagne et ce qui ressort. « Mis en avant », les mois offerts et l'économie de l'annuel, un écart en hausse, « +23 cette semaine », et l'appel posé sur le bleu (le bouton de l'offre mise en avant, le diamant de l'offre du dessus).
+- **Crème** (`cream`) : la page qu'on regarde, à part de l'édition. La colonne de la page au bureau, la page en miniature des premiers pas, l'aperçu du récapitulatif d'achat.
+- **Offres** : Starter en bleu sur `blue-pale`, Pro en blanc sur le bleu, Premium en lilas sur la nuit de l'accueil (`#eee0fa` sur `#292530`), partout où leur nom se montre.
 
 ### Neutral
 
@@ -258,15 +293,17 @@ Dans le code hérité, `.adm` inverse les noms de couleur : `white` désigne l�
 - **Papier calme** (`quiet-paper`) : barre supérieure, barre latérale et champs.
 - **Trait** (`divider`) et **Contour de contrôle** (`control-border`) : séparation des régions et limites des boutons secondaires.
 - **Secondaire** (`secondary`) et **Texte atténué** (`muted-text`) : descriptions et aides lisibles ; le second correspond aux utilitaires corrigés pour le fond clair.
-- **Survol de navigation** (`nav-hover`) et **Survol de contrôle** (`control-hover`) : réponse locale sans nouvel accent.
-- **Onglet courant** (`nav-current`) : le gris uni de la section ouverte dans la barre latérale ; le survol (`nav-hover`) est plus pâle que lui, pour que l'endroit où l'on est se voie mieux que celui qu'on survole.
-- **Barre latérale** (`sidebar`) et **Trait de la coquille** (`shell-divider`) : la barre latérale du bureau et les traits qui la séparent de l'en-tête et du contenu.
+- **Survol de contrôle** (`control-hover`) : réponse locale sans nouvel accent.
+- **Onglet courant** (`nav-current`) : la pastille blanche de la section ouverte dans la barre latérale bleue ; le survol (`nav-hover`, un voile blanc à 10 %) reste dans le bleu, pour que l'endroit où l'on est se voie mieux que celui qu'on survole.
+- **Barre latérale** (`sidebar`, le bleu) et **Trait de la coquille** (`shell-divider`) : la barre latérale du bureau et les traits qui séparent l'en-tête du contenu.
 
-Les tokens `error` et `pending` correspondent aux états d'erreur et d'enregistrement en cours. Ils ne constituent pas des accents de marque. Les variantes d'alerte déjà présentes dans le code restent contextuelles.
+Les tokens `error` et `pending` correspondent aux états d'erreur et d'enregistrement en cours. Ils ne constituent pas des accents de marque : le rouge reste au danger et aux erreurs, l'ambre aux alertes (un signalement à traiter). Un écart en baisse prend un rose pâle au texte rouge foncé (`#fdeaea` et `#a51f1f`).
 
 ### Named Rules
 
-**The Monochrome Rule.** Le back office garde des actions et contenus neutres ; la couleur est réservée aux alertes, jamais à décorer une section.
+**The Surface Accent Rule.** Comme sur l'accueil, l'appel prend l'accent de sa surface : bleu sur le papier, citron sur le bleu. Jamais deux appels pleins côte à côte.
+
+**The Role Rule.** Une couleur a un rôle (agir ou se repérer en bleu, gagner en citron, regarder la page sur le crème, alerter en ambre, effacer en rouge) ; aucune n'habille une section. Une information ne tient jamais à la couleur seule : un écart porte son signe, un onglet ouvert son trait, une offre son nom.
 
 **The Public Theme Boundary Rule.** Les couleurs de l'espace de travail ne remplacent pas les variables des pages publiques et de leurs aperçus.
 
@@ -332,7 +369,7 @@ Les contrôles et la navigation utilisent l'arrondi `control`, les cartes et feu
 
 **The No Pill Rule.** Aucun bouton, lien d'action ou badge en pilule : ce sont des rectangles arrondis. Restent ronds les avatars, les points d'état, les interrupteurs, les pastilles de couleur, la poignée de déplacement, les boutons radio et les pistes de progression.
 
-Les bordures de surface sont fines (1px). Le focus observable est un contour noir (2px), décalé de (2px). Les cadres de page et les miniatures ont des rayons propres à leur fonction ; ils ne redéfinissent pas la forme des cartes ordinaires.
+Les bordures de surface sont fines (1px). Le focus observable est un contour bleu (2px), décalé de (2px) ; sur le bleu, il passe au citron. Les cadres de page et les miniatures ont des rayons propres à leur fonction ; ils ne redéfinissent pas la forme des cartes ordinaires.
 
 ## Components
 
@@ -340,7 +377,7 @@ Les bordures de surface sont fines (1px). Le focus observable est un contour noi
 
 Actions nettes, avec un libellé court et un picto plein lorsque cela aide à reconnaître le geste. Les cinq variantes viennent d'une seule source, `classeBouton` dans `src/admin/ui.tsx`, pour qu'un lien prenne la même allure qu'un bouton. Ne pas ajouter derrière elles un padding ou une hauteur qui les contredit.
 
-- **Primary (`principal`):** noir, texte blanc, semi-gras ; cible minimale (44px), avec pression à l'échelle (0.98) et opacité réduite si désactivé. Il porte l'action principale de la vue.
+- **Primary (`principal`):** bleu Hopla, texte blanc, semi-gras, un bleu plus foncé au survol ; cible minimale (44px), avec pression à l'échelle (0.98) et opacité réduite si désactivé. Il porte l'action principale de la vue. Posé sur le bleu (la carte de l'offre mise en avant), il passe au citron, son texte à l'encre citron.
 - **Au bureau (`bureau:`):** chaque variante descend à (36px) de haut, arrondi (8px), graisse moyenne ; le bouton icône à (32px). Un bouton écrit à la main avec `min-h-11` suit la même règle.
 - **Secondary (`secondaire`):** papier blanc, contour léger, texte noir et graisse moyenne. Le survol modifie le fond et le trait.
 - **Danger (`danger`):** rouge plein, texte blanc ; réservé à l'effacement définitif, après une confirmation.
@@ -350,13 +387,13 @@ Actions nettes, avec un libellé court et un picto plein lorsque cela aide à re
 
 ### Cards / Containers
 
-Conteneurs blancs, arrondis et bordés. Un titre de carte et son action éventuelle occupent la même rangée. Dans les stats, les encarts (`.adm-encart`) sont un trait fin sur le blanc, arrondi (12px), (10px) à partir de (1024px). Les chiffres clés sont les onglets de leur courbe, dans un seul encart : deux par rangée et (72px) de haut au téléphone, quatre de front et (84px) à partir de (640px) ; l'onglet choisi passe au blanc avec un trait d'encre de (2px) en bas. Une répartition (liens, réseaux, appareils) est une liste dont chaque libellé porte derrière lui une barre pâle `#efefec`, à la longueur de sa part, le nombre et le pourcentage à droite au gris secondaire (6,5:1).
+Conteneurs blancs, arrondis et bordés. Un titre de carte et son action éventuelle occupent la même rangée. Dans les stats, les encarts (`.adm-encart`) sont un trait fin sur le blanc, arrondi (12px), (10px) à partir de (1024px). La phrase du haut écrit son nombre de vues en bleu. Les chiffres clés sont les onglets de leur courbe, dans un seul encart : deux par rangée et (72px) de haut au téléphone, quatre de front et (84px) à partir de (640px) ; l'onglet choisi passe au blanc avec un trait bleu de (2px) en bas, et son écart se lit en citron s'il monte, en rose s'il baisse, en gris s'il ne bouge pas, toujours avec son signe. La courbe est lisse et ne dépasse jamais ses points (interpolation monotone, `src/lib/courbe.ts`, la même que sur l'accueil) : un trait bleu de (2.25px) sur un dégradé du même bleu, dense sous le point le plus haut (26 %) et effacé sur la ligne de base, le dernier chiffre écrit en bleu au bout. Une répartition (liens, réseaux, appareils) est une liste dont chaque libellé porte derrière lui une barre pâle, à la longueur de sa part : le bleu pâle pour les liens et les appareils, une teinte claire de sa marque pour un réseau (son logo dans sa couleur, son nom à l'encre), le gris `#efefec` pour une provenance sans marque ; le nombre et le pourcentage à droite au gris secondaire (6,5:1).
 
-Dans une feuille, une liste de lignes est un groupe bordé sans fond (`.adm-groupe`). Dans une carte, les groupes deviennent de simples traits de séparation : jamais de boîte grise dans une carte. Un choix entre cartes (formule, aperçu de bureau) est marqué par un contour noir de (2px), pas par une couleur.
+Dans une feuille, une liste de lignes est un groupe bordé sans fond (`.adm-groupe`). Dans une carte, les groupes deviennent de simples traits de séparation : jamais de boîte grise dans une carte. Un choix entre cartes (formule, période) est marqué par un contour bleu de (2px) sur le voile bleu, et par sa coche.
 
 ### Badges
 
-Rectangle à l'arrondi `segment`, fond d'encre à 7 %, texte au rôle `caption` en semi-gras (`classeBadge`). Un seul badge est plein, à l'encre : celui de l'offre qui débloque la fonction demandée, dans la fenêtre des offres (« Pour tes couleurs »). Un état d'alerte n'est pas un badge : dans Comptes, « Signalé » et « Suspendu » s'écrivent à l'ambre, précédés de leur picto, et seul le compteur des signalements à traiter prend un fond ambre.
+Rectangle à l'arrondi `segment`, fond d'encre à 7 %, texte au rôle `caption` en semi-gras (`classeBadge`). Le badge d'une offre prend ses couleurs (Starter, Pro, Premium, voir Colors). Dans la fenêtre des offres, celui de l'offre qui débloque la fonction demandée est bleu plein (« Pour tes couleurs »), celui de son offre actuelle bleu pâle, et les mois offerts et l'économie de l'annuel s'écrivent dans l'étiquette citron. Un état d'alerte n'est pas un badge : dans Comptes, « Signalé » et « Suspendu » s'écrivent à l'ambre, précédés de leur picto, et seul le compteur des signalements à traiter prend un fond ambre ; le compteur de l'onglet ouvert passe au bleu pâle.
 
 ### Inputs / Fields
 
@@ -364,13 +401,13 @@ Fond calme, contour discret, arrondi de contrôle et texte de saisie au rôle `f
 
 ### Navigation
 
-La marque (`Marque.tsx`) est la même partout : le carré noir au lien blanc de (28px), puis « Hopla » au rôle `wordmark`, sans accroche. La connexion, les CGU et le lien de connexion périmé la reprennent telle quelle ; la barre latérale du bureau la prend en petit (`petite` : (22px) et `wordmark-desk`). Aucun fil d'Ariane ne répète la navigation : seule une sous-page en montre un, d'un seul cran, à la place du titre de l'en-tête.
+La marque (`Marque.tsx`) est la même partout : le symbole de (28px), puis « Hopla » au rôle `wordmark`, sans accroche. Sur le bleu (la barre latérale, les écrans d'entrée), elle passe en blanc, le dessin du symbole en bleu (`surBleu`). La connexion, les CGU et le lien de connexion périmé la reprennent telle quelle ; la barre latérale du bureau la prend en petit (`petite` : (22px) et `wordmark-desk`). Aucun fil d'Ariane ne répète la navigation : seule une sous-page en montre un, d'un seul cran, à la place du titre de l'en-tête.
 
-Sur desktop, une rangée de (32px) à la souris ((44px) au doigt) associe un picto plein (16px) et un nom, sans compteur. Le choix actif est un gris uni (`nav-current`), sans bordure ni graisse de plus ; le survol, plus pâle (`nav-hover`). Sur mobile, la même navigation devient une barre basse avec picto (21px) et label court ; l'onglet courant se reconnaît à son picto noir et à son label en semi-gras, sans pastille de fond.
+Sur desktop, la barre latérale est bleue : une rangée de (32px) à la souris ((44px) au doigt) associe un picto plein (16px) et un nom en `on-blue`, sans compteur. Le choix actif est une pastille blanche au texte bleu, en semi-gras (`nav-current`) ; le survol, un voile blanc (`nav-hover`). L'offre du dessus s'y lit en une ligne, son diamant en citron. Sur mobile, l'en-tête est bleu (l'adresse en blanc, Copier et Aperçu sur un voile blanc, l'anneau de « Bien démarrer » en citron) et la navigation devient une barre basse blanche avec picto (21px) et label court ; l'onglet courant se reconnaît à son picto et à son label en bleu, en semi-gras, sans pastille de fond.
 
 ### Segments
 
-Groupe de choix exclusifs neutre, composé de boutons avec une cible minimale de (40px). La sélection gagne un papier blanc et une ombre courte. Le motif radio conserve un seul arrêt de tabulation et se parcourt avec les flèches.
+Groupe de choix exclusifs neutre, composé de boutons avec une cible minimale de (40px). La sélection gagne un papier blanc, son nom en bleu et une ombre courte. Le motif radio conserve un seul arrêt de tabulation et se parcourt avec les flèches.
 
 ### Settings rows
 
@@ -382,7 +419,7 @@ Au bureau, Comptes est un tableau (`.adm-tableau`, colonnes fixes) : en-têtes d
 
 ### Switches
 
-Piste de (40px) sur (24px), pastille blanche de (18px), cible tactile étendue ; au bureau, (32px) sur (18px), pastille de (14px) (`switch-desk`). Allumée, la piste est à l'encre ; éteinte, à 45 % d'encre, soit 3:1 sur le papier, pour qu'on voie l'interrupteur et son état (WCAG 1.4.11). Le déplacement et l'étirement à la pression répondent au geste. L'état est porté par `role="switch"` et `aria-checked`.
+Piste de (40px) sur (24px), pastille blanche de (18px), cible tactile étendue ; au bureau, (32px) sur (18px), pastille de (14px) (`switch-desk`). Allumée, la piste est bleue ; éteinte, à 45 % d'encre, soit 3:1 sur le papier, pour qu'on voie l'interrupteur et son état (WCAG 1.4.11). Le déplacement et l'étirement à la pression répondent au geste. L'état est porté par `role="switch"` et `aria-checked`.
 
 ### Sheets and feedback
 
@@ -390,9 +427,9 @@ Les feuilles nomment leur tâche, gardent la fermeture accessible et gèrent le 
 
 Une confirmation ou un formulaire court (Inviter, Supprimer mon compte, Suspendre, Retirer de la liste) s'ouvre dans une petite fenêtre (`Feuille` avec `petite`) : (440px) de large, arrondi (12px), titre de (15px) au bureau, le geste définitif à droite. Au téléphone, elle monte du bas comme les autres feuilles.
 
-Au bureau, Ma page met l'édition à gauche et la page à droite (direction A, 21 octobre 2026). La colonne d'édition mesure (760px) au plus ; ses onglets Contenu et Design, de (44px), restent collés sous l'en-tête, l'onglet choisi souligné d'un trait d'encre de (2px). La liste des blocs est un seul encart au trait fin, arrondi (10px) : une rangée de (44px) par bloc ((52px) au doigt), séparée d'un trait `#efefec`, survol `#fafaf9`, la rangée ouverte sur `#f7f7f5`. On y lit la poignée, le picto plein du bloc, son nom en (13.5px) moyen, son adresse en gris, « Mis en avant » en étiquette grise de (20px), les pictos d'état, les clics, puis deux gestes de (28px) au trait : l'œil et le menu « … ». Sous (480px) de colonne, l'adresse s'efface et l'étiquette devient une étoile. Les réglages d'un bloc se déplient dans sa rangée, alignés sous son nom : les champs (deux de front à partir de (560px) de colonne), « Visible sur ma page » et « Mis en avant », puis « Plus de réglages » derrière une seule ligne qui dit ce qui est réglé, avec ses sections titrées en (12px) semi-gras et ses rangées de (36px), le libellé à gauche et la valeur à droite (`.adm-valeur`, (32px)). Pas de Terminé : ce qui est valable s'enregistre seul. La colonne de la page, sur `#f5f5f3`, garde le téléphone collé sous l'en-tête, réduit pour tenir dans la hauteur. Sur la page, la sélection est un anneau de (2px) à la couleur du texte du thème, jamais une couleur du shell : il se lit sur tous les thèmes.
+Au bureau, Ma page met l'édition à gauche et la page à droite (direction A, 21 octobre 2026). La colonne d'édition mesure (760px) au plus ; ses onglets Contenu et Design, de (44px), restent collés sous l'en-tête, l'onglet choisi en bleu, souligné d'un trait bleu de (2px). La liste des blocs est un seul encart au trait fin, arrondi (10px) : une rangée de (44px) par bloc ((52px) au doigt), séparée d'un trait `#efefec`, survol `#fafaf9`, la rangée ouverte sur le voile bleu (`blue-veil`), son picto en bleu. On y lit la poignée, le picto plein du bloc, son nom en (13.5px) moyen, son adresse en gris, « Mis en avant » en étiquette citron de (20px), les pictos d'état, les clics, puis deux gestes de (28px) au trait : l'œil et le menu « … ». Sous (480px) de colonne, l'adresse s'efface et l'étiquette devient une étoile. Les réglages d'un bloc se déplient dans sa rangée, alignés sous son nom : les champs (deux de front à partir de (560px) de colonne), « Visible sur ma page » et « Mis en avant », puis « Plus de réglages » derrière une seule ligne qui dit ce qui est réglé, avec ses sections titrées en (12px) semi-gras et ses rangées de (36px), le libellé à gauche et la valeur à droite (`.adm-valeur`, (32px)). Pas de Terminé : ce qui est valable s'enregistre seul. La colonne de la page, sur le papier crème de l'accueil (`cream`), garde le téléphone collé sous l'en-tête, réduit pour tenir dans la hauteur. Sur la page, la sélection est un anneau de (2px) à la couleur du texte du thème, jamais une couleur du shell : il se lit sur tous les thèmes.
 
-Le parcours d'achat (20 octobre 2026). Une fonction réservée, les stats ou Réglages ouvrent les offres dans une fenêtre par-dessus l'écran en cours (`FenetreOffres` dans `Offres.tsx`, une `Feuille` `large` et `nue`) : la fermer rend l'écran tel qu'il était, rangée ouverte comprise. Au bureau, elle mesure (1000px) au plus, arrondi (14px), avec une ombre de fenêtre ; son en-tête porte le titre, le badge « 3 mois offerts », la bascule Mensuel / Annuel (un segment) et la croix. Dessous, les quatre offres de front, en cartes au trait de (1px) : le nom, le prix au rôle `metric`, puis, à l'année, « au lieu de 108 € » au gris lisible (`#5f5f5a`, 6,4:1, jamais barré) et l'économie réelle à l'encre (« 29 € d'économie », calculée depuis `OFFRES`), le bouton, et ce que l'offre ajoute. L'offre qui débloque la fonction demandée est cernée d'un trait d'encre de (2px), avec son badge plein et sa ligne en semi-gras ; sans fonction, c'est l'offre juste au-dessus de la sienne qui passe devant. Premium dit « Bientôt ». Au téléphone, la fenêtre prend l'écran : la bascule, quatre onglets, une carte à la fois dans un rail qui s'aimante (la suivante dépasse, les autres sont inertes), et un seul bouton en bas, celui de l'offre en vue, avec son prix. Posée sur une autre fenêtre (les offres par-dessus Ajouter), une `Feuille` ne rajoute pas de voile : un seul assombrissement, celui du dessous.
+Le parcours d'achat (20 octobre 2026). Une fonction réservée, les stats ou Réglages ouvrent les offres dans une fenêtre par-dessus l'écran en cours (`FenetreOffres` dans `Offres.tsx`, une `Feuille` `large` et `nue`) : la fermer rend l'écran tel qu'il était, rangée ouverte comprise. Au bureau, elle mesure (1000px) au plus, arrondi (14px), avec une ombre de fenêtre ; son en-tête porte le titre, le badge « 3 mois offerts », la bascule Mensuel / Annuel (un segment) et la croix. Dessous, les quatre offres de front, en cartes au trait de (1px) : le nom, le prix au rôle `metric`, puis, à l'année, « au lieu de 108 € » au gris lisible (`#5f5f5a`, 6,4:1, jamais barré) et l'économie réelle dans l'étiquette citron (« 29 € d'économie », calculée depuis `OFFRES`), le bouton, et ce que l'offre ajoute, ses coches en bleu. L'offre qui débloque la fonction demandée est la carte bleue de l'accueil (`offer-card-featured`) : ses mots en blanc et en `on-blue`, ses coches, son badge et son bouton en citron, sa ligne en semi-gras ; sans fonction, c'est l'offre juste au-dessus de la sienne qui passe devant. Premium dit « Bientôt ». Au téléphone, la fenêtre prend l'écran : la bascule, quatre onglets, une carte à la fois dans un rail qui s'aimante (la suivante dépasse, les autres sont inertes), et un seul bouton en bas, celui de l'offre en vue, avec son prix. Posée sur une autre fenêtre (les offres par-dessus Ajouter), une `Feuille` ne rajoute pas de voile : un seul assombrissement, celui du dessous.
 
 Choisir ouvre le récapitulatif dans la même fenêtre : « ‹ Les offres », la période en deux cartes, ce qu'on paie aujourd'hui (pour un abonné qui change d'offre, la différence au prorata), la prochaine échéance, l'absence d'engagement, ce qu'on débloque et, au bureau, la page telle qu'elle sera ; puis « Payer avec Creem », au signe `ui-ouvrir`, et dessous la note au gris (prix TTC, ce que fait Creem, le lien vers les conditions d'utilisation). Au retour, une fenêtre moyenne dit « On active ton offre… » tant que le webhook signé n'est pas passé, puis « C'est fait, tu es en Starter », ce qui vient de s'ouvrir (la fonction demandée en tête) et un geste pour s'en servir (« Essayer tes couleurs » ouvre le Design sur Couleurs ; « Programmer ce bloc » rouvre le bloc d'où l'on était parti, sur la règle tout juste débloquée). Après trente secondes sans webhook, elle dit que l'offre arrive et qu'on peut fermer. L'offre ne s'accorde jamais d'après l'adresse de retour. Facturation est une sous-page de Réglages, en lignes : l'offre et « Changer d'offre », le prix, la prochaine échéance (ou la fin d'une offre résiliée), puis la carte, les factures et « Résilier mon abonnement » (le nom que lui donnent les conditions d'utilisation), qui mènent au portail client de Creem ; au téléphone, ce dernier bouton passe sous sa phrase (`.adm-ligne-pile`).
 
@@ -402,7 +439,8 @@ Un menu (le compte, puis les actions d'un bloc ou d'une ligne, la période) est 
 
 ### Do:
 
-- **Do** conserver le contraste noir sur papier, et du papier sur une action noire.
+- **Do** conserver l'encre sur le papier, le blanc sur le bleu et l'encre citron sur le citron, aux contrastes mesurés (Colors).
+- **Do** donner son rôle à chaque couleur : le bleu pour agir, choisir et lire les chiffres, le citron pour ce qui se gagne, le crème pour la page.
 - **Do** reprendre Geist et la hiérarchie des rôles déjà utilisés.
 - **Do** conserver un focus visible, les libellés et les états d'enregistrement explicites.
 - **Do** utiliser les pictogrammes Phosphor pleins et monochromes pour ce qu'on montre (un réseau, un bloc, une règle, un état), et les signes de commande au trait (`ui-*`) pour les gestes (fermer, ajouter, déplier, copier, ouvrir), sans mêler les deux dans une même rangée.
@@ -410,12 +448,13 @@ Un menu (le compte, puis les actions d'un bloc ou d'une ligne, la période) est 
 
 ### Don't:
 
-- **Don't** ajouter d'accent décoratif dans le back office.
+- **Don't** poser une couleur pour décorer, ni un dégradé ailleurs que sous une courbe de stats.
+- **Don't** mettre deux appels pleins côte à côte, ni un bouton bleu sur le bleu : sur le bleu, l'appel est citron.
 - **Don't** remplacer les couleurs ou la typographie des thèmes publics par celles du shell.
 - **Don't** transformer chaque carte en fenêtre ombrée.
 - **Don't** utiliser d'emoji ou de picto en duotone dans cet espace.
 - **Don't** faire un bouton en pilule, ni poser un picto sur une tuile de fond.
 - **Don't** écrire un sous-titre explicatif sous un titre d'onglet, ni un fil d'Ariane qui répète la navigation.
-- **Don't** dire « en ligne » ou « réussi » en vert : le noir suffit, la couleur reste aux alertes.
+- **Don't** dire « en ligne » ou « réussi » en vert : l'encre suffit, et le citron dit ce qui se gagne, pas ce qui a marché.
 - **Don't** imbriquer une boîte grise dans une carte.
 - **Don't** présenter une capture locale ou ce document comme une preuve de mise en production.

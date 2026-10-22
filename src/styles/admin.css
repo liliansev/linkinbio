@@ -799,7 +799,7 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
 /* Un champ précédé d'un texte fixe (« hopla.page/ ») : un seul cadre, le focus l'entoure en entier. */
 .adm-champ-prefixe { display: flex; min-height: 48px; align-items: center; overflow: hidden; border: 1px solid rgb(10 10 10 / 0.15); border-radius: 12px; background: #fdfdfc; font-size: 16px; transition: border-color 150ms; }
 .adm-champ-prefixe:hover { border-color: #b2b2ab; }
-.adm-champ-prefixe:focus-within { border-color: rgb(10 10 10 / 0.7); outline: 2px solid #0a0a0a; outline-offset: 2px; }
+.adm-champ-prefixe:focus-within { border-color: rgb(10 10 10 / 0.7); outline: 2px solid var(--adm-bleu); outline-offset: 2px; }
 .adm-champ-prefixe > span { padding-left: 14px; color: #5f5f5a; white-space: nowrap; }
 .adm-champ-prefixe > input { min-width: 0; flex: 1; align-self: stretch; padding: 0 14px 0 0; background: transparent; color: #0a0a0a; }
 .adm-champ-prefixe > input::placeholder { color: #737373; }
