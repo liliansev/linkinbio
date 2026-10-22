@@ -595,9 +595,10 @@ function Soutien({ bloc, rel, clic, cible, t }: { bloc: Bloc; rel: string; clic:
         </span>
       </div>
       {montants.length ? <>
+        {/* Des puces au trait, pas des boutons de la page : elles prennent l'encre de la carte (page.css, « Me soutenir »). */}
         <div className="lp-soutien-montants">
-          {montants.map(n => <a key={n} className="lp-btn lp-btn-compact lp-accent" href={lienMontant(bloc.url, n)} rel={rel} onClick={clic} {...cible}>{euros(n)}</a>)}
-          <a className="lp-btn lp-btn-compact lp-soutien-autre" href={lienSansMontant(bloc.url)} rel={rel} onClick={clic} {...cible}>{t.autreMontant}</a>
+          {montants.map(n => <a key={n} className="lp-montant" href={lienMontant(bloc.url, n)} rel={rel} onClick={clic} {...cible}>{euros(n)}</a>)}
+          <a className="lp-montant lp-soutien-autre" href={lienSansMontant(bloc.url)} rel={rel} onClick={clic} {...cible}>{t.autreMontant}</a>
         </div>
         <p className="lp-mention">{t.paiementSur(site)}</p>
       </> : <a className="lp-btn lp-btn-compact lp-accent lp-soutien-un" href={bloc.url} rel={rel} onClick={clic} {...cible}>{t.soutenirSur(site)}</a>}

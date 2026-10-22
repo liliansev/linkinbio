@@ -199,7 +199,15 @@
 .lp-carte[data-format='bandeau'] { align-items: center; gap: 14px; min-height: 78px; padding: 12px 14px 12px 12px; }
 /* Sans vignette, le picto s'aligne sur la marge du texte. */
 .lp-carte[data-format='bandeau'] > .lp-carte-picto:first-child { margin-left: 6px; }
-.lp[data-forme='pilule'] .lp-carte[data-format='bandeau'] { padding-left: 14px; padding-right: 16px; border-radius: 40px; }
+/*
+ * En pilule, les bouts du bandeau sont des demi-cercles de 40 px : la vignette (50 px, à 14 px du bord), le
+ * picto (28 px, à 25 px) et la flèche (34 px, à 22 px) se centrent dessus, chacun dans sa courbe. Sans
+ * vignette ni picto, le texte ouvre le bandeau : il recule à 24 px, sinon ses premières et dernières lignes
+ * touchent la courbe (22 octobre 2026).
+ */
+.lp[data-forme='pilule'] .lp-carte[data-format='bandeau'] { padding-left: 14px; padding-right: 22px; border-radius: 40px; }
+.lp[data-forme='pilule'] .lp-carte[data-format='bandeau'] > .lp-carte-picto:first-child { margin-left: 11px; }
+.lp[data-forme='pilule'] .lp-carte[data-format='bandeau'] > .lp-carte-texte:first-child { padding-left: 10px; }
 
 /* Carte */
 .lp-carte[data-format='carte'] { flex-direction: column; padding: 6px; border-radius: var(--rc); }
@@ -291,7 +299,7 @@
   .lp-anim-reflet::after, .lp-anim-lueur, .lp-anim-onde, .lp-anim-respiration, .lp-anim-rebond, .lp-anim-secousse { animation: none; }
   /* L'orbite se fige en un contour complet : le lien reste distingué. */
   .lp-anim-orbite::before { animation: none; background: color-mix(in srgb, var(--lp-trait) 60%, transparent); }
-  .lp-btn, .lp-carte { transition: none; }
+  .lp-btn, .lp-carte, .lp-montant, .lp-code { transition: none; }
 }
 
 /* ---- Entrée de la page : les blocs arrivent une fois, en liste ---- */
@@ -338,7 +346,12 @@
   color: var(--picto-carte, var(--vedette));
 }
 .lp-newsletter-textes { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.lp-newsletter-titre { margin: 0; font-size: 1rem; font-weight: 620; line-height: 1.25; }
+/* Le titre d'une carte (newsletter, liste, soutien) a le rôle des titres de bandeau : la police, la graisse et l'approche des cartes du thème. */
+.lp-newsletter-titre {
+  margin: 0; line-height: 1.25;
+  font-family: var(--police-titre); font-stretch: var(--titre-chasse, 100%);
+  font-size: var(--carte-taille, 1.04rem); font-weight: var(--carte-graisse, 650); letter-spacing: var(--carte-approche, -0.014em);
+}
 .lp-newsletter .lp-sous { margin: 0; opacity: 1; font-size: 0.86rem; line-height: 1.35; color: color-mix(in srgb, var(--surface-texte) 90%, transparent); text-wrap: pretty; }
 /* Le champ et le bouton ne font qu'une pièce : le bouton est posé dans le champ. */
 .lp-newsletter form {
@@ -354,7 +367,20 @@
 }
 .lp-newsletter input::placeholder { color: color-mix(in srgb, var(--surface-texte) 94%, transparent); }
 /* Le bouton d'inscription prend l'accent (classe lp-accent), quel que soit le style des boutons : lisible sur toutes les cartes. */
-.lp-btn-compact { min-height: 44px; padding: 0 18px; border-radius: calc(var(--r) - 5px); flex: 0 0 auto; cursor: pointer; border: 0; font: inherit; font-weight: 600; }
+.lp-btn-compact { min-height: 44px; padding: 0 18px; border-radius: calc(var(--r) - 5px); flex: 0 0 auto; cursor: pointer; border: 0; font: inherit; font-weight: var(--btn-graisse, 560); }
+/*
+ * Dans une carte (newsletter, liste, soutien), le bouton compact est posé : il ne s'envole pas au survol et ne
+ * projette pas de halo coloré sur la carte, il fonce à peine. Son trait de relief et son anneau de focus prennent
+ * l'encre de la carte : celle de la page, claire, se perdait sur les cartes claires (skate, arcade, klein).
+ */
+.lp .lp-newsletter .lp-btn-compact:hover { transform: none; }
+.lp .lp-newsletter .lp-btn-compact:active { transform: scale(0.97); }
+.lp[data-bouton] .lp-newsletter .lp-btn-compact.lp-accent:hover { background: color-mix(in srgb, var(--vedette) 90%, var(--vedette-texte)); }
+.lp[data-bouton='plein'] .lp-newsletter .lp-btn-compact.lp-accent { box-shadow: none; }
+.lp[data-bouton='relief'] .lp-newsletter .lp-btn-compact { border-color: var(--surface-texte); box-shadow: 3px 3px 0 var(--surface-texte); }
+.lp[data-bouton='relief'] .lp-newsletter .lp-btn-compact:hover { transform: translate(-1px, -1px); box-shadow: 4px 4px 0 var(--surface-texte); }
+.lp[data-bouton='relief'] .lp-newsletter .lp-btn-compact:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--surface-texte); }
+.lp .lp-newsletter .lp-btn:focus-visible { outline: 2px solid var(--surface-texte); outline-offset: 2px; }
 .lp-newsletter-ok { margin: 0; font-weight: 560; }
 .lp-newsletter-erreur { margin: -6px 0 0; font-size: 0.88rem; }
 
@@ -614,6 +640,8 @@
   .lp[data-bureau='profil'] .lp-bloc { grid-column: 1 / -1; }
   .lp[data-bureau='profil'] .lp-bloc:is([data-type='lien'], [data-type='produit']):not([data-vedette]) { grid-column: auto; }
   .lp[data-bureau='profil'] .lp-section { margin-top: 26px; font-size: 0.95rem; }
+  /* Une carte « Me soutenir » assez large garde ses puces sur une ligne : les montants à parts égales, « Autre montant » à sa mesure. */
+  .lp:is([data-bureau='profil'], [data-bureau='colonne']) .lp-soutien-autre { flex: 0 0 auto; padding: 0 20px; }
   .lp[data-bureau='profil'] .lp-pied { grid-area: pied; }
   .lp[data-bureau='profil'] .lp-pied .lp-reseaux { justify-content: flex-start; }
   .lp[data-bureau='profil'] .lp-signature { grid-area: signature; }
@@ -669,16 +697,20 @@
   .lp[data-bureau='onepage'] .lp-carte[data-format='bandeau'] { min-height: 96px; padding: 18px 22px 18px 18px; }
   .lp[data-bureau='onepage'] .lp-carte[data-format='bandeau'] .lp-carte-titre { font-size: 1.2rem; }
   .lp[data-bureau='onepage'] .lp-carte[data-format='carte'] { height: 100%; }
-  /* Un produit se range en vignette de boutique : sa photo en haut, son nom et son prix dessous, la flèche dans le coin. */
+  /*
+   * Un produit se range en vignette de boutique : sa photo en haut, son nom et son prix dessous, la flèche à
+   * côté d'eux, centrée sur eux comme dans le bandeau du téléphone. Une rangée plus haute laisse sa place en
+   * bas : la flèche ne part plus au fond de la carte, loin de ce qu'elle ouvre.
+   */
   .lp[data-bureau='onepage'] .lp-produit[data-format='bandeau'] {
-    position: relative; height: 100%; flex-direction: column; align-items: stretch; justify-content: flex-start; gap: 14px;
-    padding: 6px 6px 18px; border-radius: var(--rc);
+    display: grid; grid-template-columns: minmax(0, 1fr) auto; align-content: start; align-items: center; gap: 14px 12px;
+    height: 100%; padding: 6px 6px 14px; border-radius: var(--rc);
   }
-  .lp[data-bureau='onepage'] .lp-produit[data-format='bandeau'] .lp-carte-tuile { width: 100%; height: auto; aspect-ratio: 4 / 3; border-radius: calc(var(--rc) - 5px); }
+  .lp[data-bureau='onepage'] .lp-produit[data-format='bandeau'] .lp-carte-tuile { grid-column: 1 / -1; width: 100%; height: auto; aspect-ratio: 4 / 3; border-radius: calc(var(--rc) - 5px); }
   /* Sans photo, pas de grande tuile vide : le picto seul, en tête, sur la marge du texte. */
-  .lp[data-bureau='onepage'] .lp-produit[data-format='bandeau'] > .lp-carte-picto:first-child { justify-content: flex-start; margin: 14px 0 0 12px; font-size: 1.9rem; }
-  .lp[data-bureau='onepage'] .lp-produit[data-format='bandeau'] .lp-carte-texte { padding: 0 60px 0 12px; }
-  .lp[data-bureau='onepage'] .lp-produit[data-format='bandeau'] .lp-carte-fleche { position: absolute; right: 16px; bottom: 16px; width: 40px; height: 40px; }
+  .lp[data-bureau='onepage'] .lp-produit[data-format='bandeau'] > .lp-carte-picto:first-child { grid-column: 1 / -1; justify-content: flex-start; margin: 14px 0 0 12px; font-size: 1.9rem; }
+  .lp[data-bureau='onepage'] .lp-produit[data-format='bandeau'] .lp-carte-texte { padding: 0 0 0 12px; }
+  .lp[data-bureau='onepage'] .lp-produit[data-format='bandeau'] .lp-carte-fleche { width: 40px; height: 40px; margin-right: 10px; }
   .lp[data-bureau='onepage'] .lp-signature { margin-top: 64px; padding-top: 28px; border-top: 1px solid color-mix(in srgb, var(--texte) 10%, transparent); }
   .lp[data-bureau='onepage'] .lp-pied .lp-reseaux { justify-content: flex-start; }
 }
@@ -845,47 +877,77 @@ a.lp-preuve:focus-visible { outline: 3px solid var(--texte); outline-offset: 3px
  * mènent à PayPal, ou un bouton vers Ko-fi, Tipeee, Lydia…), une prise de
  * rendez-vous, et la mention d'un lien partenaire, avec son code promo.
  */
-/* La mention que la loi demande : petite, mais à pleine encre, au-dessus du titre. */
-.lp-pub { font-size: 0.75rem; font-weight: 650; letter-spacing: 0.015em; line-height: 1.2; }
+/* La mention que la loi demande : petite, mais à pleine encre, au-dessus du titre ; demi-grasse, elle ne dispute pas le titre. */
+.lp-pub { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.02em; line-height: 1.2; }
+/* Un long titre de partenaire ne laisse pas un mot seul sur sa dernière ligne : centré, il s'équilibre ; aligné à gauche, il se resserre. */
+.lp-pub + .lp-btn-titre { text-wrap: balance; }
+.lp-pub + .lp-carte-titre { text-wrap: pretty; }
 
 .lp-partenaire { display: flex; flex-direction: column; align-items: stretch; gap: 8px; }
+/* Le code promo : une puce au trait fin, le code en demi-gras et en chiffres tabulaires, le picto à sa taille. */
 .lp-code {
-  align-self: center; display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 14px 0 18px; max-width: 100%;
+  align-self: center; display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 6px 16px 6px 18px; max-width: 100%;
   border: 0; border-radius: var(--r); font: inherit; font-size: 0.9rem; cursor: pointer; color: var(--texte);
-  background: color-mix(in srgb, var(--texte) 9%, transparent);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--texte) 16%, transparent);
-  transition: background-color 0.15s, scale 0.15s;
+  background: color-mix(in srgb, var(--texte) 6%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--texte) 18%, transparent);
+  transition: background-color 0.15s, box-shadow 0.15s, scale 0.15s;
   -webkit-tap-highlight-color: transparent;
 }
-.lp-code:hover { background: color-mix(in srgb, var(--texte) 14%, transparent); }
+.lp-code:hover { background: color-mix(in srgb, var(--texte) 10%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--texte) 30%, transparent); }
 .lp-code:active { scale: 0.97; }
 .lp-code:focus-visible { outline: 3px solid var(--texte); outline-offset: 2px; }
 .lp-code-libelle { font-weight: 450; }
-.lp-code-valeur { font-weight: 720; letter-spacing: 0.06em; overflow-wrap: anywhere; }
-.lp-code svg { flex: none; opacity: 0.8; }
+.lp-code-valeur { font-weight: 640; letter-spacing: 0.05em; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.lp-code svg { flex: none; width: 15px; height: 15px; opacity: 0.72; }
 
-/* Le produit : sa photo en grande tuile, puis son prix, appuyé, et la boutique. Pas de mot seul en fin de nom. */
+/*
+ * Le produit : sa photo en grande tuile, puis son prix et la boutique. Pas de mot seul en fin de nom. Le prix
+ * suit la graisse des cartes du thème (bornée), sous le titre : il ne le dispute plus, en serif fine comme en grasse.
+ */
 .lp-produit :is(.lp-carte-titre, .lp-carte-description) { text-wrap: pretty; }
 .lp-produit[data-format='bandeau'] .lp-carte-tuile { width: 64px; height: 64px; }
 .lp-produit[data-format='bandeau'] > .lp-carte-picto:first-child { margin-left: 6px; }
 .lp-produit[data-format='carte'] .lp-carte-visuel { aspect-ratio: 4 / 3; }
 .lp-produit-ligne { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
-.lp-prix { flex: none; font-size: 0.98rem; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.lp-prix { flex: none; font-size: 0.98rem; font-weight: clamp(580, var(--carte-graisse, 650), 680); font-variant-numeric: tabular-nums; white-space: nowrap; }
 /* La boutique, en maigre plutôt qu'en pâle : elle reste lisible sur chaque thème. */
 .lp-produit-ligne .lp-carte-domaine { opacity: 1; font-weight: 420; }
 .lp-produit[data-format='carte'] .lp-carte-pied { margin-top: 10px; }
-.lp-produit[data-format='carte'] .lp-prix { font-size: 1.2rem; }
+.lp-produit[data-format='carte'] .lp-prix { font-size: 1.1rem; }
+/* Le rendez-vous non plus ne laisse pas un mot seul sur sa dernière ligne. */
+.lp-reservation :is(.lp-carte-titre, .lp-sous) { text-wrap: pretty; }
 
-/* « Me soutenir » : les montants à l'accent, « Autre montant » au trait. */
-.lp-soutien-montants { display: flex; flex-wrap: wrap; gap: 8px; }
-.lp-soutien-montants > .lp-btn { flex: 1 0 auto; min-width: 64px; font-variant-numeric: tabular-nums; }
-.lp[data-bouton] .lp-soutien .lp-soutien-autre {
-  --lp-encre: var(--surface-texte);
-  background: transparent; color: var(--surface-texte); border: 0;
-  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--surface-texte) 28%, transparent);
-  -webkit-backdrop-filter: none; backdrop-filter: none;
+/*
+ * « Me soutenir » : les montants en puces fines, au trait (22 octobre 2026, demandé par Lilian : les pilules
+ * pleines à l'accent pesaient trop). Une puce par montant, toutes de la même largeur, en chiffres tabulaires ;
+ * « Autre montant » est une puce de la même famille, sur sa ligne au téléphone. Les puces prennent l'encre de la
+ * carte, pas celle de la page, et la forme des boutons du thème ; au trait plein quand le thème dessine ses
+ * boutons au trait (contour, relief).
+ */
+.lp-soutien-montants { display: flex; flex-wrap: wrap; gap: 8px; container: montants / inline-size; }
+.lp-montant {
+  flex: 1 1 0; display: inline-flex; align-items: center; justify-content: center;
+  min-height: 46px; padding: 0 12px; border-radius: var(--r);
+  font-size: 1rem; line-height: 1.2; font-weight: min(var(--btn-graisse, 560), 560); letter-spacing: var(--btn-approche, 0);
+  font-variant-numeric: tabular-nums; white-space: nowrap; text-decoration: none;
+  color: var(--surface-texte); background: transparent;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--surface-texte) 22%, transparent);
+  transition: background-color 0.15s ease, box-shadow 0.15s ease, scale 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
 }
-.lp[data-bouton] .lp-soutien .lp-soutien-autre:hover { background: color-mix(in srgb, var(--surface-texte) 7%, transparent); }
-.lp-soutien-un { width: 100%; min-height: 48px; }
+.lp-montant:hover { background: color-mix(in srgb, var(--surface-texte) 6%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--surface-texte) 40%, transparent); }
+.lp-montant:active { scale: 0.97; }
+.lp-montant:focus-visible { outline: 2px solid var(--surface-texte); outline-offset: 2px; }
+/* « Autre montant » vient après les montants : la même puce, d'une graisse plus légère. */
+.lp-soutien-autre { flex-basis: 100%; font-weight: min(var(--btn-graisse, 560), 500); }
+/* Un seul montant : « Autre montant » se pose à côté de lui, plutôt que deux longues puces l'une sous l'autre. */
+.lp-soutien-montants:not(:has(> :nth-child(3))) > .lp-soutien-autre { flex-basis: 0; }
+/* Quatre montants sur une rangée étroite (un téléphone de 375 px ou moins) : deux par ligne, jamais trois puis un seul. */
+@container montants (max-width: 319px) {
+  .lp-soutien-montants:has(> :nth-child(5)) > .lp-montant:not(.lp-soutien-autre) { flex-basis: calc(50% - 4px); }
+}
+.lp:is([data-bouton='contour'], [data-bouton='relief']) .lp-montant { box-shadow: inset 0 0 0 1.5px var(--surface-texte); }
+/* Le bouton seul (Ko-fi, Tipeee…) reste l'appel de la carte : plein, à l'accent, à la forme et à la graisse des boutons du thème. */
+.lp-soutien-un { width: 100%; min-height: 46px; border-radius: var(--r); }
 .lp-soutien .lp-mention { margin: -6px 0 0; }
 
