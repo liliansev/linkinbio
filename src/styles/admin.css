@@ -113,9 +113,14 @@ html:has(.adm) { scrollbar-gutter: stable; }
 .adm-miroir-page { flex: 1 0 auto; display: flex; flex-direction: column; }
 .adm-miroir-page > * { flex: 1 0 auto; }
 @media (min-width: 1024px) { .adm-miroir { --z: 0.86; } }
-/* La page en miniature sur le papier crème de l'accueil, comme la page à droite de Ma page ; les questions sur le blanc. */
+/* Sur un grand écran, les questions et la page en miniature restent ensemble : 1200 px au plus, centrés. */
+@media (min-width: 1024px) { .adm-premiers { padding-inline: max(0px, (100% - 1200px) / 2); } }
+/*
+ * La page en miniature sur le papier crème de l'accueil, comme la page à droite de Ma page : au téléphone,
+ * tout le fond, sous la feuille blanche des questions ; au bureau, une scène arrondie, comme celles de l'accueil.
+ */
 @media (max-width: 1023px) { .adm:has(> .adm-premiers-scene) { background: var(--adm-creme); } }
-@media (min-width: 1024px) { .adm-premiers-scene { background: var(--adm-creme); } }
+@media (min-width: 1024px) { .adm-premiers-scene { margin: 0 24px 24px 0; border-radius: 28px; background: var(--adm-creme); } }
 
 /* Une feuille ouverte occupe le bas de l'écran : le message passe en haut, sans couvrir ce qu'on touche. */
 body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); bottom: auto; }
@@ -165,6 +170,20 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
 @media (min-width: 1024px) { .adm-shell { background: #fff; } }
 .adm-sidebar { padding: 0 10px 10px; background: var(--adm-bleu); color: #fff; }
 .adm-sidebar :is(.adm-nav-item, .adm-compte, .adm-appel):focus-visible { outline-color: var(--adm-citron); }
+/*
+ * Sur un grand écran (22 octobre 2026, demandé par Lilian) : la barre latérale et l'espace de travail
+ * tiennent dans un cadre de 1600 px au plus, centré, au lieu de partir aux deux bords. Autour, un gris
+ * très clair, et un trait fin ferme le cadre à droite. Jusqu'à 1600 px, rien ne bouge.
+ * `--adm-marge` est la place laissée de chaque côté, pour ce qui est fixé à l'écran (barre latérale, message).
+ */
+:root { --adm-cadre: 1600px; --adm-marge: max(0px, (100% - var(--adm-cadre)) / 2); }
+@media (min-width: 1024px) {
+  .adm-shell:has(> .adm-travail) { background: #fafaf9; }
+  .adm-sidebar { left: var(--adm-marge); }
+  .adm-travail { max-width: var(--adm-cadre); min-height: 100dvh; margin-inline: auto; padding-left: 216px; background: #fff; }
+  .adm-shell .adm-toast { left: calc(var(--adm-marge) + 232px); right: calc(var(--adm-marge) + 16px); }
+}
+@media (min-width: 1601px) { .adm-travail { box-shadow: 1px 0 0 #ececea; } }
 .adm-nav-item { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 10px; border-radius: 7px; color: #dcdcff; font-size: 14px; font-weight: 500; text-align: left; transition: background-color 150ms, color 150ms; }
 .adm-nav-item:hover { background: rgb(255 255 255 / 0.1); color: #fff; }
 .adm-nav-item[aria-current='page'] { background: #fff; color: var(--adm-bleu); font-weight: 600; }
@@ -413,7 +432,7 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
   .adm-tel-ecran::-webkit-scrollbar { display: none; }
   .adm-ordi-boite { display: flex; width: 100%; min-height: 0; flex: 1; flex-direction: column; overflow-y: auto; }
   /* Le message du bas se centre sur l'édition, pas sur la page. */
-  .adm:has(.adm-studio-bureau) .adm-toast { right: calc(var(--adm-apercu) + 16px); }
+  .adm:has(.adm-studio-bureau) .adm-toast { right: calc(var(--adm-marge) + var(--adm-apercu) + 16px); }
 }
 /* Une tablette en paysage a la mise en page du bureau, avec des cibles pour le doigt. */
 @media (min-width: 1024px) and (pointer: coarse) {

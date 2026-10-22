@@ -116,8 +116,12 @@ export const LEGAL: Record<NomDocument, DocumentLegal> = {
       { titre: 'Si tu signales une page', texte: [
         'Le motif, ton explication et, si tu la donnes, ton adresse e-mail, pour te tenir informé de la décision. Base légale : l’obligation légale de traiter les signalements (règlement sur les services numériques). Gardés un an après la décision.',
       ] },
+      { titre: 'Protection contre les attaques', texte: [
+        'Les visites de hopla.page et du back office passent par Cloudflare, qui arrête les attaques et les robots avant le serveur. Cloudflare voit alors ton adresse IP, ton navigateur et l’adresse demandée, le temps d’acheminer la requête ; il ne dépose pas de cookie. Base légale : l’intérêt légitime de Hopla à protéger le service et ceux qui s’en servent.',
+        'Les formulaires publics (connexion, création de page, signalement, « Rejoins ma liste ») passent aussi par Turnstile, la vérification anti-robot de Cloudflare. Elle ne se charge que lorsque tu te sers de l’un d’eux, et ne montre une case à cocher qu’à un visiteur jugé suspect.',
+      ] },
       { titre: 'Où vont les données', texte: [
-        'Nulle part ailleurs que chez les sous-traitants listés sur la page dédiée : l’hébergeur, et le service d’envoi des e-mails. Pour un abonnement, Creem reçoit ton adresse e-mail au moment du paiement. Rien n’est vendu ni partagé à des fins publicitaires.',
+        'Nulle part ailleurs que chez les sous-traitants listés sur la page dédiée : l’hébergeur, le service d’envoi des e-mails, et Cloudflare, qui protège le service. Pour un abonnement, Creem reçoit ton adresse e-mail au moment du paiement. Rien n’est vendu ni partagé à des fins publicitaires.',
       ] },
       { titre: 'Tes droits', texte: [
         'Tu peux accéder à tes données, les corriger, les effacer, les récupérer dans un format lisible par une machine, t’opposer à un traitement ou en demander la limitation. Avec un compte, l’export et la suppression se font en un clic dans l’onglet Réglages. Pour le reste, écris à ' + CONTACT_LEGAL + ' : réponse sous un mois.',
@@ -135,6 +139,9 @@ export const LEGAL: Record<NomDocument, DocumentLegal> = {
       ] },
       { titre: 'Resend', texte: [
         'Envoi des e-mails : liens de connexion, réservations de nom, invitations, décisions de modération. Ne reçoit que l’adresse du destinataire et le contenu du message. Resend, Inc., États-Unis ; le transfert est encadré par l’accord de traitement de Resend et les clauses contractuelles types de la Commission européenne.',
+      ] },
+      { titre: 'Cloudflare', texte: [
+        'Protection et acheminement du trafic de hopla.page et app.hopla.page, et vérification anti-robot des formulaires publics (Turnstile). Voit l’adresse IP, le navigateur et l’adresse demandée de chaque visite, le temps de l’acheminer ; ne dépose pas de cookie. Cloudflare, Inc., 101 Townsend St, San Francisco, CA 94107, États-Unis ; le transfert est encadré par l’accord de traitement de Cloudflare et les clauses contractuelles types de la Commission européenne.',
       ] },
       { titre: 'Creem', texte: [
         'Paiement des offres payantes (creem.io), par Armitage Labs OÜ, Rotermanni 14, 10111 Tallinn, Estonie. Creem n’est pas un sous-traitant au sens strict : revendeur officiel de l’abonnement, il est responsable des données de paiement et de facturation qu’il collecte. Hopla lui transmet ton adresse e-mail et l’identifiant de ton compte au moment du paiement, et reçoit en retour l’état de l’abonnement.',
