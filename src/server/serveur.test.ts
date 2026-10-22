@@ -115,6 +115,18 @@ test('statistiques : sources lisibles, robots et admin écartés, totaux et tend
   assert.equal(s.dejaVue, true);
   assert.deepEqual(s.blocs.map(b => b.id), [id]);
   assert.equal(s.sources[0].nom, 'Direct');
+  assert.equal(s.plage, false);
+  // Des dates choisies dans le calendrier : leurs jours, comparés à la période d'avant de même longueur, qui finit la veille.
+  const plage = db.stats(P, { du: '2026-10-06', au: '2026-10-10' }, maintenant);
+  assert.equal(plage.plage, true);
+  assert.equal(plage.jours, 5);
+  assert.deepEqual(plage.serie.map(j => j.jour), ['2026-10-06', '2026-10-07', '2026-10-08', '2026-10-09', '2026-10-10']);
+  assert.equal(plage.vues, 1); assert.equal(plage.serie[0].vues, 1); assert.equal(plage.clics, 0);
+  assert.equal(plage.precedent.vues, 0);
+  const apres = db.stats(P, { du: '2026-10-11', au: '2026-10-16' }, maintenant);
+  assert.equal(apres.vues, 3);
+  assert.equal(apres.precedent.vues, 1, 'la période d’avant va du 5 au 10 octobre');
+  assert.equal(db.stats(P, { du: '2026-10-16', au: '2026-10-16' }, maintenant).serie.length, 1, 'un seul jour');
 });
 
 test('comptes : chaque page est isolée des autres', async () => {
@@ -449,6 +461,18 @@ test('offres : webhooks Creem signés, idempotents, dans le désordre', async ()
   // Le compte principal a tout.
   assert.ok(Object.values(droits(db.compteParId(P)!, env, t)).every(Boolean));
   assert.equal(joursLisibles(db.compteParId(P)!, env, t), 365);
+  // La période demandée, ramenée à ce que l'offre laisse lire : 90 jours en Starter en font 30, des dates trop anciennes se resserrent.
+  const { periodeLisible } = await import('./droits.ts');
+  const { ajouterJours, jourDe } = await import('../lib/periode.ts');
+  const ici = t + 43 * jour, auj = jourDe(ici);
+  assert.equal(periodeLisible(neuve, 90, env, ici), 30);
+  assert.equal(periodeLisible(neuve, 14, env, ici), 14);
+  assert.deepEqual(periodeLisible(neuve, { du: ajouterJours(auj, -60), au: ajouterJours(auj, -10) }, env, ici), { du: ajouterJours(auj, -29), au: ajouterJours(auj, -10) });
+  assert.deepEqual(periodeLisible(neuve, { du: ajouterJours(auj, -3), au: ajouterJours(auj, 5) }, env, ici), { du: ajouterJours(auj, -3), au: auj }, 'pas de jours à venir');
+  assert.equal(periodeLisible(neuve, { du: ajouterJours(auj, -90), au: ajouterJours(auj, -40) }, env, ici), null, 'des dates toutes plus anciennes que l’historique');
+  assert.equal(periodeLisible(gratuite, 7, env, t), null);
+  assert.equal(periodeLisible(ancienne, 30, env, t), 7);
+  assert.deepEqual(periodeLisible(gratuite, { du: '2025-11-01', au: '2025-11-30' }, {}, t), { du: '2025-11-01', au: '2025-11-30' }, 'sans paiement branché, un an se lit');
 });
 
 test('programmer un bloc demande Starter : refusé en Gratuit, permis en Starter, gardé par une page d’avant les offres', async () => {

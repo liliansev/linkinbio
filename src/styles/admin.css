@@ -746,6 +746,78 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
 @media (prefers-reduced-motion: reduce) { .adm-courbe-onglets > button, .adm-voir-tableau { transition: none; } }
 
 /*
+ * La période des stats (22 octobre 2026, demandé par Lilian) : des boutons
+ * collés sur un rail gris, comme Mensuel et Annuel dans les offres. La période
+ * prise est blanche, son nom en bleu ; une durée que l'offre n'ouvre pas porte
+ * l'étiquette de l'offre qui l'ouvre, son nom en gris (4,7:1 sur le rail).
+ * Après un trait, le calendrier : le premier et le dernier jour en bleu plein,
+ * ceux d'entre eux sur une bande pâle, aujourd'hui cerclé de gris. Une bande
+ * encore esquissée (le dernier jour sous la souris) prend le voile, plus clair.
+ */
+.adm-periodes { display: flex; height: 44px; align-items: stretch; gap: 2px; padding: 3px; border-radius: 10px; background: rgb(10 10 10 / 0.055); }
+.adm-periodes-groupe { display: flex; flex: var(--n, 1) 1 0; gap: 2px; }
+.adm-periodes-groupe > button, .adm-periodes-dates { display: flex; align-items: center; justify-content: center; gap: 5px; border-radius: 8px; color: #45453f; font-size: 14px; font-weight: 500; white-space: nowrap; transition: background-color 150ms, color 150ms, box-shadow 150ms; }
+.adm-periodes-groupe > button { flex: 1 1 0; padding: 0 4px; }
+.adm-periodes-groupe > button:hover, .adm-periodes-dates:hover, .adm-periodes-dates[aria-expanded='true'] { background: rgb(255 255 255 / 0.55); color: #0a0a0a; }
+.adm-periodes-groupe > button[aria-checked='true'], .adm-periodes-dates[data-pris] { background: #fff; color: var(--adm-bleu); font-weight: 600; box-shadow: 0 1px 2px rgb(10 10 10 / 0.1), 0 0 0 1px rgb(10 10 10 / 0.06); }
+.adm-periodes-groupe > button[data-verrou] { color: #666661; }
+.adm-periodes-groupe > button[data-verrou]:hover { color: #0a0a0a; }
+.adm-periodes-trait { flex: none; width: 1px; margin: 9px 2px; background: rgb(10 10 10 / 0.12); }
+.adm-periodes-dates { flex: none; min-width: 44px; padding: 0 10px; }
+.adm-cal-boite { display: flex; flex-direction: column; gap: 4px; }
+.adm-cal-resume { min-height: 22px; color: #18191b; font-size: 15px; font-weight: 600; letter-spacing: -0.01em; }
+.adm-cal-mois { display: grid; gap: 24px; touch-action: pan-y; }
+.adm-cal-entete { display: flex; height: 44px; align-items: center; justify-content: space-between; }
+.adm-cal-place { width: 44px; flex: none; }
+.adm-cal-titre { flex: 1; font-size: 15px; font-weight: 600; letter-spacing: -0.01em; text-align: center; }
+.adm .adm-cal-fleche { color: #3d3d39; }
+.adm-cal-fleche:disabled { opacity: 0.3; pointer-events: none; }
+/* Un mois de cinq semaines garde la place d'une sixième : la fenêtre ne saute pas d'un mois à l'autre. */
+.adm-cal { width: 100%; margin-bottom: calc((6 - var(--semaines, 6)) * 48px); border-collapse: collapse; table-layout: fixed; }
+.adm-cal th { height: 32px; padding: 0; color: #5f5f5a; font-size: 12px; font-weight: 500; }
+.adm-cal td { position: relative; height: 48px; padding: 0; text-align: center; }
+.adm-cal td[data-bande]::before { content: ''; position: absolute; inset: 2px 0; background: var(--adm-bleu-pale); }
+.adm-cal td[data-bande][data-esquisse]::before { background: var(--adm-bleu-voile); }
+.adm-cal td[data-bande='debut']::before { left: 50%; }
+.adm-cal td[data-bande='fin']::before { right: 50%; }
+.adm-cal td[data-bord-g]::before { border-top-left-radius: 10px; border-bottom-left-radius: 10px; }
+.adm-cal td[data-bord-d]::before { border-top-right-radius: 10px; border-bottom-right-radius: 10px; }
+.adm-cal-jour { position: relative; display: inline-grid; width: 100%; max-width: 44px; height: 44px; place-items: center; vertical-align: middle; border-radius: 10px; color: #18191b; font-size: 15px; font-weight: 500; font-variant-numeric: tabular-nums; transition: background-color 120ms, color 120ms; }
+.adm-cal-jour:hover { background: #efefea; }
+.adm-cal td[data-bande='milieu']:not([data-esquisse]) .adm-cal-jour:hover { background: #d4d4ff; }
+.adm-cal-jour[aria-current='date'] { font-weight: 700; box-shadow: inset 0 0 0 1px #cfcfc8; }
+.adm-cal td[data-vise] .adm-cal-jour { color: var(--adm-bleu); box-shadow: inset 0 0 0 1.5px var(--adm-bleu); }
+.adm-cal td[data-bout] .adm-cal-jour { background: var(--adm-bleu); color: #fff; font-weight: 600; box-shadow: none; }
+.adm-cal-jour:disabled { background: none; color: #c3c3bd; cursor: default; }
+.adm-cal-plus { align-self: flex-start; min-height: 44px; color: var(--adm-bleu); font-size: 13.5px; font-weight: 500; text-decoration: underline; text-decoration-color: rgb(41 43 255 / 0.35); text-underline-offset: 3px; transition: color 150ms, text-decoration-color 150ms; }
+.adm-cal-plus:hover { color: var(--adm-bleu-fonce); text-decoration-color: currentColor; }
+.adm-cal-bulle { width: max-content; padding: 14px 16px 12px; }
+.adm-cal-pied { display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px; padding-top: 12px; border-top: 1px solid #efefec; }
+@media (min-width: 1024px) {
+  .adm-periodes { height: 36px; }
+  .adm-periodes-groupe { flex: none; }
+  .adm-periodes-groupe > button { flex: none; min-width: 40px; padding: 0 9px; }
+  .adm-periodes-groupe > button, .adm-periodes-dates { border-radius: 7px; font-size: 13.5px; }
+  .adm-periodes-dates { min-width: 36px; padding: 0 9px; }
+  .adm-periodes-trait { margin: 8px 2px; }
+  .adm-cal-resume { min-height: 20px; font-size: 14px; }
+  .adm-cal-mois[data-nombre='1'] { grid-template-columns: 252px; }
+  .adm-cal-mois[data-nombre='2'] { grid-template-columns: repeat(2, 252px); }
+  .adm-cal-entete { height: 32px; margin-bottom: 2px; }
+  .adm-cal-place { width: 32px; }
+  .adm-cal-titre { font-size: 13.5px; }
+  .adm-cal { margin-bottom: calc((6 - var(--semaines, 6)) * 36px); }
+  .adm-cal th { height: 28px; font-size: 11.5px; }
+  .adm-cal td { height: 36px; }
+  .adm-cal td[data-bande]::before { inset: 1px 0; }
+  .adm-cal td[data-bord-g]::before { border-top-left-radius: 8px; border-bottom-left-radius: 8px; }
+  .adm-cal td[data-bord-d]::before { border-top-right-radius: 8px; border-bottom-right-radius: 8px; }
+  .adm-cal-jour { max-width: 34px; height: 34px; border-radius: 8px; font-size: 13.5px; }
+  .adm-cal-plus { min-height: 32px; font-size: 13px; }
+}
+@media (prefers-reduced-motion: reduce) { .adm-periodes-groupe > button, .adm-periodes-dates, .adm-cal-jour, .adm-cal-plus { transition: none; } }
+
+/*
  * Réglages (direction B, 20 octobre 2026) : une seule page de 680 px, sans
  * tiroir. Des groupes de lignes dans un trait fin, le libellé à gauche, la
  * valeur en gris, le contrôle à droite. Une ligne fait 56 px au doigt, 48 à la

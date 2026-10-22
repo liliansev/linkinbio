@@ -30,6 +30,7 @@ import type { Droits } from '../lib/droits.ts';
 import { REFUS_PROGRAMMATION, nouvellesDates, selonDroits } from '../lib/droits.ts';
 import type { Achat, EtapeRetour } from '../lib/achat.ts';
 import { CLE_ACHAT, achatDeRetour, delaiAvantEssai, etapeRetour } from '../lib/achat.ts';
+import type { PeriodeStats } from '../lib/periode.ts';
 
 /*
  * Le back office. Tout s'enregistre tout seul : un bloc une fraction de
@@ -477,7 +478,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
     const permis = selonDroits(reglages, blocsAffiches.filter(b => compte.principal || !TYPES_PRINCIPAL.includes(b.type)), droits);
     return { reglages: permis.reglages, blocs: composerMoment(permis.blocs, maintenant), compte, maintenant };
   }, [reglages, blocsAffiches, compte, droits]);
-  const chargerStats = useCallback((jours: number) => api.stats(jours).then(s => { if (jours === 30) setClics(Object.fromEntries(s.blocs.map(b => [b.id, b.clics]))); return s; }), [api]);
+  const chargerStats = useCallback((periode: PeriodeStats) => api.stats(periode).then(s => { if (periode === 30) setClics(Object.fromEntries(s.blocs.map(b => [b.id, b.clics]))); return s; }), [api]);
   const demarrage = useDemarrage(reglages, blocs, { principal: compte.principal, dejaVue: !!initial.dejaVue });
   useEffect(() => { if (!demarrage.actif) setDemarrageOuvert(false); }, [demarrage.actif]);
   // La barre du navigateur au téléphone suit le haut de l'écran : le bleu de l'en-tête et des CGU, le papier crème des premiers pas.
