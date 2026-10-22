@@ -1,7 +1,8 @@
 /*
  * Les offres, en un seul endroit : Gratuit, Starter, Pro et Premium (choix de
- * Lilian, 20 octobre 2026), leurs prix (ceux des produits Creem, que « Créer
- * les offres dans Creem » tient à jour), ce que chacune débloque, et la lecture
+ * Lilian, 20 octobre 2026), leurs prix (Starter 9 € et Pro 19 € par mois depuis
+ * le 21 octobre 2026 ; ceux des produits Creem, que Hopla relit et que « Créer
+ * les offres dans Creem » complète), ce que chacune débloque, et la lecture
  * d'un abonnement. Le compte principal (Lilian) a tout, sans abonnement.
  * Gratuit garde l'essentiel pour essayer : des liens sans limite, la page selon
  * le réseau du visiteur (la promesse de Hopla) et tous les thèmes.
@@ -47,15 +48,15 @@ export const OFFRES: Record<Plan, Offre> = {
     avantages: ['Des liens sans limite', 'Ta page selon le réseau du visiteur', 'Les vingt thèmes'],
   },
   starter: {
-    nom: 'Starter', phrase: 'Ta page, sans la mention Hopla.', prix: { mois: 4, an: 36 }, quota: 100 * Mo, jours: 30, enVente: true,
-    avantages: ['Sans la mention « Une page faite avec Hopla »', 'Tes couleurs', 'Tes liens programmés à l’avance', 'Les avis de tes clients', 'Analytics détaillées sur 30 jours'],
+    nom: 'Starter', phrase: 'Ta page, sans la mention Hopla.', prix: { mois: 9, an: 79 }, quota: 100 * Mo, jours: 30, enVente: true,
+    avantages: ['Sans la mention « Une page faite avec Hopla »', 'Tes couleurs', 'Tes liens programmés à l’avance', 'Les avis de tes clients', 'Tes stats sur 30 jours'],
   },
   pro: {
-    nom: 'Pro', phrase: 'Le bon lien, au bon moment.', prix: { mois: 9, an: 79 }, quota: 200 * Mo, jours: 365, enVente: true,
-    avantages: ['Ta page selon l’heure', 'Les drops : un code, des places comptées', 'Ta liste e-mail, vers Brevo ou Mailchimp', 'Analytics sur un an'],
+    nom: 'Pro', phrase: 'Le bon lien, au bon moment.', prix: { mois: 19, an: 169 }, quota: 200 * Mo, jours: 365, enVente: true,
+    avantages: ['Ta page selon l’heure', 'Les drops : un code, des places comptées', 'Ta liste e-mail, vers Brevo ou Mailchimp', 'Tes stats sur un an'],
   },
   premium: {
-    nom: 'Premium', phrase: 'Ta page à ton nom de domaine.', prix: { mois: 19, an: 169 }, quota: 1024 * Mo, jours: 365, enVente: false,
+    nom: 'Premium', phrase: 'Ta page à ton nom de domaine.', prix: { mois: 29, an: 259 }, quota: 1024 * Mo, jours: 365, enVente: false,
     avantages: ['Ton propre nom de domaine', 'Jusqu’à trois pages'],
   },
 };
@@ -63,15 +64,15 @@ export const OFFRES: Record<Plan, Offre> = {
 /** Le rang d'une offre : chacune contient celles d'avant. */
 export const rang = (p: Plan) => PLANS.indexOf(p);
 
-/** Ce que l'annuel fait gagner sur douze mois, en pourcentage arrondi (27 pour le Pro). */
+/** Ce que l'annuel fait gagner sur douze mois, en pourcentage arrondi (27 pour Starter, 26 pour Pro). */
 export const economie = (p: PlanPayant) => Math.round((1 - OFFRES[p].prix.an / (OFFRES[p].prix.mois * 12)) * 100);
-/** Ce que l'annuel fait gagner en un an, en euros : douze mois moins l'année (12 € pour Starter, 29 € pour Pro). */
+/** Ce que l'annuel fait gagner en un an, en euros : douze mois moins l'année (29 € pour Starter, 59 € pour Pro). */
 export const economieAnnuelle = (p: PlanPayant) => Math.round((OFFRES[p].prix.mois * 12 - OFFRES[p].prix.an) * 100) / 100;
-/** Les mois entiers que l'annuel offre : trois pour Starter (36 € au lieu de 48 €), trois pour Pro (29 € de moins, plus de trois fois 9 €). */
+/** Les mois entiers que l'annuel offre : trois pour Starter (29 € de moins, plus de trois fois 9 €), trois pour Pro (59 € de moins, plus de trois fois 19 €). */
 export const moisOfferts = (p: PlanPayant) => Math.floor(economieAnnuelle(p) / OFFRES[p].prix.mois + 1e-9);
-/** Le prix d'une offre par mois quand on la paie à l'année (6,58 € pour le Pro). */
+/** Le prix d'une offre par mois quand on la paie à l'année (6,58 € pour Starter, 14,08 € pour Pro). */
 export const parMoisAnnuel = (p: PlanPayant) => Math.round((OFFRES[p].prix.an / 12) * 100) / 100;
-/** « 79 € par an », « 9 € par mois ». */
+/** « 169 € par an », « 19 € par mois ». */
 export const libellePrix = (p: PlanPayant, periode: Periode) => `${euros(OFFRES[p].prix[periode])} par ${periode === 'an' ? 'an' : 'mois'}`;
 
 /**
@@ -103,11 +104,48 @@ export const FONCTIONS_EN_MOTS: Record<Fonction, { avantage: string; pour: strin
   couleurs: { avantage: 'Tes couleurs', pour: 'Pour tes couleurs' },
   programmation: { avantage: 'Tes liens programmés à l’avance', pour: 'Pour programmer' },
   avis: { avantage: 'Les avis de tes clients', pour: 'Pour les avis' },
-  stats: { avantage: 'Analytics détaillées sur 30 jours', pour: 'Pour tes stats' },
+  stats: { avantage: 'Tes stats sur 30 jours', pour: 'Pour tes stats' },
   heure: { avantage: 'Ta page selon l’heure', pour: 'Pour tes créneaux' },
   drops: { avantage: 'Les drops : un code, des places comptées', pour: 'Pour les drops' },
   listeEmail: { avantage: 'Ta liste e-mail, vers Brevo ou Mailchimp', pour: 'Pour ta liste e-mail' },
 };
+
+/**
+ * L'appel vers l'offre du dessus, en une ligne du back office (Lilian, 21 octobre 2026) : ce que chaque offre
+ * apporte de plus parlant, en peu de mots, dans l'ordre où on le propose (« Passer en Starter : sans la mention
+ * Hopla »). Une fonction que le compte a déjà (une page d'avant les offres garde presque tout) laisse la place
+ * à la suivante ; la dernière de chaque liste ne dépend d'aucune fonction.
+ */
+export const ACCROCHES: Record<PlanPayant, { texte: string; fonction?: Fonction }[]> = {
+  starter: [{ texte: 'sans la mention Hopla', fonction: 'sansMention' }, { texte: 'tes couleurs', fonction: 'couleurs' }, { texte: 'tes stats sur 30 jours' }],
+  pro: [{ texte: 'ta page selon l’heure', fonction: 'heure' }, { texte: 'les drops', fonction: 'drops' }, { texte: 'ta liste e-mail', fonction: 'listeEmail' }, { texte: 'tes stats sur un an' }],
+  premium: [{ texte: 'ton nom de domaine' }],
+};
+
+/** L'offre à proposer au-dessus de celle d'un compte, et ce qu'elle apporte : `fonction` met en avant sa ligne dans les offres. */
+export interface OffreSuivante { plan: PlanPayant; texte: string; fonction?: Fonction }
+
+/**
+ * La première offre en vente au-dessus de celle du compte, avec son accroche. Rien quand rien n'est en vente
+ * au-dessus (Pro : Premium n'est pas en vente ; le compte principal a déjà tout), ni pour une offre résiliée ou
+ * impayée : on ne relance pas qui s'en va, ni qui a un souci de carte. `droits` : ce que le compte a déjà.
+ */
+export function offreSuivante(a: Pick<Abonnement, 'plan' | 'statut'>, droits: Partial<Record<Fonction, boolean>>, enVente: readonly PlanPayant[]): OffreSuivante | null {
+  if (a.plan !== 'gratuit' && (estResilie(a.statut) || a.statut === 'past_due')) return null;
+  const plan = PLANS_PAYANTS.find(p => rang(p) > rang(a.plan) && OFFRES[p].enVente && enVente.includes(p));
+  const accroche = plan && ACCROCHES[plan].find(x => !x.fonction || !droits[x.fonction]);
+  return plan && accroche ? { plan, ...accroche } : null;
+}
+
+/**
+ * Un abonné qui change d'offre paie ou se fait rendre la différence aujourd'hui, au prorata (Creem,
+ * `proration-charge-immediately`) : monter la fait payer, descendre la rend sur sa carte. Quand la période
+ * change aussi, le sens dépend de ce qui reste de la période en cours : Creem en décide (null).
+ */
+export function sensDuChangement(avant: { plan: Plan; periode: Periode | null }, apres: { plan: PlanPayant; periode: Periode }): 'facture' | 'rendu' | null {
+  if (avant.plan === 'gratuit' || avant.plan === apres.plan || avant.periode !== apres.periode) return null;
+  return rang(apres.plan) > rang(avant.plan) ? 'facture' : 'rendu';
+}
 
 /** Ce qu'on gagne (ou perd) en passant d'une offre à l'autre : les avantages des offres entre les deux, dans l'ordre où on les lit. */
 export function avantagesEntre(depuis: Plan, vers: Plan): string[] {
@@ -145,8 +183,11 @@ export function peut(plan: Plan, f: Fonction, cree = Number.POSITIVE_INFINITY): 
  */
 export const joursStats = (plan: Plan, permis: boolean) => (permis ? Math.max(OFFRES[plan].jours, JOURS_AVANT_OFFRES) : 0);
 
-/** Une offre et une période dans Creem, pour l'onglet Comptes : son prix du jour et le produit qui le vend, s'il existe. */
-export interface EtatOffre { plan: PlanPayant; periode: Periode; prix: number; enVente: boolean; produit: string | null }
+/**
+ * Une offre et une période dans Creem, pour l'onglet Comptes : son prix du jour et le produit qui le vend, s'il existe.
+ * Sans produit à ce prix, `prixCreem` dit celui du produit de l'offre tel que Creem le facture (un prix changé là-bas).
+ */
+export interface EtatOffre { plan: PlanPayant; periode: Periode; prix: number; enVente: boolean; produit: string | null; prixCreem: number | null }
 
 /** Les statuts d'abonnement Creem qui donnent accès à l'offre payée. Un impayé la garde le temps des relances. */
 export const STATUTS_PRO = ['active', 'trialing', 'scheduled_cancel', 'past_due'] as const;
@@ -181,3 +222,10 @@ export function estPaye(a: { statut: string; finPeriode: number | null }, mainte
   if (a.finPeriode && maintenant > a.finPeriode + grace) return false;
   return true;
 }
+
+/**
+ * Ce que Réglages montre de l'abonnement, d'un coup d'œil : « Gérer mon abonnement » tant qu'une offre payée
+ * court (la changer, la résilier, la carte), et « Mes factures » pour tout compte que Creem connaît, qu'il soit
+ * abonné, résilié ou ancien abonné : ses factures restent chez Creem.
+ */
+export const accesAbonnement = (a: Pick<Abonnement, 'plan' | 'portail'>) => ({ gerer: a.plan !== 'gratuit', factures: a.portail });

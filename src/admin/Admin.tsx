@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Api, Bloc, EtatAdmin, PagePublique, Reglages } from '../lib/types.ts';
 import { TYPES_PRINCIPAL, nouveauBloc, urlPage } from '../lib/types.ts';
 import { composerMoment } from '../lib/moments.ts';
@@ -20,11 +20,12 @@ import { Icone } from '../components/Icone.tsx';
 import { BoutonCopier, EmplacementEntete, Menu, PoserFil, classeBouton, copierTexte, useGrandEcran, vibrer } from './ui.tsx';
 import type { Fil } from './ui.tsx';
 import { Marque } from './Marque.tsx';
+import { useCouche } from './couches.ts';
 import { AnneauDemarrage, noterPartage, useDemarrage } from './BienDemarrer.tsx';
-import { FournisseurOffre } from './offre.tsx';
+import { AppelOffre, FournisseurOffre } from './offre.tsx';
 import { FenetreOffres, RetourPaiement } from './Offres.tsx';
 import type { Fonction, PlanPayant } from '../lib/abonnement.ts';
-import { FONCTIONS, OFFRES, joursStats, peut } from '../lib/abonnement.ts';
+import { FONCTIONS, OFFRES, joursStats, offreSuivante, peut } from '../lib/abonnement.ts';
 import type { Droits } from '../lib/droits.ts';
 import { REFUS_PROGRAMMATION, nouvellesDates, selonDroits } from '../lib/droits.ts';
 import type { Achat, EtapeRetour } from '../lib/achat.ts';
@@ -32,8 +33,8 @@ import { CLE_ACHAT, achatDeRetour, delaiAvantEssai, etapeRetour } from '../lib/a
 
 /*
  * Le back office. Tout s'enregistre tout seul : un bloc une fraction de
- * seconde après la dernière frappe dans son panneau (au bureau) ou quand on
- * valide sa feuille (au téléphone), l'ordre dès qu'on lâche, l'apparence et
+ * seconde après la dernière frappe dans sa rangée dépliée (au bureau) ou quand
+ * on valide sa feuille (au téléphone), l'ordre dès qu'on lâche, l'apparence et
  * les réglages une fraction de seconde après la dernière frappe. La page
  * qu'on modifie est la vraie page, rendue avec l'état en cours.
  */
@@ -71,8 +72,9 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
   const [reglages, setReglages] = useState(initial.reglages);
   const [clics, setClics] = useState(initial.clics);
   const [onglet, setOnglet] = useState<Onglet>('page');
-  // Les offres, par-dessus l'écran en cours : `pour`, la fonction réservée d'où l'on vient ; `vers`, l'offre à mettre en avant sans fonction.
-  const [offres, setOffres] = useState<{ pour?: Fonction; vers?: PlanPayant; bloc?: string } | null>(null);
+  // Les offres, par-dessus l'écran en cours : `pour`, la fonction réservée d'où l'on vient ; `vers`, l'offre à mettre en avant sans fonction ;
+  // `resilier`, ouvertes droit sur « Repasser en Gratuit ».
+  const [offres, setOffres] = useState<{ pour?: Fonction; vers?: PlanPayant; bloc?: string; resilier?: boolean } | null>(null);
   // Au retour de Creem : ce qu'on vient de prendre, et où en est l'offre (voir `lib/achat.ts`).
   const [retour, setRetour] = useState<{ achat: Achat; etape: EtapeRetour } | null>(null);
   // « Essayer tes couleurs » : Ma page ouvre le design sur ses couleurs.
@@ -86,13 +88,17 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
   const [brouillon, setBrouillon] = useState<Bloc | null>(null);
   // Ce que l'éditeur ouvert fait avant qu'on passe à autre chose : écrire ce qui est valable, ou retenir (voir `EditeurBloc`).
   const garde = useRef<(() => boolean) | null>(null);
-  // La forme suit la largeur : au bureau, les réglages d'un bloc s'ouvrent dans un panneau à côté de la page.
+  // La forme suit la largeur : au bureau, les réglages d'un bloc se déplient dans sa rangée, à gauche de la page.
   const grand = useGrandEcran();
   const [sauvegarde, setSauvegarde] = useState<Sauvegarde>('ok');
   const [toast, setToast] = useState<{ texte: string; annuler?: () => void; action?: string; genre?: 'ok' | 'info'; long?: boolean } | null>(null);
   // Le doigt ou le focus sur le message le garde affiché : « Annuler » ne file pas pendant qu'on le vise.
   const [toastTenu, setToastTenu] = useState(false);
   const [apercu, setApercu] = useState(false);
+  // Le retour du téléphone ferme l'aperçu plein écran, comme son bouton.
+  useCouche(apercu, () => { setApercu(false); return true; });
+  // Au téléphone, la flèche d'un bloc neuf ramène au choix du bloc : Ma page rouvre sa liste (en bas si le bloc venait du bas).
+  const [demandeAjout, setDemandeAjout] = useState<{ enBas: boolean } | null>(null);
   // L'endroit de l'en-tête du bureau où l'onglet ouvert pose son geste (voir `ActionEntete`).
   const [emplacement, setEmplacement] = useState<HTMLDivElement | null>(null);
   // Une sous-page ouverte (Réglages, puis Les offres) : l'en-tête montre son fil, qui ramène en arrière (voir `SousPage`).
@@ -157,6 +163,18 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
   // Le compte peut-il prendre une offre : le paiement est branché, et ce n'est pas le compte principal, qui a tout.
   const peutAcheter = initial.paiement && !initial.compte.principal;
   const ouvrirOffres = (pour?: Fonction, vers?: PlanPayant, bloc?: string) => setOffres({ pour, vers, bloc });
+  // L'offre du dessus, en une ligne : rien pour le compte principal, ni au-dessus de Pro, ni pendant une résiliation ou un impayé.
+  const suivante = peutAcheter ? offreSuivante(abonnement, droits, initial.enVente) : null;
+  const appel = (className = '') => suivante && (
+    <AppelOffre suivante={suivante} className={className} onClick={() => ouvrirOffres(suivante.fonction, suivante.fonction ? undefined : suivante.plan)} />
+  );
+  /** Repasser en Gratuit : Creem résilie pour la fin de la période payée, l'abonnement relu le dit aussitôt (avec l'année : un annuel finit l'an prochain). */
+  async function resilier() {
+    const a = await api.resilierAbonnement();
+    setAbonnement(a);
+    const nom = OFFRES[abonnement.plan].nom;
+    setToast({ texte: a.finPeriode ? `C’est noté : ${nom} jusqu’au ${new Date(a.finPeriode).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}, puis Gratuit` : `C’est noté : ${nom} jusqu’à la fin de la période payée, puis Gratuit`, long: true });
+  }
   // Le chemin vers les offres, pour un refus du serveur (absent quand le compte ne peut pas s'abonner) : elles s'ouvrent par-dessus.
   const versOffres = useRef<(() => void) | undefined>(undefined);
   versOffres.current = peutAcheter ? () => ouvrirOffres('programmation') : undefined;
@@ -285,7 +303,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
     return undefined;
   }
 
-  /** Un clic sur un bloc l'ouvre ; au bureau, le panneau passe d'un bloc à l'autre en écrivant le précédent. */
+  /** Un clic sur un bloc l'ouvre ; au bureau, l'éditeur passe d'une rangée à l'autre en écrivant le précédent. */
   function ouvrirBloc(bloc: Bloc) {
     if (edition && !edition.nouveau && edition.bloc.id === bloc.id) return;
     if (!libererEdition()) return;
@@ -295,16 +313,8 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
     if (!libererEdition()) return;
     setEdition({ bloc, nouveau: true, enBas });
   }
-  // Au téléphone, la feuille du bloc couvre le bas de l'écran : le bloc ouvert remonte juste sous l'en-tête, au-dessus d'elle.
+  // Au téléphone, la feuille du bloc couvre le bas de l'écran : le bloc ouvert remonte juste sous l'en-tête, au-dessus d'elle (voir `EditeurBloc`).
   const idOuvert = edition && !edition.nouveau ? edition.bloc.id : null;
-  useLayoutEffect(() => {
-    if (!idOuvert || grand) return;
-    const el = document.querySelector<HTMLElement>(`.adm-toile [data-id="${CSS.escape(idOuvert)}"]`);
-    if (!el) return;
-    const r = el.getBoundingClientRect();
-    const haut = 84, bas = innerHeight * 0.42 - 12;
-    if (r.top < haut || r.bottom > bas) scrollTo({ top: Math.max(0, scrollY + r.top - haut) });
-  }, [idOuvert, grand]);
 
   // Les réglages tapés qui attendent leur envoi : ils partent tout de suite si l'on quitte la page pour Creem.
   const reglagesEnAttente = useRef<Reglages | null>(null);
@@ -316,19 +326,21 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
     minuteur.current = setTimeout(() => { reglagesEnAttente.current = null; ecrire(() => api.enregistrerReglages(r)); }, 650);
   }
 
-  /** Un bloc qui vient d'arriver se montre : la page défile jusqu'à lui et il s'éclaire un instant. */
+  /**
+   * Un bloc qui vient d'arriver se montre et s'éclaire un instant. Au téléphone, la page défile jusqu'à lui ; au bureau,
+   * sa rangée (que la liste montre déjà, ouverte) et son bloc sur la page à droite s'éclairent ensemble.
+   */
   function montrer(id: string) {
     setTimeout(() => {
-      const el = document.querySelector<HTMLElement>(`.adm-toile [data-id="${CSS.escape(id)}"]`);
-      if (!el) return;
-      el.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'center' });
-      el.setAttribute('data-neuf', '');
-      setTimeout(() => el.removeAttribute('data-neuf'), 1800);
+      const els = [...document.querySelectorAll<HTMLElement>(`:is(.adm-toile, .adm-liste-blocs, .adm-tel-ecran) [data-id="${CSS.escape(id)}"]`)];
+      if (!els.length) return;
+      if (!grand) els[0].scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'center' });
+      for (const el of els) { el.setAttribute('data-neuf', ''); setTimeout(() => el.removeAttribute('data-neuf'), 1800); }
     }, 260);
   }
 
   /**
-   * Écrit un bloc. `garder` : l'éditeur reste ouvert sur lui (le panneau du bureau). `discret` : enregistré en route,
+   * Écrit un bloc. `garder` : l'éditeur reste ouvert sur lui (sa rangée dépliée, au bureau). `discret` : enregistré en route,
    * sans message ni défilement ; l'état de l'en-tête dit que c'est gardé.
    */
   function enregistrerBloc(bloc: Bloc, options: OptionsEnregistrement = {}) {
@@ -357,7 +369,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
     }
   }
 
-  /** L'œil posé à côté d'un bloc, au bureau : le montrer ou le masquer sans l'ouvrir. */
+  /** L'œil d'une rangée, au bureau : montrer ou masquer le bloc sans l'ouvrir. */
   function basculer(bloc: Bloc) {
     const vrai = blocsRef.current.find(b => b.id === bloc.id);
     if (!vrai || edition?.bloc.id === bloc.id) return;
@@ -407,7 +419,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
     // La version enregistrée revient avec Annuler, jamais un champ à moitié tapé.
     const vrai = avant[i];
     poserListe(avant.filter(b => b.id !== bloc.id));
-    // Retiré depuis la page, un autre bloc ouvert dans le panneau le reste.
+    // Retiré depuis sa rangée, un autre bloc ouvert le reste.
     setEdition(e => (e?.bloc.id === bloc.id ? null : e));
     ecrire(() => api.supprimerBloc(bloc.id));
     setToast({
@@ -492,8 +504,9 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
   // Un éditeur par bloc (la clé) : passer d'un bloc à l'autre repart de la version enregistrée du suivant.
   const editeur = edition && (
     <RegleAOuvrir.Provider value={regleOuverte?.bloc === edition.bloc.id ? regleOuverte.regle : null}>
-    <EditeurBloc key={edition.bloc.id} panneau={grand} garde={garde} onBrouillon={setBrouillon}
+    <EditeurBloc key={edition.bloc.id} bureau={grand} garde={garde} onBrouillon={setBrouillon}
       adressePage={urlPage(compte)} principal={compte.principal} bloc={edition.bloc} reglages={reglages} nouveau={edition.nouveau} clics={clics[edition.bloc.id] ?? 0} prises={initial.places?.[edition.bloc.id] ?? 0} onFermer={() => setEdition(null)}
+      onRetour={edition.nouveau && !grand ? () => { setEdition(null); setDemandeAjout({ enBas: !!edition.enBas }); } : undefined}
       onEnregistrer={enregistrerBloc} onSupprimer={supprimer} onDupliquer={dupliquer} onDeplacer={deplacer} place={{ rang: blocs.findIndex(b => b.id === edition.bloc.id), total: blocs.length }} envoyerImage={d => api.envoyerImage(d)} apercuSite={u => api.apercuSite(u)} />
     </RegleAOuvrir.Provider>
   );
@@ -525,6 +538,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
           ))}
         </nav>
         <div className="mt-auto">
+          {appel('mb-1')}
           <Menu label="Ton compte" haut aligne="largeur" className="adm-compte" titre={`${reglages.profil.nom || compte.pseudo}, ton compte`}
             entete={<p className="truncate px-2.5 pb-1.5 pt-2 text-[12px] text-white/55">{compte.email ? `${compte.email} · ` : ''}{compte.principal ? 'Compte principal' : `Hopla ${OFFRES[compte.plan].nom}`}</p>}
             elements={[{ nom: 'Me déconnecter', icone: 'ui-sortir', action: deconnexion }]}>
@@ -585,7 +599,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
 
       <EmplacementEntete.Provider value={emplacement}>
       <PoserFil.Provider value={setFil}>
-      {/* Ma page et Comptes prennent toute la largeur au bureau (le canevas, la barre des onglets de Comptes) ; les autres gardent leurs marges. */}
+      {/* Ma page et Comptes prennent toute la largeur au bureau (l'édition et la page côte à côte, la barre des onglets de Comptes) ; les autres gardent leurs marges. */}
       <div className={`mx-auto max-w-[1120px] px-4 lg:max-w-none ${onglet === 'page' || onglet === 'comptes' ? 'lg:px-0' : 'lg:px-10'}`}>
         <main id="contenu-admin" className={`mx-auto w-full pb-28 ${onglet === 'page' ? 'pt-4 lg:p-0' : onglet === 'comptes' ? 'pt-6 lg:pb-12 lg:pt-0' : 'pt-6 lg:pb-12 lg:pt-7'}`}>
           <div key={onglet} className="adm-onglet">
@@ -596,14 +610,18 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
             <h1>{fil?.nom ?? titre}</h1>
           </div>
           {onglet === 'page' && <MaPage compte={compte} reglages={reglages} blocs={blocsAffiches} clics={clics} visiteurs={page} grand={grand}
-            choisi={idOuvert} panneau={grand && editeur} onReglages={changerReglages} onOrdonner={l => ordonner(l)}
+            choisi={idOuvert} editeur={grand ? editeur : null} neuf={grand && edition?.nouveau ? { bloc: brouillon?.id === edition.bloc.id ? brouillon : edition.bloc, enBas: !!edition.enBas } : null}
+            onReglages={changerReglages} onOrdonner={l => ordonner(l)}
             onOuvrir={ouvrirBloc} onAjouter={ajouterBloc} liberer={libererEdition} fermerEdition={fermerEdition} gestes={{ basculer, dupliquer, supprimer }}
             envoyerImage={d => api.envoyerImage(d)} annoncer={t => setToast(t)}
-            demarrage={demarrage} demarrageOuvert={demarrageOuvert} fermerDemarrage={() => setDemarrageOuvert(false)} demandeDesign={demandeDesign} designOuvert={() => setDemandeDesign(null)} />}
+            demarrage={demarrage} demarrageOuvert={demarrageOuvert} fermerDemarrage={() => setDemarrageOuvert(false)} demandeDesign={demandeDesign} designOuvert={() => setDemandeDesign(null)}
+            demandeAjout={demandeAjout} ajoutOuvert={() => setDemandeAjout(null)}
+            appel={grand ? null : appel()} />}
           {onglet === 'stats' && <OngletStats charger={chargerStats} adresse={urlPage(compte)} pseudo={compte.pseudo} joursMax={initial.paiement ? joursStats(compte.plan, droits.stats) : 365} onOffres={peutAcheter ? ouvrirOffres : undefined}
             ouvrirApps={reglages.ouvrirApps} onActiverApps={() => changerReglages({ ...reglages, ouvrirApps: true })} liste={<MaListe api={api} />} blocs={blocs} />}
           {onglet === 'reglages' && <OngletReglages reglages={reglages} compte={compte} onChange={changerReglages} onDeconnexion={deconnexion} urlExport={api.urlExport} supprimerMonCompte={api.supprimerMonCompte}
-            abonnement={abonnement} onOffres={peutAcheter ? (pour?: Fonction) => ouvrirOffres(pour) : undefined} ouvrirPortail={api.ouvrirPortail} />}
+            abonnement={abonnement} onOffres={peutAcheter ? (pour?: Fonction) => ouvrirOffres(pour) : undefined} ouvrirPortail={api.ouvrirPortail}
+            onResilier={peutAcheter ? () => setOffres({ resilier: true }) : undefined} />}
           {onglet === 'comptes' && api.comptes && <OngletComptes api={api.comptes} avatar={reglages.profil.avatar} />}
           </div>
         </main>
@@ -637,13 +655,14 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
         </div>
       )}
 
-      {/* Au téléphone, l'éditeur est une feuille du bas ; au bureau, il occupe le panneau à droite de la page (voir MaPage). */}
+      {/* Au téléphone, l'éditeur est une feuille du bas ; au bureau, il se déplie dans la rangée du bloc (voir MaPage). */}
       {!grand && editeur}
 
       {/* Les offres et le retour de Creem s'ouvrent par-dessus l'écran en cours, qu'on retrouve en les fermant. */}
       {offres && (
         <FenetreOffres onFermer={() => setOffres(null)} abonnement={abonnement} enVente={initial.enVente} pour={offres.pour} vers={offres.vers} bloc={offres.bloc}
-          ouvrirPaiement={api.ouvrirPaiement} avantDePartir={avantDePartir} apercu={apercuAvec} />
+          ouvrirPaiement={api.ouvrirPaiement} avantDePartir={avantDePartir} apercu={apercuAvec}
+          resilier={resilier} ouvrirPortail={api.ouvrirPortail} resiliation={offres.resilier} />
       )}
       {retour && (
         <RetourPaiement achat={retour.achat} etape={retour.etape} action={actionApres(retour.achat)}

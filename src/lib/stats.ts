@@ -86,6 +86,25 @@ export function parSemaine(serie: Jour[]): Point[] {
 }
 
 /**
+ * La couleur de chaque réseau dans « D'où viennent les visites », au back
+ * office comme sur l'accueil (22 octobre 2026, demandé par Lilian) : son logo
+ * dans la couleur de sa marque, et sa barre dans une teinte claire de cette
+ * couleur, toutes de la même clarté, pour que le nom écrit dessus reste noir et
+ * se lise (plus de 10:1). Une barre pleine ferait écrire le nom en blanc, et
+ * une barre courte le couperait en deux couleurs. Le jaune de Snapchat, trop
+ * clair pour un logo, le porte en noir, et sa barre reste plus claire que les
+ * autres : assombri, il tournerait au kaki. Les provenances sans marque (Direct,
+ * QR code, e-mail, newsletter, un site) restent grises.
+ */
+export const COULEURS_SOURCES: Record<string, { picto: string; barre: string }> = {
+  Instagram: { picto: '#d62976', barre: '#f5c9dd' }, TikTok: { picto: '#111111', barre: '#d5d5d5' },
+  YouTube: { picto: '#e00000', barre: '#f9cbcb' }, LinkedIn: { picto: '#0a66c2', barre: '#c1d8ef' },
+  X: { picto: '#111111', barre: '#d5d5d5' }, Facebook: { picto: '#0866ff', barre: '#bcd6ff' },
+  Threads: { picto: '#111111', barre: '#d5d5d5' }, Snapchat: { picto: '#0a0a0a', barre: '#fffd73' },
+  Google: { picto: '#1a73e8', barre: '#bed7f8' },
+};
+
+/**
  * Les points qui portent une date sous la courbe : chaque jour jusqu'à 8,
  * une semaine sur 30, deux sur 90 ; par semaine, celle où commence un mois.
  */

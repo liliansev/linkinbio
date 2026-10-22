@@ -3,7 +3,7 @@ import { CONTACT_LEGAL } from '../lib/legal.ts';
 import type { ComptePage, Reglages } from '../lib/types.ts';
 import { sansSchema, urlPage } from '../lib/types.ts';
 import type { Abonnement as EtatAbonnement, Fonction, Plan } from '../lib/abonnement.ts';
-import { OFFRES, estPaye, estResilie, euros } from '../lib/abonnement.ts';
+import { OFFRES, accesAbonnement, estPaye, estResilie, euros } from '../lib/abonnement.ts';
 import { BoutonCopier, BoutonPrincipal, BoutonSecondaire, Champ, Feuille, Groupe, Interrupteur, Ligne, LigneBascule, LigneLien, SousPage, classeBouton, classeSaisie } from './ui.tsx';
 import { Facturation, nomOffre } from './Facturation.tsx';
 import { Etiquette, usePermis } from './offre.tsx';
@@ -15,27 +15,30 @@ import { noterPartage } from './BienDemarrer.tsx';
  * Page, Compte et Abonnement, une ligne par réglage, le libellé à gauche, le
  * contrôle à droite. Rien ne se cache dans un tiroir : ce qui demande plus
  * qu'un geste (l'aperçu dans Google, supprimer son compte) s'ouvre dans une
- * fenêtre, les offres aussi, par-dessus ; Facturation est une sous-page, avec
- * le fil « Réglages / Facturation » dans l'en-tête.
+ * fenêtre, les offres aussi, par-dessus ; « Gérer mon abonnement » est une
+ * sous-page, avec le fil « Réglages / Mon abonnement » dans l'en-tête. Les
+ * factures se lisent d'un toucher, chez Creem, pour tout compte qui a payé.
  */
 
 const dateLongue = (ms: number) => new Date(ms).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
 
-export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlExport, supprimerMonCompte, abonnement, onOffres, ouvrirPortail }: {
+export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlExport, supprimerMonCompte, abonnement, onOffres, ouvrirPortail, onResilier }: {
   reglages: Reglages; compte: ComptePage & { email?: string; plan: Plan }; onChange: (r: Reglages) => void; onDeconnexion: () => void;
-  urlExport: string | null; supprimerMonCompte: (confirmation: string) => Promise<{ ok: boolean; message: string }>;
+  urlExport: string | null; supprimerMonCompte: (confirmation: string) => Promise<{ ok: boolean; message: string; aLaMain?: boolean }>;
   abonnement: EtatAbonnement;
   /** Ouvre les offres par-dessus Réglages ; absent quand le compte ne peut pas s'abonner (compte principal, paiement pas branché). */
   onOffres?: (pour?: Fonction) => void;
   ouvrirPortail: () => Promise<string>;
+  /** Ouvre les offres sur « Repasser en Gratuit » : la résiliation se fait dans Hopla, pour la fin de la période payée. */
+  onResilier?: () => void;
 }) {
   const adresse = urlPage(compte);
-  const [sous, setSous] = useState<'facturation' | null>(null);
+  const [sous, setSous] = useState<'abonnement' | null>(null);
   const [fenetre, setFenetre] = useState<'apercu' | 'supprimer' | null>(null);
   const [portail, setPortail] = useState<'' | 'ouverture' | string>('');
   // Ce qui a ouvert la sous-page reprend le focus quand on en revient (la page se redessine : on le retrouve par son id).
   const ouvreur = useRef('');
-  const ouvrirSous = (id: string) => () => { ouvreur.current = id; setSous('facturation'); scrollTo({ top: 0 }); };
+  const ouvrirSous = (id: string) => () => { ouvreur.current = id; setSous('abonnement'); scrollTo({ top: 0 }); };
   useEffect(() => {
     if (sous || !ouvreur.current) return;
     document.getElementById(ouvreur.current)?.focus({ preventScroll: true });
@@ -53,16 +56,18 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
     catch (error) { setPortail((error as Error).message || 'Creem ne répond pas. Réessaie dans un instant.'); }
   }
 
-  if (sous === 'facturation') return (
+  if (sous === 'abonnement') return (
     <div className="adm-reglages">
-      <SousPage nom="Facturation" retour={() => setSous(null)} />
-      <Facturation abonnement={abonnement} onOffres={offres ? () => onOffres?.() : undefined} ouvrirPortail={ouvrirPortail} />
+      <SousPage nom="Mon abonnement" retour={() => setSous(null)} />
+      <Facturation abonnement={abonnement} onOffres={offres ? () => onOffres?.() : undefined} ouvrirPortail={ouvrirPortail} onResilier={offres ? onResilier : undefined} />
     </div>
   );
 
   const paye = abonnement.plan !== 'gratuit';
   const resilie = paye && estResilie(abonnement.statut);
   const prix = paye && abonnement.periode ? OFFRES[abonnement.plan].prix[abonnement.periode] : null;
+  // Gérer son abonnement tant qu'il y en a un ; ses factures dès qu'on a payé une fois, même revenu en Gratuit.
+  const acces = accesAbonnement(abonnement);
   const titreSeo = reglages.seo.titre || reglages.profil.nom;
   const descriptionSeo = reglages.seo.description || reglages.profil.bio;
 
@@ -80,6 +85,7 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
         </Ligne>
         <LigneBascule nom="Bouton Partager sur ma page" actif={reglages.partage} changer={v => onChange({ ...reglages, partage: v })} />
         <LigneBascule nom="Ouvrir YouTube, Spotify… dans leur app" actif={reglages.ouvrirApps} changer={v => onChange({ ...reglages, ouvrirApps: v })} />
+        <LigneBascule nom="Proposer Safari ou Chrome depuis Instagram, LinkedIn…" actif={reglages.ouvrirNavigateur} changer={v => onChange({ ...reglages, ouvrirNavigateur: v })} />
       </Groupe>
 
       <Groupe titre="Compte">
@@ -113,8 +119,9 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
             <Ligne nom={resilie ? 'Fin de l’offre' : 'Prochaine échéance'}
               valeur={<span className="tabular-nums">{resilie ? `${dateLongue(abonnement.finPeriode)}, puis Gratuit` : `${dateLongue(abonnement.finPeriode)}${prix ? ` · ${euros(prix)}` : ''}`}</span>} />
           ) : null}
-          {(paye || abonnement.portail) && (
-            <LigneLien id="reglage-facturation" nom="Facturation" valeur={abonnement.portail ? 'Factures et moyen de paiement' : 'Ton offre et son échéance'} onClick={ouvrirSous('reglage-facturation')} />
+          {acces.gerer && <LigneLien id="reglage-abonnement" nom="Gérer mon abonnement" onClick={ouvrirSous('reglage-abonnement')} />}
+          {acces.factures && (
+            <LigneLien nom="Mes factures" valeur="Chez Creem" externe onClick={versPortail} disabled={portail === 'ouverture'} label="Mes factures, chez Creem" />
           )}
         </Groupe>
       )}
@@ -157,33 +164,57 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
 
       {!compte.principal && (
         <Feuille petite ouverte={fenetre === 'supprimer'} onFermer={() => setFenetre(null)} titre="Supprimer mon compte">
-          {fermer => <SupprimerCompte pseudo={compte.pseudo} abonnement={paye && !resilie && estPaye(abonnement) ? OFFRES[abonnement.plan].nom : null} supprimerMonCompte={supprimerMonCompte} annuler={() => fermer()} />}
+          {fermer => <SupprimerCompte pseudo={compte.pseudo} abonnement={paye && estPaye(abonnement) ? { nom: OFFRES[abonnement.plan].nom, resilie, fin: abonnement.finPeriode } : null}
+            supprimerMonCompte={supprimerMonCompte} annuler={() => fermer()} />}
         </Feuille>
       )}
     </div>
   );
 }
 
-/** Tout effacer, pour de bon : le pseudo tapé en entier confirme. */
-function SupprimerCompte({ pseudo, abonnement, supprimerMonCompte, annuler }: { pseudo: string; abonnement: string | null; supprimerMonCompte: (confirmation: string) => Promise<{ ok: boolean; message: string }>; annuler: () => void }) {
+/**
+ * Tout effacer, pour de bon : le pseudo tapé en entier confirme. Un abonnement en cours est résilié avec, tout de
+ * suite (voir `server/suppression.ts`) ; si Creem ne l'a pas confirmé, on le dit avant de quitter le back office.
+ */
+function SupprimerCompte({ pseudo, abonnement, supprimerMonCompte, annuler }: {
+  pseudo: string; abonnement: { nom: string; resilie: boolean; fin: number | null } | null;
+  supprimerMonCompte: (confirmation: string) => Promise<{ ok: boolean; message: string; aLaMain?: boolean }>; annuler: () => void;
+}) {
   const [saisie, setSaisie] = useState('');
   const [envoi, setEnvoi] = useState(false);
   const [erreur, setErreur] = useState('');
+  const [fin, setFin] = useState('');
+  // Le compte n'existe plus : fermer la fenêtre, d'un geste ou d'un autre, quitte le back office.
+  const supprime = useRef(false);
+  useEffect(() => () => { if (supprime.current) location.replace('/'); }, []);
   async function supprimer() {
     setEnvoi(true);
     setErreur('');
     try {
       const r = await supprimerMonCompte(saisie);
+      if (r.ok && r.aLaMain) { supprime.current = true; setFin(r.message); return; }
       if (r.ok) { location.replace('/'); return; }
       setErreur(r.message);
     } catch { setErreur('Le serveur ne répond pas. Réessaie dans un instant.'); }
     setEnvoi(false);
   }
+  if (fin) return (
+    <div className="flex flex-col gap-4 pb-1">
+      <p role="status" className="text-[14px] leading-snug text-white/75">{fin}</p>
+      <div className="flex justify-end"><button type="button" onClick={() => location.replace('/')} className={classeBouton.principal}>Terminé</button></div>
+    </div>
+  );
   return (
     <form onSubmit={e => { e.preventDefault(); if (saisie.trim().toLowerCase() === pseudo) void supprimer(); }} className="flex flex-col gap-4 pb-1">
       <p className="text-[14px] leading-snug text-white/75">Ta page disparaît tout de suite, avec tes liens, tes images et tes statistiques. Rien ne se récupère.</p>
-      {/* Supprimer la page ne touche pas à Creem : un abonnement en cours continuerait d'être payé. */}
-      {abonnement && <p className="text-[14px] font-medium leading-snug text-amber-200">Ton abonnement {abonnement} continue tant que tu ne le résilies pas : résilie-le d’abord, depuis Facturation.</p>}
+      {/* L'abonnement s'arrête avec la page : plus rien n'est prélevé pour une page qui n'existe plus. */}
+      {abonnement && (
+        <p className="text-[14px] font-medium leading-snug text-amber-200">
+          {abonnement.resilie
+            ? `Ton offre ${abonnement.nom} s’arrête avec, sans attendre ${abonnement.fin ? `le ${dateLongue(abonnement.fin)}` : 'la fin de la période payée'}. Tes factures restent chez Creem.`
+            : `Ton abonnement ${abonnement.nom} est résilié avec, tout de suite : plus aucun prélèvement, sans remboursement automatique des jours déjà payés. Tes factures restent chez Creem.`}
+        </p>
+      )}
       <Champ label={`Pour confirmer, tape ton pseudo, ${pseudo}`} erreur={erreur || undefined}>
         <input className={classeSaisie} value={saisie} onChange={e => setSaisie(e.target.value)} autoFocus autoCapitalize="none" autoComplete="off" spellCheck={false} />
       </Champ>

@@ -10,7 +10,7 @@
  */
 
 /** Les navigateurs intégrés des apps où se partagent les pages de liens. */
-const NAVIGATEUR_INTEGRE = /Instagram|FBAN|FBAV|FB_IAB|FBIOS|musical_ly|BytedanceWebview|TikTok|LinkedInApp|Snapchat|Pinterest|Barcelona|Threads|Line\//i;
+const NAVIGATEUR_INTEGRE = /Instagram|FBAN|FBAV|FB_IAB|FBIOS|MetaIAB|musical_ly|BytedanceWebview|TikTok|LinkedInApp|Snapchat|Pinterest|Barcelona|Threads|Line\//i;
 export const navigateurIntegre = (userAgent: string) => NAVIGATEUR_INTEGRE.test(userAgent);
 
 /** L'hôte du lien (sans `www.` ni `m.`), le paquet Android de son app et son nom. */

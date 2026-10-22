@@ -7,24 +7,37 @@ import { Admin } from '../src/admin/Admin.tsx';
 import { THEMES } from '../src/lib/themes.ts';
 import { PageLiens } from '../src/components/PageLiens.tsx';
 import { apiDemo, apiGratuit, apiNouveau, pageDemo, recommencerNouveau } from './api-demo.ts';
+import type { Sortie } from '../src/lib/sortie.ts';
+
+/** La feuille qui monte par-dessus la page dans LinkedIn sur iPhone (`#sortie`), ou dans Instagram sur Android (`#sortie-android`). */
+const sortieDemo = (android: boolean): Sortie => (android
+  ? { adresse: 'intent://hopla.page/lilian?s=instagram#Intent;scheme=https;end', fenetre: false, safari: false, android: true, lien: 'https://hopla.page/lilian?s=instagram' }
+  : { adresse: 'x-safari-https://hopla.page/lilian?s=linkedin', fenetre: false, safari: true, android: false, lien: 'https://hopla.page/lilian?s=linkedin' });
 
 /* L'aperçu navigable : le vrai back office et la vraie page, sans serveur. */
 function Demo() {
-  const lireVue = () => (location.hash.startsWith('#page') ? 'page' : location.hash === '#nouveau' ? 'nouveau' : location.hash === '#gratuit' ? 'gratuit' : 'admin');
+  const lireVue = () => (/^#(page|sortie)/.test(location.hash) ? 'page' : location.hash === '#nouveau' ? 'nouveau' : location.hash === '#gratuit' ? 'gratuit' : 'admin');
   const [vue, setVue] = useState(lireVue);
+  // Passer de `#sortie=klein` à `#sortie=riso` ne change pas de vue : l'adresse elle-même redessine la page.
+  const [hash, setHash] = useState(() => location.hash);
   const [etat, setEtat] = useState<EtatAdmin | null>(null);
   // Chaque « Recommencer » remonte le back office du nouvel inscrit à zéro.
   const [tour, setTour] = useState(0);
   // Dans l'aperçu, on passe d'une mise en page à l'autre sans repasser par le back office.
   const [bureauChoisi, choisirBureau] = useState<MiseEnPageBureau | null>(null);
-  useEffect(() => { const f = () => { setEtat(null); setVue(lireVue()); }; addEventListener('hashchange', f); return () => removeEventListener('hashchange', f); }, []);
+  useEffect(() => { const f = () => { setEtat(null); setVue(lireVue()); setHash(location.hash); }; addEventListener('hashchange', f); return () => removeEventListener('hashchange', f); }, []);
   useEffect(() => { if (vue !== 'page') (vue === 'nouveau' ? apiNouveau : vue === 'gratuit' ? apiGratuit : apiDemo).charger().then(setEtat); }, [vue, tour]);
   if (vue === 'page') {
     const p = pageDemo();
     const bureau = bureauChoisi ?? p.reglages.bureau;
     // `#page=klein` montre la page dans un autre thème, avec ses boutons conseillés : pour revoir chaque thème d'un coup d'œil.
-    const autre = THEMES.find(t => t.id === location.hash.split('=')[1]);
+    const autre = THEMES.find(t => t.id === hash.split('=')[1]);
     if (autre) p.reglages = { ...p.reglages, theme: autre.id, couleurs: { fond: '', boutons: '', accent: '' }, bouton: { ...p.reglages.bouton, ...autre.conseil } };
+    // `#sortie=klein` : la feuille qui propose Safari, dans un thème, pour la planche de captures ; rien d'autre par-dessus.
+    if (hash.startsWith('#sortie')) {
+      const sortie = sortieDemo(hash.startsWith('#sortie-android'));
+      return <PageLiens key={hash} page={{ reglages: { ...p.reglages, bureau }, blocs: p.blocs.filter(b => estEnLigne(b)), compte: p.compte, sortie }} apercu />;
+    }
     return (
       <>
         <PageLiens page={{ reglages: { ...p.reglages, bureau }, blocs: p.blocs.filter(b => estEnLigne(b)), compte: p.compte }} apercu />

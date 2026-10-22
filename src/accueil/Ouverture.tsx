@@ -1,27 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
-import { THEMES } from '../lib/themes.ts';
 import { Icone } from '../components/Icone.tsx';
 import { Symbole } from '../components/Logo.tsx';
-import { EcranPage, Telephone } from './Telephone.tsx';
 import { Reserver, allerAuChamp, useReservation } from './Reserver.tsx';
 import type { ApiAccueil } from './Reserver.tsx';
-import { BLOCS_MARIE_RESEAUX, ceQuiChange, nomTape, pageJules, pageLilian, pageMarie, pageVisiteur, selonReseau } from './exemples.ts';
-import { NOMS_AUDIENCES, deReseau } from '../lib/provenance.ts';
-import { mouvementReduit, useGlisse } from './mouvement.ts';
+import { OFFRES, euros } from '../lib/abonnement.ts';
+import { HeroProfils, OffreFonction } from './Profils.tsx';
 import { Roue } from './Roue.tsx';
 import { APPEL, MOTS, useInscription } from './textes.ts';
-
-/*
- * 01 · La barre et l'ouverture. La promesse, puis tout de suite le champ du
- * nom, sur le bleu Klein d'un des thèmes. À côté (dessous au téléphone), la
- * roue des réseaux (`Roue.tsx`) : les visiteurs partent d'Instagram, TikTok,
- * YouTube et LinkedIn, passent par le même lien et tombent chacun sur la page
- * rangée pour eux ; le nom qu'on tape y remplace celui d'Inès. Juste dessous,
- * « Essaie » (`Selon`) : on touche un réseau et la page de Marie (ou la
- * sienne) se range. Au téléphone, où le clavier cache la roue, une carte aux
- * couleurs du thème reprend son nom juste sous la réponse du champ.
- */
 
 export function Marque() {
   return (
@@ -68,10 +54,37 @@ export function Barre() {
     addEventListener('scroll', f, { passive: true });
     return () => removeEventListener('scroll', f);
   }, []);
-  // Au téléphone, le menu se ferme avec Échap ou en touchant ailleurs.
+  // La section où l'on est : la dernière dont le haut a passé les deux cinquièmes de l'écran. La barre la dit (`aria-current`) ;
+  // Prise et le dernier appel, qui n'ont pas de lien, n'en marquent aucun.
+  const [ici, setIci] = useState('');
+  useEffect(() => {
+    let image = 0;
+    const f = () => {
+      cancelAnimationFrame(image);
+      image = requestAnimationFrame(() => {
+        let actif = '', haut = -Infinity;
+        for (const [ancre, lien] of REPERES) {
+          const t = document.querySelector(ancre)?.getBoundingClientRect().top ?? Infinity;
+          if (t <= innerHeight * 0.4 && t > haut) { haut = t; actif = lien; }
+        }
+        setIci(actif);
+      });
+    };
+    f();
+    addEventListener('scroll', f, { passive: true });
+    addEventListener('resize', f);
+    return () => { cancelAnimationFrame(image); removeEventListener('scroll', f); removeEventListener('resize', f); };
+  }, []);
+  // Au téléphone, le menu se ferme avec Échap ou en touchant ailleurs ; fermé au clavier depuis le menu, il rend le focus à son bouton.
+  const boutonMenu = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     if (!menu) return;
-    const echap = (e: KeyboardEvent) => { if (e.key === 'Escape') setMenu(false); };
+    const echap = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      const dedans = !!(document.activeElement as Element | null)?.closest('.hl-barre');
+      setMenu(false);
+      if (dedans) boutonMenu.current?.focus();
+    };
     const ailleurs = (e: PointerEvent) => { if (!(e.target as Element).closest('.hl-barre')) setMenu(false); };
     addEventListener('keydown', echap);
     addEventListener('pointerdown', ailleurs);
@@ -82,196 +95,71 @@ export function Barre() {
       <div className="hl-barre-dedans">
         <Marque />
         <nav className="hl-barre-nav" aria-label="Sections">
-          {SECTIONS.map(([lien, texte]) => <a key={lien} href={lien}>{texte}</a>)}
+          {SECTIONS.map(([lien, texte]) => <a key={lien} href={lien} aria-current={ici === lien || undefined} onClick={() => titreDe(lien)}>{texte}</a>)}
         </nav>
         <div className="hl-barre-actions">
           <a href="/admin" className="hl-barre-connexion">Connexion</a>
-          <a ref={bouton} href="#reserver" className="hl-btn hl-btn-petit" onClick={ev => { ev.preventDefault(); setMenu(false); allerAuChamp(); }}><span>{debut}<span className="hl-large">{suite}</span></span></a>
-          <button type="button" className="hl-barre-menu" aria-expanded={menu} aria-controls="hl-menu" aria-label={menu ? 'Fermer le menu' : 'Ouvrir le menu'} onClick={() => setMenu(m => !m)}>
+          <a ref={bouton} href="#reserver" className="hl-btn hl-btn-petit" aria-label={debut + suite} onClick={ev => { ev.preventDefault(); setMenu(false); allerAuChamp(); }}><span>{debut}<span className="hl-large">{suite}</span></span></a>
+          <button ref={boutonMenu} type="button" className="hl-barre-menu" aria-expanded={menu} aria-controls="hl-menu" aria-label={menu ? 'Fermer le menu' : 'Ouvrir le menu'} onClick={() => setMenu(m => !m)}>
             <Icone nom={menu ? 'ui-fermer' : 'ui-menu'} taille={22} />
           </button>
         </div>
       </div>
       <nav id="hl-menu" className="hl-menu" aria-label="Menu" hidden={!menu}>
-        {SECTIONS.map(([lien, texte]) => <a key={lien} href={lien} onClick={() => setMenu(false)}>{texte}</a>)}
+        {SECTIONS.map(([lien, texte]) => <a key={lien} href={lien} aria-current={ici === lien || undefined} onClick={() => { setMenu(false); titreDe(lien); }}>{texte}</a>)}
         <a href="/admin">Connexion</a>
       </nav>
     </header>
   );
 }
 
-/** Les sections de la barre, et du menu au téléphone. */
-const SECTIONS = [['#fonctions', 'Fonctions'], ['#themes', 'Thèmes'], ['#prix', 'Prix'], ['#questions', 'Questions']];
-
-/**
- * Essaie (juste sous l'ouverture) : le même lien, ouvert depuis Instagram,
- * TikTok, YouTube ou LinkedIn, au choix du visiteur. Toucher un onglet range
- * la page de Marie (ou la sienne, s'il a tapé son nom) pour ce réseau : le
- * lien qui a bougé est cerclé de la couleur du réseau, et le fond de la
- * section en prend la teinte. Comme dans la roue, un visiteur part de
- * l'onglet touché et entre par la barre d'adresse : la page se range à son
- * arrivée. Rien ne joue tout seul : la roue d'au-dessus montre déjà le trafic.
- */
-const RESEAUX = ['instagram', 'tiktok', 'youtube', 'linkedin'] as const;
-type ReseauDemo = (typeof RESEAUX)[number];
-const COULEURS: Record<ReseauDemo, { fond: string; anneau: string; teinte: string }> = {
-  instagram: { fond: '#d62976', anneau: '#c13584', teinte: '#f56040' },
-  tiktok: { fond: '#111111', anneau: '#111111', teinte: '#25f4ee' },
-  youtube: { fond: '#e00000', anneau: '#ff0000', teinte: '#ff2a2a' },
-  linkedin: { fond: '#0a66c2', anneau: '#0a66c2', teinte: '#2f8ae0' },
-};
-const THEME = THEMES.find(t => t.id === 'champagne')!;
-
-const d = (ms: number) => ({ '--d': `${ms}ms` }) as CSSProperties;
-/** Les mots d'un titre, qui montent un à un ; ceux de `vifs` prennent la couleur d'accent. */
-const mots = (texte: string, depart = 0, vifs = 0) => {
-  const liste = texte.split(' ');
-  return liste.map((m, i) => (
-    <span key={i}><span className={`hl-mot${i >= liste.length - vifs ? ' hl-vif' : ''}`} style={d(depart + i * 55)}>{m}</span>{' '}</span>
-  ));
-};
-
-/** Le nom tapé dans le champ, s'il fait au moins trois caractères et qu'il est libre. */
-function usePseudo() {
-  const { nom, saisie, verif, ancien } = useReservation();
-  const tape = nom.replace(/-$/, '');
-  const pseudo = tape.length >= 3 ? tape : '';
-  const pris = !!pseudo && verif?.nom === pseudo && verif.etat !== 'libre' && pseudo !== ancien;
-  return { pseudo, pris, affiche: nomTape(saisie, pseudo), verif };
+/** Après le saut vers une section, son titre prend le focus : la tabulation repart de là, pas du haut de la page. */
+function titreDe(lien: string) {
+  setTimeout(() => {
+    const titre = document.querySelector<HTMLElement>(`${lien} :is(h1, h2)`);
+    if (!titre) return;
+    if (!titre.hasAttribute('tabindex')) titre.tabIndex = -1;
+    titre.focus({ preventScroll: true });
+  });
 }
 
+/** Les sections de la barre, et du menu au téléphone, dans l'ordre de la page. */
+const SECTIONS = [['#inspiration', 'Inspiration'], ['#fonctionnement', 'Comment ça marche'], ['#themes', 'Thèmes'], ['#prix', 'Tarifs'], ['#questions', 'Questions']];
+/** Où commence chaque lien de la barre ; les sections sans lien (Prise, le dernier appel) le referment. */
+const REPERES = [...SECTIONS.map(([lien]) => [lien, lien]), ['#prise', ''], ['#dernier', '']];
+
 export function Ouverture({ api }: { api: ApiAccueil }) {
-  const { pseudo, pris, affiche } = usePseudo();
   const mode = useInscription();
   return (
-    <section className="hl-heros" data-teinte="klein" aria-labelledby="titre">
+    <section className="hl-heros hp-heros" data-teinte="klein" aria-labelledby="titre">
       <div className="hl-heros-texte">
-        <h1 id="titre" className="hl-h1 hl-heros-titre hl-mots">{mots('La page de liens qui s’adapte à chaque visiteur.', 0, 2)}</h1>
-        <p className="hl-chapo hl-apparait" style={d(420)}>
-          Rends ta page dynamique selon <span className="hl-insecable">le réseau</span> social.<br />
-          Programme tes liens selon <span className="hl-insecable">le moment</span> <span className="hl-insecable">de la journée</span>, <span className="hl-insecable">avec Pro</span>.
-        </p>
-        <div className="hl-apparait" style={d(540)} data-zone-appel="">
-          <Reserver api={api} id="reserver" grand premier note={<>{MOTS[mode].note} <a href="/lilian">Voir une vraie page</a></>} apercu={pseudo && !pris && (
-            <div className="hl-apercu hl-petit-seul" style={{ background: THEME.fondUni, color: THEME.texte }} aria-hidden="true">
-              <span className="hl-apercu-avatar">{affiche.split(' ').slice(0, 2).map(m => m[0]).join('')}</span>
-              <span className="hl-apercu-texte"><b>{affiche}</b><small style={{ color: THEME.doux }}>hopla.page/{pseudo} · {THEME.nom}</small></span>
-            </div>
-          )} />
-        </div>
+        <h1 id="titre" className="hl-h1 hl-heros-titre">Un lien qui<br />te ressemble<span className="hl-cache">. </span><span>Et s’adapte à<br />chaque visiteur</span></h1>
+        <p className="hl-chapo">Tes créations, tes projets, tes coups de cœur. Qu’on arrive d’Instagram, de TikTok ou de LinkedIn, ta page met le bon lien en premier.</p>
+        <div data-zone-appel=""><Reserver api={api} id="reserver" grand premier note={MOTS[mode].note} /></div>
+        <a className="hp-decouvrir" href="#inspiration">Trouve l’inspiration <Icone nom="ui-chevron" taille={20} /></a>
       </div>
-      <div className="hl-heros-visuel hl-apparait" style={d(700)}>
-        <Roue pseudo={pseudo && !pris ? pseudo : ''} nom={pseudo && !pris ? affiche : ''} />
-      </div>
+      <HeroProfils />
+      {/* Les prix dès l'ouverture, en une ligne qui mène aux tarifs : au téléphone, ils sont loin plus bas. */}
+      <div className="hp-heros-pied"><span>Pour ceux qui ont quelque chose à partager</span><a className="hp-heros-prix" href="#prix">Gratuit · Starter {euros(OFFRES.starter.prix.mois)} · Pro {euros(OFFRES.pro.prix.mois)} par mois</a></div>
     </section>
   );
 }
 
 export function Selon() {
-  // -1 : personne n'est encore arrivé de nulle part ; sinon le rang dans RESEAUX.
-  // `vise` est l'onglet touché, `rang` le réseau du visiteur arrivé dans la page.
-  const [vise, setVise] = useState(-1);
-  const [rang, setRang] = useState(-1);
-  const [eclat, setEclat] = useState(0);
-  const liste = useRef<HTMLDivElement>(null);
-  const section = useRef<HTMLElement>(null);
-  const onglets = useRef<(HTMLButtonElement | null)[]>([]);
-  const points = useRef<(HTMLSpanElement | null)[]>([]);
-  const vol = useRef<Animation | null>(null);
-  const lueur = useRef<ReturnType<typeof setTimeout>>(undefined);
-  const { pseudo, pris, affiche, verif } = usePseudo();
-  const { etape } = useReservation();
-
-  const reseau = rang >= 0 ? RESEAUX[rang] : null;
-  useGlisse(liste, reseau ?? 'direct', 450, '.lp-bloc');
-  useEffect(() => () => { vol.current?.cancel(); clearTimeout(lueur.current); }, []);
-
-  const arriver = (i: number) => {
-    setRang(i);
-    setEclat(e => e + 1);
-    const milieu = section.current?.querySelector<HTMLElement>('.hl-scene-milieu');
-    if (!milieu) return;
-    clearTimeout(lueur.current);
-    milieu.dataset.arrive = '';
-    lueur.current = setTimeout(() => { delete milieu.dataset.arrive; }, 600);
-  };
-  // Le rond du réseau va du centre de l'onglet à la barre d'adresse du téléphone du milieu ; avec moins de mouvement, la page se range tout de suite.
-  const toucher = (i: number) => {
-    setVise(i);
-    vol.current?.cancel();
-    points.current.forEach(p => p?.getAnimations().forEach(a => a.cancel()));
-    const s = section.current, onglet = onglets.current[i], point = points.current[i];
-    const barre = s?.querySelector('.hl-scene-milieu .hl-tel-barre');
-    if (mouvementReduit() || !s || !onglet || !point || !barre || typeof point.animate !== 'function') { arriver(i); return; }
-    const r = s.getBoundingClientRect(), a = onglet.getBoundingClientRect(), b = barre.getBoundingClientRect();
-    const x0 = a.left + a.width / 2 - r.left, y0 = a.top + a.height / 2 - r.top;
-    const x1 = b.left + b.width / 2 - r.left, y1 = b.top + b.height / 2 - r.top;
-    const en = (x: number, y: number, e = 1) => `translate(${x}px, ${y}px) scale(${e})`;
-    const v = point.animate([
-      { transform: en(x0, y0, .5), opacity: 0 },
-      { transform: en(x0 + (x1 - x0) * .2, y0 + (y1 - y0) * .2 - 14), opacity: 1, offset: .2 },
-      { transform: en((x0 + x1) / 2, (y0 + y1) / 2 - 24), opacity: 1, offset: .5 },
-      { transform: en(x1, y1), opacity: 1 },
-    ], { duration: 500, easing: 'cubic-bezier(.16,1,.3,1)', fill: 'forwards' });
-    vol.current = v;
-    v.onfinish = () => {
-      arriver(i);
-      point.animate([{ transform: en(x1, y1), opacity: 1 }, { transform: en(x1, y1, .4), opacity: 0 }], { duration: 150, easing: 'ease-out', fill: 'forwards' })
-        .onfinish = () => point.getAnimations().forEach(x => x.cancel());
-    };
-  };
-  // Dès qu'on tape un nom de trois caractères, la page du milieu devient la sienne ;
-  // un nom pris le dit dans la barre d'adresse, et une fois l'e-mail parti, l'adresse est cochée.
-  const base = pseudo ? pageVisiteur(pseudo, THEME.id, affiche) : pageMarie(THEME.id, { blocs: BLOCS_MARIE_RESEAUX });
-  const page = selonReseau(base, reseau ?? '');
-  const phrase = reseau ? ceQuiChange(base, reseau) : 'Touche un réseau pour voir la page de son visiteur.';
-  const vuDe = reseau ? `vue par un visiteur arrivé ${deReseau(reseau)}` : 'vue par un visiteur';
-  const adresse = pris
-    ? <span className="hl-tel-pris"><s>hopla.page/{pseudo}</s> {verif?.etat === 'pris' ? 'déjà pris' : 'impossible'}</span>
-    : etape === 'fait' && pseudo
-      ? <span key="fait" className="hl-tel-fait"><Icone nom="check" taille={12} />hopla.page/{pseudo}</span>
-      : `hopla.page/${pseudo || 'marie-lambert'}`;
-  const couleur = reseau ? COULEURS[reseau] : null;
-
   return (
-    <section ref={section} className="hl-section hl-selon" data-teinte="reseau" aria-labelledby="selon" style={couleur ? { '--teinte': couleur.teinte } as CSSProperties : undefined}>
-      <div className="hl-tete-section hl-entre">
-        <h2 id="selon" className="hl-h2">Choisis d’où arrive ton visiteur.</h2>
-        <p className="hl-chapo">Le même lien dans toutes tes bios. Touche un réseau : la page se range pour celui qui arrive de là.</p>
+    <section className="hl-section hp-selon" id="fonctionnement" aria-labelledby="selon">
+      <div className="hp-selon-texte">
+        <h2 id="selon" className="hl-h2">Camille partage<br /><span className="hl-cache">. </span><span>Hopla s’adapte</span></h2>
+        <p className="hl-chapo">Un seul lien dans toutes ses bios. Hopla reconnaît le réseau d’où vient son visiteur et met le bon lien en premier.</p>
+        <ol className="hp-source-legendes">
+          <li><Icone nom="instagram" taille={20} /><span>Depuis Instagram<b>Son portfolio, pour découvrir ses photos</b></span></li>
+          <li><Icone nom="linkedin" taille={20} /><span>Depuis LinkedIn<b>Son contact, pour travailler ensemble</b></span></li>
+        </ol>
+        <OffreFonction offre="gratuit" />
+        {/* La preuve arrive avec la promesse : une vraie page, en ligne aujourd'hui. */}
+        <a className="hp-vraie-page" href="/lilian">Voir une vraie page Hopla <Icone nom="ui-fleche" taille={18} /></a>
       </div>
-      <div className="hl-reseaux hl-entre" role="group" aria-label="D’où arrive le visiteur">
-        {RESEAUX.map((r, i) => (
-          <button key={r} ref={el => { onglets.current[i] = el; }} type="button" aria-pressed={vise === i} style={{ '--fond': COULEURS[r].fond } as CSSProperties} onClick={() => toucher(i)}>
-            <Icone nom={r} taille={16} /><span>{NOMS_AUDIENCES[r]}</span>
-          </button>
-        ))}
-      </div>
-      <div className="hl-scene hl-entre">
-        <div className="hl-scene-tel hl-scene-gauche" aria-hidden="true">
-          <Telephone largeur={250} label="La page de Lilian Sevoumian, dans le thème Nuit et pêche">
-            <EcranPage page={pageLilian('nuit-peche')} />
-          </Telephone>
-        </div>
-        <div className="hl-scene-tel hl-scene-droite" aria-hidden="true">
-          <Telephone largeur={250} label="La page de Jules Moreau, musicien, dans le thème Arcade">
-            <EcranPage page={pageJules('arcade')} />
-          </Telephone>
-        </div>
-        <div className="hl-scene-tel hl-scene-milieu" data-eclat={eclat ? (eclat % 2 ? 'a' : 'b') : undefined}
-          style={couleur ? { '--anneau': couleur.anneau } as CSSProperties : undefined}>
-          <Telephone largeur={290} adresse={adresse} label={pseudo && !pris
-            ? `Un aperçu de ta page, hopla.page/${pseudo}, ${vuDe}`
-            : `La page de Marie Lambert, céramiste, ${vuDe}`}>
-            <div key={pseudo ? 'toi' : 'marie'} ref={liste} className="hl-fondu" data-pris={pris || undefined}><EcranPage page={page} /></div>
-          </Telephone>
-        </div>
-      </div>
-      <p key={rang} className="hl-legende hl-reseaux-phrase" aria-live="polite">{phrase}</p>
-      {RESEAUX.map((r, i) => (
-        <span key={r} ref={el => { points.current[i] = el; }} className="hl-selon-point" style={{ background: COULEURS[r].fond }} aria-hidden="true">
-          <Icone nom={r} taille={12} />
-        </span>
-      ))}
+      <Roue />
     </section>
   );
 }

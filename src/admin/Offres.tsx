@@ -1,7 +1,7 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import type { KeyboardEvent, ReactNode } from 'react';
 import type { Abonnement as EtatAbonnement, Fonction, Periode, Plan, PlanPayant } from '../lib/abonnement.ts';
-import { FONCTIONS, FONCTIONS_EN_MOTS, OFFRES, PLANS, avantagesEntre, echeance, economieAnnuelle, estResilie, euros, moisOfferts, rang } from '../lib/abonnement.ts';
+import { FONCTIONS, FONCTIONS_EN_MOTS, OFFRES, PLANS, avantagesEntre, echeance, economieAnnuelle, estResilie, euros, moisOfferts, rang, sensDuChangement } from '../lib/abonnement.ts';
 import type { Achat, EtapeRetour, NoteAchat } from '../lib/achat.ts';
 import { CLE_ACHAT } from '../lib/achat.ts';
 import type { PagePublique } from '../lib/types.ts';
@@ -19,6 +19,8 @@ import { Feuille, classeBouton, flechesRadio, useGrandEcran, vibrer } from './ui
  * aujourd'hui, la prochaine échéance, ce qu'on débloque, et au bureau la page
  * telle qu'elle sera), puis chez Creem. Au retour, `RetourPaiement` dit où en
  * est l'offre : elle n'arrive qu'avec le webhook signé, jamais par l'adresse.
+ * Un abonné repasse en Gratuit depuis la même fenêtre (`RepasserGratuit`) :
+ * l'abonnement est résilié pour la fin de la période payée, sans quitter Hopla.
  */
 
 const dateLongue = (ms: number) => new Date(ms).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
@@ -27,7 +29,7 @@ const par = (p: Periode) => (p === 'an' ? 'par an' : 'par mois');
 const reduit = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 /** Ce que la carte d'une offre propose : un bouton, ou un simple état (l'offre en cours, bientôt). */
-type Geste = { bouton: true; texte: string; plan: PlanPayant } | { bouton: false; texte: string };
+type Geste = { bouton: true; texte: string; plan: Plan } | { bouton: false; texte: string };
 
 interface ProprietesOffres {
   onFermer: () => void;
@@ -45,15 +47,21 @@ interface ProprietesOffres {
   avantDePartir?: () => Promise<void>;
   /** La page telle qu'elle sera avec une offre, montrée au bureau dans le récapitulatif. */
   apercu?: (plan: PlanPayant) => PagePublique;
+  /** Repasser en Gratuit : résilie l'abonnement pour la fin de la période payée. Absent, la carte Gratuit ne le propose pas. */
+  resilier?: () => Promise<void>;
+  /** Le portail de Creem, si Hopla ne peut pas résilier lui-même. */
+  ouvrirPortail?: () => Promise<string>;
+  /** Ouvrir directement sur « Repasser en Gratuit » (depuis « Résilier mon abonnement »). */
+  resiliation?: boolean;
 }
 
-export function FenetreOffres({ onFermer, abonnement, enVente, pour, vers, bloc, ouvrirPaiement, avantDePartir, apercu }: ProprietesOffres) {
+export function FenetreOffres({ onFermer, abonnement, enVente, pour, vers, bloc, ouvrirPaiement, avantDePartir, apercu, resilier, ouvrirPortail, resiliation }: ProprietesOffres) {
   const grand = useGrandEcran();
   const actuelle = abonnement.plan;
   const paye = actuelle !== 'gratuit';
   const resilie = paye && estResilie(abonnement.statut);
   const [periode, setPeriode] = useState<Periode>(abonnement.periode ?? 'an');
-  const [choix, setChoix] = useState<PlanPayant | null>(null);
+  const [choix, setChoix] = useState<Plan | null>(resiliation && resilier && paye && !resilie ? 'gratuit' : null);
   const [envoi, setEnvoi] = useState(false);
   const [erreur, setErreur] = useState('');
   const idTitre = useId();
@@ -65,7 +73,12 @@ export function FenetreOffres({ onFermer, abonnement, enVente, pour, vers, bloc,
   const mois = Math.min(...PLANS.filter(vendable).map(p => moisOfferts(p)), 12);
 
   function geste(p: Plan): Geste {
-    if (p === 'gratuit') return { bouton: false, texte: paye ? 'Comprise dans ton offre' : 'Ton offre actuelle' };
+    if (p === 'gratuit') {
+      if (!paye) return { bouton: false, texte: 'Ton offre actuelle' };
+      // Résiliée, l'offre court jusqu'à sa fin : Gratuit vient ensuite. Sinon, on y repasse d'ici.
+      if (resilie) return { bouton: false, texte: abonnement.finPeriode ? `Dès le ${dateCourte(abonnement.finPeriode)}` : 'À la fin de ton offre' };
+      return resilier ? { bouton: true, texte: 'Repasser en Gratuit', plan: 'gratuit' } : { bouton: false, texte: 'Comprise dans ton offre' };
+    }
     if (!vendable(p)) return { bouton: false, texte: 'Bientôt disponible' };
     if (p === actuelle && (!abonnement.periode || abonnement.periode === periode)) return { bouton: false, texte: 'Ton offre actuelle' };
     // Une offre résiliée court jusqu'à sa fin : on en reprend une ensuite.
@@ -82,23 +95,23 @@ export function FenetreOffres({ onFermer, abonnement, enVente, pour, vers, bloc,
     : 'Prix TTC. Paiement sécurisé chez Creem, résiliable à tout moment.';
 
   // Revenir aux offres rend le focus au bouton de l'offre choisie ; entrer dans le récapitulatif le pose sur son titre.
-  const dernierChoix = useRef<PlanPayant | null>(null);
+  const dernierChoix = useRef<Plan | null>(null);
   useEffect(() => {
     if (choix) { dernierChoix.current = choix; document.getElementById(`${idTitre}-recap`)?.focus({ preventScroll: true }); return; }
     if (dernierChoix.current) document.getElementById(`${idTitre}-${dernierChoix.current}-geste`)?.focus({ preventScroll: true });
   }, [choix, idTitre]);
 
-  function choisir(p: PlanPayant) { vibrer(6); setErreur(''); setChoix(p); }
+  function choisir(p: Plan) { vibrer(6); setErreur(''); setChoix(p); }
 
   async function payer() {
-    if (!choix) return;
+    if (!choix || choix === 'gratuit') return;
     setEnvoi(true);
     setErreur('');
     try {
       await avantDePartir?.();
       const url = await ouvrirPaiement(choix, periode);
       // De quoi dire au retour ce qui vient de s'ouvrir. Rien n'est accordé d'après cette note.
-      const n: NoteAchat = { plan: choix, periode, ...(pour ? { pour } : {}), avant: actuelle, ...(bloc ? { bloc } : {}), ts: Date.now() };
+      const n: NoteAchat = { plan: choix, periode, ...(pour ? { pour } : {}), avant: actuelle, ...(abonnement.periode ? { periodeAvant: abonnement.periode } : {}), ...(bloc ? { bloc } : {}), ts: Date.now() };
       try { sessionStorage.setItem(CLE_ACHAT, JSON.stringify(n)); } catch { /* onglet privé : le retour dira seulement l'offre */ }
       location.href = url;
       return;
@@ -107,8 +120,10 @@ export function FenetreOffres({ onFermer, abonnement, enVente, pour, vers, bloc,
   }
 
   return (
-    <Feuille ouverte large nue titre={choix ? `Passer en ${OFFRES[choix].nom}` : 'Les offres'} onFermer={onFermer}>
-      {fermer => choix ? (
+    <Feuille ouverte large nue titre={choix === 'gratuit' ? 'Repasser en Gratuit' : choix ? `Passer en ${OFFRES[choix].nom}` : 'Les offres'} onFermer={onFermer}>
+      {fermer => choix === 'gratuit' && resilier ? (
+        <RepasserGratuit abonnement={abonnement} grand={grand} id={idTitre} retour={() => setChoix(null)} fermer={() => fermer()} resilier={resilier} ouvrirPortail={abonnement.portail ? ouvrirPortail : undefined} />
+      ) : choix && choix !== 'gratuit' ? (
         <Recapitulatif plan={choix} periode={periode} setPeriode={setPeriode} abonnement={abonnement} grand={grand} id={idTitre} mois={moisOfferts(choix)}
           retour={() => setChoix(null)} fermer={() => fermer()} payer={payer} envoi={envoi} erreur={erreur} apercu={apercu} />
       ) : (
@@ -179,7 +194,7 @@ function Tarif({ plan, periode }: { plan: Plan; periode: Periode }) {
 
 function CarteOffre({ id, plan, periode, badge, mis, pour, geste, onChoisir, panneau = false }: {
   id: string; plan: Plan; periode: Periode; badge: { texte: string; fort?: boolean } | null; mis: boolean; pour?: Fonction;
-  geste?: Geste; onChoisir?: (p: PlanPayant) => void; panneau?: boolean;
+  geste?: Geste; onChoisir?: (p: Plan) => void; panneau?: boolean;
 }) {
   const o = OFFRES[plan];
   const fort = pour ? FONCTIONS_EN_MOTS[pour].avantage : '';
@@ -212,7 +227,7 @@ function CarteOffre({ id, plan, periode, badge, mis, pour, geste, onChoisir, pan
  */
 function OffresMobile({ id, periode, setPeriode, mois, depart, carte, miseEnAvant, geste, onChoisir, note }: {
   id: string; periode: Periode; setPeriode: (p: Periode) => void; mois: number; depart: Plan;
-  carte: (p: Plan, mis: boolean) => ReactNode; miseEnAvant: Plan | null; geste: (p: Plan) => Geste; onChoisir: (p: PlanPayant) => void; note: string;
+  carte: (p: Plan, mis: boolean) => ReactNode; miseEnAvant: Plan | null; geste: (p: Plan) => Geste; onChoisir: (p: Plan) => void; note: string;
 }) {
   const rail = useRef<HTMLDivElement>(null);
   const [vue, setVue] = useState<Plan>(depart);
@@ -254,8 +269,11 @@ function OffresMobile({ id, periode, setPeriode, mois, depart, carte, miseEnAvan
         </div>
       </div>
       <footer className="adm-offres-pied">
+        {/* Repasser en Gratuit ne se pousse pas : un bouton au trait, sans prix. */}
         {g.bouton
-          ? <button type="button" onClick={() => onChoisir(g.plan)} className={`${classeBouton.principal} w-full`}>{g.texte}, {euros(OFFRES[g.plan].prix[periode])} {par(periode)}</button>
+          ? g.plan === 'gratuit'
+            ? <button type="button" onClick={() => onChoisir(g.plan)} className={`${classeBouton.secondaire} w-full`}>{g.texte}</button>
+            : <button type="button" onClick={() => onChoisir(g.plan)} className={`${classeBouton.principal} w-full`}>{g.texte}, {euros(OFFRES[g.plan].prix[periode])} {par(periode)}</button>
           : <p className="adm-offre-etat">{g.texte}</p>}
         <p className="adm-offres-note">{note}</p>
       </footer>
@@ -280,9 +298,14 @@ function Recapitulatif({ plan, periode, setPeriode, abonnement, grand, id, mois,
   const o = OFFRES[plan];
   const titre = meme ? (periode === 'an' ? 'Passer à l’annuel' : 'Passer au mensuel') : `Passer en ${o.nom}`;
   const monte = rang(plan) > rang(actuelle);
+  // Un abonné qui descend se fait rendre la différence, qui monte la paie ; changer aussi de période, Creem en décide.
+  const sens = changement ? sensDuChangement({ plan: actuelle, periode: abonnement.periode }, { plan, periode }) : null;
   const liste = meme ? [] : avantagesEntre(actuelle, plan);
+  // La page telle qu'elle sera se montre quand on monte, pas quand on descend : sans savoir ce qu'une page d'avant
+  // les offres garde, l'aperçu montrerait encore ce qui s'arrête. La liste « Ce qui s'arrête » le dit à sa place.
+  const vue = monte || meme ? apercu : undefined;
   const lignes: [string, string, boolean?][] = changement
-    ? [['Aujourd’hui', 'La différence, au prorata'], ['Ensuite', `${euros(o.prix[periode])} ${par(periode)}`], ['Engagement', 'Aucun, résiliable à tout moment']]
+    ? [[sens === 'rendu' ? 'Rendu aujourd’hui' : 'Aujourd’hui', 'La différence, au prorata'], ['Ensuite', `${euros(o.prix[periode])} ${par(periode)}`], ['Engagement', 'Aucun, résiliable à tout moment']]
     : [['Dû aujourd’hui', euros(o.prix[periode]), true], ['Prochaine échéance', dateLongue(echeance(Date.now(), periode))], ['Engagement', 'Aucun, résiliable à tout moment']];
 
   const revenir = (classe: string) => (
@@ -326,7 +349,7 @@ function Recapitulatif({ plan, periode, setPeriode, abonnement, grand, id, mois,
             : changement ? titre : <>Payer avec Creem<Icone nom="ui-ouvrir" taille={15} className="shrink-0" /></>}
       </button>
       <p className="adm-offres-note">
-        {changement ? 'Prix TTC. Creem facture ou rembourse la différence au prorata, sur ta carte enregistrée.' : 'Prix TTC. Creem encaisse, envoie la facture et gère la TVA.'}
+        {changement ? `Prix TTC. Creem ${sens === 'rendu' ? 'rembourse' : sens === 'facture' ? 'facture' : 'facture ou rembourse'} la différence au prorata, sur ta carte enregistrée.` : 'Prix TTC. Creem encaisse, envoie la facture et gère la TVA.'}
         {' '}Voir les <a href="/legal/cgu" target="_blank" rel="noopener">conditions d’utilisation</a>.
       </p>
       {erreur && <p role="alert" className="text-[13.5px] text-red-300">{erreur}</p>}
@@ -344,9 +367,9 @@ function Recapitulatif({ plan, periode, setPeriode, abonnement, grand, id, mois,
     </div>
   );
   return (
-    <div className="adm-recap" data-apercu={apercu ? '' : undefined} aria-labelledby={`${id}-recap`}>
+    <div className="adm-recap" data-apercu={vue ? '' : undefined} data-seul={vue ? undefined : ''} aria-labelledby={`${id}-recap`}>
       <div className="adm-recap-corps">{corps}<div className="mt-1">{paiement}</div></div>
-      {apercu ? (
+      {vue ? (
         <aside className="adm-recap-apercu" aria-label={`Ta page avec ${o.nom}`}>
           <div className="flex items-center justify-between gap-3">
             <p className="text-[12px] font-medium text-[#5f5f5a]">Ta page avec {o.nom}</p>
@@ -355,11 +378,98 @@ function Recapitulatif({ plan, periode, setPeriode, abonnement, grand, id, mois,
           {/* La vraie page, rendue à 390 px puis réduite : sans la mention, avec ce que l'offre ouvre. On la regarde, on n'y touche pas. */}
           <div className="adm-recap-cadre" inert>
             <div className="adm-apercu" style={{ width: 390, height: 880, transform: 'scale(0.6)', transformOrigin: '0 0' }}>
-              <PageLiens page={apercu(plan)} apercu />
+              <PageLiens page={vue(plan)} apercu />
             </div>
           </div>
         </aside>
       ) : <button type="button" onClick={fermer} className={`${classeBouton.icone} absolute right-3 top-3`} aria-label="Fermer"><Icone nom="ui-fermer" taille={18} /></button>}
+    </div>
+  );
+}
+
+/**
+ * Repasser en Gratuit, sans quitter Hopla : l'offre court jusqu'au bout de ce
+ * qui est payé, puis plus rien n'est prélevé. Ce qui s'arrête est dit avant le
+ * geste, et que rien n'est effacé. Si Creem refuse, son portail prend le relais
+ * (Creem y résilie tout de suite ; Hopla garde l'offre jusqu'à la fin payée).
+ */
+function RepasserGratuit({ abonnement, grand, id, retour, fermer, resilier, ouvrirPortail }: {
+  abonnement: EtatAbonnement; grand: boolean; id: string; retour: () => void; fermer: () => void;
+  resilier: () => Promise<void>; ouvrirPortail?: () => Promise<string>;
+}) {
+  const [envoi, setEnvoi] = useState<'' | 'resiliation' | 'portail'>('');
+  const [erreur, setErreur] = useState('');
+  const nom = OFFRES[abonnement.plan].nom;
+  const fin = abonnement.finPeriode;
+  const pertes = avantagesEntre('gratuit', abonnement.plan);
+
+  async function confirmer() {
+    setEnvoi('resiliation');
+    setErreur('');
+    try { await resilier(); vibrer(8); fermer(); return; }
+    catch (error) { setErreur((error as Error).message || 'Creem ne répond pas. Réessaie dans un instant.'); }
+    setEnvoi('');
+  }
+  async function versPortail() {
+    if (!ouvrirPortail) return;
+    setEnvoi('portail');
+    try { location.href = await ouvrirPortail(); return; }
+    catch (error) { setErreur((error as Error).message || 'Le portail ne répond pas. Réessaie dans un instant.'); }
+    setEnvoi('');
+  }
+
+  const revenir = (classe: string) => (
+    <button type="button" onClick={retour} className={`adm-fil-retour ${classe}`}><Icone nom="ui-chevron" taille={16} className="rotate-90" />Les offres</button>
+  );
+  const corps = (
+    <>
+      {grand && revenir('-ml-2 self-start')}
+      <h2 id={`${id}-recap`} tabIndex={-1} className="adm-recap-titre">Repasser en Gratuit</h2>
+      <dl className="adm-recap-lignes">
+        <div><dt>Ton offre {nom}</dt><dd data-fort>{fin ? `Jusqu’au ${dateLongue(fin)}` : 'Jusqu’à la fin de la période payée'}</dd></div>
+        <div><dt>Ensuite</dt><dd>Gratuit, plus aucun prélèvement</dd></div>
+      </dl>
+      {pertes.length > 0 && (
+        <div className="flex flex-col gap-2.5">
+          <h3 className="adm-recap-sous-titre">{fin ? `Ce qui s’arrête le ${dateCourte(fin)}` : 'Ce qui s’arrête ensuite'}</h3>
+          <ul className="adm-offre-liste adm-recap-liste" data-perte>
+            {pertes.map(a => <li key={a}>{a}</li>)}
+          </ul>
+        </div>
+      )}
+      <p className="adm-recap-periode-detail">Rien n’est effacé : reprendre une offre remet tout en place.</p>
+    </>
+  );
+  const geste = (
+    <div className="flex flex-col gap-2.5">
+      <button type="button" onClick={confirmer} disabled={!!envoi} className={`${classeBouton.principal} w-full`}>
+        {envoi === 'resiliation' ? 'Résiliation…' : 'Résilier mon abonnement'}
+      </button>
+      <p className="adm-offres-note">Sans frais. Tes factures restent chez Creem.</p>
+      {erreur && <p role="alert" className="text-[13.5px] text-red-300">{erreur}</p>}
+      {/* Creem refuse : son portail résilie aussi, d'un lien à usage unique. */}
+      {erreur && ouvrirPortail && (
+        <button type="button" onClick={versPortail} disabled={!!envoi} className={`${classeBouton.secondaire} w-full`}>
+          {envoi === 'portail' ? 'Ouverture…' : <>Résilier chez Creem<Icone nom="ui-ouvrir" taille={15} className="shrink-0" /></>}
+        </button>
+      )}
+    </div>
+  );
+
+  if (!grand) return (
+    <div className="adm-offres" aria-labelledby={`${id}-recap`}>
+      <header className="adm-offres-tete">
+        {revenir('-ml-2')}
+        <button type="button" onClick={fermer} className={`${classeBouton.icone} ml-auto`} aria-label="Fermer"><Icone nom="ui-fermer" taille={18} /></button>
+      </header>
+      <div className="adm-offres-corps"><div className="adm-recap-corps">{corps}</div></div>
+      <footer className="adm-offres-pied">{geste}</footer>
+    </div>
+  );
+  return (
+    <div className="adm-recap" data-seul="" aria-labelledby={`${id}-recap`}>
+      <div className="adm-recap-corps">{corps}<div className="mt-1">{geste}</div></div>
+      <button type="button" onClick={fermer} className={`${classeBouton.icone} absolute right-3 top-3`} aria-label="Fermer"><Icone nom="ui-fermer" taille={18} /></button>
     </div>
   );
 }
@@ -372,11 +482,11 @@ const PICTOS: { avantage: string; picto: string }[] = [
   { avantage: 'Tes couleurs', picto: 'pinceau' },
   { avantage: 'Tes liens programmés à l’avance', picto: 'agenda' },
   { avantage: 'Les avis de tes clients', picto: 'etoile' },
-  { avantage: 'Analytics détaillées sur 30 jours', picto: 'courbe' },
+  { avantage: 'Tes stats sur 30 jours', picto: 'courbe' },
   { avantage: 'Ta page selon l’heure', picto: 'horloge' },
   { avantage: 'Les drops : un code, des places comptées', picto: 'cadenas' },
   { avantage: 'Ta liste e-mail, vers Brevo ou Mailchimp', picto: 'courrier' },
-  { avantage: 'Analytics sur un an', picto: 'courbe' },
+  { avantage: 'Tes stats sur un an', picto: 'courbe' },
   { avantage: 'Ton propre nom de domaine', picto: 'globe' },
   { avantage: 'Jusqu’à trois pages', picto: 'document' },
 ];
@@ -392,6 +502,9 @@ export function RetourPaiement({ achat, etape, onFermer, action }: { achat: Acha
   const id = useId();
   const nom = OFFRES[achat.plan].nom;
   const meme = achat.avant === achat.plan;
+  // Un abonné qui change d'offre ne paie pas sur une page Creem : la différence est facturée, ou rendue s'il descend.
+  const changement = !!achat.avant && achat.avant !== 'gratuit';
+  const sens = changement && achat.avant && achat.periode ? sensDuChangement({ plan: achat.avant, periode: achat.periodeAvant ?? null }, { plan: achat.plan, periode: achat.periode }) : null;
   const toutes = etape !== 'fait' || meme ? [] : achat.avant ? (rang(achat.plan) > rang(achat.avant) ? avantagesEntre(achat.avant, achat.plan) : []) : OFFRES[achat.plan].avantages;
   // Ce qu'on était venu chercher passe en tête (« Tes couleurs »), le reste dans l'ordre de l'offre.
   const voulu = achat.pour ? FONCTIONS_EN_MOTS[achat.pour].avantage : '';
@@ -411,12 +524,12 @@ export function RetourPaiement({ achat, etape, onFermer, action }: { achat: Acha
             <h2 id={id} className="adm-recap-titre">{titre}</h2>
             {etape === 'fait' ? (
               <ol className="adm-retour-etapes" aria-label="Étapes">
-                <li><Icone nom="ui-ok" taille={16} />Paiement reçu</li>
+                <li><Icone nom="ui-ok" taille={16} />{changement ? 'Changement confirmé' : 'Paiement reçu'}</li>
                 <li><Icone nom="ui-ok" taille={16} />Offre activée</li>
               </ol>
             ) : etape === 'attente' ? (
-              <p className="adm-retour-texte">Creem ne nous a pas encore confirmé ton paiement. Ton offre s’activera d’elle-même dès que ce sera fait : tu peux fermer cette fenêtre. Si rien n’a changé dans une heure, <a href={`mailto:${CONTACT_LEGAL}?subject=${encodeURIComponent(`Hopla : mon offre ${nom}`)}`}>écris-nous</a>.</p>
-            ) : <p className="adm-retour-texte">Creem nous confirme ton paiement. Ça prend quelques secondes.</p>}
+              <p className="adm-retour-texte">Creem ne nous a pas encore confirmé {changement ? 'le changement' : 'ton paiement'}. Ton offre s’activera d’elle-même dès que ce sera fait : tu peux fermer cette fenêtre. Si rien n’a changé dans une heure, <a href={`mailto:${CONTACT_LEGAL}?subject=${encodeURIComponent(`Hopla : mon offre ${nom}`)}`}>écris-nous</a>.</p>
+            ) : <p className="adm-retour-texte">Creem nous confirme {changement ? 'le changement' : 'ton paiement'}. Ça prend quelques secondes.</p>}
           </div>
           {ouvertes.length > 0 && (
             <div className="flex flex-col gap-2">
@@ -437,7 +550,14 @@ export function RetourPaiement({ achat, etape, onFermer, action }: { achat: Acha
                 </>
               ) : <button type="button" onClick={() => fermer()} className={etape === 'fait' ? classeBouton.principal : classeBouton.secondaire}>Fermer</button>}
             </div>
-            {etape === 'fait' && <p className="adm-offres-note">Ta facture arrive par e-mail, envoyée par Creem.</p>}
+            {etape === 'fait' && (
+              <p className="adm-offres-note">
+                {!changement ? 'Ta facture arrive par e-mail, envoyée par Creem.'
+                  : sens === 'rendu' ? 'Creem te rend la différence au prorata, sur ta carte.'
+                    : sens === 'facture' ? 'Creem facture la différence au prorata ; ta facture arrive par e-mail.'
+                      : 'Creem facture ou rend la différence au prorata, sur ta carte.'}
+              </p>
+            )}
           </div>
         </div>
       )}

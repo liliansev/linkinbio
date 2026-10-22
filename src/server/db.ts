@@ -152,8 +152,10 @@ export function purger(maintenant = Date.now(), d = base()) {
   d.prepare('DELETE FROM acces WHERE ts < ?').run(maintenant - CONSERVATION.statistiquesJours * 86_400_000);
   d.prepare('DELETE FROM attente WHERE ts < ?').run(maintenant - CONSERVATION.attenteJours * 86_400_000);
   // Une page où personne n'est jamais entré (aucun lien de connexion utilisé) libère son nom et son adresse.
-  // Jamais tant qu'un lien envoyé marche encore, qu'elle a des liens, un client Creem, un signalement ouvert, ou qu'elle est suspendue.
-  const oubliees = d.prepare(`SELECT id FROM comptes c WHERE id != ? AND connexion IS NULL AND statut = 'actif' AND creem_client = '' AND cree < ?
+  // Jamais tant qu'un lien envoyé marche encore, qu'elle a des liens, un client ou un abonnement Creem, un signalement ouvert,
+  // ou qu'elle est suspendue. Prendre une offre demande d'être entré : la purge ne touche donc jamais un compte qui paie,
+  // et n'a aucun abonnement à résilier (voir `suppression.ts`).
+  const oubliees = d.prepare(`SELECT id FROM comptes c WHERE id != ? AND connexion IS NULL AND statut = 'actif' AND creem_client = '' AND creem_abonnement = '' AND cree < ?
     AND NOT EXISTS (SELECT 1 FROM jetons j WHERE j.compte = c.id AND j.expire > ?)
     AND NOT EXISTS (SELECT 1 FROM blocs b WHERE b.compte = c.id)
     AND NOT EXISTS (SELECT 1 FROM signalements s WHERE s.compte = c.id AND s.statut = 'ouvert')`)
@@ -210,7 +212,7 @@ export function changerStatut(id: string, statut: Compte['statut']) {
   if (statut === 'suspendu') base().prepare('DELETE FROM jetons WHERE compte = ?').run(id);
 }
 
-/** Supprime un compte et tout ce qu'il possède. */
+/** Supprime un compte et tout ce qu'il possède. Ne touche pas à Creem : un abonnement se résilie avant (voir `suppression.ts`). */
 export function supprimerCompte(id: string, d = base()) {
   if (id === PRINCIPAL) throw new Error('Le compte principal ne se supprime pas.');
   d.exec('BEGIN');

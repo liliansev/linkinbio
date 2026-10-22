@@ -109,8 +109,16 @@ export function OngletComptes({ api, avatar }: { api: ApiComptes; avatar?: strin
       { nom: 'Supprimer…', icone: 'ui-corbeille', danger: true, action: () => setDecision({
         titre: `Supprimer ${c.pseudo}`, label: 'Motif de la suppression (facultatif)', requis: false, bouton: 'Supprimer définitivement', danger: true,
         aide: 'Laisse vide si la personne l’a demandé. Sinon, le motif lui est envoyé par e-mail.',
-        avertissement: 'Sa page, ses liens, ses images et ses statistiques seront effacés. Rien ne se récupère.',
-        valider: m => agir(async () => { await api.supprimer(c.id, m); return { ok: true, message: `${c.pseudo} est supprimé.` }; }),
+        // Un abonnement en cours est résilié d'abord, tout de suite : la phrase le dit à côté de ce qui s'efface.
+        avertissement: c.plan === 'gratuit'
+          ? 'Sa page, ses liens, ses images et ses statistiques seront effacés. Rien ne se récupère.'
+          : `Sa page, ses liens, ses images et ses statistiques seront effacés, et son abonnement ${OFFRES[c.plan].nom} résilié tout de suite chez Creem, sans remboursement automatique. Rien ne se récupère.`,
+        valider: m => agir(async () => {
+          const r = await api.supprimer(c.id, m);
+          // Creem n'a pas confirmé deux fois de suite : le compte est parti, l'abonnement reste à résilier à la main.
+          if (r === 'a-la-main') return { ok: false, message: `${c.pseudo} est supprimé, mais Creem n’a pas confirmé la résiliation : résilie son abonnement à la main, les détails sont dans ta boîte mail.` };
+          return { ok: true, message: r === 'faite' ? `${c.pseudo} est supprimé, son abonnement résilié chez Creem.` : `${c.pseudo} est supprimé.` };
+        }),
       }) },
     ];
   };
@@ -457,7 +465,9 @@ function Signalements({ liste, vide, recherche, decider, api, agir }: {
 
 /**
  * Les offres dans Creem : pour chaque offre et chaque période, le produit qui
- * la vend. « Créer les offres dans Creem » fabrique ceux qui manquent, au prix
+ * la vend, relu dans Creem à l'ouverture de l'onglet. Un prix changé dans Creem
+ * y est repris ; s'il diffère de celui de `OFFRES`, la ligne dit le prix de
+ * Creem. « Créer les offres dans Creem » fabrique ceux qui manquent, au prix
  * de `OFFRES` ; un prix changé dans le code donne un nouveau produit, et
  * l'ancien reste en place pour les abonnés qui l'ont. L'encart ne se montre
  * que s'il reste un produit à créer (ou juste après la création, pour le dire).
@@ -491,7 +501,7 @@ function OffresCreem({ api }: { api: ApiComptes }) {
           <li key={`${o.plan}-${o.periode}`} className="flex min-h-11 items-center gap-3 py-2 bureau:min-h-9">
             <span className="min-w-0 flex-1 text-[14px]">{OFFRES[o.plan].nom} {o.periode === 'an' ? 'annuel' : 'mensuel'}</span>
             <span className="text-[13.5px] tabular-nums text-white/60">{euros(o.prix)}</span>
-            <span className={`w-24 text-right text-[13px] ${o.produit ? 'text-white' : 'text-white/60'}`}>{o.produit ? 'En vente' : o.enVente ? 'À créer' : 'Plus tard'}</span>
+            <span className={`w-32 text-right text-[13px] ${o.produit ? 'text-white' : 'text-white/60'}`}>{o.produit ? 'En vente' : o.prixCreem !== null ? `${euros(o.prixCreem)} dans Creem` : o.enVente ? 'À créer' : 'Plus tard'}</span>
           </li>
         ))}
       </ul>

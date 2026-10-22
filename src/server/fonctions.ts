@@ -5,10 +5,11 @@ import { FOURNISSEURS_LISTE } from '../lib/types.ts';
 import * as liste from './liste.ts';
 import { planifierResumes } from './resume.ts';
 import { VERSION_CGU } from '../lib/legal.ts';
-import { ORIGINE_ADMIN, ORIGINE_PUBLIQUE, PRINCIPAL, TYPES_PRINCIPAL } from '../lib/types.ts';
+import { ORIGINE_ADMIN, ORIGINE_PUBLIQUE, PRINCIPAL, TYPES_PRINCIPAL, cheminPage } from '../lib/types.ts';
 import { masquerAcces } from '../lib/acces.ts';
 import { composerMoment } from '../lib/moments.ts';
-import { composerAudience, provenance } from '../lib/provenance.ts';
+import { audienceDeLApp, composerAudience, provenance } from '../lib/provenance.ts';
+import { lienDeSuite, sortieDuNavigateur, suiteRecente } from '../lib/sortie.ts';
 import { adresse, email, pseudo, validerBloc, validerReglages } from '../lib/valider.ts';
 import { apercuSite as lireApercu } from './apercu.ts';
 import * as db from './db.ts';
@@ -16,6 +17,7 @@ import { MESSAGE_ROBOT, hotesTurnstile, verifierTurnstile } from './turnstile.ts
 import type { ActionTurnstile } from '../lib/turnstile.ts';
 import { COOKIE_SESSION, DUREE_SESSION, adresseAdmin, compteDeSession, demanderConnexion, fermerSession, inviter, ouvrirSession } from './auth.ts';
 import { changerStatutMotive, signaler, supprimerMotive, traiter } from './moderation.ts';
+import { supprimerAvecAbonnement } from './suppression.ts';
 import { corrigerAdresse as corriger, creerHopla, inscriptionLibre, inviterReservation, renommerPage as renommer, renvoyerInscription, reserverNom as reserver, verifierNom as verifier } from './attente.ts';
 import * as creem from './creem.ts';
 import { droits, joursLisibles, verifierDates } from './droits.ts';
@@ -32,6 +34,8 @@ import type { Periode, PlanPayant } from '../lib/abonnement.ts';
 
 // Le résumé de la semaine part le lundi matin (voir resume.ts).
 planifierResumes();
+// Les prix des produits sont relus dans Creem au démarrage, puis toutes les heures (voir creem.ts).
+creem.planifierRelecture();
 
 const enProduction = () => process.env.NODE_ENV === 'production';
 /** Les pages sur hopla.page, le back office sur app.hopla.page ; en dev, tout sur l'adresse de la requête. */
@@ -89,24 +93,29 @@ function reglagesPourCompte(compte: string, r: Reglages): Reglages {
 /** La page de Lilian sans pseudo, celle d'un autre compte avec. Null si elle n'existe pas ou est suspendue. */
 export const lirePagePublique = createServerFn({ method: 'GET' })
   .validator((data: unknown) => {
-    const o = (typeof data === 'string' ? { pseudo: data } : data ?? {}) as { pseudo?: unknown; s?: unknown };
+    const o = (typeof data === 'string' ? { pseudo: data } : data ?? {}) as { pseudo?: unknown; s?: unknown; suite?: unknown };
     const court = (v: unknown, n: number) => (typeof v === 'string' ? v.slice(0, n) : '');
-    return { pseudo: court(o.pseudo, 40).toLowerCase(), s: court(o.s, 40) };
+    return { pseudo: court(o.pseudo, 40).toLowerCase(), s: court(o.s, 40), suite: typeof o.suite === 'number' ? o.suite : 0 };
   })
   .handler(async ({ data }): Promise<PagePublique | null> => {
     const compte = data.pseudo ? db.compteParPseudo(data.pseudo) : db.compteParId(PRINCIPAL);
     if (!compte || compte.statut !== 'actif') return null;
     const maintenant = Date.now();
+    const ua = getRequestHeader('user-agent') ?? '';
     // Ce que l'offre du compte ne comprend pas s'efface avant tout le reste.
     const { reglages, blocs: permis } = selonDroits(reglagesPourCompte(compte.id, db.lireReglages(compte.id)), pourCompte(compte.id, db.lireBlocs(compte.id)), droits(compte, process.env, maintenant));
     // Le référent d'une page qui se recharge elle-même (hopla.page) ne dit rien de la provenance.
-    const blocs = composerAudience(composerMoment(permis, maintenant), provenance({ s: data.s, ua: getRequestHeader('user-agent') ?? '', referent: getRequestHeader('referer') ?? '' }));
+    const blocs = composerAudience(composerMoment(permis, maintenant), provenance({ s: data.s, ua, referent: getRequestHeader('referer') ?? '' }));
     const prises = db.placesParBloc(compte.id);
+    const proprietaire = { pseudo: compte.pseudo, principal: compte.id === PRINCIPAL };
+    // Dans le navigateur intégré de LinkedIn, d'Instagram…, la feuille qui propose Safari ou Chrome, sauf juste après elle (`suite`).
+    const sortie = reglages.ouvrirNavigateur && !suiteRecente(data.suite, maintenant) ? sortieDuNavigateur(lienDeSuite(`${origines().page}${cheminPage(proprietaire)}`, data.s || audienceDeLApp(ua), maintenant), ua) : null;
     return {
       reglages,
       blocs: masquerAcces(blocs, id => prises[id] ?? 0),
-      compte: { pseudo: compte.pseudo, principal: compte.id === PRINCIPAL, plan: db.abonnement(compte, maintenant).plan },
+      compte: { ...proprietaire, plan: db.abonnement(compte, maintenant).plan },
       maintenant,
+      ...(sortie ? { sortie } : {}),
     };
   });
 
@@ -165,16 +174,24 @@ export const accepterCgu = createServerFn({ method: 'POST' }).middleware([sessio
   return { ok: true };
 });
 
-/** Le droit à l'effacement, en libre-service : il faut retaper son pseudo. */
+/**
+ * Le droit à l'effacement, en libre-service : il faut retaper son pseudo. Un abonnement en cours est résilié
+ * avant, tout de suite (voir `suppression.ts`) : si Creem ne répond pas, rien n'est supprimé et on le dit ; au
+ * deuxième échec, le compte part quand même et l'abonnement est résilié à la main.
+ */
 export const supprimerMonCompte = createServerFn({ method: 'POST' })
   .middleware([sessionBrute])
   .validator((data: unknown) => String(data ?? '').trim().toLowerCase().slice(0, 40))
-  .handler(async ({ data, context }) => {
+  .handler(async ({ data, context }): Promise<{ ok: boolean; message: string; aLaMain?: boolean }> => {
     if (context.compte === PRINCIPAL) return { ok: false, message: 'Le compte principal ne se supprime pas.' };
     const compte = db.compteParId(context.compte);
     if (!compte || data !== compte.pseudo) return { ok: false, message: 'Retape ton pseudo exactement pour confirmer.' };
-    db.supprimerCompte(compte.id);
+    const issue = await supprimerAvecAbonnement(process.env, fetch, compte);
+    if (!issue.ok) return { ok: false, message: 'Creem n’a pas pu résilier ton abonnement, alors rien n’est supprimé pour l’instant. Réessaie dans un instant.' };
     deleteCookie(COOKIE_SESSION, cookieSession());
+    if (issue.resiliation === 'a-la-main') {
+      return { ok: true, aLaMain: true, message: 'Ton compte est supprimé. Creem n’a pas confirmé la résiliation de ton abonnement : on la fait à la main, et un prélèvement qui partirait d’ici là te serait remboursé.' };
+    }
     return { ok: true, message: 'Ton compte est supprimé.' };
   });
 
@@ -228,12 +245,14 @@ export const envoyerImage = createServerFn({ method: 'POST' })
 export const apercuSite = createServerFn({ method: 'POST' })
   .middleware([session])
   .validator((data: unknown) => {
-    const url = adresse(String(data ?? ''));
+    // Une adresse seule (les pages déjà ouvertes avant la mise à jour), ou l'adresse et l'envie d'une image.
+    const objet = data && typeof data === 'object' ? data as { url?: unknown; image?: unknown } : { url: data, image: true };
+    const url = adresse(String(objet.url ?? ''));
     if (!url) throw new Error('Adresse refusée.');
-    return url;
+    return { url, image: objet.image !== false };
   })
   .handler(async ({ data }) => {
-    try { return await lireApercu(data); }
+    try { return await lireApercu(data.url, { image: data.image }); }
     catch { throw new Error('Impossible de lire ce site.'); }
   });
 
@@ -288,7 +307,7 @@ export const resynchroniser = createServerFn({ method: 'POST' })
     return { envoyes, erreurs };
   });
 
-/* ---- Abonnement Pro (Creem) ---- */
+/* ---- Les offres payantes (Creem) ---- */
 
 export const ouvrirPaiement = createServerFn({ method: 'POST' })
   .middleware([session])
@@ -302,10 +321,21 @@ export const ouvrirPortail = createServerFn({ method: 'POST' })
   .middleware([session])
   .handler(async ({ context }) => creem.ouvrirPortail(process.env, fetch, db.compteParId(context.compte)!));
 
-/** Les offres dans Creem, pour le compte principal : l'état, et la création des produits qui manquent. */
+/** Repasser en Gratuit : l'abonnement est résilié pour la fin de la période payée. L'abonnement tel qu'il est ensuite. */
+export const resilierAbonnement = createServerFn({ method: 'POST' })
+  .middleware([session])
+  .handler(async ({ context }) => {
+    await creem.resilierEnFinDePeriode(process.env, fetch, db.compteParId(context.compte)!);
+    return db.abonnement(db.compteParId(context.compte)!);
+  });
+
+/** Les offres dans Creem, pour le compte principal : l'état, relu dans Creem quand il répond, et la création des produits qui manquent. */
 export const lireOffresCreem = createServerFn({ method: 'GET' })
   .middleware([proprietaire])
-  .handler(async () => creem.etatOffres(process.env));
+  .handler(async () => creem.relireCatalogue(process.env, fetch).catch((error: Error) => {
+    if (creem.config(process.env)) console.error('[liens] Creem, relecture des produits', error.message);
+    return creem.etatOffres(process.env);
+  }));
 
 export const creerOffresCreem = createServerFn({ method: 'POST' })
   .middleware([proprietaire])
@@ -430,7 +460,7 @@ export const supprimerCompte = createServerFn({ method: 'POST' })
     const o = (data ?? {}) as { id?: unknown; motif?: unknown };
     return { id: String(o.id ?? '').slice(0, 40), motif: motif(o.motif) };
   })
-  .handler(async ({ data }) => { await supprimerMotive(process.env, fetch, data.id, data.motif); return { ok: true }; });
+  .handler(async ({ data }) => supprimerMotive(process.env, fetch, data.id, data.motif));
 
 /* ---- Signalements ---- */
 

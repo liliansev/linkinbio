@@ -505,27 +505,48 @@ test('offres : la page de paiement, le changement d’offre et le portail passen
   assert.deepEqual(appels.at(-1)!.corps, { product_id: 'prod_mois', update_behavior: 'proration-charge-immediately' });
   db.appliquerAbonnement(noa.id, { client: 'cust_9', abonnement: 'sub_9', statut: 'active', finPeriode: null, maj: 2, produit: 'prod_mois' });
   await assert.rejects(creem.ouvrirPaiement(env, fetchFaux, db.compteParId(noa.id)!, 'pro', 'mois', O.admin), /déjà ton offre/);
+  // Résilié, l'abonnement ne change plus d'offre : rien ne part chez Creem, on en reprend une à la fin de la période.
+  const avant = appels.length;
+  db.appliquerAbonnement(noa.id, { client: 'cust_9', abonnement: 'sub_9', statut: 'scheduled_cancel', finPeriode: Date.now() + 86_400_000, maj: 3, produit: 'prod_mois' });
+  await assert.rejects(creem.ouvrirPaiement(env, fetchFaux, db.compteParId(noa.id)!, 'pro', 'an', O.admin), /résiliée/);
+  assert.equal(appels.length, avant);
 });
+
+/** Une boutique Creem pour les tests : ses produits se relisent, se listent et se créent comme par l'API. */
+function boutiqueCreem(produits: Record<string, { price: number; billing_period: string; name?: string; status?: string; billing_type?: string }>) {
+  const appels: { chemin: string; methode: string; cle: string | null; corps: any }[] = [];
+  let n = 0;
+  const decrire = (id: string) => ({ id, name: '', currency: 'EUR', billing_type: 'recurring', status: 'active', ...produits[id] });
+  const fetchFaux = (async (url: string, init: RequestInit) => {
+    const chemin = new URL(url).pathname, methode = String(init.method);
+    const corps = init.body ? JSON.parse(String(init.body)) : null;
+    appels.push({ chemin, methode, cle: new Headers(init.headers).get('Idempotency-Key'), corps });
+    if (methode === 'POST' && chemin === '/v1/products') {
+      const id = `prod_neuf_${++n}`;
+      produits[id] = { price: corps.price, billing_period: corps.billing_period, name: corps.name };
+      return Response.json(decrire(id));
+    }
+    if (chemin === '/v1/products/search') return Response.json({ items: Object.keys(produits).map(decrire), pagination: { current_page: 1, next_page: null } });
+    const id = chemin.replace('/v1/products/', '');
+    return produits[id] ? Response.json(decrire(id)) : new Response('not found', { status: 404 });
+  }) as typeof fetch;
+  return { appels, fetchFaux, produits, crees: () => appels.filter(a => a.methode === 'POST') };
+}
 
 test('offres : « Créer les offres dans Creem » crée ce qui manque, une fois, et reprend l’ancien Pro au bon prix', async () => {
   const creem = await import('./creem.ts');
   const env = { CREEM_API_KEY: 'creem_test_x', CREEM_WEBHOOK_SECRET: 'whsec_test', CREEM_PRODUIT_MOIS: 'prod_mois', CREEM_PRODUIT_AN: 'prod_an', CREEM_TEST: '1' };
-  const appels: { url: string; methode: string; cle: string | null; corps: any }[] = [];
-  let n = 0;
-  const fetchFaux = (async (url: string, init: RequestInit) => {
-    appels.push({ url, methode: String(init.method), cle: new Headers(init.headers).get('Idempotency-Key'), corps: init.body ? JSON.parse(String(init.body)) : null });
-    // L'ancien Pro mensuel est déjà à 9 € ; l'ancien annuel était à 86,40 €.
-    if (url.endsWith('/v1/products/prod_mois')) return Response.json({ id: 'prod_mois', price: 900 });
-    if (url.endsWith('/v1/products/prod_an')) return Response.json({ id: 'prod_an', price: 8640 });
-    return Response.json({ id: `prod_neuf_${++n}` });
-  }) as typeof fetch;
+  // L'ancien Pro mensuel a été remis à 19 € dans Creem ; l'ancien annuel est resté à 86,40 €.
+  const { appels, fetchFaux, crees } = boutiqueCreem({
+    prod_mois: { price: 1900, billing_period: 'every-month', name: 'Hopla Pro mensuel' },
+    prod_an: { price: 8640, billing_period: 'every-year', name: 'Hopla Pro annuel' },
+  });
   const etat = await creem.creerOffres(env, fetchFaux);
-  const crees = appels.filter(a => a.methode === 'POST');
-  assert.deepEqual(crees.map(a => a.corps.name), ['Hopla Starter mensuel', 'Hopla Starter annuel', 'Hopla Pro annuel'], 'Premium n’est pas en vente : aucun produit');
-  assert.deepEqual(crees.map(a => a.corps.price), [400, 3600, 7900]);
-  assert.deepEqual(crees.map(a => a.cle), ['hopla-starter-mois-400', 'hopla-starter-an-3600', 'hopla-pro-an-7900']);
-  assert.equal(crees[0].corps.billing_period, 'every-month');
-  assert.equal(crees[0].corps.tax_mode, 'inclusive');
+  assert.deepEqual(crees().map(a => a.corps.name), ['Hopla Starter mensuel', 'Hopla Starter annuel', 'Hopla Pro annuel'], 'Premium n’est pas en vente : aucun produit');
+  assert.deepEqual(crees().map(a => a.corps.price), [900, 7900, 16900]);
+  assert.deepEqual(crees().map(a => a.cle), ['hopla-starter-mois-900', 'hopla-starter-an-7900', 'hopla-pro-an-16900']);
+  assert.equal(crees()[0].corps.billing_period, 'every-month');
+  assert.equal(crees()[0].corps.tax_mode, 'inclusive');
   assert.equal(etat.find(e => e.plan === 'pro' && e.periode === 'mois')?.produit, 'prod_mois', 'l’ancien Pro au bon prix est repris');
   assert.equal(etat.find(e => e.plan === 'pro' && e.periode === 'an')?.produit, 'prod_neuf_3');
   assert.equal(etat.find(e => e.plan === 'premium' && e.periode === 'an')?.produit, null);
@@ -533,14 +554,97 @@ test('offres : « Créer les offres dans Creem » crée ce qui manque, une fois,
   // L'ancien annuel reste connu : ses abonnés gardent le Pro, ses webhooks passent.
   assert.equal(db.produitConnu('prod_an')?.plan, 'pro');
   assert.equal(db.produitConnu('prod_an')?.actuel, false);
-  // Rejouer ne crée rien.
+  // Rejouer relit Creem, mais ne crée rien.
   const avant = appels.length;
   await creem.creerOffres(env, fetchFaux);
-  assert.equal(appels.length, avant);
+  assert.ok(appels.length > avant);
+  assert.equal(crees().length, 3);
   // Une clé sans le droit « Products » : le message dit quoi faire.
   db.ecrireCatalogue([]);
   const refuse = (async () => new Response('forbidden', { status: 403 })) as unknown as typeof fetch;
-  await assert.rejects(creem.creerOffres({ CREEM_API_KEY: 'k', CREEM_WEBHOOK_SECRET: 's' }, refuse), /Products/);
+  await assert.rejects(creem.creerOffres({ CREEM_API_KEY: 'k', CREEM_WEBHOOK_SECRET: 's' }, refuse), /droit de créer des produits/);
+  db.ecrireCatalogue([{ id: 'prod_x', plan: 'starter', periode: 'mois', prix: 900, actuel: true }]);
+  await assert.rejects(creem.relireCatalogue({ CREEM_API_KEY: 'k', CREEM_WEBHOOK_SECRET: 's' }, refuse), /droit de lire des produits/);
+});
+
+test('offres : un prix changé dans Creem est repris, sans rien créer en double', async () => {
+  const creem = await import('./creem.ts');
+  const env = { CREEM_API_KEY: 'creem_test_x', CREEM_WEBHOOK_SECRET: 'whsec_test', CREEM_PRODUIT_MOIS: 'prod_mois', CREEM_PRODUIT_AN: 'prod_an', CREEM_TEST: '1' };
+  // Le catalogue d'avant (Starter 4 € et 36 €, Pro 9 € et 79 €), et Creem tel que Lilian l'a ajusté le 21 octobre 2026.
+  db.ecrireCatalogue([
+    { id: 'prod_s_mois', plan: 'starter', periode: 'mois', prix: 400, actuel: true },
+    { id: 'prod_s_an', plan: 'starter', periode: 'an', prix: 3600, actuel: true },
+    { id: 'prod_mois', plan: 'pro', periode: 'mois', prix: 900, actuel: true },
+    { id: 'prod_an', plan: 'pro', periode: 'an', prix: 8640, actuel: false },
+    { id: 'prod_p_an', plan: 'pro', periode: 'an', prix: 7900, actuel: true },
+  ]);
+  const { fetchFaux, produits, crees } = boutiqueCreem({
+    prod_s_mois: { price: 900, billing_period: 'every-month' },
+    prod_s_an: { price: 7900, billing_period: 'every-year' },
+    prod_mois: { price: 1900, billing_period: 'every-month' },
+    prod_an: { price: 8640, billing_period: 'every-year' },
+    prod_p_an: { price: 16900, billing_period: 'every-year' },
+  });
+  // Tant que Hopla n'a pas relu Creem, rien n'est vendu à un prix qu'il n'affiche pas.
+  assert.deepEqual(creem.offresEnVente(env), []);
+  assert.equal(creem.etatOffres(env).find(e => e.plan === 'starter' && e.periode === 'mois')?.prixCreem, 4);
+  const etat = await creem.relireCatalogue(env, fetchFaux);
+  assert.equal(crees().length, 0, 'rien n’est créé ni changé chez Creem');
+  assert.deepEqual(creem.offresEnVente(env), ['starter', 'pro']);
+  assert.deepEqual(etat.filter(e => e.enVente).map(e => [e.plan, e.periode, e.produit, e.prixCreem]), [
+    ['starter', 'mois', 'prod_s_mois', null], ['starter', 'an', 'prod_s_an', null], ['pro', 'mois', 'prod_mois', null], ['pro', 'an', 'prod_p_an', null],
+  ]);
+  assert.equal(db.produitConnu('prod_s_mois')?.prix, 900);
+  // « Créer les offres dans Creem » n'a alors plus rien à créer.
+  await creem.creerOffres(env, fetchFaux);
+  assert.equal(crees().length, 0);
+
+  // Un prix que le code n'affiche pas : l'offre ne se vend plus, et l'onglet Comptes dit le prix de Creem.
+  produits.prod_p_an.price = 17900;
+  await creem.relireCatalogue(env, fetchFaux);
+  assert.deepEqual(creem.offresEnVente(env), ['starter']);
+  assert.equal(creem.etatOffres(env).find(e => e.plan === 'pro' && e.periode === 'an')?.prixCreem, 179);
+  produits.prod_p_an.price = 16900;
+
+  // Un produit archivé dans Creem ne se vend plus ; le créer à nouveau ne refait que lui.
+  produits.prod_s_an.status = 'archived';
+  await creem.relireCatalogue(env, fetchFaux);
+  assert.deepEqual(creem.offresEnVente(env), ['pro']);
+  assert.equal(db.produitConnu('prod_s_an')?.plan, 'starter', 'ses abonnés gardent Starter');
+  await creem.creerOffres(env, fetchFaux);
+  assert.deepEqual(crees().map(a => a.corps.name), ['Hopla Starter annuel']);
+  assert.deepEqual(creem.offresEnVente(env), ['starter', 'pro']);
+
+  // Creem injoignable : le catalogue reste tel qu'il était, l'erreur remonte.
+  const avant = db.lireCatalogue();
+  const panne = (async () => new Response('erreur', { status: 500 })) as unknown as typeof fetch;
+  await assert.rejects(creem.relireCatalogue(env, panne), /ne répond pas/);
+  assert.deepEqual(db.lireCatalogue(), avant);
+  await assert.rejects(creem.relireCatalogue({}, fetchFaux), /pas encore branché/);
+});
+
+test('offres : un produit fait à la main dans Creem, au nom et au prix de l’offre, est repris', async () => {
+  const creem = await import('./creem.ts');
+  const env = { CREEM_API_KEY: 'creem_test_x', CREEM_WEBHOOK_SECRET: 'whsec_test', CREEM_TEST: '1' };
+  db.ecrireCatalogue([{ id: 'prod_s_mois', plan: 'starter', periode: 'mois', prix: 400, actuel: true }]);
+  const { fetchFaux, crees } = boutiqueCreem({
+    prod_s_mois: { price: 400, billing_period: 'every-month', name: 'Hopla Starter mensuel' },
+    // La boutique vend aussi des formations, et parfois à un prix qui tombe juste : seuls les produits nommés Hopla comptent.
+    prod_n8n: { price: 900, billing_period: 'every-month', name: 'Formation n8n' },
+    prod_main: { price: 900, billing_period: 'every-month', name: 'Hopla Starter (mensuel)' },
+    prod_main_an: { price: 7900, billing_period: 'every-year', name: 'HOPLA starter annuel' },
+    prod_pro_vieux: { price: 1900, billing_period: 'every-month', name: 'Hopla Pro mensuel', status: 'archived' },
+    prod_premium: { price: 1900, billing_period: 'every-month', name: 'Hopla Premium mensuel' },
+  });
+  await creem.relireCatalogue(env, fetchFaux);
+  assert.equal(crees().length, 0);
+  assert.equal(creem.etatOffres(env).find(e => e.plan === 'starter' && e.periode === 'mois')?.produit, 'prod_main');
+  assert.equal(creem.etatOffres(env).find(e => e.plan === 'starter' && e.periode === 'an')?.produit, 'prod_main_an');
+  assert.equal(db.produitConnu('prod_s_mois')?.actuel, false, 'l’ancien produit reste connu, sans plus se vendre');
+  // Ni un produit archivé ni celui d'une autre offre ne passent pour Pro.
+  assert.equal(creem.etatOffres(env).find(e => e.plan === 'pro' && e.periode === 'mois')?.produit, null);
+  assert.equal(db.produitConnu('prod_n8n'), undefined);
+  assert.deepEqual(creem.offresEnVente(env), ['starter']);
 });
 
 test('statistiques : un navigateur intégré sans référent est rangé sous son app', () => {
@@ -897,4 +1001,147 @@ test('un nom mal tapé se change juste après l’inscription, tant que la page 
   await attente.reserverNom(O, enAttente, { nom: 'mila-atente', email: 'mila@exemple.fr' }, fetchFaux, t, '7.7.7.8');
   assert.equal((await attente.renommerPage(O, enAttente, { ancien: 'mila-atente', nouveau: 'mila-attente', email: 'mila@exemple.fr' }, fetchFaux, t + 1000, '7.7.7.9')).ok, true);
   assert.equal(db.reservationParEmail('mila@exemple.fr')?.pseudo, 'mila-attente');
+});
+
+/* ---- Supprimer un compte abonné, repasser en Gratuit ---- */
+
+const ENV_CREEM = { CREEM_API_KEY: 'creem_test_x', CREEM_WEBHOOK_SECRET: 'whsec_test', CREEM_PRODUIT_MOIS: 'prod_mois', CREEM_PRODUIT_AN: 'prod_an', CREEM_TEST: '1' };
+
+/** Un faux Creem (et un faux Resend) : `panne` fait échouer les prochains appels à Creem, `statut` change sa réponse. */
+function fauxCreem(reponse: (url: string) => object = () => ({ id: 'sub', status: 'canceled' })) {
+  const etat = { panne: 0, statut: 200, creem: [] as { url: string; corps: any }[], courriels: [] as any[] };
+  const fetchFaux = (async (url: string, init: RequestInit) => {
+    const corps = JSON.parse(String(init.body));
+    if (url.startsWith('https://api.resend.com')) { etat.courriels.push(corps); return new Response('{}'); }
+    etat.creem.push({ url, corps });
+    if (etat.panne > 0) { etat.panne--; return new Response('{"error":"down"}', { status: 503 }); }
+    return Response.json(reponse(url), { status: etat.statut });
+  }) as typeof fetch;
+  return { etat, fetchFaux };
+}
+
+test('supprimer un compte résilie son abonnement Creem tout de suite, avant d’effacer quoi que ce soit', async () => {
+  const { supprimerAvecAbonnement } = await import('./suppression.ts');
+  const { supprimerMotive } = await import('./moderation.ts');
+  const env = { ...ENV_CREEM, RESEND_API_KEY: 'cle', NODE_ENV: 'production', LIENS_ADMIN_EMAIL: 'lilian@exemple.fr' };
+  const { etat, fetchFaux } = fauxCreem();
+  const t = Date.parse('2026-11-02T10:00:00Z'), jour = 86_400_000;
+  const abonne = (pseudo: string, statut = 'active') => {
+    const c = db.creerCompte(`${pseudo}@exemple.fr`, pseudo);
+    db.appliquerAbonnement(c.id, { client: `cust_${pseudo}`, abonnement: `sub_${pseudo}`, statut, finPeriode: t + 20 * jour, maj: 1 });
+    return db.compteParId(c.id)!;
+  };
+
+  // Un abonné : Creem résilie tout de suite (sans remboursement automatique), puis le compte disparaît.
+  const ana = abonne('ana');
+  assert.deepEqual(await supprimerAvecAbonnement(env, fetchFaux, ana, t), { ok: true, resiliation: 'faite' });
+  assert.equal(etat.creem.length, 1);
+  assert.equal(etat.creem[0].url, 'https://test-api.creem.io/v1/subscriptions/sub_ana/cancel');
+  assert.deepEqual(etat.creem[0].corps, { mode: 'immediate' });
+  assert.equal(db.compteParId(ana.id), undefined);
+
+  // Sans abonnement, ou un abonnement déjà terminé chez Creem : rien à lui demander.
+  const sans = db.creerCompte('bob@exemple.fr', 'bob');
+  for (const c of [sans, abonne('fini', 'canceled'), abonne('expire', 'expired')]) {
+    assert.deepEqual(await supprimerAvecAbonnement(env, fetchFaux, db.compteParId(c.id)!, t), { ok: true, resiliation: 'aucune' });
+    assert.equal(db.compteParId(c.id), undefined);
+  }
+  assert.equal(etat.creem.length, 1);
+
+  // Creem ne connaît pas l'abonnement : rien à résilier, le compte part.
+  etat.statut = 404;
+  const inconnu = abonne('inconnu');
+  assert.deepEqual(await supprimerAvecAbonnement(env, fetchFaux, inconnu, t), { ok: true, resiliation: 'aucune' });
+  assert.equal(db.compteParId(inconnu.id), undefined);
+  etat.statut = 200;
+
+  // Creem en panne : au premier échec rien n'est supprimé ; au deuxième, dans la journée, le compte part quand même,
+  // et Lilian reçoit de quoi résilier à la main (le pseudo et les identifiants Creem, pas l'adresse e-mail).
+  const cleo = abonne('cleo');
+  etat.panne = 2;
+  assert.deepEqual(await supprimerAvecAbonnement(env, fetchFaux, cleo, t), { ok: false });
+  assert.ok(db.compteParId(cleo.id), 'rien n’est supprimé au premier échec');
+  assert.equal(etat.courriels.length, 0);
+  assert.deepEqual(await supprimerAvecAbonnement(env, fetchFaux, db.compteParId(cleo.id)!, t + 60_000), { ok: true, resiliation: 'a-la-main' });
+  assert.equal(db.compteParId(cleo.id), undefined);
+  assert.equal(etat.courriels.length, 1);
+  assert.deepEqual(etat.courriels[0].to, ['lilian@exemple.fr']);
+  assert.match(etat.courriels[0].subject, /résilier à la main : cleo/);
+  assert.match(etat.courriels[0].text, /sub_cleo/);
+  assert.match(etat.courriels[0].text, /cust_cleo/);
+  assert.match(etat.courriels[0].text, /22 novembre 2026/);
+  assert.doesNotMatch(etat.courriels[0].text, /cleo@exemple\.fr/);
+
+  // Un échec de plus d'un jour ne compte plus : on refuse de nouveau, puis Creem répond.
+  const dan = abonne('dan');
+  etat.panne = 2;
+  assert.equal((await supprimerAvecAbonnement(env, fetchFaux, dan, t)).ok, false);
+  assert.equal((await supprimerAvecAbonnement(env, fetchFaux, dan, t + 2 * jour)).ok, false);
+  assert.deepEqual(await supprimerAvecAbonnement(env, fetchFaux, dan, t + 2 * jour + 60_000), { ok: true, resiliation: 'faite' });
+
+  // Déjà résilié pour la fin de la période : plus rien ne sera prélevé, un refus de Creem ne retient rien.
+  const eve = abonne('eve', 'scheduled_cancel');
+  etat.panne = 1;
+  assert.deepEqual(await supprimerAvecAbonnement(env, fetchFaux, eve, t), { ok: true, resiliation: 'aucune' });
+  assert.equal(db.compteParId(eve.id), undefined);
+
+  // Depuis Comptes : même règle ; la personne apprend que son abonnement s'arrête avec la page.
+  etat.courriels.length = 0;
+  const fred = abonne('fred');
+  assert.equal(await supprimerMotive(env, fetchFaux, fred.id, 'Arnaque au faux concours.', t), 'faite');
+  assert.equal(etat.courriels.length, 1);
+  assert.deepEqual(etat.courriels[0].to, ['fred@exemple.fr']);
+  assert.match(etat.courriels[0].text, /Ton abonnement s’arrête avec : plus aucun paiement ne sera prélevé/);
+  const gus = abonne('gus');
+  etat.panne = 1;
+  await assert.rejects(supprimerMotive(env, fetchFaux, gus.id, '', t), /n’est pas supprimé/);
+  assert.ok(db.compteParId(gus.id));
+});
+
+test('la purge des pages jamais ouvertes ne touche pas un compte qui a un abonnement', () => {
+  const jour = 86_400_000, maintenant = Date.now(), ilYa = maintenant - 40 * jour;
+  const payeur = db.creerCompte('payeur@exemple.fr', 'payeur', ilYa);
+  // Un abonnement sans client connu (un webhook incomplet) : la purge le garde quand même.
+  db.appliquerAbonnement(payeur.id, { client: '', abonnement: 'sub_payeur', statut: 'active', finPeriode: null, maj: 1 });
+  db.purger(maintenant);
+  assert.ok(db.compteParId(payeur.id));
+});
+
+test('repasser en Gratuit : Creem résilie pour la fin de la période payée, l’offre court jusque-là', async () => {
+  const creem = await import('./creem.ts');
+  const t = Date.parse('2026-11-02T10:00:00Z'), jour = 86_400_000, fin = t + 20 * jour;
+  const { etat, fetchFaux } = fauxCreem(() => ({ id: 'sub_ines', status: 'scheduled_cancel', current_period_end_date: new Date(fin).toISOString(), customer: { id: 'cust_ines' } }));
+  const ines = db.creerCompte('ines@exemple.fr', 'ines');
+  await assert.rejects(creem.resilierEnFinDePeriode(ENV_CREEM, fetchFaux, ines, t), /Aucun abonnement/);
+  await assert.rejects(creem.resilierEnFinDePeriode({}, fetchFaux, ines, t), /pas encore branché/);
+  await assert.rejects(creem.resilierEnFinDePeriode(ENV_CREEM, fetchFaux, db.compteParId(P)!, t), /Aucun abonnement/);
+  assert.equal(etat.creem.length, 0);
+
+  db.appliquerAbonnement(ines.id, { client: 'cust_ines', abonnement: 'sub_ines', statut: 'active', finPeriode: fin, maj: t - jour, produit: 'prod_mois' });
+  await creem.resilierEnFinDePeriode(ENV_CREEM, fetchFaux, db.compteParId(ines.id)!, t);
+  assert.equal(etat.creem[0].url, 'https://test-api.creem.io/v1/subscriptions/sub_ines/cancel');
+  // `scheduled` toujours écrit : sans lui, Creem suivrait le réglage de la boutique, peut-être « tout de suite ».
+  assert.deepEqual(etat.creem[0].corps, { mode: 'scheduled', onExecute: 'cancel' });
+  const a = db.abonnement(db.compteParId(ines.id)!, t);
+  assert.deepEqual({ plan: a.plan, statut: a.statut, finPeriode: a.finPeriode, portail: a.portail }, { plan: 'pro', statut: 'scheduled_cancel', finPeriode: fin, portail: true });
+  assert.equal(db.abonnement(db.compteParId(ines.id)!, fin + 1).plan, 'gratuit', 'puis Gratuit, sans jours de grâce');
+  assert.equal(db.abonnement(db.compteParId(ines.id)!, fin + 1).portail, true, 'les factures restent accessibles');
+
+  // Un double toucher ne rappelle pas Creem.
+  await creem.resilierEnFinDePeriode(ENV_CREEM, fetchFaux, db.compteParId(ines.id)!, t + 1000);
+  assert.equal(etat.creem.length, 1);
+
+  // Creem refuse (clé sans le droit) : le message renvoie au portail, rien ne change.
+  const { createHmac } = await import('node:crypto');
+  const jo = db.creerCompte('jo@exemple.fr', 'jo');
+  db.appliquerAbonnement(jo.id, { client: 'cust_jo', abonnement: 'sub_jo', statut: 'active', finPeriode: fin, maj: 1, produit: 'prod_mois' });
+  etat.statut = 403;
+  await assert.rejects(creem.resilierEnFinDePeriode(ENV_CREEM, fetchFaux, db.compteParId(jo.id)!, t), /portail Creem/);
+  assert.equal(db.compteParId(jo.id)!.abonnement_statut, 'active');
+  etat.statut = 200;
+
+  // Le webhook de Creem dit la même chose, même si l'objet garde « active » jusqu'à la fin de la période.
+  const corps = JSON.stringify({ id: 'evt_sc', eventType: 'subscription.scheduled_cancel', created_at: t, object: { id: 'sub_jo', status: 'active', customer: { id: 'cust_jo' }, current_period_end_date: new Date(fin).toISOString() } });
+  assert.equal(creem.traiterWebhook(ENV_CREEM, corps, createHmac('sha256', ENV_CREEM.CREEM_WEBHOOK_SECRET).update(corps).digest('hex'), t).status, 200);
+  assert.equal(db.compteParId(jo.id)!.abonnement_statut, 'scheduled_cancel');
 });

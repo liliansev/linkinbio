@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { chiffre, ecart, graduation, parSemaine, reperes, totalDe, valeurDuJour } from './stats.ts';
+import { COULEURS_SOURCES, chiffre, ecart, graduation, parSemaine, reperes, totalDe, valeurDuJour } from './stats.ts';
+import { NOMS_AUDIENCES } from './provenance.ts';
+import { contraste } from './themes.ts';
 
 const s = { vues: 2877, visiteurs: 2129, clics: 1096, precedent: { vues: 4294, visiteurs: 3170, clics: 1660 } };
 
@@ -59,4 +61,15 @@ test('les dates sous la courbe : une par semaine sur 30 jours, le début de chaq
   assert.equal(r.length, 12);
   // Chaque repère tombe sur la semaine où un nouveau mois commence.
   assert.ok(r.every(i => semaines[i].fin!.slice(5, 7) !== semaines[i - 1].fin!.slice(5, 7)));
+});
+
+test('chaque réseau a sa couleur sous le nom que lui donnent les stats, et tout s’y lit', () => {
+  const noms: string[] = Object.values(NOMS_AUDIENCES);
+  for (const [nom, { picto, barre }] of Object.entries(COULEURS_SOURCES)) {
+    assert.ok(noms.includes(nom), `${nom} : un nom que les stats ne donnent jamais`);
+    // Le nom, à l'encre du back office ou de l'accueil, est écrit sur la barre.
+    for (const encre of ['#0a0a0a', '#20241f']) assert.ok(contraste(encre, barre) >= 4.5, `${nom} : nom sur la barre = ${contraste(encre, barre).toFixed(2)}`);
+    // Le logo est posé sur la barre, ou sur le blanc quand elle est plus courte que lui.
+    for (const fond of [barre, '#ffffff']) assert.ok(contraste(picto, fond) >= 3, `${nom} : logo sur ${fond} = ${contraste(picto, fond).toFixed(2)}`);
+  }
 });

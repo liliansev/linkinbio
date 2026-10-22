@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react';
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import type { Bloc, Stats } from '../lib/types.ts';
 import { sansSchema } from '../lib/types.ts';
 import { ActionEntete, BoutonCopier, Menu, classeBouton, useGrandEcran, vibrer } from './ui.tsx';
@@ -7,7 +7,7 @@ import type { ElementMenu } from './ui.tsx';
 import { Icone } from '../components/Icone.tsx';
 import { enUnePhrase } from '../lib/resume.ts';
 import type { Mesure, Point } from '../lib/stats.ts';
-import { MESURES, NOMS_MESURES, chiffre, ecart, graduation, parSemaine, reperes, totalDe, valeurDuJour } from '../lib/stats.ts';
+import { COULEURS_SOURCES, MESURES, NOMS_MESURES, chiffre, ecart, graduation, parSemaine, reperes, totalDe, valeurDuJour } from '../lib/stats.ts';
 import { OFFRES, PLANS_PAYANTS } from '../lib/abonnement.ts';
 import type { Fonction, PlanPayant } from '../lib/abonnement.ts';
 import { noterPartage } from './BienDemarrer.tsx';
@@ -19,8 +19,9 @@ import { TYPES } from './OngletLiens.tsx';
  * Stats (direction B, 20 octobre 2026) : une phrase qui dit l'essentiel, les
  * quatre chiffres clés en une rangée qui sert d'onglets à une grande courbe,
  * puis d'où viennent les clics et les visiteurs, en listes à barre pâle avec
- * les chiffres à droite. La période se choisit dans un petit menu, dans
- * l'en-tête au bureau, en tête de l'écran au téléphone.
+ * les chiffres à droite (un réseau y a son logo en couleur et sa barre teintée,
+ * seule couleur du back office hors des alertes). La période se choisit dans
+ * un petit menu, dans l'en-tête au bureau, en tête de l'écran au téléphone.
  */
 
 const PERIODES = [
@@ -250,7 +251,7 @@ const ICONES_SOURCES: Record<string, string> = {
 };
 const ICONES_APPAREILS: Record<string, string> = { Mobile: 'mobile', Tablette: 'mobile', Ordinateur: 'ordinateur' };
 
-type Ligne = { cle: string; nom: string; icone: string; valeur: number };
+type Ligne = { cle: string; nom: string; icone: string; valeur: number; couleur?: { picto: string; barre: string } };
 
 /**
  * Une répartition : le libellé sur une barre pâle à la mesure du premier, le
@@ -272,9 +273,9 @@ function Repartition({ titre, unite, lignes, total, vide = 'Pas encore de donné
         <ol className="flex flex-col gap-1">
           {vues.map(l => (
             <li key={l.cle}>
-              <span className="adm-repartition-nom">
+              <span className="adm-repartition-nom" style={l.couleur && { '--picto': l.couleur.picto, '--barre': l.couleur.barre } as CSSProperties}>
                 <span aria-hidden="true" className="adm-repartition-barre adm-barre origin-left" style={{ width: `${(l.valeur / max) * 100}%` }} />
-                <Icone nom={l.icone} taille={14} className="relative shrink-0 text-[#3d3d39]" />
+                <Icone nom={l.icone} taille={14} className="relative shrink-0" />
                 <span className="relative truncate">{l.nom}</span>
               </span>
               <span className="adm-repartition-valeur">{nombre(l.valeur)}<span className="sr-only"> {unite.toLowerCase()}</span></span>
@@ -416,7 +417,7 @@ function TableauStats({ charger, adresse, pseudo, joursMax = 365, onOffres, ouvr
     const bloc = blocs.find(x => x.id === b.id);
     return { cle: b.id, nom: b.titre, valeur: b.clics, icone: bloc?.icone || TYPES.find(t => t.type === bloc?.type)?.picto || 'bloc-lien' };
   });
-  const lignesSources: Ligne[] = (stats?.sources ?? []).map(s => ({ cle: s.nom, nom: s.nom, valeur: s.vues, icone: ICONES_SOURCES[s.nom] ?? 'site' }));
+  const lignesSources: Ligne[] = (stats?.sources ?? []).map(s => ({ cle: s.nom, nom: s.nom, valeur: s.vues, icone: ICONES_SOURCES[s.nom] ?? 'site', couleur: COULEURS_SOURCES[s.nom] }));
   const lignesAppareils: Ligne[] = (stats?.appareils ?? []).map(s => ({ cle: s.nom, nom: s.nom, valeur: s.vues, icone: ICONES_APPAREILS[s.nom] ?? 'ordinateur' }));
   const note = <p className="text-[12px] leading-snug text-[#5f5f5a]">Sans cookie : un visiteur compte une fois par jour, toi jamais.</p>;
 

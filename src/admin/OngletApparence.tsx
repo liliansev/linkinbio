@@ -5,7 +5,8 @@ import { ANIMATIONS, RESEAUX, SANS_COULEURS } from '../lib/types.ts';
 import { THEMES, themeDe, themeParId, variablesTheme } from '../lib/themes.ts';
 import type { Theme } from '../lib/themes.ts';
 import { Icone, NOMS_RESEAUX } from '../components/Icone.tsx';
-import { Carte, Champ, Interrupteur, NOMS_ANIMATIONS, Segments, choisirFichier, classeBouton, classeSaisie, flechesRadio, preparerImage, vibrer } from './ui.tsx';
+import { Carte, Champ, Interrupteur, NOMS_ANIMATIONS, Segments, choisirFichier, classeBouton, classeSaisie, flechesRadio, preparerImage, useFilFeuille, vibrer } from './ui.tsx';
+import { useCouche } from './couches.ts';
 import { pseudoReseau, urlReseau } from '../lib/demarrage.ts';
 import { adresseSaisie, pourquoiPasReseau } from '../lib/valider.ts';
 import { Etiquette, Reserve, usePermis, useVoirOffres } from './offre.tsx';
@@ -303,8 +304,11 @@ export function DesignTiroirs({ reglages, onChange, envoyerImage, principal, pie
       let el: HTMLElement | null = racine.current?.parentElement ?? null;
       while (el && !(el.scrollHeight > el.clientHeight && /auto|scroll/.test(getComputedStyle(el).overflowY))) el = el.parentElement;
       if (el) el.scrollTop = 0;
+      // Au bureau, le design est dans la page même : son haut revient sous les onglets collés s'il était passé dessous.
+      else if (racine.current && racine.current.getBoundingClientRect().top < (parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop) || 0)) racine.current.scrollIntoView({ block: 'start' });
     }
-    if (ouvert) { dernier.current = ouvert; retour.current?.focus({ preventScroll: true, focusVisible: false } as FocusOptions); }
+    // Dans la feuille du téléphone, la flèche est dans l'en-tête, posée juste après ce rendu.
+    if (ouvert) { dernier.current = ouvert; requestAnimationFrame(() => (retour.current ?? racine.current?.closest('.adm-feuille')?.querySelector<HTMLElement>('.adm-feuille-retour'))?.focus({ preventScroll: true, focusVisible: false } as FocusOptions)); }
     else if (dernier.current) document.getElementById(`design-${dernier.current}`)?.focus({ preventScroll: true });
   }, [ouvert]);
   const couleurs = usePermis('couleurs');
@@ -319,15 +323,23 @@ export function DesignTiroirs({ reglages, onChange, envoyerImage, principal, pie
     { id: 'bureau', nom: 'Sur ordinateur', icone: 'ordinateur', valeur: BUREAUX.find(x => x.id === reglages.bureau)?.nom ?? '' },
   ];
 
+  // Dans la feuille du téléphone, le nom du tiroir et sa flèche prennent l'en-tête, comme les réglages d'un bloc ; au bureau, la ligne de retour reste collée en haut.
+  const nomOuvert = lignes.find(l => l.id === ouvert)?.nom ?? '';
+  const dansFeuille = useFilFeuille(ouvert ? { titre: nomOuvert, label: 'Revenir au design', retour: () => setOuvert(null) } : null);
+  // Le retour du téléphone ramène à la liste des tiroirs avant de fermer le design.
+  useCouche(!!ouvert, () => { setOuvert(null); return true; });
+
   if (ouvert) return (
     <div ref={racine} className="flex flex-col gap-3">
-      {/* Le retour reste collé en haut de la feuille : on le retrouve après avoir fait défiler vingt thèmes. */}
-      <div className="sticky top-0 z-10 -mx-5 flex items-center bg-nuit px-4 pb-1">
-        <button ref={retour} type="button" onClick={() => { vibrer(4); setOuvert(null); }} aria-label={`${lignes.find(l => l.id === ouvert)?.nom ?? ''}, revenir au design`} className="flex min-h-11 items-center gap-1 rounded-xl pr-3 text-[14px] font-medium text-white/75 hover:text-white">
-          <Icone nom="ui-chevron" taille={18} className="rotate-90" /> {lignes.find(l => l.id === ouvert)?.nom}
-        </button>
-        {ouvert === 'couleurs' && couleurs && <span className="ml-auto pl-1"><Reinitialiser reglages={reglages} onChange={onChange} /></span>}
-      </div>
+      {/* Le retour reste collé en haut de la feuille (au bureau, sous les onglets) : on le retrouve après avoir fait défiler vingt thèmes. */}
+      {!dansFeuille ? (
+        <div className="adm-tiroir-retour sticky top-0 z-10 -mx-5 flex items-center bg-nuit px-4 pb-1">
+          <button ref={retour} type="button" onClick={() => { vibrer(4); setOuvert(null); }} aria-label={`${nomOuvert}, revenir au design`} className="flex min-h-11 items-center gap-1 rounded-xl pr-3 text-[14px] font-medium text-white/75 hover:text-white">
+            <Icone nom="ui-chevron" taille={18} className="rotate-90" /> {nomOuvert}
+          </button>
+          {ouvert === 'couleurs' && couleurs && <span className="ml-auto pl-1"><Reinitialiser reglages={reglages} onChange={onChange} /></span>}
+        </div>
+      ) : ouvert === 'couleurs' && couleurs && <div className="-mt-1 flex justify-end"><Reinitialiser reglages={reglages} onChange={onChange} /></div>}
       <OngletApparence reglages={reglages} onChange={onChange} envoyerImage={envoyerImage} principal={principal} parties={[ouvert]} vedettes={vedettes} />
     </div>
   );

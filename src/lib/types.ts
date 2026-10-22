@@ -8,6 +8,7 @@ import type { Abonnement, EtatOffre, Periode, Plan, PlanPayant } from './abonnem
 import type { Droits } from './droits.ts';
 import type { Creneau } from './moments.ts';
 import type { Audience, EffetAudience } from './provenance.ts';
+import type { Sortie } from './sortie.ts';
 
 export const TYPES_BLOC = ['lien', 'titre', 'texte', 'video', 'derniere-video', 'newsletter', 'inscription', 'preuve'] as const;
 export type TypeBloc = (typeof TYPES_BLOC)[number];
@@ -117,6 +118,8 @@ export interface Reglages {
   partage: boolean;
   /** Depuis le navigateur intégré d'Instagram, TikTok…, ouvrir les liens dans leur app (YouTube, Spotify…). */
   ouvrirApps: boolean;
+  /** Depuis le navigateur intégré de LinkedIn, d'Instagram…, proposer d'abord d'ouvrir la page dans Safari ou Chrome (lib/sortie.ts). */
+  ouvrirNavigateur: boolean;
   /** Le lundi matin, le résumé de la semaine par e-mail. */
   resumeHebdo: boolean;
   /** Les mots de la page (formulaires, drops) vouvoient le visiteur plutôt que de le tutoyer. */
@@ -177,6 +180,8 @@ export interface PagePublique {
   compte: ComptePage & { plan: Plan };
   /** L'instant où la page a été composée : le compte à rebours part de là, au serveur comme au navigateur. */
   maintenant?: number;
+  /** Ouverte dans le navigateur intégré d'une app qui laisse sortir : une feuille propose Safari ou Chrome par-dessus la page. */
+  sortie?: Sortie;
 }
 
 export interface EtatAdmin {
@@ -249,19 +254,25 @@ export interface Api {
   enregistrerReglages(reglages: Reglages): Promise<Reglages>;
   envoyerImage(dataUrl: string): Promise<string>;
   /** Le titre, la description et l'image (en data URL) d'un site, lus par le serveur. */
-  apercuSite(url: string): Promise<{ titre: string; description: string; image: string | null }>;
+  /** Le titre, la description et l'image de partage d'un site ; `image` à faux, le titre et la description seuls (plus vite). */
+  apercuSite(url: string, image?: boolean): Promise<{ titre: string; description: string; image: string | null }>;
   stats(jours: number): Promise<Stats>;
   deconnexion(): Promise<void>;
   /** Enregistre l'acceptation des CGU et de l'accord de traitement en vigueur. */
   accepterCgu(): Promise<void>;
-  /** Supprime son propre compte ; `confirmation` est le pseudo retapé. Jamais le compte principal. */
-  supprimerMonCompte(confirmation: string): Promise<{ ok: boolean; message: string }>;
+  /**
+   * Supprime son propre compte ; `confirmation` est le pseudo retapé. Jamais le compte principal. Un abonnement
+   * en cours est résilié avant ; `aLaMain` : Creem ne l'a pas confirmé, il sera résilié à la main (le message le dit).
+   */
+  supprimerMonCompte(confirmation: string): Promise<{ ok: boolean; message: string; aLaMain?: boolean }>;
   /** L'adresse de l'export complet (JSON), ou null dans l'aperçu. */
   urlExport: string | null;
   /** Prendre une offre : l'adresse où aller (la page de paiement Creem, ou le retour après un changement d'offre). */
   ouvrirPaiement(plan: PlanPayant, periode: Periode): Promise<string>;
   /** L'adresse du portail client Creem : carte, factures, résiliation. */
   ouvrirPortail(): Promise<string>;
+  /** Repasser en Gratuit : l'abonnement est résilié chez Creem pour la fin de la période payée. L'abonnement tel qu'il est ensuite. */
+  resilierAbonnement(): Promise<Abonnement>;
   liste(): Promise<Liste>;
   /** Branche Brevo ou Mailchimp (la clé est vérifiée chez eux), ou débranche avec `null`. */
   brancherListe(i: { fournisseur: FournisseurListe; cle: string; liste: string } | null): Promise<{ ok: boolean; message: string }>;
@@ -273,6 +284,13 @@ export interface Api {
   /** Seulement pour le compte principal : gérer les autres comptes. */
   comptes?: ApiComptes;
 }
+
+/**
+ * Ce qu'il advient de l'abonnement Creem d'un compte qu'on supprime : `aucune` (rien à résilier), `faite`
+ * (résilié tout de suite), `a-la-main` (Creem ne l'a pas confirmé deux fois de suite : le compte est supprimé
+ * quand même, et Lilian reçoit de quoi le résilier à la main).
+ */
+export type Resiliation = 'aucune' | 'faite' | 'a-la-main';
 
 /** Un nom réservé depuis l'accueil, en attente d'invitation. */
 export interface Reservation { id: string; email: string; pseudo: string; ts: number }
@@ -293,7 +311,8 @@ export interface ApiComptes {
   renvoyer(id: string): Promise<{ ok: boolean; message: string; lienDev?: string }>;
   /** `motif` part par e-mail à la personne (DSA, article 17) quand on suspend ou supprime. */
   changerStatut(id: string, statut: CompteResume['statut'], motif: string): Promise<void>;
-  supprimer(id: string, motif: string): Promise<void>;
+  /** Supprime le compte, après avoir résilié son abonnement : ce qu'il est advenu de l'abonnement. */
+  supprimer(id: string, motif: string): Promise<Resiliation>;
   signalements(): Promise<SignalementResume[]>;
   /** Classe un signalement, ou suspend la page avec `decision` pour motif. */
   traiterSignalement(id: string, statut: 'sans-suite' | 'suspendu', decision: string): Promise<void>;

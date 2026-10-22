@@ -23,30 +23,58 @@ const versLocal = (iso: string) => {
 const depuisLocal = (v: string) => (v ? new Date(v).toISOString() : '');
 
 /**
- * Dans le panneau du bureau, chaque règle tient sur une rangée : son nom à
- * gauche, ce qui est réglé à droite comme une valeur qu'on ouvre (« Toujours »,
- * « Tous les réseaux »). Ailleurs, le groupe bordé avec son picto.
+ * Au bureau, dans la rangée dépliée d'un bloc, chaque règle tient sur une
+ * ligne : son nom à gauche, ce qui est réglé à droite comme une valeur qu'on
+ * ouvre (« Toujours », « Tous les réseaux »). Ailleurs, le groupe bordé avec
+ * son picto.
  */
 export const RangeesCompactes = createContext(false);
 
 /** De retour des offres pour régler ce bloc (« Programmer ce bloc ») : la règle qu'on vient de débloquer s'ouvre d'elle-même. */
 export const RegleAOuvrir = createContext<'moment' | 'acces' | null>(null);
 
+/** Les règles qui s'ouvrent en sous-page, dans la feuille d'un bloc au téléphone. */
+export type PageRegle = 'moment' | 'reseaux' | 'acces' | 'animation';
+/**
+ * Au téléphone, la feuille d'un bloc mène de page en page (22 octobre 2026) :
+ * « Plus de réglages » montre une ligne par règle, qui s'ouvre à la place de la
+ * liste, avec la flèche de retour dans l'en-tête. `page` dit ce qui est ouvert.
+ */
+export const PagesBloc = createContext<{ page: 'plus' | PageRegle | null; ouvrir: (p: PageRegle) => void } | null>(null);
+
 /** Une section qui se replie, avec un résumé de ce qui est réglé. `montrer` l'amène sous les yeux en arrivant. */
-export function Repli({ titre, icone, resume, ouvert: depart, etiquette, montrer = false, children }: { titre: string; icone: string; resume?: string; ouvert: boolean; etiquette?: ReactNode; montrer?: boolean; children: ReactNode }) {
+export function Repli({ id, titre, icone, resume, ouvert: depart, etiquette, montrer = false, children }: { id?: PageRegle; titre: string; icone: string; resume?: string; ouvert: boolean; etiquette?: ReactNode; montrer?: boolean; children: ReactNode }) {
   const [ouvert, setOuvert] = useState(depart);
   const compact = useContext(RangeesCompactes);
+  const pages = useContext(PagesBloc);
   const racine = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    if (!montrer || !racine.current) return;
-    // Le défilement de la feuille ou du panneau, pas celui de la page : la section remonte juste assez pour se lire en entier.
+    if (!montrer || !racine.current || pages) return;
+    // Le défilement de la feuille, pas celui de la page : la section remonte juste assez pour se lire en entier.
+    // Au bureau, la rangée dépliée est dans la page même : c'est elle qui défile, sous l'en-tête et les onglets collés.
     let boite = racine.current.parentElement;
     while (boite && !(/(auto|scroll)/.test(getComputedStyle(boite).overflowY) && boite.scrollHeight > boite.clientHeight)) boite = boite.parentElement;
-    if (!boite) return;
+    if (!boite) { racine.current.scrollIntoView({ block: 'nearest', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); return; }
     const r = racine.current.getBoundingClientRect(), b = boite.getBoundingClientRect();
     const ecart = Math.min(r.bottom + 16 - b.bottom, r.top - b.top - 8);
     if (ecart > 0) boite.scrollBy({ top: ecart, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  if (pages && id) {
+    // Sa propre page : le contenu seul, le titre est dans l'en-tête de la feuille.
+    if (pages.page === id) return <div className="flex flex-col gap-3 pb-1">{children}</div>;
+    if (pages.page !== 'plus') return null;
+    // Dans « Plus de réglages » : une ligne qui dit ce qui est réglé, et mène à la page de la règle.
+    return (
+      <button id={`regle-${id}`} type="button" onClick={() => { vibrer(4); pages.ouvrir(id); }}
+        className="flex min-h-[52px] w-full items-center gap-3 px-3.5 py-2 text-left transition hover:bg-white/[0.04] active:bg-white/[0.06]">
+        <Icone nom={icone} taille={20} className="shrink-0 text-white/70" />
+        <span className="shrink-0 text-[14.5px] font-medium text-white">{titre}</span>
+        {etiquette}
+        <span className="min-w-0 flex-1 truncate text-right text-[13px] text-white/55">{resume}</span>
+        <Icone nom="ui-chevron" taille={16} className="-rotate-90 shrink-0 text-white/30" />
+      </button>
+    );
+  }
   if (compact) return (
     <div ref={racine}>
       <button type="button" onClick={() => setOuvert(!ouvert)} aria-expanded={ouvert} className="group flex min-h-11 w-full items-center gap-2 text-left bureau:min-h-9">
@@ -102,7 +130,7 @@ export function RegleMoment({ b, maj, erreur }: { b: Bloc; maj: (c: Partial<Bloc
   const rienARegler = !dates && !semaine && !avecDates && !c;
   const retirerDates = avecDates && <button type="button" onClick={() => maj({ debut: '', fin: '', compteARebours: false })} className="self-start text-[13px] text-white/55 underline">Retirer les dates</button>;
   return (
-    <Repli key={erreur ? 'erreur' : 'calme'} titre="Quand l’afficher" icone="horloge" etiquette={!dates ? <Etiquette fonction="programmation" /> : undefined} resume={resume || (dates ? 'Toujours' : '')} ouvert={!!(avecDates || c || erreur) || aOuvrir} montrer={aOuvrir}>
+    <Repli id="moment" key={erreur ? 'erreur' : 'calme'} titre="Quand l’afficher" icone="horloge" etiquette={!dates ? <Etiquette fonction="programmation" /> : undefined} resume={resume || (dates ? 'Toujours' : '')} ouvert={!!(avecDates || c || erreur) || aOuvrir} montrer={aOuvrir}>
       {rienARegler ? (
         <Reserve fonction="programmation" phrase="Avec Hopla Starter, ce bloc apparaît et disparaît aux dates que tu choisis, avec un compte à rebours avant un lancement. Avec Hopla Pro, il revient aussi à heure fixe, chaque semaine." />
       ) : dates ? (<>
@@ -187,7 +215,7 @@ export function RegleReseaux({ b, maj, reseaux }: { b: Bloc; maj: (c: Partial<Bl
   const resume = [caches.length ? `Pas sur ${noms(caches)}` : 'Tous les réseaux', enTete.length ? `en tête sur ${noms(enTete)}` : ''].filter(Boolean).join(', ');
   const [premier, setPremier] = useState(enTete.length > 0);
   return (
-    <Repli titre="Afficher sur" icone="cible" resume={resume} ouvert={false}>
+    <Repli id="reseaux" titre="Afficher sur" icone="cible" resume={resume} ouvert={false}>
       <p className="text-[12.5px] leading-snug text-white/55">Coupe un réseau : ceux qui arrivent de là ne verront pas ce bloc. Les autres le voient toujours.</p>
       <ul className="-my-1 divide-y divide-white/[0.06]" aria-label="Réseaux où ce bloc s’affiche">
         {liste.map(s => {
@@ -248,14 +276,14 @@ export function RegleAcces({ b, maj, prises }: { b: Bloc; maj: (c: Partial<Bloc>
   };
   const resume = a ? [a.code ? `code « ${a.code} »` : '', a.places ? `${prises}/${a.places} places prises` : ''].filter(Boolean).join(', ') : '';
   if (!permis) return (
-    <Repli titre="Accès réservé" icone="cadenas" etiquette={<Etiquette fonction="drops" />} resume={a ? 'Pas montré' : ''} ouvert={false}>
+    <Repli id="acces" titre="Accès réservé" icone="cadenas" etiquette={<Etiquette fonction="drops" />} resume={a ? 'Pas montré' : ''} ouvert={false}>
       <Reserve fonction="drops" phrase={a ? 'Sans Hopla Pro, ce lien réservé n’est pas montré : son adresse serait sinon à la vue de tous.' : 'Avec Hopla Pro, un lien ne s’ouvre qu’avec un code, ou pour les premiers arrivés.'}>
         {a && <button type="button" onClick={() => { vibrer(6); maj({ acces: null }); }} className="text-[13px] text-white/55 underline">Retirer l’accès réservé</button>}
       </Reserve>
     </Repli>
   );
   return (
-    <Repli titre="Accès réservé" icone="cadenas" resume={resume || 'Ouvert à tous'} ouvert={!!a || aOuvrir} montrer={aOuvrir}>
+    <Repli id="acces" titre="Accès réservé" icone="cadenas" resume={resume || 'Ouvert à tous'} ouvert={!!a || aOuvrir} montrer={aOuvrir}>
       <p className="text-[13px] leading-snug text-white/55">L’adresse du lien n’est jamais dans ta page : elle ne s’ouvre qu’avec le bon code, ou pour les premiers arrivés.</p>
       <Champ label="Code à taper (facultatif)" aide="Donne-le en story, en live ou dans ta newsletter. Majuscules et espaces ne comptent pas.">
         <input className={classeSaisie} value={a?.code ?? ''} maxLength={40} autoCapitalize="characters" autoComplete="off" spellCheck={false}

@@ -83,7 +83,7 @@ export const apiDemo: Api = {
   async enregistrerReglages(reglages) { await pause(); etat.reglages = reglages; ecrire(); return reglages; },
   async envoyerImage(dataUrl) { await pause(); return dataUrl; },
   // Dans l'aperçu, pas de serveur pour lire le site : une vignette dessinée en tient lieu.
-  async apercuSite(url) { await pause(); return { titre: '', description: 'Un aperçu de démonstration : en ligne, le serveur lit la vraie description du site.', image: vignetteDemo(url) }; },
+  async apercuSite(url, image = true) { await pause(); return { titre: '', description: 'Un aperçu de démonstration : en ligne, le serveur lit la vraie description du site.', image: image ? vignetteDemo(url) : null }; },
   async stats(jours) { await pause(); return statsFictives(jours); },
   async deconnexion() { localStorage.removeItem(CLE); etat = lire(); },
   async accepterCgu() { await pause(); },
@@ -92,6 +92,7 @@ export const apiDemo: Api = {
   // Le compte principal n'a pas d'abonnement : l'aperçu n'ouvre jamais de paiement.
   async ouvrirPaiement() { throw new Error('Pas de paiement dans l’aperçu.'); },
   async ouvrirPortail() { throw new Error('Pas de paiement dans l’aperçu.'); },
+  async resilierAbonnement() { throw new Error('Pas de paiement dans l’aperçu.'); },
   async liste() {
     await pause();
     const prenoms = ['Camille', 'Hugo', 'Sarah', 'Léa', 'Malik', 'Inès', 'Tom', 'Jade'];
@@ -124,7 +125,8 @@ export const apiDemo: Api = {
     async retirerAttente(i) { await pause(); const k = attenteDemo.findIndex(r => r.id === i); if (k >= 0) attenteDemo.splice(k, 1); },
     async renvoyer() { await pause(); return { ok: true, message: '' }; },
     async changerStatut(i, statut) { await pause(); const c = comptesDemo.find(x => x.id === i); if (c) c.statut = statut; },
-    async supprimer(i) { await pause(); const k = comptesDemo.findIndex(x => x.id === i); if (k > 0) comptesDemo.splice(k, 1); },
+    // Dans l'aperçu, aucun compte n'a d'abonnement Creem : rien à résilier.
+    async supprimer(i) { await pause(); const k = comptesDemo.findIndex(x => x.id === i); if (k > 0) comptesDemo.splice(k, 1); return 'aucune'; },
     async signalements() { await pause(); return signalementsDemo; },
     async traiterSignalement(i, statut, decision) {
       await pause();
@@ -258,7 +260,16 @@ export const apiGratuit: Api = {
     ecrireGratuit();
     return `${location.pathname}?paiement=${plan}#gratuit`;
   },
-  async ouvrirPortail() { await pause(); throw new Error('Dans l’aperçu, le portail de Creem ne s’ouvre pas : en vrai, la carte, les factures et la résiliation sont là-bas.'); },
+  async ouvrirPortail() { await pause(); throw new Error('Dans l’aperçu, le portail de Creem ne s’ouvre pas : en vrai, ta carte et tes factures sont là-bas.'); },
+  // Repasser en Gratuit : comme Creem, l'offre court jusqu'à la fin de la période payée, puis s'arrête.
+  async resilierAbonnement() {
+    await pause();
+    const a = gratuit.abonnement;
+    if (a.plan === 'gratuit') throw new Error('Aucun abonnement à résilier.');
+    gratuit.abonnement = { ...a, statut: 'scheduled_cancel' };
+    ecrireGratuit();
+    return gratuit.abonnement;
+  },
   async enregistrerBloc(bloc) {
     await pause();
     const existe = gratuit.blocs.some(b => b.id === bloc.id);
