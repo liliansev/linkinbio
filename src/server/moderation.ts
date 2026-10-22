@@ -5,6 +5,7 @@ import { ajouterSignalement, changerStatut, compteParId, compteParPseudo, signal
 import { adresseAdmin } from './auth.ts';
 import { echapper, envoyer, enveloppe } from './courriel.ts';
 import type { Env } from './courriel.ts';
+import { HEURE, cleIp, destinataireSature, limiteur } from './limites.ts';
 import { supprimerAvecAbonnement } from './suppression.ts';
 
 /*
@@ -17,15 +18,9 @@ import { supprimerAvecAbonnement } from './suppression.ts';
 
 export type Reponse = { ok: boolean; message: string };
 
-const parIp = new Map<string, number[]>();
-/** Cinq signalements par heure depuis une même adresse IP. */
-function tropDeSignalements(ip: string, maintenant: number) {
-  const recents = (parIp.get(ip) ?? []).filter(t => maintenant - t < 3_600_000);
-  if (parIp.size > 5000) parIp.clear();
-  if (recents.length >= 5) return true;
-  parIp.set(ip, [...recents, maintenant]);
-  return false;
-}
+/** Cinq signalements par heure depuis une même adresse IP (un /64 en IPv6). */
+const parIp = limiteur([5, HEURE]);
+const tropDeSignalements = (ip: string, maintenant: number) => parIp(cleIp(ip), maintenant);
 
 export async function signaler(
   env: Env, fetchImpl: typeof fetch,
@@ -52,7 +47,8 @@ export async function signaler(
     html: enveloppe(`<p>Nouveau signalement sur <a href="${lienPage}">${echapper(compte.pseudo)}</a>.</p><p><strong>${echapper(nomMotif(motif))}</strong></p><p style="white-space:pre-wrap">${echapper(details)}</p><p>À traiter dans l’onglet Comptes du back office : <a href="${origines.admin}/admin">${sansSchema(origines.admin)}</a>.</p>`),
     text: `Nouveau signalement sur ${lienPage}\n${nomMotif(motif)}\n\n${details}\n\nÀ traiter dans l’onglet Comptes : ${origines.admin}/admin`,
   });
-  if (email) {
+  // L'adresse de l'accusé de réception est tapée par n'importe qui : passé la limite, il ne part pas (le signalement, lui, est gardé).
+  if (email && !destinataireSature(email, maintenant)) {
     await envoyer(env, fetchImpl, {
       to: email, replyTo: CONTACT_LEGAL,
       subject: 'Ton signalement est bien reçu',

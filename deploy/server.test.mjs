@@ -4,18 +4,19 @@ import { mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createServer, request } from 'node:http';
-import { createLiensServer } from './server.mjs';
+import { createLiensServer, deCloudflare } from './server.mjs';
 async function ecouter(t, server) {
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   t.after(async () => { server.closeAllConnections(); await new Promise(resolve => server.close(resolve)); });
   return `http://127.0.0.1:${server.address().port}`;
 }
-async function fixture(t, options = {}) {
+const APP = "export default { fetch: async r => new Response('app ' + new URL(r.url).pathname + ' ' + (r.headers.get('x-real-ip') ?? '-') + ' ' + (r.body ? await r.text() : ''), { headers: { 'content-type': 'text/html', 'set-cookie': 'a=1; Path=/' } }) };";
+async function fixture(t, options = {}, app = APP) {
   const dir = await mkdtemp(join(tmpdir(), 'linkinbio-'));
   t.after(() => rm(dir, { recursive: true, force: true }));
   await mkdir(join(dir, 'client/assets'), { recursive: true }); await mkdir(join(dir, 'server'));
   await writeFile(join(dir, 'client/assets/a.js'), 'js'); await writeFile(join(dir, 'client/avatar.webp'), 'image');
-  await writeFile(join(dir, 'server/server.js'), "export default { fetch: async r => new Response('app ' + new URL(r.url).pathname + ' ' + (r.headers.get('x-real-ip') ?? '-') + ' ' + (r.body ? await r.text() : ''), { headers: { 'content-type': 'text/html', 'set-cookie': 'a=1; Path=/' } }) };");
+  await writeFile(join(dir, 'server/server.js'), app);
   return ecouter(t, createLiensServer({ appDir: dir, ...options }));
 }
 /** Une requête telle quelle : fetch() normaliserait le chemin et refuserait l'en-tête Host. */
@@ -82,4 +83,41 @@ test("l'API du site de Lilian est relayée, avec l'origine du site pour la page 
 test("sans LIENS_SITE, l'API du site n'existe pas", async t => {
   const url = await fixture(t, { site: undefined });
   assert.equal((await fetch(`${url}/api/derniere-video`)).status, 404);
+});
+test("derrière Cloudflare, l'IP du visiteur vient de CF-Connecting-IP, que seul Cloudflare peut écrire", async t => {
+  const url = await fixture(t);
+  const ip = async headers => (await brut(url, '/camille', { host: 'hopla.page', ...headers })).body;
+  assert.equal(await ip({ 'x-real-ip': '173.245.48.1', 'cf-connecting-ip': '9.9.9.9' }), 'app /camille 9.9.9.9 ');
+  assert.equal(await ip({ 'x-real-ip': '2606:4700::1', 'cf-connecting-ip': '2001:db8::5' }), 'app /camille 2001:db8::5 ');
+  assert.equal(await ip({ 'x-real-ip': '::ffff:162.158.1.1', 'cf-connecting-ip': '9.9.9.9' }), 'app /camille 9.9.9.9 ');
+  assert.equal(await ip({ 'x-real-ip': '8.8.8.8', 'cf-connecting-ip': '1.1.1.1' }), 'app /camille 8.8.8.8 ', 'hors de Cloudflare, cet en-tête ne compte pas');
+  assert.equal(await ip({ 'x-real-ip': '173.245.48.1', 'cf-connecting-ip': 'pas une ip' }), 'app /camille - ');
+  assert.equal(await ip({ 'cf-connecting-ip': '1.1.1.1' }), 'app /camille - ');
+  for (const [adresse, attendu] of [['104.16.0.1', true], ['2a06:98c0::1', true], ['9.9.9.9', false], ['2001:db8::1', false], ['pas une ip', false]]) assert.equal(deCloudflare(adresse), attendu, adresse);
+  // L'app ne lit que X-Real-IP : l'en-tête de Cloudflare ne lui parvient pas.
+  const echo = await fixture(t, {}, "export default { fetch: async r => new Response(r.headers.get('cf-connecting-ip') ?? '-') };");
+  assert.equal((await brut(echo, '/camille', { host: 'hopla.page', 'x-real-ip': '173.245.48.1', 'cf-connecting-ip': '9.9.9.9' })).body, '-');
+});
+test('avec LIENS_CLOUDFLARE=exclusif, ce qui vient de Caddy sans passer par Cloudflare est refusé', async t => {
+  const url = await fixture(t, { cloudflare: 'exclusif' });
+  assert.equal((await brut(url, '/camille', { host: 'hopla.page', 'x-real-ip': '8.8.8.8' })).status, 403);
+  assert.equal((await brut(url, '/camille', { host: 'hopla.page', 'x-real-ip': '8.8.8.8', 'cf-connecting-ip': '9.9.9.9' })).status, 403);
+  assert.equal((await brut(url, '/camille', { host: 'hopla.page', 'x-real-ip': '173.245.48.1', 'cf-connecting-ip': '8.8.8.8' })).body, 'app /camille 8.8.8.8 ');
+  assert.equal((await brut(url, '/healthz', { 'x-real-ip': '8.8.8.8' })).body, 'ok', 'le healthcheck répond toujours');
+  // Sans X-Real-IP, la requête vient du réseau interne (le contrôle du déploiement) : elle passe.
+  assert.equal((await brut(url, '/lilian', { host: 'hopla.page' })).status, 200);
+  const ouvert = await fixture(t);
+  assert.equal((await brut(ouvert, '/camille', { host: 'hopla.page', 'x-real-ip': '8.8.8.8' })).status, 200, 'sans la variable, rien ne change');
+});
+test('en production, chaque réponse demande HTTPS (HSTS)', async t => {
+  const dev = await fixture(t);
+  assert.equal((await fetch(`${dev}/healthz`)).headers.get('strict-transport-security'), null);
+  const avant = process.env.NODE_ENV;
+  process.env.NODE_ENV = 'production';
+  t.after(() => { if (avant === undefined) delete process.env.NODE_ENV; else process.env.NODE_ENV = avant; });
+  const url = await fixture(t);
+  for (const chemin of ['/healthz', '/camille', '/assets/a.js', '/liens/camille']) {
+    const r = await fetch(url + chemin, { redirect: 'manual' });
+    assert.equal(r.headers.get('strict-transport-security'), 'max-age=31536000', chemin);
+  }
 });

@@ -2,7 +2,7 @@ import { createServer } from 'node:http';
 import { readFile, realpath, stat } from 'node:fs/promises';
 import { resolve, sep, extname } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { isIP } from 'node:net';
+import { BlockList, isIP } from 'node:net';
 import { createHash } from 'node:crypto';
 /* Le serveur de production de Hopla. L'app (TanStack Start) est un simple
    `fetch(Request)`, chargée à la première visite ; ses fichiers statiques
@@ -30,6 +30,20 @@ const appRoot = fileURLToPath(new URL('../dist', import.meta.url));
 const mime = { html: 'text/html; charset=utf-8', css: 'text/css', js: 'text/javascript', mjs: 'text/javascript', json: 'application/json', svg: 'image/svg+xml', png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', avif: 'image/avif', gif: 'image/gif', ico: 'image/x-icon', woff: 'font/woff', woff2: 'font/woff2', webmanifest: 'application/manifest+json', txt: 'text/plain; charset=utf-8', xml: 'application/xml; charset=utf-8' };
 const etagOf = bytes => `"${createHash('sha1').update(bytes).digest('base64url').slice(0, 27)}"`;
 class HttpError extends Error { constructor(status) { super(`HTTP ${status}`); this.status = status; } }
+/* Derrière Cloudflare, Caddy voit une adresse de Cloudflare (X-Real-IP) et celle
+   du visiteur arrive dans CF-Connecting-IP. On ne croit cet en-tête que s'il vient
+   d'une adresse de Cloudflare (https://www.cloudflare.com/ips/, relevées le
+   20 octobre 2026) : n'importe qui d'autre peut l'écrire. Avec
+   LIENS_CLOUDFLARE=exclusif, ce qui ne passe pas par Cloudflare est refusé :
+   personne ne contourne son pare-feu en visant directement le serveur. */
+const CLOUDFLARE = new BlockList();
+for (const [type, reseaux] of [
+  ['ipv4', ['173.245.48.0/20', '103.21.244.0/22', '103.22.200.0/22', '103.31.4.0/22', '141.101.64.0/18', '108.162.192.0/18', '190.93.240.0/20', '188.114.96.0/20', '197.234.240.0/22', '198.41.128.0/17', '162.158.0.0/15', '104.16.0.0/13', '104.24.0.0/14', '172.64.0.0/13', '131.0.72.0/22']],
+  ['ipv6', ['2400:cb00::/32', '2606:4700::/32', '2803:f800::/32', '2405:b500::/32', '2405:8100::/32', '2a06:98c0::/29', '2c0f:f248::/32']],
+]) for (const reseau of reseaux) { const [adresse, bits] = reseau.split('/'); CLOUDFLARE.addSubnet(adresse, Number(bits), type); }
+/** Une adresse IP valide, une IPv4 glissée dans une IPv6 remise à plat ; null sinon. */
+const adresseIp = valeur => { const ip = typeof valeur === 'string' ? valeur.trim().replace(/^::ffff:(?=\d+\.\d+\.\d+\.\d+$)/i, '') : ''; return isIP(ip) ? ip : null; };
+export const deCloudflare = ip => { const v = isIP(ip); return v !== 0 && CLOUDFLARE.check(ip, v === 4 ? 'ipv4' : 'ipv6'); };
 async function readBody(req, limit) {
   if (Number(req.headers['content-length']) > limit) throw new HttpError(413);
   const chunks = []; let size = 0;
@@ -37,7 +51,8 @@ async function readBody(req, limit) {
   return Buffer.concat(chunks);
 }
 /** À n'exposer que derrière Caddy, qui doit écraser X-Real-IP avec l'IP du visiteur. */
-export function createLiensServer({ appDir = appRoot, site = process.env.LIENS_SITE } = {}) {
+export function createLiensServer({ appDir = appRoot, site = process.env.LIENS_SITE, cloudflare = process.env.LIENS_CLOUDFLARE } = {}) {
+  const exclusif = cloudflare === 'exclusif';
   let appPromise;
   async function liens(req, url, ip, send) {
     const local = url.pathname;
@@ -57,6 +72,8 @@ export function createLiensServer({ appDir = appRoot, site = process.env.LIENS_S
     const app = (await appPromise).default;
     const headers = new Headers();
     for (const [key, value] of Object.entries(req.headers)) if (typeof value === 'string' && !key.startsWith(':')) headers.set(key, value);
+    // L'app ne lit que X-Real-IP, déjà démêlée ici.
+    headers.delete('cf-connecting-ip');
     if (ip) headers.set('x-real-ip', ip); else headers.delete('x-real-ip');
     const host = /^[\w.-]+(:\d+)?$/.test(req.headers.host ?? '') ? req.headers.host : new URL(origin).host;
     const body = ['GET', 'HEAD'].includes(req.method) ? undefined : await readBody(req, 3_000_000);
@@ -86,10 +103,11 @@ export function createLiensServer({ appDir = appRoot, site = process.env.LIENS_S
     for (const key of ['content-type', 'cache-control', 'etag', 'allow']) { const v = response.headers.get(key); if (v) out[key.replace(/(^|-)\w/g, c => c.toUpperCase())] = v; }
     return send(response.status, Buffer.from(await response.arrayBuffer()), out);
   }
+  const production = process.env.NODE_ENV === 'production';
   const server = createServer((req, res) => {
     function send(status, value = '', headers = {}) {
       const bytes = Buffer.isBuffer(value) ? value : Buffer.from(value);
-      res.writeHead(status, { 'Content-Type': 'text/plain; charset=utf-8', 'X-Content-Type-Options': 'nosniff', 'Content-Length': bytes.length, ...headers });
+      res.writeHead(status, { 'Content-Type': 'text/plain; charset=utf-8', 'X-Content-Type-Options': 'nosniff', ...(production ? { 'Strict-Transport-Security': 'max-age=31536000' } : {}), 'Content-Length': bytes.length, ...headers });
       res.end(req.method === 'HEAD' ? undefined : bytes);
     }
     async function handle() {
@@ -98,9 +116,14 @@ export function createLiensServer({ appDir = appRoot, site = process.env.LIENS_S
       try { decoded = decodeURIComponent(req.url.split('?')[0]); } catch { throw new HttpError(400); }
       if (decoded.includes('\0') || decoded.includes('\\') || decoded.split('/').some(p => p === '..' || p === '.')) throw new HttpError(400);
       const url = new URL(req.url, origin);
-      const ip = typeof req.headers['x-real-ip'] === 'string' && isIP(req.headers['x-real-ip']) ? req.headers['x-real-ip'] : null;
+      // L'adresse que Caddy a vue ; derrière Cloudflare, celle du visiteur qu'il transmet.
+      const pair = adresseIp(req.headers['x-real-ip']);
+      const parCloudflare = pair !== null && deCloudflare(pair);
+      const ip = parCloudflare ? adresseIp(req.headers['cf-connecting-ip']) : pair;
       const chemin = url.pathname;
       if (chemin === '/healthz') return send(200, 'ok', { 'Cache-Control': 'no-store' });
+      // Sans X-Real-IP, la requête ne vient pas de Caddy mais du réseau interne (le healthcheck) : elle passe.
+      if (exclusif && pair && !parCloudflare) return send(403, 'Forbidden', { 'Cache-Control': 'no-store' });
       // Les anciennes adresses, liliansevoumian.fr/liens/... : la page de Lilian est /lilian, le reste garde son chemin.
       if (chemin === '/liens' || chemin === '/liens/') return send(308, '', { Location: `/lilian${url.search}` });
       if (chemin.startsWith('/liens/')) return send(308, '', { Location: `${chemin.slice(6)}${url.search}` });

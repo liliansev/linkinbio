@@ -7,6 +7,7 @@ import { demanderConnexion, inviter } from './auth.ts';
 import type { Reponse } from './auth.ts';
 import { bouton, envoyer, enveloppe } from './courriel.ts';
 import type { Env } from './courriel.ts';
+import { HEURE, cleIp, destinataireSature, limiteur } from './limites.ts';
 
 /*
  * Prendre son nom depuis l'accueil. On tape un nom, Hopla dit s'il est libre ;
@@ -41,15 +42,14 @@ export function verifierNom(saisie: string): EtatNom {
   return validerPseudo(nom) !== nom ? { etat: 'pris', nom, suggestions: suggestions(nom), reserve: true } : { etat: 'libre', nom, suggestions: [] };
 }
 
-const parIp = new Map<string, number[]>();
-/** Au plus 5 réservations par heure depuis une même adresse IP. */
-function tropInsistante(ip: string, maintenant: number) {
-  const recentes = (parIp.get(ip) ?? []).filter(t => maintenant - t < 3_600_000);
-  if (parIp.size > 5000) parIp.clear();
-  if (recentes.length >= 5) return true;
-  parIp.set(ip, [...recentes, maintenant]);
-  return false;
-}
+/** Au plus 5 réservations par heure depuis une même adresse IP (un /64 en IPv6). */
+const parIp = limiteur([5, HEURE]);
+const tropInsistante = (ip: string, maintenant: number) => parIp(cleIp(ip), maintenant);
+/**
+ * Chaque envoi ci-dessous part vers une adresse tapée par un inconnu. Passé la limite (voir `destinataireSature`),
+ * rien ne part : l'accueil le dit quand on vient de taper l'adresse, et se tait pour un renvoi.
+ */
+const TROP_DE_COURRIELS = { ok: false as const, message: 'Trop d’e-mails sont partis vers cette adresse. Réessaie plus tard.' };
 /** Au-delà, l'accueil demande de revenir demain : personne ne vide la liste des noms d'un coup. */
 const PLAFOND_JOUR = 300;
 
@@ -69,6 +69,7 @@ export async function reserverNom(origines: Origines, env: Env, saisie: { nom: s
   if (!adresse) return { ok: false, message: 'Cette adresse e-mail ne semble pas valide.' };
   if (tropInsistante(ip, maintenant)) return { ok: false, message: 'Trop de réservations depuis ce réseau. Réessaie dans une heure.' };
   if (db.reservationsDepuis(maintenant - 86_400_000) >= PLAFOND_JOUR) return { ok: false, message: 'Beaucoup de monde aujourd’hui. Réessaie demain, ton nom t’attendra peut-être.' };
+  if (destinataireSature(adresse, maintenant)) return TROP_DE_COURRIELS;
   const note = { ok: true as const, message: `C’est noté. Ton invitation arrivera à ${adresse}.` };
   const deja = db.dejaInscrit(adresse);
   if (deja) { await rappeler(origines, env, adresse, deja, fetchImpl); return note; }
@@ -112,6 +113,8 @@ export async function creerHopla(origines: Origines, env: Env, saisie: { nom: st
   if (!adresse) return { ok: false, message: 'Cette adresse e-mail ne semble pas valide.' };
   if (tropInsistante(ip, maintenant)) return { ok: false, message: 'Trop de pages créées depuis ce réseau. Réessaie dans une heure.' };
   if (db.comptesDepuis(maintenant - 86_400_000) >= PLAFOND_JOUR) return { ok: false, message: 'Beaucoup de monde aujourd’hui. Réessaie demain, ton nom t’attendra peut-être.' };
+  // Avant de savoir quel e-mail partira : la réponse reste la même, que l'adresse ait une page ou non.
+  if (destinataireSature(adresse, maintenant)) return TROP_DE_COURRIELS;
   const note = { ok: true as const, message: `C’est parti. Ouvre l’e-mail envoyé à ${adresse} : un clic, et tu entres dans ta page.` };
   const reservation = db.reservationParEmail(adresse);
   if (reservation) return (await inviterReservation(origines, env, reservation.id, fetchImpl)).ok ? note : { ok: false, message: 'L’e-mail n’est pas parti. Réessaie dans un instant.' };
@@ -143,7 +146,7 @@ export async function renvoyerInscription(origines: Origines, env: Env, saisie: 
   }
   const note = { ok: true as const, message: 'C’est renvoyé, avec un nouveau lien de 7 jours. Le premier marche toujours.' };
   const recents = db.jetonsRecents(maintenant - 86_400_000, compte.id);
-  if (maintenant - recents.dernier < 60_000 || recents.n >= 10) return note;
+  if (maintenant - recents.dernier < 60_000 || recents.n >= 10 || destinataireSature(adresse, maintenant)) return note;
   const r = await inviter(origines, env, compte, fetchImpl, 'inscription');
   return r.ok ? { ...note, lienDev: r.lienDev } : { ok: false, message: 'L’e-mail n’est pas parti. Réessaie dans un instant.' };
 }
@@ -172,6 +175,7 @@ export async function corrigerAdresse(origines: Origines, env: Env, saisie: { no
   if (!inscriptionLibre(env)) {
     const r = db.reservationParEmail(ancienne);
     if (!r || r.pseudo !== nom || maintenant - r.ts > DELAI_CORRECTION) return refus;
+    if (destinataireSature(nouvelle, maintenant)) return TROP_DE_COURRIELS;
     const note = { ok: true as const, message: `C’est corrigé. Ton invitation arrivera à ${nouvelle}.` };
     const deja = nouvelle === ancienne ? null : db.dejaInscrit(nouvelle);
     if (deja) { await rappeler(origines, env, nouvelle, deja, fetchImpl); return note; }
@@ -182,6 +186,7 @@ export async function corrigerAdresse(origines: Origines, env: Env, saisie: { no
 
   const compte = db.compteParPseudo(nom);
   if (!compte || compte.email !== ancienne || compte.connexion || maintenant - compte.cree > DELAI_CORRECTION) return refus;
+  if (destinataireSature(nouvelle, maintenant)) return TROP_DE_COURRIELS;
   const note = { ok: true as const, message: `C’est corrigé. Ouvre l’e-mail envoyé à ${nouvelle} : un clic, et tu entres dans ta page.` };
   const deja = nouvelle === ancienne ? null : db.dejaInscrit(nouvelle);
   if (deja) { await rappeler(origines, env, nouvelle, deja, fetchImpl); return note; }
@@ -213,6 +218,7 @@ export async function renommerPage(origines: Origines, env: Env, saisie: { ancie
   if (!inscriptionLibre(env)) {
     const r = db.reservationParEmail(adresse);
     if (!r || r.pseudo !== ancien || maintenant - r.ts > DELAI_CORRECTION) return refus;
+    if (destinataireSature(adresse, maintenant)) return TROP_DE_COURRIELS;
     try { db.changerPseudoReservation(r.id, nom); } catch { return { ok: false, message: `hopla.page/${nom} vient d’être pris. Essaie une variante.` }; }
     await confirmerReservation(env, adresse, nom, fetchImpl);
     return { ok: true, message: `C’est changé. Ton invitation arrivera à ${adresse}.`, nom };
@@ -220,6 +226,7 @@ export async function renommerPage(origines: Origines, env: Env, saisie: { ancie
 
   const compte = db.compteParPseudo(ancien);
   if (!compte || compte.email !== adresse || compte.connexion || maintenant - compte.cree > DELAI_CORRECTION) return refus;
+  if (destinataireSature(adresse, maintenant)) return TROP_DE_COURRIELS;
   try { db.changerPseudo(compte.id, nom); } catch { return { ok: false, message: `hopla.page/${nom} vient d’être pris. Essaie une variante.` }; }
   const envoi = await inviter(origines, env, { ...compte, pseudo: nom }, fetchImpl, 'inscription');
   // L'e-mail n'est pas parti : l'ancien nom revient, et l'on peut réessayer.

@@ -4,6 +4,7 @@ import type { Origines } from '../lib/types.ts';
 import { ajouterJeton, compteParEmail, jetonsRecents, noterConnexion, supprimerJeton, verifierJeton } from './db.ts';
 import type { Compte } from './db.ts';
 import { bouton, envoyer, enveloppe } from './courriel.ts';
+import { HEURE, cleIp, limiteur } from './limites.ts';
 import type { Env } from './courriel.ts';
 
 /*
@@ -64,15 +65,9 @@ export function compteParAdresse(email: string, env: Env): string | null {
 
 export type Reponse = { ok: true; message: string; lienDev?: string } | { ok: false; message: string };
 
-const demandesParIp = new Map<string, number[]>();
-/** Au plus 3 demandes par heure depuis une même adresse IP : un inconnu ne peut ni bombarder une boîte ni épuiser le plafond du jour. */
-function ipTropInsistante(ip: string, maintenant: number) {
-  const recentes = (demandesParIp.get(ip) ?? []).filter(t => maintenant - t < 3_600_000);
-  if (demandesParIp.size > 5000) demandesParIp.clear();
-  if (recentes.length >= 3) return true;
-  demandesParIp.set(ip, [...recentes, maintenant]);
-  return false;
-}
+/** Au plus 3 demandes par heure depuis une même adresse IP (un /64 en IPv6) : un inconnu ne peut ni bombarder une boîte ni épuiser le plafond du jour. */
+const demandesParIp = limiteur([3, HEURE]);
+const ipTropInsistante = (ip: string, maintenant: number) => demandesParIp(cleIp(ip), maintenant);
 
 /**
  * Inscrit un lien de connexion pour `compte` et l'envoie à `destinataire`. Le
@@ -100,7 +95,8 @@ export async function demanderConnexion(origines: Origines, env: Env, email: str
   const adresse = email.trim().toLowerCase();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(adresse)) return { ok: false, message: 'Entre l’adresse e-mail de ton compte.' };
   if (ipTropInsistante(ip, maintenant)) return { ok: false, message: 'Trop de demandes. Réessaie dans une heure.' };
-  if (jetonsRecents(maintenant - 86_400_000).n >= 200) return { ok: false, message: 'Trop de demandes aujourd’hui. Réessaie demain.' };
+  // Le plafond du jour ne compte que les liens de connexion : les bienvenues des pages créées depuis l'accueil ne l'épuisent pas.
+  if (jetonsRecents(maintenant - 86_400_000, undefined, DUREE_LIEN).n >= 200) return { ok: false, message: 'Trop de demandes aujourd’hui. Réessaie demain.' };
   const envoye = { ok: true as const, message: `Si ${adresse} a un compte, le lien vient de partir. Il marche une fois, pendant 15 minutes.` };
   const compte = compteParAdresse(adresse, env);
   if (!compte) return envoye;

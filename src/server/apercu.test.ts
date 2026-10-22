@@ -76,6 +76,6 @@ test('refuse les adresses du réseau local', () => {
 });
 
 test('refuse les adresses privées, réservées ou glissées dans une IPv6', () => {
-  for (const ip of ['10.1.2.3', '172.20.0.1', '198.18.1.1', '169.254.169.254', '::1', '::ffff:127.0.0.1', '::127.0.0.1', '64:ff9b::a00:1', 'fd00::1', 'pas-une-ip']) assert.equal(estPrivee(ip), true, ip);
+  for (const ip of ['10.1.2.3', '172.20.0.1', '198.18.1.1', '169.254.169.254', '::1', '::ffff:127.0.0.1', '::127.0.0.1', '::7f00:1', '::ffff:0:7f00:1', '64:ff9b::a00:1', '64:ff9b:1::a00:1', '2001::1', 'fd00::1', 'pas-une-ip']) assert.equal(estPrivee(ip), true, ip);
   for (const ip of ['8.8.8.8', '1.1.1.1', '2606:4700::1111']) assert.equal(estPrivee(ip), false, ip);
 });

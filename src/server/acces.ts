@@ -1,4 +1,5 @@
 import { createHash, timingSafeEqual } from 'node:crypto';
+import { MINUTE, cleIp, limiteur } from './limites.ts';
 import { PRINCIPAL } from '../lib/types.ts';
 import { composerMoment } from '../lib/moments.ts';
 import { normaliserCode } from '../lib/acces.ts';
@@ -13,15 +14,9 @@ import { droits } from './droits.ts';
  * reprendre de place.
  */
 
-const essais = new Map<string, number[]>();
-/** Au plus 10 essais par 10 minutes et par adresse IP : un code ne se devine pas à la chaîne. */
-function tropDEssais(ip: string, maintenant: number) {
-  const l = (essais.get(ip) ?? []).filter(t => maintenant - t < 600_000);
-  l.push(maintenant);
-  essais.set(ip, l);
-  if (essais.size > 5000) essais.clear();
-  return l.length > 10;
-}
+/** Au plus 10 essais par 10 minutes et par adresse IP, un /64 en IPv6 : un code ne se devine pas à la chaîne. */
+const essais = limiteur([10, 10 * MINUTE]);
+const tropDEssais = (ip: string, maintenant: number) => essais(cleIp(ip), maintenant);
 
 const empreinte = (texte: string) => createHash('sha256').update(texte).digest();
 const memeCode = (a: string, b: string) => timingSafeEqual(empreinte(normaliserCode(a)), empreinte(normaliserCode(b)));

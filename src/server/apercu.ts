@@ -1,5 +1,10 @@
-import { lookup } from 'node:dns/promises';
+import { lookup as resoudreDns } from 'node:dns';
+import type { LookupAddress } from 'node:dns';
+import { request as requeteHttp } from 'node:http';
+import type { IncomingMessage } from 'node:http';
+import { request as requeteHttps } from 'node:https';
 import { BlockList, isIP } from 'node:net';
+import type { LookupFunction } from 'node:net';
 
 /*
  * L'aperçu d'un site, pour habiller un lien : son titre, sa description et son
@@ -39,9 +44,8 @@ type Voix = typeof VOIX_APERCU | typeof VOIX_NAVIGATEUR;
 
 const RESERVEES = new BlockList();
 for (const [reseau, bits] of [['0.0.0.0', 8], ['10.0.0.0', 8], ['100.64.0.0', 10], ['127.0.0.0', 8], ['169.254.0.0', 16], ['172.16.0.0', 12], ['192.0.0.0', 24], ['192.0.2.0', 24], ['192.168.0.0', 16], ['198.18.0.0', 15], ['198.51.100.0', 24], ['203.0.113.0', 24], ['224.0.0.0', 3]] as const) RESERVEES.addSubnet(reseau, bits, 'ipv4');
-for (const [reseau, bits] of [['64:ff9b::', 96], ['100::', 64], ['2001:db8::', 32], ['2002::', 16], ['fc00::', 7], ['fe80::', 10], ['fec0::', 10], ['ff00::', 8]] as const) RESERVEES.addSubnet(reseau, bits, 'ipv6');
-RESERVEES.addAddress('::', 'ipv6');
-RESERVEES.addAddress('::1', 'ipv6');
+// `::/96` et `::ffff:0:0:0/96` : une IPv4 glissée dans une IPv6 sous ses formes anciennes (`[::127.0.0.1]` devient `::7f00:1`).
+for (const [reseau, bits] of [['::', 96], ['::ffff:0:0:0', 96], ['64:ff9b::', 96], ['64:ff9b:1::', 48], ['100::', 64], ['2001::', 23], ['2001:db8::', 32], ['2002::', 16], ['fc00::', 7], ['fe80::', 10], ['fec0::', 10], ['ff00::', 8]] as const) RESERVEES.addSubnet(reseau, bits, 'ipv6');
 
 /** Une adresse IP du réseau local, de la machine ou réservée (IPv4 glissée dans une IPv6 comprise). */
 export function estPrivee(ip: string): boolean {
@@ -52,10 +56,41 @@ export function estPrivee(ip: string): boolean {
   return RESERVEES.check(ip, famille === 4 ? 'ipv4' : 'ipv6');
 }
 
-async function verifier(url: URL) {
-  if (url.protocol !== 'https:' && url.protocol !== 'http:') throw new Error('Adresse refusée.');
-  const adresses = isIP(url.hostname) ? [{ address: url.hostname }] : await lookup(url.hostname, { all: true });
-  if (!adresses.length || adresses.some(a => estPrivee(a.address))) throw new Error('Adresse refusée.');
+type Resolveur = (hote: string, options: { all: true }, rappel: (erreur: NodeJS.ErrnoException | null, adresses: LookupAddress[]) => void) => void;
+
+/**
+ * La résolution DNS de la connexion elle-même, qui refuse un nom dont une seule
+ * adresse est privée. Vérifier d'abord, puis laisser `fetch` résoudre de nouveau,
+ * laisserait un serveur DNS répondre une adresse publique à la vérification et
+ * 127.0.0.1 à la connexion.
+ */
+export const resolutionPublique = (resoudre: Resolveur = resoudreDns as Resolveur): LookupFunction => (hote, options, rappel) => {
+  resoudre(hote, { all: true }, (erreur, adresses) => {
+    if (erreur) return rappel(erreur, '', 0);
+    if (!adresses.length || adresses.some(a => estPrivee(a.address))) return rappel(Object.assign(new Error('Adresse refusée.'), { code: 'EREFUSEE' }), '', 0);
+    if (options.all) return rappel(null, adresses);
+    const famille = options.family === 'IPv4' ? 4 : options.family === 'IPv6' ? 6 : options.family;
+    const choisie = adresses.find(a => !famille || a.family === famille) ?? adresses[0];
+    rappel(null, choisie.address, choisie.family);
+  });
+};
+
+/**
+ * Une requête GET, sans suivre de redirection, qui ne se connecte qu'à une adresse publique. Le délai
+ * dépassé rejette avec sa raison (`TimeoutError`), comme `fetch`.
+ */
+function obtenir(url: URL, entetes: Record<string, string>, delai: AbortSignal): Promise<IncomingMessage> {
+  if (url.protocol !== 'https:' && url.protocol !== 'http:') return Promise.reject(new Error('Adresse refusée.'));
+  // Une adresse IP écrite telle quelle ne passe pas par la résolution : elle se vérifie ici.
+  const hote = url.hostname.replace(/^\[|\]$/g, '');
+  if (isIP(hote) && estPrivee(hote)) return Promise.reject(new Error('Adresse refusée.'));
+  return new Promise((ok, ko) => {
+    const requete = (url.protocol === 'https:' ? requeteHttps : requeteHttp)(url, {
+      method: 'GET', agent: false, lookup: resolutionPublique(), signal: delai, headers: entetes,
+    }, ok);
+    requete.on('error', e => ko(delai.aborted ? delai.reason : e));
+    requete.end();
+  });
 }
 
 /** YouTube et Google montrent une page de consentement aux visiteurs d'Europe : ce témoin dit qu'on l'a déjà vue (refus des témoins compris). */
@@ -71,36 +106,40 @@ interface Reponse { octets: Buffer; type: string; url: string; statut: number }
 async function telecharger(depart: string, { limite, accepte, voix = VOIX_APERCU, coupe = false, referent }: { limite: number; accepte: string; voix?: Voix; coupe?: boolean; referent?: string }): Promise<Reponse> {
   let url = new URL(depart);
   for (let saut = 0; saut <= SAUTS; saut++) {
-    await verifier(url);
-    const reponse = await fetch(url, {
-      redirect: 'manual', signal: AbortSignal.timeout(DELAI),
-      headers: { accept: accepte, 'accept-language': 'fr-FR,fr;q=0.9,en;q=0.8', 'user-agent': voix, ...consentement(url.hostname), ...(referent ? { referer: referent } : {}) } as Record<string, string>,
-    });
-    if (reponse.status >= 300 && reponse.status < 400 && reponse.headers.get('location')) {
-      void reponse.body?.cancel().catch(() => {});
-      url = new URL(reponse.headers.get('location')!, url);
+    const delai = AbortSignal.timeout(DELAI);
+    const reponse = await obtenir(url, {
+      accept: accepte, 'accept-language': 'fr-FR,fr;q=0.9,en;q=0.8', 'user-agent': voix, ...consentement(url.hostname), ...(referent ? { referer: referent } : {}),
+    }, delai);
+    const statut = reponse.statusCode ?? 0;
+    const suite = reponse.headers.location;
+    if (statut >= 300 && statut < 400 && suite) {
+      reponse.destroy();
+      url = new URL(suite, url);
       continue;
     }
-    if (!reponse.body || (!coupe && !reponse.ok)) { void reponse.body?.cancel().catch(() => {}); throw new Error(`Réponse ${reponse.status}`); }
+    if (!coupe && (statut < 200 || statut >= 300)) { reponse.destroy(); throw new Error(`Réponse ${statut}`); }
     const morceaux: Buffer[] = [];
     let total = 0;
-    const lecteur = reponse.body.getReader();
+    let entiere = false;
     try {
-      for (;;) {
-        const { done, value } = await lecteur.read();
-        if (done) break;
-        total += value.length;
+      let arretee = false;
+      for await (const morceau of reponse as AsyncIterable<Buffer>) {
+        total += morceau.length;
         if (total > limite) {
           if (!coupe) throw new Error('Fichier trop lourd.');
-          morceaux.push(Buffer.from(value.subarray(0, value.length - (total - limite))));
+          morceaux.push(morceau.subarray(0, morceau.length - (total - limite)));
+          arretee = true;
           break;
         }
-        morceaux.push(Buffer.from(value));
+        morceaux.push(morceau);
         // Le `<head>` est fermé (ou le corps commencé) : les balises de partage sont toutes là.
-        if (coupe && /<\/head\s*>|<body[\s>]/i.test(Buffer.concat(morceaux.slice(-2)).toString('latin1'))) break;
+        if (coupe && /<\/head\s*>|<body[\s>]/i.test(Buffer.concat(morceaux.slice(-2)).toString('latin1'))) { arretee = true; break; }
       }
-    } finally { void lecteur.cancel().catch(() => {}); }
-    return { octets: Buffer.concat(morceaux), type: reponse.headers.get('content-type') ?? '', url: url.toString(), statut: reponse.status };
+      entiere = arretee || reponse.complete;
+    } catch (e) { throw delai.aborted ? delai.reason : e; } finally { reponse.destroy(); }
+    // Coupée par le délai, une réponse peut s'arrêter en route sans erreur.
+    if (!entiere) throw delai.aborted ? delai.reason : new Error('Réponse incomplète.');
+    return { octets: Buffer.concat(morceaux), type: reponse.headers['content-type'] ?? '', url: url.toString(), statut };
   }
   throw new Error('Trop de redirections.');
 }
