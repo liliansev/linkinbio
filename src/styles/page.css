@@ -42,11 +42,11 @@
   position: absolute; top: 14px; right: 16px;
   width: 44px; height: 44px; border-radius: 999px; border: 0;
   display: grid; place-items: center; cursor: pointer;
-  color: var(--texte);
-  background: color-mix(in srgb, var(--texte) 10%, transparent);
-  backdrop-filter: blur(10px);
+  /* L'icône seule, à la couleur du texte : jamais de rond derrière une icône (22 octobre 2026). */
+  color: var(--texte); background: none;
+  transition: transform 0.15s;
 }
-.lp-partager:hover { background: color-mix(in srgb, var(--texte) 18%, transparent); }
+.lp-partager:hover { transform: translateY(-1px); }
 
 .lp-tete { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 10px; margin-bottom: 28px; }
 .lp-avatar { width: 104px; height: 104px; border-radius: 999px; object-fit: cover; box-shadow: 0 0 0 1px color-mix(in srgb, var(--texte) 14%, transparent), 0 18px 40px -18px rgb(0 0 0 / 0.55); }
@@ -56,8 +56,8 @@
 .lp-bio { margin: 0; color: var(--doux); font-size: 1rem; line-height: 1.5; max-width: 36ch; text-wrap: balance; }
 
 .lp-reseaux { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin-top: 4px; }
-.lp-reseaux a { width: 44px; height: 44px; display: grid; place-items: center; color: var(--texte); border-radius: 999px; transition: background 0.15s, transform 0.15s; }
-.lp-reseaux a:hover { background: color-mix(in srgb, var(--texte) 10%, transparent); transform: translateY(-1px); }
+.lp-reseaux a { width: 44px; height: 44px; display: grid; place-items: center; color: var(--texte); border-radius: 999px; transition: transform 0.15s; }
+.lp-reseaux a:hover { transform: translateY(-1px); }
 .lp-pied { margin-top: 28px; }
 
 .lp-blocs { display: flex; flex-direction: column; gap: 14px; }
@@ -162,10 +162,12 @@
 
 /* ---- Liens mis en avant ----
  * Trois formats. Le bouton : un bouton comme les autres, à la couleur
- * d'accent. Le bandeau : plus haut, picto ou vignette en tuile à gauche,
- * titre, sous-titre et description alignés à gauche, flèche dans une
- * pastille. La carte : un visuel 16/9 (l'aperçu du site, une image, ou un
- * motif autour du picto), puis titre, description et le domaine en pied.
+ * d'accent. Le bandeau : plus haut, la vignette ou le picto à gauche,
+ * titre, sous-titre et description alignés à gauche, la flèche à droite.
+ * La carte : un visuel 16/9 (l'aperçu du site ou une image), puis titre,
+ * description et le domaine en pied ; sans image, le picto en tête.
+ * Une icône se pose toujours seule, à l'encre du bouton : ni pastille, ni
+ * tuile, ni rond derrière elle (22 octobre 2026, Lilian). Une photo garde son cadre.
  */
 
 .lp-btn-vedette { font-weight: calc(var(--btn-graisse, 560) + 60); }
@@ -179,22 +181,24 @@
   display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden;
 }
 .lp-carte-fleche {
-  flex: none; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 999px;
-  background: color-mix(in srgb, var(--lp-encre) 12%, transparent);
-  transition: translate 0.3s cubic-bezier(0.16, 1, 0.3, 1), rotate 0.3s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.2s ease;
+  flex: none; display: grid; place-items: center; width: 34px; height: 34px;
+  transition: translate 0.3s cubic-bezier(0.16, 1, 0.3, 1), rotate 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
-.lp-carte:hover .lp-carte-fleche { rotate: 45deg; background: color-mix(in srgb, var(--lp-encre) 20%, transparent); }
+.lp-carte:hover .lp-carte-fleche { rotate: 45deg; }
+/* La vignette : une photo, dans son cadre arrondi. */
 .lp-carte-tuile {
-  flex: none; display: grid; place-items: center; width: 50px; height: 50px; object-fit: cover;
+  flex: none; display: block; width: 50px; height: 50px; object-fit: cover;
   border-radius: calc(min(var(--r), 22px) - 6px);
   background: color-mix(in srgb, var(--lp-encre) 12%, transparent);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--lp-encre) 10%, transparent);
-  font-size: 1.4rem;
 }
 .lp[data-forme='pilule'] .lp-carte[data-format='bandeau'] .lp-carte-tuile { border-radius: 999px; }
+/* Le picto : seul, à l'encre du bouton. */
+.lp-carte-picto { flex: none; display: flex; align-items: center; justify-content: center; min-width: 28px; line-height: 1; font-size: 1.5rem; }
 
 /* Bandeau */
 .lp-carte[data-format='bandeau'] { align-items: center; gap: 14px; min-height: 78px; padding: 12px 14px 12px 12px; }
+/* Sans vignette, le picto s'aligne sur la marge du texte. */
+.lp-carte[data-format='bandeau'] > .lp-carte-picto:first-child { margin-left: 6px; }
 .lp[data-forme='pilule'] .lp-carte[data-format='bandeau'] { padding-left: 14px; padding-right: 16px; border-radius: 40px; }
 
 /* Carte */
@@ -207,27 +211,9 @@
 }
 .lp-carte-visuel img { width: 100%; height: 100%; object-fit: cover; display: block; transition: scale 0.6s cubic-bezier(0.16, 1, 0.3, 1); }
 .lp-carte:hover .lp-carte-visuel img { scale: 1.04; }
-.lp-carte-visuel .lp-carte-tuile {
-  /* Sur une photo, une pastille claire et nette, quel que soit le thème. */
-  position: absolute; left: 12px; bottom: 12px; width: 44px; height: 44px; border-radius: 14px;
-  background: rgb(255 255 255 / 0.92); color: #111827; box-shadow: 0 6px 18px -6px rgb(0 0 0 / 0.45);
-}
-/* Sans image : le picto en grand, sur une trame de points et une lumière. */
-.lp-carte-motif {
-  display: grid; place-items: center;
-  background:
-    radial-gradient(60% 80% at 50% 110%, color-mix(in srgb, var(--lp-encre) 16%, transparent), transparent 70%),
-    radial-gradient(circle at 1px 1px, color-mix(in srgb, var(--lp-encre) 22%, transparent) 1px, transparent 1.5px) 0 0 / 16px 16px,
-    color-mix(in srgb, var(--lp-encre) 6%, transparent);
-}
-.lp-carte-motif .lp-carte-tuile {
-  position: static; width: 76px; height: 76px; border-radius: 24px;
-  background: color-mix(in srgb, var(--lp-encre) 12%, transparent);
-  -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
-  box-shadow: 0 14px 34px -14px rgb(0 0 0 / 0.45), inset 0 0 0 1px color-mix(in srgb, var(--lp-encre) 16%, transparent);
-}
-.lp-carte-motif .lp-carte-tuile svg { width: 36px; height: 36px; }
 .lp-carte[data-format='carte'] .lp-carte-corps { display: flex; flex-direction: column; gap: 4px; padding: 14px 10px 8px 12px; }
+/* Sans image, pas de visuel : le picto en tête de la carte, seul, puis le titre. */
+.lp-carte[data-format='carte'] .lp-carte-corps > .lp-carte-picto { justify-content: flex-start; margin-bottom: 6px; font-size: 1.9rem; }
 .lp-carte[data-format='carte'] .lp-carte-titre { font-size: 1.24rem; letter-spacing: -0.02em; }
 .lp-carte-sous { font-size: 0.9rem; font-weight: 520; opacity: 0.86; }
 .lp-carte[data-format='carte'] .lp-carte-description { -webkit-line-clamp: 3; font-size: 0.9rem; }
@@ -326,11 +312,12 @@
 .lp-video-jouer:hover img { transform: scale(1.03); }
 .lp-video-jouer:focus-visible { outline: 3px solid var(--texte); outline-offset: -3px; }
 .lp-video-play {
+  /* Le triangle seul, blanc, sans rond derrière lui : une ombre douce le détache de l'image. */
   position: absolute; left: 50%; top: 50%; translate: -50% -50%;
-  width: 64px; height: 64px; border-radius: 999px; display: grid; place-items: center;
-  background: var(--surface); color: var(--surface-texte); box-shadow: 0 10px 30px -8px rgb(0 0 0 / 0.5);
+  display: grid; place-items: center; color: #fff;
+  filter: drop-shadow(0 2px 12px rgb(0 0 0 / 0.55));
 }
-.lp-video-play svg { margin-left: 3px; fill: currentColor; }
+.lp-video-play svg { margin-left: 4px; fill: currentColor; }
 .lp-video figcaption { font-size: 0.95rem; font-weight: 560; text-align: center; line-height: 1.35; padding: 0 8px; display: flex; flex-direction: column; gap: 2px; }
 .lp-video-etiquette { font-size: 0.8rem; font-weight: 450; color: var(--doux); }
 .lp-video-attente .lp-video-cadre { animation: lp-attente 1.4s ease-in-out infinite alternate; }
@@ -346,8 +333,9 @@
 }
 .lp-newsletter-tete { display: flex; align-items: center; gap: 12px; }
 .lp-newsletter-picto {
-  display: grid; place-items: center; flex: none; width: 42px; height: 42px; border-radius: 50%;
-  color: var(--picto-carte, var(--vedette)); background: var(--picto-carte-fond, color-mix(in srgb, var(--vedette) 16%, transparent));
+  /* Seul sur la carte, sans rond : l'accent s'il s'y lit, sinon le texte de la carte (`pictoCarte`). */
+  display: grid; place-items: center; flex: none; width: 28px; height: 28px;
+  color: var(--picto-carte, var(--vedette));
 }
 .lp-newsletter-textes { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .lp-newsletter-titre { margin: 0; font-size: 1rem; font-weight: 620; line-height: 1.25; }
@@ -423,11 +411,10 @@
 .lp-sortie-aide { visibility: hidden; font-weight: 500; }
 .lp-sortie-mots[data-aide] > p:first-child { visibility: hidden; }
 .lp-sortie-mots[data-aide] > .lp-sortie-aide { visibility: visible; animation: lp-entree 0.45s cubic-bezier(0.16, 1, 0.3, 1) both; }
-/* Le bouton du menu de l'app, dessiné : trois points couchés sur iPhone, debout sur Android. */
+/* Le bouton du menu de l'app, dessiné : trois points couchés sur iPhone, debout sur Android ; l'icône seule, dans la phrase. */
 .lp-sortie-points {
-  display: inline-grid; place-items: center; vertical-align: -0.25em;
-  min-width: 30px; height: 22px; padding: 0 6px; border-radius: 999px;
-  color: var(--texte); background: color-mix(in srgb, var(--texte) 12%, transparent);
+  display: inline-grid; place-items: center; vertical-align: -0.2em;
+  color: var(--texte);
 }
 .lp-sortie-annonce { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .lp-sortie-gestes { align-self: stretch; display: flex; flex-direction: column; gap: 12px; }
@@ -478,9 +465,9 @@
 .lp-agenda-apart:hover { text-decoration-color: currentColor; }
 .lp-agenda-fermer {
   flex: none; display: grid; place-items: center; width: 44px; height: 44px; border: 0; border-radius: 999px; cursor: pointer;
-  color: var(--texte); background: color-mix(in srgb, var(--texte) 9%, transparent);
+  color: var(--texte); background: none; transition: scale 0.15s;
 }
-.lp-agenda-fermer:hover { background: color-mix(in srgb, var(--texte) 15%, transparent); }
+.lp-agenda-fermer:hover { scale: 1.1; }
 :is(.lp-agenda-apart, .lp-agenda-fermer):focus-visible { outline: 3px solid var(--texte); outline-offset: 2px; }
 .lp-agenda-cadre { position: relative; flex: 1; min-height: 0; }
 .lp-agenda-cadre iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; display: block; }
@@ -688,6 +675,8 @@
     padding: 6px 6px 18px; border-radius: var(--rc);
   }
   .lp[data-bureau='onepage'] .lp-produit[data-format='bandeau'] .lp-carte-tuile { width: 100%; height: auto; aspect-ratio: 4 / 3; border-radius: calc(var(--rc) - 5px); }
+  /* Sans photo, pas de grande tuile vide : le picto seul, en tête, sur la marge du texte. */
+  .lp[data-bureau='onepage'] .lp-produit[data-format='bandeau'] > .lp-carte-picto:first-child { justify-content: flex-start; margin: 14px 0 0 12px; font-size: 1.9rem; }
   .lp[data-bureau='onepage'] .lp-produit[data-format='bandeau'] .lp-carte-texte { padding: 0 60px 0 12px; }
   .lp[data-bureau='onepage'] .lp-produit[data-format='bandeau'] .lp-carte-fleche { position: absolute; right: 16px; bottom: 16px; width: 40px; height: 40px; }
   .lp[data-bureau='onepage'] .lp-signature { margin-top: 64px; padding-top: 28px; border-top: 1px solid color-mix(in srgb, var(--texte) 10%, transparent); }
@@ -721,15 +710,11 @@
 textarea.lp-bio.lp-ed-saisie { display: block; width: 100%; resize: none; overflow: hidden; color: var(--doux); }
 
 .lp-ed-photo { position: relative; padding: 0; border: 0; background: none; border-radius: 999px; cursor: pointer; color: inherit; }
-.lp-ed-sans-photo { display: block; background: color-mix(in srgb, var(--texte) 9%, transparent); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--texte) 30%, transparent); }
-.lp-ed-pastille {
-  position: absolute; right: 0; bottom: 2px; width: 34px; height: 34px; border-radius: 999px;
-  display: grid; place-items: center; font-weight: 700;
-  /* Découpé dans le fond de la page, comme les pictos des blocs : pas de pastille de couleur. */
-  background: var(--fond-uni); color: var(--texte);
-  transition: scale 0.15s;
-}
-.lp-ed-photo:hover .lp-ed-pastille { scale: 1.08; }
+/* Pas de pastille sur la photo ni de rond vide (22 octobre 2026) : la photo se touche elle-même ; sans photo, l'icône seule à sa place. */
+.lp-ed-photo { transition: opacity 0.15s, scale 0.15s; }
+.lp-ed-photo:hover { scale: 1.03; }
+.lp-ed-photo[data-envoi] { opacity: 0.5; }
+.lp-ed-sans-photo { display: grid; place-items: center; width: 72px; height: 72px; color: var(--texte); }
 
 button.lp-ed-zone {
   font: inherit; color: var(--texte); background: none; border: 0; cursor: pointer;
@@ -776,12 +761,14 @@ button.lp-ed-ajout:is(:hover, :active) { background: color-mix(in srgb, var(--te
 @media (prefers-reduced-motion: reduce) { .lp-ed-bloc[data-neuf] { animation: none; outline-color: var(--vedette); } }
 .lp-ed-bloc[data-glisse] { z-index: 5; cursor: grabbing; outline-color: var(--vedette); }
 .lp-ed-bloc[data-glisse] > :not(.lp-ed-puces) { box-shadow: 0 26px 50px -18px rgb(0 0 0 / 0.6); }
-.lp-ed-puces { position: absolute; top: -9px; right: 12px; display: flex; gap: 4px; pointer-events: none; }
-.lp-ed-puce {
-  /* Le picto est découpé dans le fond de la page : il se lit sur le bord du bloc sans pastille visible. */
-  display: grid; place-items: center; width: 20px; height: 20px; border-radius: 50%;
-  background: var(--fond-uni); color: var(--texte);
-}
+/*
+ * Les états d'un bloc (masqué, programmé, ses règles) : leurs pictos seuls, au-dessus de lui, sur le fond
+ * de la page et hors de son voile, jamais dans une pastille (22 octobre 2026). Le bloc qui en porte
+ * s'écarte d'autant du précédent.
+ */
+.lp-ed-bloc:has(> .lp-ed-puces) { margin-top: 14px; }
+.lp-ed-puces { position: absolute; bottom: calc(100% + 8px); right: 10px; display: flex; gap: 6px; pointer-events: none; }
+.lp-ed-puce { display: grid; place-items: center; color: var(--texte); }
 
 /* ---- Compte à rebours : un lien annoncé, pas encore ouvert ---- */
 .lp-rebours { cursor: default; }
@@ -880,6 +867,7 @@ a.lp-preuve:focus-visible { outline: 3px solid var(--texte); outline-offset: 3px
 /* Le produit : sa photo en grande tuile, puis son prix, appuyé, et la boutique. Pas de mot seul en fin de nom. */
 .lp-produit :is(.lp-carte-titre, .lp-carte-description) { text-wrap: pretty; }
 .lp-produit[data-format='bandeau'] .lp-carte-tuile { width: 64px; height: 64px; }
+.lp-produit[data-format='bandeau'] > .lp-carte-picto:first-child { margin-left: 6px; }
 .lp-produit[data-format='carte'] .lp-carte-visuel { aspect-ratio: 4 / 3; }
 .lp-produit-ligne { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
 .lp-prix { flex: none; font-size: 0.98rem; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }

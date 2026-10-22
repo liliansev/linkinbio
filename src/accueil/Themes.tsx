@@ -103,10 +103,7 @@ export function Themes() {
                 <legend>{n.nom}</legend>
                 {n.choix.map(([c, nom]) => (
                   <button key={c} type="button" className="hl-nuance" style={{ background: c }} aria-pressed={couleurs[n.role] === c}
-                    aria-label={`${n.nom} ${nom}`} title={nom} onClick={() => setCouleurs(x => ({ ...x, [n.role]: x[n.role] === c ? '' : c }))}>
-                    {/* La pastille choisie porte une coche : elle ne se confond pas avec celle qui a le focus. */}
-                    {couleurs[n.role] === c && <span className="hl-nuance-coche"><Icone nom="check" taille={14} /></span>}
-                  </button>
+                    aria-label={`${n.nom} ${nom}`} title={nom} onClick={() => setCouleurs(x => ({ ...x, [n.role]: x[n.role] === c ? '' : c }))} />
                 ))}
               </fieldset>
             ))}

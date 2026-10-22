@@ -93,7 +93,7 @@ export function HeroProfils() {
           <small>{page.reglages.reseaux.map(r => NOMS_RESEAUX[r.reseau] ?? r.reseau).join(' · ')}</small>
           <div className="hp-page-liens" ref={id === 'ines' ? liens : undefined}>
             {blocs.map((b, i) => <div key={b.id} data-cle={b.id} data-premier={i === 0 || undefined}><span>{b.titre}</span>{id === 'ines' && i === 0
-              ? <span key={reseau} className="hp-lien-source" data-reseau={reseau}><Icone nom={reseau} taille={12} /></span>
+              ? <span key={reseau} className="hp-lien-source" data-reseau={reseau}><Icone nom={reseau} taille={16} /></span>
               : <Icone nom="ui-fleche" taille={14} />}</div>)}
           </div>
           {/* Inès est en Starter : sa page n'a plus la mention. */}
@@ -135,7 +135,7 @@ export function GalerieProfils() {
   const p = PROFILS[profil];
   return <section id="inspiration" className="hl-section hp-inspiration" aria-labelledby="titre-inspiration">
     <div className="hp-inspiration-tete"><div><h2 id="titre-inspiration" className="hl-h2">Il y a tout un monde<br />derrière un lien</h2></div><p>Ton activité ne ressemble à aucune autre.<br />Ta page non plus.<small>Explore ces six profils imaginés pour te donner des idées.</small></p></div>
-    <div ref={galerie} className="hp-galerie">{IDS_PROFILS.map(id => <button key={id} className="hp-profil" type="button" data-profil={id} onClick={() => ouvrir(id)} aria-label={`Découvrir la page ${de(PROFILS[id].nom)}, ${PROFILS[id].metier.toLowerCase()} à ${PROFILS[id].ville}`}><span className="hp-profil-photo"><Avatar profil={id} /><span><Icone nom="ui-oeil" taille={18} /></span></span><b>{PROFILS[id].nom}</b><small>{PROFILS[id].metier} · {PROFILS[id].ville}</small></button>)}</div>
+    <div ref={galerie} className="hp-galerie">{IDS_PROFILS.map(id => <button key={id} className="hp-profil" type="button" data-profil={id} onClick={() => ouvrir(id)} aria-label={`Découvrir la page ${de(PROFILS[id].nom)}, ${PROFILS[id].metier.toLowerCase()} à ${PROFILS[id].ville}`}><span className="hp-profil-photo"><Avatar profil={id} /></span><b className="hp-profil-nom">{PROFILS[id].nom}<Icone nom="ui-oeil" taille={18} /></b><small>{PROFILS[id].metier} · {PROFILS[id].ville}</small></button>)}</div>
     <dialog ref={boite} className="hp-dialogue" aria-labelledby="profil-titre" onKeyDown={fleches}
       onClose={() => { if (retour.current) galerie.current?.querySelector<HTMLButtonElement>(`[data-profil="${profil}"]`)?.focus(); retour.current = true; }} onClick={e => { if (e.target === e.currentTarget) boite.current?.close(); }}>
       <div className="hp-dialogue-tete">

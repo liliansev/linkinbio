@@ -248,9 +248,10 @@ const SANS_MARQUE = { picto: '#3d3d39', barre: '#efefec' };
 type Ligne = { cle: string; nom: string; icone: string; valeur: number; couleur?: { picto: string; barre: string } };
 
 /**
- * Une répartition : le libellé sur une barre pâle à la mesure du premier, le
- * chiffre et la part à droite, dans leurs colonnes, en gris lisible sur le
- * blanc (et non plus posés sur la barre, à 4,27:1). Huit lignes, puis « Tout voir ».
+ * Une répartition : le logo seul devant, le libellé sur une barre pâle à la
+ * mesure du premier, le chiffre et la part à droite, dans leurs colonnes, en
+ * gris lisible sur le blanc (et non plus posés sur la barre, à 4,27:1). Huit
+ * lignes, puis « Tout voir ».
  */
 function Repartition({ titre, unite, lignes, total, vide = 'Pas encore de données.' }: { titre: string; unite: string; lignes: Ligne[]; total: number; vide?: string }) {
   const id = useId();
@@ -266,10 +267,11 @@ function Repartition({ titre, unite, lignes, total, vide = 'Pas encore de donné
       {!lignes.length ? <p className="py-2 text-[14px] text-[#5f5f5a]">{vide}</p> : (
         <ol className="flex flex-col gap-1">
           {vues.map(l => (
-            <li key={l.cle}>
-              <span className="adm-repartition-nom" style={l.couleur && { '--picto': l.couleur.picto, '--barre': l.couleur.barre } as CSSProperties}>
+            <li key={l.cle} style={l.couleur && { '--picto': l.couleur.picto, '--barre': l.couleur.barre } as CSSProperties}>
+              {/* Le logo devant la barre, seul : jamais posé sur elle. */}
+              <Icone nom={l.icone} taille={16} className="adm-repartition-picto shrink-0" />
+              <span className="adm-repartition-nom">
                 <span aria-hidden="true" className="adm-repartition-barre adm-barre origin-left" style={{ width: `${(l.valeur / max) * 100}%` }} />
-                <Icone nom={l.icone} taille={14} className="relative shrink-0" />
                 <span className="relative truncate">{l.nom}</span>
               </span>
               <span className="adm-repartition-valeur">{nombre(l.valeur)}<span className="sr-only"> {unite.toLowerCase()}</span></span>

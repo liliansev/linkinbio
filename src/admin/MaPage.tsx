@@ -327,10 +327,11 @@ export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, chois
                 <>
                   <section className="adm-profil" aria-label="Ton profil">
                     <div className="adm-profil-haut">
+                      {/* La photo se clique elle-même ; sans photo, l'icône seule à sa place : pas de pastille par-dessus. */}
                       <button ref={photoBureau} type="button" className="adm-profil-photo" onClick={e => choisirFichier(fichier.current, e.currentTarget)}
-                        aria-label={reglages.profil.avatar ? 'Changer la photo' : 'Ajouter une photo'} title={reglages.profil.avatar ? 'Changer la photo' : 'Ajouter une photo'}>
-                        {reglages.profil.avatar ? <img src={reglages.profil.avatar} alt="" /> : <Icone nom="utilisateur" taille={22} />}
-                        <span className="adm-profil-pastille" aria-hidden="true">{envoi ? '…' : <Icone nom="photo" taille={11} />}</span>
+                        aria-label={reglages.profil.avatar ? 'Changer la photo' : 'Ajouter une photo'} title={reglages.profil.avatar ? 'Changer la photo' : 'Ajouter une photo'}
+                        aria-busy={envoi || undefined} data-envoi={envoi || undefined}>
+                        {reglages.profil.avatar ? <img src={reglages.profil.avatar} alt="" /> : <Icone nom="photo" taille={30} />}
                       </button>
                       <div className="adm-profil-texte">
                         {/* Le nom et la bio se tapent en place, comme sur la page au téléphone : ils ressemblent à du texte jusqu'au survol. */}
@@ -345,7 +346,7 @@ export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, chois
                       </div>
                     </div>
                     <div className="adm-profil-reseaux">
-                      {actifs.map(r => <span key={r.reseau + r.url} className="adm-reseau" title={NOMS_RESEAUX[r.reseau]} style={{ color: couleurReseau(r.reseau) }}><Icone nom={r.reseau} taille={15} /></span>)}
+                      {actifs.map(r => <span key={r.reseau + r.url} className="adm-reseau" title={NOMS_RESEAUX[r.reseau]} style={{ color: couleurReseau(r.reseau) }}><Icone nom={r.reseau} taille={18} /></span>)}
                       <button type="button" className="adm-lien" aria-expanded={cote === 'reseaux'} aria-controls={`${id}-reseaux`}
                         onClick={() => { vibrer(4); if (cote === 'reseaux') quitterCote(); else ouvrirCote('reseaux'); }}>
                         {cote === 'reseaux' ? 'Fermer les réseaux' : actifs.length ? 'Modifier mes réseaux' : 'Ajouter tes réseaux'}
