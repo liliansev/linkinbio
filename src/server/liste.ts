@@ -106,11 +106,18 @@ const brevo: Pilote = {
   },
   nom: async (cle, liste, f) => propre((await appeler(f, `https://api.brevo.com/v3/contacts/lists/${liste}`, { headers: enteteBrevo(cle) })).name),
   async pousser(cle, liste, c, f) {
-    const r = await requete(f, 'https://api.brevo.com/v3/contacts', {
+    const envoyer = (avecPrenom: boolean) => requete(f, 'https://api.brevo.com/v3/contacts', {
       method: 'POST', headers: { ...enteteBrevo(cle), ...json },
-      body: JSON.stringify({ email: c.email, listIds: [Number(liste)], updateEnabled: true, ...(c.prenom ? { attributes: { PRENOM: c.prenom, FIRSTNAME: c.prenom } } : {}) }),
+      body: JSON.stringify({ email: c.email, listIds: [Number(liste)], updateEnabled: true, ...(avecPrenom && c.prenom ? { attributes: { PRENOM: c.prenom, FIRSTNAME: c.prenom } } : {}) }),
     }, 6000);
-    // Brevo répond 400 « duplicate » pour une adresse déjà là : elle est bien dans la liste.
+    let r = await envoyer(true);
+    // Brevo répond 400 « duplicate » pour une adresse déjà là : elle est bien dans la liste. Un autre 400 avec le prénom : un compte
+    // qui n'a pas l'attribut PRENOM ou FIRSTNAME ; l'adresse repart seule, mieux vaut un inscrit sans prénom que pas d'inscrit.
+    if (r.status === 400) {
+      if (/duplicate/i.test(await r.text().catch(() => ''))) return;
+      if (c.prenom) r = await envoyer(false);
+    }
+    if (r.status === 401 || r.status === 403) throw new Refus('cle', r.status);
     if (!r.ok && !(r.status === 400 && /duplicate/i.test(await r.text().catch(() => '')))) throw new Refus('panne', r.status);
   },
 };
@@ -129,10 +136,12 @@ const mailchimp: Pilote = {
   nom: async (cle, liste, f) => propre((await appeler(f, `${baseMailchimp(cle)}/lists/${liste}?fields=name`, { headers: enteteMailchimp(cle) })).name),
   async pousser(cle, liste, c, f) {
     const id = createHash('md5').update(c.email.toLowerCase()).digest('hex');
-    await appeler(f, `${baseMailchimp(cle)}/lists/${liste}/members/${id}`, {
+    const envoyer = (avecPrenom: boolean) => appeler(f, `${baseMailchimp(cle)}/lists/${liste}/members/${id}`, {
       method: 'PUT', headers: { ...enteteMailchimp(cle), ...json },
-      body: JSON.stringify({ email_address: c.email, status_if_new: 'subscribed', ...(c.prenom ? { merge_fields: { FNAME: c.prenom } } : {}) }),
+      body: JSON.stringify({ email_address: c.email, status_if_new: 'subscribed', ...(avecPrenom && c.prenom ? { merge_fields: { FNAME: c.prenom } } : {}) }),
     }, 6000);
+    // Une audience sans le champ FNAME refuse le prénom (400) : l'adresse repart seule.
+    try { await envoyer(true); } catch (e) { if (!(e instanceof Refus && e.raison === 'panne' && e.statut === 400 && c.prenom)) throw e; await envoyer(false); }
   },
 };
 

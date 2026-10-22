@@ -734,6 +734,24 @@ test('Rejoins ma liste : inscrit gardé, envoyé chez Brevo, export CSV sans for
   assert.equal(db.exporter(P).inscrits.length, 1);
 });
 
+test('Brevo : un compte sans l’attribut PRENOM reçoit quand même l’inscrit, sans son prénom', async () => {
+  const liste = await import('./liste.ts');
+  const env = { LIENS_CLE_INTEGRATIONS: 'test' };
+  const corps: Record<string, unknown>[] = [];
+  const fetchFaux = (async (_url: string, init: RequestInit) => {
+    const c = JSON.parse(String(init.body));
+    corps.push(c);
+    return c.attributes ? new Response('{"code":"invalid_parameter","message":"Attribute PRENOM not found"}', { status: 400 }) : new Response(null, { status: 204 });
+  }) as typeof fetch;
+  db.enregistrerBloc(P, validerBloc({ type: 'inscription', titre: 'Rejoins ma liste', demanderPrenom: true }, 'liste'));
+  db.ecrireIntegration(P, { fournisseur: 'brevo', cle: liste.chiffrer(env, 'xkeysib-secret'), liste: '7', nom: 'Ma liste' });
+  const r = await liste.inscrire(env, fetchFaux, { page: '', bloc: 'liste', email: 'sans-prenom@exemple.fr', prenom: 'Léa' }, { ip: '6.6.6.6', ua: 'Mozilla/5.0', referent: '' });
+  assert.equal(r.status, 200);
+  assert.equal(corps.length, 2, 'une seconde fois, sans les attributs');
+  assert.equal(corps[1].attributes, undefined);
+  assert.equal(db.resumeContacts(P).enAttente, 0, 'parti chez Brevo');
+});
+
 test('Intégrations : la liste se choisit par son nom chez Kit, MailerLite, beehiiv et Systeme.io', async () => {
   const liste = await import('./liste.ts');
   const appels: { url: string; entetes: Record<string, string> }[] = [];

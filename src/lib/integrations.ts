@@ -35,9 +35,9 @@ export function destination(i: Pick<IntegrationListe, 'fournisseur' | 'nom'>): s
   return i.nom ? `chez ${nom}, ${LISTE_CHEZ[i.fournisseur].la} « ${i.nom} »` : `chez ${nom}`;
 }
 
-/** Le logo de chaque outil, une icône de `icones.ts` ; sans logo libre de droits, l'enveloppe. */
+/** Le logo de chaque outil, une icône de `icones.ts` : le vrai, celui de la marque (la bulle de MailerLite, l'abeille de beehiiv). */
 export const LOGOS_OUTILS: Record<FournisseurListe | 'substack', string> = {
-  brevo: 'brevo', mailchimp: 'mailchimp', kit: 'kit', mailerlite: 'courrier', beehiiv: 'courrier', systeme: 'courrier', substack: 'substack',
+  brevo: 'brevo', mailchimp: 'mailchimp', kit: 'kit', mailerlite: 'mailerlite', beehiiv: 'beehiiv', systeme: 'courrier', substack: 'substack',
   make: 'make', zapier: 'zapier', n8n: 'n8n',
 };
 
@@ -57,7 +57,7 @@ export const OUTILS_DES_BLOCS: { type: 'preuve' | 'reservation' | 'soutien' | 'p
  * `COULEURS_SOURCES`) ; absent, l'encre (une marque noire ou jaune : Mailchimp, Kit, Patreon).
  */
 export const COULEURS_LOGOS: Record<string, string> = {
-  brevo: '#0a8560', substack: '#c84b08', make: '#6d00cc', zapier: '#d24000', n8n: '#d33660',
+  brevo: '#0a8560', mailerlite: '#047a42', substack: '#c84b08', make: '#6d00cc', zapier: '#d24000', n8n: '#d33660',
   google: '#1a73e8', trustpilot: '#00845a', malt: '#d63b3b', calendly: '#006bff',
   paypal: '#002991', kofi: '#c94a22', stripe: '#635bff', shopify: '#4a8030', etsy: '#c4511a',
 };

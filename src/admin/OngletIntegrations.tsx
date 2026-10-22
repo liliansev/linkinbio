@@ -61,17 +61,21 @@ const OU_EST_LE_WEBHOOK: Record<Webhook, string> = {
   n8n: 'Dans n8n : un workflow qui commence par un nœud Webhook en POST, activé. Copie son adresse de production.',
 };
 
-export function OngletIntegrations({ api, blocs, onAjouter, onOuvrir, onOffres }: {
+export function OngletIntegrations({ api, blocs, sousOuverte, sousLue, onAjouter, onOuvrir, onOffres }: {
   api: ApiIntegrations;
   blocs: Bloc[];
-  /** Ajoute un bloc de ce type à Ma page (l'onglet change), ou ouvre celui qui y est déjà. */
-  onAjouter: (type: TypeBloc) => void;
+  /** La sous-page où revenir, quand on referme un bloc ouvert d'ici. */
+  sousOuverte?: string | null;
+  sousLue?: () => void;
+  /** Ajoute un bloc de ce type à Ma page (l'onglet change) ; `outil` : la sous-page d'où l'on part, où l'on revient. */
+  onAjouter: (type: TypeBloc, outil: Outil | null) => void;
   onOuvrir: (bloc: Bloc) => void;
   /** Ouvre les offres par-dessus ; absent quand le compte ne peut pas s'abonner (compte principal, aperçu). */
   onOffres?: (pour?: Fonction) => void;
 }) {
   const [liste, setListe] = useState<Liste | null>(null);
-  const [sous, setSous] = useState<Outil | null>(null);
+  const [sous, setSous] = useState<Outil | null>(() => (sousOuverte as Outil | null) ?? null);
+  useEffect(() => { if (sousOuverte) sousLue?.(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const recharger = useCallback(() => api.liste().then(setListe).catch(() => {}), [api]);
   useEffect(() => { void recharger(); }, [recharger]);
   const droits = useDroits();
@@ -87,7 +91,7 @@ export function OngletIntegrations({ api, blocs, onAjouter, onOuvrir, onOffres }
   const branche = liste?.integration ?? null;
   const formulaire = {
     present: blocs.some(b => b.type === 'inscription'),
-    ajouter: () => onAjouter('inscription'),
+    ajouter: () => onAjouter('inscription', sous),
   };
 
   if (sous) return (
@@ -131,7 +135,7 @@ export function OngletIntegrations({ api, blocs, onAjouter, onOuvrir, onOffres }
               apres={libre
                 ? <span className="flex shrink-0 items-center gap-2.5">{r.logos.map((l, i) => <Logo key={l} nom={l} taille={16} className={i === 2 ? 'max-[379px]:hidden' : ''} />)}</span>
                 : <Etiquette fonction={t.fonction!} />}
-              onClick={libre ? () => (presents.length ? onOuvrir(presents[0]) : onAjouter(r.type)) : onOffres ? () => onOffres(t.fonction) : undefined}
+              onClick={libre ? () => (presents.length ? onOuvrir(presents[0]) : onAjouter(r.type, null)) : onOffres ? () => onOffres(t.fonction) : undefined}
               label={libre ? undefined : `${t.nom}, avec une offre : voir les offres`} />
           );
         })}
