@@ -22,9 +22,7 @@ pnpm start       # deploy/server.mjs sur dist/ (PORT, LIENS_DB, LIENS_ORIGINE, L
 Sans `RESEND_API_KEY` ni `NODE_ENV=production`, les liens de connexion s'affichent
 dans la console. Le bundle se croit toujours en production : pour un essai de
 `pnpm start` en local, donner `LIENS_ORIGINE` et `LIENS_ORIGINE_ADMIN` à
-`http://localhost:<port>`. La feuille qui propose Safari ou Chrome ne se montre qu'avec une
-origine en https (les deux à `https://hopla.page` en local) et un user agent d'app (LinkedIn,
-Instagram…) ; la démo le montre avec `#sortie=<thème>` ou `#sortie-android=<thème>`.
+`http://localhost:<port>`.
 
 ## Pile
 
@@ -79,10 +77,8 @@ embarque tout : l'image n'a pas de `node_modules`.
   `achat.ts` (le retour d'un paiement : la note posée avant Creem, puis « On active », « C'est fait » ou l'attente, d'après l'abonnement relu),
   `integrations.ts` (le nom de chaque outil, le mot qu'il emploie pour sa liste, `adresseWebhook` pour la forme d'une adresse
   de webhook, `destination` : « chez Brevo, la liste « Newsletter » »),
-  `sortie.ts` (depuis le navigateur intégré de LinkedIn, Instagram, Facebook, Messenger ou Threads, l'adresse qui rouvre la page
-  dans Safari ou Chrome, app par app ; TikTok, X et Snapchat n'en ont pas), `vitrine.ts` (les sites de soutien et les agendas que
-  la page sait nommer, l'adresse PayPal.Me d'un montant, et `adresseIntegree` : Calendly, Cal.com et Google Agenda s'ouvrent dans la
-  page, les autres sur leur site).
+  `vitrine.ts` (les sites de soutien et les agendas que la page sait nommer, l'adresse PayPal.Me d'un montant,
+  et `adresseIntegree` : Calendly, Cal.com et Google Agenda s'ouvrent dans la page, les autres sur leur site).
 - `admin/` : onglets Ma page, Stats, Intégrations, Comptes (principal seulement), Réglages. Sur un grand écran (22 octobre 2026, d'après MailCheap et
   Resend), l'app prend toute la largeur, la barre latérale collée au bord gauche, et l'en-tête comme le contenu de chaque
   onglet tiennent dans une colonne centrée (`adm-colonne`, largeur `--adm-colonne` selon `data-onglet` : 1120 px, 680 pour
@@ -139,12 +135,9 @@ embarque tout : l'image n'a pas de `node_modules`.
   Un compte neuf, juste après les CGU, passe par `PremiersPas.tsx` (nom et bio, liens,
   réseaux, ambiance, page en ligne), avec sa page en miniature qui se remplit ; une
   seule fois, et seulement tant que la page est vide (`pageNeuve`).
-- `components/PageLiens.tsx` : la page publique. Ouverte dans une app qui laisse sortir, une feuille monte
-  par-dessus la page, voilée et `inert` (`FeuilleSortie`, rendue par le serveur, réglage `ouvrirNavigateur`,
-  actif par défaut ; 21 octobre 2026, demandé par Lilian) : ouvrir dans Safari ou le navigateur, copier le
-  lien, continuer ici (le voile et Échap aussi). L'adresse rouverte porte `?suite=<minute>`,
-  valable 15 minutes à l'heure du serveur : pas de feuille, et la visite, déjà comptée dans l'app, ne l'est
-  pas deux fois ; copié puis partagé, le lien redevient une visite comme une autre. La vitrine (22 octobre 2026,
+- `components/PageLiens.tsx` : la page publique. Ouverte dans le navigateur intégré d'une app (LinkedIn,
+  Instagram…), elle se montre directement : la feuille qui proposait Safari ou Chrome (21 octobre 2026) a été
+  retirée le 22 octobre 2026, à la demande de Lilian. La vitrine (22 octobre 2026,
   choisie par Lilian) : `Produit` (photo, nom et prix lus sur la boutique), `Soutien` (des montants pour
   PayPal.Me, un bouton pour Ko-fi, Tipeee, Lydia…), `Reservation` (l'agenda dans une feuille, `FeuilleAgenda`,
   quand il se laisse intégrer), et pour un lien partenaire (`partenariat` sur un lien ou un produit), `Mention`
@@ -162,7 +155,7 @@ embarque tout : l'image n'a pas de `node_modules`.
   image de partage dans `public/`. `server/referencement.ts` écrit `robots.txt`, `sitemap.xml` et
   `llms.txt` (routes `robots[.]txt.ts`…) ; le back office ne s'indexe pas.
 - `demo/` : aperçu statique avec une API simulée, publié en Artifact ; `#nouveau` y
-  rejoue l'arrivée d'un nouvel inscrit, `#sortie=<thème>` montre la feuille qui propose Safari, `#vitrine=<thème>`
+  rejoue l'arrivée d'un nouvel inscrit, `#page=<thème>` montre la page dans un thème, `#vitrine=<thème>`
   la vitrine d'exemple (produits, liens partenaires, réservations, soutiens).
 
 ## Règles
