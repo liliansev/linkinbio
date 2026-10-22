@@ -273,6 +273,19 @@ const enHex = (n: number) => Math.round(Math.min(255, Math.max(0, n))).toString(
 /** `a` mêlé de `b` dans la proportion `t` (0 : `a`, 1 : `b`). */
 export const meler = (a: string, b: string, t: number) =>
   '#' + [1, 3, 5].map(i => enHex(parseInt(a.slice(i, i + 2), 16) * (1 - t) + parseInt(b.slice(i, i + 2), 16) * t)).join('');
+/**
+ * Le picto d'une carte (newsletter, liste, soutien) : l'accent sur un rond teinté d'accent quand il s'y
+ * voit, sinon le texte de l'accent sur un rond plein d'accent (le bleu de bauhaus sur son rouge).
+ */
+export const pictoCarte = (theme: Theme) => (contraste(theme.vedette, meler(theme.surface, theme.vedette, 0.16)) >= 3
+  ? { encre: theme.vedette, fond: `color-mix(in srgb, ${theme.vedette} 16%, transparent)` }
+  : { encre: theme.vedetteTexte, fond: theme.vedette });
+/** Le texte d'une carte fondu dans sa couleur, autant que le permet un contraste de 4,5 : pour ses mentions en petit. */
+export const douxSurCarte = (theme: Theme) => {
+  let part = 0.45;
+  while (part > 0 && contraste(meler(theme.surfaceTexte, theme.surface, part), theme.surface) < 4.5) part -= 0.03;
+  return meler(theme.surfaceTexte, theme.surface, Math.max(0, part));
+};
 /** Le texte qui se lit sur `fond` : le premier proposé qui passe 4,5, sinon le blanc ou le presque noir. */
 const lisibleSur = (fond: string, ...choix: string[]) =>
   choix.find(c => contraste(c, fond) >= 4.5) ?? (contraste('#ffffff', fond) >= contraste('#111111', fond) ? '#ffffff' : '#111111');
@@ -321,6 +334,7 @@ export function variablesTheme(theme: Theme): Record<string, string> {
   return {
     '--fond': theme.fond, '--fond-uni': theme.fondUni, '--texte': theme.texte, '--doux': theme.doux, '--titre-section': titreSection(theme),
     '--surface': theme.surface, '--surface-texte': theme.surfaceTexte, '--vedette': theme.vedette, '--vedette-texte': theme.vedetteTexte,
+    '--picto-carte': pictoCarte(theme).encre, '--picto-carte-fond': pictoCarte(theme).fond, '--surface-doux': douxSurCarte(theme),
     '--police': POLICES[theme.police].corps, '--police-titre': POLICES[theme.police].titre, '--ombre-teinte': theme.ombre,
     // La typographie réglée du thème : la page la lit sur le nom, les sections, les boutons et les cartes.
     ...role('nom', theme.typo.nom), ...role('section', theme.typo.section), ...role('btn', theme.typo.bouton), ...role('carte', theme.typo.carte),

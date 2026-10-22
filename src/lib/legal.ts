@@ -13,7 +13,7 @@ import { OFFRES, euros } from './abonnement.ts';
 /** « 9 € par mois ou 79 € par an » : le prix d'une offre, tel que Creem le facture. */
 const prixDe = (p: 'starter' | 'pro' | 'premium') => `${euros(OFFRES[p].prix.mois)} par mois ou ${euros(OFFRES[p].prix.an)} par an`;
 
-export const VERSION_CGU = '2026-10-21.2';
+export const VERSION_CGU = '2026-10-22.1';
 export const CONTACT_LEGAL = 'bonjour@liliansevoumian.fr';
 
 export interface DocumentLegal { titre: string; resume: string; sections: { titre: string; texte: string[] }[] }
@@ -26,7 +26,7 @@ const HEBERGEUR = 'Hostinger International Limited, 61 Lordou Vironos Street, 60
 export const LEGAL: Record<NomDocument, DocumentLegal> = {
   cgu: {
     titre: 'Conditions générales d’utilisation',
-    resume: `Les règles du service Hopla, en vigueur depuis le 21 octobre 2026 (version ${VERSION_CGU}).`,
+    resume: `Les règles du service Hopla, en vigueur depuis le 22 octobre 2026 (version ${VERSION_CGU}).`,
     sections: [
       { titre: 'Le service', texte: [
         'Hopla permet de publier une page de liens personnelle à l’adresse hopla.page/<pseudo>, et de la gérer depuis un back office, sur app.hopla.page. Le service est édité par Lilian Sevoumian (voir les mentions légales).',
@@ -37,18 +37,20 @@ export const LEGAL: Record<NomDocument, DocumentLegal> = {
         'Tu peux télécharger toutes tes données et supprimer ton compte à tout moment, depuis l’onglet Réglages. La suppression est immédiate et définitive. Si tu as un abonnement, elle le résilie au même moment : plus aucun paiement ne part, et la période en cours n’est pas remboursée, sauf dans les 14 jours qui suivent ton premier paiement (voir « Les offres payantes et leur paiement »).',
       ] },
       { titre: 'Les offres payantes et leur paiement', texte: [
-        'La version gratuite le reste pour toujours : ta page, des liens sans limite, l’ordre de tes liens selon le réseau d’où arrive le visiteur, et les vingt thèmes. Trois offres payantes s’y ajoutent, chacune avec tout ce que comprend la précédente.',
-        `Starter, à ${prixDe('starter')} : ta page sans la mention « Une page faite avec Hopla », tes couleurs, tes liens programmés à l’avance, les avis de tes clients et tes statistiques détaillées sur 30 jours. Pro, à ${prixDe('pro')} : ta page selon l’heure, les drops, ta liste e-mail vers Brevo ou Mailchimp et tes statistiques sur un an. Premium, à ${prixDe('premium')}, ajoutera ton propre nom de domaine et jusqu’à trois pages ; il n’est pas encore en vente.`,
+        'La version gratuite le reste pour toujours : ta page, des liens sans limite, dont tes liens partenaires avec leur mention « Publicité », l’ordre de tes liens selon le réseau d’où arrive le visiteur, et les vingt thèmes. Trois offres payantes s’y ajoutent, chacune avec tout ce que comprend la précédente.',
+        `Starter, à ${prixDe('starter')} : ta page sans la mention « Une page faite avec Hopla », ta vitrine (tes produits et leur prix, ta prise de rendez-vous, un bouton pour te soutenir, le code promo de tes liens partenaires), tes couleurs, tes liens programmés à l’avance, les avis de tes clients et tes statistiques détaillées sur 30 jours. Pro, à ${prixDe('pro')} : ta page selon l’heure, les drops, ta liste e-mail vers Brevo ou Mailchimp et tes statistiques sur un an. Premium, à ${prixDe('premium')}, ajoutera ton propre nom de domaine et jusqu’à trois pages ; il n’est pas encore en vente.`,
         'Les visites de ta page sont comptées dans toutes les versions, mais seules les offres payantes te montrent tes statistiques : en prendre une te donne aussi celles d’avant, dans la limite de son historique.',
         'Les prix sont toutes taxes comprises. L’abonnement se renouvelle automatiquement à la fin de chaque période, au mois ou à l’an selon ton choix.',
         'Le paiement passe par Creem (creem.io), service de la société Armitage Labs OÜ (registre estonien n° 16977866, Rotermanni 14, 10111 Tallinn, Estonie), revendeur officiel de l’abonnement : c’est Creem qui te le vend, encaisse le paiement, t’envoie la facture et reverse la TVA. Ses conditions de vente s’ajoutent à celles-ci pour le paiement. Hopla ne voit ni ne garde jamais ton numéro de carte.',
         'Tu peux changer d’offre à tout moment depuis l’onglet Réglages : le changement s’applique tout de suite, et Creem facture ou rembourse la différence au prorata de la période en cours.',
-        'Tu peux résilier à tout moment, sans frais, depuis l’onglet Réglages (« Résilier mon abonnement ») : ton offre reste active jusqu’à la fin de la période déjà payée, puis ta page repasse en gratuit. Ce que la version gratuite ne comprend pas (tes couleurs, un compte à rebours, un avis, une règle selon l’heure, un drop, un formulaire de liste, tes statistiques) cesse de s’afficher, mais rien n’est effacé : reprendre une offre le remet en place. Les dates déjà posées sur un bloc continuent de s’appliquer ; en poser de nouvelles demande une offre.',
-        'Les pages créées avant le 21 octobre 2026 gardent, sans abonnement, tout ce que la version gratuite comprenait alors : toutes les fonctions sauf la page sans mention, et leurs statistiques sur sept jours.',
+        'Tu peux résilier à tout moment, sans frais, depuis l’onglet Réglages (« Résilier mon abonnement ») : ton offre reste active jusqu’à la fin de la période déjà payée, puis ta page repasse en gratuit. Ce que la version gratuite ne comprend pas (tes couleurs, un compte à rebours, un avis, ta vitrine et tes codes promo, une règle selon l’heure, un drop, un formulaire de liste, tes statistiques) cesse de s’afficher, mais rien n’est effacé : reprendre une offre le remet en place. Les dates déjà posées sur un bloc continuent de s’appliquer ; en poser de nouvelles demande une offre.',
+        'Les pages créées avant le 21 octobre 2026 gardent, sans abonnement, tout ce que la version gratuite comprenait alors : toutes les fonctions sauf la page sans mention, et leurs statistiques sur sept jours. La vitrine, venue après, demande Starter.',
         'Tu disposes de 14 jours après ton premier paiement pour changer d’avis : écris à ' + CONTACT_LEGAL + ' et tu es remboursé en entier. Si le prix change, tu es prévenu par e-mail au moins 30 jours avant ; le nouveau prix ne s’applique qu’au renouvellement suivant, et tu peux résilier d’ici là.',
       ] },
       { titre: 'Ce que tu publies', texte: [
         'Tu restes propriétaire de ce que tu publies (textes, images, liens) et seul responsable de son contenu. Tu nous autorises à l’héberger et à l’afficher sur ta page, le temps que ton compte existe.',
+        'Hopla ne vend rien, ne réserve rien et n’encaisse rien pour toi : un produit, une prise de rendez-vous ou un bouton de soutien mènent au site qui vend, réserve ou reçoit le paiement (ta boutique, Calendly, PayPal…), dont les conditions s’appliquent. Tu restes seul responsable de ce que tu proposes, du prix affiché et de tes obligations de vendeur.',
+        'Un lien publié contre une rémunération ou un avantage (affiliation, partenariat, produit offert) porte la mention « Publicité » ou « Collaboration commerciale », comme le demande la loi du 9 juin 2023 sur l’influence commerciale : le bloc « Lien partenaire » l’affiche pour toi, dans toutes les versions.',
         'Sont interdits : les contenus illégaux, les arnaques et le hameçonnage, les liens vers des logiciels malveillants, l’incitation à la haine ou à la violence, le harcèlement, les contenus pornographiques ou impliquant des mineurs, l’usurpation d’identité, les faux avis, les témoignages inventés et les chiffres trompeurs (bloc « Avis et preuves »), et la reproduction d’œuvres ou d’images sans en avoir les droits.',
       ] },
       { titre: 'Signalements et modération', texte: [
@@ -101,6 +103,7 @@ export const LEGAL: Record<NomDocument, DocumentLegal> = {
       ] },
       { titre: 'Si tu visites une page', texte: [
         'Aucun cookie n’est déposé, aucune publicité, aucun traceur d’un site à l’autre. Le serveur compte les vues et les clics de la page pour son propriétaire, avec une empreinte anonyme renouvelée chaque jour ; ton adresse IP n’est pas enregistrée. Ces statistiques sont gardées 13 mois. C’est une mesure d’audience strictement limitée, qui entre dans l’exemption de consentement prévue par la CNIL.',
+        'Le lecteur d’une vidéo YouTube, comme l’agenda d’une prise de rendez-vous (Calendly, Cal.com, Google Agenda), ne se charge dans la page que si tu le touches : ce service applique alors ses propres règles, cookies compris. Un produit, un bouton de soutien ou un lien te mène sur un autre site, qui a les siennes.',
         'Tu peux t’y opposer : un navigateur qui bloque les requêtes vers hopla.page/api/evenement (la plupart des bloqueurs de contenus le permettent) n’est pas compté, sans que la page cesse de fonctionner. Le propriétaire de la page est responsable de ces statistiques ; Hopla les traite pour lui.',
         'Si tu t’inscris à la liste d’une page (« Rejoins ma liste »), ton adresse et, s’il est demandé, ton prénom vont à son propriétaire, qui seul décide des e-mails qu’il t’envoie ; il peut les transmettre à son outil d’envoi (Brevo ou Mailchimp). Pour te désinscrire ou faire effacer ton adresse, écris-lui, ou à ' + CONTACT_LEGAL + '.',
         'Pour un lien à accès réservé (mode drop), Hopla garde, pour compter les places, une empreinte chiffrée propre à ce lien, tirée de ton adresse IP et de ton navigateur : elle ne sert qu’à ça, ne permet pas de te suivre d’un lien à l’autre, et s’efface au bout de treize mois.',

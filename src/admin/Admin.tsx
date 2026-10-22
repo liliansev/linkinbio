@@ -52,7 +52,7 @@ const ONGLETS: { id: Onglet; nom: string; icone: string }[] = [
 
 const nouvelId = () => `n${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 /** Les fonctions qui se règlent dans un bloc (ses dates, son créneau, son drop). */
-const FONCTIONS_DE_BLOC: Fonction[] = ['programmation', 'heure', 'drops'];
+const FONCTIONS_DE_BLOC: Fonction[] = ['programmation', 'heure', 'drops', 'vitrine'];
 
 /**
  * Le retour de Creem, lu une fois : l'adresse (`?paiement=pro`) et la note posée avant de partir. L'adresse
@@ -294,6 +294,13 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
     if (pour === 'stats') return { texte: 'Voir tes stats', faire: () => choisirOnglet('stats') };
     if (pour === 'avis') return { texte: 'Ajouter un avis', faire: () => { choisirOnglet('page'); ajouterBloc(nouveauBloc('preuve', nouvelId())); } };
     if (pour === 'listeEmail') return { texte: 'Ajouter ta liste d’inscrits', faire: () => { choisirOnglet('page'); ajouterBloc(nouveauBloc('inscription', nouvelId())); } };
+    // La vitrine : parti du code promo d'un lien, on y revient ; sinon, le choix des blocs, où elle est désormais ouverte.
+    if (pour === 'vitrine') {
+      const lien = bloc ? blocs.find(x => x.id === bloc) : undefined;
+      return lien
+        ? { texte: 'Ajouter ton code promo', faire: () => { choisirOnglet('page'); ouvrirBloc(lien); } }
+        : { texte: 'Remplir ta vitrine', faire: () => { choisirOnglet('page'); setDemandeAjout({ enBas: false }); } };
+    }
     // Une règle de bloc (dates, créneau, drop) : on revient au bloc d'où l'on était parti, s'il est toujours là.
     const b = pour && FONCTIONS_DE_BLOC.includes(pour) && bloc ? blocs.find(x => x.id === bloc) : undefined;
     if (b) return {
@@ -497,7 +504,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
     return (
       <FournisseurOffre value={{ droits }}>
         <PremiersPas compte={compte} reglages={reglages} blocs={blocs} onReglages={changerReglages} onPoserBlocs={poserBlocs}
-          envoyerImage={d => api.envoyerImage(d)} apercuSite={u => api.apercuSite(u)} onFin={suite => {
+          envoyerImage={d => api.envoyerImage(d)} apercuSite={(u, i) => api.apercuSite(u, i)} onFin={suite => {
             setPremiersPas(false); setOnglet('page'); scrollTo({ top: 0 });
             // « Ajouter mon premier lien » : l'éditeur s'ouvre déjà sur un lien neuf.
             if (suite === 'lien') setEdition({ bloc: nouveauBloc('lien', nouvelId()), nouveau: true });
@@ -513,7 +520,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
     <EditeurBloc key={edition.bloc.id} bureau={grand} garde={garde} onBrouillon={setBrouillon}
       adressePage={urlPage(compte)} principal={compte.principal} bloc={edition.bloc} reglages={reglages} nouveau={edition.nouveau} clics={clics[edition.bloc.id] ?? 0} prises={initial.places?.[edition.bloc.id] ?? 0} onFermer={() => setEdition(null)}
       onRetour={edition.nouveau && !grand ? () => { setEdition(null); setDemandeAjout({ enBas: !!edition.enBas }); } : undefined}
-      onEnregistrer={enregistrerBloc} onSupprimer={supprimer} onDupliquer={dupliquer} onDeplacer={deplacer} place={{ rang: blocs.findIndex(b => b.id === edition.bloc.id), total: blocs.length }} envoyerImage={d => api.envoyerImage(d)} apercuSite={u => api.apercuSite(u)} />
+      onEnregistrer={enregistrerBloc} onSupprimer={supprimer} onDupliquer={dupliquer} onDeplacer={deplacer} place={{ rang: blocs.findIndex(b => b.id === edition.bloc.id), total: blocs.length }} envoyerImage={d => api.envoyerImage(d)} apercuSite={(u, i) => api.apercuSite(u, i)} />
     </RegleAOuvrir.Provider>
   );
   const indicateur = sauvegarde === 'encours' ? 'Enregistrement…' : sauvegarde === 'erreur' ? 'Non enregistré' : 'Enregistré';

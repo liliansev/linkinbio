@@ -4,6 +4,7 @@
  */
 
 import type { Bloc, Reglages, Reseau } from './types.ts';
+import { TYPES_VITRINE } from './types.ts';
 import { adresse, adresseSaisie } from './valider.ts';
 import { THEME_DEFAUT } from './themes.ts';
 
@@ -13,7 +14,8 @@ export interface Etape { id: Destination | 'partage'; nom: string; aide: string;
 
 /** `themeVu` : les thèmes ont été regardés ; garder celui de départ est un choix, pas un oubli. */
 export function etapesDemarrage(reglages: Reglages, blocs: Bloc[], partagee: boolean, themeVu = false): Etape[] {
-  const liens = blocs.filter(b => b.type === 'lien' && b.public && b.url).length;
+  // Un produit ou une prise de rendez-vous compte comme un lien : la page mène déjà quelque part.
+  const liens = blocs.filter(b => (b.type === 'lien' || TYPES_VITRINE.includes(b.type)) && b.public && b.url).length;
   return [
     { id: 'photo', nom: 'Ajoute ta photo', aide: 'Un visage rassure avant de cliquer.', faite: !!reglages.profil.avatar },
     { id: 'bio', nom: 'Écris ta bio', aide: 'Une phrase : ce que tu fais, pour qui.', faite: !!reglages.profil.bio.trim() },

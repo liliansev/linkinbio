@@ -1,12 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { adresseOembed, decoderPage, estBarrage, estPrivee, lireMeta, lireOembed, titreCourt } from './apercu.ts';
+import { adresseOembed, decoderPage, ecrirePrix, estBarrage, estPrivee, lireMeta, lireOembed, montant, titreCourt } from './apercu.ts';
 
 test('lit le titre, la description et l’image de partage, adresse relative comprise', () => {
   const html = `<head><title>Repli</title><meta property="og:title" content="Agence AFK &amp; co">
     <meta name="description" content='Automatisation &#233;l&#xe9;gante'><meta property="og:image" content="/partage.png"></head>`;
   assert.deepEqual(lireMeta(html, 'https://agenceafk.fr/offres'), {
-    titre: 'Agence AFK & co', description: 'Automatisation élégante', image: 'https://agenceafk.fr/partage.png', oembed: '', rafraichir: '',
+    titre: 'Agence AFK & co', description: 'Automatisation élégante', image: 'https://agenceafk.fr/partage.png', oembed: '', rafraichir: '', prix: '',
   });
   assert.equal(lireMeta('<title>Seul titre</title>', 'https://x.fr').titre, 'Seul titre');
 });
@@ -20,6 +20,37 @@ test('lit les balises écrites sans guillemets, les entités françaises et les 
   assert.equal(m.image, 'https://cdn.boulangerie.fr/vitrine.jpg');
   // Une majuscule accentuée reste majuscule.
   assert.equal(lireMeta('<title>&Eacute;cole &amp; atelier</title>', 'https://x.fr').titre, 'École & atelier');
+});
+
+test('lit un montant écrit à la façon de n’importe quel pays', () => {
+  assert.equal(montant('24,00'), 24);
+  assert.equal(montant('1.234,56'), 1234.56);
+  assert.equal(montant('1,234.56'), 1234.56);
+  assert.equal(montant('1 234,50 €'), 1234.5);
+  assert.equal(montant('$1,299'), 1299);
+  assert.equal(montant('12.5'), 12.5);
+  assert.equal(montant('€9.99'), 9.99);
+  for (const rien of ['', 'Gratuit', '0', '0,00']) assert.equal(montant(rien), null, rien);
+  assert.equal(ecrirePrix(24, 'EUR'), '24\u00a0€');
+  assert.equal(ecrirePrix(1234.5, 'EUR'), '1\u202f234,50\u00a0€');
+  assert.equal(ecrirePrix(10, 'USD'), '10\u00a0$');
+  assert.equal(ecrirePrix(10, 'eur'), '');
+});
+
+test('lit le prix d’un produit : Shopify, WooCommerce, Etsy, Gumroad, une étiquette Twitter ou le JSON-LD', () => {
+  const prix = (head: string) => lireMeta(`<head><title>Le carnet</title>${head}</head>`, 'https://boutique.fr/p').prix;
+  assert.equal(prix(`<meta property="og:price:amount" content="24,00"><meta property="og:price:currency" content="EUR">`), '24\u00a0€');
+  assert.equal(prix(`<meta property="product:price:amount" content="12.50"><meta property="product:price:currency" content="eur">`), '12,50\u00a0€');
+  assert.equal(prix(`<meta property="etsymarketplace:price_value" content="45.00"><meta property="etsymarketplace:currency_code" content="USD">`), '45\u00a0$');
+  assert.equal(prix(`<meta name="twitter:label1" content="Price"><meta name="twitter:data1" content="€19">`), '19\u00a0€');
+  assert.equal(prix(`<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebPage"},{"@type":"Product","name":"Carnet","offers":{"@type":"Offer","price":"29.90","priceCurrency":"EUR"}}]}</script>`), '29,90\u00a0€');
+  assert.equal(prix(`<script type="application/ld+json">{"@type":"Product","offers":[{"price":15,"priceCurrency":"EUR"},{"price":9,"priceCurrency":"EUR"}]}</script>`), 'Dès 9\u00a0€');
+  assert.equal(prix(`<script type="application/ld+json">{"@type":"Product","offers":{"@type":"AggregateOffer","lowPrice":"12","highPrice":"30","priceCurrency":"EUR"}}</script>`), 'Dès 12\u00a0€');
+  // Ni montant, ni devise connue, ni JSON lisible : pas de prix plutôt qu'un faux.
+  assert.equal(prix(`<meta property="og:price:amount" content="24">`), '');
+  assert.equal(prix(`<meta property="og:price:amount" content="0"><meta property="og:price:currency" content="EUR">`), '');
+  assert.equal(prix(`<script type="application/ld+json">{ cassé </script>`), '');
+  assert.equal(prix(''), '');
 });
 
 test('repère l’oEmbed annoncé par la page et la page qui renvoie ailleurs', () => {

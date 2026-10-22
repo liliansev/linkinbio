@@ -48,6 +48,19 @@ test('les adresses dangereuses sont refusées, les raccourcis complétés', () =
   assert.equal(r.theme, 'nuit-peche'); assert.equal(r.bouton.style, 'plein'); assert.deepEqual(r.reseaux, [{ reseau: 'x', url: 'https://x.com/moi' }]);
 });
 
+test('la vitrine : un prix pour un produit, des montants pour un soutien, une mention pour un lien partenaire', () => {
+  const produit = validerBloc({ type: 'produit', titre: 'Carnet', url: 'etsy.com/listing/1', prix: ' 24 € ', partenariat: { mention: 'rien', code: ' CAMILLE10 ' } }, 'p');
+  assert.equal(produit.prix, '24 €');
+  assert.deepEqual(produit.partenariat, { mention: 'publicite', code: 'CAMILLE10' }, 'une mention inconnue redevient « Publicité »');
+  assert.equal(produit.montants.length, 0);
+  // Ce qui n'est pas de son type ne s'enregistre pas.
+  assert.equal(validerBloc({ type: 'lien', url: 'a.fr', prix: '12 €' }, 'l').prix, '');
+  assert.equal(validerBloc({ type: 'soutien', url: 'paypal.me/camille', partenariat: { mention: 'publicite' } }, 's').partenariat, null);
+  assert.deepEqual(validerBloc({ type: 'soutien', url: 'paypal.me/camille', montants: [10, 3, 3, 0, 2.5, 5000, '5', 20, 50] }, 's').montants, [3, 5, 10, 20]);
+  assert.deepEqual(validerBloc({ type: 'lien', url: 'a.fr', partenariat: { mention: 'collaboration', code: 'x'.repeat(60) } }, 'l').partenariat, { mention: 'collaboration', code: 'x'.repeat(40) });
+  assert.equal(validerBloc({ type: 'lien', url: 'a.fr' }, 'l').partenariat, null, 'un lien ordinaire n’est pas partenaire');
+});
+
 test('connexion par lien : envoi par Resend, usage unique, limite d’envoi', async () => {
   const envois: { url: string; corps: any }[] = [];
   const fetchFaux = (async (url: string, init: RequestInit) => { envois.push({ url, corps: JSON.parse(String(init.body)) }); return new Response('{}', { status: 200 }); }) as typeof fetch;

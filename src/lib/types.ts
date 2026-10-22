@@ -10,8 +10,12 @@ import type { Creneau } from './moments.ts';
 import type { Audience, EffetAudience } from './provenance.ts';
 import type { Sortie } from './sortie.ts';
 
-export const TYPES_BLOC = ['lien', 'titre', 'texte', 'video', 'derniere-video', 'newsletter', 'inscription', 'preuve'] as const;
+export const TYPES_BLOC = ['lien', 'titre', 'texte', 'video', 'derniere-video', 'newsletter', 'inscription', 'preuve', 'produit', 'soutien', 'reservation'] as const;
 export type TypeBloc = (typeof TYPES_BLOC)[number];
+/** La vitrine (Starter, 22 octobre 2026) : un produit et son prix, « Me soutenir », « Réserver ». Hopla n'encaisse rien, chacun mène au site qui vend. */
+export const TYPES_VITRINE: readonly TypeBloc[] = ['produit', 'soutien', 'reservation'];
+/** Les blocs qui mènent à une adresse : la rangée du back office la montre à côté de leur nom. */
+export const TYPES_ADRESSE: readonly TypeBloc[] = ['lien', 'video', 'produit', 'soutien', 'reservation'];
 
 /** Les mouvements qui attirent l'œil sur un bouton. */
 export const ANIMATIONS = ['aucune', 'reflet', 'orbite', 'lueur', 'onde', 'respiration', 'rebond', 'secousse'] as const;
@@ -63,6 +67,21 @@ export interface Bloc {
   restantes?: number | null;
   /** Un avis, un chiffre, un témoignage (bloc `preuve`). */
   preuve: Preuve | null;
+  /** Le prix d'un produit tel qu'il s'affiche (« 24 € », « Dès 12 € », « Prix libre ») : lu sur sa page, ou tapé. */
+  prix: string;
+  /** « Me soutenir » : les montants proposés, en euros. Seul PayPal les reprend dans son adresse. */
+  montants: number[];
+  /** Un lien partenaire (affiliation, collaboration payée) : sa mention, à tous, et son code promo, avec Starter. */
+  partenariat: Partenariat | null;
+}
+
+/** Les deux mentions que demande la loi du 9 juin 2023 sur l'influence commerciale. */
+export const MENTIONS_PARTENAIRE = ['publicite', 'collaboration'] as const;
+export type MentionPartenaire = (typeof MENTIONS_PARTENAIRE)[number];
+export interface Partenariat {
+  mention: MentionPartenaire;
+  /** Le code promo à copier d'un geste, vide s'il n'y en a pas. */
+  code: string;
 }
 
 export interface Acces {
@@ -253,9 +272,12 @@ export interface Api {
   ordonner(ids: string[]): Promise<void>;
   enregistrerReglages(reglages: Reglages): Promise<Reglages>;
   envoyerImage(dataUrl: string): Promise<string>;
-  /** Le titre, la description et l'image (en data URL) d'un site, lus par le serveur. */
-  /** Le titre, la description et l'image de partage d'un site ; `image` à faux, le titre et la description seuls (plus vite). */
-  apercuSite(url: string, image?: boolean): Promise<{ titre: string; description: string; image: string | null }>;
+  /**
+   * Le titre, la description, l'image de partage (en data URL) et le prix (une boutique) d'un site, lus par le
+   * serveur ; `image` à faux, sans l'image (plus vite) ; `'partage'`, l'image de partage seule, jamais une capture
+   * de la page (la photo d'un produit).
+   */
+  apercuSite(url: string, image?: boolean | 'partage'): Promise<{ titre: string; description: string; image: string | null; prix: string }>;
   stats(jours: number): Promise<Stats>;
   deconnexion(): Promise<void>;
   /** Enregistre l'acceptation des CGU et de l'accord de traitement en vigueur. */
@@ -331,16 +353,27 @@ export interface SignalementResume {
   decision: string;
 }
 
+/** Les montants que « Me soutenir » propose d'abord, en euros. */
+export const MONTANTS_DEFAUT: readonly number[] = [3, 5, 10];
+
 export function nouveauBloc(type: TypeBloc, id: string): Bloc {
   const titres: Record<TypeBloc, string> = {
     lien: '', titre: 'Nouvelle section', texte: '', video: 'Ma vidéo', 'derniere-video': 'Ma dernière vidéo', newsletter: 'Ma newsletter', inscription: 'Rejoins ma liste', preuve: 'Ce qu’ils en disent',
+    produit: '', soutien: 'Me soutenir', reservation: 'Prendre rendez-vous',
   };
   return {
     id, type, titre: titres[type], url: '', sousTitre: type === 'newsletter' || type === 'inscription' ? 'Un e-mail de temps en temps, rien de plus.' : '', description: '', icone: '', image: '',
     public: true, indexable: true, vedette: false, format: 'bandeau', teinte: 'accent', animation: 'auto', debut: '', fin: '',
     compteARebours: false, creneau: null, audience: null, cache: [], demanderPrenom: false, acces: null,
     preuve: type === 'preuve' ? { genre: 'note', note: 0, nombre: 0, source: '' } : null,
+    prix: '', montants: type === 'soutien' ? [...MONTANTS_DEFAUT] : [], partenariat: null,
   };
+}
+
+/** Le format d'un bloc mis en avant, tel que la page le montre : le sien, sauf un produit, qui devient une grande carte, et une réservation, un bandeau. */
+export function formatVedette(bloc: Bloc): FormatVedette | undefined {
+  if (!bloc.vedette) return undefined;
+  return bloc.type === 'produit' ? 'carte' : bloc.type === 'reservation' ? 'bandeau' : bloc.format;
 }
 
 /** Le mouvement que joue un bloc, une fois appliqués les réglages de la page. */

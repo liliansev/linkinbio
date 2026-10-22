@@ -49,8 +49,9 @@ embarque tout : l'image n'a pas de `node_modules`.
   `server/apercu.ts` (aperçu de site, anti-SSRF : l'adresse se vérifie au moment de la connexion ; lu en voix d'aperçu puis
   de navigateur, jusqu'au `</head>`, dans le jeu de caractères annoncé, par l'oEmbed pour YouTube, Vimeo, Spotify et
   SoundCloud ; une page de vérification, de consentement ou d'erreur ne donne jamais son titre ; `image: false` pour le
-  titre seul), `server/droits.ts` (`droits()` d'un compte, `verifierDates` avant d'enregistrer un bloc, `joursLisibles`
-  pour les stats).
+  titre seul ; le prix d'un produit, lu dans les balises des boutiques puis dans le JSON-LD, et `image: 'partage'` pour sa
+  photo : l'image de partage ou rien, jamais une capture), `server/droits.ts` (`droits()` d'un compte, `verifierDates`
+  avant d'enregistrer un bloc, `joursLisibles` pour les stats).
 - `server/limites.ts` : les limites anti-abus en mémoire (`limiteur`, `cleIp` qui
   compte une IPv6 pour son /64) et `destinataireSature`, cinq e-mails par heure et
   dix par jour vers une adresse tapée par un inconnu. `server/turnstile.ts` vérifie
@@ -66,7 +67,9 @@ embarque tout : l'image n'a pas de `node_modules`.
   dernière connexion et recherche de l'onglet Comptes),
   `achat.ts` (le retour d'un paiement : la note posée avant Creem, puis « On active », « C'est fait » ou l'attente, d'après l'abonnement relu),
   `sortie.ts` (depuis le navigateur intégré de LinkedIn, Instagram, Facebook, Messenger ou Threads, l'adresse qui rouvre la page
-  dans Safari ou Chrome, app par app ; TikTok, X et Snapchat n'en ont pas).
+  dans Safari ou Chrome, app par app ; TikTok, X et Snapchat n'en ont pas), `vitrine.ts` (les sites de soutien et les agendas que
+  la page sait nommer, l'adresse PayPal.Me d'un montant, et `adresseIntegree` : Calendly, Cal.com et Google Agenda s'ouvrent dans la
+  page, les autres sur leur site).
 - `admin/` : onglets Ma page, Stats, Comptes (principal seulement), Réglages. Sur un grand écran (22 octobre 2026), la
   barre latérale et l'espace de travail (`adm-travail`) tiennent dans un cadre centré de 1600 px au plus (`--adm-cadre`),
   les premiers pas dans 1200 px (`adm-premiers`). Réglages tient sur une seule page de lignes
@@ -109,7 +112,11 @@ embarque tout : l'image n'a pas de `node_modules`.
   actif par défaut ; 21 octobre 2026, demandé par Lilian) : ouvrir dans Safari ou le navigateur, copier le
   lien, continuer ici (le voile et Échap aussi). L'adresse rouverte porte `?suite=<minute>`,
   valable 15 minutes à l'heure du serveur : pas de feuille, et la visite, déjà comptée dans l'app, ne l'est
-  pas deux fois ; copié puis partagé, le lien redevient une visite comme une autre.
+  pas deux fois ; copié puis partagé, le lien redevient une visite comme une autre. La vitrine (22 octobre 2026,
+  choisie par Lilian) : `Produit` (photo, nom et prix lus sur la boutique), `Soutien` (des montants pour
+  PayPal.Me, un bouton pour Ko-fi, Tipeee, Lydia…), `Reservation` (l'agenda dans une feuille, `FeuilleAgenda`,
+  quand il se laisse intégrer), et pour un lien partenaire (`partenariat` sur un lien ou un produit), `Mention`
+  et `CodePromo`, copié d'un geste. Hopla n'encaisse et ne réserve rien : chaque bloc mène au site qui le fait.
 - `accueil/` : l'accueil de hopla.page (`routes/index.tsx`, styles dans `styles/accueil.css` et, pour la
   version « des visages » du 21 octobre 2026, `styles/accueil-profils.css` sous `.hl-humain`), en bleu, vert
   citron et papiers crème, autour de six profils imaginés (portraits générés, provenance en `.webp.json`) ;
@@ -123,7 +130,8 @@ embarque tout : l'image n'a pas de `node_modules`.
   image de partage dans `public/`. `server/referencement.ts` écrit `robots.txt`, `sitemap.xml` et
   `llms.txt` (routes `robots[.]txt.ts`…) ; le back office ne s'indexe pas.
 - `demo/` : aperçu statique avec une API simulée, publié en Artifact ; `#nouveau` y
-  rejoue l'arrivée d'un nouvel inscrit, `#sortie=<thème>` montre la feuille qui propose Safari.
+  rejoue l'arrivée d'un nouvel inscrit, `#sortie=<thème>` montre la feuille qui propose Safari, `#vitrine=<thème>`
+  la vitrine d'exemple (produits, liens partenaires, réservations, soutiens).
 
 ## Règles
 
@@ -139,6 +147,7 @@ embarque tout : l'image n'a pas de `node_modules`.
 - Chez Cloudflare, ni cookie ni défi : Bot Fight Mode éteint, des règles qui bloquent sans défier (voir `deploy/README.md`, « Cloudflare »).
 - Une offre payante (Starter, Pro, Premium) n'est accordée que par un webhook Creem signé, jamais par le retour du paiement. Les produits Creem se créent depuis l'onglet Comptes (« Créer les offres dans Creem ») : la clé a besoin des droits Products et Subscriptions.
 - L'abonnement suit le compte (21 octobre 2026) : changer d'offre passe par Creem au prorata (`proration-charge-immediately`, payé ou rendu tout de suite) ; repasser en Gratuit résilie pour la fin de la période payée, et un abonnement résilié ne change plus d'offre ; supprimer un compte, par son titulaire ou depuis Comptes, résilie l'abonnement tout de suite, sans remboursement automatique (`server/suppression.ts`), et la purge des comptes jamais connectés épargne ceux qui ont un abonnement.
-- Les offres (20 octobre 2026), avec `FONCTIONS` pour seule source : Gratuit garde des liens sans limite, la page selon le réseau du visiteur et les vingt thèmes ; Starter ajoute la page sans mention, les couleurs, la programmation (début, fin, compte à rebours), les avis et 30 jours de stats ; Pro le créneau selon l'heure, les drops, la liste e-mail et un an de stats ; Premium (pas en vente) le nom de domaine et trois pages. Ce que l'offre ne comprend pas s'efface de la page publique (`selonDroits`) sans rien effacer de la base. Les dates d'un bloc tiennent toujours, mais sans Starter le serveur refuse d'en poser de nouvelles (`verifierDates`). Les stats se comptent pour tous ; leur lecture et le résumé du lundi sont réservés. Les pages créées avant `BASCULE_OFFRES` (21 octobre 2026) gardent tout sauf la page sans mention, avec 7 jours de stats. La place pour les images (`quota`) est un garde-fou qu'on n'annonce pas. La page en plusieurs langues a été retirée le 20 octobre 2026 : `valider.ts` laisse de côté les anciennes traductions.
+- Les offres (20 octobre 2026), avec `FONCTIONS` pour seule source : Gratuit garde des liens sans limite, la page selon le réseau du visiteur et les vingt thèmes ; Starter ajoute la page sans mention, les couleurs, la programmation (début, fin, compte à rebours), les avis, la vitrine (produits, prise de rendez-vous, Me soutenir, code promo d'un lien partenaire) et 30 jours de stats ; Pro le créneau selon l'heure, les drops, la liste e-mail et un an de stats ; Premium (pas en vente) le nom de domaine et trois pages. Ce que l'offre ne comprend pas s'efface de la page publique (`selonDroits`) sans rien effacer de la base. Les dates d'un bloc tiennent toujours, mais sans Starter le serveur refuse d'en poser de nouvelles (`verifierDates`). Les stats se comptent pour tous ; leur lecture et le résumé du lundi sont réservés. Les pages créées avant `BASCULE_OFFRES` (21 octobre 2026) gardent tout sauf la page sans mention et la vitrine, venue après, avec 7 jours de stats. La place pour les images (`quota`) est un garde-fou qu'on n'annonce pas. La page en plusieurs langues a été retirée le 20 octobre 2026 : `valider.ts` laisse de côté les anciennes traductions.
+- La mention « Publicité » (ou « Collaboration commerciale ») d'un lien partenaire s'affiche dans toutes les offres, Gratuit compris : la loi du 9 juin 2023 la demande. Sans Starter, `selonDroits` retire le code promo et les blocs de la vitrine, jamais la mention.
 - Aucun secret dans le dépôt ; ils vivent dans `/opt/linkinbio/secrets/runtime.env`.
 - Ne jamais tuer un serveur local avec un `pkill -f` dont le motif correspond à sa propre commande.

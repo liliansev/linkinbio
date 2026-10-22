@@ -38,6 +38,21 @@ test('la fin d’un bloc programmé vient après son début', () => {
   assert.ok(verifierBloc({ ...b, fin: '2026-11-03T10:00:00.000Z' }).bloc);
 });
 
+test('la vitrine : une adresse de page web pour chacun, un nom pour un produit, un texte de départ pour les autres', () => {
+  const produit = { ...nouveauBloc('produit', 'p'), url: 'etsy.com/fr/listing/1' };
+  assert.deepEqual(verifierBloc(produit).erreurs, { titre: 'Écris le nom du produit.' });
+  assert.deepEqual(verifierBloc({ ...produit, url: '' }).erreurs, { url: 'Indique l’adresse du produit sur ta boutique.' });
+  assert.ok(verifierBloc({ ...produit, url: 'camille@exemple.fr', titre: 'Carnet' }).erreurs?.url, 'une adresse e-mail n’est pas une boutique');
+  assert.equal(verifierBloc({ ...produit, titre: 'Carnet' }).bloc?.url, 'https://etsy.com/fr/listing/1');
+  const soutien = { ...nouveauBloc('soutien', 's'), url: 'paypal.me/camille', titre: ' ', montants: [10, 3, 10] };
+  assert.equal(verifierBloc(soutien).bloc?.titre, 'Me soutenir');
+  assert.deepEqual(verifierBloc(soutien).bloc?.montants, [3, 10]);
+  assert.equal(verifierBloc({ ...nouveauBloc('reservation', 'r'), url: 'calendly.com/camille', titre: '' }).bloc?.titre, 'Prendre rendez-vous');
+  assert.deepEqual(verifierBloc(nouveauBloc('reservation', 'r')).erreurs, { url: 'Indique l’adresse de ton agenda.' });
+  const partenaire = lien({ url: 'https://a.fr', titre: 'A', partenariat: { mention: 'publicite', code: ' CAMILLE10 ' } });
+  assert.equal(verifierBloc(partenaire).bloc?.partenariat?.code, 'CAMILLE10');
+});
+
 test('l’enregistrement automatique ne réécrit pas une version identique', () => {
   const v = verifierBloc(lien({ url: 'https://a.fr', titre: 'A' })).bloc;
   assert.equal(memeBloc(v, { ...v! }), true);

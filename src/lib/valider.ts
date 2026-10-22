@@ -1,5 +1,5 @@
-import { ANIMATIONS, ANIMATIONS_BLOC, FORMATS_VEDETTE, FORMES_BOUTON, GENRES_PREUVE, OMBRES_BOUTON, MISES_EN_PAGE_BUREAU, RESEAUX, STYLES_BOUTON, TEINTES_VEDETTE, TYPES_BLOC } from './types.ts';
-import type { Acces, Bloc, Preuve, Reglages } from './types.ts';
+import { ANIMATIONS, ANIMATIONS_BLOC, FORMATS_VEDETTE, FORMES_BOUTON, GENRES_PREUVE, MENTIONS_PARTENAIRE, OMBRES_BOUTON, MISES_EN_PAGE_BUREAU, RESEAUX, STYLES_BOUTON, TEINTES_VEDETTE, TYPES_BLOC } from './types.ts';
+import type { Acces, Bloc, Partenariat, Preuve, Reglages } from './types.ts';
 import { idTheme } from './themes.ts';
 import { EFFETS_CRENEAU, fuseauValide } from './moments.ts';
 import type { Creneau } from './moments.ts';
@@ -101,6 +101,20 @@ export function preuve(v: unknown): Preuve | null {
   };
 }
 
+/** Un lien partenaire : sa mention (« Publicité » par défaut) et son code promo ; null s'il n'en est pas un. */
+export function partenariat(v: unknown): Partenariat | null {
+  if (!v || typeof v !== 'object') return null;
+  const o = v as Record<string, unknown>;
+  return { mention: parmi(o.mention, MENTIONS_PARTENAIRE, 'publicite'), code: texte(o.code, 40) };
+}
+
+/** Les montants de « Me soutenir » : des euros entiers, de 1 à 1 000, quatre au plus, sans doublon, du plus petit au plus grand. */
+export function montants(v: unknown): number[] {
+  if (!Array.isArray(v)) return [];
+  const l = v.map(Number).filter(n => Number.isInteger(n) && n >= 1 && n <= 1000);
+  return [...new Set(l)].sort((a, b) => a - b).slice(0, 4);
+}
+
 /** Les noms d'avant le 16 octobre 2026, gardés pour les blocs déjà enregistrés. */
 const ANCIENNES: Record<string, string> = { brille: 'reflet', pulse: 'respiration', secoue: 'secousse' };
 
@@ -131,6 +145,9 @@ export function validerBloc(v: unknown, id: string): Bloc {
     demanderPrenom: bool(o.demanderPrenom, false),
     acces: type === 'lien' ? acces(o.acces) : null,
     preuve: type === 'preuve' ? preuve(o.preuve) ?? { genre: 'note', note: 5, nombre: 0, source: '' } : null,
+    prix: type === 'produit' ? texte(o.prix, 24) : '',
+    montants: type === 'soutien' ? montants(o.montants) : [],
+    partenariat: type === 'lien' || type === 'produit' ? partenariat(o.partenariat) : null,
   };
 }
 
