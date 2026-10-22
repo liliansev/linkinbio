@@ -1,4 +1,4 @@
-import { useContext, useEffect, useId, useRef, useState } from 'react';
+import { useContext, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import type { CSSProperties, MutableRefObject } from 'react';
 import type { Api, Bloc, Reglages } from '../lib/types.ts';
 import { ANIMATIONS_BLOC, SANS_COULEURS, estEnLigne } from '../lib/types.ts';
@@ -11,14 +11,28 @@ import { themeDe, variablesTheme } from '../lib/themes.ts';
 import { ICONES } from '../lib/icones.ts';
 import { Icone, NOMS_RESEAUX, PICTOS } from '../components/Icone.tsx';
 import { BlocPublic } from '../components/PageLiens.tsx';
-import { BoutonPrincipal, BoutonSecondaire, Champ, Feuille, Interrupteur, ListeChoix, NOMS_ANIMATIONS, Segments, choisirFichier, classeBouton, classeSaisie, flechesRadio, preparerImage, vibrer } from './ui.tsx';
+import { BoutonPrincipal, BoutonSecondaire, Champ, Feuille, Interrupteur, ListeChoix, NOMS_ANIMATIONS, Segments, choisirFichier, classeBouton, classeSaisie, flechesRadio, preparerImage, useFilFeuille, vibrer } from './ui.tsx';
+import type { FilFeuille } from './ui.tsx';
 import { TYPES } from './OngletLiens.tsx';
 import { appDe } from '../lib/ouvrirApp.ts';
-import { ChampsPreuve, RangeesCompactes, RegleAOuvrir, RegleAcces, RegleMoment, RegleReseaux, Repli } from './ReglesBloc.tsx';
+import { ChampsPreuve, PagesBloc, RangeesCompactes, RegleAOuvrir, RegleAcces, RegleMoment, RegleReseaux, Repli } from './ReglesBloc.tsx';
+import type { PageRegle } from './ReglesBloc.tsx';
+import { useCouche } from './couches.ts';
 import { reseauxDePartage } from '../lib/provenance.ts';
 import { etiquettes } from '../lib/etiquettes.ts';
 import { FournisseurOffre, Reserve, offreDe, useDroits, useVoirOffres } from './offre.tsx';
 import type { Fonction } from '../lib/abonnement.ts';
+
+/** Au téléphone, la page ouverte dans la feuille d'un bloc : l'essentiel (`null`), « Plus de réglages », ou une règle. */
+type PageBloc = 'plus' | PageRegle | null;
+const NOMS_PAGES: Record<'plus' | PageRegle, string> = { plus: 'Plus de réglages', moment: 'Quand l’afficher', reseaux: 'Afficher sur', acces: 'Accès réservé', animation: 'Animation' };
+const niveau = (p: PageBloc) => (p === null ? 0 : p === 'plus' ? 1 : 2);
+
+/** Pose le fil de la feuille depuis son contenu : le nom de la page ouverte et sa flèche de retour. */
+function FilPage({ fil }: { fil: FilFeuille | null }) {
+  useFilFeuille(fil);
+  return null;
+}
 
 export interface OptionsEnregistrement {
   /** L'éditeur reste ouvert sur le bloc enregistré (sa rangée dépliée, au bureau). */
@@ -36,7 +50,7 @@ export interface OptionsEnregistrement {
  * la page au-dessus, avec son « Terminé ». Dans les deux cas, le bloc se
  * redessine sur la page à chaque frappe (`onBrouillon`).
  */
-export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, onBrouillon, onFermer, onEnregistrer, onSupprimer, onDupliquer, onDeplacer, place, envoyerImage, apercuSite, clics, prises = 0, principal = false }: {
+export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, onBrouillon, onFermer, onRetour, onEnregistrer, onSupprimer, onDupliquer, onDeplacer, place, envoyerImage, apercuSite, clics, prises = 0, principal = false }: {
   bloc: Bloc;
   reglages: Reglages;
   nouveau: boolean;
@@ -47,6 +61,8 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
   /** Le bloc tel qu'il se tape (vide quand rien n'attend d'être écrit), pour que la page le montre en direct. */
   onBrouillon?: (b: Bloc | null) => void;
   onFermer: () => void;
+  /** Un bloc neuf, au téléphone : la flèche de l'en-tête (et le retour du téléphone) ramène au choix du bloc, sans rien ajouter. */
+  onRetour?: () => void;
   onEnregistrer: (bloc: Bloc, options?: OptionsEnregistrement) => void;
   onSupprimer: (bloc: Bloc) => void;
   onDupliquer: (bloc: Bloc) => void;
@@ -76,9 +92,75 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
   const voir = useVoirOffres();
   const [icones, setIcones] = useState(false);
   // L'essentiel d'abord, neuf ou pas ; le reste attend derrière « Plus de réglages ».
-  // Ouvert pour y régler une règle tout juste débloquée (au retour des offres), il arrive déplié.
-  const aRegler = useContext(RegleAOuvrir) !== null;
+  // Ouvert pour y régler une règle tout juste débloquée (au retour des offres), il arrive déplié (au téléphone, sur la page de la règle).
+  const regleAOuvrir = useContext(RegleAOuvrir);
+  const aRegler = regleAOuvrir !== null;
   const [plus, setPlus] = useState(aRegler);
+  const [page, setPage] = useState<PageBloc>(bureau ? null : regleAOuvrir);
+  // Chaque page garde l'endroit où on l'a laissée : on revient à la ligne d'où l'on était parti.
+  const defilements = useRef<Partial<Record<string, number>>>({});
+  const passage = useRef<{ de: PageBloc; a: PageBloc } | null>(null);
+  const corpsFeuille = () => document.querySelector<HTMLElement>('.adm-feuille-bloc .adm-feuille-corps');
+  function allerA(p: PageBloc) {
+    if (p === page) return;
+    const c = corpsFeuille();
+    if (c) defilements.current[page ?? 'bloc'] = c.scrollTop;
+    passage.current = { de: page, a: p };
+    setPage(p);
+  }
+  useLayoutEffect(() => {
+    const v = passage.current;
+    if (!v) return;
+    passage.current = null;
+    // Une page plus profonde s'ouvre par son haut ; en revenant, la page d'avant reprend où on l'avait laissée.
+    const remonte = niveau(v.a) < niveau(v.de);
+    const c = corpsFeuille();
+    if (c) c.scrollTop = remonte ? defilements.current[v.a ?? 'bloc'] ?? 0 : 0;
+    // Le focus suit : sur la flèche en entrant (posée dans l'en-tête au rendu suivant), sur la ligne d'où l'on venait en revenant.
+    const poser = () => {
+      const cible = remonte ? document.getElementById(v.de === 'plus' ? `${idPlus}-ligne` : `regle-${v.de}`) : document.querySelector<HTMLElement>('.adm-feuille-bloc .adm-feuille-retour');
+      cible?.focus({ preventScroll: true, focusVisible: false } as FocusOptions);
+    };
+    if (remonte) poser(); else requestAnimationFrame(poser);
+  }, [page]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Le retour du téléphone remonte d'une page à la fois, avant de fermer la feuille.
+  useCouche(!bureau && page !== null, () => { allerA(null); return true; });
+  useCouche(!bureau && niveau(page) === 2, () => { allerA('plus'); return true; });
+
+  /*
+   * Au téléphone, la feuille d'un bloc posé s'arrête juste sous lui (22 octobre 2026) : le bloc remonte sous l'en-tête,
+   * et la feuille prend toute la place qui reste, entre la moitié et 86 % de l'écran. Un bloc neuf, pas encore sur la
+   * page, a une feuille presque pleine. Le bloc reste en vue quand la feuille grandit ou qu'il change de taille.
+   */
+  const [plafond, setPlafond] = useState<number>();
+  useLayoutEffect(() => {
+    if (bureau) return;
+    const blocPage = () => (nouveau ? null : document.querySelector<HTMLElement>(`.adm-toile [data-id="${CSS.escape(bloc.id)}"]`));
+    const feuille = () => document.querySelector<HTMLElement>('.adm-feuille-bloc');
+    const sousEntete = () => (document.querySelector('.adm-topbar')?.getBoundingClientRect().bottom ?? 72) + 12;
+    const clavier = () => !!window.visualViewport && innerHeight - window.visualViewport.height > 120;
+    const mesurer = () => {
+      const el = blocPage();
+      const h = innerHeight;
+      setPlafond(Math.round(el ? Math.min(h * 0.86, Math.max(h * 0.5, h - sousEntete() - el.offsetHeight - 14)) : h * 0.92));
+    };
+    const ajuster = () => {
+      const el = blocPage(), f = feuille();
+      if (!el || !f || clavier()) return;
+      const r = el.getBoundingClientRect();
+      const haut = sousEntete(), bas = innerHeight - f.offsetHeight - 12;
+      const cible = Math.max(haut, Math.min(r.top, bas - r.height));
+      if (Math.abs(r.top - cible) > 2) scrollBy({ top: r.top - cible, behavior: 'instant' });
+    };
+    mesurer();
+    ajuster();
+    const suivre = () => { mesurer(); ajuster(); };
+    const ro = new ResizeObserver(suivre);
+    // La page entière : un bloc qui grandit (mis en avant, une image) la fait grandir aussi, même s'il est redessiné à neuf.
+    for (const x of [document.querySelector('.adm-toile'), feuille()]) if (x) ro.observe(x);
+    addEventListener('resize', suivre);
+    return () => { ro.disconnect(); removeEventListener('resize', suivre); };
+  }, [bureau, nouveau, bloc.id]);
   const idPlus = useId();
   const racine = useRef<HTMLDivElement>(null);
   const fichier = useRef<HTMLInputElement>(null);
@@ -135,10 +217,12 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
     if (r.bloc) return r.bloc;
     setErreurs(r.erreurs);
     if (r.erreurs.dates) {
-      setPlus(true);
+      if (bureau) setPlus(true); else allerA('moment');
       setTimeout(() => { const f = document.getElementById('bloc-fin'); f?.scrollIntoView({ block: 'center' }); f?.focus({ preventScroll: true }); }, 60);
-    } else if (r.erreurs.note || r.erreurs.nombre || r.erreurs.source || bureau) {
-      setTimeout(() => document.querySelector<HTMLElement>('.adm-editeur [aria-invalid="true"]')?.focus());
+    } else {
+      // Les autres champs sont sur la première page : on y revient, le champ fautif sous les yeux.
+      if (!bureau && page !== null) allerA(null);
+      if (r.erreurs.note || r.erreurs.nombre || r.erreurs.source || bureau || page !== null) setTimeout(() => document.querySelector<HTMLElement>('.adm-editeur [aria-invalid="true"]')?.focus(), page !== null ? 60 : 0);
     }
     return null;
   }
@@ -204,12 +288,15 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
     finally { setLecture(false); }
   }
 
-  /** En quittant l'adresse d'un lien sans texte, le texte se remplit du nom du site, puis de son vrai titre. */
-  async function titreDepuisSite() {
+  /**
+   * Une adresse de lien sans texte (quittée, collée, ou arrivée toute faite) : le texte se remplit du nom du site,
+   * puis de son vrai titre. Seul le titre est demandé au serveur : il ne télécharge ni image ni capture pour si peu.
+   */
+  async function titreDepuisSite(saisie = b.url) {
     if (b.type !== 'lien') return;
-    const url = adresseSaisie(b.url);
+    const url = adresseSaisie(saisie);
     // L'adresse se vérifie en quittant le champ, comme aux premiers pas ; un profil de réseau prend son icône.
-    if (b.url.trim() && !url) { setErreur(pourquoiPasAdresse(b.url)); return; }
+    if (saisie.trim() && !url) { setErreur(pourquoiPasAdresse(saisie)); return; }
     const reseau = url && !b.icone ? reseauDeUrl(url) : null;
     if (reseau) setB(avant => (avant.icone ? avant : { ...avant, icone: reseau }));
     if (b.titre.trim()) return;
@@ -217,10 +304,12 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
     if (!repli) return;
     setB(avant => (avant.titre.trim() ? avant : { ...avant, titre: repli }));
     try {
-      const site = await apercuSite(url);
-      if (site.titre) setB(avant => (avant.titre === repli ? { ...avant, titre: site.titre.slice(0, 80) } : avant));
+      const site = await apercuSite(url, false);
+      if (site.titre) setB(avant => (avant.titre === repli && adresseSaisie(avant.url) === url ? { ...avant, titre: site.titre.slice(0, 80) } : avant));
     } catch { /* le nom du site suffit */ }
   }
+  // Un lien neuf qui arrive avec son adresse (collée sur la page ou dans Ajouter) cherche son texte tout de suite.
+  useEffect(() => { if (nouveau && bloc.url && !bloc.titre.trim()) void titreDepuisSite(bloc.url); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   /**
    * Fermer d'un glissé, d'Échap, de la croix ou d'un toucher à côté garde ce qui a changé, comme partout
@@ -328,7 +417,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
     </div>
   );
   const animation = b.type === 'lien' && b.vedette && (
-    <Repli key={`animation-${b.id}`} titre="Animation" icone="eclair" resume={b.animation === 'auto' ? 'Comme ma page' : NOMS_ANIMATIONS[b.animation].nom} ouvert={false}>
+    <Repli id="animation" key={`animation-${b.id}`} titre="Animation" icone="eclair" resume={b.animation === 'auto' ? 'Comme ma page' : NOMS_ANIMATIONS[b.animation].nom} ouvert={false}>
       {/* Une liste, pas une rangée de pastilles : le bloc sur la page (ou l'aperçu en haut) joue l'animation choisie. */}
       <ListeChoix label="Animation" valeur={b.animation} onChange={a => maj({ animation: a })}
         options={ANIMATIONS_BLOC.map(a => a === 'auto'
@@ -363,7 +452,8 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
     <Champ label={b.type === 'video' ? 'Adresse de la vidéo YouTube' : 'Adresse'} erreur={erreurDe('url')}
       aide={b.type === 'lien' && reglages.ouvrirApps && appDe(adresse(b.url)) ? <span className="inline-flex items-center gap-1.5 text-white/75"><Icone nom="ui-ok" taille={13} />Ce lien s’ouvre directement dans l’app {appDe(adresse(b.url))}, même depuis {['Instagram', 'TikTok'].filter(n => n !== appDe(adresse(b.url))).join(' ou ')}.</span> : undefined}>
       <input className={classeSaisie} type="url" inputMode="url" autoCapitalize="none" autoCorrect="off" placeholder={b.type === 'video' ? 'https://youtu.be/…' : 'https://…'}
-        value={b.url} onChange={e => maj({ url: e.target.value })} onBlur={titreDepuisSite} autoFocus={nouveau}
+        value={b.url} onChange={e => maj({ url: e.target.value })} onBlur={() => titreDepuisSite()} autoFocus={nouveau && !bloc.url}
+        onPaste={e => { const texte = e.clipboardData.getData('text'); if (!b.url.trim() && adresseSaisie(texte)) setTimeout(() => titreDepuisSite(texte)); }}
         onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); document.getElementById('bloc-titre')?.focus(); } }} />
     </Champ>
   );
@@ -385,7 +475,6 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
       {!nouveau && etiquettes(b, droits).length > 0 && <p className="text-[13px] leading-snug text-white/60">{etiquettes(b, droits).join(' · ')}</p>}
       {/* Un avis ou une liste gardés d'une offre passée : ils attendent, rien n'est perdu. */}
       {type.fonction && !droits[type.fonction] && <Reserve fonction={type.fonction} phrase={`Ce bloc n’est pas montré sur ta page sans Hopla ${offreDe(type.fonction)}. Il revient tel quel dès que tu la prends.`} />}
-      {apercu}
       {b.type === 'preuve' && nouveau && !bureau && !preuveRemplie && !clavier && (
         // La place de l'aperçu est gardée dès l'ouverture : le formulaire ne saute pas quand la première valeur arrive.
         <div className="lp lp-mini grid min-h-[112px] place-items-center rounded-[20px] p-4 text-center ring-1 ring-white/[0.06]" style={variablesTheme(theme) as CSSProperties} data-police={theme.police} data-decor={theme.decor}>
@@ -514,10 +603,19 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
     );
   }
 
+  // Au téléphone, la feuille mène de page en page, sa flèche dans l'en-tête : l'essentiel, puis « Plus de réglages », puis une page par règle.
+  const fil: FilFeuille | null = page === null ? null : {
+    titre: NOMS_PAGES[page],
+    label: page === 'plus' ? 'Revenir au bloc' : 'Revenir à Plus de réglages',
+    retour: () => allerA(page === 'plus' ? null : 'plus'),
+  };
+  const groupe = 'adm-groupe flex flex-col divide-y divide-white/[0.06]';
   return (
     <FournisseurOffre value={offre}>
-    {/* `cote` : la page reste visible au-dessus de la feuille, et le bloc s'y redessine à chaque frappe. */}
-    <Feuille ouverte cote onFermer={fermerEnGardant} retenir={retenir} titre={titre}
+    {/* `cote` : la page reste visible au-dessus de la feuille, et le bloc s'y redessine à chaque frappe ; la feuille s'arrête sous lui.
+        Un bloc neuf n'est pas encore sur la page : sa feuille, voilée, prend presque tout l'écran, son aperçu en haut. */}
+    <Feuille ouverte cote={!nouveau} classe="adm-feuille-bloc" plafond={plafond} onFermer={fermerEnGardant} retenir={retenir} titre={titre}
+      retour={nouveau && onRetour ? { label: 'Revenir au choix du bloc', action: onRetour } : undefined}
       pied={fermer => (
         <div className="flex items-center gap-2">
           {/* Fermer garde les changements ; ce bouton est la seule façon de les oublier (un bloc neuf n'est pas ajouté). */}
@@ -530,7 +628,11 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
           </BoutonPrincipal>
         </div>
       )}>
-      <div className="adm-editeur flex flex-col gap-4 pt-1">
+      <FilPage fil={fil} />
+      {apercu}
+      <PagesBloc.Provider value={{ page, ouvrir: allerA }}>
+      {/* La première page reste montée sous les autres : rien ne s'y perd, et son champ ne reprend pas le focus au retour. */}
+      <div hidden={page !== null} className="adm-editeur flex flex-col gap-4 pt-1">
         {essentiel}
 
         {/* Masquer un bloc un temps est le geste le plus courant après le texte : il reste à portée, hors de « Plus de réglages ». */}
@@ -538,70 +640,19 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
           <Interrupteur label="Visible sur ma page" actif={b.public} onChange={v => maj({ public: v })} />
         </div>
 
-        {plus ? (<>
-        {/* Deux groupes nommés, l'allure puis les règles : on trouve sans tout lire. */}
-        {['lien', 'video', 'newsletter', 'inscription'].includes(b.type) && <h3 className="-mb-1 pt-1 text-[13px] font-medium text-white/55">Apparence</h3>}
-        {(b.type === 'lien' || b.type === 'newsletter' || b.type === 'inscription') && (
-          <Champ label="Sous-titre (facultatif)">
-            <input className={classeSaisie} value={b.sousTitre} onChange={e => maj({ sousTitre: e.target.value })} maxLength={240} />
-          </Champ>
-        )}
-
-        {description}
-
-        {b.type === 'lien' && (
-          <>
-            <div>
-              <button type="button" onClick={() => setIcones(!icones)} aria-expanded={icones}
-                className="adm-groupe flex min-h-12 w-full items-center gap-3 px-4 text-left transition hover:bg-white/[0.03]">
-                <span className="text-white"><Icone nom={b.icone && ICONES[b.icone] ? b.icone : 'ui-aucun'} taille={20} /></span>
-                <span className="flex-1 text-[14.5px] font-medium text-white/85">Icône</span>
-                <span className="text-[13px] text-white/50">{nomIcone}</span>
-                <Icone nom="ui-chevron" taille={16} className={`text-white/55 transition ${icones ? 'rotate-180' : ''}`} />
-              </button>
-              {grilleIcones}
-            </div>
-            <div className="flex items-center gap-3">
-              {b.image && <img src={b.image} alt="" className="h-14 w-14 rounded-xl object-cover" />}
-              <div className="flex flex-1 flex-wrap gap-2">
-                <button type="button" onClick={e => choisirFichier(fichier.current, e.currentTarget)} disabled={envoi} className={classeBouton.secondaire}>{envoi ? 'Envoi…' : b.image ? 'Changer l’image' : 'Ajouter une image'}</button>
-                {!!adresseSaisie(b.url) && (
-                  <button type="button" onClick={recupererApercu} disabled={lecture || envoi} className={classeBouton.secondaire}>
-                    {lecture ? 'Lecture du site…' : 'Remplir depuis le site'}
-                  </button>
-                )}
-                {b.image && <button type="button" onClick={() => maj({ image: '' })} className={classeBouton.discret}>Retirer</button>}
-              </div>
-              {champFichier}
-            </div>
-            {erreurImage && <div className="-mt-2">{erreurImage}</div>}
-          </>
-        )}
-
-        {bascules(false).length > 0 && <div className="adm-groupe divide-y divide-white/[0.06] px-4">{bascules(false)}</div>}
-        {formeCouleur}
-        {animation}
-
-        <h3 className="-mb-1 pt-1 text-[13px] font-medium text-white/55">Règles</h3>
-        {regles}
-        <button type="button" onClick={() => { vibrer(4); setPlus(false); }}
-          className={classeBouton.discret}>
-          <Icone nom="ui-chevron" taille={16} className="rotate-180" /> Moins de réglages
+        {/* Le reste attend derrière une seule ligne, qui dit ce qui est réglé ; elle mène à sa page, la flèche de l'en-tête ramène. */}
+        <button id={`${idPlus}-ligne`} type="button" onClick={() => { vibrer(4); allerA('plus'); }}
+          className="-mt-2 flex min-h-12 w-full items-center gap-3 text-left">
+          <span className="shrink-0 whitespace-nowrap text-[14.5px] font-medium text-white">Plus de réglages</span>
+          <span className="min-w-0 flex-1 truncate text-right text-[13px] text-white/55">{reglees || cache}</span>
+          <Icone nom="ui-chevron" taille={16} className="-rotate-90 shrink-0 text-white/55" />
         </button>
-        </>) : (
-          <button type="button" onClick={() => { vibrer(4); setPlus(true); }}
-            className="-mt-2 flex min-h-12 w-full items-center gap-3 text-left">
-            <span className="shrink-0 whitespace-nowrap text-[14.5px] font-medium text-white">Plus de réglages</span>
-            <span className="min-w-0 flex-1 truncate text-[13px] text-white/55">{reglees || cache}</span>
-            <Icone nom="ui-chevron" taille={16} className="shrink-0 text-white/55" />
-          </button>
-        )}
 
         {!nouveau && b.type === 'lien' && clics > 0 && <p className="text-center text-[13px] text-white/55">{clics} clic{clics > 1 ? 's' : ''} ces 30 derniers jours</p>}
 
         {/* Les gestes rares, nommés en toutes lettres, au bout de la feuille plutôt qu'en pictos à côté de Terminé. */}
         {!nouveau && (
-          <div className="adm-groupe flex flex-col divide-y divide-white/[0.06]">
+          <div className={groupe}>
             {onDeplacer && place && place.total > 1 && (
               <div className="flex min-h-12 items-center gap-2 pl-4 pr-1.5">
                 <span className="flex-1 text-[14.5px] font-medium text-white/85">Place sur ta page</span>
@@ -618,6 +669,59 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
           </div>
         )}
       </div>
+
+      {page !== null && (
+        <div className="adm-editeur flex flex-col gap-4 pt-1">
+          {page === 'plus' && (<>
+            {/* Deux groupes nommés, l'allure puis les règles : on trouve sans tout lire. */}
+            {['lien', 'video', 'newsletter', 'inscription'].includes(b.type) && <h3 className="-mb-1 text-[13px] font-medium text-white/55">Apparence</h3>}
+            {(b.type === 'lien' || b.type === 'newsletter' || b.type === 'inscription') && (
+              <Champ label="Sous-titre (facultatif)">
+                <input className={classeSaisie} value={b.sousTitre} onChange={e => maj({ sousTitre: e.target.value })} maxLength={240} />
+              </Champ>
+            )}
+
+            {description}
+
+            {b.type === 'lien' && (
+              <>
+                <div>
+                  <button type="button" onClick={() => setIcones(!icones)} aria-expanded={icones}
+                    className="adm-groupe flex min-h-12 w-full items-center gap-3 px-4 text-left transition hover:bg-white/[0.03]">
+                    <span className="text-white"><Icone nom={b.icone && ICONES[b.icone] ? b.icone : 'ui-aucun'} taille={20} /></span>
+                    <span className="flex-1 text-[14.5px] font-medium text-white/85">Icône</span>
+                    <span className="text-[13px] text-white/50">{nomIcone}</span>
+                    <Icone nom="ui-chevron" taille={16} className={`text-white/55 transition ${icones ? 'rotate-180' : ''}`} />
+                  </button>
+                  {grilleIcones}
+                </div>
+                <div className="flex items-center gap-3">
+                  {b.image && <img src={b.image} alt="" className="h-14 w-14 rounded-xl object-cover" />}
+                  <div className="flex flex-1 flex-wrap gap-2">
+                    <button type="button" onClick={e => choisirFichier(fichier.current, e.currentTarget)} disabled={envoi} className={classeBouton.secondaire}>{envoi ? 'Envoi…' : b.image ? 'Changer l’image' : 'Ajouter une image'}</button>
+                    {!!adresseSaisie(b.url) && (
+                      <button type="button" onClick={recupererApercu} disabled={lecture || envoi} className={classeBouton.secondaire}>
+                        {lecture ? 'Lecture du site…' : 'Remplir depuis le site'}
+                      </button>
+                    )}
+                    {b.image && <button type="button" onClick={() => maj({ image: '' })} className={classeBouton.discret}>Retirer</button>}
+                  </div>
+                  {champFichier}
+                </div>
+                {erreurImage && <div className="-mt-2">{erreurImage}</div>}
+              </>
+            )}
+
+            {bascules(false).length > 0 && <div className="adm-groupe divide-y divide-white/[0.06] px-4">{bascules(false)}</div>}
+            {formeCouleur}
+          </>)}
+          {/* Les règles (et l'animation d'un lien mis en avant) restent montées d'une page à l'autre : une ligne ici, leur page là. */}
+          {animation && <div className={page === 'plus' ? groupe : 'contents'}>{animation}</div>}
+          {page === 'plus' && <h3 className="-mb-1 pt-1 text-[13px] font-medium text-white/55">Règles</h3>}
+          <div className={page === 'plus' ? groupe : 'contents'}>{regles}</div>
+        </div>
+      )}
+      </PagesBloc.Provider>
     </Feuille>
     </FournisseurOffre>
   );

@@ -63,6 +63,9 @@ test('les thèmes proposés à l’arrivée existent tous', () => {
   assert.equal(nomSite('https://calendly.com/toi'), 'Calendly');
   assert.equal(nomSite('https://shop.marie.co.uk'), 'Marie');
   assert.equal(nomSite('pas une adresse'), '');
+  assert.equal(nomSite('https://www.youtube.com/@marie'), 'YouTube');
+  assert.equal(nomSite('https://youtu.be/abc'), 'YouTube');
+  assert.equal(nomSite('https://fr.linkedin.com/in/marie'), 'LinkedIn');
 });
 
 test('une adresse de profil se relit en pseudo, et le pseudo redonne la même adresse', () => {

@@ -230,12 +230,14 @@ export const envoyerImage = createServerFn({ method: 'POST' })
 export const apercuSite = createServerFn({ method: 'POST' })
   .middleware([session])
   .validator((data: unknown) => {
-    const url = adresse(String(data ?? ''));
+    // Une adresse seule (les pages déjà ouvertes avant la mise à jour), ou l'adresse et l'envie d'une image.
+    const objet = data && typeof data === 'object' ? data as { url?: unknown; image?: unknown } : { url: data, image: true };
+    const url = adresse(String(objet.url ?? ''));
     if (!url) throw new Error('Adresse refusée.');
-    return url;
+    return { url, image: objet.image !== false };
   })
   .handler(async ({ data }) => {
-    try { return await lireApercu(data); }
+    try { return await lireApercu(data.url, { image: data.image }); }
     catch { throw new Error('Impossible de lire ce site.'); }
   });
 

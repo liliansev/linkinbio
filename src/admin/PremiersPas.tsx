@@ -97,7 +97,7 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
     const repli = nomSite(url);
     majLigne(l.id, { titre: repli, lecture: true });
     try {
-      const site = await apercuSite(url);
+      const site = await apercuSite(url, false);
       // On ne remplace que le nom de repli : un titre tapé entre-temps reste.
       if (site.titre) setLignes(ls => ls.map(x => (x.id === l.id && x.titre === repli ? { ...x, titre: site.titre.slice(0, 80) } : x)));
     } catch { /* le nom du site suffit */ } finally { majLigne(l.id, { lecture: false }); }

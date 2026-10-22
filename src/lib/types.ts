@@ -254,7 +254,8 @@ export interface Api {
   enregistrerReglages(reglages: Reglages): Promise<Reglages>;
   envoyerImage(dataUrl: string): Promise<string>;
   /** Le titre, la description et l'image (en data URL) d'un site, lus par le serveur. */
-  apercuSite(url: string): Promise<{ titre: string; description: string; image: string | null }>;
+  /** Le titre, la description et l'image de partage d'un site ; `image` à faux, le titre et la description seuls (plus vite). */
+  apercuSite(url: string, image?: boolean): Promise<{ titre: string; description: string; image: string | null }>;
   stats(jours: number): Promise<Stats>;
   deconnexion(): Promise<void>;
   /** Enregistre l'acceptation des CGU et de l'accord de traitement en vigueur. */

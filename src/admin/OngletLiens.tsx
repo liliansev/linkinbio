@@ -1,8 +1,10 @@
+import { useId, useState } from 'react';
 import type { CSSProperties } from 'react';
 import type { TypeBloc } from '../lib/types.ts';
 import { TYPES_PRINCIPAL } from '../lib/types.ts';
+import { adresseSaisie, pourquoiPasAdresse } from '../lib/valider.ts';
 import { Icone } from '../components/Icone.tsx';
-import { Feuille } from './ui.tsx';
+import { Feuille, classeSaisie } from './ui.tsx';
 import type { Fonction } from '../lib/abonnement.ts';
 import { Etiquette, useDroits, useVoirOffres } from './offre.tsx';
 
@@ -17,7 +19,46 @@ export const TYPES: { type: TypeBloc; nom: string; aide: string; picto: string; 
   { type: 'newsletter', nom: 'Ma newsletter Lumail', aide: 'Branchée sur Lumail', picto: 'bloc-newsletter' },
 ];
 
-export function FeuilleAjout({ ouverte, onFermer, onChoisir, principal }: { ouverte: boolean; onFermer: () => void; onChoisir: (type: TypeBloc) => void; principal: boolean }) {
+/**
+ * Au téléphone, en tête du choix : une adresse collée (ou tapée, puis Entrée)
+ * devient un lien d'un coup, son texte lu sur le site. Une saisie qui n'est pas
+ * une adresse dit pourquoi.
+ */
+function CollerAdresse({ ajouter }: { ajouter: (url: string) => void }) {
+  const [valeur, setValeur] = useState('');
+  const [erreur, setErreur] = useState('');
+  const id = useId();
+  const poser = (texte: string) => {
+    const url = adresseSaisie(texte);
+    if (!url) { setErreur(pourquoiPasAdresse(texte)); return; }
+    ajouter(url);
+  };
+  return (
+    <div className="pb-2">
+      <div className="relative flex items-center">
+        <Icone nom="ui-plus" taille={16} className="pointer-events-none absolute left-3.5 text-white/55" />
+        <input className={`${classeSaisie} pl-10`} type="url" inputMode="url" enterKeyHint="go" autoCapitalize="none" autoCorrect="off" spellCheck={false} value={valeur}
+          placeholder="Colle une adresse" aria-label="Ajouter un lien depuis son adresse" aria-invalid={erreur ? true : undefined} aria-describedby={erreur ? id : undefined}
+          onChange={e => { setValeur(e.target.value); if (erreur) setErreur(''); }}
+          onPaste={e => {
+            if (valeur.trim()) return;
+            const texte = e.clipboardData.getData('text');
+            if (!adresseSaisie(texte)) return;
+            e.preventDefault();
+            setValeur(texte);
+            poser(texte);
+          }}
+          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); if (valeur.trim()) poser(valeur); } }} />
+      </div>
+      {erreur && <p id={id} role="alert" className="mt-1.5 text-[13px] font-medium leading-snug text-red-300">{erreur}</p>}
+    </div>
+  );
+}
+
+export function FeuilleAjout({ ouverte, onFermer, onChoisir, onColler, principal }: { ouverte: boolean; onFermer: () => void; onChoisir: (type: TypeBloc) => void;
+  /** Au téléphone : une adresse collée en tête de la liste devient un lien neuf. */
+  onColler?: (url: string) => void;
+  principal: boolean }) {
   const types = principal ? TYPES : TYPES.filter(t => !TYPES_PRINCIPAL.includes(t.type));
   const droits = useDroits();
   const voirOffres = useVoirOffres();
@@ -25,6 +66,7 @@ export function FeuilleAjout({ ouverte, onFermer, onChoisir, principal }: { ouve
     <Feuille ouverte={ouverte} onFermer={onFermer} titre="Ajouter à ma page">
       {fermer => (
         <>
+        {onColler && <CollerAdresse ajouter={url => fermer(() => onColler(url))} />}
         <ul className="adm-cascade -mx-2 flex flex-col pb-2">
           {types.map((t, i) => {
             // Un bloc réservé reste dans la liste, avec le nom de son offre : le toucher mène aux offres.

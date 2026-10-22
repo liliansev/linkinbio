@@ -46,7 +46,9 @@ embarque tout : l'image n'a pas de `node_modules`.
   jamais stockée), `server/moderation.ts` (DSA), `server/creem.ts` (paiement, changement d'offre au prorata,
   résiliation, webhooks signés), `server/suppression.ts` (supprimer un compte résilie d'abord son abonnement Creem ;
   si Creem ne répond pas, refusé une fois, puis supprimé et signalé à Lilian par e-mail pour le résilier à la main),
-  `server/apercu.ts` (aperçu de site, anti-SSRF), `server/droits.ts`
+  `server/apercu.ts` (aperçu de site, anti-SSRF ; lu en voix d'aperçu puis de navigateur, jusqu'au `</head>`, dans le jeu de
+  caractères annoncé, par l'oEmbed pour YouTube, Vimeo, Spotify et SoundCloud ; une page de vérification, de consentement ou
+  d'erreur ne donne jamais son titre ; `image: false` pour le titre seul), `server/droits.ts`
   (`droits()` d'un compte, `verifierDates` avant d'enregistrer un bloc, `joursLisibles` pour les stats).
 - `lib/` : `types.ts` (origines, `cheminPage`, `urlPage`), `valider.ts`, `themes.ts`, `legal.ts` (`VERSION_CGU`),
   `abonnement.ts` (les quatre offres Gratuit, Starter, Pro, Premium : prix, `FONCTIONS`, `peut()`, `joursStats()`, `estPaye()` ;
@@ -78,7 +80,14 @@ embarque tout : l'image n'a pas de `node_modules`.
   `PageLiens` reçoit `edition` (nom et bio tapés en place, photo, réseaux et blocs
   ouverts d'un toucher, blocs déplacés en les maintenant), le design s'ouvre dans une
   feuille `cote` qui laisse voir la page, et la liste d'avant (`OngletLiens`) reste à
-  un toucher. En tête, `BienDemarrer.tsx` :
+  un toucher. La feuille d'un bloc (22 octobre 2026) s'arrête sous lui, entre la moitié
+  et 86 % de l'écran (`plafond`), et garde sa hauteur d'une page à l'autre : ses réglages
+  rares s'ouvrent en pages (« Plus de réglages », puis chaque règle, `PagesBloc` dans
+  `ReglesBloc.tsx`), avec une flèche dans l'en-tête de la feuille (`useFilFeuille`). Un bloc
+  neuf revient au choix des blocs par sa flèche ; ce choix s'ouvre sur « Colle une adresse ».
+  Le retour du téléphone referme une couche à la fois (`couches.ts` : chaque feuille,
+  page de bloc, tiroir du design, sous-page de Réglages ou aperçu pose une entrée dans
+  l'historique, que le routeur ne voit pas). En tête, `BienDemarrer.tsx` :
   l'adresse à copier ou partager, et les étapes d'une page prête (`lib/demarrage.ts`) ;
   au téléphone, un anneau dans l'en-tête ouvre ces étapes dans une feuille, et Ajouter
   et Personnaliser se posent sur la barre des onglets : la page commence sous l'en-tête.
