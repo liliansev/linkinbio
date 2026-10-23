@@ -42,5 +42,8 @@ test('Calendly, Cal.com et Google Agenda s’ouvrent dans la page ; Planity et l
   assert.equal(agendaDe('https://app.lemcal.com/@lilian/decouverte'), 'lemcal');
   assert.equal(agendaDe('https://cal.com/lilian'), 'calcom');
   assert.equal(nomAgenda('https://calendly.com/lilian'), 'Calendly');
-  assert.equal(nomAgenda('https://www.doctolib.fr/x'), 'doctolib.fr');
+  assert.equal(nomAgenda('https://www.doctolib.fr/osteopathe/paris/camille-martin'), 'Doctolib');
+  assert.equal(nomAgenda('https://camille.as.me/'), 'Acuity');
+  assert.equal(nomAgenda('https://meetings-eu1.hubspot.com/camille'), 'HubSpot');
+  assert.equal(nomAgenda('https://www.agenda-camille.fr/x'), 'agenda-camille.fr');
 });

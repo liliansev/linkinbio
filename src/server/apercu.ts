@@ -5,6 +5,7 @@ import type { IncomingMessage } from 'node:http';
 import { request as requeteHttps } from 'node:https';
 import { BlockList, isIP } from 'node:net';
 import type { LookupFunction } from 'node:net';
+import type { ImageApercu, VisuelApercu } from '../lib/types.ts';
 
 /*
  * L'aperçu d'un site, pour habiller un lien : son titre, sa description et son
@@ -21,15 +22,27 @@ import type { LookupFunction } from 'node:net';
  * partage, puis comme un navigateur si la porte reste fermée ; les grands
  * sites de vidéo et de musique passent par leur oEmbed ; et une page de
  * vérification (« Just a moment… ») ne se prend jamais pour un titre.
+ *
+ * Le logo d'un site (23 octobre 2026, demandé par Lilian) : ses icônes d'écran
+ * d'accueil (`apple-touch-icon`), ses icônes déclarées, celles de son manifeste,
+ * puis `/favicon.ico`. Il habille la petite vignette d'un bouton quand l'image
+ * de partage est une bannière large, qui s'y couperait.
  */
 
-export interface ApercuSite { titre: string; description: string; image: string | null; prix: string }
+export interface ApercuSite {
+  titre: string; description: string; image: string | null; prix: string;
+  /** D'où vient l'image : l'image de partage, le logo du site, ou une capture de la page. */
+  visuel?: VisuelApercu;
+}
 
 /** Au plus ce qu'on lit d'une page : son `<head>` suffit, la lecture s'arrête dès qu'il se ferme. */
 const LIMITE_PAGE = 2_000_000;
 const LIMITE_IMAGE = 5_000_000;
 const LIMITE_OEMBED = 200_000;
 const DELAI = 7000;
+/** Un logo se cherche à plusieurs adresses : chacune a moins de temps, et quatre essais au plus. */
+const DELAI_LOGO = 4000;
+const ESSAIS_LOGO = 4;
 const SAUTS = 8;
 const CAPTURE = (url: string) => `https://image.thum.io/get/width/1200/crop/675/noanimate/${url}`;
 
@@ -103,10 +116,10 @@ interface Reponse { octets: Buffer; type: string; url: string; statut: number }
  * (`coupe`) ou à `limite` octets, et se lit quelle que soit sa réponse (un 403 peut porter ses balises) ;
  * un fichier (une image) doit répondre 200 et tenir sous `limite`.
  */
-async function telecharger(depart: string, { limite, accepte, voix = VOIX_APERCU, coupe = false, referent }: { limite: number; accepte: string; voix?: Voix; coupe?: boolean; referent?: string }): Promise<Reponse> {
+async function telecharger(depart: string, { limite, accepte, voix = VOIX_APERCU, coupe = false, referent, duree = DELAI }: { limite: number; accepte: string; voix?: Voix; coupe?: boolean; referent?: string; duree?: number }): Promise<Reponse> {
   let url = new URL(depart);
   for (let saut = 0; saut <= SAUTS; saut++) {
-    const delai = AbortSignal.timeout(DELAI);
+    const delai = AbortSignal.timeout(duree);
     const reponse = await obtenir(url, {
       accept: accepte, 'accept-language': 'fr-FR,fr;q=0.9,en;q=0.8', 'user-agent': voix, ...consentement(url.hostname), ...(referent ? { referer: referent } : {}),
     }, delai);
@@ -207,7 +220,10 @@ const BARRAGES = [
 ];
 export const estBarrage = (titre: string) => [titre, titreCourt(titre)].some(t => BARRAGES.some(m => m.test(t.replace(/[.…!\s]+$/, '').trim())));
 
-interface Meta { titre: string; description: string; image: string; oembed: string; rafraichir: string; prix: string }
+/** Une icône déclarée par une page : son adresse, son plus petit côté annoncé (0 s'il ne l'est pas), et si c'est celle de l'écran d'accueil. */
+export interface IconeDeclaree { url: string; taille: number; accueil: boolean }
+
+interface Meta { titre: string; description: string; image: string; oembed: string; rafraichir: string; prix: string; icones: IconeDeclaree[]; manifeste: string }
 
 /** Un montant écrit à la façon de n'importe quel pays (« 24,00 », « 1.234,56 », « 1,234.56 », « 1 234 ») ; null s'il n'y en a pas, ou s'il est nul. */
 export function montant(brut: string): number | null {
@@ -279,7 +295,10 @@ function lirePrix(meta: Record<string, string>, html: string): string {
   return texte && des ? `Dès ${texte}` : texte;
 }
 
-/** Le titre, la description, l'image de partage et le prix (une boutique) déclarés dans le `<head>` d'une page, et son oEmbed s'il en a un. */
+/**
+ * Le titre, la description, l'image de partage et le prix (une boutique) déclarés dans le `<head>` d'une page, son oEmbed
+ * s'il en a un, ses icônes et son manifeste. Une icône en SVG est laissée de côté : elle ne se redessine pas en vignette.
+ */
 export function lireMeta(html: string, base: string): Meta {
   const meta: Record<string, string> = {};
   const attr = (balise: string, nom: string) => {
@@ -294,11 +313,20 @@ export function lireMeta(html: string, base: string): Meta {
     if (!(k in meta) && contenu.trim()) meta[k] = decoder(contenu.trim());
   }
   const liens: Record<string, string> = {};
+  const icones: IconeDeclaree[] = [];
   for (const [balise] of html.matchAll(/<link\b[^>]*>/gi)) {
     const rel = attr(balise, 'rel')?.toLowerCase() ?? '', type = attr(balise, 'type')?.toLowerCase() ?? '', href = attr(balise, 'href');
     if (!href) continue;
+    const rels = rel.split(/\s+/);
     if (rel === 'image_src' && !liens.image) liens.image = decoder(href);
     if (rel.includes('alternate') && type === 'application/json+oembed' && !liens.oembed) liens.oembed = decoder(href);
+    if (rels.includes('manifest') && !liens.manifeste) liens.manifeste = decoder(href);
+    const accueil = rels.some(r => r === 'apple-touch-icon' || r === 'apple-touch-icon-precomposed');
+    if ((accueil || rels.includes('icon')) && !type.includes('svg') && !/\.svg([?#]|$)/i.test(href)) {
+      const tailles = (attr(balise, 'sizes') ?? '').match(/\d+x\d+/gi)?.map(t => Math.min(...t.toLowerCase().split('x').map(Number))) ?? [];
+      // Une icône d'écran d'accueil sans taille fait 180 pixels ; une icône sans taille, souvent 16 ou 32.
+      icones.push({ url: decoder(href), taille: tailles.length ? Math.max(...tailles) : accueil ? 180 : 0, accueil });
+    }
   }
   const absolue = (u: string) => { try { return u ? new URL(u, base).toString() : ''; } catch { return ''; } };
   const titreBalise = decoder(/<title[^>]*>([^<]*)<\/title>/i.exec(html)?.[1] ?? '');
@@ -315,6 +343,8 @@ export function lireMeta(html: string, base: string): Meta {
     oembed: absolue(liens.oembed ?? ''),
     rafraichir: absolue(rafraichir),
     prix: barre ? '' : lirePrix(meta, html),
+    icones: barre ? [] : icones.map(i => ({ ...i, url: absolue(i.url) })).filter(i => /^https?:/.test(i.url)),
+    manifeste: barre ? '' : absolue(liens.manifeste ?? ''),
   };
 }
 
@@ -372,24 +402,125 @@ async function lirePage(url: string): Promise<Meta & { url: string }> {
   throw erreur ?? new Error('Page illisible.');
 }
 
-async function imageEnDataUrl(url: string, referent?: string): Promise<string | null> {
+/** La largeur et la hauteur d'une image, lues dans ses octets : PNG, JPEG, GIF, WebP et ICO (sa plus grande icône) ; null sinon. */
+export function tailleImage(o: Uint8Array): { l: number; h: number } | null {
+  const b = Buffer.from(o.buffer, o.byteOffset, o.byteLength);
+  const texte = (de: number, a: number) => b.toString('latin1', de, a);
+  if (b.length >= 24 && b.readUInt32BE(0) === 0x89504e47) return { l: b.readUInt32BE(16), h: b.readUInt32BE(20) };
+  if (b.length >= 10 && texte(0, 3) === 'GIF') return { l: b.readUInt16LE(6), h: b.readUInt16LE(8) };
+  if (b.length >= 30 && texte(0, 4) === 'RIFF' && texte(8, 12) === 'WEBP') {
+    const morceau = texte(12, 16);
+    if (morceau === 'VP8 ') return { l: b.readUInt16LE(26) & 0x3fff, h: b.readUInt16LE(28) & 0x3fff };
+    if (morceau === 'VP8L') { const n = b.readUInt32LE(21); return { l: (n & 0x3fff) + 1, h: ((n >>> 14) & 0x3fff) + 1 }; }
+    if (morceau === 'VP8X') return { l: b.readUIntLE(24, 3) + 1, h: b.readUIntLE(27, 3) + 1 };
+    return null;
+  }
+  const ico = entreesIco(b);
+  if (ico) { const c = Math.max(0, ...ico.map(e => e.cote)); return c ? { l: c, h: c } : null; }
+  if (b.length >= 4 && b[0] === 0xff && b[1] === 0xd8) {
+    // Les marqueurs d'un JPEG, jusqu'à celui qui décrit l'image (SOF) et donne sa taille.
+    for (let i = 2; i + 9 < b.length;) {
+      if (b[i] !== 0xff) { i++; continue; }
+      const m = b[i + 1];
+      if (m === 0xff) { i++; continue; }
+      if (m === 0x01 || (m >= 0xd0 && m <= 0xd8)) { i += 2; continue; }
+      if (m >= 0xc0 && m <= 0xcf && m !== 0xc4 && m !== 0xc8 && m !== 0xcc) return { l: b.readUInt16BE(i + 7), h: b.readUInt16BE(i + 5) };
+      i += 2 + b.readUInt16BE(i + 2);
+    }
+  }
+  return null;
+}
+
+/** Les icônes d'un fichier ICO (le `favicon.ico`) : leur côté, et où elles sont rangées ; null si ce n'en est pas un. */
+function entreesIco(b: Buffer): { cote: number; debut: number; longueur: number }[] | null {
+  if (b.length < 22 || b.readUInt16LE(0) !== 0 || b.readUInt16LE(2) !== 1) return null;
+  const n = b.readUInt16LE(4);
+  if (!n || 6 + 16 * n > b.length) return null;
+  return Array.from({ length: n }, (_, i) => {
+    const e = 6 + 16 * i;
+    return { cote: Math.min(b[e] || 256, b[e + 1] || 256), longueur: b.readUInt32LE(e + 8), debut: b.readUInt32LE(e + 12) };
+  });
+}
+
+/** La plus grande icône d'un ICO quand elle est rangée en PNG (le cas des icônes modernes) : un PNG tout simple, que tout navigateur lit. */
+export function pngDeIco(o: Uint8Array): Buffer | null {
+  const b = Buffer.from(o.buffer, o.byteOffset, o.byteLength);
+  const grande = entreesIco(b)?.sort((x, y) => y.cote - x.cote)[0];
+  if (!grande || grande.debut + grande.longueur > b.length) return null;
+  const png = b.subarray(grande.debut, grande.debut + grande.longueur);
+  return png.length > 8 && png.readUInt32BE(0) === 0x89504e47 ? png : null;
+}
+
+interface ImageLue { donnees: string; l: number; h: number }
+const cote = (i: ImageLue) => Math.min(i.l, i.h);
+/** Presque carrée : elle tient entière dans la vignette d'un bouton. */
+const carree = (i: ImageLue) => i.l / i.h >= 0.8 && i.l / i.h <= 1.25;
+
+/** Une image téléchargée, en data URL, avec sa taille ; null si ce n'est pas une image qu'un navigateur sait lire. */
+async function imageDe(url: string, referent?: string, duree = DELAI): Promise<ImageLue | null> {
   try {
-    const { octets, type } = await telecharger(url, { limite: LIMITE_IMAGE, accepte: 'image/avif,image/webp,image/png,image/jpeg,image/*', voix: VOIX_NAVIGATEUR, referent });
-    const mime = type.split(';')[0].trim().toLowerCase();
-    if (!/^image\/(png|jpeg|webp|gif|avif)$/.test(mime)) return null;
-    return `data:${mime};base64,${octets.toString('base64')}`;
+    const { octets, type } = await telecharger(url, { limite: LIMITE_IMAGE, accepte: 'image/avif,image/webp,image/png,image/jpeg,image/*', voix: VOIX_NAVIGATEUR, referent, duree });
+    let mime = type.split(';')[0].trim().toLowerCase();
+    let corps: Buffer = octets;
+    // Un favicon se sert sous bien des noms (image/x-icon, image/vnd.microsoft.icon, application/octet-stream) : ses octets disent ce qu'il est.
+    if (entreesIco(octets)) {
+      const png = pngDeIco(octets);
+      if (png) { corps = png; mime = 'image/png'; } else mime = 'image/x-icon';
+    } else if (!/^image\/(png|jpeg|webp|gif|avif)$/.test(mime)) return null;
+    const taille = tailleImage(octets) ?? { l: 0, h: 0 };
+    if (mime !== 'image/avif' && !taille.l) return null;
+    return { donnees: `data:${mime};base64,${corps.toString('base64')}`, l: taille.l || 1200, h: taille.h || 630 };
   } catch { return null; }
+}
+
+/** Les icônes d'un manifeste d'application web, de la plus grande à la plus petite, sans SVG ni icône monochrome. */
+async function iconesManifeste(adresse: string): Promise<string[]> {
+  try {
+    const r = await telecharger(adresse, { limite: LIMITE_OEMBED, accepte: 'application/manifest+json,application/json', voix: VOIX_NAVIGATEUR, duree: DELAI_LOGO });
+    const m = JSON.parse(r.octets.toString('utf8')) as { icons?: { src?: unknown; sizes?: unknown; type?: unknown; purpose?: unknown }[] };
+    return (Array.isArray(m.icons) ? m.icons : [])
+      .filter(i => typeof i.src === 'string' && !/svg/i.test(String(i.type ?? '')) && !/\.svg([?#]|$)/i.test(i.src) && !/monochrome/i.test(String(i.purpose ?? '')))
+      .map(i => ({ url: new URL(i.src as string, r.url).toString(), taille: Math.max(0, ...(String(i.sizes ?? '').match(/\d+/g) ?? []).map(Number)) }))
+      .sort((a, b) => b.taille - a.taille).slice(0, 2).map(i => i.url);
+  } catch { return []; }
+}
+
+/**
+ * Le logo d'un site, le plus net trouvé : ses icônes d'écran d'accueil et ses grandes icônes déclarées, celles de son
+ * manifeste, `/apple-touch-icon.png`, ses petites icônes, puis `/favicon.ico`. Quatre essais au plus ; null si le plus
+ * net a un côté sous `min` pixels.
+ */
+async function logoDuSite(page: (Meta & { url: string }) | null, url: string, min: number): Promise<ImageLue | null> {
+  let origine: string;
+  try { origine = new URL(page?.url ?? url).origin; } catch { return null; }
+  const declarees = [...(page?.icones ?? [])].sort((a, b) => Number(b.accueil) - Number(a.accueil) || b.taille - a.taille);
+  const grandes = declarees.filter(i => i.accueil || i.taille >= 64).map(i => i.url);
+  const petites = declarees.filter(i => !i.accueil && i.taille < 64).map(i => i.url);
+  const manifeste = page?.manifeste && grandes.length < 2 ? await iconesManifeste(page.manifeste) : [];
+  const adresses = [...new Set([...grandes, ...manifeste, `${origine}/apple-touch-icon.png`, ...petites, `${origine}/favicon.ico`])].slice(0, ESSAIS_LOGO + 2);
+  let meilleure: ImageLue | null = null;
+  let essais = 0;
+  for (const a of adresses) {
+    if (essais >= ESSAIS_LOGO) break;
+    essais++;
+    const image = await imageDe(a, page?.url, DELAI_LOGO);
+    if (image && (!meilleure || cote(image) > cote(meilleure))) meilleure = image;
+    if (meilleure && cote(meilleure) >= 120) break;
+  }
+  return meilleure && cote(meilleure) >= min ? meilleure : null;
 }
 
 /**
  * L'aperçu d'un site. `image` à faux : le titre, la description et le prix seuls, pour remplir le texte d'un lien
  * sans attendre une image ni une capture. `'partage'` : l'image de partage, ou rien, jamais une capture (la photo
- * d'un produit ne peut pas être un morceau de sa page).
+ * d'un produit ne peut pas être un morceau de sa page). `'logo'` : le logo du site seul. `'vignette'` : ce qui tient le
+ * mieux dans la petite vignette carrée d'un bouton, l'image de partage si elle est carrée, sinon le logo du site,
+ * sinon l'image de partage, jamais une capture.
  */
-export async function apercuSite(url: string, { image: avecImage = true }: { image?: boolean | 'partage' } = {}): Promise<ApercuSite> {
+export async function apercuSite(url: string, { image: mode = true }: { image?: ImageApercu } = {}): Promise<ApercuSite> {
   const viaOembed = adresseOembed(url);
   const [page, o] = await Promise.all([
-    lirePage(url).catch(e => (viaOembed ? null : Promise.reject(e))),
+    lirePage(url).catch(e => (viaOembed || mode === 'logo' ? null : Promise.reject(e))),
     viaOembed ? oembed(viaOembed) : Promise.resolve(null),
   ]);
   // L'oEmbed annoncé par la page elle-même, quand elle n'a pas dit son titre.
@@ -397,8 +528,17 @@ export async function apercuSite(url: string, { image: avecImage = true }: { ima
   const titre = o?.titre || page?.titre || annonce?.titre || '';
   const description = page?.description ?? '';
   const prix = page?.prix ?? '';
-  if (!avecImage) return { titre, description, image: null, prix };
+  const base = { titre, description, prix };
+  if (!mode) return { ...base, image: null };
+  const avec = (i: ImageLue | null, visuel: VisuelApercu): ApercuSite => (i ? { ...base, image: i.donnees, visuel } : { ...base, image: null });
+  if (mode === 'logo') return avec(await logoDuSite(page, url, 32), 'logo');
   const source = page?.image || o?.image || annonce?.image || '';
-  const visuel = (source && (await imageEnDataUrl(source, page?.url))) || (avecImage === 'partage' ? null : await imageEnDataUrl(CAPTURE(page?.url ?? url)));
-  return { titre, description, image: visuel, prix };
+  const partage = source ? await imageDe(source, page?.url) : null;
+  if (mode === 'vignette') {
+    if (partage && carree(partage) && cote(partage) >= 96) return avec(partage, 'partage');
+    const logo = await logoDuSite(page, url, 64);
+    return logo ? avec(logo, 'logo') : avec(partage, 'partage');
+  }
+  if (partage || mode === 'partage') return avec(partage, 'partage');
+  return avec(await imageDe(CAPTURE(page?.url ?? url)), 'capture');
 }

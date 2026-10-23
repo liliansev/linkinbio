@@ -1,12 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { adresseOembed, decoderPage, ecrirePrix, estBarrage, estPrivee, lireMeta, lireOembed, montant, titreCourt } from './apercu.ts';
+import { adresseOembed, decoderPage, ecrirePrix, estBarrage, estPrivee, lireMeta, lireOembed, montant, pngDeIco, tailleImage, titreCourt } from './apercu.ts';
 
 test('lit le titre, la description et l’image de partage, adresse relative comprise', () => {
   const html = `<head><title>Repli</title><meta property="og:title" content="Agence AFK &amp; co">
     <meta name="description" content='Automatisation &#233;l&#xe9;gante'><meta property="og:image" content="/partage.png"></head>`;
   assert.deepEqual(lireMeta(html, 'https://agenceafk.fr/offres'), {
-    titre: 'Agence AFK & co', description: 'Automatisation élégante', image: 'https://agenceafk.fr/partage.png', oembed: '', rafraichir: '', prix: '',
+    titre: 'Agence AFK & co', description: 'Automatisation élégante', image: 'https://agenceafk.fr/partage.png', oembed: '', rafraichir: '', prix: '', icones: [], manifeste: '',
   });
   assert.equal(lireMeta('<title>Seul titre</title>', 'https://x.fr').titre, 'Seul titre');
 });
@@ -20,6 +20,63 @@ test('lit les balises écrites sans guillemets, les entités françaises et les 
   assert.equal(m.image, 'https://cdn.boulangerie.fr/vitrine.jpg');
   // Une majuscule accentuée reste majuscule.
   assert.equal(lireMeta('<title>&Eacute;cole &amp; atelier</title>', 'https://x.fr').titre, 'École & atelier');
+});
+
+test('repère les icônes d’une page et son manifeste, sans les SVG ni l’icône de Safari', () => {
+  const html = `<head><link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png">
+    <link rel="shortcut icon" href="/favicon.ico"><link rel="apple-touch-icon" href="/apple.png">
+    <link rel="icon" type="image/png" sizes="16x16 192x192" href="https://cdn.atelier.fr/192.png">
+    <link rel="icon" type="image/svg+xml" href="/logo.svg"><link rel="mask-icon" href="/masque.svg" color="#000">
+    <link rel="apple-touch-icon-precomposed" sizes="152x152" href="/apple-152.png"><link rel="manifest" href="/site.webmanifest"></head>`;
+  const m = lireMeta(html, 'https://atelier.fr/boutique/');
+  assert.deepEqual(m.icones, [
+    { url: 'https://atelier.fr/favicon-32.png', taille: 32, accueil: false },
+    { url: 'https://atelier.fr/favicon.ico', taille: 0, accueil: false },
+    { url: 'https://atelier.fr/apple.png', taille: 180, accueil: true },
+    { url: 'https://cdn.atelier.fr/192.png', taille: 192, accueil: false },
+    { url: 'https://atelier.fr/apple-152.png', taille: 152, accueil: true },
+  ]);
+  assert.equal(m.manifeste, 'https://atelier.fr/site.webmanifest');
+  // Une page de vérification ne donne pas ses icônes : ce sont celles du garde, pas du site.
+  assert.deepEqual(lireMeta('<title>Just a moment...</title><link rel="icon" href="/cf.png">', 'https://x.fr').icones, []);
+});
+
+/** Un PNG réduit à son en-tête : sa signature et son IHDR, qui donne sa taille. */
+const png = (l: number, h: number) => {
+  const b = Buffer.alloc(33);
+  b.writeUInt32BE(0x89504e47, 0); b.writeUInt32BE(0x0d0a1a0a, 4); b.writeUInt32BE(13, 8); b.write('IHDR', 12, 'latin1');
+  b.writeUInt32BE(l, 16); b.writeUInt32BE(h, 20);
+  return b;
+};
+
+test('lit la taille d’une image dans ses octets : PNG, GIF, JPEG, WebP et ICO', () => {
+  assert.deepEqual(tailleImage(png(180, 120)), { l: 180, h: 120 });
+  const gif = Buffer.from('GIF89a\x40\x00\x20\x00\x00\x00\x00', 'latin1');
+  assert.deepEqual(tailleImage(gif), { l: 64, h: 32 });
+  // Un JPEG : son début, un segment APP0, puis le SOF0 (hauteur 400, largeur 600).
+  const jpeg = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x04, 0x00, 0x00, 0xff, 0xc0, 0x00, 0x11, 0x08, 0x01, 0x90, 0x02, 0x58, 0x03, 0, 0, 0, 0, 0, 0]);
+  assert.deepEqual(tailleImage(jpeg), { l: 600, h: 400 });
+  const webp = Buffer.alloc(30);
+  webp.write('RIFF', 0, 'latin1'); webp.write('WEBP', 8, 'latin1'); webp.write('VP8X', 12, 'latin1');
+  webp.writeUIntLE(1199, 24, 3); webp.writeUIntLE(629, 27, 3);
+  assert.deepEqual(tailleImage(webp), { l: 1200, h: 630 });
+  assert.equal(tailleImage(Buffer.from('<html></html>')), null);
+});
+
+test('un favicon.ico donne sa plus grande icône, et la sert en PNG quand elle l’est déjà', () => {
+  const grande = png(256, 256);
+  const ico = Buffer.alloc(6 + 32);
+  ico.writeUInt16LE(0, 0); ico.writeUInt16LE(1, 2); ico.writeUInt16LE(2, 4);
+  // Une icône de 32 (rangée en BMP, ici quelques octets), puis une de 256 (écrite 0), rangée en PNG.
+  ico[6] = 32; ico[7] = 32; ico.writeUInt32LE(4, 6 + 8); ico.writeUInt32LE(38, 6 + 12);
+  ico[22] = 0; ico[23] = 0; ico.writeUInt32LE(grande.length, 22 + 8); ico.writeUInt32LE(42, 22 + 12);
+  const fichier = Buffer.concat([ico, Buffer.from([0x28, 0, 0, 0]), grande]);
+  assert.deepEqual(tailleImage(fichier), { l: 256, h: 256 });
+  assert.deepEqual(pngDeIco(fichier), grande);
+  // Sa plus grande icône rangée en BMP : pas de PNG à en tirer, le navigateur lira l'ICO tel quel.
+  const ancien = Buffer.from(fichier);
+  ancien.writeUInt32LE(4, 22 + 8); ancien.writeUInt32LE(38, 22 + 12);
+  assert.equal(pngDeIco(ancien), null);
 });
 
 test('lit un montant écrit à la façon de n’importe quel pays', () => {
