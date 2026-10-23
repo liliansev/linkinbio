@@ -185,17 +185,18 @@ export function PageLiens({ page, apercu = false, edition, liste }: {
           au bas de l'écran sur une page courte, les liens légaux en petit : on ne touche plus « Signaler » en visant la mention.
         */}
         {/* En édition, le pied ne mène nulle part : on ne quitte pas sa page en touchant la mention. */}
-        <footer className="lp-fin" {...(edition ? { inert: true } : fige)}>{compte.principal
-          ? <p className="lp-signature"><a href="https://liliansevoumian.fr" {...cible}>liliansevoumian.fr</a></p>
-          : <>
-            {/* La mention disparaît dès Starter ; les liens légaux restent sur toutes les pages des comptes invités. */}
-            {!peut(compte.plan, 'sansMention') && <p className="lp-signature"><a className="lp-hopla" href={ORIGINE_PUBLIQUE} {...cible}>{t.creeAvec} <strong>Hopla</strong></a></p>}
-            <p className="lp-legal">
-              <a href="/legal/confidentialite" {...cible}>{t.confidentialite}</a>
-              <span aria-hidden="true">·</span>
-              <a href={`/signaler?page=${compte.pseudo}`} rel="nofollow" aria-label={t.signalerPage} {...cible}>{t.signaler}</a>
-            </p>
-          </>}</footer>
+        <footer className="lp-fin" {...(edition ? { inert: true } : fige)}>
+          {/* La page de Lilian signe de son site ; ailleurs, la mention, qui disparaît dès Starter. */}
+          {compte.principal
+            ? <p className="lp-signature"><a href="https://liliansevoumian.fr" {...cible}>liliansevoumian.fr</a></p>
+            : !peut(compte.plan, 'sansMention') && <p className="lp-signature"><a className="lp-hopla" href={ORIGINE_PUBLIQUE} {...cible}>{t.creeAvec} <strong>Hopla</strong></a></p>}
+          {/* Les liens légaux, sur toutes les pages, celle de Lilian comprise. */}
+          <p className="lp-legal">
+            <a href="/legal/confidentialite" {...cible}>{t.confidentialite}</a>
+            <span aria-hidden="true">·</span>
+            <a href={`/signaler?page=${compte.pseudo}`} rel="nofollow" aria-label={t.signalerPage} {...cible}>{t.signaler}</a>
+          </p>
+        </footer>
       </div>
       </div>
       {agenda && <FeuilleAgenda bloc={agenda} t={t} fermer={() => { setAgenda(null); requestAnimationFrame(() => avantAgenda.current?.focus({ preventScroll: true })); }} />}

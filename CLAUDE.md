@@ -162,8 +162,9 @@ embarque tout : l'image n'a pas de `node_modules`.
   et `CodePromo`, copié d'un geste. Hopla n'encaisse et ne réserve rien : chaque bloc mène au site qui le fait.
   Le pied (23 octobre 2026, demandé par Lilian, d'après Linktree) : « Crée ta page avec Hopla » (comptes Gratuit) à
   l'accent du thème (`--mention-hopla`, `mentionPied` le pousse vers le texte juste assez pour se lire), puis loin
-  dessous, au bas de l'écran sur une page courte, Confidentialité · Signaler en petit (`--pied-legal`) : chaque lien
-  a sa cible de 44 px et aucune ne touche l'autre.
+  dessous, au bas de l'écran sur une page courte, Confidentialité · Signaler en petit (`--pied-legal`), sur toutes les
+  pages, celle de Lilian comprise : chaque lien a sa cible de 44 px et aucune ne touche l'autre. Le damier et les
+  étoiles s'effacent dans la dernière bande de l'écran, où se posent ces liens.
 - `accueil/` : l'accueil de hopla.page (`routes/index.tsx`, styles dans `styles/accueil.css` et, pour la
   version « des visages » du 21 octobre 2026, `styles/accueil-profils.css` sous `.hl-humain`), en bleu, vert
   citron et papiers crème, autour de six profils imaginés (portraits générés, provenance en `.webp.json`) ;
