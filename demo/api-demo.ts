@@ -4,10 +4,10 @@ import { ADRESSE_WEBHOOK, LISTE_CHEZ, NOMS_FOURNISSEURS, adresseWebhook } from '
 import { REGLAGES_DEFAUT, blocsDefaut, reglagesNouveauCompte } from '../src/lib/defauts.ts';
 import { CONTACT_LEGAL } from '../src/lib/legal.ts';
 import type { Droits } from '../src/lib/droits.ts';
-import type { Abonnement, Fonction, Periode, PlanPayant } from '../src/lib/abonnement.ts';
+import type { Abonnement, Fonction, OffreOfferte, Periode, PlanPayant } from '../src/lib/abonnement.ts';
 import type { PeriodeStats } from '../src/lib/periode.ts';
 import { ajouterJours, jourDe, joursEntre, longueur, plageDe } from '../src/lib/periode.ts';
-import { FONCTIONS, echeance, peut } from '../src/lib/abonnement.ts';
+import { FONCTIONS, OFFRES, echeance, effetOffert, finOfferte, peut, plusMois, rang } from '../src/lib/abonnement.ts';
 import avatar from '../public/avatar.webp?inline';
 
 /*
@@ -17,6 +17,7 @@ import avatar from '../public/avatar.webp?inline';
  */
 
 const CLE = 'liens-demo-v3';
+const SANS_ABONNEMENT: Abonnement = { plan: 'gratuit', payee: 'gratuit', statut: '', finPeriode: null, periode: null, portail: false, offerte: null };
 /** Sans paiement, rien n'est réservé : l'aperçu montre toutes les fonctions (seule la mention reste sans offre). */
 const DROITS_APERCU: Droits = { sansMention: false, vitrine: true, couleurs: true, programmation: true, avis: true, stats: true, heure: true, drops: true, listeEmail: true };
 let n = 0;
@@ -99,7 +100,7 @@ export const apiDemo: Api = {
   async charger(): Promise<EtatAdmin> {
     const s = statsFictives(30);
     return { ...etat, clics: Object.fromEntries(s.blocs.map(b => [b.id, b.clics])), places: {}, stockageEphemere: false, cguAJour: true, dejaVue: true, compte: { pseudo: 'lilian', principal: true, email: CONTACT_LEGAL, plan: 'premium' },
-      abonnement: { plan: 'premium', statut: '', finPeriode: null, periode: null, portail: false }, paiement: false, enVente: [], droits: DROITS_APERCU };
+      abonnement: { plan: 'premium', payee: 'gratuit', statut: '', finPeriode: null, periode: null, portail: false, offerte: null }, paiement: false, enVente: [], droits: DROITS_APERCU };
   },
   async enregistrerBloc(bloc) {
     await pause();
@@ -163,7 +164,7 @@ export const apiDemo: Api = {
     async inviter(email, pseudo) {
       await pause();
       if (comptesDemo.some(c => c.pseudo === pseudo)) return { ok: false, message: 'Ce pseudo est déjà pris.' };
-      comptesDemo.splice(1, 0, { id: id(), email, pseudo, statut: 'actif', cree: Date.now(), connexion: null, blocs: 0, vues: 0, principal: false, plan: 'gratuit' as const });
+      comptesDemo.splice(1, 0, { id: id(), email, pseudo, statut: 'actif', cree: Date.now(), connexion: null, blocs: 0, vues: 0, principal: false, plan: 'gratuit', abonnement: SANS_ABONNEMENT });
       return { ok: true, message: `Invitation envoyée à ${email} (dans l’aperçu, rien ne part vraiment).` };
     },
     async attente() { await pause(); return attenteDemo; },
@@ -172,14 +173,56 @@ export const apiDemo: Api = {
       const k = attenteDemo.findIndex(r => r.id === i);
       if (k < 0) return { ok: false, message: 'Cette réservation n’existe plus.' };
       const [r] = attenteDemo.splice(k, 1);
-      comptesDemo.splice(1, 0, { id: id(), email: r.email, pseudo: r.pseudo, statut: 'actif', cree: Date.now(), connexion: null, blocs: 0, vues: 0, principal: false, plan: 'gratuit' as const });
+      comptesDemo.splice(1, 0, { id: id(), email: r.email, pseudo: r.pseudo, statut: 'actif', cree: Date.now(), connexion: null, blocs: 0, vues: 0, principal: false, plan: 'gratuit', abonnement: SANS_ABONNEMENT });
       return { ok: true, message: `Invitation envoyée à ${r.email} (dans l’aperçu, rien ne part vraiment).` };
     },
     async retirerAttente(i) { await pause(); const k = attenteDemo.findIndex(r => r.id === i); if (k >= 0) attenteDemo.splice(k, 1); },
-    async renvoyer() { await pause(); return { ok: true, message: '' }; },
+    async renvoyer(i) {
+      await pause();
+      const c = compteDemo(i);
+      return { ok: true, message: c.connexion ? `Lien de connexion envoyé à ${c.email}, valable 24 heures (dans l’aperçu, rien ne part vraiment).` : `Lien envoyé à ${c.email} : il ouvre sa page, pendant 7 jours (dans l’aperçu, rien ne part vraiment).` };
+    },
+    // Comme Creem : l'offre payée court jusqu'à la fin de la période, puis s'arrête.
+    async resilier(i) {
+      await pause();
+      const c = compteDemo(i);
+      if (c.abonnement.payee === 'gratuit') throw new Error(`${c.pseudo} n’a pas d’abonnement à résilier.`);
+      c.abonnement = { ...c.abonnement, statut: 'scheduled_cancel' };
+      const fin = c.abonnement.finPeriode;
+      return { ok: true, message: `L’abonnement ${OFFRES[c.abonnement.payee].nom} de ${c.pseudo} est résilié : il s’arrête ${fin ? `le ${dateLongue(fin)}` : 'à la fin de la période payée'}. Dans l’aperçu, aucun e-mail ne part.` };
+    },
+    async offrir(i, plan, duree) {
+      await pause();
+      const c = compteDemo(i);
+      const jusqu = finOfferte(Date.now(), duree);
+      const effet = effetOffert(c.abonnement, plan, jusqu);
+      const avant = c.abonnement.payee;
+      if (!effet) throw new Error(`${c.pseudo} paie déjà ${OFFRES[c.abonnement.payee].nom} : offrir ${OFFRES[plan].nom} ne lui donnerait rien de plus.`);
+      c.abonnement = { ...c.abonnement, offerte: { plan, jusqu }, plan: rang(plan) > rang(c.abonnement.payee) ? plan : c.abonnement.payee };
+      c.plan = c.abonnement.plan;
+      const pendant = jusqu ? `jusqu’au ${dateLongue(jusqu)}` : 'sans limite de durée';
+      const fin = c.abonnement.finPeriode;
+      return { ok: true, message: `${effet === 'maintenant' ? `${c.pseudo} a ${OFFRES[plan].nom}, offert ${pendant}.` : `Après son abonnement, qui s’arrête ${fin ? `le ${dateLongue(fin)}` : 'à la fin de la période payée'}, ${c.pseudo} ${plan === avant ? 'garde' : 'passe en'} ${OFFRES[plan].nom}, offert ${pendant}.`} Dans l’aperçu, aucun e-mail ne part.` };
+    },
+    async retirerOffre(i) {
+      await pause();
+      const c = compteDemo(i);
+      const offerte = c.abonnement.offerte;
+      if (!offerte) throw new Error(`${c.pseudo} n’a pas d’offre offerte.`);
+      const dessus = rang(offerte.plan) > rang(c.abonnement.payee);
+      c.abonnement = { ...c.abonnement, offerte: null, plan: c.abonnement.payee };
+      c.plan = c.abonnement.plan;
+      return { ok: true, message: dessus ? `${c.pseudo} n’a plus ${OFFRES[offerte.plan].nom} offert : sa page repasse en ${OFFRES[c.plan].nom}.` : `${c.pseudo} n’a plus ${OFFRES[offerte.plan].nom} offert. Son abonnement ${OFFRES[c.abonnement.payee].nom} ne change pas.` };
+    },
     async changerStatut(i, statut) { await pause(); const c = comptesDemo.find(x => x.id === i); if (c) c.statut = statut; },
-    // Dans l'aperçu, aucun compte n'a d'abonnement Creem : rien à résilier.
-    async supprimer(i) { await pause(); const k = comptesDemo.findIndex(x => x.id === i); if (k > 0) comptesDemo.splice(k, 1); return 'aucune'; },
+    // Dans l'aperçu, rien ne part chez Creem : l'abonnement s'arrête avec le compte.
+    async supprimer(i) {
+      await pause();
+      const k = comptesDemo.findIndex(x => x.id === i);
+      const paye = k > 0 && comptesDemo[k].abonnement.payee !== 'gratuit';
+      if (k > 0) comptesDemo.splice(k, 1);
+      return paye ? 'faite' : 'aucune';
+    },
     async signalements() { await pause(); return signalementsDemo; },
     async traiterSignalement(i, statut, decision) {
       await pause();
@@ -190,14 +233,24 @@ export const apiDemo: Api = {
   },
 };
 
-/** Des comptes inventés, pour voir l'onglet Comptes dans l'aperçu. */
+/** Des comptes inventés, pour voir l'onglet Comptes dans l'aperçu : un abonnement Pro, une offre offerte, une page jamais ouverte, une suspendue. */
 const jour = 86_400_000;
 const comptesDemo: CompteResume[] = [
-  { id: 'principal', email: CONTACT_LEGAL, pseudo: 'lilian', statut: 'actif', cree: Date.now() - 40 * jour, connexion: Date.now(), blocs: 8, vues: 2140, principal: true, plan: 'premium' as const },
-  { id: 'demo1', email: 'camille@exemple.fr', pseudo: 'camille-studio', statut: 'actif', cree: Date.now() - 6 * jour, connexion: Date.now() - jour, blocs: 7, vues: 312, principal: false, plan: 'pro' as const },
-  { id: 'demo2', email: 'hugo@exemple.fr', pseudo: 'hugo-podcast', statut: 'actif', cree: Date.now() - 4 * jour, connexion: null, blocs: 0, vues: 0, principal: false, plan: 'gratuit' as const },
-  { id: 'demo3', email: 'sarah@exemple.fr', pseudo: 'sarah-coach', statut: 'suspendu', cree: Date.now() - 12 * jour, connexion: Date.now() - 9 * jour, blocs: 4, vues: 58, principal: false, plan: 'gratuit' as const },
+  { id: 'principal', email: CONTACT_LEGAL, pseudo: 'lilian', statut: 'actif', cree: Date.now() - 40 * jour, connexion: Date.now(), blocs: 8, vues: 2140, principal: true, plan: 'premium',
+    abonnement: { ...SANS_ABONNEMENT, plan: 'premium' } },
+  { id: 'demo1', email: 'camille@exemple.fr', pseudo: 'camille-studio', statut: 'actif', cree: Date.now() - 36 * jour, connexion: Date.now() - jour, blocs: 7, vues: 312, principal: false, plan: 'pro',
+    abonnement: { plan: 'pro', payee: 'pro', statut: 'active', finPeriode: Date.now() + 18 * jour, periode: 'mois', portail: true, offerte: null } },
+  { id: 'demo4', email: 'ines@exemple.fr', pseudo: 'ines-yoga', statut: 'actif', cree: Date.now() - 20 * jour, connexion: Date.now() - 2 * jour, blocs: 5, vues: 141, principal: false, plan: 'starter',
+    abonnement: { ...SANS_ABONNEMENT, plan: 'starter', offerte: { plan: 'starter', jusqu: Date.now() + 41 * jour } } },
+  { id: 'demo2', email: 'hugo@exemple.fr', pseudo: 'hugo-podcast', statut: 'actif', cree: Date.now() - 4 * jour, connexion: null, blocs: 0, vues: 0, principal: false, plan: 'gratuit', abonnement: SANS_ABONNEMENT },
+  { id: 'demo3', email: 'sarah@exemple.fr', pseudo: 'sarah-coach', statut: 'suspendu', cree: Date.now() - 12 * jour, connexion: Date.now() - 9 * jour, blocs: 4, vues: 58, principal: false, plan: 'gratuit', abonnement: SANS_ABONNEMENT },
 ];
+function compteDemo(i: string): CompteResume {
+  const c = comptesDemo.find(x => x.id === i && !x.principal);
+  if (!c) throw new Error('Compte introuvable.');
+  return c;
+}
+const dateLongue = (ms: number) => new Date(ms).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
 
 const attenteDemo: Reservation[] = [
   { id: 'r1', email: 'lea@exemple.fr', pseudo: 'lea-ceramique', ts: Date.now() - 2 * jour },
@@ -283,7 +336,7 @@ export const apiNouveau: Api = {
   ...apiDemo,
   async charger(): Promise<EtatAdmin> {
     return { reglages: nouveau.reglages, blocs: nouveau.blocs, clics: {}, places: {}, stockageEphemere: false, cguAJour: nouveau.cgu, dejaVue: false, compte: { pseudo: 'camille', principal: false, email: 'camille@exemple.fr', plan: 'gratuit' },
-      abonnement: { plan: 'gratuit', statut: '', finPeriode: null, periode: null, portail: false }, paiement: false, enVente: [], droits: DROITS_APERCU };
+      abonnement: SANS_ABONNEMENT, paiement: false, enVente: [], droits: DROITS_APERCU };
   },
   async enregistrerBloc(bloc) {
     await pause();
@@ -307,7 +360,6 @@ export const pageNouveau = () => ({ reglages: nouveau.reglages, blocs: nouveau.b
 /* ---- Un compte ordinaire en Gratuit, pour voir ce que l'offre réserve, et la prendre (#gratuit) ---- */
 
 const CLE_GRATUIT = 'liens-demo-gratuit-v2';
-const SANS_ABONNEMENT: Abonnement = { plan: 'gratuit', statut: '', finPeriode: null, periode: null, portail: false };
 interface CompteGratuit { reglages: Reglages; blocs: Bloc[]; abonnement: Abonnement; achat?: { plan: PlanPayant; periode: Periode; ts: number } }
 function gratuitNeuf(): CompteGratuit {
   const bloc = (titre: string, url: string, icone: string): Bloc => ({ ...nouveauBloc('lien', id()), titre, url, icone });
@@ -321,6 +373,13 @@ let gratuit: CompteGratuit = (() => { try { const v = localStorage.getItem(CLE_G
 const ecrireGratuit = () => { try { localStorage.setItem(CLE_GRATUIT, JSON.stringify(gratuit)); } catch { /* idem */ } };
 const droitsDe = (a: Abonnement) => Object.fromEntries((Object.keys(FONCTIONS) as Fonction[]).map(f => [f, peut(a.plan, f)])) as Droits;
 
+/** `#gratuit=offert` : le même compte, avec Pro offert pour trois mois par-dessus ce qu'il paie. */
+const OFFERTE_DEMO: OffreOfferte = { plan: 'pro', jusqu: plusMois(Date.now(), 3) };
+function avecOffre(a: Abonnement): Abonnement {
+  if (location.hash !== '#gratuit=offert') return a;
+  return { ...a, plan: rang(OFFERTE_DEMO.plan) > rang(a.payee) ? OFFERTE_DEMO.plan : a.payee, offerte: OFFERTE_DEMO };
+}
+
 /**
  * Le paiement simulé : « Payer » note l'achat et revient aussitôt, comme Creem, sur `?paiement=<offre>`.
  * Le faux webhook passe quatre secondes plus tard : jusque-là, l'abonnement relu n'a pas changé. Sans achat
@@ -329,7 +388,7 @@ const droitsDe = (a: Abonnement) => Object.fromEntries((Object.keys(FONCTIONS) a
 function webhookSimule() {
   const a = gratuit.achat;
   if (!a || Date.now() - a.ts < 4000) return;
-  gratuit.abonnement = { plan: a.plan, statut: 'active', finPeriode: echeance(a.ts, a.periode), periode: a.periode, portail: true };
+  gratuit.abonnement = { ...gratuit.abonnement, plan: a.plan, payee: a.plan, statut: 'active', finPeriode: echeance(a.ts, a.periode), periode: a.periode, portail: true };
   delete gratuit.achat;
   ecrireGratuit();
 }
@@ -338,7 +397,7 @@ export const apiGratuit: Api = {
   ...apiDemo,
   async charger(): Promise<EtatAdmin> {
     webhookSimule();
-    const a = gratuit.abonnement;
+    const a = avecOffre(gratuit.abonnement);
     return { reglages: gratuit.reglages, blocs: gratuit.blocs, clics: {}, places: {}, stockageEphemere: false, cguAJour: true, dejaVue: true, compte: { pseudo: 'sarah-coach', principal: false, email: 'sarah@exemple.fr', plan: a.plan },
       abonnement: a, paiement: true, enVente: ['starter', 'pro'], droits: droitsDe(a) };
   },
@@ -353,10 +412,10 @@ export const apiGratuit: Api = {
   async resilierAbonnement() {
     await pause();
     const a = gratuit.abonnement;
-    if (a.plan === 'gratuit') throw new Error('Aucun abonnement à résilier.');
+    if (a.payee === 'gratuit') throw new Error('Aucun abonnement à résilier.');
     gratuit.abonnement = { ...a, statut: 'scheduled_cancel' };
     ecrireGratuit();
-    return gratuit.abonnement;
+    return avecOffre(gratuit.abonnement);
   },
   async enregistrerBloc(bloc) {
     await pause();

@@ -39,11 +39,14 @@ embarque tout : l'image n'a pas de `node_modules`.
   abonnement, signalements, `exporter()`.
 - `server/fonctions.ts` : server functions. `sessionBrute` lit le compte sans les
   CGU, `session` les vérifie, `proprietaire` réserve au compte principal.
-- `server/auth.ts` (liens magiques de 15 minutes, sessions de 90 jours),
+- `server/auth.ts` (liens magiques de 15 minutes, sessions de 90 jours ; `renvoyerLienCompte`, « Renvoyer son lien » depuis
+  Comptes : l'invitation de 7 jours pour une page jamais ouverte, un lien de connexion de 24 heures sinon, un par minute),
   `server/courriel.ts` (Resend), `server/analytique.ts` (stats sans cookie, IP
   jamais stockée), `server/moderation.ts` (DSA), `server/creem.ts` (paiement, changement d'offre au prorata,
   résiliation, webhooks signés), `server/suppression.ts` (supprimer un compte résilie d'abord son abonnement Creem ;
   si Creem ne répond pas, refusé une fois, puis supprimé et signalé à Lilian par e-mail pour le résilier à la main),
+  `server/gestes.ts` (les gestes de Lilian sur l'abonnement d'un compte, 23 octobre 2026 : `resilierPourLeCompte` pour la fin
+  de la période payée, `offrirAuCompte` et `retirerAuCompte` ; résilier et offrir préviennent la personne par e-mail, avec son mot),
   `server/apercu.ts` (aperçu de site, anti-SSRF : l'adresse se vérifie au moment de la connexion ; lu en voix d'aperçu puis
   de navigateur, jusqu'au `</head>`, dans le jeu de caractères annoncé, par l'oEmbed pour YouTube, Vimeo, Spotify et
   SoundCloud ; une page de vérification, de consentement ou d'erreur ne donne jamais son titre ; `image: false` pour le
@@ -66,7 +69,10 @@ embarque tout : l'image n'a pas de `node_modules`.
   page (`avecJeton`) ; en sommeil sans `TURNSTILE_SITE_KEY` et `TURNSTILE_SECRET`.
 - `lib/` : `types.ts` (origines, `cheminPage`, `urlPage`), `valider.ts`, `themes.ts`, `legal.ts` (`VERSION_CGU`),
   `abonnement.ts` (les quatre offres Gratuit, Starter, Pro, Premium : prix, `FONCTIONS`, `peut()`, `joursStats()`, `estPaye()` ;
-  `offreSuivante()` et ses `ACCROCHES` pour l'appel à l'offre du dessus, `sensDuChangement()`, `accesAbonnement()`), `droits.ts`
+  `offreSuivante()` et ses `ACCROCHES` pour l'appel à l'offre du dessus, `sensDuChangement()`, `accesAbonnement()` ; dans `Abonnement`,
+  `plan` est l'offre de la page, la plus haute de `payee`, ce que Creem facture, et d'`offerte`, une offre offerte depuis Comptes
+  qui court : les droits suivent `plan`, tout ce qui touche à Creem suit `payee` ; `effetOffert`, `offresAOffrir`, `apresAbonnement`,
+  `apresOffre`), `droits.ts`
   (`selonDroits` retire de la page publique ce que l'offre ne comprend pas, sans rien effacer ; `nouvellesDates`),
   `mots.ts` (les mots de la page publique, au « tu » ou au « vous »), `stats.ts` (les quatre chiffres de l'onglet Stats, leurs écarts,
   l'échelle de la courbe, et `COULEURS_SOURCES`, la couleur de chaque réseau), `courbe.ts` (le tracé lisse des courbes de stats
@@ -79,7 +85,10 @@ embarque tout : l'image n'a pas de `node_modules`.
   de webhook, `destination` : « chez Brevo, la liste « Newsletter » »),
   `vitrine.ts` (les sites de soutien et les agendas que la page sait nommer, l'adresse PayPal.Me d'un montant,
   et `adresseIntegree` : Calendly, Cal.com et Google Agenda s'ouvrent dans la page, les autres sur leur site).
-- `admin/` : onglets Ma page, Stats, Intégrations, Comptes (principal seulement), Réglages. Sur un grand écran (22 octobre 2026, d'après MailCheap et
+- `admin/` : onglets Ma page, Stats, Intégrations, Comptes (principal seulement), Réglages. Dans Comptes (23 octobre 2026,
+  demandé par Lilian : « tout faire sur un compte »), un compte s'ouvre en fiche (`FicheCompte` dans `OngletComptes.tsx`, une
+  sous-page en lignes comme Réglages, 680 px au bureau) : sa page, « Renvoyer son lien », son offre (offrir avec `FormOffrir`, retirer,
+  résilier l'abonnement), la modération et la suppression, chaque geste après une confirmation. Sur un grand écran (22 octobre 2026, d'après MailCheap et
   Resend), l'app prend toute la largeur, la barre latérale collée au bord gauche, et l'en-tête comme le contenu de chaque
   onglet tiennent dans une colonne centrée (`adm-colonne`, largeur `--adm-colonne` selon `data-onglet` : 1120 px, 680 pour
   Réglages et Intégrations, 1300 pour Ma page) ; les premiers pas dans 1200 px (`adm-premiers`). Réglages tient sur une seule page de lignes
@@ -178,8 +187,8 @@ embarque tout : l'image n'a pas de `node_modules`.
 - Le suivi des clics Resend reste désactivé : il casse les liens magiques.
 - Un formulaire public qui fait partir un e-mail ou garde une adresse passe par Turnstile (`avecJeton` dans la page, `verifierTurnstile` sur le serveur), et tout e-mail vers une adresse tapée par un inconnu par `destinataireSature`. Une limite par adresse IP passe par `limites.ts`.
 - Chez Cloudflare, ni cookie ni défi : Bot Fight Mode éteint, des règles qui bloquent sans défier (voir `deploy/README.md`, « Cloudflare »).
-- Une offre payante (Starter, Pro, Premium) n'est accordée que par un webhook Creem signé, jamais par le retour du paiement. Les produits Creem se créent depuis l'onglet Comptes (« Créer les offres dans Creem ») : la clé a besoin des droits Products et Subscriptions.
-- L'abonnement suit le compte (21 octobre 2026) : changer d'offre passe par Creem au prorata (`proration-charge-immediately`, payé ou rendu tout de suite) ; repasser en Gratuit résilie pour la fin de la période payée, et un abonnement résilié ne change plus d'offre ; supprimer un compte, par son titulaire ou depuis Comptes, résilie l'abonnement tout de suite, sans remboursement automatique (`server/suppression.ts`), et la purge des comptes jamais connectés épargne ceux qui ont un abonnement.
+- Une offre payante (Starter, Pro, Premium) n'est accordée que par un webhook Creem signé, jamais par le retour du paiement, ou offerte par Lilian depuis Comptes (23 octobre 2026), sans Creem ni facture : `offrir()` dans `db.ts`, pour une durée ou sans fin, ne touche jamais à l'abonnement Creem, qui continue d'être prélevé. Faire payer une offre au-dessus passe toujours par la personne, depuis ses offres : rien n'est prélevé sans elle. Les produits Creem se créent depuis l'onglet Comptes (« Créer les offres dans Creem ») : la clé a besoin des droits Products et Subscriptions.
+- L'abonnement suit le compte (21 octobre 2026) : changer d'offre passe par Creem au prorata (`proration-charge-immediately`, payé ou rendu tout de suite) ; repasser en Gratuit résilie pour la fin de la période payée, et un abonnement résilié ne change plus d'offre ; supprimer un compte, par son titulaire ou depuis Comptes, résilie l'abonnement tout de suite, sans remboursement automatique (`server/suppression.ts`), et la purge des comptes jamais connectés épargne ceux qui ont un abonnement ou une offre offerte qui court. Résilier depuis Comptes fait comme « Repasser en Gratuit » ; une offre offerte qui dure au-delà de la période payée prend alors sa suite.
 - Les offres (20 octobre 2026), avec `FONCTIONS` pour seule source : Gratuit garde des liens sans limite, la page selon le réseau du visiteur et les vingt thèmes ; Starter ajoute la page sans mention, les couleurs, la programmation (début, fin, compte à rebours), les avis, la vitrine (produits, prise de rendez-vous, Me soutenir, code promo d'un lien partenaire) et 30 jours de stats ; Pro le créneau selon l'heure, les drops, la liste e-mail et un an de stats ; Premium (pas en vente) le nom de domaine et trois pages. Ce que l'offre ne comprend pas s'efface de la page publique (`selonDroits`) sans rien effacer de la base. Les dates d'un bloc tiennent toujours, mais sans Starter le serveur refuse d'en poser de nouvelles (`verifierDates`). Les stats se comptent pour tous ; leur lecture et le résumé du lundi sont réservés. Les pages créées avant `BASCULE_OFFRES` (21 octobre 2026) gardent tout sauf la page sans mention et la vitrine, venue après, avec 7 jours de stats. La place pour les images (`quota`) est un garde-fou qu'on n'annonce pas. La page en plusieurs langues a été retirée le 20 octobre 2026 : `valider.ts` laisse de côté les anciennes traductions.
 - La mention « Publicité » (ou « Collaboration commerciale ») d'un lien partenaire s'affiche dans toutes les offres, Gratuit compris : la loi du 9 juin 2023 la demande. Sans Starter, `selonDroits` retire le code promo et les blocs de la vitrine, jamais la mention.
 - Aucun secret dans le dépôt ; ils vivent dans `/opt/linkinbio/secrets/runtime.env`.

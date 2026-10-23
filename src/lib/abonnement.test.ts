@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { ACCROCHES, BASCULE_OFFRES, FONCTIONS, FONCTIONS_EN_MOTS, OFFRES, PLANS, PLANS_PAYANTS, accesAbonnement, avantagesEntre, echeance, economie, economieAnnuelle, euros, joursStats, libellePrix, moisOfferts, offreSuivante, parMoisAnnuel, peut, sensDuChangement } from './abonnement.ts';
-import type { Fonction, Plan, PlanPayant } from './abonnement.ts';
+import { ACCROCHES, BASCULE_OFFRES, FONCTIONS, FONCTIONS_EN_MOTS, OFFRES, PLANS, PLANS_PAYANTS, accesAbonnement, apresAbonnement, apresOffre, avantagesEntre, echeance, economie, economieAnnuelle, effetOffert, estDureeOfferte, euros, finOfferte, joursStats, libellePrix, moisOfferts, offerteAuDessus, offreSuivante, offresAOffrir, parMoisAnnuel, peut, sensDuChangement } from './abonnement.ts';
+import type { Fonction, OffreOfferte, Plan, PlanPayant } from './abonnement.ts';
 import { nouvellesDates, selonDroits } from './droits.ts';
 import type { Droits } from './droits.ts';
 import { LEGAL } from './legal.ts';
@@ -70,6 +70,51 @@ test('la prochaine échéance : un mois ou un an plus tard, le même jour ou le 
   assert.deepEqual(lu(echeance(jour(2026, 1, 31), 'mois')), [2026, 2, 28]);
   assert.deepEqual(lu(echeance(jour(2028, 2, 29), 'an')), [2029, 2, 28]);
   assert.deepEqual(lu(echeance(jour(2026, 12, 15), 'mois')), [2027, 1, 15]);
+});
+
+test('une offre offerte : sa fin, ce qu’on peut offrir, et ce que la page a ensuite', () => {
+  const jour = (a: number, m: number, j: number) => new Date(a, m - 1, j, 10).getTime();
+  const lu = (t: number | null) => { const d = new Date(t!); return [d.getFullYear(), d.getMonth() + 1, d.getDate()]; };
+  assert.deepEqual(lu(finOfferte(jour(2026, 1, 31), '1m')), [2026, 2, 28]);
+  assert.deepEqual(lu(finOfferte(jour(2026, 10, 23), '3m')), [2027, 1, 23]);
+  assert.deepEqual(lu(finOfferte(jour(2026, 10, 23), '1a')), [2027, 10, 23]);
+  assert.equal(finOfferte(jour(2026, 10, 23), 'toujours'), null);
+  assert.ok(estDureeOfferte('3m'));
+  for (const v of ['2m', '', null, undefined, 3]) assert.ok(!estDureeOfferte(v), String(v));
+  // Ce qui est en vente au-dessus de ce qu'on paie : jamais Premium, qui n'est pas en vente.
+  assert.deepEqual(offresAOffrir({ payee: 'gratuit', statut: '' }), ['starter', 'pro']);
+  assert.deepEqual(offresAOffrir({ payee: 'starter', statut: 'active' }), ['pro']);
+  assert.deepEqual(offresAOffrir({ payee: 'pro', statut: 'active' }), []);
+  // Un abonnement résilié : l'offre offerte prendra sa suite, la même ou une autre.
+  assert.deepEqual(offresAOffrir({ payee: 'pro', statut: 'scheduled_cancel' }), ['starter', 'pro']);
+  // Elle passe devant l'abonnement quand elle est au-dessus, et seulement alors.
+  const fin = jour(2026, 12, 1);
+  const actif = { payee: 'starter' as const, statut: 'active', finPeriode: fin };
+  const resilie = { ...actif, statut: 'scheduled_cancel' };
+  assert.equal(effetOffert(actif, 'pro', fin - 1), 'maintenant');
+  assert.equal(effetOffert(actif, 'starter', null), null, 'offrir ce qu’on paie ne donne rien');
+  assert.equal(effetOffert(resilie, 'starter', fin + 1), 'ensuite', 'après une résiliation, elle prend la suite');
+  assert.equal(effetOffert(resilie, 'starter', null), 'ensuite');
+  assert.equal(effetOffert(resilie, 'starter', fin), null, 'une offre qui finit avec l’abonnement ne donne rien');
+  assert.equal(effetOffert({ ...resilie, finPeriode: null }, 'starter', fin), 'ensuite', 'sans la fin connue, on laisse faire');
+  const starter: OffreOfferte = { plan: 'starter', jusqu: fin };
+  const pro: OffreOfferte = { plan: 'pro', jusqu: fin };
+  assert.equal(offerteAuDessus({ payee: 'gratuit', offerte: starter }), starter);
+  assert.equal(offerteAuDessus({ payee: 'starter', offerte: starter }), null);
+  assert.equal(offerteAuDessus({ payee: 'pro', offerte: starter }), null);
+  assert.equal(offerteAuDessus({ payee: 'gratuit', offerte: null }), null);
+  // Un abonnement qui s'arrête : l'offre offerte qui court encore ce jour-là prend la suite, sinon Gratuit.
+  assert.equal(apresAbonnement({ offerte: null }, fin), 'gratuit');
+  assert.equal(apresAbonnement({ offerte: { plan: 'pro', jusqu: null } }, fin), 'pro');
+  assert.equal(apresAbonnement({ offerte: { plan: 'pro', jusqu: fin + 1 } }, fin), 'pro');
+  assert.equal(apresAbonnement({ offerte: { plan: 'pro', jusqu: fin - 1 } }, fin), 'gratuit');
+  assert.equal(apresAbonnement({ offerte: pro }, null), 'gratuit', 'sans la fin de la période, on ne promet rien');
+  // L'offre offerte qui finit : la page garde ce qu'elle paie encore ce jour-là.
+  assert.equal(apresOffre({ payee: 'gratuit', statut: '', finPeriode: null, offerte: pro }), 'gratuit');
+  assert.equal(apresOffre({ payee: 'starter', statut: 'active', finPeriode: fin - 10, offerte: pro }), 'starter', 'un abonnement actif se renouvelle');
+  assert.equal(apresOffre({ payee: 'starter', statut: 'scheduled_cancel', finPeriode: fin - 10, offerte: pro }), 'gratuit');
+  assert.equal(apresOffre({ payee: 'starter', statut: 'scheduled_cancel', finPeriode: fin + 10, offerte: pro }), 'starter');
+  assert.equal(apresOffre({ payee: 'starter', statut: 'active', finPeriode: fin, offerte: { plan: 'pro', jusqu: null } }), 'starter');
 });
 
 test('une fonction se débloque avec son offre et celles du dessus', () => {
@@ -206,7 +251,7 @@ const droitsDe = (plan: Plan, cree = Number.POSITIVE_INFINITY) => Object.fromEnt
 
 test('l’offre du dessus : la première en vente, avec ce qu’elle apporte de plus parlant', () => {
   const enVente: PlanPayant[] = ['starter', 'pro'];
-  const compte = (plan: Plan, statut = plan === 'gratuit' ? '' : 'active', cree?: number) => offreSuivante({ plan, statut }, droitsDe(plan, cree), enVente);
+  const compte = (plan: Plan, statut = plan === 'gratuit' ? '' : 'active', cree?: number) => offreSuivante({ plan, payee: plan, statut }, droitsDe(plan, cree), enVente);
   assert.deepEqual(compte('gratuit'), { plan: 'starter', texte: 'sans la mention Hopla', fonction: 'sansMention' });
   assert.deepEqual(compte('starter'), { plan: 'pro', texte: 'ta page selon l’heure', fonction: 'heure' });
   // Au-dessus de Pro, Premium n'est pas en vente ; le compte principal (Premium) a déjà tout.
@@ -217,8 +262,13 @@ test('l’offre du dessus : la première en vente, avec ce qu’elle apporte de 
   // Revenu en Gratuit, un ancien abonné voit de nouveau Starter.
   assert.deepEqual(compte('gratuit', 'expired'), { plan: 'starter', texte: 'sans la mention Hopla', fonction: 'sansMention' });
   // Ce qui est en vente décide : rien en vente, rien à proposer ; Pro seul, on propose Pro.
-  assert.equal(offreSuivante({ plan: 'gratuit', statut: '' }, droitsDe('gratuit'), []), null);
-  assert.deepEqual(offreSuivante({ plan: 'gratuit', statut: '' }, droitsDe('gratuit'), ['pro']), { plan: 'pro', texte: 'ta page selon l’heure', fonction: 'heure' });
+  assert.equal(offreSuivante({ plan: 'gratuit', payee: 'gratuit', statut: '' }, droitsDe('gratuit'), []), null);
+  assert.deepEqual(offreSuivante({ plan: 'gratuit', payee: 'gratuit', statut: '' }, droitsDe('gratuit'), ['pro']), { plan: 'pro', texte: 'ta page selon l’heure', fonction: 'heure' });
+  // Starter offert : on propose ce qu'il y a au-dessus, Pro ; Pro offert a déjà ce qui est en vente.
+  assert.deepEqual(offreSuivante({ plan: 'starter', payee: 'gratuit', statut: '' }, droitsDe('starter'), enVente), { plan: 'pro', texte: 'ta page selon l’heure', fonction: 'heure' });
+  assert.equal(offreSuivante({ plan: 'pro', payee: 'gratuit', statut: '' }, droitsDe('pro'), enVente), null);
+  // Un abonnement résilié sous une offre offerte : on ne relance pas non plus.
+  assert.equal(offreSuivante({ plan: 'pro', payee: 'starter', statut: 'scheduled_cancel' }, droitsDe('pro'), enVente), null);
   // Une page d'avant les offres a déjà presque tout : on lui propose ce qui lui manque vraiment.
   const avant = BASCULE_OFFRES - 86_400_000;
   assert.deepEqual(compte('gratuit', '', avant), { plan: 'starter', texte: 'sans la mention Hopla', fonction: 'sansMention' });
@@ -250,10 +300,13 @@ test('changer d’offre : monter fait payer la différence, descendre la rend, c
 });
 
 test('Réglages : gérer son abonnement tant qu’il court, ses factures dès qu’on a payé une fois', () => {
-  assert.deepEqual(accesAbonnement({ plan: 'gratuit', portail: false }), { gerer: false, factures: false });
-  assert.deepEqual(accesAbonnement({ plan: 'gratuit', portail: true }), { gerer: false, factures: true }, 'un ancien abonné garde ses factures');
-  assert.deepEqual(accesAbonnement({ plan: 'starter', portail: true }), { gerer: true, factures: true });
-  assert.deepEqual(accesAbonnement({ plan: 'pro', portail: false }), { gerer: true, factures: false });
+  assert.deepEqual(accesAbonnement({ payee: 'gratuit', portail: false }), { gerer: false, factures: false });
+  assert.deepEqual(accesAbonnement({ payee: 'gratuit', portail: true }), { gerer: false, factures: true }, 'un ancien abonné garde ses factures');
+  assert.deepEqual(accesAbonnement({ payee: 'starter', portail: true }), { gerer: true, factures: true });
+  assert.deepEqual(accesAbonnement({ payee: 'pro', portail: false }), { gerer: true, factures: false });
+  // Une offre offerte ne se gère pas : seul ce qui se paie ouvre « Gérer mon abonnement ».
+  const offert = { plan: 'pro' as const, payee: 'gratuit' as const, portail: false };
+  assert.deepEqual(accesAbonnement(offert), { gerer: false, factures: false });
 });
 
 test('les CGU disent que supprimer son compte résilie son abonnement', () => {

@@ -4,7 +4,7 @@
  * liste ordonnée de blocs.
  */
 
-import type { Abonnement, EtatOffre, Periode, Plan, PlanPayant } from './abonnement.ts';
+import type { Abonnement, DureeOfferte, EtatOffre, Periode, Plan, PlanPayant } from './abonnement.ts';
 import type { Droits } from './droits.ts';
 import type { Creneau } from './moments.ts';
 import type { PeriodeStats } from './periode.ts';
@@ -187,6 +187,8 @@ export interface CompteResume {
   principal: boolean;
   /** L'offre en ce moment (Premium pour le compte principal, qui n'a pas d'abonnement). */
   plan: Plan;
+  /** Son abonnement tel que la personne le voit dans Réglages : l'offre payée, son statut et sa fin, une offre offerte. */
+  abonnement: Abonnement;
 }
 
 /** Ce que la page publique reçoit : jamais un bloc privé ni hors programmation. */
@@ -353,7 +355,14 @@ export interface ApiComptes {
   retirerAttente(id: string): Promise<void>;
   /** Crée le compte et envoie l'invitation ; renvoie le message à afficher. */
   inviter(email: string, pseudo: string): Promise<{ ok: boolean; message: string; lienDev?: string }>;
+  /** Son lien : le premier e-mail d'une page jamais ouverte (7 jours), un lien de connexion d'un jour sinon. */
   renvoyer(id: string): Promise<{ ok: boolean; message: string; lienDev?: string }>;
+  /** Résilie l'abonnement pour la fin de la période payée ; la personne est prévenue, avec `mot` s'il y en a un. */
+  resilier(id: string, mot: string): Promise<{ ok: boolean; message: string }>;
+  /** Offre une offre, sans paiement, pour une durée ; la personne est prévenue, avec `mot` s'il y en a un. */
+  offrir(id: string, plan: PlanPayant, duree: DureeOfferte, mot: string): Promise<{ ok: boolean; message: string }>;
+  /** Retire l'offre offerte : la page revient à ce qu'elle paie, ou à Gratuit. */
+  retirerOffre(id: string): Promise<{ ok: boolean; message: string }>;
   /** `motif` part par e-mail à la personne (DSA, article 17) quand on suspend ou supprime. */
   changerStatut(id: string, statut: CompteResume['statut'], motif: string): Promise<void>;
   /** Supprime le compte, après avoir résilié son abonnement : ce qu'il est advenu de l'abonnement. */

@@ -14,11 +14,14 @@ import { FONCTIONS, PERIODES, estPlan, estPlanPayant } from './abonnement.ts';
 
 export const CLE_ACHAT = 'hopla-achat';
 
-/** Ce qu'on vient de prendre. `avant` : l'offre d'avant, quand on la connaît, et `periodeAvant` sa période ; `bloc` : le bloc d'où l'on venait. */
-export interface Achat { plan: PlanPayant; periode: Periode | null; pour?: Fonction; avant?: Plan; periodeAvant?: Periode; bloc?: string }
+/**
+ * Ce qu'on vient de prendre. `avant` : l'offre payée d'avant, quand on la connaît, et `periodeAvant` sa période ;
+ * `deja` : l'offre offerte qui passait devant elle (ce qui était déjà ouvert) ; `bloc` : le bloc d'où l'on venait.
+ */
+export interface Achat { plan: PlanPayant; periode: Periode | null; pour?: Fonction; avant?: Plan; periodeAvant?: Periode; deja?: Plan; bloc?: string }
 
 /** La note posée avant de partir chez Creem. Elle ne vaut que pour cette offre, et quelques heures. */
-export interface NoteAchat { plan: PlanPayant; periode: Periode; pour?: Fonction; avant: Plan; periodeAvant?: Periode; bloc?: string; ts: number }
+export interface NoteAchat { plan: PlanPayant; periode: Periode; pour?: Fonction; avant: Plan; periodeAvant?: Periode; deja?: Plan; bloc?: string; ts: number }
 
 const VALIDITE = 3 * 3_600_000;
 
@@ -35,6 +38,7 @@ export function achatDeRetour(recherche: string, note: unknown, maintenant = Dat
     ...(typeof n.pour === 'string' && Object.hasOwn(FONCTIONS, n.pour) ? { pour: n.pour } : {}),
     ...(estPlan(n.avant) ? { avant: n.avant } : {}),
     ...(PERIODES.includes(n.periodeAvant as Periode) ? { periodeAvant: n.periodeAvant as Periode } : {}),
+    ...(estPlan(n.deja) ? { deja: n.deja } : {}),
     ...(typeof n.bloc === 'string' && /^[\w-]{1,64}$/.test(n.bloc) ? { bloc: n.bloc } : {}),
   };
 }
@@ -49,9 +53,10 @@ export const delaiAvantEssai = (essais: number): number | null => (essais < ESSA
 /**
  * Où en est le retour. « fait » seulement quand l'abonnement lu sur le serveur
  * porte l'offre prise (et sa période, quand on la connaît) : jamais d'après
- * l'adresse. Après les lectures rapides, on cesse d'attendre à l'écran.
+ * l'adresse. C'est l'offre payée qui compte, pas une offre offerte au-dessus.
+ * Après les lectures rapides, on cesse d'attendre à l'écran.
  */
-export function etapeRetour(achat: Pick<Achat, 'plan' | 'periode'>, lu: Pick<Abonnement, 'plan' | 'periode'> | null, essais: number): EtapeRetour {
-  if (lu && lu.plan === achat.plan && (!achat.periode || !lu.periode || lu.periode === achat.periode)) return 'fait';
+export function etapeRetour(achat: Pick<Achat, 'plan' | 'periode'>, lu: Pick<Abonnement, 'payee' | 'periode'> | null, essais: number): EtapeRetour {
+  if (lu && lu.payee === achat.plan && (!achat.periode || !lu.periode || lu.periode === achat.periode)) return 'fait';
   return essais >= ESSAIS_RAPIDES ? 'attente' : 'activation';
 }

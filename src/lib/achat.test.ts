@@ -16,8 +16,10 @@ test('le retour du paiement se lit dans l’adresse, et la note ne le complète 
   // Un abonné qui change d'offre : la période d'avant revient aussi, pour dire si Creem facture ou rend la différence.
   assert.deepEqual(achatDeRetour('?paiement=starter', { ...note, avant: 'pro', periodeAvant: 'an' }, maintenant), { plan: 'starter', periode: 'an', pour: 'couleurs', avant: 'pro', periodeAvant: 'an' });
   assert.deepEqual(achatDeRetour('?paiement=starter', { ...note, periodeAvant: 'jour' }, maintenant), { plan: 'starter', periode: 'an', pour: 'couleurs', avant: 'gratuit' });
+  // L'offre offerte qui passait devant l'abonnement revient aussi : ce qui s'ouvre se compte depuis elle.
+  assert.deepEqual(achatDeRetour('?paiement=pro', { ...note, plan: 'pro', deja: 'starter' }, maintenant), { plan: 'pro', periode: 'an', pour: 'couleurs', avant: 'gratuit', deja: 'starter' });
   // Une note abîmée garde ce qui se lit.
-  assert.deepEqual(achatDeRetour('?paiement=starter', { ...note, periode: 'semaine', pour: 'toString', avant: 'or', bloc: '"><img>' }, maintenant), { plan: 'starter', periode: null });
+  assert.deepEqual(achatDeRetour('?paiement=starter', { ...note, periode: 'semaine', pour: 'toString', avant: 'or', deja: 'or', bloc: '"><img>' }, maintenant), { plan: 'starter', periode: null });
   assert.deepEqual(achatDeRetour('?paiement=starter', null, maintenant), { plan: 'starter', periode: null });
   // Pas d'offre payante nommée : pas de retour de paiement.
   assert.equal(achatDeRetour('?paiement=gratuit', note, maintenant), null);
@@ -28,17 +30,21 @@ test('le retour du paiement se lit dans l’adresse, et la note ne le complète 
 test('« C’est fait » attend l’abonnement écrit par le serveur, jamais l’adresse', () => {
   const achat = { plan: 'starter' as const, periode: 'an' as const };
   // Le webhook n'est pas encore passé : la page est toujours en Gratuit.
-  assert.equal(etapeRetour(achat, { plan: 'gratuit', periode: null }, 0), 'activation');
+  assert.equal(etapeRetour(achat, { payee: 'gratuit', periode: null }, 0), 'activation');
   assert.equal(etapeRetour(achat, null, 3), 'activation');
-  assert.equal(etapeRetour(achat, { plan: 'starter', periode: 'an' }, 2), 'fait');
+  assert.equal(etapeRetour(achat, { payee: 'starter', periode: 'an' }, 2), 'fait');
   // Passer de Starter au mois à Starter à l'année : la même offre ne suffit pas, il faut la nouvelle période.
-  assert.equal(etapeRetour(achat, { plan: 'starter', periode: 'mois' }, 2), 'activation');
+  assert.equal(etapeRetour(achat, { payee: 'starter', periode: 'mois' }, 2), 'activation');
   // Sans la période (pas de note), l'offre suffit.
-  assert.equal(etapeRetour({ plan: 'starter', periode: null }, { plan: 'starter', periode: 'mois' }, 2), 'fait');
+  assert.equal(etapeRetour({ plan: 'starter', periode: null }, { payee: 'starter', periode: 'mois' }, 2), 'fait');
+  // Une offre offerte au-dessus ne compte pas : seul l'abonnement payé dit que c'est fait.
+  const offert = { plan: 'pro' as const, payee: 'gratuit' as const, periode: null };
+  assert.equal(etapeRetour(achat, offert, 0), 'activation');
+  assert.equal(etapeRetour(achat, { ...offert, payee: 'starter', periode: 'an' }, 0), 'fait');
   // Trop longtemps sans nouvelles : on cesse d'attendre à l'écran, sans rien accorder.
-  assert.equal(etapeRetour(achat, { plan: 'gratuit', periode: null }, ESSAIS_RAPIDES), 'attente');
+  assert.equal(etapeRetour(achat, { payee: 'gratuit', periode: null }, ESSAIS_RAPIDES), 'attente');
   // Et si l'offre arrive ensuite, c'est fait.
-  assert.equal(etapeRetour(achat, { plan: 'starter', periode: 'an' }, ESSAIS_RAPIDES + 4), 'fait');
+  assert.equal(etapeRetour(achat, { payee: 'starter', periode: 'an' }, ESSAIS_RAPIDES + 4), 'fait');
 });
 
 test('l’abonnement se relit vite, puis plus calmement, puis plus du tout', () => {

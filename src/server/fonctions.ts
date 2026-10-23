@@ -15,7 +15,8 @@ import { apercuSite as lireApercu } from './apercu.ts';
 import * as db from './db.ts';
 import { MESSAGE_ROBOT, hotesTurnstile, verifierTurnstile } from './turnstile.ts';
 import type { ActionTurnstile } from '../lib/turnstile.ts';
-import { COOKIE_SESSION, DUREE_SESSION, adresseAdmin, compteDeSession, demanderConnexion, fermerSession, inviter, ouvrirSession } from './auth.ts';
+import { COOKIE_SESSION, DUREE_SESSION, adresseAdmin, compteDeSession, demanderConnexion, fermerSession, inviter, ouvrirSession, renvoyerLienCompte } from './auth.ts';
+import { offrirAuCompte, resilierPourLeCompte, retirerAuCompte } from './gestes.ts';
 import { changerStatutMotive, signaler, supprimerMotive, traiter } from './moderation.ts';
 import { supprimerAvecAbonnement } from './suppression.ts';
 import { corrigerAdresse as corriger, creerHopla, inscriptionLibre, inviterReservation, renommerPage as renommer, renvoyerInscription, reserverNom as reserver, verifierNom as verifier } from './attente.ts';
@@ -23,8 +24,8 @@ import * as creem from './creem.ts';
 import { droits, joursLisibles, periodeLisible, verifierDates } from './droits.ts';
 import { lirePeriode } from '../lib/periode.ts';
 import { selonDroits } from '../lib/droits.ts';
-import { estPlanPayant } from '../lib/abonnement.ts';
-import type { Periode, PlanPayant } from '../lib/abonnement.ts';
+import { estDureeOfferte, estPlanPayant } from '../lib/abonnement.ts';
+import type { DureeOfferte, Periode, PlanPayant } from '../lib/abonnement.ts';
 
 /*
  * Les fonctions serveur : les pages publiques en lecture libre, tout le reste
@@ -466,6 +467,7 @@ export const inviterCompte = createServerFn({ method: 'POST' })
     return r.ok ? r : { ok: false, message: `Compte créé, mais l’invitation n’est pas partie : ${r.message} Renvoie-la depuis la liste.` };
   });
 
+/** « Renvoyer son lien » : le premier e-mail d'une page jamais ouverte, un lien de connexion d'un jour sinon. */
 export const renvoyerInvitation = createServerFn({ method: 'POST' })
   .middleware([proprietaire])
   .validator((data: unknown) => String(data ?? '').slice(0, 40))
@@ -473,7 +475,7 @@ export const renvoyerInvitation = createServerFn({ method: 'POST' })
     const compte = db.compteParId(data);
     if (!compte || compte.id === PRINCIPAL) return { ok: false, message: 'Compte introuvable.' };
     if (compte.statut !== 'actif') return { ok: false, message: 'Réactive le compte avant de lui renvoyer un lien.' };
-    return inviter(origines(), process.env, compte);
+    return renvoyerLienCompte(origines(), process.env, compte);
   });
 
 const motif = (v: unknown) => String(v ?? '').slice(0, 2000);
@@ -493,6 +495,31 @@ export const supprimerCompte = createServerFn({ method: 'POST' })
     return { id: String(o.id ?? '').slice(0, 40), motif: motif(o.motif) };
   })
   .handler(async ({ data }) => supprimerMotive(process.env, fetch, data.id, data.motif));
+
+/** Résilie l'abonnement d'un compte pour la fin de la période payée ; la personne reçoit un e-mail, avec le mot s'il y en a un. */
+export const resilierAbonnementCompte = createServerFn({ method: 'POST' })
+  .middleware([proprietaire])
+  .validator((data: unknown) => {
+    const o = (data ?? {}) as { id?: unknown; mot?: unknown };
+    return { id: String(o.id ?? '').slice(0, 40), mot: motif(o.mot) };
+  })
+  .handler(async ({ data }) => resilierPourLeCompte(process.env, fetch, data.id, data.mot));
+
+/** Offre une offre à un compte, sans paiement, pour une durée ou sans fin ; la personne reçoit un e-mail. */
+export const offrirOffreCompte = createServerFn({ method: 'POST' })
+  .middleware([proprietaire])
+  .validator((data: unknown): { id: string; plan: PlanPayant; duree: DureeOfferte; mot: string } => {
+    const o = (data ?? {}) as { id?: unknown; plan?: unknown; duree?: unknown; mot?: unknown };
+    if (!estPlanPayant(o.plan) || !estDureeOfferte(o.duree)) throw new Error('Choisis une offre et une durée.');
+    return { id: String(o.id ?? '').slice(0, 40), plan: o.plan, duree: o.duree, mot: motif(o.mot) };
+  })
+  .handler(async ({ data }) => offrirAuCompte(process.env, fetch, origines(), data.id, data.plan, data.duree, data.mot));
+
+/** Retire l'offre offerte d'un compte : sa page revient tout de suite à ce qu'elle paie. */
+export const retirerOffreCompte = createServerFn({ method: 'POST' })
+  .middleware([proprietaire])
+  .validator((data: unknown) => String(data ?? '').slice(0, 40))
+  .handler(async ({ data }) => retirerAuCompte(data));
 
 /* ---- Signalements ---- */
 

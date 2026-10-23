@@ -135,8 +135,8 @@ export interface OffreSuivante { plan: PlanPayant; texte: string; fonction?: Fon
  * au-dessus (Pro : Premium n'est pas en vente ; le compte principal a déjà tout), ni pour une offre résiliée ou
  * impayée : on ne relance pas qui s'en va, ni qui a un souci de carte. `droits` : ce que le compte a déjà.
  */
-export function offreSuivante(a: Pick<Abonnement, 'plan' | 'statut'>, droits: Partial<Record<Fonction, boolean>>, enVente: readonly PlanPayant[]): OffreSuivante | null {
-  if (a.plan !== 'gratuit' && (estResilie(a.statut) || a.statut === 'past_due')) return null;
+export function offreSuivante(a: Pick<Abonnement, 'plan' | 'payee' | 'statut'>, droits: Partial<Record<Fonction, boolean>>, enVente: readonly PlanPayant[]): OffreSuivante | null {
+  if (a.payee !== 'gratuit' && (estResilie(a.statut) || a.statut === 'past_due')) return null;
   const plan = PLANS_PAYANTS.find(p => rang(p) > rang(a.plan) && OFFRES[p].enVente && enVente.includes(p));
   const accroche = plan && ACCROCHES[plan].find(x => !x.fonction || !droits[x.fonction]);
   return plan && accroche ? { plan, ...accroche } : null;
@@ -158,14 +158,58 @@ export function avantagesEntre(depuis: Plan, vers: Plan): string[] {
   return PLANS.slice(rang(bas) + 1, rang(haut) + 1).flatMap(p => OFFRES[p].avantages);
 }
 
-/** La prochaine échéance d'un abonnement pris le jour `debut` : un mois ou un an plus tard, le même jour, ou le dernier du mois s'il n'existe pas. */
-export function echeance(debut: number, periode: Periode): number {
+/** `mois` mois après `debut`, le même jour, ou le dernier du mois s'il n'existe pas (le 31 janvier donne le 28 février). */
+export function plusMois(debut: number, mois: number): number {
   const d = new Date(debut);
   const jour = d.getDate();
   d.setDate(1);
-  if (periode === 'an') d.setFullYear(d.getFullYear() + 1); else d.setMonth(d.getMonth() + 1);
+  d.setMonth(d.getMonth() + mois);
   d.setDate(Math.min(jour, new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()));
   return d.getTime();
+}
+
+/** La prochaine échéance d'un abonnement pris le jour `debut` : un mois ou un an plus tard. */
+export const echeance = (debut: number, periode: Periode) => plusMois(debut, periode === 'an' ? 12 : 1);
+
+/*
+ * Une offre offerte (23 octobre 2026, demandé par Lilian : « élever son abonnement ») : depuis l'onglet
+ * Comptes, Lilian donne Starter ou Pro à un compte, pour une durée ou sans fin, sans rien facturer ni
+ * toucher à Creem. Elle passe devant l'abonnement quand elle est au-dessus, et s'éteint d'elle-même à sa fin.
+ */
+export interface OffreOfferte { plan: PlanPayant; /** Sa fin (ms), null : sans fin. */ jusqu: number | null }
+
+/** Les durées qu'on offre, en mois (0 : sans fin). */
+export const DUREES_OFFERTES = [
+  { id: '1m', nom: '1 mois', mois: 1 },
+  { id: '3m', nom: '3 mois', mois: 3 },
+  { id: '1a', nom: '1 an', mois: 12 },
+  { id: 'toujours', nom: 'Sans fin', mois: 0 },
+] as const;
+export type DureeOfferte = (typeof DUREES_OFFERTES)[number]['id'];
+export const estDureeOfferte = (v: unknown): v is DureeOfferte => DUREES_OFFERTES.some(d => d.id === v);
+
+/** La fin d'une offre offerte le jour `debut` pour `duree` ; null : sans fin. */
+export function finOfferte(debut: number, duree: DureeOfferte): number | null {
+  const mois = DUREES_OFFERTES.find(d => d.id === duree)?.mois ?? 0;
+  return mois ? plusMois(debut, mois) : null;
+}
+
+/**
+ * Ce qu'on peut offrir à un compte : les offres en vente au-dessus de celle qu'il paie (offrir ce qu'il paie
+ * déjà ne lui donnerait rien), ou toutes quand son abonnement est résilié : l'offre offerte prendra la suite.
+ * Premium attend son nom de domaine et ses pages.
+ */
+export const offresAOffrir = (a: Pick<Abonnement, 'payee' | 'statut'>): PlanPayant[] =>
+  PLANS_PAYANTS.filter(p => OFFRES[p].enVente && (rang(p) > rang(a.payee) || estResilie(a.statut)));
+
+/**
+ * Ce que change une offre offerte jusqu'à `jusqu` : `maintenant` au-dessus de ce que le compte paie, `ensuite`
+ * quand elle prend la suite d'un abonnement résilié (elle court encore après lui), null quand elle ne donnerait rien.
+ */
+export function effetOffert(a: Pick<Abonnement, 'payee' | 'statut' | 'finPeriode'>, plan: PlanPayant, jusqu: number | null): 'maintenant' | 'ensuite' | null {
+  if (rang(plan) > rang(a.payee)) return 'maintenant';
+  if (!estResilie(a.statut)) return null;
+  return jusqu === null || a.finPeriode === null || jusqu > a.finPeriode ? 'ensuite' : null;
 }
 
 /**
@@ -202,7 +246,10 @@ export const STATUTS_PRO = ['active', 'trialing', 'scheduled_cancel', 'past_due'
 export const GRACE_JOURS = 7;
 
 export interface Abonnement {
+  /** L'offre du compte : celle de son abonnement, ou l'offre qu'on lui offre quand elle est au-dessus. */
   plan: Plan;
+  /** L'offre de l'abonnement Creem seul (Gratuit sans abonnement) : celle qu'on paie, que les offres changent ou résilient. */
+  payee: Plan;
   /** Le statut Creem tel que reçu (`active`, `scheduled_cancel`, `past_due`, `canceled`…), vide sans abonnement. */
   statut: string;
   /** Fin de la période payée en cours (ms), si connue. */
@@ -211,6 +258,26 @@ export interface Abonnement {
   periode: Periode | null;
   /** Vrai si Creem connaît ce client : le portail (carte, résiliation, factures) est ouvert. */
   portail: boolean;
+  /** L'offre offerte depuis l'onglet Comptes, tant qu'elle court ; null sinon. */
+  offerte: OffreOfferte | null;
+}
+
+/** L'offre offerte quand c'est elle qui donne au compte son offre (au-dessus de ce qu'il paie) ; null sinon. */
+export const offerteAuDessus = (a: Pick<Abonnement, 'payee' | 'offerte'>): OffreOfferte | null =>
+  (a.offerte && rang(a.offerte.plan) > rang(a.payee) ? a.offerte : null);
+
+/**
+ * L'offre de la page une fois l'abonnement arrêté à `fin` : l'offre offerte si elle court encore ce jour-là,
+ * Gratuit sinon. Ce que la résiliation dit de la suite, dans les offres comme dans Comptes.
+ */
+export const apresAbonnement = (a: Pick<Abonnement, 'offerte'>, fin: number | null): Plan =>
+  (a.offerte && (a.offerte.jusqu === null || (fin !== null && a.offerte.jusqu > fin)) ? a.offerte.plan : 'gratuit');
+
+/** L'offre de la page une fois l'offre offerte finie : celle qu'elle paie encore ce jour-là, Gratuit sinon. */
+export function apresOffre(a: Pick<Abonnement, 'payee' | 'statut' | 'finPeriode' | 'offerte'>): Plan {
+  const fin = a.offerte?.jusqu;
+  if (a.payee === 'gratuit' || !fin) return a.payee;
+  return estResilie(a.statut) && a.finPeriode !== null && a.finPeriode <= fin ? 'gratuit' : a.payee;
 }
 
 /**
@@ -233,6 +300,7 @@ export function estPaye(a: { statut: string; finPeriode: number | null }, mainte
 /**
  * Ce que Réglages montre de l'abonnement, d'un coup d'œil : « Gérer mon abonnement » tant qu'une offre payée
  * court (la changer, la résilier, la carte), et « Mes factures » pour tout compte que Creem connaît, qu'il soit
- * abonné, résilié ou ancien abonné : ses factures restent chez Creem.
+ * abonné, résilié ou ancien abonné : ses factures restent chez Creem. Une offre offerte ne se gère pas : elle
+ * ne se paie pas.
  */
-export const accesAbonnement = (a: Pick<Abonnement, 'plan' | 'portail'>) => ({ gerer: a.plan !== 'gratuit', factures: a.portail });
+export const accesAbonnement = (a: Pick<Abonnement, 'payee' | 'portail'>) => ({ gerer: a.payee !== 'gratuit', factures: a.portail });

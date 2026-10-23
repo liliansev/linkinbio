@@ -186,6 +186,8 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
   }
   .adm-shell:is([data-onglet='reglages'], [data-onglet='integrations']) { --adm-colonne: 680px; }
   .adm-shell[data-onglet='page'] { --adm-colonne: 1300px; }
+  /* La fiche d'un compte se lit en lignes, comme Réglages : la même colonne. */
+  .adm-shell[data-onglet='comptes'][data-sous] { --adm-colonne: 680px; }
   .adm-travail { padding-left: 216px; }
   .adm-colonne { width: min(100% - 2 * var(--adm-bord), var(--adm-colonne)); margin-inline: auto; }
   .adm-shell .adm-toast { left: 232px; right: 16px; }
@@ -952,6 +954,14 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
 .adm-liste-comptes > li { display: flex; min-height: 64px; align-items: center; gap: 12px; padding: 10px 0; }
 .adm-liste-comptes > li + li { border-top: 1px solid #efefec; }
 .adm-liste-comptes .adm-pastille { width: 36px; height: 36px; font-size: 14px; }
+/*
+ * Un compte s'ouvre sur sa fiche (23 octobre 2026) : au bureau toute la rangée, et son nom pour le clavier ;
+ * au téléphone la ligne entière, sauf « … ».
+ */
+.adm-tableau tbody tr[data-ouvrable] { cursor: pointer; }
+.adm-nom-compte { display: flex; min-width: 0; max-width: 100%; align-items: center; border-radius: 6px; text-align: left; }
+.adm-tableau tbody tr[data-ouvrable]:hover .adm-nom-texte { text-decoration: underline; text-decoration-color: rgb(10 10 10 / 0.3); text-underline-offset: 3px; }
+.adm-compte-ouvrir { display: flex; min-width: 0; flex: 1; align-items: center; gap: 12px; align-self: stretch; border-radius: 8px; text-align: left; }
 .adm-bandeau { display: flex; align-items: flex-start; gap: 12px; padding: 10px 8px 10px 14px; border: 1px solid #e3e3df; border-radius: 10px; background: #fafaf9; font-size: 14px; }
 .adm-bandeau[data-erreur] { border-color: #f1c7c7; background: #fdf3f3; color: #a51f1f; }
 @media (max-width: 1023px) { .adm-points { width: 44px; height: 44px; border-radius: 10px; } }
