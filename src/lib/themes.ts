@@ -306,7 +306,7 @@ function lisibleAuPied(theme: Theme, couleur: string): [string, number] {
   return [theme.texte, 1];
 }
 /**
- * La mention « Crée ta page avec Hopla », au pied de la page (23 octobre 2026, Lilian : un peu en avant, à la
+ * La mention « Créer ma page avec Hopla », au pied de la page (23 octobre 2026, Lilian : un peu en avant, à la
  * couleur du thème) : l'accent, foncé ou éclairci vers le texte juste assez pour se lire ; le texte, s'il fallait l'y noyer.
  */
 export const mentionPied = (theme: Theme) => { const [c, part] = lisibleAuPied(theme, theme.vedette); return part > 0.6 ? theme.texte : c; };

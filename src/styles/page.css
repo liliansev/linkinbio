@@ -386,7 +386,7 @@
 .lp-newsletter-erreur { margin: -6px 0 0; font-size: 0.88rem; }
 
 /* ---- Le pied ----
- * D'après Linktree (23 octobre 2026, Lilian) : la mention « Crée ta page avec Hopla », à la couleur du thème
+ * D'après Linktree (23 octobre 2026, Lilian) : la mention « Créer ma page avec Hopla », à la couleur du thème
  * (`--mention-hopla`, l'accent quand il se lit), seule sur sa ligne ; puis, loin dessous, Confidentialité et Signaler
  * en petit, séparés d'un point. Sur une page courte, ces deux liens descendent au bas de l'écran ; sur une longue,
  * 48 px de vide les séparent de la mention : chaque lien a sa cible de 44 px, et aucune ne touche l'autre.

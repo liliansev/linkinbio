@@ -195,7 +195,7 @@ export interface CompteResume {
 export interface PagePublique {
   reglages: Reglages;
   blocs: Bloc[];
-  /** Dès Starter, la page perd la mention « Crée ta page avec Hopla ». */
+  /** Dès Starter, la page perd la mention « Créer ma page avec Hopla ». */
   compte: ComptePage & { plan: Plan };
   /** L'instant où la page a été composée : le compte à rebours part de là, au serveur comme au navigateur. */
   maintenant?: number;

@@ -160,7 +160,7 @@ embarque tout : l'image n'a pas de `node_modules`.
   PayPal.Me, un bouton pour Ko-fi, Tipeee, Lydia…), `Reservation` (l'agenda dans une feuille, `FeuilleAgenda`,
   quand il se laisse intégrer), et pour un lien partenaire (`partenariat` sur un lien ou un produit), `Mention`
   et `CodePromo`, copié d'un geste. Hopla n'encaisse et ne réserve rien : chaque bloc mène au site qui le fait.
-  Le pied (23 octobre 2026, demandé par Lilian, d'après Linktree) : « Crée ta page avec Hopla » (comptes Gratuit) à
+  Le pied (23 octobre 2026, demandé par Lilian, d'après Linktree) : « Créer ma page avec Hopla » (comptes Gratuit) à
   l'accent du thème (`--mention-hopla`, `mentionPied` le pousse vers le texte juste assez pour se lire), puis loin
   dessous, au bas de l'écran sur une page courte, Confidentialité · Signaler en petit (`--pied-legal`), sur toutes les
   pages, celle de Lilian comprise : chaque lien a sa cible de 44 px et aucune ne touche l'autre. Le damier et les
