@@ -487,9 +487,15 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
 .adm-valeur:hover { border-color: #c7c7c0; }
 .adm-valeur:disabled { opacity: 0.45; }
 .adm-field.adm-field-ligne { min-height: 44px; padding: 0 10px; border-color: #e3e3df; border-radius: 10px; background: #fff; font-size: 16px; }
+/*
+ * La vignette d'un lien, ou la photo d'un produit, posée au début de son champ (23 octobre 2026) : l'image ou
+ * l'icône et un petit crayon, puis un trait fin ; le texte commence après, au même endroit qu'il y ait une image ou non.
+ */
+.adm-field.adm-field-vignette { padding-left: 68px; }
 @media (min-width: 1024px) and (pointer: fine) {
   .adm-valeur { height: 32px; border-radius: 8px; }
   .adm-field.adm-field-ligne { min-height: 32px; height: 32px; border-radius: 8px; font-size: 13.5px; }
+  .adm-field.adm-field-vignette { padding-left: 58px; }
 }
 @media (max-width: 639px) {
   .adm-page-heading { margin-bottom: 20px; }

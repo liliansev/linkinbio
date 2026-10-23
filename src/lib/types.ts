@@ -278,6 +278,16 @@ export interface Liste {
   enAttente: number;
 }
 
+/**
+ * L'image qu'on demande avec l'aperçu d'un site : aucune (`false`, plus vite), son image de partage ou sinon une capture
+ * de la page (`true`), son image de partage seule (`'partage'`, la photo d'un produit), son logo seul (`'logo'`), ou ce
+ * qui tient le mieux dans la petite vignette carrée d'un bouton (`'vignette'` : l'image de partage si elle est carrée,
+ * sinon le logo, sinon l'image de partage ; jamais une capture).
+ */
+export type ImageApercu = boolean | 'partage' | 'logo' | 'vignette';
+/** D'où vient l'image d'un aperçu : l'image de partage du site, son logo, ou une capture de sa page. */
+export type VisuelApercu = 'partage' | 'logo' | 'capture';
+
 /** Ce que le back office demande au serveur (ou à la démo, dans l'aperçu). */
 export interface Api {
   charger(): Promise<EtatAdmin>;
@@ -287,11 +297,10 @@ export interface Api {
   enregistrerReglages(reglages: Reglages): Promise<Reglages>;
   envoyerImage(dataUrl: string): Promise<string>;
   /**
-   * Le titre, la description, l'image de partage (en data URL) et le prix (une boutique) d'un site, lus par le
-   * serveur ; `image` à faux, sans l'image (plus vite) ; `'partage'`, l'image de partage seule, jamais une capture
-   * de la page (la photo d'un produit).
+   * Le titre, la description, l'image (en data URL) et le prix (une boutique) d'un site, lus par le serveur. Voir
+   * `ImageApercu` pour l'image demandée ; `visuel` dit d'où vient celle qui revient.
    */
-  apercuSite(url: string, image?: boolean | 'partage'): Promise<{ titre: string; description: string; image: string | null; prix: string }>;
+  apercuSite(url: string, image?: ImageApercu): Promise<{ titre: string; description: string; image: string | null; prix: string; visuel?: VisuelApercu }>;
   /** Les stats des derniers jours (7, 14, 30, 90 ou 365), ou de dates choisies. */
   stats(periode: PeriodeStats): Promise<Stats>;
   deconnexion(): Promise<void>;

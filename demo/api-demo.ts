@@ -116,8 +116,11 @@ export const apiDemo: Api = {
   // Dans l'aperçu, pas de serveur pour lire le site : une vignette dessinée en tient lieu. Une boutique donne un produit d'exemple.
   async apercuSite(url, image = true) {
     await pause();
-    if (image === 'partage') return { titre: 'Carnet de recettes illustré', description: '', image: photoProduitDemo(), prix: '24 €' };
-    return { titre: '', description: 'Un aperçu de démonstration : en ligne, le serveur lit la vraie description du site.', image: image ? vignetteDemo(url) : null, prix: '' };
+    if (image === 'partage') return { titre: 'Carnet de recettes illustré', description: '', image: photoProduitDemo(), prix: '24 €', visuel: 'partage' };
+    const description = 'Un aperçu de démonstration : en ligne, le serveur lit la vraie description du site.';
+    // La vignette d'un bouton : en ligne, l'image de partage si elle est carrée, sinon le logo du site, comme ici.
+    if (image === 'logo' || image === 'vignette') return { titre: '', description, image: logoDemo(url), prix: '', visuel: 'logo' };
+    return { titre: '', description, image: image ? vignetteDemo(url) : null, prix: '', visuel: image ? 'partage' : undefined };
   },
   async stats(periode) { await pause(); return statsFictives(periode); },
   async deconnexion() { localStorage.removeItem(CLE); etat = lire(); },
@@ -271,6 +274,17 @@ function vignetteDemo(url: string): string {
   x.fillStyle = '#ffb38a'; x.fillRect(140, 200, 420, 34); x.fillStyle = 'rgba(255,255,255,0.5)'; x.fillRect(140, 260, 640, 18); x.fillRect(140, 296, 520, 18);
   x.fillStyle = '#ffb38a'; x.beginPath(); x.roundRect(140, 360, 220, 64, 32); x.fill();
   x.fillStyle = '#f4f1ec'; x.font = '600 40px system-ui'; let hote = url; try { hote = new URL(url).hostname.replace(/^www\./, ''); } catch { /* adresse brute */ } x.fillText(hote, 140, 540);
+  return c.toDataURL('image/png');
+}
+
+/** Le logo d'un site, dessiné : l'initiale de son domaine dans un rond, sur un fond transparent. */
+function logoDemo(url: string): string {
+  const c = document.createElement('canvas'); c.width = 180; c.height = 180;
+  const x = c.getContext('2d')!;
+  let hote = url; try { hote = new URL(url).hostname.replace(/^www\./, ''); } catch { /* adresse brute */ }
+  x.fillStyle = '#292bff'; x.beginPath(); x.arc(90, 90, 84, 0, Math.PI * 2); x.fill();
+  x.fillStyle = '#e3fc96'; x.font = '700 96px system-ui'; x.textAlign = 'center'; x.textBaseline = 'middle';
+  x.fillText((hote[0] ?? 'h').toUpperCase(), 90, 96);
   return c.toDataURL('image/png');
 }
 

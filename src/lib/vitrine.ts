@@ -51,7 +51,10 @@ export function lienMontant(url: string, montant: number): string {
 export const lienSansMontant = (url: string) => comptePaypal(url) ?? url;
 
 /** Les agendas que la page sait nommer. */
-export const NOMS_AGENDA = { calendly: 'Calendly', calcom: 'Cal.com', lemcal: 'lemcal', google: 'Google Agenda', planity: 'Planity' } as const;
+export const NOMS_AGENDA = {
+  calendly: 'Calendly', calcom: 'Cal.com', lemcal: 'lemcal', google: 'Google Agenda', planity: 'Planity', doctolib: 'Doctolib',
+  tidycal: 'TidyCal', zcal: 'zcal', savvycal: 'SavvyCal', hubspot: 'HubSpot', acuity: 'Acuity', youcanbook: 'YouCanBook.me',
+} as const;
 export type Agenda = keyof typeof NOMS_AGENDA;
 
 export function agendaDe(url: string): Agenda | null {
@@ -61,6 +64,13 @@ export function agendaDe(url: string): Agenda | null {
   if (sur(h, 'lemcal.com')) return 'lemcal';
   if (h === 'calendar.google.com' || h === 'calendar.app.google') return 'google';
   if (sur(h, 'planity.com')) return 'planity';
+  if (/(^|\.)doctolib\.(fr|de|it)$/.test(h)) return 'doctolib';
+  if (h === 'tidycal.com') return 'tidycal';
+  if (h === 'zcal.co') return 'zcal';
+  if (h === 'savvycal.com') return 'savvycal';
+  if (/^meetings(-[a-z0-9]+)?\.hubspot\.com$/.test(h)) return 'hubspot';
+  if (sur(h, 'as.me') || sur(h, 'acuityscheduling.com')) return 'acuity';
+  if (sur(h, 'youcanbook.me')) return 'youcanbook';
   return null;
 }
 

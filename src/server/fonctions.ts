@@ -1,6 +1,6 @@
 import { createMiddleware, createServerFn } from '@tanstack/react-start';
 import { deleteCookie, getCookie, getRequestHeader, getRequestUrl, setCookie } from '@tanstack/react-start/server';
-import type { Bloc, CompteResume, EtatAdmin, FournisseurListe, Liste, ListeFournisseur, Origines, PagePublique, Reglages, Reservation, SignalementResume, Stats } from '../lib/types.ts';
+import type { Bloc, CompteResume, EtatAdmin, FournisseurListe, ImageApercu, Liste, ListeFournisseur, Origines, PagePublique, Reglages, Reservation, SignalementResume, Stats } from '../lib/types.ts';
 import { FOURNISSEURS_LISTE } from '../lib/types.ts';
 import * as liste from './liste.ts';
 import { requeteSortante } from './sortante.ts';
@@ -246,7 +246,8 @@ export const apercuSite = createServerFn({ method: 'POST' })
     const objet = data && typeof data === 'object' ? data as { url?: unknown; image?: unknown } : { url: data, image: true };
     const url = adresse(String(objet.url ?? ''));
     if (!url) throw new Error('Adresse refusée.');
-    return { url, image: objet.image === 'partage' ? 'partage' as const : objet.image !== false };
+    const image: ImageApercu = objet.image === 'partage' || objet.image === 'logo' || objet.image === 'vignette' ? objet.image : objet.image !== false;
+    return { url, image };
   })
   .handler(async ({ data }) => {
     try { return await lireApercu(data.url, { image: data.image }); }

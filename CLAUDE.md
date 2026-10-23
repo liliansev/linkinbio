@@ -51,7 +51,9 @@ embarque tout : l'image n'a pas de `node_modules`.
   de navigateur, jusqu'au `</head>`, dans le jeu de caractères annoncé, par l'oEmbed pour YouTube, Vimeo, Spotify et
   SoundCloud ; une page de vérification, de consentement ou d'erreur ne donne jamais son titre ; `image: false` pour le
   titre seul ; le prix d'un produit, lu dans les balises des boutiques puis dans le JSON-LD, et `image: 'partage'` pour sa
-  photo : l'image de partage ou rien, jamais une capture), `server/droits.ts` (`droits()` d'un compte, `verifierDates`
+  photo : l'image de partage ou rien, jamais une capture ; `'logo'` pour le logo du site, cherché dans ses icônes déclarées,
+  son manifeste, `/apple-touch-icon.png` puis le favicon (un ICO rendu en PNG), et `'vignette'` pour la vignette d'un
+  bouton : l'image de partage si elle est carrée, sinon le logo, `visuel` dit laquelle est venue), `server/droits.ts` (`droits()` d'un compte, `verifierDates`
   avant d'enregistrer un bloc, `joursLisibles` pour les stats).
 - `server/liste.ts` : « Rejoins ma liste ». Les inscrits restent chez Hopla (export CSV) et partent là où la personne a
   branché sa liste (22 octobre 2026) : six newsletters par leur API (Brevo, Mailchimp, Kit, MailerLite, beehiiv,
@@ -83,8 +85,10 @@ embarque tout : l'image n'a pas de `node_modules`.
   `achat.ts` (le retour d'un paiement : la note posée avant Creem, puis « On active », « C'est fait » ou l'attente, d'après l'abonnement relu),
   `integrations.ts` (le nom de chaque outil, le mot qu'il emploie pour sa liste, `adresseWebhook` pour la forme d'une adresse
   de webhook, `destination` : « chez Brevo, la liste « Newsletter » »),
-  `vitrine.ts` (les sites de soutien et les agendas que la page sait nommer, l'adresse PayPal.Me d'un montant,
-  et `adresseIntegree` : Calendly, Cal.com et Google Agenda s'ouvrent dans la page, les autres sur leur site).
+  `vitrine.ts` (les sites de soutien et les agendas que la page sait nommer, Doctolib, TidyCal, Acuity, HubSpot… compris,
+  l'adresse PayPal.Me d'un montant, et `adresseIntegree` : Calendly, Cal.com et Google Agenda s'ouvrent dans la page, les
+  autres sur leur site), `detection.ts` (`typeDeAdresse` : ce qu'est une adresse collée, vidéo YouTube, agenda, fiche
+  d'une boutique, page de soutien ou simple lien, et `versType` qui fait passer un bloc de l'un à l'autre).
 - `admin/` : onglets Ma page, Stats, Intégrations, Comptes (principal seulement), Réglages. Dans Comptes (23 octobre 2026,
   demandé par Lilian : « tout faire sur un compte »), un compte s'ouvre en fiche (`FicheCompte` dans `OngletComptes.tsx`, une
   sous-page en lignes comme Réglages, 680 px au bureau) : sa page, « Renvoyer son lien », son offre (offrir avec `FormOffrir`, retirer,
@@ -132,9 +136,14 @@ embarque tout : l'image n'a pas de `node_modules`.
   (absent pour un bloc qui n'a rien d'autre), en pages (`PagesBloc` dans `ReglesBloc.tsx`), avec une
   flèche dans l'en-tête de la feuille (`useFilFeuille`). Un bloc
   neuf revient au choix des blocs par sa flèche ; ce choix s'ouvre sur « Colle une adresse ».
-  L'image d'un lien est sous son texte, hors de « Plus de réglages », et une autre adresse relit le site d'elle-même
-  dès qu'on cesse de taper (22 octobre 2026, demandé par Lilian) : le texte, l'image et la description qui venaient
-  de l'ancienne adresse (vides, lus par Hopla, ou l'adresse effacée puis retapée) prennent ceux de la nouvelle.
+  Une adresse collée dans un bloc neuf prend le bloc qui lui va (23 octobre 2026, demandé par Lilian : « que ça détecte
+  automatiquement de quoi il s'agit ») : une vidéo, un agenda, une fiche de boutique (et une page qui déclare un prix) ;
+  « En faire un simple lien », sous l'adresse, la rend à un lien. Le site se lit tout seul, et une autre adresse le relit
+  dès qu'on cesse de taper (22 octobre 2026) : le texte, l'image et la description qui venaient de l'ancienne adresse
+  (vides, lus par Hopla, ou l'adresse effacée puis retapée) prennent ceux de la nouvelle ; une icône choisie reste.
+  L'image d'un lien ou la photo d'un produit tient dans une vignette au début du champ de son texte (23 octobre 2026,
+  « une icône très discrète, un crayon ») : l'image, l'icône ou un picto, et un petit crayon, qui ouvrent un menu
+  (image du site, logo du site, une photo, une icône, retirer) ; un logo se pose sur du blanc (`preparerLogo` dans `ui.tsx`).
   Le retour du téléphone referme une couche à la fois (`couches.ts` : chaque feuille,
   page de bloc, tiroir du design, sous-page de Réglages ou aperçu pose une entrée dans
   l'historique, que le routeur ne voit pas). En tête, `BienDemarrer.tsx` :
