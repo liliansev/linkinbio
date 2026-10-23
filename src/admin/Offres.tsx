@@ -480,7 +480,7 @@ function RepasserGratuit({ abonnement, grand, id, retour, fermer, resilier, ouvr
 
 /** Le picto de chaque avantage, celui que la fonction porte ailleurs dans le back office. Un avantage inconnu prend la coche. */
 const PICTOS: { avantage: string; picto: string }[] = [
-  { avantage: 'Sans la mention « Une page faite avec Hopla »', picto: 'check' },
+  { avantage: 'Sans la mention « Crée ta page avec Hopla »', picto: 'check' },
   { avantage: 'Tes couleurs', picto: 'pinceau' },
   { avantage: 'Tes liens programmés à l’avance', picto: 'agenda' },
   { avantage: 'Les avis de tes clients', picto: 'etoile' },

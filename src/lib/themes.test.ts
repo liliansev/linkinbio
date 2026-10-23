@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { FAMILLES, REMPLACES, THEMES, contraste, idTheme, meler, personnaliser, themeDe, themeParId, variablesTheme } from './themes.ts';
+import { FAMILLES, REMPLACES, THEMES, contraste, fondsDuPied, idTheme, meler, personnaliser, themeDe, themeParId, variablesTheme } from './themes.ts';
 
 const couleurs = (fond: string) => fond.match(/#[0-9a-f]{6}/gi) ?? [];
 
@@ -86,4 +86,29 @@ test('les couleurs changées par-dessus un thème restent lisibles', () => {
   }
   assert.deepEqual(themeDe({ theme: 'klein', couleurs: { fond: '', boutons: '', accent: '' } }), themeParId('klein'));
   assert.equal(themeDe({ theme: 'klein', couleurs: { fond: 'rouge', boutons: '', accent: '' } }).fondUni, themeParId('klein').fondUni);
+});
+
+test('au pied, la mention Hopla prend l\'accent du thème quand il se lit, et les liens légaux se lisent en petit', () => {
+  const essais = [...THEMES, personnaliser(themeParId('neige'), { accent: '#ffffff' }), personnaliser(themeParId('klein'), { fond: '#ff3d7f', accent: '#ffe14d' })];
+  for (const t of essais) {
+    const v = variablesTheme(t);
+    // Le fond uni, chaque teinte du dégradé, le panneau de la mise en page Colonne et la lave du décor.
+    for (const c of fondsDuPied(t)) {
+      // Le texte du thème est le dernier recours : il se lit déjà partout (test plus haut).
+      for (const [nom, couleur] of [['mention', v['--mention-hopla']], ['liens légaux', v['--pied-legal']]]) {
+        assert.ok(couleur === t.texte || contraste(couleur, c) >= 4.5, `${t.id} : ${nom} ${couleur} sur ${c} = ${contraste(couleur, c).toFixed(2)}`);
+      }
+    }
+  }
+  // Sur Klein, la mention est le jaune du thème tel quel, comme Lilian l'a demandé.
+  assert.equal(variablesTheme(themeParId('klein'))['--mention-hopla'], '#ffd400');
+  // Sur Lampe, la lave passe sous la mention : l'orange s'éclaircit juste assez, sans se fondre dans le texte.
+  const lampe = themeParId('lampe');
+  assert.ok(![lampe.vedette, lampe.texte].includes(variablesTheme(lampe)['--mention-hopla']));
+  // Les liens légaux ne passent pas par une opacité, qui ferait tomber leur contraste sous celui calculé ici.
+  const css = readFileSync(new URL('../styles/page.css', import.meta.url), 'utf8');
+  const legal = css.match(/\n\.lp-legal \{([^}]*)\}/)?.[1] ?? '';
+  assert.match(legal, /\bcolor: var\(--pied-legal\);/);
+  assert.doesNotMatch(legal, /opacity/);
+  assert.match(css.match(/a\.lp-hopla \{([^}]*)\}/)?.[1] ?? '', /\bcolor: var\(--mention-hopla\);/);
 });

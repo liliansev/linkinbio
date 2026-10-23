@@ -49,7 +49,7 @@ export const OFFRES: Record<Plan, Offre> = {
   },
   starter: {
     nom: 'Starter', phrase: 'Ta page, sans la mention Hopla.', prix: { mois: 9, an: 79 }, quota: 100 * Mo, jours: 30, enVente: true,
-    avantages: ['Sans la mention « Une page faite avec Hopla »', 'Ta vitrine : produits, réservations, soutien', 'Tes couleurs', 'Tes liens programmés à l’avance', 'Les avis de tes clients', 'Tes stats sur 30 jours'],
+    avantages: ['Sans la mention « Crée ta page avec Hopla »', 'Ta vitrine : produits, réservations, soutien', 'Tes couleurs', 'Tes liens programmés à l’avance', 'Les avis de tes clients', 'Tes stats sur 30 jours'],
   },
   pro: {
     nom: 'Pro', phrase: 'Le bon lien, au bon moment.', prix: { mois: 19, an: 169 }, quota: 200 * Mo, jours: 365, enVente: true,
@@ -104,7 +104,7 @@ export type Fonction = keyof typeof FONCTIONS;
  * la prendre, sur l'étiquette de l'offre mise en avant (« Pour tes couleurs »).
  */
 export const FONCTIONS_EN_MOTS: Record<Fonction, { avantage: string; pour: string }> = {
-  sansMention: { avantage: 'Sans la mention « Une page faite avec Hopla »', pour: 'Pour ôter la mention' },
+  sansMention: { avantage: 'Sans la mention « Crée ta page avec Hopla »', pour: 'Pour ôter la mention' },
   vitrine: { avantage: 'Ta vitrine : produits, réservations, soutien', pour: 'Pour ta vitrine' },
   couleurs: { avantage: 'Tes couleurs', pour: 'Pour tes couleurs' },
   programmation: { avantage: 'Tes liens programmés à l’avance', pour: 'Pour programmer' },

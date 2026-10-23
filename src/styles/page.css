@@ -21,6 +21,8 @@
   font-family: var(--police);
   -webkit-font-smoothing: antialiased;
   position: relative;
+  /* La page tient au moins l'écran, jusque dans sa colonne : sur une page courte, le pied descend au bas de l'écran. */
+  display: flex; flex-direction: column;
 }
 .lp[data-forme='arrondi'] { --r: 16px; --rc: 20px; }
 .lp[data-forme='carre'] { --r: 4px; --rc: 6px; }
@@ -32,10 +34,12 @@
 .lp { font-optical-sizing: auto; }
 
 .lp-col {
+  width: 100%;
   max-width: 580px;
   margin: 0 auto;
-  padding: 56px 16px 32px;
+  padding: 56px 16px calc(28px + env(safe-area-inset-bottom));
   position: relative;
+  flex: 1 0 auto; display: flex; flex-direction: column;
 }
 
 .lp-partager {
@@ -381,11 +385,33 @@
 .lp-newsletter-ok { margin: 0; font-weight: 560; }
 .lp-newsletter-erreur { margin: -6px 0 0; font-size: 0.88rem; }
 
-.lp-signature { text-align: center; margin: 24px 0 0; font-size: 0.82rem; }
-.lp-signature a { color: var(--doux); text-decoration: none; display: inline-block; padding: 12px 8px; }
-.lp-signature a:hover { color: var(--texte); }
-.lp-legal { display: flex; justify-content: center; gap: 14px; margin-top: 8px; font-size: 0.78rem; opacity: 0.85; }
-.lp-legal:first-child { margin-top: 0; }
+/* ---- Le pied ----
+ * D'après Linktree (23 octobre 2026, Lilian) : la mention « Crée ta page avec Hopla », à la couleur du thème
+ * (`--mention-hopla`, l'accent quand il se lit), seule sur sa ligne ; puis, loin dessous, Confidentialité et Signaler
+ * en petit, séparés d'un point. Sur une page courte, ces deux liens descendent au bas de l'écran ; sur une longue,
+ * 48 px de vide les séparent de la mention : chaque lien a sa cible de 44 px, et aucune ne touche l'autre.
+ */
+.lp-fin { flex: 1 0 auto; display: flex; flex-direction: column; align-items: center; margin-top: 32px; text-align: center; }
+/* Le pied garde l'œil de Geist (0,53 de sa taille) dans toutes les polices : en Garamond ou en Fraunces, il ne rapetisse plus. */
+.lp-fin { font-size-adjust: 0.53; }
+/* EB Garamond est déjà porté à 1,06em sur toute la page : 0,5 × 1,06 ≈ 0,53. */
+.lp[data-police='serif'] .lp-fin { font-size-adjust: 0.5; }
+.lp-signature { margin: 0; font-size: 0.88em; line-height: 1.3; text-wrap: balance; }
+.lp-legal { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; margin: auto 0 0; padding-top: 48px; font-size: 0.78em; line-height: 1.3; color: var(--pied-legal); }
+.lp-legal:first-child { padding-top: 0; }
+/* Chaque lien a sa vraie boîte de 44 px, sans marge négative : celle de l'accueil (`p a`, accueil.css) ne s'applique pas ici. */
+.lp-fin :is(.lp-signature, .lp-legal) a { display: inline-block; margin: 0; padding: 13px 10px; color: inherit; text-decoration: none; }
+.lp-fin .lp-signature a { color: var(--doux); }
+.lp-fin .lp-signature a.lp-hopla { color: var(--mention-hopla); font-weight: 480; }
+.lp-hopla strong { font-weight: 700; }
+.lp-fin .lp-legal a { padding: 14px 8px; }
+/* Le survol, seulement là où il existe : au doigt, le soulignement resterait collé après un retour. */
+@media (hover: hover) {
+  .lp-fin :is(.lp-signature, .lp-legal) a:hover { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 4px; }
+  .lp-fin :is(.lp-signature a:not(.lp-hopla), .lp-legal a):hover { color: var(--texte); }
+}
+.lp-legal span { opacity: 0.7; }
+.lp-fin :is(.lp-signature, .lp-legal) a:focus-visible { outline: 2px solid var(--texte); outline-offset: -2px; border-radius: 8px; }
 
 .lp-toast {
   position: fixed; left: 50%; bottom: 24px; translate: -50% 0; z-index: 10;
@@ -558,7 +584,7 @@
  *             puis les liens en cartes sur trois colonnes.
  */
 
-.lp-scene { container: lp / inline-size; position: relative; isolation: isolate; }
+.lp-scene { container: lp / inline-size; position: relative; isolation: isolate; flex: 1 0 auto; display: flex; flex-direction: column; }
 
 @container lp (min-width: 960px) {
   /* Une lumière de la couleur de vedette, en haut, pour que le grand écran ne soit pas un aplat. */
@@ -568,9 +594,13 @@
   }
   .lp-section { text-align: left; }
   .lp-texte { text-align: left; }
-  .lp-signature { text-align: left; }
-  .lp-legal { justify-content: flex-start; }
-  .lp[data-bureau='colonne'] .lp-legal { justify-content: center; }
+  /* Le pied s'aligne à gauche avec la page, le texte de ses liens sur le bord de la colonne ; il ne descend plus au bas de la fenêtre. */
+  .lp-col { flex-grow: 0; }
+  .lp-fin { align-items: flex-start; text-align: left; }
+  .lp-fin > * { margin-left: -10px; }
+  .lp-legal { margin-left: -8px; }
+  .lp[data-bureau='colonne'] .lp-fin { align-items: center; text-align: center; }
+  .lp[data-bureau='colonne'] .lp-fin > * { margin-left: 0; }
 
   /* ---- Colonne ---- */
   .lp[data-bureau='colonne'] .lp-col {
@@ -579,7 +609,7 @@
     background: color-mix(in srgb, var(--texte) 4%, transparent);
     box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--texte) 9%, transparent), 0 40px 120px -60px rgb(0 0 0 / 0.6);
   }
-  .lp[data-bureau='colonne'] :is(.lp-section, .lp-texte, .lp-signature) { text-align: center; }
+  .lp[data-bureau='colonne'] :is(.lp-section, .lp-texte) { text-align: center; }
   .lp[data-bureau='colonne'] .lp-col::before { inset: -64px -60% auto; }
 
   /* ---- Profil ---- */
@@ -605,7 +635,7 @@
   .lp:is([data-bureau='profil'], [data-bureau='colonne']) .lp-soutien-autre { flex: 0 0 auto; padding: 0 20px; }
   .lp[data-bureau='profil'] .lp-pied { grid-area: pied; }
   .lp[data-bureau='profil'] .lp-pied .lp-reseaux { justify-content: flex-start; }
-  .lp[data-bureau='profil'] .lp-signature { grid-area: signature; }
+  .lp[data-bureau='profil'] .lp-fin { grid-area: signature; }
 
   /* ---- One page ---- */
   .lp[data-bureau='onepage'] .lp-col { max-width: 1180px; padding: 88px 48px 72px; }
@@ -672,7 +702,12 @@
   .lp[data-bureau='onepage'] .lp-produit[data-format='bandeau'] > .lp-carte-picto:first-child { grid-column: 1 / -1; justify-content: flex-start; margin: 14px 0 0 12px; font-size: 1.9rem; }
   .lp[data-bureau='onepage'] .lp-produit[data-format='bandeau'] .lp-carte-texte { padding: 0 0 0 12px; }
   .lp[data-bureau='onepage'] .lp-produit[data-format='bandeau'] .lp-carte-fleche { width: 40px; height: 40px; margin-right: 10px; }
-  .lp[data-bureau='onepage'] .lp-signature { margin-top: 64px; padding-top: 28px; border-top: 1px solid color-mix(in srgb, var(--texte) 10%, transparent); }
+  /* Le pied d'un site : la mention à gauche, les liens légaux à droite, sous un trait. */
+  .lp[data-bureau='onepage'] .lp-fin {
+    flex-direction: row; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 0 32px;
+    margin-top: 64px; padding-top: 16px; border-top: 1px solid color-mix(in srgb, var(--texte) 10%, transparent);
+  }
+  .lp[data-bureau='onepage'] .lp-legal { margin: 0 -8px 0 auto; padding-top: 0; }
   .lp[data-bureau='onepage'] .lp-pied .lp-reseaux { justify-content: flex-start; }
 }
 

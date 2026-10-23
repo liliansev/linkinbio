@@ -13,7 +13,7 @@ import { OFFRES, euros } from './abonnement.ts';
 /** « 9 € par mois ou 79 € par an » : le prix d'une offre, tel que Creem le facture. */
 const prixDe = (p: 'starter' | 'pro' | 'premium') => `${euros(OFFRES[p].prix.mois)} par mois ou ${euros(OFFRES[p].prix.an)} par an`;
 
-export const VERSION_CGU = '2026-10-22.2';
+export const VERSION_CGU = '2026-10-23.1';
 export const CONTACT_LEGAL = 'bonjour@liliansevoumian.fr';
 
 export interface DocumentLegal { titre: string; resume: string; sections: { titre: string; texte: string[] }[] }
@@ -26,7 +26,7 @@ const HEBERGEUR = 'Hostinger International Limited, 61 Lordou Vironos Street, 60
 export const LEGAL: Record<NomDocument, DocumentLegal> = {
   cgu: {
     titre: 'Conditions générales d’utilisation',
-    resume: `Les règles du service Hopla, en vigueur depuis le 22 octobre 2026 (version ${VERSION_CGU}).`,
+    resume: `Les règles du service Hopla, en vigueur depuis le 23 octobre 2026 (version ${VERSION_CGU}).`,
     sections: [
       { titre: 'Le service', texte: [
         'Hopla permet de publier une page de liens personnelle à l’adresse hopla.page/<pseudo>, et de la gérer depuis un back office, sur app.hopla.page. Le service est édité par Lilian Sevoumian (voir les mentions légales).',
@@ -38,7 +38,7 @@ export const LEGAL: Record<NomDocument, DocumentLegal> = {
       ] },
       { titre: 'Les offres payantes et leur paiement', texte: [
         'La version gratuite le reste pour toujours : ta page, des liens sans limite, dont tes liens partenaires avec leur mention « Publicité », l’ordre de tes liens selon le réseau d’où arrive le visiteur, et les vingt thèmes. Trois offres payantes s’y ajoutent, chacune avec tout ce que comprend la précédente.',
-        `Starter, à ${prixDe('starter')} : ta page sans la mention « Une page faite avec Hopla », ta vitrine (tes produits et leur prix, ta prise de rendez-vous, un bouton pour te soutenir, le code promo de tes liens partenaires), tes couleurs, tes liens programmés à l’avance, les avis de tes clients et tes statistiques détaillées sur 30 jours. Pro, à ${prixDe('pro')} : ta page selon l’heure, les drops, ta liste e-mail, que tu peux brancher sur ta newsletter ou ton outil d’automatisation, et tes statistiques sur un an. Premium, à ${prixDe('premium')}, ajoutera ton propre nom de domaine et jusqu’à trois pages ; il n’est pas encore en vente.`,
+        `Starter, à ${prixDe('starter')} : ta page sans la mention Hopla, ta vitrine (tes produits et leur prix, ta prise de rendez-vous, un bouton pour te soutenir, le code promo de tes liens partenaires), tes couleurs, tes liens programmés à l’avance, les avis de tes clients et tes statistiques détaillées sur 30 jours. Pro, à ${prixDe('pro')} : ta page selon l’heure, les drops, ta liste e-mail, que tu peux brancher sur ta newsletter ou ton outil d’automatisation, et tes statistiques sur un an. Premium, à ${prixDe('premium')}, ajoutera ton propre nom de domaine et jusqu’à trois pages ; il n’est pas encore en vente.`,
         'Les visites de ta page sont comptées dans toutes les versions, mais seules les offres payantes te montrent tes statistiques : en prendre une te donne aussi celles d’avant, dans la limite de son historique.',
         'Les prix sont toutes taxes comprises. L’abonnement se renouvelle automatiquement à la fin de chaque période, au mois ou à l’an selon ton choix.',
         'Le paiement passe par Creem (creem.io), service de la société Armitage Labs OÜ (registre estonien n° 16977866, Rotermanni 14, 10111 Tallinn, Estonie), revendeur officiel de l’abonnement : c’est Creem qui te le vend, encaisse le paiement, t’envoie la facture et reverse la TVA. Ses conditions de vente s’ajoutent à celles-ci pour le paiement. Hopla ne voit ni ne garde jamais ton numéro de carte.',
