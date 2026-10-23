@@ -1,7 +1,8 @@
 import { useContext, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
-import type { CSSProperties, MutableRefObject } from 'react';
+import type { MutableRefObject } from 'react';
 import type { Api, Bloc, ImageApercu, MentionPartenaire, Partenariat, Reglages, VisuelApercu } from '../lib/types.ts';
-import { ANIMATIONS_BLOC, MONTANTS_DEFAUT, SANS_COULEURS, TYPES_ADRESSE, TYPES_VITRINE, estEnLigne, nouveauBloc } from '../lib/types.ts';
+import { ANIMATIONS_BLOC, TYPES_ADRESSE, TYPES_VITRINE, nouveauBloc } from '../lib/types.ts';
+import { horsCreneauOuDates } from '../lib/moments.ts';
 import { RESEAUX } from '../lib/types.ts';
 import { adresse, adresseSaisie, montants as lireMontants, pourquoiPasAdresse } from '../lib/valider.ts';
 import { avecMontants, nomAgenda, nomSoutien, seIntegre, soutienDe } from '../lib/vitrine.ts';
@@ -9,10 +10,8 @@ import { nomSite, reseauDeUrl } from '../lib/demarrage.ts';
 import { typeDeAdresse, versType } from '../lib/detection.ts';
 import { memeBloc, verifierBloc } from '../lib/editionBloc.ts';
 import type { ChampErreur, Erreurs } from '../lib/editionBloc.ts';
-import { themeDe, variablesTheme } from '../lib/themes.ts';
 import { ICONES } from '../lib/icones.ts';
 import { Icone, NOMS_RESEAUX, PICTOS } from '../components/Icone.tsx';
-import { BlocPublic } from '../components/PageLiens.tsx';
 import { BoutonPrincipal, BoutonSecondaire, Champ, Feuille, Interrupteur, ListeChoix, Menu, NOMS_ANIMATIONS, Segments, choisirFichier, classeBouton, classeSaisie, flechesRadio, preparerImage, preparerLogo, useFilFeuille, vibrer } from './ui.tsx';
 import type { ElementMenu, FilFeuille } from './ui.tsx';
 import { typeDe } from './OngletLiens.tsx';
@@ -25,13 +24,16 @@ import { Etiquette, FournisseurOffre, Reserve, offreDe, useDroits, useVoirOffres
 import type { Fonction } from '../lib/abonnement.ts';
 import { focusAuto } from '../lib/clavier';
 
-/** Au téléphone, la page ouverte dans la feuille d'un bloc : l'essentiel (`null`), Quand, Pour qui, « Plus de réglages », ou une règle rare. */
+/** Au téléphone, la page ouverte dans la feuille d'un bloc : l'essentiel (`null`), Quand, Pour qui, l'apparence, « Plus de réglages », ou une règle rare. */
 type PageBloc = 'plus' | PageRegle | null;
 const hoteDe = (url: string) => { try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return ''; } };
-const NOMS_PAGES: Record<'plus' | PageRegle, string> = { plus: 'Plus de réglages', quand: 'Quand', public: 'Pour qui', acces: 'Accès réservé', animation: 'Animation' };
-/** La page d'où l'on vient : Quand et Pour qui s'ouvrent depuis la première page, l'accès et l'animation depuis « Plus de réglages ». */
-const parent = (p: PageBloc): PageBloc => (p === 'acces' || p === 'animation' ? 'plus' : null);
-const niveau = (p: PageBloc): number => (p === null ? 0 : 1 + niveau(parent(p)));
+const NOMS_PAGES: Record<'plus' | PageRegle, string> = { plus: 'Plus de réglages', quand: 'Quand', public: 'Pour qui', apparence: 'Apparence', acces: 'Accès réservé', animation: 'Animation' };
+const NOMS_FORMES: Record<Bloc['format'], string> = { bouton: 'Bouton', bandeau: 'Bandeau', carte: 'Carte' };
+/**
+ * Ce que « Mis en avant » ouvre, sur une ligne juste sous lui : l'apparence d'un lien (forme, couleur, description,
+ * animation) ou d'un produit (description, animation), l'animation seule d'un rendez-vous. Rien pour une vidéo.
+ */
+const pageVedette = (b: Bloc): 'apparence' | 'animation' | null => (!b.vedette ? null : b.type === 'lien' || b.type === 'produit' ? 'apparence' : b.type === 'reservation' ? 'animation' : null);
 
 /** Pose le fil de la feuille depuis son contenu : le nom de la page ouverte et sa flèche de retour. */
 function FilPage({ fil }: { fil: FilFeuille | null }) {
@@ -50,17 +52,24 @@ type ChampAMoi = 'titre' | 'image' | 'description' | 'prix' | 'icone';
 const MENTIONS: { id: MentionPartenaire; nom: string }[] = [{ id: 'publicite', nom: 'Publicité' }, { id: 'collaboration', nom: 'Collaboration commerciale' }];
 const PARTENARIAT_NEUF: Partenariat = { mention: 'publicite', code: '' };
 
+const EXEMPLES_MONTANTS = [3, 5, 10, 20];
+
 /**
  * Les montants de « Me soutenir » chez PayPal : quatre cases, en euros entiers ; une case vide n'est pas proposée.
  * Les cases se remettent dans l'ordre en les quittant, jamais pendant la frappe.
  */
-function ChampMontants({ montants, onChange, compact = false }: { montants: number[]; onChange: (m: number[]) => void; compact?: boolean }) {
+function ChampMontants({ montants, onChange }: { montants: number[]; onChange: (m: number[]) => void }) {
   const remplir = (l: number[]) => [0, 1, 2, 3].map(i => (l[i] ? String(l[i]) : ''));
   const [cases, setCases] = useState(() => remplir(montants));
   // Revenus d'ailleurs (« Annuler mes changements ») : les cases reprennent les montants du bloc.
   useEffect(() => {
     if (JSON.stringify(lireMontants(cases.map(Number))) !== JSON.stringify(montants)) setCases(remplir(montants));
   }, [montants]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Une case vide dit ce qu'on y mettrait : 3, 5, 10, 20 €, ou le double du montant d'avant s'il dépasse déjà l'exemple.
+  const exemple = (i: number) => {
+    const avant = Math.max(0, ...cases.slice(0, i).map(Number).filter(Boolean));
+    return String(EXEMPLES_MONTANTS[i] > avant ? EXEMPLES_MONTANTS[i] : avant * 2);
+  };
   function changer(i: number, v: string) {
     const l = cases.map((c, j) => (j === i ? v.replace(/\D/g, '').slice(0, 4) : c));
     setCases(l);
@@ -70,7 +79,7 @@ function ChampMontants({ montants, onChange, compact = false }: { montants: numb
     <div role="group" aria-label="Montants proposés, en euros" className="grid grid-cols-4 gap-2 bureau:gap-1.5"
       onBlur={e => { if (!e.currentTarget.contains(e.relatedTarget)) setCases(remplir(montants)); }}>
       {cases.map((c, i) => (
-        <input key={i} className={`${classeSaisie} ${compact ? 'adm-field-ligne' : ''} text-center tabular-nums`} inputMode="numeric" enterKeyHint="done" value={c}
+        <input key={i} className={`${classeSaisie} text-center tabular-nums`} inputMode="numeric" enterKeyHint="done" value={c} placeholder={exemple(i)}
           onChange={e => changer(i, e.target.value)} aria-label={`Montant ${i + 1}, en euros`} />
       ))}
     </div>
@@ -156,10 +165,16 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
   const [visuelEnCours, setVisuelEnCours] = useState(false);
   const voir = useVoirOffres();
   const [icones, setIcones] = useState(false);
+  /** Le sous-titre, rare : son champ se montre rempli, ou une fois demandé ; sinon une ligne « Ajouter un sous-titre ». */
+  const [sousTitreDemande, setSousTitreDemande] = useState(false);
   // L'essentiel d'abord, neuf ou pas ; le reste attend derrière « Plus de réglages ».
   // Ouvert pour y régler une règle tout juste débloquée (au retour des offres), il arrive déplié (au téléphone, sur la page de la règle).
   const regleAOuvrir = useContext(RegleAOuvrir);
   const [plus, setPlus] = useState(regleAOuvrir === 'acces');
+  // La page d'où l'on vient : Quand, Pour qui et l'apparence s'ouvrent depuis la première page, l'accès réservé depuis
+  // « Plus de réglages », l'animation depuis l'apparence (celle d'un rendez-vous, depuis la première page).
+  const parent = (p: PageBloc): PageBloc => (p === 'acces' ? 'plus' : p === 'animation' && pageVedette(b) === 'apparence' ? 'apparence' : null);
+  const niveau = (p: PageBloc): number => (p === null ? 0 : 1 + niveau(parent(p)));
   const [page, setPage] = useState<PageBloc>(bureau ? null : regleAOuvrir === 'moment' ? 'quand' : regleAOuvrir);
   // Chaque page garde l'endroit où on l'a laissée : on revient à la ligne d'où l'on était parti.
   const defilements = useRef<Partial<Record<string, number>>>({});
@@ -189,17 +204,17 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
   }, [page]); // eslint-disable-line react-hooks/exhaustive-deps
   // Le retour du téléphone remonte d'une page à la fois, avant de fermer la feuille.
   useCouche(!bureau && page !== null, () => { allerA(null); return true; });
-  useCouche(!bureau && niveau(page) === 2, () => { allerA('plus'); return true; });
+  useCouche(!bureau && niveau(page) === 2, () => { allerA(parent(page)); return true; });
 
   /*
-   * Au téléphone, la feuille d'un bloc posé s'arrête juste sous lui (22 octobre 2026) : le bloc remonte sous l'en-tête,
-   * et la feuille prend toute la place qui reste, entre la moitié et 86 % de l'écran. Un bloc neuf, pas encore sur la
-   * page, a une feuille presque pleine. Le bloc reste en vue quand la feuille grandit ou qu'il change de taille.
+   * Au téléphone, la feuille d'un bloc s'arrête juste sous lui (22 octobre 2026) : le bloc remonte sous l'en-tête, et la
+   * feuille prend toute la place qui reste, entre la moitié et 86 % de l'écran. Un bloc neuf aussi (23 octobre 2026) : il
+   * est déjà sur la page, à la place qu'il prendra. Le bloc reste en vue quand la feuille grandit ou qu'il change de taille.
    */
   const [plafond, setPlafond] = useState<number>();
   useLayoutEffect(() => {
     if (bureau) return;
-    const blocPage = () => (nouveau ? null : document.querySelector<HTMLElement>(`.adm-toile [data-id="${CSS.escape(bloc.id)}"]`));
+    const blocPage = () => document.querySelector<HTMLElement>(`.adm-toile [data-id="${CSS.escape(bloc.id)}"]`);
     const feuille = () => document.querySelector<HTMLElement>('.adm-feuille-bloc');
     const sousEntete = () => (document.querySelector('.adm-topbar')?.getBoundingClientRect().bottom ?? 72) + 12;
     const clavier = () => !!window.visualViewport && innerHeight - window.visualViewport.height > 120;
@@ -224,7 +239,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
     for (const x of [document.querySelector('.adm-toile'), feuille()]) if (x) ro.observe(x);
     addEventListener('resize', suivre);
     return () => { ro.disconnect(); removeEventListener('resize', suivre); };
-  }, [bureau, nouveau, bloc.id]);
+  }, [bureau, bloc.id]);
   const idPlus = useId();
   const idTitre = useId();
   const racine = useRef<HTMLDivElement>(null);
@@ -251,16 +266,6 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
     const t = setTimeout(() => { brut.current = b; enregistre.current = v; enregistrerRef.current(v, { garder: true, discret: true }); }, 650);
     return () => clearTimeout(t);
   }, [b, bureau, nouveau]);
-
-  // Clavier ouvert, l'aperçu collant se replie : la place va au champ et à son erreur.
-  const [clavier, setClavier] = useState(false);
-  useEffect(() => {
-    const vv = window.visualViewport;
-    if (!vv) return;
-    const lire = () => setClavier(vv.height < window.innerHeight * 0.75 || vv.height < 560);
-    lire(); vv.addEventListener('resize', lire);
-    return () => vv.removeEventListener('resize', lire);
-  }, []);
 
   // Une erreur s'efface quand on touche à son champ, pas aux autres : celles qui restent vraies restent affichées.
   const maj = (champs: Partial<Bloc>) => {
@@ -315,28 +320,18 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
     return () => { garde.current = null; };
   });
 
-  // L'aperçu montre le bouton comme la page le montrera : sans Starter, aux couleurs du thème.
-  const vue = droits.couleurs ? reglages : { ...reglages, couleurs: SANS_COULEURS };
-  const theme = themeDe(vue);
-  // Une preuve ne s'aperçoit qu'une fois commencée : pas de « 0,0 sur 5 » avant d'avoir rien tapé.
-  const preuveRemplie = !!b.preuve && (b.preuve.genre === 'note' ? b.preuve.note > 0 && b.preuve.note <= 5 : b.preuve.genre === 'compteur' ? b.preuve.nombre > 0 : !!b.description.trim());
-  // Ce qui est réglé derrière « Plus de réglages », nommé à droite de la ligne : on sait quoi sans ouvrir.
-  // Au bureau, « Mis en avant » se règle dehors, à côté de « Visible sur ma page » : la ligne ne le répète pas.
-  // La photo d'un produit est dans l'essentiel, sous les yeux ; des montants de soutien se disent s'ils ne sont plus ceux de départ.
-  const montantsAMoi = b.type === 'soutien' && avecMontants(adresseValide) && b.montants.join() !== MONTANTS_DEFAUT.join();
-  // Quand, Pour qui et « Mis en avant » sont sur la première page, l'image d'un lien aussi : la ligne ne les répète pas.
-  // L'icône et l'image d'un lien sont dans le champ de son texte : seules celles d'une réservation se règlent derrière la ligne.
-  const reglages_ = ([[!!b.sousTitre, 'Sous-titre'], [montantsAMoi, 'Montants'], [!!b.icone && b.type === 'reservation', 'Icône'], [!!b.image && b.type === 'reservation', 'Image'], [b.vedette && b.animation !== 'auto', 'Animation'],
-    [!!b.partenariat, 'Lien partenaire'], [!!b.acces, 'Accès réservé']] as [boolean, string][])
+  /*
+   * Ce que la page montre se règle sur la première page du bloc (23 octobre 2026) : son texte, son sous-titre, ses montants,
+   * son image ; l'apparence d'un bloc mis en avant, juste sous « Mis en avant ». Derrière « Plus de réglages » ne reste que
+   * ce que la page ne montre pas : le lien partenaire, l'accès réservé, Google, le prénom demandé. Ce qui y est réglé se dit
+   * à droite de la ligne, en bleu comme dans Quand et Pour qui ; rien de réglé, la ligne dit ce qu'elle cache, en gris.
+   */
+  const reglages_ = ([[!!b.partenariat, 'Lien partenaire'], [!!b.acces, 'Accès réservé'], [b.type === 'lien' && principal && !b.indexable, 'Pas sur Google'],
+    [b.type === 'inscription' && b.demanderPrenom, 'Prénom demandé']] as [boolean, string][])
     .filter(([oui]) => oui).map(([, nom]) => nom);
   const reglees = reglages_.length > 2 ? `${reglages_.slice(0, 2).join(', ')} et ${reglages_.length - 2} de plus` : reglages_.join(', ');
-  // Rien de réglé : la ligne dit ce qu'elle cache.
-  const cache = b.type === 'lien' ? 'Sous-titre, accès réservé'
-    : b.type === 'reservation' ? 'Sous-titre, icône, image'
-    : b.type === 'soutien' ? (avecMontants(adresseValide) ? 'Sous-titre, montants' : 'Sous-titre')
-    : b.type === 'produit' ? 'Lien partenaire'
-    : b.type === 'newsletter' ? 'Sous-titre' : b.type === 'inscription' ? 'Sous-titre, prénom' : '';
-  // Un titre, un texte, une preuve, une vidéo : rien d'autre à régler que Quand et Pour qui, pas de « Plus de réglages ».
+  const cache = b.type === 'lien' ? 'Lien partenaire, accès réservé' : b.type === 'produit' ? 'Lien partenaire' : b.type === 'inscription' ? 'Demander le prénom' : '';
+  // Un titre, un texte, une vidéo, un soutien, un rendez-vous : rien que la page ne montre, pas de « Plus de réglages ».
   const plusVide = !cache;
   const nomAuto = `Comme ma page (${NOMS_ANIMATIONS[reglages.animation].nom})`;
   const nomIcone = b.icone ? NOMS_RESEAUX[b.icone] ?? PICTOS.find(p => p.nom === b.icone)?.libelle ?? '' : 'Aucune';
@@ -602,37 +597,39 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
   }
   // Retirer reprend la version enregistrée : « Annuler » dans le message remet celle-là, jamais un champ à moitié tapé.
   const retirer = () => onSupprimer(enregistre.current ?? bloc);
-  /** Au bureau, « Ajouter à ma page » pose le bloc et garde sa rangée dépliée : on continue de le régler. */
+  /**
+   * Au bureau, « Ajouter à ma page » pose le bloc et garde sa rangée dépliée : on continue de le régler. Le bouton part avec
+   * le pied d'un bloc neuf : le focus reste dans la rangée, sur le premier geste du pied d'un bloc posé, à la même place.
+   */
+  const apresAjout = useRef(false);
   function ajouter() {
     const v = valider();
     if (!v) return;
     vibrer(12);
     setB(v); brut.current = v; enregistre.current = v; depart.current = v;
+    apresAjout.current = true;
     onEnregistrer(v, { garder: true });
   }
+  useEffect(() => {
+    if (nouveau || !apresAjout.current) return;
+    apresAjout.current = false;
+    const ici = document.activeElement;
+    if (!ici || ici === document.body) racine.current?.querySelector<HTMLElement>('.adm-editeur-pied button')?.focus({ preventScroll: true });
+  }, [nouveau]);
 
-  const titre = nouveau ? `Ajouter : ${type.nom}` : [type.nom, !b.public && 'masqué', b.public && !estEnLigne(b) && 'programmé'].filter(Boolean).join(' · ');
+  // Un bloc neuf porte le nom de son genre (« Lien », « Me soutenir ») : il est déjà sur la page, son pied dit « Ajouter à ma
+  // page ». Un bloc posé porte son nom à lui, tel qu'il est sur la page (« Le blog ») : on sait lequel est ouvert. Un texte,
+  // une preuve ou la dernière vidéo gardent celui de leur genre, leur « titre » n'étant pas un nom.
+  const sonNom = ['texte', 'preuve', 'derniere-video'].includes(b.type) ? '' : bloc.titre.trim();
+  const titre = nouveau ? type.nom : [sonNom || type.nom, !b.public && 'masqué', horsCreneauOuDates(b, !!droits.heure) && 'programmé'].filter(Boolean).join(' · ');
   const ligne = 'flex min-h-11 items-center gap-2 bureau:min-h-9';
 
-  // Un bloc neuf n'est pas encore sur la page : au téléphone, son aperçu reste collé en haut de la feuille, chaque réglage se voit sans remonter.
-  // Au bureau, il se voit sur la page, à droite, à la place qu'il prendra (voir MaPage).
-  // Un bloc de la vitrine s'aperçoit dès son adresse : avant, il n'a rien à montrer.
-  const apercu = nouveau && !bureau && (b.type === 'lien' || (TYPES_VITRINE.includes(b.type) && !!adresseValide) || (b.type === 'preuve' && preuveRemplie)) && !clavier && (
-    <div className="sticky top-0 z-10 -mx-5 bg-nuit px-5 pb-3 pt-1 shadow-[0_14px_14px_-12px_#ffffff]">
-      <div className="lp lp-mini -mx-1 rounded-[20px] p-4 ring-1 ring-white/[0.06]" style={variablesTheme(theme) as CSSProperties}
-        data-bouton={reglages.bouton.style} data-forme={reglages.bouton.forme} data-ombre={reglages.bouton.ombre} data-police={theme.police} data-decor={theme.decor} aria-label="Aperçu du bouton">
-        <div className="pointer-events-none" inert>
-          {/* Sans Starter, un compte à rebours gardé se tait sur la page : l'aperçu montre le bouton tel qu'il s'ouvrira. */}
-          <BlocPublic key={`${b.format}-${b.teinte}-${b.animation}-${b.vedette}`} bloc={{ ...b, url: b.type === 'preuve' ? b.url : adresseValide || b.url || '#', titre: b.titre || (b.type === 'lien' ? 'Texte du bouton' : b.type === 'produit' ? 'Nom du produit' : b.type === 'soutien' || b.type === 'reservation' ? nouveauBloc(b.type, b.id).titre : ''), public: true, restantes: b.acces?.places ? Math.max(0, b.acces.places - prises) : null, compteARebours: b.compteARebours && droits.programmation }} reglages={vue} clic={() => {}} cible={{}} apercu />
-        </div>
-      </div>
-    </div>
-  );
-
   const grilleIcones = icones && (
-    <div role="radiogroup" onKeyDown={e => flechesRadio(e, false)} aria-label="Icône" className="adm-groupe grid max-h-[208px] grid-cols-[repeat(auto-fill,minmax(44px,1fr))] gap-1.5 overflow-y-auto p-2 [scrollbar-width:thin] bureau:grid-cols-[repeat(auto-fill,minmax(36px,1fr))]">
+    // Toutes les icônes d'un coup, sans boîte qui défile dans la feuille qui défile : le pouce ne fait bouger que la feuille.
+    <div role="radiogroup" onKeyDown={e => flechesRadio(e, false)} aria-label="Icône" className="adm-groupe grid grid-cols-[repeat(auto-fill,minmax(44px,1fr))] gap-1.5 p-2 bureau:grid-cols-[repeat(auto-fill,minmax(36px,1fr))]">
       {[{ nom: '', libelle: 'Sans icône' }, ...RESEAUX.map(r => ({ nom: r as string, libelle: NOMS_RESEAUX[r] })), ...PICTOS].map(p => {
-        const choisi = b.icone === p.nom;
+        // Une image en place n'est pas « Sans icône » : rien n'est coché tant qu'elle est là.
+        const choisi = p.nom ? b.icone === p.nom : !b.icone && !b.image;
         return (
           // L'icône seule, sans fond derrière elle : la prise passe au bleu, un point dessous.
           // Une icône choisie prend la place de l'image, qui passerait devant elle sur la page.
@@ -653,6 +650,12 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
         placeholder="Ce qu’on trouve en cliquant, en une ou deux phrases." />
     </Champ>
   );
+  // Ce que disent, sans s'ouvrir, la ligne de l'apparence d'un bloc mis en avant et celle de son animation.
+  const resumeAnimation = b.animation === 'auto' ? 'Comme ma page' : NOMS_ANIMATIONS[b.animation].nom;
+  // Une description lue sur le site se montre sur la page : la ligne le dit, on sait d'où vient ce texte.
+  const avecDescription = !!b.description.trim() && (b.type === 'produit' || b.format !== 'bouton');
+  const resumeApparence = b.type === 'produit' ? (avecDescription ? 'Grande carte, avec description' : 'Grande carte')
+    : `${NOMS_FORMES[b.format]}${avecDescription ? ' avec description' : ''}, ${b.teinte === 'accent' ? 'couleur d’accent' : 'comme les autres'}`;
   const formeCouleur = b.type === 'lien' && b.vedette && (
     <div className="grid gap-3">
       <div>
@@ -668,23 +671,25 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
     </div>
   );
   const animation = (b.type === 'lien' || b.type === 'produit' || b.type === 'reservation') && b.vedette && (
-    <Repli id="animation" key={`animation-${b.id}`} titre="Animation" icone="eclair" resume={b.animation === 'auto' ? 'Comme ma page' : NOMS_ANIMATIONS[b.animation].nom} ouvert={false}>
-      {/* Une liste, pas une rangée de pastilles : le bloc sur la page (ou l'aperçu en haut) joue l'animation choisie. */}
+    <Repli id="animation" depuis="apparence" key={`animation-${b.id}`} titre="Animation" icone="eclair" resume={resumeAnimation} regle={b.animation !== 'auto'} ouvert={false}>
+      {/* Une liste, pas une rangée de pastilles : le bloc sur la page joue l'animation choisie. */}
       <ListeChoix label="Animation" valeur={b.animation} onChange={a => maj({ animation: a })}
         options={ANIMATIONS_BLOC.map(a => a === 'auto'
           ? { id: a, nom: nomAuto }
           : { id: a, nom: NOMS_ANIMATIONS[a].nom })} />
     </Repli>
   );
+  /** « Mis en avant » vient d'être allumé : au bureau, son apparence arrive dépliée, on voit ce qu'il ouvre. */
+  const vedetteAllumee = useRef(false);
   const enAvant = !['titre', 'texte', 'newsletter', 'inscription', 'preuve', 'soutien'].includes(b.type);
   const aideVedette = b.type === 'produit' ? 'Une grande carte, de la couleur d’accent de ta page.' : b.type === 'reservation' ? 'De la couleur d’accent de ta page.' : 'En plus grand, de la couleur d’accent de ta page.';
-  const vedette = (compact: boolean) => enAvant && <Interrupteur key="vedette" compact={compact} label="Mis en avant" aide={aideVedette} actif={b.vedette} onChange={v => maj({ vedette: v })} />;
+  const vedette = (compact: boolean) => enAvant && <Interrupteur key="vedette" compact={compact} label="Mis en avant" aide={aideVedette} actif={b.vedette} onChange={v => { vedetteAllumee.current = v; maj({ vedette: v }); }} />;
   const bascules = (compact: boolean, sansVedette = false) => [
     b.type === 'inscription' && <Interrupteur key="prenom" compact={compact} label="Demander le prénom" actif={b.demanderPrenom} onChange={v => maj({ demanderPrenom: v })} />,
     !sansVedette && vedette(compact),
     // Un lien qui devient partenaire prend sa mention ; éteint puis rallumé, il retrouve celle d'avant, et son code.
     (b.type === 'lien' || b.type === 'produit') && (
-      <Interrupteur key="partenaire" compact={compact} label="Lien partenaire" aide="Affiliation ou collaboration payée : la mention « Publicité » s’affiche." actif={!!b.partenariat}
+      <Interrupteur key="partenaire" compact={compact} label="Lien partenaire" actif={!!b.partenariat}
         onChange={v => { if (!v) partenariatGarde.current = b.partenariat; maj({ partenariat: v ? partenariatGarde.current ?? PARTENARIAT_NEUF : null }); }} />
     ),
     b.type === 'lien' && principal && <Interrupteur key="google" compact={compact} label="Visible par Google" actif={b.indexable} onChange={v => maj({ indexable: v })} />,
@@ -736,18 +741,27 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
    * lui-même : rien à aller chercher.
    */
   const produit = b.type === 'produit';
-  const avecVignette = b.type === 'lien' || produit;
+  // Un rendez-vous aussi (23 octobre 2026) : sa photo ou son icône, la même vignette ; sans elles, le picto que la page montre.
+  // Son site est un agenda : ni son image ni son logo ne parlent de la personne, ils ne sont pas proposés.
+  const rdv = b.type === 'reservation';
+  const avecVignette = b.type === 'lien' || produit || rdv;
+  const iconeVue = b.icone || (rdv ? 'bloc-reservation' : '');
+  // Ce qui est en place, quand on sait d'où il vient (une image du site, son logo, une photo, une icône) : sa ligne est cochée
+  // dans le menu, les autres le remplacent.
+  const source = b.image ? genreImage.current : !produit && b.icone ? 'icone' : null;
+  const coche = (de: (typeof source)[]) => (source ? de.includes(source) : undefined);
   const elementsVignette: ElementMenu[] = [
-    ...(adresseValide ? [{ nom: produit ? 'Photo de la boutique' : 'Image du site', action: () => void prendreDuSite('partage') }] : []),
-    ...(adresseValide && !produit ? [{ nom: 'Logo du site', action: () => void prendreDuSite('logo') }] : []),
-    { nom: b.image ? 'Choisir une autre photo' : 'Choisir une photo', action: () => choisirFichier(fichier.current, vignette.current) },
-    ...(!produit ? [{ nom: 'Choisir une icône', action: () => setIcones(true) }] : []),
+    ...(adresseValide && !rdv ? [{ nom: produit ? 'Photo de la boutique' : 'Image du site', coche: coche(['partage', 'capture']), action: () => void prendreDuSite('partage') }] : []),
+    ...(adresseValide && !produit && !rdv ? [{ nom: 'Logo du site', coche: coche(['logo']), action: () => void prendreDuSite('logo') }] : []),
+    { nom: 'Choisir une photo', coche: coche(['photo']), action: () => choisirFichier(fichier.current, vignette.current) },
+    ...(!produit ? [{ nom: 'Choisir une icône', coche: coche(['icone']), action: () => setIcones(true) }] : []),
     ...(b.image ? [{ nom: produit ? 'Retirer la photo' : 'Retirer l’image', action: () => maj({ image: '' }) }] : []),
     ...(!produit && !b.image && b.icone ? [{ nom: 'Retirer l’icône', action: () => maj({ icone: '' }) }] : []),
   ];
-  const rempli = !visuelEnCours && (!!b.image || (!produit && !!b.icone));
+  const rempli = !visuelEnCours && (!!b.image || (!produit && !!iconeVue));
   const nomVignette = produit ? (b.image ? 'Photo du produit : la changer ou la retirer' : 'Ajouter la photo du produit')
-    : b.image ? 'Image du bouton : la changer ou la retirer' : b.icone ? `Icône du bouton, ${nomIcone} : la changer ou la retirer` : 'Ajouter une image ou une icône';
+    : b.image ? 'Image du bouton : la changer ou la retirer' : b.icone ? `Icône du bouton, ${nomIcone} : la changer ou la retirer`
+    : rdv ? 'Icône du bouton : la changer, ou choisir une photo' : 'Ajouter une image ou une icône';
   const case_ = 'grid h-7 w-7 shrink-0 place-items-center bureau:h-6 bureau:w-6';
   const vignetteChamp = avecVignette && (
     <div ref={vignette} className="absolute inset-y-0 left-0 flex items-center pl-1 bureau:pl-0.5">
@@ -756,7 +770,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
         {visuelEnCours
           ? <span className={case_} aria-hidden="true"><span className="h-4 w-4 animate-spin rounded-full border-2 border-white/15 border-t-white/60 motion-reduce:animate-none" /></span>
           : b.image ? <img src={b.image} alt="" className="h-7 w-7 shrink-0 rounded-[7px] object-cover outline outline-1 -outline-offset-1 outline-white/10 bureau:h-6 bureau:w-6 bureau:rounded-md" />
-          : !produit && b.icone ? <span className={`${case_} text-white`}>{ICONES[b.icone] ? <Icone nom={b.icone} taille={20} /> : <span className="text-[18px] leading-none">{b.icone}</span>}</span>
+          : !produit && iconeVue ? <span className={`${case_} text-white`}>{ICONES[iconeVue] ? <Icone nom={iconeVue} taille={20} /> : <span className="text-[18px] leading-none">{iconeVue}</span>}</span>
           : <span className={`${case_} text-white/55`}><Icone nom="ui-image-plus" taille={19} /></span>}
         {/* Le crayon dit qu'on peut changer ce qui est là ; vide, le plus du picto suffit. Sa place reste gardée. */}
         <span className="grid w-3 shrink-0 place-items-center">{rempli && <Icone nom="ui-crayon" taille={12} />}</span>
@@ -768,16 +782,17 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
   const champTitre = b.type !== 'derniere-video' && b.type !== 'preuve' && (avecVignette ? (
     <div>
       <label htmlFor="bloc-titre" className="mb-1.5 block text-[12.5px] font-medium text-white/60 bureau:text-white/75">{produit ? 'Nom du produit' : 'Texte du bouton'}</label>
-      {/* Le champ d'abord, la vignette par-dessus : le libellé nomme le champ, pas le bouton de la vignette. */}
+      {/* Le champ d'abord, la vignette par-dessus : le libellé nomme le champ, pas le bouton de la vignette. Vide, il dit le
+          nom que la page montre déjà, celui du site, en attendant sa lecture. */}
       <div className="relative">
         <input id="bloc-titre" className={`${classeSaisie} adm-field-vignette`} value={b.titre} onChange={e => maj({ titre: e.target.value })} maxLength={160} autoFocus={focusAuto(nouveau && !avecUrl)}
           aria-invalid={erreurDe('titre') ? true : undefined} aria-describedby={erreurDe('titre') ? idTitre : undefined}
-          placeholder={lecture && !b.titre ? (produit ? 'Lecture de la boutique…' : 'Lecture du site…') : produit ? '' : 'Mon super lien'} />
+          placeholder={lecture && !b.titre ? (produit ? 'Lecture de la boutique…' : 'Lecture du site…') : produit ? '' : rdv ? nouveauBloc('reservation', b.id).titre : (adresseValide && nomSite(adresseValide)) || 'Mon super lien'} />
         {vignetteChamp}
       </div>
       {erreurDe('titre') && <span id={idTitre} role="alert" className="mt-1.5 block text-[13px] font-medium leading-snug text-red-300">{erreurDe('titre')}</span>}
       {erreurImage && <div className="mt-1.5">{erreurImage}</div>}
-      {icones && b.type === 'lien' && (
+      {icones && !produit && (
         <div className="mt-2">
           <div className="mb-1 flex items-center justify-between">
             <span className="text-[12.5px] font-medium text-white/60 bureau:text-white/75">Icône</span>
@@ -790,11 +805,11 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
       )}
     </div>
   ) : (
-    <Champ erreur={erreurDe('titre')} label={b.type === 'reservation' ? 'Texte du bouton' : b.type === 'texte' ? 'Texte' : 'Titre'}>
+    <Champ erreur={erreurDe('titre')} label={b.type === 'texte' ? 'Texte' : 'Titre'}>
       {b.type === 'texte'
         ? <textarea className={`${classeSaisie} min-h-28`} value={b.titre} onChange={e => maj({ titre: e.target.value })} maxLength={1000} autoFocus={focusAuto(nouveau)} />
         : <input id="bloc-titre" className={classeSaisie} value={b.titre} onChange={e => maj({ titre: e.target.value })} maxLength={160} autoFocus={focusAuto(nouveau && !avecUrl)}
-            placeholder={b.type === 'soutien' || b.type === 'reservation' ? nouveauBloc(b.type, b.id).titre : ''} />}
+            placeholder={b.type === 'soutien' ? nouveauBloc(b.type, b.id).titre : ''} />}
     </Champ>
   ));
   // Un produit : son prix, lu sur la boutique comme son nom et sa photo ; il se corrige à la main.
@@ -828,26 +843,37 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
   );
   // Au bureau, l'adresse et son texte côte à côte, comme dans la maquette A2 : la rangée dépliée reste courte.
   const paire = bureau && !!champUrl && !!champTitre;
-  // Ce qui se règle derrière « Plus de réglages » selon le bloc : l'icône et l'image d'une réservation (celles d'un lien
-  // sont dans le champ de son texte), les montants de « Me soutenir » chez PayPal, le sous-titre qu'une réservation montre déjà.
-  const avecVisuel = b.type === 'reservation';
-  const montants = b.type === 'soutien' && avecMontants(adresseValide) && ((compact: boolean) => <ChampMontants compact={compact} montants={b.montants} onChange={m => maj({ montants: m })} />);
-  const placeholderSousTitre = b.type === 'reservation' && adresseValide ? nomAgenda(adresseValide) : '';
+  // Sous le texte, ce que la page montre encore du bloc : son sous-titre, et les montants de « Me soutenir » chez PayPal.
+  // Le sous-titre sert rarement : vide, il attend derrière une ligne, et les gestes courants restent à portée. Celui d'un
+  // rendez-vous se montre toujours, puisque la page dit son agenda tant qu'il est vide. Demandé, le champ ne prend la main
+  // qu'au bureau : au téléphone, le clavier ne monte pas tout seul. Effacé en cours de frappe, il reste ouvert.
+  const avecSousTitre = ['lien', 'newsletter', 'inscription', 'soutien', 'reservation'].includes(b.type);
+  const champSousTitre = avecSousTitre && (b.sousTitre || sousTitreDemande || b.type === 'reservation' ? (
+    <Champ label="Sous-titre (facultatif)">
+      <input className={classeSaisie} value={b.sousTitre} onChange={e => { setSousTitreDemande(true); maj({ sousTitre: e.target.value }); }} maxLength={240} autoFocus={focusAuto(sousTitreDemande && !b.sousTitre)}
+        placeholder={b.type === 'reservation' && adresseValide ? nomAgenda(adresseValide) : ''} />
+    </Champ>
+  ) : (
+    <button type="button" onClick={() => { vibrer(4); setSousTitreDemande(true); }}
+      className="-my-1.5 flex min-h-11 items-center gap-2 self-start text-[13.5px] font-medium text-white/70 transition hover:text-white bureau:min-h-8">
+      <Icone nom="ui-plus" taille={15} className="shrink-0" />Ajouter un sous-titre
+    </button>
+  ));
+  const champMontants = b.type === 'soutien' && avecMontants(adresseValide) && (
+    <div>
+      <span className="mb-1.5 block text-[12.5px] font-medium text-white/60 bureau:text-white/75">Montants proposés, en euros</span>
+      <div className="bureau:max-w-[360px]"><ChampMontants montants={b.montants} onChange={m => maj({ montants: m })} /></div>
+    </div>
+  );
   const compteClics = b.type === 'lien' || TYPES_VITRINE.includes(b.type);
 
   /** Le haut, commun aux deux formes : à quoi sert le bloc, ce qu'il a de particulier, puis ses champs essentiels. */
   const essentiel = (
     <>
-      {/* Un bloc neuf dit d'abord à quoi il sert, en une ligne. Ce qu'un bloc posé a de particulier se lit dans ses lignes Quand, Pour qui et « Plus de réglages ». */}
-      {nouveau && <p className="text-[13.5px] leading-snug text-white/60">{type.aide}.</p>}
+      {/* Un bloc neuf dit d'abord, en une ligne, ce qu'on ne devine pas : les agendas, les sites de soutien, la boutique lue. Rien quand c'est évident. */}
+      {nouveau && type.aide && <p className="text-[13.5px] leading-snug text-white/60">{type.aide}.</p>}
       {/* Un avis ou une liste gardés d'une offre passée : ils attendent, rien n'est perdu. */}
       {type.fonction && !droits[type.fonction] && <Reserve fonction={type.fonction} phrase={`Ce bloc n’est pas montré sur ta page sans Hopla ${offreDe(type.fonction)}. Il revient tel quel dès que tu la prends.`} />}
-      {b.type === 'preuve' && nouveau && !bureau && !preuveRemplie && !clavier && (
-        // La place de l'aperçu est gardée dès l'ouverture : le formulaire ne saute pas quand la première valeur arrive.
-        <div className="lp lp-mini grid min-h-[112px] place-items-center rounded-[20px] p-4 text-center ring-1 ring-white/[0.06]" style={variablesTheme(theme) as CSSProperties} data-police={theme.police} data-decor={theme.decor}>
-          <p className="text-[13.5px]" style={{ color: 'var(--doux)' }}>L’aperçu s’affiche ici dès ta première valeur.</p>
-        </div>
-      )}
       {paire ? <div className="adm-paire">{champUrl}{champTitre}</div> : champUrl}
 
       {b.type === 'preuve' && <ChampsPreuve b={b} maj={maj} erreurDe={erreurDe} />}
@@ -861,6 +887,8 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
       {b.type === 'preuve' && <p className="text-[12.5px] leading-snug text-white/55">Des chiffres vrais, des avis réels, avec l’accord de leurs auteurs.</p>}
 
       {!paire && champTitre}
+      {champSousTitre}
+      {champMontants}
       {b.type === 'produit' && (bureau ? <div className="adm-paire">{champPrix}</div> : champPrix)}
       {partenaire}
       {b.type === 'derniere-video' && (
@@ -872,9 +900,6 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
   );
 
   if (bureau) {
-    // L'allure : le sous-titre, l'icône et l'image d'un lien ou d'une réservation, le prénom d'une liste, les montants d'un soutien ;
-    // « Mis en avant » est dehors.
-    const aApparence = ['lien', 'newsletter', 'inscription', 'produit', 'soutien', 'reservation'].includes(b.type);
     // Les deux côtés passent par la même vérification : une adresse rangée sans sa barre finale n'est pas un changement.
     const norme = (x: Bloc) => verifierBloc(x).bloc ?? x;
     const annulable = !nouveau && !!depart.current && !memeBloc(norme(b), norme(depart.current));
@@ -888,70 +913,30 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
           <Interrupteur compact label="Visible sur ma page" actif={b.public} onChange={v => maj({ public: v })} />
           {vedette(true)}
         </div>
-        {/* Quand et Pour qui, à portée : leur ligne dit ce qui est réglé, et se déplie en place. */}
+        {/* Ce que « Mis en avant » ouvre, juste sous lui, puis Quand et Pour qui : chaque ligne dit ce qui est réglé, et se déplie en place.
+            Allumé à l'instant, l'apparence arrive dépliée. */}
         <div className="flex flex-col">
-          <Repli key={erreurDe('dates') ? 'quand-erreur' : `quand-${b.id}`} titre="Quand" icone="horloge" resume={dejaQuand} ouvert={!!erreurDe('dates') || regleAOuvrir === 'moment'} montrer={regleAOuvrir === 'moment'}>{quand}</Repli>
-          <Repli key={`public-${b.id}`} titre="Pour qui" icone="cible" resume={dejaPourQui} ouvert={false}>{pourQui}</Repli>
+          {pageVedette(b) === 'apparence' && (
+            <Repli key={`apparence-${b.id}`} titre="Apparence" icone="pinceau" resume={resumeApparence} ouvert={vedetteAllumee.current}>
+              {formeCouleur}{description}{animation}
+            </Repli>
+          )}
+          {pageVedette(b) === 'animation' && animation}
+          <Repli key={erreurDe('dates') ? 'quand-erreur' : `quand-${b.id}`} titre="Quand" icone="horloge" resume={dejaQuand} regle={dejaQuand !== 'Tout le temps'} ouvert={!!erreurDe('dates') || regleAOuvrir === 'moment'} montrer={regleAOuvrir === 'moment'}>{quand}</Repli>
+          <Repli key={`public-${b.id}`} titre="Pour qui" icone="cible" resume={dejaPourQui} regle={dejaPourQui !== 'Tout le monde'} ouvert={false}>{pourQui}</Repli>
         </div>
 
-        {/* Le reste attend derrière une seule ligne, qui dit ce qui est réglé : on sait quoi sans ouvrir. */}
+        {/* Ce que la page ne montre pas attend derrière une seule ligne, qui dit ce qui est réglé : on sait quoi sans ouvrir. */}
         {!plusVide && <div className="adm-plus-groupe">
           <button type="button" onClick={() => { vibrer(4); setPlus(!plus); }} aria-expanded={plus} aria-controls={idPlus} className="adm-plus">
             <span className="shrink-0 font-medium text-white">Plus de réglages</span>
-            {!plus && <span className="min-w-0 flex-1 truncate text-white/55">{reglees || cache}</span>}
+            {!plus && <span className={`min-w-0 flex-1 truncate ${reglees ? 'font-medium text-bleu' : 'text-white/55'}`}>{reglees || cache}</span>}
             <Icone nom="ui-chevron" taille={14} className={`ml-auto shrink-0 text-white/55 transition-transform ${plus ? 'rotate-180' : ''}`} />
           </button>
           {plus && (
             <div id={idPlus} className="adm-plus-contenu">
-              {aApparence && (
-                <section aria-label="Apparence" className="flex flex-col">
-                  <h3 className="adm-section-panneau">Apparence</h3>
-                  {b.type !== 'produit' && (
-                    <label className={ligne}>
-                      <span className="flex-1 text-[13.5px] text-white">Sous-titre</span>
-                      <input className={`${classeSaisie} adm-field-ligne max-w-[260px]`} value={b.sousTitre} onChange={e => maj({ sousTitre: e.target.value })} maxLength={240} placeholder={placeholderSousTitre || 'Facultatif'} />
-                    </label>
-                  )}
-                  {montants && (
-                    <div className={ligne}>
-                      <span className="flex-1 text-[13.5px] text-white">Montants en euros</span>
-                      <div className="w-[216px] shrink-0">{montants(true)}</div>
-                    </div>
-                  )}
-                  {avecVisuel && (
-                    <div>
-                      <div className={ligne}>
-                        <span className="flex-1 text-[13.5px] text-white">Icône</span>
-                        <button type="button" onClick={() => setIcones(!icones)} aria-expanded={icones} aria-label={`Icône : ${nomIcone}`} className="adm-valeur">
-                          {b.icone && <Icone nom={ICONES[b.icone] ? b.icone : 'ui-aucun'} taille={14} className="shrink-0" />}
-                          <span className="truncate">{nomIcone}</span>
-                        </button>
-                      </div>
-                      {grilleIcones}
-                    </div>
-                  )}
-                  {b.type === 'reservation' && (
-                    <div className={ligne}>
-                      <span className="flex-1 text-[13.5px] text-white">Image</span>
-                      {b.image && <img src={b.image} alt="" className="h-8 w-8 rounded-md object-cover" />}
-                      <button type="button" onClick={e => choisirFichier(fichier.current, e.currentTarget)} disabled={envoi} className="adm-valeur">{envoi ? 'Envoi…' : b.image ? 'Changer' : 'Ajouter'}</button>
-                      {b.image && <button type="button" onClick={() => maj({ image: '' })} aria-label="Retirer l’image" title="Retirer l’image" className={classeBouton.icone}><Icone nom="ui-corbeille" taille={15} /></button>}
-                      {champFichier}
-                    </div>
-                  )}
-                  {b.type === 'reservation' && erreurImage}
-                  {bascules(true, true)}
-                  {description && <div className="pt-2">{description}</div>}
-                  {formeCouleur && <div className="pt-2">{formeCouleur}</div>}
-                  {animation}
-                </section>
-              )}
-              {acces && (
-                <section aria-label="Accès" className="flex flex-col">
-                  <h3 className="adm-section-panneau">Accès</h3>
-                  {acces}
-                </section>
-              )}
+              {bascules(true, true).length > 0 && <div className="flex flex-col">{bascules(true, true)}</div>}
+              {acces}
             </div>
           )}
         </div>}
@@ -985,28 +970,32 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
     );
   }
 
-  // Au téléphone, la feuille mène de page en page, sa flèche dans l'en-tête : l'essentiel, puis « Plus de réglages », puis une page par règle.
+  // Au téléphone, la feuille mène de page en page, sa flèche dans l'en-tête : l'essentiel, puis une page par règle (l'apparence,
+  // Quand, Pour qui, « Plus de réglages »), et l'animation ou l'accès réservé un cran plus loin.
   const fil: FilFeuille | null = page === null ? null : {
     titre: NOMS_PAGES[page],
-    label: parent(page) === 'plus' ? 'Revenir à Plus de réglages' : 'Revenir au bloc',
+    label: parent(page) === 'plus' ? 'Revenir à Plus de réglages' : parent(page) === 'apparence' ? 'Revenir à Apparence' : 'Revenir au bloc',
     retour: () => allerA(parent(page)),
   };
   const groupe = 'adm-groupe flex flex-col divide-y divide-white/[0.06]';
-  /** Une ligne de la première page qui mène à sa page : son nom, ce qui est réglé à droite, un chevron. */
-  const ligneRegle = (id: 'quand' | 'public', nom: string, valeur: string) => (
+  /** Une ligne de la première page qui mène à sa page : son nom, ce qui est réglé à droite (en bleu si c'est une règle), un chevron. */
+  const ligneRegle = (id: PageRegle, valeur: string, regle = valeur !== 'Tout le temps' && valeur !== 'Tout le monde') => (
     <button id={`regle-${id}`} type="button" onClick={() => { vibrer(4); allerA(id); }}
       className="flex min-h-12 w-full items-center gap-3 px-4 text-left transition hover:bg-white/[0.03] active:bg-white/[0.05]">
-      <span className="shrink-0 text-[14.5px] font-medium text-white">{nom}</span>
-      <span className={`min-w-0 flex-1 truncate text-right text-[13.5px] ${valeur === 'Tout le temps' || valeur === 'Tout le monde' ? 'text-white/55' : 'font-medium text-bleu'}`}>{valeur}</span>
+      <span className="shrink-0 text-[14.5px] font-medium text-white">{NOMS_PAGES[id]}</span>
+      <span className={`min-w-0 flex-1 truncate text-right text-[13.5px] ${regle ? 'font-medium text-bleu' : 'text-white/55'}`}>{valeur}</span>
       <Icone nom="ui-chevron" taille={16} className="-rotate-90 shrink-0 text-white/55" />
     </button>
   );
+  const vedettePage = pageVedette(b);
   return (
     <FournisseurOffre value={offre}>
     {/* `cote` : la page reste visible au-dessus de la feuille, et le bloc s'y redessine à chaque frappe ; la feuille s'arrête sous lui.
-        Un bloc neuf n'est pas encore sur la page : sa feuille, voilée, prend presque tout l'écran, son aperçu en haut. */}
-    <Feuille ouverte cote={!nouveau} classe="adm-feuille-bloc" plafond={plafond} onFermer={fermerEnGardant} retenir={retenir} titre={titre}
-      retour={nouveau && onRetour ? { label: 'Revenir au choix du bloc', action: onRetour } : undefined}
+        Un bloc neuf aussi : il est déjà sur la page, à la place qu'il prendra (voir MaPage). */}
+    <Feuille ouverte cote classe="adm-feuille-bloc" plafond={plafond} onFermer={fermerEnGardant} retenir={retenir} titre={titre}
+      // La flèche vers le choix des blocs, tant que rien n'est tapé : ensuite, elle et le retour du téléphone perdraient l'adresse
+      // collée. Le bloc commencé se referme alors comme d'un glissé, en s'ajoutant (« Annuler » dans le message le retire).
+      retour={nouveau && onRetour && !commence() ? { label: 'Revenir au choix du bloc', action: onRetour } : undefined}
       pied={fermer => (
         <div className="flex items-center gap-2">
           {/* Fermer garde les changements ; ce bouton est la seule façon de les oublier (un bloc neuf n'est pas ajouté). */}
@@ -1020,29 +1009,32 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
         </div>
       )}>
       <FilPage fil={fil} />
-      {apercu}
       <PagesBloc.Provider value={{ page, ouvrir: allerA }}>
       {/* La première page reste montée sous les autres : rien ne s'y perd, et son champ ne reprend pas le focus au retour. */}
       <div hidden={page !== null} className="adm-editeur flex flex-col gap-4 pt-1">
         {essentiel}
 
         {/* Les quatre gestes les plus courants après le texte, à portée (Lilian, 22 octobre 2026) : le montrer ou non, le mettre
-            en avant, le programmer, le régler selon le réseau. Chaque ligne dit ce qui est réglé ; Quand et Pour qui mènent à leur page. */}
+            en avant, le programmer, le régler selon le réseau. Chaque ligne dit ce qui est réglé ; Quand et Pour qui mènent à leur page.
+            Allumé, « Mis en avant » pose juste sous lui la ligne de ce qu'il ouvre : l'apparence, ou l'animation d'un rendez-vous. */}
         <div className={groupe}>
           <div className="px-4"><Interrupteur label="Visible sur ma page" actif={b.public} onChange={v => maj({ public: v })} /></div>
           {enAvant && <div className="px-4"><Interrupteur label="Mis en avant" actif={b.vedette} onChange={v => maj({ vedette: v })} /></div>}
-          {ligneRegle('quand', 'Quand', dejaQuand)}
-          {ligneRegle('public', 'Pour qui', dejaPourQui)}
+          {vedettePage && ligneRegle(vedettePage, vedettePage === 'apparence' ? resumeApparence : resumeAnimation, vedettePage === 'animation' && b.animation !== 'auto')}
+          {ligneRegle('quand', dejaQuand)}
+          {ligneRegle('public', dejaPourQui)}
         </div>
 
-        {/* Le reste, rare, attend derrière une seule ligne, qui dit ce qui est réglé ; elle mène à sa page, la flèche de l'en-tête ramène. */}
+        {/* Ce que la page ne montre pas attend derrière une seule ligne, qui dit ce qui est réglé ; elle mène à sa page, la flèche de l'en-tête ramène. */}
         {!plusVide && (
-          <button id={`${idPlus}-ligne`} type="button" onClick={() => { vibrer(4); allerA('plus'); }}
-            className="-mt-1 flex min-h-12 w-full items-center gap-3 text-left">
-            <span className="shrink-0 whitespace-nowrap text-[14.5px] font-medium text-white">Plus de réglages</span>
-            <span className="min-w-0 flex-1 truncate text-right text-[13px] text-white/55">{reglees || cache}</span>
-            <Icone nom="ui-chevron" taille={16} className="-rotate-90 shrink-0 text-white/55" />
-          </button>
+          <div className={groupe}>
+            <button id={`${idPlus}-ligne`} type="button" onClick={() => { vibrer(4); allerA('plus'); }}
+              className="flex min-h-12 w-full items-center gap-3 px-4 text-left transition hover:bg-white/[0.03] active:bg-white/[0.05]">
+              <span className="shrink-0 whitespace-nowrap text-[14.5px] font-medium text-white">Plus de réglages</span>
+              <span className={`min-w-0 flex-1 truncate text-right text-[13.5px] ${reglees ? 'font-medium text-bleu' : 'text-white/55'}`}>{reglees || cache}</span>
+              <Icone nom="ui-chevron" taille={16} className="-rotate-90 shrink-0 text-white/55" />
+            </button>
+          </div>
         )}
 
         {!nouveau && compteClics && clics > 0 && <p className="text-center text-[13px] text-white/55">{clics} clic{clics > 1 ? 's' : ''} ces 30 derniers jours</p>}
@@ -1069,54 +1061,13 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
 
       {page !== null && (
         <div className="adm-editeur flex flex-col gap-4 pt-1">
-          {page === 'plus' && (<>
-            {/* Deux groupes nommés, l'allure puis les règles : on trouve sans tout lire. */}
-            {['lien', 'video', 'newsletter', 'inscription', 'produit', 'soutien', 'reservation'].includes(b.type) && <h3 className="-mb-1 text-[13px] font-medium text-white/55">Apparence</h3>}
-            {['lien', 'newsletter', 'inscription', 'soutien', 'reservation'].includes(b.type) && (
-              <Champ label="Sous-titre (facultatif)">
-                <input className={classeSaisie} value={b.sousTitre} onChange={e => maj({ sousTitre: e.target.value })} maxLength={240} placeholder={placeholderSousTitre} />
-              </Champ>
-            )}
-            {montants && (
-              <div>
-                <span className="mb-1.5 block text-[12.5px] font-medium text-white/60">Montants proposés, en euros</span>
-                {montants(false)}
-              </div>
-            )}
-
-            {description}
-
-            {avecVisuel && (
-              <>
-                <div>
-                  <button type="button" onClick={() => setIcones(!icones)} aria-expanded={icones}
-                    className="adm-groupe flex min-h-12 w-full items-center gap-3 px-4 text-left transition hover:bg-white/[0.03]">
-                    <span className="text-white"><Icone nom={b.icone && ICONES[b.icone] ? b.icone : 'ui-aucun'} taille={20} /></span>
-                    <span className="flex-1 text-[14.5px] font-medium text-white/85">Icône</span>
-                    <span className="text-[13px] text-white/50">{nomIcone}</span>
-                    <Icone nom="ui-chevron" taille={16} className={`text-white/55 transition ${icones ? 'rotate-180' : ''}`} />
-                  </button>
-                  {grilleIcones}
-                </div>
-                {b.type === 'reservation' && <div className="flex items-center gap-3">
-                  {b.image && <img src={b.image} alt="" className="h-14 w-14 rounded-xl object-cover" />}
-                  <div className="flex flex-1 flex-wrap gap-2">
-                    <button type="button" onClick={e => choisirFichier(fichier.current, e.currentTarget)} disabled={envoi} className={classeBouton.secondaire}>{envoi ? 'Envoi…' : b.image ? 'Changer l’image' : 'Ajouter une image'}</button>
-                    {b.image && <button type="button" onClick={() => maj({ image: '' })} className={classeBouton.discret}>Retirer</button>}
-                  </div>
-                  {champFichier}
-                </div>}
-                {b.type === 'reservation' && erreurImage && <div className="-mt-2">{erreurImage}</div>}
-              </>
-            )}
-
-            {bascules(false, true).length > 0 && <div className="adm-groupe divide-y divide-white/[0.06] px-4">{bascules(false, true)}</div>}
-            {formeCouleur}
-          </>)}
+          {page === 'apparence' && <>{formeCouleur}{description}</>}
+          {page === 'plus' && bascules(false, true).length > 0 && <div className="adm-groupe divide-y divide-white/[0.06] px-4">{bascules(false, true)}</div>}
           {page === 'quand' && quand}
           {page === 'public' && pourQui}
-          {/* L'animation d'un lien mis en avant et l'accès réservé restent montés d'une page à l'autre : une ligne ici, leur page là. */}
-          {(page === 'plus' || parent(page) === 'plus') && (animation || acces) && <div className={page === 'plus' ? groupe : 'contents'}>{animation}{acces}</div>}
+          {/* L'animation et l'accès réservé restent montés d'une page à l'autre : leur ligne dans la page d'où ils partent, leur page ensuite. */}
+          {(page === 'apparence' || page === 'animation') && animation && <div className={page === 'apparence' ? groupe : 'contents'}>{animation}</div>}
+          {(page === 'plus' || page === 'acces') && acces && <div className={page === 'plus' ? groupe : 'contents'}>{acces}</div>}
         </div>
       )}
       </PagesBloc.Provider>

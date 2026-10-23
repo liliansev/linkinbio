@@ -650,7 +650,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
             <h1>{fil?.nom ?? titre}</h1>
           </div>
           {onglet === 'page' && <MaPage compte={compte} reglages={reglages} blocs={blocsAffiches} clics={clics} visiteurs={page} grand={grand}
-            choisi={idOuvert} editeur={grand ? editeur : null} neuf={grand && edition?.nouveau ? { bloc: brouillon?.id === edition.bloc.id ? brouillon : edition.bloc, enBas: !!edition.enBas } : null}
+            choisi={idOuvert} editeur={grand ? editeur : null} neuf={edition?.nouveau ? { bloc: brouillon?.id === edition.bloc.id ? brouillon : edition.bloc, enBas: !!edition.enBas } : null}
             onReglages={changerReglages} onOrdonner={l => ordonner(l)}
             onOuvrir={ouvrirBloc} onAjouter={ajouterBloc} liberer={libererEdition} fermerEdition={fermerEdition} gestes={{ basculer, dupliquer, supprimer }}
             envoyerImage={d => api.envoyerImage(d)} annoncer={t => setToast(t)}

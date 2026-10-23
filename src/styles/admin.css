@@ -396,6 +396,9 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
   @keyframes adm-rangee-neuf { 0%, 35% { background-color: var(--adm-bleu-pale); } }
   .adm-rangee[data-prive] :is(.adm-rangee-nom, .adm-rangee-picto) { color: #6b6b66; }
   .adm-rangee-tete { display: flex; min-height: 44px; align-items: center; gap: 2px; padding: 0 8px 0 6px; }
+  /* Ouverte, la rangée garde son en-tête collé sous les onglets : son nom et le chevron qui la replie restent en vue,
+     même au bas d'un long réglage (23 octobre 2026). */
+  .adm-rangee[data-ouvert] > .adm-rangee-tete { position: sticky; top: 101px; z-index: 5; border-top-left-radius: inherit; border-top-right-radius: inherit; background: var(--adm-bleu-voile); }
   .adm-rangee-poignee { display: grid; width: 24px; height: 32px; flex: none; place-items: center; border-radius: 6px; color: #8b8b86; cursor: grab; touch-action: none; transition: color 150ms; }
   button.adm-rangee-poignee:hover { color: #0a0a0a; }
   span.adm-rangee-poignee { cursor: default; }

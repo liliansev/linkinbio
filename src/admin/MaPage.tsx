@@ -5,8 +5,9 @@ import type { DragEndEvent, Modifier } from '@dnd-kit/core';
 import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS as CssDnd } from '@dnd-kit/utilities';
 import type { Bloc, PagePublique, Reglages, TypeBloc } from '../lib/types.ts';
-import { SANS_COULEURS, TYPES_ADRESSE, TYPES_PRINCIPAL, TYPES_VITRINE, estEnLigne, formatVedette, nouveauBloc, sansSchema } from '../lib/types.ts';
+import { SANS_COULEURS, TYPES_ADRESSE, TYPES_PRINCIPAL, TYPES_VITRINE, formatVedette, nouveauBloc, sansSchema } from '../lib/types.ts';
 import { etiquettes } from '../lib/etiquettes.ts';
+import { horsCreneauOuDates } from '../lib/moments.ts';
 import { selonDroits } from '../lib/droits.ts';
 import type { Droits } from '../lib/droits.ts';
 import type { Destination } from '../lib/demarrage.ts';
@@ -20,7 +21,7 @@ import { Icone, NOMS_RESEAUX } from '../components/Icone.tsx';
 import { themeDe, variablesTheme } from '../lib/themes.ts';
 import { HautLiens } from './BienDemarrer.tsx';
 import type { Demarrage } from './BienDemarrer.tsx';
-import { FeuilleAjout, typeDe } from './OngletLiens.tsx';
+import { FeuilleAjout, MenuAjout, typeDe } from './OngletLiens.tsx';
 import { DesignTiroirs, OngletApparence } from './OngletApparence.tsx';
 import type { Tiroir } from './OngletApparence.tsx';
 import { ActionEntete, BoutonPrincipal, BoutonSecondaire, Feuille, Interrupteur, Menu, choisirFichier, classeBouton, couleurReseau, flechesRadio, preparerImage, vibrer } from './ui.tsx';
@@ -59,6 +60,25 @@ const reduit = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 /** Ce que l'en-tête et les onglets collés couvrent en haut de l'écran, au bureau (le `scroll-padding-top` de la page). */
 const margeHaut = () => parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop) || 0;
 
+/**
+ * Un bloc neuf tel que la page le montre pendant qu'on le remplit, à la place qu'il prendra (au téléphone depuis le
+ * 23 octobre 2026, comme au bureau) : tel quel s'il est valable ; sinon un lien avec le texte qu'il aura, un titre ou un
+ * texte avec le mot qui les attend, une preuve dès sa première valeur, un produit, un agenda ou un soutien dès son
+ * adresse, et ce qui attend encore la sienne (une vidéo, une boutique) en bouton à son nom et à son picto.
+ */
+function brouillonNeuf(b: Bloc): Bloc {
+  const valable = verifierBloc(b).bloc;
+  if (valable) return valable;
+  const url = adresseSaisie(b.url);
+  if (b.type === 'lien') return { ...b, titre: b.titre.trim() || 'Texte du bouton', url: url || '#' };
+  if (b.type === 'titre' || b.type === 'texte') return { ...b, titre: b.titre.trim() || (b.type === 'titre' ? 'Titre de section' : 'Ton texte') };
+  const p = b.preuve;
+  if (p && (p.genre === 'note' ? p.note > 0 && p.note <= 5 : p.genre === 'compteur' ? p.nombre > 0 : !!b.description.trim())) return b;
+  if (url && TYPES_VITRINE.includes(b.type)) return { ...b, url, titre: b.titre.trim() || (b.type === 'produit' ? 'Nom du produit' : nouveauBloc(b.type, b.id).titre) };
+  const type = typeDe(b);
+  return { ...nouveauBloc('lien', b.id), titre: b.titre.trim() || type.nom, url: '#', icone: type.picto };
+}
+
 export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, choisi, editeur, neuf, onReglages, onOrdonner, onOuvrir, onAjouter, liberer, fermerEdition, gestes, envoyerImage, annoncer, demarrage, demarrageOuvert, fermerDemarrage, demandeDesign, designOuvert, demandeAjout, ajoutOuvert, appel }: {
   compte: PagePublique['compte'];
   reglages: Reglages;
@@ -73,7 +93,10 @@ export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, chois
   choisi: string | null;
   /** L'éditeur du bloc ouvert, au bureau : il se déplie dans sa rangée. */
   editeur: ReactNode;
-  /** Au bureau, un bloc neuf qu'on règle avant de l'ajouter, tel qu'il est saisi : une rangée de plus, en haut de la liste (en bas s'il vient du bas). */
+  /**
+   * Un bloc neuf qu'on règle avant de l'ajouter, tel qu'il est saisi, en haut (en bas s'il vient du bas) : au bureau, une
+   * rangée de plus dans la liste et son bloc sur la page à droite ; au téléphone, son bloc sur la page, la feuille sous lui.
+   */
   neuf: { bloc: Bloc; enBas: boolean } | null;
   onReglages: (r: Reglages) => void;
   onOrdonner: (blocs: Bloc[]) => void;
@@ -129,6 +152,8 @@ export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, chois
   const id = useId();
   const principal = compte.principal;
   const visibles = blocs.filter(b => principal || !TYPES_PRINCIPAL.includes(b.type));
+  const neufVu = neuf && brouillonNeuf(neuf.bloc);
+  const avecNeuf = neufVu ? (neuf!.enBas ? [...visibles, neufVu] : [neufVu, ...visibles]) : visibles;
   // La page se dessine comme les visiteurs la verront : sans Starter, aux couleurs de son thème. Les réglages, eux, gardent tout.
   const droits = useDroits();
   const montree = droits.couleurs ? reglages : { ...reglages, couleurs: SANS_COULEURS };
@@ -203,17 +228,22 @@ export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, chois
 
   // Le bouton du bas de la page pose le bloc en bas ; celui du haut, en haut.
   const enBas = useRef(false);
+  // Au bureau, le menu des blocs se pose sous le bouton qui l'a ouvert ; sous celui de l'en-tête pour la touche A.
+  const ancreAjout = useRef<HTMLElement | null>(null);
+  const boutonEntete = () => document.querySelector<HTMLElement>('[aria-keyshortcuts="A"]');
   /** Ajouter : ce qui est tapé dans l'éditeur s'écrit d'abord, puis le choix du bloc s'ouvre. */
-  function ouvrirAjout(bas = false) {
+  function ouvrirAjout(bas = false, ancre?: HTMLElement | null) {
     if (!liberer() || (cote === 'reseaux' && reseauFaux())) return;
     vibrer(5);
     enBas.current = bas;
+    ancreAjout.current = ancre ?? boutonEntete();
     setAjout(true);
   }
   // Revenu d'un bloc neuf par sa flèche : la liste se rouvre telle qu'on l'avait quittée, une fois.
   useEffect(() => {
     if (!demandeAjout) return;
     enBas.current = demandeAjout.enBas;
+    ancreAjout.current = boutonEntete();
     setAjout(true);
     ajoutOuvert?.();
   }, [demandeAjout]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -247,7 +277,7 @@ export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, chois
   raccourcis.current = { ouvrirAjout, ajouterAdresse };
   useEffect(() => {
     const libre = (e: Event) => !(e.target as HTMLElement | null)?.closest('input, textarea, select, [contenteditable], [role="dialog"]') && !document.querySelector('[role="dialog"]');
-    const touche = (e: KeyboardEvent) => { if ((e.key === 'a' || e.key === 'A') && !e.metaKey && !e.ctrlKey && !e.altKey && libre(e)) { e.preventDefault(); raccourcis.current.ouvrirAjout(); } };
+    const touche = (e: KeyboardEvent) => { if ((e.key === 'a' || e.key === 'A') && !e.defaultPrevented && !e.metaKey && !e.ctrlKey && !e.altKey && libre(e)) { e.preventDefault(); raccourcis.current.ouvrirAjout(); } };
     const coller = (e: ClipboardEvent) => {
       if (!libre(e)) return;
       const url = adresseSaisie(e.clipboardData?.getData('text') ?? '');
@@ -284,14 +314,14 @@ export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, chois
     const actifs = reglages.reseaux.filter(r => adresseSaisie(r.url));
     /** Contenu ou Design : quitter le design le referme (et dit ce qui a changé). Faux si quelque chose retient. */
     const choisirOnglet = (o: 'contenu' | 'design') => (o === 'design' ? ouvrirCote('design') : !enDesign || quitterCote());
-    // Un bloc neuf se voit sur la page, à la place qu'il prendra, dès qu'il a de quoi s'y montrer ;
-    // un lien tout de suite, avec le texte qu'il aura. Il n'y est pas encore : un clic sur lui ramène à sa rangée.
-    const neufVu = neuf && (verifierBloc(neuf.bloc).bloc ?? (neuf.bloc.type === 'lien' ? { ...neuf.bloc, titre: neuf.bloc.titre.trim() || 'Texte du bouton', url: '#' } : null));
+    // Le bloc neuf se voit sur la page, à la place qu'il prendra. Il n'y est pas encore : un clic sur lui ramène à sa rangée.
     return (
       <div className="adm-studio adm-studio-bureau">
         {/* Le geste principal est à droite de l'en-tête, comme celui de chaque onglet. */}
         <ActionEntete>
-          <BoutonPrincipal onClick={() => ouvrirAjout()} aria-keyshortcuts="A" title="Ajouter (A, ou colle une adresse)"><Icone nom="ui-plus" taille={14} className="shrink-0" />Ajouter un bloc</BoutonPrincipal>
+          {/* Il ouvre le menu des blocs, ou le referme s'il l'est. */}
+          <BoutonPrincipal onClick={e => (ajout ? setAjout(false) : ouvrirAjout(false, e.currentTarget))} aria-keyshortcuts="A" aria-haspopup="menu" aria-expanded={ajout}
+            title="Ajouter (A, ou colle une adresse)"><Icone nom="ui-plus" taille={14} className="shrink-0" />Ajouter un bloc</BoutonPrincipal>
         </ActionEntete>
 
         <div className="adm-edition">
@@ -367,7 +397,7 @@ export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, chois
                   <ChampColler ajouter={ajouterAdresse} />
 
                   <ListeBlocs blocs={visibles} clics={clics} choisi={choisi} editeur={editeur} neuf={neuf} gestes={{ ...gestes, dupliquer: b => { if (quitterCote()) gestes.dupliquer(b); } }}
-                    onOrdonner={ordonner} onOuvrir={ouvrirBloc} fermer={fermerEdition} onAjouter={() => ouvrirAjout()} />
+                    onOrdonner={ordonner} onOuvrir={ouvrirBloc} fermer={fermerEdition} onAjouter={ancre => ouvrirAjout(false, ancre)} />
                 </>
               )}
             </div>
@@ -387,7 +417,7 @@ export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, chois
             </div>
             {largeur === 'ordinateur' ? <div className="adm-ordi-boite"><ApercuBureau page={visiteurs} /></div> : (
               <Telephone ecran={ecran} choisi={choisi ?? neuf?.bloc.id ?? null}>
-                <PageLiens page={{ reglages: montree, blocs: neufVu ? (neuf!.enBas ? [...visibles, neufVu] : [neufVu, ...visibles]) : visibles, compte }}
+                <PageLiens page={{ reglages: montree, blocs: avecNeuf, compte }}
                   liste={(liste, rendu) => <BlocsApercu blocs={liste} rendu={rendu} choisi={choisi ?? neuf?.bloc.id ?? null} ouvrir={ouvrirDepuisApercu} />} />
               </Telephone>
             )}
@@ -395,7 +425,7 @@ export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, chois
         </aside>
 
         <input ref={fichier} type="file" accept="image/*" className="adm-fichier" tabIndex={-1} aria-hidden="true" onChange={e => photo(e.target.files?.[0])} />
-        <FeuilleAjout ouverte={ajout} onFermer={() => { enBas.current = false; setAjout(false); }} onChoisir={ajouter} principal={principal} />
+        {ajout && <MenuAjout ancre={ancreAjout.current} onFermer={() => { enBas.current = false; setAjout(false); }} onChoisir={ajouter} principal={principal} />}
       </div>
     );
   }
@@ -407,7 +437,7 @@ export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, chois
     reseaux: () => ouvrirCote('reseaux'),
     modifie,
     nomVide,
-    liste: (liste, rendu) => <BlocsEditables blocs={liste} rendu={rendu} choisi={choisi} onOrdonner={ordonner} onOuvrir={ouvrirBloc} onAjouter={() => ouvrirAjout(true)} />,
+    liste: (liste, rendu) => <BlocsEditables blocs={liste} rendu={rendu} choisi={choisi ?? neuf?.bloc.id ?? null} neuf={neuf?.bloc.id} onOrdonner={ordonner} onOuvrir={ouvrirBloc} onAjouter={() => ouvrirAjout(true)} />,
   };
   // Le pied des feuilles du téléphone, qui s'enregistrent seules : Terminé ferme, Annuler (dès qu'il y a un changement) revient au départ.
   const piedAnnuler = (fermer: (apres?: () => void) => void) => (
@@ -433,7 +463,7 @@ export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, chois
         <HautLiens compte={compte} reglages={reglages} demarrage={demarrage} aller={aller} annoncer={annoncer} feuille={demarrageOuvert} fermerFeuille={fermerDemarrage} />
 
         <div ref={toile} className="adm-apercu adm-toile relative scroll-mt-24 overflow-hidden rounded-[24px]">
-          <PageLiens page={{ reglages: montree, blocs: visibles, compte }} edition={edition} />
+          <PageLiens page={{ reglages: montree, blocs: avecNeuf, compte }} edition={edition} />
           {/* Le geste s'écrit sur la page même, dans sa couleur, en haut à gauche : pas une ligne de plus au-dessus d'elle. */}
           {astuce && <p className="pointer-events-none absolute top-4 left-4 right-16 text-[13px] font-medium leading-snug" style={{ color: variablesTheme(themeDe(montree))['--doux'] }}>{visibles.length < 2 ? 'Touche pour modifier.' : 'Touche pour modifier, maintiens pour déplacer.'}</p>}
         </div>
@@ -534,7 +564,8 @@ function etatBloc(bloc: Bloc, droits: Droits) {
   const prive = !bloc.public || !!attend;
   // Une règle que l'offre ne comprend plus n'est pas dite : sans Starter, un lancement attend sa date sans compte à rebours (« programmé »).
   const regles = etiquettes(bloc, droits);
-  const programme = bloc.public && !estEnLigne(bloc) && !regles.includes('Compte à rebours');
+  // Un créneau « affiché seulement » qui le retire en ce moment le grise aussi : la page éditée montre ce que voient les visiteurs.
+  const programme = horsCreneauOuDates(bloc, !!droits.heure) && !regles.includes('Compte à rebours');
   // Chaque règle porte le picto de sa ligne dans l'éditeur : on la reconnaît sans l'ouvrir.
   const puces = [
     { oui: !programme && !!((bloc.creneau && droits.heure) || (bloc.compteARebours && bloc.debut && droits.programmation)), icone: 'horloge', nom: 'Quand' },
@@ -577,7 +608,7 @@ const vertical: Modifier = ({ transform }) => ({ ...transform, x: 0 });
  */
 function ListeBlocs({ blocs, clics, choisi, editeur, neuf, gestes, onOrdonner, onOuvrir, fermer, onAjouter }: {
   blocs: Bloc[]; clics: Record<string, number>; choisi: string | null; editeur: ReactNode; neuf: { bloc: Bloc; enBas: boolean } | null;
-  gestes: Gestes; onOrdonner: (blocs: Bloc[]) => void; onOuvrir: (bloc: Bloc) => void; fermer: () => boolean; onAjouter: () => void;
+  gestes: Gestes; onOrdonner: (blocs: Bloc[]) => void; onOuvrir: (bloc: Bloc) => void; fermer: () => boolean; onAjouter: (ancre: HTMLElement) => void;
 }) {
   const droits = useDroits();
   const liste = useRef<HTMLUListElement>(null);
@@ -633,7 +664,7 @@ function ListeBlocs({ blocs, clics, choisi, editeur, neuf, gestes, onOrdonner, o
   if (!rangees.length) return (
     <div className="adm-liste-vide">
       <p>Ta page n’a encore aucun bloc.</p>
-      <BoutonSecondaire onClick={onAjouter}><Icone nom="ui-plus" taille={15} className="shrink-0" />Ajouter un bloc</BoutonSecondaire>
+      <BoutonSecondaire onClick={e => onAjouter(e.currentTarget)} aria-haspopup="menu"><Icone nom="ui-plus" taille={15} className="shrink-0" />Ajouter un bloc</BoutonSecondaire>
     </div>
   );
   return (
@@ -878,8 +909,10 @@ const ACCESSIBILITE = {
 };
 
 /** Au téléphone : la page elle-même, dont chaque bloc s'ouvre d'un toucher et se déplace en le maintenant. */
-function BlocsEditables({ blocs, rendu, choisi, onOrdonner, onOuvrir, onAjouter }: {
+function BlocsEditables({ blocs, rendu, choisi, neuf, onOrdonner, onOuvrir, onAjouter }: {
   blocs: Bloc[]; rendu: (bloc: Bloc) => ReactNode; choisi: string | null;
+  /** Le bloc neuf qu'on remplit, déjà à sa place : il ne s'ouvre ni ne se déplace, il n'est pas encore ajouté. */
+  neuf?: string;
   onOrdonner: (blocs: Bloc[]) => void; onOuvrir: (bloc: Bloc) => void; onAjouter: () => void;
 }) {
   // Un glisser se termine par un clic : il ne doit pas ouvrir le bloc lâché.
@@ -893,9 +926,9 @@ function BlocsEditables({ blocs, rendu, choisi, onOrdonner, onOuvrir, onAjouter 
     glisse.current = Date.now();
     if (!over || active.id === over.id) return;
     vibrer(10);
-    onOrdonner(arrayMove(blocs, blocs.findIndex(b => b.id === active.id), blocs.findIndex(b => b.id === over.id)));
+    onOrdonner(arrayMove(blocs, blocs.findIndex(b => b.id === active.id), blocs.findIndex(b => b.id === over.id)).filter(b => b.id !== neuf));
   }
-  const ouvrir = (bloc: Bloc) => { if (Date.now() - glisse.current > 250) onOuvrir(bloc); };
+  const ouvrir = (bloc: Bloc) => { if (bloc.id !== neuf && Date.now() - glisse.current > 250) onOuvrir(bloc); };
   // La toile dessine les blocs comme la page des visiteurs (voir `commeSurLaPage`).
   const droits = useDroits();
   const dessin = (bloc: Bloc) => rendu(commeSurLaPage(bloc, droits));
@@ -903,17 +936,17 @@ function BlocsEditables({ blocs, rendu, choisi, onOrdonner, onOuvrir, onAjouter 
     <>
       <DndContext accessibility={ACCESSIBILITE} sensors={capteurs} collisionDetection={closestCenter} onDragStart={() => vibrer(6)} onDragEnd={deplacer} onDragCancel={() => { glisse.current = Date.now(); }}>
         <SortableContext items={blocs.map(b => b.id)} strategy={verticalListSortingStrategy}>
-          {blocs.map((bloc, i) => <BlocEditable key={bloc.id} bloc={bloc} i={i} choisi={choisi === bloc.id} ouvrir={ouvrir}>{dessin(bloc)}</BlocEditable>)}
+          {blocs.map((bloc, i) => <BlocEditable key={bloc.id} bloc={bloc} i={i} choisi={choisi === bloc.id} neuf={bloc.id === neuf} ouvrir={ouvrir}>{dessin(bloc)}</BlocEditable>)}
         </SortableContext>
       </DndContext>
-      {/* Sous le dernier bloc, à portée du pouce : le même geste que le bouton Ajouter du haut. */}
-      <button type="button" onClick={onAjouter} className="lp-ed-zone lp-ed-ajout"><Icone nom="ui-plus" taille={18} /> Ajouter à ma page</button>
+      {/* Sous le dernier bloc, à portée du pouce : le même geste, et le même nom, que le bouton Ajouter du haut. « Ajouter à ma page » reste au geste qui pose le bloc. */}
+      <button type="button" onClick={onAjouter} className="lp-ed-zone lp-ed-ajout"><Icone nom="ui-plus" taille={18} /> Ajouter un bloc</button>
     </>
   );
 }
 
-function BlocEditable({ bloc, i, choisi, ouvrir, children }: { bloc: Bloc; i: number; choisi: boolean; ouvrir: (b: Bloc) => void; children: ReactNode }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: bloc.id });
+function BlocEditable({ bloc, i, choisi, neuf = false, ouvrir, children }: { bloc: Bloc; i: number; choisi: boolean; neuf?: boolean; ouvrir: (b: Bloc) => void; children: ReactNode }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: bloc.id, disabled: neuf });
   const droits = useDroits();
   const { attend, prive, programme, puces, dit } = etatBloc(bloc, droits);
   const nom = bloc.titre || bloc.url || 'ce bloc';

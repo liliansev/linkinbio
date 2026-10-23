@@ -84,6 +84,13 @@ export function selonMoment(bloc: Bloc, maintenant: number): 'retire' | 'normal'
 }
 
 /**
+ * Un bloc posé qui n'est pas sur la page à cet instant : pas encore ouvert, déjà fini, ou hors de son créneau « affiché
+ * seulement » (`heure` : l'offre comprend le créneau, sinon il ne s'applique pas). Le back office le grise, « programmé ».
+ */
+export const horsCreneauOuDates = (bloc: Bloc, heure: boolean, maintenant = Date.now()) =>
+  bloc.public && (!estEnLigne(bloc, maintenant) || (heure && selonMoment(bloc, maintenant) === 'retire'));
+
+/**
  * Les blocs tels que la page les montre à cet instant : programmation,
  * comptes à rebours (sans leur adresse) et créneaux appliqués. Un bloc mis en
  * avant par son créneau passe en tête, dans sa forme de lien mis en avant.
