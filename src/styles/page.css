@@ -761,7 +761,7 @@ button.lp-ed-zone:focus-visible { outline: 2px solid var(--texte); outline-offse
 .lp-ed-reseau { width: 40px; height: 40px; display: grid; place-items: center; }
 .lp-ed-vide { padding: 9px 12px; font-size: 0.92rem; font-weight: 520; color: var(--doux); }
 /*
- * La ligne « Ajouter à ma page » sous le dernier bloc : un geste de l'éditeur, pas un bouton de la page.
+ * La ligne « Ajouter un bloc » sous le dernier bloc : un geste de l’éditeur, pas un bouton de la page.
  * Elle se voit sur tous les thèmes (22 octobre 2026, demandé par Lilian : sur le Bleu Klein, elle se
  * fondait dans le fond) : le mot à la couleur du texte du thème, un trait à 70 % de celle-ci, au moins
  * 3:1 sur chacun des vingt fonds (`themes.test.ts` relit cette règle), et pas de voile au repos, qui

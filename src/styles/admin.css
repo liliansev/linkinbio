@@ -253,6 +253,8 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
 .adm-menu-item { display: flex; width: 100%; min-height: 44px; align-items: center; gap: 9px; padding: 0 10px; border-radius: 6px; font-size: 14px; font-weight: 500; transition: background-color 120ms; }
 .adm-menu-item:hover, .adm-menu-item:focus-visible { background: #f2f2ef; }
 .adm .adm-menu-item:focus-visible { outline-offset: -2px; }
+/* Entre deux familles d'une liste (le choix des blocs) : un filet plein, sans titre. */
+.adm-filet { height: 1px; background: #efefec; }
 /* Le titre d'un écran, le même partout : les onglets, la connexion, les CGU, les premiers pas. */
 .adm-page-heading { margin-bottom: 24px; }
 .adm-titre, .adm-page-heading h1 { font-size: 32px; line-height: 1.2; font-weight: 600; letter-spacing: -0.035em; text-wrap: balance; }
@@ -396,6 +398,10 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
   @keyframes adm-rangee-neuf { 0%, 35% { background-color: var(--adm-bleu-pale); } }
   .adm-rangee[data-prive] :is(.adm-rangee-nom, .adm-rangee-picto) { color: #6b6b66; }
   .adm-rangee-tete { display: flex; min-height: 44px; align-items: center; gap: 2px; padding: 0 8px 0 6px; }
+  /* Ouverte, la rangée garde son en-tête collé sous les onglets : son nom et le chevron qui la replie restent en vue,
+     même au bas d'un long réglage (23 octobre 2026). */
+  .adm-rangee[data-ouvert] > .adm-rangee-tete { position: sticky; top: 101px; z-index: 5; border-top-left-radius: inherit; border-top-right-radius: inherit; background: var(--adm-bleu-voile); }
+  .adm-rangee[data-ouvert] > .adm-rangee-tete[data-colle] { box-shadow: 0 1px 0 var(--adm-trait); }
   .adm-rangee-poignee { display: grid; width: 24px; height: 32px; flex: none; place-items: center; border-radius: 6px; color: #8b8b86; cursor: grab; touch-action: none; transition: color 150ms; }
   button.adm-rangee-poignee:hover { color: #0a0a0a; }
   span.adm-rangee-poignee { cursor: default; }

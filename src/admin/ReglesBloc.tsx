@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useRef, useState } from 'react';
+import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { Acces, Bloc, Preuve } from '../lib/types.ts';
 import type { Creneau } from '../lib/moments.ts';
@@ -11,8 +11,9 @@ import { Etiquette, Reserve, usePermis, useVoirOffres } from './offre.tsx';
 import { COULEURS_SOURCES } from '../lib/stats.ts';
 
 /*
- * Les réglages d'un bloc : Quand et Pour qui sur sa première page, les règles
- * rares (accès réservé, animation) derrière « Plus de réglages ».
+ * Les réglages d'un bloc : Quand et Pour qui sur sa première page, l'animation
+ * dans l'apparence d'un bloc mis en avant, l'accès réservé, rare, derrière
+ * « Plus de réglages ».
  */
 
 /** Une date ISO vers la valeur d'un `<input type="datetime-local">`, en heure locale. */
@@ -31,11 +32,20 @@ const depuisLocal = (v: string) => (v ? new Date(v).toISOString() : '');
  */
 export const RangeesCompactes = createContext(false);
 
+/**
+ * Au bureau, dans la rangée d'un bloc : Apparence, Quand et Pour qui se déplient un à la fois (23 octobre 2026). En ouvrir un
+ * replie l'autre, et la rangée ne s'allonge pas de trois réglages ouverts. `ouvert` : le titre de celui qui l'est.
+ */
+export const ReplisExclusifs = createContext<{ ouvert: string | null; poser: (titre: string | null) => void } | null>(null);
+
 /** De retour des offres pour régler ce bloc (« Programmer ce bloc ») : la règle qu'on vient de débloquer s'ouvre d'elle-même. */
 export const RegleAOuvrir = createContext<'moment' | 'acces' | null>(null);
 
-/** Les réglages qui s'ouvrent en sous-page, dans la feuille d'un bloc au téléphone : Quand et Pour qui depuis la première page, les autres depuis « Plus de réglages ». */
-export type PageRegle = 'quand' | 'public' | 'acces' | 'animation';
+/**
+ * Les réglages qui s'ouvrent en sous-page, dans la feuille d'un bloc au téléphone : Quand, Pour qui et l'apparence d'un bloc
+ * mis en avant depuis la première page, l'animation depuis cette apparence, l'accès réservé depuis « Plus de réglages ».
+ */
+export type PageRegle = 'quand' | 'public' | 'apparence' | 'acces' | 'animation';
 /**
  * Au téléphone, la feuille d'un bloc mène de page en page (22 octobre 2026) :
  * « Plus de réglages » montre une ligne par règle, qui s'ouvre à la place de la
@@ -43,11 +53,20 @@ export type PageRegle = 'quand' | 'public' | 'acces' | 'animation';
  */
 export const PagesBloc = createContext<{ page: 'plus' | PageRegle | null; ouvrir: (p: PageRegle) => void } | null>(null);
 
-/** Une section qui se replie, avec un résumé de ce qui est réglé. `montrer` l'amène sous les yeux en arrivant. */
-export function Repli({ id, titre, icone, resume, ouvert: depart, etiquette, montrer = false, children }: { id?: PageRegle; titre: string; icone: string; resume?: string; ouvert: boolean; etiquette?: ReactNode; montrer?: boolean; children: ReactNode }) {
-  const [ouvert, setOuvert] = useState(depart);
+/**
+ * Une section qui se replie, avec un résumé de ce qui est réglé. `montrer` l'amène sous les yeux en arrivant. Au téléphone,
+ * `depuis` est la page où se pose sa ligne : « Plus de réglages », ou l'apparence d'un bloc mis en avant. `regle` : le résumé
+ * dit une règle posée, il s'écrit en bleu, comme sur la première page du bloc.
+ */
+export function Repli({ id, depuis = 'plus', titre, icone, resume, regle = false, ouvert: depart, etiquette, montrer = false, children }: { id?: PageRegle; depuis?: 'plus' | PageRegle; titre: string; icone: string; resume?: string; regle?: boolean; ouvert: boolean; etiquette?: ReactNode; montrer?: boolean; children: ReactNode }) {
+  const [seul, setSeul] = useState(depart);
   const compact = useContext(RangeesCompactes);
   const pages = useContext(PagesBloc);
+  const exclusifs = useContext(ReplisExclusifs);
+  const ouvert = exclusifs ? exclusifs.ouvert === titre : seul;
+  const setOuvert = (v: boolean) => (exclusifs ? exclusifs.poser(v ? titre : null) : setSeul(v));
+  // Arrivé ouvert (une erreur de dates, « Mis en avant » qu'on vient d'allumer) : il prend la place de celui qui l'était.
+  useLayoutEffect(() => { if (depart && exclusifs) exclusifs.poser(titre); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const racine = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!montrer || !racine.current || pages) return;
@@ -63,16 +82,16 @@ export function Repli({ id, titre, icone, resume, ouvert: depart, etiquette, mon
   if (pages && id) {
     // Sa propre page : le contenu seul, le titre est dans l'en-tête de la feuille.
     if (pages.page === id) return <div className="flex flex-col gap-3 pb-1">{children}</div>;
-    if (pages.page !== 'plus') return null;
-    // Dans « Plus de réglages » : une ligne qui dit ce qui est réglé, et mène à la page de la règle.
+    if (pages.page !== depuis) return null;
+    // Dans la page d'où elle part : une ligne qui dit ce qui est réglé, et mène à la page de la règle. La même que Quand et
+    // Pour qui sur la première page du bloc : sans picto, la règle posée en bleu.
     return (
       <button id={`regle-${id}`} type="button" onClick={() => { vibrer(4); pages.ouvrir(id); }}
-        className="flex min-h-[52px] w-full items-center gap-3 px-3.5 py-2 text-left transition hover:bg-white/[0.04] active:bg-white/[0.06]">
-        <Icone nom={icone} taille={20} className="shrink-0 text-white/70" />
+        className="flex min-h-12 w-full items-center gap-3 px-4 text-left transition hover:bg-white/[0.03] active:bg-white/[0.05]">
         <span className="shrink-0 text-[14.5px] font-medium text-white">{titre}</span>
         {etiquette}
-        <span className="min-w-0 flex-1 truncate text-right text-[13px] text-white/55">{resume}</span>
-        <Icone nom="ui-chevron" taille={16} className="-rotate-90 shrink-0 text-white/30" />
+        <span className={`min-w-0 flex-1 truncate text-right text-[13.5px] ${regle ? 'font-medium text-bleu' : 'text-white/55'}`}>{resume}</span>
+        <Icone nom="ui-chevron" taille={16} className="-rotate-90 shrink-0 text-white/55" />
       </button>
     );
   }
@@ -83,11 +102,12 @@ export function Repli({ id, titre, icone, resume, ouvert: depart, etiquette, mon
         {etiquette}
         {/* La valeur se lit comme un menu qu'on ouvre : le résumé, puis un chevron. */}
         <span className="adm-valeur ml-auto">
-          <span className="min-w-0 truncate">{resume || 'Régler'}</span>
+          <span className={`min-w-0 truncate ${regle ? 'font-medium text-bleu' : ''}`}>{resume || 'Régler'}</span>
           <Icone nom="ui-chevron" taille={14} className={`shrink-0 transition-transform duration-300 ${ouvert ? 'rotate-180' : ''}`} />
         </span>
       </button>
-      {ouvert && <div className="flex flex-col gap-3 pb-2 pt-1.5">{children}</div>}
+      {/* Ce que la ligne ouvre, en retrait sous son nom : on voit où finit l'apparence et où commence Quand. */}
+      {ouvert && <div className="flex flex-col gap-3 pb-3 pl-4 pt-1.5">{children}</div>}
     </div>
   );
   return (
@@ -124,23 +144,27 @@ const majuscule = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 /** Ce que « Quand » dit sans s'ouvrir. `heure` : un créneau que l'offre ne comprend pas ne s'applique pas, il ne se dit pas. */
 export function resumeQuand(b: Bloc, heure: boolean): string {
   const dates = b.debut && b.fin ? `du ${jourCourt(b.debut)} au ${jourCourt(b.fin)}` : b.debut ? `à partir du ${jourCourt(b.debut)}` : b.fin ? `jusqu’au ${jourCourt(b.fin)}` : '';
-  const semaine = heure && b.creneau ? `${b.creneau.effet === 'avant' ? 'en avant ' : ''}${decrireCreneau(b.creneau)}` : '';
+  const semaine = heure && b.creneau ? `${b.creneau.effet === 'avant' ? 'en avant ' : 'seulement '}${decrireCreneau(b.creneau)}` : '';
   return majuscule([dates, semaine].filter(Boolean).join(', ')) || 'Tout le temps';
 }
 
-/** Ce que « Pour qui » dit sans s'ouvrir : « Tout le monde », « Pas sur TikTok, en avant sur Instagram ». */
+/**
+ * Ce que « Pour qui » dit sans s'ouvrir : « Tout le monde », « Sauf venus de TikTok, en avant venus d'Instagram ». Le
+ * réglage porte sur d'où vient le visiteur, pas sur le réseau où le bloc serait publié : la phrase le dit (23 octobre 2026).
+ */
 export function resumePourQui(b: Bloc): string {
-  const noms = (l: Audience[]) => l.map(s => NOMS_AUDIENCES[s]).join(', ');
+  const venus = (l: Audience[]) => `venus ${l.map(deReseau).join(', ')}`;
   const a = b.audience?.sources.length ? b.audience : null;
   return majuscule([
-    a?.effet === 'seulement' ? `seulement ${noms(a.sources)}` : '',
-    b.cache?.length ? `pas sur ${noms(b.cache)}` : '',
-    a?.effet === 'avant' ? `en avant sur ${noms(a.sources)}` : '',
+    a?.effet === 'seulement' ? `seulement ${venus(a.sources)}` : '',
+    b.cache?.length ? `sauf ${venus(b.cache)}` : '',
+    a?.effet === 'avant' ? `en avant ${venus(a.sources)}` : '',
   ].filter(Boolean).join(', ')) || 'Tout le monde';
 }
 
 /**
- * Une date d'un bloc, comme dans le calendrier du téléphone : son nom, et sa valeur à droite (« Maintenant », « Jamais »).
+ * Une date d'un bloc, comme dans le calendrier du téléphone : son nom, et sa valeur à droite (« Maintenant », « Jamais »), un
+ * chevron tant qu'elle est vide, une croix pour la retirer ensuite.
  * Le sélecteur natif couvre la ligne, invisible : un toucher l'ouvre tout de suite, sans champ à viser. Sans l'offre, la
  * ligne mène aux offres ; une date gardée d'une offre passée se retire toujours.
  */
@@ -159,11 +183,14 @@ function LigneDate({ id, nom, vide, valeur, min, permis, invalide, onChange, ret
       ) : (
         <button type="button" onClick={() => voir?.('programmation')} aria-haspopup="dialog" aria-label={`${nom} : ${valeur ? dateLigne(valeur) : vide}. Voir les offres`} className="absolute inset-0" />
       )}
-      {valeur && (
+      {valeur ? (
         <button type="button" onClick={() => { vibrer(6); retirer(); }} aria-label={`Retirer la date : ${nom}`} title="Retirer"
           className="relative z-10 -mr-2 grid h-11 w-9 shrink-0 place-items-center text-white/45 transition hover:text-white bureau:h-8 bureau:w-7">
           <Icone nom="ui-fermer" taille={15} />
         </button>
+      ) : (
+        // Sans date, un chevron dit que la ligne s'ouvre : « Maintenant » et « Jamais » ne sont pas du simple texte.
+        <Icone nom="ui-chevron" taille={15} className="pointer-events-none shrink-0 text-white/55" />
       )}
     </div>
   );
@@ -180,7 +207,9 @@ export function ReglageQuand({ b, maj, erreur }: { b: Bloc; maj: (c: Partial<Blo
   const semaine = usePermis('heure');
   const voir = useVoirOffres();
   const compact = useContext(RangeesCompactes);
-  const majCreneau = (champs: Partial<Creneau>) => maj({ creneau: { ...(c ?? { jours: [1, 2, 3, 4, 5], de: '09:00', a: '12:00', fuseau: fuseauNavigateur(), effet: 'afficher' }), ...champs, fuseau: fuseauNavigateur() } });
+  // Un premier jour touché pose le créneau que le serveur prendrait de lui-même : 9 h à 18 h, en avant. Il ne retire rien de la
+  // page ; « Affiché seulement », qui la retire le reste du temps, se choisit exprès.
+  const majCreneau = (champs: Partial<Creneau>) => maj({ creneau: { ...(c ?? { jours: [1, 2, 3, 4, 5], de: '09:00', a: '18:00', fuseau: fuseauNavigateur(), effet: 'avant' }), ...champs, fuseau: fuseauNavigateur() } });
   const lancement = b.type === 'lien' && dates && !!b.debut && Date.parse(b.debut) > Date.now();
   return (
     <div className="flex flex-col gap-4 bureau:gap-3">
@@ -207,7 +236,8 @@ export function ReglageQuand({ b, maj, erreur }: { b: Bloc; maj: (c: Partial<Blo
             <button type="button" onClick={() => maj({ creneau: null })} className="text-[13px] text-white/55 underline">Retirer le créneau</button>
           </Reserve>
         ) : (
-          <div role="group" aria-label="Jours" className="grid grid-cols-7 gap-0.5 rounded-[10px] bg-white/[0.05] p-[3px]">
+          // Sept cases qui se cochent à plusieurs, sans la piste grise des segments (un seul choix) : chacune se lit seule.
+          <div role="group" aria-label="Jours" className="grid grid-cols-7 gap-1">
             {JOURS.map((j, i) => {
               const actif = !!c?.jours.includes(i + 1);
               return (
@@ -217,7 +247,7 @@ export function ReglageQuand({ b, maj, erreur }: { b: Bloc; maj: (c: Partial<Blo
                   vibrer(4);
                   const jours = actif ? c!.jours.filter(n => n !== i + 1) : [...(c?.jours ?? []), i + 1];
                   if (!jours.length) maj({ creneau: null }); else majCreneau({ jours: jours.sort() });
-                }} className={`min-h-11 rounded-[7px] text-[14px] font-semibold transition duration-200 active:scale-95 bureau:min-h-8 bureau:text-[13px] ${actif ? 'bg-bleu text-nuit' : 'text-white/55 hover:text-white'}`}>{j}</button>
+                }} className={`min-h-11 rounded-[9px] text-[14px] font-semibold transition duration-200 active:scale-95 bureau:min-h-8 bureau:text-[13px] ${actif ? 'bg-bleu text-nuit' : 'text-white/70 hover:text-white'}`}>{j}</button>
               );
             })}
           </div>
@@ -257,9 +287,9 @@ export function ReglagePourQui({ b, maj, reseaux }: { b: Bloc; maj: (c: Partial<
   const rang = 'gap-3 px-4 max-[359px]:gap-2 max-[359px]:px-3 bureau:gap-2 bureau:px-3';
   return (
     <div className="adm-groupe">
-      {/* Le nom des deux colonnes, une fois en haut, aligné sur les interrupteurs. */}
+      {/* Le nom des trois colonnes, une fois en haut : d'où vient le visiteur, puis les deux interrupteurs. */}
       <div aria-hidden="true" className={`flex items-center pb-0.5 pt-2.5 text-[12px] font-medium text-white/55 bureau:pt-2 ${rang}`}>
-        <span className="flex-1" />
+        <span className="flex-1">Venus de</span>
         <span className={colonne}>Affiché</span>
         <span className={colonne}>En avant</span>
       </div>
@@ -313,17 +343,19 @@ export function RegleAcces({ b, maj, prises }: { b: Bloc; maj: (c: Partial<Bloc>
     </Repli>
   );
   return (
-    <Repli id="acces" titre="Accès réservé" icone="cadenas" resume={resume || 'Ouvert à tous'} ouvert={!!a || aOuvrir} montrer={aOuvrir}>
-      <p className="text-[13px] leading-snug text-white/55">L’adresse du lien n’est jamais dans ta page : elle ne s’ouvre qu’avec le bon code, ou pour les premiers arrivés.</p>
-      <Champ label="Code à taper (facultatif)" aide="Donne-le en story, en live ou dans ta newsletter. Majuscules et espaces ne comptent pas.">
+    <Repli id="acces" titre="Accès réservé" icone="cadenas" resume={resume || 'Ouvert à tous'} regle={!!a} ouvert={!!a || aOuvrir} montrer={aOuvrir}>
+      {/* Un code, des places, ou les deux : les champs se suffisent. Seul ce qui ne se devine pas se dit, le nombre de places
+          prises tant qu'il y en a, et ce que fait l'accès quand rien n'est rempli. */}
+      <Champ label="Code à taper" aide="Majuscules et espaces ne comptent pas.">
         <input className={classeSaisie} value={a?.code ?? ''} maxLength={40} autoCapitalize="characters" autoComplete="off" spellCheck={false}
           placeholder="VIP2026" onChange={e => majAcces({ code: e.target.value })} />
       </Champ>
-      <Champ label="Nombre de places (facultatif)" aide={a?.places ? `${prises} prise${prises > 1 ? 's' : ''} pour l’instant. Ta page affiche « Plus que 3 places », puis « Complet ».` : 'Vide : pas de limite. Une place par personne.'}>
+      <Champ label="Nombre de places" aide={a?.places ? `${prises} prise${prises > 1 ? 's' : ''} pour l’instant.` : undefined}>
         <input className={classeSaisie} type="number" inputMode="numeric" min={0} max={100000} value={a?.places || ''} placeholder="Sans limite"
           onChange={e => majAcces({ places: Math.max(0, Math.min(100_000, Math.round(Number(e.target.value) || 0))) })} />
       </Champ>
-      {a && <button type="button" onClick={() => { vibrer(6); maj({ acces: null }); }} className="self-start text-[13.5px] font-medium text-white/55 hover:text-white">Retirer l’accès réservé</button>}
+      {a ? <button type="button" onClick={() => { vibrer(6); maj({ acces: null }); }} className="self-start text-[13.5px] font-medium text-white/55 hover:text-white">Retirer l’accès réservé</button>
+        : <p className="text-[13px] leading-snug text-white/55">Sans code ni places, le lien reste ouvert à tous.</p>}
     </Repli>
   );
 }

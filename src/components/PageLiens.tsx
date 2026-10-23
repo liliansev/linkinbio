@@ -548,6 +548,8 @@ function CompteARebours({ bloc, depart, apercu, t }: { bloc: Bloc; depart: numbe
 
 function Lecteur({ id, titre, vignette, clic, legende }: { id: string; titre: string; vignette: string; clic: () => void; legende?: ReactNode }) {
   const [joue, setJoue] = useState(false);
+  // Une vignette qui ne vient pas (vidéo privée, adresse en cours de frappe) laisse le cadre et son bouton, sans image cassée.
+  const [cassee, setCassee] = useState<string | null>(null);
   return (
     <figure className="lp-video">
       <div className="lp-video-cadre">
@@ -555,7 +557,7 @@ function Lecteur({ id, titre, vignette, clic, legende }: { id: string; titre: st
           <iframe src={`https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0`} title={titre} allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen />
         ) : (
           <button type="button" className="lp-video-jouer" onClick={() => { setJoue(true); clic(); }} aria-label={`Lire la vidéo : ${titre}`}>
-            <img src={vignette} alt="" loading="lazy" />
+            {cassee !== vignette && <img src={vignette} alt="" loading="lazy" onError={() => setCassee(vignette)} />}
             <span className="lp-video-play"><Icone nom="play" taille={52} /></span>
           </button>
         )}
