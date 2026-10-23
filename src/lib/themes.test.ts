@@ -111,4 +111,12 @@ test('au pied, la mention Hopla prend l\'accent du thème quand il se lit, et le
   assert.match(legal, /\bcolor: var\(--pied-legal\);/);
   assert.doesNotMatch(legal, /opacity/);
   assert.match(css.match(/a\.lp-hopla \{([^}]*)\}/)?.[1] ?? '', /\bcolor: var\(--mention-hopla\);/);
+  // La signature de la page de Lilian se lit comme les liens légaux, et l'appui ne pâlit aucun lien du pied.
+  assert.match(css.match(/\.lp-signature a \{([^}]*)\}/)?.[1] ?? '', /\bcolor: var\(--pied-legal\);/);
+  assert.doesNotMatch(css.match(/a:active \{([^}]*)\}/)?.[1] ?? '', /opacity/);
+  // Sur Argile, l'accent ne se lit pas : la mention prend le texte, et passe devant les liens légaux par son poids.
+  const argile = variablesTheme(themeParId('argile'));
+  assert.equal(argile['--mention-hopla'], themeParId('argile').texte);
+  assert.equal(argile['--mention-graisse'], '560');
+  assert.equal(variablesTheme(themeParId('klein'))['--mention-graisse'], '480');
 });

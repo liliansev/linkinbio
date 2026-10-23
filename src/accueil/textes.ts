@@ -56,7 +56,7 @@ export const FONCTIONS = [
   'Vingt thèmes',
   'Modification de la page depuis le téléphone',
   'Liens partenaires avec la mention « Publicité » que demande la loi',
-  'Page sans la mention « Crée ta page avec Hopla » (Starter)',
+  'Page sans la mention « Créer ma page avec Hopla » (Starter)',
   'Vitrine sans commission : produits avec leur photo et leur prix lus sur la boutique, prise de rendez-vous Calendly ou Cal.com dans la page, bouton de soutien PayPal ou Ko‑fi, code promo copié d’un geste (Starter)',
   'Couleurs personnalisées par-dessus le thème (Starter)',
   'Liens programmés à l’avance, compte à rebours avant un lancement (Starter)',
@@ -74,7 +74,7 @@ export const QUESTION_LINKTREE = 'J’ai déjà un Linktree. Comment passer à H
 export function questions(m: Inscription): [string, string][] {
   return [
     ['C’est quoi, Hopla ?', 'Une page de liens à mettre dans ta bio Instagram, TikTok ou YouTube, sur hopla.page/ton-nom. Elle change l’ordre de ses liens selon le réseau d’où arrive ton visiteur (et selon l’heure, avec Pro), ouvre tes liens dans leurs apps et se modifie depuis ton téléphone.'],
-    ['C’est vraiment gratuit ?', 'Oui, pour toujours : des liens sans limite, une page qui se réorganise selon le réseau du visiteur, et les vingt thèmes. Starter retire la mention « Crée ta page avec Hopla » et ajoute tes couleurs, tes liens programmés à l’avance, les avis de tes clients et tes stats sur 30 jours ; Pro réorganise ta page selon l’heure, avec les drops, ta liste e‑mail et un an de stats.'],
+    ['C’est vraiment gratuit ?', 'Oui, pour toujours : des liens sans limite, une page qui se réorganise selon le réseau du visiteur, et les vingt thèmes. Starter retire la mention « Créer ma page avec Hopla » et ajoute tes couleurs, tes liens programmés à l’avance, les avis de tes clients et tes stats sur 30 jours ; Pro réorganise ta page selon l’heure, avec les drops, ta liste e‑mail et un an de stats.'],
     m === 'libre'
       ? ['Combien de temps pour avoir ma page ?', 'Deux minutes. Tu choisis ton nom, tu laisses ton e‑mail, et le lien pour entrer dans ta page arrive par e‑mail. Quatre questions plus tard, elle est en ligne.']
       : ['Quand aurai-je ma page ?', 'On ouvre les pages petit à petit, dans l’ordre des réservations. Ton invitation arrive par e‑mail, avec un lien valable une semaine ; quatre questions plus tard, ta page est en ligne.'],
