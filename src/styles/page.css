@@ -392,22 +392,20 @@
  * 48 px de vide les séparent de la mention : chaque lien a sa cible de 44 px, et aucune ne touche l'autre.
  */
 .lp-fin { flex: 1 0 auto; display: flex; flex-direction: column; align-items: center; margin-top: 32px; text-align: center; }
-/* Le pied garde l'œil de Geist (0,53 de sa taille) dans toutes les polices : en Garamond ou en Fraunces, il ne rapetisse plus. */
-.lp-fin { font-size-adjust: 0.53; }
-/* EB Garamond est déjà porté à 1,06em sur toute la page : 0,5 × 1,06 ≈ 0,53. */
-.lp[data-police='serif'] .lp-fin { font-size-adjust: 0.5; }
 .lp-signature { margin: 0; font-size: 0.88em; line-height: 1.3; text-wrap: balance; }
 .lp-legal { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; margin: auto 0 0; padding-top: 48px; font-size: 0.78em; line-height: 1.3; color: var(--pied-legal); }
 .lp-legal:first-child { padding-top: 0; }
+/* Garamond et Fraunces ont un petit œil : leurs liens légaux montent un peu, sans dépasser la bio ni les boutons de la page. */
+.lp:is([data-police='serif'], [data-police='elegante']) .lp-legal { font-size: 0.82em; }
 /* Chaque lien a sa vraie boîte de 44 px, sans marge négative : celle de l'accueil (`p a`, accueil.css) ne s'applique pas ici. */
 .lp-fin :is(.lp-signature, .lp-legal) a {
   display: inline-block; margin: 0; padding: 13px 10px; color: inherit; text-decoration: none;
-  -webkit-tap-highlight-color: transparent; transition: opacity 0.15s ease-out;
+  -webkit-tap-highlight-color: transparent;
 }
-/* Au toucher, le lien pâlit un instant, comme une touche qu'on enfonce : les boutons de la page, eux, rétrécissent. */
-.lp-fin :is(.lp-signature, .lp-legal) a:active { opacity: 0.55; transition-duration: 0.05s; }
-.lp-fin .lp-signature a { color: var(--doux); }
-.lp-fin .lp-signature a.lp-hopla { color: var(--mention-hopla); font-weight: 480; }
+/* Au toucher, le lien se souligne le temps de l'appui : un retour net qui ne fait rien perdre au contraste. */
+.lp-fin :is(.lp-signature, .lp-legal) a:active { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 4px; }
+.lp-fin .lp-signature a { color: var(--pied-legal); }
+.lp-fin .lp-signature a.lp-hopla { color: var(--mention-hopla); font-weight: var(--mention-graisse, 480); }
 .lp-hopla strong { font-weight: 700; }
 .lp-fin .lp-legal a { padding: 14px 8px; }
 /* Le survol, seulement là où il existe : au doigt, le soulignement resterait collé après un retour. */
@@ -415,7 +413,9 @@
   .lp-fin :is(.lp-signature, .lp-legal) a:hover { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 4px; }
   .lp-fin :is(.lp-signature a:not(.lp-hopla), .lp-legal a):hover { color: var(--texte); }
 }
-.lp-legal span { opacity: 0.7; }
+/* Le point et « Signaler » restent ensemble quand la ligne se coupe ; le point écarte les deux cibles. */
+.lp-legal-suite { display: inline-flex; align-items: center; white-space: nowrap; }
+.lp-legal-point { padding-inline: 4px; }
 .lp-fin :is(.lp-signature, .lp-legal) a:focus-visible { outline: 2px solid var(--texte); outline-offset: -2px; border-radius: 8px; }
 
 .lp-toast {

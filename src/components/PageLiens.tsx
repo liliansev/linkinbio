@@ -193,8 +193,10 @@ export function PageLiens({ page, apercu = false, edition, liste }: {
           {/* Les liens légaux, sur toutes les pages, celle de Lilian comprise. */}
           <p className="lp-legal">
             <a href="/legal/confidentialite" {...cible}>{t.confidentialite}</a>
-            <span aria-hidden="true">·</span>
-            <a href={`/signaler?page=${compte.pseudo}`} rel="nofollow" aria-label={t.signalerPage} {...cible}>{t.signaler}</a>
+            <span className="lp-legal-suite">
+              <span className="lp-legal-point" aria-hidden="true">·</span>
+              <a href={`/signaler?page=${compte.pseudo}`} rel="nofollow" aria-label={t.signalerPage} {...cible}>{t.signaler}</a>
+            </span>
           </p>
         </footer>
       </div>

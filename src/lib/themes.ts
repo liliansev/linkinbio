@@ -288,11 +288,13 @@ export const douxSurCarte = (theme: Theme) => {
 /**
  * Les fonds que le pied peut avoir derrière lui : le fond uni et chaque teinte du dégradé (la lueur d'une page courte),
  * ces mêmes teintes sous le panneau de la mise en page Colonne (le texte à 4 %, `page.css`), et la lave de son décor
- * (sa bulle la plus vive, l'accent mêlé de #ff2d55, passe sous le pied d'une page courte).
+ * (sa bulle la plus vive, l'accent mêlé de #ff2d55, passe sous le pied d'une page courte), et l'encre de la grille ou du
+ * damier (le texte à 10 %, `--decor-encre`).
  */
 export function fondsDuPied(theme: Theme): string[] {
   const teintes = [theme.fondUni, ...(theme.fond.match(/#[0-9a-f]{6}/gi) ?? [])];
   const fonds = [...teintes, ...teintes.map(f => meler(f, theme.texte, 0.04))];
+  if (theme.decor === 'grille' || theme.decor === 'damier') fonds.push(...teintes.map(f => meler(f, theme.texte, 0.1)));
   if (theme.decor === 'lave') fonds.push(meler(theme.fondUni, meler(theme.vedette, '#ff2d55', 0.55), 0.5));
   return fonds;
 }
@@ -361,6 +363,8 @@ export function variablesTheme(theme: Theme): Record<string, string> {
     '--fond': theme.fond, '--fond-uni': theme.fondUni, '--texte': theme.texte, '--doux': theme.doux, '--titre-section': titreSection(theme),
     '--surface': theme.surface, '--surface-texte': theme.surfaceTexte, '--vedette': theme.vedette, '--vedette-texte': theme.vedetteTexte,
     '--picto-carte': pictoCarte(theme), '--surface-doux': douxSurCarte(theme), '--mention-hopla': mentionPied(theme), '--pied-legal': legalPied(theme),
+    // Quand l'accent ne se lit pas et que la mention prend le texte, elle passe devant les liens légaux par son poids.
+    '--mention-graisse': mentionPied(theme) === theme.texte && theme.vedette !== theme.texte ? '560' : '480',
     '--police': POLICES[theme.police].corps, '--police-titre': POLICES[theme.police].titre, '--ombre-teinte': theme.ombre,
     // La typographie réglée du thème : la page la lit sur le nom, les sections, les boutons et les cartes.
     ...role('nom', theme.typo.nom), ...role('section', theme.typo.section), ...role('btn', theme.typo.bouton), ...role('carte', theme.typo.carte),
