@@ -7,7 +7,7 @@ import { PRINCIPAL } from '../lib/types.ts';
 import { REGLAGES_DEFAUT, blocsDefaut, reglagesNouveauCompte } from '../lib/defauts.ts';
 import { validerBloc, validerReglages } from '../lib/valider.ts';
 import type { Abonnement, Periode, Plan, PlanPayant } from '../lib/abonnement.ts';
-import { OFFRES, estPaye } from '../lib/abonnement.ts';
+import { OFFRES, estPaye, estPlanPayant, rang } from '../lib/abonnement.ts';
 import { appDe } from '../lib/ouvrirApp.ts';
 import type { PeriodeStats } from '../lib/periode.ts';
 import { ajouterJours, jourDe, longueur, plageDe } from '../lib/periode.ts';
@@ -99,6 +99,10 @@ export function base(): DatabaseSync {
   colonne(db, 'comptes', 'abonnement_maj', 'INTEGER NOT NULL DEFAULT 0');
   // Le produit Creem de l'abonnement, qui dit l'offre (Starter, Pro, Premium) ; vide pour les abonnements Pro d'avant les quatre offres.
   colonne(db, 'comptes', 'abonnement_produit', "TEXT NOT NULL DEFAULT ''");
+  // L'offre offerte depuis l'onglet Comptes (23 octobre 2026) : son offre, sa fin (vide : sans fin) et le jour où elle l'a été.
+  colonne(db, 'comptes', 'offerte', "TEXT NOT NULL DEFAULT ''");
+  colonne(db, 'comptes', 'offerte_jusqu', 'INTEGER');
+  colonne(db, 'comptes', 'offerte_le', 'INTEGER');
   // Vu depuis le navigateur intégré d'une app (Instagram, TikTok…), et pour un clic, ouvert dans l'app visée.
   colonne(db, 'evenements', 'integre', 'INTEGER NOT NULL DEFAULT 0');
   colonne(db, 'evenements', 'app', 'INTEGER NOT NULL DEFAULT 0');
@@ -154,11 +158,12 @@ export function purger(maintenant = Date.now(), d = base()) {
   d.prepare('DELETE FROM acces WHERE ts < ?').run(maintenant - CONSERVATION.statistiquesJours * 86_400_000);
   d.prepare('DELETE FROM attente WHERE ts < ?').run(maintenant - CONSERVATION.attenteJours * 86_400_000);
   // Une page où personne n'est jamais entré (aucun lien de connexion utilisé) libère son nom et son adresse.
-  // Jamais tant qu'un lien envoyé marche encore, qu'elle a des liens, un client ou un abonnement Creem, un signalement ouvert,
-  // ou qu'elle est suspendue. Prendre une offre demande d'être entré : la purge ne touche donc jamais un compte qui paie,
-  // et n'a aucun abonnement à résilier (voir `suppression.ts`).
+  // Jamais tant qu'un lien envoyé marche encore, qu'elle a des liens, un client ou un abonnement Creem, une offre offerte
+  // qui court, un signalement ouvert, ou qu'elle est suspendue. Prendre une offre demande d'être entré : la purge ne touche
+  // donc jamais un compte qui paie, et n'a aucun abonnement à résilier (voir `suppression.ts`).
   const oubliees = d.prepare(`SELECT id FROM comptes c WHERE id != ? AND connexion IS NULL AND statut = 'actif' AND creem_client = '' AND creem_abonnement = '' AND cree < ?
-    AND NOT EXISTS (SELECT 1 FROM jetons j WHERE j.compte = c.id AND j.expire > ?)
+    AND (offerte = '' OR offerte_jusqu <= ?3)
+    AND NOT EXISTS (SELECT 1 FROM jetons j WHERE j.compte = c.id AND j.expire > ?3)
     AND NOT EXISTS (SELECT 1 FROM blocs b WHERE b.compte = c.id)
     AND NOT EXISTS (SELECT 1 FROM signalements s WHERE s.compte = c.id AND s.statut = 'ouvert')`)
     .all(PRINCIPAL, maintenant - CONSERVATION.pagesNonOuvertesJours * 86_400_000, maintenant) as { id: string }[];
@@ -181,9 +186,11 @@ export function secret(): string {
 export interface Compte {
   id: string; email: string; pseudo: string; statut: 'actif' | 'suspendu'; cree: number; connexion: number | null; cgu: string; cgu_le: number | null;
   creem_client: string; creem_abonnement: string; abonnement_statut: string; fin_periode: number | null; abonnement_maj: number; abonnement_produit: string;
+  offerte: string; offerte_jusqu: number | null; offerte_le: number | null;
 }
 
-const LIRE_COMPTE = 'SELECT id, email, pseudo, statut, cree, connexion, cgu, cgu_le, creem_client, creem_abonnement, abonnement_statut, fin_periode, abonnement_maj, abonnement_produit FROM comptes';
+const COLONNES_COMPTE = 'id, email, pseudo, statut, cree, connexion, cgu, cgu_le, creem_client, creem_abonnement, abonnement_statut, fin_periode, abonnement_maj, abonnement_produit, offerte, offerte_jusqu, offerte_le';
+const LIRE_COMPTE = `SELECT ${COLONNES_COMPTE} FROM comptes`;
 export const compteParId = (id: string) => base().prepare(`${LIRE_COMPTE} WHERE id = ?`).get(id) as Compte | undefined;
 export const compteParPseudo = (pseudo: string) => base().prepare(`${LIRE_COMPTE} WHERE pseudo = ?`).get(pseudo.toLowerCase()) as Compte | undefined;
 /** Jamais le compte principal : son adresse se lit dans l'environnement. */
@@ -305,13 +312,22 @@ export function produitConnu(id: string): ProduitCreem | undefined {
   return id ? lireCatalogue().find(p => p.id === id) : undefined;
 }
 
-/** Où en est l'abonnement d'un compte. Le compte principal a tout, sans abonnement. */
-export function abonnement(c: Compte, maintenant = Date.now()): Abonnement {
-  if (c.id === PRINCIPAL) return { plan: 'premium', statut: '', finPeriode: null, periode: null, portail: false };
-  const produit = produitConnu(c.abonnement_produit);
-  const plan: Plan = estPaye({ statut: c.abonnement_statut, finPeriode: c.fin_periode }, maintenant) ? produit?.plan ?? 'pro' : 'gratuit';
-  return { plan, statut: c.abonnement_statut, finPeriode: c.fin_periode, periode: produit?.periode ?? null, portail: !!c.creem_client };
+/**
+ * Où en est l'abonnement d'un compte : l'offre qu'il paie (celle de son produit, Pro pour un abonnement d'avant
+ * les quatre offres), celle qu'on lui offre tant qu'elle court, et la plus haute des deux, qui est la sienne.
+ * Le compte principal a tout, sans abonnement.
+ */
+function abonnementSelon(c: Compte, catalogue: ProduitCreem[], maintenant: number): Abonnement {
+  if (c.id === PRINCIPAL) return { plan: 'premium', payee: 'gratuit', statut: '', finPeriode: null, periode: null, portail: false, offerte: null };
+  const produit = c.abonnement_produit ? catalogue.find(p => p.id === c.abonnement_produit) : undefined;
+  const payee: Plan = estPaye({ statut: c.abonnement_statut, finPeriode: c.fin_periode }, maintenant) ? produit?.plan ?? 'pro' : 'gratuit';
+  const offerte = estPlanPayant(c.offerte) && (c.offerte_jusqu === null || maintenant < c.offerte_jusqu) ? { plan: c.offerte, jusqu: c.offerte_jusqu } : null;
+  return {
+    plan: offerte && rang(offerte.plan) > rang(payee) ? offerte.plan : payee, payee,
+    statut: c.abonnement_statut, finPeriode: c.fin_periode, periode: produit?.periode ?? null, portail: !!c.creem_client, offerte,
+  };
 }
+export const abonnement = (c: Compte, maintenant = Date.now()): Abonnement => abonnementSelon(c, lireCatalogue(), maintenant);
 
 export const planDuCompte = (id: string, maintenant = Date.now()): Plan => {
   const c = compteParId(id);
@@ -350,21 +366,29 @@ export const accepterCgu = (id: string, version: string, maintenant = Date.now()
 
 export const noterConnexion = (id: string, maintenant = Date.now()) => base().prepare('UPDATE comptes SET connexion = ? WHERE id = ?').run(maintenant, id);
 
-/** La liste du back office de Lilian, avec de quoi juger l'activité de chaque page. */
+/** La liste du back office de Lilian, avec de quoi juger l'activité de chaque page, et son abonnement tel que la fiche du compte le montre. */
 export function listerComptes(maintenant = Date.now()): CompteResume[] {
   const lignes = base().prepare(`
-    SELECT c.id, c.email, c.pseudo, c.statut, c.cree, c.connexion, c.abonnement_statut, c.fin_periode, c.abonnement_produit,
+    SELECT ${COLONNES_COMPTE},
       (SELECT COUNT(*) FROM blocs b WHERE b.compte = c.id) AS blocs,
       (SELECT COUNT(*) FROM evenements e WHERE e.compte = c.id AND e.type = 'vue' AND e.ts > ?) AS vues
-    FROM comptes c ORDER BY c.id = ? DESC, c.cree DESC`).all(maintenant - 30 * 86_400_000, PRINCIPAL) as (Omit<CompteResume, 'principal' | 'plan'> & { abonnement_statut: string; fin_periode: number | null; abonnement_produit: string })[];
+    FROM comptes c ORDER BY c.id = ? DESC, c.cree DESC`).all(maintenant - 30 * 86_400_000, PRINCIPAL) as unknown as (Compte & { blocs: number; vues: number })[];
   const catalogue = lireCatalogue();
-  return lignes.map(({ abonnement_statut, fin_periode, abonnement_produit, ...l }) => {
-    const paye = l.id !== PRINCIPAL && estPaye({ statut: abonnement_statut, finPeriode: fin_periode }, maintenant);
-    // L'offre d'un abonné : celle de son produit, Pro pour un abonnement d'avant les quatre offres.
-    const plan: Plan = paye ? catalogue.find(p => p.id === abonnement_produit)?.plan ?? 'pro' : 'gratuit';
-    return { ...l, principal: l.id === PRINCIPAL, plan };
+  return lignes.map(c => {
+    const a = abonnementSelon(c, catalogue, maintenant);
+    return { id: c.id, email: c.email, pseudo: c.pseudo, statut: c.statut, cree: c.cree, connexion: c.connexion, blocs: c.blocs, vues: c.vues, principal: c.id === PRINCIPAL, plan: a.plan, abonnement: a };
   });
 }
+
+/**
+ * Offre une offre à un compte, sans paiement, jusqu'à `jusqu` (null : sans fin). Elle remplace celle d'avant ;
+ * l'abonnement Creem, s'il y en a un, n'est pas touché.
+ */
+export function offrir(id: string, plan: PlanPayant, jusqu: number | null, maintenant = Date.now()) {
+  if (id === PRINCIPAL) throw new Error('Le compte principal a déjà tout.');
+  base().prepare('UPDATE comptes SET offerte = ?, offerte_jusqu = ?, offerte_le = ? WHERE id = ?').run(plan, jusqu, maintenant, id);
+}
+export const retirerOffre = (id: string) => base().prepare("UPDATE comptes SET offerte = '', offerte_jusqu = NULL, offerte_le = NULL WHERE id = ?").run(id);
 
 /* ---- Pages et blocs ---- */
 
@@ -608,6 +632,7 @@ export function exporter(compte: string) {
       derniereConnexion: c.connexion ? new Date(c.connexion).toISOString() : null,
       conditionsAcceptees: c.cgu ? { version: c.cgu, le: c.cgu_le ? new Date(c.cgu_le).toISOString() : null } : null,
       abonnement: c.creem_abonnement ? { statut: c.abonnement_statut, finPeriode: c.fin_periode ? new Date(c.fin_periode).toISOString() : null, creemClient: c.creem_client, creemAbonnement: c.creem_abonnement } : null,
+      offreOfferte: c.offerte ? { offre: c.offerte, le: c.offerte_le ? new Date(c.offerte_le).toISOString() : null, jusqu: c.offerte_jusqu ? new Date(c.offerte_jusqu).toISOString() : null } : null,
     },
     reglages: lireReglages(compte),
     blocs: lireBlocs(compte),

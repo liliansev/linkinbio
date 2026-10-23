@@ -3,9 +3,9 @@ import { CONTACT_LEGAL } from '../lib/legal.ts';
 import type { ComptePage, Reglages } from '../lib/types.ts';
 import { sansSchema, urlPage } from '../lib/types.ts';
 import type { Abonnement as EtatAbonnement, Fonction, Plan } from '../lib/abonnement.ts';
-import { OFFRES, accesAbonnement, estPaye, estResilie, euros } from '../lib/abonnement.ts';
+import { OFFRES, accesAbonnement, apresOffre, estPaye, estResilie, euros, offerteAuDessus } from '../lib/abonnement.ts';
 import { BoutonCopier, BoutonPrincipal, BoutonSecondaire, Champ, Feuille, Groupe, Interrupteur, Ligne, LigneBascule, LigneLien, SousPage, classeBouton, classeSaisie } from './ui.tsx';
-import { Facturation, nomOffre } from './Facturation.tsx';
+import { Facturation, nomAbonnement, nomApres, nomOffre } from './Facturation.tsx';
 import { Etiquette, usePermis } from './offre.tsx';
 import { telechargerQR } from './CodeQR.tsx';
 import { noterPartage } from './BienDemarrer.tsx';
@@ -64,9 +64,11 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
     </div>
   );
 
-  const paye = abonnement.plan !== 'gratuit';
+  const paye = abonnement.payee !== 'gratuit';
   const resilie = paye && estResilie(abonnement.statut);
-  const prix = paye && abonnement.periode ? OFFRES[abonnement.plan].prix[abonnement.periode] : null;
+  const prix = paye && abonnement.periode ? OFFRES[abonnement.payee].prix[abonnement.periode] : null;
+  // Une offre offerte depuis Comptes passe devant ce qu'on paie : sa fin se lit, puis l'abonnement s'il y en a un.
+  const offerte = offerteAuDessus(abonnement);
   // Gérer son abonnement tant qu'il y en a un ; ses factures dès qu'on a payé une fois, même revenu en Gratuit.
   const acces = accesAbonnement(abonnement);
   const titreSeo = reglages.seo.titre || reglages.profil.nom;
@@ -111,13 +113,17 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
           <Ligne nom="Offre" valeur={<strong>{nomOffre(abonnement)}</strong>}>
             {!resilie && <BoutonSecondaire onClick={() => onOffres?.()} aria-haspopup="dialog">{paye ? 'Changer d’offre' : 'Voir les offres'}</BoutonSecondaire>}
           </Ligne>
+          {offerte && (
+            <Ligne nom="Fin de l’offre" valeur={<span className="tabular-nums">{offerte.jusqu ? `${dateLongue(offerte.jusqu)}, puis ${OFFRES[apresOffre(abonnement)].nom}` : 'Sans limite de durée'}</span>} />
+          )}
+          {offerte && paye && <Ligne nom="Abonnement" valeur={nomAbonnement(abonnement)} />}
           {paye && abonnement.statut === 'past_due' ? (
             <Ligne nom="Paiement" valeur={<span data-alerte="">Le dernier paiement n’est pas passé</span>}>
               {abonnement.portail && <BoutonSecondaire onClick={versPortail} disabled={portail === 'ouverture'}>Mettre à jour ma carte</BoutonSecondaire>}
             </Ligne>
           ) : paye && abonnement.finPeriode ? (
-            <Ligne nom={resilie ? 'Fin de l’offre' : 'Prochaine échéance'}
-              valeur={<span className="tabular-nums">{resilie ? `${dateLongue(abonnement.finPeriode)}, puis Gratuit` : `${dateLongue(abonnement.finPeriode)}${prix ? ` · ${euros(prix)}` : ''}`}</span>} />
+            <Ligne nom={resilie ? (offerte ? 'Fin de l’abonnement' : 'Fin de l’offre') : 'Prochaine échéance'}
+              valeur={<span className="tabular-nums">{resilie ? (offerte ? dateLongue(abonnement.finPeriode) : `${dateLongue(abonnement.finPeriode)}, puis ${nomApres(abonnement, abonnement.finPeriode)}`) : `${dateLongue(abonnement.finPeriode)}${prix ? ` · ${euros(prix)}` : ''}`}</span>} />
           ) : null}
           {acces.gerer && <LigneLien id="reglage-abonnement" nom="Gérer mon abonnement" onClick={ouvrirSous('reglage-abonnement')} />}
           {acces.factures && (
@@ -164,7 +170,7 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
 
       {!compte.principal && (
         <Feuille petite ouverte={fenetre === 'supprimer'} onFermer={() => setFenetre(null)} titre="Supprimer mon compte">
-          {fermer => <SupprimerCompte pseudo={compte.pseudo} abonnement={paye && estPaye(abonnement) ? { nom: OFFRES[abonnement.plan].nom, resilie, fin: abonnement.finPeriode } : null}
+          {fermer => <SupprimerCompte pseudo={compte.pseudo} abonnement={paye && estPaye(abonnement) ? { nom: OFFRES[abonnement.payee].nom, resilie, fin: abonnement.finPeriode } : null}
             supprimerMonCompte={supprimerMonCompte} annuler={() => fermer()} />}
         </Feuille>
       )}

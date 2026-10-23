@@ -1,15 +1,16 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
-import type { FormEvent, KeyboardEvent } from 'react';
+import type { FormEvent, KeyboardEvent, MouseEvent, ReactNode } from 'react';
 import type { ApiComptes, CompteResume, Reservation, SignalementResume } from '../lib/types.ts';
 import { nomMotif } from '../lib/legal.ts';
-import { cheminPage } from '../lib/types.ts';
-import type { EtatOffre } from '../lib/abonnement.ts';
-import { OFFRES, euros } from '../lib/abonnement.ts';
+import { cheminPage, sansSchema, urlPage } from '../lib/types.ts';
+import type { Abonnement, DureeOfferte, EtatOffre, PlanPayant } from '../lib/abonnement.ts';
+import { DUREES_OFFERTES, OFFRES, effetOffert, estResilie, euros, finOfferte, offerteAuDessus, offresAOffrir, rang } from '../lib/abonnement.ts';
 import type { StatutCompte } from '../lib/comptes.ts';
 import { NOMS_STATUTS, quand, statutCompte, trouve } from '../lib/comptes.ts';
 import { Icone } from '../components/Icone.tsx';
 import type { ElementMenu } from './ui.tsx';
-import { ActionEntete, Champ, Feuille, Menu, classeBadge, classeBouton, classeSaisie } from './ui.tsx';
+import { ActionEntete, BoutonSecondaire, Champ, Feuille, Groupe, Ligne, Menu, Segments, SousPage, classeBadge, classeBouton, classeSaisie } from './ui.tsx';
+import { nomApres } from './Facturation.tsx';
 import { focusAuto } from '../lib/clavier';
 
 /*
@@ -19,6 +20,11 @@ import { focusAuto } from '../lib/clavier';
  * les vues sur 30 jours, la dernière connexion, le statut, et « … » pour les
  * gestes. « Inviter » s'ouvre dans une petite fenêtre. Au téléphone, le
  * tableau devient une liste.
+ *
+ * Un compte s'ouvre sur sa fiche (23 octobre 2026, demandé par Lilian : « tout
+ * faire sur un compte ») : renvoyer son lien, lui offrir une offre ou la lui
+ * retirer, résilier son abonnement, le suspendre, le supprimer. Les mêmes
+ * gestes restent sous « … ».
  *
  * Pendant la bêta on n'entre que sur invitation : Lilian invite une personne
  * de la liste d'attente (son nom réservé depuis l'accueil), ou saisit
@@ -33,12 +39,29 @@ type Resultat = { ok: boolean; message: string; lienDev?: string };
 
 const nombre = (n: number) => n.toLocaleString('fr-FR');
 const dateCourte = (ts: number) => new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }).format(ts);
+const dateLongue = (ts: number) => new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }).format(ts);
 const voirPage = (pseudo: string) => window.open(cheminPage({ pseudo, principal: false }), '_blank', 'noopener');
 
-/** Une décision qui part avec un motif : suspendre ou supprimer un compte, traiter un signalement. */
+/**
+ * Une décision prise dans une petite fenêtre : suspendre ou supprimer un compte, résilier son abonnement, retirer
+ * une offre offerte, traiter un signalement. `label` pose le champ du motif (ou du mot pour la personne) ; sans
+ * lui, la fenêtre n'a que sa phrase et ses boutons. `danger` : effacer pour de bon, le bouton et la phrase en rouge.
+ */
 interface Decision {
-  titre: string; label: string; aide: string; requis: boolean; bouton: string; danger?: boolean; avertissement?: string;
+  titre: string; bouton: string; label?: string; aide?: string; requis?: boolean; danger?: boolean; avertissement?: string;
   valider: (motif: string) => Promise<unknown>;
+}
+
+/** Ce qu'on peut faire d'un compte, selon son état : la fiche et le menu « … » en tirent leurs boutons. */
+interface Gestes {
+  voir: () => void;
+  renvoyer?: () => Promise<void>;
+  offrir?: () => void;
+  retirer?: () => void;
+  resilier?: () => void;
+  suspendre?: () => void;
+  reactiver?: () => void;
+  supprimer: () => void;
 }
 
 export function OngletComptes({ api, avatar }: { api: ApiComptes; avatar?: string }) {
@@ -52,6 +75,9 @@ export function OngletComptes({ api, avatar }: { api: ApiComptes; avatar?: strin
   const [inviter, setInviter] = useState(false);
   const [decision, setDecision] = useState<Decision | null>(null);
   const [aRetirer, setARetirer] = useState<Reservation | null>(null);
+  const [aOffrir, setAOffrir] = useState<CompteResume | null>(null);
+  // La fiche ouverte, par l'id du compte : elle se relit avec la liste après chaque geste.
+  const [fiche, setFiche] = useState<string | null>(null);
   const id = useId();
 
   const chargerComptes = useCallback(() => api.lister().then(setComptes).catch(() => setErreur('La liste ne s’est pas chargée. Recharge la page.')), [api]);
@@ -69,6 +95,22 @@ export function OngletComptes({ api, avatar }: { api: ApiComptes; avatar?: strin
     } catch (error) { setMessage({ ok: false, texte: (error as Error).message || 'L’action n’a pas abouti. Réessaie.' }); }
     await toutRecharger();
   }
+
+  // Revenir de la fiche rend le focus au compte qui l'a ouverte, dans le tableau ou dans la liste (celui qu'on voit).
+  const ouvreur = useRef('');
+  const ouvrirFiche = (c: CompteResume) => { ouvreur.current = c.id; setMessage(null); setFiche(c.id); scrollTo({ top: 0 }); };
+  const fermerFiche = () => { setFiche(null); setMessage(null); };
+  useEffect(() => {
+    if (fiche || !ouvreur.current) return;
+    const b = [...document.querySelectorAll<HTMLElement>(`[data-fiche="${CSS.escape(ouvreur.current)}"]`)].find(x => x.offsetParent);
+    ouvreur.current = '';
+    if (!b) return;
+    b.focus({ preventScroll: true });
+    b.scrollIntoView({ block: 'center' });
+  }, [fiche]);
+  const ouvert = fiche ? comptes?.find(c => c.id === fiche) : undefined;
+  // Un compte supprimé depuis sa fiche la referme : le message reste, au-dessus de la liste.
+  useEffect(() => { if (fiche && comptes && !comptes.some(c => c.id === fiche)) setFiche(null); }, [fiche, comptes]);
 
   const ouverts = signalements?.filter(s => s.statut === 'ouvert') ?? [];
   // Au téléphone, « Attente » : les trois onglets et le compte des signalements tiennent sur la largeur.
@@ -95,34 +137,69 @@ export function OngletComptes({ api, avatar }: { api: ApiComptes; avatar?: strin
     </button>
   );
 
-  const gestesCompte = (c: CompteResume): ElementMenu[] => {
+  const gestesDe = (c: CompteResume): Gestes => {
     const suspendu = c.statut === 'suspendu';
-    return [
-      { nom: 'Voir sa page', icone: 'ui-ouvrir', action: () => voirPage(c.pseudo) },
-      ...(suspendu ? [] : [{ nom: 'Renvoyer un lien', icone: 'ui-fleche', action: () => void agir(async () => { const r = await api.renvoyer(c.id); return r.ok ? { ...r, message: `Nouveau lien envoyé à ${c.email}.` } : r; }) }]),
-      suspendu
-        ? { nom: 'Réactiver', icone: 'ui-oeil', action: () => void agir(async () => { await api.changerStatut(c.id, 'actif', ''); return { ok: true, message: `${c.pseudo} est de nouveau en ligne.` }; }) }
-        : { nom: 'Suspendre…', icone: 'ui-masque', action: () => setDecision({
-          titre: `Suspendre ${c.pseudo}`, label: 'Motif de la suspension', requis: true, bouton: 'Suspendre et prévenir',
-          aide: 'Envoyé à la personne par e-mail : les faits, la règle des CGU en cause. Elle peut contester en répondant.',
-          valider: m => agir(async () => { await api.changerStatut(c.id, 'suspendu', m); return { ok: true, message: `${c.pseudo} est suspendu, la personne est prévenue.` }; }),
-        }) },
-      { nom: 'Supprimer…', icone: 'ui-corbeille', danger: true, action: () => setDecision({
+    const a = c.abonnement;
+    const offerte = a.offerte;
+    const paye = a.payee !== 'gratuit';
+    return {
+      voir: () => voirPage(c.pseudo),
+      // Une page jamais ouverte reçoit de nouveau son premier e-mail, les autres un lien de connexion d'un jour.
+      renvoyer: suspendu ? undefined : () => agir(() => api.renvoyer(c.id)),
+      offrir: suspendu || !offresAOffrir(a).length ? undefined : () => setAOffrir(c),
+      retirer: offerte ? () => setDecision({
+        titre: `Retirer ${OFFRES[offerte.plan].nom} offert`, bouton: 'Retirer l’offre',
+        // Sous l'abonnement, l'offre ne faisait que prendre sa suite : rien ne change aujourd'hui.
+        avertissement: offerteAuDessus(a)
+          ? `Sa page repasse tout de suite en ${OFFRES[a.payee].nom}, sans rien perdre de son contenu. Aucun e-mail ne part.`
+          : `Son abonnement ${OFFRES[a.payee].nom} ne change pas${estResilie(a.statut) ? ' : à sa fin, sa page repassera en Gratuit' : ''}. Aucun e-mail ne part.`,
+        valider: () => agir(() => api.retirerOffre(c.id)),
+      }) : undefined,
+      // Pour la fin de la période payée, comme « Repasser en Gratuit » : l'offre court jusque-là, puis plus rien n'est prélevé.
+      resilier: paye && !estResilie(a.statut) ? () => setDecision({
+        titre: `Résilier l’abonnement de ${c.pseudo}`, bouton: 'Résilier l’abonnement',
+        label: 'Un mot pour la personne (facultatif)', aide: 'Il part dans l’e-mail qui la prévient.',
+        avertissement: `Son abonnement ${OFFRES[a.payee].nom} s’arrête ${a.finPeriode ? `le ${dateLongue(a.finPeriode)}` : 'à la fin de la période payée'} : rien n’est prélevé ensuite, et sa page repasse en ${nomApres(a, a.finPeriode)}, sans rien perdre. Creem ne rembourse rien de lui-même.`,
+        valider: mot => agir(() => api.resilier(c.id, mot)),
+      }) : undefined,
+      suspendre: suspendu ? undefined : () => setDecision({
+        titre: `Suspendre ${c.pseudo}`, label: 'Motif de la suspension', requis: true, bouton: 'Suspendre et prévenir',
+        aide: 'Envoyé à la personne par e-mail : les faits, la règle des CGU en cause. Elle peut contester en répondant.',
+        valider: m => agir(async () => { await api.changerStatut(c.id, 'suspendu', m); return { ok: true, message: `${c.pseudo} est suspendu, la personne est prévenue.` }; }),
+      }),
+      reactiver: suspendu ? () => void agir(async () => { await api.changerStatut(c.id, 'actif', ''); return { ok: true, message: `${c.pseudo} est de nouveau en ligne.` }; }) : undefined,
+      supprimer: () => setDecision({
         titre: `Supprimer ${c.pseudo}`, label: 'Motif de la suppression (facultatif)', requis: false, bouton: 'Supprimer définitivement', danger: true,
         aide: 'Laisse vide si la personne l’a demandé. Sinon, le motif lui est envoyé par e-mail.',
         // Un abonnement en cours est résilié d'abord, tout de suite : la phrase le dit à côté de ce qui s'efface.
-        avertissement: c.plan === 'gratuit'
+        avertissement: !paye
           ? 'Sa page, ses liens, ses images et ses statistiques seront effacés. Rien ne se récupère.'
-          : `Sa page, ses liens, ses images et ses statistiques seront effacés, et son abonnement ${OFFRES[c.plan].nom} résilié tout de suite chez Creem, sans remboursement automatique. Rien ne se récupère.`,
+          : estResilie(a.statut)
+            ? `Sa page, ses liens, ses images et ses statistiques seront effacés, et son abonnement ${OFFRES[a.payee].nom}, déjà résilié, s’arrête avec elle, sans remboursement automatique. Rien ne se récupère.`
+            : `Sa page, ses liens, ses images et ses statistiques seront effacés, et son abonnement ${OFFRES[a.payee].nom} résilié tout de suite chez Creem, sans remboursement automatique. Rien ne se récupère.`,
         valider: m => agir(async () => {
           const r = await api.supprimer(c.id, m);
           // Creem n'a pas confirmé deux fois de suite : le compte est parti, l'abonnement reste à résilier à la main.
           if (r === 'a-la-main') return { ok: false, message: `${c.pseudo} est supprimé, mais Creem n’a pas confirmé la résiliation : résilie son abonnement à la main, les détails sont dans ta boîte mail.` };
           return { ok: true, message: r === 'faite' ? `${c.pseudo} est supprimé, son abonnement résilié chez Creem.` : `${c.pseudo} est supprimé.` };
         }),
-      }) },
-    ];
+      }),
+    };
   };
+
+  /** Le menu « … » d'un compte : les gestes de sa fiche, dans le même ordre. */
+  const menuDe = (g: Gestes): ElementMenu[] => [
+    { nom: 'Voir sa page', icone: 'ui-ouvrir', action: g.voir },
+    ...(g.renvoyer ? [{ nom: 'Renvoyer son lien', icone: 'ui-fleche', action: () => void g.renvoyer?.() }] : []),
+    ...(g.offrir ? [{ nom: 'Offrir une offre…', icone: 'ui-monter', action: g.offrir }] : []),
+    ...(g.retirer ? [{ nom: 'Retirer l’offre offerte…', icone: 'ui-descendre', action: g.retirer }] : []),
+    ...(g.resilier ? [{ nom: 'Résilier l’abonnement…', icone: 'ui-aucun', action: g.resilier }] : []),
+    ...(g.reactiver ? [{ nom: 'Réactiver', icone: 'ui-oeil', action: g.reactiver }] : g.suspendre ? [{ nom: 'Suspendre…', icone: 'ui-masque', action: g.suspendre }] : []),
+    { nom: 'Supprimer…', icone: 'ui-corbeille', danger: true, action: g.supprimer },
+  ];
+
+  // Toute la rangée ouvre la fiche, sauf ses boutons (le nom, « … ») qui font leur propre geste.
+  const surRangee = (c: CompteResume) => (e: MouseEvent) => { if (!(e.target as Element).closest('button, a, [role=menu]')) ouvrirFiche(c); };
 
   const comptesVus = (comptes ?? []).filter(c => trouve(recherche, c.pseudo, c.email));
   const attenteVue = (attente ?? []).filter(r => trouve(recherche, r.pseudo, r.email));
@@ -131,128 +208,146 @@ export function OngletComptes({ api, avatar }: { api: ApiComptes; avatar?: strin
 
   return (
     <div className="adm-comptes flex flex-col gap-4 lg:gap-0">
-      <ActionEntete>{boutonInviter('')}</ActionEntete>
+      {ouvert ? (
+        <FicheCompte compte={ouvert} statut={statutCompte(ouvert, signalements ?? [])} gestes={gestesDe(ouvert)} fermer={fermerFiche}
+          message={message && <Bandeau message={message} fermer={() => setMessage(null)} />} />
+      ) : (
+        <>
+          <ActionEntete>{boutonInviter('')}</ActionEntete>
 
-      <div className="adm-comptes-barre">
-        <div ref={liste} role="tablist" aria-label="Comptes" onKeyDown={fleches} className="adm-comptes-onglets">
-          {onglets.map(o => (
-            <button key={o.id} type="button" role="tab" id={`${id}-${o.id}`} aria-selected={vue === o.id} aria-controls={`${id}-panneau`} tabIndex={vue === o.id ? 0 : -1}
-              aria-label={o.alerte ? `${o.nom}, ${o.compte} à traiter` : undefined} onClick={() => { if (o.id !== vue) { setVue(o.id); setMessage(null); } }}>
-              {o.court ? <><span className="max-sm:hidden">{o.nom}</span><span className="sm:hidden">{o.court}</span></> : o.nom}
-              {o.compte !== null && <span className="adm-compteur" data-alerte={o.alerte || undefined} aria-hidden={o.alerte || undefined}>{o.compte}</span>}
-            </button>
-          ))}
-        </div>
-        <div className="flex items-center gap-2">
-          <label className="adm-recherche">
-            <Icone nom="ui-recherche" taille={15} />
-            <input type="search" value={recherche} onChange={e => setRecherche(e.target.value)} aria-label="Chercher un compte" placeholder="Pseudo ou e-mail" autoComplete="off" spellCheck={false} />
-          </label>
-          {boutonInviter('lg:hidden')}
-        </div>
-      </div>
+          <div className="adm-comptes-barre">
+            <div ref={liste} role="tablist" aria-label="Comptes" onKeyDown={fleches} className="adm-comptes-onglets">
+              {onglets.map(o => (
+                <button key={o.id} type="button" role="tab" id={`${id}-${o.id}`} aria-selected={vue === o.id} aria-controls={`${id}-panneau`} tabIndex={vue === o.id ? 0 : -1}
+                  aria-label={o.alerte ? `${o.nom}, ${o.compte} à traiter` : undefined} onClick={() => { if (o.id !== vue) { setVue(o.id); setMessage(null); } }}>
+                  {o.court ? <><span className="max-sm:hidden">{o.nom}</span><span className="sm:hidden">{o.court}</span></> : o.nom}
+                  {o.compte !== null && <span className="adm-compteur" data-alerte={o.alerte || undefined} aria-hidden={o.alerte || undefined}>{o.compte}</span>}
+                </button>
+              ))}
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="adm-recherche">
+                <Icone nom="ui-recherche" taille={15} />
+                <input type="search" value={recherche} onChange={e => setRecherche(e.target.value)} aria-label="Chercher un compte" placeholder="Pseudo ou e-mail" autoComplete="off" spellCheck={false} />
+              </label>
+              {boutonInviter('lg:hidden')}
+            </div>
+          </div>
 
-      <div id={`${id}-panneau`} role="tabpanel" aria-labelledby={`${id}-${vue}`} className="adm-comptes-contenu flex flex-col gap-4">
-        {message && <Bandeau message={message} fermer={() => setMessage(null)} />}
+          <div id={`${id}-panneau`} role="tabpanel" aria-labelledby={`${id}-${vue}`} className="adm-comptes-contenu flex flex-col gap-4">
+            {message && <Bandeau message={message} fermer={() => setMessage(null)} />}
 
-        {vue === 'comptes' && (
-          <>
-            <OffresCreem api={api} />
-            {erreur && <p className="text-[14px] text-red-300" role="alert">{erreur}</p>}
-            {!comptes && !erreur && <p className="py-6 text-[14px] text-white/60">Chargement…</p>}
-            {comptes && (comptesVus.length === 0 ? rien('compte') : (
+            {vue === 'comptes' && (
               <>
-                <table className="adm-tableau hidden lg:table">
-                  <colgroup>
-                    <col style={{ width: '22%' }} /><col style={{ width: '24%' }} /><col style={{ width: '11%' }} /><col style={{ width: '9.5%' }} />
-                    <col style={{ width: '15.5%' }} /><col style={{ width: '13%' }} /><col style={{ width: 48 }} />
-                  </colgroup>
-                  <thead>
-                    <tr>
-                      <th scope="col">Page</th><th scope="col">E-mail</th><th scope="col">Offre</th><th scope="col" className="adm-nombre">Vues 30&#8239;j</th>
-                      <th scope="col">Dernière connexion</th><th scope="col">Statut</th><th scope="col"><span className="sr-only">Gestes</span></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {comptesVus.map(c => {
-                      const statut = statutCompte(c, signalements ?? []);
-                      return (
-                        <tr key={c.id}>
-                          <td><NomCompte compte={c} avatar={avatar} /></td>
-                          <td className="adm-gris" title={c.email}>{c.email}</td>
-                          <td className="text-[#3d3d39]">{c.principal ? 'Principal' : <Offre plan={c.plan} />}</td>
-                          <td className="adm-nombre">{nombre(c.vues)}</td>
-                          <td className="adm-gris">{quand(c.connexion)}</td>
-                          <td><Statut statut={statut} /></td>
-                          <td>{!c.principal && <MenuGestes nom={c.pseudo} elements={gestesCompte(c)} />}</td>
+                <OffresCreem api={api} />
+                {erreur && <p className="text-[14px] text-red-300" role="alert">{erreur}</p>}
+                {!comptes && !erreur && <p className="py-6 text-[14px] text-white/60">Chargement…</p>}
+                {comptes && (comptesVus.length === 0 ? rien('compte') : (
+                  <>
+                    <table className="adm-tableau hidden lg:table">
+                      <colgroup>
+                        <col style={{ width: '22%' }} /><col style={{ width: '24%' }} /><col style={{ width: '11%' }} /><col style={{ width: '9.5%' }} />
+                        <col style={{ width: '15.5%' }} /><col style={{ width: '13%' }} /><col style={{ width: 48 }} />
+                      </colgroup>
+                      <thead>
+                        <tr>
+                          <th scope="col">Page</th><th scope="col">E-mail</th><th scope="col">Offre</th><th scope="col" className="adm-nombre">Vues 30&#8239;j</th>
+                          <th scope="col">Dernière connexion</th><th scope="col">Statut</th><th scope="col"><span className="sr-only">Gestes</span></th>
                         </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-                <ul className="adm-liste-comptes lg:hidden">
-                  {comptesVus.map(c => {
-                    const statut = statutCompte(c, signalements ?? []);
-                    return (
-                      <li key={c.id}>
-                        <Pastille pseudo={c.pseudo} avatar={c.principal ? avatar : undefined} />
-                        <div className="min-w-0 flex-1">
-                          <p className="flex items-center gap-2 text-[15px] font-medium"><span className="truncate">{c.pseudo}</span>{c.principal ? <span className={classeBadge}>Toi</span> : c.plan !== 'gratuit' && <Offre plan={c.plan} />}</p>
-                          <p className="truncate text-[13px] text-white/60">{c.email}</p>
-                          <p className="text-[13px] text-white/60">{c.principal ? 'Principal · ' : c.plan === 'gratuit' ? 'Gratuit · ' : ''}{nombre(c.vues)} vue{c.vues > 1 ? 's' : ''} en 30&#8239;j · {quand(c.connexion)}</p>
-                          {statut !== 'actif' && <p className="mt-0.5 text-[13px]"><Statut statut={statut} /></p>}
-                        </div>
-                        {!c.principal && <MenuGestes nom={c.pseudo} elements={gestesCompte(c)} />}
-                      </li>
-                    );
-                  })}
-                </ul>
-              </>
-            ))}
-          </>
-        )}
-
-        {vue === 'attente' && attente && (
-          attente.length === 0 ? <p className="py-6 text-[14px] text-white/60">Les noms réservés depuis hopla.page arrivent ici, dans l’ordre d’arrivée.</p>
-          : attenteVue.length === 0 ? rien('nom')
-          : (
-            <>
-              <table className="adm-tableau hidden lg:table">
-                <colgroup><col style={{ width: '30%' }} /><col style={{ width: '34%' }} /><col style={{ width: '18%' }} /><col /><col style={{ width: 48 }} /></colgroup>
-                <thead><tr><th scope="col">Nom réservé</th><th scope="col">E-mail</th><th scope="col">Réservé</th><th scope="col"><span className="sr-only">Inviter</span></th><th scope="col"><span className="sr-only">Gestes</span></th></tr></thead>
-                <tbody>
-                  {attenteVue.map(r => (
-                    <tr key={r.id}>
-                      <td><span className="flex min-w-0 items-center gap-2.5"><Pastille pseudo={r.pseudo} /><span className="truncate font-medium" translate="no">{r.pseudo}</span></span></td>
-                      <td className="adm-gris" title={r.email}>{r.email}</td>
-                      <td className="adm-gris">{quand(r.ts)}</td>
-                      <td className="text-right"><BoutonInviterAttente r={r} agir={agir} api={api} /></td>
-                      <td><MenuGestes nom={r.pseudo} elements={[{ nom: 'Retirer de la liste…', icone: 'ui-corbeille', danger: true, action: () => setARetirer(r) }]} /></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              <ul className="adm-liste-comptes lg:hidden">
-                {attenteVue.map(r => (
-                  <li key={r.id}>
-                    <Pastille pseudo={r.pseudo} />
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-[15px] font-medium" translate="no">{r.pseudo}</p>
-                      <p className="truncate text-[13px] text-white/60">{r.email} · {quand(r.ts)}</p>
-                    </div>
-                    <BoutonInviterAttente r={r} agir={agir} api={api} />
-                    <MenuGestes nom={r.pseudo} elements={[{ nom: 'Retirer de la liste…', icone: 'ui-corbeille', danger: true, action: () => setARetirer(r) }]} />
-                  </li>
+                      </thead>
+                      <tbody>
+                        {comptesVus.map(c => {
+                          const statut = statutCompte(c, signalements ?? []);
+                          return (
+                            <tr key={c.id} onClick={c.principal ? undefined : surRangee(c)} data-ouvrable={c.principal ? undefined : ''}>
+                              <td>
+                                {c.principal ? <NomCompte compte={c} avatar={avatar} /> : (
+                                  <button type="button" data-fiche={c.id} onClick={() => ouvrirFiche(c)} className="adm-nom-compte" aria-label={`${c.pseudo}, ouvrir sa fiche`}>
+                                    <NomCompte compte={c} />
+                                  </button>
+                                )}
+                              </td>
+                              <td className="adm-gris" title={c.email}>{c.email}</td>
+                              <td className="text-[#3d3d39]">{c.principal ? 'Principal' : <Offre compte={c} />}</td>
+                              <td className="adm-nombre">{nombre(c.vues)}</td>
+                              <td className="adm-gris">{quand(c.connexion)}</td>
+                              <td><Statut statut={statut} /></td>
+                              <td>{!c.principal && <MenuGestes nom={c.pseudo} elements={menuDe(gestesDe(c))} />}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                    <ul className="adm-liste-comptes lg:hidden">
+                      {comptesVus.map(c => {
+                        const statut = statutCompte(c, signalements ?? []);
+                        const corps = (
+                          <>
+                            <Pastille pseudo={c.pseudo} avatar={c.principal ? avatar : undefined} />
+                            <div className="min-w-0 flex-1">
+                              <p className="flex items-center gap-2 text-[15px] font-medium"><span className="truncate">{c.pseudo}</span>{c.principal ? <span className={classeBadge}>Toi</span> : c.plan !== 'gratuit' && <Offre compte={c} />}</p>
+                              <p className="truncate text-[13px] text-white/60">{c.email}</p>
+                              <p className="text-[13px] text-white/60">{c.principal ? 'Principal · ' : c.plan === 'gratuit' ? 'Gratuit · ' : ''}{nombre(c.vues)} vue{c.vues > 1 ? 's' : ''} en 30&#8239;j · {quand(c.connexion)}</p>
+                              {statut !== 'actif' && <p className="mt-0.5 text-[13px]"><Statut statut={statut} /></p>}
+                            </div>
+                          </>
+                        );
+                        return (
+                          <li key={c.id}>
+                            {c.principal ? corps : <button type="button" data-fiche={c.id} onClick={() => ouvrirFiche(c)} className="adm-compte-ouvrir">{corps}</button>}
+                            {!c.principal && <MenuGestes nom={c.pseudo} elements={menuDe(gestesDe(c))} />}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </>
                 ))}
-              </ul>
-            </>
-          )
-        )}
+              </>
+            )}
 
-        {vue === 'signalements' && signalements && (
-          <Signalements liste={signalementsVus} vide={signalements.length === 0} recherche={recherche} decider={setDecision} api={api} agir={agir} />
-        )}
-      </div>
+            {vue === 'attente' && attente && (
+              attente.length === 0 ? <p className="py-6 text-[14px] text-white/60">Les noms réservés depuis hopla.page arrivent ici, dans l’ordre d’arrivée.</p>
+              : attenteVue.length === 0 ? rien('nom')
+              : (
+                <>
+                  <table className="adm-tableau hidden lg:table">
+                    <colgroup><col style={{ width: '30%' }} /><col style={{ width: '34%' }} /><col style={{ width: '18%' }} /><col /><col style={{ width: 48 }} /></colgroup>
+                    <thead><tr><th scope="col">Nom réservé</th><th scope="col">E-mail</th><th scope="col">Réservé</th><th scope="col"><span className="sr-only">Inviter</span></th><th scope="col"><span className="sr-only">Gestes</span></th></tr></thead>
+                    <tbody>
+                      {attenteVue.map(r => (
+                        <tr key={r.id}>
+                          <td><span className="flex min-w-0 items-center gap-2.5"><Pastille pseudo={r.pseudo} /><span className="truncate font-medium" translate="no">{r.pseudo}</span></span></td>
+                          <td className="adm-gris" title={r.email}>{r.email}</td>
+                          <td className="adm-gris">{quand(r.ts)}</td>
+                          <td className="text-right"><BoutonInviterAttente r={r} agir={agir} api={api} /></td>
+                          <td><MenuGestes nom={r.pseudo} elements={[{ nom: 'Retirer de la liste…', icone: 'ui-corbeille', danger: true, action: () => setARetirer(r) }]} /></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  <ul className="adm-liste-comptes lg:hidden">
+                    {attenteVue.map(r => (
+                      <li key={r.id}>
+                        <Pastille pseudo={r.pseudo} />
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-[15px] font-medium" translate="no">{r.pseudo}</p>
+                          <p className="truncate text-[13px] text-white/60">{r.email} · {quand(r.ts)}</p>
+                        </div>
+                        <BoutonInviterAttente r={r} agir={agir} api={api} />
+                        <MenuGestes nom={r.pseudo} elements={[{ nom: 'Retirer de la liste…', icone: 'ui-corbeille', danger: true, action: () => setARetirer(r) }]} />
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )
+            )}
+
+            {vue === 'signalements' && signalements && (
+              <Signalements liste={signalementsVus} vide={signalements.length === 0} recherche={recherche} decider={setDecision} api={api} agir={agir} />
+            )}
+          </div>
+        </>
+      )}
 
       <Feuille petite ouverte={inviter} onFermer={() => setInviter(false)} titre="Inviter quelqu’un">
         {fermer => <FormInviter inviter={(email, pseudo) => api.inviter(email, pseudo)} fini={r => fermer(() => { setInviter(false); setMessage({ ok: true, texte: r.message, lienDev: r.lienDev }); void toutRecharger(); })} />}
@@ -260,6 +355,13 @@ export function OngletComptes({ api, avatar }: { api: ApiComptes; avatar?: strin
 
       <Feuille petite ouverte={!!decision} onFermer={() => setDecision(null)} titre={decision?.titre ?? ''}>
         {fermer => decision && <FormMotif decision={decision} annuler={() => fermer()} fini={() => fermer(() => setDecision(null))} />}
+      </Feuille>
+
+      <Feuille petite ouverte={!!aOffrir} onFermer={() => setAOffrir(null)} titre={aOffrir ? `Offrir une offre à ${aOffrir.pseudo}` : ''}>
+        {fermer => aOffrir && (
+          <FormOffrir compte={aOffrir} annuler={() => fermer()} fini={() => fermer(() => setAOffrir(null))}
+            offrir={(plan, duree, mot) => agir(() => api.offrir(aOffrir.id, plan, duree, mot))} />
+        )}
       </Feuille>
 
       <Feuille petite ouverte={!!aRetirer} onFermer={() => setARetirer(null)} titre={`Retirer ${aRetirer?.pseudo ?? ''}`}>
@@ -277,6 +379,79 @@ export function OngletComptes({ api, avatar }: { api: ApiComptes; avatar?: strin
   );
 }
 
+/** L'abonnement Creem d'un compte, en une ligne : l'offre, sa période, puis où il en est. */
+function enMots(a: Abonnement): string {
+  const nom = `${OFFRES[a.payee].nom}${a.periode ? `, ${a.periode === 'an' ? 'annuel' : 'mensuel'}` : ''}`;
+  if (a.statut === 'past_due') return `${nom} · paiement en retard`;
+  if (estResilie(a.statut)) return `${nom} · résilié${a.finPeriode ? `, s’arrête le ${dateCourte(a.finPeriode)}` : ''}`;
+  return a.finPeriode ? `${nom} · prochaine échéance le ${dateCourte(a.finPeriode)}` : nom;
+}
+
+/**
+ * La fiche d'un compte : une sous-page de Comptes, le fil « Comptes / pseudo » dans l'en-tête, en lignes comme
+ * Réglages. Sa page, son compte et son lien, son offre (celle qu'il a, celle qu'on lui offre, son abonnement),
+ * puis la modération. Ce qui change quelque chose pour la personne s'ouvre dans une petite fenêtre qui le dit
+ * avant de le faire ; renvoyer son lien part d'un toucher.
+ */
+function FicheCompte({ compte: c, statut, gestes, fermer, message }: { compte: CompteResume; statut: StatutCompte; gestes: Gestes; fermer: () => void; message: ReactNode }) {
+  const [envoi, setEnvoi] = useState(false);
+  const a = c.abonnement;
+  const offerte = a.offerte;
+  async function renvoyer() {
+    if (!gestes.renvoyer) return;
+    setEnvoi(true);
+    await gestes.renvoyer();
+    setEnvoi(false);
+  }
+  return (
+    <div className="adm-reglages lg:pt-7">
+      <SousPage nom={c.pseudo} retour={fermer} />
+      {message}
+      <Groupe titre="Page">
+        <Ligne nom="Adresse" valeur={<span translate="no">{sansSchema(urlPage(c))}</span>}>
+          <BoutonSecondaire onClick={gestes.voir}>Voir sa page<Icone nom="ui-ouvrir" taille={14} className="shrink-0" /></BoutonSecondaire>
+        </Ligne>
+        <Ligne nom="Activité" valeur={`${nombre(c.blocs)} bloc${c.blocs > 1 ? 's' : ''} · ${nombre(c.vues)} vue${c.vues > 1 ? 's' : ''} en 30 j`} />
+      </Groupe>
+
+      <Groupe titre="Compte">
+        <Ligne nom="E-mail" valeur={c.email} />
+        <Ligne nom="Créé le" valeur={dateLongue(c.cree)} />
+        <Ligne nom="Dernière connexion" valeur={quand(c.connexion)}>
+          {gestes.renvoyer && <BoutonSecondaire onClick={renvoyer} disabled={envoi}>{envoi ? 'Envoi…' : 'Renvoyer son lien'}</BoutonSecondaire>}
+        </Ligne>
+      </Groupe>
+
+      <Groupe titre="Offre">
+        <Ligne nom="Actuelle" valeur={<Offre compte={c} />}>
+          {gestes.offrir && <BoutonSecondaire onClick={gestes.offrir} aria-haspopup="dialog">Offrir une offre</BoutonSecondaire>}
+        </Ligne>
+        {offerte && (
+          <Ligne nom="Offerte" valeur={`${OFFRES[offerte.plan].nom}, ${offerteAuDessus(a) ? '' : 'après l’abonnement, '}${offerte.jusqu ? `jusqu’au ${dateLongue(offerte.jusqu)}` : 'sans fin'}`}>
+            {gestes.retirer && <BoutonSecondaire onClick={gestes.retirer} aria-haspopup="dialog">Retirer</BoutonSecondaire>}
+          </Ligne>
+        )}
+        {a.payee !== 'gratuit' && (
+          <Ligne nom="Abonnement" valeur={enMots(a)}>
+            {gestes.resilier && <BoutonSecondaire onClick={gestes.resilier} aria-haspopup="dialog">Résilier</BoutonSecondaire>}
+          </Ligne>
+        )}
+      </Groupe>
+
+      <Groupe titre="Modération">
+        <Ligne nom="Statut" valeur={<Statut statut={statut} />}>
+          {gestes.reactiver
+            ? <BoutonSecondaire onClick={gestes.reactiver}>Réactiver</BoutonSecondaire>
+            : gestes.suspendre && <BoutonSecondaire onClick={gestes.suspendre} aria-haspopup="dialog">Suspendre</BoutonSecondaire>}
+        </Ligne>
+        <Ligne nom="Supprimer le compte">
+          <BoutonSecondaire onClick={gestes.supprimer} aria-haspopup="dialog" className="!text-red-300">Supprimer</BoutonSecondaire>
+        </Ligne>
+      </Groupe>
+    </div>
+  );
+}
+
 const TEINTES = ['bleu', 'citron', 'lilas', 'menthe', 'creme'] as const;
 /** Une des teintes de l'accueil, tirée du pseudo : un compte garde la sienne d'une visite à l'autre. */
 const teinteDe = (pseudo: string) => TEINTES[[...pseudo].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7) % TEINTES.length];
@@ -286,16 +461,26 @@ function Pastille({ pseudo, avatar }: { pseudo: string; avatar?: string }) {
   return <span className="adm-pastille" data-teinte={avatar ? undefined : teinteDe(pseudo)} aria-hidden="true">{avatar ? <img src={avatar} alt="" /> : pseudo.slice(0, 1)}</span>;
 }
 
-/** L'offre d'un compte : une étiquette aux couleurs de l'offre quand elle est payante, le mot seul pour Gratuit. */
-function Offre({ plan }: { plan: CompteResume['plan'] }) {
-  return plan === 'gratuit' ? <>{OFFRES.gratuit.nom}</> : <span className={classeBadge} data-offre={plan}>{OFFRES[plan].nom}</span>;
+/**
+ * L'offre d'un compte : une étiquette aux couleurs de l'offre quand elle est payante, le mot seul pour Gratuit.
+ * Une offre offerte qui passe devant l'abonnement le dit à côté : « offert ».
+ */
+function Offre({ compte }: { compte: Pick<CompteResume, 'plan' | 'abonnement'> }) {
+  const plan = compte.plan;
+  if (plan === 'gratuit') return <>{OFFRES.gratuit.nom}</>;
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <span className={classeBadge} data-offre={plan}>{OFFRES[plan].nom}</span>
+      {offerteAuDessus(compte.abonnement) && <span className="text-[12.5px] font-normal text-white/60">offert</span>}
+    </span>
+  );
 }
 
 function NomCompte({ compte, avatar }: { compte: CompteResume; avatar?: string }) {
   return (
     <span className="flex min-w-0 items-center gap-2.5">
       <Pastille pseudo={compte.pseudo} avatar={compte.principal ? avatar : undefined} />
-      <span className="truncate font-medium" translate="no">{compte.pseudo}</span>
+      <span className="adm-nom-texte truncate font-medium" translate="no">{compte.pseudo}</span>
       {compte.principal && <span className={classeBadge}>Toi</span>}
     </span>
   );
@@ -393,13 +578,74 @@ function FormMotif({ decision, annuler, fini }: { decision: Decision; annuler: (
   }
   return (
     <form onSubmit={valider} className="flex flex-col gap-4 pb-1">
-      <Champ label={decision.label} aide={decision.aide}>
-        <textarea autoFocus={focusAuto()} className={`${classeSaisie} min-h-24`} value={motif} maxLength={2000} required={decision.requis} onChange={e => setMotif(e.target.value)} />
-      </Champ>
-      {decision.avertissement && <p className="text-[13.5px] font-medium leading-snug text-red-300">{decision.avertissement}</p>}
+      {decision.label && (
+        <Champ label={decision.label} aide={decision.aide}>
+          <textarea autoFocus={focusAuto()} className={`${classeSaisie} min-h-24`} value={motif} maxLength={2000} required={decision.requis} onChange={e => setMotif(e.target.value)} />
+        </Champ>
+      )}
+      {decision.avertissement && <p className={`text-[13.5px] leading-snug ${decision.danger ? 'font-medium text-red-300' : 'text-white/75'}`}>{decision.avertissement}</p>}
       <div className="flex flex-wrap justify-end gap-2">
         <button type="button" onClick={annuler} className={classeBouton.discret}>Annuler</button>
         <button type="submit" disabled={envoi || (decision.requis && !motif.trim())} className={decision.danger ? classeBouton.danger : classeBouton.principal}>{envoi ? 'Envoi…' : decision.bouton}</button>
+      </div>
+    </form>
+  );
+}
+
+/**
+ * Offrir une offre à un compte, sans paiement : l'offre quand il y a le choix, la durée, un mot pour la personne.
+ * La phrase du bas dit ce qui va se passer avant le geste : tout de suite, ou après un abonnement résilié, sans rien
+ * payer, ce que l'offre remplace, l'abonnement qui continue d'être prélevé. Une offre qui ne donnerait rien ne part pas.
+ */
+function FormOffrir({ compte: c, offrir, annuler, fini }: { compte: CompteResume; offrir: (plan: PlanPayant, duree: DureeOfferte, mot: string) => Promise<void>; annuler: () => void; fini: () => void }) {
+  const a = c.abonnement;
+  const choix = offresAOffrir(a);
+  // L'offre juste au-dessus de celle qu'il a, d'abord ; la plus haute s'il l'a déjà (offerte, ou payée jusqu'à une résiliation).
+  const [plan, setPlan] = useState<PlanPayant>(() => choix.find(p => rang(p) > rang(c.plan)) ?? choix[choix.length - 1]);
+  const [duree, setDuree] = useState<DureeOfferte>('1m');
+  const [mot, setMot] = useState('');
+  const [envoi, setEnvoi] = useState(false);
+  const jusqu = finOfferte(Date.now(), duree);
+  const effet = effetOffert(a, plan, jusqu);
+  const nom = OFFRES[plan].nom;
+  const paye = OFFRES[a.payee].nom;
+  const pendant = jusqu ? `jusqu’au ${dateLongue(jusqu)}` : 'sans limite de durée';
+  const resume = !effet
+    ? `Son abonnement ${paye} court jusqu’au ${a.finPeriode ? dateLongue(a.finPeriode) : 'bout de la période payée'} : une offre qui finit avant ne lui donnerait rien. Choisis une durée plus longue.`
+    : [
+      effet === 'maintenant'
+        ? `${c.pseudo} a ${nom} tout de suite, ${pendant}, sans rien payer. Un e-mail le lui dit.`
+        : `Son abonnement ${paye} s’arrête ${a.finPeriode ? `le ${dateLongue(a.finPeriode)}` : 'à la fin de la période payée'} : ensuite, ${c.pseudo} ${plan === a.payee ? 'garde' : 'passe en'} ${nom}, ${pendant}, sans rien payer. Un e-mail le lui dit.`,
+      a.offerte ? `Cette offre remplace ${OFFRES[a.offerte.plan].nom} offert${a.offerte.jusqu ? ` jusqu’au ${dateLongue(a.offerte.jusqu)}` : ''}.` : '',
+      a.payee !== 'gratuit' && !estResilie(a.statut) ? `Son abonnement ${paye} continue d’être prélevé : le résilier est un autre geste.` : '',
+    ].filter(Boolean).join(' ');
+  const titre = 'mb-1.5 block text-[12.5px] font-medium text-white/60 bureau:text-white/75';
+  async function valider(e: FormEvent) {
+    e.preventDefault();
+    if (!effet) return;
+    setEnvoi(true);
+    await offrir(plan, duree, mot.trim());
+    fini();
+  }
+  return (
+    <form onSubmit={valider} className="flex flex-col gap-4 pb-1">
+      {choix.length > 1 && (
+        <div>
+          <span className={titre} aria-hidden="true">Offre</span>
+          <Segments label="Offre" valeur={plan} options={choix.map(p => ({ id: p, nom: OFFRES[p].nom }))} onChange={setPlan} />
+        </div>
+      )}
+      <div>
+        <span className={titre} aria-hidden="true">Durée</span>
+        <Segments label="Durée" valeur={duree} options={DUREES_OFFERTES.map(d => ({ id: d.id, nom: d.nom }))} onChange={setDuree} />
+      </div>
+      <Champ label="Un mot pour la personne (facultatif)" aide="Il part dans l’e-mail qui la prévient.">
+        <textarea className={`${classeSaisie} min-h-20`} value={mot} maxLength={2000} onChange={e => setMot(e.target.value)} />
+      </Champ>
+      <p className="text-[13.5px] leading-snug text-white/75" aria-live="polite">{resume}</p>
+      <div className="flex flex-wrap justify-end gap-2">
+        <button type="button" onClick={annuler} className={classeBouton.discret}>Annuler</button>
+        <button type="submit" disabled={envoi || !effet} className={classeBouton.principal}>{envoi ? 'Envoi…' : `Offrir ${nom}`}</button>
       </div>
     </form>
   );

@@ -29,6 +29,8 @@ export const DUREE_SESSION = 90 * 86_400_000;
 const DUREE_LIEN = 15 * 60_000;
 /** Une invitation attend plus longtemps qu'un lien demandé à l'instant. */
 const DUREE_INVITATION = 7 * 86_400_000;
+/** Un lien que Lilian envoie depuis l'onglet Comptes : la personne ne l'attend pas devant sa boîte. */
+const DUREE_LIEN_ENVOYE = 86_400_000;
 
 export const empreinte = (jeton: string) => createHash('sha256').update(jeton).digest('hex');
 const nouveauJeton = () => randomBytes(32).toString('base64url');
@@ -117,20 +119,22 @@ ${bouton(lien, 'Ouvrir mon back office')}
 /**
  * Le premier e-mail d'un compte : l'adresse de sa page et un lien valable une
  * semaine. `motif` dit d'où vient la page : ouverte par Lilian (`invitation`),
- * réservée depuis l'accueil pendant la liste d'attente (`reservation`), ou
- * créée à l'instant depuis l'accueil (`inscription`).
+ * réservée depuis l'accueil pendant la liste d'attente (`reservation`), créée
+ * à l'instant depuis l'accueil (`inscription`), ou jamais ouverte depuis, et
+ * renvoyée depuis l'onglet Comptes (`rappel`).
  */
-export async function inviter(origines: Origines, env: Env, compte: Compte, fetchImpl: typeof fetch = fetch, motif: 'invitation' | 'reservation' | 'inscription' = 'invitation'): Promise<Reponse> {
+export async function inviter(origines: Origines, env: Env, compte: Compte, fetchImpl: typeof fetch = fetch, motif: 'invitation' | 'reservation' | 'inscription' | 'rappel' = 'invitation'): Promise<Reponse> {
   const page = `${origines.page}/${compte.pseudo}`;
   const lienPage = `<a href="${page}">${sansSchema(page)}</a>`;
   const intro = (adresse: string, texte = false) => ({
     invitation: texte ? `Lilian Sevoumian t’a ouvert une page sur Hopla : ${adresse}` : `Lilian Sevoumian t’a ouvert une page sur Hopla, à l’adresse ${adresse}.`,
     reservation: `Tu avais réservé ${adresse} : ta page est ouverte.`,
     inscription: `Ta page ${adresse} est créée.`,
+    rappel: `Ta page ${adresse} t’attend.`,
   })[motif];
   const r = await envoyerLien({
     origines, env, fetchImpl, compte: compte.id, destinataire: compte.email, duree: DUREE_INVITATION,
-    sujet: 'Ta page Hopla est prête',
+    sujet: motif === 'rappel' ? 'Ta page Hopla t’attend' : 'Ta page Hopla est prête',
     html: lien => enveloppe(`<p>Bonjour,</p>
 <p>${intro(lienPage)} Elle est vide pour l’instant : ajoute tes liens, choisis un thème, et elle est en ligne.</p>
 ${bouton(lien, 'Créer ma page')}
@@ -138,6 +142,30 @@ ${bouton(lien, 'Créer ma page')}
     texte: lien => `${intro(page, true)}\nPour la créer : ${lien}\nLe lien marche une seule fois, pendant 7 jours. Ensuite, tu te connectes depuis ${origines.admin} avec cette adresse.\nUne page jamais ouverte s’efface au bout d’un mois.`,
   });
   return r.ok ? { ok: true, message: `Invitation envoyée à ${compte.email}.`, lienDev: r.lienDev } : r;
+}
+
+/**
+ * « Renvoyer son lien », depuis l'onglet Comptes : une page jamais ouverte reçoit de nouveau son premier e-mail
+ * (un lien de 7 jours, qui la garde aussi de la purge) ; une page déjà ouverte, un lien de connexion d'un jour,
+ * que la personne n'a pas eu à demander. Un lien par minute au plus : un double clic n'en envoie pas deux.
+ */
+export async function renvoyerLienCompte(origines: Origines, env: Env, compte: Compte, fetchImpl: typeof fetch = fetch, maintenant = Date.now()): Promise<Reponse> {
+  if (maintenant - jetonsRecents(maintenant - 60_000, compte.id).dernier < 60_000) return { ok: false, message: `Un lien vient de partir à ${compte.email}. Attends une minute avant d’en renvoyer un.` };
+  if (!compte.connexion) {
+    const r = await inviter(origines, env, compte, fetchImpl, 'rappel');
+    return r.ok ? { ok: true, message: `Lien envoyé à ${compte.email} : il ouvre sa page, pendant 7 jours.`, lienDev: r.lienDev } : r;
+  }
+  const page = `${origines.page}/${compte.pseudo}`;
+  const r = await envoyerLien({
+    origines, env, fetchImpl, compte: compte.id, destinataire: compte.email, duree: DUREE_LIEN_ENVOYE,
+    sujet: 'Ton lien pour ouvrir Hopla',
+    html: lien => enveloppe(`<p>Bonjour,</p>
+<p>Voici un nouveau lien pour ouvrir le back office de ta page <a href="${page}">${sansSchema(page)}</a>. Il marche une seule fois, pendant 24 heures.</p>
+${bouton(lien, 'Ouvrir mon back office')}
+<p style="color:#666;font-size:14px">Ensuite, tu te connectes depuis ${sansSchema(origines.admin)} avec cette adresse. Tu n’en as pas besoin ? Ignore ce message : personne ne peut s’en servir sans accès à ta boîte.</p>`),
+    texte: lien => `Voici un nouveau lien pour ouvrir le back office de ta page ${page} : ${lien}\nIl marche une seule fois, pendant 24 heures. Ensuite, tu te connectes depuis ${origines.admin} avec cette adresse.`,
+  });
+  return r.ok ? { ok: true, message: `Lien de connexion envoyé à ${compte.email}, valable 24 heures.`, lienDev: r.lienDev } : r;
 }
 
 /** Échange un lien de connexion (usage unique) contre un jeton de session du même compte. */

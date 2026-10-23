@@ -1,7 +1,7 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import type { KeyboardEvent, ReactNode } from 'react';
 import type { Abonnement as EtatAbonnement, Fonction, Periode, Plan, PlanPayant } from '../lib/abonnement.ts';
-import { FONCTIONS, FONCTIONS_EN_MOTS, OFFRES, PLANS, avantagesEntre, echeance, economieAnnuelle, estResilie, euros, moisOfferts, rang, sensDuChangement } from '../lib/abonnement.ts';
+import { FONCTIONS, FONCTIONS_EN_MOTS, OFFRES, PLANS, apresAbonnement, avantagesEntre, echeance, economieAnnuelle, estResilie, euros, moisOfferts, offerteAuDessus, rang, sensDuChangement } from '../lib/abonnement.ts';
 import type { Achat, EtapeRetour, NoteAchat } from '../lib/achat.ts';
 import { CLE_ACHAT } from '../lib/achat.ts';
 import type { PagePublique } from '../lib/types.ts';
@@ -21,6 +21,8 @@ import { Feuille, classeBouton, flechesRadio, useGrandEcran, vibrer } from './ui
  * est l'offre : elle n'arrive qu'avec le webhook signé, jamais par l'adresse.
  * Un abonné repasse en Gratuit depuis la même fenêtre (`RepasserGratuit`) :
  * l'abonnement est résilié pour la fin de la période payée, sans quitter Hopla.
+ * Une offre offerte depuis Comptes (23 octobre 2026) se lit sur sa carte, avec
+ * sa fin ; celles du dessous y sont comprises, celles du dessus s'achètent.
  */
 
 const dateLongue = (ms: number) => new Date(ms).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
@@ -59,9 +61,15 @@ interface ProprietesOffres {
 
 export function FenetreOffres({ onFermer, abonnement, enVente, pour, vers, bloc, ouvrirPaiement, avantDePartir, apercu, resilier, ouvrirPortail, resiliation }: ProprietesOffres) {
   const grand = useGrandEcran();
+  // L'offre de la page (une offre offerte peut passer devant l'abonnement), et celle qu'on paie, que Creem change ou résilie.
   const actuelle = abonnement.plan;
-  const paye = actuelle !== 'gratuit';
+  const payee = abonnement.payee;
+  const paye = payee !== 'gratuit';
   const resilie = paye && estResilie(abonnement.statut);
+  const offerte = offerteAuDessus(abonnement);
+  // Une offre offerte qui court après un abonnement résilié prend sa suite : sa carte et la note le disent.
+  const suite = resilie && !offerte && abonnement.offerte && apresAbonnement(abonnement, abonnement.finPeriode) !== 'gratuit' ? abonnement.offerte : null;
+  const offerteVue = offerte ?? suite;
   const [periode, setPeriode] = useState<Periode>(abonnement.periode ?? 'an');
   const [choix, setChoix] = useState<Plan | null>(resiliation && resilier && paye && !resilie ? 'gratuit' : null);
   const [envoi, setEnvoi] = useState(false);
@@ -76,25 +84,33 @@ export function FenetreOffres({ onFermer, abonnement, enVente, pour, vers, bloc,
 
   function geste(p: Plan): Geste {
     if (p === 'gratuit') {
-      if (!paye) return { bouton: false, texte: 'Ton offre actuelle' };
-      // Résiliée, l'offre court jusqu'à sa fin : Gratuit vient ensuite. Sinon, on y repasse d'ici.
-      if (resilie) return { bouton: false, texte: abonnement.finPeriode ? `Dès le ${dateCourte(abonnement.finPeriode)}` : 'À la fin de ton offre' };
-      return resilier ? { bouton: true, texte: 'Repasser en Gratuit', plan: 'gratuit' } : { bouton: false, texte: 'Comprise dans ton offre' };
+      if (paye && !resilie) return resilier ? { bouton: true, texte: 'Repasser en Gratuit', plan: 'gratuit' } : { bouton: false, texte: 'Comprise dans ton offre' };
+      if (!paye && !offerteVue) return { bouton: false, texte: 'Ton offre actuelle' };
+      // Gratuit vient après l'abonnement résilié et l'offre offerte, la plus lointaine des deux ; jamais après une offre sans fin.
+      if (offerteVue && offerteVue.jusqu === null) return { bouton: false, texte: 'Comprise dans ton offre' };
+      const fin = Math.max(resilie ? abonnement.finPeriode ?? 0 : 0, offerteVue?.jusqu ?? 0);
+      return { bouton: false, texte: fin ? `Dès le ${dateCourte(fin)}` : 'À la fin de ton offre' };
     }
+    // L'offre offerte ne s'achète pas : sa carte dit jusqu'à quand. Celles du dessous y sont comprises, sauf celle qu'on paie.
+    if (offerte?.plan === p) return { bouton: false, texte: offerte.jusqu ? `Offert jusqu’au ${dateCourte(offerte.jusqu)}` : 'Offert sans limite' };
+    if (suite?.plan === p && p !== payee && abonnement.finPeriode) return { bouton: false, texte: `Offert dès le ${dateCourte(abonnement.finPeriode)}` };
+    if (offerte && rang(p) < rang(offerte.plan) && p !== payee) return { bouton: false, texte: 'Comprise dans ton offre' };
     if (!vendable(p)) return { bouton: false, texte: 'Bientôt disponible' };
-    if (p === actuelle && (!abonnement.periode || abonnement.periode === periode)) return { bouton: false, texte: 'Ton offre actuelle' };
+    if (p === payee && (!abonnement.periode || abonnement.periode === periode)) return { bouton: false, texte: offerte ? 'Ton abonnement' : 'Ton offre actuelle' };
     // Une offre résiliée court jusqu'à sa fin : on en reprend une ensuite.
     if (resilie) return { bouton: false, texte: abonnement.finPeriode ? `Après le ${dateCourte(abonnement.finPeriode)}` : 'Après ta résiliation' };
-    if (p === actuelle) return { bouton: true, texte: periode === 'an' ? 'Passer à l’annuel' : 'Passer au mensuel', plan: p };
+    if (p === payee) return { bouton: true, texte: periode === 'an' ? 'Passer à l’annuel' : 'Passer au mensuel', plan: p };
     return { bouton: true, texte: `Passer en ${OFFRES[p].nom}`, plan: p };
   }
   const badge = (p: Plan): Badge | null =>
     p === actuelle ? { texte: 'Ton offre', actuelle: true }
       : pour && p === FONCTIONS[pour] ? { texte: FONCTIONS_EN_MOTS[pour].pour, fort: true }
         : p !== 'gratuit' && !OFFRES[p].enVente ? { texte: 'Bientôt' } : null;
+  const offert = offerteVue ? `${OFFRES[offerteVue.plan].nom} t’est offert${offerteVue.jusqu ? ` jusqu’au ${dateLongue(offerteVue.jusqu)}` : ''}` : '';
   const note = resilie && abonnement.finPeriode
-    ? `Ton offre ${OFFRES[actuelle].nom} s’arrête le ${dateLongue(abonnement.finPeriode)} : tu pourras en prendre une autre ensuite.`
-    : 'Prix TTC. Paiement sécurisé chez Creem, résiliable à tout moment.';
+    ? `Ton offre ${OFFRES[payee].nom} s’arrête le ${dateLongue(abonnement.finPeriode)}${offert ? `, et ${offert}.` : ' : tu pourras en prendre une autre ensuite.'}`
+    : offert ? `${offert}. Prix TTC, paiement chez Creem.`
+      : 'Prix TTC. Paiement sécurisé chez Creem, résiliable à tout moment.';
 
   // Revenir aux offres rend le focus au bouton de l'offre choisie ; entrer dans le récapitulatif le pose sur son titre.
   const dernierChoix = useRef<Plan | null>(null);
@@ -113,7 +129,7 @@ export function FenetreOffres({ onFermer, abonnement, enVente, pour, vers, bloc,
       await avantDePartir?.();
       const url = await ouvrirPaiement(choix, periode);
       // De quoi dire au retour ce qui vient de s'ouvrir. Rien n'est accordé d'après cette note.
-      const n: NoteAchat = { plan: choix, periode, ...(pour ? { pour } : {}), avant: actuelle, ...(abonnement.periode ? { periodeAvant: abonnement.periode } : {}), ...(bloc ? { bloc } : {}), ts: Date.now() };
+      const n: NoteAchat = { plan: choix, periode, ...(pour ? { pour } : {}), avant: payee, ...(abonnement.periode ? { periodeAvant: abonnement.periode } : {}), ...(offerte ? { deja: offerte.plan } : {}), ...(bloc ? { bloc } : {}), ts: Date.now() };
       try { sessionStorage.setItem(CLE_ACHAT, JSON.stringify(n)); } catch { /* onglet privé : le retour dira seulement l'offre */ }
       location.href = url;
       return;
@@ -150,7 +166,7 @@ export function FenetreOffres({ onFermer, abonnement, enVente, pour, vers, bloc,
           ) : (
             <OffresMobile id={idTitre} periode={periode} setPeriode={setPeriode} mois={mois} depart={miseEnAvant ?? actuelle}
               carte={(p, mis) => <CarteOffre id={`${idTitre}-${p}`} plan={p} periode={periode} badge={badge(p)} mis={mis} pour={pour} panneau />}
-              miseEnAvant={miseEnAvant} geste={geste} onChoisir={choisir} note={resilie ? note : 'Prix TTC, paiement chez Creem.'} />
+              miseEnAvant={miseEnAvant} geste={geste} onChoisir={choisir} note={resilie || offerteVue ? note : 'Prix TTC, paiement chez Creem.'} />
           )}
         </div>
       )}
@@ -293,15 +309,17 @@ function Recapitulatif({ plan, periode, setPeriode, abonnement, grand, id, mois,
   plan: PlanPayant; periode: Periode; setPeriode: (p: Periode) => void; abonnement: EtatAbonnement; grand: boolean; id: string; mois: number;
   retour: () => void; fermer: () => void; payer: () => void; envoi: boolean; erreur: string; apercu?: (plan: PlanPayant) => PagePublique;
 }) {
+  // Ce qu'on paie décide du chemin chez Creem (changer d'abonnement ou en prendre un) ; l'offre de la page, de ce qui s'ouvre.
   const actuelle = abonnement.plan;
-  const changement = actuelle !== 'gratuit' && !estResilie(abonnement.statut);
-  const meme = plan === actuelle;
+  const payee = abonnement.payee;
+  const changement = payee !== 'gratuit' && !estResilie(abonnement.statut);
+  const meme = plan === payee;
   const deja = meme && abonnement.periode === periode;
   const o = OFFRES[plan];
   const titre = meme ? (periode === 'an' ? 'Passer à l’annuel' : 'Passer au mensuel') : `Passer en ${o.nom}`;
   const monte = rang(plan) > rang(actuelle);
   // Un abonné qui descend se fait rendre la différence, qui monte la paie ; changer aussi de période, Creem en décide.
-  const sens = changement ? sensDuChangement({ plan: actuelle, periode: abonnement.periode }, { plan, periode }) : null;
+  const sens = changement ? sensDuChangement({ plan: payee, periode: abonnement.periode }, { plan, periode }) : null;
   const liste = meme ? [] : avantagesEntre(actuelle, plan);
   // La page telle qu'elle sera se montre quand on monte, pas quand on descend : sans savoir ce qu'une page d'avant
   // les offres garde, l'aperçu montrerait encore ce qui s'arrête. La liste « Ce qui s'arrête » le dit à sa place.
@@ -401,9 +419,11 @@ function RepasserGratuit({ abonnement, grand, id, retour, fermer, resilier, ouvr
 }) {
   const [envoi, setEnvoi] = useState<'' | 'resiliation' | 'portail'>('');
   const [erreur, setErreur] = useState('');
-  const nom = OFFRES[abonnement.plan].nom;
+  const nom = OFFRES[abonnement.payee].nom;
   const fin = abonnement.finPeriode;
-  const pertes = avantagesEntre('gratuit', abonnement.plan);
+  // Une offre offerte qui court encore après la période payée prend la suite : on ne perd que ce qu'elle ne comprend pas.
+  const apres = apresAbonnement(abonnement, fin);
+  const pertes = rang(abonnement.payee) > rang(apres) ? avantagesEntre(apres, abonnement.payee) : [];
 
   async function confirmer() {
     setEnvoi('resiliation');
@@ -429,7 +449,7 @@ function RepasserGratuit({ abonnement, grand, id, retour, fermer, resilier, ouvr
       <h2 id={`${id}-recap`} tabIndex={-1} className="adm-recap-titre">Repasser en Gratuit</h2>
       <dl className="adm-recap-lignes">
         <div><dt>Ton offre {nom}</dt><dd data-fort>{fin ? `Jusqu’au ${dateLongue(fin)}` : 'Jusqu’à la fin de la période payée'}</dd></div>
-        <div><dt>Ensuite</dt><dd>Gratuit, plus aucun prélèvement</dd></div>
+        <div><dt>Ensuite</dt><dd>{apres === 'gratuit' ? 'Gratuit' : `${OFFRES[apres].nom} offert`}, plus aucun prélèvement</dd></div>
       </dl>
       {pertes.length > 0 && (
         <div className="flex flex-col gap-2.5">
@@ -507,7 +527,9 @@ export function RetourPaiement({ achat, etape, onFermer, action }: { achat: Acha
   // Un abonné qui change d'offre ne paie pas sur une page Creem : la différence est facturée, ou rendue s'il descend.
   const changement = !!achat.avant && achat.avant !== 'gratuit';
   const sens = changement && achat.avant && achat.periode ? sensDuChangement({ plan: achat.avant, periode: achat.periodeAvant ?? null }, { plan: achat.plan, periode: achat.periode }) : null;
-  const toutes = etape !== 'fait' || meme ? [] : achat.avant ? (rang(achat.plan) > rang(achat.avant) ? avantagesEntre(achat.avant, achat.plan) : []) : OFFRES[achat.plan].avantages;
+  // Ce qui s'ouvre se compte depuis ce que la page avait déjà : une offre offerte au-dessus de l'abonnement d'avant compte.
+  const base = achat.deja ?? achat.avant;
+  const toutes = etape !== 'fait' || meme ? [] : base ? (rang(achat.plan) > rang(base) ? avantagesEntre(base, achat.plan) : []) : OFFRES[achat.plan].avantages;
   // Ce qu'on était venu chercher passe en tête (« Tes couleurs »), le reste dans l'ordre de l'offre.
   const voulu = achat.pour ? FONCTIONS_EN_MOTS[achat.pour].avantage : '';
   const ouvertes = [...toutes.filter(a => a === voulu), ...toutes.filter(a => a !== voulu)];

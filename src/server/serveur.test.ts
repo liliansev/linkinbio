@@ -1372,3 +1372,176 @@ test('repasser en Gratuit : Creem résilie pour la fin de la période payée, l�
   assert.equal(creem.traiterWebhook(ENV_CREEM, corps, createHmac('sha256', ENV_CREEM.CREEM_WEBHOOK_SECRET).update(corps).digest('hex'), t).status, 200);
   assert.equal(db.compteParId(jo.id)!.abonnement_statut, 'scheduled_cancel');
 });
+
+test('Comptes : une offre offerte passe devant l’abonnement, s’éteint à sa fin, et garde la page de la purge', () => {
+  const t = Date.parse('2026-11-02T10:00:00Z'), jour = 86_400_000;
+  // Une page jamais ouverte, créée il y a quarante jours : la purge la prendrait.
+  const kim = db.creerCompte('kim@exemple.fr', 'kim', t - 40 * jour);
+  db.offrir(kim.id, 'pro', t + 30 * jour, t);
+  const a = db.abonnement(db.compteParId(kim.id)!, t);
+  assert.deepEqual({ plan: a.plan, payee: a.payee, offerte: a.offerte }, { plan: 'pro', payee: 'gratuit', offerte: { plan: 'pro', jusqu: t + 30 * jour } });
+  assert.equal(db.planDuCompte(kim.id, t), 'pro', 'les droits suivent l’offre offerte');
+  const ligne = db.listerComptes(t).find(c => c.id === kim.id)!;
+  assert.equal(ligne.plan, 'pro');
+  assert.equal(ligne.abonnement.payee, 'gratuit');
+  assert.deepEqual(db.exporter(kim.id).compte.offreOfferte, { offre: 'pro', le: new Date(t).toISOString(), jusqu: new Date(t + 30 * jour).toISOString() });
+  db.purger(t);
+  assert.ok(db.compteParId(kim.id), 'la purge épargne une page à qui l’on offre une offre');
+  // À sa fin, l'offre s'éteint d'elle-même, et la page redevient une page comme les autres.
+  const apres = db.abonnement(db.compteParId(kim.id)!, t + 30 * jour);
+  assert.deepEqual({ plan: apres.plan, offerte: apres.offerte }, { plan: 'gratuit', offerte: null });
+  db.purger(t + 31 * jour);
+  assert.equal(db.compteParId(kim.id), undefined);
+
+  // Sous l'abonnement, l'offre offerte ne change rien ; sans fin, elle court toujours.
+  const lou = db.creerCompte('lou@exemple.fr', 'lou');
+  db.appliquerAbonnement(lou.id, { client: 'cust_lou', abonnement: 'sub_lou', statut: 'active', finPeriode: t + 20 * jour, maj: 1 });
+  db.offrir(lou.id, 'starter', null, t);
+  const b = db.abonnement(db.compteParId(lou.id)!, t + 400 * jour);
+  assert.deepEqual({ plan: b.plan, payee: b.payee, offerte: b.offerte }, { plan: 'starter', payee: 'gratuit', offerte: { plan: 'starter', jusqu: null } }, 'l’abonnement fini, Starter offert reste');
+  assert.equal(db.abonnement(db.compteParId(lou.id)!, t).plan, 'pro', 'tant que Pro est payé, c’est Pro');
+  db.retirerOffre(lou.id);
+  assert.equal(db.abonnement(db.compteParId(lou.id)!, t).offerte, null);
+  assert.throws(() => db.offrir(P, 'pro', null, t), /principal/);
+});
+
+test('Comptes : offrir une offre prévient la personne, la remplace, se refuse quand elle ne donnerait rien', async () => {
+  const { offrirAuCompte, retirerAuCompte } = await import('./gestes.ts');
+  const { finOfferte } = await import('../lib/abonnement.ts');
+  const env = { RESEND_API_KEY: 'cle', NODE_ENV: 'production' };
+  const { etat, fetchFaux } = fauxCreem();
+  const t = Date.parse('2026-11-02T10:00:00Z'), jour = 86_400_000;
+  const mia = db.creerCompte('mia@exemple.fr', 'mia', t - jour);
+
+  const r = await offrirAuCompte(env, fetchFaux, O, mia.id, 'pro', '3m', 'Merci pour tes retours sur la bêta !', t);
+  assert.equal(r.ok, true);
+  assert.match(r.message, /^mia a Pro, offert jusqu’au 2 février 2027\. La personne est prévenue par e-mail\.$/);
+  assert.equal(db.planDuCompte(mia.id, t), 'pro');
+  assert.equal(db.abonnement(db.compteParId(mia.id)!, t).offerte?.jusqu, finOfferte(t, '3m'));
+  assert.equal(etat.creem.length, 0, 'Creem n’est jamais appelé : rien ne se paie');
+  const mail = etat.courriels.at(-1);
+  assert.deepEqual(mail.to, ['mia@exemple.fr']);
+  assert.equal(mail.subject, 'Hopla Pro t’est offert');
+  assert.match(mail.text, /Lilian Sevoumian t’offre Hopla Pro, jusqu’au 2 février 2027, pour ta page https:\/\/hopla\.page\/mia/);
+  assert.match(mail.text, /Merci pour tes retours sur la bêta !/);
+  assert.match(mail.text, /Ce que Pro t’ouvre :/);
+  assert.match(mail.text, /Le 2 février 2027, ta page repassera en Gratuit/);
+  assert.match(mail.html, /Merci pour tes retours sur la bêta !/);
+  assert.ok(mail.reply_to, 'la personne peut répondre');
+
+  // Une autre offre remplace la première ; sans fin, l'e-mail ne parle pas de fin.
+  await offrirAuCompte(env, fetchFaux, O, mia.id, 'starter', 'toujours', '', t);
+  assert.deepEqual(db.abonnement(db.compteParId(mia.id)!, t).offerte, { plan: 'starter', jusqu: null });
+  assert.match(etat.courriels.at(-1).text, /sans limite de durée/);
+  assert.doesNotMatch(etat.courriels.at(-1).text, /repassera/);
+
+  // Ce qui ne donnerait rien, ou n'est pas en vente, est refusé ; une page suspendue se réactive d'abord.
+  const noe = db.creerCompte('noe@exemple.fr', 'noe');
+  db.appliquerAbonnement(noe.id, { client: 'cust_noe', abonnement: 'sub_noe', statut: 'active', finPeriode: t + 20 * jour, maj: 1 });
+  await assert.rejects(offrirAuCompte(env, fetchFaux, O, noe.id, 'pro', '1m', '', t), /noe paie déjà Pro : offrir Pro ne lui donnerait rien de plus/);
+  await assert.rejects(offrirAuCompte(env, fetchFaux, O, noe.id, 'starter', '1m', '', t), /paie déjà Pro/);
+  await assert.rejects(offrirAuCompte(env, fetchFaux, O, mia.id, 'premium', '1m', '', t), /Premium n’est pas encore en vente/);
+  db.changerStatut(mia.id, 'suspendu');
+  await assert.rejects(offrirAuCompte(env, fetchFaux, O, mia.id, 'pro', '1m', '', t), /Réactive mia/);
+  db.changerStatut(mia.id, 'actif');
+  await assert.rejects(offrirAuCompte(env, fetchFaux, O, P, 'pro', '1m', '', t), /introuvable/);
+
+  // Resend en panne : l'offre est là, et Lilian sait qu'il faut prévenir la personne.
+  const n = etat.courriels.length;
+  const ola = db.creerCompte('ola@exemple.fr', 'ola');
+  const r2 = await offrirAuCompte({ NODE_ENV: 'production' }, fetchFaux, O, ola.id, 'starter', '1m', '', t);
+  assert.match(r2.message, /n’est pas parti : préviens-la toi-même/);
+  assert.equal(db.planDuCompte(ola.id, t), 'starter');
+  assert.equal(etat.courriels.length, n);
+
+  // Retirer : la page repasse à ce qu'elle paie, sans e-mail.
+  assert.match(retirerAuCompte(mia.id, t).message, /^mia n’a plus Starter offert : sa page repasse en Gratuit\.$/);
+  assert.equal(db.planDuCompte(mia.id, t), 'gratuit');
+  assert.throws(() => retirerAuCompte(mia.id, t), /n’a pas d’offre offerte/);
+  assert.equal(etat.courriels.length, n);
+});
+
+test('Comptes : résilier l’abonnement d’un compte, pour la fin de la période payée, et prévenir la personne', async () => {
+  const { resilierPourLeCompte } = await import('./gestes.ts');
+  const t = Date.parse('2026-11-02T10:00:00Z'), jour = 86_400_000, fin = t + 20 * jour;
+  const env = { ...ENV_CREEM, RESEND_API_KEY: 'cle', NODE_ENV: 'production' };
+  const { etat, fetchFaux } = fauxCreem(url => ({ id: url.split('/').at(-2), status: 'scheduled_cancel', current_period_end_date: new Date(fin).toISOString(), customer: { id: 'cust' } }));
+  const abonne = (pseudo: string, statut = 'active') => {
+    const c = db.creerCompte(`${pseudo}@exemple.fr`, pseudo);
+    db.appliquerAbonnement(c.id, { client: `cust_${pseudo}`, abonnement: `sub_${pseudo}`, statut, finPeriode: fin, maj: 1, produit: 'prod_mois' });
+    return c;
+  };
+
+  const sans = db.creerCompte('pia@exemple.fr', 'pia');
+  await assert.rejects(resilierPourLeCompte(env, fetchFaux, sans.id, '', t), /pia n’a pas d’abonnement à résilier/);
+  assert.equal(etat.creem.length, 0);
+
+  const rob = abonne('rob');
+  const r = await resilierPourLeCompte(env, fetchFaux, rob.id, 'Comme convenu au téléphone.', t);
+  assert.equal(r.message, 'L’abonnement Pro de rob est résilié : il s’arrête le 22 novembre 2026. La personne est prévenue par e-mail.');
+  assert.equal(etat.creem[0].url, 'https://test-api.creem.io/v1/subscriptions/sub_rob/cancel');
+  assert.deepEqual(etat.creem[0].corps, { mode: 'scheduled', onExecute: 'cancel' }, 'pour la fin de la période, jamais tout de suite');
+  assert.equal(db.compteParId(rob.id)!.abonnement_statut, 'scheduled_cancel');
+  assert.equal(db.planDuCompte(rob.id, t), 'pro', 'l’offre court jusqu’au bout de ce qui est payé');
+  const mail = etat.courriels.at(-1);
+  assert.deepEqual(mail.to, ['rob@exemple.fr']);
+  assert.equal(mail.subject, 'Ton abonnement Hopla est résilié');
+  assert.match(mail.text, /Comme convenu au téléphone\./);
+  assert.match(mail.text, /s’arrête le 22 novembre 2026 : plus rien ne sera prélevé/);
+
+  // Un double toucher ne rappelle pas Creem et ne renvoie pas d'e-mail.
+  const n = etat.courriels.length;
+  assert.match((await resilierPourLeCompte(env, fetchFaux, rob.id, '', t + 1000)).message, /déjà résilié : il s’arrête le 22 novembre 2026/);
+  assert.equal(etat.creem.length, 1);
+  assert.equal(etat.courriels.length, n);
+
+  // Résilié, le compte peut recevoir une offre qui prend la suite de l'abonnement : la même, ou une autre.
+  const { offrirAuCompte, retirerAuCompte } = await import('./gestes.ts');
+  const suite = await offrirAuCompte(env, fetchFaux, O, rob.id, 'pro', 'toujours', '', t);
+  assert.equal(suite.message, 'Après son abonnement, qui s’arrête le 22 novembre 2026, rob garde Pro, offert sans limite de durée. La personne est prévenue par e-mail.');
+  assert.match(etat.courriels.at(-1).text, /^Ton abonnement Hopla Pro s’arrête le 22 novembre 2026, et plus rien ne sera prélevé\. Ensuite, Lilian Sevoumian t’offre Hopla Pro, sans limite de durée/);
+  assert.doesNotMatch(etat.courriels.at(-1).text, /t’ouvre/, 'rien de nouveau ne s’ouvre');
+  assert.equal(db.planDuCompte(rob.id, fin + jour), 'pro', 'la période payée finie, Pro continue, offert');
+  assert.equal(retirerAuCompte(rob.id, t).message, 'rob n’a plus Pro offert. Son abonnement Pro ne change pas.');
+  // Une offre qui finirait avant l'abonnement ne lui donnerait rien.
+  const ugo = db.creerCompte('ugo@exemple.fr', 'ugo');
+  db.appliquerAbonnement(ugo.id, { client: 'cust_ugo', abonnement: 'sub_ugo', statut: 'scheduled_cancel', finPeriode: t + 200 * jour, maj: 1, produit: 'prod_an' });
+  await assert.rejects(offrirAuCompte(env, fetchFaux, O, ugo.id, 'starter', '1m', '', t), /court jusqu’au 21 mai 2027 : une offre qui finit avant ne lui donnerait rien/);
+  assert.equal((await offrirAuCompte(env, fetchFaux, O, ugo.id, 'starter', '1a', '', t)).ok, true);
+
+  // Une offre offerte qui court après la période payée prend la suite : l'e-mail de résiliation le dit.
+  const sam = abonne('sam');
+  db.offrir(sam.id, 'starter', null, t);
+  await resilierPourLeCompte(env, fetchFaux, sam.id, '', t);
+  assert.match(etat.courriels.at(-1).text, /Ensuite, ta page garde Starter, offert sans limite de durée\./);
+});
+
+test('Comptes : « Renvoyer son lien » redonne la bienvenue à une page jamais ouverte, un lien d’un jour aux autres', async () => {
+  const envois: any[] = [];
+  const fetchFaux = (async (_url: string, init: RequestInit) => { envois.push(JSON.parse(String(init.body))); return new Response('{}', { status: 200 }); }) as typeof fetch;
+  const env = { RESEND_API_KEY: 'cle', NODE_ENV: 'production' };
+  const tia = db.creerCompte('tia@exemple.fr', 'tia');
+  const r = await auth.renvoyerLienCompte(O, env, db.compteParId(tia.id)!, fetchFaux);
+  assert.equal(r.message, 'Lien envoyé à tia@exemple.fr : il ouvre sa page, pendant 7 jours.');
+  assert.equal(envois.at(-1).subject, 'Ta page Hopla t’attend');
+  assert.match(envois.at(-1).text, /Ta page https:\/\/hopla\.page\/tia t’attend\./);
+  const bienvenue = /jeton=([\w-]+)/.exec(envois.at(-1).text)![1];
+
+  // Un double clic n'envoie pas deux liens.
+  const tot = await auth.renvoyerLienCompte(O, env, db.compteParId(tia.id)!, fetchFaux);
+  assert.equal(tot.ok, false);
+  assert.match(tot.message, /Attends une minute/);
+  assert.equal(envois.length, 1);
+
+  // La page ouverte, c'est un lien de connexion, valable 24 heures, et le premier lien ne sert plus à rien.
+  assert.ok(auth.ouvrirSession(bienvenue));
+  const r2 = await auth.renvoyerLienCompte(O, env, db.compteParId(tia.id)!, fetchFaux, Date.now() + 61_000);
+  assert.equal(r2.message, 'Lien de connexion envoyé à tia@exemple.fr, valable 24 heures.');
+  assert.equal(envois.at(-1).subject, 'Ton lien pour ouvrir Hopla');
+  assert.match(envois.at(-1).text, /pendant 24 heures/);
+  assert.match(envois.at(-1).text, /https:\/\/app\.hopla\.page\/admin\/connexion\?jeton=/);
+  const jeton = /jeton=([\w-]+)/.exec(envois.at(-1).text)![1];
+  const hash = auth.empreinte(jeton);
+  const ligne = db.base().prepare('SELECT expire - cree AS duree FROM jetons WHERE hash = ?').get(hash) as { duree: number };
+  assert.equal(ligne.duree, 86_400_000);
+});

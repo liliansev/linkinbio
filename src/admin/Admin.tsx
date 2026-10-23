@@ -25,6 +25,7 @@ import { useCouche } from './couches.ts';
 import { AnneauDemarrage, noterPartage, useDemarrage } from './BienDemarrer.tsx';
 import { AppelOffre, FournisseurOffre } from './offre.tsx';
 import { FenetreOffres, RetourPaiement } from './Offres.tsx';
+import { nomApres } from './Facturation.tsx';
 import type { Fonction, PlanPayant } from '../lib/abonnement.ts';
 import { FONCTIONS, OFFRES, joursStats, offreSuivante, peut } from '../lib/abonnement.ts';
 import type { Droits } from '../lib/droits.ts';
@@ -191,8 +192,9 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
   async function resilier() {
     const a = await api.resilierAbonnement();
     setAbonnement(a);
-    const nom = OFFRES[abonnement.plan].nom;
-    setToast({ texte: a.finPeriode ? `C’est noté : ${nom} jusqu’au ${new Date(a.finPeriode).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}, puis Gratuit` : `C’est noté : ${nom} jusqu’à la fin de la période payée, puis Gratuit`, long: true });
+    const nom = OFFRES[abonnement.payee].nom;
+    const apres = nomApres(a, a.finPeriode);
+    setToast({ texte: a.finPeriode ? `C’est noté : ${nom} jusqu’au ${new Date(a.finPeriode).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}, puis ${apres}` : `C’est noté : ${nom} jusqu’à la fin de la période payée, puis ${apres}`, long: true });
   }
   // Le chemin vers les offres, pour un refus du serveur (absent quand le compte ne peut pas s'abonner) : elles s'ouvrent par-dessus.
   const versOffres = useRef<(() => void) | undefined>(undefined);
@@ -562,7 +564,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
 
   return (
     <FournisseurOffre value={offre}>
-    <div className="adm adm-shell min-h-dvh font-sans text-white antialiased" data-onglet={onglet}>
+    <div className="adm adm-shell min-h-dvh font-sans text-white antialiased" data-onglet={onglet} data-sous={fil ? '' : undefined}>
       {/* Au bureau, une barre latérale fine : la marque, les sections, et le compte en bas, qui s'ouvre sur « Me déconnecter ». */}
       <aside className="adm-sidebar fixed inset-y-0 left-0 z-30 hidden w-[216px] flex-col lg:flex" aria-label="Navigation">
         <Marque petite surBleu className="h-14 shrink-0 px-2" />
