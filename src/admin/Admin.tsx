@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Api, Bloc, EtatAdmin, PagePublique, Reglages } from '../lib/types.ts';
 import { TYPES_PRINCIPAL, nouveauBloc, urlPage } from '../lib/types.ts';
 import { composerMoment } from '../lib/moments.ts';
+import type { BlocCommence } from '../lib/editionBloc.ts';
+import { cleBlocCommence, relireBlocCommence } from '../lib/editionBloc.ts';
 import { PageLiens } from '../components/PageLiens.tsx';
 import { MaPage } from './MaPage.tsx';
 import type { Tiroir } from './OngletApparence.tsx';
@@ -88,8 +90,9 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
   const [demandeDesign, setDemandeDesign] = useState<Tiroir | null>(null);
   // « Programmer ce bloc », au retour de Creem : le bloc s'ouvre sur la règle que l'offre vient de débloquer.
   const [regleOuverte, setRegleOuverte] = useState<{ bloc: string; regle: 'moment' | 'acces' } | null>(null);
-  // `choisi` : un bloc neuf pris dans la liste avec une adresse déjà tapée, qui reste ce qu'on a choisi.
-  const [edition, setEdition] = useState<{ bloc: Bloc; nouveau: boolean; enBas?: boolean; choisi?: boolean } | null>(null);
+  // `choisi` : un bloc neuf pris dans la liste avec une adresse déjà tapée, qui reste ce qu'on a choisi. `repris` : un bloc neuf
+  // rouvert avec ce qui y était tapé, déjà commencé (voir `EditeurBloc`).
+  const [edition, setEdition] = useState<{ bloc: Bloc; nouveau: boolean; enBas?: boolean; choisi?: boolean; repris?: boolean } | null>(null);
   // Un bloc ouvert depuis Intégrations (« Produit », « Ma liste d'inscrits »…) : refermé, par sa croix, Annuler, Enregistrer ou le retour
   // du téléphone, on revient à Intégrations, sur la sous-page d'où l'on venait (22 octobre 2026, Lilian : la croix ramenait à Ma page).
   const depuisIntegrations = useRef<{ bloc: string; outil: string | null } | null>(null);
@@ -107,6 +110,20 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
   useEffect(() => { if (regleOuverte && edition?.bloc.id !== regleOuverte.bloc) setRegleOuverte(null); }, [edition, regleOuverte]);
   // Le bloc tel qu'il se tape dans l'éditeur : la page le redessine à chaque frappe, avant même qu'il soit écrit.
   const [brouillon, setBrouillon] = useState<Bloc | null>(null);
+  // Un bloc neuf commencé se garde sur l'appareil à chaque frappe, et s'efface quand il est ajouté, annulé, rendu à la liste
+  // par sa flèche ou laissé vide : une page rechargée ou refermée le retrouve (23 octobre 2026, voir la reprise plus bas).
+  const cleCommence = cleBlocCommence(initial.compte.pseudo);
+  const avaitNeuf = useRef(false);
+  useEffect(() => {
+    const neuf = edition?.nouveau ? edition : null;
+    if (!neuf && !avaitNeuf.current) return;
+    avaitNeuf.current = !!neuf;
+    const tape = neuf && brouillon?.id === neuf.bloc.id ? brouillon : null;
+    try {
+      if (neuf && tape) localStorage.setItem(cleCommence, JSON.stringify({ bloc: tape, enBas: !!neuf.enBas, choisi: !!neuf.choisi, quand: Date.now() } satisfies BlocCommence));
+      else localStorage.removeItem(cleCommence);
+    } catch { /* stockage refusé : rien ne se garde */ }
+  }, [edition, brouillon, cleCommence]);
   // Ce que l'éditeur ouvert fait avant qu'on passe à autre chose : écrire ce qui est valable, ou retenir (voir `EditeurBloc`).
   const garde = useRef<(() => boolean) | null>(null);
   // La forme suit la largeur : au bureau, les réglages d'un bloc se déplient dans sa rangée, à gauche de la page.
@@ -276,6 +293,25 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
     return () => { fini = true; clearTimeout(minuterie); };
   }, [api]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Un bloc neuf laissé en route (la page rechargée, l'onglet refermé) se rouvre une fois, tel qu'on l'avait laissé, sur
+  // Ma page : pas pendant les premiers pas, les CGU à accepter ou un retour de Creem. Déjà ajouté ou trop vieux, il s'efface.
+  const reprise = useRef(false);
+  useEffect(() => {
+    if (reprise.current || premiersPas || !cguAJour) return;
+    reprise.current = true;
+    if (retourLu.current) return;
+    let texte: string | null = null;
+    try { texte = localStorage.getItem(cleCommence); } catch { return; }
+    const d = relireBlocCommence(texte, blocsRef.current.map(b => b.id));
+    if (!d) {
+      if (texte) try { localStorage.removeItem(cleCommence); } catch { /* stockage refusé */ }
+      return;
+    }
+    if (edition || onglet !== 'page') return;
+    ajouterBloc(d.bloc, d.enBas, d.choisi, true);
+    setToast({ texte: 'Repris là où tu l’avais laissé', genre: 'info' });
+  }, [premiersPas, cguAJour]); // eslint-disable-line react-hooks/exhaustive-deps
+
   /** Avant un autre geste : ce que l'éditeur ouvert a de valable s'écrit ; un champ faux le retient (faux). */
   const libererEdition = () => !garde.current || garde.current();
   /** Ferme l'éditeur ouvert, après avoir écrit ce qui est valable. */
@@ -342,9 +378,9 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
     if (!libererEdition()) return;
     setEdition({ bloc: blocsRef.current.find(b => b.id === bloc.id) ?? bloc, nouveau: false });
   }
-  function ajouterBloc(bloc: Bloc, enBas?: boolean, choisi?: boolean) {
+  function ajouterBloc(bloc: Bloc, enBas?: boolean, choisi?: boolean, repris?: boolean) {
     if (!libererEdition()) return;
-    setEdition({ bloc, nouveau: true, enBas, choisi });
+    setEdition({ bloc, nouveau: true, enBas, choisi, repris });
   }
   // Au téléphone, la feuille du bloc couvre le bas de l'écran : le bloc ouvert remonte juste sous l'en-tête, au-dessus d'elle (voir `EditeurBloc`).
   const idOuvert = edition && !edition.nouveau ? edition.bloc.id : null;
@@ -558,7 +594,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
     <EditeurBloc key={edition.bloc.id} bureau={grand} garde={garde} onBrouillon={setBrouillon}
       adressePage={urlPage(compte)} principal={compte.principal} bloc={edition.bloc} reglages={reglages} nouveau={edition.nouveau} clics={clics[edition.bloc.id] ?? 0} prises={initial.places?.[edition.bloc.id] ?? 0} onFermer={() => setEdition(null)}
       onRetour={edition.nouveau && !grand && depuisIntegrations.current?.bloc !== edition.bloc.id ? b => { setEdition(null); setDemandeAjout({ enBas: !!edition.enBas, brouillon: b ?? undefined }); } : undefined}
-      onReplier={replier} suitAdresse={!edition.choisi}
+      onReplier={replier} suitAdresse={!edition.choisi} repris={edition.repris}
       onEnregistrer={enregistrerBloc} onSupprimer={supprimer} onDupliquer={dupliquer} onDeplacer={deplacer} place={{ rang: blocs.findIndex(b => b.id === edition.bloc.id), total: blocs.length }} envoyerImage={d => api.envoyerImage(d)} apercuSite={(u, i) => api.apercuSite(u, i)} />
     </RegleAOuvrir.Provider>
   );

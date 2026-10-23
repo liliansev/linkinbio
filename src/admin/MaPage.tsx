@@ -104,7 +104,7 @@ export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, chois
   onOuvrir: (bloc: Bloc) => void;
   /** `enBas` : ajouté depuis le bas de la page, le bloc se pose en dernier. */
   /** `choisi` : pris dans la liste avec une adresse déjà tapée, le bloc reste ce qu'on a choisi. */
-  onAjouter: (bloc: Bloc, enBas?: boolean, choisi?: boolean) => void;
+  onAjouter: (bloc: Bloc, enBas?: boolean, choisi?: boolean, repris?: boolean) => void;
   /** Un bloc neuf posé sans rouvrir son éditeur : la liste refermée sur ce qu'on avait tapé. */
   onPoser: (bloc: Bloc, enBas: boolean) => void;
   /** Avant un autre geste : ce qui est tapé dans l'éditeur s'écrit. Faux si un champ faux le retient. */
@@ -505,7 +505,7 @@ export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, chois
           // La même adresse que le bloc d'où l'on revient : on le retrouve tel qu'on l'avait laissé.
           const d = brouillonAjout.current;
           brouillonAjout.current = null;
-          if (d && adresseSaisie(d.url) === url) { if (quitterCote()) onAjouter(d, enBas.current); } else ajouterAdresse(url, enBas.current);
+          if (d && adresseSaisie(d.url) === url) { if (quitterCote()) onAjouter(d, enBas.current, false, true); } else ajouterAdresse(url, enBas.current);
           enBas.current = false;
         }} />
       <Feuille ouverte={cote === 'reseaux'} onFermer={() => fermerCote()} retenir={reseauFaux} titre="Réseaux" cote apercu={direct} pied={piedAnnuler}>

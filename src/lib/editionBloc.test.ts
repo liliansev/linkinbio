@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { memeBloc, verifierBloc } from './editionBloc.ts';
+import { GARDE_BLOC_COMMENCE, memeBloc, relireBlocCommence, verifierBloc } from './editionBloc.ts';
 import { nouveauBloc } from './types.ts';
 import type { Bloc } from './types.ts';
 
@@ -58,4 +58,25 @@ test('l’enregistrement automatique ne réécrit pas une version identique', ()
   assert.equal(memeBloc(v, { ...v! }), true);
   assert.equal(memeBloc(v, { ...v!, titre: 'B' }), false);
   assert.equal(memeBloc(v, null), false);
+});
+
+test('un bloc neuf commencé se relit tel qu’on l’avait laissé, une semaine au plus', () => {
+  const maintenant = Date.UTC(2026, 9, 23, 20);
+  const bloc = lien({ id: 'n1', url: 'https://atelier-marie.fr', titre: 'Mon atelier' });
+  const garde = (champs: Record<string, unknown> = {}) => JSON.stringify({ bloc, enBas: true, choisi: false, quand: maintenant - 60_000, ...champs });
+  assert.deepEqual(relireBlocCommence(garde(), [], maintenant), { bloc, enBas: true, choisi: false, quand: maintenant - 60_000 });
+  assert.equal(relireBlocCommence(garde({ quand: maintenant - GARDE_BLOC_COMMENCE - 1 }), [], maintenant), null);
+  // Déjà sur la page (ajouté, puis la page rechargée avant de l'effacer) : rien à reprendre.
+  assert.equal(relireBlocCommence(garde(), ['n1'], maintenant), null);
+  // Encore vide : rien n'était commencé.
+  assert.equal(relireBlocCommence(garde({ bloc: nouveauBloc('soutien', 'n2') }), [], maintenant), null);
+});
+
+test('un bloc commencé abîmé ne se relit pas, un champ manquant ou faux reprend celui d’un bloc neuf', () => {
+  const maintenant = Date.UTC(2026, 9, 23, 20);
+  for (const texte of [null, '', 'pas du json', '42', '{"quand":1}', JSON.stringify({ bloc: { id: 'n1', type: 'inconnu', titre: 'x' }, quand: maintenant })])
+    assert.equal(relireBlocCommence(texte, [], maintenant), null);
+  const r = relireBlocCommence(JSON.stringify({ bloc: { id: 'n1', type: 'lien', titre: 'Mon site', montants: 'faux', creneau: 3 }, quand: maintenant }), [], maintenant);
+  assert.deepEqual(r?.bloc, { ...nouveauBloc('lien', 'n1'), titre: 'Mon site' });
+  assert.equal(r?.enBas, false);
 });
