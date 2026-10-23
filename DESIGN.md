@@ -321,7 +321,7 @@ Les tokens `error` et `pending` correspondent aux états d'erreur et d'enregistr
 - **Title** : nom d'une carte ou d'un groupe de réglages.
 - **Body** : contenu courant ; les composants utilisent aussi des variations locales entre (13px) et (14.5px).
 - **Label** : nom de champ et aide courte.
-- **Caption** : légende d'onglet mobile, nom sous un picto, axe de courbe, compteur, et badge en semi-gras.
+- **Caption** : légende d'onglet mobile, nom sous un picto, axe de courbe, compteur, et badge en semi-gras. Seule exception, la légende compacte : (10.5px), pour les cinq onglets de la barre du bas du compte principal sous (360px), où « Intégrations » ne tiendrait pas sinon. Nulle part ailleurs.
 - **Field** : texte saisi, conservé à une taille lisible sur mobile.
 - **Metric** : chiffre clé, (24px) à toutes les largeurs ; dans les onglets de la courbe des stats (`.adm-courbe-chiffre`), en chiffres proportionnels. Le prix d'une offre le reprend, au téléphone comme au bureau (`.adm-offre-prix`). Les listes et les tableaux gardent des chiffres tabulaires, alignés à droite.
 - **Wordmark** : « Hopla » dans la marque, et nulle part ailleurs ; en petit (`wordmark-desk`) dans la barre latérale du bureau.

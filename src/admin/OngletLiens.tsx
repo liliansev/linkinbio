@@ -1,4 +1,4 @@
-import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import type { CSSProperties, KeyboardEvent as ToucheClavier } from 'react';
 import type { Bloc, TypeBloc } from '../lib/types.ts';
 import { TYPES_PRINCIPAL } from '../lib/types.ts';
@@ -11,25 +11,30 @@ import { Etiquette, offreDe, useDroits, useVoirOffres } from './offre.tsx';
 /**
  * Ce qu'on ajoute à sa page. `aide` : la ligne qu'un bloc neuf dit en tête de sa feuille, seulement quand elle apprend
  * quelque chose (23 octobre 2026) ; un lien, un titre, un texte se passent d'elle. `modele` : ce qu'un bloc neuf a déjà
- * (un lien partenaire est un lien, avec sa mention) ; `fonction` : l'offre qu'il demande.
+ * (un lien partenaire est un lien, avec sa mention) ; `fonction` : l'offre qu'il demande. `groupe` : trois familles,
+ * séparées d'un filet sans titre dans le choix des blocs (23 octobre 2026) : ce qui part d'une adresse, ce qu'on
+ * écrit, ce que Hopla branche tout seul.
  */
-export interface TypeAjout { type: TypeBloc; nom: string; aide?: string; picto: string; fonction?: Fonction; modele?: Partial<Bloc> }
+export interface TypeAjout { type: TypeBloc; nom: string; aide?: string; picto: string; fonction?: Fonction; modele?: Partial<Bloc>; groupe: 'adresse' | 'ecrit' | 'branche' }
 
 export const TYPES: TypeAjout[] = [
-  { type: 'lien', nom: 'Lien', picto: 'bloc-lien' },
-  { type: 'lien', nom: 'Lien partenaire', aide: 'Affiliation ou collaboration payée : la mention « Publicité », et ton code promo', picto: 'bloc-partenaire', modele: { partenariat: { mention: 'publicite', code: '' } } },
-  { type: 'titre', nom: 'Titre de section', picto: 'bloc-titre' },
-  { type: 'texte', nom: 'Texte', picto: 'bloc-texte' },
-  { type: 'video', nom: 'Vidéo YouTube', picto: 'bloc-video' },
-  { type: 'derniere-video', nom: 'Ma dernière vidéo YouTube', picto: 'bloc-derniere-video' },
+  { type: 'lien', nom: 'Lien', picto: 'bloc-lien', groupe: 'adresse' },
+  { type: 'lien', nom: 'Lien partenaire', aide: 'Affiliation ou collaboration payée : la mention « Publicité », et ton code promo', picto: 'bloc-partenaire', modele: { partenariat: { mention: 'publicite', code: '' } }, groupe: 'adresse' },
+  { type: 'video', nom: 'Vidéo YouTube', picto: 'bloc-video', groupe: 'adresse' },
   // La vitrine : Hopla n'encaisse rien, chaque bloc mène au site qui vend, réserve ou reçoit.
-  { type: 'produit', nom: 'Produit', aide: 'Sa photo et son prix, lus sur ta boutique', picto: 'bloc-produit', fonction: 'vitrine' },
-  { type: 'reservation', nom: 'Prise de rendez-vous', aide: 'Ton agenda Calendly, Cal.com, Doctolib ou Planity', picto: 'bloc-reservation', fonction: 'vitrine' },
-  { type: 'soutien', nom: 'Me soutenir', aide: 'Un bouton vers PayPal, Ko-fi, Tipeee ou Lydia', picto: 'bloc-soutien', fonction: 'vitrine' },
-  { type: 'inscription', nom: 'Ma liste d’inscrits', aide: 'Tes visiteurs laissent leur e-mail, que tu exportes ou envoies vers ta newsletter', picto: 'bloc-inscription', fonction: 'listeEmail' },
-  { type: 'preuve', nom: 'Avis et preuves', aide: 'Ta note Google, un chiffre clé ou un témoignage, avec sa source', picto: 'bloc-preuve', fonction: 'avis' },
-  { type: 'newsletter', nom: 'Ma newsletter Lumail', picto: 'bloc-newsletter' },
+  { type: 'produit', nom: 'Produit', aide: 'Sa photo et son prix, lus sur ta boutique', picto: 'bloc-produit', fonction: 'vitrine', groupe: 'adresse' },
+  { type: 'reservation', nom: 'Prise de rendez-vous', aide: 'Ton agenda Calendly, Cal.com, Doctolib ou Planity', picto: 'bloc-reservation', fonction: 'vitrine', groupe: 'adresse' },
+  { type: 'soutien', nom: 'Me soutenir', aide: 'Un bouton vers PayPal, Ko-fi, Tipeee ou Lydia', picto: 'bloc-soutien', fonction: 'vitrine', groupe: 'adresse' },
+  { type: 'titre', nom: 'Titre de section', picto: 'bloc-titre', groupe: 'ecrit' },
+  { type: 'texte', nom: 'Texte', picto: 'bloc-texte', groupe: 'ecrit' },
+  { type: 'preuve', nom: 'Avis et preuves', aide: 'Ta note Google, un chiffre clé ou un témoignage, avec sa source', picto: 'bloc-preuve', fonction: 'avis', groupe: 'ecrit' },
+  { type: 'derniere-video', nom: 'Ma dernière vidéo YouTube', picto: 'bloc-derniere-video', groupe: 'branche' },
+  { type: 'inscription', nom: 'Ma liste d’inscrits', aide: 'Tes visiteurs laissent leur e-mail, que tu exportes ou envoies vers ta newsletter', picto: 'bloc-inscription', fonction: 'listeEmail', groupe: 'branche' },
+  { type: 'newsletter', nom: 'Ma newsletter Lumail', picto: 'bloc-newsletter', groupe: 'branche' },
 ];
+
+/** Vrai pour le premier type d'une famille, sauf la première : un filet le précède. */
+const ouvreGroupe = (types: TypeAjout[], i: number) => i > 0 && types[i].groupe !== types[i - 1].groupe;
 
 /** L'entrée de la liste qui décrit un bloc : un lien partenaire a la sienne. */
 export const typeDe = (b: Pick<Bloc, 'type' | 'partenariat'>): TypeAjout =>
@@ -43,8 +48,8 @@ export const typeDe = (b: Pick<Bloc, 'type' | 'partenariat'>): TypeAjout =>
  * pas, et coller ne demande plus trois gestes. Absent là où le navigateur ne lit
  * pas le presse-papiers.
  */
-function CollerAdresse({ ajouter }: { ajouter: (url: string) => void }) {
-  const [valeur, setValeur] = useState('');
+function CollerAdresse({ ajouter, adresse = '' }: { ajouter: (url: string) => void; adresse?: string }) {
+  const [valeur, setValeur] = useState(adresse);
   const [erreur, setErreur] = useState('');
   const id = useId();
   const lisible = typeof navigator !== 'undefined' && !!navigator.clipboard?.readText;
@@ -89,9 +94,11 @@ function CollerAdresse({ ajouter }: { ajouter: (url: string) => void }) {
   );
 }
 
-export function FeuilleAjout({ ouverte, onFermer, onChoisir, onColler, principal }: { ouverte: boolean; onFermer: () => void; onChoisir: (type: TypeBloc, modele?: Partial<Bloc>) => void;
+export function FeuilleAjout({ ouverte, onFermer, onChoisir, onColler, adresse, principal }: { ouverte: boolean; onFermer: () => void; onChoisir: (type: TypeBloc, modele?: Partial<Bloc>) => void;
   /** Au téléphone : une adresse collée en tête de la liste devient un lien neuf. */
   onColler?: (url: string) => void;
+  /** L'adresse du bloc neuf d'où l'on revient par sa flèche : elle attend dans le champ. */
+  adresse?: string;
   principal: boolean }) {
   const types = principal ? TYPES : TYPES.filter(t => !TYPES_PRINCIPAL.includes(t.type));
   const droits = useDroits();
@@ -100,13 +107,14 @@ export function FeuilleAjout({ ouverte, onFermer, onChoisir, onColler, principal
     <Feuille ouverte={ouverte} onFermer={onFermer} titre="Ajouter un bloc">
       {fermer => (
         <>
-        {onColler && <CollerAdresse ajouter={url => fermer(() => onColler(url))} />}
+        {onColler && <CollerAdresse key={adresse ?? ''} adresse={adresse} ajouter={url => fermer(() => onColler(url))} />}
         <ul className="adm-cascade -mx-2 flex flex-col pb-2">
           {types.map((t, i) => {
             // Un bloc réservé reste dans la liste, avec le nom de son offre : le toucher mène aux offres.
             const reserve = !!t.fonction && !droits[t.fonction];
             return (
             <li key={t.nom} style={{ '--i': i } as CSSProperties}>
+              {ouvreGroupe(types, i) && <div aria-hidden className="adm-filet mx-2 my-1.5" />}
               <button type="button" disabled={reserve && !voirOffres} onClick={() => fermer(() => (reserve ? voirOffres?.(t.fonction) : onChoisir(t.type, t.modele)))}
                 className="group flex min-h-12 w-full items-center gap-3 rounded-xl px-2 py-1 text-left transition duration-150 hover:bg-white/[0.05] active:scale-[0.985] active:bg-white/[0.07]">
                 {/* Pas de pastille ni d'effet : le picto plein, d'une couleur, se suffit. */}
@@ -190,10 +198,12 @@ export function MenuAjout({ ancre, onFermer, onChoisir, principal }: { ancre: HT
   return (
     <div ref={boite} onKeyDown={touche} className="adm-menu adm-fondu fixed z-50 overflow-y-auto overscroll-contain" style={place}>
       <div role="menu" aria-label="Ajouter un bloc">
-        {types.map(t => {
+        {types.map((t, i) => {
           const reserve = !!t.fonction && !droits[t.fonction];
           return (
-            <button key={t.nom} type="button" role="menuitem" tabIndex={-1} disabled={reserve && !voirOffres}
+            <Fragment key={t.nom}>
+            {ouvreGroupe(types, i) && <div role="separator" className="adm-filet mx-1.5 my-1" />}
+            <button type="button" role="menuitem" tabIndex={-1} disabled={reserve && !voirOffres}
               aria-label={reserve && t.fonction ? `${t.nom}, avec Hopla ${offreDe(t.fonction)} : voir les offres` : undefined}
               onClick={() => { fermer(false); if (reserve) voirOffres?.(t.fonction); else onChoisir(t.type, t.modele); }}
               className="adm-menu-item text-white">
@@ -201,6 +211,7 @@ export function MenuAjout({ ancre, onFermer, onChoisir, principal }: { ancre: HT
               <span className="min-w-0 flex-1 truncate text-left">{t.nom}</span>
               {reserve && t.fonction && <Etiquette fonction={t.fonction} />}
             </button>
+            </Fragment>
           );
         })}
       </div>

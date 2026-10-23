@@ -399,7 +399,7 @@ export const MONTANTS_DEFAUT: readonly number[] = [3, 5, 10];
 
 export function nouveauBloc(type: TypeBloc, id: string): Bloc {
   const titres: Record<TypeBloc, string> = {
-    lien: '', titre: 'Nouvelle section', texte: '', video: 'Ma vidéo', 'derniere-video': 'Ma dernière vidéo', newsletter: 'Ma newsletter', inscription: 'Rejoins ma liste', preuve: 'Ce qu’ils en disent',
+    lien: '', titre: '', texte: '', video: 'Ma vidéo', 'derniere-video': 'Ma dernière vidéo', newsletter: 'Ma newsletter', inscription: 'Rejoins ma liste', preuve: 'Ce qu’ils en disent',
     produit: '', soutien: 'Me soutenir', reservation: 'Prendre rendez-vous',
   };
   return {

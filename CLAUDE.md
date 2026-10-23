@@ -129,25 +129,31 @@ embarque tout : l'image n'a pas de `node_modules`.
   et 86 % de l'écran (`plafond`), et garde sa hauteur d'une page à l'autre ; elle porte le nom du bloc
   (« Le blog · masqué · programmé »), le type seul pour un bloc neuf. Ce que la page montre se règle
   sur la première page du bloc, seul ce qu'elle ne montre pas attend derrière « Plus de réglages »
-  (23 octobre 2026, revue pilote-design-produit, demandée par Lilian) : le texte, le sous-titre (replié
-  derrière « Ajouter un sous-titre » tant qu'il est vide), les montants de « Me soutenir », puis les quatre gestes
+  (23 octobre 2026, revue pilote-design-produit, demandée par Lilian) : le texte, la description d'un lien dont la
+  forme la montre, le sous-titre (replié derrière « Ajouter un sous-titre » tant qu'il est vide), les montants de
+  « Me soutenir », puis les quatre gestes
   courants (22 octobre 2026, demandé par Lilian : « vraiment simple ») :
   Visible, Mis en avant, puis Quand (`ReglageQuand` : Apparaît « Maintenant », Disparaît « Jamais »,
   le sélecteur natif posé sur la ligne ; le créneau de la semaine dessous, du lundi au vendredi de 9 h à 18 h,
   en avant, au premier jour touché, comme le serveur) et Pour qui (`ReglagePourQui` :
   une seule liste de réseaux sous « Venus de », deux interrupteurs Affiché et En avant), chacune une ligne qui dit ce qui
   est réglé (`resumeQuand`, `resumePourQui`, « Seulement venus d'Instagram ») et mène à sa page ; « Mis en avant »
-  allumé fait paraître Apparence dessous (forme, couleur, description, animation). Au bureau, ces lignes se
-  déplient en place. Un bloc que son créneau ou ses dates retirent en ce moment se grise sur la page éditée
+  allumé fait paraître Apparence dessous (forme, couleur, animation ; l'animation seule pour un produit ou une prise
+  de rendez-vous). Au bureau, ces lignes se déplient en place, une seule à la fois (`ReplisExclusifs`), et
+  Visible et Mis en avant s'empilent comme au téléphone. Un bloc que son créneau ou ses dates retirent en ce moment se grise sur la page éditée
   (`horsCreneauOuDates` dans `lib/moments.ts`). « Plus de réglages » ne garde que le rare (lien partenaire,
-  accès réservé, Visible par Google, demander le prénom ; absent pour un bloc qui n'a rien de tout cela),
-  en pages (`PagesBloc` dans `ReglesBloc.tsx`), avec une flèche dans l'en-tête de la feuille (`useFilFeuille`).
+  accès réservé, Visible par Google, demander le prénom ; absent pour un bloc qui n'a rien de tout cela ; sa ligne
+  n'écrit rien tant que rien n'est réglé, ce qui l'est en bleu), en pages (`PagesBloc` dans `ReglesBloc.tsx`), avec une flèche dans l'en-tête de la feuille (`useFilFeuille`).
   Au téléphone, un bloc neuf se pose tout de suite sur la page (en haut, ou en bas depuis « Ajouter un bloc »
-  sous les blocs) avec sa feuille dessous ; il revient au choix des blocs par sa flèche tant qu'on n'a rien tapé
-  (ensuite, la flèche part et le retour fait comme la croix : le bloc est ajouté, avec Annuler). Ce choix est une
-  feuille qui s'ouvre sur « Colle une adresse » et son bouton Coller ; au bureau, un menu sous « Ajouter un bloc »
-  (`MenuAjout` dans `OngletLiens.tsx` : flèches, Échap, une lettre pour aller au type), et la rangée ouverte garde
-  son en-tête collé en haut tant qu'on la fait défiler.
+  sous les blocs) avec sa feuille dessous ; sa flèche ramène au choix des blocs avec son brouillon : l'adresse
+  tapée attend dans « Colle une adresse », un autre type choisi reprend adresse et texte (`versType`), et fermer
+  le choix ajoute le bloc, avec Annuler, comme la croix et le retour du téléphone. Ce choix est une feuille qui
+  s'ouvre sur « Colle une adresse » et son bouton Coller ; au bureau, un menu sous « Ajouter un bloc »
+  (`MenuAjout` dans `OngletLiens.tsx` : flèches, Échap, une lettre pour aller au type). Ses types vont en trois
+  familles séparées d'un filet sans titre (`groupe` de `TYPES`) : ce qui part d'une adresse, ce qu'on écrit, ce
+  que Hopla branche. Au bureau, un bloc neuf s'ajoute aussi de Cmd ou Ctrl + Entrée ; la rangée ouverte garde son
+  en-tête collé en haut tant qu'on la fait défiler, un filet dessous tant qu'il colle ; la replier après un
+  changement dit « Modifications enregistrées », dont Annuler rend le bloc tel qu'il était à l'ouverture.
   Une adresse collée dans un bloc neuf prend le bloc qui lui va (23 octobre 2026, demandé par Lilian : « que ça détecte
   automatiquement de quoi il s'agit ») : une vidéo, un agenda, une fiche de boutique (et une page qui déclare un prix) ;
   « En faire un simple lien », sous l'adresse, la rend à un lien. Le site se lit tout seul, et une autre adresse le relit

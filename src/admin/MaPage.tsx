@@ -14,6 +14,7 @@ import type { Destination } from '../lib/demarrage.ts';
 import { urlReseau } from '../lib/demarrage.ts';
 import { adresseSaisie, pourquoiPasAdresse } from '../lib/valider.ts';
 import { verifierBloc } from '../lib/editionBloc.ts';
+import { versType } from '../lib/detection.ts';
 import { ICONES } from '../lib/icones.ts';
 import { PageLiens } from '../components/PageLiens.tsx';
 import type { Edition } from '../components/PageLiens.tsx';
@@ -79,7 +80,7 @@ function brouillonNeuf(b: Bloc): Bloc {
   return { ...nouveauBloc('lien', b.id), titre: b.titre.trim() || type.nom, url: '#', icone: type.picto };
 }
 
-export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, choisi, editeur, neuf, onReglages, onOrdonner, onOuvrir, onAjouter, liberer, fermerEdition, gestes, envoyerImage, annoncer, demarrage, demarrageOuvert, fermerDemarrage, demandeDesign, designOuvert, demandeAjout, ajoutOuvert, appel }: {
+export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, choisi, editeur, neuf, onReglages, onOrdonner, onOuvrir, onAjouter, onPoser, liberer, fermerEdition, gestes, envoyerImage, annoncer, demarrage, demarrageOuvert, fermerDemarrage, demandeDesign, designOuvert, demandeAjout, ajoutOuvert, appel }: {
   compte: PagePublique['compte'];
   reglages: Reglages;
   /** Les blocs tels qu'on les voit : celui qu'on règle se redessine à chaque frappe. */
@@ -102,7 +103,10 @@ export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, chois
   onOrdonner: (blocs: Bloc[]) => void;
   onOuvrir: (bloc: Bloc) => void;
   /** `enBas` : ajouté depuis le bas de la page, le bloc se pose en dernier. */
-  onAjouter: (bloc: Bloc, enBas?: boolean) => void;
+  /** `choisi` : pris dans la liste avec une adresse déjà tapée, le bloc reste ce qu'on a choisi. */
+  onAjouter: (bloc: Bloc, enBas?: boolean, choisi?: boolean) => void;
+  /** Un bloc neuf posé sans rouvrir son éditeur : la liste refermée sur ce qu'on avait tapé. */
+  onPoser: (bloc: Bloc, enBas: boolean) => void;
   /** Avant un autre geste : ce qui est tapé dans l'éditeur s'écrit. Faux si un champ faux le retient. */
   liberer: () => boolean;
   /** Ferme l'éditeur du bloc (le design prend sa place, la rangée se replie). Faux s'il est retenu. */
@@ -120,7 +124,7 @@ export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, chois
   demandeDesign?: Tiroir | null;
   designOuvert?: () => void;
   /** Rouvre le choix du bloc (la flèche d'un bloc neuf, au téléphone) ; `ajoutOuvert` dit que c'est fait. */
-  demandeAjout?: { enBas: boolean } | null;
+  demandeAjout?: { enBas: boolean; brouillon?: Bloc } | null;
   ajoutOuvert?: () => void;
   /** Au téléphone, sous la page : l'offre du dessus, en une ligne (voir `AppelOffre`). Au bureau, elle est dans la barre latérale. */
   appel?: ReactNode;
@@ -236,22 +240,46 @@ export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, chois
     if (!liberer() || (cote === 'reseaux' && reseauFaux())) return;
     vibrer(5);
     enBas.current = bas;
+    brouillonAjout.current = null;
+    setAdresseAjout('');
     ancreAjout.current = ancre ?? boutonEntete();
     setAjout(true);
   }
+  /*
+   * Revenu d'un bloc neuf par sa flèche, avec ce qui était tapé : l'adresse attend dans « Colle une adresse », le bloc qu'on
+   * choisit reprend le tout, et refermer la liste pose ce qui était tapé, comme la croix du bloc (« Annuler » le retire).
+   */
+  const brouillonAjout = useRef<Bloc | null>(null);
+  // Ce que le champ montre, gardé le temps que la liste se referme.
+  const [adresseAjout, setAdresseAjout] = useState('');
   // Revenu d'un bloc neuf par sa flèche : la liste se rouvre telle qu'on l'avait quittée, une fois.
   useEffect(() => {
     if (!demandeAjout) return;
     enBas.current = demandeAjout.enBas;
+    brouillonAjout.current = demandeAjout.brouillon ?? null;
+    setAdresseAjout(demandeAjout.brouillon?.url ?? '');
     ancreAjout.current = boutonEntete();
     setAjout(true);
     ajoutOuvert?.();
   }, [demandeAjout]); // eslint-disable-line react-hooks/exhaustive-deps
   const ajouter = (type: TypeBloc, modele?: Partial<Bloc>) => {
     setAjout(false);
+    const d = brouillonAjout.current;
+    brouillonAjout.current = null;
     if (!quitterCote()) return;
-    onAjouter({ ...nouveauBloc(type, nouvelId()), ...modele }, enBas.current);
+    // Un autre bloc reprend ce qui était tapé : l'adresse s'il en a une, le texte écrit, les réglages.
+    const repris = d && { ...versType(d, type, !!d.titre.trim() && d.titre !== nouveauBloc(d.type, d.id).titre), ...(TYPES_ADRESSE.includes(type) ? {} : { url: '' }) };
+    onAjouter({ ...(repris || nouveauBloc(type, nouvelId())), ...modele }, enBas.current, !!repris && !!adresseSaisie(repris.url));
     enBas.current = false;
+  };
+  /** La liste refermée : ce qui était tapé dans un bloc neuf s'ajoute, s'il est valable. */
+  const fermerAjout = () => {
+    setAjout(false);
+    const d = brouillonAjout.current, bas = enBas.current;
+    brouillonAjout.current = null;
+    enBas.current = false;
+    const v = d && verifierBloc(d).bloc;
+    if (v) onPoser(v, bas);
   };
   /** Une adresse collée devient un lien neuf, qu'on règle avant de l'ajouter. Faux si quelque chose le retient. */
   const ajouterAdresse = (url: string, bas = false) => {
@@ -471,8 +499,15 @@ export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, chois
       </div>
 
       <input ref={fichier} type="file" accept="image/*" className="adm-fichier" tabIndex={-1} aria-hidden="true" onChange={e => photo(e.target.files?.[0])} />
-      <FeuilleAjout ouverte={ajout} onFermer={() => { enBas.current = false; setAjout(false); }} onChoisir={ajouter} principal={principal}
-        onColler={url => { setAjout(false); ajouterAdresse(url, enBas.current); enBas.current = false; }} />
+      <FeuilleAjout ouverte={ajout} onFermer={fermerAjout} onChoisir={ajouter} principal={principal} adresse={adresseAjout}
+        onColler={url => {
+          setAjout(false);
+          // La même adresse que le bloc d'où l'on revient : on le retrouve tel qu'on l'avait laissé.
+          const d = brouillonAjout.current;
+          brouillonAjout.current = null;
+          if (d && adresseSaisie(d.url) === url) { if (quitterCote()) onAjouter(d, enBas.current); } else ajouterAdresse(url, enBas.current);
+          enBas.current = false;
+        }} />
       <Feuille ouverte={cote === 'reseaux'} onFermer={() => fermerCote()} retenir={reseauFaux} titre="Réseaux" cote apercu={direct} pied={piedAnnuler}>
         {reseaux}
       </Feuille>
@@ -691,12 +726,24 @@ function Rangee({ bloc, droits, clics, neuf, ouvert, editeur, ouvrir, fermer, ge
   const nom = neuf ? `Nouveau bloc : ${type?.nom ?? ''}` : nomBloc(bloc);
   const sous = neuf ? '' : sousBloc(bloc, nom);
   const idReglages = useId();
+  // Ouverte, son en-tête colle sous celui de l'onglet ; un trait d'un pixel le sépare des réglages qui passent dessous,
+  // seulement tant qu'il colle (23 octobre 2026).
+  const tete = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const t = tete.current;
+    if (!ouvert || !t) return;
+    const voir = () => { const li = t.parentElement; if (li) t.toggleAttribute('data-colle', t.getBoundingClientRect().top - li.getBoundingClientRect().top > 0.5); };
+    voir();
+    addEventListener('scroll', voir, { capture: true, passive: true });
+    addEventListener('resize', voir);
+    return () => { removeEventListener('scroll', voir, { capture: true }); removeEventListener('resize', voir); t.removeAttribute('data-colle'); };
+  }, [ouvert]);
   // Le picto du bloc s'il en a un (un réseau, un picto choisi), sinon celui de son genre.
   const picto = bloc.icone && ICONES[bloc.icone] ? bloc.icone : type?.picto ?? 'bloc-lien';
   return (
     <li ref={setNodeRef} className="adm-rangee" data-id={bloc.id} data-nom={nom} data-ouvert={ouvert || undefined} data-glisse={isDragging || undefined}
       data-prive={(!neuf && (etat.prive || etat.programme)) || undefined} style={{ transform: CssDnd.Translate.toString(transform), transition }}>
-      <div className="adm-rangee-tete">
+      <div ref={tete} className="adm-rangee-tete">
         {neuf ? <span className="adm-rangee-poignee" aria-hidden="true" /> : (
           <button ref={setActivatorNodeRef} type="button" {...attributes} {...listeners} className="adm-rangee-poignee" aria-label={`Déplacer ${nom}`} title="Glisser pour déplacer">
             <Icone nom="ui-poignee" taille={14} />

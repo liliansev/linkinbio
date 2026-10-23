@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useRef, useState } from 'react';
+import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { Acces, Bloc, Preuve } from '../lib/types.ts';
 import type { Creneau } from '../lib/moments.ts';
@@ -32,6 +32,12 @@ const depuisLocal = (v: string) => (v ? new Date(v).toISOString() : '');
  */
 export const RangeesCompactes = createContext(false);
 
+/**
+ * Au bureau, dans la rangée d'un bloc : Apparence, Quand et Pour qui se déplient un à la fois (23 octobre 2026). En ouvrir un
+ * replie l'autre, et la rangée ne s'allonge pas de trois réglages ouverts. `ouvert` : le titre de celui qui l'est.
+ */
+export const ReplisExclusifs = createContext<{ ouvert: string | null; poser: (titre: string | null) => void } | null>(null);
+
 /** De retour des offres pour régler ce bloc (« Programmer ce bloc ») : la règle qu'on vient de débloquer s'ouvre d'elle-même. */
 export const RegleAOuvrir = createContext<'moment' | 'acces' | null>(null);
 
@@ -53,9 +59,14 @@ export const PagesBloc = createContext<{ page: 'plus' | PageRegle | null; ouvrir
  * dit une règle posée, il s'écrit en bleu, comme sur la première page du bloc.
  */
 export function Repli({ id, depuis = 'plus', titre, icone, resume, regle = false, ouvert: depart, etiquette, montrer = false, children }: { id?: PageRegle; depuis?: 'plus' | PageRegle; titre: string; icone: string; resume?: string; regle?: boolean; ouvert: boolean; etiquette?: ReactNode; montrer?: boolean; children: ReactNode }) {
-  const [ouvert, setOuvert] = useState(depart);
+  const [seul, setSeul] = useState(depart);
   const compact = useContext(RangeesCompactes);
   const pages = useContext(PagesBloc);
+  const exclusifs = useContext(ReplisExclusifs);
+  const ouvert = exclusifs ? exclusifs.ouvert === titre : seul;
+  const setOuvert = (v: boolean) => (exclusifs ? exclusifs.poser(v ? titre : null) : setSeul(v));
+  // Arrivé ouvert (une erreur de dates, « Mis en avant » qu'on vient d'allumer) : il prend la place de celui qui l'était.
+  useLayoutEffect(() => { if (depart && exclusifs) exclusifs.poser(titre); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const racine = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!montrer || !racine.current || pages) return;
@@ -225,7 +236,8 @@ export function ReglageQuand({ b, maj, erreur }: { b: Bloc; maj: (c: Partial<Blo
             <button type="button" onClick={() => maj({ creneau: null })} className="text-[13px] text-white/55 underline">Retirer le créneau</button>
           </Reserve>
         ) : (
-          <div role="group" aria-label="Jours" className="grid grid-cols-7 gap-0.5 rounded-[10px] bg-white/[0.05] p-[3px]">
+          // Sept cases qui se cochent à plusieurs, sans la piste grise des segments (un seul choix) : chacune se lit seule.
+          <div role="group" aria-label="Jours" className="grid grid-cols-7 gap-1">
             {JOURS.map((j, i) => {
               const actif = !!c?.jours.includes(i + 1);
               return (
@@ -235,7 +247,7 @@ export function ReglageQuand({ b, maj, erreur }: { b: Bloc; maj: (c: Partial<Blo
                   vibrer(4);
                   const jours = actif ? c!.jours.filter(n => n !== i + 1) : [...(c?.jours ?? []), i + 1];
                   if (!jours.length) maj({ creneau: null }); else majCreneau({ jours: jours.sort() });
-                }} className={`min-h-11 rounded-[7px] text-[14px] font-semibold transition duration-200 active:scale-95 bureau:min-h-8 bureau:text-[13px] ${actif ? 'bg-bleu text-nuit' : 'text-white/55 hover:text-white'}`}>{j}</button>
+                }} className={`min-h-11 rounded-[9px] text-[14px] font-semibold transition duration-200 active:scale-95 bureau:min-h-8 bureau:text-[13px] ${actif ? 'bg-bleu text-nuit' : 'text-white/70 hover:text-white'}`}>{j}</button>
               );
             })}
           </div>
@@ -332,16 +344,18 @@ export function RegleAcces({ b, maj, prises }: { b: Bloc; maj: (c: Partial<Bloc>
   );
   return (
     <Repli id="acces" titre="Accès réservé" icone="cadenas" resume={resume || 'Ouvert à tous'} regle={!!a} ouvert={!!a || aOuvrir} montrer={aOuvrir}>
-      {/* Les champs se suffisent : seul ce qui ne se devine pas se dit, et le nombre de places prises tant qu'il y en a. */}
-      <Champ label="Code à taper (facultatif)" aide="Majuscules et espaces ne comptent pas.">
+      {/* Un code, des places, ou les deux : les champs se suffisent. Seul ce qui ne se devine pas se dit, le nombre de places
+          prises tant qu'il y en a, et ce que fait l'accès quand rien n'est rempli. */}
+      <Champ label="Code à taper" aide="Majuscules et espaces ne comptent pas.">
         <input className={classeSaisie} value={a?.code ?? ''} maxLength={40} autoCapitalize="characters" autoComplete="off" spellCheck={false}
           placeholder="VIP2026" onChange={e => majAcces({ code: e.target.value })} />
       </Champ>
-      <Champ label="Nombre de places (facultatif)" aide={a?.places ? `${prises} prise${prises > 1 ? 's' : ''} pour l’instant.` : undefined}>
+      <Champ label="Nombre de places" aide={a?.places ? `${prises} prise${prises > 1 ? 's' : ''} pour l’instant.` : undefined}>
         <input className={classeSaisie} type="number" inputMode="numeric" min={0} max={100000} value={a?.places || ''} placeholder="Sans limite"
           onChange={e => majAcces({ places: Math.max(0, Math.min(100_000, Math.round(Number(e.target.value) || 0))) })} />
       </Champ>
-      {a && <button type="button" onClick={() => { vibrer(6); maj({ acces: null }); }} className="self-start text-[13.5px] font-medium text-white/55 hover:text-white">Retirer l’accès réservé</button>}
+      {a ? <button type="button" onClick={() => { vibrer(6); maj({ acces: null }); }} className="self-start text-[13.5px] font-medium text-white/55 hover:text-white">Retirer l’accès réservé</button>
+        : <p className="text-[13px] leading-snug text-white/55">Sans code ni places, le lien reste ouvert à tous.</p>}
     </Repli>
   );
 }

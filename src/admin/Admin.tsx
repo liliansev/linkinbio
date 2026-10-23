@@ -88,7 +88,8 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
   const [demandeDesign, setDemandeDesign] = useState<Tiroir | null>(null);
   // « Programmer ce bloc », au retour de Creem : le bloc s'ouvre sur la règle que l'offre vient de débloquer.
   const [regleOuverte, setRegleOuverte] = useState<{ bloc: string; regle: 'moment' | 'acces' } | null>(null);
-  const [edition, setEdition] = useState<{ bloc: Bloc; nouveau: boolean; enBas?: boolean } | null>(null);
+  // `choisi` : un bloc neuf pris dans la liste avec une adresse déjà tapée, qui reste ce qu'on a choisi.
+  const [edition, setEdition] = useState<{ bloc: Bloc; nouveau: boolean; enBas?: boolean; choisi?: boolean } | null>(null);
   // Un bloc ouvert depuis Intégrations (« Produit », « Ma liste d'inscrits »…) : refermé, par sa croix, Annuler, Enregistrer ou le retour
   // du téléphone, on revient à Intégrations, sur la sous-page d'où l'on venait (22 octobre 2026, Lilian : la croix ramenait à Ma page).
   const depuisIntegrations = useRef<{ bloc: string; outil: string | null } | null>(null);
@@ -117,8 +118,9 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
   const [apercu, setApercu] = useState(false);
   // Le retour du téléphone ferme l'aperçu plein écran, comme son bouton.
   useCouche(apercu, () => { setApercu(false); return true; });
-  // Au téléphone, la flèche d'un bloc neuf ramène au choix du bloc : Ma page rouvre sa liste (en bas si le bloc venait du bas).
-  const [demandeAjout, setDemandeAjout] = useState<{ enBas: boolean } | null>(null);
+  // Au téléphone, la flèche d'un bloc neuf ramène au choix du bloc : Ma page rouvre sa liste (en bas si le bloc venait du bas),
+  // avec ce qui était tapé (`brouillon`).
+  const [demandeAjout, setDemandeAjout] = useState<{ enBas: boolean; brouillon?: Bloc } | null>(null);
   // L'endroit de l'en-tête du bureau où l'onglet ouvert pose son geste (voir `ActionEntete`).
   const [emplacement, setEmplacement] = useState<HTMLDivElement | null>(null);
   // Une sous-page ouverte (Réglages, puis Les offres) : l'en-tête montre son fil, qui ramène en arrière (voir `SousPage`).
@@ -200,7 +202,9 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
   const versOffres = useRef<(() => void) | undefined>(undefined);
   versOffres.current = peutAcheter ? () => ouvrirOffres('programmation') : undefined;
   const refusProgrammation = () => ({ texte: REFUS_PROGRAMMATION, long: true, ...(versOffres.current ? { action: 'Voir les offres', annuler: () => { setToast(null); versOffres.current?.(); } } : {}) });
-  useEffect(() => { if (!toast) setToastTenu(false); }, [toast]);
+  // Un nouveau message part à son heure : la tenue du précédent ne le retient pas (Annuler, mis au point par le code, disparaît
+  // avec le toast sans qu'on le quitte). Déclaré avant l'effet qui met « Annuler » au point : celui-ci a le dernier mot.
+  useEffect(() => { setToastTenu(false); }, [toast]);
   // Après un retrait, le bloc qui avait le focus n'existe plus : le focus va à « Annuler » plutôt qu'au vide.
   const actionToast = useRef<HTMLButtonElement>(null);
   useEffect(() => { if (toast?.annuler && (document.activeElement === document.body || !document.activeElement)) actionToast.current?.focus({ preventScroll: true }); }, [toast]);
@@ -228,8 +232,6 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
     return () => { document.removeEventListener('keydown', touche); document.body.style.overflow = corps; avant?.focus({ preventScroll: true }); };
   }, [apercu]);
   useEffect(() => { if (!toast || toastTenu) return; const t = setTimeout(() => setToast(null), toast.long ? 8000 : toast.annuler ? 5000 : 2600); return () => clearTimeout(t); }, [toast, toastTenu]);
-  // Annuler, mis au point par le code, disparaît avec le toast : sans ce rappel, le toast suivant ne partirait plus.
-  useEffect(() => { setToastTenu(false); }, [toast]);
   useEffect(() => () => clearTimeout(minuteur.current), []);
 
   /*
@@ -340,9 +342,9 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
     if (!libererEdition()) return;
     setEdition({ bloc: blocsRef.current.find(b => b.id === bloc.id) ?? bloc, nouveau: false });
   }
-  function ajouterBloc(bloc: Bloc, enBas?: boolean) {
+  function ajouterBloc(bloc: Bloc, enBas?: boolean, choisi?: boolean) {
     if (!libererEdition()) return;
-    setEdition({ bloc, nouveau: true, enBas });
+    setEdition({ bloc, nouveau: true, enBas, choisi });
   }
   // Au téléphone, la feuille du bloc couvre le bas de l'écran : le bloc ouvert remonte juste sous l'en-tête, au-dessus d'elle (voir `EditeurBloc`).
   const idOuvert = edition && !edition.nouveau ? edition.bloc.id : null;
@@ -377,7 +379,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
   function enregistrerBloc(bloc: Bloc, options: OptionsEnregistrement = {}) {
     const avant = blocsRef.current;
     const nouveau = !avant.some(b => b.id === bloc.id);
-    const enBas = nouveau && !!edition?.enBas;
+    const enBas = nouveau && (options.enBas ?? !!edition?.enBas);
     const liste = nouveau ? (enBas ? [...avant, bloc] : [bloc, ...avant]) : avant.map(b => (b.id === bloc.id ? bloc : b));
     poserListe(liste);
     setEdition(e => (e && e.bloc.id === bloc.id ? (options.garder ? { bloc, nouveau: false } : null) : e));
@@ -398,6 +400,18 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
         poserListe(blocsRef.current.map(b => (b.id === ancien.id ? ancien : b))); setToast({ texte: 'Changements annulés', genre: 'info' }); ecrire(() => api.enregistrerBloc(ancien));
       } });
     }
+  }
+
+  /** Au bureau, une rangée changée puis repliée : le message le dit, et Annuler remet le bloc tel qu'il était à son ouverture. */
+  function replier(avant: Bloc) {
+    // Retiré entre-temps, il a son propre message.
+    if (!blocsRef.current.some(b => b.id === avant.id)) return;
+    setToast({ texte: 'Modifications enregistrées', annuler: () => {
+      if (!blocsRef.current.some(b => b.id === avant.id)) return;
+      poserListe(blocsRef.current.map(b => (b.id === avant.id ? avant : b)));
+      setToast({ texte: 'Changements annulés', genre: 'info' });
+      ecrire(() => api.enregistrerBloc(avant));
+    } });
   }
 
   /** L'œil d'une rangée, au bureau : montrer ou masquer le bloc sans l'ouvrir. */
@@ -514,7 +528,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
   if (!cguAJour) return <AccepterCgu accepter={async () => { await api.accepterCgu(); setCguAJour(true); }} deconnexion={deconnexion} />;
 
   const bulle = toast && (
-    <div role="status" onPointerEnter={() => setToastTenu(true)} onPointerLeave={() => setToastTenu(false)} onFocus={() => setToastTenu(true)} onBlur={e => { if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setToastTenu(false); }} className={`adm-toast fixed inset-x-4 ${onglet === 'page' && !premiersPas ? 'bottom-[calc(134px+env(safe-area-inset-bottom))]' : 'bottom-[calc(76px+env(safe-area-inset-bottom))]'} z-[60] mx-auto flex max-w-sm items-center justify-between gap-3 rounded-2xl bg-white px-4 py-3 text-[14.5px] font-medium text-nuit shadow-2xl lg:bottom-6`}>
+    <div role="status" onPointerEnter={() => setToastTenu(true)} onPointerLeave={() => setToastTenu(false)} onFocus={e => { if (e.target.matches(':focus-visible')) setToastTenu(true); }} onBlur={e => { if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setToastTenu(false); }} className={`adm-toast fixed inset-x-4 ${onglet === 'page' && !premiersPas ? 'bottom-[calc(134px+env(safe-area-inset-bottom))]' : 'bottom-[calc(76px+env(safe-area-inset-bottom))]'} z-[60] mx-auto flex max-w-sm items-center justify-between gap-3 rounded-2xl bg-white px-4 py-3 text-[14.5px] font-medium text-nuit shadow-2xl lg:bottom-6`}>
       <span className="flex items-center gap-2">{/* La coche confirme ; une simple information n'en a pas. */}{!toast.annuler && toast.genre !== 'info' && sauvegarde !== 'erreur' && <span aria-hidden="true" className="text-citron"><Icone nom="ui-ok" taille={18} /></span>}{toast.texte}</span>
       {toast.annuler && <button ref={actionToast} type="button" onClick={toast.annuler} className="-my-2 min-h-11 rounded-lg px-3 font-semibold text-nuit underline decoration-nuit/30 underline-offset-4 hover:bg-nuit/10">{toast.action ?? 'Annuler'}</button>}
     </div>
@@ -543,7 +557,8 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
     <RegleAOuvrir.Provider value={regleOuverte?.bloc === edition.bloc.id ? regleOuverte.regle : null}>
     <EditeurBloc key={edition.bloc.id} bureau={grand} garde={garde} onBrouillon={setBrouillon}
       adressePage={urlPage(compte)} principal={compte.principal} bloc={edition.bloc} reglages={reglages} nouveau={edition.nouveau} clics={clics[edition.bloc.id] ?? 0} prises={initial.places?.[edition.bloc.id] ?? 0} onFermer={() => setEdition(null)}
-      onRetour={edition.nouveau && !grand && depuisIntegrations.current?.bloc !== edition.bloc.id ? () => { setEdition(null); setDemandeAjout({ enBas: !!edition.enBas }); } : undefined}
+      onRetour={edition.nouveau && !grand && depuisIntegrations.current?.bloc !== edition.bloc.id ? b => { setEdition(null); setDemandeAjout({ enBas: !!edition.enBas, brouillon: b ?? undefined }); } : undefined}
+      onReplier={replier} suitAdresse={!edition.choisi}
       onEnregistrer={enregistrerBloc} onSupprimer={supprimer} onDupliquer={dupliquer} onDeplacer={deplacer} place={{ rang: blocs.findIndex(b => b.id === edition.bloc.id), total: blocs.length }} envoyerImage={d => api.envoyerImage(d)} apercuSite={(u, i) => api.apercuSite(u, i)} />
     </RegleAOuvrir.Provider>
   );
@@ -652,7 +667,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
           {onglet === 'page' && <MaPage compte={compte} reglages={reglages} blocs={blocsAffiches} clics={clics} visiteurs={page} grand={grand}
             choisi={idOuvert} editeur={grand ? editeur : null} neuf={edition?.nouveau ? { bloc: brouillon?.id === edition.bloc.id ? brouillon : edition.bloc, enBas: !!edition.enBas } : null}
             onReglages={changerReglages} onOrdonner={l => ordonner(l)}
-            onOuvrir={ouvrirBloc} onAjouter={ajouterBloc} liberer={libererEdition} fermerEdition={fermerEdition} gestes={{ basculer, dupliquer, supprimer }}
+            onOuvrir={ouvrirBloc} onAjouter={ajouterBloc} onPoser={(b, enBas) => enregistrerBloc(b, { enBas })} liberer={libererEdition} fermerEdition={fermerEdition} gestes={{ basculer, dupliquer, supprimer }}
             envoyerImage={d => api.envoyerImage(d)} annoncer={t => setToast(t)}
             demarrage={demarrage} demarrageOuvert={demarrageOuvert} fermerDemarrage={() => setDemarrageOuvert(false)} demandeDesign={demandeDesign} designOuvert={() => setDemandeDesign(null)}
             demandeAjout={demandeAjout} ajoutOuvert={() => setDemandeAjout(null)}
