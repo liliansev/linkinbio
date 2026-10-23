@@ -10,7 +10,7 @@ import { apiDemo, apiGratuit, apiNouveau, blocsVitrine, pageDemo, recommencerNou
 
 /* L'aperçu navigable : le vrai back office et la vraie page, sans serveur. */
 function Demo() {
-  const lireVue = () => (/^#(page|vitrine)/.test(location.hash) ? 'page' : location.hash === '#nouveau' ? 'nouveau' : location.hash === '#gratuit' ? 'gratuit' : 'admin');
+  const lireVue = () => (/^#(page|vitrine|mention)/.test(location.hash) ? 'page' : location.hash === '#nouveau' ? 'nouveau' : location.hash === '#gratuit' ? 'gratuit' : 'admin');
   const [vue, setVue] = useState(lireVue);
   // Passer de `#page=klein` à `#page=riso` ne change pas de vue : l'adresse elle-même redessine la page.
   const [hash, setHash] = useState(() => location.hash);
@@ -31,15 +31,20 @@ function Demo() {
     if (hash.startsWith('#vitrine')) {
       return <PageLiens key={hash} page={{ reglages: { ...p.reglages, bureau }, blocs: blocsVitrine(), compte: p.compte }} apercu />;
     }
+    // `#mention=klein` : une page courte (deux liens) d'un compte Gratuit, pour la planche du pied de page : la mention Hopla et les liens légaux.
+    const mention = hash.startsWith('#mention');
+    const liens = p.blocs.filter(b => b.type === 'lien' && estEnLigne(b));
     return (
       <>
-        <PageLiens page={{ reglages: { ...p.reglages, bureau }, blocs: p.blocs.filter(b => estEnLigne(b)), compte: p.compte }} apercu />
+        {mention
+          ? <PageLiens key={hash} page={{ reglages: { ...p.reglages, bureau }, blocs: [liens[0], liens[1]].filter(Boolean), compte: { pseudo: 'camille', principal: false, plan: 'gratuit' } }} apercu />
+          : <PageLiens page={{ reglages: { ...p.reglages, bureau }, blocs: p.blocs.filter(b => estEnLigne(b)), compte: p.compte }} apercu />}
         <div className="fixed left-1/2 top-4 z-50 hidden -translate-x-1/2 gap-1 rounded-xl border border-black/10 bg-white/90 p-1 font-sans text-[13px] font-semibold text-[#0a0a0a] shadow-lg backdrop-blur lg:flex" role="radiogroup" aria-label="Mise en page sur ordinateur">
           {([['colonne', 'Colonne'], ['profil', 'Profil'], ['onepage', 'One page']] as const).map(([id, nom]) => (
             <button key={id} type="button" role="radio" aria-checked={bureau === id} onClick={() => choisirBureau(id)} className={`rounded-lg px-4 py-2 ${bureau === id ? 'bg-[#0a0a0a] text-white' : 'hover:bg-black/5'}`}>{nom}</button>
           ))}
         </div>
-        <a href="#" className="fixed bottom-5 left-1/2 z-50 -translate-x-1/2 whitespace-nowrap rounded-xl bg-[#0a0a0a] px-5 py-3 font-sans text-[14px] font-semibold text-white shadow-lg">← Retour au back office</a>
+        {!mention && <a href="#" className="fixed bottom-5 left-1/2 z-50 -translate-x-1/2 whitespace-nowrap rounded-xl bg-[#0a0a0a] px-5 py-3 font-sans text-[14px] font-semibold text-white shadow-lg">← Retour au back office</a>}
       </>
     );
   }

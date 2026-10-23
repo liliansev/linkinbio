@@ -11,7 +11,8 @@ const tu = {
   j: 'j', h: 'h', ouTrouver: 'Le code est donné en story, en live ou dans la newsletter.',
   rien: 'Rien ici pour l’instant.',
   partager: 'Partager cette page', copie: 'Lien copié', reseaux: 'Réseaux', verifie: 'Compte vérifié',
-  confidentialite: 'Confidentialité', signaler: 'Signaler', hopla: 'Une page faite avec Hopla',
+  // Le pied : « Crée ta page avec Hopla », le nom en gras (`PageLiens`).
+  confidentialite: 'Confidentialité', signaler: 'Signaler', signalerPage: 'Signaler cette page', creeAvec: 'Crée ta page avec',
   bientot: 'Bientôt', ouvert: 'C’est ouvert', ouvreLe: (quand: string) => `Ouvre le ${quand}`,
   prenom: 'Prénom', prenomAria: 'Ton prénom', email: 'ton@email.fr', emailAria: 'Ton adresse e-mail', inscrire: 'Je m’inscris',
   mention: 'Ton adresse sert seulement à recevoir ces e-mails. Désinscription en un clic, quand tu veux.',
@@ -35,7 +36,7 @@ const vous: Textes = {
   prenomAria: 'Votre prénom', email: 'votre@email.fr', emailAria: 'Votre adresse e-mail', inscrire: 'Je m’inscris',
   mention: 'Votre adresse sert seulement à recevoir ces e-mails. Désinscription en un clic, quand vous voulez.',
   tropDEssais: 'Trop d’essais. Réessayez dans quelques minutes.', echec: 'Ça n’est pas passé. Réessayez.',
-  garde: 'Votre place est gardée.', reserver: 'Réserver ma place',
+  garde: 'Votre place est gardée.', reserver: 'Réserver ma place', creeAvec: 'Créez votre page avec',
 };
 
 export const textes = (vouvoiement = false): Textes => (vouvoiement ? vous : tu);

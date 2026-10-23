@@ -285,6 +285,33 @@ export const douxSurCarte = (theme: Theme) => {
   while (part > 0 && contraste(meler(theme.surfaceTexte, theme.surface, part), theme.surface) < 4.5) part -= 0.03;
   return meler(theme.surfaceTexte, theme.surface, Math.max(0, part));
 };
+/**
+ * Les fonds que le pied peut avoir derrière lui : le fond uni et chaque teinte du dégradé (la lueur d'une page courte),
+ * ces mêmes teintes sous le panneau de la mise en page Colonne (le texte à 4 %, `page.css`), et la lave de son décor
+ * (sa bulle la plus vive, l'accent mêlé de #ff2d55, passe sous le pied d'une page courte).
+ */
+export function fondsDuPied(theme: Theme): string[] {
+  const teintes = [theme.fondUni, ...(theme.fond.match(/#[0-9a-f]{6}/gi) ?? [])];
+  const fonds = [...teintes, ...teintes.map(f => meler(f, theme.texte, 0.04))];
+  if (theme.decor === 'lave') fonds.push(meler(theme.fondUni, meler(theme.vedette, '#ff2d55', 0.55), 0.5));
+  return fonds;
+}
+/** `couleur` poussée vers le texte juste assez pour se lire en petit (4,5) sur chaque fond du pied, avec la part de texte qu'il y a fallu. */
+function lisibleAuPied(theme: Theme, couleur: string): [string, number] {
+  const fonds = fondsDuPied(theme);
+  for (let part = 0; part < 1; part += 0.05) {
+    const c = meler(couleur, theme.texte, part);
+    if (fonds.every(f => contraste(c, f) >= 4.5)) return [c, part];
+  }
+  return [theme.texte, 1];
+}
+/**
+ * La mention « Crée ta page avec Hopla », au pied de la page (23 octobre 2026, Lilian : un peu en avant, à la
+ * couleur du thème) : l'accent, foncé ou éclairci vers le texte juste assez pour se lire ; le texte, s'il fallait l'y noyer.
+ */
+export const mentionPied = (theme: Theme) => { const [c, part] = lisibleAuPied(theme, theme.vedette); return part > 0.6 ? theme.texte : c; };
+/** Les liens légaux du pied (Confidentialité, Signaler), en petit : le texte doux, lisible au bas de la page. */
+export const legalPied = (theme: Theme) => lisibleAuPied(theme, theme.doux)[0];
 /** Le texte qui se lit sur `fond` : le premier proposé qui passe 4,5, sinon le blanc ou le presque noir. */
 const lisibleSur = (fond: string, ...choix: string[]) =>
   choix.find(c => contraste(c, fond) >= 4.5) ?? (contraste('#ffffff', fond) >= contraste('#111111', fond) ? '#ffffff' : '#111111');
@@ -333,7 +360,7 @@ export function variablesTheme(theme: Theme): Record<string, string> {
   return {
     '--fond': theme.fond, '--fond-uni': theme.fondUni, '--texte': theme.texte, '--doux': theme.doux, '--titre-section': titreSection(theme),
     '--surface': theme.surface, '--surface-texte': theme.surfaceTexte, '--vedette': theme.vedette, '--vedette-texte': theme.vedetteTexte,
-    '--picto-carte': pictoCarte(theme), '--surface-doux': douxSurCarte(theme),
+    '--picto-carte': pictoCarte(theme), '--surface-doux': douxSurCarte(theme), '--mention-hopla': mentionPied(theme), '--pied-legal': legalPied(theme),
     '--police': POLICES[theme.police].corps, '--police-titre': POLICES[theme.police].titre, '--ombre-teinte': theme.ombre,
     // La typographie réglée du thème : la page la lit sur le nom, les sections, les boutons et les cartes.
     ...role('nom', theme.typo.nom), ...role('section', theme.typo.section), ...role('btn', theme.typo.bouton), ...role('carte', theme.typo.carte),

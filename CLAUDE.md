@@ -142,6 +142,10 @@ embarque tout : l'image n'a pas de `node_modules`.
   PayPal.Me, un bouton pour Ko-fi, Tipeee, Lydia…), `Reservation` (l'agenda dans une feuille, `FeuilleAgenda`,
   quand il se laisse intégrer), et pour un lien partenaire (`partenariat` sur un lien ou un produit), `Mention`
   et `CodePromo`, copié d'un geste. Hopla n'encaisse et ne réserve rien : chaque bloc mène au site qui le fait.
+  Le pied (23 octobre 2026, demandé par Lilian, d'après Linktree) : « Crée ta page avec Hopla » (comptes Gratuit) à
+  l'accent du thème (`--mention-hopla`, `mentionPied` le pousse vers le texte juste assez pour se lire), puis loin
+  dessous, au bas de l'écran sur une page courte, Confidentialité · Signaler en petit (`--pied-legal`) : chaque lien
+  a sa cible de 44 px et aucune ne touche l'autre.
 - `accueil/` : l'accueil de hopla.page (`routes/index.tsx`, styles dans `styles/accueil.css` et, pour la
   version « des visages » du 21 octobre 2026, `styles/accueil-profils.css` sous `.hl-humain`), en bleu, vert
   citron et papiers crème, autour de six profils imaginés (portraits générés, provenance en `.webp.json`) ;
@@ -156,7 +160,8 @@ embarque tout : l'image n'a pas de `node_modules`.
   `llms.txt` (routes `robots[.]txt.ts`…) ; le back office ne s'indexe pas.
 - `demo/` : aperçu statique avec une API simulée, publié en Artifact ; `#nouveau` y
   rejoue l'arrivée d'un nouvel inscrit, `#page=<thème>` montre la page dans un thème, `#vitrine=<thème>`
-  la vitrine d'exemple (produits, liens partenaires, réservations, soutiens).
+  la vitrine d'exemple (produits, liens partenaires, réservations, soutiens), `#mention=<thème>` une page courte d'un
+  compte Gratuit, pour la planche du pied.
 
 ## Règles
 
