@@ -154,6 +154,11 @@ embarque tout : l'image n'a pas de `node_modules`.
   que Hopla branche. Au bureau, un bloc neuf s'ajoute aussi de Cmd ou Ctrl + Entrée ; la rangée ouverte garde son
   en-tête collé en haut tant qu'on la fait défiler, un filet dessous tant qu'il colle ; la replier après un
   changement dit « Modifications enregistrées », dont Annuler rend le bloc tel qu'il était à l'ouverture.
+  Un bloc neuf commencé se garde sur l'appareil à chaque frappe (23 octobre 2026, `hopla-bloc-commence:<pseudo>`) et
+  s'efface quand il est ajouté, annulé, rendu à la liste par sa flèche ou laissé vide : une page rechargée ou refermée le
+  rouvre une fois sur Ma page, à sa place, « Repris là où tu l'avais laissé » (`relireBlocCommence` dans
+  `lib/editionBloc.ts`, une semaine au plus). Rouvert ainsi, ou par la même adresse recollée, il est `repris` : déjà
+  commencé (fermer l'ajoute), il garde son type et son adresse ne se relit pas.
   Une adresse collée dans un bloc neuf prend le bloc qui lui va (23 octobre 2026, demandé par Lilian : « que ça détecte
   automatiquement de quoi il s'agit ») : une vidéo, un agenda, une fiche de boutique (et une page qui déclare un prix) ;
   « En faire un simple lien », sous l'adresse, la rend à un lien. Le site se lit tout seul, et une autre adresse le relit

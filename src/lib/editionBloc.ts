@@ -1,5 +1,5 @@
 import type { Bloc, TypeBloc } from './types.ts';
-import { TYPES_VITRINE, idYoutube, nouveauBloc } from './types.ts';
+import { TYPES_BLOC, TYPES_VITRINE, idYoutube, nouveauBloc } from './types.ts';
 import { adresse, adresseSaisie, montants, pourquoiPasAdresse } from './valider.ts';
 import { nomSite } from './demarrage.ts';
 
@@ -64,3 +64,37 @@ export function verifierBloc(b: Bloc): { bloc: Bloc; erreurs?: undefined } | { b
 
 /** Deux versions d'un bloc identiques : rien à enregistrer. */
 export const memeBloc = (a: Bloc | null | undefined, b: Bloc | null | undefined) => !!a && !!b && JSON.stringify(a) === JSON.stringify(b);
+
+/**
+ * Un bloc neuf commencé, gardé sur l'appareil (23 octobre 2026) : une page rechargée ou refermée le retrouve tel qu'on
+ * l'avait laissé. Rien ne part au serveur tant qu'il n'est pas ajouté ; une semaine au plus.
+ */
+export interface BlocCommence { bloc: Bloc; enBas: boolean; choisi: boolean; quand: number }
+export const cleBlocCommence = (pseudo: string) => `hopla-bloc-commence:${pseudo}`;
+export const GARDE_BLOC_COMMENCE = 7 * 24 * 3600 * 1000;
+
+/**
+ * Relit un bloc commencé : null s'il est trop vieux, abîmé, encore vide ou déjà sur la page (`ids`). Chaque champ reprend
+ * celui d'un bloc neuf quand le sien manque ou n'a pas la bonne forme : un brouillon d'une version d'avant ne casse rien.
+ */
+export function relireBlocCommence(texte: string | null, ids: readonly string[], maintenant = Date.now()): BlocCommence | null {
+  let d: unknown;
+  try { d = JSON.parse(texte ?? 'null'); } catch { return null; }
+  if (!d || typeof d !== 'object') return null;
+  const { bloc, enBas, choisi, quand } = d as Record<string, unknown>;
+  if (typeof quand !== 'number' || quand > maintenant + 60_000 || maintenant - quand > GARDE_BLOC_COMMENCE) return null;
+  if (!bloc || typeof bloc !== 'object') return null;
+  const brut = bloc as Record<string, unknown>;
+  const { id, type } = brut;
+  if (typeof id !== 'string' || !id || ids.includes(id) || !TYPES_BLOC.includes(type as TypeBloc)) return null;
+  const neuf = nouveauBloc(type as TypeBloc, id);
+  const repris: Record<string, unknown> = { ...neuf };
+  for (const [k, attendu] of Object.entries(neuf)) {
+    const v = brut[k];
+    const bonneForme = attendu === null ? v === null || (typeof v === 'object' && !Array.isArray(v))
+      : Array.isArray(attendu) ? Array.isArray(v) : typeof v === typeof attendu;
+    if (v !== undefined && bonneForme) repris[k] = v;
+  }
+  if (memeBloc(repris as unknown as Bloc, neuf)) return null;
+  return { bloc: repris as unknown as Bloc, enBas: enBas === true, choisi: choisi === true, quand };
+}

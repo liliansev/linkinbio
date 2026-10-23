@@ -103,7 +103,7 @@ export interface OptionsEnregistrement {
  * la page au-dessus, avec son « Terminé ». Dans les deux cas, le bloc se
  * redessine sur la page à chaque frappe (`onBrouillon`).
  */
-export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, onBrouillon, onFermer, onRetour, onReplier, suitAdresse = true, onEnregistrer, onSupprimer, onDupliquer, onDeplacer, place, envoyerImage, apercuSite, clics, prises = 0, principal = false }: {
+export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, onBrouillon, onFermer, onRetour, onReplier, suitAdresse = true, repris = false, onEnregistrer, onSupprimer, onDupliquer, onDeplacer, place, envoyerImage, apercuSite, clics, prises = 0, principal = false }: {
   bloc: Bloc;
   reglages: Reglages;
   nouveau: boolean;
@@ -123,6 +123,11 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
   onReplier?: (avant: Bloc) => void;
   /** Faux pour un bloc choisi dans la liste avec une adresse déjà tapée : il reste ce qu'on a choisi, l'adresse ne le change pas. */
   suitAdresse?: boolean;
+  /**
+   * Un bloc neuf qui reprend ce qui était tapé (retrouvé après un rechargement, ou la même adresse recollée) : il est déjà
+   * commencé (fermer l'ajoute, la flèche l'emporte), et son adresse ne se relit pas, pour ne rien changer de ce qu'on avait.
+   */
+  repris?: boolean;
   onEnregistrer: (bloc: Bloc, options?: OptionsEnregistrement) => void;
   onSupprimer: (bloc: Bloc) => void;
   onDupliquer: (bloc: Bloc) => void;
@@ -143,22 +148,24 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
   /**
    * Un bloc neuf suit son adresse (23 octobre 2026, demandé par Lilian) : une vidéo YouTube, un agenda, un soutien ou un
    * produit prennent leur bloc, jusqu'à « En faire un simple lien ». Un lien partenaire, ou un bloc choisi pour autre
-   * chose qu'une adresse collée (une prise de rendez-vous encore vide), reste ce qu'il est.
+   * chose qu'une adresse collée (une prise de rendez-vous encore vide), reste ce qu'il est. Un bloc repris aussi : un
+   * lien qu'on avait rendu simple lien ne redevient pas une vidéo.
    */
-  const [autoDepart] = useState(() => nouveau && suitAdresse && !bloc.partenariat && (bloc.type === 'lien' || typeDeAdresse(adresseSaisie(bloc.url), !!droits.vitrine) === bloc.type));
+  const [autoDepart] = useState(() => nouveau && suitAdresse && !bloc.partenariat
+    && ((bloc.type === 'lien' && !(repris && adresseSaisie(bloc.url))) || typeDeAdresse(adresseSaisie(bloc.url), !!droits.vitrine) === bloc.type));
   const auto = useRef(autoDepart);
   const [b, setB] = useState<Bloc>(() => {
     const url = adresseSaisie(bloc.url);
     const t = autoDepart && url ? typeDeAdresse(url, !!droits.vitrine) : bloc.type;
     return t === bloc.type ? bloc : versType(bloc, t, false);
   });
-  const lu = useRef<Lu>({ url: nouveau ? '' : adresseSaisie(bloc.url), inconnu: !nouveau, titre: '', image: '', description: '', prix: '', icone: '' });
+  const lu = useRef<Lu>({ url: nouveau && !repris ? '' : adresseSaisie(bloc.url), inconnu: !nouveau || repris, titre: '', image: '', description: '', prix: '', icone: '' });
   /** Ce qu'on a écrit ou choisi soi-même depuis l'ouverture : une autre adresse n'y touche pas. */
   const aMoi = useRef(new Set<ChampAMoi>());
   /** L'adresse a été effacée : celle qu'on retape remplace tout ce qui venait de l'ancienne. */
   const efface = useRef(false);
   /** La prochaine lecture part sans attendre : une adresse arrivée toute faite, ou « En faire un simple lien ». */
-  const immediat = useRef(nouveau && !!bloc.url);
+  const immediat = useRef(nouveau && !repris && !!bloc.url);
   /** D'où vient l'image : l'image de partage du site, son logo, une capture, une photo choisie ; null si on ne sait pas. */
   const genreImage = useRef<VisuelApercu | 'photo' | null>(null);
   // Une erreur dit sur quel champ elle porte : elle s'affiche dessous, et part dès qu'on y touche.
@@ -261,7 +268,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
   const fichier = useRef<HTMLInputElement>(null);
   const vignette = useRef<HTMLDivElement>(null);
   // Ce qui est écrit : la saisie telle qu'elle était au dernier enregistrement (ou à l'ouverture), et sa version enregistrée.
-  const brut = useRef<Bloc>(bloc);
+  const brut = useRef<Bloc>(repris ? nouveauBloc(bloc.type, bloc.id) : bloc);
   const enregistre = useRef<Bloc | null>(nouveau ? null : bloc);
   // Le bloc tel qu'il était en ouvrant l'éditeur : « Annuler mes changements » y revient.
   const depart = useRef<Bloc | null>(nouveau ? null : bloc);
