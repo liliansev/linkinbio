@@ -1,6 +1,6 @@
 import { createMiddleware, createServerFn } from '@tanstack/react-start';
 import { deleteCookie, getCookie, getRequestHeader, getRequestUrl, setCookie } from '@tanstack/react-start/server';
-import type { Bloc, CompteResume, EtatAdmin, FournisseurListe, ImageApercu, Liste, ListeFournisseur, Origines, PagePublique, Reglages, Reservation, SignalementResume, Stats } from '../lib/types.ts';
+import type { Bloc, CompteResume, EtatAdmin, FournisseurListe, ImageApercu, Liste, ListeFournisseur, Origines, PagePublique, Reglages, Reservation, Semaine, SignalementResume, Stats } from '../lib/types.ts';
 import { FOURNISSEURS_LISTE } from '../lib/types.ts';
 import * as liste from './liste.ts';
 import { requeteSortante } from './sortante.ts';
@@ -303,6 +303,14 @@ export const lireStats = createServerFn({ method: 'GET' })
     const periode = periodeLisible(compte, data);
     if (periode === null) throw new Error('Ces dates sont plus anciennes que ton historique.');
     return db.stats(context.compte, periode);
+  });
+
+/** Les vues de la semaine pour toutes les offres : un chiffre et son écart, rien de plus (le reste attend Starter). */
+export const lireSemaine = createServerFn({ method: 'GET' })
+  .middleware([session])
+  .handler(async ({ context }): Promise<Semaine> => {
+    const s = db.stats(context.compte, 7);
+    return { vues: s.vues, avant: s.precedent.vues, dejaVue: s.dejaVue };
   });
 
 /* ---- « Rejoins ma liste », et où partent ses inscrits (onglet Intégrations) ---- */

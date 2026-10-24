@@ -25,6 +25,7 @@ function PageAdmin() {
     apercuSite: (url, image = true) => fn.apercuSite({ data: { url, image } }),
     flux: (url, video) => fn.lireFlux({ data: { url, video } }),
     stats: periode => fn.lireStats({ data: periode }),
+    semaine: () => fn.lireSemaine(),
     deconnexion: async () => { await fn.deconnecter(); },
     accepterCgu: async () => { await fn.accepterCgu(); },
     supprimerMonCompte: confirmation => fn.supprimerMonCompte({ data: confirmation }),

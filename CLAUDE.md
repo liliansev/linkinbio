@@ -128,7 +128,8 @@ embarque tout : l'image n'a pas de `node_modules`.
   Dans Stats (22 octobre 2026, demandé par Lilian), la période se choisit d'un toucher sur un rail (7 j, 14 j, 30 j, 90 j,
   12 mois, selon l'historique de l'offre ; au-delà, un bouton verrouillé par offre, avec son badge, ouvre les offres) ou en
   dates : `ChoixPeriode.tsx`, un calendrier dans une feuille au téléphone (un mois, glissé ou fléché), dans une bulle au bureau
-  (deux mois). Le serveur borne toute période à l'historique de l'offre (`periodeLisible` dans `server/droits.ts`).
+  (deux mois). Le serveur borne toute période à l'historique de l'offre (`periodeLisible` dans `server/droits.ts`). Sans historique (Gratuit), l'onglet montre
+  les vues des 7 derniers jours et leur écart (`lireSemaine`, `VuesSemaine`, 24 octobre 2026, demandé par Lilian), le détail reste à Starter.
   `MaPage.tsx`, au bureau (direction A, 21 octobre 2026, choisie par Lilian) : l'édition
   à gauche, la page à droite. À gauche, deux onglets collés : Contenu (le profil, une
   adresse à coller, puis les blocs en rangées, déplacées par leur poignée avec dnd-kit,
