@@ -43,6 +43,10 @@ test('les pages sur hopla.page, le back office sur app.hopla.page', async t => {
   assert.equal((await brut(url, '/legal/cgu', adm)).location, 'https://hopla.page/legal/cgu');
   for (const path of ['/admin', '/admin/connexion', '/_serverFn/abc', '/api/export', '/media/x.webp']) assert.equal((await brut(url, path, adm)).status, 200, path);
   assert.equal((await brut(url, '/avatar.webp', adm)).body, 'image');
+  // Les noms courts renvoient vers hopla.page, chemin et requête gardés.
+  assert.deepEqual(await brut(url, '/camille?s=ig', { host: 'hpla.art' }), { status: 301, location: 'https://hopla.page/camille?s=ig', body: '' });
+  assert.equal((await brut(url, '/camille', { host: 'www.hpla.store' })).location, 'https://hopla.page/camille');
+  assert.equal((await brut(url, '/', { host: 'HPLA.EU' })).location, 'https://hopla.page');
   // Un autre nom (localhost en dev) : tout est servi tel quel.
   assert.equal((await brut(url, '/admin', { host: 'localhost:4400' })).body, 'app /admin - ');
 });

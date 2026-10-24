@@ -52,6 +52,17 @@ le reste : `/admin` sur hopla.page part vers app.hopla.page, les pages demandée
 mènent à leur équivalent (`/liens/` à `/lilian`). Le cookie de session n'a pas
 de `domain` : il reste sur app.hopla.page.
 
+Les noms courts `hpla.eu`, `hpla.art`, `hpla.pro` et `hpla.store` renvoient
+vers hopla.page en 301, chemin et requête gardés (`hpla.art/camille?s=ig` vers
+`hopla.page/camille?s=ig`). La redirection se fait chez Cloudflare, sans toucher
+au VPS : pour chaque nom, une zone, un enregistrement `A @ 192.0.2.1` et un
+`AAAA @ 100::` en orange (des adresses factices, la requête ne quitte jamais
+Cloudflare), la même chose pour `www`, et une règle de redirection (Rules ›
+Redirect Rules) : « Toutes les requêtes », dynamique,
+`concat("https://hopla.page", http.request.uri.path)`, 301, chaîne de requête
+gardée. `server.mjs` fait la même chose si une requête pour ces noms arrive
+jusqu'au conteneur.
+
 Dans `liliansevoumian.caddy`, l'ancienne route vers l'app est remplacée par une
 redirection, qui garde le chemin et la requête :
 

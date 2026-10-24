@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { CONTACT_LEGAL } from '../lib/legal.ts';
-import type { ComptePage, Reglages } from '../lib/types.ts';
-import { sansSchema, urlPage } from '../lib/types.ts';
+import type { ComptePage, DomaineCourt, Reglages } from '../lib/types.ts';
+import { DOMAINES_COURTS, adressePartage, sansSchema, urlPage } from '../lib/types.ts';
 import { adresseSaisie } from '../lib/valider.ts';
 import { redirectionActive } from '../lib/sorties.ts';
 import type { Abonnement as EtatAbonnement, Fonction, Plan } from '../lib/abonnement.ts';
@@ -12,6 +12,7 @@ import { Etiquette, usePermis } from './offre.tsx';
 import { telechargerQR } from './CodeQR.tsx';
 import { noterPartage } from './BienDemarrer.tsx';
 import { focusAuto } from '../lib/clavier';
+import { Icone } from '../components/Icone.tsx';
 
 /*
  * Réglages sur une seule page (direction B, 20 octobre 2026) : trois groupes,
@@ -35,9 +36,11 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
   /** Ouvre les offres sur « Repasser en Gratuit » : la résiliation se fait dans Hopla, pour la fin de la période payée. */
   onResilier?: () => void;
 }) {
+  // La page vit sur hopla.page ; on partage son nom court s'il en a choisi un.
   const adresse = urlPage(compte);
+  const partage = adressePartage(compte, reglages.domaine);
   const [sous, setSous] = useState<'abonnement' | null>(null);
-  const [fenetre, setFenetre] = useState<'apercu' | 'supprimer' | 'redirection' | null>(null);
+  const [fenetre, setFenetre] = useState<'apercu' | 'supprimer' | 'redirection' | 'domaine' | null>(null);
   const [portail, setPortail] = useState<'' | 'ouverture' | string>('');
   // Ce qui a ouvert la sous-page reprend le focus quand on en revient (la page se redessine : on le retrouve par son id).
   const ouvreur = useRef('');
@@ -82,11 +85,13 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
   return (
     <div className="adm-reglages">
       <Groupe titre="Page">
-        <Ligne nom="Adresse" valeur={<span translate="no">{sansSchema(adresse)}</span>}>
-          <BoutonCopier texte={adresse} label="Copier l’adresse de ta page" onCopie={noterPartage} />
+        <Ligne nom="Adresse" valeur={<span translate="no">{sansSchema(partage)}</span>}>
+          <BoutonCopier texte={partage} label="Copier l’adresse de ta page" onCopie={noterPartage} />
         </Ligne>
+        <LigneLien nom="Nom de domaine" valeur={<span translate="no">{reglages.domaine || sansSchema(adresse).split('/')[0]}</span>}
+          onClick={() => setFenetre('domaine')} label="Choisir le nom de domaine de mon adresse" />
         <Ligne nom="QR code">
-          <BoutonSecondaire onClick={() => { void telechargerQR(adresse, compte.pseudo); }} aria-label="Télécharger le QR code">Télécharger</BoutonSecondaire>
+          <BoutonSecondaire onClick={() => { void telechargerQR(partage, compte.pseudo); }} aria-label="Télécharger le QR code">Télécharger</BoutonSecondaire>
         </Ligne>
         {/* Coupée au bureau, la valeur se lit en entier au survol. */}
         {/* Une ligne à chevron, comme les autres ouvertures de Réglages (critique série 2 : un bouton bordé faisait exception). */}
@@ -187,6 +192,10 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
         </div>
       </Feuille>
 
+      <Feuille petite ouverte={fenetre === 'domaine'} onFermer={() => setFenetre(null)} titre="Nom de domaine">
+        {fermer => <ChoixDomaine compte={compte} valeur={reglages.domaine} choisir={d => { onChange({ ...reglages, domaine: d }); fermer(); }} />}
+      </Feuille>
+
       <Feuille petite ouverte={fenetre === 'redirection'} onFermer={() => setFenetre(null)} titre="Rediriger ma page">
         {fermer => <Redirection valeur={versAilleurs ? reglages.redirection : { url: '', fin: '' }} ici={adresse}
           poser={r => { onChange({ ...reglages, redirection: r }); fermer(); }} annuler={() => fermer()} />}
@@ -198,6 +207,31 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
             supprimerMonCompte={supprimerMonCompte} annuler={() => fermer()} />}
         </Feuille>
       )}
+    </div>
+  );
+}
+
+/**
+ * Le nom de l'adresse à partager (24 octobre 2026, demandé par Lilian) : hopla.page, ou un nom plus court. Toutes les
+ * adresses mènent à la même page, et les anciennes continuent de marcher : changer ne casse aucun lien déjà posé.
+ */
+function ChoixDomaine({ compte, valeur, choisir }: { compte: ComptePage; valeur: DomaineCourt | ''; choisir: (d: DomaineCourt | '') => void }) {
+  const choix: (DomaineCourt | '')[] = ['', ...DOMAINES_COURTS];
+  return (
+    <div className="flex flex-col gap-3">
+      <p className="text-[14px] leading-snug text-white/75">Toutes mènent à ta page. Tes liens déjà partagés continuent de marcher.</p>
+      <div role="radiogroup" aria-label="Nom de domaine" className="flex flex-col">
+        {choix.map(d => {
+          const pris = d === valeur;
+          return (
+            <button key={d || 'hopla'} type="button" role="radio" aria-checked={pris} onClick={() => choisir(d)}
+              className={`flex min-h-12 items-center justify-between gap-3 border-b border-white/10 text-left text-[15px] last:border-b-0 ${pris ? 'font-medium text-bleu' : 'text-white'}`}>
+              <span translate="no">{sansSchema(adressePartage(compte, d))}</span>
+              {pris && <Icone nom="ui-ok" taille={16} className="shrink-0" />}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }

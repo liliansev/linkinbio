@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, FormEvent, MouseEvent, ReactNode } from 'react';
 import type { Bloc, PagePublique } from '../lib/types.ts';
-import { ORIGINE_PUBLIQUE, animationDe, formatVedette, idYoutube, urlPage } from '../lib/types.ts';
+import { ORIGINE_PUBLIQUE, animationDe, formatVedette, adressePartage, idYoutube } from '../lib/types.ts';
 import type { Reglages } from '../lib/types.ts';
 import { themeDe, variablesTheme } from '../lib/themes.ts';
 import { ICONES } from '../lib/icones.ts';
@@ -137,7 +137,8 @@ export function PageLiens({ page, apercu = false, edition, liste }: {
   }
 
   async function partager() {
-    const url = apercu ? urlPage(compte) : location.href.split('?')[0];
+    // Le nom court que la personne a choisi, s'il en a un : c'est celui qu'elle partage elle-même.
+    const url = apercu || reglages.domaine ? adressePartage(compte, reglages.domaine) : location.href.split('?')[0];
     try {
       if (navigator.share) { await navigator.share({ title: reglages.seo.titre || reglages.profil.nom, url }); return; }
       await navigator.clipboard.writeText(url);

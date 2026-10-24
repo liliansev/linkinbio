@@ -41,6 +41,7 @@ export const REGLAGES_DEFAUT: Reglages = {
   redirection: { url: '', fin: '' },
   police: '',
   imageFond: '',
+  domaine: '',
 };
 
 export function blocsDefaut(id: () => string): Bloc[] {

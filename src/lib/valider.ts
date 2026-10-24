@@ -1,4 +1,4 @@
-import { ANIMATIONS, ANIMATIONS_BLOC, DISPOSITIONS, FORMATS_VEDETTE, FORMES_PHOTO, FORMES_BOUTON, GENRES_PREUVE, MAX_IMAGES, MAX_QUESTIONS, MAX_RESEAUX, MENTIONS_PARTENAIRE, OMBRES_BOUTON, MISES_EN_PAGE_BUREAU, RESEAUX, STYLES_BOUTON, TEINTES_VEDETTE, TYPES_BLOC } from './types.ts';
+import { ANIMATIONS, ANIMATIONS_BLOC, DISPOSITIONS, DOMAINES_COURTS, FORMATS_VEDETTE, FORMES_PHOTO, FORMES_BOUTON, GENRES_PREUVE, MAX_IMAGES, MAX_QUESTIONS, MAX_RESEAUX, MENTIONS_PARTENAIRE, OMBRES_BOUTON, MISES_EN_PAGE_BUREAU, RESEAUX, STYLES_BOUTON, TEINTES_VEDETTE, TYPES_BLOC } from './types.ts';
 import type { Acces, Bloc, Coordonnees, Partenariat, Preuve, Question, Reglages } from './types.ts';
 import { POLICES_CHOIX, idTheme } from './themes.ts';
 import { EFFETS_CRENEAU, fuseauValide } from './moments.ts';
@@ -226,6 +226,7 @@ export function validerReglages(v: unknown, base: Reglages): Reglages {
     police: parmi(o.police ?? base.police, POLICES_CHOIX, '' as const),
     // Une photo envoyée chez Hopla seulement : le fond ne fait rien charger d'un autre site au visiteur.
     imageFond: ((i: string) => (i.startsWith('/media/') ? i : ''))(image(o.imageFond ?? base.imageFond)),
+    domaine: parmi(o.domaine ?? base.domaine, DOMAINES_COURTS, '' as const),
   };
 }
 

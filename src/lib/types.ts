@@ -187,6 +187,8 @@ export interface Reglages {
   police: Police | '';
   /** Une photo à soi derrière la page, voilée de la couleur du fond ; vide, le fond du thème (Starter). */
   imageFond: string;
+  /** Le nom court de l'adresse à partager (`hpla.art/camille`), qui renvoie vers hopla.page ; vide, hopla.page. */
+  domaine: DomaineCourt | '';
 }
 
 export const FORMES_PHOTO = ['ronde', 'grande'] as const;
@@ -212,6 +214,15 @@ export interface Origines { page: string; admin: string }
 export const SITE_LILIAN = 'https://liliansevoumian.fr';
 export const cheminPage = (c: ComptePage) => `/${c.pseudo}`;
 export const urlPage = (c: ComptePage) => `${ORIGINE_PUBLIQUE}${cheminPage(c)}`;
+/**
+ * Les noms courts (24 octobre 2026, achetés par Lilian) : `hpla.art/camille` renvoie en 301 vers
+ * `hopla.page/camille`, chemin et requête gardés, pour toutes les pages. La page ne vit que sur hopla.page ;
+ * chacun choisit seulement l'adresse qu'il partage (`domaine` des réglages).
+ */
+export const DOMAINES_COURTS = ['hpla.eu', 'hpla.art', 'hpla.pro', 'hpla.store'] as const;
+export type DomaineCourt = (typeof DOMAINES_COURTS)[number];
+/** L'adresse que la personne partage : sur son nom court s'il en a choisi un, sinon celle de la page. */
+export const adressePartage = (c: ComptePage, domaine: DomaineCourt | '' = '') => (domaine ? `https://${domaine}${cheminPage(c)}` : urlPage(c));
 /** `https://hopla.page/camille` devient `hopla.page/camille`. */
 export const sansSchema = (url: string) => url.replace(/^https?:\/\//, '');
 
