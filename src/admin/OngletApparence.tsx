@@ -397,7 +397,8 @@ export function DesignTiroirs({ reglages, onChange, envoyerImage, principal, pie
               <Icone nom={l.icone} taille={20} className="shrink-0 text-white/70 bureau:hidden" />
               <span className="min-w-0 flex-1 truncate text-[14px] font-medium text-white bureau:font-normal">{l.nom}</span>
               <span className="min-w-0 max-w-[45%] truncate text-[13px] text-white/55">{l.valeur}</span>
-              <Icone nom="ui-chevron" taille={16} className="-rotate-90 text-white/30 bureau:text-white/55" />
+              {/* Au bureau, l'encre du chevron tombe au bord de l'interrupteur voisin (son dessin laisse 6 px de vide à droite). */}
+              <Icone nom="ui-chevron" taille={16} className="-rotate-90 text-white/30 bureau:-mr-1.5 bureau:text-white/55" />
             </button>
           </li>
         ))}

@@ -895,7 +895,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
     </div>
   );
   const animation = (b.type === 'lien' || b.type === 'produit' || b.type === 'reservation') && b.vedette && (
-    <Repli id="animation" depuis="apparence" key={`animation-${b.id}`} titre="Animation" icone="eclair" resume={resumeAnimation} regle={b.animation !== 'auto'} ouvert={false}>
+    <Repli id="animation" depuis="apparence" sous key={`animation-${b.id}`} titre="Animation" icone="eclair" resume={resumeAnimation} regle={b.animation !== 'auto'} ouvert={false}>
       {/* Une liste, pas une rangée de pastilles : le bloc sur la page joue l'animation choisie. */}
       <ListeChoix label="Animation" valeur={b.animation} onChange={a => maj({ animation: a })}
         options={ANIMATIONS_BLOC.map(a => a === 'auto'
@@ -1223,7 +1223,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
           {!plusVide && <>
             <LigneRepli titre="Plus de réglages" resume={plus ? '' : reglees} regle={!!reglees} ouvert={plus} controle={idPlus} onClick={() => setPlus(!plus)} />
             {plus && (
-              <div id={idPlus} className="adm-plus-contenu">
+              <div id={idPlus} className="adm-plus-contenu [&>div>div>label>span]:text-white/70">
                 {bascules(true, true).length > 0 && <div className="flex flex-col">{bascules(true, true)}</div>}
                 {acces}
               </div>

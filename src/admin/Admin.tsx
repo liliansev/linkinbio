@@ -741,6 +741,8 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
   return (
     <FournisseurOffre value={offre}>
     <div className="adm adm-shell min-h-dvh font-sans text-white antialiased" data-onglet={onglet} data-sous={fil ? '' : undefined}>
+      {/* Au clavier, le premier arrêt passe la navigation et l'en-tête : il mène droit au contenu de l'onglet (critique série 2). */}
+      <a href="#contenu-admin" className={`${classeBouton.principal} sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-[70]`}>Aller au contenu</a>
       {/* Au bureau, une barre latérale fine : la marque, les sections, et le compte en bas, qui s'ouvre sur « Me déconnecter ». */}
       <aside className="adm-sidebar fixed inset-y-0 left-0 z-30 hidden w-[216px] flex-col lg:flex" aria-label="Navigation">
         <Marque petite surBleu className="h-14 shrink-0 px-2" />
@@ -830,7 +832,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
       <PoserFil.Provider value={setFil}>
       {/* Au bureau, la colonne de l'onglet, sous celle de l'en-tête : 1120 px, 680 pour Réglages et Intégrations, 1300 pour Ma page (l'édition et la page côte à côte). */}
       <div className="mx-auto max-w-[1120px] px-4 lg:max-w-none lg:px-0">
-        <main id="contenu-admin" className={`adm-colonne mx-auto w-full pb-28 ${onglet === 'page' ? 'pt-4 lg:p-0' : onglet === 'comptes' ? 'pt-6 lg:pb-12 lg:pt-0' : 'pt-6 lg:pb-12 lg:pt-7'}`}>
+        <main id="contenu-admin" tabIndex={-1} className={`outline-none adm-colonne mx-auto w-full pb-28 ${onglet === 'page' ? 'pt-4 lg:p-0' : onglet === 'comptes' ? 'pt-6 lg:pb-12 lg:pt-0' : 'pt-6 lg:pb-12 lg:pt-7'}`}>
           <div key={onglet} className="adm-onglet">
           {/* Au téléphone, le titre de l'écran ouvre le contenu (Ma page n'affiche pas le sien : l'en-tête et la barre du bas disent déjà où l'on est,
               il reste pour les lecteurs d'écran). Au bureau, il est dans l'en-tête. */}

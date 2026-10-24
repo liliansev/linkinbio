@@ -5,7 +5,7 @@
 :root { --adm-sortie: cubic-bezier(0.16, 1, 0.3, 1); }
 /* Une feuille qui fige le défilement ne fait pas sauter la page : la place de la barre reste réservée. Dans l'app seulement :
    les écrans d'entrée (bleus, sans défilement) n'ont pas de bande blanche au bord droit (24 octobre 2026). */
-html:has(.adm-shell) { scrollbar-gutter: stable; }
+html:has(.adm-shell:not(.adm-entree)) { scrollbar-gutter: stable; }
 
 /*
  * L'encre et le papier (19 octobre 2026). Les classes écrites pour l'ancien
@@ -129,7 +129,7 @@ html:has(.adm-shell) { scrollbar-gutter: stable; }
  */
 @media (max-width: 1023px) { .adm:has(> .adm-premiers-scene) { background: var(--adm-creme); } }
 /* La scène prend la hauteur de sa miniature, sur la même médiane que les questions : pas de crème vide au-dessus ni dessous. */
-@media (min-width: 1024px) { .adm-premiers-scene { margin: 0 24px 24px 0; border-radius: 28px; background: var(--adm-creme); } }
+@media (min-width: 1024px) { .adm-premiers-scene { margin: 24px 24px 24px 0; border-radius: 28px; background: var(--adm-creme); } }
 
 /* Une feuille ouverte occupe le bas de l'écran : le message passe en haut, sans couvrir ce qu'on touche. */
 body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); bottom: auto; }
@@ -195,8 +195,6 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
   }
   .adm-shell:is([data-onglet='reglages'], [data-onglet='integrations']) { --adm-colonne: 680px; }
   .adm-shell[data-onglet='page'] { --adm-colonne: 1300px; }
-  /* La page vue sur un ordinateur prend la place que l'écran offre, jusqu'à sa vraie taille (24 octobre 2026). */
-  .adm-shell[data-onglet='page']:has(.adm-ordi-lieu) { --adm-colonne: 2160px; }
   /* La fiche d'un compte se lit en lignes, comme Réglages : la même colonne. */
   .adm-shell[data-onglet='comptes'][data-sous] { --adm-colonne: 680px; }
   .adm-travail { padding-left: 216px; }
@@ -350,7 +348,6 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
   .adm-editor-tools { display: none; }
   .adm-studio-bureau { display: grid; grid-template-columns: minmax(0, 1fr) var(--adm-apercu); gap: var(--adm-entre); min-height: calc(100dvh - 57px); }
   /* Sur un ordinateur, l'édition garde 760 px et la page prend le reste. */
-  .adm-studio-bureau:has(.adm-ordi-lieu) { grid-template-columns: minmax(0, 1fr) max(var(--adm-apercu), 100% - 760px - var(--adm-entre)); }
   .adm-edition { min-width: 0; padding-bottom: 96px; }
   .adm-edition-col { container: edition / inline-size; padding-top: 16px; }
   .adm-demarrage { margin-bottom: 12px; }
@@ -453,8 +450,8 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
   .adm-rangee-geste[aria-expanded='true'] { color: var(--adm-bleu); }
   /* Les réglages s'alignent sur le picto du bloc, sous son nom. */
   .adm-rangee-reglages { padding: 2px 16px 16px 40px; }
-  /* Une colonne étroite (1024 px) : l'adresse s'efface, « Mis en avant » devient un picto d'état, le nom garde la place. */
-  @container edition (max-width: 479px) {
+  /* Une colonne étroite (jusqu'à 1280 px) : l'adresse s'efface, « Mis en avant » devient un picto d'état, le nom garde la place. */
+  @container edition (max-width: 559px) {
     .adm-rangee-sous { display: none; }
     /* Le picto seul, sans l'étiquette citron derrière lui. */
     .adm-rangee-marque { padding: 0; background: none; }
@@ -474,7 +471,7 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
   .adm-paire { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px 16px; }
   @container edition (min-width: 560px) { .adm-paire { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
   /* Ce que « Plus de réglages » ouvre, en retrait sous son nom, comme Visibilité. */
-  .adm-plus-contenu { display: flex; flex-direction: column; gap: 14px; padding: 4px 0 12px 16px; }
+  .adm-plus-contenu { display: flex; flex-direction: column; padding: 4px 0 12px 24px; }
   .adm-editeur-pied { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; }
 
   /* La page, à droite : collée sous l'en-tête, avec le choix de la largeur au-dessus. */
@@ -482,12 +479,11 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
   .adm-apercu-cote { min-width: 0; }
   /* La carte prend la taille de ce qu'elle montre : le téléphone grandit avec l'écran, la carte avec lui, sans crème vide dessous. */
   .adm-apercu-colle { position: sticky; top: 73px; display: flex; max-height: calc(100dvh - 57px - 32px); flex-direction: column; align-items: center; gap: 14px; margin: 16px 0; padding: 16px 24px 20px; border-radius: 20px; background: var(--adm-creme); }
-  /* Téléphone ou ordinateur : deux icônes seules, sans cadre autour ni fond derrière ; la vue prise en bleu, soulignée comme un onglet. */
+  /* Téléphone ou ordinateur : une icône et son mot, sans cadre autour ni fond derrière ; la vue prise en bleu, soulignée comme un onglet. */
   .adm-vues { display: flex; flex: none; gap: 4px; }
   .adm-outil { display: inline-flex; height: 30px; align-items: center; gap: 6px; padding: 0 10px; color: #0a0a0a; font-size: 13.5px; font-weight: 500; transition: color 150ms, box-shadow 200ms var(--adm-sortie); }
   .adm-outil:hover { color: var(--adm-bleu); }
   .adm-outil:is([aria-pressed='true'], [aria-checked='true']) { color: var(--adm-bleu); box-shadow: inset 0 -2px 0 var(--adm-bleu); }
-  .adm-outil-carre { width: 32px; justify-content: center; padding: 0; color: #6b6b66; }
   /* Le téléphone : 390 px d'écran dans un bord de 9, réduit d'un bloc (voir `Telephone`) ; son écran défile seul. */
   .adm-tel-lieu { display: flex; width: 100%; flex: none; justify-content: center; }
   .adm-tel-cadre { flex: none; }
@@ -495,7 +491,10 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
   /* L'écran prend la couleur du cadre : le bord arrondi de la page s'y fond, sans liseré clair. */
   .adm-tel-ecran { width: 390px; height: 100%; overflow-y: auto; overscroll-behavior: contain; border-radius: 45px; background: #141414; scrollbar-width: none; }
   .adm-tel-ecran::-webkit-scrollbar { display: none; }
-  .adm-ordi-boite { display: flex; width: 100%; min-height: 0; flex: 0 1 auto; flex-direction: column; overflow-y: auto; scrollbar-width: none; }
+  /* Sur un ordinateur, la page couvre l'espace de travail, sous l'en-tête et à droite de la barre latérale, sur le crème de l'aperçu ;
+     elle défile seule, et se réduit seulement quand l'écran est plus étroit qu'elle. */
+  .adm-ordi-calque { position: fixed; top: 57px; right: 0; bottom: 0; left: 216px; z-index: 25; display: flex; flex-direction: column; align-items: center; gap: 16px; overflow-y: auto; overscroll-behavior: contain; padding: 16px var(--adm-bord) 40px; background: var(--adm-creme); }
+  .adm-ordi-calque .adm-ordi-lieu { width: 100%; }
 }
 /* Une tablette en paysage a la mise en page du bureau, avec des cibles pour le doigt. */
 @media (min-width: 1024px) and (pointer: coarse) {
@@ -601,7 +600,6 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
 /* Comme sur l'accueil : l'offre qui débloque ce qu'on venait chercher en blanc sur le bleu, la sienne sur le bleu pâle,
  * et ce que fait gagner l'annuel dans l'étiquette citron. */
 .adm-offres-badge[data-fort] { background: var(--adm-bleu); color: #fff; }
-.adm-offres-badge[data-actuelle] { background: var(--adm-bleu-pale); color: var(--adm-bleu); }
 .adm-offres-badge[data-gain] { background: var(--adm-citron); color: var(--adm-citron-encre); font-weight: 600; }
 /* Mensuel ou Annuel : un segment, le choix sur du papier blanc, en bleu. */
 .adm-offres-periodes { display: grid; height: 44px; grid-template-columns: 1fr 1.45fr; gap: 2px; padding: 3px; border-radius: 10px; background: #f3f3f1; }
@@ -988,6 +986,10 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
 .adm-tableau th { height: 36px; padding: 0 12px 0 0; border-bottom: 1px solid #ececea; color: #5f5f5a; font-size: 12px; font-weight: 500; text-align: left; }
 .adm-tableau td { height: 48px; padding: 0 12px 0 0; border-bottom: 1px solid #efefec; }
 .adm-tableau .adm-nombre { padding-right: 24px; text-align: right; font-variant-numeric: tabular-nums; }
+/* Le « … » d'une ligne au bord droit de la colonne, là où s'alignent la recherche et « Inviter » (critique série 2). */
+.adm-tableau td:last-child { padding-right: 0; }
+/* Son dessin tombe au bord (le picto laisse 7 px de vide dans son bouton). */
+.adm-tableau td:last-child .adm-points { margin-right: -7px; margin-left: auto; }
 .adm-tableau .adm-gris { overflow: hidden; color: #5f5f5a; text-overflow: ellipsis; white-space: nowrap; }
 .adm-tableau tbody tr { transition: background-color 120ms; }
 .adm-tableau tbody tr:hover { background: #fafaf9; }

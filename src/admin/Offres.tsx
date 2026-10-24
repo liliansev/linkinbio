@@ -32,8 +32,8 @@ const reduit = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 /** Ce que la carte d'une offre propose : un bouton, ou un simple état (l'offre en cours, bientôt). */
 type Geste = { bouton: true; texte: string; plan: Plan } | { bouton: false; texte: string };
-/** L'étiquette d'une carte : `fort`, l'offre qui débloque la fonction d'où l'on vient (en bleu) ; `actuelle`, la sienne (bleu pâle). */
-type Badge = { texte: string; fort?: boolean; actuelle?: boolean };
+/** L'étiquette d'une carte : `fort`, l'offre qui débloque la fonction d'où l'on vient (en bleu). */
+type Badge = { texte: string; fort?: boolean };
 
 interface ProprietesOffres {
   onFermer: () => void;
@@ -102,10 +102,9 @@ export function FenetreOffres({ onFermer, abonnement, enVente, pour, vers, apres
     if (p === payee) return { bouton: true, texte: periode === 'an' ? 'Passer à l’annuel' : 'Passer au mensuel', plan: p };
     return { bouton: true, texte: `Passer en ${OFFRES[p].nom}`, plan: p };
   }
-  const badge = (p: Plan): Badge | null =>
-    p === actuelle ? { texte: 'Ton offre', actuelle: true }
-      : pour && p === FONCTIONS[pour] ? { texte: FONCTIONS_EN_MOTS[pour].pour, fort: true }
-        : p !== 'gratuit' && !OFFRES[p].enVente ? { texte: 'Bientôt' } : null;
+  // Une seule étiquette, celle de l'offre qui débloque la fonction d'où l'on vient : « Ton offre » et « Bientôt » redisaient
+  // le bouton (« Ton offre actuelle », « Bientôt disponible »), retirés le 24 octobre 2026 (critique série 2).
+  const badge = (p: Plan): Badge | null => (pour && p === FONCTIONS[pour] ? { texte: FONCTIONS_EN_MOTS[pour].pour, fort: true } : null);
   const offert = offerteVue ? `${OFFRES[offerteVue.plan].nom} t’est offert${offerteVue.jusqu ? ` jusqu’au ${dateLongue(offerteVue.jusqu)}` : ''}` : '';
   const note = resilie && abonnement.finPeriode
     ? `Ton offre ${OFFRES[payee].nom} s’arrête le ${dateLongue(abonnement.finPeriode)}${offert ? `, et ${offert}.` : ' : tu pourras en prendre une autre ensuite.'}`
@@ -225,7 +224,7 @@ function CarteOffre({ id, plan, periode, badge, mis, pour, geste, onChoisir, pan
     <section id={id} role={panneau ? 'tabpanel' : undefined} aria-labelledby={`${id}-nom`} className="adm-offre" data-mis={mis || undefined}>
       <div className="adm-offre-tete">
         <h3 id={`${id}-nom`} className="adm-offre-nom">{o.nom}</h3>
-        {badge && <span className="adm-offres-badge" data-fort={badge.fort || undefined} data-actuelle={badge.actuelle || undefined}>{badge.texte}</span>}
+        {badge && <span className="adm-offres-badge" data-fort={badge.fort || undefined}>{badge.texte}</span>}
       </div>
       <Tarif plan={plan} periode={periode} />
       {geste && (geste.bouton

@@ -27,7 +27,7 @@ const depuisLocal = (v: string) => (v ? new Date(v).toISOString() : '');
 /**
  * Au bureau, dans la rangée dépliée d'un bloc, chaque règle tient sur une
  * ligne : son nom à gauche, ce qui est réglé à droite comme une valeur qu'on
- * ouvre (« Toujours », « Tous les réseaux »). Ailleurs, le groupe bordé avec
+ * ouvre, rien tant que rien n'est réglé. Ailleurs, le groupe bordé avec
  * son picto.
  */
 export const RangeesCompactes = createContext(false);
@@ -58,7 +58,7 @@ export const PagesBloc = createContext<{ page: 'plus' | PageRegle | null; ouvrir
  * `depuis` est la page où se pose sa ligne : « Plus de réglages », ou l'apparence d'un bloc mis en avant. `regle` : le résumé
  * dit une règle posée, il s'écrit en bleu, comme sur la première page du bloc.
  */
-export function Repli({ id, depuis = 'plus', titre, icone, resume, regle = false, ouvert: depart, etiquette, montrer = false, children }: { id?: PageRegle; depuis?: 'plus' | PageRegle; titre: string; icone?: string; resume?: string; regle?: boolean; ouvert: boolean; etiquette?: ReactNode; montrer?: boolean; children: ReactNode }) {
+export function Repli({ id, depuis = 'plus', titre, icone, resume, regle = false, ouvert: depart, etiquette, montrer = false, sous = false, children }: { id?: PageRegle; depuis?: 'plus' | PageRegle; titre: string; icone?: string; resume?: string; regle?: boolean; ouvert: boolean; etiquette?: ReactNode; montrer?: boolean; sous?: boolean; children: ReactNode }) {
   const [seul, setSeul] = useState(depart);
   const compact = useContext(RangeesCompactes);
   const pages = useContext(PagesBloc);
@@ -97,9 +97,9 @@ export function Repli({ id, depuis = 'plus', titre, icone, resume, regle = false
   }
   if (compact) return (
     <div ref={racine}>
-      <LigneRepli titre={titre} etiquette={etiquette} resume={resume} regle={regle} ouvert={ouvert} onClick={() => setOuvert(!ouvert)} />
+      <LigneRepli sous={sous} titre={titre} etiquette={etiquette} resume={resume} regle={regle} ouvert={ouvert} onClick={() => setOuvert(!ouvert)} />
       {/* Ce que la ligne ouvre, en retrait sous son nom : on voit où finit la visibilité et où reprend « Mis en avant ». */}
-      {ouvert && <div className="flex flex-col gap-3 pb-3 pl-4 pt-1.5">{children}</div>}
+      {ouvert && <div className="flex flex-col gap-3 pb-3 pl-6 pt-1.5">{children}</div>}
     </div>
   );
   return (
@@ -122,11 +122,11 @@ export function Repli({ id, depuis = 'plus', titre, icone, resume, regle = false
  * avant » et « Plus de réglages », son nom à gauche, ce qui est réglé au gris (en bleu quand une règle est posée) et un
  * chevron au bord droit, là où se pose l'interrupteur de la ligne voisine. Ni cadre ni bouton dans la ligne.
  */
-export function LigneRepli({ titre, etiquette, resume, regle = false, ouvert, onClick, controle }: { titre: string; etiquette?: ReactNode; resume?: string; regle?: boolean; ouvert: boolean; onClick: () => void; controle?: string }) {
+export function LigneRepli({ titre, etiquette, resume, regle = false, ouvert, onClick, controle, sous = false }: { titre: string; etiquette?: ReactNode; resume?: string; regle?: boolean; ouvert: boolean; onClick: () => void; controle?: string; sous?: boolean }) {
   return (
     <button type="button" onClick={() => { vibrer(4); onClick(); }} aria-expanded={ouvert} aria-controls={controle}
       className="group flex min-h-11 w-full items-center gap-2 text-left bureau:min-h-9">
-      <span className="min-w-0 shrink-0 text-[13.5px] text-white">{titre}</span>
+      <span className={`min-w-0 shrink-0 text-[13.5px] ${sous ? 'text-white/70' : 'text-white'}`}>{titre}</span>
       {etiquette}
       <span className={`ml-auto min-w-0 truncate text-right text-[13.5px] ${regle ? 'font-medium text-bleu' : 'text-white/55'}`}>{resume}</span>
       <Icone nom="ui-chevron" taille={14} className={`shrink-0 text-white/55 transition duration-300 group-hover:text-white ${ouvert ? 'rotate-180' : ''}`} />
@@ -178,11 +178,11 @@ export function resumeVisibilite(b: Bloc, heure: boolean): string {
  * Le sélecteur natif couvre la ligne, invisible : un toucher l'ouvre tout de suite, sans champ à viser. Sans l'offre, la
  * ligne mène aux offres (son badge est au titre de la partie) ; une date gardée d'une offre passée se retire toujours.
  */
-function LigneDate({ id, nom, vide, valeur, min, permis, invalide, onChange, retirer }: { id?: string; nom: string; vide: string; valeur: string; min?: string; permis: boolean; invalide?: boolean; onChange: (iso: string) => void; retirer: () => void }) {
+function LigneDate({ id, nom, vide, valeur, min, permis, invalide, onChange, retirer, nu = false }: { id?: string; nom: string; vide: string; valeur: string; min?: string; permis: boolean; invalide?: boolean; onChange: (iso: string) => void; retirer: () => void; nu?: boolean }) {
   const voir = useVoirOffres();
   return (
-    <div className="relative flex min-h-12 items-center gap-3 px-4 transition focus-within:bg-white/[0.05] hover:bg-white/[0.03] bureau:min-h-10 bureau:gap-2 bureau:px-3">
-      <span className="shrink-0 text-[14.5px] font-medium text-white bureau:text-[13.5px] bureau:font-normal">{nom}</span>
+    <div className={`relative flex min-h-12 items-center gap-3 transition bureau:min-h-10 bureau:gap-2 ${nu ? 'bureau:min-h-9' : 'px-4 focus-within:bg-white/[0.05] hover:bg-white/[0.03] bureau:px-3'}`}>
+      <span className={`shrink-0 text-[14.5px] font-medium bureau:text-[13.5px] bureau:font-normal ${nu ? 'text-white/70' : 'text-white'}`}>{nom}</span>
       <span className={`ml-auto min-w-0 truncate text-[14px] tabular-nums bureau:text-[13.5px] ${invalide ? 'text-red-300' : valeur ? 'font-medium text-bleu' : 'text-white/55'}`}>{valeur ? dateLigne(valeur) : vide}</span>
       {permis ? (
         <input id={id} type="datetime-local" aria-label={nom} aria-invalid={invalide || undefined} value={versLocal(valeur)} min={min}
@@ -237,14 +237,15 @@ export function ReglageVisibilite({ b, maj, erreur, reseaux }: { b: Bloc; maj: (
   const visible = <Interrupteur compact={compact} label="Visible sur ma page" actif={b.public} onChange={v => maj({ public: v })} />;
   const contenuDate = (
     <>
-      <div className="adm-groupe flex flex-col divide-y divide-white/[0.06]">
-        <LigneDate nom="Apparaît" vide="Maintenant" valeur={b.debut} permis={dates}
+      {/* Au bureau, dans la rangée, Apparaît et Disparaît sont deux lignes de plus, sans cadre : un cadre de plus dans un repli était un troisième niveau. */}
+      <div className={compact ? 'flex flex-col' : 'adm-groupe flex flex-col divide-y divide-white/[0.06]'}>
+        <LigneDate nom="Apparaît" vide="Maintenant" valeur={b.debut} permis={dates} nu={compact}
           onChange={debut => maj({ debut, ...(debut ? {} : { compteARebours: false }) })} retirer={() => maj({ debut: '', compteARebours: false })} />
-        <LigneDate id="bloc-fin" nom="Disparaît" vide="Jamais" valeur={b.fin} min={versLocal(b.debut) || undefined} permis={dates} invalide={!!erreur}
+        <LigneDate id="bloc-fin" nom="Disparaît" vide="Jamais" valeur={b.fin} min={versLocal(b.debut) || undefined} permis={dates} invalide={!!erreur} nu={compact}
           onChange={fin => maj({ fin })} retirer={() => maj({ fin: '' })} />
         {/* Un lien qui n'est pas encore là peut compter les jours jusqu'à son arrivée : la ligne suit sa date. */}
         {lancement && (
-          <div className="grid min-h-12 items-center px-4 bureau:min-h-10 bureau:px-3">
+          <div className={`grid min-h-12 items-center bureau:min-h-10 ${compact ? 'bureau:min-h-9' : 'px-4 bureau:px-3'}`}>
             <Interrupteur compact={compact} label="Compte à rebours" actif={b.compteARebours} onChange={v => maj({ compteARebours: v })} />
           </div>
         )}
@@ -296,17 +297,18 @@ export function ReglageVisibilite({ b, maj, erreur, reseaux }: { b: Bloc; maj: (
     const quand = datesCourtes(b.debut, b.fin);
     const ligne = (id: 'date' | 'heure' | 'reseau', titre: string, resume: string, regle: boolean, etiquette: ReactNode, contenu: ReactNode) => (
       <div key={id}>
-        <LigneRepli titre={titre} etiquette={etiquette} resume={resume} regle={regle} ouvert={partie === id} controle={`visibilite-${id}`}
+        <LigneRepli sous titre={titre} etiquette={etiquette} resume={resume} regle={regle} ouvert={partie === id} controle={`visibilite-${id}`}
           onClick={() => setPartie(partie === id ? null : id)} />
-        {partie === id && <div id={`visibilite-${id}`} className="pb-3 pt-1">{contenu}</div>}
+        {partie === id && <div id={`visibilite-${id}`} className="pb-3 pl-4 pt-1">{contenu}</div>}
       </div>
     );
     return (
-      <div className="flex flex-col">
+      // Une ligne n'écrit rien tant que rien n'est réglé, ce qui l'est se dit en bleu, comme « Plus de réglages » (critique série 2).
+      <div className="flex flex-col [&>div>label>span]:text-white/70">
         {visible}
-        {ligne('date', 'Selon la date', quand ? majuscule(quand) : 'Toujours', !!quand, !dates && <Etiquette fonction="programmation" />, contenuDate)}
-        {ligne('heure', 'Selon l’heure', semaine && c ? majuscule(decrireCreneau(c)) : 'Tout le temps', !!(semaine && c), !semaine && <Etiquette fonction="heure" />, contenuHeure)}
-        {ligne('reseau', 'Selon le réseau', resumeReseaux(b) || 'Tous les réseaux', !!resumeReseaux(b), null, contenuReseau)}
+        {ligne('date', 'Selon la date', quand ? majuscule(quand) : '', !!quand, !dates && <Etiquette fonction="programmation" />, contenuDate)}
+        {ligne('heure', 'Selon l’heure', semaine && c ? majuscule(decrireCreneau(c)) : '', !!(semaine && c), !semaine && <Etiquette fonction="heure" />, contenuHeure)}
+        {ligne('reseau', 'Selon le réseau', resumeReseaux(b), !!resumeReseaux(b), null, contenuReseau)}
       </div>
     );
   }
@@ -390,20 +392,21 @@ export function RegleAcces({ b, maj, prises }: { b: Bloc; maj: (c: Partial<Bloc>
   const a = b.acces;
   const permis = usePermis('drops');
   const aOuvrir = useContext(RegleAOuvrir) === 'acces';
+  const compact = useContext(RangeesCompactes);
   const majAcces = (champs: Partial<Acces>) => {
     const suite = { code: a?.code ?? '', places: a?.places ?? 0, ...champs };
     maj({ acces: suite.code || suite.places ? suite : null });
   };
   const resume = a ? [a.code ? `code « ${a.code} »` : '', a.places ? `${prises}/${a.places} places prises` : ''].filter(Boolean).join(', ') : '';
   if (!permis) return (
-    <Repli id="acces" titre="Accès réservé" icone="cadenas" etiquette={<Etiquette fonction="drops" />} resume={a ? 'Pas montré' : ''} ouvert={false}>
+    <Repli id="acces" sous titre="Accès réservé" icone="cadenas" etiquette={<Etiquette fonction="drops" />} resume={a ? 'Pas montré' : ''} ouvert={false}>
       <Reserve fonction="drops" phrase={a ? 'Sans Hopla Pro, ce lien réservé n’est pas montré : son adresse serait sinon à la vue de tous.' : 'Avec Hopla Pro, un lien ne s’ouvre qu’avec un code, ou pour les premiers arrivés.'}>
         {a && <button type="button" onClick={() => { vibrer(6); maj({ acces: null }); }} className="text-[13px] text-white/55 underline">Retirer l’accès réservé</button>}
       </Reserve>
     </Repli>
   );
   return (
-    <Repli id="acces" titre="Accès réservé" icone="cadenas" resume={resume || 'Ouvert à tous'} regle={!!a} ouvert={!!a || aOuvrir} montrer={aOuvrir}>
+    <Repli id="acces" sous titre="Accès réservé" icone="cadenas" resume={resume || (compact ? '' : 'Ouvert à tous')} regle={!!a} ouvert={!!a || aOuvrir} montrer={aOuvrir}>
       {/* Un code, des places, ou les deux : les champs se suffisent. Seul ce qui ne se devine pas se dit, le nombre de places
           prises tant qu'il y en a, et ce que fait l'accès quand rien n'est rempli. */}
       <Champ label="Code à taper" aide="Majuscules et espaces ne comptent pas.">

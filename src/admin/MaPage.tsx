@@ -149,6 +149,22 @@ export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, chois
   const [ajout, setAjout] = useState(false);
   // Au bureau, la page à droite, à la largeur d'un téléphone ou sur un ordinateur.
   const [largeur, setLargeur] = useState<'telephone' | 'ordinateur'>('telephone');
+  // La page sur un ordinateur s'ouvre par-dessus le travail : la bascule y prend la main, Échap revient au téléphone,
+  // et la main revient à la bascule de la carte.
+  const calque = useRef<HTMLDivElement>(null);
+  const ordiOuvert = useRef(false);
+  useEffect(() => {
+    if (largeur === 'telephone') {
+      if (ordiOuvert.current) document.querySelector<HTMLElement>('.adm-apercu-colle .adm-vues [aria-checked="true"]')?.focus({ preventScroll: true });
+      ordiOuvert.current = false;
+      return;
+    }
+    ordiOuvert.current = true;
+    calque.current?.querySelector<HTMLElement>('[aria-checked="true"]')?.focus({ preventScroll: true });
+    const touche = (e: KeyboardEvent) => { if (e.key === 'Escape' && !e.defaultPrevented && !document.querySelector('[role="dialog"]')) { e.preventDefault(); setLargeur('telephone'); } };
+    addEventListener('keydown', touche);
+    return () => removeEventListener('keydown', touche);
+  }, [largeur]);
   // Les réglages au moment où le design ou les réseaux s'ouvrent : « Annuler » y revient.
   const depart = useRef<Reglages | null>(null);
   const change = depart.current !== null && JSON.stringify(depart.current) !== JSON.stringify(reglages);
@@ -387,6 +403,16 @@ export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, chois
     const actifs = reglages.reseaux.filter(r => adresseSaisie(r.url));
     /** Contenu ou Design : quitter le design le referme (et dit ce qui a changé). Faux si quelque chose retient. */
     const choisirOnglet = (o: 'contenu' | 'design') => (o === 'design' ? ouvrirCote('design') : !enDesign || quitterCote());
+    // Téléphone ou ordinateur : la même bascule, sur la carte de l'aperçu et en haut de la page sur un ordinateur.
+    const vues = (
+      <div role="radiogroup" aria-label="Voir ma page" onKeyDown={e => flechesRadio(e)} className="adm-vues">
+        {(['telephone', 'ordinateur'] as const).map(l => (
+          <button key={l} type="button" role="radio" aria-checked={largeur === l} tabIndex={largeur === l ? 0 : -1} onClick={() => setLargeur(l)} className="adm-outil">
+            <Icone nom={l === 'telephone' ? 'mobile' : 'ordinateur'} taille={l === 'telephone' ? 15 : 16} />{l === 'telephone' ? 'Téléphone' : 'Ordinateur'}
+          </button>
+        ))}
+      </div>
+    );
     // Le bloc neuf se voit sur la page, à la place qu'il prendra. Il n'y est pas encore : un clic sur lui ramène à sa rangée.
     return (
       <div className="adm-studio adm-studio-bureau">
@@ -479,22 +505,22 @@ export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, chois
         {/* La page, collée à droite : elle suit chaque frappe ; un clic sur un bloc ouvre sa rangée. */}
         <aside className="adm-apercu-cote" aria-label="Aperçu de ta page">
           <div className="adm-apercu-colle">
-            <div role="radiogroup" aria-label="Voir ma page" onKeyDown={e => flechesRadio(e)} className="adm-vues">
-              {(['telephone', 'ordinateur'] as const).map(l => (
-                <button key={l} type="button" role="radio" aria-checked={largeur === l} tabIndex={largeur === l ? 0 : -1} onClick={() => setLargeur(l)}
-                  aria-label={l === 'telephone' ? 'Sur un téléphone' : 'Sur un ordinateur'} title={l === 'telephone' ? 'Sur un téléphone' : 'Sur un ordinateur'} className="adm-outil adm-outil-carre">
-                  <Icone nom={l === 'telephone' ? 'mobile' : 'ordinateur'} taille={l === 'telephone' ? 15 : 16} />
-                </button>
-              ))}
-            </div>
-            {largeur === 'ordinateur' ? <div className="adm-ordi-boite"><ApercuBureau page={visiteurs} /></div> : (
-              <Telephone ecran={ecran} choisi={choisi ?? neuf?.bloc.id ?? null}>
-                <PageLiens page={{ reglages: montree, blocs: avecNeuf, compte }}
-                  liste={(liste, rendu) => <BlocsApercu blocs={liste} rendu={rendu} choisi={choisi ?? neuf?.bloc.id ?? null} ouvrir={ouvrirDepuisApercu} />} />
-              </Telephone>
-            )}
+            {vues}
+            <Telephone ecran={ecran} choisi={choisi ?? neuf?.bloc.id ?? null}>
+              <PageLiens page={{ reglages: montree, blocs: avecNeuf, compte }}
+                liste={(liste, rendu) => <BlocsApercu blocs={liste} rendu={rendu} choisi={choisi ?? neuf?.bloc.id ?? null} ouvrir={ouvrirDepuisApercu} />} />
+            </Telephone>
           </div>
         </aside>
+
+        {/* Sur un ordinateur, la page s'ouvre par-dessus l'espace de travail, à sa vraie taille dès que l'écran la tient
+            (24 octobre 2026, critique série 2 : réduite à côté de l'édition, elle était illisible sur un portable, et la colonne sautait). */}
+        {largeur === 'ordinateur' && (
+          <div ref={calque} className="adm-ordi-calque" role="region" aria-label="Ta page sur un ordinateur">
+            {vues}
+            <ApercuBureau page={visiteurs} />
+          </div>
+        )}
 
         <input ref={fichier} type="file" accept="image/*" className="adm-fichier" tabIndex={-1} aria-hidden="true" onChange={e => photo(e.target.files?.[0])} />
       </div>
@@ -782,11 +808,13 @@ function Rangee({ bloc, droits, clics, neuf, ouvert, editeur, ouvrir, fermer, ge
           </button>
         ) : (
           <>
-            <button type="button" className="adm-rangee-geste" onClick={() => { vibrer(5); gestes.basculer(bloc); }}
+            {/* L'œil et « … » sont des raccourcis de la souris : au clavier, la rangée ouverte par son nom a les mêmes gestes
+                (Visibilité, Dupliquer, Retirer), et la liste ne coûte que deux arrêts par bloc (critique série 2). */}
+            <button type="button" tabIndex={-1} className="adm-rangee-geste" onClick={() => { vibrer(5); gestes.basculer(bloc); }}
               aria-label={bloc.public ? `Masquer ${nom}` : `Montrer ${nom}`} title={bloc.public ? 'Masquer de ma page' : 'Montrer sur ma page'}>
               <Icone nom={bloc.public ? 'ui-oeil' : 'ui-masque'} taille={15} />
             </button>
-            <Menu label={`Gestes : ${nom}`} titre={`Plus de gestes : ${nom}`} className="adm-rangee-geste" elements={[
+            <Menu label={`Gestes : ${nom}`} titre={`Plus de gestes : ${nom}`} className="adm-rangee-geste" tabIndex={-1} elements={[
               { nom: 'Modifier', icone: 'ui-crayon', action: () => ouvrir(bloc) },
               { nom: 'Dupliquer', icone: 'ui-copier', action: () => gestes.dupliquer(bloc) },
               { nom: 'Retirer de ma page', icone: 'ui-corbeille', danger: true, action: () => gestes.supprimer(bloc) },

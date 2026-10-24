@@ -109,7 +109,7 @@ export function LigneLien({ nom, valeur, avant, apres, onClick, label, disabled,
       {avant}{texte}{apres}
       {externe
         ? <Icone nom="ui-ouvrir" taille={15} className="shrink-0 text-[#55554f]" />
-        : <Icone nom="ui-chevron" taille={16} className="-rotate-90 shrink-0 text-[#55554f]" />}
+        : <Icone nom="ui-chevron" taille={16} className="-rotate-90 shrink-0 text-[#55554f] bureau:-mr-1.5" />}
     </button>
   );
 }
