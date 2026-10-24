@@ -10,7 +10,7 @@ import { apiDemo, apiGratuit, apiNouveau, blocsLinktree, blocsVitrine, pageDemo,
 
 /* L'aperçu navigable : le vrai back office et la vraie page, sans serveur. */
 function Demo() {
-  const lireVue = () => (/^#(page|vitrine|mention|blocs)/.test(location.hash) ? 'page' : location.hash === '#nouveau' ? 'nouveau' : location.hash.startsWith('#gratuit') ? 'gratuit' : 'admin');
+  const lireVue = () => (/^#(page|vitrine|mention|blocs|adultes)/.test(location.hash) ? 'page' : location.hash === '#nouveau' ? 'nouveau' : location.hash.startsWith('#gratuit') ? 'gratuit' : 'admin');
   const [vue, setVue] = useState(lireVue);
   // Passer de `#page=klein` à `#page=riso` ne change pas de vue : l'adresse elle-même redessine la page.
   const [hash, setHash] = useState(() => location.hash);
@@ -32,6 +32,10 @@ function Demo() {
       return <PageLiens key={hash} page={{ reglages: { ...p.reglages, bureau }, blocs: blocsVitrine(), compte: p.compte }} apercu />;
     }
     // `#blocs=klein` : les blocs venus de Linktree dans un thème.
+    // `#adultes=klein` : les mêmes, comme un visiteur les voit (un lien pour adultes demande confirmation).
+    if (hash.startsWith('#adultes')) {
+      return <PageLiens key={hash} page={{ reglages: { ...p.reglages, bureau }, blocs: blocsLinktree(), compte: p.compte }} />;
+    }
     if (hash.startsWith('#blocs')) {
       return <PageLiens key={hash} page={{ reglages: { ...p.reglages, bureau }, blocs: blocsLinktree(), compte: p.compte }} apercu />;
     }

@@ -106,6 +106,8 @@ export function base(): DatabaseSync {
   // Vu depuis le navigateur intégré d'une app (Instagram, TikTok…), et pour un clic, ouvert dans l'app visée.
   colonne(db, 'evenements', 'integre', 'INTEGER NOT NULL DEFAULT 0');
   colonne(db, 'evenements', 'app', 'INTEGER NOT NULL DEFAULT 0');
+  // Le pays du visiteur, lu chez Cloudflare (24 octobre 2026) ; vide avant, ou quand il ne le sait pas.
+  colonne(db, 'evenements', 'pays', "TEXT NOT NULL DEFAULT ''");
   db.exec(`
     CREATE UNIQUE INDEX IF NOT EXISTS comptes_email ON comptes (email);
     CREATE INDEX IF NOT EXISTS blocs_compte ON blocs (compte, position);
@@ -505,11 +507,11 @@ export function evenementsDuJour(maintenant = Date.now(), compte?: string): numb
   return (ligne as { n: number }).n;
 }
 
-export function ajouterEvenement(e: { compte: string; type: 'vue' | 'clic'; bloc: string | null; visiteur: string; source: string; appareil: string; ts?: number; integre?: boolean; app?: boolean }) {
+export function ajouterEvenement(e: { compte: string; type: 'vue' | 'clic'; bloc: string | null; visiteur: string; source: string; appareil: string; ts?: number; integre?: boolean; app?: boolean; pays?: string }) {
   const ts = e.ts ?? Date.now();
   if (Date.now() - derniere > 6 * 3_600_000) purger();
-  base().prepare('INSERT INTO evenements (compte, type, bloc, jour, ts, visiteur, source, appareil, integre, app) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
-    .run(e.compte, e.type, e.bloc, jourDe(ts), ts, e.visiteur, e.source, e.appareil, e.integre ? 1 : 0, e.app ? 1 : 0);
+  base().prepare('INSERT INTO evenements (compte, type, bloc, jour, ts, visiteur, source, appareil, integre, app, pays) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+    .run(e.compte, e.type, e.bloc, jourDe(ts), ts, e.visiteur, e.source, e.appareil, e.integre ? 1 : 0, e.app ? 1 : 0, e.pays ?? '');
 }
 
 export function clicsParBloc(compte: string, jours = 30): Record<string, number> {
@@ -543,6 +545,7 @@ export function stats(compte: string, periode: PeriodeStats, maintenant = Date.n
   const avantPar = (sql: string) => new Map((d.prepare(sql).all(compte, debutPrecedent, finPrecedent) as { cle: string; n: number }[]).map(l => [l.cle, l.n]));
   const clicsAvant = avantPar(`SELECT bloc AS cle, COUNT(*) AS n FROM evenements WHERE compte = ? AND type = 'clic' AND jour BETWEEN ? AND ? GROUP BY bloc`);
   const vuesAvant = avantPar(`SELECT source AS cle, COUNT(*) AS n FROM evenements WHERE compte = ? AND type = 'vue' AND jour BETWEEN ? AND ? GROUP BY source`);
+  const paysAvant = avantPar(`SELECT pays AS cle, COUNT(*) AS n FROM evenements WHERE compte = ? AND type = 'vue' AND jour BETWEEN ? AND ? GROUP BY pays`);
   const blocs = (d.prepare(`SELECT bloc, COUNT(*) AS n FROM evenements WHERE compte = ? AND type = 'clic' AND jour BETWEEN ? AND ? GROUP BY bloc ORDER BY n DESC LIMIT 20`).all(compte, debut, fin) as { bloc: string; n: number }[])
     .map(l => ({ id: l.bloc, titre: titres.get(l.bloc) ?? 'Bloc supprimé', clics: l.n, avant: clicsAvant.get(l.bloc) ?? 0 }));
   // Les clics venus du navigateur intégré d'une app : vers un lien qui a son app, et ouverts dedans.
@@ -563,6 +566,9 @@ export function stats(compte: string, periode: PeriodeStats, maintenant = Date.n
     vues: actuel.vues ?? 0, visiteurs: actuel.visiteurs ?? 0, clics: actuel.clics ?? 0,
     serie: jourListe.map(jour => ({ jour, vues: parJour.get(jour)?.vues ?? 0, visiteurs: parJour.get(jour)?.visiteurs ?? 0, clics: parJour.get(jour)?.clics ?? 0 })),
     blocs, sources: groupe('source'), appareils: groupe('appareil'), apps,
+    // Tous les pays de la période : la carte en montre huit, puis « Tout voir ».
+    pays: (d.prepare(`SELECT pays, COUNT(*) AS n FROM evenements WHERE compte = ? AND type = 'vue' AND jour BETWEEN ? AND ? GROUP BY pays ORDER BY n DESC LIMIT 60`).all(compte, debut, fin) as { pays: string; n: number }[])
+      .map(l => ({ code: l.pays, vues: l.n, avant: paysAvant.get(l.pays) ?? 0 })),
     precedent: { vues: avant.vues ?? 0, visiteurs: avant.visiteurs ?? 0, clics: avant.clics ?? 0 },
     dejaVue,
   };
@@ -624,7 +630,7 @@ export function exporter(compte: string) {
   if (!c) throw new Error('Compte inconnu.');
   const medias = (d.prepare('SELECT id, extension, octets, cree FROM medias WHERE compte = ? ORDER BY cree').all(compte) as { id: string; extension: string; octets: Uint8Array; cree: number }[])
     .map(m => ({ fichier: `${m.id}.${m.extension}`, cree: new Date(m.cree).toISOString(), donnees: `data:image/${m.extension === 'jpg' ? 'jpeg' : 'webp'};base64,${Buffer.from(m.octets).toString('base64')}` }));
-  const evenements = d.prepare('SELECT ts, type, bloc, source, appareil FROM evenements WHERE compte = ? ORDER BY ts').all(compte) as { ts: number; type: string; bloc: string | null; source: string; appareil: string }[];
+  const evenements = d.prepare('SELECT ts, type, bloc, source, appareil, pays FROM evenements WHERE compte = ? ORDER BY ts').all(compte) as { ts: number; type: string; bloc: string | null; source: string; appareil: string; pays: string }[];
   return {
     exporte: new Date().toISOString(),
     compte: {

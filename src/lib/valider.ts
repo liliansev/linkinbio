@@ -190,6 +190,7 @@ export function validerBloc(v: unknown, id: string): Bloc {
     images: type === 'galerie' ? images(o.images) : [],
     coordonnees: type === 'coordonnees' ? coordonnees(o.coordonnees) : null,
     adressePostale: type === 'lieu' || type === 'coordonnees' ? texte(o.adressePostale, 200) : '',
+    sensible: (type === 'lien' || type === 'produit') && bool(o.sensible, false),
   };
 }
 
@@ -217,7 +218,15 @@ export function validerReglages(v: unknown, base: Reglages): Reglages {
     bureau: parmi(o.bureau, MISES_EN_PAGE_BUREAU, base.bureau),
     vuesReseaux: provenances(o.vuesReseaux ?? base.vuesReseaux),
     animation: parmi(o.animation, ANIMATIONS, base.animation),
+    utm: bool(o.utm, base.utm ?? false),
+    redirection: redirection(o.redirection ?? base.redirection),
   };
+}
+
+/** La redirection de la page : un site en http(s) seulement, et sa fin s'il en a une. Sans adresse, pas de fin. */
+function redirection(v: any): Reglages['redirection'] {
+  const url = adresse(v?.url);
+  return /^https?:/.test(url) ? { url, fin: date(v?.fin) } : { url: '', fin: '' };
 }
 
 /** Les adresses déjà prises par l'application, ou qui prêteraient à confusion. */

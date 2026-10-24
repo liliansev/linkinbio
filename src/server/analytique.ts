@@ -9,7 +9,8 @@ import { MINUTE, cleIp, limiteur } from './limites.ts';
  * Les statistiques intégrées, sans cookie ni donnée personnelle : un visiteur
  * est une empreinte du jour (secret + date + IP + navigateur), illisible et
  * renouvelée chaque jour. Les robots sont écartés, et les visites du
- * propriétaire de la page, connecté, aussi.
+ * propriétaire de la page, connecté, aussi. Le pays vient de Cloudflare
+ * (`CF-IPCountry`, deux lettres) : l'adresse IP ne sert qu'à l'empreinte.
  */
 
 const ROBOTS = /bot|crawl|spider|slurp|preview|facebookexternalhit|embedly|whatsapp|telegram|discord|curl|wget|python|headless|lighthouse/i;
@@ -39,6 +40,12 @@ export function source(utm: string, referent: string, ua = ''): string {
   return hote.slice(0, 60) || 'Direct';
 }
 
+/** Le pays d'un visiteur tel que Cloudflare le transmet (`FR`) ; vide quand il ne le sait pas (`XX`) ou pour Tor (`T1`). */
+export function pays(code: unknown): string {
+  const c = typeof code === 'string' ? code.trim().toUpperCase() : '';
+  return /^[A-Z]{2}$/.test(c) && c !== 'XX' ? c : '';
+}
+
 export function appareil(ua: string): string {
   if (/iPad|Tablet/i.test(ua)) return 'Tablette';
   if (/Mobi|Android|iPhone/i.test(ua)) return 'Mobile';
@@ -57,7 +64,7 @@ function compteDePage(page: unknown): string | null {
   return compte && compte.statut === 'actif' ? compte.id : null;
 }
 
-export function enregistrer(entree: { page?: unknown; type: unknown; bloc: unknown; utm: unknown; referent: unknown; app?: unknown }, contexte: { ip: string; ua: string; session: string | null }, maintenant = Date.now()): boolean {
+export function enregistrer(entree: { page?: unknown; type: unknown; bloc: unknown; utm: unknown; referent: unknown; app?: unknown }, contexte: { ip: string; ua: string; session: string | null; pays?: string }, maintenant = Date.now()): boolean {
   if (!contexte.ua || ROBOTS.test(contexte.ua)) return false;
   const compte = compteDePage(entree.page);
   if (!compte || contexte.session === compte) return false;
@@ -75,7 +82,7 @@ export function enregistrer(entree: { page?: unknown; type: unknown; bloc: unkno
   ajouterEvenement({
     compte, type, bloc, visiteur, ts: maintenant, integre, app: integre && type === 'clic' && entree.app === true,
     source: source(typeof entree.utm === 'string' ? entree.utm : '', typeof entree.referent === 'string' ? entree.referent : '', contexte.ua),
-    appareil: appareil(contexte.ua),
+    appareil: appareil(contexte.ua), pays: pays(contexte.pays),
   });
   return true;
 }

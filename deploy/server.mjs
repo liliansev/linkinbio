@@ -54,7 +54,7 @@ async function readBody(req, limit) {
 export function createLiensServer({ appDir = appRoot, site = process.env.LIENS_SITE, cloudflare = process.env.LIENS_CLOUDFLARE } = {}) {
   const exclusif = cloudflare === 'exclusif';
   let appPromise;
-  async function liens(req, url, ip, send) {
+  async function liens(req, url, ip, send, parCloudflare = false) {
     const local = url.pathname;
     if (STATIQUE.test(local)) {
       const base = await realpath(resolve(appDir, 'client'));
@@ -72,8 +72,9 @@ export function createLiensServer({ appDir = appRoot, site = process.env.LIENS_S
     const app = (await appPromise).default;
     const headers = new Headers();
     for (const [key, value] of Object.entries(req.headers)) if (typeof value === 'string' && !key.startsWith(':')) headers.set(key, value);
-    // L'app ne lit que X-Real-IP, déjà démêlée ici.
+    // L'app ne lit que X-Real-IP, déjà démêlée ici ; et le pays, seulement quand c'est bien Cloudflare qui le dit.
     headers.delete('cf-connecting-ip');
+    if (!parCloudflare) headers.delete('cf-ipcountry');
     if (ip) headers.set('x-real-ip', ip); else headers.delete('x-real-ip');
     const host = /^[\w.-]+(:\d+)?$/.test(req.headers.host ?? '') ? req.headers.host : new URL(origin).host;
     const body = ['GET', 'HEAD'].includes(req.method) ? undefined : await readBody(req, 3_000_000);
@@ -133,7 +134,7 @@ export function createLiensServer({ appDir = appRoot, site = process.env.LIENS_S
       if (host === hostAdmin && chemin === '/') return send(302, '', { Location: '/admin', 'Cache-Control': 'no-store' });
       if (host === hostAdmin && !DU_BACK_OFFICE.test(chemin) && !STATIQUE.test(chemin)) return send(308, '', { Location: `${origin}${chemin}${url.search}` });
       if (DU_SITE.test(chemin)) return relaisSite(req, url, ip, send);
-      return liens(req, url, ip, send);
+      return liens(req, url, ip, send, parCloudflare);
     }
     handle().catch(error => { if (!res.headersSent) send(error instanceof HttpError ? error.status : 500, error instanceof HttpError ? error.message : 'Internal server error', { 'Cache-Control': 'no-store' }); else res.destroy(); if (!(error instanceof HttpError)) console.error(error); });
   });

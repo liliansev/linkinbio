@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { CONTACT_LEGAL } from '../lib/legal.ts';
 import type { ComptePage, Reglages } from '../lib/types.ts';
 import { sansSchema, urlPage } from '../lib/types.ts';
+import { adresseSaisie } from '../lib/valider.ts';
+import { redirectionActive } from '../lib/sorties.ts';
 import type { Abonnement as EtatAbonnement, Fonction, Plan } from '../lib/abonnement.ts';
 import { OFFRES, accesAbonnement, apresOffre, estPaye, estResilie, euros, offerteAuDessus } from '../lib/abonnement.ts';
 import { BoutonCopier, BoutonPrincipal, BoutonSecondaire, Champ, Feuille, Groupe, Interrupteur, Ligne, LigneBascule, LigneLien, SousPage, classeBouton, classeSaisie } from './ui.tsx';
@@ -35,7 +37,7 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
 }) {
   const adresse = urlPage(compte);
   const [sous, setSous] = useState<'abonnement' | null>(null);
-  const [fenetre, setFenetre] = useState<'apercu' | 'supprimer' | null>(null);
+  const [fenetre, setFenetre] = useState<'apercu' | 'supprimer' | 'redirection' | null>(null);
   const [portail, setPortail] = useState<'' | 'ouverture' | string>('');
   // Ce qui a ouvert la sous-page reprend le focus quand on en revient (la page se redessine : on le retrouve par son id).
   const ouvreur = useRef('');
@@ -49,6 +51,9 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
   const offres = !compte.principal && !!onOffres;
   // Le résumé du lundi fait partie des stats : sans elles, la ligne porte le nom de l'offre et mène aux offres.
   const stats = usePermis('stats');
+  const utm = usePermis('utm');
+  const rediriger = usePermis('redirection');
+  const versAilleurs = redirectionActive(reglages.redirection, Date.now(), adresse);
   const seo = (champs: Partial<Reglages['seo']>) => onChange({ ...reglages, seo: { ...reglages.seo, ...champs } });
 
   async function versPortail() {
@@ -88,6 +93,19 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
         </Ligne>
         <LigneBascule nom="Bouton Partager sur ma page" actif={reglages.partage} changer={v => onChange({ ...reglages, partage: v })} />
         <LigneBascule nom="Ouvrir YouTube, Spotify… dans leur app" actif={reglages.ouvrirApps} changer={v => onChange({ ...reglages, ouvrirApps: v })} />
+        {/* Starter : sans l'offre, pas d'interrupteur qui ne ferait rien, son nom et le chemin vers les offres. */}
+        {utm
+          ? <LigneBascule nom="Suivi UTM sur mes liens" actif={reglages.utm} changer={v => onChange({ ...reglages, utm: v })} />
+          : <LigneLien nom="Suivi UTM sur mes liens" apres={<Etiquette fonction="utm" />} onClick={offres ? () => onOffres?.('utm') : undefined}
+              label={offres ? 'Suivi UTM sur mes liens, avec Starter : voir les offres' : undefined} />}
+        {rediriger ? (
+          <Ligne nom="Redirection" valeur={versAilleurs ? <span className="font-medium text-bleu">{resumeRedirection(versAilleurs, reglages.redirection.fin, true)}</span> : 'Aucune'}>
+            <BoutonSecondaire onClick={() => setFenetre('redirection')} aria-haspopup="dialog" aria-label={versAilleurs ? 'Modifier la redirection' : 'Rediriger ma page'}>{versAilleurs ? 'Modifier' : 'Rediriger'}</BoutonSecondaire>
+          </Ligne>
+        ) : (
+          <LigneLien nom="Redirection" apres={<Etiquette fonction="redirection" />} onClick={offres ? () => onOffres?.('redirection') : undefined}
+            label={offres ? 'Redirection, avec Starter : voir les offres' : undefined} />
+        )}
       </Groupe>
 
       <Groupe titre="Compte">
@@ -168,6 +186,11 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
         </div>
       </Feuille>
 
+      <Feuille petite ouverte={fenetre === 'redirection'} onFermer={() => setFenetre(null)} titre="Rediriger ma page">
+        {fermer => <Redirection valeur={versAilleurs ? reglages.redirection : { url: '', fin: '' }} ici={adresse}
+          poser={r => { onChange({ ...reglages, redirection: r }); fermer(); }} annuler={() => fermer()} />}
+      </Feuille>
+
       {!compte.principal && (
         <Feuille petite ouverte={fenetre === 'supprimer'} onFermer={() => setFenetre(null)} titre="Supprimer mon compte">
           {fermer => <SupprimerCompte pseudo={compte.pseudo} abonnement={paye && estPaye(abonnement) ? { nom: OFFRES[abonnement.payee].nom, resilie, fin: abonnement.finPeriode } : null}
@@ -175,6 +198,58 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
         </Feuille>
       )}
     </div>
+  );
+}
+
+/** « Vers monsite.fr, jusqu’au 30 octobre » : où part la page, et jusqu'à quand ; `court`, le site seul, pour la ligne de Réglages. */
+export function resumeRedirection(url: string, fin: string, court = false) {
+  const site = (court ? new URL(url).hostname : sansSchema(url)).replace(/^www\./, '').replace(/\/$/, '');
+  return `Vers ${site}${fin ? `, jusqu’au ${new Date(fin).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}` : ''}`;
+}
+
+/** Une date ISO vers la valeur d'un `<input type="datetime-local">`, en heure locale. */
+const versLocal = (iso: string) => {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
+};
+
+/**
+ * Toute la page renvoie vers une adresse (Starter, rattrapé de Linktree le 24 octobre 2026) : un lancement, une sortie,
+ * une vidéo du jour. Jusqu'à une date, ou jusqu'à ce qu'on l'arrête. L'adresse de la page elle-même ferait tourner le
+ * visiteur en rond : refusée.
+ */
+function Redirection({ valeur, ici, poser, annuler }: { valeur: Reglages['redirection']; ici: string; poser: (r: Reglages['redirection']) => void; annuler: () => void }) {
+  const [url, setUrl] = useState(valeur.url);
+  const [fin, setFin] = useState(versLocal(valeur.fin));
+  const [erreur, setErreur] = useState('');
+  const [erreurFin, setErreurFin] = useState('');
+  function valider() {
+    const propre = adresseSaisie(url);
+    if (!/^https?:/.test(propre)) { setErreur('Cette adresse n’a pas l’air complète, par exemple monsite.fr/lancement'); return; }
+    if (!redirectionActive({ url: propre, fin: '' }, Date.now(), ici)) { setErreur('C’est l’adresse de ta page : choisis-en une autre.'); return; }
+    const iso = fin ? new Date(fin).toISOString() : '';
+    if (iso && Date.parse(iso) <= Date.now()) { setErreurFin('Cette date est déjà passée.'); return; }
+    poser({ url: propre, fin: iso });
+  }
+  return (
+    // `noValidate` : « monsite.fr » se tape sans https://, Hopla le complète ; le navigateur, lui, le refuserait.
+    <form noValidate onSubmit={e => { e.preventDefault(); valider(); }} className="flex flex-col gap-4 pb-1">
+      <p className="text-[14px] leading-snug text-white/75">Tes visiteurs partent tout de suite vers cette adresse, sans voir ta page.</p>
+      <Champ label="Adresse" erreur={erreur || undefined}>
+        <input className={classeSaisie} type="url" inputMode="url" autoCapitalize="none" autoCorrect="off" spellCheck={false} value={url} placeholder="monsite.fr/lancement"
+          onChange={e => { setUrl(e.target.value); setErreur(''); }} autoFocus={focusAuto()} />
+      </Champ>
+      <Champ label="Jusqu’au (facultatif)" erreur={erreurFin || undefined} aide={fin ? undefined : 'Vide : jusqu’à ce que tu l’arrêtes.'}>
+        <input className={classeSaisie} type="datetime-local" value={fin} min={versLocal(new Date().toISOString())} onChange={e => { setFin(e.target.value); setErreurFin(''); }} />
+      </Champ>
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        {valeur.url
+          ? <button type="button" onClick={() => poser({ url: '', fin: '' })} className={`${classeBouton.discret} mr-auto !text-red-300`}>Arrêter la redirection</button>
+          : <button type="button" onClick={annuler} className={classeBouton.discret}>Annuler</button>}
+        <button type="submit" disabled={!url.trim()} className={classeBouton.principal}>{valeur.url ? 'Enregistrer' : 'Rediriger'}</button>
+      </div>
+    </form>
   );
 }
 

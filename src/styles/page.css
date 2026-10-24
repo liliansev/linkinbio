@@ -491,6 +491,23 @@
 .lp-agenda-cadre iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; display: block; }
 .lp-agenda-attente { position: absolute; inset: 0; display: grid; place-items: center; margin: 0; font-size: 0.92rem; color: var(--doux); }
 
+/* ---- Un lien pour adultes ----
+ * La même feuille, basse : ce qu'il y a derrière le lien, puis les deux gestes. Le bouton à l'accent de la page ouvre le
+ * lien, « Revenir » referme la feuille.
+ */
+.lp-adultes .lp-sortie-feuille { gap: 8px; padding-top: 32px; }
+.lp-adultes-titre { margin: 0; font-size: 1.15rem; font-weight: 640; line-height: 1.3; text-wrap: balance; }
+.lp-adultes-texte { margin: 0; max-width: 32ch; color: var(--doux); line-height: 1.5; text-wrap: pretty; }
+.lp-adultes-gestes { display: flex; flex-direction: column; align-items: stretch; gap: 4px; width: 100%; max-width: 320px; margin-top: 16px; }
+.lp-adultes-gestes .lp-btn { min-height: 52px; }
+.lp-adultes-revenir {
+  min-height: 48px; border: 0; background: none; cursor: pointer; font: inherit; font-weight: 520; color: var(--texte);
+  text-decoration: underline; text-decoration-thickness: 1.5px; text-underline-offset: 4px;
+  text-decoration-color: color-mix(in srgb, var(--texte) 35%, transparent);
+}
+.lp-adultes-revenir:hover { text-decoration-color: currentColor; }
+.lp-adultes-revenir:focus-visible { outline: 3px solid var(--texte); outline-offset: 2px; border-radius: 6px; }
+
 /* Les échantillons du back office : la vraie page, en miniature. */
 .lp.lp-mini { min-height: 0; background-attachment: scroll; }
 /* Dans l'aperçu collé de l'éditeur, une carte avec image ne doit pas manger l'écran. */

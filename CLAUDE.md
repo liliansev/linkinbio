@@ -205,6 +205,13 @@ embarque tout : l'image n'a pas de `node_modules`.
   itinéraire et carte Google au toucher) et `formulaire` (« Me contacter », Starter : `/api/message`, `server/message.ts`, Turnstile,
   trois messages par IP en dix minutes, 50 par page et par jour, envoyé par Resend au propriétaire avec l'adresse du visiteur en
   réponse, rien n'est gardé). Vingt réseaux au plus (`MAX_RESEAUX`), WhatsApp par un numéro. Démo : `#blocs=<thème>`.
+- Le lot 2 venu de Linktree (24 octobre 2026) : le pays de chaque vue (colonne `pays` d'`evenements`, lu dans `CF-IPCountry`,
+  que `deploy/server.mjs` ne laisse passer que d'une adresse de Cloudflare ; `pays()` dans `server/analytique.ts`), la carte
+  « Pays » des stats ; `lib/sorties.ts` : `avecUtm` (Starter, `utm` dans les réglages : `utm_source=hopla` sur les liens et les
+  produits qui sortent de Hopla et n'ont pas déjà leurs UTM) et `redirectionActive` (Starter, `redirection` `{ url, fin }` : la page
+  renvoie en 302 depuis le loader de `$pseudo.tsx`, la vue est comptée par le serveur, jamais vers elle-même ; un bandeau ambre
+  sur Ma page avec « Arrêter »). `sensible` sur un lien ou un produit (Gratuit) : « 18+ » au-dessus du titre et une feuille
+  qui demande confirmation avant d'ouvrir (`FeuilleAdultes`, retenue pour la visite dans `sessionStorage`). Démo : `#adultes=<thème>`.
 - `components/PageLiens.tsx` : la page publique. Ouverte dans le navigateur intégré d'une app (LinkedIn,
   Instagram…), elle se montre directement : la feuille qui proposait Safari ou Chrome (21 octobre 2026) a été
   retirée le 22 octobre 2026, à la demande de Lilian. La vitrine (22 octobre 2026,

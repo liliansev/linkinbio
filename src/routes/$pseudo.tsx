@@ -1,4 +1,4 @@
-import { createFileRoute, notFound } from '@tanstack/react-router';
+import { createFileRoute, notFound, redirect } from '@tanstack/react-router';
 import { lirePagePublique } from '../server/fonctions.ts';
 import { PageLiens } from '../components/PageLiens.tsx';
 import { tetePage } from '../lib/tete.ts';
@@ -15,6 +15,8 @@ export const Route = createFileRoute('/$pseudo')({
     if (!/^[a-z0-9-]{3,30}$/i.test(params.pseudo)) throw notFound();
     const page = await lirePagePublique({ data: { pseudo: params.pseudo, s: deps.s } });
     if (!page) throw notFound();
+    // « Redirection » (Starter) : toute la page renvoie vers une seule adresse, le temps d'un lancement.
+    if (page.redirection) throw redirect({ href: page.redirection, statusCode: 302 });
     return page;
   },
   head: ({ loaderData }) => tetePage(loaderData),

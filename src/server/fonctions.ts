@@ -6,7 +6,7 @@ import * as liste from './liste.ts';
 import { requeteSortante } from './sortante.ts';
 import { planifierResumes } from './resume.ts';
 import { VERSION_CGU } from '../lib/legal.ts';
-import { ORIGINE_ADMIN, ORIGINE_PUBLIQUE, PRINCIPAL, TYPES_PRINCIPAL } from '../lib/types.ts';
+import { ORIGINE_ADMIN, ORIGINE_PUBLIQUE, PRINCIPAL, TYPES_PRINCIPAL, urlPage } from '../lib/types.ts';
 import { masquerAcces } from '../lib/acces.ts';
 import { composerMoment } from '../lib/moments.ts';
 import { composerAudience, provenance } from '../lib/provenance.ts';
@@ -24,6 +24,8 @@ import * as creem from './creem.ts';
 import { droits, joursLisibles, periodeLisible, verifierDates } from './droits.ts';
 import { lirePeriode } from '../lib/periode.ts';
 import { selonDroits } from '../lib/droits.ts';
+import { blocsAvecUtm, redirectionActive } from '../lib/sorties.ts';
+import { enregistrer } from './analytique.ts';
 import { estDureeOfferte, estPlanPayant } from '../lib/abonnement.ts';
 import type { DureeOfferte, Periode, PlanPayant } from '../lib/abonnement.ts';
 
@@ -108,10 +110,16 @@ export const lirePagePublique = createServerFn({ method: 'GET' })
     // Le référent d'une page qui se recharge elle-même (hopla.page) ne dit rien de la provenance.
     const blocs = composerAudience(composerMoment(permis, maintenant), provenance({ s: data.s, ua: getRequestHeader('user-agent') ?? '', referent: getRequestHeader('referer') ?? '' }));
     const prises = db.placesParBloc(compte.id);
+    const page = { pseudo: compte.pseudo, principal: compte.id === PRINCIPAL };
+    // Une page redirigée envoie son visiteur ailleurs : la vue se compte ici, la page ne s'ouvrira pas pour l'envoyer.
+    const vers = redirectionActive(reglages.redirection, maintenant, urlPage(page));
+    if (vers) enregistrer({ page: compte.pseudo, type: 'vue', bloc: null, utm: data.s, referent: getRequestHeader('referer') ?? '' },
+      { ip: getRequestHeader('x-real-ip') ?? '', ua: getRequestHeader('user-agent') ?? '', session: null, pays: getRequestHeader('cf-ipcountry') ?? '' }, maintenant);
     return {
       reglages,
-      blocs: masquerAcces(blocs, id => prises[id] ?? 0),
-      compte: { pseudo: compte.pseudo, principal: compte.id === PRINCIPAL, plan: db.abonnement(compte, maintenant).plan },
+      ...(vers ? { redirection: vers } : {}),
+      blocs: blocsAvecUtm(reglages, masquerAcces(blocs, id => prises[id] ?? 0)),
+      compte: { ...page, plan: db.abonnement(compte, maintenant).plan },
       maintenant,
     };
   });
