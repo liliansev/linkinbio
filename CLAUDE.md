@@ -60,7 +60,10 @@ embarque tout : l'image n'a pas de `node_modules`.
   photo : l'image de partage ou rien, jamais une capture ; `'logo'` pour le logo du site, cherché dans ses icônes déclarées,
   son manifeste, `/apple-touch-icon.png` puis le favicon (un ICO rendu en PNG), et `'vignette'` pour la vignette d'un
   bouton : l'image de partage si elle est carrée, sinon le logo, `visuel` dit laquelle est venue), `server/droits.ts` (`droits()` d'un compte, `verifierDates`
-  avant d'enregistrer un bloc, `joursLisibles` pour les stats).
+  avant d'enregistrer un bloc, `joursLisibles` pour les stats), `server/avis.ts` (24 octobre 2026, demandé par Lilian : la note
+  d'un bloc Avis lue sur la page d'avis collée, dans son JSON-LD `aggregateRating` ou les données de Trustpilot, ramenée
+  sur 5 ; `lireNoteAvis` pendant qu'on tape, `LienAvis` dans l'éditeur, puis relue chaque jour par `planifierAvis`,
+  éteinte par `HOPLA_AVIS=0` ; une page muette laisse la note tapée à la main, et une fiche Google demanderait l'API Places).
 - `server/liste.ts` : « Rejoins ma liste ». Les inscrits restent chez Hopla (export CSV) et partent là où la personne a
   branché sa liste (22 octobre 2026) : six newsletters par leur API (Brevo, Mailchimp, Kit, MailerLite, beehiiv,
   Systeme.io ; `listes()` pour choisir la liste par son nom, `verifier()`, `pousser()`), ou Make, Zapier et n8n par un

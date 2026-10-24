@@ -512,12 +512,14 @@ export function RegleAcces({ b, maj, prises }: { b: Bloc; maj: (c: Partial<Bloc>
 const SOURCES_PREUVE = ['Google', 'Trustpilot', 'Malt', 'Avis Vérifiés', 'YouTube', 'Instagram', 'TikTok', 'LinkedIn'];
 
 /** Un avis, un chiffre, un témoignage : ce que le bloc `preuve` montre. */
-export function ChampsPreuve({ b, maj, erreurDe = () => undefined }: { b: Bloc; maj: (c: Partial<Bloc>) => void; erreurDe?: (champ: string) => string | undefined }) {
+export function ChampsPreuve({ b, maj, erreurDe = () => undefined, lien }: { b: Bloc; maj: (c: Partial<Bloc>) => void; erreurDe?: (champ: string) => string | undefined; lien?: ReactNode }) {
   const p = b.preuve ?? { genre: 'note' as const, note: 0, nombre: 0, source: '' };
   const majP = (champs: Partial<Preuve>) => maj({ preuve: { ...p, ...champs } });
   // La note se tape comme on l'écrit (« 4,8 ») et ne se lit qu'en quittant le champ : rien ne s'arrondit sous les doigts.
   const [note, setNote] = useState(p.note ? String(p.note).replace('.', ',') : '');
   const [trop, setTrop] = useState(false);
+  // Une note lue sur la page des avis (`LienAvis`) remplace ce qui était tapé.
+  useEffect(() => { setNote(n => (lireNote(n) === p.note ? n : p.note ? String(p.note).replace('.', ',') : '')); }, [p.note]);
   const lireNote = (v: string) => { const n = Math.round(Number(v.replace(',', '.')) * 10) / 10; return Number.isFinite(n) ? Math.max(0, n) : 0; };
   return (
     <>
@@ -526,6 +528,8 @@ export function ChampsPreuve({ b, maj, erreurDe = () => undefined }: { b: Bloc; 
         <Segments label="Genre de preuve" valeur={p.genre} onChange={genre => maj({ preuve: { ...p, genre }, ...(genre !== 'note' && b.titre === TITRE_AVIS ? { titre: '' } : genre === 'note' && !b.titre.trim() ? { titre: TITRE_AVIS } : {}) })}
           options={[{ id: 'note', nom: 'Note' }, { id: 'compteur', nom: 'Chiffre' }, { id: 'temoignage', nom: 'Témoignage' }]} />
       </div>
+      {/* Le lien des avis d'une note vient juste après le type : il remplit la note et le nombre dessous. */}
+      {p.genre === 'note' && lien}
       {p.genre === 'note' && (
         // Le petit titre se lit au-dessus de la note : il se tape juste après le type.
         <Champ erreur={erreurDe('titre')} label="Petit titre (facultatif)">

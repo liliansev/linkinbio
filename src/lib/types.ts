@@ -361,6 +361,8 @@ export interface Liste {
  * sinon le logo, sinon l'image de partage ; jamais une capture).
  */
 export type ImageApercu = boolean | 'partage' | 'logo' | 'vignette';
+/** La note d'une page d'avis, lue dans ses données structurées : sur 5, le nombre d'avis, le nom du site. */
+export interface NoteAvis { note: number; nombre: number; source: string }
 /** D'où vient l'image d'un aperçu : l'image de partage du site, son logo, ou une capture de sa page. */
 export type VisuelApercu = 'partage' | 'logo' | 'capture';
 
@@ -381,6 +383,8 @@ export interface Api {
   /** Les derniers articles d'un blog ou d'un flux RSS (`video` : la dernière vidéo d'une chaîne YouTube), lus par le serveur ; vide s'il ne se lit pas. */
   flux(url: string, video: boolean): Promise<ArticleFlux[]>;
   stats(periode: PeriodeStats): Promise<Stats>;
+  /** La note de la page d'avis à cette adresse ; null quand elle n'en déclare pas. */
+  noteAvis?(url: string): Promise<NoteAvis | null>;
   /** Les vues des 7 derniers jours et des 7 d'avant, lisibles par toutes les offres, Gratuit compris. */
   semaine?(): Promise<Semaine>;
   deconnexion(): Promise<void>;

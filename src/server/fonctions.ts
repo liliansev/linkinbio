@@ -1,10 +1,11 @@
 import { createMiddleware, createServerFn } from '@tanstack/react-start';
 import { deleteCookie, getCookie, getRequestHeader, getRequestUrl, setCookie } from '@tanstack/react-start/server';
-import type { Bloc, CompteResume, EtatAdmin, FournisseurListe, ImageApercu, Liste, ListeFournisseur, Origines, PagePublique, Reglages, Reservation, Semaine, SignalementResume, Stats } from '../lib/types.ts';
+import type { Bloc, CompteResume, EtatAdmin, FournisseurListe, ImageApercu, Liste, ListeFournisseur, Origines, PagePublique, Reglages, NoteAvis, Reservation, Semaine, SignalementResume, Stats } from '../lib/types.ts';
 import { FOURNISSEURS_LISTE } from '../lib/types.ts';
 import * as liste from './liste.ts';
 import { requeteSortante } from './sortante.ts';
 import { planifierResumes } from './resume.ts';
+import { lireNote, planifierAvis } from './avis.ts';
 import { VERSION_CGU } from '../lib/legal.ts';
 import { ARTICLES_FLUX, ORIGINE_ADMIN, ORIGINE_PUBLIQUE, PRINCIPAL, TYPES_PRINCIPAL, urlPage } from '../lib/types.ts';
 import { masquerAcces } from '../lib/acces.ts';
@@ -41,6 +42,7 @@ import type { DureeOfferte, Periode, PlanPayant } from '../lib/abonnement.ts';
 
 // Le résumé de la semaine part le lundi matin (voir resume.ts).
 planifierResumes();
+planifierAvis();
 // Les prix des produits sont relus dans Creem au démarrage, puis toutes les heures (voir creem.ts).
 creem.planifierRelecture();
 
@@ -303,6 +305,15 @@ export const lireStats = createServerFn({ method: 'GET' })
     const periode = periodeLisible(compte, data);
     if (periode === null) throw new Error('Ces dates sont plus anciennes que ton historique.');
     return db.stats(context.compte, periode);
+  });
+
+/** La note d'une page d'avis (Trustpilot, Avis Vérifiés…), pour remplir un bloc « Avis et preuves » d'un collage. */
+export const lireNoteAvis = createServerFn({ method: 'POST' })
+  .middleware([session])
+  .validator((data: unknown) => { const url = adresse(String(data ?? '')); if (!/^https?:/.test(url)) throw new Error('Adresse refusée.'); return url; })
+  .handler(async ({ data, context }): Promise<NoteAvis | null> => {
+    if (lecturesFlux(context.compte)) throw new Error('Trop d’essais. Réessaie dans quelques minutes.');
+    return lireNote(data);
   });
 
 /** Les vues de la semaine pour toutes les offres : un chiffre et son écart, rien de plus (le reste attend Starter). */

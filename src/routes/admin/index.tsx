@@ -26,6 +26,7 @@ function PageAdmin() {
     flux: (url, video) => fn.lireFlux({ data: { url, video } }),
     stats: periode => fn.lireStats({ data: periode }),
     semaine: () => fn.lireSemaine(),
+    noteAvis: url => fn.lireNoteAvis({ data: url }),
     deconnexion: async () => { await fn.deconnecter(); },
     accepterCgu: async () => { await fn.accepterCgu(); },
     supprimerMonCompte: confirmation => fn.supprimerMonCompte({ data: confirmation }),

@@ -17,6 +17,7 @@ import { Icone, NOMS_RESEAUX, PICTOS } from '../components/Icone.tsx';
 import { BoutonPrincipal, BoutonSecondaire, Champ, Feuille, Interrupteur, ListeChoix, Menu, NOMS_ANIMATIONS, Segments, choisirFichier, classeBouton, classeSaisie, flechesRadio, preparerImage, preparerLogo, useFilFeuille, vibrer } from './ui.tsx';
 import type { ElementMenu, FilFeuille } from './ui.tsx';
 import { DEVENU, EN_FAIRE, typeDe } from '../lib/catalogue.ts';
+import { sourceDe } from '../lib/avis.ts';
 import { appDe } from '../lib/ouvrirApp.ts';
 import { ChampsPreuve, LigneRepli, PagesBloc, RangeesCompactes, RegleAOuvrir, RegleAcces, ReglageVisibilite, Repli, ReplisExclusifs, resumeVisibilite } from './ReglesBloc.tsx';
 import type { PageRegle } from './ReglesBloc.tsx';
@@ -117,7 +118,7 @@ export interface OptionsEnregistrement {
  * la page au-dessus, avec son « Terminé ». Dans les deux cas, le bloc se
  * redessine sur la page à chaque frappe (`onBrouillon`).
  */
-export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, onBrouillon, onFermer, onRetour, onReplier, suitAdresse = true, repris = false, enFaire, onEnregistrer, onSupprimer, onDupliquer, onDeplacer, place, envoyerImage, apercuSite, clics, prises = 0, principal = false }: {
+export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, onBrouillon, onFermer, onRetour, onReplier, suitAdresse = true, repris = false, enFaire, onEnregistrer, onSupprimer, onDupliquer, onDeplacer, place, envoyerImage, apercuSite, noteAvis, clics, prises = 0, principal = false }: {
   bloc: Bloc;
   reglages: Reglages;
   nouveau: boolean;
@@ -152,6 +153,8 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
   place?: { rang: number; total: number };
   envoyerImage: (dataUrl: string) => Promise<string>;
   apercuSite: Api['apercuSite'];
+  /** La note d'une page d'avis collée dans un bloc « Avis et preuves ». */
+  noteAvis?: Api['noteAvis'];
   clics: number;
   /** L'adresse publique de la page, pour les astuces (`?s=tiktok`). */
   adressePage: string;
@@ -1195,9 +1198,10 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
       {/* Une adresse de la vitrine sans Starter : le lien reste un lien, et dit ce que l'offre en ferait, juste sous l'adresse. */}
       {vitrineSousAdresse}
 
-      {b.type === 'preuve' && <ChampsPreuve b={b} maj={maj} erreurDe={erreurDe} />}
+      {/* Une note d'avis : le lien d'abord, la note se remplit toute seule quand la page la déclare (Trustpilot, Avis Vérifiés…). */}
+      {b.type === 'preuve' && <ChampsPreuve b={b} maj={maj} erreurDe={erreurDe} lien={<LienAvis b={b} maj={maj} noteAvis={noteAvis} />} />}
 
-      {b.type === 'preuve' && (
+      {b.type === 'preuve' && b.preuve?.genre !== 'note' && (
         <Champ label={b.preuve?.genre === 'compteur' ? 'Lien vers la source (facultatif)' : 'Lien vers les avis (facultatif)'}
           aide={b.preuve?.genre === 'compteur' ? 'Ta chaîne, ton profil : le bloc devient cliquable, et le chiffre vérifiable.' : 'Ta fiche Google, ta page Trustpilot : le bloc devient cliquable, et la preuve vérifiable.'}>
           <input className={classeSaisie} type="url" inputMode="url" autoCapitalize="none" autoCorrect="off" placeholder="https://…" value={b.url} onChange={e => maj({ url: e.target.value })} />
@@ -1406,5 +1410,52 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
       </PagesBloc.Provider>
     </Feuille>
     </FournisseurOffre>
+  );
+}
+
+/**
+ * Le lien des avis d'une note (24 octobre 2026, demandé par Lilian) : collé, Hopla lit la note et le nombre d'avis sur la
+ * page (`lireNoteAvis`), les pose dans le bloc, et le serveur les relit chaque jour. Une page qui ne les déclare pas
+ * (une fiche Google) laisse la note à taper à la main.
+ */
+function LienAvis({ b, maj, noteAvis }: { b: Bloc; maj: (c: Partial<Bloc>) => void; noteAvis?: Api['noteAvis'] }) {
+  const [etat, setEtat] = useState<'' | 'lecture' | 'lue' | 'muette' | 'google'>('');
+  const derniere = useRef(adresse(b.url));
+  // La preuve telle qu'elle est quand la réponse arrive : une note tapée pendant la lecture n'est pas écrasée.
+  const actuel = useRef(b);
+  actuel.current = b;
+  const preuve = () => actuel.current.preuve ?? { genre: 'note' as const, note: 0, nombre: 0, source: '' };
+  useEffect(() => {
+    const url = adresse(b.url);
+    if (!noteAvis || !/^https?:\/\//.test(url) || url === derniere.current) return;
+    const minuteur = setTimeout(() => {
+      derniere.current = url;
+      // Sans note lue, le site se pose quand même sous la note tapée.
+      const site = sourceDe(url);
+      const muette = (e: 'muette' | 'google') => { const p = preuve(); if (site && !p.source.trim()) maj({ preuve: { ...p, source: site } }); setEtat(e); };
+      // Une fiche Google ne donne pas sa note sans l'API Places : rien à lire.
+      if (site === 'Google') { muette('google'); return; }
+      setEtat('lecture');
+      noteAvis(url).then(n => {
+        if (!n) { muette('muette'); return; }
+        const p = preuve();
+        maj({ preuve: { ...p, note: n.note, nombre: n.nombre, source: n.source || p.source } });
+        setEtat('lue');
+      }).catch(() => muette('muette'));
+    }, 600);
+    return () => clearTimeout(minuteur);
+    // Seule l'adresse relance la lecture : la note posée ne la relit pas.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [b.url, noteAvis]);
+  const aide = etat === 'lecture' ? 'Hopla lit la note…'
+    : etat === 'lue' ? 'Note lue sur la page. Hopla la relit chaque jour.'
+    : etat === 'google' ? 'Google ne laisse pas lire sa note : tape-la dessous. Le bloc mène à ta fiche.'
+    : etat === 'muette' ? 'Cette page ne donne pas sa note : tape-la dessous. Le bloc reste cliquable.'
+    : 'Ta page Trustpilot, Avis Vérifiés… : la note et le nombre d’avis se remplissent tout seuls, et se relisent chaque jour.';
+  return (
+    <Champ label="Lien vers tes avis" aide={aide}>
+      <input className={classeSaisie} type="url" inputMode="url" autoCapitalize="none" autoCorrect="off" placeholder="https://…" value={b.url}
+        onChange={e => { setEtat(''); maj({ url: e.target.value }); }} />
+    </Champ>
   );
 }
