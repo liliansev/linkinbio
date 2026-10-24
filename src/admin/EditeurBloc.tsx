@@ -100,7 +100,7 @@ export interface OptionsEnregistrement {
   /**
    * Un bloc neuf gardé sans « Ajouter à ma page » (la croix, Échap, un glissé, un toucher à côté, un autre bloc, un autre
    * onglet, le départ chez Creem) : il est écrit masqué de la page, et le message le dit, avec « Afficher » (24 octobre 2026,
-   * recommandé par la critique, en attendant la réponse de Lilian). Seul « Ajouter à ma page » met un bloc neuf en ligne.
+   * choisi par Lilian après la critique). Seul « Ajouter à ma page » met un bloc neuf en ligne.
    */
   masque?: boolean;
 }
@@ -727,7 +727,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
 
   /**
    * Fermer d'un glissé, d'Échap, de la croix ou d'un toucher à côté garde ce qui a changé, comme partout ailleurs. Un bloc
-   * neuf aussi, mais masqué (24 octobre 2026, recommandé par la critique) : une adresse collée ne se perd pas d'un geste, et rien ne
+   * neuf aussi, mais masqué (24 octobre 2026, choisi par Lilian) : une adresse collée ne se perd pas d'un geste, et rien ne
    * part en ligne sans « Ajouter à ma page ». Le message le dit, avec « Afficher ».
    */
   function fermerEnGardant() {

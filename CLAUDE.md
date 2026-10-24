@@ -147,7 +147,7 @@ embarque tout : l'image n'a pas de `node_modules`.
   Au téléphone, un bloc neuf se pose tout de suite sur la page (en haut, ou en bas depuis « Ajouter un bloc »
   sous les blocs) avec sa feuille dessous ; sa flèche ramène au choix des blocs avec son brouillon : l'adresse
   tapée attend dans le champ, un autre type choisi reprend adresse et texte (`versType`). Seul « Ajouter à ma page »
-  (ou Cmd ou Ctrl + Entrée) met un bloc neuf en ligne (24 octobre 2026, recommandé par la critique, en attendant la réponse de Lilian) : refermé
+  (ou Cmd ou Ctrl + Entrée) met un bloc neuf en ligne (24 octobre 2026, choisi par Lilian après la critique) : refermé
   autrement (croix, Échap, glissé, retour du téléphone, toucher à côté, un autre bloc ou un autre onglet, le départ
   vers Creem, le choix refermé sur un brouillon), il est écrit masqué (`masque` dans `OptionsEnregistrement`), et la
   bulle dit « Gardé, masqué de ta page », avec « Afficher ». Une bulle qui offre un geste (Annuler, Afficher) reste
