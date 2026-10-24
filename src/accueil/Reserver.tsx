@@ -9,6 +9,7 @@ import { adresseSuggeree, nomDansAdresse, nomDansLien } from './adresse.ts';
 import { mouvementReduit } from './mouvement.ts';
 import { MOTS, appel, useInscription } from './textes.ts';
 import { focusSaisie } from '../lib/clavier';
+import { boiteMail } from '../lib/boiteMail.ts';
 
 /*
  * « Créer ma page » (ou « Réserver mon nom » en liste d'attente), en
@@ -283,6 +284,8 @@ export function Reserver({ api, note, apercu, id, grand, premier, libelleNom }: 
   }
 
   if (e.etape === 'fait') {
+    // Une messagerie qu'on reconnaît s'ouvre d'ici : le lien est à un geste.
+    const boite = boiteMail(e.envoyee);
     return (
       <div className={classe} id={id} onFocusCapture={prendre} onPointerDownCapture={prendre}>
         <div ref={fait} className="hl-reserver-fait" role={parle ? 'status' : undefined} tabIndex={-1}>
@@ -290,6 +293,7 @@ export function Reserver({ api, note, apercu, id, grand, premier, libelleNom }: 
           <div>
             <p className="hl-reserver-adresse">hopla.page/{insecable(e.nom)}</p>
             <p>{avecAdresse(e.message, e.envoyee)}</p>
+            {boite && <a className="hl-btn hl-btn-petit hl-reserver-boite" href={boite.url} target="_blank" rel="noopener">Ouvrir {boite.nom}<Icone nom="ui-ouvrir" taille={16} /></a>}
             <p className="hl-reserver-renvoi">
               {e.renvoi === 'fait' ? (mode === 'libre' && e.renvoye) || MOTS[mode].renvoi
                 : <>{MOTS[mode].duree && `${MOTS[mode].duree} `}{e.renvoi === 'bientot' ? 'Pas reçu ? Regarde dans tes indésirables ; tu pourras le renvoyer dans une minute.'

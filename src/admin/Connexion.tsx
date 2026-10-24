@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { BoutonPrincipal, classeBouton, classeSaisie } from './ui.tsx';
 import { Marque } from './Marque.tsx';
+import { Icone } from '../components/Icone.tsx';
+import { boiteMail } from '../lib/boiteMail.ts';
 
 /* L'écran de connexion : son adresse, et le lien arrive par e-mail. Sur le bleu de l'accueil, d'où l'on arrive. */
 export function Connexion({ demander }: { demander: (email: string) => Promise<{ ok: boolean; message: string; lienDev?: string }> }) {
@@ -10,6 +12,7 @@ export function Connexion({ demander }: { demander: (email: string) => Promise<{
   // Le formulaire disparaît avec son bouton : le focus passe au titre qui le remplace, au lieu de tomber sur la page.
   const titreEnvoye = useRef<HTMLHeadingElement>(null);
   useEffect(() => { if (etat.type === 'ok') titreEnvoye.current?.focus(); }, [etat.type]);
+  const boite = etat.type === 'ok' ? boiteMail(email) : null;
   async function envoyer(e: FormEvent) {
     e.preventDefault();
     setEtat({ type: 'envoi' });
@@ -29,7 +32,9 @@ export function Connexion({ demander }: { demander: (email: string) => Promise<{
             <p className="mt-2 text-[14px] leading-relaxed text-white/75">{etat.message}</p>
             <p className="mt-2 text-[14px] leading-relaxed text-white/60">Rien reçu ? Regarde dans les indésirables.</p>
             {etat.lienDev && <a href={etat.lienDev} className="mt-3 block break-all text-[13px] text-bleu underline">{etat.lienDev}</a>}
-            <button type="button" onClick={() => setEtat({ type: 'repos' })} className={`${classeBouton.secondaire} mt-6 w-full`}>Utiliser une autre adresse</button>
+            {/* Une messagerie qu'on reconnaît s'ouvre d'ici : le lien est à un geste. */}
+            {boite && <a href={boite.url} target="_blank" rel="noopener" className={`${classeBouton.principal} mt-6 w-full`}>Ouvrir {boite.nom}<Icone nom="ui-ouvrir" taille={16} /></a>}
+            <button type="button" onClick={() => setEtat({ type: 'repos' })} className={`${classeBouton.secondaire} ${boite ? 'mt-3' : 'mt-6'} w-full`}>Utiliser une autre adresse</button>
           </div>
         ) : (
           <div className="adm-card p-6 sm:p-8">
