@@ -11,8 +11,11 @@ import { nouveauBloc } from './types.ts';
 import { agendaDe, avecMontants, soutienDe } from './vitrine.ts';
 import { estMusique, estVideo } from './lecteurs.ts';
 
-/** Ce que peut devenir une adresse collée. */
-export type TypeAdresse = Extract<TypeBloc, 'lien' | 'video' | 'musique' | 'reservation' | 'soutien' | 'produit'>;
+/**
+ * Ce que peut devenir une adresse collée. `derniere-video` et `flux` ne se posent jamais d'eux-mêmes : une chaîne YouTube ou
+ * un flux RSS collé reste un lien, et propose d'un geste d'en faire la dernière vidéo ou les derniers articles (`suggestion`).
+ */
+export type TypeAdresse = Extract<TypeBloc, 'lien' | 'video' | 'musique' | 'reservation' | 'soutien' | 'produit' | 'derniere-video' | 'flux'>;
 
 const hote = (url: string) => { try { return new URL(url).hostname.toLowerCase().replace(/^www\./, ''); } catch { return ''; } };
 const chemin = (url: string) => { try { return new URL(url).pathname.split('/').filter(Boolean).map(c => c.toLowerCase()); } catch { return []; } };
@@ -84,6 +87,26 @@ export function lienAffilie(url: string): boolean {
   if (sur(h, 'gumroad.com') && (c[0] === 'a' || u.searchParams.has('a'))) return true;
   return [...u.searchParams].some(([k, v]) => PARAMS_AFFILIATION.test(k) || (/^utm_(source|medium|campaign)$/i.test(k) && /affil/i.test(v)));
 }
+
+/** La page d'une chaîne YouTube (`@nom`, `/channel/UC…`, `/c/nom`, `/user/nom`), pas une vidéo ni une liste de lecture. */
+export function chaineYoutube(url: string): boolean {
+  const h = hote(url), c = chemin(url);
+  if (h !== 'youtube.com' && h !== 'm.youtube.com') return false;
+  if (c[0]?.startsWith('@')) return true;
+  return ['channel', 'c', 'user'].includes(c[0] ?? '') && !!c[1];
+}
+
+/** Un flux RSS ou Atom, reconnu à son adresse : `/feed`, `/rss`, `.xml`, `.rss`, `.atom`, ou un hôte de flux (FeedBurner). */
+export function adresseFlux(url: string): boolean {
+  const h = hote(url), c = chemin(url);
+  if (h === 'youtube.com' && c[0] === 'feeds') return true;
+  if (/^feeds?\./.test(h) || h === 'feedburner.com') return true;
+  const dernier = c[c.length - 1] ?? '';
+  return /\.(xml|rss|atom)$/.test(dernier) || c.some(x => x === 'feed' || x === 'rss' || x === 'atom');
+}
+
+/** Ce qu'un lien vers cette adresse peut proposer de devenir, sans le devenir seul : la dernière vidéo d'une chaîne, ou un flux. */
+export const suggestion = (url: string): 'derniere-video' | 'flux' | null => (chaineYoutube(url) ? 'derniere-video' : adresseFlux(url) ? 'flux' : null);
 
 /** Ce que devient une adresse : `vitrine`, la page a les blocs de la vitrine (Starter). */
 export function typeDeAdresse(url: string, vitrine: boolean): TypeAdresse {

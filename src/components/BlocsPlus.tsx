@@ -1,6 +1,8 @@
-import { useRef, useState } from 'react';
+import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import type { CSSProperties, FormEvent } from 'react';
 import type { Bloc } from '../lib/types.ts';
+import type { ArticleFlux } from '../lib/flux.ts';
+import { LOCALE } from '../lib/mots.ts';
 import type { Textes } from '../lib/mots.ts';
 import type { Lecteur as InfosLecteur } from '../lib/lecteurs.ts';
 import { lecteurDe } from '../lib/lecteurs.ts';
@@ -15,6 +17,70 @@ import { Icone } from './Icone.tsx';
  */
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/**
+ * D'où viennent les derniers articles et la dernière vidéo d'un bloc : sur la page publique, `/api/flux`, qui relit le bloc
+ * enregistré ; dans le back office et la démo, l'adresse en cours de frappe, lue tout de suite (`Api.flux`).
+ */
+export type LireFlux = (bloc: Bloc, pseudo: string) => Promise<ArticleFlux[]>;
+const lireEnLigne: LireFlux = (bloc, pseudo) => fetch(`/api/flux?page=${encodeURIComponent(pseudo)}&bloc=${encodeURIComponent(bloc.id)}`)
+  .then(r => (r.ok ? r.json() : { articles: [] })).then(r => (Array.isArray(r?.articles) ? r.articles : []));
+export const SourceFlux = createContext<LireFlux>(lireEnLigne);
+
+/** Les articles d'un bloc, relus quand son adresse change : null pendant la lecture. */
+export function useArticles(bloc: Bloc, pseudo: string): ArticleFlux[] | null {
+  const lire = useContext(SourceFlux);
+  const [lus, setLus] = useState<{ articles: ArticleFlux[] } | null>(null);
+  useEffect(() => {
+    let annule = false;
+    // Une adresse en cours de frappe attend qu'on s'arrête de taper.
+    const t = setTimeout(() => { lire(bloc, pseudo).catch(() => []).then(articles => { if (!annule) setLus({ articles }); }); }, lus ? 500 : 0);
+    return () => { annule = true; clearTimeout(t); };
+  }, [bloc.url, bloc.id, pseudo, lire]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Pendant qu'une autre adresse se lit, les articles d'avant restent : le bloc ne clignote pas à chaque frappe.
+  return lus ? lus.articles : null;
+}
+
+/** « 12 oct. », et l'année quand ce n'est pas celle-ci : la date d'un article, courte. */
+function dateCourte(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const memeAnnee = d.getFullYear() === new Date().getFullYear();
+  return d.toLocaleDateString(LOCALE, { day: 'numeric', month: 'short', ...(memeAnnee ? {} : { year: 'numeric' }) });
+}
+
+/**
+ * Les derniers articles d'un blog ou d'un podcast (Pro), lus dans son flux : une carte, son titre, puis un article par
+ * ligne, son titre et sa date. Rien d'autre ne se charge : ni image ni police d'un autre site. Le flux qui ne se lit pas
+ * laisse un lien vers le site, pour que le bloc mène toujours quelque part.
+ */
+export function Flux({ bloc, pseudo, clic, t }: { bloc: Bloc; pseudo: string; clic: () => void; t: Textes }) {
+  const articles = useArticles(bloc, pseudo);
+  if (!bloc.url) return null;
+  return (
+    <section className="lp-newsletter lp-flux" aria-busy={articles === null || undefined}>
+      <TeteCarte picto="bloc-flux" titre={bloc.titre || t.derniersArticles} />
+      {articles === null ? (
+        <ul className="lp-flux-liste" aria-hidden="true">{[0, 1, 2].map(i => <li key={i}><span className="lp-flux-attente" /></li>)}</ul>
+      ) : articles.length ? (
+        <ul className="lp-flux-liste">
+          {articles.map(a => (
+            <li key={a.url}>
+              <a href={a.url} rel="noopener" onClick={clic}>
+                <span className="lp-flux-titre">{a.titre}</span>
+                {a.date && <time className="lp-flux-date" dateTime={a.date}>{dateCourte(a.date)}</time>}
+              </a>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <ul className="lp-flux-liste">
+          <li><a href={bloc.url} rel="noopener" onClick={clic}><span className="lp-flux-titre">{t.lireSur(bloc.url.replace(/^https?:\/\/(www\.)?/, '').split('/')[0])}</span></a></li>
+        </ul>
+      )}
+    </section>
+  );
+}
 
 /** La tête d'une carte : son picto seul, son titre, son sous-titre. */
 function TeteCarte({ picto, titre, sous }: { picto: string; titre: string; sous?: string }) {

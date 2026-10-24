@@ -18,7 +18,7 @@ export const Route = createFileRoute('/api/inscription')({
           ip: request.headers.get('x-real-ip') ?? '', ua: request.headers.get('user-agent') ?? '', referent: typeof entree.referent === 'string' ? entree.referent : '',
           hotes: hotesTurnstile(process.env, request.url),
         });
-        return Response.json({ message: r.message }, { status: r.status, headers: { 'Cache-Control': 'no-store' } });
+        return Response.json({ message: r.message, ...(r.cadeau ? { cadeau: r.cadeau } : {}) }, { status: r.status, headers: { 'Cache-Control': 'no-store' } });
       },
     },
   },

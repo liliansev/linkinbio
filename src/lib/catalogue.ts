@@ -11,7 +11,7 @@ import type { Bloc, TypeBloc } from './types.ts';
 import { TYPES_PRINCIPAL } from './types.ts';
 import type { Fonction } from './abonnement.ts';
 import { adresseSaisie, numeroAppel, pourquoiPasAdresse } from './valider.ts';
-import { lienAffilie, typeDeAdresse } from './detection.ts';
+import { lienAffilie, suggestion, typeDeAdresse } from './detection.ts';
 import type { TypeAdresse } from './detection.ts';
 
 /**
@@ -55,7 +55,12 @@ export const TYPES: TypeAjout[] = [
   { type: 'coordonnees', nom: 'Carte de visite', aide: 'Tes visiteurs enregistrent ton contact dans leur téléphone, d’un toucher', picto: 'bloc-coordonnees',
     mots: 'vcard contact coordonnees telephone numero carnet enregistrer societe entreprise poste' },
   { type: 'lieu', nom: 'Adresse', aide: 'Ton adresse, la carte et l’itinéraire', picto: 'bloc-lieu', mots: 'lieu carte plan maps google itineraire boutique magasin cabinet salon local venir' },
-  { type: 'derniere-video', nom: 'Ma dernière vidéo YouTube', picto: 'bloc-derniere-video', mots: 'chaine automatique' },
+  // La dernière vidéo d'une chaîne et les derniers articles d'un blog (24 octobre 2026) viennent d'une adresse collée, ou se
+  // cherchent ; la chaîne de Lilian garde sa place dans son choix de départ.
+  { type: 'derniere-video', nom: 'Ma dernière vidéo YouTube', aide: 'Ta vidéo la plus récente, toujours à jour, sans rien changer', picto: 'bloc-derniere-video', ailleurs: true,
+    mots: 'youtube chaine video videos automatique nouvelle derniere recente' },
+  { type: 'flux', nom: 'Mes derniers articles', aide: 'Les trois derniers articles de ton blog ou de ton podcast, lus dans son flux RSS', picto: 'bloc-flux', fonction: 'flux', ailleurs: true,
+    mots: 'rss flux atom blog articles podcast episodes actualites news substack medium wordpress ghost' },
   // L'ancienne newsletter de Lilian est la liste e-mail : ses blocs posés restent, elle ne s'ajoute plus.
   { type: 'newsletter', nom: 'Ma newsletter', picto: 'bloc-newsletter', ailleurs: true, retire: true },
 ];
@@ -70,7 +75,7 @@ export const typeDe = (b: Pick<Bloc, 'type' | 'partenariat'>): TypeAjout =>
  * est un lien, avec sa mention. Tous se cherchent aussi par leur nom.
  */
 export const CHOIX = TYPES.filter(t => !t.ailleurs && !t.retire);
-export const choixPour = (principal: boolean) => (principal ? CHOIX : CHOIX.filter(t => !TYPES_PRINCIPAL.includes(t.type)));
+export const choixPour = (principal: boolean) => (principal ? [...CHOIX, TYPES.find(t => t.type === 'derniere-video')!] : CHOIX.filter(t => !TYPES_PRINCIPAL.includes(t.type)));
 
 /** Une saisie comparable : sans accents ni majuscules, les apostrophes et guillemets en espaces. */
 export const normaliser = (t: string) => t.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().replace(/[’'«»"]/g, ' ').replace(/\s+/g, ' ').trim();
@@ -156,7 +161,10 @@ export function choixAjout(texte: string, { principal, vitrine }: { principal: b
     const appel = typeDeAdresse(url, true);
     const detail = hote(url);
     // Sans Starter, une adresse de la vitrine reste un lien qui marche ; ce qu'elle deviendrait suit, avec son offre.
-    const lignes: LigneAjout[] = appel === 'lien' ? [{ entree: LIEN, url, auto: true, detail }]
+    // Une chaîne YouTube, un flux : un lien d'abord, ce qu'il peut devenir juste dessous.
+    const propose = appel === 'lien' ? suggestion(url) : null;
+    const lignes: LigneAjout[] = propose ? [{ entree: LIEN, url, auto: true, detail }, { entree: entreeDe(propose), url }]
+      : appel === 'lien' ? [{ entree: LIEN, url, auto: true, detail }]
       : appel === 'video' || vitrine ? [{ entree: entreeDe(appel), url, auto: true, detail }, { entree: LIEN, url }]
         : [{ entree: LIEN, url, auto: true, detail }, { entree: entreeDe(appel), url }];
     // Une adresse d'affiliation (une régie, le tag d'Amazon) peut être un lien partenaire, juste sous ce qu'elle appelle ;
@@ -187,9 +195,11 @@ export function aideSaisie(texte: string, fini = false): string {
 /** Le geste qui fait prendre à un lien le bloc que son adresse appelle, dans l'éditeur et au retour d'un paiement. */
 export const EN_FAIRE: Record<Exclude<TypeAdresse, 'lien'>, string> = {
   video: 'En faire une vidéo dans ta page', musique: 'En faire un lecteur dans ta page', reservation: 'En faire une prise de rendez-vous', soutien: 'En faire un bouton « Me soutenir »', produit: 'En faire un produit',
+  'derniere-video': 'En faire ta dernière vidéo, toujours à jour', flux: 'En faire tes derniers articles',
 };
 
 /** Ce que devient un bloc qui change de type, dit en une phrase (pour les lecteurs d'écran). */
 export const DEVENU: Record<TypeAdresse, string> = {
   lien: 'un simple lien', video: 'une vidéo', musique: 'un lecteur', reservation: 'une prise de rendez-vous', soutien: 'un bouton « Me soutenir »', produit: 'un produit',
+  'derniere-video': 'ta dernière vidéo YouTube', flux: 'tes derniers articles',
 };

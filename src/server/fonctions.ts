@@ -6,12 +6,14 @@ import * as liste from './liste.ts';
 import { requeteSortante } from './sortante.ts';
 import { planifierResumes } from './resume.ts';
 import { VERSION_CGU } from '../lib/legal.ts';
-import { ORIGINE_ADMIN, ORIGINE_PUBLIQUE, PRINCIPAL, TYPES_PRINCIPAL, urlPage } from '../lib/types.ts';
+import { ARTICLES_FLUX, ORIGINE_ADMIN, ORIGINE_PUBLIQUE, PRINCIPAL, TYPES_PRINCIPAL, urlPage } from '../lib/types.ts';
 import { masquerAcces } from '../lib/acces.ts';
 import { composerMoment } from '../lib/moments.ts';
 import { composerAudience, provenance } from '../lib/provenance.ts';
 import { adresse, email, pseudo, validerBloc, validerReglages } from '../lib/valider.ts';
 import { apercuSite as lireApercu } from './apercu.ts';
+import { articlesDe } from './flux.ts';
+import { limiteur, MINUTE } from './limites.ts';
 import * as db from './db.ts';
 import { MESSAGE_ROBOT, hotesTurnstile, verifierTurnstile } from './turnstile.ts';
 import type { ActionTurnstile } from '../lib/turnstile.ts';
@@ -25,7 +27,8 @@ import { droits, joursLisibles, periodeLisible, verifierDates } from './droits.t
 import { lirePeriode } from '../lib/periode.ts';
 import { selonDroits } from '../lib/droits.ts';
 import { blocsAvecUtm, redirectionActive } from '../lib/sorties.ts';
-import { enregistrer } from './analytique.ts';
+import { enregistrer, pays } from './analytique.ts';
+import { pourPays } from '../lib/pays.ts';
 import { estDureeOfferte, estPlanPayant } from '../lib/abonnement.ts';
 import type { DureeOfferte, Periode, PlanPayant } from '../lib/abonnement.ts';
 
@@ -86,10 +89,15 @@ const proprietaire = createMiddleware({ type: 'function' }).middleware([session]
   return next();
 });
 
-/** Ce qu'un compte invité n'a pas le droit d'afficher : les blocs branchés sur les outils de Lilian, et le badge vérifié. */
+/**
+ * Ce qu'un compte invité n'a pas le droit d'afficher : les blocs branchés sur les outils de Lilian (sa newsletter, sa
+ * chaîne YouTube quand « Ma dernière vidéo » n'a pas d'adresse), et le badge vérifié.
+ */
 function pourCompte<T extends Bloc>(compte: string, blocs: T[]): T[] {
-  return compte === PRINCIPAL ? blocs : blocs.filter(b => !TYPES_PRINCIPAL.includes(b.type));
+  return compte === PRINCIPAL ? blocs : blocs.filter(b => !TYPES_PRINCIPAL.includes(b.type) && !(b.type === 'derniere-video' && !b.url));
 }
+/** L'adresse d'un cadeau ne part jamais avec la page : `/api/inscription` la donne, une fois l'e-mail laissé. */
+const sansCadeau = (blocs: Bloc[]) => blocs.map(b => (b.cadeau?.url ? { ...b, cadeau: { ...b.cadeau, url: '' } } : b));
 function reglagesPourCompte(compte: string, r: Reglages): Reglages {
   return compte === PRINCIPAL ? r : { ...r, profil: { ...r.profil, badge: false } };
 }
@@ -108,7 +116,11 @@ export const lirePagePublique = createServerFn({ method: 'GET' })
     // Ce que l'offre du compte ne comprend pas s'efface avant tout le reste.
     const { reglages, blocs: permis } = selonDroits(reglagesPourCompte(compte.id, db.lireReglages(compte.id)), pourCompte(compte.id, db.lireBlocs(compte.id)), droits(compte, process.env, maintenant));
     // Le référent d'une page qui se recharge elle-même (hopla.page) ne dit rien de la provenance.
-    const blocs = composerAudience(composerMoment(permis, maintenant), provenance({ s: data.s, ua: getRequestHeader('user-agent') ?? '', referent: getRequestHeader('referer') ?? '' }));
+    // Le pays du visiteur, que seul Cloudflare peut dire (le serveur retire l'en-tête venu d'ailleurs) : un bloc réservé à
+    // quelques pays ne se montre pas à qui n'en a pas.
+    const ici = pays(getRequestHeader('cf-ipcountry'));
+    const blocs = composerAudience(composerMoment(permis, maintenant), provenance({ s: data.s, ua: getRequestHeader('user-agent') ?? '', referent: getRequestHeader('referer') ?? '' }))
+      .filter(b => pourPays(b, ici));
     const prises = db.placesParBloc(compte.id);
     const page = { pseudo: compte.pseudo, principal: compte.id === PRINCIPAL };
     // Une page redirigée envoie son visiteur ailleurs : la vue se compte ici, la page ne s'ouvrira pas pour l'envoyer.
@@ -118,7 +130,7 @@ export const lirePagePublique = createServerFn({ method: 'GET' })
     return {
       reglages,
       ...(vers ? { redirection: vers } : {}),
-      blocs: blocsAvecUtm(reglages, masquerAcces(blocs, id => prises[id] ?? 0)),
+      blocs: blocsAvecUtm(reglages, sansCadeau(masquerAcces(blocs, id => prises[id] ?? 0))),
       compte: { ...page, plan: db.abonnement(compte, maintenant).plan },
       maintenant,
     };
@@ -260,6 +272,24 @@ export const apercuSite = createServerFn({ method: 'POST' })
   .handler(async ({ data }) => {
     try { return await lireApercu(data.url, { image: data.image }); }
     catch { throw new Error('Impossible de lire ce site.'); }
+  });
+
+/** Trente lectures de flux par compte en dix minutes : de quoi régler un bloc, pas de quoi faire lire le web à Hopla. */
+const lecturesFlux = limiteur([30, 10 * MINUTE]);
+
+/** L'aperçu de « Mes derniers articles » et de « Ma dernière vidéo YouTube » dans le back office, avant même l'enregistrement. */
+export const lireFlux = createServerFn({ method: 'POST' })
+  .middleware([session])
+  .validator((data: unknown) => {
+    const o = (data && typeof data === 'object' ? data : {}) as { url?: unknown; video?: unknown };
+    const url = adresse(String(o.url ?? ''));
+    if (!/^https?:/.test(url)) throw new Error('Adresse refusée.');
+    return { url, video: o.video === true };
+  })
+  .handler(async ({ data, context }) => {
+    if (lecturesFlux(context.compte)) throw new Error('Trop d’essais. Réessaie dans quelques minutes.');
+    try { return (await articlesDe(data.url, { video: data.video })).slice(0, data.video ? 1 : ARTICLES_FLUX); }
+    catch { return []; }
   });
 
 export const lireStats = createServerFn({ method: 'GET' })
