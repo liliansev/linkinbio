@@ -3,7 +3,7 @@ import type { Droits } from './droits.ts';
 import type { Audience } from './provenance.ts';
 import { deReseau } from './provenance.ts';
 
-/** « venus d'Instagram, de TikTok » : le réglage porte sur d'où vient le visiteur, comme « Pour qui » le dit. */
+/** « venus d'Instagram, de TikTok » : le réglage porte sur d'où vient le visiteur, comme « Selon le réseau » le dit. */
 const venus = (l: Audience[]) => `venus ${l.map(deReseau).join(', ')}`;
 
 /**

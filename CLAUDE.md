@@ -131,16 +131,18 @@ embarque tout : l'image n'a pas de `node_modules`.
   sur la première page du bloc, seul ce qu'elle ne montre pas attend derrière « Plus de réglages »
   (23 octobre 2026, revue pilote-design-produit, demandée par Lilian) : le texte, la description d'un lien dont la
   forme la montre, le sous-titre (replié derrière « Ajouter un sous-titre » tant qu'il est vide), les montants de
-  « Me soutenir », puis les quatre gestes
-  courants (22 octobre 2026, demandé par Lilian : « vraiment simple ») :
-  Visible, Mis en avant, puis Quand (`ReglageQuand` : Apparaît « Maintenant », Disparaît « Jamais »,
-  le sélecteur natif posé sur la ligne ; le créneau de la semaine dessous, du lundi au vendredi de 9 h à 18 h,
-  en avant, au premier jour touché, comme le serveur) et Pour qui (`ReglagePourQui` :
-  une seule liste de réseaux sous « Venus de », deux interrupteurs Affiché et En avant), chacune une ligne qui dit ce qui
-  est réglé (`resumeQuand`, `resumePourQui`, « Seulement venus d'Instagram ») et mène à sa page ; « Mis en avant »
+  « Me soutenir », puis les gestes
+  courants (22 octobre 2026, demandé par Lilian : « vraiment simple ») : Visibilité, puis Mis en avant.
+  Visibilité (24 octobre 2026, demandé par Lilian : « un sous-menu qui s'appelle visibilité ») est une ligne qui dit
+  ce qui est réglé (`resumeVisibilite` : « Visible », « Masqué », « Du 12 au 20 nov., selon le réseau ») et mène à sa
+  page (`ReglageVisibilite`) : « Visible sur ma page », puis trois parties titrées, Selon la date (Apparaît
+  « Maintenant », Disparaît « Jamais », le sélecteur natif posé sur la ligne, et le compte à rebours d'un lancement),
+  Selon l'heure (le créneau de la semaine, du lundi au vendredi de 9 h à 18 h, en avant, au premier jour touché, comme
+  le serveur) et Selon le réseau (`ListeReseaux` : une seule liste sous « Venus de », deux interrupteurs Affiché et En
+  avant). Sans l'offre, le badge Starter ou Pro se pose à côté du titre de la partie. « Mis en avant »
   allumé fait paraître Apparence dessous (forme, couleur, animation ; l'animation seule pour un produit ou une prise
-  de rendez-vous). Au bureau, ces lignes se déplient en place, une seule à la fois (`ReplisExclusifs`), et
-  Visible et Mis en avant s'empilent comme au téléphone. Un bloc que son créneau ou ses dates retirent en ce moment se grise sur la page éditée
+  de rendez-vous). Au bureau, Visibilité et Apparence se déplient en place, une seule à la fois (`ReplisExclusifs`), et
+  Visibilité et Mis en avant s'empilent comme au téléphone. Un bloc que son créneau ou ses dates retirent en ce moment se grise sur la page éditée
   (`horsCreneauOuDates` dans `lib/moments.ts`). « Plus de réglages » ne garde que le rare (lien partenaire,
   accès réservé, Visible par Google, demander le prénom ; absent pour un bloc qui n'a rien de tout cela ; sa ligne
   n'écrit rien tant que rien n'est réglé, ce qui l'est en bleu), en pages (`PagesBloc` dans `ReglesBloc.tsx`), avec une flèche dans l'en-tête de la feuille (`useFilFeuille`).

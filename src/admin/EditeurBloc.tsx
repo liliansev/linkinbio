@@ -17,7 +17,7 @@ import { BoutonPrincipal, BoutonSecondaire, Champ, Feuille, Interrupteur, ListeC
 import type { ElementMenu, FilFeuille } from './ui.tsx';
 import { DEVENU, EN_FAIRE, typeDe } from '../lib/catalogue.ts';
 import { appDe } from '../lib/ouvrirApp.ts';
-import { ChampsPreuve, PagesBloc, RangeesCompactes, RegleAOuvrir, RegleAcces, ReglagePourQui, ReglageQuand, Repli, ReplisExclusifs, resumePourQui, resumeQuand } from './ReglesBloc.tsx';
+import { ChampsPreuve, PagesBloc, RangeesCompactes, RegleAOuvrir, RegleAcces, ReglageVisibilite, Repli, ReplisExclusifs, resumeVisibilite } from './ReglesBloc.tsx';
 import type { PageRegle } from './ReglesBloc.tsx';
 import { useCouche } from './couches.ts';
 import { reseauxDePartage } from '../lib/provenance.ts';
@@ -26,10 +26,10 @@ import type { Fonction } from '../lib/abonnement.ts';
 import type { SuiteAchat } from '../lib/achat.ts';
 import { focusAuto, focusSaisie } from '../lib/clavier';
 
-/** Au téléphone, la page ouverte dans la feuille d'un bloc : l'essentiel (`null`), Quand, Pour qui, l'apparence, « Plus de réglages », ou une règle rare. */
+/** Au téléphone, la page ouverte dans la feuille d'un bloc : l'essentiel (`null`), la visibilité, l'apparence, « Plus de réglages », ou une règle rare. */
 type PageBloc = 'plus' | PageRegle | null;
 const hoteDe = (url: string) => { try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return ''; } };
-const NOMS_PAGES: Record<'plus' | PageRegle, string> = { plus: 'Plus de réglages', quand: 'Quand', public: 'Pour qui', apparence: 'Apparence', acces: 'Accès réservé', animation: 'Animation' };
+const NOMS_PAGES: Record<'plus' | PageRegle, string> = { plus: 'Plus de réglages', visibilite: 'Visibilité', apparence: 'Apparence', acces: 'Accès réservé', animation: 'Animation' };
 const NOMS_FORMES: Record<Bloc['format'], string> = { bouton: 'Bouton', bandeau: 'Bandeau', carte: 'Carte' };
 /**
  * Ce que « Mis en avant » ouvre, sur une ligne juste sous lui : l'apparence d'un lien (forme, couleur, animation),
@@ -203,13 +203,13 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
   // Ouvert pour y régler une règle tout juste débloquée (au retour des offres), il arrive déplié (au téléphone, sur la page de la règle).
   const regleAOuvrir = useContext(RegleAOuvrir);
   const [plus, setPlus] = useState(regleAOuvrir === 'acces');
-  // Au bureau, le réglage déplié de la rangée (Apparence, Quand ou Pour qui) : un seul à la fois.
+  // Au bureau, le réglage déplié de la rangée (Visibilité ou Apparence) : un seul à la fois.
   const [repli, setRepli] = useState<string | null>(null);
-  // La page d'où l'on vient : Quand, Pour qui et l'apparence s'ouvrent depuis la première page, l'accès réservé depuis
+  // La page d'où l'on vient : la visibilité et l'apparence s'ouvrent depuis la première page, l'accès réservé depuis
   // « Plus de réglages », l'animation depuis l'apparence (celle d'un rendez-vous, depuis la première page).
   const parent = (p: PageBloc): PageBloc => (p === 'acces' ? 'plus' : p === 'animation' && pageVedette(b) === 'apparence' ? 'apparence' : null);
   const niveau = (p: PageBloc): number => (p === null ? 0 : 1 + niveau(parent(p)));
-  const [page, setPage] = useState<PageBloc>(bureau ? null : regleAOuvrir === 'moment' ? 'quand' : regleAOuvrir);
+  const [page, setPage] = useState<PageBloc>(bureau ? null : regleAOuvrir === 'moment' ? 'visibilite' : regleAOuvrir);
   // Chaque page garde l'endroit où on l'a laissée : on revient à la ligne d'où l'on était parti.
   const defilements = useRef<Partial<Record<string, number>>>({});
   const passage = useRef<{ de: PageBloc; a: PageBloc } | null>(null);
@@ -336,7 +336,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
     if (r.bloc) return r.bloc;
     setErreurs(r.erreurs);
     if (r.erreurs.dates) {
-      if (!bureau) allerA('quand');
+      if (!bureau) allerA('visibilite');
       setTimeout(() => { const f = document.getElementById('bloc-fin'); f?.scrollIntoView({ block: 'center' }); f?.focus({ preventScroll: true }); }, 60);
     } else {
       // Les autres champs sont sur la première page : on y revient, le champ fautif sous les yeux.
@@ -388,7 +388,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
    * Ce que la page montre se règle sur la première page du bloc (23 octobre 2026) : son texte, son sous-titre, ses montants,
    * son image, sa description ; l'apparence d'un bloc mis en avant, juste sous « Mis en avant ». Derrière « Plus de réglages »
    * ne reste que ce que la page ne montre pas : le lien partenaire, l'accès réservé, Google, le prénom demandé. Ce qui y est
-   * réglé se dit à droite de la ligne, en bleu comme dans Quand et Pour qui ; rien de réglé, le chevron seul : la case dit un
+   * réglé se dit à droite de la ligne, en bleu comme dans Visibilité ; rien de réglé, le chevron seul : la case dit un
    * état, jamais un sommaire de ce qu'elle cache.
    */
   const reglages_ = ([[!!b.partenariat, 'Lien partenaire'], [!!b.acces, 'Accès réservé'], [b.type === 'lien' && principal && !b.indexable, 'Pas sur Google'],
@@ -884,12 +884,10 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
     ),
     b.type === 'lien' && principal && <Interrupteur key="google" compact={compact} label="Visible par Google" actif={b.indexable} onChange={v => maj({ indexable: v })} />,
   ].filter(Boolean);
-  // Quand et Pour qui, réglés depuis la première page du bloc ; l'accès réservé, rare, derrière « Plus de réglages ».
-  const quand = <ReglageQuand key={`quand-${b.id}`} b={b} maj={maj} erreur={erreurDe('dates')} />;
-  const pourQui = <ReglagePourQui key={`public-${b.id}`} b={b} maj={maj} reseaux={reseauxDePartage(reglages.vuesReseaux)} />;
+  // La visibilité, une ligne de la première page du bloc qui mène à sa page ; l'accès réservé, rare, derrière « Plus de réglages ».
+  const visibilite = <ReglageVisibilite key={`visibilite-${b.id}`} b={b} maj={maj} erreur={erreurDe('dates')} reseaux={reseauxDePartage(reglages.vuesReseaux)} />;
   const acces = b.type === 'lien' && <RegleAcces key={`acces-${b.id}`} b={b} maj={maj} prises={prises} />;
-  const dejaQuand = resumeQuand(b, !!droits.heure);
-  const dejaPourQui = resumePourQui(b);
+  const dejaVisible = resumeVisibilite(b, !!droits.heure);
   // Au téléphone seulement : au bureau, la rangée se déplace par sa poignée, à la souris ou au clavier.
   const fleche = (sens: -1 | 1) => place && onDeplacer && (
     <button type="button" disabled={sens < 0 ? place.rang === 0 : place.rang === place.total - 1} onClick={() => onDeplacer(enregistre.current ?? b, sens)} aria-label={sens < 0 ? 'Monter d’un cran' : 'Descendre d’un cran'}
@@ -945,7 +943,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
     : appel === 'soutien' ? (avecMontants(adresseValide) ? 'Avec Hopla Starter, tes visiteurs choisissent un montant, puis paient sur PayPal.' : 'Avec Hopla Starter, ce lien devient un bouton « Me soutenir ».')
     : 'Avec Hopla Starter, ce produit s’affiche avec sa photo et son prix.';
   // Un bloc d'adresse (une vidéo, un agenda, un soutien, un produit), neuf ou posé, redevient d'un geste un simple lien (24 octobre
-  // 2026) : la détection propose, elle ne décide pas. Le lien garde sa place, Quand et Pour qui.
+  // 2026) : la détection propose, elle ne décide pas. Le lien garde sa place et sa visibilité.
   const versLien = avecUrl && b.type !== 'lien' && !!adresseValide;
   // Ces gestes se posent sous le champ et hors de son libellé, pour que le lecteur d'écran ne les lise pas avec l'adresse.
   const geste = (texte: string, action: () => void, suite: 'type' | 'partenaire' = 'type') => (
@@ -1161,15 +1159,13 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
       <div ref={racine} className="adm-editeur adm-editeur-ligne"
         onKeyDown={nouveau ? e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && !envoi) { e.preventDefault(); ajouter(); } } : undefined}>
         {essentiel}
-        {/* Les deux gestes les plus courants après le texte : le montrer ou non, le mettre en avant. L'un sous l'autre, comme
-            au téléphone : côte à côte, l'interrupteur de l'un finissait contre le nom de l'autre. */}
+        {/* Les gestes courants après le texte, comme au téléphone : la visibilité, une ligne qui dit ce qui est réglé et se
+            déplie en place (le bloc sur la page ou non, selon la date, l'heure, le réseau), puis « Mis en avant » et, juste
+            sous lui, ce qu'il ouvre. Allumé à l'instant, l'apparence arrive dépliée. */}
         <div className="flex flex-col">
-          <Interrupteur compact label="Visible sur ma page" actif={b.public} onChange={v => maj({ public: v })} />
+          <Repli key={erreurDe('dates') ? 'visibilite-erreur' : `visibilite-${b.id}`} titre="Visibilité" resume={dejaVisible} regle={dejaVisible !== 'Visible'}
+            ouvert={!!erreurDe('dates') || regleAOuvrir === 'moment'} montrer={regleAOuvrir === 'moment'}>{visibilite}</Repli>
           {vedette(true)}
-        </div>
-        {/* Ce que « Mis en avant » ouvre, juste sous lui, puis Quand et Pour qui : chaque ligne dit ce qui est réglé, et se déplie en place.
-            Allumé à l'instant, l'apparence arrive dépliée. */}
-        <div className="flex flex-col">
           {pageVedette(b) === 'apparence' && (
             <Repli key={`apparence-${b.id}`} titre="Apparence" icone="pinceau" resume={resumeApparence} ouvert={vedetteAllumee.current}>
               {/* L'animation se déplie dans l'apparence, sans la replier. */}
@@ -1177,8 +1173,6 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
             </Repli>
           )}
           {pageVedette(b) === 'animation' && animation}
-          <Repli key={erreurDe('dates') ? 'quand-erreur' : `quand-${b.id}`} titre="Quand" icone="horloge" resume={dejaQuand} regle={dejaQuand !== 'Tout le temps'} ouvert={!!erreurDe('dates') || regleAOuvrir === 'moment'} montrer={regleAOuvrir === 'moment'}>{quand}</Repli>
-          <Repli key={`public-${b.id}`} titre="Pour qui" icone="cible" resume={dejaPourQui} regle={dejaPourQui !== 'Tout le monde'} ouvert={false}>{pourQui}</Repli>
         </div>
 
         {/* Ce que la page ne montre pas attend derrière une seule ligne, qui dit ce qui est réglé : on sait quoi sans ouvrir. */}
@@ -1231,8 +1225,8 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
     );
   }
 
-  // Au téléphone, la feuille mène de page en page, sa flèche dans l'en-tête : l'essentiel, puis une page par règle (l'apparence,
-  // Quand, Pour qui, « Plus de réglages »), et l'animation ou l'accès réservé un cran plus loin.
+  // Au téléphone, la feuille mène de page en page, sa flèche dans l'en-tête : l'essentiel, puis une page par règle (la visibilité,
+  // l'apparence, « Plus de réglages »), et l'animation ou l'accès réservé un cran plus loin.
   const fil: FilFeuille | null = page === null ? null : {
     titre: NOMS_PAGES[page],
     label: parent(page) === 'plus' ? 'Revenir à Plus de réglages' : parent(page) === 'apparence' ? 'Revenir à Apparence' : 'Revenir au bloc',
@@ -1240,7 +1234,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
   };
   const groupe = 'adm-groupe flex flex-col divide-y divide-white/[0.06]';
   /** Une ligne de la première page qui mène à sa page : son nom, ce qui est réglé à droite (en bleu si c'est une règle), un chevron. */
-  const ligneRegle = (id: PageRegle, valeur: string, regle = valeur !== 'Tout le temps' && valeur !== 'Tout le monde') => (
+  const ligneRegle = (id: PageRegle, valeur: string, regle: boolean) => (
     <button id={`regle-${id}`} type="button" onClick={() => { vibrer(4); allerA(id); }}
       className="flex min-h-12 w-full items-center gap-3 px-4 text-left transition hover:bg-white/[0.03] active:bg-white/[0.05]">
       <span className="shrink-0 text-[14.5px] font-medium text-white">{NOMS_PAGES[id]}</span>
@@ -1275,15 +1269,13 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
       <div hidden={page !== null} className="adm-editeur flex flex-col gap-4 pt-1">
         {essentiel}
 
-        {/* Les quatre gestes les plus courants après le texte, à portée (Lilian, 22 octobre 2026) : le montrer ou non, le mettre
-            en avant, le programmer, le régler selon le réseau. Chaque ligne dit ce qui est réglé ; Quand et Pour qui mènent à leur page.
-            Allumé, « Mis en avant » pose juste sous lui la ligne de ce qu'il ouvre : l'apparence, ou l'animation d'un rendez-vous. */}
+        {/* Les gestes courants après le texte, à portée (Lilian, 22 et 24 octobre 2026) : la visibilité, une ligne qui dit ce
+            qui est réglé et mène à sa page (le bloc sur la page ou non, selon la date, l'heure, le réseau), puis « Mis en
+            avant », qui pose juste sous lui la ligne de ce qu'il ouvre : l'apparence, ou l'animation d'un rendez-vous. */}
         <div className={groupe}>
-          <div className="px-4"><Interrupteur label="Visible sur ma page" actif={b.public} onChange={v => maj({ public: v })} /></div>
+          {ligneRegle('visibilite', dejaVisible, dejaVisible !== 'Visible')}
           {enAvant && <div className="px-4"><Interrupteur label="Mis en avant" actif={b.vedette} onChange={v => maj({ vedette: v })} /></div>}
           {vedettePage && ligneRegle(vedettePage, vedettePage === 'apparence' ? resumeApparence : resumeAnimation, vedettePage === 'animation' && b.animation !== 'auto')}
-          {ligneRegle('quand', dejaQuand)}
-          {ligneRegle('public', dejaPourQui)}
         </div>
 
         {/* Ce que la page ne montre pas attend derrière une seule ligne, qui dit ce qui est réglé ; elle mène à sa page, la flèche de l'en-tête ramène. */}
@@ -1324,8 +1316,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
         <div className="adm-editeur flex flex-col gap-4 pt-1">
           {page === 'apparence' && formeCouleur}
           {page === 'plus' && bascules(false, true).length > 0 && <div className="adm-groupe divide-y divide-white/[0.06] px-4">{bascules(false, true)}</div>}
-          {page === 'quand' && quand}
-          {page === 'public' && pourQui}
+          {page === 'visibilite' && visibilite}
           {/* L'animation et l'accès réservé restent montés d'une page à l'autre : leur ligne dans la page d'où ils partent, leur page ensuite. */}
           {(page === 'apparence' || page === 'animation') && animation && <div className={page === 'apparence' ? groupe : 'contents'}>{animation}</div>}
           {(page === 'plus' || page === 'acces') && acces && <div className={page === 'plus' ? groupe : 'contents'}>{acces}</div>}

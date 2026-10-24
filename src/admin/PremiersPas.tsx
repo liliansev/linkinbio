@@ -18,7 +18,7 @@ import { focusSaisie } from '../lib/clavier';
  * de l'eau ; chaque étape se passe, et « Plus tard » mène tout de suite à
  * l'éditeur. Les étapes laissées de côté restent dans « Bien démarrer ».
  * Où l'on mettra son lien ne se demande pas : la page voit d'où arrive
- * chaque visiteur, et chaque bloc se règle réseau par réseau (« Pour qui »).
+ * chaque visiteur, et chaque bloc se règle réseau par réseau (« Selon le réseau », dans sa visibilité).
  */
 
 type Etape = 'profil' | 'liens' | 'reseaux' | 'style' | 'fin';
@@ -141,7 +141,7 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
     if (etape === 'liens') poserLiens();
     // Une ambiance choisie ici compte pour l'étape « Choisis ton thème » de Bien démarrer.
     if (etape === 'style') noter('hopla-themes-vus');
-    // Les réseaux qu'on vient de relier sont ceux où l'on mettra son lien : la fin les nomme, et « Pour qui » les propose d'abord dans chaque bloc.
+    // Les réseaux qu'on vient de relier sont ceux où l'on mettra son lien : la fin les nomme, et « Selon le réseau » les propose d'abord dans chaque bloc.
     if (etape === 'reseaux' && !reglages.vuesReseaux.length) {
       const relies = RESEAUX_SOCIAUX.filter(a => reglages.reseaux.some(r => r.reseau === a && r.url));
       if (relies.length) onReglages({ ...reglages, vuesReseaux: relies });

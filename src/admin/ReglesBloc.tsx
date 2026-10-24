@@ -11,9 +11,9 @@ import { Etiquette, Reserve, usePermis, useVoirOffres } from './offre.tsx';
 import { COULEURS_SOURCES } from '../lib/stats.ts';
 
 /*
- * Les réglages d'un bloc : Quand et Pour qui sur sa première page, l'animation
- * dans l'apparence d'un bloc mis en avant, l'accès réservé, rare, derrière
- * « Plus de réglages ».
+ * Les réglages d'un bloc : sa visibilité, une ligne de sa première page,
+ * l'animation dans l'apparence d'un bloc mis en avant, l'accès réservé, rare,
+ * derrière « Plus de réglages ».
  */
 
 /** Une date ISO vers la valeur d'un `<input type="datetime-local">`, en heure locale. */
@@ -33,8 +33,8 @@ const depuisLocal = (v: string) => (v ? new Date(v).toISOString() : '');
 export const RangeesCompactes = createContext(false);
 
 /**
- * Au bureau, dans la rangée d'un bloc : Apparence, Quand et Pour qui se déplient un à la fois (23 octobre 2026). En ouvrir un
- * replie l'autre, et la rangée ne s'allonge pas de trois réglages ouverts. `ouvert` : le titre de celui qui l'est.
+ * Au bureau, dans la rangée d'un bloc : Visibilité et Apparence se déplient un à la fois (23 octobre 2026). En ouvrir un
+ * replie l'autre, et la rangée ne s'allonge pas de deux réglages ouverts. `ouvert` : le titre de celui qui l'est.
  */
 export const ReplisExclusifs = createContext<{ ouvert: string | null; poser: (titre: string | null) => void } | null>(null);
 
@@ -42,10 +42,10 @@ export const ReplisExclusifs = createContext<{ ouvert: string | null; poser: (ti
 export const RegleAOuvrir = createContext<'moment' | 'acces' | null>(null);
 
 /**
- * Les réglages qui s'ouvrent en sous-page, dans la feuille d'un bloc au téléphone : Quand, Pour qui et l'apparence d'un bloc
+ * Les réglages qui s'ouvrent en sous-page, dans la feuille d'un bloc au téléphone : la visibilité et l'apparence d'un bloc
  * mis en avant depuis la première page, l'animation depuis cette apparence, l'accès réservé depuis « Plus de réglages ».
  */
-export type PageRegle = 'quand' | 'public' | 'apparence' | 'acces' | 'animation';
+export type PageRegle = 'visibilite' | 'apparence' | 'acces' | 'animation';
 /**
  * Au téléphone, la feuille d'un bloc mène de page en page (22 octobre 2026) :
  * « Plus de réglages » montre une ligne par règle, qui s'ouvre à la place de la
@@ -58,7 +58,7 @@ export const PagesBloc = createContext<{ page: 'plus' | PageRegle | null; ouvrir
  * `depuis` est la page où se pose sa ligne : « Plus de réglages », ou l'apparence d'un bloc mis en avant. `regle` : le résumé
  * dit une règle posée, il s'écrit en bleu, comme sur la première page du bloc.
  */
-export function Repli({ id, depuis = 'plus', titre, icone, resume, regle = false, ouvert: depart, etiquette, montrer = false, children }: { id?: PageRegle; depuis?: 'plus' | PageRegle; titre: string; icone: string; resume?: string; regle?: boolean; ouvert: boolean; etiquette?: ReactNode; montrer?: boolean; children: ReactNode }) {
+export function Repli({ id, depuis = 'plus', titre, icone, resume, regle = false, ouvert: depart, etiquette, montrer = false, children }: { id?: PageRegle; depuis?: 'plus' | PageRegle; titre: string; icone?: string; resume?: string; regle?: boolean; ouvert: boolean; etiquette?: ReactNode; montrer?: boolean; children: ReactNode }) {
   const [seul, setSeul] = useState(depart);
   const compact = useContext(RangeesCompactes);
   const pages = useContext(PagesBloc);
@@ -83,8 +83,8 @@ export function Repli({ id, depuis = 'plus', titre, icone, resume, regle = false
     // Sa propre page : le contenu seul, le titre est dans l'en-tête de la feuille.
     if (pages.page === id) return <div className="flex flex-col gap-3 pb-1">{children}</div>;
     if (pages.page !== depuis) return null;
-    // Dans la page d'où elle part : une ligne qui dit ce qui est réglé, et mène à la page de la règle. La même que Quand et
-    // Pour qui sur la première page du bloc : sans picto, la règle posée en bleu.
+    // Dans la page d'où elle part : une ligne qui dit ce qui est réglé, et mène à la page de la règle. La même que Visibilité
+    // sur la première page du bloc : sans picto, la règle posée en bleu.
     return (
       <button id={`regle-${id}`} type="button" onClick={() => { vibrer(4); pages.ouvrir(id); }}
         className="flex min-h-12 w-full items-center gap-3 px-4 text-left transition hover:bg-white/[0.03] active:bg-white/[0.05]">
@@ -106,14 +106,14 @@ export function Repli({ id, depuis = 'plus', titre, icone, resume, regle = false
           <Icone nom="ui-chevron" taille={14} className={`shrink-0 transition-transform duration-300 ${ouvert ? 'rotate-180' : ''}`} />
         </span>
       </button>
-      {/* Ce que la ligne ouvre, en retrait sous son nom : on voit où finit l'apparence et où commence Quand. */}
+      {/* Ce que la ligne ouvre, en retrait sous son nom : on voit où finit la visibilité et où reprend « Mis en avant ». */}
       {ouvert && <div className="flex flex-col gap-3 pb-3 pl-4 pt-1.5">{children}</div>}
     </div>
   );
   return (
     <div ref={racine} className="adm-groupe">
       <button type="button" onClick={() => setOuvert(!ouvert)} aria-expanded={ouvert} className="flex min-h-12 w-full items-center gap-2.5 px-4 text-left text-[14.5px] font-medium text-white/85">
-        <Icone nom={icone} taille={17} />
+        {icone && <Icone nom={icone} taille={17} />}
         <span className="shrink-0">{titre}</span>
         {etiquette}
         {/* Ce qui est réglé se lit à droite, comme une valeur, jamais en sous-titre sous le nom. */}
@@ -129,51 +129,51 @@ const JOURS = ['Lu', 'Ma', 'Me', 'Je', 'Ve', 'Sa', 'Di'];
 const NOMS = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche'];
 const fuseauNavigateur = () => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || FUSEAU_DEFAUT; } catch { return FUSEAU_DEFAUT; } };
 
-/** « 12 nov. » : un jour d'un bloc, en court, pour les résumés. */
-const jourCourt = (iso: string) => new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+/** « 12 nov. », « 1er déc. » : un jour d'un bloc, en court, pour les résumés. */
+const jourCourt = (iso: string) => new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }).replace(/^1(\s)/, '1er$1');
 /** « mer. 12 nov., 10:00 » : une date d'un bloc, dans sa ligne. */
 const dateLigne = (iso: string) => new Date(iso).toLocaleString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 const majuscule = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
-/*
- * Les quatre gestes qu'on fait le plus sur un bloc (Lilian, 22 octobre 2026 : « il faut que ce soit vraiment simple ») :
- * le programmer, le mettre en avant, le montrer ou non selon le réseau, le mettre en avant selon le réseau. Ils se
- * règlent depuis la première page du bloc, en deux lignes qui disent ce qui est réglé : « Quand » et « Pour qui ».
- */
-
-/** Ce que « Quand » dit sans s'ouvrir. `heure` : un créneau que l'offre ne comprend pas ne s'applique pas, il ne se dit pas. */
-export function resumeQuand(b: Bloc, heure: boolean): string {
-  const dates = b.debut && b.fin ? `du ${jourCourt(b.debut)} au ${jourCourt(b.fin)}` : b.debut ? `à partir du ${jourCourt(b.debut)}` : b.fin ? `jusqu’au ${jourCourt(b.fin)}` : '';
-  const semaine = heure && b.creneau ? `${b.creneau.effet === 'avant' ? 'en avant ' : 'seulement '}${decrireCreneau(b.creneau)}` : '';
-  return majuscule([dates, semaine].filter(Boolean).join(', ')) || 'Tout le temps';
+/** « du 12 au 20 nov. », « du 28 oct. au 3 nov. », « à partir du 12 nov. » : les dates d'un bloc, en court. */
+function datesCourtes(debut: string, fin: string): string {
+  if (debut && fin) {
+    const d = new Date(debut), f = new Date(fin);
+    const memeMois = d.getFullYear() === f.getFullYear() && d.getMonth() === f.getMonth();
+    return `du ${memeMois ? (d.getDate() === 1 ? '1er' : d.getDate()) : jourCourt(debut)} au ${jourCourt(fin)}`;
+  }
+  return debut ? `à partir du ${jourCourt(debut)}` : fin ? `jusqu’au ${jourCourt(fin)}` : '';
 }
 
-/**
- * Ce que « Pour qui » dit sans s'ouvrir : « Tout le monde », « Sauf venus de TikTok, en avant venus d'Instagram ». Le
- * réglage porte sur d'où vient le visiteur, pas sur le réseau où le bloc serait publié : la phrase le dit (23 octobre 2026).
+/*
+ * La visibilité d'un bloc (24 octobre 2026, demandé par Lilian : « un sous-menu qui s'appelle visibilité […] je clique et
+ * là, je peux customiser tout ça »). Une seule ligne de sa première page, qui dit ce qui est réglé, mène à sa page : le
+ * bloc est-il sur la page, puis ce qui en décide, selon la date, selon l'heure, selon le réseau du visiteur, avec les mots
+ * des offres. Les gestes de « vraiment simple » (22 octobre 2026) y sont tous : le montrer ou non, le programmer, le
+ * mettre en avant selon l'heure ou selon le réseau.
  */
-export function resumePourQui(b: Bloc): string {
-  const venus = (l: Audience[]) => `venus ${l.map(deReseau).join(', ')}`;
-  const a = b.audience?.sources.length ? b.audience : null;
-  return majuscule([
-    a?.effet === 'seulement' ? `seulement ${venus(a.sources)}` : '',
-    b.cache?.length ? `sauf ${venus(b.cache)}` : '',
-    a?.effet === 'avant' ? `en avant ${venus(a.sources)}` : '',
-  ].filter(Boolean).join(', ')) || 'Tout le monde';
+
+/**
+ * Ce que « Visibilité » dit sans s'ouvrir : « Visible », « Masqué », ou ce qui en décide, avec le nom de ses parties
+ * (« Du 12 au 20 nov., selon le réseau »). `heure` : un créneau que l'offre ne comprend pas ne s'applique pas, il ne se dit pas.
+ */
+export function resumeVisibilite(b: Bloc, heure: boolean): string {
+  if (!b.public) return 'Masqué';
+  const reseau = !!(b.audience?.sources.length || b.cache?.length);
+  return majuscule([datesCourtes(b.debut, b.fin), heure && b.creneau ? 'selon l’heure' : '', reseau ? 'selon le réseau' : ''].filter(Boolean).join(', ')) || 'Visible';
 }
 
 /**
  * Une date d'un bloc, comme dans le calendrier du téléphone : son nom, et sa valeur à droite (« Maintenant », « Jamais »), un
  * chevron tant qu'elle est vide, une croix pour la retirer ensuite.
  * Le sélecteur natif couvre la ligne, invisible : un toucher l'ouvre tout de suite, sans champ à viser. Sans l'offre, la
- * ligne mène aux offres ; une date gardée d'une offre passée se retire toujours.
+ * ligne mène aux offres (son badge est au titre de la partie) ; une date gardée d'une offre passée se retire toujours.
  */
 function LigneDate({ id, nom, vide, valeur, min, permis, invalide, onChange, retirer }: { id?: string; nom: string; vide: string; valeur: string; min?: string; permis: boolean; invalide?: boolean; onChange: (iso: string) => void; retirer: () => void }) {
   const voir = useVoirOffres();
   return (
     <div className="relative flex min-h-12 items-center gap-3 px-4 transition focus-within:bg-white/[0.05] hover:bg-white/[0.03] bureau:min-h-10 bureau:gap-2 bureau:px-3">
       <span className="shrink-0 text-[14.5px] font-medium text-white bureau:text-[13.5px] bureau:font-normal">{nom}</span>
-      {!permis && <Etiquette fonction="programmation" />}
       <span className={`ml-auto min-w-0 truncate text-[14px] tabular-nums bureau:text-[13.5px] ${invalide ? 'text-red-300' : valeur ? 'font-medium text-bleu' : 'text-white/55'}`}>{valeur ? dateLigne(valeur) : vide}</span>
       {permis ? (
         <input id={id} type="datetime-local" aria-label={nom} aria-invalid={invalide || undefined} value={versLocal(valeur)} min={min}
@@ -196,12 +196,23 @@ function LigneDate({ id, nom, vide, valeur, min, permis, invalide, onChange, ret
   );
 }
 
+/** Une partie de la visibilité : son nom au-dessus, et le badge de son offre à côté de lui quand toute la partie l'attend. */
+function Partie({ titre, etiquette, children }: { titre: string; etiquette?: ReactNode; children: ReactNode }) {
+  return (
+    <div>
+      <h3 className="mb-1.5 flex items-center gap-2 text-[13px] font-medium text-white/70">{titre}{etiquette}</h3>
+      {children}
+    </div>
+  );
+}
+
 /**
- * « Quand » : deux lignes, Apparaît (Maintenant) et Disparaît (Jamais), le compte à rebours d'un lancement, puis le
- * créneau qui revient chaque semaine. Starter pour les dates, Pro pour la semaine : sans l'offre, les mêmes lignes
- * portent leur étiquette et mènent aux offres.
+ * « Visibilité » : « Visible sur ma page », puis trois parties. Selon la date : Apparaît (Maintenant) et Disparaît (Jamais),
+ * et le compte à rebours d'un lancement. Selon l'heure : le créneau qui revient chaque semaine. Selon le réseau : d'où
+ * vient le visiteur. Starter pour les dates, Pro pour l'heure : sans l'offre, les mêmes lignes portent son badge et mènent
+ * aux offres ; le réseau, à tous, dès Gratuit.
  */
-export function ReglageQuand({ b, maj, erreur }: { b: Bloc; maj: (c: Partial<Bloc>) => void; erreur?: string }) {
+export function ReglageVisibilite({ b, maj, erreur, reseaux }: { b: Bloc; maj: (c: Partial<Bloc>) => void; erreur?: string; reseaux: Audience[] }) {
   const c = b.creneau;
   const dates = usePermis('programmation');
   const semaine = usePermis('heure');
@@ -212,24 +223,28 @@ export function ReglageQuand({ b, maj, erreur }: { b: Bloc; maj: (c: Partial<Blo
   const majCreneau = (champs: Partial<Creneau>) => maj({ creneau: { ...(c ?? { jours: [1, 2, 3, 4, 5], de: '09:00', a: '18:00', fuseau: fuseauNavigateur(), effet: 'avant' }), ...champs, fuseau: fuseauNavigateur() } });
   const lancement = b.type === 'lien' && dates && !!b.debut && Date.parse(b.debut) > Date.now();
   return (
-    <div className="flex flex-col gap-4 bureau:gap-3">
-      <div>
+    <div className="flex flex-col gap-5 bureau:gap-4">
+      <div className="adm-groupe px-4 bureau:px-3">
+        <Interrupteur compact={compact} label="Visible sur ma page" actif={b.public} onChange={v => maj({ public: v })} />
+      </div>
+
+      <Partie titre="Selon la date" etiquette={!dates && <Etiquette fonction="programmation" />}>
         <div className="adm-groupe flex flex-col divide-y divide-white/[0.06]">
           <LigneDate nom="Apparaît" vide="Maintenant" valeur={b.debut} permis={dates}
             onChange={debut => maj({ debut, ...(debut ? {} : { compteARebours: false }) })} retirer={() => maj({ debut: '', compteARebours: false })} />
           <LigneDate id="bloc-fin" nom="Disparaît" vide="Jamais" valeur={b.fin} min={versLocal(b.debut) || undefined} permis={dates} invalide={!!erreur}
             onChange={fin => maj({ fin })} retirer={() => maj({ fin: '' })} />
+          {/* Un lien qui n'est pas encore là peut compter les jours jusqu'à son arrivée : la ligne suit sa date. */}
+          {lancement && (
+            <div className="grid min-h-12 items-center px-4 bureau:min-h-10 bureau:px-3">
+              <Interrupteur compact={compact} label="Compte à rebours" actif={b.compteARebours} onChange={v => maj({ compteARebours: v })} />
+            </div>
+          )}
         </div>
         {erreur && <p role="alert" className="mt-1.5 text-[13px] font-medium text-red-300">{erreur}</p>}
-      </div>
-      {lancement && (
-        <div className="adm-groupe px-4 bureau:px-3">
-          <Interrupteur compact={compact} label="Compte à rebours" actif={b.compteARebours} onChange={v => maj({ compteARebours: v })} />
-        </div>
-      )}
+      </Partie>
 
-      <div>
-        <span className="mb-1.5 flex items-center gap-2 text-[13px] font-medium text-white/70">Chaque semaine {!semaine && <Etiquette fonction="heure" />}</span>
+      <Partie titre="Selon l’heure" etiquette={!semaine && <Etiquette fonction="heure" />}>
         {!semaine && c ? (
           // Un créneau gardé d'une offre passée : il ne s'applique plus, il se retire.
           <Reserve fonction="heure" phrase={`Ce bloc devait s’afficher ${decrireCreneau(c)}. Sans Hopla Pro, il s’affiche tout le temps.`}>
@@ -265,16 +280,21 @@ export function ReglageQuand({ b, maj, erreur }: { b: Bloc; maj: (c: Partial<Blo
             </div>
           </div>
         )}
-      </div>
+      </Partie>
+
+      <Partie titre="Selon le réseau">
+        <ListeReseaux b={b} maj={maj} reseaux={reseaux} />
+      </Partie>
     </div>
   );
 }
 
 /**
- * « Pour qui » : une seule liste de réseaux, chacun avec deux interrupteurs côte à côte, Affiché et En avant (en tête de
- * la page, mis en avant, pour ceux qui arrivent de là). À tous, dès Gratuit : c'est la promesse de Hopla.
+ * Selon le réseau : une seule liste, chacun avec deux interrupteurs côte à côte, Affiché et En avant (en tête de la page,
+ * mis en avant, pour ceux qui arrivent de là). Le réglage porte sur d'où vient le visiteur, pas sur le réseau où le bloc
+ * serait publié : la colonne le dit, « Venus de » (23 octobre 2026). À tous, dès Gratuit : c'est la promesse de Hopla.
  */
-export function ReglagePourQui({ b, maj, reseaux }: { b: Bloc; maj: (c: Partial<Bloc>) => void; reseaux: Audience[] }) {
+function ListeReseaux({ b, maj, reseaux }: { b: Bloc; maj: (c: Partial<Bloc>) => void; reseaux: Audience[] }) {
   const cache = b.cache ?? [];
   const reserve = b.audience?.effet === 'seulement' ? b.audience.sources : null;
   const visible = (s: Audience) => !cache.includes(s) && (!reserve || reserve.includes(s));
@@ -293,7 +313,7 @@ export function ReglagePourQui({ b, maj, reseaux }: { b: Bloc; maj: (c: Partial<
         <span className={colonne}>Affiché</span>
         <span className={colonne}>En avant</span>
       </div>
-      <ul className="divide-y divide-white/[0.06]" aria-label="Pour qui">
+      <ul className="divide-y divide-white/[0.06]" aria-label="Selon le réseau">
         {liste.map(s => {
           const vu = visible(s);
           return (
