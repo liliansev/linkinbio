@@ -14,6 +14,7 @@ import { jetonTurnstile, preparerTurnstile } from '../lib/turnstile.ts';
 import { LOCALE, textes } from '../lib/mots.ts';
 import type { Textes } from '../lib/mots.ts';
 import { Icone, NOMS_RESEAUX } from './Icone.tsx';
+import { Trace } from './Logo.tsx';
 import { peut } from '../lib/abonnement.ts';
 import { adresseIntegree, avecMontants, lienMontant, lienSansMontant, nomAgenda, nomSoutien, seIntegre } from '../lib/vitrine.ts';
 import { focusAuto } from '../lib/clavier';
@@ -197,6 +198,12 @@ export function PageLiens({ page, apercu = false, edition, liste }: {
           {edition
             ? <ChampBio valeur={reglages.profil.bio} onChange={bio => edition.profil({ bio })} onQuitter={avant => edition.modifie?.('bio', avant)} />
             : reglages.profil.bio && <p className="lp-bio">{reglages.profil.bio}</p>}
+          {/* La page de Lilian met Hopla en avant sous sa bio (24 octobre 2026) : une ligne à l'accent du thème, le logo après le mot. */}
+          {compte.principal && (
+            <p className="lp-hopla-haut" {...(edition ? { inert: true } : {})}>
+              <a href={ORIGINE_PUBLIQUE} {...cible}>{t.creeTaPage} <strong>Hopla</strong><Trace /></a>
+            </p>
+          )}
           {reglages.reseauxPosition === 'haut' && reseaux}
         </header>
 

@@ -13,7 +13,7 @@ const tu = {
   partager: 'Partager cette page', copie: 'Lien copié', reseaux: 'Réseaux', verifie: 'Compte vérifié',
   // Le pied : « Créer ma page avec Hopla », le nom en gras (`PageLiens`), à la première personne comme les boutons de la page :
   // il va au tu comme au vous.
-  confidentialite: 'Confidentialité', signaler: 'Signaler', signalerPage: 'Signaler cette page', creeAvec: 'Créer ma page avec',
+  confidentialite: 'Confidentialité', signaler: 'Signaler', signalerPage: 'Signaler cette page', creeAvec: 'Créer ma page avec', creeTaPage: 'Crée ta page avec',
   bientot: 'Bientôt', ouvert: 'C’est ouvert', ouvreLe: (quand: string) => `Ouvre le ${quand}`,
   prenom: 'Prénom', prenomAria: 'Ton prénom', email: 'ton@email.fr', emailAria: 'Ton adresse e-mail', inscrire: 'Je m’inscris',
   mention: 'Ton adresse sert seulement à recevoir ces e-mails. Désinscription en un clic, quand tu veux.',
@@ -55,6 +55,7 @@ const vous: Textes = {
   nom: 'Votre nom', nomAria: 'Votre nom (facultatif)', message: 'Votre message', messageAria: 'Votre message',
   envoye: 'Message envoyé, merci ! Vous recevrez la réponse par e-mail.', messageVide: 'Écrivez votre message.',
   mentionMessage: 'Votre adresse sert seulement à vous répondre. Hopla ne garde pas votre message.',
+  creeTaPage: 'Créez votre page avec',
   ouvrirCadeau: 'Ouvrir votre cadeau', cadeauPret: 'C’est noté, merci ! Votre cadeau vous attend.',
 };
 
