@@ -8,7 +8,7 @@ export type Droits = Record<Fonction, boolean>;
 /**
  * La page telle que son offre permet de la montrer. Une fonction qui n'est pas
  * (ou plus) comprise s'efface sans rien casser : la page reprend les couleurs
- * de son thème, un bloc réglé selon l'heure redevient un bloc de tous les
+ * de son thème (et sa police, son fond, sa photo ronde), une collection en grille repasse en liste, un bloc réglé selon l'heure redevient un bloc de tous les
  * jours, un compte à rebours se tait (le bloc attend sa date sans rien montrer),
  * et ce qui ne peut pas s'afficher autrement disparaît (un drop, dont l'adresse
  * doit rester cachée ; un formulaire de liste ou de contact ; un avis ; un bloc de la vitrine). Une galerie ne montre
@@ -22,9 +22,11 @@ export type Droits = Record<Fonction, boolean>;
 export function selonDroits<T extends Bloc>(reglages: Reglages, blocs: T[], d: Droits): { reglages: Reglages; blocs: T[] } {
   return {
     // Une page qui a tout garde ses réglages tels quels.
-    reglages: d.couleurs && d.utm && d.redirection ? reglages : {
+    reglages: d.couleurs && d.utm && d.redirection && d.fond && d.grandePhoto ? reglages : {
       ...reglages,
-      ...(d.couleurs ? {} : { couleurs: SANS_COULEURS }),
+      ...(d.couleurs ? {} : { couleurs: SANS_COULEURS, police: '' as const }),
+      ...(d.fond ? {} : { imageFond: '' }),
+      ...(d.grandePhoto ? {} : { profil: { ...reglages.profil, photo: 'ronde' as const } }),
       ...(d.utm ? {} : { utm: false }),
       ...(d.redirection ? {} : { redirection: { url: '', fin: '' } }),
     },
@@ -36,6 +38,7 @@ export function selonDroits<T extends Bloc>(reglages: Reglages, blocs: T[], d: D
       if (!d.programmation && bloc.compteARebours) bloc = { ...bloc, compteARebours: false };
       if (!d.vitrine && bloc.partenariat?.code) bloc = { ...bloc, partenariat: { ...bloc.partenariat, code: '' } };
       if (!d.galerie && bloc.images.length > GALERIE_GRATUITE) bloc = { ...bloc, images: bloc.images.slice(0, GALERIE_GRATUITE) };
+      if (!d.grille && bloc.disposition === 'grille') bloc = { ...bloc, disposition: 'liste' };
       return [bloc];
     }),
   };

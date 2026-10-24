@@ -24,7 +24,7 @@ const insecables = (g: string) => g.replace(/« /g, '«\u00a0').replace(/ »/g, 
 const DEMOS: Record<string, string> = {
   'Ta page selon le réseau du visiteur': '#fonctionnement',
   'Les vingt thèmes': '#themes',
-  'Tes couleurs': '#couleurs',
+  'Tes couleurs, ta police, ton image de fond': '#couleurs',
   'Tes liens programmés à l’avance': '#vivante-lancement',
   'Les avis de tes clients': '#vivante-avis',
   'Tes stats sur 30 jours': '#stats',

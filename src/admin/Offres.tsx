@@ -510,7 +510,8 @@ function RepasserGratuit({ abonnement, grand, id, retour, fermer, resilier, ouvr
 const PICTOS: { avantage: string; picto: string }[] = [
   { avantage: 'Sans la mention « Créer ma page avec Hopla »', picto: 'masque' },
   { avantage: 'Ta vitrine : produits, réservations, soutien', picto: 'boutique' },
-  { avantage: 'Tes couleurs', picto: 'pinceau' },
+  { avantage: 'Tes couleurs, ta police, ton image de fond', picto: 'pinceau' },
+  { avantage: 'Ta photo en grand, tes liens en grille', picto: 'photo' },
   { avantage: 'Tes liens programmés à l’avance', picto: 'agenda' },
   { avantage: 'Les avis de tes clients', picto: 'etoile' },
   { avantage: 'Tes stats sur 30 jours', picto: 'courbe' },

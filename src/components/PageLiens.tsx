@@ -7,6 +7,7 @@ import { themeDe, variablesTheme } from '../lib/themes.ts';
 import { ICONES } from '../lib/icones.ts';
 import { lienApp } from '../lib/ouvrirApp.ts';
 import { enAttente } from '../lib/moments.ts';
+import { enGrille } from '../lib/collections.ts';
 import { etatPlaces } from '../lib/acces.ts';
 import { adresseSaisie } from '../lib/valider.ts';
 import { jetonTurnstile, preparerTurnstile } from '../lib/turnstile.ts';
@@ -75,6 +76,9 @@ export function PageLiens({ page, apercu = false, edition, liste }: {
   const pseudo = compte.principal ? '' : compte.pseudo;
   const theme = themeDe(reglages);
   const t = textes(reglages.vouvoiement);
+  // Les liens rangés en tuiles sous un titre de section réglé en grille (un compte à rebours garde sa largeur).
+  const tuiles = enGrille(blocs, b => enAttente(b, page.maintenant ?? Date.now()));
+  const grande = reglages.profil.photo === 'grande' && !!reglages.profil.avatar;
   const [toast, setToast] = useState('');
   // La réservation ouverte dans sa feuille, et ce qui avait le focus avant elle, pour l'y rendre.
   const [agenda, setAgenda] = useState<Bloc | null>(null);
@@ -160,7 +164,9 @@ export function PageLiens({ page, apercu = false, edition, liste }: {
 
   return (
     <ActionsPage.Provider value={actions}>
-    <div className="lp" onClick={ouvrirDansApp} style={variablesTheme(theme) as CSSProperties} data-bouton={reglages.bouton.style} data-forme={reglages.bouton.forme} data-ombre={reglages.bouton.ombre} data-police={theme.police} data-decor={theme.decor} data-bureau={reglages.bureau}>
+    <div className="lp" onClick={ouvrirDansApp} style={variablesTheme(theme) as CSSProperties} data-bouton={reglages.bouton.style} data-forme={reglages.bouton.forme} data-ombre={reglages.bouton.ombre} data-police={theme.police} data-decor={theme.decor} data-bureau={reglages.bureau} data-image={reglages.imageFond ? '' : undefined}>
+      {/* Sa propre photo derrière la page, sous un voile de la couleur du fond : tout se lit comme sur le thème. */}
+      {reglages.imageFond && <div className="lp-image-fond" aria-hidden="true" style={{ backgroundImage: `url("${reglages.imageFond}")` }} />}
       {/* Sous une feuille, la page est là, mais rien n'y répond tant qu'on ne l'a pas refermée. */}
       <div className="lp-scene" {...(agenda || adulte ? { inert: true } : {})}>
       <div className="lp-col">
@@ -169,14 +175,14 @@ export function PageLiens({ page, apercu = false, edition, liste }: {
             <Icone nom="partage" taille={18} />
           </button>
         )}
-        <header className="lp-tete" {...fige}>
+        <header className="lp-tete" data-photo={grande ? 'grande' : undefined} {...fige}>
           {edition ? (
             <button type="button" className="lp-ed-photo" onClick={e => edition.photo(e.currentTarget)} aria-label={reglages.profil.avatar ? 'Changer la photo' : 'Ajouter une photo'}
               aria-busy={edition.envoiPhoto || undefined} data-envoi={edition.envoiPhoto || undefined}>
               {/* La photo se touche elle-même ; sans photo, l'icône seule à sa place : ni pastille ni rond vide. */}
-              {reglages.profil.avatar ? <img className="lp-avatar" src={reglages.profil.avatar} alt="" width={96} height={96} /> : <span className="lp-ed-sans-photo"><Icone nom="photo" taille={40} /></span>}
+              {reglages.profil.avatar ? <img className="lp-avatar" src={reglages.profil.avatar} alt="" width={grande ? 800 : 96} height={grande ? 800 : 96} /> : <span className="lp-ed-sans-photo"><Icone nom="photo" taille={40} /></span>}
             </button>
-          ) : reglages.profil.avatar && <img className="lp-avatar" src={reglages.profil.avatar} alt="" width={96} height={96} />}
+          ) : reglages.profil.avatar && <img className="lp-avatar" src={reglages.profil.avatar} alt="" width={grande ? 800 : 96} height={grande ? 800 : 96} {...(grande ? { fetchPriority: 'high' as const } : {})} />}
           {/* Dans le back office, la page n'est qu'un aperçu : son nom n'y prend pas le titre principal. */}
           <Nom className="lp-nom">
             {edition
@@ -194,11 +200,11 @@ export function PageLiens({ page, apercu = false, edition, liste }: {
         </header>
 
         <main className="lp-blocs">
-          {edition || liste ? (edition?.liste ?? liste!)(blocs, bloc => <BlocPublic bloc={bloc} reglages={reglages} clic={() => {}} cible={cible} apercu t={t} />) : <>
+          {edition || liste ? (edition?.liste ?? liste!)(blocs, bloc => <BlocPublic bloc={bloc} reglages={reglages} clic={() => {}} cible={cible} apercu t={t} tuile={tuiles.has(bloc.id)} />) : <>
             {blocs.map((bloc, i) => (
-              <div key={bloc.id} className="lp-bloc" data-type={bloc.type} data-vedette={formatVedette(bloc)} style={{ '--i': i } as CSSProperties}
+              <div key={bloc.id} className="lp-bloc" data-type={bloc.type} data-vedette={formatVedette(bloc)} data-tuile={tuiles.has(bloc.id) || undefined} style={{ '--i': i } as CSSProperties}
                 onClickCapture={bloc.sensible ? gardeAdulte(bloc) : undefined}>
-                <BlocPublic bloc={bloc} reglages={reglages} clic={() => clic(bloc)} cible={cible} apercu={apercu} maintenant={page.maintenant} pseudo={pseudo} t={t} />
+                <BlocPublic bloc={bloc} reglages={reglages} clic={() => clic(bloc)} cible={cible} apercu={apercu} maintenant={page.maintenant} pseudo={pseudo} t={t} tuile={tuiles.has(bloc.id)} />
               </div>
             ))}
             {blocs.length === 0 && !apercu && <p className="lp-texte">{t.rien}</p>}
@@ -378,7 +384,9 @@ function CodePromo({ code, t }: { code: string; t: Textes }) {
   );
 }
 
-export function BlocPublic({ bloc, reglages, clic, cible, apercu, maintenant, pseudo, t = textes(reglages.vouvoiement) }: { bloc: Bloc; reglages: Reglages; clic: () => void; cible: object; apercu: boolean; maintenant?: number; pseudo?: string; t?: Textes }) {
+export function BlocPublic({ bloc, reglages, clic, cible, apercu, maintenant, pseudo, t = textes(reglages.vouvoiement), tuile = false }: { bloc: Bloc; reglages: Reglages; clic: () => void; cible: object; apercu: boolean; maintenant?: number; pseudo?: string; t?: Textes;
+  /** Rangé en tuile, dans la grille d'une collection (voir `enGrille`). */
+  tuile?: boolean }) {
   if (bloc.type === 'lien' && enAttente(bloc, maintenant ?? Date.now())) return <CompteARebours bloc={bloc} depart={maintenant ?? Date.now()} apercu={apercu} t={t} />;
   // Un lien partenaire se dit à Google (`sponsored`), comme aux visiteurs.
   const rel = `${bloc.indexable ? '' : 'nofollow '}${bloc.partenariat ? 'sponsored ' : ''}noopener`;
@@ -476,6 +484,19 @@ export function BlocPublic({ bloc, reglages, clic, cible, apercu, maintenant, ps
           </a>
         );
       }
+      // Une tuile de collection : l'image en haut, carrée, ou le picto seul à sa place ; le titre dessous.
+      if (tuile) return avecCode(
+        <a className={`lp-btn lp-tuile ${anim}`} href={bloc.url} rel={rel} onClick={clic} {...cible} {...nosnippet}>
+          {bloc.image
+            ? <img className="lp-tuile-visuel" src={bloc.image} alt="" loading="lazy" />
+            : <span className="lp-tuile-picto" aria-hidden="true">{bloc.icone && ICONES[bloc.icone] ? <Icone nom={bloc.icone} taille={28} /> : bloc.icone || <Icone nom="lien" taille={28} />}</span>}
+          <span className="lp-btn-texte">
+            {mention}
+            <span className="lp-btn-titre">{bloc.titre || nomDeDomaine(bloc.url)}</span>
+            {bloc.sousTitre && <span className="lp-sous">{bloc.sousTitre}</span>}
+          </span>
+        </a>
+      );
       return avecCode(
         <a className={`lp-btn ${anim}`} href={bloc.url} rel={rel} onClick={clic} {...cible} {...nosnippet}>
           <Pictogramme bloc={bloc} />

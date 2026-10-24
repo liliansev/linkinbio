@@ -83,7 +83,7 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
   async function photo(f: File | undefined) {
     if (!f) return;
     setEnvoi(true); setPhotoRatee(false);
-    try { profil({ avatar: await envoyerImage(await preparerImage(f, 'carre')) }); } catch { setPhotoRatee(true); } finally { setEnvoi(false); if (fichier.current) fichier.current.value = ''; }
+    try { profil({ avatar: await envoyerImage(await preparerImage(f, 'photo')) }); } catch { setPhotoRatee(true); } finally { setEnvoi(false); if (fichier.current) fichier.current.value = ''; }
   }
 
   /* ---- Les liens : l'adresse collée, le titre se remplit tout seul ---- */

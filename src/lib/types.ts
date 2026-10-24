@@ -9,6 +9,7 @@ import type { Droits } from './droits.ts';
 import type { Creneau } from './moments.ts';
 import type { PeriodeStats } from './periode.ts';
 import type { Audience, EffetAudience } from './provenance.ts';
+import type { Police } from './themes.ts';
 
 export const TYPES_BLOC = ['lien', 'titre', 'texte', 'video', 'derniere-video', 'newsletter', 'inscription', 'preuve', 'produit', 'soutien', 'reservation',
   'musique', 'faq', 'coordonnees', 'lieu', 'galerie', 'formulaire'] as const;
@@ -89,7 +90,12 @@ export interface Bloc {
   adressePostale: string;
   /** Réservé aux plus de 18 ans : la page demande confirmation avant d'ouvrir le lien (24 octobre 2026). */
   sensible: boolean;
+  /** Un titre de section : les liens qui le suivent, jusqu'au titre suivant, en liste ou en grille (Starter). Une collection, à la Linktree. */
+  disposition: Disposition;
 }
+
+export const DISPOSITIONS = ['liste', 'grille'] as const;
+export type Disposition = (typeof DISPOSITIONS)[number];
 
 export interface Question { question: string; reponse: string }
 export interface Coordonnees { telephone: string; email: string; societe: string; poste: string }
@@ -148,7 +154,8 @@ export interface Couleurs { fond: string; boutons: string; accent: string }
 export const SANS_COULEURS: Couleurs = { fond: '', boutons: '', accent: '' };
 
 export interface Reglages {
-  profil: { nom: string; bio: string; avatar: string; badge: boolean };
+  /** `photo` : la photo de profil en rond, ou en grand en haut de la page, fondue dans le fond (Starter). */
+  profil: { nom: string; bio: string; avatar: string; badge: boolean; photo: FormePhoto };
   reseaux: { reseau: Reseau; url: string }[];
   /** Les icônes des réseaux en haut (sous la bio) ou en bas de page. */
   reseauxPosition: 'haut' | 'bas';
@@ -176,7 +183,14 @@ export interface Reglages {
   utm: boolean;
   /** Toute la page renvoie vers une seule adresse (un lancement, une sortie), jusqu'à `fin` (ISO) ou sans fin ; `url` vide : rien (Starter). */
   redirection: { url: string; fin: string };
+  /** La police de la page, prise parmi celles des thèmes ; vide, celle du thème (Starter, avec les couleurs). */
+  police: Police | '';
+  /** Une photo à soi derrière la page, voilée de la couleur du fond ; vide, le fond du thème (Starter). */
+  imageFond: string;
 }
+
+export const FORMES_PHOTO = ['ronde', 'grande'] as const;
+export type FormePhoto = (typeof FORMES_PHOTO)[number];
 
 export const MISES_EN_PAGE_BUREAU = ['colonne', 'profil', 'onepage'] as const;
 export type MiseEnPageBureau = (typeof MISES_EN_PAGE_BUREAU)[number];
@@ -442,7 +456,7 @@ export function nouveauBloc(type: TypeBloc, id: string): Bloc {
     preuve: type === 'preuve' ? { genre: 'note', note: 0, nombre: 0, source: '' } : null,
     prix: '', montants: type === 'soutien' ? [...MONTANTS_DEFAUT] : [], partenariat: null,
     questions: type === 'faq' ? [{ question: '', reponse: '' }] : [], images: [],
-    coordonnees: type === 'coordonnees' ? { telephone: '', email: '', societe: '', poste: '' } : null, adressePostale: '', sensible: false,
+    coordonnees: type === 'coordonnees' ? { telephone: '', email: '', societe: '', poste: '' } : null, adressePostale: '', sensible: false, disposition: 'liste',
   };
 }
 

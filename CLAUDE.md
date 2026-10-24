@@ -224,6 +224,14 @@ embarque tout : l'image n'a pas de `node_modules`.
   dessous, au bas de l'écran sur une page courte, Confidentialité · Signaler en petit (`--pied-legal`), sur toutes les
   pages, celle de Lilian comprise : chaque lien a sa cible de 44 px et aucune ne touche l'autre. Le damier et les
   étoiles s'effacent dans la dernière bande de l'écran, où se posent ces liens.
+  Le design face à Linktree (24 octobre 2026, lot 3, Starter) : une police choisie parmi celles des thèmes (`police`,
+  sous le droit `couleurs` ; `themeDe` lui donne la typographie réglée du thème qui la porte, `POLICES_CHOIX` sans mono),
+  une image de fond (`imageFond`, une photo envoyée chez Hopla sous un voile de 76 % de la couleur du fond, qui remplace
+  le décor du thème ; `.lp-image-fond`, collée dans les aperçus), la photo de profil en grand (`profil.photo`
+  `'grande'`, bord à bord et fondue dans le fond au téléphone, envoyée en 800 px), et les collections : un titre de
+  section réglé `disposition: 'grille'` range en tuiles les liens simples qui le suivent, jusqu'au titre suivant
+  (`enGrille` dans `lib/collections.ts` ; la grille vient de `.lp-blocs:has(> [data-tuile])`, les blocs restent à plat
+  et se déplacent comme avant). Sans Starter, `selonDroits` rend la police et le fond du thème, la photo ronde et la liste.
 - `accueil/` : l'accueil de hopla.page (`routes/index.tsx`, styles dans `styles/accueil.css` et, pour la
   version « des visages » du 21 octobre 2026, `styles/accueil-profils.css` sous `.hl-humain`), en bleu, vert
   citron et papiers crème, autour de six profils imaginés (portraits générés, provenance en `.webp.json`) ;
@@ -236,7 +244,8 @@ embarque tout : l'image n'a pas de `node_modules`.
 - Marque : `components/Logo.tsx` (le symbole, un « h » et sa balle) ; favicon, icônes, manifeste et
   image de partage dans `public/`. `server/referencement.ts` écrit `robots.txt`, `sitemap.xml` et
   `llms.txt` (routes `robots[.]txt.ts`…) ; le back office ne s'indexe pas.
-- `demo/` : aperçu statique avec une API simulée, publié en Artifact ; `#nouveau` y
+- `demo/` : aperçu statique avec une API simulée, publié en Artifact ; `#design=<thème>[,<police>[,<mise en page>]]`
+  montre le lot 3 (photo de fond, grande photo, une police, une collection en grille) ; `#nouveau` y
   rejoue l'arrivée d'un nouvel inscrit, `#page=<thème>` montre la page dans un thème, `#vitrine=<thème>`
   la vitrine d'exemple (produits, liens partenaires, réservations, soutiens), `#blocs=<thème>` les blocs venus de Linktree, `#mention=<thème>` une page courte d'un
   compte Gratuit, pour la planche du pied.

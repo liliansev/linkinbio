@@ -1,6 +1,6 @@
-import { ANIMATIONS, ANIMATIONS_BLOC, FORMATS_VEDETTE, FORMES_BOUTON, GENRES_PREUVE, MAX_IMAGES, MAX_QUESTIONS, MAX_RESEAUX, MENTIONS_PARTENAIRE, OMBRES_BOUTON, MISES_EN_PAGE_BUREAU, RESEAUX, STYLES_BOUTON, TEINTES_VEDETTE, TYPES_BLOC } from './types.ts';
+import { ANIMATIONS, ANIMATIONS_BLOC, DISPOSITIONS, FORMATS_VEDETTE, FORMES_PHOTO, FORMES_BOUTON, GENRES_PREUVE, MAX_IMAGES, MAX_QUESTIONS, MAX_RESEAUX, MENTIONS_PARTENAIRE, OMBRES_BOUTON, MISES_EN_PAGE_BUREAU, RESEAUX, STYLES_BOUTON, TEINTES_VEDETTE, TYPES_BLOC } from './types.ts';
 import type { Acces, Bloc, Coordonnees, Partenariat, Preuve, Question, Reglages } from './types.ts';
-import { idTheme } from './themes.ts';
+import { POLICES_CHOIX, idTheme } from './themes.ts';
 import { EFFETS_CRENEAU, fuseauValide } from './moments.ts';
 import type { Creneau } from './moments.ts';
 import { AUDIENCES, EFFETS_AUDIENCE } from './provenance.ts';
@@ -191,6 +191,7 @@ export function validerBloc(v: unknown, id: string): Bloc {
     coordonnees: type === 'coordonnees' ? coordonnees(o.coordonnees) : null,
     adressePostale: type === 'lieu' || type === 'coordonnees' ? texte(o.adressePostale, 200) : '',
     sensible: (type === 'lien' || type === 'produit') && bool(o.sensible, false),
+    disposition: type === 'titre' ? parmi(o.disposition, DISPOSITIONS, 'liste') : 'liste',
   };
 }
 
@@ -204,6 +205,7 @@ export function validerReglages(v: unknown, base: Reglages): Reglages {
       bio: texte(profil.bio, 300),
       avatar: image(profil.avatar),
       badge: bool(profil.badge, base.profil.badge),
+      photo: parmi(profil.photo, FORMES_PHOTO, base.profil.photo ?? 'ronde'),
     },
     reseaux: reseaux.slice(0, MAX_RESEAUX).map((r: any) => ({ reseau: parmi(r?.reseau, RESEAUX, 'site'), url: adresse(r?.url) })).filter((r: { url: string }) => r.url),
     reseauxPosition: parmi(o.reseauxPosition, ['haut', 'bas'] as const, base.reseauxPosition),
@@ -220,6 +222,10 @@ export function validerReglages(v: unknown, base: Reglages): Reglages {
     animation: parmi(o.animation, ANIMATIONS, base.animation),
     utm: bool(o.utm, base.utm ?? false),
     redirection: redirection(o.redirection ?? base.redirection),
+    // Une police qu'un thème porte ; `mono`, qu'aucun thème ne porte, ne se choisit pas.
+    police: parmi(o.police ?? base.police, POLICES_CHOIX, '' as const),
+    // Une photo envoyée chez Hopla seulement : le fond ne fait rien charger d'un autre site au visiteur.
+    imageFond: ((i: string) => (i.startsWith('/media/') ? i : ''))(image(o.imageFond ?? base.imageFond)),
   };
 }
 

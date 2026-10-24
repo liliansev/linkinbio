@@ -19,7 +19,7 @@ import avatar from '../public/avatar.webp?inline';
 const CLE = 'liens-demo-v3';
 const SANS_ABONNEMENT: Abonnement = { plan: 'gratuit', payee: 'gratuit', statut: '', finPeriode: null, periode: null, portail: false, offerte: null };
 /** Sans paiement, rien n'est réservé : l'aperçu montre toutes les fonctions (seule la mention reste sans offre). */
-const DROITS_APERCU: Droits = { sansMention: false, vitrine: true, couleurs: true, programmation: true, avis: true, stats: true, heure: true, drops: true, listeEmail: true, formulaire: true, galerie: true, utm: true, redirection: true };
+const DROITS_APERCU: Droits = { sansMention: false, vitrine: true, couleurs: true, programmation: true, avis: true, stats: true, heure: true, drops: true, listeEmail: true, formulaire: true, galerie: true, utm: true, redirection: true, fond: true, grandePhoto: true, grille: true };
 let n = 0;
 const id = () => `d${Date.now().toString(36)}${n++}`;
 
@@ -368,6 +368,44 @@ export function blocsLinktree(): Bloc[] {
   ];
 }
 
+/**
+ * Le design du lot 3 (`#design=<thème>[,<police>]`, 24 octobre 2026), pour la planche de captures : une photo de fond,
+ * la photo de profil en grand, une police choisie, et une collection en grille sous un titre, puis une liste.
+ */
+let collection: Bloc[] | null = null;
+export function blocsCollection(): Bloc[] {
+  if (collection) return collection;
+  const b = (type: Bloc['type'], champs: Partial<Bloc>): Bloc => ({ ...nouveauBloc(type, id()), ...champs });
+  return collection = [
+    b('lien', { titre: 'Ma nouvelle collection', url: 'https://atelier-camille.fr/automne', vedette: true, icone: 'etoile' }),
+    b('titre', { titre: 'Mes boutiques', disposition: 'grille' }),
+    b('lien', { titre: 'Etsy', url: 'https://www.etsy.com/shop/camille', image: photoDemo(20, 400, 400) }),
+    b('lien', { titre: 'Ma boutique en ligne', url: 'https://atelier-camille.fr', image: photoDemo(160, 400, 400) }),
+    b('lien', { titre: 'Les ateliers du samedi', url: 'https://atelier-camille.fr/ateliers', icone: 'agenda' }),
+    b('lien', { titre: 'Cartes cadeaux', url: 'https://atelier-camille.fr/cadeaux', image: photoDemo(330, 400, 400) }),
+    b('titre', { titre: 'Me suivre' }),
+    b('lien', { titre: 'Ma chaîne YouTube', url: 'https://www.youtube.com/@camille', icone: 'youtube' }),
+    b('lien', { titre: 'Ma newsletter du dimanche', url: 'https://camille.substack.com', icone: 'courrier' }),
+  ];
+}
+let fond: string | null = null;
+export function fondDemo(): string {
+  if (fond) return fond;
+  // Une photo floue d'exemple : un dégradé chaud et deux lueurs, comme un atelier au soleil.
+  const c = document.createElement('canvas');
+  c.width = 1200; c.height = 1600;
+  const x = c.getContext('2d')!;
+  const g = x.createLinearGradient(0, 0, 1200, 1600);
+  g.addColorStop(0, '#e8a87c'); g.addColorStop(0.5, '#c06c54'); g.addColorStop(1, '#3d5a80');
+  x.fillStyle = g; x.fillRect(0, 0, 1200, 1600);
+  for (const [cx, cy, r, couleur] of [[300, 400, 520, 'rgba(255,230,180,0.75)'], [950, 1150, 600, 'rgba(120,180,200,0.6)']] as const) {
+    const rg = x.createRadialGradient(cx, cy, 0, cx, cy, r);
+    rg.addColorStop(0, couleur); rg.addColorStop(1, 'rgba(0,0,0,0)');
+    x.fillStyle = rg; x.fillRect(0, 0, 1200, 1600);
+  }
+  return fond = c.toDataURL('image/jpeg', 0.85);
+}
+
 export const etatDemo = () => apiDemo.charger();
 export const pageDemo = () => ({ reglages: etat.reglages, blocs: etat.blocs, compte: { pseudo: 'lilian', principal: true, plan: 'premium' as const } });
 
@@ -423,7 +461,7 @@ interface CompteGratuit { reglages: Reglages; blocs: Bloc[]; abonnement: Abonnem
 function gratuitNeuf(): CompteGratuit {
   const bloc = (titre: string, url: string, icone: string): Bloc => ({ ...nouveauBloc('lien', id()), titre, url, icone });
   return {
-    reglages: { ...reglagesNouveauCompte('sarah-coach'), profil: { nom: 'Sarah Martin', bio: 'Coach sportive à Lyon. Séances en salle et en ligne.', avatar: '', badge: false } },
+    reglages: { ...reglagesNouveauCompte('sarah-coach'), profil: { nom: 'Sarah Martin', bio: 'Coach sportive à Lyon. Séances en salle et en ligne.', avatar: '', badge: false, photo: 'ronde' } },
     blocs: [bloc('Réserver une séance', 'https://exemple.fr/reserver', 'agenda'), bloc('Mes programmes', 'https://exemple.fr/programmes', 'flamme'), bloc('Ma chaîne YouTube', 'https://www.youtube.com/@exemple', 'youtube')],
     abonnement: SANS_ABONNEMENT,
   };
