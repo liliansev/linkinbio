@@ -243,6 +243,9 @@ embarque tout : l'image n'a pas de `node_modules`.
   dessous, au bas de l'écran sur une page courte, Confidentialité · Signaler en petit (`--pied-legal`), sur toutes les
   pages, celle de Lilian comprise : chaque lien a sa cible de 44 px et aucune ne touche l'autre. Le damier et les
   étoiles s'effacent dans la dernière bande de l'écran, où se posent ces liens.
+  En haut de la page de Lilian (24 octobre 2026, demandé par Lilian : « pas un gros bouton, juste au-dessus des icônes »),
+  une ligne entre la bio et les réseaux, « Crée ta page avec Hopla » (« Créez votre page » au vous) et le dessin du logo
+  après le mot, à l'accent du thème (`.lp-hopla-haut`, `Trace` dans `Logo.tsx`) ; son pied ne change pas.
   Le design face à Linktree (24 octobre 2026, lot 3, Starter) : une police choisie parmi celles des thèmes (`police`,
   sous le droit `couleurs` ; `themeDe` lui donne la typographie réglée du thème qui la porte, `POLICES_CHOIX` sans mono),
   une image de fond (`imageFond`, une photo envoyée chez Hopla sous un voile de 76 % de la couleur du fond, qui remplace
