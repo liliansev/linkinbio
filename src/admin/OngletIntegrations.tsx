@@ -2,17 +2,19 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { Api, Bloc, FournisseurListe, Liste, ListeFournisseur, Newsletter, TypeBloc, Webhook } from '../lib/types.ts';
 import { NEWSLETTERS, WEBHOOKS, estWebhook } from '../lib/types.ts';
+import { FONCTIONS } from '../lib/abonnement.ts';
 import type { Fonction } from '../lib/abonnement.ts';
+import type { SuiteAchat } from '../lib/achat.ts';
 import { ADRESSE_WEBHOOK, CHAMPS_WEBHOOK, COULEURS_LOGOS, LISTE_CHEZ, LOGOS_OUTILS, NOMS_FOURNISSEURS, OUTILS_DES_BLOCS, OUVRAGE_WEBHOOK, adresseWebhook, destination } from '../lib/integrations.ts';
 import { Icone } from '../components/Icone.tsx';
 import { BoutonPrincipal, BoutonSecondaire, Champ, Groupe, Ligne, LigneLien, ListeChoix, SousPage, classeBouton, classeSaisie, copierTexte } from './ui.tsx';
-import { Etiquette, useDroits } from './offre.tsx';
-import { TYPES } from './OngletLiens.tsx';
+import { Etiquette, offreDe, useDroits } from './offre.tsx';
+import { TYPES } from '../lib/catalogue.ts';
 
 /*
  * Intégrations (22 octobre 2026, demandé par Lilian) : là où l'on branche ses
- * outils. D'abord sa newsletter, où partent les inscrits de « Ma liste
- * d'inscrits » : six se branchent par une clé, puis la liste choisie par son
+ * outils. D'abord sa newsletter, où partent les inscrits de la liste
+ * e-mail : six se branchent par une clé, puis la liste choisie par son
  * nom, sans chercher d'identifiant ; Substack, qui n'a pas d'API, par la
  * copie des adresses. Puis Make, Zapier et n8n, par un webhook. Enfin, ce qui
  * vit sur la page (avis, rendez-vous, soutien, produit) : un toucher l'ajoute
@@ -34,7 +36,7 @@ const HORS_LIGNE = 'Le serveur ne répond pas. Réessaie dans un instant.';
  * Un logo seul, sans rien autour, dans la couleur de sa marque. Un picto Phosphor garde une marge dans sa boîte, le mot
  * de Kit et le graphe de n8n sont bas : un peu plus grands, ils pèsent autant qu'un logo.
  */
-const EN_PLUS: Record<string, number> = { courrier: 2, kit: 4, n8n: 4, calcom: 12 };
+const EN_PLUS: Record<string, number> = { courrier: 2, kit: 4, n8n: 4 };
 function Logo({ nom, taille = 18, className = '' }: { nom: string; taille?: number; className?: string }) {
   return (
     <span className={`flex shrink-0 justify-center text-white ${className}`} style={{ color: COULEURS_LOGOS[nom] }}>
@@ -61,17 +63,20 @@ const OU_EST_LE_WEBHOOK: Record<Webhook, string> = {
   n8n: 'Dans n8n : un workflow qui commence par un nœud Webhook en POST, activé. Copie son adresse de production.',
 };
 
-export function OngletIntegrations({ api, blocs, sousOuverte, sousLue, onAjouter, onOuvrir, onOffres }: {
+export function OngletIntegrations({ api, blocs, sousOuverte, sousLue, raccourci, raccourciVu, onAjouter, onOuvrir, onOffres }: {
   api: ApiIntegrations;
   blocs: Bloc[];
   /** La sous-page où revenir, quand on referme un bloc ouvert d'ici. */
   sousOuverte?: string | null;
   sousLue?: () => void;
+  /** La ligne de « Sur ta page » qui reprend le focus : celle d'où l'on était parti ouvrir un bloc, ou la vitrine après son achat. */
+  raccourci?: TypeBloc | null;
+  raccourciVu?: () => void;
   /** Ajoute un bloc de ce type à Ma page (l'onglet change) ; `outil` : la sous-page d'où l'on part, où l'on revient. */
   onAjouter: (type: TypeBloc, outil: Outil | null) => void;
   onOuvrir: (bloc: Bloc) => void;
-  /** Ouvre les offres par-dessus ; absent quand le compte ne peut pas s'abonner (compte principal, aperçu). */
-  onOffres?: (pour?: Fonction) => void;
+  /** Ouvre les offres par-dessus ; absent quand le compte ne peut pas s'abonner (compte principal, aperçu). `suite` : le bloc à poser après l'achat. */
+  onOffres?: (pour?: Fonction, suite?: SuiteAchat) => void;
 }) {
   const [liste, setListe] = useState<Liste | null>(null);
   const [sous, setSous] = useState<Outil | null>(() => (sousOuverte as Outil | null) ?? null);
@@ -87,6 +92,13 @@ export function OngletIntegrations({ api, blocs, sousOuverte, sousLue, onAjouter
     document.getElementById(ouvreur.current)?.focus({ preventScroll: true });
     ouvreur.current = '';
   }, [sous]);
+  useEffect(() => {
+    if (!raccourci || sous) return;
+    const ligne = document.getElementById(`raccourci-${raccourci}`);
+    ligne?.focus({ preventScroll: true });
+    ligne?.scrollIntoView({ block: 'center' });
+    raccourciVu?.();
+  }, [raccourci, sous]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const branche = liste?.integration ?? null;
   const formulaire = {
@@ -105,42 +117,58 @@ export function OngletIntegrations({ api, blocs, sousOuverte, sousLue, onAjouter
     </div>
   );
 
-  /** Une newsletter ou une automatisation : réservée à Pro, sauf celle qui est déjà branchée (pour la débrancher). */
-  const ligneOutil = (o: Outil) => {
+  /**
+   * Une newsletter ou une automatisation : réservée à Pro, sauf celle qui est déjà branchée (pour la débrancher).
+   * `etiquette` : la ligne réservée porte la sienne, quand son groupe n'en porte pas.
+   */
+  const ligneOutil = (etiquette: boolean) => (o: Outil) => {
     const ici = branche?.fournisseur === o;
     const libre = droits.listeEmail || ici;
     return (
       <LigneLien key={o} id={`integration-${o}`} avant={<Logo nom={LOGOS_OUTILS[o]} className="w-5" />} nom={nomOutil(o)}
         valeur={ici && branche ? <><strong>Branché</strong>{branche.nom && !estWebhook(branche.fournisseur) ? ` · ${branche.nom}` : ''}</> : undefined}
-        apres={libre ? undefined : <Etiquette fonction="listeEmail" />}
+        apres={libre || !etiquette ? undefined : <Etiquette fonction="listeEmail" />}
         onClick={libre ? () => ouvrir(o) : onOffres ? () => onOffres('listeEmail') : undefined}
-        label={libre ? undefined : `${nomOutil(o)}, avec Pro : voir les offres`} />
+        label={libre ? undefined : `${nomOutil(o)}, avec Hopla ${offreDe('listeEmail')} : voir les offres`} />
     );
   };
+  /**
+   * Un groupe dont aucune ligne n'est libre dit son offre une seule fois, à côté de son titre (24 octobre 2026 : sept
+   * « Pro » alignés se lisaient comme du bruit) ; ses lignes gardent leur chevron, qui mène aux offres, et le disent aux
+   * lecteurs d'écran. Un groupe mêlé garde une étiquette par ligne réservée.
+   */
+  const groupeOutils = (titre: string, outils: readonly Outil[]) => {
+    const reserve = !droits.listeEmail && !outils.some(o => branche?.fournisseur === o);
+    return <Groupe titre={titre} apres={reserve ? <Etiquette fonction="listeEmail" /> : undefined}>{outils.map(ligneOutil(!reserve))}</Groupe>;
+  };
+  const raccourcis = OUTILS_DES_BLOCS.map(r => {
+    const t = TYPES.find(x => x.type === r.type && !x.modele)!;
+    const presents = blocs.filter(b => b.type === r.type);
+    // Un bloc déjà là s'ouvre toujours ; un nouveau demande l'offre qui le comprend.
+    return { r, t, presents, libre: !t.fonction || droits[t.fonction] || presents.length > 0 };
+  });
+  // La même règle : aucun raccourci libre, et une seule offre pour tous, son étiquette suit le titre.
+  const offreRaccourcis = raccourcis.every(x => !x.libre) && new Set(raccourcis.map(x => FONCTIONS[x.t.fonction!])).size === 1 ? raccourcis[0].t.fonction! : null;
 
   return (
     <div className="adm-reglages">
-      <Groupe titre="Newsletter">{[...NEWSLETTERS, 'substack' as const].map(ligneOutil)}</Groupe>
-      <Groupe titre="Sur ta page">
-        {OUTILS_DES_BLOCS.map(r => {
-          const t = TYPES.find(x => x.type === r.type)!;
-          const presents = blocs.filter(b => b.type === r.type);
-          // Un bloc déjà là s'ouvre toujours ; un nouveau demande l'offre qui le comprend.
-          const libre = !t.fonction || droits[t.fonction] || presents.length > 0;
-          return (
-            <LigneLien key={r.type} id={`raccourci-${r.type}`}
-              avant={<span className="flex w-5 shrink-0 justify-center"><Icone nom={t.picto} taille={20} /></span>} nom={t.nom}
-              valeur={presents.length ? (presents.length > 1 ? `${presents.length} sur ta page` : 'Sur ta page') : undefined}
-              apres={libre
-                ? <span className="flex shrink-0 items-center gap-2.5">{r.logos.map((l, i) => <Logo key={l} nom={l} taille={16} className={i === 2 ? 'max-[379px]:hidden' : ''} />)}</span>
-                : <Etiquette fonction={t.fonction!} />}
-              onClick={libre ? () => (presents.length ? onOuvrir(presents[0]) : onAjouter(r.type, null)) : onOffres ? () => onOffres(t.fonction) : undefined}
-              label={libre ? undefined : `${t.nom}, avec une offre : voir les offres`} />
-          );
-        })}
+      {groupeOutils('Newsletter', [...NEWSLETTERS, 'substack'])}
+      <Groupe titre="Sur ta page" apres={offreRaccourcis ? <Etiquette fonction={offreRaccourcis} /> : undefined}>
+        {raccourcis.map(({ r, t, presents, libre }) => (
+          <LigneLien key={r.type} id={`raccourci-${r.type}`}
+            avant={<span className="flex w-5 shrink-0 justify-center"><Icone nom={t.picto} taille={20} /></span>} nom={t.nom}
+            // « Ajouté », pas « Sur ta page » : c'est déjà le titre du groupe.
+            valeur={presents.length ? (presents.length > 1 ? `${presents.length} ajoutés` : 'Ajouté') : undefined}
+            apres={libre || offreRaccourcis
+              ? <span className="flex shrink-0 items-center gap-2.5">{r.logos.map((l, i) => <Logo key={l} nom={l} taille={16} className={i === 2 ? 'max-[379px]:hidden' : ''} />)}</span>
+              : <Etiquette fonction={t.fonction!} />}
+            // Pris, le bloc se pose au retour de l'achat : « Ajouter un produit ».
+            onClick={libre ? () => (presents.length ? onOuvrir(presents[0]) : onAjouter(r.type, null)) : onOffres ? () => onOffres(t.fonction, r.type === 'preuve' ? undefined : { type: r.type }) : undefined}
+            label={libre ? undefined : `${t.nom}, avec Hopla ${offreDe(t.fonction!)} : voir les offres`} />
+        ))}
       </Groupe>
       {/* Les outils techniques viennent en dernier (Lilian, 22 octobre 2026). */}
-      <Groupe titre="Automatisations">{WEBHOOKS.map(ligneOutil)}</Groupe>
+      {groupeOutils('Automatisations', WEBHOOKS)}
     </div>
   );
 }
@@ -192,7 +220,7 @@ function LignesBranchees({ fournisseur, liste, envoi, renvoyer, debrancher, form
         </Ligne>
       )}
       {!formulaire.present && (
-        <Ligne nom="Ma liste d’inscrits n’est pas sur ta page">
+        <Ligne nom="Ta liste e-mail n’est pas sur ta page">
           <BoutonSecondaire onClick={formulaire.ajouter}>L’ajouter</BoutonSecondaire>
         </Ligne>
       )}

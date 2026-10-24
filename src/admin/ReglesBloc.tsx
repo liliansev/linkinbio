@@ -412,7 +412,7 @@ export function ChampsPreuve({ b, maj, erreurDe = () => undefined }: { b: Bloc; 
         <>
           <Champ label="Le témoignage" erreur={erreurDe('description')}>
             <textarea className={`${classeSaisie} min-h-24`} value={b.description} maxLength={400} onChange={e => maj({ description: e.target.value })}
-              placeholder="« Grâce à Camille, j’ai lancé ma boutique en deux semaines. »" />
+              placeholder="« Grâce à Camille, j’ai lancé ma boutique en deux semaines. »" />
           </Champ>
           <Champ label="Qui le dit">
             <input className={classeSaisie} value={b.sousTitre} maxLength={240} onChange={e => maj({ sousTitre: e.target.value })} placeholder="Marie, fondatrice de Bloom" />

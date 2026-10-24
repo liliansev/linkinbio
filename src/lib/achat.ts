@@ -1,5 +1,7 @@
 import type { Abonnement, Fonction, Periode, Plan, PlanPayant } from './abonnement.ts';
 import { FONCTIONS, PERIODES, estPlan, estPlanPayant } from './abonnement.ts';
+import type { TypeBloc, TypeVitrine } from './types.ts';
+import { TYPES_VITRINE } from './types.ts';
 
 /*
  * Le retour d'un paiement. Creem renvoie sur `/admin?paiement=<offre>` ; cette
@@ -15,13 +17,21 @@ import { FONCTIONS, PERIODES, estPlan, estPlanPayant } from './abonnement.ts';
 export const CLE_ACHAT = 'hopla-achat';
 
 /**
- * Ce qu'on vient de prendre. `avant` : l'offre payée d'avant, quand on la connaît, et `periodeAvant` sa période ;
- * `deja` : l'offre offerte qui passait devant elle (ce qui était déjà ouvert) ; `bloc` : le bloc d'où l'on venait.
+ * Ce à quoi l'on revient après l'achat : `bloc`, le bloc d'où l'on venait ; `type`, le bloc de la vitrine qu'on voulait
+ * en faire, ou poser (24 octobre 2026) ; `url`, l'adresse qu'il prendra quand aucun bloc ne l'a encore (une adresse tapée
+ * dans le choix des blocs) ; `neuf`, ce bloc n'était pas encore ajouté (il est parti masqué, il se rouvre à ajouter) ;
+ * `integrations`, on venait d'Intégrations, où le bloc refermé ramène.
  */
-export interface Achat { plan: PlanPayant; periode: Periode | null; pour?: Fonction; avant?: Plan; periodeAvant?: Periode; deja?: Plan; bloc?: string }
+export interface SuiteAchat { bloc?: string; type?: TypeVitrine; url?: string; neuf?: true; integrations?: true }
+
+/**
+ * Ce qu'on vient de prendre. `avant` : l'offre payée d'avant, quand on la connaît, et `periodeAvant` sa période ;
+ * `deja` : l'offre offerte qui passait devant elle (ce qui était déjà ouvert) ; le reste, ce à quoi l'on revient.
+ */
+export interface Achat extends SuiteAchat { plan: PlanPayant; periode: Periode | null; pour?: Fonction; avant?: Plan; periodeAvant?: Periode; deja?: Plan }
 
 /** La note posée avant de partir chez Creem. Elle ne vaut que pour cette offre, et quelques heures. */
-export interface NoteAchat { plan: PlanPayant; periode: Periode; pour?: Fonction; avant: Plan; periodeAvant?: Periode; deja?: Plan; bloc?: string; ts: number }
+export interface NoteAchat extends SuiteAchat { plan: PlanPayant; periode: Periode; pour?: Fonction; avant: Plan; periodeAvant?: Periode; deja?: Plan; ts: number }
 
 const VALIDITE = 3 * 3_600_000;
 
@@ -40,6 +50,10 @@ export function achatDeRetour(recherche: string, note: unknown, maintenant = Dat
     ...(PERIODES.includes(n.periodeAvant as Periode) ? { periodeAvant: n.periodeAvant as Periode } : {}),
     ...(estPlan(n.deja) ? { deja: n.deja } : {}),
     ...(typeof n.bloc === 'string' && /^[\w-]{1,64}$/.test(n.bloc) ? { bloc: n.bloc } : {}),
+    ...(TYPES_VITRINE.includes(n.type as TypeBloc) ? { type: n.type } : {}),
+    ...(typeof n.url === 'string' && n.url.length <= 2048 && /^https?:\/\/[^\s"<>]+$/i.test(n.url) ? { url: n.url } : {}),
+    ...(n.neuf === true ? { neuf: true as const } : {}),
+    ...(n.integrations === true ? { integrations: true as const } : {}),
   };
 }
 

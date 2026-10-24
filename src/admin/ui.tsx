@@ -50,11 +50,13 @@ export function SousPage({ nom, retour }: Fil) {
 }
 
 /** Un groupe de réglages : son titre, puis ses lignes dans un cadre fin (Réglages, Facturation). */
-export function Groupe({ titre, children }: { titre: string; children: ReactNode }) {
+/** `apres` : ce qui suit le titre, l'étiquette de l'offre quand tout le groupe l'attend (une seule, pas une par ligne). */
+export function Groupe({ titre, apres, children }: { titre: string; apres?: ReactNode; children: ReactNode }) {
   const id = useId();
+  const tete = <h2 id={id} className="text-[15px] font-semibold tracking-[-0.015em] text-white">{titre}</h2>;
   return (
     <section aria-labelledby={id} className="flex flex-col gap-2.5">
-      <h2 id={id} className="text-[15px] font-semibold tracking-[-0.015em] text-white">{titre}</h2>
+      {apres ? <div className="flex items-center gap-2">{tete}{apres}</div> : tete}
       <div className="adm-lignes">{children}</div>
     </section>
   );
@@ -136,11 +138,12 @@ export function Interrupteur({ actif, onChange, label, aide, disabled, compact =
 /**
  * L'interrupteur seul, pour les lignes qui portent déjà leur icône et leur nom : un seul dessin partout.
  * Éteint, sa piste reste à 3:1 sur le blanc (WCAG 1.4.11) : on le voit, et on voit qu'il est éteint.
+ * Sa prise déborde le dessin : 44 px de haut au doigt, 56 de large.
  */
 export function Bascule({ actif, onClick, id, disabled, label, decrit }: { actif: boolean; onClick: () => void; id?: string; disabled?: boolean; label?: string; decrit?: string }) {
   return (
     <button id={id} type="button" role="switch" aria-checked={actif} aria-label={label} aria-describedby={decrit} disabled={disabled} onClick={onClick}
-      className={`adm-interrupteur relative h-6 w-10 shrink-0 rounded-full before:absolute before:-inset-2 before:content-[''] disabled:opacity-40 bureau:h-[18px] bureau:w-8 ${actif ? 'bg-bleu' : 'bg-white/45'}`}>
+      className={`adm-interrupteur relative h-6 w-10 shrink-0 rounded-full before:absolute before:-inset-x-2 before:-inset-y-2.5 before:content-[''] disabled:opacity-40 bureau:h-[18px] bureau:w-8 ${actif ? 'bg-bleu' : 'bg-white/45'}`}>
       <span className={`absolute top-[3px] left-[3px] h-[18px] w-[18px] rounded-full shadow-[0_1px_3px_rgba(0,0,0,0.3)] bg-nuit bureau:top-[2px] bureau:left-[2px] bureau:h-3.5 bureau:w-3.5 ${actif ? 'translate-x-4 bureau:translate-x-3.5' : ''}`} />
     </button>
   );
@@ -290,10 +293,17 @@ export function Feuille({ ouverte, onFermer, retenir, titre, children, pied, cot
     ro.observe(f);
     return () => { ro.disconnect(); setPlancher(0); };
   }, [ouverte, plafond]);
+  // Ce qui avait le focus avant l'ouverture, lu pendant le rendu qui ouvre la feuille : avant qu'un champ y prenne l'autoFocus,
+  // et une seule fois, même quand le mode strict joue l'effet deux fois. Le focus y revient à la fermeture.
+  const avantFocus = useRef<HTMLElement | null>(null);
+  const etaitOuverte = useRef(false);
+  if (ouverte !== etaitOuverte.current) {
+    etaitOuverte.current = ouverte;
+    if (ouverte && typeof document !== 'undefined') avantFocus.current = document.activeElement as HTMLElement | null;
+  }
   useEffect(() => {
     if (!ouverte) return;
     // Une vraie fenêtre : Tab tourne dans la feuille, et le focus revient d'où il venait à la fermeture.
-    const avantFocus = document.activeElement as HTMLElement | null;
     const touche = (e: KeyboardEvent) => {
       // Deux feuilles l'une sur l'autre (les offres par-dessus le design) : seule celle du dessus écoute le clavier.
       const fenetres = document.querySelectorAll('[role="dialog"][aria-modal="true"]');
@@ -326,7 +336,8 @@ export function Feuille({ ouverte, onFermer, retenir, titre, children, pied, cot
       // Le focus revient d'où il venait, sauf si une autre feuille vient de le prendre (Ajouter qui ouvre l'éditeur sur son premier champ).
       const ici = document.activeElement;
       const libre = !ici || ici === document.body || !!ref.current?.contains(ici);
-      if (libre && avantFocus?.isConnected) avantFocus.focus({ preventScroll: true });
+      const ouvreur = avantFocus.current;
+      if (libre && ouvreur?.isConnected) ouvreur.focus({ preventScroll: true });
     };
   }, [ouverte]);
   if (!ouverte) return null;

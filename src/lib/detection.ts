@@ -53,6 +53,36 @@ export function ficheProduit(url: string): boolean {
   return false;
 }
 
+/**
+ * Les régies d'affiliation (24 octobre 2026) : un lien qui passe par elles rapporte une commission. Les liens courts
+ * d'Amazon, Awin, Tradedoubler, Effiliation, Kwanko, Rakuten, ShareASale, CJ, Impact, Partnerize, Skimlinks, LTK,
+ * Geniuslink, Howl et ShopMy.
+ */
+const REGIES = [
+  'amzn.to', 'amzn.eu', 'a.co', 'awin1.com', 'tidd.ly', 'tradedoubler.com', 'effiliation.com', 'metaffiliation.com', 'linksynergy.com',
+  'shareasale.com', 'shrsl.com', 'anrdoezrs.net', 'dpbolvw.net', 'jdoqocy.com', 'kqzyfj.com', 'tkqlhce.com', 'sjv.io', 'pxf.io', 'prf.hn',
+  'skimresources.com', 'redirectingat.com', 'rstyle.me', 'liketk.it', 'liketoknow.it', 'shopltk.com', 'geni.us', 'howl.me', 'shopmy.us',
+];
+/** Ce que posent les programmes d'affiliation dans l'adresse : Rewardful (`via`), FirstPromoter (`fpr`), Lemon Squeezy (`aff`)… */
+const PARAMS_AFFILIATION = /^(aff|affid|aff_id|affiliate|affiliate_id|affiliateid|fpr|via|ref_id|referral|referral_code)$/i;
+
+/**
+ * Un lien d'affiliation, reconnu à son adresse : une régie, une boutique Amazon avec son `tag` ou sa vitrine
+ * d'influenceur, un lien affilié Gumroad, ou un paramètre d'affiliation. L'éditeur propose alors d'en faire un lien
+ * partenaire, avec sa mention ; rien ne change sans la personne. Un `ref` seul ne compte pas : il sert aussi à dire
+ * d'où vient le visiteur.
+ */
+export function lienAffilie(url: string): boolean {
+  let u: URL;
+  try { u = new URL(url); } catch { return false; }
+  if (!/^https?:$/.test(u.protocol)) return false;
+  const h = u.hostname.toLowerCase().replace(/^www\./, ''), c = chemin(url);
+  if (REGIES.some(d => sur(h, d))) return true;
+  if (/(^|\.)amazon\.[a-z]{2,3}(\.[a-z]{2})?$/.test(h) && (u.searchParams.has('tag') || c[0] === 'shop')) return true;
+  if (sur(h, 'gumroad.com') && (c[0] === 'a' || u.searchParams.has('a'))) return true;
+  return [...u.searchParams].some(([k, v]) => PARAMS_AFFILIATION.test(k) || (/^utm_(source|medium|campaign)$/i.test(k) && /affil/i.test(v)));
+}
+
 /** Ce que devient une adresse : `vitrine`, la page a les blocs de la vitrine (Starter). */
 export function typeDeAdresse(url: string, vitrine: boolean): TypeAdresse {
   if (idYoutube(url)) return 'video';
@@ -62,9 +92,16 @@ export function typeDeAdresse(url: string, vitrine: boolean): TypeAdresse {
   return 'lien';
 }
 
+/** Ce que deux types de blocs ont en commun et qu'un changement de type garde : le sous-titre, l'icône, l'animation. */
+const AVEC_SOUS_TITRE: readonly TypeBloc[] = ['lien', 'newsletter', 'inscription', 'soutien', 'reservation'];
+const AVEC_ICONE: readonly TypeBloc[] = ['lien', 'reservation'];
+const AVEC_ANIMATION: readonly TypeBloc[] = ['lien', 'produit', 'reservation'];
+const enCommun = (types: readonly TypeBloc[], de: TypeBloc, vers: TypeBloc) => types.includes(de) && types.includes(vers);
+
 /**
- * Un bloc neuf qui change de type avec son adresse : il garde l'adresse, la visibilité, la programmation et le public
- * visé ; le reste repart de zéro. Son texte aussi, sauf s'il a été tapé à la main (`texteAMoi`).
+ * Un bloc qui change de type avec son adresse : il garde l'adresse, la visibilité, la programmation et le public
+ * visé, et ce que les deux types montrent l'un comme l'autre (le sous-titre, l'icône, l'animation) ; le reste repart
+ * de zéro. Son texte aussi, sauf s'il a été tapé à la main (`texteAMoi`).
  */
 export function versType(b: Bloc, type: TypeBloc, texteAMoi: boolean): Bloc {
   const neuf = nouveauBloc(type, b.id);
@@ -73,5 +110,8 @@ export function versType(b: Bloc, type: TypeBloc, texteAMoi: boolean): Bloc {
     url: b.url, public: b.public, indexable: b.indexable, vedette: type !== 'soutien' && b.vedette,
     debut: b.debut, fin: b.fin, compteARebours: b.compteARebours, creneau: b.creneau, audience: b.audience, cache: b.cache,
     titre: texteAMoi && b.titre.trim() ? b.titre : neuf.titre,
+    ...(enCommun(AVEC_SOUS_TITRE, b.type, type) ? { sousTitre: b.sousTitre } : {}),
+    ...(enCommun(AVEC_ICONE, b.type, type) ? { icone: b.icone } : {}),
+    ...(enCommun(AVEC_ANIMATION, b.type, type) ? { animation: b.animation } : {}),
   };
 }

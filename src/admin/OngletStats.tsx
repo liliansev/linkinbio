@@ -17,7 +17,7 @@ import { ChoixPeriode } from './ChoixPeriode.tsx';
 import { noterPartage } from './BienDemarrer.tsx';
 import { CodeQR } from './CodeQR.tsx';
 import { Etiquette } from './offre.tsx';
-import { typeDe } from './OngletLiens.tsx';
+import { typeDe } from '../lib/catalogue.ts';
 
 /*
  * Stats (direction B, 20 octobre 2026) : une phrase qui dit l'essentiel, les

@@ -790,6 +790,8 @@ button.lp-ed-ajout:is(:hover, :active) { background: color-mix(in srgb, var(--te
 @media (hover: none) and (pointer: coarse) { .lp-ed-bloc { box-shadow: 0 0 0 6px color-mix(in srgb, var(--texte) 4%, transparent); background: color-mix(in srgb, var(--texte) 4%, transparent); } }
 /* Le bloc ouvert (dans sa feuille au téléphone, dans sa rangée au bureau) se cerne d'un trait plein : la couleur du texte du thème, lisible sur tous. */
 .lp-ed-bloc[data-choisi] { outline: 2px solid var(--texte); outline-offset: 3px; }
+/* Une vidéo finit sur sa légende, sans marge dessous : son trait s'écarte comme le voile du survol, loin du texte. */
+.lp-ed-bloc:has(.lp-video), .lp-ed-bloc[data-choisi]:has(.lp-video) { outline-offset: 6px; }
 .lp-ed-bloc[data-prive] > :not(.lp-ed-puces) { opacity: 0.42; }
 /* Un bloc qui vient d'être ajouté s'éclaire un instant, de l'accent du thème. */
 .lp-ed-bloc[data-neuf] { animation: lp-ed-neuf 1.8s ease-out; }

@@ -12,7 +12,7 @@ import { selonDroits } from '../lib/droits.ts';
 import type { Droits } from '../lib/droits.ts';
 import type { Destination } from '../lib/demarrage.ts';
 import { urlReseau } from '../lib/demarrage.ts';
-import { adresseSaisie, pourquoiPasAdresse } from '../lib/valider.ts';
+import { adresseSaisie } from '../lib/valider.ts';
 import { verifierBloc } from '../lib/editionBloc.ts';
 import { versType } from '../lib/detection.ts';
 import { ICONES } from '../lib/icones.ts';
@@ -22,7 +22,8 @@ import { Icone, NOMS_RESEAUX } from '../components/Icone.tsx';
 import { themeDe, variablesTheme } from '../lib/themes.ts';
 import { HautLiens } from './BienDemarrer.tsx';
 import type { Demarrage } from './BienDemarrer.tsx';
-import { FeuilleAjout, MenuAjout, typeDe } from './OngletLiens.tsx';
+import { ChampAjout, FeuilleAjout } from './OngletLiens.tsx';
+import { typeDe } from '../lib/catalogue.ts';
 import { DesignTiroirs, OngletApparence } from './OngletApparence.tsx';
 import type { Tiroir } from './OngletApparence.tsx';
 import { ActionEntete, BoutonPrincipal, BoutonSecondaire, Feuille, Interrupteur, Menu, choisirFichier, classeBouton, couleurReseau, flechesRadio, preparerImage, vibrer } from './ui.tsx';
@@ -36,12 +37,13 @@ import { focusSaisie } from '../lib/clavier';
  * Au bureau (direction A, 21 octobre 2026, choisie par Lilian), l'édition est
  * à gauche et la page à droite. À gauche, sous « Bien démarrer », deux onglets
  * collés en haut, Contenu et Design. Contenu : le profil (photo, nom et bio
- * tapés en place, réseaux), un champ où coller une adresse, puis la liste des
- * blocs, une rangée chacun. Une rangée se déplace par sa poignée (souris ou
+ * tapés en place, réseaux), un champ où coller une adresse ou chercher un bloc
+ * (`ChampAjout`), puis la liste des blocs, une rangée chacun. Une rangée se déplace par sa poignée (souris ou
  * clavier) ; un clic la déplie sur les réglages du bloc, qui s'enregistrent
  * tout seuls, une rangée ouverte à la fois. Un bloc neuf a sa rangée en haut
  * (en bas s'il vient du bas), et se voit déjà sur la page, à la place qu'il
- * prendra. Design : les tiroirs du design. À
+ * prendra ; seul « Ajouter à ma page » l'y met en ligne, refermé autrement il
+ * est gardé masqué (24 octobre 2026). Design : les tiroirs du design. À
  * droite, la page à la vraie largeur d'un téléphone, collée, réduite si
  * l'écran est court ou étroit ; elle suit chaque frappe, et un clic sur un de
  * ses blocs ouvre sa rangée. Elle se regarde aussi sur un ordinateur, comme la
@@ -67,6 +69,13 @@ const margeHaut = () => parseFloat(getComputedStyle(document.documentElement).sc
  * texte avec le mot qui les attend, une preuve dès sa première valeur, un produit, un agenda ou un soutien dès son
  * adresse, et ce qui attend encore la sienne (une vidéo, une boutique) en bouton à son nom et à son picto.
  */
+/** La liste avec le bloc neuf à la place qu'il prendra, en haut ou en bas ; déjà posé (gardé masqué, rouvert à ajouter), à la sienne. */
+function avecLeNeuf(liste: Bloc[], neuf: Bloc | null | undefined, enBas: boolean): Bloc[] {
+  if (!neuf) return liste;
+  if (liste.some(b => b.id === neuf.id)) return liste.map(b => (b.id === neuf.id ? neuf : b));
+  return enBas ? [...liste, neuf] : [neuf, ...liste];
+}
+
 function brouillonNeuf(b: Bloc): Bloc {
   const valable = verifierBloc(b).bloc;
   if (valable) return valable;
@@ -105,7 +114,7 @@ export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, chois
   /** `enBas` : ajouté depuis le bas de la page, le bloc se pose en dernier. */
   /** `choisi` : pris dans la liste avec une adresse déjà tapée, le bloc reste ce qu'on a choisi. */
   onAjouter: (bloc: Bloc, enBas?: boolean, choisi?: boolean, repris?: boolean) => void;
-  /** Un bloc neuf posé sans rouvrir son éditeur : la liste refermée sur ce qu'on avait tapé. */
+  /** Un bloc neuf gardé sans rouvrir son éditeur, masqué : la liste refermée sur ce qu'on avait tapé. */
   onPoser: (bloc: Bloc, enBas: boolean) => void;
   /** Avant un autre geste : ce qui est tapé dans l'éditeur s'écrit. Faux si un champ faux le retient. */
   liberer: () => boolean;
@@ -131,6 +140,8 @@ export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, chois
 }) {
   // Le design ou les réseaux. Au bureau, le design est l'onglet de droite, les réseaux s'ouvrent dans le profil ; au téléphone, dans une feuille.
   const [cote, setCote] = useState<Cote | null>(null);
+  // Un pseudo venu du choix des blocs, qui attend son réseau dans les réseaux ouverts.
+  const [pseudoReseau, setPseudoReseau] = useState('');
   // Le tiroir du design ouvert d'emblée (les couleurs, juste après les avoir prises), le temps d'une ouverture ;
   // la clé remonte le design s'il était déjà ouvert sur un autre tiroir.
   const [tiroirDepart, setTiroirDepart] = useState<Tiroir | undefined>();
@@ -157,7 +168,7 @@ export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, chois
   const principal = compte.principal;
   const visibles = blocs.filter(b => principal || !TYPES_PRINCIPAL.includes(b.type));
   const neufVu = neuf && brouillonNeuf(neuf.bloc);
-  const avecNeuf = neufVu ? (neuf!.enBas ? [...visibles, neufVu] : [neufVu, ...visibles]) : visibles;
+  const avecNeuf = avecLeNeuf(visibles, neufVu, !!neuf?.enBas);
   // La page se dessine comme les visiteurs la verront : sans Starter, aux couleurs de son thème. Les réglages, eux, gardent tout.
   const droits = useDroits();
   const montree = droits.couleurs ? reglages : { ...reglages, couleurs: SANS_COULEURS };
@@ -192,6 +203,7 @@ export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, chois
     if (!grand && (toile.current?.getBoundingClientRect().top ?? 0) < 0) toile.current?.scrollIntoView({ block: 'start', behavior: reduit() ? 'auto' : 'smooth' });
     depart.current = null;
     setTiroirDepart(undefined);
+    setPseudoReseau('');
     setCote(null);
   }
   /** Avant de passer à autre chose : le design se ferme, les réseaux aussi s'ils mènent quelque part. */
@@ -232,22 +244,28 @@ export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, chois
 
   // Le bouton du bas de la page pose le bloc en bas ; celui du haut, en haut.
   const enBas = useRef(false);
-  // Au bureau, le menu des blocs se pose sous le bouton qui l'a ouvert ; sous celui de l'en-tête pour la touche A.
-  const ancreAjout = useRef<HTMLElement | null>(null);
-  const boutonEntete = () => document.querySelector<HTMLElement>('[aria-keyshortcuts="A"]');
-  /** Ajouter : ce qui est tapé dans l'éditeur s'écrit d'abord, puis le choix du bloc s'ouvre. */
-  function ouvrirAjout(bas = false, ancre?: HTMLElement | null) {
+  // Au bureau, le champ au-dessus des blocs, seule entrée du choix : le bouton de l'en-tête et la touche A le demandent.
+  const [demandeChamp, setDemandeChamp] = useState(false);
+  /**
+   * Ajouter : ce qui est tapé dans l'éditeur s'écrit d'abord ; puis le choix du bloc s'ouvre, au téléphone dans sa
+   * feuille, au bureau dans le champ au-dessus des blocs (le contenu revient d'abord, si le design était ouvert).
+   */
+  function ouvrirAjout(bas = false) {
     if (!liberer() || (cote === 'reseaux' && reseauFaux())) return;
     vibrer(5);
+    if (grand) {
+      if (cote === 'design' && !quitterCote()) return;
+      setDemandeChamp(true);
+      return;
+    }
     enBas.current = bas;
     brouillonAjout.current = null;
     setAdresseAjout('');
-    ancreAjout.current = ancre ?? boutonEntete();
     setAjout(true);
   }
   /*
    * Revenu d'un bloc neuf par sa flèche, avec ce qui était tapé : l'adresse attend dans « Colle une adresse », le bloc qu'on
-   * choisit reprend le tout, et refermer la liste pose ce qui était tapé, comme la croix du bloc (« Annuler » le retire).
+   * choisit reprend le tout, et refermer la liste garde ce qui était tapé, masqué, comme la croix du bloc (« Annuler » l'oublie).
    */
   const brouillonAjout = useRef<Bloc | null>(null);
   // Ce que le champ montre, gardé le temps que la liste se referme.
@@ -258,21 +276,41 @@ export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, chois
     enBas.current = demandeAjout.enBas;
     brouillonAjout.current = demandeAjout.brouillon ?? null;
     setAdresseAjout(demandeAjout.brouillon?.url ?? '');
-    ancreAjout.current = boutonEntete();
     setAjout(true);
     ajoutOuvert?.();
   }, [demandeAjout]); // eslint-disable-line react-hooks/exhaustive-deps
-  const ajouter = (type: TypeBloc, modele?: Partial<Bloc>) => {
+  /**
+   * Un bloc pris dans le choix, avec l'adresse tapée s'il vient d'une ligne qu'elle donne : il reste ce qu'on a choisi.
+   * Faux si quelque chose le retient.
+   */
+  const ajouter = (type: TypeBloc, modele?: Partial<Bloc>, url?: string) => {
     setAjout(false);
-    const d = brouillonAjout.current;
+    const d = brouillonAjout.current, bas = enBas.current;
     brouillonAjout.current = null;
-    if (!quitterCote()) return;
-    // Un autre bloc reprend ce qui était tapé : l'adresse s'il en a une, le texte écrit, les réglages.
-    const repris = d && { ...versType(d, type, !!d.titre.trim() && d.titre !== nouveauBloc(d.type, d.id).titre), ...(TYPES_ADRESSE.includes(type) ? {} : { url: '' }) };
-    onAjouter({ ...(repris || nouveauBloc(type, nouvelId())), ...modele }, enBas.current, !!repris && !!adresseSaisie(repris.url));
     enBas.current = false;
+    if (!quitterCote()) return false;
+    // Un autre bloc reprend ce qui était tapé (l'adresse s'il en a une, le texte écrit, les réglages), sauf si une autre adresse a été tapée depuis.
+    const base = d && (!url || adresseSaisie(d.url) === url) ? d : null;
+    const repris = base && { ...versType(base, type, !!base.titre.trim() && base.titre !== nouveauBloc(base.type, base.id).titre), ...(TYPES_ADRESSE.includes(type) ? {} : { url: '' }) };
+    const bloc = { ...(repris || nouveauBloc(type, nouvelId())), ...modele, ...(url && TYPES_ADRESSE.includes(type) ? { url } : {}) };
+    onAjouter(bloc, bas, !!adresseSaisie(bloc.url));
+    return true;
   };
-  /** La liste refermée : ce qui était tapé dans un bloc neuf s'ajoute, s'il est valable. */
+  /**
+   * Une adresse prise telle quelle, collée ou par la ligne qu'elle appelle : le bloc neuf la suit (une vidéo, un agenda…).
+   * La même adresse que le bloc neuf d'où l'on revient par sa flèche : on le retrouve tel qu'on l'avait laissé.
+   */
+  const coller = (url: string) => {
+    setAjout(false);
+    const d = brouillonAjout.current, bas = enBas.current;
+    brouillonAjout.current = null;
+    enBas.current = false;
+    if (!d || adresseSaisie(d.url) !== url) return ajouterAdresse(url, bas);
+    if (!quitterCote()) return false;
+    onAjouter(d, bas, false, true);
+    return true;
+  };
+  /** La liste refermée : ce qui était tapé dans un bloc neuf se garde, masqué, s'il est valable (voir `masque` dans `EditeurBloc`). */
   const fermerAjout = () => {
     setAjout(false);
     const d = brouillonAjout.current, bas = enBas.current;
@@ -280,6 +318,13 @@ export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, chois
     enBas.current = false;
     const v = d && verifierBloc(d).bloc;
     if (v) onPoser(v, bas);
+  };
+  /** Un pseudo tapé dans le choix (« @lilian ») : les réseaux s'ouvrent, et demandent lequel. Faux si quelque chose le retient. */
+  const reseau = (pseudo: string) => {
+    fermerAjout();
+    if (!ouvrirCote('reseaux')) return false;
+    setPseudoReseau(pseudo);
+    return true;
   };
   /** Une adresse collée devient un lien neuf, qu'on règle avant de l'ajouter. Faux si quelque chose le retient. */
   const ajouterAdresse = (url: string, bas = false) => {
@@ -335,7 +380,7 @@ export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, chois
 
   const badge = principal && <Interrupteur label="Badge vérifié" actif={reglages.profil.badge} onChange={v => profil({ badge: v })} />;
   const design = <DesignTiroirs key={cleDesign} reglages={reglages} onChange={onReglages} envoyerImage={envoyerImage} principal={principal} vedettes={blocs.filter(b => b.vedette).length} pied={badge} initial={tiroirDepart} />;
-  const reseaux = <OngletApparence reglages={reglages} onChange={onReglages} envoyerImage={envoyerImage} principal={principal} parties={['reseaux']} />;
+  const reseaux = <OngletApparence reglages={reglages} onChange={onReglages} envoyerImage={envoyerImage} principal={principal} parties={['reseaux']} pseudo={pseudoReseau} onPseudo={() => setPseudoReseau('')} />;
 
   if (grand) {
     const enDesign = cote === 'design';
@@ -347,9 +392,8 @@ export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, chois
       <div className="adm-studio adm-studio-bureau">
         {/* Le geste principal est à droite de l'en-tête, comme celui de chaque onglet. */}
         <ActionEntete>
-          {/* Il ouvre le menu des blocs, ou le referme s'il l'est. */}
-          <BoutonPrincipal onClick={e => (ajout ? setAjout(false) : ouvrirAjout(false, e.currentTarget))} aria-keyshortcuts="A" aria-haspopup="menu" aria-expanded={ajout}
-            title="Ajouter (A, ou colle une adresse)"><Icone nom="ui-plus" taille={14} className="shrink-0" />Ajouter un bloc</BoutonPrincipal>
+          {/* Il mène au champ au-dessus des blocs, qui prend la main, sa liste ouverte. */}
+          <BoutonPrincipal onClick={() => ouvrirAjout()} aria-keyshortcuts="A" title="Ajouter (A, ou colle une adresse)"><Icone nom="ui-plus" taille={14} className="shrink-0" />Ajouter un bloc</BoutonPrincipal>
         </ActionEntete>
 
         <div className="adm-edition">
@@ -422,10 +466,10 @@ export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, chois
                     )}
                   </section>
 
-                  <ChampColler ajouter={ajouterAdresse} />
+                  <ChampAjout principal={principal} onChoisir={ajouter} onColler={coller} onReseau={reseau} demande={demandeChamp} demandeVue={() => setDemandeChamp(false)} />
 
                   <ListeBlocs blocs={visibles} clics={clics} choisi={choisi} editeur={editeur} neuf={neuf} gestes={{ ...gestes, dupliquer: b => { if (quitterCote()) gestes.dupliquer(b); } }}
-                    onOrdonner={ordonner} onOuvrir={ouvrirBloc} fermer={fermerEdition} onAjouter={ancre => ouvrirAjout(false, ancre)} />
+                    onOrdonner={ordonner} onOuvrir={ouvrirBloc} fermer={fermerEdition} onAjouter={() => ouvrirAjout()} />
                 </>
               )}
             </div>
@@ -453,7 +497,6 @@ export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, chois
         </aside>
 
         <input ref={fichier} type="file" accept="image/*" className="adm-fichier" tabIndex={-1} aria-hidden="true" onChange={e => photo(e.target.files?.[0])} />
-        {ajout && <MenuAjout ancre={ancreAjout.current} onFermer={() => { enBas.current = false; setAjout(false); }} onChoisir={ajouter} principal={principal} />}
       </div>
     );
   }
@@ -499,15 +542,7 @@ export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, chois
       </div>
 
       <input ref={fichier} type="file" accept="image/*" className="adm-fichier" tabIndex={-1} aria-hidden="true" onChange={e => photo(e.target.files?.[0])} />
-      <FeuilleAjout ouverte={ajout} onFermer={fermerAjout} onChoisir={ajouter} principal={principal} adresse={adresseAjout}
-        onColler={url => {
-          setAjout(false);
-          // La même adresse que le bloc d'où l'on revient : on le retrouve tel qu'on l'avait laissé.
-          const d = brouillonAjout.current;
-          brouillonAjout.current = null;
-          if (d && adresseSaisie(d.url) === url) { if (quitterCote()) onAjouter(d, enBas.current, false, true); } else ajouterAdresse(url, enBas.current);
-          enBas.current = false;
-        }} />
+      <FeuilleAjout ouverte={ajout} onFermer={fermerAjout} onChoisir={ajouter} onColler={coller} onReseau={reseau} principal={principal} adresse={adresseAjout} />
       <Feuille ouverte={cote === 'reseaux'} onFermer={() => fermerCote()} retenir={reseauFaux} titre="Réseaux" cote apercu={direct} pied={piedAnnuler}>
         {reseaux}
       </Feuille>
@@ -529,45 +564,6 @@ function ChampBio({ cible, valeur, onChange, onQuitter }: { cible: RefObject<HTM
   });
   return <textarea ref={cible} className="adm-profil-bio" rows={1} value={valeur} maxLength={300} placeholder="Une phrase sur toi" aria-label="Ta bio" onChange={e => onChange(e.target.value)}
     onFocus={e => { avant.current = e.currentTarget.value; }} onBlur={e => { if (e.currentTarget.value !== avant.current) onQuitter(avant.current); }} />;
-}
-
-/**
- * Coller une adresse au-dessus de la liste : elle devient un lien neuf, qu'on
- * règle dans sa rangée avant de l'ajouter. Entrée fait de même avec une
- * adresse tapée ; une saisie qui n'en est pas une dit pourquoi.
- */
-function ChampColler({ ajouter }: { ajouter: (url: string) => boolean }) {
-  const [valeur, setValeur] = useState('');
-  const [erreur, setErreur] = useState('');
-  const idErreur = useId();
-  const poser = (texte: string) => {
-    const url = adresseSaisie(texte);
-    if (!url) { setErreur(pourquoiPasAdresse(texte)); return; }
-    if (ajouter(url)) { setValeur(''); setErreur(''); }
-  };
-  return (
-    <div className="adm-coller">
-      <div className="adm-coller-champ">
-        <Icone nom="ui-plus" taille={15} className="adm-coller-signe" />
-        <input type="url" inputMode="url" autoCapitalize="none" autoCorrect="off" spellCheck={false} value={valeur}
-          placeholder="Colle une adresse pour ajouter un lien" aria-label="Ajouter un lien depuis son adresse"
-          aria-invalid={erreur ? true : undefined} aria-describedby={erreur ? idErreur : undefined}
-          onChange={e => { setValeur(e.target.value); if (erreur) setErreur(''); }}
-          onPaste={e => {
-            if (valeur.trim()) return;
-            const texte = e.clipboardData.getData('text');
-            if (!adresseSaisie(texte)) return;
-            e.preventDefault();
-            poser(texte);
-          }}
-          onKeyDown={e => {
-            if (e.key === 'Enter') { e.preventDefault(); if (valeur.trim()) poser(valeur); }
-            else if (e.key === 'Escape' && valeur) { e.preventDefault(); setValeur(''); setErreur(''); }
-          }} />
-      </div>
-      {erreur && <p id={idErreur} role="alert" className="adm-coller-erreur">{erreur}</p>}
-    </div>
-  );
 }
 
 /** Le nom d'un bloc dans sa rangée : son texte, sinon son adresse, sinon son genre. */
@@ -643,7 +639,7 @@ const vertical: Modifier = ({ transform }) => ({ ...transform, x: 0 });
  */
 function ListeBlocs({ blocs, clics, choisi, editeur, neuf, gestes, onOrdonner, onOuvrir, fermer, onAjouter }: {
   blocs: Bloc[]; clics: Record<string, number>; choisi: string | null; editeur: ReactNode; neuf: { bloc: Bloc; enBas: boolean } | null;
-  gestes: Gestes; onOrdonner: (blocs: Bloc[]) => void; onOuvrir: (bloc: Bloc) => void; fermer: () => boolean; onAjouter: (ancre: HTMLElement) => void;
+  gestes: Gestes; onOrdonner: (blocs: Bloc[]) => void; onOuvrir: (bloc: Bloc) => void; fermer: () => boolean; onAjouter: () => void;
 }) {
   const droits = useDroits();
   const liste = useRef<HTMLUListElement>(null);
@@ -695,11 +691,11 @@ function ListeBlocs({ blocs, clics, choisi, editeur, neuf, gestes, onOrdonner, o
   }, [ouvert]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Le bloc neuf a sa rangée, en haut ou en bas, à la place qu'il prendra : une fois ajouté, elle reste la même.
-  const rangees = neuf ? (neuf.enBas ? [...blocs, neuf.bloc] : [neuf.bloc, ...blocs]) : blocs;
+  const rangees = avecLeNeuf(blocs, neuf?.bloc, !!neuf?.enBas);
   if (!rangees.length) return (
     <div className="adm-liste-vide">
       <p>Ta page n’a encore aucun bloc.</p>
-      <BoutonSecondaire onClick={e => onAjouter(e.currentTarget)} aria-haspopup="menu"><Icone nom="ui-plus" taille={15} className="shrink-0" />Ajouter un bloc</BoutonSecondaire>
+      <BoutonSecondaire onClick={onAjouter}><Icone nom="ui-plus" taille={15} className="shrink-0" />Ajouter un bloc</BoutonSecondaire>
     </div>
   );
   return (

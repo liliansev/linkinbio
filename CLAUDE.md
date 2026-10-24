@@ -146,22 +146,41 @@ embarque tout : l'image n'a pas de `node_modules`.
   n'écrit rien tant que rien n'est réglé, ce qui l'est en bleu), en pages (`PagesBloc` dans `ReglesBloc.tsx`), avec une flèche dans l'en-tête de la feuille (`useFilFeuille`).
   Au téléphone, un bloc neuf se pose tout de suite sur la page (en haut, ou en bas depuis « Ajouter un bloc »
   sous les blocs) avec sa feuille dessous ; sa flèche ramène au choix des blocs avec son brouillon : l'adresse
-  tapée attend dans « Colle une adresse », un autre type choisi reprend adresse et texte (`versType`), et fermer
-  le choix ajoute le bloc, avec Annuler, comme la croix et le retour du téléphone. Ce choix est une feuille qui
-  s'ouvre sur « Colle une adresse » et son bouton Coller ; au bureau, un menu sous « Ajouter un bloc »
-  (`MenuAjout` dans `OngletLiens.tsx` : flèches, Échap, une lettre pour aller au type). Ses types vont en trois
-  familles séparées d'un filet sans titre (`groupe` de `TYPES`) : ce qui part d'une adresse, ce qu'on écrit, ce
-  que Hopla branche. Au bureau, un bloc neuf s'ajoute aussi de Cmd ou Ctrl + Entrée ; la rangée ouverte garde son
+  tapée attend dans le champ, un autre type choisi reprend adresse et texte (`versType`). Seul « Ajouter à ma page »
+  (ou Cmd ou Ctrl + Entrée) met un bloc neuf en ligne (24 octobre 2026, recommandé par la critique, en attendant la réponse de Lilian) : refermé
+  autrement (croix, Échap, glissé, retour du téléphone, toucher à côté, un autre bloc ou un autre onglet, le départ
+  vers Creem, le choix refermé sur un brouillon), il est écrit masqué (`masque` dans `OptionsEnregistrement`), et la
+  bulle dit « Gardé, masqué de ta page », avec « Afficher ». Une bulle qui offre un geste (Annuler, Afficher) reste
+  jusqu'au geste suivant, fait ailleurs, et son geste rend la main au contenu ; les autres s'en vont après 4 s (8 s
+  pour une phrase longue). Au bureau, elle se pose en bas à droite.
+  Le choix des blocs (`OngletLiens.tsx`) est un seul champ, « Colle une adresse ou cherche un bloc » : au téléphone une
+  feuille qui s'ouvre sur lui et son bouton Coller (`FeuilleAjout`), au bureau le champ au-dessus des blocs
+  (`ChampAjout`), que le bouton « Ajouter un bloc » de l'en-tête et la touche A mettent en vue (flèches, Entrée, Échap
+  qui efface puis replie, Tab qui passe sans rien jeter ; revenu des offres, il a gardé ce qu'on avait tapé). Sa liste
+  de départ ne nomme qu'une entrée par chose qu'on écrit ou que Hopla tient (24 octobre 2026, demandé par Lilian :
+  « vraiment réfléchir à quoi sert chaque lien ») : Lien, Titre de section, Texte, Avis et preuves, Liste e-mail, et
+  pour Lilian Ma dernière vidéo YouTube (`CHOIX` : les types sans `ailleurs`). L'adresse décide du reste : une vidéo, un
+  agenda, une page de soutien ou une fiche de boutique collée prend son bloc, la vitrine se pose aussi d'un toucher
+  depuis Intégrations, un lien partenaire est un lien par son interrupteur (« Lien partenaire » ne se propose que sous
+  une adresse d'affiliation, `lienAffilie`), et l'ancienne « Ma newsletter » de Lilian, doublon de la liste e-mail, ne
+  se pose plus (ses blocs restent, et « En faire une liste e-mail » les y fait passer). Des mots cherchent par le nom,
+  les mots de chaque type et ce qu'on veut faire (`chercherBlocs` dans `lib/catalogue.ts` : « prendre rendez-vous »,
+  « vendre », « don ») ; un numéro devient un lien d'appel (`tel:`), un « @pseudo » rejoint les réseaux. Un lien déjà
+  posé dont l'adresse appelle un autre bloc le propose sous son champ (« En faire une prise de rendez-vous »,
+  `EN_FAIRE` dans `EditeurBloc.tsx`) ; sans Starter, il reste un lien et dit, juste sous l'adresse, ce que l'offre en
+  ferait (`Reserve`). Au retour d'un achat parti d'un bloc neuf (`neuf` dans `SuiteAchat`), ce bloc se rouvre à
+  ajouter ; parti d'Intégrations (`integrations`), sa fermeture y ramène. La rangée ouverte, au bureau, garde son
   en-tête collé en haut tant qu'on la fait défiler, un filet dessous tant qu'il colle ; la replier après un
   changement dit « Modifications enregistrées », dont Annuler rend le bloc tel qu'il était à l'ouverture.
   Un bloc neuf commencé se garde sur l'appareil à chaque frappe (23 octobre 2026, `hopla-bloc-commence:<pseudo>`) et
   s'efface quand il est ajouté, annulé, rendu à la liste par sa flèche ou laissé vide : une page rechargée ou refermée le
   rouvre une fois sur Ma page, à sa place, « Repris là où tu l'avais laissé » (`relireBlocCommence` dans
   `lib/editionBloc.ts`, une semaine au plus). Rouvert ainsi, ou par la même adresse recollée, il est `repris` : déjà
-  commencé (fermer l'ajoute), il garde son type et son adresse ne se relit pas.
+  commencé (fermer le garde, masqué), il garde son type et son adresse ne se relit pas.
   Une adresse collée dans un bloc neuf prend le bloc qui lui va (23 octobre 2026, demandé par Lilian : « que ça détecte
   automatiquement de quoi il s'agit ») : une vidéo, un agenda, une fiche de boutique (et une page qui déclare un prix) ;
-  « En faire un simple lien », sous l'adresse, la rend à un lien. Le site se lit tout seul, et une autre adresse le relit
+  « En faire un simple lien », sous l'adresse, rend à un lien tout bloc d'adresse, neuf ou posé, et « Ce n'est pas un
+  lien partenaire » y retire la mention proposée. Le site se lit tout seul, et une autre adresse le relit
   dès qu'on cesse de taper (22 octobre 2026) : le texte, l'image et la description qui venaient de l'ancienne adresse
   (vides, lus par Hopla, ou l'adresse effacée puis retapée) prennent ceux de la nouvelle ; une icône choisie reste.
   L'image d'un lien ou la photo d'un produit tient dans une vignette au début du champ de son texte (23 octobre 2026,

@@ -1,220 +1,383 @@
-import { Fragment, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
-import type { CSSProperties, KeyboardEvent as ToucheClavier } from 'react';
-import type { Bloc, TypeBloc } from '../lib/types.ts';
-import { TYPES_PRINCIPAL } from '../lib/types.ts';
-import { adresseSaisie, pourquoiPasAdresse } from '../lib/valider.ts';
+import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import type { CSSProperties, KeyboardEvent as ToucheClavier, RefObject } from 'react';
+import type { Bloc, TypeBloc, TypeVitrine } from '../lib/types.ts';
+import { TYPES_VITRINE } from '../lib/types.ts';
+import { DEVENU, aideSaisie, choixAjout, choixPour, seColle } from '../lib/catalogue.ts';
+import type { LigneAjout } from '../lib/catalogue.ts';
+import type { TypeAdresse } from '../lib/detection.ts';
+import { reseauDeUrl } from '../lib/demarrage.ts';
+import { logoAdresse } from '../lib/vitrine.ts';
+import { COULEURS_LOGOS } from '../lib/integrations.ts';
+import { focusAuto, focusSaisie } from '../lib/clavier';
 import { Icone } from '../components/Icone.tsx';
-import { Feuille, classeSaisie } from './ui.tsx';
-import type { Fonction } from '../lib/abonnement.ts';
+import { Feuille, classeSaisie, couleurReseau } from './ui.tsx';
 import { Etiquette, offreDe, useDroits, useVoirOffres } from './offre.tsx';
 
-/**
- * Ce qu'on ajoute à sa page. `aide` : la ligne qu'un bloc neuf dit en tête de sa feuille, seulement quand elle apprend
- * quelque chose (23 octobre 2026) ; un lien, un titre, un texte se passent d'elle. `modele` : ce qu'un bloc neuf a déjà
- * (un lien partenaire est un lien, avec sa mention) ; `fonction` : l'offre qu'il demande. `groupe` : trois familles,
- * séparées d'un filet sans titre dans le choix des blocs (23 octobre 2026) : ce qui part d'une adresse, ce qu'on
- * écrit, ce que Hopla branche tout seul.
+/*
+ * Le choix des blocs (24 octobre 2026, demandé par Lilian : « vraiment réfléchir à quoi sert chaque lien ») : un seul
+ * champ, « Colle une adresse ou cherche un bloc », au-dessus de la liste de départ, une entrée par chose qu'on écrit ou
+ * que Hopla tient (`lib/catalogue.ts`). Une adresse collée devient un bloc d'un coup, celui qu'elle appelle (une vidéo,
+ * un agenda, une page de soutien, une fiche de boutique) ; tapée, elle propose ce bloc en premier, sous le logo du site,
+ * puis ce qu'elle peut être d'autre. Des mots cherchent parmi tous les blocs, par leur nom, les mots qu'on emploie pour
+ * eux et ce qu'on veut en faire (« rdv », « prendre rendez-vous », « vendre », « don ») ; un numéro devient un lien
+ * d'appel, un pseudo rejoint les réseaux. Au téléphone, une feuille ; au bureau, le champ au-dessus des blocs, seule
+ * entrée, que le bouton de l'en-tête et la touche A ouvrent.
  */
-export interface TypeAjout { type: TypeBloc; nom: string; aide?: string; picto: string; fonction?: Fonction; modele?: Partial<Bloc>; groupe: 'adresse' | 'ecrit' | 'branche' }
 
-export const TYPES: TypeAjout[] = [
-  { type: 'lien', nom: 'Lien', picto: 'bloc-lien', groupe: 'adresse' },
-  { type: 'lien', nom: 'Lien partenaire', aide: 'Affiliation ou collaboration payée : la mention « Publicité », et ton code promo', picto: 'bloc-partenaire', modele: { partenariat: { mention: 'publicite', code: '' } }, groupe: 'adresse' },
-  { type: 'video', nom: 'Vidéo YouTube', picto: 'bloc-video', groupe: 'adresse' },
-  // La vitrine : Hopla n'encaisse rien, chaque bloc mène au site qui vend, réserve ou reçoit.
-  { type: 'produit', nom: 'Produit', aide: 'Sa photo et son prix, lus sur ta boutique', picto: 'bloc-produit', fonction: 'vitrine', groupe: 'adresse' },
-  { type: 'reservation', nom: 'Prise de rendez-vous', aide: 'Ton agenda Calendly, Cal.com, Doctolib ou Planity', picto: 'bloc-reservation', fonction: 'vitrine', groupe: 'adresse' },
-  { type: 'soutien', nom: 'Me soutenir', aide: 'Un bouton vers PayPal, Ko-fi, Tipeee ou Lydia', picto: 'bloc-soutien', fonction: 'vitrine', groupe: 'adresse' },
-  { type: 'titre', nom: 'Titre de section', picto: 'bloc-titre', groupe: 'ecrit' },
-  { type: 'texte', nom: 'Texte', picto: 'bloc-texte', groupe: 'ecrit' },
-  { type: 'preuve', nom: 'Avis et preuves', aide: 'Ta note Google, un chiffre clé ou un témoignage, avec sa source', picto: 'bloc-preuve', fonction: 'avis', groupe: 'ecrit' },
-  { type: 'derniere-video', nom: 'Ma dernière vidéo YouTube', picto: 'bloc-derniere-video', groupe: 'branche' },
-  { type: 'inscription', nom: 'Ma liste d’inscrits', aide: 'Tes visiteurs laissent leur e-mail, que tu exportes ou envoies vers ta newsletter', picto: 'bloc-inscription', fonction: 'listeEmail', groupe: 'branche' },
-  { type: 'newsletter', nom: 'Ma newsletter Lumail', picto: 'bloc-newsletter', groupe: 'branche' },
-];
+/** Ce que fait une ligne prise : un bloc neuf de ce type (avec l'adresse tapée), l'adresse posée comme si on l'avait collée, ou un pseudo envoyé aux réseaux. Faux : quelque chose l'a retenue. */
+export interface GestesAjout {
+  onChoisir: (type: TypeBloc, modele?: Partial<Bloc>, url?: string) => boolean | void;
+  onColler: (url: string) => boolean | void;
+  onReseau: (pseudo: string) => boolean | void;
+}
 
-/** Vrai pour le premier type d'une famille, sauf la première : un filet le précède. */
-const ouvreGroupe = (types: TypeAjout[], i: number) => i > 0 && types[i].groupe !== types[i - 1].groupe;
+/** Une ligne sous le champ : en rouge ce qui empêche d'aller plus loin (`faute`), en gris ce qui aide. */
+interface Note { texte: string; faute?: true }
 
-/** L'entrée de la liste qui décrit un bloc : un lien partenaire a la sienne. */
-export const typeDe = (b: Pick<Bloc, 'type' | 'partenariat'>): TypeAjout =>
-  TYPES.find(t => t.type === b.type && !!t.modele?.partenariat === !!b.partenariat) ?? TYPES.find(t => t.type === b.type)!;
+/** Le logo du site d'une ligne que son adresse appelle (Calendly, Ko-fi, Instagram…), dans la couleur de sa marque. */
+function logoDe(l: LigneAjout): { nom: string; couleur?: string } | undefined {
+  const nom = l.auto && l.url ? logoAdresse(l.url) ?? reseauDeUrl(l.url) ?? undefined : undefined;
+  return nom ? { nom, couleur: COULEURS_LOGOS[nom] ?? couleurReseau(nom) } : undefined;
+}
 
 /**
- * Au téléphone, en tête du choix : une adresse collée (ou tapée, puis Entrée)
- * devient un lien d'un coup, son texte lu sur le site. Une saisie qui n'est pas
- * une adresse dit pourquoi. « Coller », dans le champ vide, la prend d'un toucher
- * (23 octobre 2026) : le champ ne prend pas la main tout seul, le clavier ne monte
- * pas, et coller ne demande plus trois gestes. Absent là où le navigateur ne lit
- * pas le presse-papiers.
+ * Ce qui est tapé, et ce qu'il donne : les lignes trouvées, puis la liste de départ quand rien ne vient (et au
+ * téléphone, toujours, sous un filet : la feuille ne rapetisse pas et ne laisse pas de vide), la ligne sous le champ, ce
+ * qu'Entrée prend. `depart` : ce que le champ montre en s'ouvrant.
  */
-function CollerAdresse({ ajouter, adresse = '' }: { ajouter: (url: string) => void; adresse?: string }) {
-  const [valeur, setValeur] = useState(adresse);
-  const [erreur, setErreur] = useState('');
-  const id = useId();
-  const lisible = typeof navigator !== 'undefined' && !!navigator.clipboard?.readText;
-  const poser = (texte: string) => {
-    const url = adresseSaisie(texte);
-    if (!url) { setErreur(pourquoiPasAdresse(texte)); return; }
-    ajouter(url);
-  };
-  async function coller() {
-    let texte = '';
-    try { texte = (await navigator.clipboard.readText()).trim(); } catch {
-      // Refusé par le navigateur : le geste habituel reste, dans le champ.
-      setErreur('Le presse-papiers n’a pas pu être lu : appuie longuement dans le champ, puis choisis Coller.');
+function useChoix(principal: boolean, { onChoisir, onColler, onReseau }: GestesAjout, { depart = '', suiteToujours = false }: { depart?: string; suiteToujours?: boolean }) {
+  const droits = useDroits();
+  const voirOffres = useVoirOffres();
+  const [texte, setTexte] = useState(depart);
+  const [note, setNote] = useState<Note | null>(null);
+  const changer = (t: string) => { setTexte(t); setNote(null); };
+  const options = { principal, vitrine: !!droits.vitrine };
+  const { mode, lignes } = choixAjout(texte, options);
+  // Un bloc réservé reste dans la liste, avec le nom de son offre : le prendre mène aux offres.
+  const reserve = (l: LigneAjout) => !!l.entree.fonction && !droits[l.entree.fonction];
+  const permise = (l: LigneAjout) => !reserve(l) || !!voirOffres;
+  const aucun = mode === 'mots' && !lignes.length;
+  const suite = mode !== 'vide' && (suiteToujours || aucun) ? choixPour(principal).filter(e => !lignes.some(l => l.entree === e)).map((entree): LigneAjout => ({ entree })) : [];
+  const toutes = [...lignes, ...suite];
+  // Entrée prend la première ligne trouvée qui pose un bloc ; une ligne réservée ne mène aux offres que choisie.
+  const premiere = texte.trim() ? lignes.findIndex(l => !reserve(l)) : -1;
+  const [actif, poser, bouger] = useActif(texte, toutes, permise, premiere);
+  const message: Note | null = note ?? (mode === 'saisie' ? { texte: aideSaisie(texte) }
+    : aucun ? { texte: `Aucun bloc pour « ${texte.trim()} ». Colle une adresse, ou choisis dans la liste.` } : null);
+
+  /** Prend une ligne. Réservée, elle ouvre les offres sur ce qu'on voulait en faire : après l'achat, ce bloc-là attend. */
+  function agir(l: LigneAjout): boolean | void {
+    const { entree, url, auto, pseudo } = l;
+    if (pseudo) return onReseau(pseudo);
+    if (reserve(l)) {
+      const type = TYPES_VITRINE.includes(entree.type) ? entree.type as TypeVitrine : undefined;
+      voirOffres?.(entree.fonction, type ? { type, ...(url ? { url } : {}) } : undefined);
       return;
     }
-    if (!texte) { setErreur('Rien à coller : copie d’abord une adresse.'); return; }
-    setValeur(texte);
-    poser(texte);
+    if (auto && url) return onColler(url);
+    return onChoisir(entree.type, entree.modele, url);
   }
+  /** Entrée : la ligne active ; une adresse pas finie dit ce qui manque ; des lignes toutes réservées le disent, sans ouvrir les offres. */
+  function entree(prendre: (l: LigneAjout) => void) {
+    const l = toutes[actif];
+    if (l) { prendre(l); return; }
+    if (!texte.trim()) return;
+    if (mode === 'saisie') { setNote({ texte: aideSaisie(texte, true), faute: true }); return; }
+    const r = lignes.find(reserve);
+    if (r?.entree.fonction) setNote({ texte: `${r.entree.nom} vient avec Hopla ${offreDe(r.entree.fonction)} : choisis la ligne pour voir les offres.` });
+  }
+  const nomDe = (l: LigneAjout) => [l.entree.nom, l.detail, reserve(l) && l.entree.fonction && `avec Hopla ${offreDe(l.entree.fonction)} : voir les offres`]
+    .filter(Boolean).join(', ');
+  // Ce que le choix devient, dit aux lecteurs d'écran quand on cesse de taper (une faute, elle, se dit tout de suite).
+  const devient = (l: LigneAjout) => (/^mailto:/i.test(l.url ?? '') ? 'un lien e-mail' : l.entree.type === 'lien' ? 'un lien' : DEVENU[l.entree.type as TypeAdresse]);
+  const dire = note ? (note.faute ? '' : note.texte)
+    : mode === 'adresse' ? `Cette adresse devient ${devient(lignes[0])}.`
+      : mode === 'numero' ? 'Ce numéro devient un lien d’appel.'
+        : mode === 'pseudo' ? 'Ce pseudo peut rejoindre tes réseaux.'
+          : mode === 'mots' && lignes.length ? `${lignes.length} bloc${lignes.length > 1 ? 's' : ''} trouvé${lignes.length > 1 ? 's' : ''}.`
+            : message?.texte ?? '';
+  const [annonce, setAnnonce] = useState('');
+  useEffect(() => {
+    const t = setTimeout(() => setAnnonce(dire), 400);
+    return () => clearTimeout(t);
+  }, [dire]);
+  return { texte, changer, note, setNote, mode, lignes, suite, toutes, actif, poser, bouger, message, reserve, permise, agir, entree, nomDe, annonce, lire: (s: string) => choixAjout(s, options) };
+}
+type Choix = ReturnType<typeof useChoix>;
+
+/**
+ * La ligne active : `premiere` dès qu'on tape, aucune sur la liste de départ tant qu'on n'a pas bougé. Elle y revient
+ * quand ce qu'on tape change ; les flèches passent les lignes qu'on ne peut pas prendre, et bouclent.
+ */
+function useActif(texte: string, lignes: LigneAjout[], permise: (l: LigneAjout) => boolean, premiere: number) {
+  const [etat, setEtat] = useState({ texte, i: premiere });
+  const i = etat.texte === texte && etat.i < lignes.length ? etat.i : premiere;
+  const poser = (j: number) => setEtat({ texte, i: j });
+  function bouger(sens: 1 | -1) {
+    const n = lignes.length;
+    let j = i < 0 ? (sens > 0 ? -1 : n) : i;
+    for (let k = 0; k < n; k++) {
+      j = (j + sens + n) % n;
+      if (permise(lignes[j])) { poser(j); return; }
+    }
+  }
+  return [i, poser, bouger] as const;
+}
+
+/** Ce que dit le champ vide, du plus complet au plus court : au téléphone, le plus long qui tient sans être coupé, « Coller » compris. */
+const AIDES = ['Colle une adresse ou cherche un bloc', 'Adresse ou nom d’un bloc', 'Une adresse'];
+function useAide(champ: RefObject<HTMLInputElement | null>) {
+  const [aide, setAide] = useState(AIDES[0]);
+  useLayoutEffect(() => {
+    const i = champ.current;
+    if (!i) return;
+    const mesure = document.createElement('canvas').getContext('2d');
+    const mesurer = () => {
+      if (!mesure) return;
+      const s = getComputedStyle(i);
+      mesure.font = `${s.fontWeight} ${s.fontSize} ${s.fontFamily}`;
+      const place = i.clientWidth - parseFloat(s.paddingLeft) - parseFloat(s.paddingRight);
+      setAide(AIDES.find(t => mesure.measureText(t).width <= place) ?? AIDES[AIDES.length - 1]);
+    };
+    mesurer();
+    // La police arrive après le premier dessin, et la marge de droite change avec « Coller » : on remesure.
+    void document.fonts?.ready.then(mesurer);
+    const suivi = new ResizeObserver(mesurer);
+    suivi.observe(i);
+    return () => suivi.disconnect();
+  }, [champ]);
+  return aide;
+}
+
+/** Le picto d'une ligne, ou le logo du site que son adresse appelle, sans fond ni cadre. */
+function PictoLigne({ l, taille, className }: { l: LigneAjout; taille: number; className: string }) {
+  const logo = logoDe(l);
   return (
-    <div className="pb-2">
-      <div className="relative flex items-center">
-        <Icone nom="ui-plus" taille={16} className="pointer-events-none absolute left-3.5 text-white/55" />
-        <input className={`${classeSaisie} pl-10 ${lisible && !valeur ? 'pr-24' : ''}`} type="url" inputMode="url" enterKeyHint="go" autoCapitalize="none" autoCorrect="off" spellCheck={false} value={valeur}
-          placeholder="Colle une adresse" aria-label="Ajouter un lien depuis son adresse" aria-invalid={erreur ? true : undefined} aria-describedby={erreur ? id : undefined}
-          onChange={e => { setValeur(e.target.value); if (erreur) setErreur(''); }}
-          onPaste={e => {
-            if (valeur.trim()) return;
-            const texte = e.clipboardData.getData('text');
-            if (!adresseSaisie(texte)) return;
-            e.preventDefault();
-            setValeur(texte);
-            poser(texte);
-          }}
-          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); if (valeur.trim()) poser(valeur); } }} />
-        {lisible && !valeur && (
-          <button type="button" onClick={() => void coller()} className="absolute inset-y-0 right-0 flex min-w-11 items-center px-4 text-[14px] font-semibold text-bleu transition active:opacity-60">Coller</button>
-        )}
-      </div>
-      {erreur && <p id={id} role="alert" className="mt-1.5 text-[13px] font-medium leading-snug text-red-300">{erreur}</p>}
+    <span className={`${className} ${logo?.couleur ? '' : 'text-white/80'}`} style={logo?.couleur ? { color: logo.couleur } : undefined}>
+      <Icone nom={logo?.nom ?? l.entree.picto} taille={taille} />
+    </span>
+  );
+}
+
+/** Au bureau : les lignes du choix, sous le champ. Le champ garde la main ; la ligne active se dit par `aria-activedescendant`. */
+function Options({ id, choix, prendre }: { id: string; choix: Choix; prendre: (l: LigneAjout) => void }) {
+  const { actif } = choix;
+  // La ligne active reste en vue quand les flèches la font sortir de la liste.
+  useEffect(() => { document.getElementById(`${id}-o${actif}`)?.scrollIntoView({ block: 'nearest' }); }, [id, actif]);
+  return (
+    <div id={`${id}-liste`} role="listbox" aria-label="Blocs" className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+      {choix.toutes.map((l, i) => (
+        // Un clic ne prend pas le focus au champ : il prend la ligne, et le champ reste où il était.
+        <div key={l.entree.nom} id={`${id}-o${i}`} role="option" aria-selected={i === actif} aria-disabled={!choix.permise(l) || undefined} aria-label={choix.nomDe(l)}
+          onMouseDown={e => e.preventDefault()} onPointerMove={() => { if (i !== actif && choix.permise(l)) choix.poser(i); }} onClick={() => prendre(l)}
+          className="adm-menu-item text-white">
+          <PictoLigne l={l} taille={17} className="flex shrink-0" />
+          <span className="min-w-0 flex-1 truncate">{l.entree.nom}</span>
+          {l.detail && <span className="adm-menu-hote">{l.detail}</span>}
+          {choix.reserve(l) && l.entree.fonction && <Etiquette fonction={l.entree.fonction} />}
+        </div>
+      ))}
     </div>
   );
 }
 
-export function FeuilleAjout({ ouverte, onFermer, onChoisir, onColler, adresse, principal }: { ouverte: boolean; onFermer: () => void; onChoisir: (type: TypeBloc, modele?: Partial<Bloc>) => void;
-  /** Au téléphone : une adresse collée en tête de la liste devient un lien neuf. */
-  onColler?: (url: string) => void;
+/**
+ * Au téléphone : la feuille « Ajouter un bloc ». Le champ ne prend pas la main tout seul (le clavier ne monte pas) ;
+ * « Coller », dans le champ vide, prend le presse-papiers d'un toucher, et une adresse collée devient un bloc d'un coup.
+ * Absent là où le navigateur ne lit pas le presse-papiers.
+ */
+export function FeuilleAjout({ ouverte, onFermer, adresse, principal, ...gestes }: GestesAjout & { ouverte: boolean; onFermer: () => void;
   /** L'adresse du bloc neuf d'où l'on revient par sa flèche : elle attend dans le champ. */
   adresse?: string;
   principal: boolean }) {
-  const types = principal ? TYPES : TYPES.filter(t => !TYPES_PRINCIPAL.includes(t.type));
-  const droits = useDroits();
-  const voirOffres = useVoirOffres();
   return (
     <Feuille ouverte={ouverte} onFermer={onFermer} titre="Ajouter un bloc">
-      {fermer => (
-        <>
-        {onColler && <CollerAdresse key={adresse ?? ''} adresse={adresse} ajouter={url => fermer(() => onColler(url))} />}
-        <ul className="adm-cascade -mx-2 flex flex-col pb-2">
-          {types.map((t, i) => {
-            // Un bloc réservé reste dans la liste, avec le nom de son offre : le toucher mène aux offres.
-            const reserve = !!t.fonction && !droits[t.fonction];
-            return (
-            <li key={t.nom} style={{ '--i': i } as CSSProperties}>
-              {ouvreGroupe(types, i) && <div aria-hidden className="adm-filet mx-2 my-1.5" />}
-              <button type="button" disabled={reserve && !voirOffres} onClick={() => fermer(() => (reserve ? voirOffres?.(t.fonction) : onChoisir(t.type, t.modele)))}
-                className="group flex min-h-12 w-full items-center gap-3 rounded-xl px-2 py-1 text-left transition duration-150 hover:bg-white/[0.05] active:scale-[0.985] active:bg-white/[0.07]">
-                {/* Pas de pastille ni d'effet : le picto plein, d'une couleur, se suffit. */}
-                <span className="grid h-10 w-9 shrink-0 place-items-center transition duration-150 ">
-                  <Icone nom={t.picto} taille={22} className="text-white/80" />
-                </span>
-                <span className="min-w-0 flex-1 truncate text-[14.5px] font-medium text-white">{t.nom}</span>
-                {reserve && t.fonction ? <Etiquette fonction={t.fonction} /> : <Icone nom="ui-chevron" taille={16} className="-rotate-90 text-white/25" />}
-              </button>
-            </li>
-            );
-          })}
-        </ul>
-        </>
-      )}
+      {fermer => <ChoixTelephone key={adresse ?? ''} depart={adresse ?? ''} principal={principal} gestes={gestes} fermer={fermer} />}
     </Feuille>
   );
 }
 
-/** Une lettre tapée mène à la ligne qui commence par elle ; la même, retapée, à la suivante. Sans accents ni majuscules. */
-const sansAccents = (t: string) => t.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
+function ChoixTelephone({ depart, principal, gestes, fermer }: { depart: string; principal: boolean; gestes: GestesAjout; fermer: (apres?: () => void) => void }) {
+  const choix = useChoix(principal, gestes, { depart, suiteToujours: true });
+  // La liste de départ entre en cascade, une fois : les lignes d'une recherche arrivent sans bouger.
+  const [aTape, setATape] = useState(false);
+  const champ = useRef<HTMLInputElement>(null);
+  const avaitFocus = useRef(false);
+  const idMessage = useId();
+  const lisible = typeof navigator !== 'undefined' && !!navigator.clipboard?.readText;
+  const aide = useAide(champ);
+  const { texte, message } = choix;
+  const changer = (t: string) => { choix.changer(t); setATape(true); };
+  /** Une ligne réservée ouvre les offres par-dessus la feuille, qu'on retrouve en les fermant ; les autres ferment la feuille, puis font leur geste. */
+  function prendre(l: LigneAjout) {
+    if (!choix.permise(l)) return;
+    if (choix.reserve(l)) { choix.agir(l); return; }
+    fermer(() => { choix.agir(l); });
+  }
+  /** Une adresse ou un numéro collés deviennent un bloc d'un coup ; le reste attend dans le champ. */
+  function poser(t: string) {
+    changer(t.trim());
+    const r = choix.lire(t);
+    if (seColle(r.mode)) prendre(r.lignes[0]);
+    else if (r.mode === 'saisie') choix.setNote({ texte: aideSaisie(t, true), faute: true });
+  }
+  async function coller() {
+    let t = '';
+    // Refusé par le navigateur : le geste habituel reste, dans le champ. Rien n'y est faux : la ligne reste grise.
+    try { t = (await navigator.clipboard.readText()).trim(); } catch { choix.setNote({ texte: 'Le presse-papiers n’a pas pu être lu : appuie longuement dans le champ, puis choisis Coller.' }); return; }
+    if (!t) { choix.setNote({ texte: 'Rien à coller : copie d’abord une adresse.' }); return; }
+    poser(t);
+  }
+  const ligne = (l: LigneAjout, i: number) => {
+    const reserve = choix.reserve(l);
+    return (
+      <li key={l.entree.nom} style={{ '--i': i } as CSSProperties}>
+        {/* La ligne qu'Entrée prendrait est teintée, comme au survol. */}
+        <button type="button" disabled={!choix.permise(l)} onClick={() => prendre(l)} aria-label={choix.nomDe(l)} data-actif={i === choix.actif || undefined}
+          className="group flex min-h-12 w-full items-center gap-3 rounded-xl px-2 py-1 text-left transition duration-150 hover:bg-white/[0.05] active:scale-[0.985] active:bg-white/[0.07] data-[actif]:bg-white/[0.05]">
+          {/* Pas de pastille ni d'effet : le picto plein, d'une couleur, ou le logo du site, se suffit. */}
+          <PictoLigne l={l} taille={22} className="grid h-10 w-9 shrink-0 place-items-center" />
+          <span className="min-w-0 flex-1 truncate text-[14.5px] font-medium text-white">{l.entree.nom}</span>
+          {l.detail && <span className="min-w-0 max-w-[45%] truncate text-[13px] text-white/55">{l.detail}</span>}
+          {/* Une ligne réservée garde son chevron : elle mène quelque part, aux offres. */}
+          {reserve && l.entree.fonction && <Etiquette fonction={l.entree.fonction} />}
+          <Icone nom="ui-chevron" taille={16} className="-rotate-90 shrink-0 text-white/25" />
+        </button>
+      </li>
+    );
+  };
+  return (
+    <>
+      <div className="pb-2">
+        <div className="relative flex items-center">
+          <Icone nom="ui-recherche" taille={17} className="pointer-events-none absolute left-3.5 text-white/55" />
+          <input ref={champ} className={`${classeSaisie} pl-10 ${texte ? 'pr-12' : lisible ? 'pr-[68px]' : ''}`} type="text" enterKeyHint="go" autoCapitalize="none" autoCorrect="off" autoComplete="off" spellCheck={false}
+            value={texte} placeholder={aide} aria-label="Colle une adresse ou cherche un bloc" autoFocus={focusAuto()}
+            aria-invalid={choix.note?.faute} aria-describedby={message ? idMessage : undefined}
+            onChange={e => changer(e.target.value)}
+            onPaste={e => {
+              if (texte.trim()) return;
+              const t = e.clipboardData.getData('text');
+              if (!seColle(choix.lire(t).mode)) return;
+              e.preventDefault();
+              poser(t);
+            }}
+            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); choix.entree(prendre); } }} />
+          {/* Effacer ne prend pas la main au champ : le clavier reste comme il était, levé ou baissé. */}
+          {texte ? (
+            <button type="button" aria-label="Effacer" onPointerDown={e => { avaitFocus.current = document.activeElement === champ.current; e.preventDefault(); }} onMouseDown={e => e.preventDefault()}
+              onClick={() => { changer(''); if (avaitFocus.current) champ.current?.focus(); }}
+              className="absolute inset-y-0 right-0 grid w-12 place-items-center text-white/55 transition hover:text-white active:opacity-60">
+              <Icone nom="ui-fermer" taille={16} />
+            </button>
+          ) : lisible && (
+            <button type="button" onClick={() => void coller()} className="absolute inset-y-0 right-0 flex min-w-11 items-center px-3 text-[14px] font-semibold text-bleu transition active:opacity-60">Coller</button>
+          )}
+        </div>
+        {/* Une seule ligne sous le champ : ce qui manque (en rouge, après Entrée), ce que deviendra ce qu'on tape, ou « aucun bloc ». */}
+        {message && <p id={idMessage} role={message.faute ? 'alert' : undefined} className={`mt-1.5 text-[13px] leading-snug ${message.faute ? 'font-medium text-red-300' : 'text-white/60'}`}>{message.texte}</p>}
+      </div>
+      {/* Les lignes trouvées, puis la liste de départ sous un filet : la feuille garde sa hauteur, sans vide sous un seul résultat. */}
+      <div className="pb-2">
+        {choix.lignes.length > 0 && <ul className={`${aTape ? '' : 'adm-cascade'} -mx-2 flex flex-col`}>{choix.lignes.map(ligne)}</ul>}
+        {choix.suite.length > 0 && (
+          <ul className={`-mx-2 flex flex-col ${choix.lignes.length ? 'mt-1.5 border-t border-white/10 pt-1.5' : ''}`}>
+            {choix.suite.map((l, i) => ligne(l, choix.lignes.length + i))}
+          </ul>
+        )}
+      </div>
+      <span className="sr-only" aria-live="polite">{choix.annonce}</span>
+    </>
+  );
+}
 
 /**
- * Au bureau, le choix des blocs se pose en menu sous le bouton qui l'ouvre (23 octobre 2026) : douze lignes ne demandent
- * ni fenêtre ni fond flouté. Les flèches parcourent la liste, une lettre mène au bloc qui commence par elle, Échap et Tab
- * la referment, un clic ailleurs la range ; le focus revient au bouton. `ancre` : le bouton qui l'a ouverte, ou celui de
- * l'en-tête pour la touche A. Rendu hors de la colonne d'édition, dont le conteneur de requêtes retiendrait `fixed`.
+ * Au bureau, au-dessus de la liste des blocs, la seule entrée du choix (24 octobre 2026) : le bouton « Ajouter un bloc »
+ * de l'en-tête, la touche A et le bouton d'une page vide y mènent (`demande`), le champ vient en vue et prend la main.
+ * Au focus, la liste de départ se déroule sous le champ ; une adresse collée devient un bloc neuf, qu'on règle dans sa
+ * rangée avant de l'ajouter ; tapée, ou des mots, les lignes trouvées prennent sa place. Les flèches parcourent, Entrée
+ * prend, Échap efface puis replie (et rend la main là d'où l'on venait), Tab passe à la suite sans rien jeter. Une ligne
+ * réservée ouvre les offres : en revenant, le champ a gardé ce qu'on avait tapé, et sa liste se rouvre.
  */
-export function MenuAjout({ ancre, onFermer, onChoisir, principal }: { ancre: HTMLElement | null; onFermer: () => void; onChoisir: (type: TypeBloc, modele?: Partial<Bloc>) => void; principal: boolean }) {
-  const types = principal ? TYPES : TYPES.filter(t => !TYPES_PRINCIPAL.includes(t.type));
-  const droits = useDroits();
-  const voirOffres = useVoirOffres();
+export function ChampAjout({ principal, demande = false, demandeVue, ...gestes }: GestesAjout & { principal: boolean;
+  /** Le bouton de l'en-tête ou la touche A le demandent ; `demandeVue` dit que c'est fait. */
+  demande?: boolean; demandeVue?: () => void }) {
+  const choix = useChoix(principal, gestes, {});
+  const [ouvert, setOuvert] = useState(false);
   const boite = useRef<HTMLDivElement>(null);
-  // Collé au bouton, son bord droit sur le sien, dessous s'il y a la place, sinon au-dessus ; il suit la page qui défile.
-  // Placé dès le premier rendu : sa première ligne prend le focus tout de suite.
-  const calculer = (): CSSProperties => {
-    const r = ancre?.getBoundingClientRect();
-    if (!r) return { right: 24, top: 96, width: 280 };
-    const largeur = 280;
-    const left = Math.min(Math.max(12, r.right - largeur), innerWidth - largeur - 12);
-    const dessous = innerHeight - r.bottom - 18, dessus = r.top - 18;
-    return dessous >= 360 || dessous >= dessus
-      ? { left, width: largeur, top: r.bottom + 6, maxHeight: dessous }
-      : { left, width: largeur, bottom: innerHeight - r.top + 6, maxHeight: dessus };
-  };
-  const [place, setPlace] = useState<CSSProperties>(calculer);
-  const tape = useRef({ texte: '', quand: 0 });
-  const fermerRef = useRef(onFermer);
-  fermerRef.current = onFermer;
-  useLayoutEffect(() => {
-    const placer = () => setPlace(calculer());
-    addEventListener('resize', placer);
-    addEventListener('scroll', placer, true);
-    return () => { removeEventListener('resize', placer); removeEventListener('scroll', placer, true); };
-  }, [ancre]); // eslint-disable-line react-hooks/exhaustive-deps
-  const lignes = () => [...(boite.current?.querySelectorAll<HTMLElement>('[role=menuitem]') ?? [])];
-  const fermer = (rendre = true) => { fermerRef.current(); if (rendre) ancre?.focus({ preventScroll: true }); };
+  const champ = useRef<HTMLInputElement>(null);
+  // Là où l'on était avant le bouton de l'en-tête ou la touche A : Échap y rend la main.
+  const retour = useRef<HTMLElement | null>(null);
+  const id = useId();
+  const { texte, message, toutes } = choix;
+  const montre = ouvert && (toutes.length > 0 || !!message);
+  const deroulee = montre && toutes.length > 0;
   useEffect(() => {
-    lignes()[0]?.focus({ preventScroll: true });
-    const dehors = (e: PointerEvent) => { const t = e.target as Node; if (!boite.current?.contains(t) && !ancre?.contains(t)) fermerRef.current(); };
+    const i = champ.current;
+    if (!demande || !i) return;
+    const ici = document.activeElement as HTMLElement | null;
+    retour.current = ici && ici !== i && ici !== document.body ? ici : null;
+    // Le champ en haut de l'écran s'il le faut, sous l'en-tête collé : sa liste a la place de se dérouler.
+    const r = i.getBoundingClientRect(), marge = parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop) || 0;
+    if (r.top < marge || r.bottom + 340 > innerHeight) i.scrollIntoView({ block: 'start', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+    focusSaisie(i, { preventScroll: true });
+    setOuvert(true);
+    demandeVue?.();
+  }, [demande]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Un toucher hors du champ et de sa liste les replie (sur un écran tactile, le champ n'a pas forcément la main).
+  useEffect(() => {
+    if (!ouvert) return;
+    const dehors = (e: PointerEvent) => { if (!boite.current?.contains(e.target as Node)) setOuvert(false); };
     document.addEventListener('pointerdown', dehors);
     return () => document.removeEventListener('pointerdown', dehors);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-  function touche(e: ToucheClavier) {
-    const l = lignes();
-    const i = l.indexOf(document.activeElement as HTMLElement);
-    if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); fermer(); }
-    else if (e.key === 'Tab') { e.preventDefault(); fermer(); }
-    else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); l[(i + (e.key === 'ArrowDown' ? 1 : -1) + l.length) % l.length]?.focus(); }
-    else if (e.key === 'Home' || e.key === 'End') { e.preventDefault(); l[e.key === 'Home' ? 0 : l.length - 1]?.focus(); }
-    else if (e.key.length === 1 && !e.metaKey && !e.ctrlKey && !e.altKey && e.key !== ' ') {
+  }, [ouvert]);
+  function prendre(l: LigneAjout) {
+    if (!choix.permise(l)) return;
+    if (choix.reserve(l)) { choix.agir(l); return; }
+    if (choix.agir(l) !== false) { choix.changer(''); retour.current = null; setOuvert(false); champ.current?.blur(); }
+  }
+  function touche(e: ToucheClavier<HTMLInputElement>) {
+    if (e.key === 'Escape' && (texte || ouvert)) {
+      e.preventDefault(); e.stopPropagation();
+      if (texte) { choix.changer(''); return; }
+      setOuvert(false);
+      const r = retour.current;
+      retour.current = null;
+      if (r?.isConnected) r.focus({ preventScroll: true });
+    } else if (e.key === 'Tab') setOuvert(false);
+    else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
       e.preventDefault();
-      const t = tape.current, maintenant = Date.now();
-      t.texte = (maintenant - t.quand < 700 ? t.texte : '') + sansAccents(e.key);
-      t.quand = maintenant;
-      const seule = [...t.texte].every(c => c === t.texte[0]);
-      const ordre = seule ? [...l.slice(i + 1), ...l.slice(0, i + 1)] : l;
-      ordre.find(x => sansAccents(x.textContent ?? '').startsWith(seule ? t.texte[0] : t.texte))?.focus();
-    }
+      if (ouvert) choix.bouger(e.key === 'ArrowDown' ? 1 : -1); else setOuvert(true);
+    } else if (e.key === 'Enter') { e.preventDefault(); setOuvert(true); choix.entree(prendre); }
   }
   return (
-    <div ref={boite} onKeyDown={touche} className="adm-menu adm-fondu fixed z-50 overflow-y-auto overscroll-contain" style={place}>
-      <div role="menu" aria-label="Ajouter un bloc">
-        {types.map((t, i) => {
-          const reserve = !!t.fonction && !droits[t.fonction];
-          return (
-            <Fragment key={t.nom}>
-            {ouvreGroupe(types, i) && <div role="separator" className="adm-filet mx-1.5 my-1" />}
-            <button type="button" role="menuitem" tabIndex={-1} disabled={reserve && !voirOffres}
-              aria-label={reserve && t.fonction ? `${t.nom}, avec Hopla ${offreDe(t.fonction)} : voir les offres` : undefined}
-              onClick={() => { fermer(false); if (reserve) voirOffres?.(t.fonction); else onChoisir(t.type, t.modele); }}
-              className="adm-menu-item text-white">
-              <Icone nom={t.picto} taille={17} className="shrink-0 text-white/80" />
-              <span className="min-w-0 flex-1 truncate text-left">{t.nom}</span>
-              {reserve && t.fonction && <Etiquette fonction={t.fonction} />}
-            </button>
-            </Fragment>
-          );
-        })}
+    <div ref={boite} className="adm-coller">
+      <div className="adm-coller-champ">
+        <Icone nom="ui-plus" taille={15} className="adm-coller-signe" />
+        <input ref={champ} type="text" role="combobox" aria-expanded={deroulee} aria-controls={deroulee ? `${id}-liste` : undefined} aria-autocomplete="list"
+          aria-activedescendant={deroulee && choix.actif >= 0 ? `${id}-o${choix.actif}` : undefined}
+          aria-label="Ajouter un bloc : colle une adresse ou cherche un bloc" placeholder="Colle une adresse ou cherche un bloc"
+          aria-invalid={choix.note?.faute} aria-describedby={montre && message ? `${id}-message` : undefined}
+          autoCapitalize="none" autoCorrect="off" autoComplete="off" spellCheck={false} value={texte}
+          onChange={e => { choix.changer(e.target.value); setOuvert(true); }}
+          onFocus={() => setOuvert(true)} onClick={() => setOuvert(true)} onBlur={() => setOuvert(false)}
+          onPaste={e => {
+            if (texte.trim()) return;
+            const r = choix.lire(e.clipboardData.getData('text'));
+            if (!seColle(r.mode)) return;
+            e.preventDefault();
+            prendre(r.lignes[0]);
+          }}
+          onKeyDown={touche} />
+        {montre && (
+          // Un clic dans la liste (sa barre de défilement comprise) laisse la main au champ.
+          <div className="adm-menu adm-coller-liste" onMouseDown={e => e.preventDefault()}>
+            {message && <p id={`${id}-message`} role={message.faute ? 'alert' : undefined} className={message.faute ? 'adm-menu-erreur' : 'adm-menu-vide'}>{message.texte}</p>}
+            {deroulee && <Options id={id} choix={choix} prendre={prendre} />}
+          </div>
+        )}
       </div>
+      <span className="sr-only" aria-live="polite">{ouvert ? choix.annonce : ''}</span>
     </div>
   );
 }

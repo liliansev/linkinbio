@@ -14,6 +14,7 @@ export const TYPES_BLOC = ['lien', 'titre', 'texte', 'video', 'derniere-video', 
 export type TypeBloc = (typeof TYPES_BLOC)[number];
 /** La vitrine (Starter, 22 octobre 2026) : un produit et son prix, « Me soutenir », « Réserver ». Hopla n'encaisse rien, chacun mène au site qui vend. */
 export const TYPES_VITRINE: readonly TypeBloc[] = ['produit', 'soutien', 'reservation'];
+export type TypeVitrine = Extract<TypeBloc, 'produit' | 'soutien' | 'reservation'>;
 /** Les blocs qui mènent à une adresse : la rangée du back office la montre à côté de leur nom. */
 export const TYPES_ADRESSE: readonly TypeBloc[] = ['lien', 'video', 'produit', 'soutien', 'reservation'];
 

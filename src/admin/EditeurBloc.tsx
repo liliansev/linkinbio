@@ -1,20 +1,21 @@
 import { useContext, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import type { MutableRefObject } from 'react';
-import type { Api, Bloc, ImageApercu, MentionPartenaire, Partenariat, Reglages, VisuelApercu } from '../lib/types.ts';
+import type { Api, Bloc, ImageApercu, MentionPartenaire, Partenariat, Reglages, TypeBloc, TypeVitrine, VisuelApercu } from '../lib/types.ts';
 import { ANIMATIONS_BLOC, TYPES_ADRESSE, TYPES_VITRINE, nouveauBloc } from '../lib/types.ts';
 import { horsCreneauOuDates } from '../lib/moments.ts';
 import { RESEAUX } from '../lib/types.ts';
-import { adresse, adresseSaisie, montants as lireMontants, pourquoiPasAdresse } from '../lib/valider.ts';
+import { adresse, adresseSaisie, montants as lireMontants, numeroAppel, pourquoiPasAdresse } from '../lib/valider.ts';
 import { avecMontants, nomAgenda, nomSoutien, seIntegre, soutienDe } from '../lib/vitrine.ts';
 import { nomSite, reseauDeUrl } from '../lib/demarrage.ts';
-import { typeDeAdresse, versType } from '../lib/detection.ts';
+import { lienAffilie, typeDeAdresse, versType } from '../lib/detection.ts';
+import type { TypeAdresse } from '../lib/detection.ts';
 import { memeBloc, verifierBloc } from '../lib/editionBloc.ts';
 import type { ChampErreur, Erreurs } from '../lib/editionBloc.ts';
 import { ICONES } from '../lib/icones.ts';
 import { Icone, NOMS_RESEAUX, PICTOS } from '../components/Icone.tsx';
 import { BoutonPrincipal, BoutonSecondaire, Champ, Feuille, Interrupteur, ListeChoix, Menu, NOMS_ANIMATIONS, Segments, choisirFichier, classeBouton, classeSaisie, flechesRadio, preparerImage, preparerLogo, useFilFeuille, vibrer } from './ui.tsx';
 import type { ElementMenu, FilFeuille } from './ui.tsx';
-import { typeDe } from './OngletLiens.tsx';
+import { DEVENU, EN_FAIRE, typeDe } from '../lib/catalogue.ts';
 import { appDe } from '../lib/ouvrirApp.ts';
 import { ChampsPreuve, PagesBloc, RangeesCompactes, RegleAOuvrir, RegleAcces, ReglagePourQui, ReglageQuand, Repli, ReplisExclusifs, resumePourQui, resumeQuand } from './ReglesBloc.tsx';
 import type { PageRegle } from './ReglesBloc.tsx';
@@ -22,7 +23,8 @@ import { useCouche } from './couches.ts';
 import { reseauxDePartage } from '../lib/provenance.ts';
 import { Etiquette, FournisseurOffre, Reserve, offreDe, useDroits, useVoirOffres } from './offre.tsx';
 import type { Fonction } from '../lib/abonnement.ts';
-import { focusAuto } from '../lib/clavier';
+import type { SuiteAchat } from '../lib/achat.ts';
+import { focusAuto, focusSaisie } from '../lib/clavier';
 
 /** Au téléphone, la page ouverte dans la feuille d'un bloc : l'essentiel (`null`), Quand, Pour qui, l'apparence, « Plus de réglages », ou une règle rare. */
 type PageBloc = 'plus' | PageRegle | null;
@@ -52,6 +54,9 @@ type ChampAMoi = 'titre' | 'image' | 'description' | 'prix' | 'icone';
 /** Les deux mentions qu'un lien partenaire peut porter (loi du 9 juin 2023). */
 const MENTIONS: { id: MentionPartenaire; nom: string }[] = [{ id: 'publicite', nom: 'Publicité' }, { id: 'collaboration', nom: 'Collaboration commerciale' }];
 const PARTENARIAT_NEUF: Partenariat = { mention: 'publicite', code: '' };
+
+/** Les adresses relues à l'ouverture d'un lien déjà posé, et si leur page déclare un prix : une lecture par adresse et par visite. */
+const PRIX_LUS = new Map<string, boolean>();
 
 const EXEMPLES_MONTANTS = [3, 5, 10, 20];
 
@@ -92,6 +97,12 @@ export interface OptionsEnregistrement {
   discret?: boolean;
   /** Un bloc neuf posé sans son éditeur (le choix des blocs refermé sur ce qu'on avait tapé) : en bas de la page plutôt qu'en haut. */
   enBas?: boolean;
+  /**
+   * Un bloc neuf gardé sans « Ajouter à ma page » (la croix, Échap, un glissé, un toucher à côté, un autre bloc, un autre
+   * onglet, le départ chez Creem) : il est écrit masqué de la page, et le message le dit, avec « Afficher » (24 octobre 2026,
+   * recommandé par la critique, en attendant la réponse de Lilian). Seul « Ajouter à ma page » met un bloc neuf en ligne.
+   */
+  masque?: boolean;
 }
 
 /*
@@ -103,7 +114,7 @@ export interface OptionsEnregistrement {
  * la page au-dessus, avec son « Terminé ». Dans les deux cas, le bloc se
  * redessine sur la page à chaque frappe (`onBrouillon`).
  */
-export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, onBrouillon, onFermer, onRetour, onReplier, suitAdresse = true, repris = false, onEnregistrer, onSupprimer, onDupliquer, onDeplacer, place, envoyerImage, apercuSite, clics, prises = 0, principal = false }: {
+export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, onBrouillon, onFermer, onRetour, onReplier, suitAdresse = true, repris = false, enFaire, onEnregistrer, onSupprimer, onDupliquer, onDeplacer, place, envoyerImage, apercuSite, clics, prises = 0, principal = false }: {
   bloc: Bloc;
   reglages: Reglages;
   nouveau: boolean;
@@ -125,9 +136,11 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
   suitAdresse?: boolean;
   /**
    * Un bloc neuf qui reprend ce qui était tapé (retrouvé après un rechargement, ou la même adresse recollée) : il est déjà
-   * commencé (fermer l'ajoute, la flèche l'emporte), et son adresse ne se relit pas, pour ne rien changer de ce qu'on avait.
+   * commencé (fermer le garde, masqué ; la flèche l'emporte), et son adresse ne se relit pas, pour ne rien changer de ce qu'on avait.
    */
   repris?: boolean;
+  /** Au retour d'un achat : le bloc que ce lien devient en s'ouvrant (« Ouvrir ton agenda dans ta page »), comme par son geste « En faire… ». */
+  enFaire?: TypeAdresse;
   onEnregistrer: (bloc: Bloc, options?: OptionsEnregistrement) => void;
   onSupprimer: (bloc: Bloc) => void;
   onDupliquer: (bloc: Bloc) => void;
@@ -178,6 +191,10 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
   const [lecture, setLecture] = useState(false);
   /** Une image se cherche ou s'envoie : la vignette du champ attend. */
   const [visuelEnCours, setVisuelEnCours] = useState(false);
+  /** L'adresse d'une page lue qui déclare un prix : un lien qui ne l'a pas suivie propose d'en faire son produit. */
+  const [boutique, setBoutique] = useState('');
+  /** Le type du bloc à son ouverture : l'enregistrement en route (au bureau) change `bloc`, pas lui. */
+  const [typeOuvert] = useState(bloc.type);
   const voir = useVoirOffres();
   const [icones, setIcones] = useState(false);
   /** Le sous-titre, rare : son champ se montre rempli, ou une fois demandé ; sinon une ligne « Ajouter un sous-titre ». */
@@ -267,6 +284,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
   const racine = useRef<HTMLDivElement>(null);
   const fichier = useRef<HTMLInputElement>(null);
   const vignette = useRef<HTMLDivElement>(null);
+  const boutonDupliquer = useRef<HTMLButtonElement>(null);
   // Ce qui est écrit : la saisie telle qu'elle était au dernier enregistrement (ou à l'ouverture), et sa version enregistrée.
   const brut = useRef<Bloc>(repris ? nouveauBloc(bloc.type, bloc.id) : bloc);
   const enregistre = useRef<Bloc | null>(nouveau ? null : bloc);
@@ -307,8 +325,10 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
   // Un lien partenaire a son nom et son aide à lui : c'est un lien, avec sa mention.
   const type = typeDe(b);
   const avecUrl = TYPES_ADRESSE.includes(b.type);
-  /** L'adresse tapée, si c'en est une (complétée de son https). */
-  const adresseValide = adresseSaisie(b.url);
+  /** L'adresse tapée, si c'en est une (complétée de son https) ; dans un lien, un numéro entier est son adresse `tel:`. */
+  const adresseValide = adresseSaisie(b.url) || (b.type === 'lien' ? numeroAppel(b.url) : '');
+  /** Une page web, qui se lit : ni un numéro ni une adresse e-mail. */
+  const web = /^https?:/i.test(adresseValide);
 
   /** Vérifie le bloc ; renvoie la version à enregistrer, ou montre ce qui manque et mène au champ. */
   function valider(): Bloc | null {
@@ -329,17 +349,37 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
   const commence = () => !memeBloc(b, brut.current);
   // Deux versions se comparent après la même vérification : une adresse rangée sans sa barre finale n'est pas un changement.
   const norme = (x: Bloc) => verifierBloc(x).bloc ?? x;
+  /**
+   * Écrit ce qui est tapé, sans « Ajouter à ma page » ni « Terminé ». Un bloc neuf ne part pas en ligne d'un autre geste que
+   * son bouton : il s'écrit masqué (voir `masque`), et l'éditeur, s'il reste ouvert sur lui, le montre ainsi.
+   */
+  function ecrireEnRoute(v: Bloc, options?: OptionsEnregistrement) {
+    const garde_ = nouveau ? { ...v, public: false } : v;
+    brut.current = nouveau ? { ...b, public: false } : b;
+    enregistre.current = garde_;
+    if (nouveau) setB(x => ({ ...x, public: false }));
+    onEnregistrer(garde_, nouveau ? { ...options, masque: true } : options);
+  }
   /** Avant de passer à autre chose : ce qui est valable s'écrit ; un champ faux garde l'éditeur ouvert et dit quoi faire. */
   function liberer(): boolean {
     if (!commence()) return true;
     const v = valider();
     if (!v) { vibrer(20); return false; }
     brut.current = b;
-    if (!memeBloc(v, enregistre.current)) { enregistre.current = v; onEnregistrer(v, { garder: true, discret: true }); }
+    if (!memeBloc(v, enregistre.current)) ecrireEnRoute(v, { garder: true, discret: true });
     return true;
   }
+  // « Afficher », dans le message d'un bloc gardé masqué, le montre sur la page : l'éditeur resté ouvert sur lui le suit.
   useEffect(() => {
-    if (!garde || !bureau) return;
+    const e = enregistre.current;
+    if (nouveau || !e || e.public === bloc.public) return;
+    enregistre.current = { ...e, public: bloc.public };
+    brut.current = { ...brut.current, public: bloc.public };
+    setB(x => ({ ...x, public: bloc.public }));
+  }, [bloc.public]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Au téléphone aussi : les offres s'ouvrent par-dessus la feuille, et ce qui y est tapé s'écrit avant de partir chez Creem.
+  useEffect(() => {
+    if (!garde) return;
     garde.current = liberer;
     return () => { garde.current = null; };
   });
@@ -414,11 +454,15 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
   async function lireAdresse(saisie = b.url) {
     if (!TYPES_ADRESSE.includes(b.type)) return;
     const url = adresseSaisie(saisie);
+    // Un numéro entier, dans un lien, l'appelle : rien à lire, rien à redire.
+    if (!url && b.type === 'lien' && numeroAppel(saisie)) return;
     if (saisie.trim() && !url) { setErreur(pourquoiPasAdresse(saisie)); return; }
     if (!url) return;
     const ancien = lu.current;
     // La même adresse ne se relit pas, sauf pour donner un texte à un lien qui n'en a plus.
     if (url === ancien.url && (b.titre.trim() || b.type !== 'lien')) return;
+    // Une adresse e-mail ou un numéro n'ont pas de page à lire.
+    if (!/^https?:/i.test(url)) { lu.current = { ...ancien, url }; return; }
     const effacee = efface.current;
     efface.current = false;
     const autreSite = effacee || !ancien.url || hoteDe(url) !== hoteDe(ancien.url);
@@ -470,8 +514,12 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
     if (mode) setVisuelEnCours(true);
     try {
       const [site, avantLu] = await Promise.all([apercuSite(url, mode), titreAuto ? null : ancienneLecture(x, ancien)]);
-      // Une page qui déclare un prix est une boutique : un lien neuf qui suit son adresse devient son produit.
-      if (auto.current && droits.vitrine && site.prix && site.titre) return await devenirProduit(url, site);
+      // Une page qui déclare un prix est une boutique : un lien neuf qui suit son adresse devient son produit ; un autre
+      // le propose, ou dit, sans Starter, ce que l'offre en ferait.
+      if (site.prix && site.titre) {
+        if (auto.current && droits.vitrine) return await devenirProduit(url, site);
+        setBoutique(url);
+      }
       const titre = site.titre.slice(0, 80);
       const titreSuit = titreAuto || (!!avantLu?.titre && avantLu.titre.slice(0, 80) === x.titre);
       const image = mode && site.image ? await envoyerVisuel(site.image, site.visuel, formatImage(x)) : '';
@@ -564,29 +612,129 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
     return () => clearTimeout(t);
   }, [b.url, b.type]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  /** « En faire un simple lien » : le bloc cesse de suivre son adresse, et le site se relit comme celui d'un lien. */
-  function enSimpleLien() {
+  /**
+   * Le texte qu'un bloc garde en changeant de type : celui qu'on a tapé, et celui d'un bloc déjà posé, sauf s'il n'était
+   * que le texte de départ, le titre lu sur le site ou le nom du site (« Calendly » pour un agenda) : le nouveau type prend
+   * alors le sien (« Prendre rendez-vous »). Celui d'un bloc neuf venait de son site.
+   */
+  function garderTexte() {
+    if (aMoi.current.has('titre')) return true;
+    const t = b.titre.trim().toLowerCase();
+    if (nouveau || !t) return false;
+    const url = adresseSaisie(b.url);
+    const venus = [nouveauBloc(b.type, b.id).titre, lu.current.titre, ...(url ? [nomSite(url), nomAgenda(url), nomSoutien(url), hoteDe(url)] : [])];
+    return !venus.some(v => v.trim().toLowerCase() === t);
+  }
+  /**
+   * Chaque type pris depuis l'ouverture, tel qu'on l'a quitté : revenir à un type déjà vu, sur la même adresse, rend le bloc
+   * à l'identique (son texte, son sous-titre, son image, sa description), sans relire le site. Ce que tous les types ont et
+   * qu'on a pu régler entre-temps reste : la visibilité, les dates, le public.
+   */
+  const versions = useRef(new Map<TypeBloc, { bloc: Bloc; lu: Lu; genre: VisuelApercu | 'photo' | null }>());
+  /** Un lien mis en avant devenu « Me soutenir » : sa mise en avant attend qu'il redevienne un lien, et la feuille le dit. */
+  const [vedettePerdue, setVedettePerdue] = useState(false);
+  function changerType(t: TypeAdresse) {
     vibrer(6);
-    auto.current = false;
+    const avant = b;
+    setVedettePerdue(t === 'soutien' && (avant.vedette || (avant.type === 'soutien' && vedettePerdue)));
+    versions.current.set(avant.type, { bloc: avant, lu: { ...lu.current }, genre: genreImage.current });
+    const v = versions.current.get(t);
+    setErreurs({});
+    if (v && adresseSaisie(v.bloc.url) === adresseSaisie(avant.url)) {
+      lu.current = { ...v.lu };
+      genreImage.current = v.genre;
+      setB({ ...v.bloc, url: avant.url, public: avant.public, indexable: avant.indexable, vedette: t !== 'soutien' && (avant.type === 'soutien' ? v.bloc.vedette : avant.vedette),
+        debut: avant.debut, fin: avant.fin, compteARebours: avant.compteARebours, creneau: avant.creneau, audience: avant.audience, cache: avant.cache });
+      return;
+    }
+    // Le titre lu sur une page YouTube est celui de la vidéo : un lien qui en devient une le garde, au lieu de « Ma vidéo ».
+    const texteGarde = garderTexte() || (t === 'video' && !!lu.current.titre && avant.titre === lu.current.titre);
     lu.current = { ...lu.current, url: '' };
     immediat.current = true;
-    const texteAMoi = aMoi.current.has('titre');
-    setB(avant => versType(avant, 'lien', texteAMoi));
-    setErreurs({});
+    setB(versType(avant, t, texteGarde));
   }
+  /** « En faire un simple lien » : le bloc cesse de suivre son adresse, et redevient le lien qu'il était, ou un lien qui lit son site. */
+  function enSimpleLien() {
+    auto.current = false;
+    changerType('lien');
+  }
+  /**
+   * « En faire une prise de rendez-vous », « … un produit » (24 octobre 2026) : un lien déjà posé, ou rendu simple lien,
+   * prend d'un geste le bloc que son adresse appelle, et son site se relit pour lui (le nom, le prix et la photo d'un produit).
+   */
+  const enType = (t: TypeAdresse) => changerType(t);
+  /**
+   * L'ancienne « Ma newsletter » de Lilian ne s'ajoute plus (24 octobre 2026) : son bloc mène d'un geste à la liste e-mail
+   * qui la remplace, avec son texte s'il est à lui, son sous-titre, ses dates et son public. La main passe à son texte.
+   */
+  function enListeEmail() {
+    vibrer(6);
+    setB(x => versType(x, 'inscription', x.titre.trim() !== nouveauBloc('newsletter', x.id).titre));
+    requestAnimationFrame(() => { if (!document.activeElement || document.activeElement === document.body) focusSaisie(document.getElementById('bloc-titre'), { preventScroll: true }); });
+  }
+  // Au retour d'un achat, le lien d'où l'on était parti prend le bloc qu'on voulait en faire.
+  useEffect(() => {
+    if (enFaire && b.type === 'lien' && !b.partenariat && adresseSaisie(b.url)) changerType(enFaire);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  // Un lien déjà posé vers une page qui déclare un prix (une boutique que son adresse ne dit pas) : relu une fois en
+  // s'ouvrant, il propose d'en faire son produit, comme un lien neuf qui la lit.
+  useEffect(() => {
+    const url = adresseSaisie(bloc.url);
+    if (nouveau || bloc.type !== 'lien' || bloc.partenariat || !url || typeDeAdresse(url, true) !== 'lien' || reseauDeUrl(url) || appDe(url)) return;
+    const deja = PRIX_LUS.get(url);
+    if (deja !== undefined) { if (deja) setBoutique(url); return; }
+    let ouvert = true;
+    apercuSite(url, false).then(site => { const prix = !!(site.prix && site.titre); PRIX_LUS.set(url, prix); if (prix && ouvert) setBoutique(url); }).catch(() => {});
+    return () => { ouvert = false; };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  // Le bloc qui change de type, ou devient un lien partenaire, le dit aux lecteurs d'écran : son nom, en tête, a changé.
+  const [annonce, setAnnonce] = useState('');
+  const vu = useRef({ type: b.type, partenaire: !!b.partenariat });
+  useEffect(() => {
+    const avant = vu.current;
+    vu.current = { type: b.type, partenaire: !!b.partenariat };
+    if (b.type !== avant.type && b.type in DEVENU) setAnnonce(`C’est maintenant ${DEVENU[b.type as TypeAdresse]}${b.type === 'soutien' && vedettePerdue ? ', qui ne se met pas en avant' : ''}.`);
+    else if (b.type !== avant.type && b.type === 'inscription') setAnnonce('C’est maintenant une liste e-mail.');
+    else if (!b.partenariat && avant.partenaire) setAnnonce('Ce n’est plus un lien partenaire.');
+    else if (b.partenariat && !avant.partenaire) setAnnonce(`C’est maintenant un lien partenaire, avec la mention « ${b.partenariat.mention === 'collaboration' ? 'Collaboration commerciale' : 'Publicité'} ».`);
+  }, [b.type, b.partenariat]);
+
+  // Un geste sous l'adresse change le bloc et disparaît avec lui : la main passe au geste qui le remplace (« En faire un
+  // simple lien »), ou à la mention d'un lien devenu partenaire, pour qu'un clavier ne reparte pas du haut de la page.
+  // Le geste qui revient peut attendre la relecture du site : s'il ne vient pas, la main va au champ de l'adresse.
+  const gestes = useRef<HTMLDivElement>(null);
+  const apresGeste = useRef<{ suite: 'type' | 'partenaire'; avant: number } | null>(null);
+  useEffect(() => {
+    const attente = apresGeste.current;
+    if (!attente) return;
+    const ici = document.activeElement;
+    // Le clavier ou la souris ont repris la main entre-temps : on la leur laisse.
+    if (ici && ici !== document.body) { apresGeste.current = null; return; }
+    const cible = attente.suite === 'partenaire'
+      ? document.querySelector<HTMLElement>('[aria-label="Mention du lien partenaire"] [aria-checked="true"]')
+      : gestes.current?.querySelector<HTMLElement>('button');
+    if (cible) { apresGeste.current = null; cible.focus({ preventScroll: true }); return; }
+    const t = setTimeout(() => {
+      if (apresGeste.current !== attente) return;
+      apresGeste.current = null;
+      if (document.activeElement === document.body) focusSaisie(document.getElementById('bloc-adresse'), { preventScroll: true });
+    }, Math.max(0, attente.avant - Date.now()));
+    return () => clearTimeout(t);
+  });
 
   /** La mention et le code d'un lien qui cesse d'être partenaire : rallumé, il les retrouve. */
   const partenariatGarde = useRef<Partenariat | null>(bloc.partenariat);
 
   /**
-   * Fermer d'un glissé, d'Échap, de la croix ou d'un toucher à côté garde ce qui a changé, comme partout
-   * ailleurs, y compris un bloc neuf : une adresse collée ne se perd pas d'un geste.
+   * Fermer d'un glissé, d'Échap, de la croix ou d'un toucher à côté garde ce qui a changé, comme partout ailleurs. Un bloc
+   * neuf aussi, mais masqué (24 octobre 2026, recommandé par la critique) : une adresse collée ne se perd pas d'un geste, et rien ne
+   * part en ligne sans « Ajouter à ma page ». Le message le dit, avec « Afficher ».
    */
   function fermerEnGardant() {
     if (commence()) {
       const v = valider();
       if (!v) { vibrer(20); return; }
-      if (!memeBloc(v, enregistre.current)) { brut.current = b; enregistre.current = v; return onEnregistrer(v, bureau ? { discret: true } : undefined); }
+      if (!memeBloc(v, enregistre.current)) return ecrireEnRoute(v, bureau ? { discret: true } : undefined);
     }
     onFermer();
   }
@@ -608,9 +756,10 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
   }, [bureau]);
   /** Un changement pas valable, neuf ou pas : la feuille reste ouverte et l'erreur dit quoi faire, rien ne se perd en silence. */
   const retenir = () => commence() && !valider();
-  // « Voir les offres » ouvre les offres par-dessus. Au téléphone, la feuille du bloc se ferme d'abord comme un glissé, en gardant
-  // ce qui a changé ; au bureau, la rangée reste dépliée derrière la fenêtre, et ce qui y est tapé part avant le paiement.
-  const offre = { droits, voirOffres: voir && ((f?: Fonction) => { if (retenir()) return; if (!bureau) fermerEnGardant(); voir(f); }) };
+  // « Voir les offres » ouvre les offres par-dessus le bloc, qui reste ouvert dessous (la feuille au téléphone, la rangée au
+  // bureau) : on le retrouve en les fermant. Ce qui y est tapé part avant le paiement, et le bloc revient après l'achat.
+  // Un bloc neuf part masqué chez Creem (`masque`) : au retour, il se rouvre à ajouter, comme on l'avait laissé (`neuf`).
+  const offre = { droits, voirOffres: voir && ((f?: Fonction, suite?: SuiteAchat) => { if (retenir()) return; voir(f, { ...suite, bloc: bloc.id, ...(nouveau ? { neuf: true as const } : {}) }); }) };
 
   /** Une copie juste en dessous : ce qui est tapé s'écrit d'abord, la copie le reprend. */
   function dupliquer() {
@@ -639,6 +788,12 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
    * le pied d'un bloc neuf : le focus reste dans la rangée, sur le premier geste du pied d'un bloc posé, à la même place.
    */
   const apresAjout = useRef(false);
+  // Au bureau, un bloc neuf arrivé avec son adresse (collée, ou prise dans le choix) : la main va à son texte, que le site remplit.
+  useEffect(() => {
+    if (!bureau || !nouveau || !bloc.url) return;
+    const t = requestAnimationFrame(() => { if (!document.activeElement || document.activeElement === document.body) focusSaisie(document.getElementById('bloc-titre'), { preventScroll: true }); });
+    return () => cancelAnimationFrame(t);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   function ajouter() {
     const v = valider();
     if (!v) return;
@@ -655,9 +810,10 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
   }, [nouveau]);
 
   // Un bloc neuf porte le nom de son genre (« Lien », « Me soutenir ») : il est déjà sur la page, son pied dit « Ajouter à ma
-  // page ». Un bloc posé porte son nom à lui, tel qu'il est sur la page (« Le blog ») : on sait lequel est ouvert. Un texte,
-  // une preuve ou la dernière vidéo gardent celui de leur genre, leur « titre » n'étant pas un nom.
-  const sonNom = ['texte', 'preuve', 'derniere-video'].includes(b.type) ? '' : bloc.titre.trim();
+  // page ». Un bloc posé porte son nom à lui, tel qu'il est en train de s'écrire (« Le blog », « Prendre rendez-vous » pour un
+  // lien Calendly qui vient d'en devenir un) : on sait lequel est ouvert. Un texte, une preuve ou la dernière vidéo gardent
+  // celui de leur genre, leur « titre » n'étant pas un nom.
+  const sonNom = ['texte', 'preuve', 'derniere-video'].includes(b.type) ? '' : b.titre.trim();
   const titre = nouveau ? type.nom : [sonNom || type.nom, !b.public && 'masqué', horsCreneauOuDates(b, !!droits.heure) && 'programmé'].filter(Boolean).join(' · ');
   const ligne = 'flex min-h-11 items-center gap-2 bureau:min-h-9';
 
@@ -745,27 +901,74 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
   // Ce que fera l'adresse, dit sous son champ : l'app qui s'ouvre, l'agenda dans la page, le site où l'on paie.
   const ok = (texte: string) => <span className="inline-flex items-center gap-1.5 text-white/75"><Icone nom="ui-ok" taille={13} className="shrink-0" />{texte}</span>;
   const app = b.type === 'lien' && reglages.ouvrirApps ? appDe(adresse(b.url)) : null;
+  // Avant l'adresse, l'aide d'un bloc neuf, sous le champ qui l'attend : les sites qui conviennent (agendas, soutiens,
+  // boutiques) ; pour un lien, ce qu'une adresse collée devient, puisque le choix des blocs ne nomme plus ces blocs-là.
+  const aideNeuf = !nouveau ? undefined
+    : b.type === 'lien' && !b.partenariat ? (droits.vitrine ? 'Colle une vidéo, un agenda, un produit ou une page de soutien : le bloc s’adapte.' : 'Colle une vidéo YouTube : elle s’affiche dans ta page.')
+    : type.aide && `${type.aide}.`;
+  // Une fois l'adresse là, une ligne cochée dit ce qu'elle fera, pour chaque bloc qui mène quelque part : la même forme partout.
   const aideType = app ? ok(`Ce lien s’ouvre directement dans l’app ${app}, même depuis ${['Instagram', 'TikTok'].filter(n => n !== app).join(' ou ')}.`)
-    // Avant l'adresse, l'aide d'un bloc neuf : les sites qui conviennent (agendas, soutiens, boutiques), sous le champ qui les attend.
-    : !adresseValide ? (nouveau && type.aide ? `${type.aide}.` : undefined)
-    : b.type === 'reservation' ? (seIntegre(adresseValide) ? ok('La réservation s’ouvre dans ta page, sans la quitter.') : `${nomAgenda(adresseValide)} s’ouvre sur son site.`)
-    : b.type === 'soutien' ? (avecMontants(adresseValide) ? 'Tes visiteurs choisissent un montant, puis paient sur PayPal.' : soutienDe(adresseValide) ? `Tes visiteurs choisissent le montant sur ${nomSoutien(adresseValide)}.` : undefined)
+    : !adresseValide ? aideNeuf
+    : adresseValide.startsWith('tel:') ? ok('Un toucher appelle ce numéro.')
+    : adresseValide.startsWith('mailto:') ? ok(`Un toucher écrit à ${adresseValide.slice(7)}.`)
+    : b.type === 'video' ? ok('La vidéo se lit dans ta page, sans la quitter.')
+    : b.type === 'reservation' ? ok(seIntegre(adresseValide) ? 'La réservation s’ouvre dans ta page, sans la quitter.' : `${nomAgenda(adresseValide)} s’ouvre sur son site.`)
+    : b.type === 'soutien' ? ok(avecMontants(adresseValide) ? 'Tes visiteurs choisissent un montant, puis paient sur PayPal.'
+      : soutienDe(adresseValide) ? `Tes visiteurs choisissent le montant sur ${nomSoutien(adresseValide)}.` : `Tes visiteurs te soutiennent sur ${nomSoutien(adresseValide)}.`)
+    // Une boutique, un stage, un atelier : la page montre la photo et le prix, et mène à la fiche, où l'on achète ou réserve.
+    : b.type === 'produit' ? ok(`Sa photo et son prix s’affichent, et il mène à ${nomSite(adresseValide) || hoteDe(adresseValide)}.`)
     : undefined;
   const champAdresse = avecUrl && (
-    <Champ label={b.type === 'video' ? 'Adresse de la vidéo YouTube' : b.type === 'produit' ? 'Adresse du produit' : b.type === 'reservation' ? 'Adresse de ton agenda' : 'Adresse'} erreur={erreurDe('url')} aide={aideType}>
-      <input className={classeSaisie} type="url" inputMode="url" autoCapitalize="none" autoCorrect="off"
+    <Champ label={b.type === 'video' ? 'Adresse de la vidéo YouTube' : b.type === 'produit' ? 'Adresse du produit' : b.type === 'reservation' ? 'Adresse de ton agenda' : b.type === 'soutien' ? 'Adresse de ta page de soutien' : 'Adresse'} erreur={erreurDe('url')} aide={aideType}>
+      <input id="bloc-adresse" className={classeSaisie} type="url" inputMode="url" autoCapitalize="none" autoCorrect="off"
         placeholder={b.type === 'video' ? 'https://youtu.be/…' : b.type === 'soutien' ? 'https://paypal.me/…' : b.type === 'reservation' ? 'https://calendly.com/…' : 'https://…'}
         value={b.url} onChange={e => { if (!e.target.value.trim()) efface.current = true; maj({ url: e.target.value }); }} onBlur={() => lireAdresse()} autoFocus={focusAuto(nouveau && !bloc.url)}
         onPaste={e => { const texte = e.clipboardData.getData('text'); if (!b.url.trim() && adresseSaisie(texte)) setTimeout(() => lireAdresse(texte)); }}
         onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); document.getElementById('bloc-titre')?.focus(); } }} />
     </Champ>
   );
-  // Une adresse qui a pris son bloc toute seule (une vidéo, un agenda…) peut rester un simple lien, d'un geste, posé
-  // sous le champ et hors de son libellé, pour que le lecteur d'écran ne le lise pas avec l'adresse.
-  const champUrl = avecUrl && (auto.current && b.type !== 'lien' && adresseValide ? (
+  /*
+   * Ce que l'adresse d'un lien appelle (24 octobre 2026) : une vidéo, un agenda, une page de soutien, une fiche de
+   * boutique, ou une page lue qui déclare un prix. Un lien neuf qui suit son adresse le devient tout seul ; un lien déjà
+   * posé, ou rendu simple lien, le propose d'un geste ; sans Starter, la vitrine dit ce que l'offre en ferait. Un lien
+   * partenaire reste un lien.
+   */
+  const appel = ((): TypeAdresse => {
+    if (b.type !== 'lien' || b.partenariat || !adresseValide) return 'lien';
+    const t = typeDeAdresse(adresseValide, true);
+    return t === 'lien' && boutique === adresseValide ? 'produit' : t;
+  })();
+  const appelLibre = appel === 'video' || !!droits.vitrine;
+  const proposer = appel !== 'lien' && appelLibre && !auto.current;
+  const phraseVitrine = appel === 'lien' || appelLibre || !adresseValide ? ''
+    : appel === 'reservation' ? (seIntegre(adresseValide) ? `Avec Hopla Starter, ton agenda ${nomAgenda(adresseValide)} s’ouvre dans ta page, sans la quitter.` : 'Avec Hopla Starter, ce lien devient une prise de rendez-vous.')
+    : appel === 'soutien' ? (avecMontants(adresseValide) ? 'Avec Hopla Starter, tes visiteurs choisissent un montant, puis paient sur PayPal.' : 'Avec Hopla Starter, ce lien devient un bouton « Me soutenir ».')
+    : 'Avec Hopla Starter, ce produit s’affiche avec sa photo et son prix.';
+  // Un bloc d'adresse (une vidéo, un agenda, un soutien, un produit), neuf ou posé, redevient d'un geste un simple lien (24 octobre
+  // 2026) : la détection propose, elle ne décide pas. Le lien garde sa place, Quand et Pour qui.
+  const versLien = avecUrl && b.type !== 'lien' && !!adresseValide;
+  // Ces gestes se posent sous le champ et hors de son libellé, pour que le lecteur d'écran ne les lise pas avec l'adresse.
+  const geste = (texte: string, action: () => void, suite: 'type' | 'partenaire' = 'type') => (
+    <button key={texte} type="button" onClick={() => { apresGeste.current = { suite, avant: Date.now() + 1500 }; action(); }} className="flex min-h-11 items-center text-[12.5px] font-medium text-white underline decoration-white/30 underline-offset-[3px] transition hover:decoration-white bureau:mt-0.5 bureau:min-h-0 bureau:py-1.5">{texte}</button>
+  );
+  // Une adresse d'affiliation (une régie, le tag d'Amazon…) : la loi demande la mention, le lien le propose d'un geste ; le
+  // geste inverse prend sa place, sous l'adresse, plutôt que d'attendre dans « Plus de réglages ».
+  const affilie = (b.type === 'lien' || b.type === 'produit') && !b.partenariat && web && lienAffilie(adresseValide);
+  const pasPartenaire = (b.type === 'lien' || b.type === 'produit') && !!b.partenariat && !!adresseValide;
+  const gestesAdresse = [
+    versLien ? geste('En faire un simple lien', enSimpleLien) : proposer && geste(EN_FAIRE[appel], () => enType(appel)),
+    affilie && geste('C’est un lien partenaire\u202f?', () => maj({ partenariat: partenariatGarde.current ?? PARTENARIAT_NEUF }), 'partenaire'),
+    pasPartenaire && geste('Ce n’est pas un lien partenaire', () => { partenariatGarde.current = b.partenariat; maj({ partenariat: null }); }),
+  ].filter(Boolean);
+  // Un bouton « Me soutenir » ne se met pas en avant : un lien mis en avant qui en devient un le dit, sous son adresse.
+  const noteVedette = b.type === 'soutien' && vedettePerdue && <p className="text-[12.5px] leading-snug text-white/55">Un bouton «\u202fMe soutenir\u202f» ne se met pas en avant.</p>;
+  // Sans Starter, ce que l'offre ferait de l'adresse se dit juste sous elle, avant le texte.
+  const vitrineSousAdresse = phraseVitrine && <Reserve fonction="vitrine" type={appel as TypeVitrine} phrase={phraseVitrine} />;
+  const champUrl = avecUrl && (gestesAdresse.length || noteVedette ? (
     <div>
       {champAdresse}
-      <button type="button" onClick={enSimpleLien} className="flex min-h-11 items-center text-[12.5px] font-medium text-white underline decoration-white/30 underline-offset-[3px] transition hover:decoration-white bureau:mt-0.5 bureau:min-h-0 bureau:py-1.5">En faire un simple lien</button>
+      {gestesAdresse.length > 0 && <div ref={gestes} className="flex flex-wrap items-center gap-x-4">{gestesAdresse}</div>}
+      {noteVedette}
     </div>
   ) : champAdresse);
   /*
@@ -785,8 +988,8 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
   const source = b.image ? genreImage.current : !produit && b.icone ? 'icone' : null;
   const coche = (de: (typeof source)[]) => (source ? de.includes(source) : undefined);
   const elementsVignette: ElementMenu[] = [
-    ...(adresseValide && !rdv ? [{ nom: produit ? 'Photo de la boutique' : 'Image du site', coche: coche(['partage', 'capture']), action: () => void prendreDuSite('partage') }] : []),
-    ...(adresseValide && !produit && !rdv ? [{ nom: 'Logo du site', coche: coche(['logo']), action: () => void prendreDuSite('logo') }] : []),
+    ...(web && !rdv ? [{ nom: produit ? 'Photo de la boutique' : 'Image du site', coche: coche(['partage', 'capture']), action: () => void prendreDuSite('partage') }] : []),
+    ...(web && !produit && !rdv ? [{ nom: 'Logo du site', coche: coche(['logo']), action: () => void prendreDuSite('logo') }] : []),
     { nom: 'Choisir une photo', coche: coche(['photo']), action: () => choisirFichier(fichier.current, vignette.current) },
     ...(!produit ? [{ nom: 'Choisir une icône', coche: coche(['icone']), action: () => setIcones(true) }] : []),
     ...(b.image ? [{ nom: produit ? 'Retirer la photo' : 'Retirer l’image', action: () => maj({ image: '' }) }] : []),
@@ -839,7 +1042,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
       )}
     </div>
   ) : (
-    <Champ erreur={erreurDe('titre')} label={b.type === 'texte' ? 'Texte' : 'Titre'}>
+    <Champ erreur={erreurDe('titre')} label={b.type === 'texte' ? 'Texte' : b.type === 'video' ? 'Titre de la vidéo' : b.type === 'titre' ? 'Titre de la section' : 'Titre'}>
       {b.type === 'texte'
         ? <textarea className={`${classeSaisie} min-h-28`} value={b.titre} onChange={e => maj({ titre: e.target.value })} maxLength={1000} autoFocus={focusAuto(nouveau)} />
         : <input id="bloc-titre" className={classeSaisie} value={b.titre} onChange={e => maj({ titre: e.target.value })} maxLength={160} autoFocus={focusAuto(nouveau && !avecUrl)}
@@ -908,8 +1111,18 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
           en a une le dit sous son champ, tant qu'il est vide. Rien quand c'est évident. */}
       {nouveau && type.aide && !avecUrl && <p className="text-[13.5px] leading-snug text-white/60">{type.aide}.</p>}
       {/* Un avis ou une liste gardés d'une offre passée : ils attendent, rien n'est perdu. */}
-      {type.fonction && !droits[type.fonction] && <Reserve fonction={type.fonction} phrase={`Ce bloc n’est pas montré sur ta page sans Hopla ${offreDe(type.fonction)}. Il revient tel quel dès que tu la prends.`} />}
-      {paire ? <div className="adm-paire">{champUrl}{champTitre}</div> : champUrl}
+      {type.fonction && !droits[type.fonction] && <Reserve fonction={type.fonction} type={TYPES_VITRINE.includes(b.type) ? b.type as TypeVitrine : undefined}
+        phrase={`Ce bloc n’est pas montré sur ta page sans Hopla ${offreDe(type.fonction)}. Il revient tel quel dès que tu la prends.`} />}
+      {/* L'ancienne « Ma newsletter » : elle reste en ligne telle quelle, et dit ce qui la remplace, avec le geste pour y passer. */}
+      {b.type === 'newsletter' && (
+        <div className="flex flex-col items-start">
+          <p className="text-[13.5px] leading-snug text-white/70">La liste e-mail remplace ce bloc : ses inscrits restent chez Hopla, et partent vers ta newsletter branchée dans Intégrations.</p>
+          {geste('En faire une liste e-mail', enListeEmail)}
+        </div>
+      )}
+      {paire ?<div className="adm-paire">{champUrl}{champTitre}</div> : champUrl}
+      {/* Une adresse de la vitrine sans Starter : le lien reste un lien, et dit ce que l'offre en ferait, juste sous l'adresse. */}
+      {vitrineSousAdresse}
 
       {b.type === 'preuve' && <ChampsPreuve b={b} maj={maj} erreurDe={erreurDe} />}
 
@@ -934,6 +1147,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
           <input className={classeSaisie} value={b.titre} onChange={e => maj({ titre: e.target.value })} maxLength={160} />
         </Champ>
       )}
+      <span className="sr-only" aria-live="polite">{annonce}</span>
     </>
   );
 
@@ -987,18 +1201,23 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
           {!nouveau && compteClics && clics > 0 && <p className="mr-auto text-[12px] tabular-nums text-white/55">{clics.toLocaleString('fr-FR')} clic{clics > 1 ? 's' : ''} ces 30 derniers jours</p>}
           {nouveau ? (
             <div className="ml-auto flex items-center gap-2">
-              {/* Le seul moyen d'oublier un bloc neuf : replier la rangée, elle, l'ajoute s'il est valable. */}
+              {/* Le seul moyen d'oublier un bloc neuf : replier la rangée le garde, masqué, s'il est valable. */}
               <BoutonSecondaire onClick={onFermer}>Annuler</BoutonSecondaire>
               <BoutonPrincipal disabled={envoi} onClick={ajouter}>Ajouter à ma page</BoutonPrincipal>
             </div>
           ) : (
             <div className="ml-auto flex flex-wrap items-center justify-end gap-0.5">
               {annulable && (
-                <button type="button" onClick={() => { setB(depart.current!); setErreurs({}); vibrer(6); }} className={classeBouton.discret}>
+                <button type="button" onClick={() => {
+                  // Le bloc revient tel qu'il était, sans relire son site ; le bouton disparaît, la main passe à Dupliquer.
+                  lu.current = { ...lu.current, url: adresseSaisie(depart.current!.url) };
+                  setB(depart.current!); setErreurs({}); vibrer(6); setAnnonce('Changements annulés.');
+                  requestAnimationFrame(() => boutonDupliquer.current?.focus({ preventScroll: true }));
+                }} className={classeBouton.discret}>
                   <Icone nom="ui-retour" taille={15} className="shrink-0" />Annuler mes changements
                 </button>
               )}
-              <button type="button" onClick={dupliquer} className={classeBouton.discret}><Icone nom="ui-copier" taille={15} className="shrink-0" />Dupliquer</button>
+              <button ref={boutonDupliquer} type="button" onClick={dupliquer} className={classeBouton.discret}><Icone nom="ui-copier" taille={15} className="shrink-0" />Dupliquer</button>
               <button type="button" onClick={retirer} className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl px-3 text-[14px] font-medium text-red-300 transition hover:bg-red-500/[0.06] bureau:min-h-9 bureau:rounded-lg bureau:px-2.5">
                 <Icone nom="ui-corbeille" taille={15} className="shrink-0" />Retirer
               </button>
@@ -1040,7 +1259,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
       retour={nouveau && onRetour ? { label: 'Revenir au choix du bloc', action: () => onRetour(commence() ? b : null) } : undefined}
       pied={fermer => (
         <div className="flex items-center gap-2">
-          {/* Fermer garde les changements ; ce bouton est la seule façon de les oublier (un bloc neuf n'est pas ajouté). */}
+          {/* Fermer garde les changements (un bloc neuf, masqué) ; ce bouton est la seule façon de les oublier. */}
           {commence() && (
             <BoutonSecondaire onClick={() => fermer(() => onFermer())}>Annuler</BoutonSecondaire>
           )}

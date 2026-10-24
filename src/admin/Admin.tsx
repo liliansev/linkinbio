@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { Api, Bloc, EtatAdmin, PagePublique, Reglages } from '../lib/types.ts';
+import type { Api, Bloc, EtatAdmin, PagePublique, Reglages, TypeBloc, TypeVitrine } from '../lib/types.ts';
 import { TYPES_PRINCIPAL, nouveauBloc, urlPage } from '../lib/types.ts';
 import { composerMoment } from '../lib/moments.ts';
+import type { TypeAdresse } from '../lib/detection.ts';
+import { EN_FAIRE } from '../lib/catalogue.ts';
+import { adresseSaisie } from '../lib/valider.ts';
 import type { BlocCommence } from '../lib/editionBloc.ts';
 import { cleBlocCommence, relireBlocCommence } from '../lib/editionBloc.ts';
 import { PageLiens } from '../components/PageLiens.tsx';
@@ -32,7 +35,7 @@ import type { Fonction, PlanPayant } from '../lib/abonnement.ts';
 import { FONCTIONS, OFFRES, joursStats, offreSuivante, peut } from '../lib/abonnement.ts';
 import type { Droits } from '../lib/droits.ts';
 import { REFUS_PROGRAMMATION, nouvellesDates, selonDroits } from '../lib/droits.ts';
-import type { Achat, EtapeRetour } from '../lib/achat.ts';
+import type { Achat, EtapeRetour, SuiteAchat } from '../lib/achat.ts';
 import { CLE_ACHAT, achatDeRetour, delaiAvantEssai, etapeRetour } from '../lib/achat.ts';
 import type { PeriodeStats } from '../lib/periode.ts';
 
@@ -62,6 +65,16 @@ const COLONNES: Record<number, string> = { 4: 'grid-cols-4', 5: 'grid-cols-5' };
 const nouvelId = () => `n${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 /** Les fonctions qui se règlent dans un bloc (ses dates, son créneau, son drop). */
 const FONCTIONS_DE_BLOC: Fonction[] = ['programmation', 'heure', 'drops', 'vitrine'];
+/** Après l'achat de la vitrine, le geste qui pose le bloc qu'on voulait, ou ramène à celui d'où l'on venait. */
+const AJOUTER: Record<TypeVitrine, string> = { reservation: 'Ajouter ta prise de rendez-vous', soutien: 'Ajouter ton bouton «\u202fMe soutenir\u202f»', produit: 'Ajouter ton produit' };
+const RETROUVER: Partial<Record<TypeBloc, string>> = { reservation: 'Retrouver ta prise de rendez-vous', soutien: 'Retrouver ton bouton «\u202fMe soutenir\u202f»', produit: 'Retrouver ton produit' };
+/** Le bloc que touche le geste d'après l'achat, pour qu'on le reconnaisse : son texte, puis son adresse, l'un et l'autre raccourcis. */
+function nommerBloc({ titre, url }: Pick<Bloc, 'titre' | 'url'>): string {
+  const court = (t: string, n: number) => (t.length > n ? `${t.slice(0, n - 1).trimEnd()}…` : t);
+  const t = court(titre.trim().replace(/\s+/g, ' '), 40);
+  const a = court(adresseSaisie(url) ? sansSchema(adresseSaisie(url)).replace(/\/$/, '') : '', 42);
+  return [t && `«\u202f${t}\u202f»`, a].filter(Boolean).join(', ');
+}
 
 /**
  * Le retour de Creem, lu une fois : l'adresse (`?paiement=pro`) et la note posée avant de partir. L'adresse
@@ -82,8 +95,9 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
   const [clics, setClics] = useState(initial.clics);
   const [onglet, setOnglet] = useState<Onglet>('page');
   // Les offres, par-dessus l'écran en cours : `pour`, la fonction réservée d'où l'on vient ; `vers`, l'offre à mettre en avant sans fonction ;
-  // `resilier`, ouvertes droit sur « Repasser en Gratuit ».
-  const [offres, setOffres] = useState<{ pour?: Fonction; vers?: PlanPayant; bloc?: string; resilier?: boolean } | null>(null);
+  // `suite`, ce à quoi l'on revient après l'achat (le bloc d'où l'on vient, le bloc de la vitrine qu'on voulait) ; `resilier`, ouvertes
+  // droit sur « Repasser en Gratuit ».
+  const [offres, setOffres] = useState<{ pour?: Fonction; vers?: PlanPayant; suite?: SuiteAchat; resilier?: boolean } | null>(null);
   // Au retour de Creem : ce qu'on vient de prendre, et où en est l'offre (voir `lib/achat.ts`).
   const [retour, setRetour] = useState<{ achat: Achat; etape: EtapeRetour } | null>(null);
   // « Essayer tes couleurs » : Ma page ouvre le design sur ses couleurs.
@@ -91,18 +105,22 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
   // « Programmer ce bloc », au retour de Creem : le bloc s'ouvre sur la règle que l'offre vient de débloquer.
   const [regleOuverte, setRegleOuverte] = useState<{ bloc: string; regle: 'moment' | 'acces' } | null>(null);
   // `choisi` : un bloc neuf pris dans la liste avec une adresse déjà tapée, qui reste ce qu'on a choisi. `repris` : un bloc neuf
-  // rouvert avec ce qui y était tapé, déjà commencé (voir `EditeurBloc`).
-  const [edition, setEdition] = useState<{ bloc: Bloc; nouveau: boolean; enBas?: boolean; choisi?: boolean; repris?: boolean } | null>(null);
-  // Un bloc ouvert depuis Intégrations (« Produit », « Ma liste d'inscrits »…) : refermé, par sa croix, Annuler, Enregistrer ou le retour
+  // rouvert avec ce qui y était tapé, déjà commencé (voir `EditeurBloc`). `enFaire` : au retour d'un achat, le bloc de la vitrine
+  // que le lien ouvert devient.
+  const [edition, setEdition] = useState<{ bloc: Bloc; nouveau: boolean; enBas?: boolean; choisi?: boolean; repris?: boolean; enFaire?: TypeAdresse } | null>(null);
+  // Un bloc ouvert depuis Intégrations (« Produit », « Liste e-mail »…) : refermé, par sa croix, Annuler, Enregistrer ou le retour
   // du téléphone, on revient à Intégrations, sur la sous-page d'où l'on venait (22 octobre 2026, Lilian : la croix ramenait à Ma page).
-  const depuisIntegrations = useRef<{ bloc: string; outil: string | null } | null>(null);
+  // Revenu d'un bloc de « Sur ta page », le focus reprend sa ligne (`raccourci`).
+  const depuisIntegrations = useRef<{ bloc: string; outil: string | null; type: TypeBloc } | null>(null);
   const [sousIntegration, setSousIntegration] = useState<string | null>(null);
+  const [raccourci, setRaccourci] = useState<TypeBloc | null>(null);
   useEffect(() => {
     const d = depuisIntegrations.current;
     if (!d || edition?.bloc.id === d.bloc) return;
     depuisIntegrations.current = null;
     if (edition || onglet !== 'page') return;
     setSousIntegration(d.outil);
+    if (!d.outil) setRaccourci(d.type);
     setOnglet('integrations');
     scrollTo({ top: 0 });
   }, [edition, onglet]);
@@ -201,9 +219,11 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
   ecrireRef.current = ecrire;
   // Le compte peut-il prendre une offre : le paiement est branché, et ce n'est pas le compte principal, qui a tout.
   const peutAcheter = initial.paiement && !initial.compte.principal;
-  const ouvrirOffres = (pour?: Fonction, vers?: PlanPayant, bloc?: string) => setOffres({ pour, vers, bloc });
-  // L'offre du dessus, en une ligne : rien pour le compte principal, ni au-dessus de Pro, ni pendant une résiliation ou un impayé.
-  const suivante = peutAcheter ? offreSuivante(abonnement, droits, initial.enVente) : null;
+  const ouvrirOffres = (pour?: Fonction, vers?: PlanPayant, suite?: SuiteAchat) => setOffres({ pour, vers, suite });
+  // L'offre du dessus, en une ligne : rien pour le compte principal, ni au-dessus de Pro, ni pendant une résiliation ou un impayé,
+  // ni juste après un achat (24 octobre 2026) : on vient de prendre Starter, Pro ne se propose pas aussitôt.
+  const [vientDAcheter, setVientDAcheter] = useState(false);
+  const suivante = peutAcheter && !vientDAcheter ? offreSuivante(abonnement, droits, initial.enVente) : null;
   const appel = (className = '') => suivante && (
     <AppelOffre suivante={suivante} className={className} onClick={() => ouvrirOffres(suivante.fonction, suivante.fonction ? undefined : suivante.plan)} />
   );
@@ -248,7 +268,45 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
     document.addEventListener('keydown', touche);
     return () => { document.removeEventListener('keydown', touche); document.body.style.overflow = corps; avant?.focus({ preventScroll: true }); };
   }, [apercu]);
-  useEffect(() => { if (!toast || toastTenu) return; const t = setTimeout(() => setToast(null), toast.long ? 8000 : toast.annuler ? 5000 : 2600); return () => clearTimeout(t); }, [toast, toastTenu]);
+  /*
+   * Un message s'en va seul : 4 secondes, 8 pour une phrase longue ; le doigt, la souris ou le focus dessus le retiennent.
+   * Celui qui offre un geste (Annuler, Afficher, Réessayer) reste jusqu'au geste suivant, fait ailleurs (24 octobre 2026) :
+   * le temps de le lire et de l'atteindre, au doigt comme au clavier, sans compte à rebours. Les offres ouvertes par-dessus
+   * le font attendre : il n'y est pas montré.
+   */
+  const fenetreOuverte = !!offres || !!retour;
+  useEffect(() => {
+    if (!toast || fenetreOuverte) return;
+    if (!toast.annuler) {
+      if (toastTenu) return;
+      const t = setTimeout(() => setToast(null), toast.long ? 8000 : 4000);
+      return () => clearTimeout(t);
+    }
+    const pose = Date.now();
+    const geste = (e: Event) => {
+      // Ni le geste qui vient de poser le message, ni un geste sur lui, ni le seul passage du focus (Tab, Maj) ne le retirent.
+      if (Date.now() - pose < 400 || (e.target as Element | null)?.closest?.('.adm-toast')) return;
+      if (e instanceof KeyboardEvent && ['Tab', 'Shift', 'Control', 'Alt', 'Meta', 'CapsLock'].includes(e.key)) return;
+      setToast(null);
+    };
+    document.addEventListener('pointerdown', geste, true);
+    document.addEventListener('keydown', geste, true);
+    return () => { document.removeEventListener('pointerdown', geste, true); document.removeEventListener('keydown', geste, true); };
+  }, [toast, toastTenu, fenetreOuverte]);
+  /** Quand rien n'a pris la main, elle revient au contenu de l'onglet, jamais au début du document. */
+  function rendreLaMain() {
+    const ici = document.activeElement;
+    const main = document.getElementById('contenu-admin');
+    if ((ici && ici !== document.body) || !main) return;
+    main.tabIndex = -1;
+    main.focus({ preventScroll: true });
+    main.addEventListener('blur', () => main.removeAttribute('tabindex'), { once: true });
+  }
+  /** Le geste du message part avec lui, et la main revient au contenu. */
+  function agirToast(action: () => void) {
+    action();
+    requestAnimationFrame(rendreLaMain);
+  }
   useEffect(() => () => clearTimeout(minuteur.current), []);
 
   /*
@@ -258,11 +316,20 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
    */
   const retourLu = useRef<Achat | null | undefined>(undefined);
   const retourFerme = useRef(false);
+  // La fenêtre du retour refermée (ouverte au chargement, elle n'a pas d'ouvreur où rendre le focus) : la main revient au
+  // contenu, après la feuille que son geste a pu ouvrir, qui la garde (le bloc à rouvrir, le Design).
+  const mainApresRetour = useRef(false);
+  useEffect(() => {
+    if (retour || !mainApresRetour.current) return;
+    mainApresRetour.current = false;
+    rendreLaMain();
+  });
   useEffect(() => {
     // Lu une seule fois, même si l'effet est rejoué (mode strict) : l'adresse est déjà nettoyée au deuxième passage.
     if (retourLu.current === undefined) retourLu.current = lireRetour();
     const achat = retourLu.current;
     if (!achat) return;
+    setVientDAcheter(true);
     let essais = 0;
     let fini = false;
     let minuterie: ReturnType<typeof setTimeout> | undefined;
@@ -350,33 +417,56 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
     return { reglages: permis.reglages, blocs: composerMoment(permis.blocs, maintenant), compte: { ...compte, plan }, maintenant };
   }
 
-  /** Après « C'est fait » : le geste qui mène à ce qu'on était venu chercher. */
-  function actionApres({ pour, bloc }: Achat): { texte: string; faire: () => void } | undefined {
+  /**
+   * Après « C'est fait » : le geste qui mène à ce qu'on était venu chercher, et le bloc qu'il touche, nommé (`detail`) pour
+   * qu'on le reconnaisse. Un bloc parti masqué avant d'être ajouté (`neuf`) se rouvre à ajouter, tel qu'on l'avait laissé ;
+   * venu d'Intégrations (`integrations`), le bloc refermé y ramène.
+   */
+  function actionApres({ pour, bloc, type, url, neuf, integrations }: Achat): { texte: string; detail?: string; faire: () => void } | undefined {
+    const depuis = (b: Bloc) => { if (integrations) depuisIntegrations.current = { bloc: b.id, outil: null, type: b.type }; };
+    const poser = (b: Bloc, choisi = false) => { if (!choisirOnglet('page')) return; depuis(b); ajouterBloc(b, false, choisi); };
+    const rouvrir = (b: Bloc, enFaire?: TypeAdresse) => {
+      if (!choisirOnglet('page')) return;
+      depuis(b);
+      if (!neuf || b.public) return ouvrirBloc(b, enFaire);
+      if (libererEdition()) setEdition({ bloc: { ...b, public: true }, nouveau: true, repris: true, ...(enFaire ? { enFaire } : {}) });
+    };
     if (pour === 'couleurs') return { texte: 'Essayer tes couleurs', faire: () => { choisirOnglet('page'); setDemandeDesign('couleurs'); } };
     if (pour === 'stats') return { texte: 'Voir tes stats', faire: () => choisirOnglet('stats') };
-    if (pour === 'avis') return { texte: 'Ajouter un avis', faire: () => { choisirOnglet('page'); ajouterBloc(nouveauBloc('preuve', nouvelId())); } };
-    if (pour === 'listeEmail') return { texte: 'Ajouter ta liste d’inscrits', faire: () => { choisirOnglet('page'); ajouterBloc(nouveauBloc('inscription', nouvelId())); } };
-    // La vitrine : parti du code promo d'un lien, on y revient ; sinon, le choix des blocs, où elle est désormais ouverte.
+    if (pour === 'avis') return { texte: 'Ajouter un avis', faire: () => poser(nouveauBloc('preuve', nouvelId())) };
+    if (pour === 'listeEmail') return { texte: 'Ajouter ta liste e-mail', faire: () => poser(nouveauBloc('inscription', nouvelId())) };
+    /*
+     * La vitrine (24 octobre 2026) : on revient à ce qu'on voulait en faire. Le lien d'où l'on était parti prend le bloc que son
+     * adresse appelle, du même geste que dans le bloc (« En faire une prise de rendez-vous ») ; un lien partenaire, son code
+     * promo ; un bloc de la vitrine choisi dans Ajouter ou Intégrations se pose, avec l'adresse collée. Sans rien de tout cela,
+     * Intégrations, sur la ligne de la vitrine : le choix des blocs ne la montre plus, elle vient des adresses.
+     */
     if (pour === 'vitrine') {
-      const lien = bloc ? blocs.find(x => x.id === bloc) : undefined;
-      return lien
-        ? { texte: 'Ajouter ton code promo', faire: () => { choisirOnglet('page'); ouvrirBloc(lien); } }
-        : { texte: 'Remplir ta vitrine', faire: () => { choisirOnglet('page'); setDemandeAjout({ enBas: false }); } };
+      const b = bloc ? blocs.find(x => x.id === bloc) : undefined;
+      if (b && b.type === 'lien' && !b.partenariat && type && adresseSaisie(b.url)) return { texte: EN_FAIRE[type], detail: `Ton lien ${nommerBloc(b)}`, faire: () => rouvrir(b, type) };
+      if (b?.partenariat) return { texte: 'Ajouter ton code promo', detail: `Ton lien ${nommerBloc(b)}`, faire: () => rouvrir(b) };
+      if (b) return { texte: RETROUVER[b.type] ?? 'Retrouver ton bloc', detail: nommerBloc(b), faire: () => rouvrir(b) };
+      if (type) {
+        const neufAvecAdresse = { ...nouveauBloc(type, nouvelId()), ...(url ? { url } : {}) };
+        return { texte: AJOUTER[type], ...(url ? { detail: `Avec ${nommerBloc({ titre: '', url })}` } : {}), faire: () => poser(neufAvecAdresse, !!url) };
+      }
+      return { texte: 'Remplir ta vitrine', faire: () => { if (choisirOnglet('integrations')) setRaccourci('reservation'); } };
     }
     // Une règle de bloc (dates, créneau, drop) : on revient au bloc d'où l'on était parti, s'il est toujours là.
     const b = pour && FONCTIONS_DE_BLOC.includes(pour) && bloc ? blocs.find(x => x.id === bloc) : undefined;
     if (b) return {
       texte: pour === 'programmation' ? 'Programmer ce bloc' : pour === 'heure' ? 'Choisir son créneau' : 'Régler ce drop',
-      faire: () => { setRegleOuverte({ bloc: b.id, regle: pour === 'drops' ? 'acces' : 'moment' }); choisirOnglet('page'); ouvrirBloc(b); },
+      ...(nommerBloc(b) ? { detail: nommerBloc(b) } : {}),
+      faire: () => { setRegleOuverte({ bloc: b.id, regle: pour === 'drops' ? 'acces' : 'moment' }); rouvrir(b); },
     };
     return undefined;
   }
 
-  /** Un clic sur un bloc l'ouvre ; au bureau, l'éditeur passe d'une rangée à l'autre en écrivant le précédent. */
-  function ouvrirBloc(bloc: Bloc) {
-    if (edition && !edition.nouveau && edition.bloc.id === bloc.id) return;
+  /** Un clic sur un bloc l'ouvre ; au bureau, l'éditeur passe d'une rangée à l'autre en écrivant le précédent. `enFaire` : le bloc qu'il devient en s'ouvrant. */
+  function ouvrirBloc(bloc: Bloc, enFaire?: TypeAdresse) {
+    if (edition && !edition.nouveau && edition.bloc.id === bloc.id && !enFaire) return;
     if (!libererEdition()) return;
-    setEdition({ bloc: blocsRef.current.find(b => b.id === bloc.id) ?? bloc, nouveau: false });
+    setEdition({ bloc: blocsRef.current.find(b => b.id === bloc.id) ?? bloc, nouveau: false, ...(enFaire ? { enFaire } : {}) });
   }
   function ajouterBloc(bloc: Bloc, enBas?: boolean, choisi?: boolean, repris?: boolean) {
     if (!libererEdition()) return;
@@ -414,19 +504,29 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
    */
   function enregistrerBloc(bloc: Bloc, options: OptionsEnregistrement = {}) {
     const avant = blocsRef.current;
-    const nouveau = !avant.some(b => b.id === bloc.id);
-    const enBas = nouveau && (options.enBas ?? !!edition?.enBas);
-    const liste = nouveau ? (enBas ? [...avant, bloc] : [bloc, ...avant]) : avant.map(b => (b.id === bloc.id ? bloc : b));
+    const ancien = avant.find(b => b.id === bloc.id);
+    // Neuf : pas encore sur la page, ou gardé masqué en route et rouvert pour être ajouté (au retour d'un achat).
+    const nouveau = !ancien || (!!edition?.nouveau && edition.bloc.id === bloc.id);
+    const enBas = !ancien && (options.enBas ?? !!edition?.enBas);
+    const liste = ancien ? avant.map(b => (b.id === bloc.id ? bloc : b)) : enBas ? [...avant, bloc] : [bloc, ...avant];
     poserListe(liste);
-    setEdition(e => (e && e.bloc.id === bloc.id ? (options.garder ? { bloc, nouveau: false } : null) : e));
+    // Gardé ouvert, l'éditeur reste le même (sa clé tient compte de `enFaire`) : on continue d'y taper.
+    setEdition(e => (e && e.bloc.id === bloc.id ? (options.garder ? { bloc, nouveau: false, ...(e.enFaire ? { enFaire: e.enFaire } : {}) } : null) : e));
     // Le serveur pose un bloc neuf en tête : ajouté par le bas, il est rangé à la fin juste après.
     ecrire(async () => { await api.enregistrerBloc(bloc); if (enBas) await api.ordonner(liste.map(b => b.id)); });
-    if (nouveau) {
-      setToast({ texte: enBas ? 'Ajouté en bas de ta page' : 'Ajouté en haut de ta page', annuler: () => {
-        poserListe(blocsRef.current.filter(b => b.id !== bloc.id));
+    if (options.masque) {
+      // Un bloc neuf refermé sans « Ajouter à ma page » : gardé, masqué ; le message reste jusqu'au geste suivant, avec « Afficher ».
+      setToast({ texte: 'Gardé, masqué de ta page', action: 'Afficher', annuler: () => afficher(bloc.id) });
+      if (!options.discret) montrer(bloc.id);
+    } else if (nouveau) {
+      const rang = liste.findIndex(b => b.id === bloc.id);
+      const ou = ancien ? (rang === 0 ? 'en haut de ta page' : rang === liste.length - 1 ? 'en bas de ta page' : 'à ta page') : enBas ? 'en bas de ta page' : 'en haut de ta page';
+      setToast({ texte: `Ajouté ${ou}`, annuler: () => {
+        // Gardé masqué avant d'être ajouté, il le redevient ; sinon, il s'en va.
+        poserListe(ancien ? blocsRef.current.map(b => (b.id === bloc.id ? ancien : b)) : blocsRef.current.filter(b => b.id !== bloc.id));
         setEdition(e => (e?.bloc.id === bloc.id ? null : e));
         setToast({ texte: 'Ajout annulé', genre: 'info' });
-        ecrire(() => api.supprimerBloc(bloc.id));
+        ecrire(async () => { if (ancien) await api.enregistrerBloc(ancien); else await api.supprimerBloc(bloc.id); });
       } });
       if (!options.discret) montrer(bloc.id);
     } else if (!options.discret) {
@@ -436,6 +536,23 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
         poserListe(blocsRef.current.map(b => (b.id === ancien.id ? ancien : b))); setToast({ texte: 'Changements annulés', genre: 'info' }); ecrire(() => api.enregistrerBloc(ancien));
       } });
     }
+  }
+
+  /** « Afficher », dans le message d'un bloc neuf gardé masqué : il se montre sur la page (l'éditeur resté ouvert sur lui suit). */
+  function afficher(id: string) {
+    const vrai = blocsRef.current.find(b => b.id === id);
+    if (!vrai) { setToast(null); return; }
+    const montre = { ...vrai, public: true };
+    poserListe(blocsRef.current.map(b => (b.id === id ? montre : b)));
+    setEdition(e => (e && !e.nouveau && e.bloc.id === id ? { ...e, bloc: montre } : e));
+    ecrire(() => api.enregistrerBloc(montre));
+    setToast({ texte: 'Montré sur ta page', annuler: () => {
+      poserListe(blocsRef.current.map(b => (b.id === id ? { ...b, public: false } : b)));
+      setEdition(e => (e && !e.nouveau && e.bloc.id === id ? { ...e, bloc: { ...e.bloc, public: false } } : e));
+      setToast({ texte: 'Masqué de ta page', genre: 'info' });
+      ecrire(() => api.enregistrerBloc({ ...montre, public: false }));
+    } });
+    montrer(id);
   }
 
   /** Au bureau, une rangée changée puis repliée : le message le dit, et Annuler remet le bloc tel qu'il était à son ouverture. */
@@ -563,15 +680,22 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
 
   if (!cguAJour) return <AccepterCgu accepter={async () => { await api.accepterCgu(); setCguAJour(true); }} deconnexion={deconnexion} />;
 
+  // Au bureau, le message se pose en bas à droite (`.adm-toast` dans admin.css), hors de la liste des blocs : il ne couvre
+  // jamais la rangée qu'on règle.
   const bulle = toast && (
     <div role="status" onPointerEnter={() => setToastTenu(true)} onPointerLeave={() => setToastTenu(false)} onFocus={e => { if (e.target.matches(':focus-visible')) setToastTenu(true); }} onBlur={e => { if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setToastTenu(false); }} className={`adm-toast fixed inset-x-4 ${onglet === 'page' && !premiersPas ? 'bottom-[calc(134px+env(safe-area-inset-bottom))]' : 'bottom-[calc(76px+env(safe-area-inset-bottom))]'} z-[60] mx-auto flex max-w-sm items-center justify-between gap-3 rounded-2xl bg-white px-4 py-3 text-[14.5px] font-medium text-nuit shadow-2xl lg:bottom-6`}>
       <span className="flex items-center gap-2">{/* La coche confirme ; une simple information n'en a pas. */}{!toast.annuler && toast.genre !== 'info' && sauvegarde !== 'erreur' && <span aria-hidden="true" className="text-citron"><Icone nom="ui-ok" taille={18} /></span>}{toast.texte}</span>
-      {toast.annuler && <button ref={actionToast} type="button" onClick={toast.annuler} className="-my-2 min-h-11 rounded-lg px-3 font-semibold text-nuit underline decoration-nuit/30 underline-offset-4 hover:bg-nuit/10">{toast.action ?? 'Annuler'}</button>}
+      {toast.annuler && <button ref={actionToast} type="button" onClick={() => agirToast(toast.annuler!)} className="-my-2 min-h-11 rounded-lg px-3 font-semibold text-nuit underline decoration-nuit/30 underline-offset-4 hover:bg-nuit/10">{toast.action ?? 'Annuler'}</button>}
     </div>
   );
 
-  // Ouvertes depuis la règle d'un bloc, les offres retiennent ce bloc : au retour de Creem, on y revient d'un geste.
-  const offre = { droits, voirOffres: peutAcheter ? (pour?: Fonction) => ouvrirOffres(pour, undefined, pour && FONCTIONS_DE_BLOC.includes(pour) && edition && !edition.nouveau ? edition.bloc.id : undefined) : undefined };
+  // Ouvertes depuis un bloc, les offres retiennent ce bloc, et le bloc de la vitrine qu'on voulait : au retour de Creem, on y revient d'un geste.
+  const offre = { droits, voirOffres: peutAcheter ? (pour?: Fonction, suite?: SuiteAchat) => {
+    const base = suite ?? (pour && FONCTIONS_DE_BLOC.includes(pour) && edition && !edition.nouveau ? { bloc: edition.bloc.id } : undefined);
+    // Un bloc ouvert depuis Intégrations : après l'achat, refermé, il y ramène encore.
+    const depuis = !!edition && depuisIntegrations.current?.bloc === edition.bloc.id;
+    ouvrirOffres(pour, undefined, depuis ? { ...base, integrations: true } : base);
+  } : undefined };
 
   if (premiersPas) {
     // Les premiers pas n'ont aucune fonction réservée : pas de chemin vers les offres.
@@ -591,9 +715,9 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
   // Un éditeur par bloc (la clé) : passer d'un bloc à l'autre repart de la version enregistrée du suivant.
   const editeur = edition && (
     <RegleAOuvrir.Provider value={regleOuverte?.bloc === edition.bloc.id ? regleOuverte.regle : null}>
-    <EditeurBloc key={edition.bloc.id} bureau={grand} garde={garde} onBrouillon={setBrouillon}
+    <EditeurBloc key={`${edition.bloc.id}${edition.enFaire ?? ''}`} enFaire={edition.enFaire} bureau={grand} garde={garde} onBrouillon={setBrouillon}
       adressePage={urlPage(compte)} principal={compte.principal} bloc={edition.bloc} reglages={reglages} nouveau={edition.nouveau} clics={clics[edition.bloc.id] ?? 0} prises={initial.places?.[edition.bloc.id] ?? 0} onFermer={() => setEdition(null)}
-      onRetour={edition.nouveau && !grand && depuisIntegrations.current?.bloc !== edition.bloc.id ? b => { setEdition(null); setDemandeAjout({ enBas: !!edition.enBas, brouillon: b ?? undefined }); } : undefined}
+      onRetour={edition.nouveau && !grand && depuisIntegrations.current?.bloc !== edition.bloc.id && !blocs.some(b => b.id === edition.bloc.id) ? b => { setEdition(null); setDemandeAjout({ enBas: !!edition.enBas, brouillon: b ?? undefined }); } : undefined}
       onReplier={replier} suitAdresse={!edition.choisi} repris={edition.repris}
       onEnregistrer={enregistrerBloc} onSupprimer={supprimer} onDupliquer={dupliquer} onDeplacer={deplacer} place={{ rang: blocs.findIndex(b => b.id === edition.bloc.id), total: blocs.length }} envoyerImage={d => api.envoyerImage(d)} apercuSite={(u, i) => api.apercuSite(u, i)} />
     </RegleAOuvrir.Provider>
@@ -703,7 +827,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
           {onglet === 'page' && <MaPage compte={compte} reglages={reglages} blocs={blocsAffiches} clics={clics} visiteurs={page} grand={grand}
             choisi={idOuvert} editeur={grand ? editeur : null} neuf={edition?.nouveau ? { bloc: brouillon?.id === edition.bloc.id ? brouillon : edition.bloc, enBas: !!edition.enBas } : null}
             onReglages={changerReglages} onOrdonner={l => ordonner(l)}
-            onOuvrir={ouvrirBloc} onAjouter={ajouterBloc} onPoser={(b, enBas) => enregistrerBloc(b, { enBas })} liberer={libererEdition} fermerEdition={fermerEdition} gestes={{ basculer, dupliquer, supprimer }}
+            onOuvrir={ouvrirBloc} onAjouter={ajouterBloc} onPoser={(b, enBas) => enregistrerBloc({ ...b, public: false }, { enBas, masque: true })} liberer={libererEdition} fermerEdition={fermerEdition} gestes={{ basculer, dupliquer, supprimer }}
             envoyerImage={d => api.envoyerImage(d)} annoncer={t => setToast(t)}
             demarrage={demarrage} demarrageOuvert={demarrageOuvert} fermerDemarrage={() => setDemarrageOuvert(false)} demandeDesign={demandeDesign} designOuvert={() => setDemandeDesign(null)}
             demandeAjout={demandeAjout} ajoutOuvert={() => setDemandeAjout(null)}
@@ -711,9 +835,10 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
           {onglet === 'stats' && <OngletStats charger={chargerStats} adresse={urlPage(compte)} pseudo={compte.pseudo} joursMax={initial.paiement ? joursStats(compte.plan, droits.stats) : 365} onOffres={peutAcheter ? ouvrirOffres : undefined}
             ouvrirApps={reglages.ouvrirApps} onActiverApps={() => changerReglages({ ...reglages, ouvrirApps: true })} liste={<MaListe api={api} onIntegrations={() => choisirOnglet('integrations')} />} blocs={blocs} />}
           {onglet === 'integrations' && <OngletIntegrations api={api} blocs={blocs} sousOuverte={sousIntegration} sousLue={() => setSousIntegration(null)}
-            onAjouter={(t, outil) => { const b = nouveauBloc(t, nouvelId()); choisirOnglet('page'); depuisIntegrations.current = { bloc: b.id, outil }; ajouterBloc(b); }}
-            onOuvrir={b => { choisirOnglet('page'); depuisIntegrations.current = { bloc: b.id, outil: null }; ouvrirBloc(b); }}
-            onOffres={peutAcheter ? (pour?: Fonction) => ouvrirOffres(pour) : undefined} />}
+            raccourci={raccourci} raccourciVu={() => setRaccourci(null)}
+            onAjouter={(t, outil) => { const b = nouveauBloc(t, nouvelId()); choisirOnglet('page'); depuisIntegrations.current = { bloc: b.id, outil, type: t }; ajouterBloc(b); }}
+            onOuvrir={b => { choisirOnglet('page'); depuisIntegrations.current = { bloc: b.id, outil: null, type: b.type }; ouvrirBloc(b); }}
+            onOffres={peutAcheter ? (pour?: Fonction, suite?: SuiteAchat) => ouvrirOffres(pour, undefined, { ...suite, integrations: true }) : undefined} />}
           {onglet === 'reglages' && <OngletReglages reglages={reglages} compte={compte} onChange={changerReglages} onDeconnexion={deconnexion} urlExport={api.urlExport} supprimerMonCompte={api.supprimerMonCompte}
             abonnement={abonnement} onOffres={peutAcheter ? (pour?: Fonction) => ouvrirOffres(pour) : undefined} ouvrirPortail={api.ouvrirPortail}
             onResilier={peutAcheter ? () => setOffres({ resilier: true }) : undefined} />}
@@ -753,18 +878,19 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
       {/* Au téléphone, l'éditeur est une feuille du bas ; au bureau, il se déplie dans la rangée du bloc (voir MaPage). */}
       {!grand && editeur}
 
-      {/* Les offres et le retour de Creem s'ouvrent par-dessus l'écran en cours, qu'on retrouve en les fermant. */}
+      {/* Les offres et le retour de Creem s'ouvrent par-dessus l'écran en cours, qu'on retrouve en les fermant. Le message attend
+          qu'ils se ferment : posé dessus, il n'aurait pas la main (le focus tourne dans la fenêtre). */}
       {offres && (
-        <FenetreOffres onFermer={() => setOffres(null)} abonnement={abonnement} enVente={initial.enVente} pour={offres.pour} vers={offres.vers} bloc={offres.bloc}
+        <FenetreOffres onFermer={() => setOffres(null)} abonnement={abonnement} enVente={initial.enVente} pour={offres.pour} vers={offres.vers} apresAchat={offres.suite}
           ouvrirPaiement={api.ouvrirPaiement} avantDePartir={avantDePartir} apercu={apercuAvec}
           resilier={resilier} ouvrirPortail={api.ouvrirPortail} resiliation={offres.resilier} />
       )}
       {retour && (
         <RetourPaiement achat={retour.achat} etape={retour.etape} action={actionApres(retour.achat)}
-          onFermer={() => { retourFerme.current = true; setRetour(null); }} />
+          onFermer={() => { retourFerme.current = true; mainApresRetour.current = true; setRetour(null); }} />
       )}
 
-      {bulle}
+      {!offres && !retour && bulle}
     </div>
     </FournisseurOffre>
   );

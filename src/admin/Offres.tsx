@@ -2,7 +2,7 @@ import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import type { KeyboardEvent, ReactNode } from 'react';
 import type { Abonnement as EtatAbonnement, Fonction, Periode, Plan, PlanPayant } from '../lib/abonnement.ts';
 import { FONCTIONS, FONCTIONS_EN_MOTS, OFFRES, PLANS, apresAbonnement, avantagesEntre, echeance, economieAnnuelle, estResilie, euros, moisOfferts, offerteAuDessus, rang, sensDuChangement } from '../lib/abonnement.ts';
-import type { Achat, EtapeRetour, NoteAchat } from '../lib/achat.ts';
+import type { Achat, EtapeRetour, NoteAchat, SuiteAchat } from '../lib/achat.ts';
 import { CLE_ACHAT } from '../lib/achat.ts';
 import type { PagePublique } from '../lib/types.ts';
 import { CONTACT_LEGAL } from '../lib/legal.ts';
@@ -44,8 +44,8 @@ interface ProprietesOffres {
   pour?: Fonction;
   /** Sans fonction, l'offre à mettre en avant quand on la connaît (un an de stats : Pro). */
   vers?: PlanPayant;
-  /** Le bloc d'où l'on vient (une règle réservée) : noté pour y revenir au retour de Creem. */
-  bloc?: string;
+  /** Ce à quoi l'on revient après l'achat (le bloc d'où l'on vient, le bloc de la vitrine qu'on voulait) : noté pour le retour de Creem. */
+  apresAchat?: SuiteAchat;
   ouvrirPaiement: (plan: PlanPayant, periode: Periode) => Promise<string>;
   /** Avant de partir chez Creem : ce qui attend d'être écrit (un bloc ouvert, le design) part d'abord. */
   avantDePartir?: () => Promise<void>;
@@ -59,7 +59,7 @@ interface ProprietesOffres {
   resiliation?: boolean;
 }
 
-export function FenetreOffres({ onFermer, abonnement, enVente, pour, vers, bloc, ouvrirPaiement, avantDePartir, apercu, resilier, ouvrirPortail, resiliation }: ProprietesOffres) {
+export function FenetreOffres({ onFermer, abonnement, enVente, pour, vers, apresAchat, ouvrirPaiement, avantDePartir, apercu, resilier, ouvrirPortail, resiliation }: ProprietesOffres) {
   const grand = useGrandEcran();
   // L'offre de la page (une offre offerte peut passer devant l'abonnement), et celle qu'on paie, que Creem change ou résilie.
   const actuelle = abonnement.plan;
@@ -120,6 +120,13 @@ export function FenetreOffres({ onFermer, abonnement, enVente, pour, vers, bloc,
   }, [choix, idTitre]);
 
   function choisir(p: Plan) { vibrer(6); setErreur(''); setChoix(p); }
+  // Revenue de Creem par le bouton retour du navigateur, la page sort du cache telle qu'on l'avait quittée : le bouton de
+  // paiement se relâche, au lieu de dire « Ouverture du paiement… » pour toujours.
+  useEffect(() => {
+    const revenu = (e: PageTransitionEvent) => { if (e.persisted) setEnvoi(false); };
+    addEventListener('pageshow', revenu);
+    return () => removeEventListener('pageshow', revenu);
+  }, []);
 
   async function payer() {
     if (!choix || choix === 'gratuit') return;
@@ -129,7 +136,7 @@ export function FenetreOffres({ onFermer, abonnement, enVente, pour, vers, bloc,
       await avantDePartir?.();
       const url = await ouvrirPaiement(choix, periode);
       // De quoi dire au retour ce qui vient de s'ouvrir. Rien n'est accordé d'après cette note.
-      const n: NoteAchat = { plan: choix, periode, ...(pour ? { pour } : {}), avant: payee, ...(abonnement.periode ? { periodeAvant: abonnement.periode } : {}), ...(offerte ? { deja: offerte.plan } : {}), ...(bloc ? { bloc } : {}), ts: Date.now() };
+      const n: NoteAchat = { plan: choix, periode, ...(pour ? { pour } : {}), avant: payee, ...(abonnement.periode ? { periodeAvant: abonnement.periode } : {}), ...(offerte ? { deja: offerte.plan } : {}), ...apresAchat, ts: Date.now() };
       try { sessionStorage.setItem(CLE_ACHAT, JSON.stringify(n)); } catch { /* onglet privé : le retour dira seulement l'offre */ }
       location.href = url;
       return;
@@ -188,7 +195,7 @@ function Periodes({ periode, onChange, mois = 0 }: { periode: Periode; onChange:
   );
 }
 
-/** Le prix d'une offre : à l'année, le prix de douze mois en gris lisible, et l'économie réelle en euros. */
+/** Le prix d'une offre : à l'année, l'économie réelle en euros ; au mois, le prix de l'année à côté. */
 function Tarif({ plan, periode }: { plan: Plan; periode: Periode }) {
   if (plan === 'gratuit') return (
     <div className="adm-offre-tarif">
@@ -200,12 +207,10 @@ function Tarif({ plan, periode }: { plan: Plan; periode: Periode }) {
   return (
     <div className="adm-offre-tarif">
       <p><span className="adm-offre-prix">{euros(o.prix[periode])}</span><span className="adm-offre-unite">{par(periode)}</span></p>
-      {periode === 'an' ? (
-        <>
-          <p className="adm-offre-sous">au lieu de {euros(o.prix.mois * 12)}</p>
-          <p className="adm-offre-gain">{euros(economieAnnuelle(plan))} d’économie</p>
-        </>
-      ) : <p className="adm-offre-sous">ou {euros(o.prix.an)} par an</p>}
+      {/* À l'année, l'économie en euros, une fois : les mois offerts sont déjà dits par la bascule (24 octobre 2026). */}
+      {periode === 'an'
+        ? <p className="adm-offre-gain">{euros(economieAnnuelle(plan))} d’économie</p>
+        : <p className="adm-offre-sous">ou {euros(o.prix.an)} par an</p>}
     </div>
   );
 }
@@ -498,9 +503,13 @@ function RepasserGratuit({ abonnement, grand, id, retour, fermer, resilier, ouvr
 
 /* ---- Le retour du paiement ---- */
 
-/** Le picto de chaque avantage, celui que la fonction porte ailleurs dans le back office. Un avantage inconnu prend la coche. */
+/**
+ * Le picto de chaque avantage, celui que la fonction porte ailleurs dans le back office, plein comme les autres (la mention
+ * ôtée, l'œil barré des blocs masqués, pas une coche au trait). Un avantage inconnu prend la coche.
+ */
 const PICTOS: { avantage: string; picto: string }[] = [
-  { avantage: 'Sans la mention « Créer ma page avec Hopla »', picto: 'check' },
+  { avantage: 'Sans la mention « Créer ma page avec Hopla »', picto: 'masque' },
+  { avantage: 'Ta vitrine : produits, réservations, soutien', picto: 'boutique' },
   { avantage: 'Tes couleurs', picto: 'pinceau' },
   { avantage: 'Tes liens programmés à l’avance', picto: 'agenda' },
   { avantage: 'Les avis de tes clients', picto: 'etoile' },
@@ -512,7 +521,7 @@ const PICTOS: { avantage: string; picto: string }[] = [
   { avantage: 'Ton propre nom de domaine', picto: 'globe' },
   { avantage: 'Jusqu’à trois pages', picto: 'document' },
 ];
-const pictoDe = (a: string) => PICTOS.find(x => x.avantage === a)?.picto ?? 'check';
+const pictoDe = (a: string) => PICTOS.find(x => x.avantage === a)?.picto ?? 'coche';
 
 /**
  * Au retour de Creem : « On active ton offre… » tant que le webhook n'est pas
@@ -520,7 +529,7 @@ const pictoDe = (a: string) => PICTOS.find(x => x.avantage === a)?.picto ?? 'che
  * « C'est fait » et ce qui vient de s'ouvrir. Sans nouvelles au bout de trente
  * secondes, on le dit, sans rien promettre de plus : l'offre arrivera seule.
  */
-export function RetourPaiement({ achat, etape, onFermer, action }: { achat: Achat; etape: EtapeRetour; onFermer: () => void; action?: { texte: string; faire: () => void } }) {
+export function RetourPaiement({ achat, etape, onFermer, action }: { achat: Achat; etape: EtapeRetour; onFermer: () => void; action?: { texte: string; detail?: string; faire: () => void } }) {
   const id = useId();
   const nom = OFFRES[achat.plan].nom;
   const meme = achat.avant === achat.plan;
@@ -542,14 +551,14 @@ export function RetourPaiement({ achat, etape, onFermer, action }: { achat: Acha
       {fermer => (
         <div className="adm-retour" aria-labelledby={id}>
           <div className="adm-retour-tete" aria-live="polite">
-            {etape === 'fait' ? <Icone nom="check" taille={44} />
+            {etape === 'fait' ? <Icone nom="coche" taille={44} />
               : etape === 'attente' ? <Icone nom="horloge" taille={44} />
                 : <span className="adm-retour-roue" aria-hidden="true" />}
             <h2 id={id} className="adm-recap-titre">{titre}</h2>
             {etape === 'fait' ? (
               <ol className="adm-retour-etapes" aria-label="Étapes">
-                <li><Icone nom="ui-ok" taille={16} />{changement ? 'Changement confirmé' : 'Paiement reçu'}</li>
-                <li><Icone nom="ui-ok" taille={16} />Offre activée</li>
+                <li><Icone nom="coche" taille={16} />{changement ? 'Changement confirmé' : 'Paiement reçu'}</li>
+                <li><Icone nom="coche" taille={16} />Offre activée</li>
               </ol>
             ) : etape === 'attente' ? (
               <p className="adm-retour-texte">Creem ne nous a pas encore confirmé {changement ? 'le changement' : 'ton paiement'}. Ton offre s’activera d’elle-même dès que ce sera fait : tu peux fermer cette fenêtre. Si rien n’a changé dans une heure, <a href={`mailto:${CONTACT_LEGAL}?subject=${encodeURIComponent(`Hopla : mon offre ${nom}`)}`}>écris-nous</a>.</p>
@@ -560,17 +569,19 @@ export function RetourPaiement({ achat, etape, onFermer, action }: { achat: Acha
               <h3 className="adm-recap-sous-titre">Ce qui vient de s’ouvrir</h3>
               <ul className="adm-retour-liste">
                 {ouvertes.map(a => (
-                  <li key={a}><Icone nom={pictoDe(a)} taille={16} /><span className="flex-1">{a}</span>{a === mention && <span className="adm-retour-deja">déjà sur ta page</span>}</li>
+                  <li key={a}><Icone nom={pictoDe(a)} taille={16} /><span className="flex-1">{a}</span>{a === mention && <span className="adm-retour-deja">Déjà fait</span>}</li>
                 ))}
               </ul>
             </div>
           )}
           <div className="flex flex-col gap-3">
+            {/* Le bloc que le geste touche, nommé : on sait lequel de ses liens devient une prise de rendez-vous. */}
+            {etape === 'fait' && action?.detail && <p id={`${id}-objet`} className="adm-retour-objet">{action.detail}</p>}
             <div className="adm-retour-gestes">
               {etape === 'fait' && action ? (
                 <>
                   <button type="button" onClick={() => fermer()} className={classeBouton.secondaire}>Fermer</button>
-                  <button type="button" onClick={() => fermer(() => { onFermer(); action.faire(); })} className={classeBouton.principal}>{action.texte}</button>
+                  <button type="button" onClick={() => fermer(() => { onFermer(); action.faire(); })} aria-describedby={action.detail ? `${id}-objet` : undefined} className={classeBouton.principal}>{action.texte}</button>
                 </>
               ) : <button type="button" onClick={() => fermer()} className={etape === 'fait' ? classeBouton.principal : classeBouton.secondaire}>Fermer</button>}
             </div>

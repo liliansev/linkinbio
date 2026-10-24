@@ -7,7 +7,7 @@ import type { Theme } from '../lib/themes.ts';
 import { Icone, NOMS_RESEAUX } from '../components/Icone.tsx';
 import { Carte, Champ, Interrupteur, NOMS_ANIMATIONS, Segments, choisirFichier, classeBouton, classeSaisie, couleurReseau, flechesRadio, preparerImage, useFilFeuille, vibrer } from './ui.tsx';
 import { useCouche } from './couches.ts';
-import { pseudoReseau, urlReseau } from '../lib/demarrage.ts';
+import { RESEAUX_PSEUDO, pseudoReseau, urlReseau } from '../lib/demarrage.ts';
 import { adresseSaisie, pourquoiPasReseau } from '../lib/valider.ts';
 import { Etiquette, Reserve, usePermis, useVoirOffres } from './offre.tsx';
 import { focusSaisie } from '../lib/clavier';
@@ -46,7 +46,9 @@ export type PartieApparence = 'profil' | 'theme' | 'couleurs' | 'animation' | 'b
 const TOUTES: PartieApparence[] = ['profil', 'theme', 'couleurs', 'animation', 'boutons', 'bureau', 'reseaux'];
 
 /** Les réglages d'apparence, en cartes. `parties` n'en garde que certaines (les feuilles de « Ma page »). */
-export function OngletApparence({ reglages, onChange, envoyerImage, principal = true, parties = TOUTES, vedettes }: { reglages: Reglages; onChange: (r: Reglages) => void; envoyerImage: (d: string) => Promise<string>; principal?: boolean; parties?: PartieApparence[]; vedettes?: number }) {
+export function OngletApparence({ reglages, onChange, envoyerImage, principal = true, parties = TOUTES, vedettes, pseudo = '', onPseudo }: { reglages: Reglages; onChange: (r: Reglages) => void; envoyerImage: (d: string) => Promise<string>; principal?: boolean; parties?: PartieApparence[]; vedettes?: number;
+  /** Un pseudo tapé dans le choix des blocs (« @lilian ») : il attend qu'on choisisse son réseau ; `onPseudo` quand c'est fait, ou laissé. */
+  pseudo?: string; onPseudo?: () => void }) {
   const voir = (p: PartieApparence) => parties.includes(p);
   // Seule dans une feuille, une partie est déjà nommée par la feuille : pas de second titre.
   const titre = (t: string) => (parties.length === 1 ? undefined : t);
@@ -66,6 +68,21 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
   const maj = (champs: Partial<Reglages>) => onChange({ ...reglages, ...champs });
   const profil = (champs: Partial<Reglages['profil']>) => maj({ profil: { ...reglages.profil, ...champs } });
   const absents = RESEAUX.filter(r => !reglages.reseaux.some(x => x.reseau === r));
+  // Le premier réseau proposé pour un pseudo prend la main au clavier (pas sur un écran tactile, où la feuille la garde).
+  const premierReseau = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (!pseudo) return;
+    premierReseau.current?.scrollIntoView({ block: 'nearest' });
+    focusSaisie(premierReseau.current, { preventScroll: true });
+  }, [pseudo]);
+  /** Le pseudo devient l'adresse du profil sur ce réseau, à la place de celle qu'il avait. */
+  const mettrePseudo = (r: Reseau) => {
+    const url = urlReseau(r, pseudo);
+    if (!url) return;
+    vibrer(4);
+    maj({ reseaux: reglages.reseaux.some(x => x.reseau === r) ? reglages.reseaux.map(x => (x.reseau === r ? { ...x, url } : x)) : [...reglages.reseaux, { reseau: r, url }] });
+    onPseudo?.();
+  };
 
   async function avatar(f: File | undefined) {
     if (!f) return;
@@ -137,7 +154,7 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
 
       {voir('animation') && <Carte nu={nu} titre={titre('Animation')} action={titre('Animation') ? <span className="text-[13px] text-white/50">{NOMS_ANIMATIONS[reglages.animation].nom}</span> : undefined}>
         <p className="mb-3 text-[13px] leading-snug text-white/60">{vedettes === 0
-          ? 'Aucun lien n’est mis en avant pour l’instant : touche un lien sur ta page, puis « Mis en avant » dans Plus de réglages. L’animation choisie ici s’y appliquera.'
+          ? 'Aucun lien n’est mis en avant pour l’instant : touche un lien sur ta page, puis « Mis en avant » dans Plus de réglages. L’animation choisie ici s’y appliquera.'
           : 'Pour les liens mis en avant. Chaque lien peut aussi choisir la sienne.'}</p>
         <div className="lp lp-mini rounded-2xl p-3" style={variablesTheme(theme) as CSSProperties} data-bouton={reglages.bouton.style} data-forme={reglages.bouton.forme} data-ombre={reglages.bouton.ombre} data-police={theme.police} data-decor={theme.decor}>
           <ul role="radiogroup" onKeyDown={e => flechesRadio(e)} aria-label="Animation des liens mis en avant" className="grid grid-cols-2 gap-2">
@@ -228,7 +245,24 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
             );
           })}
         </ul>
-        {absents.length > 0 && (
+        {/* Un pseudo venu du choix des blocs : il prend la place d'« Ajouter un réseau » le temps qu'on lui choisisse le sien. */}
+        {pseudo ? (
+          <div className="mt-4" role="group" aria-labelledby="reseau-du-pseudo">
+            <div className="mb-1 flex items-center justify-between gap-2">
+              <span id="reseau-du-pseudo" className="min-w-0 truncate text-[13px] font-medium text-white">@{pseudo}{'\u202f'}: sur quel réseau{'\u202f'}?</span>
+              <button type="button" onClick={onPseudo} className={classeBouton.discret}>Annuler</button>
+            </div>
+            <div className="flex flex-wrap gap-1">
+              {RESEAUX_PSEUDO.map((r, i) => (
+                <button key={r} ref={i === 0 ? premierReseau : undefined} type="button" aria-label={NOMS_RESEAUX[r]} onClick={() => mettrePseudo(r)}
+                  className="flex w-[62px] flex-col items-center gap-1 rounded-xl py-2 text-white/80 transition hover:bg-white/[0.06] hover:text-white active:scale-95">
+                  <Icone nom={r} taille={22} />
+                  <span className="w-full truncate text-center text-[11.5px] text-white/55" aria-hidden="true">{NOMS_RESEAUX[r]}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : absents.length > 0 && (
           <div className="mt-4">
             <span className="mb-1.5 block text-[13px] font-medium text-white/70">Ajouter un réseau</span>
             <div className="flex flex-wrap gap-1">

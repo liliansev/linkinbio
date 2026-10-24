@@ -1,6 +1,6 @@
 import type { Bloc, TypeBloc } from './types.ts';
 import { TYPES_BLOC, TYPES_VITRINE, idYoutube, nouveauBloc } from './types.ts';
-import { adresse, adresseSaisie, montants, pourquoiPasAdresse } from './valider.ts';
+import { adresse, adresseSaisie, montants, numeroAppel, pourquoiPasAdresse } from './valider.ts';
 import { nomSite } from './demarrage.ts';
 
 /*
@@ -29,7 +29,8 @@ const ADRESSE_MANQUANTE: Partial<Record<TypeBloc, string>> = {
  */
 export function verifierBloc(b: Bloc): { bloc: Bloc; erreurs?: undefined } | { bloc?: undefined; erreurs: Erreurs } {
   const manquante = ADRESSE_MANQUANTE[b.type];
-  const url = manquante ? adresseSaisie(b.url) : adresse(b.url);
+  // Un numéro tapé dans l'adresse d'un lien devient un lien d'appel.
+  const url = manquante ? (b.type === 'lien' && numeroAppel(b.url)) || adresseSaisie(b.url) : adresse(b.url);
   if (manquante && !url) return { erreurs: { url: b.url.trim() ? pourquoiPasAdresse(b.url) : manquante } };
   // Une boutique, une cagnotte, un agenda : une page web, jamais une adresse e-mail.
   if (TYPES_VITRINE.includes(b.type) && !/^https?:\/\//i.test(url)) return { erreurs: { url: 'Colle l’adresse d’une page web, qui commence par https://.' } };
