@@ -8,6 +8,12 @@ avec son historique le 17 octobre 2026, passé sur hopla.page le 18 octobre 2026
 Les pages vivent sur `hopla.page/<pseudo>` (celle de Lilian, le compte
 principal, sur `/lilian`), le back office sur `app.hopla.page`, l'accueil sur
 `hopla.page`. Les anciennes adresses `liliansevoumian.fr/liens/...` redirigent.
+Les noms courts `hpla.eu`, `hpla.art`, `hpla.pro` et `hpla.store` (24 octobre 2026,
+`DOMAINES_COURTS` dans `lib/types.ts`) renvoient en 301 vers hopla.page, chemin et
+requête gardés, pour toutes les pages : une règle de redirection chez Cloudflare, et
+`deploy/server.mjs` en secours. Chacun choisit dans Réglages (« Nom de domaine »,
+`domaine` des réglages, sans offre) l'adresse qu'il partage : `adressePartage` la
+donne au back office (en-tête, copier, QR, stats) et au bouton Partager de la page.
 
 ## Commandes
 

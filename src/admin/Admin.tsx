@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Api, Bloc, EtatAdmin, PagePublique, Reglages, TypeBloc, TypeVitrine } from '../lib/types.ts';
-import { TYPES_PRINCIPAL, nouveauBloc, urlPage } from '../lib/types.ts';
+import { TYPES_PRINCIPAL, adressePartage, nouveauBloc, urlPage } from '../lib/types.ts';
 import { composerMoment } from '../lib/moments.ts';
 import type { TypeAdresse } from '../lib/detection.ts';
 import { EN_FAIRE } from '../lib/catalogue.ts';
@@ -734,7 +734,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
   const signe = sauvegarde === 'ok'
     ? <Icone nom="ui-ok" taille={14} className="shrink-0" />
     : <span aria-hidden="true" className={`mx-1 h-1.5 w-1.5 shrink-0 rounded-full bg-current ${sauvegarde === 'encours' ? 'animate-pulse opacity-50 motion-reduce:animate-none' : ''}`} />;
-  const adresse = urlPage(compte);
+  const adresse = adressePartage(compte, reglages.domaine);
   const courte = sansSchema(adresse);
   const coupe = courte.lastIndexOf('/') + 1;
   const titre = onglets.find(o => o.id === onglet)!.nom;
@@ -854,7 +854,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
             demarrage={demarrage} demarrageOuvert={demarrageOuvert} fermerDemarrage={() => setDemarrageOuvert(false)} demandeDesign={demandeDesign} designOuvert={() => setDemandeDesign(null)}
             demandeAjout={demandeAjout} ajoutOuvert={() => setDemandeAjout(null)}
             appel={grand ? null : appel()} />}
-          {onglet === 'stats' && <OngletStats charger={chargerStats} adresse={urlPage(compte)} pseudo={compte.pseudo} joursMax={initial.paiement ? joursStats(compte.plan, droits.stats) : 365} onOffres={peutAcheter ? ouvrirOffres : undefined}
+          {onglet === 'stats' && <OngletStats charger={chargerStats} adresse={adressePartage(compte, reglages.domaine)} pseudo={compte.pseudo} joursMax={initial.paiement ? joursStats(compte.plan, droits.stats) : 365} onOffres={peutAcheter ? ouvrirOffres : undefined}
             ouvrirApps={reglages.ouvrirApps} onActiverApps={() => changerReglages({ ...reglages, ouvrirApps: true })} liste={<MaListe api={api} onIntegrations={() => choisirOnglet('integrations')} />} blocs={blocs} />}
           {onglet === 'integrations' && <OngletIntegrations api={api} blocs={blocs} sousOuverte={sousIntegration} sousLue={() => setSousIntegration(null)}
             raccourci={raccourci} raccourciVu={() => setRaccourci(null)}

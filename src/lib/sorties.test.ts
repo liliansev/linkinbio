@@ -6,6 +6,7 @@ import { selonDroits } from './droits.ts';
 import type { Droits } from './droits.ts';
 import { FONCTIONS } from './abonnement.ts';
 import { REGLAGES_DEFAUT } from './defauts.ts';
+import { adressePartage } from './types.ts';
 
 const TOUT = Object.fromEntries(Object.keys(FONCTIONS).map(f => [f, true])) as Droits;
 const RIEN = Object.fromEntries(Object.keys(FONCTIONS).map(f => [f, false])) as Droits;
@@ -32,6 +33,14 @@ test('redirection : une adresse http(s), jusqu’à sa fin, jamais vers la page 
   assert.equal(redirectionActive({ url: 'https://sortie.fr/', fin: '2026-10-20T00:00:00.000Z' }, maintenant), null, 'finie');
   assert.equal(redirectionActive({ url: 'https://hopla.page/camille/', fin: '' }, maintenant, 'https://hopla.page/camille'), null, 'elle tournerait en rond');
   assert.equal(redirectionActive({ url: 'https://hopla.page/marie', fin: '' }, maintenant, 'https://hopla.page/camille'), 'https://hopla.page/marie');
+  assert.equal(redirectionActive({ url: 'https://hpla.art/camille', fin: '' }, maintenant, 'https://hopla.page/camille'), null, 'son nom court tourne en rond aussi');
+  assert.equal(redirectionActive({ url: 'https://hpla.art/marie', fin: '' }, maintenant, 'https://hopla.page/camille'), 'https://hpla.art/marie');
+
+  const d = (domaine: unknown) => validerReglages({ ...REGLAGES_DEFAUT, domaine } as never, REGLAGES_DEFAUT).domaine;
+  assert.equal(d('hpla.art'), 'hpla.art');
+  assert.equal(d('exemple.com'), '');
+  assert.equal(adressePartage({ pseudo: 'camille', principal: false }, 'hpla.eu'), 'https://hpla.eu/camille');
+  assert.equal(adressePartage({ pseudo: 'camille', principal: false }, ''), 'https://hopla.page/camille');
 
   const r = validerReglages({ ...REGLAGES_DEFAUT, utm: true, redirection: { url: 'sortie.fr/lancement', fin: '2026-10-30T10:00' } }, REGLAGES_DEFAUT);
   assert.equal(r.utm, true);

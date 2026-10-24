@@ -1,4 +1,8 @@
 import type { Bloc, Reglages } from './types.ts';
+import { DOMAINES_COURTS, ORIGINE_PUBLIQUE } from './types.ts';
+
+/** Un nom court renvoie vers hopla.page : pour savoir où mène une adresse, il vaut hopla.page. */
+const hote = (h: string) => ((DOMAINES_COURTS as readonly string[]).includes(h.replace(/^www\./, '')) ? new URL(ORIGINE_PUBLIQUE).host : h);
 
 /*
  * Ce qui part de la page (24 octobre 2026, rattrapé de Linktree) : les liens marqués `utm_source=hopla`, pour que le
@@ -35,7 +39,7 @@ export function redirectionActive(r: Reglages['redirection'], maintenant: number
   if (ici) {
     try {
       const a = new URL(r.url), b = new URL(ici);
-      if (a.host === b.host && a.pathname.replace(/\/+$/, '') === b.pathname.replace(/\/+$/, '')) return null;
+      if (hote(a.host) === hote(b.host) && a.pathname.replace(/\/+$/, '') === b.pathname.replace(/\/+$/, '')) return null;
     } catch { return null; }
   }
   return r.url;

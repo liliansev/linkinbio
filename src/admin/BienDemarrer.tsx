@@ -1,7 +1,7 @@
 import { useState, useSyncExternalStore } from 'react';
 import type { CSSProperties } from 'react';
 import type { Bloc, ComptePage, Reglages } from '../lib/types.ts';
-import { urlPage } from '../lib/types.ts';
+import { adressePartage } from '../lib/types.ts';
 import { demarrageUtile, etapesDemarrage } from '../lib/demarrage.ts';
 import type { Destination, Etape } from '../lib/demarrage.ts';
 import { Icone } from '../components/Icone.tsx';
@@ -98,7 +98,7 @@ export function HautLiens({ compte, reglages, demarrage, aller, annoncer, feuill
   /** La liste ouverte depuis l'en-tête du téléphone. */
   feuille: boolean; fermerFeuille: () => void;
 }) {
-  const adresse = urlPage(compte);
+  const adresse = adressePartage(compte, reglages.domaine);
   const { etapes, faites, actif } = demarrage;
   const [ouvert, setOuvert] = useState(false);
   const peutPartager = typeof navigator !== 'undefined' && typeof navigator.share === 'function';

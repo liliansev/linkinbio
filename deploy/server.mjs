@@ -14,6 +14,8 @@ const origin = process.env.LIENS_ORIGINE ?? 'https://hopla.page';
 const originAdmin = process.env.LIENS_ORIGINE_ADMIN ?? 'https://app.hopla.page';
 const hostPublic = new URL(origin).host;
 const hostAdmin = new URL(originAdmin).host;
+/** Les mêmes que `DOMAINES_COURTS` dans src/lib/types.ts. */
+const DOMAINES_COURTS = new Set(['hpla.eu', 'hpla.art', 'hpla.pro', 'hpla.store']);
 /* Les fichiers de dist/client : les scripts et styles, les icônes, le manifeste.
    robots.txt, sitemap.xml et llms.txt n'y sont pas : l'app les écrit selon le nom
    demandé, et ils passent par ici pour que le back office réponde aussi le sien. */
@@ -128,6 +130,11 @@ export function createLiensServer({ appDir = appRoot, site = process.env.LIENS_S
       // Les anciennes adresses, liliansevoumian.fr/liens/... : la page de Lilian est /lilian, le reste garde son chemin.
       if (chemin === '/liens' || chemin === '/liens/') return send(308, '', { Location: `/lilian${url.search}` });
       if (chemin.startsWith('/liens/')) return send(308, '', { Location: `${chemin.slice(6)}${url.search}` });
+      // Les noms courts (hpla.art/camille…) renvoient vers hopla.page, chemin et requête gardés : la page ne vit qu'à un endroit.
+      // Cloudflare le fait d'habitude par une règle de redirection ; ceci sert si la requête arrive jusqu'ici.
+      if (DOMAINES_COURTS.has((req.headers.host ?? '').toLowerCase().replace(/:\d+$/, '').replace(/^www\./, ''))) {
+        return send(301, '', { Location: `${origin}${chemin === '/' ? '' : chemin}${url.search}`, 'Cache-Control': 'public, max-age=86400' });
+      }
       // Un seul nom pour les deux (un essai en local) : rien à renvoyer d'un côté à l'autre.
       const host = hostPublic === hostAdmin ? '' : (req.headers.host ?? '').toLowerCase();
       if (host === hostPublic && /^\/admin(\/|$)/.test(chemin)) return send(308, '', { Location: `${originAdmin}${chemin}${url.search}` });
