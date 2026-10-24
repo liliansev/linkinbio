@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 process.env.LIENS_DB = ':memory:';
 const db = await import('./db.ts');
 const auth = await import('./auth.ts');
-const { source, appareil, enregistrer } = await import('./analytique.ts');
+const { source, appareil, enregistrer, pays } = await import('./analytique.ts');
 const { validerBloc, validerReglages, adresse, pseudo, email } = await import('../lib/valider.ts');
 const P = 'principal';
 const O = { page: 'https://hopla.page', admin: 'https://app.hopla.page' };
@@ -1591,4 +1591,23 @@ test('la carte de visite se télécharge en vCard, que le téléphone range dans
   assert.equal(carteDeVisite('', 'inconnu'), null);
   db.enregistrerBloc(P, { ...db.lireBlocs(P).find(b => b.id === 'carte')!, public: false });
   assert.equal(carteDeVisite('', 'carte'), null, 'une carte masquée ne se télécharge pas');
+});
+
+test('pays : lu chez Cloudflare, deux lettres, rien quand il ne le sait pas', () => {
+  assert.equal(pays('FR'), 'FR');
+  assert.equal(pays(' be '), 'BE');
+  assert.equal(pays('XX'), '');
+  assert.equal(pays('T1'), '', 'Tor n’est pas un pays');
+  assert.equal(pays('FRA'), '');
+  assert.equal(pays(undefined), '');
+  const iphone = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148';
+  const maintenant = Date.parse('2026-10-16T12:00:00Z');
+  enregistrer({ type: 'vue', bloc: null, utm: '', referent: '' }, { ip: '1.1.1.1', ua: iphone, session: null, pays: 'FR' }, maintenant);
+  enregistrer({ type: 'vue', bloc: null, utm: '', referent: '' }, { ip: '2.2.2.2', ua: iphone, session: null, pays: 'FR' }, maintenant);
+  enregistrer({ type: 'vue', bloc: null, utm: '', referent: '' }, { ip: '3.3.3.3', ua: iphone, session: null, pays: 'BE' }, maintenant);
+  enregistrer({ type: 'vue', bloc: null, utm: '', referent: '' }, { ip: '4.4.4.4', ua: iphone, session: null }, maintenant);
+  enregistrer({ type: 'vue', bloc: null, utm: '', referent: '' }, { ip: '5.5.5.5', ua: iphone, session: null, pays: 'FR' }, maintenant - 7 * 86_400_000);
+  const s = db.stats(P, 7, maintenant);
+  assert.deepEqual(s.pays, [{ code: 'FR', vues: 2, avant: 1 }, { code: 'BE', vues: 1, avant: 0 }, { code: '', vues: 1, avant: 0 }]);
+  assert.ok(db.exporter(P).statistiques.some((e: { pays: string }) => e.pays === 'BE'), 'l’export dit le pays, jamais l’adresse');
 });

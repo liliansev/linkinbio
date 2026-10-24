@@ -389,12 +389,13 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
   /*
    * Ce que la page montre se règle sur la première page du bloc (23 octobre 2026) : son texte, son sous-titre, ses montants,
    * son image, sa description ; l'apparence d'un bloc mis en avant, juste sous « Mis en avant ». Derrière « Plus de réglages »
-   * ne reste que ce que la page ne montre pas : le lien partenaire, l'accès réservé, Google, le prénom demandé. Ce qui y est
+   * ne reste que ce que la page ne montre pas : le lien partenaire, l'accès réservé, Google, le prénom demandé, un lien
+   * réservé aux plus de 18 ans. Ce qui y est
    * réglé se dit à droite de la ligne, en bleu comme dans Visibilité ; rien de réglé, le chevron seul : la case dit un
    * état, jamais un sommaire de ce qu'elle cache.
    */
   const reglages_ = ([[!!b.partenariat, 'Lien partenaire'], [!!b.acces, 'Accès réservé'], [b.type === 'lien' && principal && !b.indexable, 'Pas sur Google'],
-    [b.type === 'inscription' && b.demanderPrenom, 'Prénom demandé']] as [boolean, string][])
+    [b.type === 'inscription' && b.demanderPrenom, 'Prénom demandé'], [b.sensible, 'Plus de 18 ans']] as [boolean, string][])
     .filter(([oui]) => oui).map(([, nom]) => nom);
   const reglees = reglages_.length > 2 ? `${reglages_.slice(0, 2).join(', ')} et ${reglages_.length - 2} de plus` : reglages_.join(', ');
   // Un titre, un texte, une vidéo, un soutien, un rendez-vous : rien que la page ne montre, pas de « Plus de réglages ».
@@ -916,6 +917,8 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
         onChange={v => { if (!v) partenariatGarde.current = b.partenariat; maj({ partenariat: v ? partenariatGarde.current ?? PARTENARIAT_NEUF : null }); }} />
     ),
     b.type === 'lien' && principal && <Interrupteur key="google" compact={compact} label="Visible par Google" actif={b.indexable} onChange={v => maj({ indexable: v })} />,
+    // Pour tous les comptes : la page demande au visiteur s'il a 18 ans avant d'ouvrir le lien.
+    (b.type === 'lien' || b.type === 'produit') && <Interrupteur key="sensible" compact={compact} label="Réservé aux plus de 18 ans" actif={b.sensible} onChange={v => maj({ sensible: v })} />,
   ].filter(Boolean);
   // La visibilité, une ligne de la première page du bloc qui mène à sa page ; l'accès réservé, rare, derrière « Plus de réglages ».
   const visibilite = <ReglageVisibilite key={`visibilite-${b.id}`} b={b} maj={maj} erreur={erreurDe('dates')} reseaux={reseauxDePartage(reglages.vuesReseaux)} />;

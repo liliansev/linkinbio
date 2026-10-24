@@ -245,7 +245,14 @@ const ICONES_APPAREILS: Record<string, string> = { Mobile: 'mobile', Tablette: '
 /** Une provenance sans marque (Direct, QR code, e-mail, un site) : en gris, à côté des réseaux en couleur. Les liens et les appareils prennent le bleu (voir admin.css). */
 const SANS_MARQUE = { picto: '#3d3d39', barre: '#efefec' };
 
-type Ligne = { cle: string; nom: string; icone: string; valeur: number; couleur?: { picto: string; barre: string } };
+/** `code` à la place d'un logo : les deux lettres d'un pays (« FR »), qu'aucun drapeau ne remplace (jamais d'emoji). */
+/** Le nom d'un pays en français, d'après ses deux lettres (« FR » : France) ; « Inconnu » quand Cloudflare ne l'a pas dit. */
+function nomPays(code: string) {
+  if (!code) return 'Inconnu';
+  try { return new Intl.DisplayNames(['fr'], { type: 'region' }).of(code) ?? code; } catch { return code; }
+}
+
+type Ligne = { cle: string; nom: string; icone?: string; code?: string; valeur: number; couleur?: { picto: string; barre: string } };
 
 /**
  * Une répartition : le logo seul devant, le libellé sur une barre pâle à la
@@ -269,7 +276,7 @@ function Repartition({ titre, unite, lignes, total, vide = 'Pas encore de donné
           {vues.map(l => (
             <li key={l.cle} style={l.couleur && { '--picto': l.couleur.picto, '--barre': l.couleur.barre } as CSSProperties}>
               {/* Le logo devant la barre, seul : jamais posé sur elle. */}
-              <Icone nom={l.icone} taille={16} className="adm-repartition-picto shrink-0" />
+              {l.icone ? <Icone nom={l.icone} taille={16} className="adm-repartition-picto shrink-0" /> : <span aria-hidden="true" className="adm-repartition-code">{l.code}</span>}
               <span className="adm-repartition-nom">
                 <span aria-hidden="true" className="adm-repartition-barre adm-barre origin-left" style={{ width: `${(l.valeur / max) * 100}%` }} />
                 <span className="relative truncate">{l.nom}</span>
@@ -419,6 +426,7 @@ function TableauStats({ charger, adresse, pseudo, joursMax = 365, onOffres, ouvr
   });
   const lignesSources: Ligne[] = (stats?.sources ?? []).map(s => ({ cle: s.nom, nom: s.nom, valeur: s.vues, icone: ICONES_SOURCES[s.nom] ?? 'site', couleur: COULEURS_SOURCES[s.nom] ?? SANS_MARQUE }));
   const lignesAppareils: Ligne[] = (stats?.appareils ?? []).map(s => ({ cle: s.nom, nom: s.nom, valeur: s.vues, icone: ICONES_APPAREILS[s.nom] ?? 'ordinateur' }));
+  const lignesPays: Ligne[] = (stats?.pays ?? []).map(p => ({ cle: p.code || '?', nom: nomPays(p.code), valeur: p.vues, code: p.code }));
   const note = <p className="text-[12px] leading-snug text-[#5f5f5a]">Sans cookie : un visiteur compte une fois par jour, toi jamais.</p>;
 
   return (
@@ -444,6 +452,7 @@ function TableauStats({ charger, adresse, pseudo, joursMax = 365, onOffres, ouvr
             <Repartition titre="Liens" unite="Clics" lignes={lignesLiens} total={stats.clics} vide="Aucun clic sur cette période." />
             <Repartition titre="Réseaux" unite="Vues" lignes={lignesSources} total={stats.vues} />
             <Repartition titre="Appareils" unite="Vues" lignes={lignesAppareils} total={stats.vues} />
+            <Repartition titre="Pays" unite="Vues" lignes={lignesPays} total={stats.vues} />
             <OuvertsDansLApp apps={stats.apps} actif={ouvrirApps} onActiver={onActiverApps} />
           </div>
           {liste}

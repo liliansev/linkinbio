@@ -49,7 +49,7 @@ export const OFFRES: Record<Plan, Offre> = {
   },
   starter: {
     nom: 'Starter', phrase: 'Ta page, sans la mention Hopla.', prix: { mois: 9, an: 79 }, quota: 100 * Mo, jours: 30, enVente: true,
-    avantages: ['Sans la mention « Créer ma page avec Hopla »', 'Ta vitrine : produits, réservations, soutien', 'Tes couleurs', 'Tes liens programmés à l’avance', 'Les avis de tes clients', 'Ton formulaire de contact, et douze photos par galerie', 'Tes stats sur 30 jours'],
+    avantages: ['Sans la mention « Créer ma page avec Hopla »', 'Ta vitrine : produits, réservations, soutien', 'Tes couleurs', 'Tes liens programmés à l’avance', 'Les avis de tes clients', 'Ton formulaire de contact, et douze photos par galerie', 'Tes stats sur 30 jours', 'Ta page redirigée, tes liens suivis (UTM)'],
   },
   pro: {
     nom: 'Pro', phrase: 'Le bon lien, au bon moment.', prix: { mois: 19, an: 169 }, quota: 200 * Mo, jours: 365, enVente: true,
@@ -84,7 +84,8 @@ export const libellePrix = (p: PlanPayant, periode: Periode) => `${euros(OFFRES[
  * (elles se comptent pour tout le monde, seule leur lecture est réservée) ;
  * `vitrine` : les blocs produit, soutien et réservation, et le code promo d'un
  * lien partenaire (22 octobre 2026) ; `formulaire` : le bloc « Me contacter » ; `galerie` : plus de trois photos dans
- * une galerie (24 octobre 2026).
+ * une galerie (24 octobre 2026) ; `utm` : les liens sortants marqués `utm_source=hopla` ; `redirection` : toute
+ * la page renvoyée vers une adresse.
  */
 export const FONCTIONS = {
   sansMention: 'starter',
@@ -95,6 +96,8 @@ export const FONCTIONS = {
   stats: 'starter',
   formulaire: 'starter',
   galerie: 'starter',
+  utm: 'starter',
+  redirection: 'starter',
   heure: 'pro',
   drops: 'pro',
   listeEmail: 'pro',
@@ -115,6 +118,8 @@ export const FONCTIONS_EN_MOTS: Record<Fonction, { avantage: string; pour: strin
   stats: { avantage: 'Tes stats sur 30 jours', pour: 'Pour tes stats' },
   formulaire: { avantage: 'Ton formulaire de contact, et douze photos par galerie', pour: 'Pour ton formulaire' },
   galerie: { avantage: 'Ton formulaire de contact, et douze photos par galerie', pour: 'Pour ta galerie' },
+  utm: { avantage: 'Ta page redirigée, tes liens suivis (UTM)', pour: 'Pour les UTM' },
+  redirection: { avantage: 'Ta page redirigée, tes liens suivis (UTM)', pour: 'Pour la redirection' },
   heure: { avantage: 'Ta page selon l’heure', pour: 'Pour tes créneaux' },
   drops: { avantage: 'Les drops : un code, des places comptées', pour: 'Pour les drops' },
   listeEmail: { avantage: 'Ta liste e-mail, vers ta newsletter', pour: 'Pour ta liste e-mail' },
@@ -224,8 +229,8 @@ export function effetOffert(a: Pick<Abonnement, 'payee' | 'statut' | 'finPeriode
 export const BASCULE_OFFRES = Date.UTC(2026, 9, 21);
 /** Les jours de stats qu'une page d'avant les offres lisait en gratuit : elle les garde. */
 export const JOURS_AVANT_OFFRES = 7;
-/** Ce que ces pages ne faisaient pas en gratuit, et ne gardent donc pas : la page sans mention, et ce qui est venu après (la vitrine, le formulaire, la galerie complète). */
-const PAS_AVANT_OFFRES: readonly Fonction[] = ['sansMention', 'vitrine', 'formulaire', 'galerie'];
+/** Ce que ces pages ne faisaient pas en gratuit, et ne gardent donc pas : la page sans mention, et ce qui est venu après (la vitrine, le formulaire, la galerie complète, l'UTM, la redirection). */
+const PAS_AVANT_OFFRES: readonly Fonction[] = ['sansMention', 'vitrine', 'formulaire', 'galerie', 'utm', 'redirection'];
 
 /** Ce compte peut-il se servir de cette fonction ? `cree` : la création du compte (ms), pour les pages d'avant. */
 export function peut(plan: Plan, f: Fonction, cree = Number.POSITIVE_INFINITY): boolean {

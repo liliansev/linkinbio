@@ -16,7 +16,8 @@ import type { OptionsEnregistrement } from './EditeurBloc.tsx';
 import { OngletStats } from './OngletStats.tsx';
 import { MaListe } from './MaListe.tsx';
 import { OngletIntegrations } from './OngletIntegrations.tsx';
-import { OngletReglages } from './OngletReglages.tsx';
+import { OngletReglages, resumeRedirection } from './OngletReglages.tsx';
+import { redirectionActive } from '../lib/sorties.ts';
 import { OngletComptes } from './OngletComptes.tsx';
 import { AccepterCgu } from './AccepterCgu.tsx';
 import { PremiersPas, premiersPasFaits } from './PremiersPas.tsx';
@@ -811,6 +812,19 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
       {initial.stockageEphemere && !demo && (
         <p className="mx-auto mt-3 max-w-6xl px-4"><span className="block rounded-xl bg-amber-400/15 px-3.5 py-2.5 text-[13.5px] text-amber-100">Le stockage n’est pas encore branché sur le serveur : tes changements seront perdus au prochain redémarrage.</span></p>
       )}
+
+      {/* Une page redirigée ne se voit plus : Ma page le dit, avec le geste pour la rendre à ses visiteurs. */}
+      {onglet === 'page' && (() => {
+        const vers = redirectionActive(reglages.redirection, Date.now(), urlPage(compte));
+        return vers && (
+          <p className="mx-auto mt-3 max-w-6xl px-4 lg:px-8" role="status">
+            <span className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl bg-amber-400/15 py-1.5 pr-1.5 pl-3.5 text-[13.5px] text-amber-100">
+              <span className="min-w-0 flex-1">Ta page renvoie ses visiteurs {resumeRedirection(vers, reglages.redirection.fin).replace(/^Vers/, 'vers')}.</span>
+              <button type="button" onClick={() => changerReglages({ ...reglages, redirection: { url: '', fin: '' } })} className={classeBouton.secondaire}>Arrêter</button>
+            </span>
+          </p>
+        );
+      })()}
 
       <EmplacementEntete.Provider value={emplacement}>
       <PoserFil.Provider value={setFil}>

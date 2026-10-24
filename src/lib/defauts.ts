@@ -36,6 +36,8 @@ export const REGLAGES_DEFAUT: Reglages = {
   animation: 'orbite',
   bureau: 'onepage',
   vuesReseaux: [],
+  utm: false,
+  redirection: { url: '', fin: '' },
 };
 
 export function blocsDefaut(id: () => string): Bloc[] {

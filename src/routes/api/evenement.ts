@@ -16,7 +16,7 @@ export const Route = createFileRoute('/api/evenement')({
         try { entree = JSON.parse(texte); } catch { return new Response(null, { status: 400 }); }
         const ip = request.headers.get('x-real-ip') ?? '';
         const session = compteDeSession(lireCookie(request.headers.get('cookie'), COOKIE_SESSION));
-        enregistrer({ page: entree.page, type: entree.type, bloc: entree.bloc, utm: entree.utm, referent: entree.referent, app: entree.app }, { ip, ua: request.headers.get('user-agent') ?? '', session });
+        enregistrer({ page: entree.page, type: entree.type, bloc: entree.bloc, utm: entree.utm, referent: entree.referent, app: entree.app }, { ip, ua: request.headers.get('user-agent') ?? '', session, pays: request.headers.get('cf-ipcountry') ?? '' });
         return new Response(null, { status: 204, headers: { 'Cache-Control': 'no-store' } });
       },
     },

@@ -87,6 +87,8 @@ export interface Bloc {
   coordonnees: Coordonnees | null;
   /** Une adresse postale, telle qu'on l'écrit sur une enveloppe : celle d'un lieu (bloc `lieu`) ou d'une carte de visite. */
   adressePostale: string;
+  /** Réservé aux plus de 18 ans : la page demande confirmation avant d'ouvrir le lien (24 octobre 2026). */
+  sensible: boolean;
 }
 
 export interface Question { question: string; reponse: string }
@@ -170,6 +172,10 @@ export interface Reglages {
   vuesReseaux: Audience[];
   /** La mise en page sur un grand écran ; sur téléphone, la page reste une colonne. */
   bureau: MiseEnPageBureau;
+  /** Les liens de la page portent `utm_source=hopla` : le site d'arrivée voit d'où vient le visiteur (Starter). */
+  utm: boolean;
+  /** Toute la page renvoie vers une seule adresse (un lancement, une sortie), jusqu'à `fin` (ISO) ou sans fin ; `url` vide : rien (Starter). */
+  redirection: { url: string; fin: string };
 }
 
 export const MISES_EN_PAGE_BUREAU = ['colonne', 'profil', 'onepage'] as const;
@@ -221,6 +227,8 @@ export interface PagePublique {
   compte: ComptePage & { plan: Plan };
   /** L'instant où la page a été composée : le compte à rebours part de là, au serveur comme au navigateur. */
   maintenant?: number;
+  /** La page renvoie en ce moment vers cette adresse (« Redirection », Starter) : le visiteur n'en voit rien, il y part. */
+  redirection?: string;
 }
 
 export interface EtatAdmin {
@@ -260,6 +268,8 @@ export interface Stats {
   blocs: { id: string; titre: string; clics: number; avant: number }[];
   sources: { nom: string; vues: number; avant: number }[];
   appareils: { nom: string; vues: number }[];
+  /** Les pays des visiteurs, lus chez Cloudflare (`FR`, vide quand il ne le sait pas) ; l'adresse IP n'est jamais gardée. */
+  pays: { code: string; vues: number; avant: number }[];
   /** Les clics depuis le navigateur intégré d'Instagram, TikTok… : en tout, vers un lien qui a son app, et ouverts dans l'app. */
   apps: { integres: number; versApp: number; ouverts: number };
   /** Mêmes totaux sur la période précédente, pour la tendance. */
@@ -432,7 +442,7 @@ export function nouveauBloc(type: TypeBloc, id: string): Bloc {
     preuve: type === 'preuve' ? { genre: 'note', note: 0, nombre: 0, source: '' } : null,
     prix: '', montants: type === 'soutien' ? [...MONTANTS_DEFAUT] : [], partenariat: null,
     questions: type === 'faq' ? [{ question: '', reponse: '' }] : [], images: [],
-    coordonnees: type === 'coordonnees' ? { telephone: '', email: '', societe: '', poste: '' } : null, adressePostale: '',
+    coordonnees: type === 'coordonnees' ? { telephone: '', email: '', societe: '', poste: '' } : null, adressePostale: '', sensible: false,
   };
 }
 

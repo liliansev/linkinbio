@@ -1,6 +1,6 @@
 /*
  * Les mots de la page publique elle-même (les formulaires, le compte à rebours,
- * les places d'un drop, le pied de page, la vitrine, les lecteurs, la galerie),
+ * les places d'un drop, le pied de page, la vitrine, les lecteurs, la galerie, un lien pour adultes),
  * au « tu » ou au « vous » selon ce que la personne a choisi pour ses visiteurs.
  */
 
@@ -36,6 +36,9 @@ const tu = {
   nom: 'Ton nom', nomAria: 'Ton nom (facultatif)', message: 'Ton message', messageAria: 'Ton message', envoyer: 'Envoyer',
   envoye: 'Message envoyé, merci ! Tu recevras la réponse par e-mail.', messageVide: 'Écris ton message.',
   mentionMessage: 'Ton adresse sert seulement à te répondre. Hopla ne garde pas ton message.',
+  // Un lien réservé aux plus de 18 ans (24 octobre 2026) : sa mention, et la confirmation avant de l'ouvrir.
+  adultes: '18+', reserveAdultes: 'Réservé aux plus de 18 ans', contenuAdultes: 'Ce lien mène à un contenu pour adultes.',
+  dixHuitAns: 'J’ai 18 ans ou plus', revenir: 'Revenir',
 };
 export type Textes = typeof tu;
 

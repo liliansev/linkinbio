@@ -19,7 +19,7 @@ import avatar from '../public/avatar.webp?inline';
 const CLE = 'liens-demo-v3';
 const SANS_ABONNEMENT: Abonnement = { plan: 'gratuit', payee: 'gratuit', statut: '', finPeriode: null, periode: null, portail: false, offerte: null };
 /** Sans paiement, rien n'est réservé : l'aperçu montre toutes les fonctions (seule la mention reste sans offre). */
-const DROITS_APERCU: Droits = { sansMention: false, vitrine: true, couleurs: true, programmation: true, avis: true, stats: true, heure: true, drops: true, listeEmail: true, formulaire: true, galerie: true };
+const DROITS_APERCU: Droits = { sansMention: false, vitrine: true, couleurs: true, programmation: true, avis: true, stats: true, heure: true, drops: true, listeEmail: true, formulaire: true, galerie: true, utm: true, redirection: true };
 let n = 0;
 const id = () => `d${Date.now().toString(36)}${n++}`;
 
@@ -66,6 +66,7 @@ function statsFictives(periode: PeriodeStats, blocs: Bloc[] = etat.blocs): Stats
       .map(([nom, p, q]) => ({ nom: String(nom), vues: Math.round(vues * Number(p)), avant: Math.round(vuesAvant * Number(q)) })),
     apps: { integres: Math.round(clics * 0.46), versApp: Math.round(clics * 0.31), ouverts: Math.round(clics * 0.29) },
     appareils: [{ nom: 'Mobile', vues: Math.round(vues * 0.81) }, { nom: 'Ordinateur', vues: Math.round(vues * 0.16) }, { nom: 'Tablette', vues: Math.round(vues * 0.03) }],
+    pays: [['FR', 0.71], ['BE', 0.09], ['CH', 0.06], ['CA', 0.05], ['MA', 0.03], ['', 0.02]].map(([code, part]) => ({ code: code as string, vues: Math.round(vues * (part as number)), avant: Math.round(vues * (part as number) * 0.9) })),
     precedent: { vues: vuesAvant, clics: clicsAvant, visiteurs: somme(avant, 'visiteurs') },
     dejaVue: true,
   };
@@ -76,7 +77,7 @@ function statsVides(periode: PeriodeStats): Stats {
   const { du, au } = plageDe(periode, jourDe(Date.now()));
   const jours = longueur({ du, au });
   const serie = Array.from({ length: jours }, (_, i) => ({ jour: ajouterJours(du, i), vues: 0, visiteurs: 0, clics: 0 }));
-  return { jours, plage: typeof periode !== 'number', vues: 0, visiteurs: 0, clics: 0, serie, blocs: [], sources: [], appareils: [], apps: { integres: 0, versApp: 0, ouverts: 0 }, precedent: { vues: 0, visiteurs: 0, clics: 0 }, dejaVue: false };
+  return { jours, plage: typeof periode !== 'number', vues: 0, visiteurs: 0, clics: 0, serie, blocs: [], sources: [], appareils: [], pays: [], apps: { integres: 0, versApp: 0, ouverts: 0 }, precedent: { vues: 0, visiteurs: 0, clics: 0 }, dejaVue: false };
 }
 
 /* ---- « Rejoins ma liste » : des inscrits inventés, et la liste branchée (Brevo au départ) ---- */
@@ -361,6 +362,7 @@ export function blocsLinktree(): Bloc[] {
     b('coordonnees', { titre: 'Camille Martin', url: 'https://atelier-camille.fr', adressePostale: '12 rue des Lilas\n75011 Paris',
       coordonnees: { telephone: '06 12 34 56 78', email: 'camille@atelier-camille.fr', societe: 'Atelier Camille', poste: 'Céramiste' } }),
     b('lieu', { titre: 'L’atelier', adressePostale: '12 rue des Lilas\n75011 Paris' }),
+    b('lien', { titre: 'Soirée dégustation à l’atelier', url: 'https://cave-des-lilas.fr/degustation', sousTitre: 'Vins nature et céramiques', sensible: true }),
     b('formulaire', { sousTitre: 'Une question, une commande : je réponds sous 48 heures.' }),
     b('video', { titre: 'Les coulisses d’une cuisson', url: 'https://www.tiktok.com/@camille/video/7234567890123456789' }),
   ];

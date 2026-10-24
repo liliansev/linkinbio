@@ -10,7 +10,7 @@ test('les stats en phrases : ce qui monte, le meilleur jour, d’où vient le mo
     jours: 7, vues: 400, visiteurs: 300, clics: 120, serie: serie([30, 200, 40, 30, 40, 30, 30]),
     blocs: [{ id: 'yt', titre: 'YouTube', clics: 52, avant: 37 }, { id: 'site', titre: 'Mon site', clics: 6, avant: 5 }],
     sources: [{ nom: 'Direct', vues: 150, avant: 100 }, { nom: 'TikTok', vues: 120, avant: 50 }],
-    appareils: [], apps: { integres: 40, versApp: 30, ouverts: 28 }, precedent: { vues: 300, visiteurs: 250, clics: 90 }, dejaVue: true,
+    appareils: [], pays: [], apps: { integres: 40, versApp: 30, ouverts: 28 }, precedent: { vues: 300, visiteurs: 250, clics: 90 }, dejaVue: true,
   };
   const textes = resumer(s).map(p => p.texte);
   assert.equal(textes[0], 'Ta page a eu 400 vues, 33 % de plus que la semaine d’avant.');
@@ -24,7 +24,7 @@ test('les stats en une phrase, en tête de l’onglet', () => {
   const s: Stats = {
     jours: 30, vues: 2877, visiteurs: 2129, clics: 1096, serie: serie([90, 100, 95, 92, 98, 101, 99]),
     blocs: [], sources: [{ nom: 'Instagram', vues: 1093, avant: 1500 }, { nom: 'Direct', vues: 345, avant: 500 }],
-    appareils: [], apps: { integres: 0, versApp: 0, ouverts: 0 }, precedent: { vues: 4294, visiteurs: 3170, clics: 1660 }, dejaVue: true,
+    appareils: [], pays: [], apps: { integres: 0, versApp: 0, ouverts: 0 }, precedent: { vues: 4294, visiteurs: 3170, clics: 1660 }, dejaVue: true,
   };
   // Les milliers et le pourcentage se séparent d'une espace fine insécable, comme partout en français.
   assert.equal(enUnePhrase(s), 'En 30 jours, ta page a eu 2 877 vues, 33 % de moins que les 30 jours d’avant, et Instagram t’amène le plus de monde.');
@@ -43,7 +43,7 @@ test('des dates choisies se disent en dates, et se comparent aux jours d’avant
   const s: Stats = {
     jours: 7, plage: true, vues: 400, visiteurs: 300, clics: 120, serie: serie([30, 200, 40, 30, 40, 30, 30]),
     blocs: [], sources: [{ nom: 'Instagram', vues: 150, avant: 100 }],
-    appareils: [], apps: { integres: 0, versApp: 0, ouverts: 0 }, precedent: { vues: 300, visiteurs: 250, clics: 90 }, dejaVue: true,
+    appareils: [], pays: [], apps: { integres: 0, versApp: 0, ouverts: 0 }, precedent: { vues: 300, visiteurs: 250, clics: 90 }, dejaVue: true,
   };
   assert.equal(enUnePhrase(s, '2026-10-22'), 'Du 13 au 19 octobre, ta page a eu 400 vues, 33\u202f% de plus que la semaine d’avant, et Instagram t’amène le plus de monde.');
   // L'année se dit quand ce n'est pas celle d'aujourd'hui.

@@ -79,6 +79,8 @@ export function PageLiens({ page, apercu = false, edition, liste }: {
   // La réservation ouverte dans sa feuille, et ce qui avait le focus avant elle, pour l'y rendre.
   const [agenda, setAgenda] = useState<Bloc | null>(null);
   const avantAgenda = useRef<HTMLElement | null>(null);
+  // Un lien réservé aux plus de 18 ans, touché : il attend la confirmation du visiteur, une seule fois par visite.
+  const [adulte, setAdulte] = useState<{ bloc: Bloc; lien: HTMLAnchorElement } | null>(null);
   const actions = useMemo(() => ({
     annoncer: setToast,
     // Le focus revient au lien touché : Safari ne le lui donne pas au toucher.
@@ -94,6 +96,27 @@ export function PageLiens({ page, apercu = false, edition, liste }: {
     suivre(pseudo, 'clic', bloc.id, reglages.ouvrirApps && !!bloc.url && !!lienApp(bloc.url, navigator.userAgent));
   };
   const cible = apercu ? { target: '_blank' } : {};
+
+  const cleAdulte = `hopla-18:${pseudo || compte.pseudo}`;
+  const dejaConfirme = () => { try { return sessionStorage.getItem(cleAdulte) === '1'; } catch { return false; } };
+  /** Avant le lien lui-même (son clic, l'ouverture dans une app) : un lien pour adultes demande d'abord confirmation. */
+  const gardeAdulte = (bloc: Bloc) => (e: MouseEvent<HTMLDivElement>) => {
+    if (apercu || e.button !== 0 || dejaConfirme()) return;
+    const lien = (e.target as Element).closest?.('a[href]') as HTMLAnchorElement | null;
+    if (!lien || !e.currentTarget.contains(lien)) return;
+    e.preventDefault();
+    e.stopPropagation();
+    setAdulte({ bloc, lien });
+  };
+  function confirmerAdulte() {
+    if (!adulte) return;
+    try { sessionStorage.setItem(cleAdulte, '1'); } catch { /* le navigateur refuse : on redemandera */ }
+    const { bloc, lien } = adulte;
+    setAdulte(null);
+    clic(bloc);
+    if (lien.target === '_blank') window.open(lien.href, '_blank', 'noopener');
+    else location.href = lien.href;
+  }
   // Dans l'aperçu du bureau, seuls les blocs répondent : l'en-tête, les réseaux et la signature ne mènent nulle part.
   const fige = liste && !edition ? { inert: true } : {};
 
@@ -139,7 +162,7 @@ export function PageLiens({ page, apercu = false, edition, liste }: {
     <ActionsPage.Provider value={actions}>
     <div className="lp" onClick={ouvrirDansApp} style={variablesTheme(theme) as CSSProperties} data-bouton={reglages.bouton.style} data-forme={reglages.bouton.forme} data-ombre={reglages.bouton.ombre} data-police={theme.police} data-decor={theme.decor} data-bureau={reglages.bureau}>
       {/* Sous une feuille, la page est là, mais rien n'y répond tant qu'on ne l'a pas refermée. */}
-      <div className="lp-scene" {...(agenda ? { inert: true } : {})}>
+      <div className="lp-scene" {...(agenda || adulte ? { inert: true } : {})}>
       <div className="lp-col">
         {reglages.partage && !edition && (
           <button type="button" className="lp-partager" onClick={partager} aria-label={t.partager} {...fige}>
@@ -173,7 +196,8 @@ export function PageLiens({ page, apercu = false, edition, liste }: {
         <main className="lp-blocs">
           {edition || liste ? (edition?.liste ?? liste!)(blocs, bloc => <BlocPublic bloc={bloc} reglages={reglages} clic={() => {}} cible={cible} apercu t={t} />) : <>
             {blocs.map((bloc, i) => (
-              <div key={bloc.id} className="lp-bloc" data-type={bloc.type} data-vedette={formatVedette(bloc)} style={{ '--i': i } as CSSProperties}>
+              <div key={bloc.id} className="lp-bloc" data-type={bloc.type} data-vedette={formatVedette(bloc)} style={{ '--i': i } as CSSProperties}
+                onClickCapture={bloc.sensible ? gardeAdulte(bloc) : undefined}>
                 <BlocPublic bloc={bloc} reglages={reglages} clic={() => clic(bloc)} cible={cible} apercu={apercu} maintenant={page.maintenant} pseudo={pseudo} t={t} />
               </div>
             ))}
@@ -204,6 +228,7 @@ export function PageLiens({ page, apercu = false, edition, liste }: {
       </div>
       </div>
       {agenda && <FeuilleAgenda bloc={agenda} t={t} fermer={() => { setAgenda(null); requestAnimationFrame(() => avantAgenda.current?.focus({ preventScroll: true })); }} />}
+      {adulte && <FeuilleAdultes t={t} confirmer={confirmerAdulte} fermer={() => { const { lien } = adulte; setAdulte(null); requestAnimationFrame(() => lien.focus({ preventScroll: true })); }} />}
       {toast && <div className="lp-toast" role="status">{toast}</div>}
     </div>
     </ActionsPage.Provider>
@@ -254,6 +279,37 @@ function FeuilleAgenda({ bloc, t, fermer }: { bloc: Bloc; t: Textes; fermer: () 
   );
 }
 
+/** Avant un lien réservé aux plus de 18 ans : la même feuille que la réservation, deux gestes, et rien d'autre. */
+function FeuilleAdultes({ t, confirmer, fermer }: { t: Textes; confirmer: () => void; fermer: () => void }) {
+  const [sort, setSort] = useState(false);
+  const feuille = useRef<HTMLElement>(null);
+  function quitter() {
+    if (sort) return;
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) { fermer(); return; }
+    setSort(true);
+    setTimeout(fermer, 220);
+  }
+  useEffect(() => { feuille.current?.focus({ preventScroll: true }); }, []);
+  useEffect(() => {
+    const echap = (e: KeyboardEvent) => { if (e.key === 'Escape') quitter(); };
+    document.addEventListener('keydown', echap);
+    return () => document.removeEventListener('keydown', echap);
+  });
+  return (
+    <div className="lp-sortie lp-adultes" data-sort={sort || undefined}>
+      <div className="lp-sortie-voile" aria-hidden="true" onClick={quitter} />
+      <section ref={feuille} className="lp-sortie-feuille" role="alertdialog" aria-modal="true" aria-labelledby="lp-adultes-titre" aria-describedby="lp-adultes-texte" tabIndex={-1}>
+        <p className="lp-adultes-titre" id="lp-adultes-titre">{t.reserveAdultes}</p>
+        <p className="lp-adultes-texte" id="lp-adultes-texte">{t.contenuAdultes}</p>
+        <div className="lp-adultes-gestes">
+          <button type="button" className="lp-btn lp-btn-compact lp-accent" onClick={confirmer}>{t.dixHuitAns}</button>
+          <button type="button" className="lp-adultes-revenir" onClick={quitter}>{t.revenir}</button>
+        </div>
+      </section>
+    </div>
+  );
+}
+
 /** Copier sans l'API du presse-papiers, que certains navigateurs intégrés refusent. */
 function copierALAncienne(texte: string): boolean {
   const zone = document.createElement('textarea');
@@ -295,10 +351,13 @@ function Pictogramme({ bloc }: { bloc: Bloc }) {
   return null;
 }
 
-/** La mention d'un lien partenaire, que la loi du 9 juin 2023 demande à tous : « Publicité » ou « Collaboration commerciale ». */
+/**
+ * Au-dessus du titre d'un lien : « 18+ » pour un lien réservé aux adultes, et la mention d'un lien partenaire, que la loi
+ * du 9 juin 2023 demande à tous (« Publicité » ou « Collaboration commerciale »).
+ */
 function Mention({ bloc, t }: { bloc: Bloc; t: Textes }) {
-  if (!bloc.partenariat) return null;
-  return <span className="lp-pub">{bloc.partenariat.mention === 'collaboration' ? t.collaboration : t.publicite}</span>;
+  const mots = [bloc.sensible && t.adultes, bloc.partenariat && (bloc.partenariat.mention === 'collaboration' ? t.collaboration : t.publicite)].filter(Boolean);
+  return mots.length ? <span className="lp-pub">{mots.join(' · ')}</span> : null;
 }
 
 /** Le code promo d'un lien partenaire, sous lui, copié d'un geste. */
