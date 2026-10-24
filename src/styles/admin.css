@@ -10,6 +10,7 @@ html:has(.adm-shell:not(.adm-entree)) { scrollbar-gutter: stable; }
 @media (min-width: 1024px) {
   html:has(.adm-shell:not(.adm-entree)) { background: #f6f5ef; }
   html:has(.adm-shell[data-onglet='page']) { background: #f3eee5; }
+  html:has(.adm-detail-cote) { background: #fff; }
 }
 
 /*
@@ -92,7 +93,7 @@ html:has(.adm-shell:not(.adm-entree)) { scrollbar-gutter: stable; }
 @keyframes adm-barre { from { transform: scaleX(0); } }
 
 @media (prefers-reduced-motion: reduce) {
-  .adm-feuille, .adm-fondu, .adm-toast, .adm-onglet, .adm-cascade > *, .adm-barre, [data-sortie] .adm-feuille, [data-sortie] .adm-fondu { animation: none; }
+  .adm-feuille, .adm-fondu, .adm-toast, .adm-onglet, .adm-cascade > *, .adm-barre, .adm-detail-cote, [data-sortie] .adm-feuille, [data-sortie] .adm-fondu { animation: none; }
   .adm-interrupteur > span { transition: none; }
 }
 
@@ -200,14 +201,16 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
     --adm-colonne: 1120px;
     /* La zone de l'aperçu, à droite de Ma page : le téléphone à sa vraie taille dès 1470 px d'écran. */
     --adm-zone-apercu: clamp(440px, 30vw, 560px);
+    /* La zone du détail (un outil, la fiche d'un compte, Mon abonnement), à droite de sa liste : voir `PanneauDetail`. */
+    --adm-zone-detail: clamp(420px, 32vw, 600px);
     --adm-largeur: min(100% - 216px - 2 * var(--adm-bord), var(--adm-colonne));
   }
   .adm-shell:is([data-onglet='reglages'], [data-onglet='integrations']) { --adm-colonne: 680px; }
   .adm-shell[data-onglet='page'] { --adm-colonne: clamp(820px, 38vw, 960px); --adm-largeur: min(100% - 216px - var(--adm-zone-apercu) - 2 * var(--adm-bord), var(--adm-colonne)); }
-  /* La fiche d'un compte se lit en lignes, comme Réglages : la même colonne. */
-  .adm-shell[data-onglet='comptes'][data-sous] { --adm-colonne: 680px; }
   .adm-travail { padding-left: 216px; }
   .adm-shell[data-onglet='page'] .adm-travail { padding-right: var(--adm-zone-apercu); }
+  .adm-shell:has(.adm-detail-cote) { --adm-largeur: min(100% - 216px - var(--adm-zone-detail) - 2 * var(--adm-bord), var(--adm-colonne)); }
+  .adm-shell:has(.adm-detail-cote) .adm-travail { padding-right: var(--adm-zone-detail); }
   /* L'en-tête d'une zone va d'un bord à l'autre : le titre au bord gauche du travail, les gestes au bord droit. */
   .adm-entete-bureau { padding-inline: 28px; }
   .adm-colonne { width: min(100% - 2 * var(--adm-bord), var(--adm-colonne)); margin-inline: auto; }
@@ -215,6 +218,7 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
   /* Au bord droit de la colonne de l'onglet, pas au bord de l'écran : sur un écran de 3440 px, il reste près du travail. */
   .adm-shell .adm-toast { left: auto; right: max(24px, (100% - 216px - var(--adm-largeur)) / 2); width: min(24rem, 100% - 216px - 48px); margin: 0; }
   .adm-shell[data-onglet='page'] .adm-toast { right: calc(var(--adm-zone-apercu) + max(24px, (100% - 216px - var(--adm-zone-apercu) - var(--adm-largeur)) / 2)); }
+  .adm-shell:has(.adm-detail-cote) .adm-toast { right: calc(var(--adm-zone-detail) + max(24px, (100% - 216px - var(--adm-zone-detail) - var(--adm-largeur)) / 2)); }
 }
 /* Une fenêtre centrée (les offres, une confirmation) se centre sur l'espace de travail, à droite de la barre latérale. */
 @media (min-width: 1024px) {
@@ -492,6 +496,18 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
   .adm-apercu-cote { position: fixed; top: 0; right: 0; bottom: 0; z-index: 30; display: flex; width: var(--adm-zone-apercu); flex-direction: column; border-left: 1px solid #e3dccf; background: var(--adm-creme); }
   .adm-apercu-tete { display: flex; height: 57px; flex: none; align-items: center; justify-content: space-between; gap: 8px; padding: 0 20px; border-bottom: 1px solid #e3dccf; }
   .adm-apercu-tete .adm-adresse-entete { background: #fff; }
+  /* La zone du détail : la même place que l'aperçu, en blanc, sa tête à la hauteur de celle du travail ; son corps défile seul.
+     L'élément de la liste dont le détail est ouvert se lit en bleu pâle (`aria-current`, `data-choisi`). */
+  .adm-detail-cote { position: fixed; top: 0; right: 0; bottom: 0; z-index: 30; display: flex; width: var(--adm-zone-detail); flex-direction: column; border-left: 1px solid #e3e3df; background: #fff; animation: adm-detail 0.22s var(--adm-sortie); }
+  @keyframes adm-detail { from { opacity: 0; transform: translateX(12px); } }
+  .adm-detail-tete { display: flex; height: 57px; flex: none; align-items: center; gap: 10px; padding: 0 12px 0 24px; border-bottom: 1px solid #e3e3df; }
+  .adm-detail-corps { min-height: 0; flex: 1; overflow-y: auto; overscroll-behavior: contain; padding: 24px 24px 48px; }
+  .adm-detail-corps .adm-lignes { background: #fafaf8; }
+  /* Plus étroit que Réglages : la valeur se lit sous le nom, comme au téléphone, plutôt que coupée entre lui et le bouton. */
+  .adm-detail-corps .adm-ligne-texte { flex-direction: column; align-items: flex-start; gap: 1px; }
+  .adm-detail-corps .adm-ligne-valeur { display: -webkit-box; flex: none; font-size: 13.5px; text-align: left; white-space: normal; }
+  .adm-ligne-lien[aria-current] { background: var(--adm-bleu-pale); }
+  .adm-tableau tr[data-choisi] td { background: var(--adm-bleu-pale); }
   /* La carte prend la place qui reste : le téléphone grandit avec l'écran, réduit seulement quand la place manque. */
   .adm-apercu-colle { display: flex; min-height: 0; flex: 1; flex-direction: column; align-items: center; gap: 14px; padding: 16px 24px 24px; }
   /* Téléphone ou ordinateur : une icône et son mot, sans cadre autour ni fond derrière ; la vue prise en bleu, soulignée comme un onglet. */
@@ -1043,7 +1059,10 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
   .adm-comptes-barre { height: 48px; flex-direction: row; align-items: stretch; justify-content: space-between; gap: 16px; border-bottom: 1px solid #ececea; }
   .adm-comptes-onglets { border-bottom: 0; }
   .adm-comptes-onglets > button { min-height: 0; }
-  .adm-recherche { width: 260px; flex: none; }
+  /* La fiche ouverte à côté resserre la colonne : la recherche cède sa place aux onglets, qui ne se coupent jamais. */
+  .adm-comptes-barre > :last-child { min-width: 176px; flex: 0 1 260px; }
+  .adm-recherche { width: 100%; flex: none; }
+  .adm-comptes-barre > .adm-comptes-onglets { flex: none; }
   .adm-comptes-contenu { padding-top: 8px; }
 }
 @media (min-width: 1024px) and (pointer: fine) {

@@ -9,7 +9,7 @@ import type { StatutCompte } from '../lib/comptes.ts';
 import { NOMS_STATUTS, quand, statutCompte, trouve } from '../lib/comptes.ts';
 import { Icone } from '../components/Icone.tsx';
 import type { ElementMenu } from './ui.tsx';
-import { ActionEntete, BoutonSecondaire, Champ, Feuille, Groupe, Ligne, Menu, Segments, SousPage, classeBadge, classeBouton, classeSaisie } from './ui.tsx';
+import { ActionEntete, BoutonSecondaire, Champ, Feuille, Groupe, Ligne, Menu, PanneauDetail, Segments, SousPage, classeBadge, classeBouton, classeSaisie, useGrandEcran } from './ui.tsx';
 import { nomApres } from './Facturation.tsx';
 import { focusAuto } from '../lib/clavier';
 
@@ -24,7 +24,9 @@ import { focusAuto } from '../lib/clavier';
  * Un compte s'ouvre sur sa fiche (23 octobre 2026, demandé par Lilian : « tout
  * faire sur un compte ») : renvoyer son lien, lui offrir une offre ou la lui
  * retirer, résilier son abonnement, le suspendre, le supprimer. Les mêmes
- * gestes restent sous « … ».
+ * gestes restent sous « … ». Au bureau (24 octobre 2026), la fiche s'ouvre à
+ * droite, dans `PanneauDetail`, et le tableau reste à sa gauche, réduit à la
+ * page, l'offre, les vues et le statut.
  *
  * Pendant la bêta on n'entre que sur invitation : Lilian invite une personne
  * de la liste d'attente (son nom réservé depuis l'accueil), ou saisit
@@ -79,6 +81,7 @@ export function OngletComptes({ api, avatar }: { api: ApiComptes; avatar?: strin
   // La fiche ouverte, par l'id du compte : elle se relit avec la liste après chaque geste.
   const [fiche, setFiche] = useState<string | null>(null);
   const id = useId();
+  const grand = useGrandEcran();
 
   const chargerComptes = useCallback(() => api.lister().then(setComptes).catch(() => setErreur('La liste ne s’est pas chargée. Recharge la page.')), [api]);
   const chargerAttente = useCallback(() => api.attente().then(setAttente).catch(() => setAttente([])), [api]);
@@ -98,7 +101,7 @@ export function OngletComptes({ api, avatar }: { api: ApiComptes; avatar?: strin
 
   // Revenir de la fiche rend le focus au compte qui l'a ouverte, dans le tableau ou dans la liste (celui qu'on voit).
   const ouvreur = useRef('');
-  const ouvrirFiche = (c: CompteResume) => { ouvreur.current = c.id; setMessage(null); setFiche(c.id); scrollTo({ top: 0 }); };
+  const ouvrirFiche = (c: CompteResume) => { ouvreur.current = c.id; setMessage(null); setFiche(c.id); if (!grand) scrollTo({ top: 0 }); };
   const fermerFiche = () => { setFiche(null); setMessage(null); };
   useEffect(() => {
     if (fiche || !ouvreur.current) return;
@@ -111,6 +114,10 @@ export function OngletComptes({ api, avatar }: { api: ApiComptes; avatar?: strin
   const ouvert = fiche ? comptes?.find(c => c.id === fiche) : undefined;
   // Un compte supprimé depuis sa fiche la referme : le message reste, au-dessus de la liste.
   useEffect(() => { if (fiche && comptes && !comptes.some(c => c.id === fiche)) setFiche(null); }, [fiche, comptes]);
+  // Au bureau, la fiche n'appartient qu'à l'onglet Comptes : en changer la referme.
+  useEffect(() => { if (vue !== 'comptes') setFiche(null); }, [vue]);
+  // La fiche à côté du tableau : il ne garde que ce qui se lit d'un coup d'œil, l'e-mail et la connexion sont dans la fiche.
+  const cote = grand && !!ouvert;
 
   const ouverts = signalements?.filter(s => s.statut === 'ouvert') ?? [];
   // Au téléphone, « Attente » : les trois onglets et le compte des signalements tiennent sur la largeur.
@@ -208,7 +215,13 @@ export function OngletComptes({ api, avatar }: { api: ApiComptes; avatar?: strin
 
   return (
     <div className="adm-comptes flex flex-col gap-4 lg:gap-0">
-      {ouvert ? (
+      {ouvert && cote && (
+        <PanneauDetail titre={ouvert.pseudo} avant={<Pastille pseudo={ouvert.pseudo} />} fermer={fermerFiche}>
+          <FicheCompte compte={ouvert} statut={statutCompte(ouvert, signalements ?? [])} gestes={gestesDe(ouvert)} fermer={fermerFiche} cote
+            message={message && <Bandeau message={message} fermer={() => setMessage(null)} />} />
+        </PanneauDetail>
+      )}
+      {ouvert && !cote ? (
         <FicheCompte compte={ouvert} statut={statutCompte(ouvert, signalements ?? [])} gestes={gestesDe(ouvert)} fermer={fermerFiche}
           message={message && <Bandeau message={message} fermer={() => setMessage(null)} />} />
       ) : (
@@ -235,7 +248,7 @@ export function OngletComptes({ api, avatar }: { api: ApiComptes; avatar?: strin
           </div>
 
           <div id={`${id}-panneau`} role="tabpanel" aria-labelledby={`${id}-${vue}`} className="adm-comptes-contenu flex flex-col gap-4">
-            {message && <Bandeau message={message} fermer={() => setMessage(null)} />}
+            {message && !cote && <Bandeau message={message} fermer={() => setMessage(null)} />}
 
             {vue === 'comptes' && (
               <>
@@ -245,32 +258,36 @@ export function OngletComptes({ api, avatar }: { api: ApiComptes; avatar?: strin
                 {comptes && (comptesVus.length === 0 ? rien('compte') : (
                   <>
                     <table className="adm-tableau hidden lg:table">
-                      <colgroup>
-                        <col style={{ width: '22%' }} /><col style={{ width: '24%' }} /><col style={{ width: '11%' }} /><col style={{ width: '9.5%' }} />
-                        <col style={{ width: '15.5%' }} /><col style={{ width: '13%' }} /><col style={{ width: 48 }} />
-                      </colgroup>
+                      {cote ? (
+                        <colgroup><col style={{ width: '38%' }} /><col style={{ width: '20%' }} /><col style={{ width: '15%' }} /><col /><col style={{ width: 48 }} /></colgroup>
+                      ) : (
+                        <colgroup>
+                          <col style={{ width: '22%' }} /><col style={{ width: '24%' }} /><col style={{ width: '11%' }} /><col style={{ width: '9.5%' }} />
+                          <col style={{ width: '15.5%' }} /><col style={{ width: '13%' }} /><col style={{ width: 48 }} />
+                        </colgroup>
+                      )}
                       <thead>
                         <tr>
-                          <th scope="col">Page</th><th scope="col">E-mail</th><th scope="col">Offre</th><th scope="col" className="adm-nombre">Vues 30&#8239;j</th>
-                          <th scope="col">Dernière connexion</th><th scope="col">Statut</th><th scope="col"><span className="sr-only">Gestes</span></th>
+                          <th scope="col">Page</th>{!cote && <th scope="col">E-mail</th>}<th scope="col">Offre</th><th scope="col" className="adm-nombre">Vues 30&#8239;j</th>
+                          {!cote && <th scope="col">Dernière connexion</th>}<th scope="col">Statut</th><th scope="col"><span className="sr-only">Gestes</span></th>
                         </tr>
                       </thead>
                       <tbody>
                         {comptesVus.map(c => {
                           const statut = statutCompte(c, signalements ?? []);
                           return (
-                            <tr key={c.id} onClick={c.principal ? undefined : surRangee(c)} data-ouvrable={c.principal ? undefined : ''}>
+                            <tr key={c.id} onClick={c.principal ? undefined : surRangee(c)} data-ouvrable={c.principal ? undefined : ''} data-choisi={cote && c.id === fiche ? '' : undefined}>
                               <td>
                                 {c.principal ? <NomCompte compte={c} avatar={avatar} /> : (
-                                  <button type="button" data-fiche={c.id} onClick={() => ouvrirFiche(c)} className="adm-nom-compte" aria-label={`${c.pseudo}, ouvrir sa fiche`}>
+                                  <button type="button" data-fiche={c.id} onClick={() => ouvrirFiche(c)} className="adm-nom-compte" aria-label={`${c.pseudo}, ouvrir sa fiche`} aria-current={cote && c.id === fiche ? 'true' : undefined}>
                                     <NomCompte compte={c} />
                                   </button>
                                 )}
                               </td>
-                              <td className="adm-gris" title={c.email}>{c.email}</td>
+                              {!cote && <td className="adm-gris" title={c.email}>{c.email}</td>}
                               <td className="text-[#3d3d39]">{c.principal ? 'Principal' : <Offre compte={c} />}</td>
                               <td className="adm-nombre">{nombre(c.vues)}</td>
-                              <td className="adm-gris">{quand(c.connexion)}</td>
+                              {!cote && <td className="adm-gris">{quand(c.connexion)}</td>}
                               <td><Statut statut={statut} /></td>
                               <td>{!c.principal && <MenuGestes nom={c.pseudo} elements={menuDe(gestesDe(c))} />}</td>
                             </tr>
@@ -393,7 +410,7 @@ function enMots(a: Abonnement): string {
  * puis la modération. Ce qui change quelque chose pour la personne s'ouvre dans une petite fenêtre qui le dit
  * avant de le faire ; renvoyer son lien part d'un toucher.
  */
-function FicheCompte({ compte: c, statut, gestes, fermer, message }: { compte: CompteResume; statut: StatutCompte; gestes: Gestes; fermer: () => void; message: ReactNode }) {
+function FicheCompte({ compte: c, statut, gestes, fermer, message, cote = false }: { compte: CompteResume; statut: StatutCompte; gestes: Gestes; fermer: () => void; message: ReactNode; cote?: boolean }) {
   const [envoi, setEnvoi] = useState(false);
   const a = c.abonnement;
   const offerte = a.offerte;
@@ -404,8 +421,9 @@ function FicheCompte({ compte: c, statut, gestes, fermer, message }: { compte: C
     setEnvoi(false);
   }
   return (
-    <div className="adm-reglages lg:pt-7">
-      <SousPage nom={c.pseudo} retour={fermer} />
+    <div className={`adm-reglages ${cote ? '' : 'lg:pt-7'}`}>
+      {/* À côté du tableau, la fiche a sa tête : pas de fil dans l'en-tête. */}
+      {!cote && <SousPage nom={c.pseudo} retour={fermer} />}
       {message}
       <Groupe titre="Page">
         <Ligne nom="Adresse" valeur={<span translate="no">{sansSchema(urlPage(c))}</span>}>

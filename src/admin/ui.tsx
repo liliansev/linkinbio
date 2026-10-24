@@ -49,6 +49,39 @@ export function SousPage({ nom, retour }: Fil) {
   return null;
 }
 
+/**
+ * Le détail d'une liste, au bureau (24 octobre 2026, demandé par Lilian : des zones nettes, pas de blanc perdu) :
+ * un outil d'Intégrations, la fiche d'un compte, Mon abonnement. Il s'ouvre dans la zone de droite, fixée au bord
+ * comme l'aperçu de Ma page, et la liste reste à sa gauche. En tête, son nom et la croix ; Échap le referme quand
+ * aucune fenêtre n'est ouverte par-dessus. Au téléphone, l'onglet garde sa sous-page.
+ */
+export function PanneauDetail({ titre, avant, fermer, children }: { titre: string; avant?: ReactNode; fermer: () => void; children: ReactNode }) {
+  const id = useId();
+  const tete = useRef<HTMLHeadingElement>(null);
+  const fermerRef = useRef(fermer);
+  fermerRef.current = fermer;
+  // Le focus suit ce qu'on ouvre : un autre élément de la liste le ramène en tête du détail.
+  useEffect(() => { tete.current?.focus({ preventScroll: true }); }, [titre]);
+  useEffect(() => {
+    const touche = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape' || e.defaultPrevented || document.querySelector('[role="dialog"][aria-modal="true"]')) return;
+      fermerRef.current();
+    };
+    document.addEventListener('keydown', touche);
+    return () => document.removeEventListener('keydown', touche);
+  }, []);
+  return (
+    <aside className="adm-detail-cote" aria-labelledby={id}>
+      <div className="adm-detail-tete">
+        {avant}
+        <h2 ref={tete} id={id} tabIndex={-1} className="min-w-0 flex-1 truncate text-[15px] font-semibold tracking-[-0.015em] outline-none">{titre}</h2>
+        <button type="button" onClick={fermer} aria-label={`Fermer ${titre}`} className={classeBouton.icone}><Icone nom="ui-fermer" taille={18} /></button>
+      </div>
+      <div className="adm-detail-corps">{children}</div>
+    </aside>
+  );
+}
+
 /** Un groupe de réglages : son titre, puis ses lignes dans un cadre fin (Réglages, Facturation). */
 /** `apres` : ce qui suit le titre, l'étiquette de l'offre quand tout le groupe l'attend (une seule, pas une par ligne). */
 export function Groupe({ titre, apres, children }: { titre: string; apres?: ReactNode; children: ReactNode }) {
@@ -94,9 +127,10 @@ export function LigneBascule({ nom, actif, changer, disabled }: { nom: string; a
  * Une ligne qui mène ailleurs (Mon abonnement, une fonction réservée) : toute la
  * ligne se touche, un chevron au bout. `apres` se pose avant lui (l'offre qui
  * débloque). `externe` : elle quitte Hopla (le portail de Creem), le signe
- * d'ouverture remplace le chevron. Sans `onClick`, la ligne se lit sans mener nulle part.
+ * d'ouverture remplace le chevron. Sans `onClick`, la ligne se lit sans mener nulle part. `courant` : son détail est
+ * ouvert à côté (au bureau, dans `PanneauDetail`).
  */
-export function LigneLien({ nom, valeur, avant, apres, onClick, label, disabled, id, externe = false }: { nom: ReactNode; valeur?: ReactNode; avant?: ReactNode; apres?: ReactNode; onClick?: () => void; label?: string; disabled?: boolean; id?: string; externe?: boolean }) {
+export function LigneLien({ nom, valeur, avant, apres, onClick, label, disabled, id, externe = false, courant = false }: { nom: ReactNode; valeur?: ReactNode; avant?: ReactNode; apres?: ReactNode; onClick?: () => void; label?: string; disabled?: boolean; id?: string; externe?: boolean; courant?: boolean }) {
   const texte = (
     <span className="adm-ligne-texte">
       <span className="adm-ligne-nom">{nom}</span>
@@ -105,7 +139,7 @@ export function LigneLien({ nom, valeur, avant, apres, onClick, label, disabled,
   );
   if (!onClick) return <div className="adm-ligne">{avant}{texte}{apres}</div>;
   return (
-    <button id={id} type="button" onClick={onClick} aria-label={label} disabled={disabled} className="adm-ligne adm-ligne-lien">
+    <button id={id} type="button" onClick={onClick} aria-label={label} disabled={disabled} aria-current={courant || undefined} className="adm-ligne adm-ligne-lien">
       {avant}{texte}{apres}
       {externe
         ? <Icone nom="ui-ouvrir" taille={15} className="shrink-0 text-[#55554f]" />
