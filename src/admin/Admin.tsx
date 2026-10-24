@@ -791,8 +791,9 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
           {/* Sous 390 px, l'œil seul, sans cadre : l'adresse garde la place d'être lue. */}
           <button type="button" onClick={() => setApercu(true)} className="adm-button-outline adm-apercu-bouton flex min-h-11 items-center justify-center gap-1.5 px-3.5 text-[13px] font-medium max-[389px]:w-11 max-[389px]:px-0"><Icone nom="ui-oeil" taille={17} className="shrink-0" /><span className="max-[389px]:sr-only">Aperçu</span></button>
         </div>
-        {/* Au bureau, une seule rangée : le nom de l'écran, puis ce qui sert ici. Pas de barre vide, pas de deuxième titre. */}
-        <div className="adm-colonne hidden h-14 items-center gap-2 lg:flex">
+        {/* Au bureau, une seule rangée, d'un bord à l'autre de la zone : le nom de l'écran, puis ce qui sert ici. Pas de barre vide, pas de deuxième titre.
+            Sur Ma page, elle ne couvre que l'édition : l'adresse et « Voir ma page » sont en tête de l'aperçu (24 octobre 2026, trois zones). */}
+        <div className="adm-entete-bureau hidden h-14 items-center gap-2 lg:flex">
           {fil ? (
             <div className="flex min-w-0 flex-1 items-center gap-1.5">
               <button type="button" onClick={fil.retour} className="adm-fil-retour -ml-2"><Icone nom="ui-chevron" taille={14} className="rotate-90" />{titre}</button>
@@ -803,15 +804,6 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
           {/* L'état ne se montre que là où l'on écrit, ou quand il a quelque chose à dire. */}
           {(onglet === 'page' || onglet === 'reglages' || sauvegarde !== 'ok') && (
             <p className="adm-etat mr-1.5" data-erreur={sauvegarde === 'erreur' || undefined} role="status">{signe}{indicateur}</p>
-          )}
-          {onglet === 'page' && (
-            <>
-              <div className="adm-adresse-entete h-11 bureau:h-9">
-                <span className="flex items-center px-2.5 text-[13px] text-white/55" translate="no">{courte.slice(0, coupe)}<span className="font-medium text-white">{courte.slice(coupe)}</span></span>
-                <BoutonAdresse adresse={adresse} />
-              </div>
-              <a href={demo ? '#page' : adresse} target={demo ? undefined : '_blank'} rel={demo ? undefined : 'noopener'} className={classeBouton.secondaire}><Icone nom="ui-ouvrir" taille={15} className="shrink-0" />Voir ma page</a>
-            </>
           )}
           <div ref={setEmplacement} className="flex items-center gap-2 empty:hidden" />
         </div>
@@ -853,7 +845,16 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
             envoyerImage={d => api.envoyerImage(d)} annoncer={t => setToast(t)}
             demarrage={demarrage} demarrageOuvert={demarrageOuvert} fermerDemarrage={() => setDemarrageOuvert(false)} demandeDesign={demandeDesign} designOuvert={() => setDemandeDesign(null)}
             demandeAjout={demandeAjout} ajoutOuvert={() => setDemandeAjout(null)}
-            appel={grand ? null : appel()} />}
+            appel={grand ? null : appel()}
+            teteApercu={(
+              <>
+                <div className="adm-adresse-entete h-9 min-w-0">
+                  <span className="flex min-w-0 items-center truncate px-2.5 text-[13px] text-white/55" translate="no">{courte.slice(0, coupe)}<span className="font-medium text-white">{courte.slice(coupe)}</span></span>
+                  <BoutonAdresse adresse={adresse} />
+                </div>
+                <a href={demo ? '#page' : adresse} target={demo ? undefined : '_blank'} rel={demo ? undefined : 'noopener'} className={classeBouton.secondaire}><Icone nom="ui-ouvrir" taille={15} className="shrink-0" />Voir ma page</a>
+              </>
+            )} />}
           {onglet === 'stats' && <OngletStats charger={chargerStats} adresse={adressePartage(compte, reglages.domaine)} pseudo={compte.pseudo} joursMax={initial.paiement ? joursStats(compte.plan, droits.stats) : 365} onOffres={peutAcheter ? ouvrirOffres : undefined}
             ouvrirApps={reglages.ouvrirApps} onActiverApps={() => changerReglages({ ...reglages, ouvrirApps: true })} liste={<MaListe api={api} onIntegrations={() => choisirOnglet('integrations')} />} blocs={blocs} />}
           {onglet === 'integrations' && <OngletIntegrations api={api} blocs={blocs} sousOuverte={sousIntegration} sousLue={() => setSousIntegration(null)}

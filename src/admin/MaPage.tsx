@@ -90,7 +90,7 @@ function brouillonNeuf(b: Bloc): Bloc {
   return { ...nouveauBloc('lien', b.id), titre: b.titre.trim() || type.nom, url: '#', icone: type.picto };
 }
 
-export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, choisi, editeur, neuf, onReglages, onOrdonner, onOuvrir, onAjouter, onPoser, liberer, fermerEdition, gestes, envoyerImage, annoncer, demarrage, demarrageOuvert, fermerDemarrage, demandeDesign, designOuvert, demandeAjout, ajoutOuvert, appel }: {
+export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, choisi, editeur, neuf, onReglages, onOrdonner, onOuvrir, onAjouter, onPoser, liberer, fermerEdition, gestes, envoyerImage, annoncer, demarrage, demarrageOuvert, fermerDemarrage, demandeDesign, designOuvert, demandeAjout, ajoutOuvert, appel, teteApercu }: {
   compte: PagePublique['compte'];
   reglages: Reglages;
   /** Les blocs tels qu'on les voit : celui qu'on règle se redessine à chaque frappe. */
@@ -138,6 +138,8 @@ export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, chois
   ajoutOuvert?: () => void;
   /** Au téléphone, sous la page : l'offre du dessus, en une ligne (voir `AppelOffre`). Au bureau, elle est dans la barre latérale. */
   appel?: ReactNode;
+  /** Au bureau, en tête de la zone de l'aperçu : l'adresse de la page, Copier et « Voir ma page ». */
+  teteApercu?: ReactNode;
 }) {
   // Le design ou les réseaux. Au bureau, le design est l'onglet de droite, les réseaux s'ouvrent dans le profil ; au téléphone, dans une feuille.
   const [cote, setCote] = useState<Cote | null>(null);
@@ -503,8 +505,10 @@ export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, chois
           </div>
         </div>
 
-        {/* La page, collée à droite : elle suit chaque frappe ; un clic sur un bloc ouvre sa rangée. */}
+        {/* La troisième zone, d'un bord à l'autre de l'écran à droite (24 octobre 2026, d'après Linktree et Later) : l'adresse en tête,
+            puis la page, qui suit chaque frappe ; un clic sur un bloc ouvre sa rangée. */}
         <aside className="adm-apercu-cote" aria-label="Aperçu de ta page">
+          <div className="adm-apercu-tete">{teteApercu}</div>
           <div className="adm-apercu-colle">
             {vues}
             <Telephone ecran={ecran} choisi={choisi ?? neuf?.bloc.id ?? null}>
@@ -847,9 +851,8 @@ function Telephone({ ecran, choisi, children }: { ecran: RefObject<HTMLDivElemen
     const carte = el?.closest<HTMLElement>('.adm-apercu-colle');
     if (!el || !carte) return;
     const mesurer = () => {
-      // La place sous la carte collée : sa hauteur au plus, moins ce qui précède le téléphone et son bas.
-      const style = getComputedStyle(carte);
-      const dispo = window.innerHeight - (parseFloat(style.top) || 0) - (parseFloat(style.marginBottom) || 0) - el.offsetTop - (parseFloat(style.paddingBottom) || 0);
+      // La place sous le haut du téléphone, jusqu'au bas de sa zone, fixée à l'écran.
+      const dispo = window.innerHeight - el.getBoundingClientRect().top - (parseFloat(getComputedStyle(carte).paddingBottom) || 0);
       const haut = Math.round(Math.min(932, Math.max(760, dispo - 18)));
       setMesure({ echelle: Math.min(1, el.clientWidth / 408, dispo / (haut + 18)), haut });
     };
@@ -857,7 +860,9 @@ function Telephone({ ecran, choisi, children }: { ecran: RefObject<HTMLDivElemen
     const obs = new ResizeObserver(mesurer);
     obs.observe(el);
     window.addEventListener('resize', mesurer);
-    return () => { obs.disconnect(); window.removeEventListener('resize', mesurer); };
+    // L'entrée de l'onglet est une animation : tant qu'elle joue, la zone fixée suit l'onglet qui glisse. On remesure à sa fin.
+    document.addEventListener('animationend', mesurer);
+    return () => { obs.disconnect(); window.removeEventListener('resize', mesurer); document.removeEventListener('animationend', mesurer); };
   }, []);
   const { echelle, haut } = mesure;
   useEffect(() => {
