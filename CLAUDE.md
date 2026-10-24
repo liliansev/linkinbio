@@ -98,10 +98,14 @@ embarque tout : l'image n'a pas de `node_modules`.
 - `admin/` : onglets Ma page, Stats, Intégrations, Comptes (principal seulement), Réglages. Dans Comptes (23 octobre 2026,
   demandé par Lilian : « tout faire sur un compte »), un compte s'ouvre en fiche (`FicheCompte` dans `OngletComptes.tsx`, une
   sous-page en lignes comme Réglages, 680 px au bureau) : sa page, « Renvoyer son lien », son offre (offrir avec `FormOffrir`, retirer,
-  résilier l'abonnement), la modération et la suppression, chaque geste après une confirmation. Sur un grand écran (22 octobre 2026, d'après MailCheap et
-  Resend), l'app prend toute la largeur, la barre latérale collée au bord gauche, et l'en-tête comme le contenu de chaque
-  onglet tiennent dans une colonne centrée (`adm-colonne`, largeur `--adm-colonne` selon `data-onglet` : 1120 px, 680 pour
-  Réglages et Intégrations, 1300 pour Ma page) ; les premiers pas dans 1200 px (`adm-premiers`). Réglages tient sur une seule page de lignes
+  résilier l'abonnement), la modération et la suppression, chaque geste après une confirmation. Sur un grand écran, trois zones (24 octobre 2026, demandé par Lilian
+  d'après Linktree, Later, Biosites, Buffer et Kit sur Mobbin ; le 22 octobre, d'après MailCheap et Resend, tout tenait dans
+  une colonne centrée sur du blanc) : la barre latérale bleue collée au bord gauche ; le travail sur le papier teinté
+  (`--adm-fond`), son en-tête blanc d'un bord à l'autre de la zone (`adm-entete-bureau`), et le contenu dans une colonne
+  centrée (`adm-colonne`, largeur `--adm-colonne` selon `data-onglet` : 1120 px, 680 pour Réglages et Intégrations, de 820
+  à 960 pour l'édition de Ma page) où groupes, encarts et tableaux se posent en blanc ; sur Ma page, l'aperçu dans sa
+  propre zone fixée au bord droit (`adm-apercu-cote`, `--adm-zone-apercu`, de 440 à 560 px), sur le crème, avec l'adresse,
+  Copier et « Voir ma page » en tête (`teteApercu`, passé par `Admin.tsx`) ; les premiers pas dans 1200 px (`adm-premiers`). Réglages tient sur une seule page de lignes
   (`Groupe`, `Ligne`, `LigneLien` dans `ui.tsx`) ; un détail s'y ouvre en sous-page (`SousPage`), avec un fil dans l'en-tête,
   comme `Facturation.tsx`, « Mon abonnement » (l'offre, son échéance, la carte et les factures au portail client de Creem,
   puis « Résilier mon abonnement »). Dans le groupe Abonnement, « Mes factures » ouvre ce portail pour tout compte que Creem
@@ -125,11 +129,11 @@ embarque tout : l'image n'a pas de `node_modules`.
   adresse à coller, puis les blocs en rangées, déplacées par leur poignée avec dnd-kit,
   souris ou clavier, et dépliées en place sur `EditeurBloc` `bureau`, une à la fois ;
   un bloc neuf a sa rangée en haut ou en bas) et Design (`DesignTiroirs`). À droite,
-  `PageLiens` reçoit `liste` et se montre dans un téléphone de 390 px, haut de 760 à 932 px selon l'écran,
-  collé et réduit s'il le faut, dans une carte crème à sa taille (24 octobre 2026) : elle suit chaque frappe, un bloc
+  dans la zone de l'aperçu, `PageLiens` reçoit `liste` et se montre dans un téléphone de 390 px, haut de 760 à 932 px
+  selon l'écran, réduit s'il le faut (24 octobre 2026) : elle suit chaque frappe, un bloc
   neuf y prend déjà sa place, un clic sur un bloc ouvre sa rangée. La bascule Téléphone / Ordinateur (une icône et son mot)
-  est en haut de la carte ; « Ordinateur » ouvre la page par-dessus l'espace de travail, sous l'en-tête et à droite de la
-  barre latérale (`adm-ordi-calque`), à sa vraie taille dès que l'écran la tient, réduite en dessous ; Échap ou
+  est en haut de la carte ; « Ordinateur » ouvre la page par-dessus l'édition et l'aperçu, à droite de la barre latérale
+  (`adm-ordi-calque`), à sa vraie taille dès que l'écran la tient, réduite en dessous ; Échap ou
   « Téléphone » y revient (24 octobre 2026, critique série 2 : à côté de l'édition, elle était illisible sur un portable et
   la colonne sautait). Au téléphone, `MaPage` édite la page elle-même :
   `PageLiens` reçoit `edition` (nom et bio tapés en place, photo, réseaux et blocs

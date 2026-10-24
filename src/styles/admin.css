@@ -6,6 +6,11 @@
 /* Une feuille qui fige le défilement ne fait pas sauter la page : la place de la barre reste réservée. Dans l'app seulement :
    les écrans d'entrée (bleus, sans défilement) n'ont pas de bande blanche au bord droit (24 octobre 2026). */
 html:has(.adm-shell:not(.adm-entree)) { scrollbar-gutter: stable; }
+/* La place de la barre de défilement prend la couleur de la zone qu'elle borde : le papier teinté, ou le crème de l'aperçu sur Ma page. */
+@media (min-width: 1024px) {
+  html:has(.adm-shell:not(.adm-entree)) { background: #f6f5ef; }
+  html:has(.adm-shell[data-onglet='page']) { background: #f3eee5; }
+}
 
 /*
  * L'encre et le papier (19 octobre 2026). Les classes écrites pour l'ancien
@@ -175,8 +180,10 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
  * bleu, comme une carte de l'accueil posée sur le bleu ; le survol, un voile
  * blanc. Les autres mots sont d'un blanc teinté de bleu (5,4:1). Sur le bleu,
  * l'anneau de focus passe au citron (6,5:1).
+ * Trois zones (24 octobre 2026, Lilian, d'après Linktree, Later, Biosites, Buffer et Kit) : la barre, le travail
+ * sur le papier teinté (`--adm-fond`) où les groupes se posent en blanc, et, sur Ma page, l'aperçu sur le crème,
+ * chacune d'un bord à l'autre de l'écran et séparée de la suivante par un trait.
  */
-@media (min-width: 1024px) { .adm-shell { background: #fff; } }
 .adm-sidebar { padding: 0 10px 10px; background: var(--adm-bleu); color: #fff; }
 .adm-sidebar :is(.adm-nav-item, .adm-compte, .adm-appel):focus-visible { outline-color: var(--adm-citron); }
 /*
@@ -191,17 +198,23 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
   .adm-shell {
     --adm-bord: clamp(20px, 2.5vw, 40px);
     --adm-colonne: 1120px;
+    /* La zone de l'aperçu, à droite de Ma page : le téléphone à sa vraie taille dès 1470 px d'écran. */
+    --adm-zone-apercu: clamp(440px, 30vw, 560px);
     --adm-largeur: min(100% - 216px - 2 * var(--adm-bord), var(--adm-colonne));
   }
   .adm-shell:is([data-onglet='reglages'], [data-onglet='integrations']) { --adm-colonne: 680px; }
-  .adm-shell[data-onglet='page'] { --adm-colonne: 1300px; }
+  .adm-shell[data-onglet='page'] { --adm-colonne: clamp(820px, 38vw, 960px); --adm-largeur: min(100% - 216px - var(--adm-zone-apercu) - 2 * var(--adm-bord), var(--adm-colonne)); }
   /* La fiche d'un compte se lit en lignes, comme Réglages : la même colonne. */
   .adm-shell[data-onglet='comptes'][data-sous] { --adm-colonne: 680px; }
   .adm-travail { padding-left: 216px; }
+  .adm-shell[data-onglet='page'] .adm-travail { padding-right: var(--adm-zone-apercu); }
+  /* L'en-tête d'une zone va d'un bord à l'autre : le titre au bord gauche du travail, les gestes au bord droit. */
+  .adm-entete-bureau { padding-inline: 28px; }
   .adm-colonne { width: min(100% - 2 * var(--adm-bord), var(--adm-colonne)); margin-inline: auto; }
   /* Le message se pose en bas à droite, hors des rangées qu'on édite (24 octobre 2026 : centré, il en couvrait une). */
   /* Au bord droit de la colonne de l'onglet, pas au bord de l'écran : sur un écran de 3440 px, il reste près du travail. */
   .adm-shell .adm-toast { left: auto; right: max(24px, (100% - 216px - var(--adm-largeur)) / 2); width: min(24rem, 100% - 216px - 48px); margin: 0; }
+  .adm-shell[data-onglet='page'] .adm-toast { right: calc(var(--adm-zone-apercu) + max(24px, (100% - 216px - var(--adm-zone-apercu) - var(--adm-largeur)) / 2)); }
 }
 /* Une fenêtre centrée (les offres, une confirmation) se centre sur l'espace de travail, à droite de la barre latérale. */
 @media (min-width: 1024px) {
@@ -333,20 +346,20 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
 }
 /*
  * Ma page au bureau (direction A, 21 octobre 2026, choisie par Lilian) :
- * l'édition à gauche, la page à droite. À gauche, une colonne de 760 px au
+ * l'édition à gauche, la page à droite. À gauche, une colonne de 820 px au
  * plus : « Bien démarrer », les onglets Contenu et Design collés sous
  * l'en-tête, le profil, le champ où coller une adresse, puis la liste des
  * blocs, une rangée chacun, dépliée sur ses réglages. À droite, sur le papier
- * crème de l'accueil, la page dans un téléphone à sa vraie largeur, collée sous
- * l'en-tête et réduite si l'écran est court ou étroit. Les deux tiennent
- * ensemble dans la colonne centrée de l'onglet (1300 px au plus).
+ * crème de l'accueil, la page dans un téléphone à sa vraie largeur, réduite si
+ * l'écran est court ou étroit. Depuis le 24 octobre 2026 (trois zones), la page
+ * a sa propre zone, fixée au bord droit de l'écran, et l'édition se centre dans
+ * la sienne.
  */
 @media (min-width: 1024px) {
-  .adm { --adm-apercu: clamp(340px, 34vw, 500px); --adm-entre: clamp(24px, 2.5vw, 40px); }
   /* L'en-tête (57 px) et les onglets collés (44 px) couvrent le haut : ce qu'on amène en vue s'arrête dessous. */
   html:has(.adm-studio-bureau) { scroll-padding-top: 113px; }
   .adm-editor-tools { display: none; }
-  .adm-studio-bureau { display: grid; grid-template-columns: minmax(0, 1fr) var(--adm-apercu); gap: var(--adm-entre); min-height: calc(100dvh - 57px); }
+  .adm-studio-bureau { min-height: calc(100dvh - 57px); }
   /* Sur un ordinateur, l'édition garde 760 px et la page prend le reste. */
   .adm-edition { min-width: 0; padding-bottom: 96px; }
   .adm-edition-col { container: edition / inline-size; padding-top: 16px; }
@@ -354,7 +367,7 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
   .adm-demarrage:empty { display: none; }
 
   /* Contenu, Design : les onglets de Comptes, collés sous l'en-tête. */
-  .adm-onglets-edition { position: sticky; top: 57px; z-index: 20; display: flex; height: 44px; align-items: center; gap: 8px; border-bottom: 1px solid #ececea; background: #fff; }
+  .adm-onglets-edition { position: sticky; top: 57px; z-index: 20; display: flex; height: 44px; align-items: center; gap: 8px; border-bottom: 1px solid var(--adm-trait); background: var(--adm-fond); }
   .adm-onglets { display: flex; align-self: stretch; gap: 22px; }
   .adm-onglets > button { display: flex; align-items: center; color: #55554f; font-size: 13.5px; font-weight: 500; transition: color 150ms, box-shadow 200ms var(--adm-sortie); }
   .adm-onglets > button:hover { color: #0a0a0a; }
@@ -474,11 +487,13 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
   .adm-plus-contenu { display: flex; flex-direction: column; padding: 4px 0 12px 24px; }
   .adm-editeur-pied { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; }
 
-  /* La page, à droite : collée sous l'en-tête, avec le choix de la largeur au-dessus. */
-  /* Sur le papier crème de l'accueil, une scène arrondie à côté de l'édition (comme aux premiers pas), et non plus une bande collée au bord de l'écran. */
-  .adm-apercu-cote { min-width: 0; }
-  /* La carte prend la taille de ce qu'elle montre : le téléphone grandit avec l'écran, la carte avec lui, sans crème vide dessous. */
-  .adm-apercu-colle { position: sticky; top: 73px; display: flex; max-height: calc(100dvh - 57px - 32px); flex-direction: column; align-items: center; gap: 14px; margin: 16px 0; padding: 16px 24px 20px; border-radius: 20px; background: var(--adm-creme); }
+  /* La troisième zone : fixée à droite, du haut au bas de l'écran, sur le crème de l'accueil, un trait la sépare de l'édition.
+     En tête, à la hauteur de celle du travail, l'adresse et « Voir ma page » ; dessous, la vue et le téléphone, centrés. */
+  .adm-apercu-cote { position: fixed; top: 0; right: 0; bottom: 0; z-index: 30; display: flex; width: var(--adm-zone-apercu); flex-direction: column; border-left: 1px solid #e3dccf; background: var(--adm-creme); }
+  .adm-apercu-tete { display: flex; height: 57px; flex: none; align-items: center; justify-content: space-between; gap: 8px; padding: 0 20px; border-bottom: 1px solid #e3dccf; }
+  .adm-apercu-tete .adm-adresse-entete { background: #fff; }
+  /* La carte prend la place qui reste : le téléphone grandit avec l'écran, réduit seulement quand la place manque. */
+  .adm-apercu-colle { display: flex; min-height: 0; flex: 1; flex-direction: column; align-items: center; gap: 14px; padding: 16px 24px 24px; }
   /* Téléphone ou ordinateur : une icône et son mot, sans cadre autour ni fond derrière ; la vue prise en bleu, soulignée comme un onglet. */
   .adm-vues { display: flex; flex: none; gap: 4px; }
   .adm-outil { display: inline-flex; height: 30px; align-items: center; gap: 6px; padding: 0 10px; color: #0a0a0a; font-size: 13.5px; font-weight: 500; transition: color 150ms, box-shadow 200ms var(--adm-sortie); }
@@ -493,7 +508,7 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
   .adm-tel-ecran::-webkit-scrollbar { display: none; }
   /* Sur un ordinateur, la page couvre l'espace de travail, sous l'en-tête et à droite de la barre latérale, sur le crème de l'aperçu ;
      elle défile seule, et se réduit seulement quand l'écran est plus étroit qu'elle. */
-  .adm-ordi-calque { position: fixed; top: 57px; right: 0; bottom: 0; left: 216px; z-index: 25; display: flex; flex-direction: column; align-items: center; gap: 16px; overflow-y: auto; overscroll-behavior: contain; padding: 16px var(--adm-bord) 40px; background: var(--adm-creme); }
+  .adm-ordi-calque { position: fixed; top: 0; right: 0; bottom: 0; left: 216px; z-index: 35; display: flex; flex-direction: column; align-items: center; gap: 16px; overflow-y: auto; overscroll-behavior: contain; padding: 16px var(--adm-bord) 40px; background: var(--adm-creme); }
   .adm-ordi-calque .adm-ordi-lieu { width: 100%; }
 }
 /* Une tablette en paysage a la mise en page du bureau, avec des cibles pour le doigt. */
@@ -1037,3 +1052,14 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
   .adm-bandeau { font-size: 13.5px; }
 }
 @media (prefers-reduced-motion: reduce) { .adm-comptes-onglets > button, .adm-tableau tbody tr, .adm-points { transition: none; } }
+/*
+ * Au bureau, sur le papier teinté de la zone de travail, un tableau est une surface blanche, comme les groupes de
+ * Réglages et les encarts de Stats (24 octobre 2026, trois zones) : ses lignes ne flottent plus sur le fond.
+ */
+@media (min-width: 1024px) {
+  .adm-tableau { border-collapse: separate; border-spacing: 0; overflow: hidden; border: 1px solid #e6e6e2; border-radius: 12px; background: #fff; }
+  .adm-tableau :is(th, td):first-child { padding-left: 16px; }
+  .adm-tableau td:last-child { padding-right: 8px; }
+  .adm-tableau td:last-child .adm-points { margin-right: 0; }
+  .adm-tableau tbody tr:last-child td { border-bottom: 0; }
+}
