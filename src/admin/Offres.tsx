@@ -80,7 +80,9 @@ export function FenetreOffres({ onFermer, abonnement, enVente, pour, vers, apres
   const cible: Plan | null = pour ? FONCTIONS[pour] : vers ?? null;
   // Sans fonction demandée, l'offre juste au-dessus de la sienne passe devant.
   const miseEnAvant: Plan | null = cible ?? (resilie ? null : PLANS.find(p => rang(p) > rang(actuelle) && vendable(p)) ?? null);
-  const mois = Math.min(...PLANS.filter(vendable).map(p => moisOfferts(p)), 12);
+  // Les mois offerts de l'annuel, les moins généreux des offres en vente ; aucune en vente, la bascule n'en promet pas.
+  const enVenteIci = PLANS.filter(vendable);
+  const mois = enVenteIci.length ? Math.min(...enVenteIci.map(p => moisOfferts(p))) : 0;
 
   function geste(p: Plan): Geste {
     if (p === 'gratuit') {

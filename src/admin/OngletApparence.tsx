@@ -217,9 +217,9 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
         )}
       </Carte>}
 
-      {voir('photo') && <Carte nu={nu} titre={titre('Photo de profil')}>
+      {voir('photo') && <Carte nu={nu} titre={titre('Forme de la photo')}>
         {grandePhoto ? (
-          <div className="grid grid-cols-2 gap-2" role="radiogroup" onKeyDown={e => flechesRadio(e)} aria-label="Photo de profil">
+          <div className="grid grid-cols-2 gap-2" role="radiogroup" onKeyDown={e => flechesRadio(e)} aria-label="Forme de la photo">
             {(['ronde', 'grande'] as const).map(f => {
               const actif = (reglages.profil.photo ?? 'ronde') === f;
               return (
@@ -459,7 +459,7 @@ export function DesignTiroirs({ reglages, onChange, envoyerImage, principal, pie
     { id: 'couleurs', nom: 'Couleurs', icone: 'pinceau', valeur: !couleurs ? <Etiquette fonction="couleurs" /> : Object.values(reglages.couleurs).some(Boolean) ? 'Personnalisées' : 'Celles du thème' },
     { id: 'police', nom: 'Police', icone: 'plume', valeur: !couleurs ? <Etiquette fonction="couleurs" /> : reglages.police ? NOMS_POLICES[reglages.police as keyof typeof NOMS_POLICES] : 'Celle du thème' },
     { id: 'fond', nom: 'Image de fond', icone: 'photo', valeur: !fond ? <Etiquette fonction="fond" /> : reglages.imageFond ? 'Ta photo' : 'Aucune' },
-    { id: 'photo', nom: 'Photo de profil', icone: 'utilisateur', valeur: !grandePhoto ? <Etiquette fonction="grandePhoto" /> : reglages.profil.photo === 'grande' ? 'En grand' : 'En rond' },
+    { id: 'photo', nom: 'Forme de la photo', icone: 'utilisateur', valeur: !grandePhoto ? <Etiquette fonction="grandePhoto" /> : reglages.profil.photo === 'grande' ? 'En grand' : 'En rond' },
     { id: 'boutons', nom: 'Boutons', icone: 'etiquette', valeur: STYLES.find(x => x.id === reglages.bouton.style)?.nom ?? '' },
     { id: 'animation', nom: 'Animation', icone: 'eclair', valeur: NOMS_ANIMATIONS[reglages.animation].nom },
     { id: 'bureau', nom: 'Sur ordinateur', icone: 'ordinateur', valeur: BUREAUX.find(x => x.id === reglages.bureau)?.nom ?? '' },

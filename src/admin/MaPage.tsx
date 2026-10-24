@@ -28,7 +28,7 @@ import { typeDe } from '../lib/catalogue.ts';
 import { DesignTiroirs, OngletApparence } from './OngletApparence.tsx';
 import type { Tiroir } from './OngletApparence.tsx';
 import { ActionEntete, BoutonPrincipal, BoutonSecondaire, Feuille, Interrupteur, Menu, choisirFichier, classeBouton, couleurReseau, flechesRadio, preparerImage, vibrer } from './ui.tsx';
-import { offreDe, useDroits } from './offre.tsx';
+import { Etiquette, offreDe, useDroits } from './offre.tsx';
 import type { Fonction } from '../lib/abonnement.ts';
 import { focusSaisie } from '../lib/clavier';
 
@@ -799,7 +799,8 @@ function Rangee({ bloc, droits, clics, neuf, ouvert, editeur, ouvrir, fermer, ge
             {/* Un picto par état, sans étiquette : le nom complet se lit au survol, et un lecteur d'écran l'entend. */}
             {(etat.attend || etat.programme || etat.puces.length > 0) && (
               <span className="adm-rangee-etats" aria-hidden="true">
-                {etat.attend && <span title={`Pas montré sans Hopla ${offreDe(etat.attend)}`}><Icone nom="masque" taille={13} /></span>}
+                {/* Réservé, le bloc porte le nom de son offre, pas l'œil d'un bloc masqué : on sait pourquoi il est grisé. */}
+                {etat.attend && <span title={`Pas montré sans Hopla ${offreDe(etat.attend)}`}><Etiquette fonction={etat.attend} /></span>}
                 {etat.programme && <span title="Programmé"><Icone nom="horloge" taille={13} /></span>}
                 {etat.puces.map(p => <span key={p.icone} title={p.nom}><Icone nom={p.icone} taille={13} /></span>)}
               </span>
@@ -1059,7 +1060,8 @@ function BlocEditable({ bloc, i, choisi, neuf = false, tuile, ouvrir, children }
       {(prive || programme || puces.length > 0) && (
         <span className="lp-ed-puces" aria-hidden="true">
           {/* Un picto par état, sans étiquette : le nom complet est dans l'aria-label du bloc. */}
-          {prive && <span className="lp-ed-puce" title={attend ? `Pas montré sans Hopla ${offreDe(attend)}` : 'Masqué'}><Icone nom="masque" taille={13} /></span>}
+          {/* Réservé, le bloc porte le nom de son offre, pas l'œil d'un bloc masqué : on sait pourquoi il est grisé. */}
+          {prive && <span className="lp-ed-puce" title={attend ? `Pas montré sans Hopla ${offreDe(attend)}` : 'Masqué'}>{attend ? <Etiquette fonction={attend} /> : <Icone nom="masque" taille={13} />}</span>}
           {programme && <span className="lp-ed-puce" title="Programmé"><Icone nom="horloge" taille={13} /></span>}
           {/* Chaque règle porte le picto de sa ligne dans l'éditeur : on la reconnaît sans l'ouvrir. */}
           {puces.map(p => <span key={p.icone} className="lp-ed-puce" title={p.nom}><Icone nom={p.icone} taille={13} /></span>)}
