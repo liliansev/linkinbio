@@ -27,7 +27,7 @@ export const MOTS: Record<Inscription, { note: string; adresse: string; rassure:
     adresse: 'À quelle adresse e‑mail t’envoyer le lien de ta page ?',
     rassure: 'Ni mot de passe ni carte bancaire : un lien arrive par e‑mail, et on ne t’écrit que pour ta page.',
     envoyer: 'Recevoir mon lien',
-    duree: 'Le lien marche 7 jours ; entre dans ta page dans le mois pour garder ton nom.',
+    duree: 'Le lien marche 7 jours.',
     renvoi: 'C’est renvoyé.',
     fin: 'Ton lien t’attend dans ta boîte.',
   },

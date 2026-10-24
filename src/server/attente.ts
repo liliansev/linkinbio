@@ -115,7 +115,7 @@ export async function creerHopla(origines: Origines, env: Env, saisie: { nom: st
   if (db.comptesDepuis(maintenant - 86_400_000) >= PLAFOND_JOUR) return { ok: false, message: 'Beaucoup de monde aujourd’hui. Réessaie demain, ton nom t’attendra peut-être.' };
   // Avant de savoir quel e-mail partira : la réponse reste la même, que l'adresse ait une page ou non.
   if (destinataireSature(adresse, maintenant)) return TROP_DE_COURRIELS;
-  const note = { ok: true as const, message: `C’est parti. Ouvre l’e-mail envoyé à ${adresse} : un clic, et tu entres dans ta page.` };
+  const note = { ok: true as const, message: `Va dans tes e-mails : ton lien est parti à ${adresse}.` };
   const reservation = db.reservationParEmail(adresse);
   if (reservation) return (await inviterReservation(origines, env, reservation.id, fetchImpl)).ok ? note : { ok: false, message: 'L’e-mail n’est pas parti. Réessaie dans un instant.' };
   const deja = db.dejaInscrit(adresse);
@@ -187,7 +187,7 @@ export async function corrigerAdresse(origines: Origines, env: Env, saisie: { no
   const compte = db.compteParPseudo(nom);
   if (!compte || compte.email !== ancienne || compte.connexion || maintenant - compte.cree > DELAI_CORRECTION) return refus;
   if (destinataireSature(nouvelle, maintenant)) return TROP_DE_COURRIELS;
-  const note = { ok: true as const, message: `C’est corrigé. Ouvre l’e-mail envoyé à ${nouvelle} : un clic, et tu entres dans ta page.` };
+  const note = { ok: true as const, message: `C’est corrigé. Va dans tes e-mails : ton lien est parti à ${nouvelle}.` };
   const deja = nouvelle === ancienne ? null : db.dejaInscrit(nouvelle);
   if (deja) { await rappeler(origines, env, nouvelle, deja, fetchImpl); return note; }
   db.changerEmail(compte.id, nouvelle);
@@ -231,5 +231,5 @@ export async function renommerPage(origines: Origines, env: Env, saisie: { ancie
   const envoi = await inviter(origines, env, { ...compte, pseudo: nom }, fetchImpl, 'inscription');
   // L'e-mail n'est pas parti : l'ancien nom revient, et l'on peut réessayer.
   if (!envoi.ok) { db.changerPseudo(compte.id, ancien); return { ok: false, message: 'L’e-mail n’est pas parti. Réessaie dans un instant.' }; }
-  return { ok: true, message: `C’est changé. Ouvre le nouvel e-mail envoyé à ${adresse} : un clic, et tu entres dans ta page.`, nom };
+  return { ok: true, message: `C’est changé. Va dans tes e-mails : un nouveau lien est parti à ${adresse}.`, nom };
 }
