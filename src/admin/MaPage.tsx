@@ -597,10 +597,12 @@ function etatBloc(bloc: Bloc, droits: Droits) {
   const regles = etiquettes(bloc, droits);
   // Un créneau « affiché seulement » qui le retire en ce moment le grise aussi : la page éditée montre ce que voient les visiteurs.
   const programme = horsCreneauOuDates(bloc, !!droits.heure) && !regles.includes('Compte à rebours');
-  // Chaque règle porte le picto de sa ligne dans l'éditeur : on la reconnaît sans l'ouvrir.
+  // Chaque règle porte un picto, et en bulle le nom qu'elle a dans l'éditeur (une partie de Visibilité, une ligne de « Plus de
+  // réglages ») : on la reconnaît sans l'ouvrir.
+  const selonHeure = !!(bloc.creneau && droits.heure);
   const puces = [
-    { oui: !programme && !!((bloc.creneau && droits.heure) || (bloc.compteARebours && bloc.debut && droits.programmation)), icone: 'horloge', nom: 'Quand' },
-    { oui: !!(bloc.cache?.length || bloc.audience?.sources.length), icone: 'cible', nom: 'Pour qui' },
+    { oui: !programme && (selonHeure || !!(bloc.compteARebours && bloc.debut && droits.programmation)), icone: 'horloge', nom: selonHeure ? 'Selon l’heure' : 'Compte à rebours' },
+    { oui: !!(bloc.cache?.length || bloc.audience?.sources.length), icone: 'cible', nom: 'Selon le réseau' },
     { oui: !!bloc.acces, icone: 'cadenas', nom: 'Accès réservé' },
     { oui: !!bloc.partenariat, icone: 'bloc-partenaire', nom: 'Lien partenaire' },
   ].filter(p => p.oui);
