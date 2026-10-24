@@ -259,6 +259,19 @@ export const POLICES: Record<Police, { corps: string; titre: string }> = {
   editoriale: { corps: GEIST, titre: "'Instrument Serif', " + GARAMOND },
 };
 
+/**
+ * Les polices qu'on choisit par-dessus son thème (Starter, 24 octobre 2026, d'après Linktree), dans l'ordre du choix : celles
+ * que porte au moins un thème, chacune avec son nom. Choisie, une police vient avec la typographie réglée du premier thème
+ * qui la porte (tailles, graisses, approches) : l'accord vérifié par Impeccable voyage avec elle.
+ */
+export const POLICES_CHOIX = ['geist', 'geometrique', 'technique', 'grotesque', 'condensee', 'expressive', 'display', 'serif', 'elegante', 'editoriale'] as const satisfies readonly Police[];
+export const NOMS_POLICES: Record<(typeof POLICES_CHOIX)[number], string> = {
+  geist: 'Geist', geometrique: 'Outfit', technique: 'Space Grotesk', grotesque: 'Bricolage', condensee: 'Bricolage étroite',
+  expressive: 'Syne', display: 'Unbounded', serif: 'Garamond', elegante: 'Fraunces', editoriale: 'Instrument Serif',
+};
+/** Le thème d'où vient chaque police, et donc sa typographie. */
+export const themeDeLaPolice = (police: Police) => THEMES.find(t => t.police === police) ?? THEMES[0];
+
 const luminance = (hex: string) => {
   const [r, g, b] = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255).map(c => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
@@ -348,8 +361,11 @@ export function personnaliser(theme: Theme, couleurs?: Partial<Couleurs>): Theme
   }
   return t;
 }
-/** Le thème d'une page, avec ses couleurs à elle. */
-export const themeDe = (r: { theme: string; couleurs?: Partial<Couleurs> }) => personnaliser(themeParId(r.theme), r.couleurs);
+/** Le thème d'une page, avec ses couleurs à elle, et sa police si elle en a choisi une (avec la typographie qui va avec). */
+export function themeDe(r: { theme: string; couleurs?: Partial<Couleurs>; police?: Police | '' }): Theme {
+  const t = personnaliser(themeParId(r.theme), r.couleurs);
+  return r.police && r.police !== t.police ? { ...t, police: r.police, typo: themeDeLaPolice(r.police).typo } : t;
+}
 
 const role = (nom: string, r: Role): Record<string, string> => ({
   ...(r.taille ? { [`--${nom}-taille`]: `${r.taille}rem` } : {}),
