@@ -390,6 +390,8 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
   .adm-edition-col { container: edition / inline-size; padding-top: 16px; }
   .adm-demarrage { margin-bottom: 12px; }
   .adm-demarrage:empty { display: none; }
+  /* La redirection en cours, le design à l'essai : dans la colonne, au-dessus des onglets, alignés sur eux. */
+  .adm-bandeaux { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
 
   /* Contenu, Design : les onglets de Comptes, collés sous l'en-tête. */
   .adm-onglets-edition { position: sticky; top: 57px; z-index: 20; display: flex; height: 44px; align-items: center; gap: 8px; border-bottom: 1px solid var(--adm-trait); background: var(--adm-fond); }
@@ -400,7 +402,7 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
   .adm .adm-onglets > button:focus-visible { outline-offset: -2px; }
   .adm-edition-corps { display: flex; flex-direction: column; gap: 16px; padding-top: 20px; }
   /* Le retour d'un tiroir du design se colle sous les onglets, pas sous l'en-tête. */
-  .adm-studio-bureau .adm-tiroir-retour { top: 101px; margin-inline: 0; padding-inline: 0; }
+  .adm-studio-bureau .adm-tiroir-retour { top: 101px; margin-inline: 0; padding-inline: 0; background: var(--adm-fond); }
 
   /* Le profil : la photo, puis le nom et la bio tapés en place, qui ressemblent à du texte jusqu'au survol. */
   .adm-profil { display: flex; flex-direction: column; gap: 12px; }
@@ -441,6 +443,16 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
   .adm-coller-champ > input[aria-invalid='true'] { border-color: #c62828; }
   /* La liste de départ au focus, puis ce que l'adresse tapée ou les mots appellent : déroulée sous le champ, par-dessus les blocs. */
   .adm-coller-liste { position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 40; display: flex; max-height: 320px; flex-direction: column; overflow-y: auto; }
+  /* Le départ, champ vide : quatre tuiles de couleur sur une rangée, puis les autres blocs par famille sur deux colonnes, tout en vue. */
+  .adm-coller-liste:has(> .adm-depart) { max-height: min(440px, calc(100dvh - 140px)); }
+  .adm-depart { padding: 4px; }
+  .adm-depart-tuiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+  .adm-depart-tuile { position: relative; display: flex; min-height: 104px; flex-direction: column; gap: 2px; padding: 12px; border-radius: 12px; color: #0a0a0a; cursor: pointer; outline: 2px solid transparent; outline-offset: -2px; transition: outline-color 120ms; }
+  .adm-depart-tuile[aria-selected='true'] { outline-color: var(--adm-bleu); }
+  .adm-depart-tuile[aria-disabled='true'] { cursor: default; opacity: 0.45; }
+  .adm-depart-aide { padding: 12px 10px 4px; color: #5f5f5a; font-size: 12px; line-height: 1.4; }
+  .adm-depart-familles { columns: 2; column-gap: 12px; }
+  .adm-depart-famille { padding: 8px 10px 2px; color: #737373; font-size: 12px; font-weight: 600; }
 
   /*
    * La liste des blocs : un trait fin autour, une rangée de 44 px par bloc. La
@@ -517,6 +529,8 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
   .adm-apercu-cote { position: fixed; top: 0; right: 0; bottom: 0; z-index: 30; display: flex; width: var(--adm-zone-apercu); flex-direction: column; border-left: 1px solid #e3dccf; background: var(--adm-creme); }
   .adm-apercu-tete { display: flex; height: 57px; flex: none; align-items: center; justify-content: space-between; gap: 8px; padding: 0 20px; border-bottom: 1px solid #e3dccf; }
   .adm-apercu-tete .adm-adresse-entete { background: #fff; }
+  /* Un pseudo long rétrécit l'adresse, jamais « Voir ma page », qui tient sur une ligne. */
+  .adm-apercu-tete > a { flex: none; white-space: nowrap; }
   /* La zone du détail : la même place que l'aperçu, en blanc, sa tête à la hauteur de celle du travail ; son corps défile seul.
      L'élément de la liste dont le détail est ouvert se lit en bleu pâle (`aria-current`, `data-choisi`). */
   .adm-detail-cote { position: fixed; top: 0; right: 0; bottom: 0; z-index: 30; display: flex; width: var(--adm-zone-detail); flex-direction: column; border-left: 1px solid #e3e3df; background: #fff; animation: adm-detail 0.22s var(--adm-sortie); }

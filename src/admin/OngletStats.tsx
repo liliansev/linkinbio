@@ -344,7 +344,7 @@ const duree = (jours: number) => (jours >= 365 ? 'un an' : `${jours} jours`);
 function StatsReservees({ onOffres, liste, semaine }: { onOffres?: Proprietes['onOffres']; liste?: ReactNode; semaine?: Proprietes['semaine'] }) {
   const [vues, setVues] = useState<Semaine | null>(null);
   useEffect(() => { let vivant = true; semaine?.().then(s => { if (vivant) setVues(s); }).catch(() => {}); return () => { vivant = false; }; }, [semaine]);
-  const lignes = ['Tes vues, tes visiteurs et tes clics, jour par jour', 'Tes liens les plus cliqués', 'D’où viennent tes visiteurs, et sur quel appareil', 'Le résumé de ta semaine, chaque lundi par e-mail'];
+  const lignes = ['Tes vues, tes visiteurs et tes clics, jour par jour', 'Tes liens les plus cliqués', 'D’où viennent tes visiteurs, et sur quel appareil', 'Le résumé de ta semaine, chaque lundi par e‑mail'];
   return (
     <div className="flex flex-col gap-5">
       {vues?.dejaVue ? <VuesSemaine semaine={vues} /> : <p className="adm-stats-phrase">Tes visites se comptent déjà, sans cookie. Il ne reste qu’à les lire.</p>}
@@ -355,7 +355,7 @@ function StatsReservees({ onOffres, liste, semaine }: { onOffres?: Proprietes['o
         <p className="text-[13.5px] leading-snug text-white/70">Avec Hopla {OFFRES.starter.nom}, tu les lis sur {duree(OFFRES.starter.jours)}, et sur {duree(OFFRES.pro.jours)} avec {OFFRES.pro.nom} :</p>
         <ul className="mt-4 flex flex-col gap-2">
           {lignes.map(l => (
-            <li key={l} className="flex gap-2.5 text-[14px] leading-snug">
+            <li key={l} className="flex gap-2.5 text-pretty text-[14px] leading-snug">
               <span className="mt-0.5 shrink-0" aria-hidden="true"><Icone nom="ui-ok" taille={16} /></span>{l}
             </li>
           ))}

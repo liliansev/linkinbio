@@ -350,7 +350,7 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
                   <span className={`relative block w-full rounded-xl outline-offset-2 transition-[outline-color] ${choisi ? 'outline-2 outline-bleu outline' : 'outline-2 outline-transparent outline group-hover:outline-white/20'}`}>
                     <Pastille theme={t} />
                   </span>
-                  <span className={`line-clamp-2 w-full text-center text-[11.5px] leading-tight ${choisi ? 'font-semibold text-white' : 'text-white/70'}`}>{t.nom}</span>
+                  <span className={`line-clamp-2 w-full text-center lg:whitespace-nowrap text-[11.5px] leading-tight ${choisi ? 'font-semibold text-white' : 'text-white/70'}`}>{t.nom}</span>
                 </button>
               </li>
             );
@@ -368,9 +368,10 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
   const c = contenu[etape];
 
   return (
-    <div className="adm adm-premiers flex h-dvh flex-col overflow-hidden bg-nuit font-sans text-white antialiased lg:grid lg:grid-cols-[minmax(0,460px)_1fr] lg:grid-rows-[minmax(0,1fr)_auto_minmax(0,auto)_minmax(0,1fr)]">
-      {/* Au bureau, la progression et « Plus tard » se posent au-dessus de la question, dans sa colonne, et le tout se centre
-          en hauteur sur la même médiane que la scène (critique série 2). */}
+    <div className="adm adm-premiers flex h-dvh flex-col overflow-hidden bg-nuit font-sans text-white antialiased lg:grid lg:grid-cols-[minmax(0,480px)_1fr] lg:grid-rows-[max(72px,calc(50dvh_-_381px))_auto_minmax(0,auto)_1fr]">
+      {/* Au bureau, la progression et « Plus tard » se posent au-dessus de la question, dans sa colonne, à la hauteur du haut
+          du téléphone : elles ne bougent plus d'une étape à l'autre, quelle que soit la longueur de la question (24 octobre
+          2026 ; centrées sur la médiane de la scène, elles sautaient de 120 px). */}
       <header className="flex h-14 shrink-0 items-center gap-2 px-3 lg:col-start-1 lg:row-start-2 lg:px-6">
         <button type="button" onClick={() => { setIgnorer(false); setI(n => n - 1); }} aria-label="Étape précédente" disabled={i === 0 || etape === 'fin'}
           className={`${classeBouton.icone} disabled:invisible`}><Icone nom="ui-chevron" taille={20} className="rotate-90" /></button>
