@@ -2,6 +2,7 @@ import type { Bloc, TypeBloc } from './types.ts';
 import { TYPES_BLOC, TYPES_VITRINE, nouveauBloc } from './types.ts';
 import { adresse, adresseSaisie, email, montants, numeroAppel, pourquoiPasAdresse, questions } from './valider.ts';
 import { estMusique, estVideo } from './lecteurs.ts';
+import { adresseFlux, chaineYoutube } from './detection.ts';
 import { nomSite } from './demarrage.ts';
 
 /*
@@ -11,7 +12,7 @@ import { nomSite } from './demarrage.ts';
  */
 
 /** Le champ sur lequel porte une erreur : elle s'affiche dessous. */
-export type ChampErreur = 'url' | 'titre' | 'description' | 'dates' | 'image' | 'note' | 'nombre' | 'source' | 'questions' | 'telephone' | 'email' | 'adresse' | 'images';
+export type ChampErreur = 'url' | 'titre' | 'description' | 'dates' | 'image' | 'note' | 'nombre' | 'source' | 'questions' | 'telephone' | 'email' | 'adresse' | 'images' | 'cadeau';
 export type Erreurs = Partial<Record<ChampErreur, string>>;
 
 /** Les blocs qui ne vont nulle part sans leur adresse, et ce qu'on dit quand elle manque. */
@@ -22,6 +23,8 @@ const ADRESSE_MANQUANTE: Partial<Record<TypeBloc, string>> = {
   reservation: 'Indique l’adresse de ton agenda.',
   video: 'Colle l’adresse d’une vidéo YouTube, Vimeo ou TikTok.',
   musique: 'Colle l’adresse d’un titre, d’un album ou d’un podcast.',
+  'derniere-video': 'Colle l’adresse de ta chaîne YouTube, comme youtube.com/@tonnom.',
+  flux: 'Colle l’adresse de ton blog, ou celle de son flux RSS.',
 };
 
 /**
@@ -40,6 +43,11 @@ export function verifierBloc(b: Bloc): { bloc: Bloc; erreurs?: undefined } | { b
   if (b.type === 'produit' && !b.titre.trim()) return { erreurs: { titre: 'Écris le nom du produit.' } };
   if (b.type === 'video' && !estVideo(url)) return { erreurs: { url: 'Colle l’adresse d’une vidéo YouTube, Vimeo ou TikTok.' } };
   if (b.type === 'musique' && !estMusique(url)) return { erreurs: { url: 'Colle l’adresse d’un titre, d’un album, d’une playlist ou d’un podcast sur Spotify, Apple Music, Deezer ou SoundCloud.' } };
+  if (b.type === 'derniere-video' && !chaineYoutube(url) && !(adresseFlux(url) && /youtube\.com\/feeds\//.test(url))) return { erreurs: { url: 'Colle l’adresse de ta chaîne YouTube, comme youtube.com/@tonnom, pas celle d’une vidéo.' } };
+  if (b.type === 'flux' && !/^https?:\/\//i.test(url)) return { erreurs: { url: 'Colle l’adresse d’une page web, qui commence par https://.' } };
+  // Un cadeau commencé : son adresse, une page web ; sans rien, il n'y en a pas.
+  const cadeau = b.type === 'inscription' && b.cadeau && (b.cadeau.nom.trim() || b.cadeau.url.trim()) ? { nom: b.cadeau.nom.trim(), url: adresseSaisie(b.cadeau.url) } : null;
+  if (cadeau && !/^https?:/i.test(cadeau.url)) return { erreurs: { cadeau: b.cadeau!.url.trim() ? 'Colle l’adresse d’une page web, qui commence par https://.' : 'Indique l’adresse du cadeau : un PDF, une page, une vidéo.' } };
   if (b.type === 'faq') {
     const q = questions(b.questions);
     if (!q.length) return { erreurs: { questions: 'Écris au moins une question et sa réponse.' } };
@@ -81,6 +89,7 @@ export function verifierBloc(b: Bloc): { bloc: Bloc; erreurs?: undefined } | { b
       ...(b.type === 'soutien' ? { montants: montants(b.montants) } : {}),
       ...(b.partenariat ? { partenariat: { ...b.partenariat, code: b.partenariat.code.trim() } } : {}),
       ...(b.type === 'faq' ? { questions: questions(b.questions) } : {}),
+      ...(b.type === 'inscription' ? { cadeau } : {}),
       ...(b.type === 'coordonnees' && b.coordonnees ? { coordonnees: { ...b.coordonnees, telephone: b.coordonnees.telephone.trim(), email: email(b.coordonnees.email) } } : {}),
     },
   };

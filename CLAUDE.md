@@ -227,6 +227,16 @@ embarque tout : l'image n'a pas de `node_modules`.
   renvoie en 302 depuis le loader de `$pseudo.tsx`, la vue est comptée par le serveur, jamais vers elle-même ; un bandeau ambre
   sur Ma page avec « Arrêter »). `sensible` sur un lien ou un produit (Gratuit) : « 18+ » au-dessus du titre et une feuille
   qui demande confirmation avant d'ouvrir (`FeuilleAdultes`, retenue pour la visite dans `sessionStorage`). Démo : `#adultes=<thème>`.
+- Le lot 4 venu de Linktree (24 octobre 2026) : « Ma dernière vidéo YouTube » est à tous (`derniere-video` avec l'adresse d'une
+  chaîne ; sans adresse, l'ancien bloc de Lilian, réservé au compte principal), « Mes derniers articles » (`flux`, Pro : les trois
+  derniers articles d'un blog ou d'un podcast). Le serveur lit les flux (`server/flux.ts` : `telecharger` de l'aperçu, flux annoncé
+  par la page, vidéos longues d'une chaîne `UULF` puis toutes, gardés 30 minutes, 5 après un échec) et la page les demande à
+  `/api/flux?page&bloc` ; le back office passe par `lireFlux` (`SourceFlux` dans `BlocsPlus.tsx`). `lib/flux.ts` lit RSS, RDF et
+  Atom. Une chaîne ou un flux collé reste un lien et propose d'un geste d'en faire la dernière vidéo ou les derniers articles
+  (`suggestion` dans `lib/detection.ts`). Le cadeau d'une liste e-mail (`cadeau` `{ nom, url }`, Pro) : son adresse ne va jamais
+  dans la page, `/api/inscription` la rend une fois l'e-mail donné. Selon le pays (`pays` `{ codes, effet }`, Pro, `lib/pays.ts`) :
+  « Seulement » ou « Sauf » ces pays, dans Visibilité ; un visiteur au pays inconnu ne voit pas un bloc « Seulement ». Démo :
+  `#flux=<thème>[,attente]`.
 - `components/PageLiens.tsx` : la page publique. Ouverte dans le navigateur intégré d'une app (LinkedIn,
   Instagram…), elle se montre directement : la feuille qui proposait Safari ou Chrome (21 octobre 2026) a été
   retirée le 22 octobre 2026, à la demande de Lilian. La vitrine (22 octobre 2026,
@@ -262,7 +272,7 @@ embarque tout : l'image n'a pas de `node_modules`.
 - `demo/` : aperçu statique avec une API simulée, publié en Artifact ; `#design=<thème>[,<police>[,<mise en page>]]`
   montre le lot 3 (photo de fond, grande photo, une police, une collection en grille) ; `#nouveau` y
   rejoue l'arrivée d'un nouvel inscrit, `#page=<thème>` montre la page dans un thème, `#vitrine=<thème>`
-  la vitrine d'exemple (produits, liens partenaires, réservations, soutiens), `#blocs=<thème>` les blocs venus de Linktree, `#mention=<thème>` une page courte d'un
+  la vitrine d'exemple (produits, liens partenaires, réservations, soutiens), `#blocs=<thème>` les blocs venus de Linktree, `#flux=<thème>` le lot 4, `#mention=<thème>` une page courte d'un
   compte Gratuit, pour la planche du pied.
 
 ## Règles

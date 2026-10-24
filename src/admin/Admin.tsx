@@ -8,6 +8,7 @@ import { adresseSaisie } from '../lib/valider.ts';
 import type { BlocCommence } from '../lib/editionBloc.ts';
 import { cleBlocCommence, relireBlocCommence } from '../lib/editionBloc.ts';
 import { PageLiens } from '../components/PageLiens.tsx';
+import { SourceFlux } from '../components/BlocsPlus.tsx';
 import { MaPage } from './MaPage.tsx';
 import type { Tiroir } from './OngletApparence.tsx';
 import { EditeurBloc } from './EditeurBloc.tsx';
@@ -670,6 +671,8 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
     return { reglages: permis.reglages, blocs: composerMoment(permis.blocs, maintenant), compte, maintenant };
   }, [reglages, blocsAffiches, compte, droits]);
   const chargerStats = useCallback((periode: PeriodeStats) => api.stats(periode).then(s => { if (periode === 30) setClics(Object.fromEntries(s.blocs.map(b => [b.id, b.clics]))); return s; }), [api]);
+  // La page éditée lit les flux par le back office : un bloc pas encore enregistré se lit déjà.
+  const lireFlux = useCallback((b: Bloc) => api.flux(b.url, b.type === 'derniere-video'), [api]);
   const demarrage = useDemarrage(reglages, blocs, { principal: compte.principal, dejaVue: !!initial.dejaVue });
   useEffect(() => { if (!demarrage.actif) setDemarrageOuvert(false); }, [demarrage.actif]);
   // La barre du navigateur au téléphone suit le haut de l'écran : le bleu de l'en-tête et des CGU, le papier crème des premiers pas.
@@ -702,6 +705,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
     // Les premiers pas n'ont aucune fonction réservée : pas de chemin vers les offres.
     return (
       <FournisseurOffre value={{ droits }}>
+      <SourceFlux.Provider value={lireFlux}>
         <PremiersPas compte={compte} reglages={reglages} blocs={blocs} onReglages={changerReglages} onPoserBlocs={poserBlocs}
           envoyerImage={d => api.envoyerImage(d)} apercuSite={(u, i) => api.apercuSite(u, i)} onFin={suite => {
             setPremiersPas(false); setOnglet('page'); scrollTo({ top: 0 });
@@ -709,6 +713,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
             if (suite === 'lien') setEdition({ bloc: nouveauBloc('lien', nouvelId()), nouveau: true });
           }} />
         {bulle}
+      </SourceFlux.Provider>
       </FournisseurOffre>
     );
   }
@@ -740,6 +745,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
 
   return (
     <FournisseurOffre value={offre}>
+    <SourceFlux.Provider value={lireFlux}>
     <div className="adm adm-shell min-h-dvh font-sans text-white antialiased" data-onglet={onglet} data-sous={fil ? '' : undefined}>
       {/* Au clavier, le premier arrêt passe la navigation et l'en-tête : il mène droit au contenu de l'onglet (critique série 2). */}
       <a href="#contenu-admin" className={`${classeBouton.principal} sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-[70]`}>Aller au contenu</a>
@@ -908,6 +914,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
 
       {!offres && !retour && bulle}
     </div>
+    </SourceFlux.Provider>
     </FournisseurOffre>
   );
 }

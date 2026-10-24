@@ -18,7 +18,7 @@ import { peut } from '../lib/abonnement.ts';
 import { adresseIntegree, avecMontants, lienMontant, lienSansMontant, nomAgenda, nomSoutien, seIntegre } from '../lib/vitrine.ts';
 import { focusAuto } from '../lib/clavier';
 import { lecteurDe } from '../lib/lecteurs.ts';
-import { CarteVisite, Contact, Faq, Galerie, Lieu, Musique, VideoIntegree } from './BlocsPlus.tsx';
+import { CarteVisite, Contact, Faq, Flux, Galerie, Lieu, Musique, VideoIntegree, useArticles } from './BlocsPlus.tsx';
 
 /*
  * La page publique, rendue côté serveur pour Google et les aperçus de liens,
@@ -421,7 +421,9 @@ export function BlocPublic({ bloc, reglages, clic, cible, apercu, maintenant, ps
     case 'formulaire':
       return <Contact bloc={bloc} apercu={apercu} pseudo={pseudo ?? ''} t={t} />;
     case 'derniere-video':
-      return <DerniereVideo titre={bloc.titre} clic={clic} />;
+      return bloc.url ? <DerniereVideoChaine bloc={bloc} pseudo={pseudo ?? ''} clic={clic} /> : <DerniereVideo titre={bloc.titre} clic={clic} />;
+    case 'flux':
+      return <Flux bloc={bloc} pseudo={pseudo ?? ''} clic={clic} t={t} />;
     case 'newsletter':
       return <Newsletter bloc={bloc} apercu={apercu} />;
     case 'inscription':
@@ -687,6 +689,21 @@ function DerniereVideo({ titre, clic }: { titre: string; clic: () => void }) {
     legende={<><span className="lp-video-etiquette">{titre}</span>{video.titre}</>} />;
 }
 
+/*
+ * La dernière vidéo d'une chaîne YouTube, pour toute page (24 octobre 2026) : le serveur lit le flux de ses vidéos
+ * longues. Tant qu'il lit, le cadre attend ; s'il n'y arrive pas, un bouton mène à la chaîne.
+ */
+function DerniereVideoChaine({ bloc, pseudo, clic }: { bloc: Bloc; pseudo: string; clic: () => void }) {
+  const articles = useArticles(bloc, pseudo);
+  const video = articles?.find(a => a.video);
+  if (articles === null) return <div className="lp-video lp-video-attente" aria-hidden="true"><div className="lp-video-cadre" /></div>;
+  if (!video) {
+    return <a className="lp-btn" href={bloc.url} rel="noopener" onClick={clic}><span className="lp-picto"><Icone nom="youtube" taille={22} /></span><span className="lp-btn-texte"><span className="lp-btn-titre">{bloc.titre}</span></span></a>;
+  }
+  return <Lecteur id={video.video} titre={video.titre} vignette={video.image || `https://i.ytimg.com/vi/${video.video}/hqdefault.jpg`} clic={clic}
+    legende={<>{bloc.titre && <span className="lp-video-etiquette">{bloc.titre}</span>}{video.titre}</>} />;
+}
+
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function Newsletter({ bloc, apercu }: { bloc: Bloc; apercu: boolean }) {
@@ -726,10 +743,11 @@ function Newsletter({ bloc, apercu }: { bloc: Bloc; apercu: boolean }) {
 
 /** « Rejoins ma liste » : l'inscrit reste chez la personne (et part vers sa newsletter si elle l'a branchée, voir l'onglet Intégrations). */
 function Inscription({ bloc, apercu, pseudo, t }: { bloc: Bloc; apercu: boolean; pseudo: string; t: Textes }) {
-  const [etat, setEtat] = useState<{ type: 'repos' | 'envoi' | 'ok' | 'erreur'; message?: string }>({ type: 'repos' });
+  const [etat, setEtat] = useState<{ type: 'repos' | 'envoi' | 'ok' | 'erreur'; message?: string; cadeau?: string }>({ type: 'repos' });
   async function envoyer(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (apercu) { setEtat({ type: 'ok', message: t.apercu }); return; }
+    // Dans l'aperçu, le cadeau s'ouvre comme pour un visiteur : son adresse est encore dans le bloc.
+    if (apercu) { setEtat({ type: 'ok', message: t.apercu, cadeau: bloc.cadeau?.url || undefined }); return; }
     const f = new FormData(event.currentTarget);
     if (!EMAIL.test(String(f.get('email') ?? '').trim())) { setEtat({ type: 'erreur', message: t.emailInvalide }); return; }
     setEtat({ type: 'envoi' });
@@ -739,7 +757,9 @@ function Inscription({ bloc, apercu, pseudo, t }: { bloc: Bloc; apercu: boolean;
       const r = await fetch('/api/inscription', { method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ page: pseudo, bloc: bloc.id, email: f.get('email'), prenom: f.get('prenom') ?? '', website: f.get('website') ?? '', utm: params.get('utm_source') ?? params.get('s') ?? '', referent: document.referrer, jeton }) });
       // Les messages viennent de la page, dans son ton (tu ou vous) ; le serveur ne donne que le statut.
-      setEtat(r.ok ? { type: 'ok', message: t.merci } : { type: 'erreur', message: r.status === 400 ? t.emailInvalide : r.status === 429 ? t.tropDEssais : r.status === 404 ? t.indisponible : t.echec });
+      const cadeau = r.ok ? await r.json().then(c => (typeof c?.cadeau === 'string' && /^https?:\/\//.test(c.cadeau) ? c.cadeau : ''), () => '') : '';
+      setEtat(r.ok ? { type: 'ok', message: cadeau ? t.cadeauPret : t.merci, cadeau: cadeau || undefined }
+        : { type: 'erreur', message: r.status === 400 ? t.emailInvalide : r.status === 429 ? t.tropDEssais : r.status === 404 ? t.indisponible : t.echec });
     } catch { setEtat({ type: 'erreur', message: t.echec }); }
   }
   return (
@@ -749,9 +769,17 @@ function Inscription({ bloc, apercu, pseudo, t }: { bloc: Bloc; apercu: boolean;
         <span className="lp-newsletter-textes">
           <h2 className="lp-newsletter-titre">{bloc.titre}</h2>
           {bloc.sousTitre && <p className="lp-sous">{bloc.sousTitre}</p>}
+          {bloc.cadeau && <p className="lp-cadeau"><Icone nom="cadeau" taille={16} />{bloc.cadeau.nom ? t.enCadeau(bloc.cadeau.nom) : t.unCadeau}</p>}
         </span>
       </div>
-      {etat.type === 'ok' ? <p className="lp-newsletter-ok" role="status">{etat.message}</p> : (
+      {etat.type === 'ok' ? (
+        <div className="lp-inscription-ok">
+          <p className="lp-newsletter-ok" role="status">{etat.message}</p>
+          {etat.cadeau && (
+            <a className="lp-btn lp-btn-compact lp-accent" href={etat.cadeau} target="_blank" rel="noopener noreferrer"><Icone nom="cadeau" taille={18} />{t.ouvrirCadeau}</a>
+          )}
+        </div>
+      ) : (
         <form onSubmit={envoyer} noValidate data-prenom={bloc.demanderPrenom || undefined} onFocus={apercu ? undefined : () => preparerTurnstile('liste')}>
           {bloc.demanderPrenom && <input name="prenom" autoComplete="given-name" placeholder={t.prenom} aria-label={t.prenomAria} maxLength={60} />}
           <input type="email" name="email" required autoComplete="email" placeholder={t.email} aria-label={t.emailAria} aria-invalid={etat.type === 'erreur' || undefined} aria-describedby={etat.type === 'erreur' ? `${bloc.id}-erreur` : undefined} />

@@ -19,7 +19,7 @@ import avatar from '../public/avatar.webp?inline';
 const CLE = 'liens-demo-v3';
 const SANS_ABONNEMENT: Abonnement = { plan: 'gratuit', payee: 'gratuit', statut: '', finPeriode: null, periode: null, portail: false, offerte: null };
 /** Sans paiement, rien n'est réservé : l'aperçu montre toutes les fonctions (seule la mention reste sans offre). */
-const DROITS_APERCU: Droits = { sansMention: false, vitrine: true, couleurs: true, programmation: true, avis: true, stats: true, heure: true, drops: true, listeEmail: true, formulaire: true, galerie: true, utm: true, redirection: true, fond: true, grandePhoto: true, grille: true };
+const DROITS_APERCU: Droits = { sansMention: false, vitrine: true, couleurs: true, programmation: true, avis: true, stats: true, heure: true, drops: true, listeEmail: true, formulaire: true, galerie: true, utm: true, redirection: true, fond: true, grandePhoto: true, grille: true, pays: true, cadeau: true, flux: true };
 let n = 0;
 const id = () => `d${Date.now().toString(36)}${n++}`;
 
@@ -125,6 +125,17 @@ export const apiDemo: Api = {
     // La vignette d'un bouton : en ligne, l'image de partage si elle est carrée, sinon le logo du site, comme ici.
     if (image === 'logo' || image === 'vignette') return { ...vend, description, image: logoDemo(url), visuel: 'logo' };
     return { ...vend, description, image: image ? vignetteDemo(url) : null, visuel: image ? 'partage' : undefined };
+  },
+  // Les flux aussi : des articles d'exemple, datés de ces derniers jours ; une vidéo garde une vignette dessinée.
+  async flux(url, video) {
+    await pause();
+    const jour = (n: number) => new Date(Date.now() - n * 86_400_000).toISOString();
+    if (video) return [{ titre: 'J’automatise ma prospection avec n8n, de A à Z', url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', date: jour(2), image: vignetteDemo(url), video: 'dQw4w9WgXcQ' }];
+    return [
+      { titre: 'Trois automatisations qui m’ont rendu dix heures par semaine', url: `${url.replace(/\/$/, '')}/dix-heures`, date: jour(1), image: '', video: '' },
+      { titre: 'Make ou n8n : ce que j’ai appris en un an de projets clients', url: `${url.replace(/\/$/, '')}/make-ou-n8n`, date: jour(6), image: '', video: '' },
+      { titre: 'Le tableau de bord que je montre à chaque client', url: `${url.replace(/\/$/, '')}/tableau-de-bord`, date: jour(13), image: '', video: '' },
+    ];
   },
   async stats(periode) { await pause(); return statsFictives(periode); },
   async deconnexion() { localStorage.removeItem(CLE); etat = lire(); },
@@ -365,6 +376,22 @@ export function blocsLinktree(): Bloc[] {
     b('lien', { titre: 'Soirée dégustation à l’atelier', url: 'https://cave-des-lilas.fr/degustation', sousTitre: 'Vins nature et céramiques', sensible: true }),
     b('formulaire', { sousTitre: 'Une question, une commande : je réponds sous 48 heures.' }),
     b('video', { titre: 'Les coulisses d’une cuisson', url: 'https://www.tiktok.com/@camille/video/7234567890123456789' }),
+  ];
+}
+
+/**
+ * Le lot 4 (`#flux=<thème>`, 24 octobre 2026), pour la planche de captures : la dernière vidéo d'une chaîne, les
+ * derniers articles d'un blog, et une liste e-mail qui offre un cadeau.
+ */
+let lot4: Bloc[] | null = null;
+export function blocsFlux(): Bloc[] {
+  if (lot4) return lot4;
+  const b = (type: Bloc['type'], champs: Partial<Bloc>): Bloc => ({ ...nouveauBloc(type, id()), ...champs });
+  return lot4 = [
+    b('derniere-video', { url: 'https://www.youtube.com/@camille' }),
+    b('flux', { titre: 'Le journal de l’atelier', url: 'https://atelier-camille.fr/journal/' }),
+    b('inscription', { titre: 'La lettre du dimanche', sousTitre: 'Une pièce, une histoire, une fois par semaine.', cadeau: { nom: 'Mon guide pour débuter la céramique', url: 'https://atelier-camille.fr/guide.pdf' } }),
+    b('lien', { titre: 'Ma boutique', url: 'https://atelier-camille.fr' }),
   ];
 }
 

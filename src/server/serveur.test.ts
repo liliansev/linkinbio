@@ -1611,3 +1611,32 @@ test('pays : lu chez Cloudflare, deux lettres, rien quand il ne le sait pas', ()
   assert.deepEqual(s.pays, [{ code: 'FR', vues: 2, avant: 1 }, { code: 'BE', vues: 1, avant: 0 }, { code: '', vues: 1, avant: 0 }]);
   assert.ok(db.exporter(P).statistiques.some((e: { pays: string }) => e.pays === 'BE'), 'l’export dit le pays, jamais l’adresse');
 });
+
+test('derniers articles : seul un bloc en ligne et compris dans l’offre se lit, un flux qui ne répond pas donne une liste vide', async () => {
+  const { articlesDuBloc, oublierFlux } = await import('./flux.ts');
+  oublierFlux();
+  const t = Date.now();
+  const env = { CREEM_API_KEY: 'creem_test_x', CREEM_WEBHOOK_SECRET: 'whsec_test' };
+  const sam = db.creerCompte('sam@exemple.fr', 'sam', t);
+  db.enregistrerBloc(sam.id, validerBloc({ type: 'flux', url: 'https://blog.invalid/feed' }, 'flux'));
+  db.enregistrerBloc(sam.id, validerBloc({ type: 'lien', url: 'https://blog.invalid/' }, 'lien'));
+  db.enregistrerBloc(sam.id, validerBloc({ type: 'derniere-video', url: 'https://www.youtube.invalid/@sam', public: false }, 'masquee'));
+  assert.equal(await articlesDuBloc('sam', 'flux', t, env), null, 'sans Pro, le flux ne se lit pas');
+  assert.equal(await articlesDuBloc('sam', 'lien', t, env), null, 'un lien n’a pas de flux');
+  assert.equal(await articlesDuBloc('sam', 'masquee', t, env), null, 'un bloc masqué ne se lit pas');
+  assert.equal(await articlesDuBloc('personne', 'flux', t, env), null);
+  db.offrir(sam.id, 'pro', null, t);
+  assert.deepEqual(await articlesDuBloc('sam', 'flux', t, env), [], 'un flux injoignable : la page montre un simple lien');
+});
+
+test('Rejoins ma liste : le cadeau s’ouvre une fois l’adresse donnée, jamais avant', async () => {
+  const liste = await import('./liste.ts');
+  const { validerBloc: valider } = await import('../lib/valider.ts');
+  db.enregistrerBloc(P, valider({ type: 'inscription', titre: 'Mon guide offert', cadeau: { nom: 'Le guide', url: 'https://drive.example/guide.pdf' } }, 'cadeau'));
+  const fetchFaux = (async () => new Response('{}', { status: 201 })) as typeof fetch;
+  const r = await liste.inscrire({}, fetchFaux, { page: '', bloc: 'cadeau', email: 'lea@exemple.fr' }, { ip: '6.6.6.6', ua: 'Mozilla/5.0', referent: '' });
+  assert.equal(r.status, 200);
+  assert.equal(r.cadeau, 'https://drive.example/guide.pdf');
+  const sans = await liste.inscrire({}, fetchFaux, { page: '', bloc: 'liste-inconnue', email: 'lea@exemple.fr' }, { ip: '6.6.6.7', ua: 'Mozilla/5.0', referent: '' });
+  assert.equal(sans.cadeau, undefined);
+});

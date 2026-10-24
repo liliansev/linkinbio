@@ -667,6 +667,10 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
 .adm-recap-periodes > label[data-choisi] { padding: 13px 14px; border: 2px solid var(--adm-bleu); background: var(--adm-bleu-voile); }
 .adm-recap-periodes > label:has(input:focus-visible) { outline: 2px solid var(--adm-bleu); outline-offset: 2px; }
 .adm .adm-recap-periodes input:focus-visible { outline: none; }
+/* Un champ posé dans une rangée (chercher un pays) : l'anneau entoure la rangée arrondie, pas le champ nu. */
+.adm .adm-champ-ligne { border-radius: 10px; }
+.adm .adm-champ-ligne:has(input:focus-visible) { outline: 2px solid var(--adm-bleu); outline-offset: -2px; }
+.adm .adm-champ-ligne input:focus-visible { outline: none; }
 .adm-recap-periodes input { width: 16px; height: 16px; flex: none; margin: 2px 0 0; accent-color: var(--adm-bleu); }
 .adm-recap-periodes label > span { display: flex; flex-direction: column; gap: 2px; }
 .adm-recap-periode-nom { font-weight: 500; }

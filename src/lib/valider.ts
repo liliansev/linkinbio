@@ -1,9 +1,10 @@
-import { ANIMATIONS, ANIMATIONS_BLOC, DISPOSITIONS, DOMAINES_COURTS, FORMATS_VEDETTE, FORMES_PHOTO, FORMES_BOUTON, GENRES_PREUVE, MAX_IMAGES, MAX_QUESTIONS, MAX_RESEAUX, MENTIONS_PARTENAIRE, OMBRES_BOUTON, MISES_EN_PAGE_BUREAU, RESEAUX, STYLES_BOUTON, TEINTES_VEDETTE, TYPES_BLOC } from './types.ts';
-import type { Acces, Bloc, Coordonnees, Partenariat, Preuve, Question, Reglages } from './types.ts';
+import { ANIMATIONS, ANIMATIONS_BLOC, DISPOSITIONS, DOMAINES_COURTS, EFFETS_PAYS, MAX_PAYS, FORMATS_VEDETTE, FORMES_PHOTO, FORMES_BOUTON, GENRES_PREUVE, MAX_IMAGES, MAX_QUESTIONS, MAX_RESEAUX, MENTIONS_PARTENAIRE, OMBRES_BOUTON, MISES_EN_PAGE_BUREAU, RESEAUX, STYLES_BOUTON, TEINTES_VEDETTE, TYPES_BLOC } from './types.ts';
+import type { Acces, Bloc, Cadeau, Coordonnees, Partenariat, Preuve, Question, Reglages } from './types.ts';
 import { POLICES_CHOIX, idTheme } from './themes.ts';
 import { EFFETS_CRENEAU, fuseauValide } from './moments.ts';
 import type { Creneau } from './moments.ts';
 import { AUDIENCES, EFFETS_AUDIENCE } from './provenance.ts';
+import { PAYS, estPays } from './pays.ts';
 import type { Audience, EffetAudience } from './provenance.ts';
 
 /*
@@ -153,6 +154,23 @@ export function coordonnees(v: unknown): Coordonnees {
   return { telephone: telephone(o.telephone), email: email(o.email), societe: texte(o.societe, 80), poste: texte(o.poste, 80) };
 }
 
+/** Les pays visés par un bloc (codes ISO à deux lettres connus, sans doublon, dans l'ordre de `PAYS`), ou null s'il n'en vise aucun. */
+export function pays(v: unknown): Bloc['pays'] {
+  if (!v || typeof v !== 'object') return null;
+  const o = v as Record<string, unknown>;
+  const voulus = Array.isArray(o.codes) ? new Set(o.codes.filter(estPays)) : new Set<string>();
+  const codes = PAYS.filter(c => voulus.has(c)).slice(0, MAX_PAYS);
+  return codes.length ? { codes, effet: parmi(o.effet, EFFETS_PAYS, 'seulement') } : null;
+}
+
+/** Le cadeau d'une liste e-mail : un site en http(s) et son nom ; null sans adresse. */
+export function cadeau(v: unknown): Cadeau | null {
+  if (!v || typeof v !== 'object') return null;
+  const o = v as Record<string, unknown>;
+  const url = adresse(o.url);
+  return /^https?:/.test(url) ? { nom: texte(o.nom, 80), url } : null;
+}
+
 /** Les noms d'avant le 16 octobre 2026, gardés pour les blocs déjà enregistrés. */
 const ANCIENNES: Record<string, string> = { brille: 'reflet', pulse: 'respiration', secoue: 'secousse' };
 
@@ -192,6 +210,8 @@ export function validerBloc(v: unknown, id: string): Bloc {
     adressePostale: type === 'lieu' || type === 'coordonnees' ? texte(o.adressePostale, 200) : '',
     sensible: (type === 'lien' || type === 'produit') && bool(o.sensible, false),
     disposition: type === 'titre' ? parmi(o.disposition, DISPOSITIONS, 'liste') : 'liste',
+    pays: pays(o.pays),
+    cadeau: type === 'inscription' ? cadeau(o.cadeau) : null,
   };
 }
 

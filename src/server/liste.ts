@@ -337,7 +337,7 @@ const tropRapide = (ip: string, maintenant: number) => recents(cleIp(ip), mainte
 const MESSAGE_OK = 'C’est noté, merci !';
 
 /** Le formulaire d'une page : vérifie, garde l'inscrit, l'envoie chez le fournisseur. */
-export async function inscrire(env: Env, fetchImpl: typeof fetch, entree: Record<string, unknown>, contexte: { ip: string; ua: string; referent: string; hotes?: Set<string> }, maintenant = Date.now()): Promise<{ status: number; message: string }> {
+export async function inscrire(env: Env, fetchImpl: typeof fetch, entree: Record<string, unknown>, contexte: { ip: string; ua: string; referent: string; hotes?: Set<string> }, maintenant = Date.now()): Promise<{ status: number; message: string; cadeau?: string }> {
   // Le champ caché qu'un humain ne remplit pas.
   if (entree.website) return { status: 200, message: MESSAGE_OK };
   const adresse = validerEmail(entree.email);
@@ -347,7 +347,8 @@ export async function inscrire(env: Env, fetchImpl: typeof fetch, entree: Record
   const compte = page ? db.compteParPseudo(page) : db.compteParId('principal');
   if (!compte || compte.statut !== 'actif') return { status: 404, message: 'Cette page n’existe plus.' };
   // Le formulaire n'existe que dans l'offre qui le comprend (la page publique ne le montre pas sans elle).
-  if (!droits(compte, env, maintenant).listeEmail) return { status: 404, message: 'Ce formulaire n’existe plus.' };
+  const d = droits(compte, env, maintenant);
+  if (!d.listeEmail) return { status: 404, message: 'Ce formulaire n’existe plus.' };
   const bloc = db.lireBlocs(compte.id).find(b => b.id === entree.bloc && b.type === 'inscription' && b.public);
   if (!bloc) return { status: 404, message: 'Ce formulaire n’existe plus.' };
   // Une adresse gardée part parfois chez une newsletter, qui lui écrit : un robot n'en inscrit pas à la chaîne.
@@ -358,7 +359,8 @@ export async function inscrire(env: Env, fetchImpl: typeof fetch, entree: Record
   // Une adresse déjà inscrite reçoit la même réponse : la page ne dit pas qui est sur la liste.
   // Le visiteur n'attend pas un fournisseur lent : au-delà de 4 secondes, l'envoi finit sans lui (et se note sur le contact).
   if (contact) await Promise.race([pousser(env, compte.id, contact, fetchImpl), new Promise(fin => { setTimeout(fin, 4000).unref?.(); })]);
-  return { status: 200, message: MESSAGE_OK };
+  // Le cadeau (Pro) s'ouvre une fois l'adresse laissée, déjà inscrite ou non : son adresse n'a jamais été dans la page.
+  return { status: 200, message: MESSAGE_OK, ...(d.cadeau && bloc.cadeau?.url ? { cadeau: bloc.cadeau.url } : {}) };
 }
 
 /** Le CSV des inscrits, lisible par Excel (séparateur point-virgule, BOM). */

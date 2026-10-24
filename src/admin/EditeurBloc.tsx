@@ -8,7 +8,7 @@ import { RESEAUX } from '../lib/types.ts';
 import { adresse, adresseSaisie, montants as lireMontants, numeroAppel, pourquoiPasAdresse } from '../lib/valider.ts';
 import { avecMontants, nomAgenda, nomSoutien, seIntegre, soutienDe } from '../lib/vitrine.ts';
 import { nomSite, reseauDeUrl } from '../lib/demarrage.ts';
-import { lienAffilie, typeDeAdresse, versType } from '../lib/detection.ts';
+import { lienAffilie, suggestion, typeDeAdresse, versType } from '../lib/detection.ts';
 import type { TypeAdresse } from '../lib/detection.ts';
 import { memeBloc, verifierBloc } from '../lib/editionBloc.ts';
 import type { ChampErreur, Erreurs } from '../lib/editionBloc.ts';
@@ -202,6 +202,8 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
   const [icones, setIcones] = useState(false);
   /** Le sous-titre, rare : son champ se montre rempli, ou une fois demandé ; sinon une ligne « Ajouter un sous-titre ». */
   const [sousTitreDemande, setSousTitreDemande] = useState(false);
+  /** « Ajouter un cadeau », sous une liste e-mail : ses champs restent ouverts une fois demandés, même vidés. */
+  const [cadeauDemande, setCadeauDemande] = useState(false);
   // L'essentiel d'abord, neuf ou pas ; le reste attend derrière « Plus de réglages ».
   // Ouvert pour y régler une règle tout juste débloquée (au retour des offres), il arrive déplié (au téléphone, sur la page de la règle).
   const regleAOuvrir = useContext(RegleAOuvrir);
@@ -906,7 +908,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
   );
   /** « Mis en avant » vient d'être allumé : au bureau, son apparence arrive dépliée, on voit ce qu'il ouvre. */
   const vedetteAllumee = useRef(false);
-  const enAvant = !['titre', 'texte', 'newsletter', 'inscription', 'preuve', 'soutien', 'faq', 'coordonnees', 'lieu', 'galerie', 'formulaire'].includes(b.type);
+  const enAvant = !['titre', 'texte', 'newsletter', 'inscription', 'preuve', 'soutien', 'faq', 'coordonnees', 'lieu', 'galerie', 'formulaire', 'flux'].includes(b.type);
   const aideVedette = b.type === 'produit' ? 'Une grande carte, de la couleur d’accent de ta page.' : b.type === 'reservation' ? 'De la couleur d’accent de ta page.' : 'En plus grand, de la couleur d’accent de ta page.';
   const vedette = (compact: boolean) => enAvant && <Interrupteur key="vedette" compact={compact} label="Mis en avant" aide={aideVedette} actif={b.vedette} onChange={v => { vedetteAllumee.current = v; maj({ vedette: v }); }} />;
   const bascules = (compact: boolean, sansVedette = false) => [
@@ -924,7 +926,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
   // La visibilité, une ligne de la première page du bloc qui mène à sa page ; l'accès réservé, rare, derrière « Plus de réglages ».
   const visibilite = <ReglageVisibilite key={`visibilite-${b.id}`} b={b} maj={maj} erreur={erreurDe('dates')} reseaux={reseauxDePartage(reglages.vuesReseaux)} />;
   const acces = b.type === 'lien' && <RegleAcces key={`acces-${b.id}`} b={b} maj={maj} prises={prises} />;
-  const dejaVisible = resumeVisibilite(b, !!droits.heure);
+  const dejaVisible = resumeVisibilite(b, !!droits.heure, !!droits.pays);
   // Au téléphone seulement : au bureau, la rangée se déplace par sa poignée, à la souris ou au clavier.
   const fleche = (sens: -1 | 1) => place && onDeplacer && (
     <button type="button" disabled={sens < 0 ? place.rang === 0 : place.rang === place.total - 1} onClick={() => onDeplacer(enregistre.current ?? b, sens)} aria-label={sens < 0 ? 'Monter d’un cran' : 'Descendre d’un cran'}
@@ -947,6 +949,8 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
     : adresseValide.startsWith('tel:') ? ok('Un toucher appelle ce numéro.')
     : adresseValide.startsWith('mailto:') ? ok(`Un toucher écrit à ${adresseValide.slice(7)}.`)
     : b.type === 'video' ? ok('La vidéo se lit dans ta page, sans la quitter.')
+    : b.type === 'derniere-video' ? ok('Ta vidéo la plus récente se lit dans ta page, et change seule à chaque publication.')
+    : b.type === 'flux' ? ok('Tes trois derniers articles s’affichent, et se mettent à jour seuls.')
     : b.type === 'musique' ? ok(`Le lecteur${lecteurDe(adresseValide) ? ` ${lecteurDe(adresseValide)!.nom}` : ''} s’ouvre dans ta page, sans la quitter.`)
     : b.type === 'reservation' ? ok(seIntegre(adresseValide) ? 'La réservation s’ouvre dans ta page, sans la quitter.' : `${nomAgenda(adresseValide)} s’ouvre sur son site.`)
     : b.type === 'soutien' ? ok(avecMontants(adresseValide) ? 'Tes visiteurs choisissent un montant, puis paient sur PayPal.'
@@ -955,9 +959,9 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
     : b.type === 'produit' ? ok(`Sa photo et son prix s’affichent, et il mène à ${nomSite(adresseValide) || hoteDe(adresseValide)}.`)
     : undefined;
   const champAdresse = avecUrl && (
-    <Champ label={b.type === 'video' ? 'Adresse de la vidéo' : b.type === 'musique' ? 'Adresse du titre, de l’album ou du podcast' : b.type === 'produit' ? 'Adresse du produit' : b.type === 'reservation' ? 'Adresse de ton agenda' : b.type === 'soutien' ? 'Adresse de ta page de soutien' : 'Adresse'} erreur={erreurDe('url')} aide={aideType}>
+    <Champ label={b.type === 'derniere-video' ? 'Adresse de ta chaîne YouTube' : b.type === 'flux' ? 'Adresse de ton blog ou de son flux RSS' : b.type === 'video' ? 'Adresse de la vidéo' : b.type === 'musique' ? 'Adresse du titre, de l’album ou du podcast' : b.type === 'produit' ? 'Adresse du produit' : b.type === 'reservation' ? 'Adresse de ton agenda' : b.type === 'soutien' ? 'Adresse de ta page de soutien' : 'Adresse'} erreur={erreurDe('url')} aide={aideType}>
       <input id="bloc-adresse" className={classeSaisie} type="url" inputMode="url" autoCapitalize="none" autoCorrect="off"
-        placeholder={b.type === 'video' ? 'https://youtu.be/…' : b.type === 'musique' ? 'https://open.spotify.com/…' : b.type === 'soutien' ? 'https://paypal.me/…' : b.type === 'reservation' ? 'https://calendly.com/…' : 'https://…'}
+        placeholder={b.type === 'derniere-video' ? 'https://youtube.com/@…' : b.type === 'video' ? 'https://youtu.be/…' : b.type === 'musique' ? 'https://open.spotify.com/…' : b.type === 'soutien' ? 'https://paypal.me/…' : b.type === 'reservation' ? 'https://calendly.com/…' : 'https://…'}
         value={b.url} onChange={e => { if (!e.target.value.trim()) efface.current = true; maj({ url: e.target.value }); }} onBlur={() => lireAdresse()} autoFocus={focusAuto(nouveau && !bloc.url)}
         onPaste={e => { const texte = e.clipboardData.getData('text'); if (!b.url.trim() && adresseSaisie(texte)) setTimeout(() => lireAdresse(texte)); }}
         onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); document.getElementById('bloc-titre')?.focus(); } }} />
@@ -972,11 +976,13 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
   const appel = ((): TypeAdresse => {
     if (b.type !== 'lien' || b.partenariat || !adresseValide) return 'lien';
     const t = typeDeAdresse(adresseValide, true);
-    return t === 'lien' && boutique === adresseValide ? 'produit' : t;
+    // Une chaîne YouTube, un flux RSS : le lien propose d'en faire la dernière vidéo, les derniers articles.
+    return t === 'lien' && boutique === adresseValide ? 'produit' : t === 'lien' ? suggestion(adresseValide) ?? 'lien' : t;
   })();
-  const appelLibre = appel === 'video' || appel === 'musique' || !!droits.vitrine;
+  const appelLibre = appel === 'video' || appel === 'musique' || appel === 'derniere-video' || (appel === 'flux' ? !!droits.flux : !!droits.vitrine);
   const proposer = appel !== 'lien' && appelLibre && !auto.current;
   const phraseVitrine = appel === 'lien' || appelLibre || !adresseValide ? ''
+    : appel === 'flux' ? 'Avec Hopla Pro, ce lien devient tes trois derniers articles, toujours à jour.'
     : appel === 'reservation' ? (seIntegre(adresseValide) ? `Avec Hopla Starter, ton agenda ${nomAgenda(adresseValide)} s’ouvre dans ta page, sans la quitter.` : 'Avec Hopla Starter, ce lien devient une prise de rendez-vous.')
     : appel === 'soutien' ? (avecMontants(adresseValide) ? 'Avec Hopla Starter, tes visiteurs choisissent un montant, puis paient sur PayPal.' : 'Avec Hopla Starter, ce lien devient un bouton « Me soutenir ».')
     : 'Avec Hopla Starter, ce produit s’affiche avec sa photo et son prix.';
@@ -999,7 +1005,8 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
   // Un bouton « Me soutenir » ne se met pas en avant : un lien mis en avant qui en devient un le dit, sous son adresse.
   const noteVedette = b.type === 'soutien' && vedettePerdue && <p className="text-[12.5px] leading-snug text-white/55">Un bouton «\u202fMe soutenir\u202f» ne se met pas en avant.</p>;
   // Sans Starter, ce que l'offre ferait de l'adresse se dit juste sous elle, avant le texte.
-  const vitrineSousAdresse = phraseVitrine && <Reserve fonction="vitrine" type={appel as TypeVitrine} phrase={phraseVitrine} />;
+  const vitrineSousAdresse = phraseVitrine && (appel === 'flux' ? <Reserve fonction="flux" phrase={phraseVitrine} />
+    : <Reserve fonction="vitrine" type={appel as TypeVitrine} phrase={phraseVitrine} />);
   const champUrl = avecUrl && (gestesAdresse.length || noteVedette ? (
     <div>
       {champAdresse}
@@ -1087,7 +1094,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
         ? <textarea className={`${classeSaisie} min-h-28`} value={b.titre} onChange={e => maj({ titre: e.target.value })} maxLength={1000} autoFocus={focusAuto(nouveau)} />
         : <input id="bloc-titre" className={classeSaisie} value={b.titre} onChange={e => maj({ titre: e.target.value })} maxLength={160} autoFocus={focusAuto(nouveau && !avecUrl && b.type !== 'lieu' && b.type !== 'galerie')}
             autoComplete={b.type === 'coordonnees' ? 'name' : undefined}
-            placeholder={b.type === 'soutien' || b.type === 'faq' || b.type === 'formulaire' ? nouveauBloc(b.type, b.id).titre : b.type === 'titre' ? 'Nouvelle section' : b.type === 'coordonnees' ? 'Marie Dupont' : ''} />}
+            placeholder={b.type === 'soutien' || b.type === 'faq' || b.type === 'formulaire' || b.type === 'flux' ? nouveauBloc(b.type, b.id).titre : b.type === 'titre' ? 'Nouvelle section' : b.type === 'coordonnees' ? 'Marie Dupont' : ''} />}
     </Champ>
   ));
   // Un produit : son prix, lu sur la boutique comme son nom et sa photo ; il se corrige à la main.
@@ -1135,6 +1142,29 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
     <button type="button" onClick={() => { vibrer(4); setSousTitreDemande(true); }}
       className="-my-1.5 flex min-h-11 items-center gap-2 self-start text-[13.5px] font-medium text-white/70 transition hover:text-white bureau:min-h-8">
       <Icone nom="ui-plus" taille={15} className="shrink-0" />Ajouter un sous-titre
+    </button>
+  ));
+  // Un cadeau contre l'e-mail (Pro, 24 octobre 2026) : un guide, un code, une vidéo ; son adresse ne s'ouvre qu'une fois
+  // l'adresse e-mail donnée, et ne part jamais avec la page. Il sert rarement : il attend derrière une ligne, comme le sous-titre.
+  const champCadeau = b.type === 'inscription' && (b.cadeau || cadeauDemande ? (
+    <div className="flex flex-col gap-3">
+      <span className="-mb-1.5 flex items-center gap-2 text-[12.5px] font-medium text-white/60 bureau:text-white/75">Le cadeau {!droits.cadeau && <Etiquette fonction="cadeau" />}</span>
+      {!droits.cadeau && <Reserve fonction="cadeau" phrase="Sans Hopla Pro, ce cadeau n’est pas proposé sur ta page. Il revient dès que tu la prends." />}
+      <div className={bureau ? 'adm-paire' : 'flex flex-col gap-3'}>
+        <Champ label="Son nom">
+          <input className={classeSaisie} value={b.cadeau?.nom ?? ''} onChange={e => maj({ cadeau: { url: b.cadeau?.url ?? '', nom: e.target.value } })} maxLength={80}
+            placeholder="Mon guide en PDF" autoFocus={focusAuto(cadeauDemande && !b.cadeau)} />
+        </Champ>
+        <Champ label="Son adresse" erreur={erreurDe('cadeau')} aide="Elle ne s’ouvre qu’une fois l’e-mail donné.">
+          <input className={classeSaisie} type="url" inputMode="url" autoCapitalize="none" autoCorrect="off" placeholder="https://…" value={b.cadeau?.url ?? ''}
+            onChange={e => maj({ cadeau: { nom: b.cadeau?.nom ?? '', url: e.target.value } })} />
+        </Champ>
+      </div>
+    </div>
+  ) : (
+    <button type="button" onClick={() => { vibrer(4); if (!droits.cadeau && voir) { voir('cadeau'); return; } setCadeauDemande(true); }} aria-haspopup={droits.cadeau ? undefined : 'dialog'}
+      className="-my-1.5 flex min-h-11 items-center gap-2 self-start text-[13.5px] font-medium text-white/70 transition hover:text-white bureau:min-h-8">
+      <Icone nom="ui-plus" taille={15} className="shrink-0" />Offrir un cadeau contre l’e-mail{!droits.cadeau && <Etiquette fonction="cadeau" />}
     </button>
   ));
   const champMontants = b.type === 'soutien' && avecMontants(adresseValide) && (
@@ -1192,11 +1222,12 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
           avant » s'allume, souvent lue sur le site ; elle se lit et se corrige ici, sous le texte, là où l'œil est. */}
       {description}
       {champSousTitre}
+      {champCadeau}
       {champMontants}
       {b.type === 'produit' && (bureau ? <div className="adm-paire">{champPrix}</div> : champPrix)}
       {partenaire}
       {b.type === 'derniere-video' && (
-        <Champ label="Petit titre au-dessus" aide="La vidéo elle-même change toute seule à chaque nouvelle publication sur la chaîne.">
+        <Champ label="Petit titre">
           <input className={classeSaisie} value={b.titre} onChange={e => maj({ titre: e.target.value })} maxLength={160} />
         </Champ>
       )}

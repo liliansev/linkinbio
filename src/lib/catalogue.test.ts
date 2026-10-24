@@ -50,7 +50,11 @@ test('on cherche avec ce qu’on veut faire : un mot suffit, les petits mots ne 
 test('le nom passe avant les mots ; une lettre seule ne cherche que les noms', () => {
   assert.deepEqual(noms(chercherBlocs('p', false)), ['Produit', 'Prise de rendez-vous', 'Lien partenaire', 'Musique ou podcast', 'Avis et preuves']);
   assert.deepEqual(noms(chercherBlocs('youtube', true)), ['Ma dernière vidéo YouTube', 'Vidéo']);
-  assert.deepEqual(noms(chercherBlocs('youtube', false)), ['Vidéo']);
+  // Depuis le lot 4, la dernière vidéo d'une chaîne est à tous : elle se trouve aussi par son nom.
+  assert.deepEqual(noms(chercherBlocs('youtube', false)), ['Ma dernière vidéo YouTube', 'Vidéo']);
+  assert.equal(premier('rss'), 'Mes derniers articles');
+  // « blog » reste d'abord un lien vers le blog ; ses derniers articles suivent.
+  assert.deepEqual(noms(chercherBlocs('blog', false)), ['Lien', 'Mes derniers articles']);
   // Les blocs venus de Linktree se trouvent par ce qu'on veut montrer.
   assert.equal(premier('spotify'), 'Musique ou podcast');
   assert.equal(premier('photos'), 'Galerie');

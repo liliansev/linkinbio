@@ -28,7 +28,7 @@ const DEMOS: Record<string, string> = {
   'Tes liens programmés à l’avance': '#vivante-lancement',
   'Les avis de tes clients': '#vivante-avis',
   'Tes stats sur 30 jours': '#stats',
-  'Ta page selon l’heure': '#vivante-heure',
+  'Ta page selon l’heure et le pays': '#vivante-heure',
   'Les drops : un code, des places comptées': '#vivante-drops',
   'Ta liste e-mail, vers ta newsletter': '#vivante-liste',
   'Tes stats sur un an': '#stats',

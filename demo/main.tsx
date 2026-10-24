@@ -7,11 +7,12 @@ import { Admin } from '../src/admin/Admin.tsx';
 import { POLICES_CHOIX, THEMES } from '../src/lib/themes.ts';
 import portrait from '../public/profil-camille.webp?inline';
 import { PageLiens } from '../src/components/PageLiens.tsx';
-import { apiDemo, apiGratuit, apiNouveau, blocsCollection, blocsLinktree, fondDemo, blocsVitrine, pageDemo, recommencerNouveau } from './api-demo.ts';
+import { SourceFlux } from '../src/components/BlocsPlus.tsx';
+import { apiDemo, apiGratuit, apiNouveau, blocsCollection, blocsFlux, blocsLinktree, fondDemo, blocsVitrine, pageDemo, recommencerNouveau } from './api-demo.ts';
 
 /* L'aperçu navigable : le vrai back office et la vraie page, sans serveur. */
 function Demo() {
-  const lireVue = () => (/^#(page|vitrine|mention|blocs|adultes|design)/.test(location.hash) ? 'page' : location.hash === '#nouveau' ? 'nouveau' : location.hash.startsWith('#gratuit') ? 'gratuit' : 'admin');
+  const lireVue = () => (/^#(page|vitrine|mention|blocs|adultes|design|flux)/.test(location.hash) ? 'page' : location.hash === '#nouveau' ? 'nouveau' : location.hash.startsWith('#gratuit') ? 'gratuit' : 'admin');
   const [vue, setVue] = useState(lireVue);
   // Passer de `#page=klein` à `#page=riso` ne change pas de vue : l'adresse elle-même redessine la page.
   const [hash, setHash] = useState(() => location.hash);
@@ -38,6 +39,16 @@ function Demo() {
       const disposition = (hash.split(',')[2] as MiseEnPageBureau | undefined) || bureau;
       const r = { ...p.reglages, bureau: disposition, police, imageFond: fondDemo(), profil: { ...p.reglages.profil, nom: 'Camille Martin', bio: 'Céramiste à Paris. Des bols, des tasses, et des ateliers le samedi.', avatar: portrait, photo: 'grande' as const } };
       return <PageLiens key={hash} page={{ reglages: r, blocs: blocsCollection(), compte: p.compte }} apercu />;
+    }
+    // `#flux=klein` : la dernière vidéo d'une chaîne, les derniers articles et le cadeau d'une liste ; `#flux=klein,attente`
+    // les montre pendant leur lecture.
+    if (hash.startsWith('#flux')) {
+      const attente = hash.split(',')[1] === 'attente';
+      return (
+        <SourceFlux.Provider value={b => (attente ? new Promise(() => {}) : apiDemo.flux(b.url, b.type === 'derniere-video'))}>
+          <PageLiens key={hash} page={{ reglages: { ...p.reglages, bureau }, blocs: blocsFlux(), compte: p.compte }} apercu />
+        </SourceFlux.Provider>
+      );
     }
     // `#blocs=klein` : les blocs venus de Linktree dans un thème.
     // `#adultes=klein` : les mêmes, comme un visiteur les voit (un lien pour adultes demande confirmation).

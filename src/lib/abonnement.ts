@@ -53,7 +53,7 @@ export const OFFRES: Record<Plan, Offre> = {
   },
   pro: {
     nom: 'Pro', phrase: 'Le bon lien, au bon moment.', prix: { mois: 19, an: 169 }, quota: 200 * Mo, jours: 365, enVente: true,
-    avantages: ['Ta page selon l’heure', 'Les drops : un code, des places comptées', 'Ta liste e-mail, vers ta newsletter', 'Tes stats sur un an'],
+    avantages: ['Ta page selon l’heure et le pays', 'Les drops : un code, des places comptées', 'Ta liste e-mail, vers ta newsletter', 'Un cadeau contre l’e-mail, tes articles en RSS', 'Tes stats sur un an'],
   },
   premium: {
     nom: 'Premium', phrase: 'Ta page à ton nom de domaine.', prix: { mois: 29, an: 259 }, quota: 1024 * Mo, jours: 365, enVente: false,
@@ -85,7 +85,8 @@ export const libellePrix = (p: PlanPayant, periode: Periode) => `${euros(OFFRES[
  * `vitrine` : les blocs produit, soutien et réservation, et le code promo d'un
  * lien partenaire (22 octobre 2026) ; `formulaire` : le bloc « Me contacter » ; `galerie` : plus de trois photos dans
  * une galerie (24 octobre 2026) ; `utm` : les liens sortants marqués `utm_source=hopla` ; `redirection` : toute
- * la page renvoyée vers une adresse.
+ * la page renvoyée vers une adresse ; `pays` : un bloc selon le pays du visiteur ; `cadeau` : un cadeau contre l'e-mail
+ * dans « Rejoins ma liste » ; `flux` : le bloc des derniers articles d'un flux RSS (24 octobre 2026).
  */
 export const FONCTIONS = {
   sansMention: 'starter',
@@ -104,6 +105,9 @@ export const FONCTIONS = {
   heure: 'pro',
   drops: 'pro',
   listeEmail: 'pro',
+  pays: 'pro',
+  cadeau: 'pro',
+  flux: 'pro',
 } as const satisfies Record<string, PlanPayant>;
 export type Fonction = keyof typeof FONCTIONS;
 
@@ -126,9 +130,12 @@ export const FONCTIONS_EN_MOTS: Record<Fonction, { avantage: string; pour: strin
   fond: { avantage: 'Tes couleurs, ta police, ton image de fond', pour: 'Pour ton fond' },
   grandePhoto: { avantage: 'Ta photo en grand, tes liens en grille', pour: 'Pour ta grande photo' },
   grille: { avantage: 'Ta photo en grand, tes liens en grille', pour: 'Pour la grille' },
-  heure: { avantage: 'Ta page selon l’heure', pour: 'Pour tes créneaux' },
+  heure: { avantage: 'Ta page selon l’heure et le pays', pour: 'Pour tes créneaux' },
   drops: { avantage: 'Les drops : un code, des places comptées', pour: 'Pour les drops' },
   listeEmail: { avantage: 'Ta liste e-mail, vers ta newsletter', pour: 'Pour ta liste e-mail' },
+  pays: { avantage: 'Ta page selon l’heure et le pays', pour: 'Pour le pays' },
+  cadeau: { avantage: 'Un cadeau contre l’e-mail, tes articles en RSS', pour: 'Pour ton cadeau' },
+  flux: { avantage: 'Un cadeau contre l’e-mail, tes articles en RSS', pour: 'Pour ton flux RSS' },
 };
 
 /**
@@ -236,7 +243,7 @@ export const BASCULE_OFFRES = Date.UTC(2026, 9, 21);
 /** Les jours de stats qu'une page d'avant les offres lisait en gratuit : elle les garde. */
 export const JOURS_AVANT_OFFRES = 7;
 /** Ce que ces pages ne faisaient pas en gratuit, et ne gardent donc pas : la page sans mention, et ce qui est venu après (la vitrine, le formulaire, la galerie complète, l'UTM, la redirection). */
-const PAS_AVANT_OFFRES: readonly Fonction[] = ['sansMention', 'vitrine', 'formulaire', 'galerie', 'utm', 'redirection', 'fond', 'grandePhoto', 'grille'];
+const PAS_AVANT_OFFRES: readonly Fonction[] = ['sansMention', 'vitrine', 'formulaire', 'galerie', 'utm', 'redirection', 'fond', 'grandePhoto', 'grille', 'pays', 'cadeau', 'flux'];
 
 /** Ce compte peut-il se servir de cette fonction ? `cree` : la création du compte (ms), pour les pages d'avant. */
 export function peut(plan: Plan, f: Fonction, cree = Number.POSITIVE_INFINITY): boolean {
