@@ -295,6 +295,9 @@ export interface EtatAdmin {
   dejaVue: boolean;
 }
 
+/** Les vues de la semaine, montrées en Gratuit (24 octobre 2026, Lilian) : le détail reste à Starter. */
+export interface Semaine { vues: number; avant: number; dejaVue: boolean }
+
 export interface Stats {
   /** Le nombre de jours de la période, le premier et le dernier compris (ce sont ceux de `serie`). */
   jours: number;
@@ -378,6 +381,8 @@ export interface Api {
   /** Les derniers articles d'un blog ou d'un flux RSS (`video` : la dernière vidéo d'une chaîne YouTube), lus par le serveur ; vide s'il ne se lit pas. */
   flux(url: string, video: boolean): Promise<ArticleFlux[]>;
   stats(periode: PeriodeStats): Promise<Stats>;
+  /** Les vues des 7 derniers jours et des 7 d'avant, lisibles par toutes les offres, Gratuit compris. */
+  semaine?(): Promise<Semaine>;
   deconnexion(): Promise<void>;
   /** Enregistre l'acceptation des CGU et de l'accord de traitement en vigueur. */
   accepterCgu(): Promise<void>;

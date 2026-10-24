@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
-import type { Bloc, Stats } from '../lib/types.ts';
+import type { Bloc, Semaine, Stats } from '../lib/types.ts';
 import { sansSchema } from '../lib/types.ts';
 import { ActionEntete, BoutonCopier, Carte, classeBouton, useGrandEcran, vibrer } from './ui.tsx';
 import { Icone } from '../components/Icone.tsx';
@@ -341,11 +341,13 @@ function PageJamaisVue({ adresse, pseudo }: { adresse: string; pseudo: string })
 const duree = (jours: number) => (jours >= 365 ? 'un an' : `${jours} jours`);
 
 /** Ce que lire ses stats apporte, pour une offre qui ne les montre pas (Gratuit) : elles se comptent déjà, Starter les ouvre. */
-function StatsReservees({ onOffres, liste }: { onOffres?: Proprietes['onOffres']; liste?: ReactNode }) {
+function StatsReservees({ onOffres, liste, semaine }: { onOffres?: Proprietes['onOffres']; liste?: ReactNode; semaine?: Proprietes['semaine'] }) {
+  const [vues, setVues] = useState<Semaine | null>(null);
+  useEffect(() => { let vivant = true; semaine?.().then(s => { if (vivant) setVues(s); }).catch(() => {}); return () => { vivant = false; }; }, [semaine]);
   const lignes = ['Tes vues, tes visiteurs et tes clics, jour par jour', 'Tes liens les plus cliqués', 'D’où viennent tes visiteurs, et sur quel appareil', 'Le résumé de ta semaine, chaque lundi par e-mail'];
   return (
     <div className="flex flex-col gap-5">
-      <p className="adm-stats-phrase">Tes visites se comptent déjà, sans cookie. Il ne reste qu’à les lire.</p>
+      {vues?.dejaVue ? <VuesSemaine semaine={vues} /> : <p className="adm-stats-phrase">Tes visites se comptent déjà, sans cookie. Il ne reste qu’à les lire.</p>}
       {/* Au bureau, ce que Starter ouvre et la liste côte à côte : deux cartes de même hauteur, sans une carte de 1120 px à moitié vide. */}
       <div className="grid gap-5 lg:grid-cols-2">
       {/* Les deux encarts viennent du même composant : titres, badges et textes sur les mêmes lignes. */}
@@ -366,6 +368,24 @@ function StatsReservees({ onOffres, liste }: { onOffres?: Proprietes['onOffres']
   );
 }
 
+/**
+ * Le seul chiffre que Gratuit lit (24 octobre 2026, Lilian : « oui » à « un chiffre de stats en Gratuit ») : les vues
+ * des 7 derniers jours et leur écart avec les 7 d'avant. On paie plus volontiers pour lire ce qu'on voit grandir.
+ */
+function VuesSemaine({ semaine }: { semaine: Semaine }) {
+  const e = ecart({ vues: semaine.vues, visiteurs: 0, clics: 0, precedent: { vues: semaine.avant, visiteurs: 0, clics: 0 } }, 'vues');
+  return (
+    <section aria-labelledby="stats-semaine" className="adm-encart p-5 bureau:px-6">
+      <h2 id="stats-semaine" className="text-[14px] text-white/70">Vues ces 7 derniers jours</h2>
+      <p className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        <span className="text-[40px] font-semibold leading-none tracking-[-0.03em] tabular-nums">{chiffre(semaine.vues, 'vues')}</span>
+        {e.court && <span className="adm-courbe-ecart" data-sens={e.sens}><span aria-hidden="true">{e.court}</span><span className="sr-only">, {e.long}</span></span>}
+      </p>
+      <p className="mt-2 text-[13.5px] leading-snug text-white/70">Le détail jour par jour, tes liens et d’où viennent tes visiteurs s’ouvrent avec Starter.</p>
+    </section>
+  );
+}
+
 type Proprietes = {
   /** Les stats des derniers jours (`30`), ou de dates choisies (`{ du, au }`). */
   charger: (periode: PeriodeStats) => Promise<Stats>; adresse: string; pseudo: string; joursMax?: number;
@@ -374,6 +394,8 @@ type Proprietes = {
   ouvrirApps?: boolean; onActiverApps?: () => void; liste?: ReactNode;
   /** Les blocs de la page : chaque lien de la liste prend son picto. */
   blocs?: Bloc[];
+  /** Les vues de la semaine, montrées quand l'offre ne lit pas ses stats. */
+  semaine?: () => Promise<Semaine>;
 };
 
 /**
@@ -393,7 +415,7 @@ function dansHistorique(p: PeriodeStats, joursMax: number): PeriodeStats {
  * `onOffres` mène aux offres.
  */
 export function OngletStats(props: Proprietes) {
-  if (props.joursMax !== undefined && props.joursMax <= 0) return <StatsReservees onOffres={props.onOffres} liste={props.liste} />;
+  if (props.joursMax !== undefined && props.joursMax <= 0) return <StatsReservees onOffres={props.onOffres} liste={props.liste} semaine={props.semaine} />;
   return <TableauStats {...props} />;
 }
 
