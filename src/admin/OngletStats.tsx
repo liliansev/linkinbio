@@ -346,6 +346,8 @@ function StatsReservees({ onOffres, liste }: { onOffres?: Proprietes['onOffres']
   return (
     <div className="flex flex-col gap-5">
       <p className="adm-stats-phrase">Tes visites se comptent déjà, sans cookie. Il ne reste qu’à les lire.</p>
+      {/* Au bureau, ce que Starter ouvre et la liste côte à côte : deux cartes de même hauteur, sans une carte de 1120 px à moitié vide. */}
+      <div className="grid gap-5 lg:grid-cols-2">
       <section aria-labelledby="stats-reservees" className="adm-encart p-5 bureau:px-6">
         <div className="flex items-center gap-2">
           <h2 id="stats-reservees" className="text-[15px] font-semibold tracking-[-0.015em]">Tes stats</h2>
@@ -362,6 +364,7 @@ function StatsReservees({ onOffres, liste }: { onOffres?: Proprietes['onOffres']
         {onOffres && <button type="button" onClick={() => onOffres('stats')} aria-haspopup="dialog" className={`${classeBouton.principal} mt-5`}>Voir les offres</button>}
       </section>
       {liste}
+      </div>
     </div>
   );
 }
@@ -448,7 +451,8 @@ function TableauStats({ charger, adresse, pseudo, joursMax = 365, onOffres, ouvr
         <div className={`flex flex-col gap-5 transition-opacity duration-200 ${charge ? 'opacity-50' : ''}`} aria-busy={charge}>
           <p className="adm-stats-phrase"><Phrase texte={enUnePhrase(stats)} /></p>
           <CourbeAOnglets stats={stats} />
-          <div className="grid items-start gap-5 lg:grid-cols-2">
+          {/* Deux encarts par rangée, de même hauteur : pas d'escalier entre Liens et Réseaux. */}
+          <div className="grid gap-5 lg:grid-cols-2">
             <Repartition titre="Liens" unite="Clics" lignes={lignesLiens} total={stats.clics} vide="Aucun clic sur cette période." />
             <Repartition titre="Réseaux" unite="Vues" lignes={lignesSources} total={stats.vues} />
             <Repartition titre="Appareils" unite="Vues" lignes={lignesAppareils} total={stats.vues} />

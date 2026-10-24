@@ -434,7 +434,7 @@ export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, chois
                       <button ref={photoBureau} type="button" className="adm-profil-photo" onClick={e => choisirFichier(fichier.current, e.currentTarget)}
                         aria-label={reglages.profil.avatar ? 'Changer la photo' : 'Ajouter une photo'} title={reglages.profil.avatar ? 'Changer la photo' : 'Ajouter une photo'}
                         aria-busy={envoi || undefined} data-envoi={envoi || undefined}>
-                        {reglages.profil.avatar ? <img src={reglages.profil.avatar} alt="" /> : <Icone nom="photo" taille={30} />}
+                        {reglages.profil.avatar ? <img src={reglages.profil.avatar} alt="" /> : <Icone nom="utilisateur" taille={30} />}
                       </button>
                       <div className="adm-profil-texte">
                         {/* Le nom et la bio se tapent en place, comme sur la page au téléphone : ils ressemblent à du texte jusqu'au survol. */}
@@ -802,22 +802,33 @@ function Rangee({ bloc, droits, clics, neuf, ouvert, editeur, ouvrir, fermer, ge
 }
 
 /**
- * La page à droite, au bureau, dans un téléphone : 390 px d'écran, réduit
- * d'un bloc pour tenir dans la hauteur ou la largeur qui reste. Le bloc
- * ouvert dans la liste vient en vue sur l'écran s'il n'y est pas.
+ * La page à droite, au bureau, dans un téléphone : 390 px d'écran, haut de
+ * 760 px, et jusqu'à 932 (un grand iPhone) quand l'écran de l'ordinateur a la
+ * place ; réduit d'un bloc seulement quand la hauteur ou la largeur manque. La
+ * carte crème autour en prend la taille. Le bloc ouvert dans la liste vient en
+ * vue sur l'écran s'il n'y est pas.
  */
 function Telephone({ ecran, choisi, children }: { ecran: RefObject<HTMLDivElement | null>; choisi: string | null; children: ReactNode }) {
   const lieu = useRef<HTMLDivElement>(null);
-  const [echelle, setEchelle] = useState(0);
+  const [mesure, setMesure] = useState({ echelle: 0, haut: 760 });
   useLayoutEffect(() => {
     const el = lieu.current;
-    if (!el) return;
-    const mesurer = () => setEchelle(Math.min(1, el.clientWidth / 408, el.clientHeight / 778));
+    const carte = el?.closest<HTMLElement>('.adm-apercu-colle');
+    if (!el || !carte) return;
+    const mesurer = () => {
+      // La place sous la carte collée : sa hauteur au plus, moins ce qui précède le téléphone et son bas.
+      const style = getComputedStyle(carte);
+      const dispo = window.innerHeight - (parseFloat(style.top) || 0) - (parseFloat(style.marginBottom) || 0) - el.offsetTop - (parseFloat(style.paddingBottom) || 0);
+      const haut = Math.round(Math.min(932, Math.max(760, dispo - 18)));
+      setMesure({ echelle: Math.min(1, el.clientWidth / 408, dispo / (haut + 18)), haut });
+    };
     mesurer();
     const obs = new ResizeObserver(mesurer);
     obs.observe(el);
-    return () => obs.disconnect();
+    window.addEventListener('resize', mesurer);
+    return () => { obs.disconnect(); window.removeEventListener('resize', mesurer); };
   }, []);
+  const { echelle, haut } = mesure;
   useEffect(() => {
     const e = ecran.current;
     if (!choisi || !e) return;
@@ -832,8 +843,8 @@ function Telephone({ ecran, choisi, children }: { ecran: RefObject<HTMLDivElemen
   }, [choisi, ecran]);
   return (
     <div ref={lieu} className="adm-tel-lieu">
-      <div className="adm-tel-cadre" style={{ width: 408 * echelle, height: 778 * echelle, visibility: echelle ? undefined : 'hidden' }}>
-        <div className="adm-tel" style={{ transform: `scale(${echelle})` }}>
+      <div className="adm-tel-cadre" style={{ width: 408 * echelle, height: (haut + 18) * echelle, visibility: echelle ? undefined : 'hidden' }}>
+        <div className="adm-tel" style={{ height: haut + 18, transform: `scale(${echelle})` }}>
           {/* L'écran se lit à la souris ; au clavier et pour un lecteur d'écran, tout se fait dans la liste. */}
           <div ref={ecran} className="adm-tel-ecran adm-apercu" aria-hidden="true">{children}</div>
         </div>
@@ -899,7 +910,6 @@ function ApercuBureau({ page }: { page: PagePublique }) {
           <PageLiens page={page} apercu />
         </div>
       </div>
-      <p className="adm-ordi-legende">Ta page sur un ordinateur, comme la voient tes visiteurs.</p>
     </div>
   );
 }

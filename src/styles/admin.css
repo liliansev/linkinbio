@@ -3,8 +3,9 @@
  * court (150 à 300 ms) et décéléré : l'interface répond, elle ne se montre pas.
  */
 :root { --adm-sortie: cubic-bezier(0.16, 1, 0.3, 1); }
-/* Une feuille qui fige le défilement ne fait pas sauter la page : la place de la barre reste réservée. */
-html:has(.adm) { scrollbar-gutter: stable; }
+/* Une feuille qui fige le défilement ne fait pas sauter la page : la place de la barre reste réservée. Dans l'app seulement :
+   les écrans d'entrée (bleus, sans défilement) n'ont pas de bande blanche au bord droit (24 octobre 2026). */
+html:has(.adm-shell) { scrollbar-gutter: stable; }
 
 /*
  * L'encre et le papier (19 octobre 2026). Les classes écrites pour l'ancien
@@ -115,6 +116,11 @@ html:has(.adm) { scrollbar-gutter: stable; }
 .adm-miroir-page { flex: 1 0 auto; display: flex; flex-direction: column; }
 .adm-miroir-page > * { flex: 1 0 auto; }
 @media (min-width: 1024px) { .adm-miroir { --z: 0.86; } }
+/* Au bureau, la miniature est le téléphone de Ma page (24 octobre 2026) : son bord noir, et sa vraie taille quand la hauteur le permet. */
+@media (min-width: 1024px) and (min-height: 900px) { .adm-miroir { --z: 1; } }
+@media (min-width: 1024px) {
+  .adm-premiers .adm-miroir { box-sizing: content-box; border: calc(9px * var(--z)) solid #141414; border-radius: calc(54px * var(--z)); box-shadow: 0 24px 60px -24px rgb(10 10 10 / 0.35); }
+}
 /* Sur un grand écran, les questions et la page en miniature restent ensemble : 1200 px au plus, centrés. */
 @media (min-width: 1024px) { .adm-premiers { padding-inline: max(0px, (100% - 1200px) / 2); } }
 /*
@@ -122,6 +128,7 @@ html:has(.adm) { scrollbar-gutter: stable; }
  * tout le fond, sous la feuille blanche des questions ; au bureau, une scène arrondie, comme celles de l'accueil.
  */
 @media (max-width: 1023px) { .adm:has(> .adm-premiers-scene) { background: var(--adm-creme); } }
+/* La scène prend la hauteur de sa miniature, sur la même médiane que les questions : pas de crème vide au-dessus ni dessous. */
 @media (min-width: 1024px) { .adm-premiers-scene { margin: 0 24px 24px 0; border-radius: 28px; background: var(--adm-creme); } }
 
 /* Une feuille ouverte occupe le bas de l'écran : le message passe en haut, sans couvrir ce qu'on touche. */
@@ -188,12 +195,19 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
   }
   .adm-shell:is([data-onglet='reglages'], [data-onglet='integrations']) { --adm-colonne: 680px; }
   .adm-shell[data-onglet='page'] { --adm-colonne: 1300px; }
+  /* La page vue sur un ordinateur prend la place que l'écran offre, jusqu'à sa vraie taille (24 octobre 2026). */
+  .adm-shell[data-onglet='page']:has(.adm-ordi-lieu) { --adm-colonne: 2160px; }
   /* La fiche d'un compte se lit en lignes, comme Réglages : la même colonne. */
   .adm-shell[data-onglet='comptes'][data-sous] { --adm-colonne: 680px; }
   .adm-travail { padding-left: 216px; }
   .adm-colonne { width: min(100% - 2 * var(--adm-bord), var(--adm-colonne)); margin-inline: auto; }
   /* Le message se pose en bas à droite, hors des rangées qu'on édite (24 octobre 2026 : centré, il en couvrait une). */
-  .adm-shell .adm-toast { left: auto; right: 24px; width: min(24rem, 100% - 216px - 48px); margin: 0; }
+  /* Au bord droit de la colonne de l'onglet, pas au bord de l'écran : sur un écran de 3440 px, il reste près du travail. */
+  .adm-shell .adm-toast { left: auto; right: max(24px, (100% - 216px - var(--adm-largeur)) / 2); width: min(24rem, 100% - 216px - 48px); margin: 0; }
+}
+/* Une fenêtre centrée (les offres, une confirmation) se centre sur l'espace de travail, à droite de la barre latérale. */
+@media (min-width: 1024px) {
+  body:has(.adm-shell) [data-calque='centre'] { padding-left: 216px; }
 }
 .adm-nav-item { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 10px; border-radius: 7px; color: #dcdcff; font-size: 14px; font-weight: 500; text-align: left; transition: background-color 150ms, color 150ms; }
 .adm-nav-item:hover { background: rgb(255 255 255 / 0.1); color: #fff; }
@@ -335,6 +349,8 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
   html:has(.adm-studio-bureau) { scroll-padding-top: 113px; }
   .adm-editor-tools { display: none; }
   .adm-studio-bureau { display: grid; grid-template-columns: minmax(0, 1fr) var(--adm-apercu); gap: var(--adm-entre); min-height: calc(100dvh - 57px); }
+  /* Sur un ordinateur, l'édition garde 760 px et la page prend le reste. */
+  .adm-studio-bureau:has(.adm-ordi-lieu) { grid-template-columns: minmax(0, 1fr) max(var(--adm-apercu), 100% - 760px - var(--adm-entre)); }
   .adm-edition { min-width: 0; padding-bottom: 96px; }
   .adm-edition-col { container: edition / inline-size; padding-top: 16px; }
   .adm-demarrage { margin-bottom: 12px; }
@@ -423,10 +439,11 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
   .adm-rangee-bouton { display: flex; min-width: 0; flex: 1; align-self: stretch; align-items: center; gap: 8px; padding: 0 6px; border-radius: 6px; text-align: left; }
   .adm .adm-rangee-bouton:focus-visible { outline-offset: -2px; }
   .adm-rangee-picto { flex: none; color: #0a0a0a; }
+  /* Le nom passe d'abord : l'adresse, à côté, se coupe bien avant lui (24 octobre 2026). */
   .adm-rangee-nom { min-width: 0; flex: 0 1 auto; overflow: hidden; color: #0a0a0a; font-size: 13.5px; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
-  .adm-rangee-sous { min-width: 0; flex: 0 4 auto; overflow: hidden; color: #5f5f5a; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+  .adm-rangee-sous { min-width: 0; flex: 0 1000 auto; overflow: hidden; color: #5f5f5a; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
   /* « Mis en avant » : l'étiquette citron de l'accueil, son encre vert foncé (12,4:1). */
-  .adm-rangee-marque { display: inline-flex; height: 20px; flex: none; align-items: center; padding: 0 7px; border-radius: 6px; background: var(--adm-citron); color: var(--adm-citron-encre); font-size: 12px; font-weight: 500; white-space: nowrap; }
+  .adm-rangee-marque { display: inline-flex; height: 22px; flex: none; align-items: center; padding: 0 7px; border-radius: 6px; background: var(--adm-citron); color: var(--adm-citron-encre); font-size: 12px; font-weight: 500; white-space: nowrap; }
   .adm-rangee-marque-picto { display: none; }
   .adm-rangee-etats { display: inline-flex; flex: none; align-items: center; gap: 6px; color: #55554f; }
   .adm-rangee-clics { flex: none; margin-left: auto; padding-left: 8px; color: #5f5f5a; font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
@@ -446,22 +463,25 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
     .adm-rangee-reglages { padding-inline: 12px; }
   }
 
-  /* Les réglages d'un bloc, dépliés : l'essentiel, deux interrupteurs, puis « Plus de réglages » dans un trait fin. */
+  /* Les thèmes, au bureau : quatre par rangée dans une colonne large, des miniatures carrées, sans moitié vide (24 octobre 2026). */
+  @container edition (min-width: 640px) {
+    .adm-themes { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .adm-themes .lp-pastille { aspect-ratio: 1 / 1; }
+  }
+
+  /* Les réglages d'un bloc, dépliés : l'essentiel, puis trois lignes d'une même forme (Visibilité, Mis en avant, Plus de réglages). */
   .adm-editeur-ligne { display: flex; flex-direction: column; gap: 14px; }
   .adm-paire { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px 16px; }
   @container edition (min-width: 560px) { .adm-paire { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-  .adm-plus-groupe { border: 1px solid #e3e3df; border-radius: 8px; background: #fff; }
-  .adm-plus { display: flex; width: 100%; min-height: 36px; align-items: center; gap: 8px; padding: 0 12px; border-radius: 7px; font-size: 13.5px; text-align: left; transition: background-color 150ms; }
-  .adm-plus:hover { background: #fafaf9; }
-  .adm-plus[aria-expanded='true'] { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
-  .adm .adm-plus:focus-visible { outline-offset: -2px; }
-  .adm-plus-contenu { display: flex; flex-direction: column; gap: 14px; padding: 10px 12px 12px; border-top: 1px solid #efefec; }
+  /* Ce que « Plus de réglages » ouvre, en retrait sous son nom, comme Visibilité. */
+  .adm-plus-contenu { display: flex; flex-direction: column; gap: 14px; padding: 4px 0 12px 16px; }
   .adm-editeur-pied { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; }
 
   /* La page, à droite : collée sous l'en-tête, avec le choix de la largeur au-dessus. */
   /* Sur le papier crème de l'accueil, une scène arrondie à côté de l'édition (comme aux premiers pas), et non plus une bande collée au bord de l'écran. */
   .adm-apercu-cote { min-width: 0; }
-  .adm-apercu-colle { position: sticky; top: 73px; display: flex; height: calc(100dvh - 57px - 32px); flex-direction: column; align-items: center; gap: 14px; margin: 16px 0; padding: 16px 24px 20px; border-radius: 20px; background: var(--adm-creme); }
+  /* La carte prend la taille de ce qu'elle montre : le téléphone grandit avec l'écran, la carte avec lui, sans crème vide dessous. */
+  .adm-apercu-colle { position: sticky; top: 73px; display: flex; max-height: calc(100dvh - 57px - 32px); flex-direction: column; align-items: center; gap: 14px; margin: 16px 0; padding: 16px 24px 20px; border-radius: 20px; background: var(--adm-creme); }
   /* Téléphone ou ordinateur : deux icônes seules, sans cadre autour ni fond derrière ; la vue prise en bleu, soulignée comme un onglet. */
   .adm-vues { display: flex; flex: none; gap: 4px; }
   .adm-outil { display: inline-flex; height: 30px; align-items: center; gap: 6px; padding: 0 10px; color: #0a0a0a; font-size: 13.5px; font-weight: 500; transition: color 150ms, box-shadow 200ms var(--adm-sortie); }
@@ -469,13 +489,13 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
   .adm-outil:is([aria-pressed='true'], [aria-checked='true']) { color: var(--adm-bleu); box-shadow: inset 0 -2px 0 var(--adm-bleu); }
   .adm-outil-carre { width: 32px; justify-content: center; padding: 0; color: #6b6b66; }
   /* Le téléphone : 390 px d'écran dans un bord de 9, réduit d'un bloc (voir `Telephone`) ; son écran défile seul. */
-  .adm-tel-lieu { display: flex; width: 100%; min-height: 0; flex: 1; align-items: flex-start; justify-content: center; }
+  .adm-tel-lieu { display: flex; width: 100%; flex: none; justify-content: center; }
   .adm-tel-cadre { flex: none; }
   .adm-tel { width: 408px; height: 778px; padding: 9px; border-radius: 54px; background: #141414; box-shadow: 0 24px 60px -24px rgb(10 10 10 / 0.35); transform-origin: 0 0; }
   /* L'écran prend la couleur du cadre : le bord arrondi de la page s'y fond, sans liseré clair. */
-  .adm-tel-ecran { width: 390px; height: 760px; overflow-y: auto; overscroll-behavior: contain; border-radius: 45px; background: #141414; scrollbar-width: none; }
+  .adm-tel-ecran { width: 390px; height: 100%; overflow-y: auto; overscroll-behavior: contain; border-radius: 45px; background: #141414; scrollbar-width: none; }
   .adm-tel-ecran::-webkit-scrollbar { display: none; }
-  .adm-ordi-boite { display: flex; width: 100%; min-height: 0; flex: 1; flex-direction: column; overflow-y: auto; }
+  .adm-ordi-boite { display: flex; width: 100%; min-height: 0; flex: 0 1 auto; flex-direction: column; overflow-y: auto; scrollbar-width: none; }
 }
 /* Une tablette en paysage a la mise en page du bureau, avec des cibles pour le doigt. */
 @media (min-width: 1024px) and (pointer: coarse) {
@@ -485,15 +505,14 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
 }
 @media (min-width: 1024px) and (prefers-reduced-motion: reduce) {
   .adm-rangee[data-neuf] { animation: none; }
-  .adm-rangee, .adm-onglets > button, .adm-rangee-poignee, .adm-rangee-geste, .adm-plus, .adm-lien, .adm-profil-photo, .adm-outil, .adm-coller-champ > input { transition: none; }
+  .adm-rangee, .adm-onglets > button, .adm-rangee-poignee, .adm-rangee-geste, .adm-lien, .adm-profil-photo, .adm-outil, .adm-coller-champ > input { transition: none; }
 }
 
-/* L'aperçu sur ordinateur : la page des visiteurs à 1280 px, réduite pour tenir dans la colonne de droite. */
-.adm-ordi-lieu { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+/* L'aperçu sur ordinateur : la page des visiteurs à 1280 px, réduite seulement si la colonne de droite est plus étroite. */
+.adm-ordi-lieu { display: flex; flex-direction: column; align-items: center; }
 .adm-ordi { overflow: hidden; border-radius: 14px; }
 .adm-ordi-page { display: flex; min-height: 800px; flex-direction: column; transform-origin: 0 0; }
 .adm-ordi-page > .lp { flex: 1 0 auto; }
-.adm-ordi-legende { color: #5f5f5a; font-size: 12px; }
 
 /*
  * Les réglages d'un bloc au bureau, dans sa rangée dépliée : une ligne par
@@ -742,7 +761,7 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
  * baisse, en gris s'il ne bouge pas, et son signe le dit aussi.
  */
 .adm-encart { border: 1px solid #e6e6e2; border-radius: 12px; background: #fff; }
-.adm-stats-phrase { max-width: 62rem; font-size: 18px; line-height: 1.4; font-weight: 500; letter-spacing: -0.01em; text-wrap: pretty; }
+.adm-stats-phrase { max-width: 46rem; font-size: 18px; line-height: 1.4; font-weight: 500; letter-spacing: -0.01em; text-wrap: pretty; }
 .adm-stats-chiffre { color: var(--adm-bleu); white-space: nowrap; }
 .adm-stats .adm-card { border-color: #e6e6e2; border-radius: 12px; padding: 16px; }
 .adm-courbe { overflow: hidden; }
@@ -924,7 +943,8 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
 @media (min-width: 640px) { .adm-feuille.adm-feuille-petite { border-radius: 12px; } }
 @media (min-width: 1024px) and (pointer: fine) {
   .adm-ligne { min-height: 48px; font-size: 13.5px; }
-  .adm-ligne-controle { padding-right: 6px; }
+  /* Un bouton, une valeur, un interrupteur ou un chevron : le même retrait de 16 px au bord droit (24 octobre 2026). */
+  .adm-ligne-controle, .adm-ligne-lien { padding-right: 16px; }
   .adm-fil-retour { min-height: 32px; }
 }
 @media (prefers-reduced-motion: reduce) { .adm-ligne-lien, .adm-fil-retour { transition: none; } }

@@ -126,7 +126,7 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
               className="min-h-11 shrink-0 font-medium text-white underline decoration-white/30 underline-offset-2">Les garder</button>
           </p>
         )}
-        <ul role="radiogroup" aria-label="Thème" onKeyDown={e => flechesRadio(e)} className="grid grid-cols-3 gap-2.5">
+        <ul role="radiogroup" aria-label="Thème" onKeyDown={e => flechesRadio(e)} className="adm-themes grid grid-cols-3 gap-2.5">
           {THEMES.map(t => (
             <li key={t.id}>
               {/* Choisir un thème pose aussi ses boutons et ses couleurs ; on peut les changer ensuite. */}
@@ -392,16 +392,18 @@ export function DesignTiroirs({ reglages, onChange, envoyerImage, principal, pie
           <li key={l.id} className={i > 0 ? 'border-t border-white/[0.07]' : ''}>
             <button id={`design-${l.id}`} type="button" aria-haspopup={l.id === 'couleurs' && !couleurs && voirOffres ? 'dialog' : undefined}
               onClick={() => { vibrer(4); if (l.id === 'couleurs' && !couleurs && voirOffres) return voirOffres('couleurs'); setOuvert(l.id); if (l.id === 'theme') themesVus(); }}
-              className="flex min-h-[52px] w-full items-center gap-3 rounded-[inherit] px-3.5 py-2 text-left transition hover:bg-white/[0.04] active:bg-white/[0.06]">
-              <Icone nom={l.icone} taille={20} className="shrink-0 text-white/70" />
-              <span className="min-w-0 flex-1 truncate text-[14px] font-medium text-white">{l.nom}</span>
+              className="flex min-h-[52px] w-full items-center gap-3 rounded-[inherit] px-3.5 py-2 text-left transition hover:bg-white/[0.04] active:bg-white/[0.06] bureau:min-h-12 bureau:gap-4 bureau:px-4">
+              {/* Au bureau, la ligne de Réglages : le nom, la valeur en gris, le chevron, sans picto devant (24 octobre 2026). */}
+              <Icone nom={l.icone} taille={20} className="shrink-0 text-white/70 bureau:hidden" />
+              <span className="min-w-0 flex-1 truncate text-[14px] font-medium text-white bureau:font-normal">{l.nom}</span>
               <span className="min-w-0 max-w-[45%] truncate text-[13px] text-white/55">{l.valeur}</span>
-              <Icone nom="ui-chevron" taille={16} className="-rotate-90 text-white/30" />
+              <Icone nom="ui-chevron" taille={16} className="-rotate-90 text-white/30 bureau:text-white/55" />
             </button>
           </li>
         ))}
+        {/* Le badge vérifié, dans le même groupe : une ligne de plus, son interrupteur au bord droit. */}
+        {pied && <li className="border-t border-white/[0.07] px-3.5 bureau:flex bureau:min-h-12 bureau:items-center bureau:px-4 bureau:[&_span]:font-normal [&>*]:flex-1">{pied}</li>}
       </ul>
-      {pied}
     </div>
   );
 }

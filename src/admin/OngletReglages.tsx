@@ -88,7 +88,8 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
         <Ligne nom="QR code">
           <BoutonSecondaire onClick={() => { void telechargerQR(adresse, compte.pseudo); }} aria-label="Télécharger le QR code">Télécharger</BoutonSecondaire>
         </Ligne>
-        <Ligne nom="Aperçu dans Google et les réseaux" valeur={[titreSeo, descriptionSeo].filter(Boolean).join(' · ') || 'Rien pour l’instant'}>
+        {/* Coupée au bureau, la valeur se lit en entier au survol. */}
+        <Ligne nom="Aperçu dans Google et les réseaux" valeur={<span title={[titreSeo, descriptionSeo].filter(Boolean).join(' · ') || undefined}>{[titreSeo, descriptionSeo].filter(Boolean).join(' · ') || 'Rien pour l’instant'}</span>}>
           <BoutonSecondaire onClick={() => setFenetre('apercu')} aria-haspopup="dialog" aria-label="Modifier l’aperçu dans Google et les réseaux">Modifier</BoutonSecondaire>
         </Ligne>
         <LigneBascule nom="Bouton Partager sur ma page" actif={reglages.partage} changer={v => onChange({ ...reglages, partage: v })} />

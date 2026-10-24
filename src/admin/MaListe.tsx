@@ -32,7 +32,7 @@ export function MaListe({ api, onIntegrations }: { api: ApiListe; onIntegrations
   if (!liste) return null;
   // Sans l'offre et sans inscrit, la carte dit ce que la liste ferait ; des inscrits déjà là restent à toi (export, ta newsletter).
   if (!permis && !liste.total) return (
-    <Carte titre="Ta liste" action={<Etiquette fonction="listeEmail" />}>
+    <Carte titre="Ta liste" etiquette={<Etiquette fonction="listeEmail" />} className="h-full">
       <Reserve fonction="listeEmail" phrase="Avec Hopla Pro, tes visiteurs laissent leur e-mail sur ta page : chaque adresse arrive ici, et dans ta newsletter si tu la branches." />
     </Carte>
   );
