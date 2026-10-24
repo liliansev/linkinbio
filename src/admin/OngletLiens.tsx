@@ -45,14 +45,18 @@ function logoDe(l: LigneAjout): { nom: string; couleur?: string } | undefined {
  * téléphone, toujours, sous un filet : la feuille ne rapetisse pas et ne laisse pas de vide), la ligne sous le champ, ce
  * qu'Entrée prend. `depart` : ce que le champ montre en s'ouvrant.
  */
-function useChoix(principal: boolean, { onChoisir, onColler, onReseau }: GestesAjout, { depart = '', suiteToujours = false }: { depart?: string; suiteToujours?: boolean }) {
+function useChoix(principal: boolean, { onChoisir, onColler, onReseau }: GestesAjout, { depart = '', suiteToujours = false, ordre }: { depart?: string; suiteToujours?: boolean;
+  /** L'ordre de la liste de départ, celui où elle se lit (au bureau, les tuiles puis les familles) : les flèches le suivent. */
+  ordre?: (lignes: LigneAjout[]) => LigneAjout[] }) {
   const droits = useDroits();
   const voirOffres = useVoirOffres();
   const [texte, setTexte] = useState(depart);
   const [note, setNote] = useState<Note | null>(null);
   const changer = (t: string) => { setTexte(t); setNote(null); };
   const options = { principal, vitrine: !!droits.vitrine };
-  const { mode, lignes } = choixAjout(texte, options);
+  const trouve = choixAjout(texte, options);
+  const { mode } = trouve;
+  const lignes = mode === 'vide' && ordre ? ordre(trouve.lignes) : trouve.lignes;
   // Un bloc réservé reste dans la liste, avec le nom de son offre : le prendre mène aux offres.
   const reserve = (l: LigneAjout) => !!l.entree.fonction && !droits[l.entree.fonction];
   const permise = (l: LigneAjout) => !reserve(l) || !!voirOffres;
@@ -159,18 +163,25 @@ function PictoLigne({ l, taille, className }: { l: LigneAjout; taille: number; c
   );
 }
 
+/** Ce que porte une option du choix au bureau : son id pour `aria-activedescendant`, son état, et le clic qui la prend sans ôter la main au champ. */
+function attributsOption(id: string, choix: Choix, prendre: (l: LigneAjout) => void, l: LigneAjout, i: number) {
+  return {
+    id: `${id}-o${i}`, role: 'option', 'aria-selected': i === choix.actif, 'aria-disabled': !choix.permise(l) || undefined, 'aria-label': choix.nomDe(l),
+    onMouseDown: (e: { preventDefault: () => void }) => e.preventDefault(), onPointerMove: () => { if (i !== choix.actif && choix.permise(l)) choix.poser(i); }, onClick: () => prendre(l),
+  } as const;
+}
+
 /** Au bureau : les lignes du choix, sous le champ. Le champ garde la main ; la ligne active se dit par `aria-activedescendant`. */
 function Options({ id, choix, prendre }: { id: string; choix: Choix; prendre: (l: LigneAjout) => void }) {
   const { actif } = choix;
   // La ligne active reste en vue quand les flèches la font sortir de la liste.
   useEffect(() => { document.getElementById(`${id}-o${actif}`)?.scrollIntoView({ block: 'nearest' }); }, [id, actif]);
+  if (choix.mode === 'vide') return <DepartBureau id={id} choix={choix} prendre={prendre} />;
   return (
     <div id={`${id}-liste`} role="listbox" aria-label="Blocs" className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
       {choix.toutes.map((l, i) => (
         // Un clic ne prend pas le focus au champ : il prend la ligne, et le champ reste où il était.
-        <div key={l.entree.nom} id={`${id}-o${i}`} role="option" aria-selected={i === actif} aria-disabled={!choix.permise(l) || undefined} aria-label={choix.nomDe(l)}
-          onMouseDown={e => e.preventDefault()} onPointerMove={() => { if (i !== actif && choix.permise(l)) choix.poser(i); }} onClick={() => prendre(l)}
-          className="adm-menu-item text-white">
+        <div key={l.entree.nom} {...attributsOption(id, choix, prendre, l, i)} className="adm-menu-item text-white">
           <PictoLigne l={l} taille={17} className="flex shrink-0" />
           <span className="min-w-0 flex-1 truncate">{l.entree.nom}</span>
           {l.detail && <span className="adm-menu-hote">{l.detail}</span>}
@@ -299,11 +310,12 @@ function ChoixTelephone({ depart, principal, gestes, fermer }: { depart: string;
  * ligne qui se déplie, une à la fois. Une tuile est un bouton avec son nom : sa couleur est celle du bouton, l'icône y
  * reste seule.
  */
-const SUGGESTIONS: { type: TypeBloc; fond: string; sous?: string }[] = [
-  { type: 'lien', fond: 'var(--adm-bleu-pale)', sous: 'Ton site, ta boutique, ton agenda…' },
-  { type: 'galerie', fond: 'var(--adm-creme)' },
-  { type: 'preuve', fond: 'var(--adm-citron)' },
-  { type: 'inscription', fond: '#ffe3da' },
+// `bref` : ce qu'en dit la tuile au bureau, quatre sur une rangée, en deux lignes au plus.
+const SUGGESTIONS: { type: TypeBloc; fond: string; sous?: string; bref: string }[] = [
+  { type: 'lien', fond: 'var(--adm-bleu-pale)', sous: 'Ton site, ta boutique, ton agenda…', bref: 'Site, boutique, agenda' },
+  { type: 'galerie', fond: 'var(--adm-creme)', bref: 'Tes photos, qui défilent' },
+  { type: 'preuve', fond: 'var(--adm-citron)', bref: 'Ta note, tes témoignages' },
+  { type: 'inscription', fond: '#ffe3da', bref: 'Les e-mails de tes visiteurs' },
 ];
 const FAMILLES: { nom: string; types: TypeBloc[] }[] = [
   { nom: 'Liens', types: ['lien', 'derniere-video'] },
@@ -311,6 +323,64 @@ const FAMILLES: { nom: string; types: TypeBloc[] }[] = [
   { nom: 'Photos et infos', types: ['galerie', 'faq', 'preuve'] },
   { nom: 'Pour te joindre', types: ['formulaire', 'coordonnees', 'lieu', 'inscription'] },
 ];
+
+/** Une ligne de départ qui se montre en tuile : un bloc des suggestions, sans modèle. */
+const estTuile = (l: LigneAjout) => !l.entree.modele && SUGGESTIONS.some(s => s.type === l.entree.type);
+const familleDe = (l: LigneAjout) => FAMILLES.find(f => f.types.includes(l.entree.type))?.nom ?? 'Autres';
+/** Au bureau, la liste de départ dans l'ordre où elle se lit : les suggestions en tuiles, puis chaque famille, sans redire une tuile. */
+function ordreBureau(lignes: LigneAjout[]): LigneAjout[] {
+  const tuiles = SUGGESTIONS.flatMap(s => lignes.find(l => l.entree.type === s.type && !l.entree.modele) ?? []);
+  const reste = lignes.filter(l => !tuiles.includes(l));
+  return [...tuiles, ...[...FAMILLES.map(f => f.nom), 'Autres'].flatMap(nom => reste.filter(l => familleDe(l) === nom))];
+}
+
+/*
+ * Le départ du choix au bureau (24 octobre 2026, Lilian : « la page desktop aussi faut qu'elle soit impeccable ») : les
+ * quatre suggestions du téléphone en tuiles de couleur sur une rangée, puis les autres blocs rangés par famille sur deux
+ * colonnes, tout en vue d'un coup d'œil. Une seule liste pour le clavier, dans l'ordre de lecture (`ordreBureau`).
+ */
+function DepartBureau({ id, choix, prendre }: { id: string; choix: Choix; prendre: (l: LigneAjout) => void }) {
+  const { toutes } = choix;
+  const n = toutes.filter(estTuile).length;
+  const familles: { nom: string; lignes: [LigneAjout, number][] }[] = [];
+  toutes.slice(n).forEach((l, k) => {
+    const nom = familleDe(l);
+    const f = familles.find(x => x.nom === nom);
+    if (f) f.lignes.push([l, n + k]); else familles.push({ nom, lignes: [[l, n + k]] });
+  });
+  return (
+    <div id={`${id}-liste`} role="listbox" aria-label="Blocs" className="adm-depart min-h-0 flex-1 overflow-y-auto overscroll-contain">
+      <div role="group" aria-label="Suggestions" className="adm-depart-tuiles">
+        {toutes.slice(0, n).map((l, i) => {
+          const s = SUGGESTIONS.find(x => x.type === l.entree.type);
+          return (
+            <div key={l.entree.nom} {...attributsOption(id, choix, prendre, l, i)} className="adm-depart-tuile" style={{ background: s?.fond }}>
+              <Icone nom={l.entree.picto} taille={22} className="text-bleu" />
+              {choix.reserve(l) && l.entree.fonction && <span className="absolute top-2.5 right-2.5"><Etiquette fonction={l.entree.fonction} /></span>}
+              <span className="mt-auto text-[13.5px] leading-tight font-semibold">{l.entree.nom}</span>
+              {s && <span className="line-clamp-2 text-[12px] leading-snug text-white/65">{s.bref}</span>}
+            </div>
+          );
+        })}
+      </div>
+      <p className="adm-depart-aide">Une vidéo, un agenda, une boutique ? Colle son adresse : Hopla en fait le bon bloc.</p>
+      <div className="adm-depart-familles">
+        {familles.map(f => (
+          <div key={f.nom} role="group" aria-label={f.nom} className="break-inside-avoid pb-1.5">
+            <p aria-hidden="true" className="adm-depart-famille">{f.nom}</p>
+            {f.lignes.map(([l, i]) => (
+              <div key={l.entree.nom} {...attributsOption(id, choix, prendre, l, i)} className="adm-menu-item text-white">
+                <PictoLigne l={l} taille={17} className="flex shrink-0" />
+                <span className="min-w-0 flex-1 truncate">{l.entree.nom}</span>
+                {choix.reserve(l) && l.entree.fonction && <Etiquette fonction={l.entree.fonction} />}
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 function Depart({ lignes, ligne, prendre, reserve, permise, nomDe }: {
   lignes: LigneAjout[]; ligne: (l: LigneAjout, i: number) => ReactNode; prendre: (l: LigneAjout) => void;
@@ -371,7 +441,7 @@ function Depart({ lignes, ligne, prendre, reserve, permise, nomDe }: {
 export function ChampAjout({ principal, demande = false, demandeVue, ...gestes }: GestesAjout & { principal: boolean;
   /** Le bouton de l'en-tête ou la touche A le demandent ; `demandeVue` dit que c'est fait. */
   demande?: boolean; demandeVue?: () => void }) {
-  const choix = useChoix(principal, gestes, {});
+  const choix = useChoix(principal, gestes, { ordre: ordreBureau });
   const [ouvert, setOuvert] = useState(false);
   const boite = useRef<HTMLDivElement>(null);
   const champ = useRef<HTMLInputElement>(null);

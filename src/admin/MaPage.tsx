@@ -90,7 +90,7 @@ function brouillonNeuf(b: Bloc): Bloc {
   return { ...nouveauBloc('lien', b.id), titre: b.titre.trim() || type.nom, url: '#', icone: type.picto };
 }
 
-export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, choisi, editeur, neuf, onReglages, onOrdonner, onOuvrir, onAjouter, onPoser, liberer, fermerEdition, gestes, envoyerImage, annoncer, demarrage, demarrageOuvert, fermerDemarrage, demandeDesign, designOuvert, demandeAjout, ajoutOuvert, appel, teteApercu }: {
+export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, choisi, editeur, neuf, onReglages, onOrdonner, onOuvrir, onAjouter, onPoser, liberer, fermerEdition, gestes, envoyerImage, annoncer, demarrage, demarrageOuvert, fermerDemarrage, demandeDesign, designOuvert, demandeAjout, ajoutOuvert, appel, bandeaux, teteApercu }: {
   compte: PagePublique['compte'];
   reglages: Reglages;
   /** Les blocs tels qu'on les voit : celui qu'on règle se redessine à chaque frappe. */
@@ -138,6 +138,8 @@ export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, chois
   ajoutOuvert?: () => void;
   /** Au téléphone, sous la page : l'offre du dessus, en une ligne (voir `AppelOffre`). Au bureau, elle est dans la barre latérale. */
   appel?: ReactNode;
+  /** Au bureau, au-dessus des onglets Contenu et Design : la redirection en cours, le design à l'essai. Au téléphone, sous l'en-tête. */
+  bandeaux?: ReactNode;
   /** Au bureau, en tête de la zone de l'aperçu : l'adresse de la page, Copier et « Voir ma page ». */
   teteApercu?: ReactNode;
 }) {
@@ -432,6 +434,7 @@ export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, chois
           <div className="adm-edition-col">
             {/* « Bien démarrer », tant que la page n'a pas commencé : au-dessus des onglets, il mène au profil, au design ou à un lien neuf. */}
             <HautLiens compte={compte} reglages={reglages} demarrage={demarrage} aller={aller} annoncer={annoncer} feuille={demarrageOuvert} fermerFeuille={fermerDemarrage} />
+            {bandeaux && <div className="adm-bandeaux">{bandeaux}</div>}
 
             {/* Collés sous l'en-tête : on change d'onglet sans remonter. */}
             <div className="adm-onglets-edition">

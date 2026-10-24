@@ -188,7 +188,9 @@ embarque tout : l'image n'a pas de `node_modules`.
   Le choix des blocs (`OngletLiens.tsx`) est un seul champ, « Colle une adresse ou cherche un bloc » : au téléphone une
   feuille qui s'ouvre sur lui et son bouton Coller (`FeuilleAjout`), au bureau le champ au-dessus des blocs
   (`ChampAjout`), que le bouton « Ajouter un bloc » de l'en-tête et la touche A mettent en vue (flèches, Entrée, Échap
-  qui efface puis replie, Tab qui passe sans rien jeter ; revenu des offres, il a gardé ce qu'on avait tapé). Sa liste
+  qui efface puis replie, Tab qui passe sans rien jeter ; revenu des offres, il a gardé ce qu'on avait tapé). Vide, sa liste
+  s'ouvre au bureau comme au téléphone : les quatre tuiles en une rangée, puis les familles en deux colonnes (`DepartBureau`,
+  `ordreBureau`, 24 octobre 2026, la page au bureau). Sa liste
   de départ ne nomme qu'une entrée par chose qu'on écrit ou que Hopla tient (24 octobre 2026, demandé par Lilian :
   « vraiment réfléchir à quoi sert chaque lien ») : Lien, Titre de section, Texte, Avis et preuves, Liste e-mail, et
   pour Lilian Ma dernière vidéo YouTube (`CHOIX` : les types sans `ailleurs`). L'adresse décide du reste : une vidéo, un
@@ -227,7 +229,8 @@ embarque tout : l'image n'a pas de `node_modules`.
   Un compte neuf, juste après les CGU, passe par `PremiersPas.tsx` (nom et bio, ce qu'on veut
   montrer choisi d'un toucher, site, boutique, agenda, vidéo ou musique, l'adresse décidant du bloc, réseaux, ambiance,
   puis un bravo en feu d'artifice qui mène à l'éditeur, sans rien à copier), avec sa page en miniature qui se remplit ; une
-  seule fois, et seulement tant que la page est vide (`pageNeuve`).
+  seule fois, et seulement tant que la page est vide (`pageNeuve`). Au bureau, son en-tête s'aligne sur le haut du téléphone et ne
+  bouge plus d'une étape à l'autre (24 octobre 2026).
 - Les blocs venus de Linktree (24 octobre 2026, choisis par Lilian) : `components/BlocsPlus.tsx` pour la page, `admin/ChampsBlocs.tsx`
   pour l'éditeur. `musique` (Spotify, Apple Music, Apple Podcasts, Deezer, SoundCloud) et `video` (YouTube, Vimeo, TikTok) passent par
   `lib/lecteurs.ts` (`lecteurDe` : l'adresse d'intégration, chargée seulement au toucher ; titre et pochette lus par l'oEmbed) ;
@@ -277,7 +280,8 @@ embarque tout : l'image n'a pas de `node_modules`.
   (`enGrille` dans `lib/collections.ts` ; la grille vient de `.lp-blocs:has(> [data-tuile])`, les blocs restent à plat
   et se déplacent comme avant). Sans Starter, `selonDroits` rend la police et le fond du thème, la photo ronde et la liste.
   Ce design s'essaie avant de payer (24 octobre 2026, demandé par Lilian) : au back office, l'éditeur et l'aperçu le montrent
-  (`avecEssai` dans `lib/droits.ts`), un bandeau citron sur Ma page dit ce qui est à l'essai (`enEssai`), avec « Retirer »
+  (`avecEssai` dans `lib/droits.ts`), un bandeau citron sur Ma page dit ce qui est à l'essai (`enEssai`, au bureau dans la colonne de l'édition, au-dessus
+  des onglets, comme celui d'une redirection : `bandeaux` de `MaPage`), avec « Retirer »
   (`sansEssai`) et « Passer en Starter » ; la page publique reste celle de l'offre. Dans Design, « Photo de profil » change la
   photo (pour tous) et sa forme.
 - `accueil/` : l'accueil de hopla.page (`routes/index.tsx`, styles dans `styles/accueil.css` et, pour la

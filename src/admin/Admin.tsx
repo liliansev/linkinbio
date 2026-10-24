@@ -743,6 +743,42 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
     ? <img src={reglages.profil.avatar} alt="" className={`${taille} shrink-0 rounded-full object-cover`} />
     : <span className={`${taille} adm-avatar-vide grid shrink-0 place-items-center`}><Icone nom="utilisateur" taille={icone} /></span>;
 
+  // Les bandeaux de Ma page. Une page redirigée ne se voit plus : Ma page le dit, avec le geste pour la rendre à ses visiteurs.
+  // Le design à l'essai ne se voit que d'ici : Ma page le dit, avec Starter pour le montrer, ou le thème pour revenir.
+  // Le texte prend la ligne, et les boutons passent dessous, à droite, quand la place manque.
+  const bandeaux = (() => {
+    if (onglet !== 'page') return null;
+    const vers = redirectionActive(reglages.redirection, Date.now(), urlPage(compte));
+    const essais = peutAcheter ? enEssai(reglages, droits) : [];
+    if (!vers && !essais.length) return null;
+    const perso = Object.values(reglages.couleurs).some(Boolean);
+    const noms: Partial<Record<Fonction, string>> = {
+      couleurs: perso && reglages.police ? 'tes couleurs et ta police' : perso ? 'tes couleurs' : 'ta police',
+      fond: 'ton image de fond', grandePhoto: 'ta grande photo',
+    };
+    const liste = essais.map(f => noms[f]).join(', ').replace(/, ([^,]*)$/, ' et $1');
+    const plusieurs = essais.length > 1 || (essais[0] === 'couleurs' && perso);
+    return (
+      <>
+        {vers && (
+          <p role="status" className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl bg-amber-400/15 py-1.5 pr-1.5 pl-3.5 text-[13.5px] leading-snug text-amber-100">
+            <span className="min-w-[14rem] flex-1 text-pretty">Ta page renvoie ses visiteurs {resumeRedirection(vers, reglages.redirection.fin).replace(/^Vers/, 'vers')}.</span>
+            <button type="button" onClick={() => changerReglages({ ...reglages, redirection: { url: '', fin: '' } })} className={`ml-auto ${classeBouton.secondaire}`}>Arrêter</button>
+          </p>
+        )}
+        {essais.length > 0 && (
+          <p role="status" className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl bg-[var(--adm-citron)] py-2 pr-2 pl-3.5 text-[13.5px] leading-snug text-[var(--adm-citron-encre)] sm:py-1.5">
+            <span className="min-w-[14rem] flex-1 text-pretty">À l’essai : {liste}. Tes visiteurs {plusieurs ? 'les' : 'la'} verront avec Starter.</span>
+            <span className="ml-auto flex gap-1.5">
+              <button type="button" onClick={() => changerReglages(sansEssai(reglages, droits))} className={classeBouton.discret}>Retirer</button>
+              <button type="button" onClick={() => ouvrirOffres(essais[0])} className={classeBouton.principal}>Passer en Starter</button>
+            </span>
+          </p>
+        )}
+      </>
+    );
+  })();
+
   return (
     <FournisseurOffre value={offre}>
     <SourceFlux.Provider value={lireFlux}>
@@ -813,42 +849,8 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
         <p className="mx-auto mt-3 max-w-6xl px-4"><span className="block rounded-xl bg-amber-400/15 px-3.5 py-2.5 text-[13.5px] text-amber-100">Le stockage n’est pas encore branché sur le serveur : tes changements seront perdus au prochain redémarrage.</span></p>
       )}
 
-      {/* Une page redirigée ne se voit plus : Ma page le dit, avec le geste pour la rendre à ses visiteurs. */}
-      {onglet === 'page' && (() => {
-        const vers = redirectionActive(reglages.redirection, Date.now(), urlPage(compte));
-        return vers && (
-          <p className="mx-auto mt-3 max-w-6xl px-4 lg:px-8" role="status">
-            <span className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl bg-amber-400/15 py-1.5 pr-1.5 pl-3.5 text-[13.5px] text-amber-100">
-              <span className="min-w-0 flex-1">Ta page renvoie ses visiteurs {resumeRedirection(vers, reglages.redirection.fin).replace(/^Vers/, 'vers')}.</span>
-              <button type="button" onClick={() => changerReglages({ ...reglages, redirection: { url: '', fin: '' } })} className={classeBouton.secondaire}>Arrêter</button>
-            </span>
-          </p>
-        );
-      })()}
-
-      {/* Le design à l'essai ne se voit que d'ici : Ma page le dit, avec Starter pour le montrer, ou le thème pour revenir. */}
-      {onglet === 'page' && peutAcheter && (() => {
-        const essais = enEssai(reglages, droits);
-        if (!essais.length) return null;
-        const perso = Object.values(reglages.couleurs).some(Boolean);
-        const noms: Partial<Record<Fonction, string>> = {
-          couleurs: perso && reglages.police ? 'tes couleurs et ta police' : perso ? 'tes couleurs' : 'ta police',
-          fond: 'ton image de fond', grandePhoto: 'ta grande photo',
-        };
-        const liste = essais.map(f => noms[f]).join(', ').replace(/, ([^,]*)$/, ' et $1');
-        const plusieurs = essais.length > 1 || (essais[0] === 'couleurs' && perso);
-        return (
-          <p className="mx-auto mt-3 max-w-6xl px-4 lg:px-8" role="status">
-            <span className="flex flex-col gap-2 rounded-xl bg-[var(--adm-citron)] py-2 pr-2 pl-3.5 text-[13.5px] leading-snug text-[var(--adm-citron-encre)] sm:flex-row sm:items-center sm:gap-3 sm:py-1.5">
-              <span className="min-w-0 flex-1">À l’essai : {liste}. Tes visiteurs {plusieurs ? 'les' : 'la'} verront avec Starter.</span>
-              <span className="flex justify-end gap-1.5">
-                <button type="button" onClick={() => changerReglages(sansEssai(reglages, droits))} className={classeBouton.discret}>Retirer</button>
-                <button type="button" onClick={() => ouvrirOffres(essais[0])} className={classeBouton.principal}>Passer en Starter</button>
-              </span>
-            </span>
-          </p>
-        );
-      })()}
+      {/* Les bandeaux de Ma page : au téléphone sous l'en-tête, au bureau dans la colonne de l'édition, au-dessus des onglets (`bandeaux` de MaPage). */}
+      {!grand && bandeaux && <div className="mx-auto mt-3 flex max-w-6xl flex-col gap-2 px-4">{bandeaux}</div>}
 
       <EmplacementEntete.Provider value={emplacement}>
       <PoserFil.Provider value={setFil}>
@@ -869,11 +871,11 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
             envoyerImage={d => api.envoyerImage(d)} annoncer={t => setToast(t)}
             demarrage={demarrage} demarrageOuvert={demarrageOuvert} fermerDemarrage={() => setDemarrageOuvert(false)} demandeDesign={demandeDesign} designOuvert={() => setDemandeDesign(null)}
             demandeAjout={demandeAjout} ajoutOuvert={() => setDemandeAjout(null)}
-            appel={grand ? null : appel()}
+            appel={grand ? null : appel()} bandeaux={grand ? bandeaux : null}
             teteApercu={(
               <>
                 <div className="adm-adresse-entete h-9 min-w-0">
-                  <span className="flex min-w-0 items-center truncate px-2.5 text-[13px] text-white/55" translate="no">{courte.slice(0, coupe)}<span className="font-medium text-white">{courte.slice(coupe)}</span></span>
+                  <span className="min-w-0 self-center truncate px-2.5 text-[13px] text-white/55" translate="no">{courte.slice(0, coupe)}<span className="font-medium text-white">{courte.slice(coupe)}</span></span>
                   <BoutonAdresse adresse={adresse} />
                 </div>
                 <a href={demo ? '#page' : adresse} target={demo ? undefined : '_blank'} rel={demo ? undefined : 'noopener'} className={classeBouton.secondaire}><Icone nom="ui-ouvrir" taille={15} className="shrink-0" />Voir ma page</a>
@@ -952,7 +954,7 @@ function BoutonAdresse({ adresse }: { adresse: string }) {
     vibrer(8); noterPartage(); setCopie(true); setTimeout(() => setCopie(false), 1800);
   }
   return (
-    <button type="button" onClick={copier} aria-label={copie ? 'Adresse copiée' : 'Copier l’adresse de ta page'} className="flex items-center gap-1.5 px-3 text-[13px] font-medium text-white">
+    <button type="button" onClick={copier} aria-label={copie ? 'Adresse copiée' : 'Copier l’adresse de ta page'} className="flex shrink-0 items-center gap-1.5 px-3 text-[13px] font-medium whitespace-nowrap text-white">
       <Icone nom={copie ? 'ui-ok' : 'ui-copier'} taille={15} className="shrink-0" />{copie ? 'Copié' : 'Copier'}
     </button>
   );
