@@ -1545,3 +1545,50 @@ test('Comptes : « Renvoyer son lien » redonne la bienvenue à une page jamais 
   const ligne = db.base().prepare('SELECT expire - cree AS duree FROM jetons WHERE hash = ?').get(hash) as { duree: number };
   assert.equal(ligne.duree, 86_400_000);
 });
+
+test('Me contacter : le message part au propriétaire, l’adresse du visiteur en réponse, rien n’est gardé', async () => {
+  const { envoyerMessage } = await import('./message.ts');
+  const env = { RESEND_API_KEY: 're_test', LIENS_ADMIN_EMAIL: 'lilian@exemple.fr' };
+  const envois: any[] = [];
+  const fetchFaux = (async (_url: string, init: RequestInit) => { envois.push(JSON.parse(String(init.body))); return new Response('{}', { status: 200 }); }) as typeof fetch;
+  db.enregistrerBloc(P, validerBloc({ type: 'formulaire', titre: 'Me contacter' }, 'contact'));
+  const ctx = { ip: '7.7.7.7', hotes: new Set<string>() };
+  const message = { page: '', bloc: 'contact', nom: 'Camille <b>', email: 'Camille@Exemple.fr', message: 'Bonjour, <script>x</script> un devis ?' };
+  assert.equal((await envoyerMessage(env, fetchFaux, message, ctx)).status, 200);
+  const e = envois.at(-1);
+  assert.deepEqual(e.to, ['lilian@exemple.fr']);
+  assert.equal(e.reply_to, 'camille@exemple.fr');
+  assert.match(e.subject, /Camille b/);
+  assert.ok(!e.html.includes('<script>'), 'le message est échappé');
+  assert.equal((await envoyerMessage(env, fetchFaux, { ...message, website: 'spam' }, ctx)).status, 200);
+  assert.equal(envois.length, 1, 'le champ piège écarte le robot sans rien envoyer');
+  assert.equal((await envoyerMessage(env, fetchFaux, { ...message, email: 'pas-une-adresse' }, ctx)).status, 400);
+  assert.equal((await envoyerMessage(env, fetchFaux, { ...message, message: ' ' }, ctx)).status, 400);
+  assert.equal((await envoyerMessage(env, fetchFaux, { ...message, bloc: 'inconnu' }, ctx)).status, 404);
+  // Trois messages en dix minutes par adresse IP, pas plus.
+  await envoyerMessage(env, fetchFaux, message, ctx);
+  await envoyerMessage(env, fetchFaux, message, ctx);
+  assert.equal((await envoyerMessage(env, fetchFaux, message, ctx)).status, 429);
+  // Une page en Gratuit n'a pas « Me contacter » : le bloc n'accepte rien.
+  const payant = { ...env, CREEM_API_KEY: 'creem_test_x', CREEM_WEBHOOK_SECRET: 'whsec_test', CREEM_PRODUIT_MOIS: 'prod_mois', CREEM_PRODUIT_AN: 'prod_an' };
+  const noa = db.creerCompte('noa@exemple.fr', 'noa', BASCULE_OFFRES + 86_400_000);
+  db.enregistrerBloc(noa.id, validerBloc({ type: 'formulaire', titre: 'Me contacter' }, 'c2'));
+  assert.equal((await envoyerMessage(payant, fetchFaux, { ...message, page: 'noa', bloc: 'c2' }, { ip: '8.8.8.8', hotes: new Set() })).status, 404);
+});
+
+test('la carte de visite se télécharge en vCard, que le téléphone range dans ses contacts', async () => {
+  const { carteDeVisite } = await import('./message.ts');
+  db.enregistrerBloc(P, validerBloc({ type: 'coordonnees', titre: 'Marie Dupont', url: 'marie.fr', adressePostale: '12 rue des Lilas\n75011 Paris',
+    coordonnees: { telephone: '06 12 34 56 78', email: 'marie@exemple.fr', societe: 'Atelier, Lumière', poste: 'Photographe' } }, 'carte'));
+  const c = carteDeVisite('', 'carte')!;
+  assert.equal(c.fichier, 'marie-dupont.vcf');
+  assert.match(c.vcf, /^BEGIN:VCARD\r\nVERSION:3\.0\r\n/);
+  assert.match(c.vcf, /\r\nN:Dupont;Marie;;;\r\n/);
+  assert.match(c.vcf, /\r\nORG:Atelier\\, Lumière\r\n/, 'la virgule s’échappe');
+  assert.match(c.vcf, /\r\nTEL;TYPE=CELL:0612345678\r\n/);
+  assert.match(c.vcf, /\r\nADR;TYPE=WORK:;;12 rue des Lilas\\, 75011 Paris;;;;\r\n/);
+  assert.match(c.vcf, /\r\nURL:https:\/\/marie\.fr\/\r\n/);
+  assert.equal(carteDeVisite('', 'inconnu'), null);
+  db.enregistrerBloc(P, { ...db.lireBlocs(P).find(b => b.id === 'carte')!, public: false });
+  assert.equal(carteDeVisite('', 'carte'), null, 'une carte masquée ne se télécharge pas');
+});

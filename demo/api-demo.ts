@@ -19,7 +19,7 @@ import avatar from '../public/avatar.webp?inline';
 const CLE = 'liens-demo-v3';
 const SANS_ABONNEMENT: Abonnement = { plan: 'gratuit', payee: 'gratuit', statut: '', finPeriode: null, periode: null, portail: false, offerte: null };
 /** Sans paiement, rien n'est réservé : l'aperçu montre toutes les fonctions (seule la mention reste sans offre). */
-const DROITS_APERCU: Droits = { sansMention: false, vitrine: true, couleurs: true, programmation: true, avis: true, stats: true, heure: true, drops: true, listeEmail: true };
+const DROITS_APERCU: Droits = { sansMention: false, vitrine: true, couleurs: true, programmation: true, avis: true, stats: true, heure: true, drops: true, listeEmail: true, formulaire: true, galerie: true };
 let n = 0;
 const id = () => `d${Date.now().toString(36)}${n++}`;
 
@@ -323,6 +323,46 @@ export function blocsVitrine(): Bloc[] {
     b('reservation', { titre: 'Réserver au salon', url: 'https://www.planity.com/salon-camille-75011-paris', vedette: true }),
     b('soutien', { url: 'https://paypal.me/camille', sousTitre: 'Pour m’aider à continuer, si le cœur t’en dit.' }),
     b('soutien', { titre: 'Un café pour la route', url: 'https://ko-fi.com/camille' }),
+  ];
+}
+
+/** Une photo d'exemple pour la galerie : un aplat dégradé et une forme, dans une teinte. */
+function photoDemo(teinte: number, l = 800, h = 1000): string {
+  const c = document.createElement('canvas');
+  c.width = l; c.height = h;
+  const x = c.getContext('2d')!;
+  const g = x.createLinearGradient(0, 0, l, h);
+  g.addColorStop(0, `hsl(${teinte} 45% 72%)`); g.addColorStop(1, `hsl(${teinte + 30} 40% 38%)`);
+  x.fillStyle = g; x.fillRect(0, 0, l, h);
+  x.fillStyle = `hsl(${teinte + 180} 50% 88% / 0.85)`; x.beginPath(); x.arc(l * 0.62, h * 0.4, l * 0.22, 0, Math.PI * 2); x.fill();
+  x.fillStyle = `hsl(${teinte} 30% 22% / 0.6)`; x.fillRect(0, h * 0.72, l, h * 0.28);
+  return c.toDataURL('image/jpeg', 0.8);
+}
+
+/**
+ * Les blocs venus de Linktree (`#blocs=<thème>`, 24 octobre 2026), pour la planche de captures : une vidéo Vimeo et
+ * une TikTok, deux lecteurs de musique, une galerie, des questions fréquentes, une carte de visite, une adresse et
+ * « Me contacter ».
+ */
+let linktree: Bloc[] | null = null;
+export function blocsLinktree(): Bloc[] {
+  if (linktree) return linktree;
+  const b = (type: Bloc['type'], champs: Partial<Bloc>): Bloc => ({ ...nouveauBloc(type, id()), ...champs });
+  return linktree = [
+    b('musique', { titre: 'Mon premier EP, «\u00a0Lueurs\u00a0»', url: 'https://open.spotify.com/album/1DFixLWuPkv3KT3TnV35m3', image: photoDemo(20, 400, 400) }),
+    b('musique', { titre: 'Le podcast de l’atelier', url: 'https://soundcloud.com/camille/episode-12', sousTitre: 'Épisode 12, la cuisson raku', vedette: true }),
+    b('galerie', { titre: 'Mes dernières pièces', images: [photoDemo(20), photoDemo(160), photoDemo(220), photoDemo(330)] }),
+    b('video', { titre: 'Tourner un bol en cinq minutes', url: 'https://vimeo.com/76979871', image: photoDemo(200, 960, 540) }),
+    b('faq', { questions: [
+      { question: 'Tu livres où ?', reponse: 'Partout en France, en 48 heures. En Europe, compte une semaine.' },
+      { question: 'Les pièces passent au lave-vaisselle ?', reponse: 'Oui, toutes, sauf celles en raku : un coup d’éponge suffit.' },
+      { question: 'Tu prends des commandes sur mesure ?', reponse: 'Avec plaisir, écris-moi en dessous.' },
+    ] }),
+    b('coordonnees', { titre: 'Camille Martin', url: 'https://atelier-camille.fr', adressePostale: '12 rue des Lilas\n75011 Paris',
+      coordonnees: { telephone: '06 12 34 56 78', email: 'camille@atelier-camille.fr', societe: 'Atelier Camille', poste: 'Céramiste' } }),
+    b('lieu', { titre: 'L’atelier', adressePostale: '12 rue des Lilas\n75011 Paris' }),
+    b('formulaire', { sousTitre: 'Une question, une commande : je réponds sous 48 heures.' }),
+    b('video', { titre: 'Les coulisses d’une cuisson', url: 'https://www.tiktok.com/@camille/video/7234567890123456789' }),
   ];
 }
 

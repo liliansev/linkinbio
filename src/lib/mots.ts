@@ -1,6 +1,6 @@
 /*
- * Les mots de la page publique elle-même (le formulaire, le compte à rebours,
- * les places d'un drop, le pied de page, la vitrine),
+ * Les mots de la page publique elle-même (les formulaires, le compte à rebours,
+ * les places d'un drop, le pied de page, la vitrine, les lecteurs, la galerie),
  * au « tu » ou au « vous » selon ce que la personne a choisi pour ses visiteurs.
  */
 
@@ -28,6 +28,14 @@ const tu = {
   codePromo: 'Code', codeCopie: (code: string) => `Code ${code} copié`, copierCode: (code: string) => `Copier le code ${code}`, copieRatee: 'La copie n’a pas marché.',
   autreMontant: 'Autre montant', paiementSur: (site: string) => `Le paiement se fait sur ${site}.`, soutenirSur: (site: string) => `Soutenir sur ${site}`,
   ouvrirSur: (site: string) => `Ouvrir sur ${site}`, fermer: 'Fermer', chargement: 'Chargement…',
+  // Les blocs venus de Linktree (24 octobre 2026) : un lecteur, une galerie, une carte de visite, une adresse, « Me contacter ».
+  ecouter: (titre: string, service: string) => `Écouter ${titre} sur ${service}`, lireVideo: (titre: string) => `Lire la vidéo : ${titre}`,
+  photo: (n: number, total: number) => `Photo ${n} sur ${total}`, photoPrecedente: 'Photo précédente', photoSuivante: 'Photo suivante',
+  enregistrerContact: 'Enregistrer le contact', appeler: 'Appeler', ecrire: 'Écrire',
+  itineraire: 'Itinéraire', voirCarte: 'Voir la carte', carteDe: (lieu: string) => `Carte : ${lieu}`,
+  nom: 'Ton nom', nomAria: 'Ton nom (facultatif)', message: 'Ton message', messageAria: 'Ton message', envoyer: 'Envoyer',
+  envoye: 'Message envoyé, merci ! Tu recevras la réponse par e-mail.', messageVide: 'Écris ton message.',
+  mentionMessage: 'Ton adresse sert seulement à te répondre. Hopla ne garde pas ton message.',
 };
 export type Textes = typeof tu;
 
@@ -38,6 +46,9 @@ const vous: Textes = {
   mention: 'Votre adresse sert seulement à recevoir ces e-mails. Désinscription en un clic, quand vous voulez.',
   tropDEssais: 'Trop d’essais. Réessayez dans quelques minutes.', echec: 'Ça n’est pas passé. Réessayez.',
   garde: 'Votre place est gardée.', reserver: 'Réserver ma place',
+  nom: 'Votre nom', nomAria: 'Votre nom (facultatif)', message: 'Votre message', messageAria: 'Votre message',
+  envoye: 'Message envoyé, merci ! Vous recevrez la réponse par e-mail.', messageVide: 'Écrivez votre message.',
+  mentionMessage: 'Votre adresse sert seulement à vous répondre. Hopla ne garde pas votre message.',
 };
 
 export const textes = (vouvoiement = false): Textes => (vouvoiement ? vous : tu);

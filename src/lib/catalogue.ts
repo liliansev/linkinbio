@@ -27,10 +27,12 @@ export interface TypeAjout { type: TypeBloc; nom: string; aide?: string; picto: 
 
 export const TYPES: TypeAjout[] = [
   { type: 'lien', nom: 'Lien', picto: 'bloc-lien',
-    mots: 'site adresse url bouton page web reseau instagram tiktok facebook linkedin twitter threads spotify twitch pinterest snapchat whatsapp telegram discord podcast blog portfolio' },
+    mots: 'site adresse url bouton page web reseau instagram tiktok facebook linkedin twitter threads twitch pinterest snapchat whatsapp telegram discord blog portfolio' },
   { type: 'lien', nom: 'Lien partenaire', aide: 'Affiliation ou collaboration payée : la mention « Publicité », et ton code promo', picto: 'bloc-partenaire', modele: { partenariat: { mention: 'publicite', code: '' } }, ailleurs: true,
     mots: 'affiliation affilie affiliate publicite pub sponsor sponsorise collaboration commerciale partenariat code promo reduction remise amazon awin' },
-  { type: 'video', nom: 'Vidéo YouTube', picto: 'bloc-video', ailleurs: true, mots: 'film clip extrait tuto regarder' },
+  { type: 'video', nom: 'Vidéo', aide: 'Une vidéo YouTube, Vimeo ou TikTok, qui se lit dans ta page', picto: 'bloc-video', ailleurs: true, mots: 'youtube vimeo tiktok film clip extrait tuto regarder' },
+  { type: 'musique', nom: 'Musique ou podcast', aide: 'Un titre, un album ou un podcast Spotify, Apple Music, Deezer ou SoundCloud, qui s’écoute dans ta page', picto: 'bloc-musique', ailleurs: true,
+    mots: 'lecteur ecouter son audio chanson titre morceau album playlist ep single episode spotify deezer soundcloud apple music podcasts' },
   // La vitrine : Hopla n'encaisse rien, chaque bloc mène au site qui vend, réserve ou reçoit.
   { type: 'produit', nom: 'Produit', aide: 'Sa photo et son prix, lus sur ta boutique', picto: 'bloc-produit', fonction: 'vitrine', ailleurs: true,
     mots: 'boutique shop vente vendre article achat acheter commander commande payer paiement prix etsy gumroad shopify payhip stan stripe ebook formation atelier vitrine' },
@@ -40,10 +42,19 @@ export const TYPES: TypeAjout[] = [
     mots: 'soutien soutenir aider contribuer participer don donation donner payer pourboire tip cagnotte paypal ko-fi kofi tipeee lydia patreon buy coffee cafe vitrine' },
   { type: 'titre', nom: 'Titre de section', picto: 'bloc-titre', mots: 'intertitre separateur rubrique categorie partie' },
   { type: 'texte', nom: 'Texte', picto: 'bloc-texte', mots: 'paragraphe description phrase message presentation' },
+  // Les blocs venus de Linktree (24 octobre 2026) : chacun montre une chose que la page ne savait pas montrer.
+  { type: 'galerie', nom: 'Galerie', aide: 'Tes photos, qui défilent d’un geste', picto: 'bloc-galerie', mots: 'photo photos image images album portfolio carrousel diaporama realisations' },
+  { type: 'faq', nom: 'Questions fréquentes', aide: 'Les questions qu’on te pose, et tes réponses', picto: 'bloc-faq', mots: 'faq question reponse aide infos accordeon' },
   { type: 'preuve', nom: 'Avis et preuves', aide: 'Ta note Google, un chiffre clé ou un témoignage, avec sa source', picto: 'bloc-preuve', fonction: 'avis',
     mots: 'note etoile google trustpilot malt temoignage recommandation chiffre clients' },
   { type: 'inscription', nom: 'Liste e-mail', aide: 'Tes visiteurs laissent leur e-mail, que tu exportes ou envoies vers ta newsletter', picto: 'bloc-inscription', fonction: 'listeEmail',
-    mots: 'email mail newsletter lettre inscription inscrit abonne formulaire collecter brevo mailchimp kit mailerlite beehiiv substack systeme.io systeme' },
+    mots: 'email mail newsletter lettre inscription inscrit abonne collecter brevo mailchimp kit mailerlite beehiiv substack systeme.io systeme' },
+  // Pour qu'on te joigne : un message, ton contact, ton adresse.
+  { type: 'formulaire', nom: 'Me contacter', aide: 'Un formulaire : le message arrive dans ta boîte, ton adresse reste cachée', picto: 'bloc-formulaire', fonction: 'formulaire',
+    mots: 'formulaire contact message ecrire email devis demande' },
+  { type: 'coordonnees', nom: 'Carte de visite', aide: 'Tes visiteurs enregistrent ton contact dans leur téléphone, d’un toucher', picto: 'bloc-coordonnees',
+    mots: 'vcard contact coordonnees telephone numero carnet enregistrer societe entreprise poste' },
+  { type: 'lieu', nom: 'Adresse', aide: 'Ton adresse, la carte et l’itinéraire', picto: 'bloc-lieu', mots: 'lieu carte plan maps google itineraire boutique magasin cabinet salon local venir' },
   { type: 'derniere-video', nom: 'Ma dernière vidéo YouTube', picto: 'bloc-derniere-video', mots: 'chaine automatique' },
   // L'ancienne newsletter de Lilian est la liste e-mail : ses blocs posés restent, elle ne s'ajoute plus.
   { type: 'newsletter', nom: 'Ma newsletter', picto: 'bloc-newsletter', ailleurs: true, retire: true },
@@ -175,10 +186,10 @@ export function aideSaisie(texte: string, fini = false): string {
 
 /** Le geste qui fait prendre à un lien le bloc que son adresse appelle, dans l'éditeur et au retour d'un paiement. */
 export const EN_FAIRE: Record<Exclude<TypeAdresse, 'lien'>, string> = {
-  video: 'En faire une vidéo dans ta page', reservation: 'En faire une prise de rendez-vous', soutien: 'En faire un bouton « Me soutenir »', produit: 'En faire un produit',
+  video: 'En faire une vidéo dans ta page', musique: 'En faire un lecteur dans ta page', reservation: 'En faire une prise de rendez-vous', soutien: 'En faire un bouton « Me soutenir »', produit: 'En faire un produit',
 };
 
 /** Ce que devient un bloc qui change de type, dit en une phrase (pour les lecteurs d'écran). */
 export const DEVENU: Record<TypeAdresse, string> = {
-  lien: 'un simple lien', video: 'une vidéo', reservation: 'une prise de rendez-vous', soutien: 'un bouton « Me soutenir »', produit: 'un produit',
+  lien: 'un simple lien', video: 'une vidéo', musique: 'un lecteur', reservation: 'une prise de rendez-vous', soutien: 'un bouton « Me soutenir »', produit: 'un produit',
 };

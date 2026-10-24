@@ -6,11 +6,11 @@ import { estEnLigne } from '../src/lib/types.ts';
 import { Admin } from '../src/admin/Admin.tsx';
 import { THEMES } from '../src/lib/themes.ts';
 import { PageLiens } from '../src/components/PageLiens.tsx';
-import { apiDemo, apiGratuit, apiNouveau, blocsVitrine, pageDemo, recommencerNouveau } from './api-demo.ts';
+import { apiDemo, apiGratuit, apiNouveau, blocsLinktree, blocsVitrine, pageDemo, recommencerNouveau } from './api-demo.ts';
 
 /* L'aperçu navigable : le vrai back office et la vraie page, sans serveur. */
 function Demo() {
-  const lireVue = () => (/^#(page|vitrine|mention)/.test(location.hash) ? 'page' : location.hash === '#nouveau' ? 'nouveau' : location.hash.startsWith('#gratuit') ? 'gratuit' : 'admin');
+  const lireVue = () => (/^#(page|vitrine|mention|blocs)/.test(location.hash) ? 'page' : location.hash === '#nouveau' ? 'nouveau' : location.hash.startsWith('#gratuit') ? 'gratuit' : 'admin');
   const [vue, setVue] = useState(lireVue);
   // Passer de `#page=klein` à `#page=riso` ne change pas de vue : l'adresse elle-même redessine la page.
   const [hash, setHash] = useState(() => location.hash);
@@ -30,6 +30,10 @@ function Demo() {
     // `#vitrine=klein` : la vitrine d'exemple dans un thème, pour la planche de captures.
     if (hash.startsWith('#vitrine')) {
       return <PageLiens key={hash} page={{ reglages: { ...p.reglages, bureau }, blocs: blocsVitrine(), compte: p.compte }} apercu />;
+    }
+    // `#blocs=klein` : les blocs venus de Linktree dans un thème.
+    if (hash.startsWith('#blocs')) {
+      return <PageLiens key={hash} page={{ reglages: { ...p.reglages, bureau }, blocs: blocsLinktree(), compte: p.compte }} apercu />;
     }
     // `#mention=klein` : une page courte (deux liens) d'un compte Gratuit, pour la planche du pied de page : la mention Hopla et les liens légaux.
     const mention = hash.startsWith('#mention');

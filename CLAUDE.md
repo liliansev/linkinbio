@@ -197,6 +197,14 @@ embarque tout : l'image n'a pas de `node_modules`.
   Un compte neuf, juste après les CGU, passe par `PremiersPas.tsx` (nom et bio, liens,
   réseaux, ambiance, page en ligne), avec sa page en miniature qui se remplit ; une
   seule fois, et seulement tant que la page est vide (`pageNeuve`).
+- Les blocs venus de Linktree (24 octobre 2026, choisis par Lilian) : `components/BlocsPlus.tsx` pour la page, `admin/ChampsBlocs.tsx`
+  pour l'éditeur. `musique` (Spotify, Apple Music, Apple Podcasts, Deezer, SoundCloud) et `video` (YouTube, Vimeo, TikTok) passent par
+  `lib/lecteurs.ts` (`lecteurDe` : l'adresse d'intégration, chargée seulement au toucher ; titre et pochette lus par l'oEmbed) ;
+  `galerie` (`images`, des `/media/` seulement, trois montrées en Gratuit, douze avec Starter), `faq` (`questions`, en `details`),
+  `coordonnees` (carte de visite : `coordonnees`, `adressePostale`, un fichier vCard servi par `/api/vcard`), `lieu` (`adressePostale`,
+  itinéraire et carte Google au toucher) et `formulaire` (« Me contacter », Starter : `/api/message`, `server/message.ts`, Turnstile,
+  trois messages par IP en dix minutes, 50 par page et par jour, envoyé par Resend au propriétaire avec l'adresse du visiteur en
+  réponse, rien n'est gardé). Vingt réseaux au plus (`MAX_RESEAUX`), WhatsApp par un numéro. Démo : `#blocs=<thème>`.
 - `components/PageLiens.tsx` : la page publique. Ouverte dans le navigateur intégré d'une app (LinkedIn,
   Instagram…), elle se montre directement : la feuille qui proposait Safari ou Chrome (21 octobre 2026) a été
   retirée le 22 octobre 2026, à la demande de Lilian. La vitrine (22 octobre 2026,
@@ -223,7 +231,7 @@ embarque tout : l'image n'a pas de `node_modules`.
   `llms.txt` (routes `robots[.]txt.ts`…) ; le back office ne s'indexe pas.
 - `demo/` : aperçu statique avec une API simulée, publié en Artifact ; `#nouveau` y
   rejoue l'arrivée d'un nouvel inscrit, `#page=<thème>` montre la page dans un thème, `#vitrine=<thème>`
-  la vitrine d'exemple (produits, liens partenaires, réservations, soutiens), `#mention=<thème>` une page courte d'un
+  la vitrine d'exemple (produits, liens partenaires, réservations, soutiens), `#blocs=<thème>` les blocs venus de Linktree, `#mention=<thème>` une page courte d'un
   compte Gratuit, pour la planche du pied.
 
 ## Règles

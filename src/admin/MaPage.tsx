@@ -5,7 +5,7 @@ import type { DragEndEvent, Modifier } from '@dnd-kit/core';
 import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS as CssDnd } from '@dnd-kit/utilities';
 import type { Bloc, PagePublique, Reglages, TypeBloc } from '../lib/types.ts';
-import { SANS_COULEURS, TYPES_ADRESSE, TYPES_PRINCIPAL, TYPES_VITRINE, formatVedette, nouveauBloc, sansSchema } from '../lib/types.ts';
+import { GALERIE_GRATUITE, SANS_COULEURS, TYPES_ADRESSE, TYPES_PRINCIPAL, TYPES_VITRINE, formatVedette, nouveauBloc, sansSchema } from '../lib/types.ts';
 import { etiquettes } from '../lib/etiquettes.ts';
 import { horsCreneauOuDates } from '../lib/moments.ts';
 import { selonDroits } from '../lib/droits.ts';
@@ -569,7 +569,7 @@ function ChampBio({ cible, valeur, onChange, onQuitter }: { cible: RefObject<HTM
 /** Le nom d'un bloc dans sa rangée : son texte, sinon son adresse, sinon son genre. */
 function nomBloc(b: Bloc) {
   const titre = b.titre.trim().split('\n')[0];
-  return titre || (TYPES_ADRESSE.includes(b.type) && b.url ? sansSchema(b.url).replace(/\/$/, '') : '') || typeDe(b).nom;
+  return titre || (TYPES_ADRESSE.includes(b.type) && b.url ? sansSchema(b.url).replace(/\/$/, '') : '') || (b.type === 'lieu' ? b.adressePostale.split('\n')[0].trim() : '') || typeDe(b).nom;
 }
 /** Ce qui se lit en gris à côté du nom : le prix d'un produit, l'adresse d'un bloc qui mène quelque part, sinon le genre du bloc. */
 function sousBloc(b: Bloc, nom: string) {
@@ -585,13 +585,14 @@ function commeSurLaPage(bloc: Bloc, droits: Droits): Bloc {
   let b = bloc;
   if (!droits.programmation && b.compteARebours) b = { ...b, compteARebours: false };
   if (!droits.vitrine && b.partenariat?.code) b = { ...b, partenariat: { ...b.partenariat, code: '' } };
+  if (!droits.galerie && b.images.length > GALERIE_GRATUITE) b = { ...b, images: b.images.slice(0, GALERIE_GRATUITE) };
   return b;
 }
 
 /** Ce qu'un bloc a de particulier, dit de la même façon dans la liste du bureau et sur la page du téléphone. */
 function etatBloc(bloc: Bloc, droits: Droits) {
   // Un bloc que l'offre ne comprend plus reste là, grisé comme un bloc masqué : il revient avec l'offre.
-  const attend = ([[!!bloc.acces, 'drops'], [bloc.type === 'inscription', 'listeEmail'], [bloc.type === 'preuve', 'avis'], [TYPES_VITRINE.includes(bloc.type), 'vitrine']] as [boolean, Fonction][]).find(([oui, f]) => oui && !droits[f])?.[1];
+  const attend = ([[!!bloc.acces, 'drops'], [bloc.type === 'inscription', 'listeEmail'], [bloc.type === 'preuve', 'avis'], [TYPES_VITRINE.includes(bloc.type), 'vitrine'], [bloc.type === 'formulaire', 'formulaire']] as [boolean, Fonction][]).find(([oui, f]) => oui && !droits[f])?.[1];
   const prive = !bloc.public || !!attend;
   // Une règle que l'offre ne comprend plus n'est pas dite : sans Starter, un lancement attend sa date sans compte à rebours (« programmé »).
   const regles = etiquettes(bloc, droits);

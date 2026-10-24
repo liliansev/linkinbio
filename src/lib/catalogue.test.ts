@@ -7,10 +7,10 @@ const noms = (entrees: { nom: string }[]) => entrees.map(e => e.nom);
 const premier = (texte: string, principal = false) => chercherBlocs(texte, principal)[0]?.nom;
 
 test('le choix de départ n’a qu’une entrée par chose qu’on écrit ou que Hopla tient', () => {
-  assert.deepEqual(noms(choixPour(true)), ['Lien', 'Titre de section', 'Texte', 'Avis et preuves', 'Liste e-mail', 'Ma dernière vidéo YouTube']);
-  assert.deepEqual(noms(choixPour(false)), ['Lien', 'Titre de section', 'Texte', 'Avis et preuves', 'Liste e-mail']);
-  // Une vidéo, un agenda, un soutien, un produit viennent de leur adresse ; un lien partenaire est un lien.
-  for (const nom of ['Vidéo YouTube', 'Produit', 'Prise de rendez-vous', 'Me soutenir', 'Lien partenaire', 'Ma newsletter']) assert.equal(CHOIX.some(t => t.nom === nom), false, nom);
+  assert.deepEqual(noms(choixPour(true)), ['Lien', 'Titre de section', 'Texte', 'Galerie', 'Questions fréquentes', 'Avis et preuves', 'Liste e-mail', 'Me contacter', 'Carte de visite', 'Adresse', 'Ma dernière vidéo YouTube']);
+  assert.deepEqual(noms(choixPour(false)), ['Lien', 'Titre de section', 'Texte', 'Galerie', 'Questions fréquentes', 'Avis et preuves', 'Liste e-mail', 'Me contacter', 'Carte de visite', 'Adresse']);
+  // Une vidéo, une musique, un agenda, un soutien, un produit viennent de leur adresse ; un lien partenaire est un lien.
+  for (const nom of ['Vidéo', 'Musique ou podcast', 'Produit', 'Prise de rendez-vous', 'Me soutenir', 'Lien partenaire', 'Ma newsletter']) assert.equal(CHOIX.some(t => t.nom === nom), false, nom);
 });
 
 test('un bloc se trouve par son nom ou par les mots qu’on emploie pour lui', () => {
@@ -38,7 +38,7 @@ test('on cherche avec ce qu’on veut faire : un mot suffit, les petits mots ne 
   assert.equal(premier('vendre mes ebooks'), 'Produit');
   assert.equal(premier('acheter'), 'Produit');
   assert.equal(premier('dons'), 'Me soutenir');
-  assert.equal(premier('vidéos'), 'Vidéo YouTube');
+  assert.equal(premier('vidéos'), 'Vidéo');
   assert.equal(premier('mon insta'), 'Lien');
   assert.equal(premier('les étoiles'), 'Avis et preuves');
   assert.equal(premier('collecter des e-mails'), 'Liste e-mail');
@@ -48,9 +48,15 @@ test('on cherche avec ce qu’on veut faire : un mot suffit, les petits mots ne 
 });
 
 test('le nom passe avant les mots ; une lettre seule ne cherche que les noms', () => {
-  assert.deepEqual(noms(chercherBlocs('p', false)), ['Produit', 'Prise de rendez-vous', 'Lien partenaire', 'Avis et preuves']);
-  assert.deepEqual(noms(chercherBlocs('youtube', true)), ['Vidéo YouTube', 'Ma dernière vidéo YouTube']);
-  assert.deepEqual(noms(chercherBlocs('youtube', false)), ['Vidéo YouTube']);
+  assert.deepEqual(noms(chercherBlocs('p', false)), ['Produit', 'Prise de rendez-vous', 'Lien partenaire', 'Musique ou podcast', 'Avis et preuves']);
+  assert.deepEqual(noms(chercherBlocs('youtube', true)), ['Ma dernière vidéo YouTube', 'Vidéo']);
+  assert.deepEqual(noms(chercherBlocs('youtube', false)), ['Vidéo']);
+  // Les blocs venus de Linktree se trouvent par ce qu'on veut montrer.
+  assert.equal(premier('spotify'), 'Musique ou podcast');
+  assert.equal(premier('photos'), 'Galerie');
+  assert.equal(premier('formulaire'), 'Me contacter');
+  assert.equal(premier('vcard'), 'Carte de visite');
+  assert.equal(premier('itinéraire'), 'Adresse');
   assert.deepEqual(chercherBlocs('', true), []);
   assert.deepEqual(chercherBlocs('zzz', true), []);
 });
@@ -64,7 +70,7 @@ test('une adresse tapée propose le bloc qu’elle appelle, puis ce qu’elle pe
   const sans = choixAjout('https://calendly.com/lilian/30min', { principal: false, vitrine: false });
   assert.deepEqual(sans.lignes.map(l => [l.entree.nom, !!l.auto]), [['Lien', true], ['Prise de rendez-vous', false]]);
   // Une vidéo est pour tous.
-  assert.equal(choixAjout('https://www.youtube.com/watch?v=dQw4w9WgXcQ', { principal: false, vitrine: false }).lignes[0].entree.nom, 'Vidéo YouTube');
+  assert.equal(choixAjout('https://www.youtube.com/watch?v=dQw4w9WgXcQ', { principal: false, vitrine: false }).lignes[0].entree.nom, 'Vidéo');
   // Une adresse ordinaire, sans « https:// » : un lien, sans « Lien partenaire », qui ne vaut que pour une adresse d'affiliation.
   assert.deepEqual(noms(choixAjout('monsite.fr/blog', { principal: false, vitrine: true }).lignes.map(l => l.entree)), ['Lien']);
   // Un e-mail devient un lien qui écrit, avec son texte.

@@ -16,6 +16,8 @@ import { Icone, NOMS_RESEAUX } from './Icone.tsx';
 import { peut } from '../lib/abonnement.ts';
 import { adresseIntegree, avecMontants, lienMontant, lienSansMontant, nomAgenda, nomSoutien, seIntegre } from '../lib/vitrine.ts';
 import { focusAuto } from '../lib/clavier';
+import { lecteurDe } from '../lib/lecteurs.ts';
+import { CarteVisite, Contact, Faq, Galerie, Lieu, Musique, VideoIntegree } from './BlocsPlus.tsx';
 
 /*
  * La page publique, rendue côté serveur pour Google et les aperçus de liens,
@@ -332,8 +334,24 @@ export function BlocPublic({ bloc, reglages, clic, cible, apercu, maintenant, ps
       return <h2 className="lp-section">{bloc.titre}</h2>;
     case 'texte':
       return <p className="lp-texte">{bloc.titre}</p>;
-    case 'video':
+    case 'video': {
+      // YouTube garde son lecteur et sa vignette ; Vimeo et TikTok passent par le leur.
+      const lecteur = idYoutube(bloc.url) ? null : lecteurDe(bloc.url);
+      if (lecteur) return <VideoIntegree lecteur={lecteur} bloc={bloc} clic={clic} t={t} />;
       return <Video id={idYoutube(bloc.url)} titre={bloc.titre} url={bloc.url} vedette={bloc.vedette} clic={clic} />;
+    }
+    case 'musique':
+      return <Musique bloc={bloc} clic={clic} t={t} />;
+    case 'galerie':
+      return <Galerie bloc={bloc} t={t} />;
+    case 'faq':
+      return <Faq bloc={bloc} />;
+    case 'coordonnees':
+      return <CarteVisite bloc={bloc} pseudo={pseudo ?? ''} clic={clic} t={t} />;
+    case 'lieu':
+      return <Lieu bloc={bloc} clic={clic} t={t} />;
+    case 'formulaire':
+      return <Contact bloc={bloc} apercu={apercu} pseudo={pseudo ?? ''} t={t} />;
     case 'derniere-video':
       return <DerniereVideo titre={bloc.titre} clic={clic} />;
     case 'newsletter':

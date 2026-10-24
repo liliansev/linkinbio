@@ -1,5 +1,5 @@
-import { ANIMATIONS, ANIMATIONS_BLOC, FORMATS_VEDETTE, FORMES_BOUTON, GENRES_PREUVE, MENTIONS_PARTENAIRE, OMBRES_BOUTON, MISES_EN_PAGE_BUREAU, RESEAUX, STYLES_BOUTON, TEINTES_VEDETTE, TYPES_BLOC } from './types.ts';
-import type { Acces, Bloc, Partenariat, Preuve, Reglages } from './types.ts';
+import { ANIMATIONS, ANIMATIONS_BLOC, FORMATS_VEDETTE, FORMES_BOUTON, GENRES_PREUVE, MAX_IMAGES, MAX_QUESTIONS, MAX_RESEAUX, MENTIONS_PARTENAIRE, OMBRES_BOUTON, MISES_EN_PAGE_BUREAU, RESEAUX, STYLES_BOUTON, TEINTES_VEDETTE, TYPES_BLOC } from './types.ts';
+import type { Acces, Bloc, Coordonnees, Partenariat, Preuve, Question, Reglages } from './types.ts';
 import { idTheme } from './themes.ts';
 import { EFFETS_CRENEAU, fuseauValide } from './moments.ts';
 import type { Creneau } from './moments.ts';
@@ -128,6 +128,31 @@ export function montants(v: unknown): number[] {
   return [...new Set(l)].sort((a, b) => a - b).slice(0, 4);
 }
 
+/** Les questions d'une FAQ : une question et sa réponse, vingt au plus ; une question sans rien n'est pas gardée. */
+export function questions(v: unknown): Question[] {
+  if (!Array.isArray(v)) return [];
+  return v.map(q => ({ question: texte(q?.question, 200), reponse: texte(q?.reponse, 1500) })).filter(q => q.question || q.reponse).slice(0, MAX_QUESTIONS);
+}
+
+/** Les images d’une galerie : les photos envoyées chez Hopla, sans doublon, douze au plus. */
+export function images(v: unknown): string[] {
+  if (!Array.isArray(v)) return [];
+  // Seulement des photos envoyées chez Hopla : une galerie ne fait rien charger d'un autre site au visiteur.
+  return [...new Set(v.map(image).filter(i => i.startsWith('/media/')))].slice(0, MAX_IMAGES);
+}
+
+/** Un numéro de téléphone tel qu'on l'écrit (« 06 12 34 56 78 », « +33 6… ») : des chiffres et leurs séparateurs, 8 à 15 chiffres. */
+export function telephone(v: unknown): string {
+  const s = texte(v, 30);
+  return numeroAppel(s) ? s.replace(/\s+/g, ' ') : '';
+}
+
+/** Une carte de visite : un numéro, une adresse e-mail, une société et un poste, chacun vérifié. */
+export function coordonnees(v: unknown): Coordonnees {
+  const o = (v && typeof v === 'object' ? v : {}) as Record<string, unknown>;
+  return { telephone: telephone(o.telephone), email: email(o.email), societe: texte(o.societe, 80), poste: texte(o.poste, 80) };
+}
+
 /** Les noms d'avant le 16 octobre 2026, gardés pour les blocs déjà enregistrés. */
 const ANCIENNES: Record<string, string> = { brille: 'reflet', pulse: 'respiration', secoue: 'secousse' };
 
@@ -161,6 +186,10 @@ export function validerBloc(v: unknown, id: string): Bloc {
     prix: type === 'produit' ? texte(o.prix, 24) : '',
     montants: type === 'soutien' ? montants(o.montants) : [],
     partenariat: type === 'lien' || type === 'produit' ? partenariat(o.partenariat) : null,
+    questions: type === 'faq' ? questions(o.questions) : [],
+    images: type === 'galerie' ? images(o.images) : [],
+    coordonnees: type === 'coordonnees' ? coordonnees(o.coordonnees) : null,
+    adressePostale: type === 'lieu' || type === 'coordonnees' ? texte(o.adressePostale, 200) : '',
   };
 }
 
@@ -175,7 +204,7 @@ export function validerReglages(v: unknown, base: Reglages): Reglages {
       avatar: image(profil.avatar),
       badge: bool(profil.badge, base.profil.badge),
     },
-    reseaux: reseaux.slice(0, 12).map((r: any) => ({ reseau: parmi(r?.reseau, RESEAUX, 'site'), url: adresse(r?.url) })).filter((r: { url: string }) => r.url),
+    reseaux: reseaux.slice(0, MAX_RESEAUX).map((r: any) => ({ reseau: parmi(r?.reseau, RESEAUX, 'site'), url: adresse(r?.url) })).filter((r: { url: string }) => r.url),
     reseauxPosition: parmi(o.reseauxPosition, ['haut', 'bas'] as const, base.reseauxPosition),
     theme: idTheme(o.theme),
     couleurs: couleurs(o.couleurs ?? base.couleurs),
@@ -234,6 +263,8 @@ export function pourquoiPasAdresse(v: string): string {
 export function pourquoiPasReseau(reseau: string, v: string): string {
   if (reseau === 'email') return v.includes('@') ? 'Il manque une partie de l’adresse e-mail, par exemple toi@exemple.fr' : 'Il manque le @ de l’adresse e-mail, par exemple toi@exemple.fr';
   if (reseau === 'spotify') return 'Colle l’adresse de ta page Spotify : elle commence par open.spotify.com';
+  if (reseau === 'whatsapp') return 'Ton numéro avec l’indicatif, comme +33 6 12 34 56 78, ou ton lien wa.me';
+  if (['applemusic', 'applepodcasts', 'deezer', 'medium', 'substack', 'mastodon', 'malt', 'etsy', 'bandcamp'].includes(reseau)) return 'Colle l’adresse de ta page, qui commence par https://';
   if (reseau === 'site') return 'L’adresse de ton site, par exemple ton\u2011site.fr';
   const s = v.trim().replace(/^@/, '');
   if (/\s/.test(s)) return `Pas d’espace dans un pseudo : essaie ${s.replace(/\s+/g, '.').toLowerCase()}`;
