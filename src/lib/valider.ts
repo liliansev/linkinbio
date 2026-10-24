@@ -40,10 +40,23 @@ export function adresse(v: unknown): string {
  * la saisie ne mène nulle part.
  */
 export function adresseSaisie(v: unknown): string {
+  // Des chiffres seuls ne sont pas un site (« 0612 » deviendrait l'adresse IP 0.0.1.138) : un numéro, entier ou pas.
+  if (typeof v === 'string' && /^\+?[\d\s.()-]+$/.test(v.trim())) return '';
   const url = adresse(v);
   if (!url || url.startsWith('/') || !/^https?:/i.test(url)) return url;
   const hote = new URL(url).hostname;
   return /^[a-z0-9-]+(\.[a-z0-9-]+)+$/i.test(hote) || hote === 'localhost' ? url : '';
+}
+
+/**
+ * Un numéro de téléphone tapé (« 06 12 34 56 78 », « +33 6 12 34 56 78 ») : l'adresse `tel:` d'un lien qui l'appelle,
+ * de 8 à 15 chiffres ; vide sinon.
+ */
+export function numeroAppel(v: string): string {
+  const s = v.trim();
+  if (!/^\+?[\d\s.()-]+$/.test(s)) return '';
+  const n = s.replace(/\D/g, '');
+  return n.length >= 8 && n.length <= 15 ? `tel:${s.startsWith('+') ? '+' : ''}${n}` : '';
 }
 
 /** Une image : seulement nos médias, l'avatar livré, ou https. */
@@ -202,6 +215,10 @@ export function email(v: unknown): string {
 /** Pourquoi une saisie n'est pas une adresse, dit au plus près de l'erreur. */
 export function pourquoiPasAdresse(v: string): string {
   const s = v.trim();
+  // Un pseudo, un numéro pas fini : on dit ce que c'est, pas qu'il manque « .fr ».
+  if (s === '@') return 'Tape ton pseudo après le @, ou colle l’adresse de ton profil.';
+  if (/^@[\w.-]+$/.test(s)) return `C’est un pseudo : colle plutôt l’adresse de ton profil, comme instagram.com/${s.slice(1)}`;
+  if (/^\+?[\d\s.()-]+$/.test(s)) return 'Un numéro de téléphone s’écrit en entier, avec au moins 8 chiffres.';
   if (/^(?!https?:)h?t{1,3}p{1,2}s?:/i.test(s) || /^(?!https?\/\/)h?t{1,3}p{1,2}s?\/\//i.test(s)) return 'Le début de l’adresse est mal tapé : écris https://. Exemple : https://ton‑site.fr';
   if (/^https?\/\//i.test(s)) return 'Il manque « : » après http. Exemple : https://ton‑site.fr';
   if (/^https?:\/[^/]/i.test(s)) return 'Il manque un « / » après https:. Exemple : https://ton‑site.fr';

@@ -103,3 +103,21 @@ export function adresseIntegree(url: string, domaine: string): string | null {
 
 /** Ce lien de réservation s'ouvre-t-il dans la page ? */
 export const seIntegre = (url: string) => adresseIntegree(url, 'hopla.page') !== null;
+
+/**
+ * Le logo du site d'une adresse, quand Hopla en a un (24 octobre 2026) : un agenda, une page de soutien, une boutique. Le
+ * choix des blocs le pose sur la ligne que l'adresse appelle, à la place du picto ; les réseaux ont le leur
+ * (`reseauDeUrl`). Cal.com n'en a pas ici : son logo, tout en largeur, ne tient pas dans un carré.
+ */
+export function logoAdresse(url: string): string | undefined {
+  const h = hote(url);
+  if (!h) return undefined;
+  const a = agendaDe(url);
+  if (a === 'calendly' || a === 'google') return a;
+  const s = soutienDe(url);
+  if (s === 'paypal' || s === 'kofi' || s === 'patreon') return s;
+  if (sur(h, 'stripe.com')) return 'stripe';
+  if (sur(h, 'myshopify.com') || h === 'shop.app') return 'shopify';
+  if (sur(h, 'etsy.com') || h === 'etsy.me') return 'etsy';
+  return undefined;
+}

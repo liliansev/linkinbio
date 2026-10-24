@@ -13,6 +13,14 @@ test('le retour du paiement se lit dans l’adresse, et la note ne le complète 
   assert.deepEqual(achatDeRetour('?paiement=starter', { ...note, ts: maintenant - 86_400_000 }, maintenant), { plan: 'starter', periode: null });
   // Le bloc d'où l'on venait revient avec l'achat, pour s'en resservir aussitôt.
   assert.deepEqual(achatDeRetour('?paiement=starter', { ...note, pour: 'programmation', bloc: 'n1a2b' }, maintenant), { plan: 'starter', periode: 'an', pour: 'programmation', avant: 'gratuit', bloc: 'n1a2b' });
+  // Le bloc de la vitrine qu'on voulait en faire, et l'adresse qu'il prendra, reviennent aussi ; une adresse qui n'en est pas une, non.
+  assert.deepEqual(achatDeRetour('?paiement=starter', { ...note, pour: 'vitrine', type: 'reservation', url: 'https://calendly.com/lilian/30min' }, maintenant),
+    { plan: 'starter', periode: 'an', pour: 'vitrine', avant: 'gratuit', type: 'reservation', url: 'https://calendly.com/lilian/30min' });
+  assert.deepEqual(achatDeRetour('?paiement=starter', { ...note, pour: 'vitrine', type: 'video', url: 'javascript:alert(1)' }, maintenant), { plan: 'starter', periode: 'an', pour: 'vitrine', avant: 'gratuit' });
+  // Un bloc neuf, parti masqué, se rouvre à ajouter ; venu d'Intégrations, il y ramène. Seul `true` compte.
+  assert.deepEqual(achatDeRetour('?paiement=starter', { ...note, pour: 'vitrine', bloc: 'n1a2b', type: 'reservation', neuf: true, integrations: true }, maintenant),
+    { plan: 'starter', periode: 'an', pour: 'vitrine', avant: 'gratuit', bloc: 'n1a2b', type: 'reservation', neuf: true, integrations: true });
+  assert.deepEqual(achatDeRetour('?paiement=starter', { ...note, neuf: 'oui', integrations: 1 }, maintenant), { plan: 'starter', periode: 'an', pour: 'couleurs', avant: 'gratuit' });
   // Un abonné qui change d'offre : la période d'avant revient aussi, pour dire si Creem facture ou rend la différence.
   assert.deepEqual(achatDeRetour('?paiement=starter', { ...note, avant: 'pro', periodeAvant: 'an' }, maintenant), { plan: 'starter', periode: 'an', pour: 'couleurs', avant: 'pro', periodeAvant: 'an' });
   assert.deepEqual(achatDeRetour('?paiement=starter', { ...note, periodeAvant: 'jour' }, maintenant), { plan: 'starter', periode: 'an', pour: 'couleurs', avant: 'gratuit' });

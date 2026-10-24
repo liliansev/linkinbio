@@ -116,11 +116,14 @@ export const apiDemo: Api = {
   // Dans l'aperçu, pas de serveur pour lire le site : une vignette dessinée en tient lieu. Une boutique donne un produit d'exemple.
   async apercuSite(url, image = true) {
     await pause();
-    if (image === 'partage') return { titre: 'Carnet de recettes illustré', description: '', image: photoProduitDemo(), prix: '24 €', visuel: 'partage' };
+    // Une page qui déclare un prix sans que son adresse le dise (un site d'atelier) : en ligne, le serveur le lit dans ses balises.
+    const atelier = /atelier/.test(url);
+    if (image === 'partage') return { titre: atelier ? 'Stage de poterie, une journée' : 'Carnet de recettes illustré', description: '', image: photoProduitDemo(), prix: atelier ? '85 €' : '24 €', visuel: 'partage' };
     const description = 'Un aperçu de démonstration : en ligne, le serveur lit la vraie description du site.';
+    const vend = atelier ? { titre: 'Stage de poterie, une journée', prix: '85 €' } : { titre: '', prix: '' };
     // La vignette d'un bouton : en ligne, l'image de partage si elle est carrée, sinon le logo du site, comme ici.
-    if (image === 'logo' || image === 'vignette') return { titre: '', description, image: logoDemo(url), prix: '', visuel: 'logo' };
-    return { titre: '', description, image: image ? vignetteDemo(url) : null, prix: '', visuel: image ? 'partage' : undefined };
+    if (image === 'logo' || image === 'vignette') return { ...vend, description, image: logoDemo(url), visuel: 'logo' };
+    return { ...vend, description, image: image ? vignetteDemo(url) : null, visuel: image ? 'partage' : undefined };
   },
   async stats(periode) { await pause(); return statsFictives(periode); },
   async deconnexion() { localStorage.removeItem(CLE); etat = lire(); },

@@ -57,6 +57,8 @@ const PROFILS: Partial<Record<Reseau, (p: string) => string>> = {
   twitch: p => `https://twitch.tv/${p}`,
   github: p => `https://github.com/${p}`,
 };
+/** Les réseaux dont un pseudo suffit à faire l'adresse, dans l'ordre de l'accueil : un « @lilian » tapé dans le choix des blocs en prend un. */
+export const RESEAUX_PSEUDO = RESEAUX_ACCUEIL.filter(r => PROFILS[r]);
 
 /**
  * Ce qu'on tape pour un réseau devient son adresse : un pseudo (avec ou sans

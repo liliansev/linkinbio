@@ -1,8 +1,10 @@
 import { createContext, useContext } from 'react';
 import type { ReactNode } from 'react';
 import type { Fonction, OffreSuivante } from '../lib/abonnement.ts';
-import { FONCTIONS, OFFRES } from '../lib/abonnement.ts';
+import { FONCTIONS, FONCTIONS_EN_MOTS, OFFRES } from '../lib/abonnement.ts';
 import type { Droits } from '../lib/droits.ts';
+import type { SuiteAchat } from '../lib/achat.ts';
+import type { TypeVitrine } from '../lib/types.ts';
 import { Icone } from '../components/Icone.tsx';
 import { classeBadge, classeBouton } from './ui.tsx';
 
@@ -16,9 +18,10 @@ interface ContexteOffre {
   droits: Droits;
   /**
    * Ouvre les offres dans une fenêtre, par-dessus l'écran en cours ; `pour` : la fonction réservée d'où l'on vient,
-   * dont l'offre passe devant. Absent quand le compte ne peut pas s'abonner (aperçu, compte principal).
+   * dont l'offre passe devant ; `suite` : ce à quoi l'on revient après l'achat (le bloc ouvert, le bloc de la vitrine
+   * qu'on voulait). Absent quand le compte ne peut pas s'abonner (aperçu, compte principal).
    */
-  voirOffres?: (pour?: Fonction) => void;
+  voirOffres?: (pour?: Fonction, suite?: SuiteAchat) => void;
 }
 
 const TOUT = Object.fromEntries(Object.keys(FONCTIONS).map(f => [f, true])) as Droits;
@@ -41,14 +44,17 @@ export function Etiquette({ fonction }: { fonction: Fonction }) {
 /**
  * À la place des réglages d'une fonction réservée : une phrase qui nomme l'offre, et le chemin vers les offres,
  * ouvertes sur celle qui débloque `fonction`. `bouton={false}` quand ce chemin est déjà juste au-dessus : un seul
- * « Voir les offres » par endroit.
+ * « Voir les offres » par endroit. `type` : le bloc de la vitrine que l'offre en ferait, retrouvé au retour de l'achat.
+ * Le bouton dit pour quoi aux lecteurs d'écran (« Voir les offres, pour ta vitrine »).
  */
-export function Reserve({ phrase, fonction, bouton = true, children }: { phrase: string; fonction: Fonction; bouton?: boolean; children?: ReactNode }) {
+export function Reserve({ phrase, fonction, type, bouton = true, children }: { phrase: string; fonction: Fonction; type?: TypeVitrine; bouton?: boolean; children?: ReactNode }) {
   const voir = useVoirOffres();
   return (
     <div className="flex flex-col items-start gap-3">
       <p className="text-[13.5px] leading-snug text-white/70">{phrase}</p>
-      {voir && bouton && <button type="button" onClick={() => voir(fonction)} aria-haspopup="dialog" className={classeBouton.secondaire}>Voir les offres</button>}
+      {voir && bouton && (
+        <button type="button" onClick={() => voir(fonction, type ? { type } : undefined)} aria-haspopup="dialog" aria-label={`Voir les offres, ${FONCTIONS_EN_MOTS[fonction].pour.toLowerCase()}`} className={classeBouton.secondaire}>Voir les offres</button>
+      )}
       {children}
     </div>
   );

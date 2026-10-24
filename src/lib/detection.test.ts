@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { ficheProduit, pourReserver, pourSoutenir, typeDeAdresse, versType } from './detection.ts';
+import { ficheProduit, lienAffilie, pourReserver, pourSoutenir, typeDeAdresse, versType } from './detection.ts';
 import { nouveauBloc } from './types.ts';
 
 test('une vidéo YouTube, un agenda, un soutien ou un produit se reconnaissent à leur adresse', () => {
@@ -61,4 +61,58 @@ test('un bloc neuf qui change de type garde son adresse, sa programmation et le 
   // « Me soutenir » ne se met pas en avant.
   assert.equal(versType(lien, 'soutien', false).vedette, false);
   assert.deepEqual(versType(lien, 'soutien', false).montants, nouveauBloc('soutien', 'x').montants);
+});
+
+test('un bloc qui change de type garde ce que les deux types montrent : sous-titre, icône, animation', () => {
+  const lien = { ...nouveauBloc('lien', 'x'), url: 'https://cal.com/lilian', sousTitre: '30 minutes, offert', icone: 'calendrier', animation: 'lueur' as const };
+  const rdv = versType(lien, 'reservation', false);
+  assert.equal(rdv.sousTitre, '30 minutes, offert');
+  assert.equal(rdv.icone, 'calendrier');
+  assert.equal(rdv.animation, 'lueur');
+  // Un produit n'a ni sous-titre ni icône ; « Me soutenir » n'a ni icône ni animation.
+  const produit = versType(lien, 'produit', false);
+  assert.equal(produit.sousTitre, '');
+  assert.equal(produit.icone, '');
+  assert.equal(produit.animation, 'lueur');
+  const soutien = versType(lien, 'soutien', false);
+  assert.equal(soutien.sousTitre, '30 minutes, offert');
+  assert.equal(soutien.icone, '');
+  assert.equal(soutien.animation, 'auto');
+  // Et le chemin inverse : la prise de rendez-vous rendue à un lien garde les siens.
+  assert.equal(versType(rdv, 'lien', false).icone, 'calendrier');
+  assert.equal(versType(rdv, 'lien', false).sousTitre, '30 minutes, offert');
+});
+
+test('un lien d’affiliation se reconnaît à sa régie ou à ses paramètres, un `ref` seul ne compte pas', () => {
+  for (const url of [
+    'https://amzn.to/3xYz12',
+    'https://amzn.eu/d/abc',
+    'https://www.amazon.fr/dp/B0C123?tag=lilian-21',
+    'https://www.amazon.fr/shop/lilian',
+    'https://www.awin1.com/cread.php?awinmid=1&awinaffid=2',
+    'https://tidd.ly/3abc',
+    'https://clk.tradedoubler.com/click?p=1&a=2',
+    'https://click.linksynergy.com/deeplink?id=abc',
+    'https://www.anrdoezrs.net/click-123-456',
+    'https://notion.sjv.io/abc',
+    'https://go.skimresources.com/?id=1&url=x',
+    'https://rstyle.me/+abc',
+    'https://liketk.it/4abc',
+    'https://geni.us/abc',
+    'https://lilian.gumroad.com/l/carnet?a=123456',
+    'https://gumroad.com/a/123456/abc',
+    'https://outil.com/?via=lilian',
+    'https://outil.com/?fpr=lilian',
+    'https://boutique.lemonsqueezy.com/checkout/buy/abc?aff=123',
+    'https://outil.com/tarifs?utm_source=x&utm_medium=affiliate',
+  ]) assert.equal(lienAffilie(url), true, url);
+  for (const url of [
+    'https://www.amazon.fr/dp/B0C123',
+    'https://lilian.gumroad.com/l/carnet',
+    'https://outil.com/?ref=instagram',
+    'https://monsite.fr/blog?utm_source=instagram&utm_medium=social',
+    'https://data.co/',
+    'mailto:lilian@exemple.fr',
+    'pas une adresse',
+  ]) assert.equal(lienAffilie(url), false, url);
 });

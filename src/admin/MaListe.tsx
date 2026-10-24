@@ -50,7 +50,7 @@ export function MaListe({ api, onIntegrations }: { api: ApiListe; onIntegrations
               {liste.integration ? `Envoyés aussi ${destination(liste.integration)}.` : 'Gardés ici. Exporte-les en CSV, ou branche ta newsletter.'}
             </p>
           </>
-        ) : <p className="text-[14px] leading-snug text-white/60">Ajoute « Ma liste d’inscrits » à ta page : chaque adresse arrive ici, et dans ta newsletter si tu la branches.</p>}
+        ) : <p className="text-[14px] leading-snug text-white/60">Ajoute le bloc « Liste e-mail » à ta page : chaque adresse arrive ici, et dans ta newsletter si tu la branches.</p>}
         {!permis && liste.total > 0 && <p className="mt-2.5 text-[13px] leading-snug text-white/55">Le formulaire n’est plus sur ta page sans Hopla Pro. Tes inscrits restent à toi : exporte-les depuis Gérer.</p>}
       </Carte>
       {ouverte && <FeuilleListe liste={liste} api={api} onFermer={() => setOuverte(false)} onChange={recharger} onIntegrations={onIntegrations} />}

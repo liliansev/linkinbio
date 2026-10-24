@@ -104,6 +104,8 @@ html:has(.adm) { scrollbar-gutter: stable; }
 .adm .adm-feuille:focus-visible { outline: none; }
 /* Un titre qui reçoit le focus quand l'écran change (premiers pas, lien envoyé) n'est pas un contrôle non plus. */
 .adm :is(h1, h2)[tabindex='-1']:focus-visible { outline: none; }
+/* Le contenu de l'onglet reprend la main quand le geste d'un message part avec lui (voir `agirToast`) : pas de cadre autour de tout. */
+.adm #contenu-admin:focus-visible { outline: none; }
 
 /* Les premiers pas : la vraie page en miniature, à la largeur d'un téléphone. */
 .adm-miroir { --z: 0.62; width: calc(390px * var(--z)); flex-shrink: 0; }
@@ -190,7 +192,8 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
   .adm-shell[data-onglet='comptes'][data-sous] { --adm-colonne: 680px; }
   .adm-travail { padding-left: 216px; }
   .adm-colonne { width: min(100% - 2 * var(--adm-bord), var(--adm-colonne)); margin-inline: auto; }
-  .adm-shell .adm-toast { left: 232px; right: 16px; }
+  /* Le message se pose en bas à droite, hors des rangées qu'on édite (24 octobre 2026 : centré, il en couvrait une). */
+  .adm-shell .adm-toast { left: auto; right: 24px; width: min(24rem, 100% - 216px - 48px); margin: 0; }
 }
 .adm-nav-item { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 10px; border-radius: 7px; color: #dcdcff; font-size: 14px; font-weight: 500; text-align: left; transition: background-color 150ms, color 150ms; }
 .adm-nav-item:hover { background: rgb(255 255 255 / 0.1); color: #fff; }
@@ -253,8 +256,18 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
 .adm-menu-item { display: flex; width: 100%; min-height: 44px; align-items: center; gap: 9px; padding: 0 10px; border-radius: 6px; font-size: 14px; font-weight: 500; transition: background-color 120ms; }
 .adm-menu-item:hover, .adm-menu-item:focus-visible { background: #f2f2ef; }
 .adm .adm-menu-item:focus-visible { outline-offset: -2px; }
-/* Entre deux familles d'une liste (le choix des blocs) : un filet plein, sans titre. */
-.adm-filet { height: 1px; background: #efefec; }
+/*
+ * Le choix des blocs au bureau (24 octobre 2026) : les lignes déroulées sous le champ au-dessus des blocs. La ligne
+ * active (la souris ou les flèches) se dit par son fond, une seule à la fois ; le site de l'adresse tapée, en gris, au
+ * bout de la ligne qu'elle appelle ; au-dessus, la ligne qui aide (en gris) ou qui dit ce qui manque (en rouge).
+ */
+.adm-menu-item[role='option'] { cursor: pointer; }
+.adm-menu-item[role='option']:hover { background: transparent; }
+.adm-menu-item[role='option'][aria-selected='true'] { background: #f2f2ef; }
+.adm-menu-item[role='option'][aria-disabled='true'] { cursor: default; opacity: 0.45; }
+.adm-menu-hote { max-width: 45%; overflow: hidden; color: #6b6b66; font-size: 12.5px; font-weight: 400; text-overflow: ellipsis; white-space: nowrap; }
+.adm-menu-vide { padding: 10px 10px 12px; color: #5f5f5a; font-size: 13.5px; }
+.adm-menu-erreur { padding: 6px 10px 4px; color: #c62828; font-size: 13px; font-weight: 500; line-height: 1.35; }
 /* Le titre d'un écran, le même partout : les onglets, la connexion, les CGU, les premiers pas. */
 .adm-page-heading { margin-bottom: 24px; }
 .adm-titre, .adm-page-heading h1 { font-size: 32px; line-height: 1.2; font-weight: 600; letter-spacing: -0.035em; text-wrap: balance; }
@@ -375,7 +388,8 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
   .adm-coller-champ > input:hover { border-color: #b5b5ae; }
   .adm-coller-champ > input::placeholder { color: #737373; }
   .adm-coller-champ > input[aria-invalid='true'] { border-color: #c62828; }
-  .adm-coller-erreur { color: #c62828; font-size: 13.5px; font-weight: 500; }
+  /* La liste de départ au focus, puis ce que l'adresse tapée ou les mots appellent : déroulée sous le champ, par-dessus les blocs. */
+  .adm-coller-liste { position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 40; display: flex; max-height: 320px; flex-direction: column; overflow-y: auto; }
 
   /*
    * La liste des blocs : un trait fin autour, une rangée de 44 px par bloc. La
@@ -462,8 +476,6 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
   .adm-tel-ecran { width: 390px; height: 760px; overflow-y: auto; overscroll-behavior: contain; border-radius: 45px; background: #141414; scrollbar-width: none; }
   .adm-tel-ecran::-webkit-scrollbar { display: none; }
   .adm-ordi-boite { display: flex; width: 100%; min-height: 0; flex: 1; flex-direction: column; overflow-y: auto; }
-  /* Le message du bas se centre sur l'édition, pas sur la page. */
-  .adm-shell:has(.adm-studio-bureau) .adm-toast { left: calc(216px + (100% - 216px - var(--adm-largeur)) / 2); right: calc((100% - 216px - var(--adm-largeur)) / 2 + var(--adm-entre) + var(--adm-apercu)); }
 }
 /* Une tablette en paysage a la mise en page du bureau, avec des cibles pour le doigt. */
 @media (min-width: 1024px) and (pointer: coarse) {
@@ -574,11 +586,13 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
 .adm-offres-badge[data-gain] { background: var(--adm-citron); color: var(--adm-citron-encre); font-weight: 600; }
 /* Mensuel ou Annuel : un segment, le choix sur du papier blanc, en bleu. */
 .adm-offres-periodes { display: grid; height: 44px; grid-template-columns: 1fr 1.45fr; gap: 2px; padding: 3px; border-radius: 10px; background: #f3f3f1; }
-.adm-offres-periodes > button { display: flex; align-items: center; justify-content: center; gap: 8px; border-radius: 8px; color: #55554f; transition: background-color 150ms, color 150ms, box-shadow 150ms; }
+.adm-offres-periodes > button { position: relative; display: flex; align-items: center; justify-content: center; gap: 8px; border-radius: 8px; color: #55554f; transition: background-color 150ms, color 150ms, box-shadow 150ms; }
+/* Au doigt, chaque moitié se touche sur toute la hauteur du segment (44 px), marge comprise. */
+.adm-offres-periodes > button::before { content: ''; position: absolute; inset: -3px -1px; }
 .adm-offres-periodes > button:hover { color: #0a0a0a; }
 .adm-offres-periodes > button[aria-checked='true'] { background: #fff; color: var(--adm-bleu); font-weight: 500; box-shadow: 0 1px 2px rgb(10 10 10 / 0.1), 0 0 0 1px rgb(10 10 10 / 0.06); }
 .adm-offres-entete-mobile { flex: none; padding: 4px 16px 12px; }
-.adm-offres-onglets { display: grid; height: 44px; flex: none; grid-template-columns: repeat(4, minmax(0, 1fr)); padding: 0 8px; border-bottom: 1px solid #ececea; }
+.adm-offres-onglets { display: grid; height: 45px; flex: none; grid-template-columns: repeat(4, minmax(0, 1fr)); padding: 0 8px; border-bottom: 1px solid #ececea; }
 .adm-offres-onglets > button { color: #55554f; transition: color 150ms, box-shadow 200ms var(--adm-sortie); }
 .adm-offres-onglets > button:hover { color: #0a0a0a; }
 .adm-offres-onglets > button[aria-selected='true'] { color: var(--adm-bleu); font-weight: 500; box-shadow: inset 0 -2px 0 var(--adm-bleu); }
@@ -662,6 +676,8 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
 @keyframes adm-roue { to { transform: rotate(360deg); } }
 .adm-retour-etapes { display: flex; flex-wrap: wrap; gap: 6px 18px; color: #3d3d39; }
 .adm-retour-etapes > li { display: inline-flex; align-items: center; gap: 6px; }
+/* Des coches pleines, comme les pictos de « Ce qui vient de s'ouvrir » dessous : pas de trait au milieu des pleins. */
+.adm-retour-etapes > li > svg { flex: none; color: var(--adm-bleu); }
 .adm-retour-texte { max-width: 46ch; color: #3d3d39; text-wrap: pretty; }
 .adm-retour-texte a { color: var(--adm-bleu); text-decoration: underline; text-decoration-color: rgb(41 43 255 / 0.35); text-underline-offset: 2px; }
 .adm-retour-liste { border-top: 1px solid #efefec; }
@@ -669,6 +685,9 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
 .adm-retour-liste > li > svg { flex: none; color: var(--adm-bleu); }
 .adm-retour-deja { flex: none; color: #5f5f5a; font-size: 12px; }
 .adm-retour-gestes { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+/* Le bloc que touche le geste d'après l'achat (« Ton lien « Calendly », calendly.com/lilian »), juste au-dessus de lui. */
+.adm-retour-objet { overflow-wrap: anywhere; color: #3d3d39; font-size: 13.5px; line-height: 1.4; text-align: right; }
+@media (max-width: 639px) { .adm-retour-objet { text-align: left; } }
 @media (max-width: 639px) { .adm-retour-gestes > * { flex: 1 1 auto; } }
 @media (min-width: 520px) { .adm-recap-periodes { grid-template-columns: 1fr 1fr; } }
 @media (min-width: 640px) {

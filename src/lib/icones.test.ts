@@ -5,11 +5,11 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ICONES } from './icones.ts';
 
-/** Les fichiers .tsx de `src`, sous-dossiers compris. */
+/** Les fichiers .tsx et .ts de `src`, sous-dossiers compris, sans les tests ni le code généré (le catalogue des blocs est en .ts). */
 function composants(dossier: string): string[] {
   return readdirSync(dossier, { withFileTypes: true }).flatMap(e => {
     const chemin = join(dossier, e.name);
-    return e.isDirectory() ? composants(chemin) : e.name.endsWith('.tsx') ? [chemin] : [];
+    return e.isDirectory() ? composants(chemin) : /\.tsx?$/.test(e.name) && !/\.(test|gen)\.ts$/.test(e.name) ? [chemin] : [];
   });
 }
 
