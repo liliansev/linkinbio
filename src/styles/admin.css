@@ -92,6 +92,27 @@ html:has(.adm-shell:not(.adm-entree)) { scrollbar-gutter: stable; }
 .adm-barre { animation: adm-barre 0.7s var(--adm-sortie) both; }
 @keyframes adm-barre { from { transform: scaleX(0); } }
 
+/* Ce qui vient de s'ajouter (un choix des premiers pas, la coche de la fin) : un petit rebond. */
+.adm-pop { animation: adm-pop 0.42s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+@keyframes adm-pop { from { opacity: 0; transform: scale(0.92); } }
+
+/* Le bravo de la fin des premiers pas : trois gerbes, une fois, puis plus rien. */
+.adm-feu { position: fixed; inset: 0; z-index: 60; pointer-events: none; overflow: hidden; }
+.adm-feu-gerbe { position: absolute; width: 0; height: 0; animation: adm-feu-gerbe 1.5s both; }
+.adm-feu-etincelle {
+  position: absolute; left: -4px; top: -4px; width: 8px; height: 8px; border-radius: 9999px; background: var(--adm-bleu);
+  opacity: 0; animation: adm-feu-etincelle 1.25s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.adm-feu-etincelle[data-teinte='1'] { background: #c8e86a; }
+.adm-feu-etincelle[data-teinte='2'] { background: #8f90ff; width: 5px; height: 5px; }
+@keyframes adm-feu-gerbe { from { transform: translateY(40px); } 25% { transform: none; } }
+@keyframes adm-feu-etincelle {
+  0% { opacity: 1; transform: rotate(var(--angle)) translateX(0) scale(1.2); }
+  70% { opacity: 1; }
+  100% { opacity: 0; transform: rotate(var(--angle)) translateX(var(--loin)) translateY(18px) scale(0.5); }
+}
+@media (prefers-reduced-motion: reduce) { .adm-pop { animation: none; } .adm-feu { display: none; } }
+
 @media (prefers-reduced-motion: reduce) {
   .adm-feuille, .adm-fondu, .adm-toast, .adm-onglet, .adm-cascade > *, .adm-barre, .adm-detail-cote, [data-sortie] .adm-feuille, [data-sortie] .adm-fondu { animation: none; }
   .adm-interrupteur > span { transition: none; }

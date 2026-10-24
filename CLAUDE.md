@@ -218,8 +218,9 @@ embarque tout : l'image n'a pas de `node_modules`.
   l'adresse à copier ou partager, et les étapes d'une page prête (`lib/demarrage.ts`) ;
   au téléphone, un anneau dans l'en-tête ouvre ces étapes dans une feuille, et Ajouter
   et Personnaliser se posent sur la barre des onglets : la page commence sous l'en-tête.
-  Un compte neuf, juste après les CGU, passe par `PremiersPas.tsx` (nom et bio, liens,
-  réseaux, ambiance, page en ligne), avec sa page en miniature qui se remplit ; une
+  Un compte neuf, juste après les CGU, passe par `PremiersPas.tsx` (nom et bio, ce qu'on veut
+  montrer choisi d'un toucher, site, boutique, agenda, vidéo ou musique, l'adresse décidant du bloc, réseaux, ambiance,
+  puis un bravo en feu d'artifice qui mène à l'éditeur, sans rien à copier), avec sa page en miniature qui se remplit ; une
   seule fois, et seulement tant que la page est vide (`pageNeuve`).
 - Les blocs venus de Linktree (24 octobre 2026, choisis par Lilian) : `components/BlocsPlus.tsx` pour la page, `admin/ChampsBlocs.tsx`
   pour l'éditeur. `musique` (Spotify, Apple Music, Apple Podcasts, Deezer, SoundCloud) et `video` (YouTube, Vimeo, TikTok) passent par
