@@ -1,5 +1,5 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
-import type { CSSProperties, KeyboardEvent as ToucheClavier, RefObject } from 'react';
+import type { CSSProperties, ReactNode, KeyboardEvent as ToucheClavier, RefObject } from 'react';
 import type { Bloc, TypeBloc, TypeVitrine } from '../lib/types.ts';
 import { TYPES_VITRINE } from '../lib/types.ts';
 import { DEVENU, aideSaisie, choixAjout, choixPour, seColle } from '../lib/catalogue.ts';
@@ -277,17 +277,86 @@ function ChoixTelephone({ depart, principal, gestes, fermer }: { depart: string;
         {/* Une seule ligne sous le champ : ce qui manque (en rouge, après Entrée), ce que deviendra ce qu'on tape, ou « aucun bloc ». */}
         {message && <p id={idMessage} role={message.faute ? 'alert' : undefined} className={`mt-1.5 text-[13px] leading-snug ${message.faute ? 'font-medium text-red-300' : 'text-white/60'}`}>{message.texte}</p>}
       </div>
-      {/* Les lignes trouvées, puis la liste de départ sous un filet : la feuille garde sa hauteur, sans vide sous un seul résultat. */}
-      <div className="pb-2">
+      {/* Rien de tapé : les suggestions en tuiles, puis le reste rangé par familles (`Depart`). Sinon, les lignes trouvées,
+          puis la liste de départ sous un filet : la feuille garde sa hauteur, sans vide sous un seul résultat. */}
+      {!texte.trim() ? <Depart lignes={choix.toutes} ligne={ligne} prendre={prendre} reserve={choix.reserve} permise={choix.permise} nomDe={choix.nomDe} /> : <div className="pb-2">
         {choix.lignes.length > 0 && <ul className={`${aTape ? '' : 'adm-cascade'} -mx-2 flex flex-col`}>{choix.lignes.map(ligne)}</ul>}
         {choix.suite.length > 0 && (
           <ul className={`-mx-2 flex flex-col ${choix.lignes.length ? 'mt-1.5 border-t border-white/10 pt-1.5' : ''}`}>
             {choix.suite.map((l, i) => ligne(l, choix.lignes.length + i))}
           </ul>
         )}
-      </div>
+      </div>}
       <span className="sr-only" aria-live="polite">{choix.annonce}</span>
     </>
+  );
+}
+
+/*
+ * Le départ du choix au téléphone (24 octobre 2026, Lilian : « trop de liens, faut regrouper, des sous-menus, des
+ * recommandations, quelques widgets carrés en 2×2 comme sur Linktree, un peu de couleur ») : quatre suggestions en
+ * tuiles de couleur, un bloc gratuit et un réservé de chaque offre pour qu'on les découvre, puis chaque famille sur une
+ * ligne qui se déplie, une à la fois. Une tuile est un bouton avec son nom : sa couleur est celle du bouton, l'icône y
+ * reste seule.
+ */
+const SUGGESTIONS: { type: TypeBloc; fond: string; sous?: string }[] = [
+  { type: 'lien', fond: 'var(--adm-bleu-pale)', sous: 'Ton site, ta boutique, ton agenda…' },
+  { type: 'galerie', fond: 'var(--adm-creme)' },
+  { type: 'preuve', fond: 'var(--adm-citron)' },
+  { type: 'inscription', fond: '#ffe3da' },
+];
+const FAMILLES: { nom: string; types: TypeBloc[] }[] = [
+  { nom: 'Liens', types: ['lien', 'derniere-video'] },
+  { nom: 'Texte et titres', types: ['titre', 'texte'] },
+  { nom: 'Photos et infos', types: ['galerie', 'faq', 'preuve'] },
+  { nom: 'Pour te joindre', types: ['formulaire', 'coordonnees', 'lieu', 'inscription'] },
+];
+
+function Depart({ lignes, ligne, prendre, reserve, permise, nomDe }: {
+  lignes: LigneAjout[]; ligne: (l: LigneAjout, i: number) => ReactNode; prendre: (l: LigneAjout) => void;
+  reserve: (l: LigneAjout) => boolean; permise: (l: LigneAjout) => boolean; nomDe: (l: LigneAjout) => string;
+}) {
+  const [ouverte, setOuverte] = useState<string | null>(null);
+  const de = (type: TypeBloc) => lignes.find(l => l.entree.type === type && !l.entree.modele);
+  const tuiles = SUGGESTIONS.flatMap(s => { const l = de(s.type); return l ? [{ l, fond: s.fond, sous: s.sous ?? l.entree.aide }] : []; });
+  const familles = FAMILLES.map(f => ({ ...f, lignes: f.types.flatMap(t => de(t) ?? []) })).filter(f => f.lignes.length);
+  return (
+    <div className="flex flex-col gap-4 pb-2">
+      <ul className="adm-cascade grid grid-cols-2 gap-2.5 pt-1" aria-label="Suggestions">
+        {tuiles.map(({ l, fond, sous }, i) => (
+          <li key={l.entree.nom} style={{ '--i': i } as CSSProperties}>
+            <button type="button" disabled={!permise(l)} onClick={() => prendre(l)} aria-label={nomDe(l)} style={{ background: fond }}
+              className="relative flex aspect-square w-full flex-col justify-between rounded-2xl p-3.5 text-left text-white transition duration-150 hover:brightness-[0.97] active:scale-[0.97]">
+              <Icone nom={l.entree.picto} taille={30} className="text-bleu" />
+              {reserve(l) && l.entree.fonction && <span className="absolute top-3 right-3"><Etiquette fonction={l.entree.fonction} /></span>}
+              <span className="flex flex-col gap-0.5">
+                <span className="text-[15px] leading-tight font-semibold">{l.entree.nom}</span>
+                {sous && <span className="line-clamp-2 text-[12.5px] leading-snug text-white/65">{sous}</span>}
+              </span>
+            </button>
+          </li>
+        ))}
+      </ul>
+      <p className="text-[13px] leading-snug text-white/60">Une vidéo, un agenda, une boutique ? Colle son adresse : Hopla en fait le bon bloc.</p>
+      <ul className="-mx-2 flex flex-col">
+        {familles.map(f => {
+          const ici = ouverte === f.nom;
+          return (
+            <li key={f.nom} className="border-t border-white/10 first:border-t-0">
+              <button type="button" aria-expanded={ici} onClick={() => setOuverte(ici ? null : f.nom)}
+                className="flex min-h-12 w-full items-center gap-3 rounded-xl px-2 py-1 text-left transition hover:bg-white/[0.05]">
+                <span className="flex min-w-0 flex-1 flex-col">
+                  <span className="text-[14.5px] font-semibold text-white">{f.nom}</span>
+                  {!ici && <span className="truncate text-[12.5px] text-white/55">{f.lignes.map(l => l.entree.nom).join(', ')}</span>}
+                </span>
+                <Icone nom="ui-chevron" taille={16} className={`shrink-0 text-white/40 transition-transform ${ici ? 'rotate-180' : ''}`} />
+              </button>
+              {ici && <ul className="adm-cascade flex flex-col pb-1.5 pl-2">{f.lignes.map((l, i) => ligne(l, i))}</ul>}
+            </li>
+          );
+        })}
+      </ul>
+    </div>
   );
 }
 

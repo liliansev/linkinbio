@@ -179,6 +179,8 @@ embarque tout : l'image n'a pas de `node_modules`.
   bulle dit « Gardé, masqué de ta page », avec « Afficher ». Une bulle qui offre un geste (Annuler, Afficher) reste
   jusqu'au geste suivant, fait ailleurs, et son geste rend la main au contenu ; les autres s'en vont après 4 s (8 s
   pour une phrase longue). Au bureau, elle se pose en bas à droite.
+  Au téléphone, le champ vide montre quatre tuiles en couleur (`SUGGESTIONS` : Lien, Galerie, Avis et preuves, Liste
+  e-mail, avec le badge de l'offre) puis les blocs rangés en familles repliées (`FAMILLES`, 24 octobre 2026, demandé par Lilian).
   Le choix des blocs (`OngletLiens.tsx`) est un seul champ, « Colle une adresse ou cherche un bloc » : au téléphone une
   feuille qui s'ouvre sur lui et son bouton Coller (`FeuilleAjout`), au bureau le champ au-dessus des blocs
   (`ChampAjout`), que le bouton « Ajouter un bloc » de l'en-tête et la touche A mettent en vue (flèches, Entrée, Échap
@@ -270,6 +272,10 @@ embarque tout : l'image n'a pas de `node_modules`.
   section réglé `disposition: 'grille'` range en tuiles les liens simples qui le suivent, jusqu'au titre suivant
   (`enGrille` dans `lib/collections.ts` ; la grille vient de `.lp-blocs:has(> [data-tuile])`, les blocs restent à plat
   et se déplacent comme avant). Sans Starter, `selonDroits` rend la police et le fond du thème, la photo ronde et la liste.
+  Ce design s'essaie avant de payer (24 octobre 2026, demandé par Lilian) : au back office, l'éditeur et l'aperçu le montrent
+  (`avecEssai` dans `lib/droits.ts`), un bandeau citron sur Ma page dit ce qui est à l'essai (`enEssai`), avec « Retirer »
+  (`sansEssai`) et « Passer en Starter » ; la page publique reste celle de l'offre. Dans Design, « Photo de profil » change la
+  photo (pour tous) et sa forme.
 - `accueil/` : l'accueil de hopla.page (`routes/index.tsx`, styles dans `styles/accueil.css` et, pour la
   version « des visages » du 21 octobre 2026, `styles/accueil-profils.css` sous `.hl-humain`), en bleu, vert
   citron et papiers crème, autour de six profils imaginés (portraits générés, provenance en `.webp.json`) ;

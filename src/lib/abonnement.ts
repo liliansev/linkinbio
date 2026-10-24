@@ -49,7 +49,7 @@ export const OFFRES: Record<Plan, Offre> = {
   },
   starter: {
     nom: 'Starter', phrase: 'Ta page, sans la mention Hopla.', prix: { mois: 9, an: 79 }, quota: 100 * Mo, jours: 30, enVente: true,
-    avantages: ['Sans la mention « Créer ma page avec Hopla »', 'Ta vitrine : produits, réservations, soutien', 'Tes couleurs, ta police, ton image de fond', 'Ta photo en grand, tes liens en grille', 'Tes liens programmés à l’avance', 'Les avis de tes clients', 'Ton formulaire de contact, et douze photos par galerie', 'Tes stats sur 30 jours', 'Ta page redirigée, tes liens suivis (UTM)'],
+    avantages: ['Sans la mention Hopla', 'Ta vitrine : produits, rendez-vous, dons', 'Tes couleurs, ta police, ton fond', 'Grande photo, liens en grille', 'Tes liens programmés à l’avance', 'Les avis de tes clients', 'Ton formulaire et tes galeries', 'Tes stats sur 30 jours', 'Redirection et suivi UTM'],
   },
   pro: {
     nom: 'Pro', phrase: 'Le bon lien, au bon moment.', prix: { mois: 19, an: 169 }, quota: 200 * Mo, jours: 365, enVente: true,
@@ -117,19 +117,19 @@ export type Fonction = keyof typeof FONCTIONS;
  * la prendre, sur l'étiquette de l'offre mise en avant (« Pour tes couleurs »).
  */
 export const FONCTIONS_EN_MOTS: Record<Fonction, { avantage: string; pour: string }> = {
-  sansMention: { avantage: 'Sans la mention « Créer ma page avec Hopla »', pour: 'Pour ôter la mention' },
-  vitrine: { avantage: 'Ta vitrine : produits, réservations, soutien', pour: 'Pour ta vitrine' },
-  couleurs: { avantage: 'Tes couleurs, ta police, ton image de fond', pour: 'Pour tes couleurs' },
+  sansMention: { avantage: 'Sans la mention Hopla', pour: 'Pour ôter la mention' },
+  vitrine: { avantage: 'Ta vitrine : produits, rendez-vous, dons', pour: 'Pour ta vitrine' },
+  couleurs: { avantage: 'Tes couleurs, ta police, ton fond', pour: 'Pour tes couleurs' },
   programmation: { avantage: 'Tes liens programmés à l’avance', pour: 'Pour programmer' },
   avis: { avantage: 'Les avis de tes clients', pour: 'Pour les avis' },
   stats: { avantage: 'Tes stats sur 30 jours', pour: 'Pour tes stats' },
-  formulaire: { avantage: 'Ton formulaire de contact, et douze photos par galerie', pour: 'Pour ton formulaire' },
-  galerie: { avantage: 'Ton formulaire de contact, et douze photos par galerie', pour: 'Pour ta galerie' },
-  utm: { avantage: 'Ta page redirigée, tes liens suivis (UTM)', pour: 'Pour les UTM' },
-  redirection: { avantage: 'Ta page redirigée, tes liens suivis (UTM)', pour: 'Pour la redirection' },
-  fond: { avantage: 'Tes couleurs, ta police, ton image de fond', pour: 'Pour ton fond' },
-  grandePhoto: { avantage: 'Ta photo en grand, tes liens en grille', pour: 'Pour ta grande photo' },
-  grille: { avantage: 'Ta photo en grand, tes liens en grille', pour: 'Pour la grille' },
+  formulaire: { avantage: 'Ton formulaire et tes galeries', pour: 'Pour ton formulaire' },
+  galerie: { avantage: 'Ton formulaire et tes galeries', pour: 'Pour ta galerie' },
+  utm: { avantage: 'Redirection et suivi UTM', pour: 'Pour les UTM' },
+  redirection: { avantage: 'Redirection et suivi UTM', pour: 'Pour la redirection' },
+  fond: { avantage: 'Tes couleurs, ta police, ton fond', pour: 'Pour ton fond' },
+  grandePhoto: { avantage: 'Grande photo, liens en grille', pour: 'Pour ta grande photo' },
+  grille: { avantage: 'Grande photo, liens en grille', pour: 'Pour la grille' },
   heure: { avantage: 'Ta page selon l’heure et le pays', pour: 'Pour tes créneaux' },
   drops: { avantage: 'Les drops : un code, des places comptées', pour: 'Pour les drops' },
   listeEmail: { avantage: 'Ta liste e-mail, vers ta newsletter', pour: 'Pour ta liste e-mail' },
