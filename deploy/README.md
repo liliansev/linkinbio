@@ -64,7 +64,8 @@ redir @liens https://hopla.page{uri} permanent
 
 En service depuis le 22 octobre 2026 : la zone `hopla.page` est chez Cloudflare
 (serveurs de noms `cory.ns.cloudflare.com` et `crystal.ns.cloudflare.com`, posés
-dans hPanel) et Turnstile protège les formulaires. Seul le verrou attend.
+dans hPanel) et Turnstile protège les formulaires. Depuis le 24 octobre 2026, le
+serveur refuse ce qui ne passe pas par Cloudflare (le verrou).
 
 - **Turnstile**, la vérification anti-robot de la connexion, de l'accueil, du
   signalement et de « Rejoins ma liste » : `TURNSTILE_SITE_KEY` (la clé publique,
@@ -80,13 +81,13 @@ dans hPanel) et Turnstile protège les formulaires. Seul le verrou attend.
   « Flexible » ; les enregistrements des e-mails (Resend) restent en gris.
   « Always Use HTTPS » reste éteint : Caddy renouvelle ses certificats par le défi
   HTTP-01, sur le port 80. Le cache du navigateur suit les en-têtes de l'app.
-- **Verrou** : `LIENS_CLOUDFLARE=exclusif` dans `runtime.env`, puis redéployer.
-  Une requête arrivée par Caddy sans passer par Cloudflare reçoit alors 403 ;
-  `/healthz` et le réseau interne (sans `X-Real-IP`, comme le contrôle de
-  `deploy.sh`) passent toujours. À poser une fois les anciens serveurs de noms
-  (`lunar` et `solar.dns-parking.com`) oubliés des résolveurs, à partir du
-  24 octobre 2026 : avant, un visiteur encore envoyé en direct au serveur
-  recevrait 403.
+- **Verrou** : `LIENS_CLOUDFLARE=exclusif` dans `runtime.env`, posé le
+  24 octobre 2026. Une requête arrivée par Caddy sans passer par Cloudflare reçoit
+  403 ; `/healthz` et le réseau interne (sans `X-Real-IP`, comme le contrôle de
+  `deploy.sh`) passent toujours. Pour le lever, retirer la ligne de `runtime.env`,
+  puis redéployer. Le verrou tient à la liste des adresses de Cloudflare de
+  `server.mjs` : si Cloudflare en publie de nouvelles, les y ajouter, car une
+  requête venue d'une adresse absente de la liste reçoit 403.
 - **Ni cookie ni défi** : Bot Fight Mode reste éteint (il poserait `__cf_bm` et
   bloquerait les webhooks Creem), les règles du pare-feu bloquent sans jamais
   défier (`cf_clearance`), et les limites de débit n'utilisent pas
@@ -123,5 +124,3 @@ Le 18 octobre 2026, l'app est passée à la racine de hopla.page (voir « Adress
 ## Reste à faire
 
 - Sauvegarde nocturne de la base hors du VPS, avec un test de restauration.
-- Poser le verrou `LIENS_CLOUDFLARE=exclusif`, à partir du 24 octobre 2026 (voir
-  « Cloudflare »).
