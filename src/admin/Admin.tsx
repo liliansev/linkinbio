@@ -725,7 +725,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
       adressePage={urlPage(compte)} principal={compte.principal} bloc={edition.bloc} reglages={reglages} nouveau={edition.nouveau} clics={clics[edition.bloc.id] ?? 0} prises={initial.places?.[edition.bloc.id] ?? 0} onFermer={() => setEdition(null)}
       onRetour={edition.nouveau && !grand && depuisIntegrations.current?.bloc !== edition.bloc.id && !blocs.some(b => b.id === edition.bloc.id) ? b => { setEdition(null); setDemandeAjout({ enBas: !!edition.enBas, brouillon: b ?? undefined }); } : undefined}
       onReplier={replier} suitAdresse={!edition.choisi} repris={edition.repris}
-      onEnregistrer={enregistrerBloc} onSupprimer={supprimer} onDupliquer={dupliquer} onDeplacer={deplacer} place={{ rang: blocs.findIndex(b => b.id === edition.bloc.id), total: blocs.length }} envoyerImage={d => api.envoyerImage(d)} apercuSite={(u, i) => api.apercuSite(u, i)} />
+      onEnregistrer={enregistrerBloc} onSupprimer={supprimer} onDupliquer={dupliquer} onDeplacer={deplacer} place={{ rang: blocs.findIndex(b => b.id === edition.bloc.id), total: blocs.length }} envoyerImage={d => api.envoyerImage(d)} apercuSite={(u, i) => api.apercuSite(u, i)} noteAvis={api.noteAvis} />
     </RegleAOuvrir.Provider>
   );
   const indicateur = sauvegarde === 'encours' ? 'Enregistrement…' : sauvegarde === 'erreur' ? 'Non enregistré' : 'Enregistré';

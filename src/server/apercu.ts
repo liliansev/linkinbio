@@ -52,7 +52,7 @@ const CAPTURE = (url: string) => `https://image.thum.io/get/width/1200/crop/675/
  * Puis, si la porte reste fermée, comme un navigateur ordinaire.
  */
 const VOIX_APERCU = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15 facebookexternalhit/1.1 Facebot Twitterbot/1.0 Hopla/1.0 (+https://hopla.page)';
-const VOIX_NAVIGATEUR = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36';
+export const VOIX_NAVIGATEUR = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36';
 type Voix = typeof VOIX_APERCU | typeof VOIX_NAVIGATEUR;
 
 const RESERVEES = new BlockList();
