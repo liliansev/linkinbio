@@ -8,7 +8,7 @@
  * l'écran. Un jeton ne sert qu'une fois : le suivant se prépare aussitôt.
  */
 
-export type ActionTurnstile = 'connexion' | 'accueil' | 'signalement' | 'liste';
+export type ActionTurnstile = 'connexion' | 'accueil' | 'signalement' | 'liste' | 'message';
 
 interface Turnstile {
   render(conteneur: HTMLElement, options: Record<string, unknown>): string | null | undefined;

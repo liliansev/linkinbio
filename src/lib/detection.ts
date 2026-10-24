@@ -1,16 +1,18 @@
 /*
  * Ce qu'est une adresse collée (23 octobre 2026, demandé par Lilian : « que ça détecte automatiquement de quoi il
- * s'agit ») : une vidéo YouTube s'affiche dans la page, un agenda devient une prise de rendez-vous, PayPal ou Ko-fi un
+ * s'agit ») : une vidéo YouTube, Vimeo ou TikTok s'affiche dans la page, un titre ou un podcast Spotify, Apple Music,
+ * Deezer ou SoundCloud devient un lecteur (24 octobre 2026), un agenda devient une prise de rendez-vous, PayPal ou Ko-fi un
  * « Me soutenir », la fiche d'un produit sur Etsy ou Gumroad un produit. Le reste est un lien. Seule l'adresse compte
  * ici, rien n'est demandé au site ; une page qui déclare un prix (une boutique Shopify, WooCommerce…) devient un
  * produit une fois lue, dans l'éditeur. Les blocs de la vitrine demandent Starter : sans elle, l'adresse reste un lien.
  */
 import type { Bloc, TypeBloc } from './types.ts';
-import { idYoutube, nouveauBloc } from './types.ts';
+import { nouveauBloc } from './types.ts';
 import { agendaDe, avecMontants, soutienDe } from './vitrine.ts';
+import { estMusique, estVideo } from './lecteurs.ts';
 
 /** Ce que peut devenir une adresse collée. */
-export type TypeAdresse = Extract<TypeBloc, 'lien' | 'video' | 'reservation' | 'soutien' | 'produit'>;
+export type TypeAdresse = Extract<TypeBloc, 'lien' | 'video' | 'musique' | 'reservation' | 'soutien' | 'produit'>;
 
 const hote = (url: string) => { try { return new URL(url).hostname.toLowerCase().replace(/^www\./, ''); } catch { return ''; } };
 const chemin = (url: string) => { try { return new URL(url).pathname.split('/').filter(Boolean).map(c => c.toLowerCase()); } catch { return []; } };
@@ -85,7 +87,9 @@ export function lienAffilie(url: string): boolean {
 
 /** Ce que devient une adresse : `vitrine`, la page a les blocs de la vitrine (Starter). */
 export function typeDeAdresse(url: string, vitrine: boolean): TypeAdresse {
-  if (idYoutube(url)) return 'video';
+  // Une vidéo YouTube, Vimeo ou TikTok, un titre ou un podcast sur Spotify, Deezer… se lisent dans la page, pour tous.
+  if (estVideo(url)) return 'video';
+  if (estMusique(url)) return 'musique';
   if (vitrine && pourReserver(url)) return 'reservation';
   if (vitrine && pourSoutenir(url)) return 'soutien';
   if (vitrine && ficheProduit(url)) return 'produit';

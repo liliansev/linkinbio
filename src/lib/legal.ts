@@ -13,7 +13,7 @@ import { OFFRES, euros } from './abonnement.ts';
 /** « 9 € par mois ou 79 € par an » : le prix d'une offre, tel que Creem le facture. */
 const prixDe = (p: 'starter' | 'pro' | 'premium') => `${euros(OFFRES[p].prix.mois)} par mois ou ${euros(OFFRES[p].prix.an)} par an`;
 
-export const VERSION_CGU = '2026-10-23.1';
+export const VERSION_CGU = '2026-10-24.1';
 export const CONTACT_LEGAL = 'bonjour@liliansevoumian.fr';
 
 export interface DocumentLegal { titre: string; resume: string; sections: { titre: string; texte: string[] }[] }
@@ -26,7 +26,7 @@ const HEBERGEUR = 'Hostinger International Limited, 61 Lordou Vironos Street, 60
 export const LEGAL: Record<NomDocument, DocumentLegal> = {
   cgu: {
     titre: 'Conditions générales d’utilisation',
-    resume: `Les règles du service Hopla, en vigueur depuis le 23 octobre 2026 (version ${VERSION_CGU}).`,
+    resume: `Les règles du service Hopla, en vigueur depuis le 24 octobre 2026 (version ${VERSION_CGU}).`,
     sections: [
       { titre: 'Le service', texte: [
         'Hopla permet de publier une page de liens personnelle à l’adresse hopla.page/<pseudo>, et de la gérer depuis un back office, sur app.hopla.page. Le service est édité par Lilian Sevoumian (voir les mentions légales).',
@@ -37,8 +37,8 @@ export const LEGAL: Record<NomDocument, DocumentLegal> = {
         'Tu peux télécharger toutes tes données et supprimer ton compte à tout moment, depuis l’onglet Réglages. La suppression est immédiate et définitive. Si tu as un abonnement, elle le résilie au même moment : plus aucun paiement ne part, et la période en cours n’est pas remboursée, sauf dans les 14 jours qui suivent ton premier paiement (voir « Les offres payantes et leur paiement »).',
       ] },
       { titre: 'Les offres payantes et leur paiement', texte: [
-        'La version gratuite le reste pour toujours : ta page, des liens sans limite, dont tes liens partenaires avec leur mention « Publicité », l’ordre de tes liens selon le réseau d’où arrive le visiteur, et les vingt thèmes. Trois offres payantes s’y ajoutent, chacune avec tout ce que comprend la précédente.',
-        `Starter, à ${prixDe('starter')} : ta page sans la mention Hopla, ta vitrine (tes produits et leur prix, ta prise de rendez-vous, un bouton pour te soutenir, le code promo de tes liens partenaires), tes couleurs, tes liens programmés à l’avance, les avis de tes clients et tes statistiques détaillées sur 30 jours. Pro, à ${prixDe('pro')} : ta page selon l’heure, les drops, ta liste e-mail, que tu peux brancher sur ta newsletter ou ton outil d’automatisation, et tes statistiques sur un an. Premium, à ${prixDe('premium')}, ajoutera ton propre nom de domaine et jusqu’à trois pages ; il n’est pas encore en vente.`,
+        'La version gratuite le reste pour toujours : ta page, des liens sans limite, dont tes liens partenaires avec leur mention « Publicité », tes vidéos et ta musique lues dans la page, tes questions fréquentes, ta carte de visite, ton adresse, des galeries de trois photos, l’ordre de tes liens selon le réseau d’où arrive le visiteur, et les vingt thèmes. Trois offres payantes s’y ajoutent, chacune avec tout ce que comprend la précédente.',
+        `Starter, à ${prixDe('starter')} : ta page sans la mention Hopla, ta vitrine (tes produits et leur prix, ta prise de rendez-vous, un bouton pour te soutenir, le code promo de tes liens partenaires), ton formulaire de contact, des galeries jusqu’à douze photos, tes couleurs, tes liens programmés à l’avance, les avis de tes clients et tes statistiques détaillées sur 30 jours. Pro, à ${prixDe('pro')} : ta page selon l’heure, les drops, ta liste e-mail, que tu peux brancher sur ta newsletter ou ton outil d’automatisation, et tes statistiques sur un an. Premium, à ${prixDe('premium')}, ajoutera ton propre nom de domaine et jusqu’à trois pages ; il n’est pas encore en vente.`,
         'Les visites de ta page sont comptées dans toutes les versions, mais seules les offres payantes te montrent tes statistiques : en prendre une te donne aussi celles d’avant, dans la limite de son historique.',
         'Les prix sont toutes taxes comprises. L’abonnement se renouvelle automatiquement à la fin de chaque période, au mois ou à l’an selon ton choix.',
         'Le paiement passe par Creem (creem.io), service de la société Armitage Labs OÜ (registre estonien n° 16977866, Rotermanni 14, 10111 Tallinn, Estonie), revendeur officiel de l’abonnement : c’est Creem qui te le vend, encaisse le paiement, t’envoie la facture et reverse la TVA. Ses conditions de vente s’ajoutent à celles-ci pour le paiement. Hopla ne voit ni ne garde jamais ton numéro de carte.',
@@ -76,11 +76,12 @@ export const LEGAL: Record<NomDocument, DocumentLegal> = {
     resume: `L’accord de sous-traitance prévu par l’article 28 du RGPD, entre toi (responsable de traitement) et Hopla (sous-traitant), pour les données des visiteurs de ta page. Version ${VERSION_CGU}.`,
     sections: [
       { titre: 'Objet', texte: [
-        'Hopla mesure l’audience de ta page pour toi : nombre de vues, de visiteurs et de clics, provenance et type d’appareil. Si tu ajoutes le bloc « Rejoins ma liste », Hopla recueille aussi pour toi les adresses des personnes qui s’y inscrivent. Il ne fait rien d’autre de ces données et ne les utilise pas pour son propre compte.',
+        'Hopla mesure l’audience de ta page pour toi : nombre de vues, de visiteurs et de clics, provenance et type d’appareil. Si tu ajoutes le bloc « Rejoins ma liste », Hopla recueille aussi pour toi les adresses des personnes qui s’y inscrivent. Si tu ajoutes « Me contacter », Hopla transmet à ta boîte e-mail les messages que tes visiteurs t’y laissent. Il ne fait rien d’autre de ces données et ne les utilise pas pour son propre compte.',
       ] },
       { titre: 'Données traitées', texte: [
         'Pour chaque visite ou clic : la date, le lien cliqué, la provenance (site d’origine ou paramètre de campagne), le type d’appareil (mobile, ordinateur, tablette), et une empreinte anonyme du visiteur, recalculée chaque jour à partir d’un secret du serveur, de l’adresse IP et du navigateur. L’adresse IP elle-même n’est jamais enregistrée, aucun cookie n’est déposé chez le visiteur, et l’empreinte ne permet pas de le suivre d’un jour à l’autre ni d’un site à l’autre.',
         'Pour le bloc « Rejoins ma liste » : l’adresse e-mail, le prénom s’il est demandé, la date d’inscription et la provenance. Ces inscrits sont gardés tant que tu ne les retires pas, ou que ton compte existe. Si tu branches un outil dans l’onglet Intégrations (une newsletter comme Brevo, Mailchimp, Kit, MailerLite, beehiiv ou Systeme.io, ou un webhook Make, Zapier ou n8n), chaque inscrit lui est transmis sur ton instruction : cet outil, que tu choisis, agit alors pour toi, sous ton propre contrat avec lui. Ta clé d’API, ou l’adresse de ton webhook, est chiffrée sur le serveur. Substack n’a pas d’API : tes inscrits n’y vont que si tu les y importes toi-même.',
+        'Pour « Me contacter » : le nom s’il est donné, l’adresse e-mail et le message du visiteur, transmis aussitôt par e-mail à l’adresse de ton compte, avec son adresse pour lui répondre. Hopla n’en garde aucune copie.',
       ] },
       { titre: 'Durée', texte: [
         'Les données sont gardées 13 mois au plus, puis effacées automatiquement. Elles sont effacées immédiatement si tu supprimes ton compte.',
@@ -103,9 +104,10 @@ export const LEGAL: Record<NomDocument, DocumentLegal> = {
       ] },
       { titre: 'Si tu visites une page', texte: [
         'Aucun cookie n’est déposé, aucune publicité, aucun traceur d’un site à l’autre. Le serveur compte les vues et les clics de la page pour son propriétaire, avec une empreinte anonyme renouvelée chaque jour ; ton adresse IP n’est pas enregistrée. Ces statistiques sont gardées 13 mois. C’est une mesure d’audience strictement limitée, qui entre dans l’exemption de consentement prévue par la CNIL.',
-        'Le lecteur d’une vidéo YouTube, comme l’agenda d’une prise de rendez-vous (Calendly, Cal.com, Google Agenda), ne se charge dans la page que si tu le touches : ce service applique alors ses propres règles, cookies compris. Un produit, un bouton de soutien ou un lien te mène sur un autre site, qui a les siennes.',
+        'Le lecteur d’une vidéo (YouTube, Vimeo, TikTok) ou d’une musique (Spotify, Apple Music, Apple Podcasts, Deezer, SoundCloud), la carte d’une adresse (Google Maps), comme l’agenda d’une prise de rendez-vous (Calendly, Cal.com, Google Agenda), ne se charge dans la page que si tu le touches : ce service applique alors ses propres règles, cookies compris. Un produit, un bouton de soutien ou un lien te mène sur un autre site, qui a les siennes.',
         'Tu peux t’y opposer : un navigateur qui bloque les requêtes vers hopla.page/api/evenement (la plupart des bloqueurs de contenus le permettent) n’est pas compté, sans que la page cesse de fonctionner. Le propriétaire de la page est responsable de ces statistiques ; Hopla les traite pour lui.',
         'Si tu t’inscris à la liste d’une page (« Rejoins ma liste »), ton adresse et, s’il est demandé, ton prénom vont à son propriétaire, qui seul décide des e-mails qu’il t’envoie ; il peut les transmettre à son outil d’envoi ou d’automatisation (Brevo, Mailchimp, Kit, Substack ou Make, par exemple). Pour te désinscrire ou faire effacer ton adresse, écris-lui, ou à ' + CONTACT_LEGAL + '.',
+        'Si tu écris par « Me contacter », ton nom, ton adresse et ton message partent par e-mail au propriétaire de la page, qui te répond à cette adresse ; Hopla ne les garde pas. Enregistrer une carte de visite dans tes contacts ne dit rien de toi à Hopla.',
         'Pour un lien à accès réservé (mode drop), Hopla garde, pour compter les places, une empreinte chiffrée propre à ce lien, tirée de ton adresse IP et de ton navigateur : elle ne sert qu’à ça, ne permet pas de te suivre d’un lien à l’autre, et s’efface au bout de treize mois.',
       ] },
       { titre: 'Si tu réserves ton nom', texte: [
@@ -122,7 +124,7 @@ export const LEGAL: Record<NomDocument, DocumentLegal> = {
       ] },
       { titre: 'Protection contre les attaques', texte: [
         'Les visites de hopla.page et du back office passent par Cloudflare, qui arrête les attaques et les robots avant le serveur. Cloudflare voit alors ton adresse IP, ton navigateur et l’adresse demandée, le temps d’acheminer la requête ; il ne dépose pas de cookie. Base légale : l’intérêt légitime de Hopla à protéger le service et ceux qui s’en servent.',
-        'Les formulaires publics (connexion, création de page, signalement, « Rejoins ma liste ») passent aussi par Turnstile, la vérification anti-robot de Cloudflare. Elle ne se charge que lorsque tu te sers de l’un d’eux, et ne montre une case à cocher qu’à un visiteur jugé suspect.',
+        'Les formulaires publics (connexion, création de page, signalement, « Rejoins ma liste », « Me contacter ») passent aussi par Turnstile, la vérification anti-robot de Cloudflare. Elle ne se charge que lorsque tu te sers de l’un d’eux, et ne montre une case à cocher qu’à un visiteur jugé suspect.',
       ] },
       { titre: 'Où vont les données', texte: [
         'Nulle part ailleurs que chez les sous-traitants listés sur la page dédiée : l’hébergeur, le service d’envoi des e-mails, et Cloudflare, qui protège le service. Pour un abonnement, Creem reçoit ton adresse e-mail au moment du paiement. Rien n’est vendu ni partagé à des fins publicitaires.',
@@ -142,7 +144,7 @@ export const LEGAL: Record<NomDocument, DocumentLegal> = {
         `Hébergement du serveur et de la base de données. ${HEBERGEUR} : société établie dans l’Union européenne.`,
       ] },
       { titre: 'Resend', texte: [
-        'Envoi des e-mails : liens de connexion, réservations de nom, invitations, décisions de modération. Ne reçoit que l’adresse du destinataire et le contenu du message. Resend, Inc., États-Unis ; le transfert est encadré par l’accord de traitement de Resend et les clauses contractuelles types de la Commission européenne.',
+        'Envoi des e-mails : liens de connexion, réservations de nom, invitations, décisions de modération, messages laissés par « Me contacter ». Ne reçoit que l’adresse du destinataire et le contenu du message. Resend, Inc., États-Unis ; le transfert est encadré par l’accord de traitement de Resend et les clauses contractuelles types de la Commission européenne.',
       ] },
       { titre: 'Cloudflare', texte: [
         'Protection et acheminement du trafic de hopla.page et app.hopla.page, et vérification anti-robot des formulaires publics (Turnstile). Voit l’adresse IP, le navigateur et l’adresse demandée de chaque visite, le temps de l’acheminer ; ne dépose pas de cookie. Cloudflare, Inc., 101 Townsend St, San Francisco, CA 94107, États-Unis ; le transfert est encadré par l’accord de traitement de Cloudflare et les clauses contractuelles types de la Commission européenne.',

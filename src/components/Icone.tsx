@@ -12,6 +12,9 @@ export function Icone({ nom, taille = 20, className }: { nom: string; taille?: n
 export const NOMS_RESEAUX: Record<string, string> = {
   youtube: 'YouTube', linkedin: 'LinkedIn', instagram: 'Instagram', tiktok: 'TikTok', x: 'X', github: 'GitHub', facebook: 'Facebook',
   threads: 'Threads', twitch: 'Twitch', spotify: 'Spotify', email: 'E-mail', site: 'Site web',
+  whatsapp: 'WhatsApp', telegram: 'Telegram', discord: 'Discord', pinterest: 'Pinterest', snapchat: 'Snapchat', bluesky: 'Bluesky', mastodon: 'Mastodon',
+  reddit: 'Reddit', substack: 'Substack', medium: 'Medium', patreon: 'Patreon', soundcloud: 'SoundCloud', deezer: 'Deezer', applemusic: 'Apple Music',
+  applepodcasts: 'Apple Podcasts', bandcamp: 'Bandcamp', vimeo: 'Vimeo', behance: 'Behance', dribbble: 'Dribbble', malt: 'Malt', etsy: 'Etsy',
 };
 
 /** Les pictos proposés pour un lien, dans l'ordre du sélecteur. */

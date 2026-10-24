@@ -10,13 +10,18 @@ import type { Creneau } from './moments.ts';
 import type { PeriodeStats } from './periode.ts';
 import type { Audience, EffetAudience } from './provenance.ts';
 
-export const TYPES_BLOC = ['lien', 'titre', 'texte', 'video', 'derniere-video', 'newsletter', 'inscription', 'preuve', 'produit', 'soutien', 'reservation'] as const;
+export const TYPES_BLOC = ['lien', 'titre', 'texte', 'video', 'derniere-video', 'newsletter', 'inscription', 'preuve', 'produit', 'soutien', 'reservation',
+  'musique', 'faq', 'coordonnees', 'lieu', 'galerie', 'formulaire'] as const;
 export type TypeBloc = (typeof TYPES_BLOC)[number];
 /** La vitrine (Starter, 22 octobre 2026) : un produit et son prix, « Me soutenir », « Réserver ». Hopla n'encaisse rien, chacun mène au site qui vend. */
 export const TYPES_VITRINE: readonly TypeBloc[] = ['produit', 'soutien', 'reservation'];
 export type TypeVitrine = Extract<TypeBloc, 'produit' | 'soutien' | 'reservation'>;
 /** Les blocs qui mènent à une adresse : la rangée du back office la montre à côté de leur nom. */
-export const TYPES_ADRESSE: readonly TypeBloc[] = ['lien', 'video', 'produit', 'soutien', 'reservation'];
+export const TYPES_ADRESSE: readonly TypeBloc[] = ['lien', 'video', 'musique', 'produit', 'soutien', 'reservation'];
+/** Les questions d'une FAQ, les images d'une galerie : combien au plus. Sans Starter, une galerie n'en montre que `GALERIE_GRATUITE`. */
+export const MAX_QUESTIONS = 20;
+export const MAX_IMAGES = 12;
+export const GALERIE_GRATUITE = 3;
 
 /** Les mouvements qui attirent l'œil sur un bouton. */
 export const ANIMATIONS = ['aucune', 'reflet', 'orbite', 'lueur', 'onde', 'respiration', 'rebond', 'secousse'] as const;
@@ -74,7 +79,18 @@ export interface Bloc {
   montants: number[];
   /** Un lien partenaire (affiliation, collaboration payée) : sa mention, à tous, et son code promo, avec Starter. */
   partenariat: Partenariat | null;
+  /** Une FAQ : ses questions et leurs réponses, dans l'ordre (bloc `faq`, 24 octobre 2026). */
+  questions: Question[];
+  /** Une galerie : ses images, `/media/...` (bloc `galerie`). */
+  images: string[];
+  /** Une carte de visite : de quoi enregistrer le contact dans son téléphone (bloc `coordonnees`). Le site est l'adresse du bloc. */
+  coordonnees: Coordonnees | null;
+  /** Une adresse postale, telle qu'on l'écrit sur une enveloppe : celle d'un lieu (bloc `lieu`) ou d'une carte de visite. */
+  adressePostale: string;
 }
+
+export interface Question { question: string; reponse: string }
+export interface Coordonnees { telephone: string; email: string; societe: string; poste: string }
 
 /** Les deux mentions que demande la loi du 9 juin 2023 sur l'influence commerciale. */
 export const MENTIONS_PARTENAIRE = ['publicite', 'collaboration'] as const;
@@ -117,7 +133,12 @@ export type FormeBouton = (typeof FORMES_BOUTON)[number];
 export const OMBRES_BOUTON = ['aucune', 'subtile', 'marquee'] as const;
 export type OmbreBouton = (typeof OMBRES_BOUTON)[number];
 
-export const RESEAUX = ['youtube', 'linkedin', 'instagram', 'tiktok', 'x', 'github', 'facebook', 'threads', 'twitch', 'spotify', 'email', 'site'] as const;
+export const RESEAUX = ['youtube', 'linkedin', 'instagram', 'tiktok', 'x', 'github', 'facebook', 'threads', 'twitch', 'spotify', 'email', 'site',
+  // Les réseaux qu'on colle le plus, ajoutés le 24 octobre 2026 (d'après Linktree).
+  'whatsapp', 'telegram', 'discord', 'pinterest', 'snapchat', 'bluesky', 'mastodon', 'reddit', 'substack', 'medium', 'patreon', 'soundcloud',
+  'deezer', 'applemusic', 'applepodcasts', 'bandcamp', 'vimeo', 'behance', 'dribbble', 'malt', 'etsy'] as const;
+/** Le nombre de réseaux qu'une page montre au plus. */
+export const MAX_RESEAUX = 20;
 export type Reseau = (typeof RESEAUX)[number];
 
 /** Le fond, les boutons et l'accent qu'on peut changer après avoir choisi un thème. */
@@ -402,6 +423,7 @@ export function nouveauBloc(type: TypeBloc, id: string): Bloc {
   const titres: Record<TypeBloc, string> = {
     lien: '', titre: '', texte: '', video: 'Ma vidéo', 'derniere-video': 'Ma dernière vidéo', newsletter: 'Ma newsletter', inscription: 'Rejoins ma liste', preuve: 'Ce qu’ils en disent',
     produit: '', soutien: 'Me soutenir', reservation: 'Prendre rendez-vous',
+    musique: 'Écouter', faq: 'Questions fréquentes', coordonnees: '', lieu: '', galerie: '', formulaire: 'Me contacter',
   };
   return {
     id, type, titre: titres[type], url: '', sousTitre: type === 'newsletter' || type === 'inscription' ? 'Un e-mail de temps en temps, rien de plus.' : '', description: '', icone: '', image: '',
@@ -409,6 +431,8 @@ export function nouveauBloc(type: TypeBloc, id: string): Bloc {
     compteARebours: false, creneau: null, audience: null, cache: [], demanderPrenom: false, acces: null,
     preuve: type === 'preuve' ? { genre: 'note', note: 0, nombre: 0, source: '' } : null,
     prix: '', montants: type === 'soutien' ? [...MONTANTS_DEFAUT] : [], partenariat: null,
+    questions: type === 'faq' ? [{ question: '', reponse: '' }] : [], images: [],
+    coordonnees: type === 'coordonnees' ? { telephone: '', email: '', societe: '', poste: '' } : null, adressePostale: '',
   };
 }
 

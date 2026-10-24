@@ -5,7 +5,7 @@
 
 import type { Bloc, Reglages, Reseau } from './types.ts';
 import { TYPES_VITRINE } from './types.ts';
-import { adresse, adresseSaisie } from './valider.ts';
+import { adresse, adresseSaisie, numeroAppel } from './valider.ts';
 import { THEME_DEFAUT } from './themes.ts';
 
 export type Destination = 'photo' | 'bio' | 'theme' | 'reseaux' | 'lien';
@@ -56,6 +56,18 @@ const PROFILS: Partial<Record<Reseau, (p: string) => string>> = {
   facebook: p => `https://facebook.com/${p}`,
   twitch: p => `https://twitch.tv/${p}`,
   github: p => `https://github.com/${p}`,
+  telegram: p => `https://t.me/${p}`,
+  pinterest: p => `https://pinterest.com/${p}`,
+  snapchat: p => `https://snapchat.com/add/${p}`,
+  bluesky: p => `https://bsky.app/profile/${p.includes('.') ? p : `${p}.bsky.social`}`,
+  reddit: p => `https://reddit.com/user/${p}`,
+  medium: p => `https://medium.com/@${p}`,
+  substack: p => `https://${p}.substack.com`,
+  patreon: p => `https://patreon.com/${p}`,
+  soundcloud: p => `https://soundcloud.com/${p}`,
+  vimeo: p => `https://vimeo.com/${p}`,
+  behance: p => `https://behance.net/${p}`,
+  dribbble: p => `https://dribbble.com/${p}`,
 };
 /** Les réseaux dont un pseudo suffit à faire l'adresse, dans l'ordre de l'accueil : un « @lilian » tapé dans le choix des blocs en prend un. */
 export const RESEAUX_PSEUDO = RESEAUX_ACCUEIL.filter(r => PROFILS[r]);
@@ -68,6 +80,8 @@ export function urlReseau(reseau: Reseau, saisie: string): string {
   const s = saisie.trim();
   if (!s) return '';
   if (reseau === 'email') return s.includes('@') && !s.includes('/') ? adresse(s.replace(/^mailto:/i, '')) : '';
+  // WhatsApp : un numéro, avec son indicatif, devient le lien qui ouvre la conversation.
+  if (reseau === 'whatsapp' && numeroAppel(s)) return `https://wa.me/${s.replace(/\D/g, '').replace(/^00/, '')}`;
   if (/^https?:\/\//i.test(s) || s.includes('/')) {
     const url = adresseSaisie(s);
     // Spotify n'a pas de pseudo : seule l'adresse d'une page Spotify mène quelque part.
@@ -110,15 +124,26 @@ export function nomSite(url: string): string {
 /** Les noms qui ne s'écrivent pas comme leur adresse (youtube.com donne « YouTube », pas « Youtube »). */
 const MARQUES: Record<string, string> = {
   youtube: 'YouTube', youtu: 'YouTube', linkedin: 'LinkedIn', tiktok: 'TikTok', github: 'GitHub', paypal: 'PayPal', whatsapp: 'WhatsApp', wa: 'WhatsApp',
-  soundcloud: 'SoundCloud', ebay: 'eBay', linktr: 'Linktree', bandcamp: 'Bandcamp', onlyfans: 'OnlyFans', helloasso: 'HelloAsso', leboncoin: 'leboncoin',
+  soundcloud: 'SoundCloud', bsky: 'Bluesky', t: 'Telegram', pin: 'Pinterest', snapchat: 'Snapchat', ebay: 'eBay', linktr: 'Linktree', bandcamp: 'Bandcamp', onlyfans: 'OnlyFans', helloasso: 'HelloAsso', leboncoin: 'leboncoin',
 };
 
 const HOTES_RESEAUX: Record<string, Reseau> = {
   'instagram.com': 'instagram', 'tiktok.com': 'tiktok', 'youtube.com': 'youtube', 'youtu.be': 'youtube', 'linkedin.com': 'linkedin',
   'x.com': 'x', 'twitter.com': 'x', 'threads.net': 'threads', 'threads.com': 'threads', 'facebook.com': 'facebook', 'twitch.tv': 'twitch',
   'spotify.com': 'spotify', 'open.spotify.com': 'spotify', 'github.com': 'github',
+  'wa.me': 'whatsapp', 'whatsapp.com': 'whatsapp', 'chat.whatsapp.com': 'whatsapp', 'api.whatsapp.com': 'whatsapp', 't.me': 'telegram', 'telegram.me': 'telegram',
+  'discord.gg': 'discord', 'discord.com': 'discord', 'pinterest.com': 'pinterest', 'pinterest.fr': 'pinterest', 'pin.it': 'pinterest', 'snapchat.com': 'snapchat',
+  'bsky.app': 'bluesky', 'reddit.com': 'reddit', 'medium.com': 'medium', 'patreon.com': 'patreon', 'soundcloud.com': 'soundcloud', 'deezer.com': 'deezer',
+  'music.apple.com': 'applemusic', 'podcasts.apple.com': 'applepodcasts', 'vimeo.com': 'vimeo', 'behance.net': 'behance', 'dribbble.com': 'dribbble', 'malt.fr': 'malt',
+  'malt.com': 'malt', 'etsy.com': 'etsy',
 };
 /** Le réseau d'une adresse (instagram.com/marie → instagram), pour lui donner son icône d'office. */
 export function reseauDeUrl(url: string): Reseau | null {
-  try { return HOTES_RESEAUX[new URL(url).hostname.toLowerCase().replace(/^(www|m)\./, '')] ?? null; } catch { return null; }
+  let hote: string;
+  try { hote = new URL(url).hostname.toLowerCase().replace(/^(www|m)\./, ''); } catch { return null; }
+  // Une lettre Substack (marie.substack.com), une instance Mastodon (mastodon.social, piaille.fr…) se reconnaissent autrement.
+  if (hote.endsWith('.substack.com')) return 'substack';
+  if (/^mastodon\.|^(mamot\.fr|piaille\.fr|mstdn\.social|framapiaf\.org|toot\.\w+)$/.test(hote)) return 'mastodon';
+  if (hote.endsWith('.bandcamp.com')) return 'bandcamp';
+  return HOTES_RESEAUX[hote] ?? null;
 }

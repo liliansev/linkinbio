@@ -1,7 +1,8 @@
 import { useContext, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import type { MutableRefObject } from 'react';
 import type { Api, Bloc, ImageApercu, MentionPartenaire, Partenariat, Reglages, TypeBloc, TypeVitrine, VisuelApercu } from '../lib/types.ts';
-import { ANIMATIONS_BLOC, TYPES_ADRESSE, TYPES_VITRINE, nouveauBloc } from '../lib/types.ts';
+import { ANIMATIONS_BLOC, TYPES_ADRESSE, TYPES_VITRINE, idYoutube, nouveauBloc } from '../lib/types.ts';
+import { lecteurDe } from '../lib/lecteurs.ts';
 import { horsCreneauOuDates } from '../lib/moments.ts';
 import { RESEAUX } from '../lib/types.ts';
 import { adresse, adresseSaisie, montants as lireMontants, numeroAppel, pourquoiPasAdresse } from '../lib/valider.ts';
@@ -25,6 +26,7 @@ import { Etiquette, FournisseurOffre, Reserve, offreDe, useDroits, useVoirOffres
 import type { Fonction } from '../lib/abonnement.ts';
 import type { SuiteAchat } from '../lib/achat.ts';
 import { focusAuto, focusSaisie } from '../lib/clavier';
+import { ChampLieu, ChampsCoordonnees, ChampsFaq, ChampsGalerie } from './ChampsBlocs.tsx';
 
 /** Au téléphone, la page ouverte dans la feuille d'un bloc : l'essentiel (`null`), la visibilité, l'apparence, « Plus de réglages », ou une règle rare. */
 type PageBloc = 'plus' | PageRegle | null;
@@ -403,7 +405,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
   /** Le format de l'image d'un bloc : la photo d'un produit, la grande image d'une carte, la vignette d'un bouton. */
   const formatImage = (x: Bloc) => (x.type === 'produit' ? 'photo' as const : x.vedette && x.format === 'carte' ? 'large' as const : 'carre' as const);
   /** Une image lue sur un site (en data URL), préparée à son format puis envoyée : son adresse chez Hopla. Un logo se pose sur du blanc. */
-  async function envoyerVisuel(donnees: string, visuel: VisuelApercu | undefined, format: 'carre' | 'large' | 'photo') {
+  async function envoyerVisuel(donnees: string, visuel: VisuelApercu | undefined, format: 'carre' | 'large' | 'photo' | 'galerie') {
     const fichierLu = await (await fetch(donnees)).blob();
     return envoyerImage(await (visuel === 'logo' ? preparerLogo(fichierLu, format === 'large' ? 'large' : 'carre') : preparerImage(fichierLu, format)));
   }
@@ -427,7 +429,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
     const format = formatImage(b);
     setVisuelEnCours(true); setErreur('');
     try {
-      const site = await apercuSite(url, genre === 'logo' ? 'logo' : b.type === 'produit' ? 'partage' : true);
+      const site = await apercuSite(url, genre === 'logo' ? 'logo' : b.type === 'produit' || b.type === 'musique' ? 'partage' : true);
       if (!site.image) {
         setErreur(genre === 'logo' ? 'Ce site n’a pas de logo assez net. Choisis une photo ou une icône.' : 'Ce site ne donne pas d’image. Choisis une photo.', 'image');
         return;
@@ -479,7 +481,8 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
     lu.current = { url, inconnu: false, titre: '', image: '', description: '', prix: '', icone: '' };
     if (x.type === 'lien') await lireLien(url, x, ancien, autreSite, effacee);
     else if (x.type === 'produit') await lireBoutique(url, x, ancien, autreSite, effacee);
-    else if (x.type === 'video') await lireVideo(url, x, ancien, effacee);
+    else if (x.type === 'video') await (idYoutube(url) ? lireVideo(url, x, ancien, effacee) : lireLecteur(url, x, ancien, effacee));
+    else if (x.type === 'musique') await lireLecteur(url, x, ancien, effacee);
   }
 
   /** Le texte venait-il de l'ancienne adresse ? Vide, lu par Hopla, le nom de l'ancien site, le texte de départ du bloc, ou l'adresse effacée puis retapée. */
@@ -599,6 +602,36 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
       lu.current.titre = titre;
       setB(avant => (adresseSaisie(avant.url) === url && avant.type === 'video' && avant.titre === x.titre ? { ...avant, titre } : avant));
     } catch { /* « Ma vidéo » suffit */ }
+  }
+
+  /**
+   * Un lecteur (un titre, un album, un podcast, une vidéo Vimeo ou TikTok) prend son vrai titre et sa pochette, ou sa
+   * vignette, lus par le service (oEmbed) ; ce qu'on a écrit ou choisi soi-même reste. Une vidéo TikTok garde sa
+   * vignette verticale.
+   */
+  async function lireLecteur(url: string, x: Bloc, ancien: Lu, effacee: boolean) {
+    const titreLibre = texteLibre(x, ancien, effacee);
+    const imageLibre = !aMoi.current.has('image') && (!x.image || x.image === ancien.image || effacee);
+    if (!titreLibre && !imageLibre) return;
+    const pareil = (avant: Bloc) => adresseSaisie(avant.url) === url && avant.type === x.type;
+    setLecture(true);
+    if (imageLibre) setVisuelEnCours(true);
+    try {
+      const site = await apercuSite(url, imageLibre ? 'partage' : false);
+      const titre = site.titre.slice(0, 80);
+      if (titre && titreLibre) {
+        lu.current.titre = titre;
+        setB(avant => (pareil(avant) && avant.titre === x.titre ? { ...avant, titre } : avant));
+      }
+      if (imageLibre) {
+        const forme = x.type === 'musique' ? 'carre' as const : lecteurDe(url)?.forme === 'vertical' ? 'galerie' as const : 'large' as const;
+        const image = site.image ? await envoyerVisuel(site.image, 'partage', forme) : '';
+        genreImage.current = 'partage';
+        lu.current.image = image;
+        setB(avant => (pareil(avant) && avant.image === x.image ? { ...avant, image } : avant));
+      }
+    } catch { /* le titre de départ et le logo du service suffisent */ }
+    finally { setLecture(false); setVisuelEnCours(false); }
   }
 
   // L'adresse tapée se relit d'elle-même dès qu'on cesse de taper : « Terminé » trouve le texte et l'image déjà là.
@@ -813,7 +846,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
   // page ». Un bloc posé porte son nom à lui, tel qu'il est en train de s'écrire (« Le blog », « Prendre rendez-vous » pour un
   // lien Calendly qui vient d'en devenir un) : on sait lequel est ouvert. Un texte, une preuve ou la dernière vidéo gardent
   // celui de leur genre, leur « titre » n'étant pas un nom.
-  const sonNom = ['texte', 'preuve', 'derniere-video'].includes(b.type) ? '' : b.titre.trim();
+  const sonNom = ['texte', 'preuve', 'derniere-video'].includes(b.type) ? '' : b.type === 'lieu' ? b.titre.trim() || b.adressePostale.split('\n')[0].trim() : b.titre.trim();
   const titre = nouveau ? type.nom : [sonNom || type.nom, !b.public && 'masqué', horsCreneauOuDates(b, !!droits.heure) && 'programmé'].filter(Boolean).join(' · ');
   const ligne = 'flex min-h-11 items-center gap-2 bureau:min-h-9';
 
@@ -871,7 +904,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
   );
   /** « Mis en avant » vient d'être allumé : au bureau, son apparence arrive dépliée, on voit ce qu'il ouvre. */
   const vedetteAllumee = useRef(false);
-  const enAvant = !['titre', 'texte', 'newsletter', 'inscription', 'preuve', 'soutien'].includes(b.type);
+  const enAvant = !['titre', 'texte', 'newsletter', 'inscription', 'preuve', 'soutien', 'faq', 'coordonnees', 'lieu', 'galerie', 'formulaire'].includes(b.type);
   const aideVedette = b.type === 'produit' ? 'Une grande carte, de la couleur d’accent de ta page.' : b.type === 'reservation' ? 'De la couleur d’accent de ta page.' : 'En plus grand, de la couleur d’accent de ta page.';
   const vedette = (compact: boolean) => enAvant && <Interrupteur key="vedette" compact={compact} label="Mis en avant" aide={aideVedette} actif={b.vedette} onChange={v => { vedetteAllumee.current = v; maj({ vedette: v }); }} />;
   const bascules = (compact: boolean, sansVedette = false) => [
@@ -902,7 +935,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
   // Avant l'adresse, l'aide d'un bloc neuf, sous le champ qui l'attend : les sites qui conviennent (agendas, soutiens,
   // boutiques) ; pour un lien, ce qu'une adresse collée devient, puisque le choix des blocs ne nomme plus ces blocs-là.
   const aideNeuf = !nouveau ? undefined
-    : b.type === 'lien' && !b.partenariat ? (droits.vitrine ? 'Colle une vidéo, un agenda, un produit ou une page de soutien : le bloc s’adapte.' : 'Colle une vidéo YouTube : elle s’affiche dans ta page.')
+    : b.type === 'lien' && !b.partenariat ? (droits.vitrine ? 'Colle une vidéo, une musique, un agenda, un produit ou une page de soutien : le bloc s’adapte.' : 'Colle une vidéo ou une musique : elle se lit dans ta page.')
     : type.aide && `${type.aide}.`;
   // Une fois l'adresse là, une ligne cochée dit ce qu'elle fera, pour chaque bloc qui mène quelque part : la même forme partout.
   const aideType = app ? ok(`Ce lien s’ouvre directement dans l’app ${app}, même depuis ${['Instagram', 'TikTok'].filter(n => n !== app).join(' ou ')}.`)
@@ -910,6 +943,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
     : adresseValide.startsWith('tel:') ? ok('Un toucher appelle ce numéro.')
     : adresseValide.startsWith('mailto:') ? ok(`Un toucher écrit à ${adresseValide.slice(7)}.`)
     : b.type === 'video' ? ok('La vidéo se lit dans ta page, sans la quitter.')
+    : b.type === 'musique' ? ok(`Le lecteur${lecteurDe(adresseValide) ? ` ${lecteurDe(adresseValide)!.nom}` : ''} s’ouvre dans ta page, sans la quitter.`)
     : b.type === 'reservation' ? ok(seIntegre(adresseValide) ? 'La réservation s’ouvre dans ta page, sans la quitter.' : `${nomAgenda(adresseValide)} s’ouvre sur son site.`)
     : b.type === 'soutien' ? ok(avecMontants(adresseValide) ? 'Tes visiteurs choisissent un montant, puis paient sur PayPal.'
       : soutienDe(adresseValide) ? `Tes visiteurs choisissent le montant sur ${nomSoutien(adresseValide)}.` : `Tes visiteurs te soutiennent sur ${nomSoutien(adresseValide)}.`)
@@ -917,9 +951,9 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
     : b.type === 'produit' ? ok(`Sa photo et son prix s’affichent, et il mène à ${nomSite(adresseValide) || hoteDe(adresseValide)}.`)
     : undefined;
   const champAdresse = avecUrl && (
-    <Champ label={b.type === 'video' ? 'Adresse de la vidéo YouTube' : b.type === 'produit' ? 'Adresse du produit' : b.type === 'reservation' ? 'Adresse de ton agenda' : b.type === 'soutien' ? 'Adresse de ta page de soutien' : 'Adresse'} erreur={erreurDe('url')} aide={aideType}>
+    <Champ label={b.type === 'video' ? 'Adresse de la vidéo' : b.type === 'musique' ? 'Adresse du titre, de l’album ou du podcast' : b.type === 'produit' ? 'Adresse du produit' : b.type === 'reservation' ? 'Adresse de ton agenda' : b.type === 'soutien' ? 'Adresse de ta page de soutien' : 'Adresse'} erreur={erreurDe('url')} aide={aideType}>
       <input id="bloc-adresse" className={classeSaisie} type="url" inputMode="url" autoCapitalize="none" autoCorrect="off"
-        placeholder={b.type === 'video' ? 'https://youtu.be/…' : b.type === 'soutien' ? 'https://paypal.me/…' : b.type === 'reservation' ? 'https://calendly.com/…' : 'https://…'}
+        placeholder={b.type === 'video' ? 'https://youtu.be/…' : b.type === 'musique' ? 'https://open.spotify.com/…' : b.type === 'soutien' ? 'https://paypal.me/…' : b.type === 'reservation' ? 'https://calendly.com/…' : 'https://…'}
         value={b.url} onChange={e => { if (!e.target.value.trim()) efface.current = true; maj({ url: e.target.value }); }} onBlur={() => lireAdresse()} autoFocus={focusAuto(nouveau && !bloc.url)}
         onPaste={e => { const texte = e.clipboardData.getData('text'); if (!b.url.trim() && adresseSaisie(texte)) setTimeout(() => lireAdresse(texte)); }}
         onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); document.getElementById('bloc-titre')?.focus(); } }} />
@@ -936,7 +970,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
     const t = typeDeAdresse(adresseValide, true);
     return t === 'lien' && boutique === adresseValide ? 'produit' : t;
   })();
-  const appelLibre = appel === 'video' || !!droits.vitrine;
+  const appelLibre = appel === 'video' || appel === 'musique' || !!droits.vitrine;
   const proposer = appel !== 'lien' && appelLibre && !auto.current;
   const phraseVitrine = appel === 'lien' || appelLibre || !adresseValide ? ''
     : appel === 'reservation' ? (seIntegre(adresseValide) ? `Avec Hopla Starter, ton agenda ${nomAgenda(adresseValide)} s’ouvre dans ta page, sans la quitter.` : 'Avec Hopla Starter, ce lien devient une prise de rendez-vous.')
@@ -979,28 +1013,31 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
   // Un rendez-vous aussi (23 octobre 2026) : sa photo ou son icône, la même vignette ; sans elles, le picto que la page montre.
   // Son site est un agenda : ni son image ni son logo ne parlent de la personne, ils ne sont pas proposés.
   const rdv = b.type === 'reservation';
-  const avecVignette = b.type === 'lien' || produit || rdv;
+  // Un lecteur de musique : sa pochette, lue sur le service, ou une photo ; ni logo ni icône.
+  const musique = b.type === 'musique';
+  const avecVignette = b.type === 'lien' || produit || rdv || musique;
   const iconeVue = b.icone || (rdv ? 'bloc-reservation' : '');
   // Ce qui est en place, quand on sait d'où il vient (une image du site, son logo, une photo, une icône) : sa ligne est cochée
   // dans le menu, les autres le remplacent.
   const source = b.image ? genreImage.current : !produit && b.icone ? 'icone' : null;
   const coche = (de: (typeof source)[]) => (source ? de.includes(source) : undefined);
   const elementsVignette: ElementMenu[] = [
-    ...(web && !rdv ? [{ nom: produit ? 'Photo de la boutique' : 'Image du site', coche: coche(['partage', 'capture']), action: () => void prendreDuSite('partage') }] : []),
-    ...(web && !produit && !rdv ? [{ nom: 'Logo du site', coche: coche(['logo']), action: () => void prendreDuSite('logo') }] : []),
+    ...(web && !rdv ? [{ nom: produit ? 'Photo de la boutique' : musique ? 'Pochette' : 'Image du site', coche: coche(['partage', 'capture']), action: () => void prendreDuSite('partage') }] : []),
+    ...(web && !produit && !rdv && !musique ? [{ nom: 'Logo du site', coche: coche(['logo']), action: () => void prendreDuSite('logo') }] : []),
     { nom: 'Choisir une photo', coche: coche(['photo']), action: () => choisirFichier(fichier.current, vignette.current) },
-    ...(!produit ? [{ nom: 'Choisir une icône', coche: coche(['icone']), action: () => setIcones(true) }] : []),
-    ...(b.image ? [{ nom: produit ? 'Retirer la photo' : 'Retirer l’image', action: () => maj({ image: '' }) }] : []),
+    ...(!produit && !musique ? [{ nom: 'Choisir une icône', coche: coche(['icone']), action: () => setIcones(true) }] : []),
+    ...(b.image ? [{ nom: produit ? 'Retirer la photo' : musique ? 'Retirer la pochette' : 'Retirer l’image', action: () => maj({ image: '' }) }] : []),
     ...(!produit && !b.image && b.icone ? [{ nom: 'Retirer l’icône', action: () => maj({ icone: '' }) }] : []),
   ];
   const rempli = !visuelEnCours && (!!b.image || (!produit && !!iconeVue));
   const nomVignette = produit ? (b.image ? 'Photo du produit : la changer ou la retirer' : 'Ajouter la photo du produit')
+    : musique ? (b.image ? 'Pochette : la changer ou la retirer' : 'Ajouter une pochette')
     : b.image ? 'Image du bouton : la changer ou la retirer' : b.icone ? `Icône du bouton, ${nomIcone} : la changer ou la retirer`
     : rdv ? 'Icône du bouton : la changer, ou choisir une photo' : 'Ajouter une image ou une icône';
   const case_ = 'grid h-7 w-7 shrink-0 place-items-center bureau:h-6 bureau:w-6';
   const vignetteChamp = avecVignette && (
     <div ref={vignette} className="absolute inset-y-0 left-0 flex items-center pl-1 bureau:pl-0.5">
-      <Menu label={produit ? 'Photo du produit' : 'Vignette du bouton'} titre={nomVignette} elements={elementsVignette} aligne="gauche"
+      <Menu label={produit ? 'Photo du produit' : musique ? 'Pochette' : 'Vignette du bouton'} titre={nomVignette} elements={elementsVignette} aligne="gauche"
         className="flex h-11 items-center gap-[3px] rounded-lg px-1 text-white/45 transition hover:text-white/80 bureau:h-8">
         {visuelEnCours
           ? <span className={case_} aria-hidden="true"><span className="h-4 w-4 animate-spin rounded-full border-2 border-white/15 border-t-white/60 motion-reduce:animate-none" /></span>
@@ -1016,13 +1053,13 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
   );
   const champTitre = b.type !== 'derniere-video' && b.type !== 'preuve' && (avecVignette ? (
     <div>
-      <label htmlFor="bloc-titre" className="mb-1.5 block text-[12.5px] font-medium text-white/60 bureau:text-white/75">{produit ? 'Nom du produit' : 'Texte du bouton'}</label>
+      <label htmlFor="bloc-titre" className="mb-1.5 block text-[12.5px] font-medium text-white/60 bureau:text-white/75">{produit ? 'Nom du produit' : musique ? 'Titre' : 'Texte du bouton'}</label>
       {/* Le champ d'abord, la vignette par-dessus : le libellé nomme le champ, pas le bouton de la vignette. Vide, il dit le
           nom que la page montre déjà, celui du site, en attendant sa lecture. */}
       <div className="relative">
         <input id="bloc-titre" className={`${classeSaisie} adm-field-vignette`} value={b.titre} onChange={e => maj({ titre: e.target.value })} maxLength={160} autoFocus={focusAuto(nouveau && !avecUrl)}
           aria-invalid={erreurDe('titre') ? true : undefined} aria-describedby={erreurDe('titre') ? idTitre : undefined}
-          placeholder={lecture && !b.titre ? (produit ? 'Lecture de la boutique…' : 'Lecture du site…') : produit ? '' : rdv ? nouveauBloc('reservation', b.id).titre : (adresseValide && nomSite(adresseValide)) || 'Mon super lien'} />
+          placeholder={lecture && !b.titre ? (produit ? 'Lecture de la boutique…' : 'Lecture du site…') : produit || musique ? '' : rdv ? nouveauBloc('reservation', b.id).titre : (adresseValide && nomSite(adresseValide)) || 'Mon super lien'} />
         {vignetteChamp}
       </div>
       {erreurDe('titre') && <span id={idTitre} role="alert" className="mt-1.5 block text-[13px] font-medium leading-snug text-red-300">{erreurDe('titre')}</span>}
@@ -1040,11 +1077,13 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
       )}
     </div>
   ) : (
-    <Champ erreur={erreurDe('titre')} label={b.type === 'texte' ? 'Texte' : b.type === 'video' ? 'Titre de la vidéo' : b.type === 'titre' ? 'Titre de la section' : 'Titre'}>
+    <Champ erreur={erreurDe('titre')} label={b.type === 'texte' ? 'Texte' : b.type === 'video' ? 'Titre de la vidéo' : b.type === 'titre' ? 'Titre de la section'
+      : b.type === 'coordonnees' ? 'Nom' : b.type === 'lieu' ? 'Nom du lieu (facultatif)' : b.type === 'galerie' ? 'Légende (facultatif)' : 'Titre'}>
       {b.type === 'texte'
         ? <textarea className={`${classeSaisie} min-h-28`} value={b.titre} onChange={e => maj({ titre: e.target.value })} maxLength={1000} autoFocus={focusAuto(nouveau)} />
-        : <input id="bloc-titre" className={classeSaisie} value={b.titre} onChange={e => maj({ titre: e.target.value })} maxLength={160} autoFocus={focusAuto(nouveau && !avecUrl)}
-            placeholder={b.type === 'soutien' ? nouveauBloc(b.type, b.id).titre : b.type === 'titre' ? 'Nouvelle section' : ''} />}
+        : <input id="bloc-titre" className={classeSaisie} value={b.titre} onChange={e => maj({ titre: e.target.value })} maxLength={160} autoFocus={focusAuto(nouveau && !avecUrl && b.type !== 'lieu' && b.type !== 'galerie')}
+            autoComplete={b.type === 'coordonnees' ? 'name' : undefined}
+            placeholder={b.type === 'soutien' || b.type === 'faq' || b.type === 'formulaire' ? nouveauBloc(b.type, b.id).titre : b.type === 'titre' ? 'Nouvelle section' : b.type === 'coordonnees' ? 'Marie Dupont' : ''} />}
     </Champ>
   ));
   // Un produit : son prix, lu sur la boutique comme son nom et sa photo ; il se corrige à la main.
@@ -1082,7 +1121,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
   // Le sous-titre sert rarement : vide, il attend derrière une ligne, et les gestes courants restent à portée. Celui d'un
   // rendez-vous se montre toujours, puisque la page dit son agenda tant qu'il est vide. Demandé, le champ ne prend la main
   // qu'au bureau : au téléphone, le clavier ne monte pas tout seul. Effacé en cours de frappe, il reste ouvert.
-  const avecSousTitre = ['lien', 'newsletter', 'inscription', 'soutien', 'reservation'].includes(b.type);
+  const avecSousTitre = ['lien', 'newsletter', 'inscription', 'soutien', 'reservation', 'musique', 'formulaire'].includes(b.type);
   const champSousTitre = avecSousTitre && (b.sousTitre || sousTitreDemande || b.type === 'reservation' ? (
     <Champ label="Sous-titre (facultatif)">
       <input className={classeSaisie} value={b.sousTitre} onChange={e => { setSousTitreDemande(true); maj({ sousTitre: e.target.value }); }} maxLength={240} autoFocus={focusAuto(sousTitreDemande && !b.sousTitre)}
@@ -1132,7 +1171,11 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
       )}
       {b.type === 'preuve' && <p className="text-[12.5px] leading-snug text-white/55">Des chiffres vrais, des avis réels, avec l’accord de leurs auteurs.</p>}
 
+      {b.type === 'galerie' && <ChampsGalerie b={b} maj={maj} erreurDe={erreurDe} envoyerImage={envoyerImage} droit={!!droits.galerie} />}
+      {b.type === 'lieu' && <ChampLieu b={b} maj={maj} erreurDe={erreurDe} nouveau={nouveau} />}
       {!paire && champTitre}
+      {b.type === 'faq' && <ChampsFaq b={b} maj={maj} erreurDe={erreurDe} />}
+      {b.type === 'coordonnees' && <ChampsCoordonnees b={b} maj={maj} erreurDe={erreurDe} bureau={bureau} />}
       {/* La description d'un bandeau, d'une carte ou d'un produit mis en avant : la page la montre sous le titre dès que « Mis en
           avant » s'allume, souvent lue sur le site ; elle se lit et se corrige ici, sous le texte, là où l'œil est. */}
       {description}

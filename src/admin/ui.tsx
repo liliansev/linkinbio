@@ -626,10 +626,15 @@ export function Segments<T extends string>({ valeur, options, onChange, label, s
   );
 }
 
-/** Réduit une image choisie sur le téléphone, côté navigateur : carrée, en 16:9, ou la photo d'un produit, carrée et plus grande. */
-export async function preparerImage(fichier: Blob, format: 'carre' | 'large' | 'photo'): Promise<string> {
+/**
+ * Réduit une image choisie sur le téléphone, côté navigateur : carrée, en 16:9, la photo d'un produit, carrée et plus
+ * grande, ou une photo de galerie, qui garde son cadrage (1080 pixels au plus sur son grand côté).
+ */
+export async function preparerImage(fichier: Blob, format: 'carre' | 'large' | 'photo' | 'galerie'): Promise<string> {
   const bitmap = await createImageBitmap(fichier);
-  const [w, h] = format === 'carre' ? [400, 400] : format === 'photo' ? [800, 800] : [960, 540];
+  const reduit = Math.min(1, 1080 / Math.max(bitmap.width, bitmap.height));
+  const [w, h] = format === 'carre' ? [400, 400] : format === 'photo' ? [800, 800] : format === 'galerie'
+    ? [Math.round(bitmap.width * reduit), Math.round(bitmap.height * reduit)] : [960, 540];
   const canvas = document.createElement('canvas');
   canvas.width = w; canvas.height = h;
   const ctx = canvas.getContext('2d')!;

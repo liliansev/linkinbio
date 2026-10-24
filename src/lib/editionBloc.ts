@@ -1,6 +1,7 @@
 import type { Bloc, TypeBloc } from './types.ts';
-import { TYPES_BLOC, TYPES_VITRINE, idYoutube, nouveauBloc } from './types.ts';
-import { adresse, adresseSaisie, montants, numeroAppel, pourquoiPasAdresse } from './valider.ts';
+import { TYPES_BLOC, TYPES_VITRINE, nouveauBloc } from './types.ts';
+import { adresse, adresseSaisie, email, montants, numeroAppel, pourquoiPasAdresse, questions } from './valider.ts';
+import { estMusique, estVideo } from './lecteurs.ts';
 import { nomSite } from './demarrage.ts';
 
 /*
@@ -10,7 +11,7 @@ import { nomSite } from './demarrage.ts';
  */
 
 /** Le champ sur lequel porte une erreur : elle s'affiche dessous. */
-export type ChampErreur = 'url' | 'titre' | 'description' | 'dates' | 'image' | 'note' | 'nombre' | 'source';
+export type ChampErreur = 'url' | 'titre' | 'description' | 'dates' | 'image' | 'note' | 'nombre' | 'source' | 'questions' | 'telephone' | 'email' | 'adresse' | 'images';
 export type Erreurs = Partial<Record<ChampErreur, string>>;
 
 /** Les blocs qui ne vont nulle part sans leur adresse, et ce qu'on dit quand elle manque. */
@@ -19,6 +20,8 @@ const ADRESSE_MANQUANTE: Partial<Record<TypeBloc, string>> = {
   produit: 'Indique l’adresse du produit sur ta boutique.',
   soutien: 'Indique l’adresse de ta page PayPal.Me, Ko-fi ou Tipeee.',
   reservation: 'Indique l’adresse de ton agenda.',
+  video: 'Colle l’adresse d’une vidéo YouTube, Vimeo ou TikTok.',
+  musique: 'Colle l’adresse d’un titre, d’un album ou d’un podcast.',
 };
 
 /**
@@ -30,12 +33,30 @@ const ADRESSE_MANQUANTE: Partial<Record<TypeBloc, string>> = {
 export function verifierBloc(b: Bloc): { bloc: Bloc; erreurs?: undefined } | { bloc?: undefined; erreurs: Erreurs } {
   const manquante = ADRESSE_MANQUANTE[b.type];
   // Un numéro tapé dans l'adresse d'un lien devient un lien d'appel.
-  const url = manquante ? (b.type === 'lien' && numeroAppel(b.url)) || adresseSaisie(b.url) : adresse(b.url);
+  const url = manquante ? (b.type === 'lien' && numeroAppel(b.url)) || adresseSaisie(b.url) : b.type === 'coordonnees' ? adresseSaisie(b.url) : adresse(b.url);
   if (manquante && !url) return { erreurs: { url: b.url.trim() ? pourquoiPasAdresse(b.url) : manquante } };
   // Une boutique, une cagnotte, un agenda : une page web, jamais une adresse e-mail.
   if (TYPES_VITRINE.includes(b.type) && !/^https?:\/\//i.test(url)) return { erreurs: { url: 'Colle l’adresse d’une page web, qui commence par https://.' } };
   if (b.type === 'produit' && !b.titre.trim()) return { erreurs: { titre: 'Écris le nom du produit.' } };
-  if (b.type === 'video' && !idYoutube(url)) return { erreurs: { url: 'Colle l’adresse d’une vidéo YouTube.' } };
+  if (b.type === 'video' && !estVideo(url)) return { erreurs: { url: 'Colle l’adresse d’une vidéo YouTube, Vimeo ou TikTok.' } };
+  if (b.type === 'musique' && !estMusique(url)) return { erreurs: { url: 'Colle l’adresse d’un titre, d’un album, d’une playlist ou d’un podcast sur Spotify, Apple Music, Deezer ou SoundCloud.' } };
+  if (b.type === 'faq') {
+    const q = questions(b.questions);
+    if (!q.length) return { erreurs: { questions: 'Écris au moins une question et sa réponse.' } };
+    if (q.some(x => !x.question)) return { erreurs: { questions: 'Chaque réponse a besoin de sa question.' } };
+    if (q.some(x => !x.reponse)) return { erreurs: { questions: 'Chaque question a besoin de sa réponse.' } };
+  }
+  if (b.type === 'coordonnees') {
+    const c = b.coordonnees, manque: Erreurs = {};
+    if (!b.titre.trim()) manque.titre = 'Écris ton nom, tel qu’il s’enregistrera dans les contacts.';
+    if (c?.telephone.trim() && !numeroAppel(c.telephone)) manque.telephone = 'Un numéro de téléphone s’écrit en entier, avec au moins 8 chiffres.';
+    if (c?.email.trim() && !email(c.email)) manque.email = 'Cette adresse e-mail n’a pas l’air complète, par exemple toi@exemple.fr';
+    if (!manque.telephone && !manque.email && !c?.telephone.trim() && !c?.email.trim()) manque.telephone = 'Indique au moins un numéro ou une adresse e-mail.';
+    if (b.url.trim() && !/^https?:/i.test(url)) manque.url = 'Cette adresse de site n’a pas l’air complète, par exemple monsite.fr';
+    if (Object.keys(manque).length) return { erreurs: manque };
+  }
+  if (b.type === 'lieu' && !b.adressePostale.trim()) return { erreurs: { adresse: 'Écris l’adresse, comme sur une enveloppe.' } };
+  if (b.type === 'galerie' && !b.images.length) return { erreurs: { images: 'Ajoute au moins une photo.' } };
   if ((b.type === 'titre' || b.type === 'texte') && !b.titre.trim()) return { erreurs: { titre: b.type === 'titre' ? 'Écris le titre.' : 'Écris le texte.' } };
   if (b.type === 'preuve' && b.preuve?.genre === 'temoignage' && !b.description.trim()) return { erreurs: { description: 'Écris le témoignage.' } };
   if (b.type === 'preuve' && b.preuve?.genre === 'compteur' && !b.preuve.nombre) return { erreurs: { nombre: 'Indique le chiffre à montrer.' } };
@@ -59,6 +80,8 @@ export function verifierBloc(b: Bloc): { bloc: Bloc; erreurs?: undefined } | { b
       // Comme le serveur les rangera : les montants triés, sans doublon ; un code promo sans espace autour.
       ...(b.type === 'soutien' ? { montants: montants(b.montants) } : {}),
       ...(b.partenariat ? { partenariat: { ...b.partenariat, code: b.partenariat.code.trim() } } : {}),
+      ...(b.type === 'faq' ? { questions: questions(b.questions) } : {}),
+      ...(b.type === 'coordonnees' && b.coordonnees ? { coordonnees: { ...b.coordonnees, telephone: b.coordonnees.telephone.trim(), email: email(b.coordonnees.email) } } : {}),
     },
   };
 }

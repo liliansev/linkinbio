@@ -354,6 +354,7 @@ const OEMBED: [RegExp, (u: string) => string][] = [
   [/^(www\.)?vimeo\.com$/, u => `https://vimeo.com/api/oembed.json?url=${encodeURIComponent(u)}`],
   [/^open\.spotify\.com$/, u => `https://open.spotify.com/oembed?url=${encodeURIComponent(u)}`],
   [/^(www\.|m\.)?soundcloud\.com$/, u => `https://soundcloud.com/oembed?format=json&url=${encodeURIComponent(u)}`],
+  [/^(www\.)?deezer\.com$/, u => `https://api.deezer.com/oembed?format=json&url=${encodeURIComponent(u)}`],
   [/^(www\.|m\.)?tiktok\.com$/, u => `https://www.tiktok.com/oembed?url=${encodeURIComponent(u)}`],
   [/^(www\.)?dailymotion\.com$|^dai\.ly$/, u => `https://www.dailymotion.com/services/oembed?format=json&url=${encodeURIComponent(u)}`],
 ];

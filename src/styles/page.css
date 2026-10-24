@@ -956,3 +956,112 @@ a.lp-preuve:focus-visible { outline: 3px solid var(--texte); outline-offset: 3px
 .lp-soutien-un { width: 100%; min-height: 46px; border-radius: var(--r); }
 .lp-soutien .lp-mention { margin: -6px 0 0; }
 
+
+/* ---- Les blocs venus de Linktree (24 octobre 2026) ----
+ * Un lecteur de musique ou de podcast, une vidéo Vimeo ou TikTok, une galerie, des questions fréquentes, une carte
+ * de visite, une adresse et « Me contacter ». Les cartes reprennent la surface de la newsletter ; rien d'un autre
+ * site ne se charge avant le toucher du visiteur. Aucune icône sur un fond : les flèches de la galerie se posent
+ * sous les photos, seules, à l'encre de la page.
+ */
+
+/* Le lecteur fermé est un bandeau comme les autres, le triangle à la place de la flèche. */
+.lp-lecteur { width: 100%; border: 0; font: inherit; cursor: pointer; }
+.lp-lecteur-play { flex: none; display: grid; place-items: center; width: 34px; height: 34px; }
+.lp-lecteur-play svg { margin-left: 3px; fill: currentColor; }
+.lp-lecteur-cadre { height: var(--hauteur, 352px); border-radius: var(--rc); overflow: hidden; animation: lp-drop-ouvre 0.35s cubic-bezier(0.16, 1, 0.3, 1); }
+.lp-lecteur-cadre iframe { width: 100%; height: 100%; border: 0; display: block; }
+
+/* Une vidéo TikTok est verticale : un téléphone dans la page, pas plus large qu'une main. */
+.lp-video[data-forme='vertical'] .lp-video-cadre { aspect-ratio: 9 / 16; width: min(100%, 325px); margin-inline: auto; }
+/* Sans vignette, le logo du service dans le coin, le triangle à l'encre de la page. */
+.lp-video-service { position: absolute; left: 16px; top: 16px; display: grid; color: var(--texte); opacity: 0.8; }
+.lp-video-jouer:has(.lp-video-service) .lp-video-play { color: var(--texte); filter: none; }
+
+/* La galerie : un rail qui défile d'un geste, la photo suivante dépasse ; les flèches au bureau, sous le rail. */
+.lp-galerie { margin: 0; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px 4px; }
+.lp-galerie-rail {
+  grid-column: 1 / -1; display: flex; gap: 10px; margin: 0; padding: 0; list-style: none;
+  overflow-x: auto; scroll-snap-type: x mandatory; overscroll-behavior-x: contain; scrollbar-width: none;
+  border-radius: var(--rc);
+}
+.lp-galerie-rail::-webkit-scrollbar { display: none; }
+.lp-galerie-rail:focus-visible { outline: 3px solid var(--texte); outline-offset: 3px; }
+.lp-galerie-rail > li {
+  flex: 0 0 82%; aspect-ratio: 4 / 5; scroll-snap-align: start; overflow: hidden; border-radius: var(--rc);
+  background: color-mix(in srgb, var(--texte) 10%, transparent);
+}
+.lp-galerie[data-seule] .lp-galerie-rail > li { flex-basis: 100%; aspect-ratio: 4 / 3; }
+.lp-galerie-rail img { width: 100%; height: 100%; object-fit: cover; display: block; user-select: none; }
+.lp-galerie figcaption { grid-column: 1 / -1; font-size: 0.95rem; font-weight: 560; line-height: 1.35; padding: 0 8px; color: var(--texte); text-align: center; }
+.lp-galerie-fleches { grid-column: 2; display: none; }
+.lp-galerie-fleches button {
+  width: 44px; height: 44px; display: grid; place-items: center; padding: 0; border: 0; background: none; cursor: pointer;
+  color: var(--texte); border-radius: 999px; transition: opacity 0.15s;
+}
+.lp-galerie-fleches button:hover { opacity: 0.7; }
+.lp-galerie-fleches button:focus-visible { outline: 2px solid var(--texte); outline-offset: -2px; }
+.lp-galerie-fleches button:first-child svg { rotate: 90deg; }
+.lp-galerie-fleches button:last-child svg { rotate: -90deg; }
+@media (hover: hover) and (pointer: fine) {
+  .lp-galerie-fleches { display: flex; }
+  /* Au bureau, la légende à gauche et les flèches à droite, sur la même ligne. */
+  .lp-galerie:has(.lp-galerie-fleches) figcaption { grid-column: 1; grid-row: 2; text-align: left; padding: 0 4px; }
+}
+
+/* Les questions fréquentes : un accordéon, une ligne par question, la réponse dessous. */
+.lp-faq-liste { display: flex; flex-direction: column; margin-bottom: -6px; }
+.lp-faq-q { border-top: 1px solid color-mix(in srgb, var(--surface-texte) 12%, transparent); }
+.lp-faq-q summary {
+  list-style: none; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  min-height: 48px; padding: 10px 0; cursor: pointer; font-weight: 560; line-height: 1.35;
+}
+.lp-faq-q summary::-webkit-details-marker { display: none; }
+.lp-faq-q summary svg { flex: none; transition: rotate 0.25s cubic-bezier(0.16, 1, 0.3, 1); }
+.lp-faq-q[open] summary svg { rotate: 180deg; }
+.lp-faq-q summary:focus-visible { outline: 2px solid var(--surface-texte); outline-offset: 2px; border-radius: 4px; }
+.lp-faq-q p { margin: 0 0 14px; line-height: 1.5; white-space: pre-line; text-wrap: pretty; color: color-mix(in srgb, var(--surface-texte) 88%, transparent); }
+
+/* La carte de visite : un numéro et une adresse d'un toucher, puis « Enregistrer le contact ». */
+.lp-coordonnees-lignes { list-style: none; margin: -4px 0 0; padding: 0; display: flex; flex-direction: column; }
+.lp-coordonnees-lignes :is(a, .lp-coordonnees-adresse) { display: flex; align-items: center; gap: 12px; min-height: 44px; color: inherit; text-decoration: none; }
+.lp-coordonnees-lignes a:hover span { text-decoration: underline; text-underline-offset: 3px; }
+.lp-coordonnees-lignes a:focus-visible { outline: 2px solid var(--surface-texte); outline-offset: 2px; border-radius: 4px; }
+.lp-coordonnees-lignes svg { flex: none; color: var(--picto-carte, var(--vedette)); }
+.lp-coordonnees-lignes span { min-width: 0; overflow-wrap: anywhere; }
+.lp-coordonnees-adresse { align-items: flex-start !important; padding: 11px 0; white-space: pre-line; line-height: 1.4; }
+.lp-coordonnees-adresse svg { margin-top: 1px; }
+.lp-coordonnees-enregistrer, .lp-lieu-gestes .lp-btn { gap: 8px; }
+.lp-coordonnees-enregistrer { width: 100%; min-height: 46px; }
+
+/* Une adresse : l'itinéraire d'un toucher ; la carte, demandée, se pose au-dessus des gestes. */
+.lp-lieu .lp-sous { white-space: pre-line; }
+.lp-lieu-carte { aspect-ratio: 16 / 10; border-radius: calc(var(--rc) - 6px); overflow: hidden; background: color-mix(in srgb, var(--surface-texte) 8%, transparent); }
+.lp-lieu-carte iframe { width: 100%; height: 100%; border: 0; display: block; }
+.lp-lieu-gestes { display: flex; align-items: center; gap: 8px; }
+.lp-lieu-gestes .lp-btn { flex: 1 1 auto; min-height: 46px; }
+.lp-lieu-voir {
+  flex: none; min-height: 44px; padding: 0 14px; border: 0; background: none; cursor: pointer;
+  font: inherit; font-weight: 520; color: inherit; text-decoration: underline; text-underline-offset: 3px;
+}
+.lp-lieu-voir:focus-visible { outline: 2px solid var(--surface-texte); outline-offset: 2px; border-radius: 4px; }
+
+/* « Me contacter » : les champs empilés dans une seule pièce, le bouton en bas, sur toute la largeur. */
+.lp-newsletter .lp-contact-form { flex-direction: column; flex-wrap: nowrap; gap: 0; border-radius: min(var(--r), 18px); }
+.lp-contact-form :is(input, textarea) { flex: none; border-bottom: 1px solid color-mix(in srgb, var(--surface-texte) 12%, transparent); border-radius: 0; }
+.lp-contact-form textarea {
+  min-height: 112px; padding: 12px; font: inherit; font-size: 16px; line-height: 1.45; resize: vertical;
+  border-top: 0; border-left: 0; border-right: 0; color: inherit; background: transparent; outline: none;
+}
+.lp-contact-form textarea::placeholder { color: color-mix(in srgb, var(--surface-texte) 94%, transparent); }
+.lp-contact-form [aria-invalid='true'] { border-bottom-color: currentColor; }
+.lp-contact-form .lp-btn-compact { margin-top: 5px; width: 100%; }
+
+@container lp (min-width: 960px) {
+  .lp[data-bureau='onepage'] .lp-bloc:is([data-type='coordonnees'], [data-type='lieu'], [data-type='formulaire']) { grid-column: auto; }
+  .lp[data-bureau='onepage'] .lp-galerie:not([data-seule]) .lp-galerie-rail > li { flex-basis: calc((100% - 20px) / 3); }
+  .lp[data-bureau='onepage'] .lp-galerie[data-seule] .lp-galerie-rail > li { aspect-ratio: 16 / 9; }
+  /* Une vidéo verticale tient dans une colonne, sa légende alignée sur elle. */
+  .lp[data-bureau='onepage'] .lp-bloc[data-type='video']:has(.lp-video[data-forme='vertical']) { grid-column: auto; }
+  .lp[data-bureau='onepage'] .lp-video[data-forme='vertical'] .lp-video-cadre { width: 100%; }
+}
+@media (prefers-reduced-motion: reduce) { .lp-lecteur-cadre, .lp-faq-q summary svg { animation: none; transition: none; } }

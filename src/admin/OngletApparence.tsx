@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import type { Couleurs, FormeBouton, MiseEnPageBureau, OmbreBouton, Reglages, Reseau, StyleBouton } from '../lib/types.ts';
-import { ANIMATIONS, RESEAUX, SANS_COULEURS } from '../lib/types.ts';
+import { ANIMATIONS, MAX_RESEAUX, RESEAUX, SANS_COULEURS } from '../lib/types.ts';
 import { THEMES, themeDe, themeParId, variablesTheme } from '../lib/themes.ts';
 import type { Theme } from '../lib/themes.ts';
 import { Icone, NOMS_RESEAUX } from '../components/Icone.tsx';
@@ -21,6 +21,11 @@ const EXEMPLES: Record<Reseau, string> = {
   youtube: '@pseudo ou lien', linkedin: 'pseudo ou lien', instagram: '@pseudo ou lien', tiktok: '@pseudo ou lien',
   x: '@pseudo ou lien', github: 'pseudo ou lien', facebook: 'pseudo ou lien', threads: '@pseudo ou lien', twitch: 'pseudo ou lien',
   spotify: 'https://open.spotify.com/…', email: 'toi@exemple.fr', site: 'https://…',
+  whatsapp: '+33 6 12 34 56 78', telegram: 'pseudo ou lien', discord: 'https://discord.gg/…', pinterest: 'pseudo ou lien', snapchat: 'pseudo ou lien',
+  bluesky: 'pseudo.bsky.social', mastodon: 'https://mastodon.social/@…', reddit: 'pseudo ou lien', substack: 'pseudo ou lien', medium: '@pseudo ou lien',
+  patreon: 'pseudo ou lien', soundcloud: 'pseudo ou lien', deezer: 'https://deezer.com/…', applemusic: 'https://music.apple.com/…',
+  applepodcasts: 'https://podcasts.apple.com/…', bandcamp: 'https://….bandcamp.com', vimeo: 'pseudo ou lien', behance: 'pseudo ou lien',
+  dribbble: 'pseudo ou lien', malt: 'https://malt.fr/profile/…', etsy: 'https://etsy.com/shop/…',
 };
 
 /** Un thème en miniature : sa police, son accent et ses boutons, dans leur vrai style. */
@@ -67,7 +72,8 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
   const theme = themeDe(couleurs ? reglages : { ...reglages, couleurs: SANS_COULEURS });
   const maj = (champs: Partial<Reglages>) => onChange({ ...reglages, ...champs });
   const profil = (champs: Partial<Reglages['profil']>) => maj({ profil: { ...reglages.profil, ...champs } });
-  const absents = RESEAUX.filter(r => !reglages.reseaux.some(x => x.reseau === r));
+  // Vingt réseaux au plus sur une page : au-delà, la rangée d'icônes ne se lit plus.
+  const absents = reglages.reseaux.length >= MAX_RESEAUX ? [] : RESEAUX.filter(r => !reglages.reseaux.some(x => x.reseau === r));
   // Le premier réseau proposé pour un pseudo prend la main au clavier (pas sur un écran tactile, où la feuille la garde).
   const premierReseau = useRef<HTMLButtonElement>(null);
   useEffect(() => {
@@ -231,7 +237,7 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
               <span className="flex w-7 shrink-0 justify-center text-white" style={{ color: couleurReseau(r.reseau) }}><Icone nom={r.reseau} taille={22} /></span>
               {/* Un pseudo suffit, comme aux premiers pas : il devient l'adresse du profil en quittant le champ. */}
               <input className={`${classeSaisie} min-w-0 flex-1 py-2.5`} value={pseudoReseau(r.reseau, r.url)} onFocus={() => setEnSaisie(r.reseau)}
-                aria-invalid={faux || undefined} aria-describedby={faux ? `reseau-faux-${r.reseau}` : undefined} aria-label={NOMS_RESEAUX[r.reseau]} placeholder={EXEMPLES[r.reseau]} inputMode={r.reseau === 'email' ? 'email' : 'url'} autoCapitalize="none" autoCorrect="off"
+                aria-invalid={faux || undefined} aria-describedby={faux ? `reseau-faux-${r.reseau}` : undefined} aria-label={NOMS_RESEAUX[r.reseau]} placeholder={EXEMPLES[r.reseau]} inputMode={r.reseau === 'email' ? 'email' : r.reseau === 'whatsapp' ? 'tel' : 'url'} autoCapitalize="none" autoCorrect="off"
                 onChange={e => maj({ reseaux: reglages.reseaux.map((x, j) => (j === i ? { ...x, url: e.target.value } : x)) })}
                 onBlur={e => { setEnSaisie(null); const u = urlReseau(r.reseau, e.target.value); if (u && u !== r.url) maj({ reseaux: reglages.reseaux.map((x, j) => (j === i ? { ...x, url: u } : x)) }); }} />
               {/* Monter et descendre, à la taille du pouce, sur la ligne touchée seulement : le champ garde sa largeur sur les autres. */}
