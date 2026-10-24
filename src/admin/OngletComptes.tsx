@@ -423,9 +423,16 @@ function FicheCompte({ compte: c, statut, gestes, fermer, message }: { compte: C
       </Groupe>
 
       <Groupe titre="Offre">
-        <Ligne nom="Actuelle" valeur={<Offre compte={c} />}>
-          {gestes.offrir && <BoutonSecondaire onClick={gestes.offrir} aria-haspopup="dialog">Offrir une offre</BoutonSecondaire>}
-        </Ligne>
+        {/* Payée sans rien d'offert, l'abonnement dit déjà l'offre : une seule ligne, pas « Pro » deux fois. */}
+        {(a.payee === 'gratuit' || offerte) ? (
+          <Ligne nom="Actuelle" valeur={<Offre compte={c} />}>
+            {gestes.offrir && <BoutonSecondaire onClick={gestes.offrir} aria-haspopup="dialog">Offrir une offre</BoutonSecondaire>}
+          </Ligne>
+        ) : gestes.offrir && (
+          <Ligne nom="Offrir une offre">
+            <BoutonSecondaire onClick={gestes.offrir} aria-haspopup="dialog">Offrir</BoutonSecondaire>
+          </Ligne>
+        )}
         {offerte && (
           <Ligne nom="Offerte" valeur={`${OFFRES[offerte.plan].nom}, ${offerteAuDessus(a) ? '' : 'après l’abonnement, '}${offerte.jusqu ? `jusqu’au ${dateLongue(offerte.jusqu)}` : 'sans fin'}`}>
             {gestes.retirer && <BoutonSecondaire onClick={gestes.retirer} aria-haspopup="dialog">Retirer</BoutonSecondaire>}

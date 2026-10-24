@@ -18,7 +18,7 @@ import { BoutonPrincipal, BoutonSecondaire, Champ, Feuille, Interrupteur, ListeC
 import type { ElementMenu, FilFeuille } from './ui.tsx';
 import { DEVENU, EN_FAIRE, typeDe } from '../lib/catalogue.ts';
 import { appDe } from '../lib/ouvrirApp.ts';
-import { ChampsPreuve, PagesBloc, RangeesCompactes, RegleAOuvrir, RegleAcces, ReglageVisibilite, Repli, ReplisExclusifs, resumeVisibilite } from './ReglesBloc.tsx';
+import { ChampsPreuve, LigneRepli, PagesBloc, RangeesCompactes, RegleAOuvrir, RegleAcces, ReglageVisibilite, Repli, ReplisExclusifs, resumeVisibilite } from './ReglesBloc.tsx';
 import type { PageRegle } from './ReglesBloc.tsx';
 import { useCouche } from './couches.ts';
 import { reseauxDePartage } from '../lib/provenance.ts';
@@ -896,7 +896,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
     </div>
   );
   const animation = (b.type === 'lien' || b.type === 'produit' || b.type === 'reservation') && b.vedette && (
-    <Repli id="animation" depuis="apparence" key={`animation-${b.id}`} titre="Animation" icone="eclair" resume={resumeAnimation} regle={b.animation !== 'auto'} ouvert={false}>
+    <Repli id="animation" depuis="apparence" sous key={`animation-${b.id}`} titre="Animation" icone="eclair" resume={resumeAnimation} regle={b.animation !== 'auto'} ouvert={false}>
       {/* Une liste, pas une rangée de pastilles : le bloc sur la page joue l'animation choisie. */}
       <ListeChoix label="Animation" valeur={b.animation} onChange={a => maj({ animation: a })}
         options={ANIMATIONS_BLOC.map(a => a === 'auto'
@@ -1228,22 +1228,17 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
             </Repli>
           )}
           {pageVedette(b) === 'animation' && animation}
+          {/* Ce que la page ne montre pas attend derrière une ligne de la même forme, qui dit ce qui est réglé : on sait quoi sans ouvrir. */}
+          {!plusVide && <>
+            <LigneRepli titre="Plus de réglages" resume={plus ? '' : reglees} regle={!!reglees} ouvert={plus} controle={idPlus} onClick={() => setPlus(!plus)} />
+            {plus && (
+              <div id={idPlus} className="adm-plus-contenu [&>div>div>label>span]:text-white/70">
+                {bascules(true, true).length > 0 && <div className="flex flex-col">{bascules(true, true)}</div>}
+                {acces}
+              </div>
+            )}
+          </>}
         </div>
-
-        {/* Ce que la page ne montre pas attend derrière une seule ligne, qui dit ce qui est réglé : on sait quoi sans ouvrir. */}
-        {!plusVide && <div className="adm-plus-groupe">
-          <button type="button" onClick={() => { vibrer(4); setPlus(!plus); }} aria-expanded={plus} aria-controls={idPlus} className="adm-plus">
-            <span className="shrink-0 font-medium text-white">Plus de réglages</span>
-            {!plus && reglees && <span className="min-w-0 flex-1 truncate font-medium text-bleu">{reglees}</span>}
-            <Icone nom="ui-chevron" taille={14} className={`ml-auto shrink-0 text-white/55 transition-transform ${plus ? 'rotate-180' : ''}`} />
-          </button>
-          {plus && (
-            <div id={idPlus} className="adm-plus-contenu">
-              {bascules(true, true).length > 0 && <div className="flex flex-col">{bascules(true, true)}</div>}
-              {acces}
-            </div>
-          )}
-        </div>}
 
         {/* Le bas de la rangée : un bloc neuf s'ajoute ou s'oublie ; un bloc posé se duplique ou se retire, et revient d'un geste à ce qu'il était. */}
         <div className="adm-editeur-pied">

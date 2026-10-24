@@ -88,9 +88,10 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
         <Ligne nom="QR code">
           <BoutonSecondaire onClick={() => { void telechargerQR(adresse, compte.pseudo); }} aria-label="Télécharger le QR code">Télécharger</BoutonSecondaire>
         </Ligne>
-        <Ligne nom="Aperçu dans Google et les réseaux" valeur={[titreSeo, descriptionSeo].filter(Boolean).join(' · ') || 'Rien pour l’instant'}>
-          <BoutonSecondaire onClick={() => setFenetre('apercu')} aria-haspopup="dialog" aria-label="Modifier l’aperçu dans Google et les réseaux">Modifier</BoutonSecondaire>
-        </Ligne>
+        {/* Coupée au bureau, la valeur se lit en entier au survol. */}
+        {/* Une ligne à chevron, comme les autres ouvertures de Réglages (critique série 2 : un bouton bordé faisait exception). */}
+        <LigneLien nom="Aperçu dans Google et les réseaux" onClick={() => setFenetre('apercu')}
+          valeur={<span title={[titreSeo, descriptionSeo].filter(Boolean).join(' · ') || undefined}>{[titreSeo, descriptionSeo].filter(Boolean).join(' · ') || 'Rien pour l’instant'}</span>} />
         <LigneBascule nom="Bouton Partager sur ma page" actif={reglages.partage} changer={v => onChange({ ...reglages, partage: v })} />
         <LigneBascule nom="Ouvrir YouTube, Spotify… dans leur app" actif={reglages.ouvrirApps} changer={v => onChange({ ...reglages, ouvrirApps: v })} />
         {/* Starter : sans l'offre, pas d'interrupteur qui ne ferait rien, son nom et le chemin vers les offres. */}

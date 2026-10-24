@@ -190,7 +190,7 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
             <button type="button" onClick={e => choisirFichier(fichier.current, e.currentTarget)} className="flex shrink-0 flex-col items-center gap-1 self-start transition active:scale-95">
               {/* Sans photo, l'icône seule à sa place : pas de rond vide autour. */}
               <span className="relative grid h-[60px] w-[60px] place-items-center overflow-hidden rounded-full text-white/70">
-                {reglages.profil.avatar ? <img src={reglages.profil.avatar} alt="" className="h-full w-full object-cover" /> : <Icone nom="photo" taille={34} />}
+                {reglages.profil.avatar ? <img src={reglages.profil.avatar} alt="" className="h-full w-full object-cover" /> : <Icone nom="utilisateur" taille={34} />}
                 {envoi && <span className="absolute inset-0 grid place-items-center bg-black/55 text-[12px] text-nuit">…</span>}
               </span>
               <span className="text-[12.5px] font-medium text-white/60">{reglages.profil.avatar ? 'Changer' : 'Ta photo'}</span>
@@ -330,8 +330,10 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
   const c = contenu[etape];
 
   return (
-    <div className="adm adm-premiers flex h-dvh flex-col overflow-hidden bg-nuit font-sans text-white antialiased lg:grid lg:grid-cols-[minmax(0,460px)_1fr] lg:grid-rows-[auto_1fr]">
-      <header className="flex h-14 shrink-0 items-center gap-2 px-3 lg:col-span-2 lg:px-6">
+    <div className="adm adm-premiers flex h-dvh flex-col overflow-hidden bg-nuit font-sans text-white antialiased lg:grid lg:grid-cols-[minmax(0,460px)_1fr] lg:grid-rows-[minmax(0,1fr)_auto_minmax(0,auto)_minmax(0,1fr)]">
+      {/* Au bureau, la progression et « Plus tard » se posent au-dessus de la question, dans sa colonne, et le tout se centre
+          en hauteur sur la même médiane que la scène (critique série 2). */}
+      <header className="flex h-14 shrink-0 items-center gap-2 px-3 lg:col-start-1 lg:row-start-2 lg:px-6">
         <button type="button" onClick={() => { setIgnorer(false); setI(n => n - 1); }} aria-label="Étape précédente" disabled={i === 0 || etape === 'fin'}
           className={`${classeBouton.icone} disabled:invisible`}><Icone nom="ui-chevron" taille={20} className="rotate-90" /></button>
         <div className="flex flex-1 justify-center gap-1.5" role="progressbar" aria-label="Premiers pas" aria-valuemin={0} aria-valuemax={QUESTIONS} aria-valuenow={Math.min(i, QUESTIONS)} aria-valuetext={i < QUESTIONS ? `Question ${i + 1} sur ${QUESTIONS}` : 'Terminé'}>
@@ -345,16 +347,16 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
       </header>
 
       {/* L'aperçu : la vraie page, en petit, qui se remplit à chaque réponse. */}
-      <div className="adm-premiers-scene flex min-h-[16dvh] max-h-[38dvh] flex-1 justify-center px-6 pt-1 pb-4 lg:max-h-none lg:order-last lg:min-h-0 lg:items-center lg:p-8" aria-hidden="true" inert>
-        <div className={`adm-miroir adm-apercu adm-toile pointer-events-none relative max-h-[640px] select-none lg:h-[min(640px,calc(100dvh-8rem))] overflow-hidden rounded-[26px] transition-shadow duration-700 ${etape === 'fin' ? 'adm-miroir-fin' : ''}`}>
+      <div className="adm-premiers-scene flex min-h-[16dvh] max-h-[38dvh] flex-1 justify-center px-6 pt-1 pb-4 lg:col-start-2 lg:row-span-4 lg:row-start-1 lg:max-h-none lg:min-h-0 lg:items-center lg:self-center lg:p-8" aria-hidden="true" inert>
+        <div className={`adm-miroir adm-apercu adm-toile pointer-events-none relative max-h-[640px] select-none lg:max-h-none lg:h-[min(calc(744px*var(--z)),calc(100dvh-10rem))] overflow-hidden rounded-[26px] transition-shadow duration-700 ${etape === 'fin' ? 'adm-miroir-fin' : ''}`}>
           <div className="adm-miroir-page"><PageLiens page={{ reglages, blocs: visibles, compte }} apercu /></div>
         </div>
       </div>
 
       {/* Les questions, sous le pouce. Le bouton reste visible ; c'est le contenu qui défile s'il déborde. */}
-      <section key={etape} className="adm-onglet flex min-h-0 flex-1 flex-col lg:flex-none rounded-t-2xl border-t border-white/[0.08] bg-nuit lg:max-h-none lg:min-h-0 lg:rounded-none lg:border-t-0 lg:bg-transparent"
+      <section key={etape} className="adm-onglet flex min-h-0 flex-1 flex-col lg:col-start-1 lg:row-start-3 lg:flex-none rounded-t-2xl border-t border-white/[0.08] bg-nuit lg:max-h-none lg:min-h-0 lg:rounded-none lg:border-t-0 lg:bg-transparent"
         aria-labelledby="premiers-pas-titre">
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pt-5 lg:flex-none lg:px-8 lg:pt-10">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pt-5 lg:px-8 lg:pt-4">
           {etape === 'fin' && <Icone nom="coche" taille={30} className="mb-2" />}
           <h1 id="premiers-pas-titre" ref={titre} tabIndex={-1} className="adm-titre outline-none">{c.titre}</h1>
           <p className="mt-1 mb-4 text-[14.5px] leading-snug text-white/60">{c.aide}</p>

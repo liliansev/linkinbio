@@ -109,7 +109,7 @@ export function LigneLien({ nom, valeur, avant, apres, onClick, label, disabled,
       {avant}{texte}{apres}
       {externe
         ? <Icone nom="ui-ouvrir" taille={15} className="shrink-0 text-[#55554f]" />
-        : <Icone nom="ui-chevron" taille={16} className="-rotate-90 shrink-0 text-[#55554f]" />}
+        : <Icone nom="ui-chevron" taille={16} className="-rotate-90 shrink-0 text-[#55554f] bureau:-mr-1.5" />}
     </button>
   );
 }
@@ -167,12 +167,13 @@ export function Champ({ label, aide, erreur, children }: { label: string; aide?:
 
 export const classeSaisie = 'adm-field w-full rounded-xl border border-white/15 bg-nuit px-3.5 py-3 text-[16px] text-white placeholder:text-white/50 transition focus:border-white/70 aria-[invalid=true]:border-red-400/70';
 
-export function Carte({ titre, action, children, className = '', id, nu = false }: { titre?: string; action?: ReactNode; children: ReactNode; className?: string; id?: string; nu?: boolean }) {
+export function Carte({ titre, etiquette, action, children, className = '', id, nu = false }: { titre?: string; etiquette?: ReactNode; action?: ReactNode; children: ReactNode; className?: string; id?: string; nu?: boolean }) {
   return (
     <section id={id} className={`scroll-mt-24 ${nu ? '' : 'adm-card'} ${className}`}>
       {(titre || action) && (
         <div className="mb-3 flex items-center justify-between gap-3">
-          {titre && <h2 className="text-[15px] font-semibold tracking-[-0.015em] text-white">{titre}</h2>}
+          {/* Le badge d'une offre se pose à côté du titre, comme partout ailleurs ; le bord droit reste au geste. */}
+          {titre && <div className="flex min-w-0 items-center gap-2"><h2 className="text-[15px] font-semibold tracking-[-0.015em] text-white">{titre}</h2>{etiquette}</div>}
           {action}
         </div>
       )}
@@ -362,9 +363,9 @@ export function Feuille({ ouverte, onFermer, retenir, titre, children, pied, cot
   const rendre = (c: Contenu) => (typeof c === 'function' ? c(fermer) : c);
 
   return (
-    <div className={`fixed inset-0 z-50 flex items-end justify-center ${cote ? 'sm:items-stretch sm:justify-end sm:p-4' : 'sm:items-center'}`} role="dialog" aria-modal="true" aria-label={titre} data-sortie={sortie || undefined}
+    <div className={`fixed inset-0 z-50 flex items-end justify-center ${cote ? 'sm:items-stretch sm:justify-end sm:p-4' : 'sm:items-center'}`} role="dialog" aria-modal="true" aria-label={titre} data-sortie={sortie || undefined} data-calque={cote ? undefined : 'centre'}
       style={visible ? { top: visible.haut, height: visible.h, bottom: 'auto' } : undefined}>
-      <button type="button" tabIndex={-1} aria-hidden="true" className={`adm-fondu absolute inset-0 ${apercu ? 'bg-[#f3eee5] sm:bg-black/[0.04]' : cote ? 'bg-black/[0.04]' : pardessus ? '' : 'bg-black/40 backdrop-blur-[2px]'}`} onClick={() => fermer()} />
+      <button type="button" tabIndex={-1} aria-hidden="true" className={`adm-fondu absolute inset-0 ${apercu ? 'bg-[#f3eee5] sm:bg-black/[0.04]' : cote ? 'bg-black/[0.04]' : pardessus ? '' : 'bg-black/40'}`} onClick={() => fermer()} />
       {apercu && <div inert className="adm-fondu pointer-events-none absolute inset-x-0 top-0 bottom-[57dvh] flex items-center justify-center px-4 pt-[max(12px,env(safe-area-inset-top))] pb-3 sm:hidden">{apercu}</div>}
       <div ref={ref} tabIndex={-1}
         style={{ ...(tire ? { transform: `translateY(${tire}px)`, transition: 'none' } : {}), ...(visible ? { maxHeight: visible.h - 8, height: 'auto' } : plafond ? { maxHeight: plafond, minHeight: Math.min(plancher, plafond) || undefined } : {}) }}
@@ -500,6 +501,13 @@ export function Menu({ label, elements, children, className = '', titre, haut = 
   const basculeRef = useRef(onBascule);
   basculeRef.current = onBascule;
   useEffect(() => { basculeRef.current?.(ouvert); }, [ouvert]);
+  // Sans la place dessous (le dernier bloc d'un écran court), la liste s'ouvre vers le haut, si la place y est.
+  const [retourne, setRetourne] = useState(false);
+  useLayoutEffect(() => {
+    if (!ouvert) { setRetourne(false); return; }
+    const l = boite.current?.getBoundingClientRect(), b = bouton.current?.getBoundingClientRect();
+    if (!haut && l && b && l.bottom > window.innerHeight - 8 && b.top - l.height - 6 > 8) setRetourne(true);
+  }, [ouvert, haut]);
   useEffect(() => {
     if (!ouvert) return;
     const o = options();
@@ -517,7 +525,7 @@ export function Menu({ label, elements, children, className = '', titre, haut = 
     else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); o[(i + (e.key === 'ArrowDown' ? 1 : -1) + o.length) % o.length]?.focus(); }
     else if (e.key === 'Home' || e.key === 'End') { e.preventDefault(); o[e.key === 'Home' ? 0 : o.length - 1]?.focus(); }
   }
-  const place = `${haut ? 'bottom-full mb-1.5' : 'top-full mt-1.5'} ${aligne === 'gauche' ? 'left-0' : aligne === 'droite' ? 'right-0' : 'inset-x-0'}`;
+  const place = `${haut || retourne ? 'bottom-full mb-1.5' : 'top-full mt-1.5'} ${aligne === 'gauche' ? 'left-0' : aligne === 'droite' ? 'right-0' : 'inset-x-0'}`;
   return (
     <div className="relative">
       <button ref={bouton} type="button" aria-haspopup="menu" aria-expanded={ouvert} aria-controls={ouvert ? id : undefined} aria-label={titre} title={titre} tabIndex={tabIndex}

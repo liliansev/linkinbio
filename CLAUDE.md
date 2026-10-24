@@ -119,9 +119,13 @@ embarque tout : l'image n'a pas de `node_modules`.
   adresse à coller, puis les blocs en rangées, déplacées par leur poignée avec dnd-kit,
   souris ou clavier, et dépliées en place sur `EditeurBloc` `bureau`, une à la fois ;
   un bloc neuf a sa rangée en haut ou en bas) et Design (`DesignTiroirs`). À droite,
-  `PageLiens` reçoit `liste` et se montre dans un téléphone de 390 px, collé et réduit
-  s'il le faut : elle suit chaque frappe, un bloc neuf y prend déjà sa place, un clic
-  sur un bloc ouvre sa rangée. Au téléphone, `MaPage` édite la page elle-même :
+  `PageLiens` reçoit `liste` et se montre dans un téléphone de 390 px, haut de 760 à 932 px selon l'écran,
+  collé et réduit s'il le faut, dans une carte crème à sa taille (24 octobre 2026) : elle suit chaque frappe, un bloc
+  neuf y prend déjà sa place, un clic sur un bloc ouvre sa rangée. La bascule Téléphone / Ordinateur (une icône et son mot)
+  est en haut de la carte ; « Ordinateur » ouvre la page par-dessus l'espace de travail, sous l'en-tête et à droite de la
+  barre latérale (`adm-ordi-calque`), à sa vraie taille dès que l'écran la tient, réduite en dessous ; Échap ou
+  « Téléphone » y revient (24 octobre 2026, critique série 2 : à côté de l'édition, elle était illisible sur un portable et
+  la colonne sautait). Au téléphone, `MaPage` édite la page elle-même :
   `PageLiens` reçoit `edition` (nom et bio tapés en place, photo, réseaux et blocs
   ouverts d'un toucher, blocs déplacés en les maintenant), le design s'ouvre dans une
   feuille `cote` qui laisse voir la page, et la liste d'avant (`OngletLiens`) reste à
@@ -141,7 +145,12 @@ embarque tout : l'image n'a pas de `node_modules`.
   le serveur) et Selon le réseau (`ListeReseaux` : une seule liste sous « Venus de », deux interrupteurs Affiché et En
   avant). Sans l'offre, le badge Starter ou Pro se pose à côté du titre de la partie. « Mis en avant »
   allumé fait paraître Apparence dessous (forme, couleur, animation ; l'animation seule pour un produit ou une prise
-  de rendez-vous). Au bureau, Visibilité et Apparence se déplient en place, une seule à la fois (`ReplisExclusifs`), et
+  de rendez-vous). Au bureau, Visibilité et Apparence se déplient en place, une seule à la fois (`ReplisExclusifs`) ;
+  Visibilité, Mis en avant et Plus de réglages y ont une seule forme de ligne (`LigneRepli` : le nom, la valeur au gris,
+  le chevron ou l'interrupteur au bord droit), et les trois parties de Visibilité y sont trois lignes qui s'ouvrent une à
+  une, en retrait de 24 px et au gris, qui n'écrivent rien tant que rien n'est réglé (Apparaît et Disparaît sans cadre
+  sous Selon la date) (24 octobre 2026, critique du grand écran) ; au clavier, une rangée fermée n'a que deux arrêts (la
+  poignée et le nom : l'œil et « … » sont des raccourcis de la souris), et « Aller au contenu » passe la navigation ; et
   Visibilité et Mis en avant s'empilent comme au téléphone. Un bloc que son créneau ou ses dates retirent en ce moment se grise sur la page éditée
   (`horsCreneauOuDates` dans `lib/moments.ts`). « Plus de réglages » ne garde que le rare (lien partenaire,
   accès réservé, Visible par Google, demander le prénom ; absent pour un bloc qui n'a rien de tout cela ; sa ligne

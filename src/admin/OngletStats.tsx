@@ -2,7 +2,7 @@ import { useEffect, useId, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import type { Bloc, Stats } from '../lib/types.ts';
 import { sansSchema } from '../lib/types.ts';
-import { ActionEntete, BoutonCopier, classeBouton, useGrandEcran, vibrer } from './ui.tsx';
+import { ActionEntete, BoutonCopier, Carte, classeBouton, useGrandEcran, vibrer } from './ui.tsx';
 import { Icone } from '../components/Icone.tsx';
 import { enUnePhrase } from '../lib/resume.ts';
 import type { Mesure, Point } from '../lib/stats.ts';
@@ -241,7 +241,7 @@ const ICONES_SOURCES: Record<string, string> = {
   Instagram: 'instagram', TikTok: 'tiktok', YouTube: 'youtube', LinkedIn: 'linkedin', X: 'x', Facebook: 'facebook', Threads: 'threads',
   Snapchat: 'snapchat', 'QR code': 'qr', Newsletter: 'courrier', 'E-mail': 'email', Google: 'google', Direct: 'lien',
 };
-const ICONES_APPAREILS: Record<string, string> = { Mobile: 'mobile', Tablette: 'mobile', Ordinateur: 'ordinateur' };
+const ICONES_APPAREILS: Record<string, string> = { Mobile: 'mobile', Tablette: 'tablette', Ordinateur: 'ordinateur' };
 /** Une provenance sans marque (Direct, QR code, e-mail, un site) : en gris, à côté des réseaux en couleur. Les liens et les appareils prennent le bleu (voir admin.css). */
 const SANS_MARQUE = { picto: '#3d3d39', barre: '#efefec' };
 
@@ -346,12 +346,11 @@ function StatsReservees({ onOffres, liste }: { onOffres?: Proprietes['onOffres']
   return (
     <div className="flex flex-col gap-5">
       <p className="adm-stats-phrase">Tes visites se comptent déjà, sans cookie. Il ne reste qu’à les lire.</p>
-      <section aria-labelledby="stats-reservees" className="adm-encart p-5 bureau:px-6">
-        <div className="flex items-center gap-2">
-          <h2 id="stats-reservees" className="text-[15px] font-semibold tracking-[-0.015em]">Tes stats</h2>
-          <Etiquette fonction="stats" />
-        </div>
-        <p className="mt-1.5 text-[14px] leading-snug text-[#5f5f5a]">Avec Hopla {OFFRES.starter.nom}, tu les lis sur {duree(OFFRES.starter.jours)}, et sur {duree(OFFRES.pro.jours)} avec {OFFRES.pro.nom} :</p>
+      {/* Au bureau, ce que Starter ouvre et la liste côte à côte : deux cartes de même hauteur, sans une carte de 1120 px à moitié vide. */}
+      <div className="grid gap-5 lg:grid-cols-2">
+      {/* Les deux encarts viennent du même composant : titres, badges et textes sur les mêmes lignes. */}
+      <Carte nu titre="Tes stats" etiquette={<Etiquette fonction="stats" />} className="adm-encart p-5 bureau:px-6">
+        <p className="text-[13.5px] leading-snug text-white/70">Avec Hopla {OFFRES.starter.nom}, tu les lis sur {duree(OFFRES.starter.jours)}, et sur {duree(OFFRES.pro.jours)} avec {OFFRES.pro.nom} :</p>
         <ul className="mt-4 flex flex-col gap-2">
           {lignes.map(l => (
             <li key={l} className="flex gap-2.5 text-[14px] leading-snug">
@@ -360,8 +359,9 @@ function StatsReservees({ onOffres, liste }: { onOffres?: Proprietes['onOffres']
           ))}
         </ul>
         {onOffres && <button type="button" onClick={() => onOffres('stats')} aria-haspopup="dialog" className={`${classeBouton.principal} mt-5`}>Voir les offres</button>}
-      </section>
+      </Carte>
       {liste}
+      </div>
     </div>
   );
 }
@@ -448,7 +448,8 @@ function TableauStats({ charger, adresse, pseudo, joursMax = 365, onOffres, ouvr
         <div className={`flex flex-col gap-5 transition-opacity duration-200 ${charge ? 'opacity-50' : ''}`} aria-busy={charge}>
           <p className="adm-stats-phrase"><Phrase texte={enUnePhrase(stats)} /></p>
           <CourbeAOnglets stats={stats} />
-          <div className="grid items-start gap-5 lg:grid-cols-2">
+          {/* Deux encarts par rangée, de même hauteur : pas d'escalier entre Liens et Réseaux. */}
+          <div className="grid gap-5 lg:grid-cols-2">
             <Repartition titre="Liens" unite="Clics" lignes={lignesLiens} total={stats.clics} vide="Aucun clic sur cette période." />
             <Repartition titre="Réseaux" unite="Vues" lignes={lignesSources} total={stats.vues} />
             <Repartition titre="Appareils" unite="Vues" lignes={lignesAppareils} total={stats.vues} />

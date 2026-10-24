@@ -3,7 +3,7 @@ import type { Api, Contact, Liste } from '../lib/types.ts';
 import { destination } from '../lib/integrations.ts';
 import { Icone } from '../components/Icone.tsx';
 import { Carte, Feuille, classeBouton } from './ui.tsx';
-import { Etiquette, Reserve, usePermis } from './offre.tsx';
+import { Etiquette, Reserve, usePermis, useVoirOffres } from './offre.tsx';
 
 /*
  * Les inscrits de « Rejoins ma liste », dans l'onglet Stats : combien, les
@@ -29,11 +29,15 @@ export function MaListe({ api, onIntegrations }: { api: ApiListe; onIntegrations
   const recharger = useCallback(() => api.liste().then(setListe).catch(() => {}), [api]);
   useEffect(() => { recharger(); }, [recharger]);
   const permis = usePermis('listeEmail');
+  const voir = useVoirOffres();
   if (!liste) return null;
   // Sans l'offre et sans inscrit, la carte dit ce que la liste ferait ; des inscrits déjà là restent à toi (export, ta newsletter).
   if (!permis && !liste.total) return (
-    <Carte titre="Ta liste" action={<Etiquette fonction="listeEmail" />}>
-      <Reserve fonction="listeEmail" phrase="Avec Hopla Pro, tes visiteurs laissent leur e-mail sur ta page : chaque adresse arrive ici, et dans ta newsletter si tu la branches." />
+    // Le même encart que « Tes stats », à côté : un seul bouton plein (celui des stats), ici un lien discret vers Pro.
+    <Carte nu titre="Ta liste" etiquette={<Etiquette fonction="listeEmail" />} className="adm-encart p-5 bureau:px-6">
+      <Reserve fonction="listeEmail" bouton={false} phrase="Avec Hopla Pro, tes visiteurs laissent leur e-mail sur ta page : chaque adresse arrive ici, et dans ta newsletter si tu la branches.">
+        {voir && <button type="button" onClick={() => voir('listeEmail')} aria-haspopup="dialog" className="adm-lien -ml-1.5">Voir Hopla Pro</button>}
+      </Reserve>
     </Carte>
   );
   return (

@@ -47,7 +47,7 @@ export const LOGOS_OUTILS: Record<FournisseurListe | 'substack', string> = {
  */
 export const OUTILS_DES_BLOCS: { type: 'preuve' | 'reservation' | 'soutien' | 'produit'; logos: string[] }[] = [
   { type: 'preuve', logos: ['google', 'trustpilot', 'malt'] },
-  { type: 'reservation', logos: ['calendly'] },
+  { type: 'reservation', logos: ['calendly', 'googleagenda', 'calcom'] },
   { type: 'soutien', logos: ['paypal', 'kofi', 'patreon'] },
   { type: 'produit', logos: ['stripe', 'shopify', 'etsy'] },
 ];
@@ -58,7 +58,7 @@ export const OUTILS_DES_BLOCS: { type: 'preuve' | 'reservation' | 'soutien' | 'p
  */
 export const COULEURS_LOGOS: Record<string, string> = {
   brevo: '#0a8560', mailerlite: '#047a42', systeme: '#0070b8', substack: '#c84b08', make: '#6d00cc', zapier: '#d24000', n8n: '#d33660',
-  google: '#1a73e8', trustpilot: '#00845a', malt: '#d63b3b', calendly: '#006bff',
+  google: '#1a73e8', trustpilot: '#00845a', malt: '#d63b3b', calendly: '#006bff', googleagenda: '#1a73e8',
   paypal: '#002991', kofi: '#c94a22', stripe: '#635bff', shopify: '#4a8030', etsy: '#c4511a', spotify: '#117a37',
 };
 
