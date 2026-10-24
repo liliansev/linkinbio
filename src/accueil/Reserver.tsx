@@ -3,7 +3,6 @@ import type { FocusEvent, FormEvent, ReactNode } from 'react';
 import { Icone } from '../components/Icone.tsx';
 import { OFFRES } from '../lib/abonnement.ts';
 import type { Periode, PlanPayant } from '../lib/abonnement.ts';
-import { CONTACT_LEGAL } from '../lib/legal.ts';
 import { nomSaisi } from '../lib/valider.ts';
 import { adresseSuggeree, nomDansAdresse, nomDansLien } from './adresse.ts';
 import { mouvementReduit } from './mouvement.ts';
@@ -130,11 +129,6 @@ function attendreFin() {
   changer({ fermee: false });
   fin = setTimeout(() => changer({ fermee: true }), reste);
 }
-/** « 14 h 32 », l'heure où la correction se ferme. */
-function heure(t: number) {
-  const d = new Date(t);
-  return `${d.getHours()}\u00a0h\u00a0${String(d.getMinutes()).padStart(2, '0')}`;
-}
 
 /** Une lettre d'un autre alphabet ne passe pas dans une adresse : on le dit au lieu de l'effacer en silence. */
 const AUTRE_ALPHABET = /[^\P{L}\p{Script=Latin}]/u;
@@ -207,14 +201,6 @@ function remonter(ev: FocusEvent<HTMLInputElement>) {
     const ecart = formulaire.getBoundingClientRect().top - 72;
     if (Math.abs(ecart) > 8) scrollTo({ top: scrollY + ecart, behavior: mouvementReduit() ? 'auto' : 'smooth' });
   }, 250);
-}
-
-async function renvoyer(api: ApiAccueil) {
-  changer({ renvoi: 'envoi', erreur: '' });
-  try {
-    const r = await api.renvoyer(etat.nom, etat.envoyee);
-    if (r.ok) { changer({ renvoi: 'fait', renvoye: r.message }); attendreRenvoi(); } else changer({ renvoi: 'pret', erreur: r.message });
-  } catch { changer({ renvoi: 'pret', erreur: 'Le serveur ne répond pas. Réessaie dans un instant.' }); }
 }
 
 /**
@@ -294,19 +280,10 @@ export function Reserver({ api, note, apercu, id, grand, premier, libelleNom }: 
             <p className="hl-reserver-adresse">hopla.page/{insecable(e.nom)}</p>
             <p>{avecAdresse(e.message, e.envoyee)}</p>
             {boite && <a className="hl-btn hl-btn-petit hl-reserver-boite" href={boite.url} target="_blank" rel="noopener">Ouvrir {boite.nom}<Icone nom="ui-ouvrir" taille={16} /></a>}
+            {/* Ce qu'il faut savoir, et rien d'autre (Lilian, 24 octobre 2026) : combien de temps marche le lien ; une faute de frappe se corrige d'un toucher. */}
             <p className="hl-reserver-renvoi">
-              {e.renvoi === 'fait' ? (mode === 'libre' && e.renvoye) || MOTS[mode].renvoi
-                : <>{MOTS[mode].duree && `${MOTS[mode].duree} `}{e.renvoi === 'bientot' ? 'Pas reçu ? Regarde dans tes indésirables ; tu pourras le renvoyer dans une minute.'
-                : <>Pas reçu ? Regarde dans tes indésirables, ou{' '}
-                  <button type="button" className="hl-lien-texte" disabled={e.renvoi === 'envoi'} onClick={() => renvoyer(api)}>{e.renvoi === 'envoi' ? 'envoi…' : 'renvoie-le'}</button>.</>}</>}
-            </p>
-            <p className="hl-reserver-renvoi">
-              {e.fermee
-                ? <>Une faute ? <a href={`mailto:${CONTACT_LEGAL}`}>Écris-nous</a>, on la corrige pour toi.</>
-                : <>Une faute ? Jusqu’à {heure(e.le + FENETRE)}, tu peux{' '}
-                  <button type="button" className="hl-lien-texte" onClick={() => changer({ etape: 'email', correction: true, email: e.envoyee, signalee: '', quitte: '', erreur: '', focus: moi })}>corriger ton e‑mail</button>
-                  {' '}ou{' '}
-                  <button type="button" className="hl-lien-texte" onClick={() => changer({ etape: 'nom', ancien: e.nom, verif: null, erreur: '', coupe: false, retire: false, focus: moi })}>changer de nom</button>.</>}
+              {MOTS[mode].duree}
+              {!e.fermee && <>{MOTS[mode].duree && ' '}<button type="button" className="hl-lien-texte" onClick={() => changer({ etape: 'email', correction: true, email: e.envoyee, signalee: '', quitte: '', erreur: '', focus: moi })}>Mauvaise adresse ?</button></>}
             </p>
             {e.offre && mode === 'libre' && <p className="hl-reserver-renvoi">Ensuite, active {offreLue(e)} dans tes réglages.</p>}
             {e.erreur && <p className="hl-reserver-erreur" role={parle ? 'alert' : undefined}>{e.erreur}</p>}
