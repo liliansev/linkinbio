@@ -522,7 +522,7 @@
  */
 [data-decor] { --decor-encre: color-mix(in srgb, var(--texte) 10%, transparent); }
 [data-decor]::before { content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0; }
-.lp[data-decor] > :not(.lp-toast, .lp-sortie) { position: relative; z-index: 1; }
+.lp[data-decor] > :not(.lp-toast, .lp-sortie, .lp-image-fond) { position: relative; z-index: 1; }
 .lp-mini[data-decor], .adm-apercu .lp[data-decor] { overflow: hidden; }
 :is(.lp-mini, .lp-pastille, .adm-apercu .lp)[data-decor]::before { position: absolute; }
 .lp-toast { z-index: 10; }
@@ -678,6 +678,9 @@
   .lp[data-bureau='onepage'][data-forme='carre'] .lp-avatar { border-radius: 8px; }
   .lp[data-bureau='onepage'] .lp-nom { margin: 0; align-self: end; font-size: clamp(3rem, 6cqi, 4.75rem); line-height: 1.02; letter-spacing: min(var(--nom-approche, -0.04em), -0.02em); }
   .lp[data-bureau='onepage'] .lp-badge svg { width: 0.5em; height: 0.5em; }
+  /* Un nom sur deux lignes (une police large, un nom long) garde son badge après le dernier mot, pas au bout de la colonne. */
+  .lp[data-bureau='onepage'] .lp-nom:not(:has(input)) { display: block; }
+  .lp[data-bureau='onepage'] .lp-nom:not(:has(input)) .lp-badge { vertical-align: 0.12em; margin-left: 0.12em; }
   .lp[data-bureau='onepage'] .lp-bio { font-size: 1.3rem; line-height: 1.45; max-width: 32ch; text-wrap: pretty; }
   .lp[data-bureau='onepage'] .lp-reseaux { justify-content: flex-start; margin-left: -10px; align-self: start; }
   .lp[data-bureau='onepage'] .lp-partager { top: 24px; right: 48px; }
@@ -1082,3 +1085,68 @@ a.lp-preuve:focus-visible { outline: 3px solid var(--texte); outline-offset: 3px
   .lp[data-bureau='onepage'] .lp-video[data-forme='vertical'] .lp-video-cadre { width: 100%; }
 }
 @media (prefers-reduced-motion: reduce) { .lp-lecteur-cadre, .lp-faq-q summary svg { animation: none; transition: none; } }
+
+/* ---- Lot 3 Linktree (24 octobre 2026) : l'image de fond, la grande photo, les collections en grille ---- */
+
+/*
+ * L'image de fond : la photo de la personne derrière toute la page, couvrant l'écran, sous un voile de la couleur du
+ * fond (76 %) : les textes gardent leurs contrastes du thème, la photo se devine. Elle passe devant la matière du thème.
+ * Dans un aperçu du back office, elle colle en haut de l'écran qui défile, au lieu de l'écran du navigateur.
+ */
+.lp-image-fond { position: fixed; inset: 0; z-index: 0; pointer-events: none; background-size: cover; background-position: center; }
+.lp-image-fond::after { content: ''; position: absolute; inset: 0; background: color-mix(in srgb, var(--fond-uni) 76%, transparent); }
+/* La photo remplace le décor du thème : un damier ou des étoiles par-dessus une photo brouillent l'une et l'autre. */
+.lp[data-image][data-decor]::before { display: none; }
+.lp[data-image] > :not(.lp-toast, .lp-sortie, .lp-image-fond) { position: relative; z-index: 1; }
+.adm-apercu .lp[data-image] { overflow: clip; }
+:is(.adm-apercu, .lp-mini) .lp-image-fond { position: sticky; top: 0; flex: none; height: 100dvh; max-height: 100vh; margin-bottom: -100dvh; }
+
+/*
+ * La grande photo (la mise en page « Hero » de Linktree) : la photo de profil prend toute la largeur en haut de la page,
+ * bord à bord, et se fond dans le fond ; le nom se pose sur le fondu. Le bouton Partager garde une ombre pour se lire sur
+ * la photo. Au bureau, Colonne la pose en haut de son panneau ; Profil et Pleine page la gardent dans leur cadre, en plus grand.
+ */
+.lp-tete[data-photo='grande']::before { display: none; }
+.lp-tete[data-photo='grande'] .lp-avatar {
+  display: block; width: 100%; height: auto; aspect-ratio: 1; max-height: 480px; object-fit: cover; border-radius: 0; box-shadow: none;
+  mask-image: linear-gradient(to bottom, #000 55%, transparent 97%);
+}
+.lp-tete[data-photo='grande'] .lp-ed-photo { border-radius: 0; }
+.lp-tete[data-photo='grande'] .lp-ed-photo:hover { scale: none; opacity: 0.92; }
+.lp-tete[data-photo='grande'] .lp-nom { position: relative; text-shadow: 0 1px 14px color-mix(in srgb, var(--fond-uni) 70%, transparent); }
+.lp-col:has(> .lp-tete[data-photo='grande']) > .lp-partager { color: #fff; filter: drop-shadow(0 1px 3px rgb(0 0 0 / 0.55)); z-index: 2; }
+@container lp (max-width: 959px) {
+  .lp-tete[data-photo='grande'] { margin-top: -56px; }
+  .lp-tete[data-photo='grande'] > :is(.lp-avatar, .lp-ed-photo) { width: calc(100% + 32px); max-width: none; margin: 0 -16px; }
+  .lp-tete[data-photo='grande'] .lp-ed-photo .lp-avatar { width: 100%; margin: 0; }
+  .lp-tete[data-photo='grande'] .lp-nom { margin-top: -64px; }
+}
+@container lp (min-width: 960px) {
+  .lp[data-bureau='colonne'] .lp-tete[data-photo='grande'] { margin-top: -64px; }
+  .lp[data-bureau='colonne'] .lp-tete[data-photo='grande'] > :is(.lp-avatar, .lp-ed-photo) { width: calc(100% + 88px); max-width: none; margin: 0 -44px; }
+  .lp[data-bureau='colonne'] .lp-tete[data-photo='grande'] .lp-avatar { border-radius: 36px 36px 0 0; }
+  .lp[data-bureau='colonne'] .lp-tete[data-photo='grande'] .lp-ed-photo .lp-avatar { width: 100%; margin: 0; }
+  .lp[data-bureau='colonne'] .lp-tete[data-photo='grande'] .lp-nom { margin-top: -72px; }
+  .lp[data-bureau='profil'] .lp-tete[data-photo='grande'] .lp-avatar { width: 100%; max-height: none; border-radius: 28px; mask-image: none; box-shadow: 0 40px 80px -40px rgb(0 0 0 / 0.6); }
+  .lp[data-bureau='onepage'] .lp-tete[data-photo='grande'] .lp-avatar { width: 400px; height: 400px; border-radius: 44px; mask-image: none; }
+}
+
+/*
+ * Les collections : sous un titre de section réglé en grille, les liens simples se rangent en tuiles, deux par rangée ;
+ * l'image du lien en haut, carrée, ou son picto seul à sa place, le titre dessous. Les autres blocs gardent toute la largeur.
+ */
+.lp-blocs:has(> [data-tuile]) { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.lp-blocs:has(> [data-tuile]) > :not([data-tuile]) { grid-column: 1 / -1; }
+.lp-tuile.lp-btn {
+  height: 100%; min-height: 132px; padding: 12px 12px 14px; flex-direction: column; justify-content: flex-start; gap: 10px;
+  border-radius: var(--rc);
+}
+.lp-tuile-visuel { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: calc(var(--rc) - 8px); }
+.lp[data-forme='carre'] .lp-tuile-visuel { border-radius: 3px; }
+/* Le picto garde la place carrée d'une image : les titres d'une même rangée commencent à la même hauteur. */
+.lp-tuile-picto { display: grid; place-items: center; width: 100%; aspect-ratio: 1; flex: none; font-size: 1.6rem; }
+.lp-tuile .lp-btn-titre { overflow-wrap: anywhere; }
+.lp-tuile .lp-sous { font-size: 0.8rem; }
+@container lp (min-width: 960px) {
+  .lp[data-bureau='colonne'] .lp-blocs:has(> [data-tuile]) { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}

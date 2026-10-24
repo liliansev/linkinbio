@@ -13,6 +13,7 @@ export const REGLAGES_DEFAUT: Reglages = {
     bio: 'J’automatise le travail des PME avec l’IA, n8n et Make. Vidéos, newsletter et formations.',
     avatar: '/avatar.webp',
     badge: true,
+    photo: 'ronde',
   },
   reseaux: [
     { reseau: 'youtube', url: 'https://www.youtube.com/@lilian.sevoumian' },
@@ -38,6 +39,8 @@ export const REGLAGES_DEFAUT: Reglages = {
   vuesReseaux: [],
   utm: false,
   redirection: { url: '', fin: '' },
+  police: '',
+  imageFond: '',
 };
 
 export function blocsDefaut(id: () => string): Bloc[] {
@@ -60,7 +63,7 @@ export function reglagesNouveauCompte(pseudo: string): Reglages {
   const nom = pseudo.split('-').filter(Boolean).map(m => m.charAt(0).toUpperCase() + m.slice(1)).join(' ') || pseudo;
   return {
     ...REGLAGES_DEFAUT,
-    profil: { nom, bio: '', avatar: '', badge: false },
+    profil: { nom, bio: '', avatar: '', badge: false, photo: 'ronde' },
     reseaux: [],
     seo: { titre: `${nom} · Hopla`, description: '', indexable: false },
     animation: 'reflet',

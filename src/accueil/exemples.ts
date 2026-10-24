@@ -56,7 +56,7 @@ export function pageExemple(id: ProfilExemple, theme: string = PROFILS[id].theme
     reglages: {
       ...REGLAGES_DEFAUT, theme, couleurs: o.couleurs ?? SANS_COULEURS,
       bouton: { ...REGLAGES_DEFAUT.bouton, ...themeParId(theme).conseil }, animation: 'aucune', bureau: 'colonne', partage: false,
-      profil: { nom: p.nom, bio: p.bio, avatar: p.avatar, badge: false, ...o.profil },
+      profil: { nom: p.nom, bio: p.bio, avatar: p.avatar, badge: false, photo: 'ronde', ...o.profil },
       reseaux: o.reseaux === false ? [] : RESEAUX_EXEMPLES[id].map(r => ({ ...r })),
     },
     blocs: (o.blocs ?? composerAudience(BLOCS_EXEMPLES[id], '')).map(b => ({ ...b })),

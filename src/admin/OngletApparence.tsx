@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import type { Couleurs, FormeBouton, MiseEnPageBureau, OmbreBouton, Reglages, Reseau, StyleBouton } from '../lib/types.ts';
 import { ANIMATIONS, MAX_RESEAUX, RESEAUX, SANS_COULEURS } from '../lib/types.ts';
-import { THEMES, themeDe, themeParId, variablesTheme } from '../lib/themes.ts';
+import { NOMS_POLICES, POLICES, POLICES_CHOIX, THEMES, themeDe, themeParId, variablesTheme } from '../lib/themes.ts';
 import type { Theme } from '../lib/themes.ts';
 import { Icone, NOMS_RESEAUX } from '../components/Icone.tsx';
 import { Carte, Champ, Interrupteur, NOMS_ANIMATIONS, Segments, choisirFichier, classeBouton, classeSaisie, couleurReseau, flechesRadio, preparerImage, useFilFeuille, vibrer } from './ui.tsx';
@@ -10,6 +10,7 @@ import { useCouche } from './couches.ts';
 import { RESEAUX_PSEUDO, pseudoReseau, urlReseau } from '../lib/demarrage.ts';
 import { adresseSaisie, pourquoiPasReseau } from '../lib/valider.ts';
 import { Etiquette, Reserve, usePermis, useVoirOffres } from './offre.tsx';
+import type { Fonction } from '../lib/abonnement.ts';
 import { focusSaisie } from '../lib/clavier';
 
 const STYLES: { id: StyleBouton; nom: string }[] = [
@@ -47,8 +48,8 @@ export function Pastille({ theme }: { theme: Theme }) {
   );
 }
 
-export type PartieApparence = 'profil' | 'theme' | 'couleurs' | 'animation' | 'boutons' | 'bureau' | 'reseaux';
-const TOUTES: PartieApparence[] = ['profil', 'theme', 'couleurs', 'animation', 'boutons', 'bureau', 'reseaux'];
+export type PartieApparence = 'profil' | 'theme' | 'couleurs' | 'police' | 'fond' | 'photo' | 'animation' | 'boutons' | 'bureau' | 'reseaux';
+const TOUTES: PartieApparence[] = ['profil', 'theme', 'couleurs', 'police', 'fond', 'photo', 'animation', 'boutons', 'bureau', 'reseaux'];
 
 /** Les réglages d'apparence, en cartes. `parties` n'en garde que certaines (les feuilles de « Ma page »). */
 export function OngletApparence({ reglages, onChange, envoyerImage, principal = true, parties = TOUTES, vedettes, pseudo = '', onPseudo }: { reglages: Reglages; onChange: (r: Reglages) => void; envoyerImage: (d: string) => Promise<string>; principal?: boolean; parties?: PartieApparence[]; vedettes?: number;
@@ -66,10 +67,17 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
   // Un thème choisi par-dessus des couleurs à soi : elles partent, mais un toucher les rend.
   const [avantTheme, setAvantTheme] = useState<Reglages | null>(null);
   const fichier = useRef<HTMLInputElement>(null);
+  const fichierFond = useRef<HTMLInputElement>(null);
+  const [envoiFond, setEnvoiFond] = useState(false);
+  const [fondRate, setFondRate] = useState(false);
+  const fond = usePermis('fond');
+  const grandePhoto = usePermis('grandePhoto');
   // Tes couleurs viennent avec Starter : sans, les aperçus montrent celles du thème, comme la page.
   const couleurs = usePermis('couleurs');
   const perso = Object.values(reglages.couleurs).some(Boolean);
-  const theme = themeDe(couleurs ? reglages : { ...reglages, couleurs: SANS_COULEURS });
+  const theme = themeDe(couleurs ? reglages : { ...reglages, couleurs: SANS_COULEURS, police: '' });
+  // La police du thème, et le thème qui la porte, pour la première case du choix.
+  const duTheme = themeDe({ ...reglages, couleurs: couleurs ? reglages.couleurs : SANS_COULEURS, police: '' });
   const maj = (champs: Partial<Reglages>) => onChange({ ...reglages, ...champs });
   const profil = (champs: Partial<Reglages['profil']>) => maj({ profil: { ...reglages.profil, ...champs } });
   // Vingt réseaux au plus sur une page : au-delà, la rangée d'icônes ne se lit plus.
@@ -90,10 +98,16 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
     onPseudo?.();
   };
 
+  async function imageFond(f: File | undefined) {
+    if (!f) return;
+    setEnvoiFond(true); setFondRate(false);
+    try { maj({ imageFond: await envoyerImage(await preparerImage(f, 'galerie')) }); } catch { setFondRate(true); } finally { setEnvoiFond(false); if (fichierFond.current) fichierFond.current.value = ''; }
+  }
+
   async function avatar(f: File | undefined) {
     if (!f) return;
     setEnvoi(true); setPhotoRatee(false);
-    try { profil({ avatar: await envoyerImage(await preparerImage(f, 'carre')) }); } catch { setPhotoRatee(true); } finally { setEnvoi(false); if (fichier.current) fichier.current.value = ''; }
+    try { profil({ avatar: await envoyerImage(await preparerImage(f, 'photo')) }); } catch { setPhotoRatee(true); } finally { setEnvoi(false); if (fichier.current) fichier.current.value = ''; }
   }
 
   return (
@@ -121,8 +135,8 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
       {voir('theme') && <Carte nu={nu} titre={titre('Thème')} id="theme" action={titre('Thème') ? <span className="text-[13px] text-white/50">{theme.nom}</span> : undefined}>
         {avantTheme && (
           <p role="status" className="mb-3 flex items-center justify-between gap-3 text-[13px] text-white/60">
-            Tes couleurs à toi ont été retirées.
-            <button type="button" onClick={() => { onChange({ ...reglages, couleurs: avantTheme.couleurs, bouton: avantTheme.bouton }); setAvantTheme(null); }}
+            {Object.values(avantTheme.couleurs).some(Boolean) || !avantTheme.police ? 'Tes couleurs à toi ont été retirées.' : 'Ta police a laissé place à celle du thème.'}
+            <button type="button" onClick={() => { onChange({ ...reglages, couleurs: avantTheme.couleurs, bouton: avantTheme.bouton, police: avantTheme.police }); setAvantTheme(null); }}
               className="min-h-11 shrink-0 font-medium text-white underline decoration-white/30 underline-offset-2">Les garder</button>
           </p>
         )}
@@ -131,8 +145,8 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
             <li key={t.id}>
               {/* Choisir un thème pose aussi ses boutons et ses couleurs ; on peut les changer ensuite. */}
               <button type="button" onClick={() => {
-                setAvantTheme(perso ? reglages : null);
-                maj({ theme: t.id, bouton: t.conseil, couleurs: SANS_COULEURS });
+                setAvantTheme(perso || reglages.police ? reglages : null);
+                maj({ theme: t.id, bouton: t.conseil, couleurs: SANS_COULEURS, police: '' });
               }} role="radio" aria-checked={theme.id === t.id}
                 className={`flex w-full flex-col items-center gap-1.5 rounded-2xl p-1.5 transition ${theme.id === t.id ? 'bg-white/10 ring-2 ring-white' : 'hover:bg-white/[0.05]'}`}>
                 <Pastille theme={t} />
@@ -156,6 +170,71 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
           // Des couleurs gardées d'une offre passée restent en base : elles reviennent avec Starter.
           <Reserve fonction="couleurs" phrase={perso ? 'Tes couleurs attendent Hopla Starter : pour l’instant, ta page garde celles de son thème.' : 'Avec Hopla Starter, tu changes le fond, les boutons et le lien mis en avant, par-dessus ton thème.'} />
         )}
+      </Carte>}
+
+      {voir('police') && <Carte nu={nu} titre={titre('Police')}>
+        {couleurs ? (
+          // Chaque police se montre dans sa propre lettre ; la première est celle du thème, qu'on retrouve d'un toucher.
+          <ul role="radiogroup" aria-label="Police de ta page" onKeyDown={e => flechesRadio(e)} className="grid grid-cols-2 gap-2">
+            {[{ id: '' as const, nom: `Celle du thème`, rendu: duTheme.police }, ...POLICES_CHOIX.filter(p => p !== duTheme.police).map(p => ({ id: p, nom: NOMS_POLICES[p], rendu: p }))].map(p => {
+              const choisi = (reglages.police === duTheme.police ? '' : reglages.police) === p.id;
+              return (
+                <li key={p.id || 'theme'}>
+                  <button type="button" role="radio" aria-checked={choisi} onClick={() => { vibrer(4); maj({ police: p.id }); }}
+                    className={`flex w-full flex-col items-start gap-1 rounded-[14px] border px-3.5 py-3 text-left transition ${choisi ? 'border-white ring-1 ring-inset ring-white' : 'border-white/15 hover:border-white/30'}`}>
+                    <span className="text-[26px] leading-none text-white" style={{ fontFamily: POLICES[p.rendu].titre }} aria-hidden="true">Aa</span>
+                    <span className="w-full truncate text-[13px] font-medium text-white/85">{p.nom}</span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        ) : (
+          <Reserve fonction="couleurs" phrase={reglages.police ? 'Ta police attend Hopla Starter : pour l’instant, ta page garde celle de son thème.' : 'Avec Hopla Starter, tu choisis la police de ta page parmi celles des thèmes.'} />
+        )}
+      </Carte>}
+
+      {voir('fond') && <Carte nu={nu} titre={titre('Image de fond')}>
+        {fond ? (
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center gap-4">
+              {/* La photo telle qu'elle sera : sous le voile de la couleur du fond. */}
+              <button type="button" onClick={e => choisirFichier(fichierFond.current, e.currentTarget)} aria-label={reglages.imageFond ? 'Changer l’image de fond' : 'Choisir une image de fond'}
+                className="relative h-28 w-20 shrink-0 overflow-hidden rounded-xl ring-1 ring-white/15" style={{ background: theme.fondUni }}>
+                {reglages.imageFond && <><img src={reglages.imageFond} alt="" className="h-full w-full object-cover" /><span className="absolute inset-0" style={{ background: theme.fondUni, opacity: 0.76 }} /></>}
+                {!reglages.imageFond && <span className="absolute inset-0 grid place-items-center" style={{ color: theme.texte }}><Icone nom="photo" taille={26} /></span>}
+              </button>
+              <div className="flex flex-col items-start gap-1">
+                <button type="button" onClick={e => choisirFichier(fichierFond.current, e.currentTarget)} className={classeBouton.secondaire}>{envoiFond ? 'Envoi…' : reglages.imageFond ? 'Changer la photo' : 'Choisir une photo'}</button>
+                {reglages.imageFond && <button type="button" onClick={() => maj({ imageFond: '' })} className="min-h-11 rounded-xl px-1 text-[13px] text-white/60 hover:text-white">Retirer</button>}
+              </div>
+              <input ref={fichierFond} type="file" accept="image/*" className="adm-fichier" tabIndex={-1} aria-hidden="true" onChange={e => imageFond(e.target.files?.[0])} />
+            </div>
+            {fondRate && <p className="text-[13px] text-red-300" role="alert">La photo n’est pas passée. Essaie une autre image, en JPG ou PNG.</p>}
+          </div>
+        ) : (
+          <Reserve fonction="fond" phrase={reglages.imageFond ? 'Ton image de fond attend Hopla Starter : pour l’instant, ta page garde le fond de son thème.' : 'Avec Hopla Starter, ta propre photo passe derrière ta page, voilée pour que tout reste lisible.'} />
+        )}
+      </Carte>}
+
+      {voir('photo') && <Carte nu={nu} titre={titre('Photo de profil')}>
+        {grandePhoto ? (
+          <div className="grid grid-cols-2 gap-2" role="radiogroup" onKeyDown={e => flechesRadio(e)} aria-label="Photo de profil">
+            {(['ronde', 'grande'] as const).map(f => {
+              const actif = (reglages.profil.photo ?? 'ronde') === f;
+              return (
+                <button key={f} type="button" role="radio" aria-checked={actif} onClick={() => { vibrer(); profil({ photo: f }); }}
+                  className={`flex flex-col gap-2 rounded-[14px] border p-2 text-left transition ${actif ? 'border-white ring-1 ring-inset ring-white' : 'border-white/15 hover:border-white/30'}`}>
+                  <SchemaPhoto forme={f} />
+                  <span className="px-1 pb-1 text-[13px] font-semibold text-white">{f === 'ronde' ? 'En rond' : 'En grand'}</span>
+                </button>
+              );
+            })}
+          </div>
+        ) : (
+          <Reserve fonction="grandePhoto" phrase="Avec Hopla Starter, ta photo prend toute la largeur en haut de ta page, et se fond dans le fond." />
+        )}
+        {grandePhoto && reglages.profil.photo === 'grande' && !reglages.profil.avatar && <p className="mt-3 text-[13px] leading-snug text-white/60">Ajoute une photo de profil : elle s’affichera en grand.</p>}
       </Carte>}
 
       {voir('animation') && <Carte nu={nu} titre={titre('Animation')} action={titre('Animation') ? <span className="text-[13px] text-white/50">{NOMS_ANIMATIONS[reglages.animation].nom}</span> : undefined}>
@@ -297,6 +376,21 @@ const BUREAUX: { id: MiseEnPageBureau; nom: string; aide: string }[] = [
   { id: 'onepage', nom: 'Pleine page', aide: 'Ton nom en grand, les liens en cartes.' },
 ];
 
+/** La photo en rond ou en grand, en croquis comme les mises en page. */
+function SchemaPhoto({ forme }: { forme: 'ronde' | 'grande' }) {
+  const b = 'rgb(0 0 0 / 0.14)', p = 'rgb(0 0 0 / 0.78)';
+  return (
+    <svg viewBox="0 0 120 76" className="w-full rounded-xl bg-[#f4f4f4]" aria-hidden="true">
+      <defs><linearGradient id="fondu-photo" x1="0" y1="0" x2="0" y2="1"><stop offset="0.5" stopColor="rgb(0 0 0 / 0.3)" /><stop offset="1" stopColor="rgb(0 0 0 / 0)" /></linearGradient></defs>
+      <rect x="38" y="6" width="44" height="64" rx="6" fill="rgb(0 0 0 / 0.05)" />
+      {forme === 'ronde'
+        ? <><circle cx="60" cy="18" r="6" fill={b} /><rect x="48" y="28" width="24" height="3" rx="1.5" fill={p} /></>
+        : <><path d="M38 12a6 6 0 0 1 6-6h32a6 6 0 0 1 6 6v20H38z" fill="url(#fondu-photo)" /><rect x="48" y="28" width="24" height="3" rx="1.5" fill={p} /></>}
+      {[36, 45, 54].map(y => <rect key={y} x="44" y={y} width="32" height="6" rx="3" fill={b} />)}
+    </svg>
+  );
+}
+
 /** Un petit croquis de chaque mise en page, dessiné en blocs. */
 function SchemaBureau({ id }: { id: MiseEnPageBureau }) {
   const b = 'rgb(0 0 0 / 0.14)', p = 'rgb(0 0 0 / 0.78)';
@@ -324,7 +418,7 @@ function SchemaBureau({ id }: { id: MiseEnPageBureau }) {
   );
 }
 
-export type Tiroir = 'theme' | 'couleurs' | 'boutons' | 'animation' | 'bureau';
+export type Tiroir = 'theme' | 'couleurs' | 'police' | 'fond' | 'photo' | 'boutons' | 'animation' | 'bureau';
 
 /**
  * Le design en liste à tiroirs : une icône et un titre par ligne, un toucher
@@ -353,12 +447,19 @@ export function DesignTiroirs({ reglages, onChange, envoyerImage, principal, pie
     else if (dernier.current) document.getElementById(`design-${dernier.current}`)?.focus({ preventScroll: true });
   }, [ouvert]);
   const couleurs = usePermis('couleurs');
+  const fond = usePermis('fond');
+  const grandePhoto = usePermis('grandePhoto');
   const voirOffres = useVoirOffres();
+  // Une ligne réservée ouvre les offres, sur la fonction qu'il lui faut.
+  const reservee: Partial<Record<Tiroir, Fonction>> = { ...(couleurs ? {} : { couleurs: 'couleurs', police: 'couleurs' }), ...(fond ? {} : { fond: 'fond' }), ...(grandePhoto ? {} : { photo: 'grandePhoto' }) };
   // Chaque ligne dit ce qui est réglé, à droite : on sait sans ouvrir. Une partie réservée porte le nom de son offre.
   // Réservées, les couleurs ouvrent les offres par-dessus le design, Starter en avant ; sans chemin vers les offres, leur tiroir dit pourquoi.
   const lignes: { id: Tiroir; nom: string; icone: string; valeur: ReactNode }[] = [
     { id: 'theme', nom: 'Thème', icone: 'palette', valeur: themeParId(reglages.theme).nom },
     { id: 'couleurs', nom: 'Couleurs', icone: 'pinceau', valeur: !couleurs ? <Etiquette fonction="couleurs" /> : Object.values(reglages.couleurs).some(Boolean) ? 'Personnalisées' : 'Celles du thème' },
+    { id: 'police', nom: 'Police', icone: 'plume', valeur: !couleurs ? <Etiquette fonction="couleurs" /> : reglages.police ? NOMS_POLICES[reglages.police as keyof typeof NOMS_POLICES] : 'Celle du thème' },
+    { id: 'fond', nom: 'Image de fond', icone: 'photo', valeur: !fond ? <Etiquette fonction="fond" /> : reglages.imageFond ? 'Ta photo' : 'Aucune' },
+    { id: 'photo', nom: 'Photo de profil', icone: 'utilisateur', valeur: !grandePhoto ? <Etiquette fonction="grandePhoto" /> : reglages.profil.photo === 'grande' ? 'En grand' : 'En rond' },
     { id: 'boutons', nom: 'Boutons', icone: 'etiquette', valeur: STYLES.find(x => x.id === reglages.bouton.style)?.nom ?? '' },
     { id: 'animation', nom: 'Animation', icone: 'eclair', valeur: NOMS_ANIMATIONS[reglages.animation].nom },
     { id: 'bureau', nom: 'Sur ordinateur', icone: 'ordinateur', valeur: BUREAUX.find(x => x.id === reglages.bureau)?.nom ?? '' },
@@ -390,8 +491,8 @@ export function DesignTiroirs({ reglages, onChange, envoyerImage, principal, pie
       <ul className="adm-groupe">
         {lignes.map((l, i) => (
           <li key={l.id} className={i > 0 ? 'border-t border-white/[0.07]' : ''}>
-            <button id={`design-${l.id}`} type="button" aria-haspopup={l.id === 'couleurs' && !couleurs && voirOffres ? 'dialog' : undefined}
-              onClick={() => { vibrer(4); if (l.id === 'couleurs' && !couleurs && voirOffres) return voirOffres('couleurs'); setOuvert(l.id); if (l.id === 'theme') themesVus(); }}
+            <button id={`design-${l.id}`} type="button" aria-haspopup={reservee[l.id] && voirOffres ? 'dialog' : undefined}
+              onClick={() => { vibrer(4); const f = reservee[l.id]; if (f && voirOffres) return voirOffres(f); setOuvert(l.id); if (l.id === 'theme') themesVus(); }}
               className="flex min-h-[52px] w-full items-center gap-3 rounded-[inherit] px-3.5 py-2 text-left transition hover:bg-white/[0.04] active:bg-white/[0.06] bureau:min-h-12 bureau:gap-4 bureau:px-4">
               {/* Au bureau, la ligne de Réglages : le nom, la valeur en gris, le chevron, sans picto devant (24 octobre 2026). */}
               <Icone nom={l.icone} taille={20} className="shrink-0 text-white/70 bureau:hidden" />

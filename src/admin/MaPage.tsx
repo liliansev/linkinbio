@@ -8,6 +8,7 @@ import type { Bloc, PagePublique, Reglages, TypeBloc } from '../lib/types.ts';
 import { GALERIE_GRATUITE, SANS_COULEURS, TYPES_ADRESSE, TYPES_PRINCIPAL, TYPES_VITRINE, formatVedette, nouveauBloc, sansSchema } from '../lib/types.ts';
 import { etiquettes } from '../lib/etiquettes.ts';
 import { horsCreneauOuDates } from '../lib/moments.ts';
+import { enGrille } from '../lib/collections.ts';
 import { selonDroits } from '../lib/droits.ts';
 import type { Droits } from '../lib/droits.ts';
 import type { Destination } from '../lib/demarrage.ts';
@@ -253,7 +254,7 @@ export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, chois
   async function photo(f: File | undefined) {
     if (!f) return;
     setEnvoi(true);
-    try { profil({ avatar: await envoyerImage(await preparerImage(f, 'carre')) }); } catch { annoncer({ texte: 'La photo n’est pas passée. Essaie une autre image, en JPG ou PNG.', genre: 'info', long: true }); } finally { setEnvoi(false); if (fichier.current) fichier.current.value = ''; }
+    try { profil({ avatar: await envoyerImage(await preparerImage(f, 'photo')) }); } catch { annoncer({ texte: 'La photo n’est pas passée. Essaie une autre image, en JPG ou PNG.', genre: 'info', long: true }); } finally { setEnvoi(false); if (fichier.current) fichier.current.value = ''; }
   }
   // L'aperçu du design au téléphone montre la page des visiteurs : sans l'offre, ni drop, ni liste, ni avis, ni compte à rebours.
   const direct = <ApercuDirect page={{ ...selonDroits(reglages, visibles, droits), compte }} />;
@@ -618,7 +619,7 @@ function commeSurLaPage(bloc: Bloc, droits: Droits): Bloc {
 /** Ce qu'un bloc a de particulier, dit de la même façon dans la liste du bureau et sur la page du téléphone. */
 function etatBloc(bloc: Bloc, droits: Droits) {
   // Un bloc que l'offre ne comprend plus reste là, grisé comme un bloc masqué : il revient avec l'offre.
-  const attend = ([[!!bloc.acces, 'drops'], [bloc.type === 'inscription', 'listeEmail'], [bloc.type === 'preuve', 'avis'], [TYPES_VITRINE.includes(bloc.type), 'vitrine'], [bloc.type === 'formulaire', 'formulaire']] as [boolean, Fonction][]).find(([oui, f]) => oui && !droits[f])?.[1];
+  const attend = ([[!!bloc.acces, 'drops'], [bloc.type === 'inscription', 'listeEmail'], [bloc.type === 'preuve', 'avis'], [TYPES_VITRINE.includes(bloc.type), 'vitrine'], [bloc.type === 'formulaire', 'formulaire'], [bloc.disposition === 'grille', 'grille']] as [boolean, Fonction][]).find(([oui, f]) => oui && !droits[f])?.[1];
   const prive = !bloc.public || !!attend;
   // Une règle que l'offre ne comprend plus n'est pas dite : sans Starter, un lancement attend sa date sans compte à rebours (« programmé »).
   const regles = etiquettes(bloc, droits);
@@ -884,12 +885,13 @@ function Telephone({ ecran, choisi, children }: { ecran: RefObject<HTMLDivElemen
 /** Les blocs de la page à droite : grisés s'ils sont masqués, cerclés quand leur rangée est ouverte, ouverts d'un clic. */
 function BlocsApercu({ blocs, rendu, choisi, ouvrir }: { blocs: Bloc[]; rendu: (bloc: Bloc) => ReactNode; choisi: string | null; ouvrir: (b: Bloc) => void }) {
   const droits = useDroits();
+  const tuiles = enGrille(blocs);
   return (
     <>
       {blocs.map((bloc, i) => {
         const e = etatBloc(bloc, droits);
         return (
-          <BlocApercu key={bloc.id} bloc={bloc} i={i} choisi={choisi === bloc.id} prive={e.prive || e.programme} ouvrir={ouvrir}>
+          <BlocApercu key={bloc.id} bloc={bloc} i={i} choisi={choisi === bloc.id} prive={e.prive || e.programme} tuile={tuiles.has(bloc.id)} ouvrir={ouvrir}>
             {rendu(commeSurLaPage(bloc, droits))}
           </BlocApercu>
         );
@@ -898,11 +900,11 @@ function BlocsApercu({ blocs, rendu, choisi, ouvrir }: { blocs: Bloc[]; rendu: (
   );
 }
 
-function BlocApercu({ bloc, i, choisi, prive, ouvrir, children }: { bloc: Bloc; i: number; choisi: boolean; prive: boolean; ouvrir: (b: Bloc) => void; children: ReactNode }) {
+function BlocApercu({ bloc, i, choisi, prive, tuile, ouvrir, children }: { bloc: Bloc; i: number; choisi: boolean; prive: boolean; tuile: boolean; ouvrir: (b: Bloc) => void; children: ReactNode }) {
   const noeud = useRef<HTMLDivElement>(null);
   useFige(noeud);
   return (
-    <div ref={noeud} className="lp-bloc lp-ed-bloc" data-id={bloc.id} data-type={bloc.type} data-vedette={formatVedette(bloc)}
+    <div ref={noeud} className="lp-bloc lp-ed-bloc" data-id={bloc.id} data-type={bloc.type} data-vedette={formatVedette(bloc)} data-tuile={tuile || undefined}
       data-prive={prive || undefined} data-choisi={choisi || undefined} style={{ '--i': i } as CSSProperties}
       onClickCapture={e => { e.preventDefault(); e.stopPropagation(); ouvrir(bloc); }}>
       {children}
@@ -1016,11 +1018,12 @@ function BlocsEditables({ blocs, rendu, choisi, neuf, onOrdonner, onOuvrir, onAj
   // La toile dessine les blocs comme la page des visiteurs (voir `commeSurLaPage`).
   const droits = useDroits();
   const dessin = (bloc: Bloc) => rendu(commeSurLaPage(bloc, droits));
+  const tuiles = enGrille(blocs);
   return (
     <>
       <DndContext accessibility={ACCESSIBILITE} sensors={capteurs} collisionDetection={closestCenter} onDragStart={() => vibrer(6)} onDragEnd={deplacer} onDragCancel={() => { glisse.current = Date.now(); }}>
         <SortableContext items={blocs.map(b => b.id)} strategy={verticalListSortingStrategy}>
-          {blocs.map((bloc, i) => <BlocEditable key={bloc.id} bloc={bloc} i={i} choisi={choisi === bloc.id} neuf={bloc.id === neuf} ouvrir={ouvrir}>{dessin(bloc)}</BlocEditable>)}
+          {blocs.map((bloc, i) => <BlocEditable key={bloc.id} bloc={bloc} i={i} choisi={choisi === bloc.id} neuf={bloc.id === neuf} tuile={tuiles.has(bloc.id)} ouvrir={ouvrir}>{dessin(bloc)}</BlocEditable>)}
         </SortableContext>
       </DndContext>
       {/* Sous le dernier bloc, à portée du pouce : le même geste, et le même nom, que le bouton Ajouter du haut. « Ajouter à ma page » reste au geste qui pose le bloc. */}
@@ -1029,7 +1032,7 @@ function BlocsEditables({ blocs, rendu, choisi, neuf, onOrdonner, onOuvrir, onAj
   );
 }
 
-function BlocEditable({ bloc, i, choisi, neuf = false, ouvrir, children }: { bloc: Bloc; i: number; choisi: boolean; neuf?: boolean; ouvrir: (b: Bloc) => void; children: ReactNode }) {
+function BlocEditable({ bloc, i, choisi, neuf = false, tuile, ouvrir, children }: { bloc: Bloc; i: number; choisi: boolean; neuf?: boolean; tuile: boolean; ouvrir: (b: Bloc) => void; children: ReactNode }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: bloc.id, disabled: neuf });
   const droits = useDroits();
   const { attend, prive, programme, puces, dit } = etatBloc(bloc, droits);
@@ -1040,7 +1043,7 @@ function BlocEditable({ bloc, i, choisi, neuf = false, ouvrir, children }: { blo
   return (
     <div ref={n => { setNodeRef(n); noeud.current = n; }} {...attributes} {...listeners} aria-label={[`Modifier ${nom}`, dit].filter(Boolean).join(', ')} aria-roledescription="bloc déplaçable"
       aria-current={choisi || undefined}
-      className="lp-bloc lp-ed-bloc" data-id={bloc.id} data-type={bloc.type} data-vedette={formatVedette(bloc)} data-glisse={isDragging || undefined} data-prive={prive || programme || undefined}
+      className="lp-bloc lp-ed-bloc" data-id={bloc.id} data-type={bloc.type} data-vedette={formatVedette(bloc)} data-tuile={tuile || undefined} data-glisse={isDragging || undefined} data-prive={prive || programme || undefined}
       data-choisi={choisi || undefined}
       style={{ '--i': i, transform: CssDnd.Transform.toString(transform), transition } as CSSProperties}
       onClickCapture={e => { e.preventDefault(); e.stopPropagation(); ouvrir(bloc); }}

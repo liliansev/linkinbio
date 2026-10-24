@@ -1,6 +1,6 @@
 import { useContext, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import type { MutableRefObject } from 'react';
-import type { Api, Bloc, ImageApercu, MentionPartenaire, Partenariat, Reglages, TypeBloc, TypeVitrine, VisuelApercu } from '../lib/types.ts';
+import type { Api, Bloc, Disposition, ImageApercu, MentionPartenaire, Partenariat, Reglages, TypeBloc, TypeVitrine, VisuelApercu } from '../lib/types.ts';
 import { ANIMATIONS_BLOC, TYPES_ADRESSE, TYPES_VITRINE, idYoutube, nouveauBloc } from '../lib/types.ts';
 import { lecteurDe } from '../lib/lecteurs.ts';
 import { horsCreneauOuDates } from '../lib/moments.ts';
@@ -54,6 +54,7 @@ interface Lu { url: string; inconnu: boolean; titre: string; image: string; desc
 type ChampAMoi = 'titre' | 'image' | 'description' | 'prix' | 'icone';
 
 /** Les deux mentions qu'un lien partenaire peut porter (loi du 9 juin 2023). */
+const DISPOSITIONS_NOMMEES: { id: Disposition; nom: string }[] = [{ id: 'liste', nom: 'En liste' }, { id: 'grille', nom: 'En grille' }];
 const MENTIONS: { id: MentionPartenaire; nom: string }[] = [{ id: 'publicite', nom: 'Publicité' }, { id: 'collaboration', nom: 'Collaboration commerciale' }];
 const PARTENARIAT_NEUF: Partenariat = { mention: 'publicite', code: '' };
 
@@ -1177,6 +1178,14 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
       {b.type === 'galerie' && <ChampsGalerie b={b} maj={maj} erreurDe={erreurDe} envoyerImage={envoyerImage} droit={!!droits.galerie} />}
       {b.type === 'lieu' && <ChampLieu b={b} maj={maj} erreurDe={erreurDe} nouveau={nouveau} />}
       {!paire && champTitre}
+      {/* Une collection : les liens qui suivent ce titre, jusqu'au suivant, en liste ou en tuiles (Starter). */}
+      {b.type === 'titre' && (
+        <div>
+          <span className="mb-1.5 flex items-center gap-2 text-[12.5px] font-medium text-white/60 bureau:text-white/75">Les liens dessous {!droits.grille && <Etiquette fonction="grille" />}</span>
+          <Segments label="Les liens sous ce titre" valeur={b.disposition ?? 'liste'} options={DISPOSITIONS_NOMMEES}
+            onChange={v => { if (v === 'grille' && !droits.grille && voir) return voir('grille'); maj({ disposition: v }); }} />
+        </div>
+      )}
       {b.type === 'faq' && <ChampsFaq b={b} maj={maj} erreurDe={erreurDe} />}
       {b.type === 'coordonnees' && <ChampsCoordonnees b={b} maj={maj} erreurDe={erreurDe} bureau={bureau} />}
       {/* La description d'un bandeau, d'une carte ou d'un produit mis en avant : la page la montre sous le titre dès que « Mis en

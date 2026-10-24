@@ -49,7 +49,7 @@ export const OFFRES: Record<Plan, Offre> = {
   },
   starter: {
     nom: 'Starter', phrase: 'Ta page, sans la mention Hopla.', prix: { mois: 9, an: 79 }, quota: 100 * Mo, jours: 30, enVente: true,
-    avantages: ['Sans la mention « Créer ma page avec Hopla »', 'Ta vitrine : produits, réservations, soutien', 'Tes couleurs', 'Tes liens programmés à l’avance', 'Les avis de tes clients', 'Ton formulaire de contact, et douze photos par galerie', 'Tes stats sur 30 jours', 'Ta page redirigée, tes liens suivis (UTM)'],
+    avantages: ['Sans la mention « Créer ma page avec Hopla »', 'Ta vitrine : produits, réservations, soutien', 'Tes couleurs, ta police, ton image de fond', 'Ta photo en grand, tes liens en grille', 'Tes liens programmés à l’avance', 'Les avis de tes clients', 'Ton formulaire de contact, et douze photos par galerie', 'Tes stats sur 30 jours', 'Ta page redirigée, tes liens suivis (UTM)'],
   },
   pro: {
     nom: 'Pro', phrase: 'Le bon lien, au bon moment.', prix: { mois: 19, an: 169 }, quota: 200 * Mo, jours: 365, enVente: true,
@@ -98,6 +98,9 @@ export const FONCTIONS = {
   galerie: 'starter',
   utm: 'starter',
   redirection: 'starter',
+  fond: 'starter',
+  grandePhoto: 'starter',
+  grille: 'starter',
   heure: 'pro',
   drops: 'pro',
   listeEmail: 'pro',
@@ -112,7 +115,7 @@ export type Fonction = keyof typeof FONCTIONS;
 export const FONCTIONS_EN_MOTS: Record<Fonction, { avantage: string; pour: string }> = {
   sansMention: { avantage: 'Sans la mention « Créer ma page avec Hopla »', pour: 'Pour ôter la mention' },
   vitrine: { avantage: 'Ta vitrine : produits, réservations, soutien', pour: 'Pour ta vitrine' },
-  couleurs: { avantage: 'Tes couleurs', pour: 'Pour tes couleurs' },
+  couleurs: { avantage: 'Tes couleurs, ta police, ton image de fond', pour: 'Pour tes couleurs' },
   programmation: { avantage: 'Tes liens programmés à l’avance', pour: 'Pour programmer' },
   avis: { avantage: 'Les avis de tes clients', pour: 'Pour les avis' },
   stats: { avantage: 'Tes stats sur 30 jours', pour: 'Pour tes stats' },
@@ -120,6 +123,9 @@ export const FONCTIONS_EN_MOTS: Record<Fonction, { avantage: string; pour: strin
   galerie: { avantage: 'Ton formulaire de contact, et douze photos par galerie', pour: 'Pour ta galerie' },
   utm: { avantage: 'Ta page redirigée, tes liens suivis (UTM)', pour: 'Pour les UTM' },
   redirection: { avantage: 'Ta page redirigée, tes liens suivis (UTM)', pour: 'Pour la redirection' },
+  fond: { avantage: 'Tes couleurs, ta police, ton image de fond', pour: 'Pour ton fond' },
+  grandePhoto: { avantage: 'Ta photo en grand, tes liens en grille', pour: 'Pour ta grande photo' },
+  grille: { avantage: 'Ta photo en grand, tes liens en grille', pour: 'Pour la grille' },
   heure: { avantage: 'Ta page selon l’heure', pour: 'Pour tes créneaux' },
   drops: { avantage: 'Les drops : un code, des places comptées', pour: 'Pour les drops' },
   listeEmail: { avantage: 'Ta liste e-mail, vers ta newsletter', pour: 'Pour ta liste e-mail' },
@@ -230,7 +236,7 @@ export const BASCULE_OFFRES = Date.UTC(2026, 9, 21);
 /** Les jours de stats qu'une page d'avant les offres lisait en gratuit : elle les garde. */
 export const JOURS_AVANT_OFFRES = 7;
 /** Ce que ces pages ne faisaient pas en gratuit, et ne gardent donc pas : la page sans mention, et ce qui est venu après (la vitrine, le formulaire, la galerie complète, l'UTM, la redirection). */
-const PAS_AVANT_OFFRES: readonly Fonction[] = ['sansMention', 'vitrine', 'formulaire', 'galerie', 'utm', 'redirection'];
+const PAS_AVANT_OFFRES: readonly Fonction[] = ['sansMention', 'vitrine', 'formulaire', 'galerie', 'utm', 'redirection', 'fond', 'grandePhoto', 'grille'];
 
 /** Ce compte peut-il se servir de cette fonction ? `cree` : la création du compte (ms), pour les pages d'avant. */
 export function peut(plan: Plan, f: Fonction, cree = Number.POSITIVE_INFINITY): boolean {
