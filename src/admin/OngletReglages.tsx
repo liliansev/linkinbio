@@ -6,7 +6,7 @@ import { adresseSaisie } from '../lib/valider.ts';
 import { redirectionActive } from '../lib/sorties.ts';
 import type { Abonnement as EtatAbonnement, Fonction, Plan } from '../lib/abonnement.ts';
 import { OFFRES, accesAbonnement, apresOffre, estPaye, estResilie, euros, offerteAuDessus } from '../lib/abonnement.ts';
-import { BoutonCopier, BoutonPrincipal, BoutonSecondaire, Champ, Feuille, Groupe, Interrupteur, Ligne, LigneBascule, LigneLien, SousPage, classeBouton, classeSaisie } from './ui.tsx';
+import { BoutonCopier, BoutonPrincipal, BoutonSecondaire, Champ, Feuille, Groupe, Interrupteur, Ligne, LigneBascule, LigneLien, PanneauDetail, SousPage, classeBouton, classeSaisie, useGrandEcran } from './ui.tsx';
 import { Facturation, nomAbonnement, nomApres, nomOffre } from './Facturation.tsx';
 import { Etiquette, usePermis } from './offre.tsx';
 import { telechargerQR } from './CodeQR.tsx';
@@ -20,8 +20,9 @@ import { Icone } from '../components/Icone.tsx';
  * contrôle à droite. Rien ne se cache dans un tiroir : ce qui demande plus
  * qu'un geste (l'aperçu dans Google, supprimer son compte) s'ouvre dans une
  * fenêtre, les offres aussi, par-dessus ; « Gérer mon abonnement » est une
- * sous-page, avec le fil « Réglages / Mon abonnement » dans l'en-tête. Les
- * factures se lisent d'un toucher, chez Creem, pour tout compte qui a payé.
+ * sous-page, avec le fil « Réglages / Mon abonnement » dans l'en-tête (au
+ * bureau, à droite, dans `PanneauDetail`). Les factures se lisent d'un
+ * toucher, chez Creem, pour tout compte qui a payé.
  */
 
 const dateLongue = (ms: number) => new Date(ms).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
@@ -44,7 +45,8 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
   const [portail, setPortail] = useState<'' | 'ouverture' | string>('');
   // Ce qui a ouvert la sous-page reprend le focus quand on en revient (la page se redessine : on le retrouve par son id).
   const ouvreur = useRef('');
-  const ouvrirSous = (id: string) => () => { ouvreur.current = id; setSous('abonnement'); scrollTo({ top: 0 }); };
+  const grand = useGrandEcran();
+  const ouvrirSous = (id: string) => () => { ouvreur.current = id; setSous('abonnement'); if (!grand) scrollTo({ top: 0 }); };
   useEffect(() => {
     if (sous || !ouvreur.current) return;
     document.getElementById(ouvreur.current)?.focus({ preventScroll: true });
@@ -65,10 +67,11 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
     catch (error) { setPortail((error as Error).message || 'Creem ne répond pas. Réessaie dans un instant.'); }
   }
 
-  if (sous === 'abonnement') return (
+  const facturation = <Facturation abonnement={abonnement} onOffres={offres ? () => onOffres?.() : undefined} ouvrirPortail={ouvrirPortail} onResilier={offres ? onResilier : undefined} />;
+  if (sous === 'abonnement' && !grand) return (
     <div className="adm-reglages">
       <SousPage nom="Mon abonnement" retour={() => setSous(null)} />
-      <Facturation abonnement={abonnement} onOffres={offres ? () => onOffres?.() : undefined} ouvrirPortail={ouvrirPortail} onResilier={offres ? onResilier : undefined} />
+      {facturation}
     </div>
   );
 
@@ -149,7 +152,7 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
             <Ligne nom={resilie ? (offerte ? 'Fin de l’abonnement' : 'Fin de l’offre') : 'Prochaine échéance'}
               valeur={<span className="tabular-nums">{resilie ? (offerte ? dateLongue(abonnement.finPeriode) : `${dateLongue(abonnement.finPeriode)}, puis ${nomApres(abonnement, abonnement.finPeriode)}`) : `${dateLongue(abonnement.finPeriode)}${prix ? ` · ${euros(prix)}` : ''}`}</span>} />
           ) : null}
-          {acces.gerer && <LigneLien id="reglage-abonnement" nom="Gérer mon abonnement" onClick={ouvrirSous('reglage-abonnement')} />}
+          {acces.gerer && <LigneLien id="reglage-abonnement" nom="Gérer mon abonnement" courant={sous === 'abonnement'} onClick={ouvrirSous('reglage-abonnement')} />}
           {acces.factures && (
             <LigneLien nom="Mes factures" valeur="Chez Creem" externe onClick={versPortail} disabled={portail === 'ouverture'} label="Mes factures, chez Creem" />
           )}
@@ -165,6 +168,11 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
           <a href="/legal/traitement-des-donnees" target="_blank" rel="noopener">Accord de traitement</a>
         </p>
       </footer>
+      {sous === 'abonnement' && (
+        <PanneauDetail titre="Mon abonnement" fermer={() => setSous(null)}>
+          <div className="adm-reglages">{facturation}</div>
+        </PanneauDetail>
+      )}
       {/* Au bureau, « Me déconnecter » est dans le menu du compte, en bas de la barre latérale. */}
       <BoutonSecondaire onClick={onDeconnexion} className="w-full lg:hidden">Me déconnecter</BoutonSecondaire>
 

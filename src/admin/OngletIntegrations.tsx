@@ -7,7 +7,7 @@ import type { Fonction } from '../lib/abonnement.ts';
 import type { SuiteAchat } from '../lib/achat.ts';
 import { ADRESSE_WEBHOOK, CHAMPS_WEBHOOK, COULEURS_LOGOS, LISTE_CHEZ, LOGOS_OUTILS, NOMS_FOURNISSEURS, OUTILS_DES_BLOCS, OUVRAGE_WEBHOOK, adresseWebhook, destination } from '../lib/integrations.ts';
 import { Icone } from '../components/Icone.tsx';
-import { BoutonPrincipal, BoutonSecondaire, Champ, Groupe, Ligne, LigneLien, ListeChoix, SousPage, classeBouton, classeSaisie, copierTexte } from './ui.tsx';
+import { BoutonPrincipal, BoutonSecondaire, Champ, Groupe, Ligne, LigneLien, ListeChoix, PanneauDetail, SousPage, classeBouton, classeSaisie, copierTexte, useGrandEcran } from './ui.tsx';
 import { Etiquette, offreDe, useDroits } from './offre.tsx';
 import { TYPES } from '../lib/catalogue.ts';
 
@@ -20,7 +20,8 @@ import { TYPES } from '../lib/catalogue.ts';
  * vit sur la page (avis, rendez-vous, soutien, produit) : un toucher l'ajoute
  * à Ma page, ou l'y ouvre. Une ligne par outil, son logo seul, dans sa
  * couleur ; le détail s'ouvre en sous-page, avec le fil « Intégrations /
- * Brevo » dans l'en-tête, comme Réglages.
+ * Brevo » dans l'en-tête, comme Réglages. Au bureau (24 octobre 2026), il
+ * s'ouvre à droite, dans `PanneauDetail`, et la liste reste à sa gauche.
  */
 
 type Outil = FournisseurListe | 'substack';
@@ -84,9 +85,10 @@ export function OngletIntegrations({ api, blocs, sousOuverte, sousLue, raccourci
   const recharger = useCallback(() => api.liste().then(setListe).catch(() => {}), [api]);
   useEffect(() => { void recharger(); }, [recharger]);
   const droits = useDroits();
+  const grand = useGrandEcran();
   // Ce qui a ouvert la sous-page reprend le focus quand on en revient (la liste se redessine : on le retrouve par son id).
   const ouvreur = useRef('');
-  const ouvrir = (o: Outil) => { ouvreur.current = `integration-${o}`; setSous(o); scrollTo({ top: 0 }); };
+  const ouvrir = (o: Outil) => { ouvreur.current = `integration-${o}`; setSous(o); if (!grand) scrollTo({ top: 0 }); };
   useEffect(() => {
     if (sous || !ouvreur.current) return;
     document.getElementById(ouvreur.current)?.focus({ preventScroll: true });
@@ -106,14 +108,16 @@ export function OngletIntegrations({ api, blocs, sousOuverte, sousLue, raccourci
     ajouter: () => onAjouter('inscription', sous),
   };
 
-  if (sous) return (
+  // Une clé par outil : passer de Brevo à Mailchimp, au bureau, repart d'une page neuve.
+  const detail = sous && (sous === 'substack'
+    ? <PageSubstack key={sous} liste={liste} api={api} />
+    : estWebhook(sous)
+      ? <PageWebhook key={sous} outil={sous} liste={liste} api={api} onChange={recharger} formulaire={formulaire} />
+      : <PageNewsletter key={sous} outil={sous} liste={liste} api={api} onChange={recharger} formulaire={formulaire} />);
+  if (sous && !grand) return (
     <div className="adm-reglages">
       <SousPage nom={nomOutil(sous)} retour={() => setSous(null)} />
-      {sous === 'substack'
-        ? <PageSubstack liste={liste} api={api} />
-        : estWebhook(sous)
-          ? <PageWebhook outil={sous} liste={liste} api={api} onChange={recharger} formulaire={formulaire} />
-          : <PageNewsletter outil={sous} liste={liste} api={api} onChange={recharger} formulaire={formulaire} />}
+      {detail}
     </div>
   );
 
@@ -125,7 +129,7 @@ export function OngletIntegrations({ api, blocs, sousOuverte, sousLue, raccourci
     const ici = branche?.fournisseur === o;
     const libre = droits.listeEmail || ici;
     return (
-      <LigneLien key={o} id={`integration-${o}`} avant={<Logo nom={LOGOS_OUTILS[o]} className="w-5" />} nom={nomOutil(o)}
+      <LigneLien key={o} id={`integration-${o}`} courant={sous === o} avant={<Logo nom={LOGOS_OUTILS[o]} className="w-5" />} nom={nomOutil(o)}
         valeur={ici && branche ? <><strong>Branché</strong>{branche.nom && !estWebhook(branche.fournisseur) ? ` · ${branche.nom}` : ''}</> : undefined}
         apres={libre || !etiquette ? undefined : <Etiquette fonction="listeEmail" />}
         onClick={libre ? () => ouvrir(o) : onOffres ? () => onOffres('listeEmail') : undefined}
@@ -169,6 +173,11 @@ export function OngletIntegrations({ api, blocs, sousOuverte, sousLue, raccourci
       </Groupe>
       {/* Les outils techniques viennent en dernier (Lilian, 22 octobre 2026). */}
       {groupeOutils('Automatisations', WEBHOOKS)}
+      {sous && (
+        <PanneauDetail titre={nomOutil(sous)} avant={<Logo nom={LOGOS_OUTILS[sous]} className="w-5" />} fermer={() => setSous(null)}>
+          <div className="adm-reglages">{detail}</div>
+        </PanneauDetail>
+      )}
     </div>
   );
 }
