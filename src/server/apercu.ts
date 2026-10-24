@@ -116,7 +116,7 @@ interface Reponse { octets: Buffer; type: string; url: string; statut: number }
  * (`coupe`) ou à `limite` octets, et se lit quelle que soit sa réponse (un 403 peut porter ses balises) ;
  * un fichier (une image) doit répondre 200 et tenir sous `limite`.
  */
-async function telecharger(depart: string, { limite, accepte, voix = VOIX_APERCU, coupe = false, referent, duree = DELAI }: { limite: number; accepte: string; voix?: Voix; coupe?: boolean; referent?: string; duree?: number }): Promise<Reponse> {
+export async function telecharger(depart: string, { limite, accepte, voix = VOIX_APERCU, coupe = false, referent, duree = DELAI }: { limite: number; accepte: string; voix?: Voix; coupe?: boolean; referent?: string; duree?: number }): Promise<Reponse> {
   let url = new URL(depart);
   for (let saut = 0; saut <= SAUTS; saut++) {
     const delai = AbortSignal.timeout(duree);

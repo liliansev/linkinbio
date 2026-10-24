@@ -10,15 +10,18 @@ import type { Creneau } from './moments.ts';
 import type { PeriodeStats } from './periode.ts';
 import type { Audience, EffetAudience } from './provenance.ts';
 import type { Police } from './themes.ts';
+import type { ArticleFlux } from './flux.ts';
 
 export const TYPES_BLOC = ['lien', 'titre', 'texte', 'video', 'derniere-video', 'newsletter', 'inscription', 'preuve', 'produit', 'soutien', 'reservation',
-  'musique', 'faq', 'coordonnees', 'lieu', 'galerie', 'formulaire'] as const;
+  'musique', 'faq', 'coordonnees', 'lieu', 'galerie', 'formulaire', 'flux'] as const;
 export type TypeBloc = (typeof TYPES_BLOC)[number];
 /** La vitrine (Starter, 22 octobre 2026) : un produit et son prix, « Me soutenir », « Réserver ». Hopla n'encaisse rien, chacun mène au site qui vend. */
 export const TYPES_VITRINE: readonly TypeBloc[] = ['produit', 'soutien', 'reservation'];
 export type TypeVitrine = Extract<TypeBloc, 'produit' | 'soutien' | 'reservation'>;
 /** Les blocs qui mènent à une adresse : la rangée du back office la montre à côté de leur nom. */
-export const TYPES_ADRESSE: readonly TypeBloc[] = ['lien', 'video', 'musique', 'produit', 'soutien', 'reservation'];
+export const TYPES_ADRESSE: readonly TypeBloc[] = ['lien', 'video', 'musique', 'produit', 'soutien', 'reservation', 'derniere-video', 'flux'];
+/** Les articles d'un flux RSS que la page montre (bloc `flux`). */
+export const ARTICLES_FLUX = 3;
 /** Les questions d'une FAQ, les images d'une galerie : combien au plus. Sans Starter, une galerie n'en montre que `GALERIE_GRATUITE`. */
 export const MAX_QUESTIONS = 20;
 export const MAX_IMAGES = 12;
@@ -92,7 +95,17 @@ export interface Bloc {
   sensible: boolean;
   /** Un titre de section : les liens qui le suivent, jusqu'au titre suivant, en liste ou en grille (Starter). Une collection, à la Linktree. */
   disposition: Disposition;
+  /** Le pays du visiteur, lu chez Cloudflare : le bloc ne s'affiche que pour ces pays, ou pour tous sauf eux (Pro, 24 octobre 2026). */
+  pays: { codes: string[]; effet: EffetPays } | null;
+  /** « Rejoins ma liste » : un cadeau qui s'ouvre une fois l'adresse donnée (un guide, un code). Son adresse ne part jamais avec la page (Pro). */
+  cadeau: Cadeau | null;
 }
+
+export const EFFETS_PAYS = ['seulement', 'sauf'] as const;
+export type EffetPays = (typeof EFFETS_PAYS)[number];
+/** Le nombre de pays qu'un bloc vise au plus. */
+export const MAX_PAYS = 60;
+export interface Cadeau { nom: string; url: string }
 
 export const DISPOSITIONS = ['liste', 'grille'] as const;
 export type Disposition = (typeof DISPOSITIONS)[number];
@@ -198,8 +211,11 @@ export type MiseEnPageBureau = (typeof MISES_EN_PAGE_BUREAU)[number];
 /** Le compte de Lilian, servi sur hopla.page/lilian comme les autres sur hopla.page/<pseudo>. */
 export const PRINCIPAL = 'principal';
 
-/** Les blocs branchés sur les outils de Lilian (sa chaîne YouTube, sa newsletter) : réservés à sa page. */
-export const TYPES_PRINCIPAL: readonly TypeBloc[] = ['derniere-video', 'newsletter'];
+/**
+ * Les blocs branchés sur les outils de Lilian (sa newsletter) : réservés à sa page. « Ma dernière vidéo YouTube » est à
+ * tous depuis le 24 octobre 2026 (l'adresse de la chaîne dans le bloc) ; sans adresse, c'est la chaîne de Lilian, à lui seul.
+ */
+export const TYPES_PRINCIPAL: readonly TypeBloc[] = ['newsletter'];
 
 /** Qui possède la page : de quoi construire son adresse. */
 export interface ComptePage { pseudo: string; principal: boolean }
@@ -348,6 +364,8 @@ export interface Api {
    */
   apercuSite(url: string, image?: ImageApercu): Promise<{ titre: string; description: string; image: string | null; prix: string; visuel?: VisuelApercu }>;
   /** Les stats des derniers jours (7, 14, 30, 90 ou 365), ou de dates choisies. */
+  /** Les derniers articles d'un blog ou d'un flux RSS (`video` : la dernière vidéo d'une chaîne YouTube), lus par le serveur ; vide s'il ne se lit pas. */
+  flux(url: string, video: boolean): Promise<ArticleFlux[]>;
   stats(periode: PeriodeStats): Promise<Stats>;
   deconnexion(): Promise<void>;
   /** Enregistre l'acceptation des CGU et de l'accord de traitement en vigueur. */
@@ -447,7 +465,7 @@ export function nouveauBloc(type: TypeBloc, id: string): Bloc {
   const titres: Record<TypeBloc, string> = {
     lien: '', titre: '', texte: '', video: 'Ma vidéo', 'derniere-video': 'Ma dernière vidéo', newsletter: 'Ma newsletter', inscription: 'Rejoins ma liste', preuve: 'Ce qu’ils en disent',
     produit: '', soutien: 'Me soutenir', reservation: 'Prendre rendez-vous',
-    musique: 'Écouter', faq: 'Questions fréquentes', coordonnees: '', lieu: '', galerie: '', formulaire: 'Me contacter',
+    musique: 'Écouter', faq: 'Questions fréquentes', coordonnees: '', lieu: '', galerie: '', formulaire: 'Me contacter', flux: 'Mes derniers articles',
   };
   return {
     id, type, titre: titres[type], url: '', sousTitre: type === 'newsletter' || type === 'inscription' ? 'Un e-mail de temps en temps, rien de plus.' : '', description: '', icone: '', image: '',
@@ -457,6 +475,7 @@ export function nouveauBloc(type: TypeBloc, id: string): Bloc {
     prix: '', montants: type === 'soutien' ? [...MONTANTS_DEFAUT] : [], partenariat: null,
     questions: type === 'faq' ? [{ question: '', reponse: '' }] : [], images: [],
     coordonnees: type === 'coordonnees' ? { telephone: '', email: '', societe: '', poste: '' } : null, adressePostale: '', sensible: false, disposition: 'liste',
+    pays: null, cadeau: null,
   };
 }
 

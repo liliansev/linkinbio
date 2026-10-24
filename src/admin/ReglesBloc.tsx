@@ -9,6 +9,9 @@ import type { Audience } from '../lib/provenance.ts';
 import { Bascule, Champ, Interrupteur, Segments, classeSaisie, vibrer } from './ui.tsx';
 import { Etiquette, Reserve, usePermis, useVoirOffres } from './offre.tsx';
 import { COULEURS_SOURCES } from '../lib/stats.ts';
+import { chercherPays, listePays, nomPays } from '../lib/pays.ts';
+import { MAX_PAYS } from '../lib/types.ts';
+import type { EffetPays } from '../lib/types.ts';
 
 /*
  * Les réglages d'un bloc : sa visibilité, une ligne de sa première page,
@@ -166,10 +169,10 @@ function datesCourtes(debut: string, fin: string): string {
  * Ce que « Visibilité » dit sans s'ouvrir : « Visible », « Masqué », ou ce qui en décide, avec le nom de ses parties
  * (« Du 12 au 20 nov., selon le réseau »). `heure` : un créneau que l'offre ne comprend pas ne s'applique pas, il ne se dit pas.
  */
-export function resumeVisibilite(b: Bloc, heure: boolean): string {
+export function resumeVisibilite(b: Bloc, heure: boolean, pays = heure): string {
   if (!b.public) return 'Masqué';
   const reseau = !!(b.audience?.sources.length || b.cache?.length);
-  return majuscule([datesCourtes(b.debut, b.fin), heure && b.creneau ? 'selon l’heure' : '', reseau ? 'selon le réseau' : ''].filter(Boolean).join(', ')) || 'Visible';
+  return majuscule([datesCourtes(b.debut, b.fin), heure && b.creneau ? 'selon l’heure' : '', reseau ? 'selon le réseau' : '', pays && b.pays ? 'selon le pays' : ''].filter(Boolean).join(', ')) || 'Visible';
 }
 
 /**
@@ -218,13 +221,15 @@ function Partie({ titre, etiquette, children }: { titre: string; etiquette?: Rea
 /**
  * « Visibilité » : « Visible sur ma page », puis trois parties. Selon la date : Apparaît (Maintenant) et Disparaît (Jamais),
  * et le compte à rebours d'un lancement. Selon l'heure : le créneau qui revient chaque semaine. Selon le réseau : d'où
- * vient le visiteur. Starter pour les dates, Pro pour l'heure : sans l'offre, les mêmes lignes portent son badge et mènent
- * aux offres ; le réseau, à tous, dès Gratuit.
+ * vient le visiteur. Selon le pays (24 octobre 2026) : partout, seulement dans quelques pays, ou partout sauf eux. Starter
+ * pour les dates, Pro pour l'heure et le pays : sans l'offre, les mêmes lignes portent son badge et mènent aux offres ; le
+ * réseau, à tous, dès Gratuit.
  */
 export function ReglageVisibilite({ b, maj, erreur, reseaux }: { b: Bloc; maj: (c: Partial<Bloc>) => void; erreur?: string; reseaux: Audience[] }) {
   const c = b.creneau;
   const dates = usePermis('programmation');
   const semaine = usePermis('heure');
+  const paysPermis = usePermis('pays');
   const voir = useVoirOffres();
   const compact = useContext(RangeesCompactes);
   // Un premier jour touché pose le créneau que le serveur prendrait de lui-même : 9 h à 18 h, en avant. Il ne retire rien de la
@@ -233,7 +238,7 @@ export function ReglageVisibilite({ b, maj, erreur, reseaux }: { b: Bloc; maj: (
   const lancement = b.type === 'lien' && dates && !!b.debut && Date.parse(b.debut) > Date.now();
   // Au bureau, les trois parties sont trois lignes qui disent ce qui est réglé et s'ouvrent une à une (24 octobre 2026).
   const aOuvrir = useContext(RegleAOuvrir);
-  const [partie, setPartie] = useState<'date' | 'heure' | 'reseau' | null>(erreur || aOuvrir === 'moment' ? 'date' : null);
+  const [partie, setPartie] = useState<'date' | 'heure' | 'reseau' | 'pays' | null>(erreur || aOuvrir === 'moment' ? 'date' : null);
   const visible = <Interrupteur compact={compact} label="Visible sur ma page" actif={b.public} onChange={v => maj({ public: v })} />;
   const contenuDate = (
     <>
@@ -293,9 +298,10 @@ export function ReglageVisibilite({ b, maj, erreur, reseaux }: { b: Bloc; maj: (
     </>
   );
   const contenuReseau = <ListeReseaux b={b} maj={maj} reseaux={reseaux} />;
+  const contenuPays = <ChoixPays b={b} maj={maj} permis={paysPermis} />;
   if (compact) {
     const quand = datesCourtes(b.debut, b.fin);
-    const ligne = (id: 'date' | 'heure' | 'reseau', titre: string, resume: string, regle: boolean, etiquette: ReactNode, contenu: ReactNode) => (
+    const ligne = (id: 'date' | 'heure' | 'reseau' | 'pays', titre: string, resume: string, regle: boolean, etiquette: ReactNode, contenu: ReactNode) => (
       <div key={id}>
         <LigneRepli sous titre={titre} etiquette={etiquette} resume={resume} regle={regle} ouvert={partie === id} controle={`visibilite-${id}`}
           onClick={() => setPartie(partie === id ? null : id)} />
@@ -309,6 +315,7 @@ export function ReglageVisibilite({ b, maj, erreur, reseaux }: { b: Bloc; maj: (
         {ligne('date', 'Selon la date', quand ? majuscule(quand) : '', !!quand, !dates && <Etiquette fonction="programmation" />, contenuDate)}
         {ligne('heure', 'Selon l’heure', semaine && c ? majuscule(decrireCreneau(c)) : '', !!(semaine && c), !semaine && <Etiquette fonction="heure" />, contenuHeure)}
         {ligne('reseau', 'Selon le réseau', resumeReseaux(b), !!resumeReseaux(b), null, contenuReseau)}
+        {ligne('pays', 'Selon le pays', resumePays(b), !!resumePays(b), !paysPermis && <Etiquette fonction="pays" />, contenuPays)}
       </div>
     );
   }
@@ -318,6 +325,85 @@ export function ReglageVisibilite({ b, maj, erreur, reseaux }: { b: Bloc; maj: (
       <Partie titre="Selon la date" etiquette={!dates && <Etiquette fonction="programmation" />}>{contenuDate}</Partie>
       <Partie titre="Selon l’heure" etiquette={!semaine && <Etiquette fonction="heure" />}>{contenuHeure}</Partie>
       <Partie titre="Selon le réseau">{contenuReseau}</Partie>
+      <Partie titre="Selon le pays" etiquette={!paysPermis && <Etiquette fonction="pays" />}>{contenuPays}</Partie>
+    </div>
+  );
+}
+
+/** Ce que règle « Selon le pays », en peu de mots : « Seulement France et Belgique », « Sauf 4 pays ». */
+const resumePays = (b: Bloc) => (b.pays?.codes.length ? `${b.pays.effet === 'seulement' ? 'Seulement' : 'Sauf'} ${listePays(b.pays.codes)}` : '');
+
+const MODES_PAYS: { id: 'partout' | EffetPays; nom: string }[] = [{ id: 'partout', nom: 'Partout' }, { id: 'seulement', nom: 'Seulement' }, { id: 'sauf', nom: 'Sauf' }];
+
+/**
+ * Selon le pays du visiteur, lu chez Cloudflare (Pro) : partout, seulement dans les pays choisis, ou partout sauf eux. Les
+ * pays choisis en lignes, chacun avec sa croix, puis un champ qui les cherche par leur nom (« belg », « états »). Ni drapeau
+ * ni pastille : le nom seul. Un réglage gardé d'une offre passée ne s'applique plus, il se retire.
+ */
+function ChoixPays({ b, maj, permis }: { b: Bloc; maj: (c: Partial<Bloc>) => void; permis: boolean }) {
+  const voir = useVoirOffres();
+  const compact = useContext(RangeesCompactes);
+  const codes = b.pays?.codes ?? [];
+  // « Seulement » choisi sans pays encore : le choix tient ici, le bloc reste partout tant qu'aucun pays n'est pris.
+  const [mode, setMode] = useState<'partout' | EffetPays>(b.pays?.effet ?? 'partout');
+  const [mot, setMot] = useState('');
+  if (!permis && b.pays) {
+    return (
+      <Reserve fonction="pays" phrase={`Ce bloc devait ${b.pays.effet === 'seulement' ? 's’afficher seulement' : 'se cacher'} pour les visiteurs de ces pays : ${listePays(b.pays.codes)}. Sans Hopla Pro, il s’affiche partout.`}>
+        <button type="button" onClick={() => maj({ pays: null })} className="text-[13px] text-white/55 underline">Retirer le réglage</button>
+      </Reserve>
+    );
+  }
+  const changerMode = (m: 'partout' | EffetPays) => {
+    if (!permis) { voir?.('pays'); return; }
+    setMode(m);
+    maj({ pays: m === 'partout' || !codes.length ? null : { codes, effet: m } });
+  };
+  const poser = (liste: string[]) => maj({ pays: liste.length && mode !== 'partout' ? { codes: liste, effet: mode } : null });
+  const trouves = mot.trim() ? chercherPays(mot).filter(c => !codes.includes(c)).slice(0, 6) : [];
+  const ajouter = (c: string) => { vibrer(4); poser([...codes, c]); setMot(''); };
+  const rang = 'flex min-h-12 items-center gap-3 px-4 bureau:min-h-10 bureau:gap-2 bureau:px-3';
+  return (
+    <div className="flex flex-col gap-2.5">
+      <Segments label="Selon le pays du visiteur" valeur={mode} options={MODES_PAYS} onChange={changerMode} />
+      {mode !== 'partout' && (
+        <div className="adm-groupe">
+          {codes.length > 0 && (
+            <ul className="divide-y divide-white/[0.06]" aria-label={mode === 'seulement' ? 'Affiché seulement dans ces pays' : 'Caché dans ces pays'}>
+              {codes.map(c => (
+                <li key={c} className={rang}>
+                  <span className="min-w-0 flex-1 truncate text-[14.5px] font-medium text-white bureau:text-[13.5px] bureau:font-normal">{nomPays(c)}</span>
+                  <button type="button" onClick={() => { vibrer(6); poser(codes.filter(x => x !== c)); }} aria-label={`Retirer ${nomPays(c)}`} title="Retirer"
+                    className="-mr-2 grid h-11 w-9 shrink-0 place-items-center text-white/45 transition hover:text-white bureau:h-8 bureau:w-7">
+                    <Icone nom="ui-fermer" taille={15} />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          {codes.length < MAX_PAYS && (
+            <div className={codes.length ? 'border-t border-white/[0.06]' : ''}>
+              <label className={`${rang} adm-champ-ligne cursor-text`}>
+                <Icone nom="ui-plus" taille={16} className="shrink-0 text-white/55" />
+                <input value={mot} onChange={e => setMot(e.target.value)} placeholder={codes.length ? 'Ajouter un pays' : 'Chercher un pays'} aria-label="Chercher un pays"
+                  autoComplete="off" autoCorrect="off" spellCheck={false}
+                  onKeyDown={e => { if (e.key === 'Enter' && trouves[0]) { e.preventDefault(); ajouter(trouves[0]); } else if (e.key === 'Escape' && mot) { e.preventDefault(); e.stopPropagation(); setMot(''); } }}
+                  className="min-w-0 flex-1 bg-transparent text-[16px] text-white outline-none placeholder:text-white/45 bureau:text-[13.5px]" />
+              </label>
+              {mot.trim() && (
+                <ul className="divide-y divide-white/[0.06] border-t border-white/[0.06]" aria-label="Pays trouvés">
+                  {trouves.length ? trouves.map(c => (
+                    <li key={c}>
+                      <button type="button" onClick={() => ajouter(c)} className={`${rang} w-full text-left text-[14.5px] text-white/85 transition hover:bg-white/[0.03] hover:text-white bureau:text-[13.5px]`}>{nomPays(c)}</button>
+                    </li>
+                  )) : <li className={`${rang} text-[13.5px] text-white/55`}>Aucun pays de ce nom.</li>}
+                </ul>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+      {mode !== 'partout' && !compact && codes.length === 0 && <p className="text-[12.5px] leading-snug text-white/55">Tant qu’aucun pays n’est choisi, le bloc s’affiche partout.</p>}
     </div>
   );
 }

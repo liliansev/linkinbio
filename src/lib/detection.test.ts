@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { ficheProduit, lienAffilie, pourReserver, pourSoutenir, typeDeAdresse, versType } from './detection.ts';
+import { adresseFlux, chaineYoutube, ficheProduit, lienAffilie, pourReserver, pourSoutenir, suggestion, typeDeAdresse, versType } from './detection.ts';
 import { nouveauBloc } from './types.ts';
 
 test('une vidéo YouTube, un agenda, un soutien ou un produit se reconnaissent à leur adresse', () => {
@@ -115,4 +115,20 @@ test('un lien d’affiliation se reconnaît à sa régie ou à ses paramètres, 
     'mailto:lilian@exemple.fr',
     'pas une adresse',
   ]) assert.equal(lienAffilie(url), false, url);
+});
+
+test('une chaîne YouTube ou un flux RSS restent des liens, et proposent d’en faire la dernière vidéo ou les derniers articles', () => {
+  assert.equal(chaineYoutube('https://www.youtube.com/@lilian'), true);
+  assert.equal(chaineYoutube('https://m.youtube.com/channel/UCabcdefghijklmnopqrstuv'), true);
+  assert.equal(chaineYoutube('https://www.youtube.com/watch?v=dQw4w9WgXcQ'), false);
+  assert.equal(chaineYoutube('https://www.youtube.com/c'), false);
+  for (const url of ['https://blog.fr/feed', 'https://blog.fr/feed/', 'https://pod.fr/rss.xml', 'https://feeds.acast.com/public/shows/x', 'https://anchor.fm/s/abc/podcast/rss', 'https://www.youtube.com/feeds/videos.xml?channel_id=UCx']) {
+    assert.equal(adresseFlux(url), true, url);
+  }
+  assert.equal(adresseFlux('https://blog.fr/articles/feedback'), false);
+  assert.equal(suggestion('https://www.youtube.com/@lilian'), 'derniere-video');
+  assert.equal(suggestion('https://blog.fr/feed'), 'flux');
+  assert.equal(suggestion('https://blog.fr/'), null);
+  assert.equal(typeDeAdresse('https://www.youtube.com/@lilian', true), 'lien');
+  assert.equal(typeDeAdresse('https://blog.fr/feed', true), 'lien');
 });

@@ -12,7 +12,8 @@ export type Droits = Record<Fonction, boolean>;
  * jours, un compte à rebours se tait (le bloc attend sa date sans rien montrer),
  * et ce qui ne peut pas s'afficher autrement disparaît (un drop, dont l'adresse
  * doit rester cachée ; un formulaire de liste ou de contact ; un avis ; un bloc de la vitrine). Une galerie ne montre
- * que ses trois premières photos. Les liens perdent leurs UTM, et la page ne renvoie plus ailleurs.
+ * que ses trois premières photos, un bloc selon le pays se montre partout, une liste e-mail n'offre plus de cadeau, et
+ * les derniers articles d'un flux RSS s'en vont. Les liens perdent leurs UTM, et la page ne renvoie plus ailleurs.
  * Un lien partenaire garde sa mention « Publicité », que la loi demande à tous,
  * et perd son code promo. La page selon le réseau du visiteur reste à tous.
  * Les dates d'un bloc tiennent toujours : un lien
@@ -32,13 +33,15 @@ export function selonDroits<T extends Bloc>(reglages: Reglages, blocs: T[], d: D
     },
     blocs: blocs.flatMap(b => {
       if ((!d.drops && b.acces) || (!d.listeEmail && b.type === 'inscription') || (!d.avis && b.type === 'preuve') || (!d.vitrine && TYPES_VITRINE.includes(b.type))
-        || (!d.formulaire && b.type === 'formulaire')) return [];
+        || (!d.formulaire && b.type === 'formulaire') || (!d.flux && b.type === 'flux')) return [];
       let bloc = b;
       if (!d.heure && bloc.creneau) bloc = { ...bloc, creneau: null };
       if (!d.programmation && bloc.compteARebours) bloc = { ...bloc, compteARebours: false };
       if (!d.vitrine && bloc.partenariat?.code) bloc = { ...bloc, partenariat: { ...bloc.partenariat, code: '' } };
       if (!d.galerie && bloc.images.length > GALERIE_GRATUITE) bloc = { ...bloc, images: bloc.images.slice(0, GALERIE_GRATUITE) };
       if (!d.grille && bloc.disposition === 'grille') bloc = { ...bloc, disposition: 'liste' };
+      if (!d.pays && bloc.pays) bloc = { ...bloc, pays: null };
+      if (!d.cadeau && bloc.cadeau) bloc = { ...bloc, cadeau: null };
       return [bloc];
     }),
   };

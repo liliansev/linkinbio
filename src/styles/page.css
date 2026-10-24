@@ -1041,6 +1041,25 @@ a.lp-preuve:focus-visible { outline: 3px solid var(--texte); outline-offset: 3px
 .lp-faq-q summary:focus-visible { outline: 2px solid var(--surface-texte); outline-offset: 2px; border-radius: 4px; }
 .lp-faq-q p { margin: 0 0 14px; line-height: 1.5; white-space: pre-line; text-wrap: pretty; color: color-mix(in srgb, var(--surface-texte) 88%, transparent); }
 
+/* Les derniers articles d'un flux : un article par ligne, son titre et sa date, comme les questions d'une FAQ. */
+.lp-flux-liste { list-style: none; margin: 0 0 -6px; padding: 0; display: flex; flex-direction: column; }
+.lp-flux-liste li { border-top: 1px solid color-mix(in srgb, var(--surface-texte) 12%, transparent); }
+.lp-flux-liste a { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; min-height: 48px; padding: 12px 0; color: inherit; text-decoration: none; }
+.lp-flux-liste a:hover .lp-flux-titre { text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
+.lp-flux-liste a:focus-visible { outline: 2px solid var(--surface-texte); outline-offset: 2px; border-radius: 4px; }
+.lp-flux-titre { font-weight: 560; line-height: 1.35; text-wrap: pretty; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.lp-flux-date { flex: none; font-size: 0.86em; font-variant-numeric: tabular-nums; color: color-mix(in srgb, var(--surface-texte) 70%, transparent); }
+.lp-flux-attente { display: block; height: 14px; margin: 17px 0; width: 70%; border-radius: 7px; background: color-mix(in srgb, var(--surface-texte) 10%, transparent); }
+.lp-flux-liste li:nth-child(2) .lp-flux-attente { width: 82%; }
+.lp-flux-liste li:nth-child(3) .lp-flux-attente { width: 58%; }
+
+/* Le cadeau d'une liste e-mail : son nom sous le titre, puis, l'adresse laissée, le bouton qui l'ouvre. */
+.lp-cadeau { margin: 2px 0 0; display: flex; align-items: flex-start; gap: 6px; font-size: 0.9em; font-weight: 560; }
+/* Le picto se pose sur la première ligne, même quand le nom du cadeau en prend deux. */
+.lp-cadeau svg { flex: none; margin-top: calc((1lh - 16px) / 2); }
+.lp-inscription-ok { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }
+.lp-inscription-ok .lp-btn { display: inline-flex; align-items: center; gap: 8px; text-decoration: none; }
+
 /* La carte de visite : un numéro et une adresse d'un toucher, puis « Enregistrer le contact ». */
 .lp-coordonnees-lignes { list-style: none; margin: -4px 0 0; padding: 0; display: flex; flex-direction: column; }
 .lp-coordonnees-lignes :is(a, .lp-coordonnees-adresse) { display: flex; align-items: center; gap: 12px; min-height: 44px; color: inherit; text-decoration: none; }

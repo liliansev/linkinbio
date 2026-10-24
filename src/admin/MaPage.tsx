@@ -613,13 +613,14 @@ function commeSurLaPage(bloc: Bloc, droits: Droits): Bloc {
   if (!droits.programmation && b.compteARebours) b = { ...b, compteARebours: false };
   if (!droits.vitrine && b.partenariat?.code) b = { ...b, partenariat: { ...b.partenariat, code: '' } };
   if (!droits.galerie && b.images.length > GALERIE_GRATUITE) b = { ...b, images: b.images.slice(0, GALERIE_GRATUITE) };
+  if (!droits.cadeau && b.cadeau) b = { ...b, cadeau: null };
   return b;
 }
 
 /** Ce qu'un bloc a de particulier, dit de la même façon dans la liste du bureau et sur la page du téléphone. */
 function etatBloc(bloc: Bloc, droits: Droits) {
   // Un bloc que l'offre ne comprend plus reste là, grisé comme un bloc masqué : il revient avec l'offre.
-  const attend = ([[!!bloc.acces, 'drops'], [bloc.type === 'inscription', 'listeEmail'], [bloc.type === 'preuve', 'avis'], [TYPES_VITRINE.includes(bloc.type), 'vitrine'], [bloc.type === 'formulaire', 'formulaire'], [bloc.disposition === 'grille', 'grille']] as [boolean, Fonction][]).find(([oui, f]) => oui && !droits[f])?.[1];
+  const attend = ([[!!bloc.acces, 'drops'], [bloc.type === 'inscription', 'listeEmail'], [bloc.type === 'preuve', 'avis'], [TYPES_VITRINE.includes(bloc.type), 'vitrine'], [bloc.type === 'formulaire', 'formulaire'], [bloc.disposition === 'grille', 'grille'], [bloc.type === 'flux', 'flux']] as [boolean, Fonction][]).find(([oui, f]) => oui && !droits[f])?.[1];
   const prive = !bloc.public || !!attend;
   // Une règle que l'offre ne comprend plus n'est pas dite : sans Starter, un lancement attend sa date sans compte à rebours (« programmé »).
   const regles = etiquettes(bloc, droits);
@@ -631,6 +632,7 @@ function etatBloc(bloc: Bloc, droits: Droits) {
   const puces = [
     { oui: !programme && (selonHeure || !!(bloc.compteARebours && bloc.debut && droits.programmation)), icone: 'horloge', nom: selonHeure ? 'Selon l’heure' : 'Compte à rebours' },
     { oui: !!(bloc.cache?.length || bloc.audience?.sources.length), icone: 'cible', nom: 'Selon le réseau' },
+    { oui: !!(bloc.pays && droits.pays), icone: 'globe', nom: 'Selon le pays' },
     { oui: !!bloc.acces, icone: 'cadenas', nom: 'Accès réservé' },
     { oui: !!bloc.partenariat, icone: 'bloc-partenaire', nom: 'Lien partenaire' },
   ].filter(p => p.oui);

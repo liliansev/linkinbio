@@ -39,6 +39,9 @@ const tu = {
   // Un lien réservé aux plus de 18 ans (24 octobre 2026) : sa mention, et la confirmation avant de l'ouvrir.
   adultes: '18+', reserveAdultes: 'Réservé aux plus de 18 ans', contenuAdultes: 'Ce lien mène à un contenu pour adultes.',
   dixHuitAns: 'J’ai 18 ans ou plus', revenir: 'Revenir',
+  // Le lot 4 (24 octobre 2026) : les derniers articles d'un flux, le cadeau d'une liste e-mail.
+  derniersArticles: 'Mes derniers articles', lireSur: (site: string) => `Lire sur ${site}`,
+  enCadeau: (nom: string) => `En cadeau : ${nom}`, unCadeau: 'Un cadeau à l’inscription', ouvrirCadeau: 'Ouvrir mon cadeau', cadeauPret: 'C’est noté, merci ! Ton cadeau t’attend.',
 };
 export type Textes = typeof tu;
 
@@ -52,6 +55,7 @@ const vous: Textes = {
   nom: 'Votre nom', nomAria: 'Votre nom (facultatif)', message: 'Votre message', messageAria: 'Votre message',
   envoye: 'Message envoyé, merci ! Vous recevrez la réponse par e-mail.', messageVide: 'Écrivez votre message.',
   mentionMessage: 'Votre adresse sert seulement à vous répondre. Hopla ne garde pas votre message.',
+  ouvrirCadeau: 'Ouvrir votre cadeau', cadeauPret: 'C’est noté, merci ! Votre cadeau vous attend.',
 };
 
 export const textes = (vouvoiement = false): Textes => (vouvoiement ? vous : tu);
