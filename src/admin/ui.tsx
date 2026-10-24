@@ -114,10 +114,10 @@ export function Ligne({ nom, valeur, avant, children, className = '' }: { nom: R
 }
 
 /** Une ligne à interrupteur : le libellé l'actionne aussi. */
-export function LigneBascule({ nom, actif, changer, disabled }: { nom: string; actif: boolean; changer: (v: boolean) => void; disabled?: boolean }) {
+export function LigneBascule({ nom, valeur, actif, changer, disabled }: { nom: string; valeur?: ReactNode; actif: boolean; changer: (v: boolean) => void; disabled?: boolean }) {
   const id = useId();
   return (
-    <Ligne className="adm-ligne-bascule" nom={<label htmlFor={id} className="cursor-pointer">{nom}</label>}>
+    <Ligne className="adm-ligne-bascule" nom={<label htmlFor={id} className="cursor-pointer">{nom}</label>} valeur={valeur}>
       <Bascule id={id} actif={actif} disabled={disabled} onClick={() => { vibrer(); changer(!actif); }} />
     </Ligne>
   );

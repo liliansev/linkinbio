@@ -67,13 +67,18 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
   // Un thème choisi par-dessus des couleurs à soi : elles partent, mais un toucher les rend.
   const [avantTheme, setAvantTheme] = useState<Reglages | null>(null);
   const fichier = useRef<HTMLInputElement>(null);
+  const fichierPhoto = useRef<HTMLInputElement>(null);
   const fichierFond = useRef<HTMLInputElement>(null);
   const [envoiFond, setEnvoiFond] = useState(false);
   const [fondRate, setFondRate] = useState(false);
-  const fond = usePermis('fond');
-  const grandePhoto = usePermis('grandePhoto');
-  // Tes couleurs viennent avec Starter : sans, les aperçus montrent celles du thème, comme la page.
-  const couleurs = usePermis('couleurs');
+  // Tes couleurs viennent avec Starter : sans, les aperçus montrent celles du thème, comme la page. Quand les offres sont
+  // en vente, tout s'essaie quand même (`avecEssai`) : réglé ici, montré au back office, et la carte dit qu'il est à l'essai.
+  const essai = !!useVoirOffres();
+  const payees = { couleurs: usePermis('couleurs'), fond: usePermis('fond'), grandePhoto: usePermis('grandePhoto') };
+  const fond = payees.fond || essai;
+  const grandePhoto = payees.grandePhoto || essai;
+  const couleurs = payees.couleurs || essai;
+  const aLEssai = (f: keyof typeof payees) => (essai && !payees[f] ? <AEssai fonction={f} /> : null);
   const perso = Object.values(reglages.couleurs).some(Boolean);
   const theme = themeDe(couleurs ? reglages : { ...reglages, couleurs: SANS_COULEURS, police: '' });
   // La police du thème, et le thème qui la porte, pour la première case du choix.
@@ -107,7 +112,7 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
   async function avatar(f: File | undefined) {
     if (!f) return;
     setEnvoi(true); setPhotoRatee(false);
-    try { profil({ avatar: await envoyerImage(await preparerImage(f, 'photo')) }); } catch { setPhotoRatee(true); } finally { setEnvoi(false); if (fichier.current) fichier.current.value = ''; }
+    try { profil({ avatar: await envoyerImage(await preparerImage(f, 'photo')) }); } catch { setPhotoRatee(true); } finally { setEnvoi(false); if (fichier.current) fichier.current.value = ''; if (fichierPhoto.current) fichierPhoto.current.value = ''; }
   }
 
   return (
@@ -159,6 +164,7 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
 
       {/* Seule dans une feuille, « Réinitialiser » monte dans l'en-tête de la feuille, à côté du retour. */}
       {voir('couleurs') && <Carte nu={nu} titre={titre('Couleurs')} action={nu || !couleurs ? undefined : <Reinitialiser reglages={reglages} onChange={onChange} />}>
+        {aLEssai('couleurs')}
         {couleurs ? (
           <div className="flex flex-col gap-5">
             {CLES_COULEURS.map(c => (
@@ -173,6 +179,7 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
       </Carte>}
 
       {voir('police') && <Carte nu={nu} titre={titre('Police')}>
+        {aLEssai('couleurs')}
         {couleurs ? (
           // Chaque police se montre dans sa propre lettre ; la première est celle du thème, qu'on retrouve d'un toucher.
           <ul role="radiogroup" aria-label="Police de ta page" onKeyDown={e => flechesRadio(e)} className="grid grid-cols-2 gap-2">
@@ -195,6 +202,7 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
       </Carte>}
 
       {voir('fond') && <Carte nu={nu} titre={titre('Image de fond')}>
+        {aLEssai('fond')}
         {fond ? (
           <div className="flex flex-col gap-3">
             <div className="flex items-center gap-4">
@@ -217,7 +225,22 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
         )}
       </Carte>}
 
-      {voir('photo') && <Carte nu={nu} titre={titre('Forme de la photo')}>
+      {/* La photo d'abord, gratuite pour tous ; sa forme en grand, ensuite, avec Starter (Lilian, 24 octobre 2026 : « Modifier ma photo de profil »). */}
+      {voir('photo') && <Carte nu={nu} titre={titre('Photo de profil')}>
+        <div className="mb-4 flex items-center gap-3">
+          <button type="button" onClick={e => choisirFichier(fichierPhoto.current, e.currentTarget)} className="relative grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-full text-white/60" aria-label={reglages.profil.avatar ? 'Changer ma photo' : 'Ajouter une photo'}>
+            {reglages.profil.avatar ? <img src={reglages.profil.avatar} alt="" className="h-full w-full object-cover" /> : <Icone nom="utilisateur" taille={64} />}
+            {envoi && <span className="absolute inset-0 grid place-items-center bg-black/45 text-[12px] font-medium text-nuit">…</span>}
+          </button>
+          <div className="flex flex-col items-start gap-1">
+            <button type="button" onClick={e => choisirFichier(fichierPhoto.current, e.currentTarget)} className={classeBouton.secondaire}>{envoi ? 'Envoi…' : reglages.profil.avatar ? 'Changer ma photo' : 'Ajouter une photo'}</button>
+            {reglages.profil.avatar && <button type="button" onClick={() => profil({ avatar: '' })} className="min-h-11 rounded-xl px-1 text-[13px] text-white/60 hover:text-white">Sans photo</button>}
+          </div>
+          <input ref={fichierPhoto} type="file" accept="image/*" className="adm-fichier" tabIndex={-1} aria-hidden="true" onChange={e => avatar(e.target.files?.[0])} />
+        </div>
+        {photoRatee && <p className="-mt-2 mb-3 text-[13px] text-red-300" role="alert">La photo n’est pas passée. Essaie une autre image, en JPG ou PNG.</p>}
+        <p className="mb-2 text-[13px] font-medium text-white/60">Sa forme</p>
+        {aLEssai('grandePhoto')}
         {grandePhoto ? (
           <div className="grid grid-cols-2 gap-2" role="radiogroup" onKeyDown={e => flechesRadio(e)} aria-label="Forme de la photo">
             {(['ronde', 'grande'] as const).map(f => {
@@ -234,7 +257,6 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
         ) : (
           <Reserve fonction="grandePhoto" phrase="Avec Hopla Starter, ta photo prend toute la largeur en haut de ta page, et se fond dans le fond." />
         )}
-        {grandePhoto && reglages.profil.photo === 'grande' && !reglages.profil.avatar && <p className="mt-3 text-[13px] leading-snug text-white/60">Ajoute une photo de profil : elle s’affichera en grand.</p>}
       </Carte>}
 
       {voir('animation') && <Carte nu={nu} titre={titre('Animation')} action={titre('Animation') ? <span className="text-[13px] text-white/50">{NOMS_ANIMATIONS[reglages.animation].nom}</span> : undefined}>
@@ -451,7 +473,8 @@ export function DesignTiroirs({ reglages, onChange, envoyerImage, principal, pie
   const grandePhoto = usePermis('grandePhoto');
   const voirOffres = useVoirOffres();
   // Une ligne réservée ouvre les offres, sur la fonction qu'il lui faut.
-  const reservee: Partial<Record<Tiroir, Fonction>> = { ...(couleurs ? {} : { couleurs: 'couleurs', police: 'couleurs' }), ...(fond ? {} : { fond: 'fond' }), ...(grandePhoto ? {} : { photo: 'grandePhoto' }) };
+  // Quand les offres sont en vente, rien ne mène aux offres d'ici : le design s'essaie, et sa carte le dit.
+  const reservee: Partial<Record<Tiroir, Fonction>> = voirOffres ? {} : { ...(couleurs ? {} : { couleurs: 'couleurs', police: 'couleurs' }), ...(fond ? {} : { fond: 'fond' }) };
   // Chaque ligne dit ce qui est réglé, à droite : on sait sans ouvrir. Une partie réservée porte le nom de son offre.
   // Réservées, les couleurs ouvrent les offres par-dessus le design, Starter en avant ; sans chemin vers les offres, leur tiroir dit pourquoi.
   const lignes: { id: Tiroir; nom: string; icone: string; valeur: ReactNode }[] = [
@@ -459,7 +482,7 @@ export function DesignTiroirs({ reglages, onChange, envoyerImage, principal, pie
     { id: 'couleurs', nom: 'Couleurs', icone: 'pinceau', valeur: !couleurs ? <Etiquette fonction="couleurs" /> : Object.values(reglages.couleurs).some(Boolean) ? 'Personnalisées' : 'Celles du thème' },
     { id: 'police', nom: 'Police', icone: 'plume', valeur: !couleurs ? <Etiquette fonction="couleurs" /> : reglages.police ? NOMS_POLICES[reglages.police as keyof typeof NOMS_POLICES] : 'Celle du thème' },
     { id: 'fond', nom: 'Image de fond', icone: 'photo', valeur: !fond ? <Etiquette fonction="fond" /> : reglages.imageFond ? 'Ta photo' : 'Aucune' },
-    { id: 'photo', nom: 'Forme de la photo', icone: 'utilisateur', valeur: !grandePhoto ? <Etiquette fonction="grandePhoto" /> : reglages.profil.photo === 'grande' ? 'En grand' : 'En rond' },
+    { id: 'photo', nom: 'Photo de profil', icone: 'utilisateur', valeur: !reglages.profil.avatar ? 'Aucune' : grandePhoto && reglages.profil.photo === 'grande' ? 'En grand' : 'En rond' },
     { id: 'boutons', nom: 'Boutons', icone: 'etiquette', valeur: STYLES.find(x => x.id === reglages.bouton.style)?.nom ?? '' },
     { id: 'animation', nom: 'Animation', icone: 'eclair', valeur: NOMS_ANIMATIONS[reglages.animation].nom },
     { id: 'bureau', nom: 'Sur ordinateur', icone: 'ordinateur', valeur: BUREAUX.find(x => x.id === reglages.bureau)?.nom ?? '' },
@@ -559,5 +582,16 @@ function ChoixCouleur({ nom, valeur, duTheme, onChange }: { nom: string; valeur:
         </label>
       </div>
     </div>
+  );
+}
+
+/** Une partie du design réglée sans Starter : elle se voit ici, pas encore sur la page publique. */
+function AEssai({ fonction }: { fonction: Fonction }) {
+  const voir = useVoirOffres();
+  return (
+    <p className="mb-4 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl bg-[var(--adm-citron)] px-3 py-2 text-[13px] leading-snug text-[var(--adm-citron-encre)]">
+      <span className="min-w-0 flex-1">À l’essai : tu le vois ici, tes visiteurs le verront avec Starter.</span>
+      {voir && <button type="button" onClick={() => voir(fonction)} className="min-h-9 font-semibold underline underline-offset-2">Voir Starter</button>}
+    </p>
   );
 }

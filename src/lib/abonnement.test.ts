@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { ACCROCHES, BASCULE_OFFRES, FONCTIONS, FONCTIONS_EN_MOTS, OFFRES, PLANS, PLANS_PAYANTS, accesAbonnement, apresAbonnement, apresOffre, avantagesEntre, echeance, economie, economieAnnuelle, effetOffert, estDureeOfferte, euros, finOfferte, joursStats, libellePrix, moisOfferts, offerteAuDessus, offreSuivante, offresAOffrir, parMoisAnnuel, peut, sensDuChangement } from './abonnement.ts';
 import type { Fonction, OffreOfferte, Plan, PlanPayant } from './abonnement.ts';
-import { nouvellesDates, selonDroits } from './droits.ts';
+import { avecEssai, enEssai, nouvellesDates, sansEssai, selonDroits } from './droits.ts';
 import type { Droits } from './droits.ts';
 import { LEGAL } from './legal.ts';
 import { SANS_COULEURS, nouveauBloc } from './types.ts';
@@ -313,4 +313,15 @@ test('les CGU disent que supprimer son compte résilie son abonnement', () => {
   const compte = LEGAL.cgu.sections.find(s => s.titre === 'Ton compte')!.texte.join(' ');
   assert.match(compte, /résilie au même moment/);
   assert.match(compte, /n’est pas remboursée, sauf dans les 14 jours/);
+});
+
+test('le design s’essaie sans Starter : il se montre au back office, la page publique ne le montre pas, et se retire d’un geste', () => {
+  const reglages = { ...REGLAGES_DEFAUT, police: 'elegante' as const, imageFond: '/media/fond.webp', couleurs: { ...SANS_COULEURS, fond: '#112233' } };
+  assert.deepEqual(enEssai(reglages, RIEN), ['couleurs', 'fond']);
+  assert.deepEqual(enEssai(reglages, TOUT), []);
+  assert.equal(selonDroits(reglages, [], RIEN).reglages.imageFond, '');
+  assert.equal(selonDroits(reglages, [], avecEssai(RIEN)).reglages.imageFond, '/media/fond.webp');
+  const retire = sansEssai(reglages, RIEN);
+  assert.deepEqual(enEssai(retire, RIEN), []);
+  assert.equal(retire.theme, reglages.theme);
 });

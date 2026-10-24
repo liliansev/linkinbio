@@ -9,7 +9,7 @@ import { GALERIE_GRATUITE, SANS_COULEURS, TYPES_ADRESSE, TYPES_PRINCIPAL, TYPES_
 import { etiquettes } from '../lib/etiquettes.ts';
 import { horsCreneauOuDates } from '../lib/moments.ts';
 import { enGrille } from '../lib/collections.ts';
-import { selonDroits } from '../lib/droits.ts';
+import { avecEssai, selonDroits } from '../lib/droits.ts';
 import type { Droits } from '../lib/droits.ts';
 import type { Destination } from '../lib/demarrage.ts';
 import { urlReseau } from '../lib/demarrage.ts';
@@ -28,7 +28,7 @@ import { typeDe } from '../lib/catalogue.ts';
 import { DesignTiroirs, OngletApparence } from './OngletApparence.tsx';
 import type { Tiroir } from './OngletApparence.tsx';
 import { ActionEntete, BoutonPrincipal, BoutonSecondaire, Feuille, Interrupteur, Menu, choisirFichier, classeBouton, couleurReseau, flechesRadio, preparerImage, vibrer } from './ui.tsx';
-import { Etiquette, offreDe, useDroits } from './offre.tsx';
+import { Etiquette, offreDe, useDroits, useVoirOffres } from './offre.tsx';
 import type { Fonction } from '../lib/abonnement.ts';
 import { focusSaisie } from '../lib/clavier';
 
@@ -189,8 +189,11 @@ export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, chois
   const neufVu = neuf && brouillonNeuf(neuf.bloc);
   const avecNeuf = avecLeNeuf(visibles, neufVu, !!neuf?.enBas);
   // La page se dessine comme les visiteurs la verront : sans Starter, aux couleurs de son thème. Les réglages, eux, gardent tout.
+  // Quand les offres sont en vente, le design s'essaie : il se montre ici, et le bandeau de Ma page dit qu'il est à l'essai.
   const droits = useDroits();
-  const montree = droits.couleurs ? reglages : { ...reglages, couleurs: SANS_COULEURS };
+  const essai = !!useVoirOffres();
+  const vus = essai ? avecEssai(droits) : droits;
+  const montree = vus.couleurs ? reglages : { ...reglages, couleurs: SANS_COULEURS };
 
   // Les réglages du dernier rendu : une annulation tardive ne défait que son propre champ.
   const derniers = useRef(reglages);
@@ -259,7 +262,7 @@ export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, chois
     try { profil({ avatar: await envoyerImage(await preparerImage(f, 'photo')) }); } catch { annoncer({ texte: 'La photo n’est pas passée. Essaie une autre image, en JPG ou PNG.', genre: 'info', long: true }); } finally { setEnvoi(false); if (fichier.current) fichier.current.value = ''; }
   }
   // L'aperçu du design au téléphone montre la page des visiteurs : sans l'offre, ni drop, ni liste, ni avis, ni compte à rebours.
-  const direct = <ApercuDirect page={{ ...selonDroits(reglages, visibles, droits), compte }} />;
+  const direct = <ApercuDirect page={{ ...selonDroits(reglages, visibles, vus), compte }} />;
 
   // Le bouton du bas de la page pose le bloc en bas ; celui du haut, en haut.
   const enBas = useRef(false);

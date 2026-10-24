@@ -36,7 +36,7 @@ import { nomApres } from './Facturation.tsx';
 import type { Fonction, PlanPayant } from '../lib/abonnement.ts';
 import { FONCTIONS, OFFRES, joursStats, offreSuivante, peut } from '../lib/abonnement.ts';
 import type { Droits } from '../lib/droits.ts';
-import { REFUS_PROGRAMMATION, nouvellesDates, selonDroits } from '../lib/droits.ts';
+import { REFUS_PROGRAMMATION, avecEssai, enEssai, nouvellesDates, sansEssai, selonDroits } from '../lib/droits.ts';
 import type { Achat, EtapeRetour, SuiteAchat } from '../lib/achat.ts';
 import { CLE_ACHAT, achatDeRetour, delaiAvantEssai, etapeRetour } from '../lib/achat.ts';
 import type { PeriodeStats } from '../lib/periode.ts';
@@ -664,12 +664,12 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
   const brouillonVu = brouillon && edition && !edition.nouveau && brouillon.id === edition.bloc.id ? brouillon : null;
   const blocsAffiches = useMemo(() => (brouillonVu ? blocs.map(b => (b.id === brouillonVu.id ? brouillonVu : b)) : blocs), [blocs, brouillonVu]);
   // L'aperçu (plein écran au téléphone, sur ordinateur au bureau) est la page telle que les visiteurs la voient :
-  // ce que l'offre ne comprend pas s'en efface, comme sur le serveur.
+  // ce que l'offre ne comprend pas s'en efface, comme sur le serveur. Seul le design à l'essai s'y montre, le bandeau de Ma page le dit.
   const page = useMemo(() => {
     const maintenant = Date.now();
-    const permis = selonDroits(reglages, blocsAffiches.filter(b => compte.principal || !TYPES_PRINCIPAL.includes(b.type)), droits);
+    const permis = selonDroits(reglages, blocsAffiches.filter(b => compte.principal || !TYPES_PRINCIPAL.includes(b.type)), peutAcheter ? avecEssai(droits) : droits);
     return { reglages: permis.reglages, blocs: composerMoment(permis.blocs, maintenant), compte, maintenant };
-  }, [reglages, blocsAffiches, compte, droits]);
+  }, [reglages, blocsAffiches, compte, droits, peutAcheter]);
   const chargerStats = useCallback((periode: PeriodeStats) => api.stats(periode).then(s => { if (periode === 30) setClics(Object.fromEntries(s.blocs.map(b => [b.id, b.clics]))); return s; }), [api]);
   // La page éditée lit les flux par le back office : un bloc pas encore enregistré se lit déjà.
   const lireFlux = useCallback((b: Bloc) => api.flux(b.url, b.type === 'derniere-video'), [api]);
@@ -821,6 +821,30 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
             <span className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl bg-amber-400/15 py-1.5 pr-1.5 pl-3.5 text-[13.5px] text-amber-100">
               <span className="min-w-0 flex-1">Ta page renvoie ses visiteurs {resumeRedirection(vers, reglages.redirection.fin).replace(/^Vers/, 'vers')}.</span>
               <button type="button" onClick={() => changerReglages({ ...reglages, redirection: { url: '', fin: '' } })} className={classeBouton.secondaire}>Arrêter</button>
+            </span>
+          </p>
+        );
+      })()}
+
+      {/* Le design à l'essai ne se voit que d'ici : Ma page le dit, avec Starter pour le montrer, ou le thème pour revenir. */}
+      {onglet === 'page' && peutAcheter && (() => {
+        const essais = enEssai(reglages, droits);
+        if (!essais.length) return null;
+        const perso = Object.values(reglages.couleurs).some(Boolean);
+        const noms: Partial<Record<Fonction, string>> = {
+          couleurs: perso && reglages.police ? 'tes couleurs et ta police' : perso ? 'tes couleurs' : 'ta police',
+          fond: 'ton image de fond', grandePhoto: 'ta grande photo',
+        };
+        const liste = essais.map(f => noms[f]).join(', ').replace(/, ([^,]*)$/, ' et $1');
+        const plusieurs = essais.length > 1 || (essais[0] === 'couleurs' && perso);
+        return (
+          <p className="mx-auto mt-3 max-w-6xl px-4 lg:px-8" role="status">
+            <span className="flex flex-col gap-2 rounded-xl bg-[var(--adm-citron)] py-2 pr-2 pl-3.5 text-[13.5px] leading-snug text-[var(--adm-citron-encre)] sm:flex-row sm:items-center sm:gap-3 sm:py-1.5">
+              <span className="min-w-0 flex-1">À l’essai : {liste}. Tes visiteurs {plusieurs ? 'les' : 'la'} verront avec Starter.</span>
+              <span className="flex justify-end gap-1.5">
+                <button type="button" onClick={() => changerReglages(sansEssai(reglages, droits))} className={classeBouton.discret}>Retirer</button>
+                <button type="button" onClick={() => ouvrirOffres(essais[0])} className={classeBouton.principal}>Passer en Starter</button>
+              </span>
             </span>
           </p>
         );

@@ -88,24 +88,24 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
   return (
     <div className="adm-reglages">
       <Groupe titre="Page">
-        <Ligne nom="Adresse" valeur={<span translate="no">{sansSchema(partage)}</span>}>
+        <Ligne nom="Mon lien" valeur={<span translate="no">{sansSchema(partage)}</span>}>
           <BoutonCopier texte={partage} label="Copier l’adresse de ta page" onCopie={noterPartage} />
         </Ligne>
-        <LigneLien nom="Nom de domaine" valeur={<span translate="no">{reglages.domaine || sansSchema(adresse).split('/')[0]}</span>}
+        <LigneLien nom="Domaine" valeur={<span translate="no">{reglages.domaine || sansSchema(adresse).split('/')[0]}</span>}
           onClick={() => setFenetre('domaine')} label="Choisir le nom de domaine de mon adresse" />
         <Ligne nom="QR code">
           <BoutonSecondaire onClick={() => { void telechargerQR(partage, compte.pseudo); }} aria-label="Télécharger le QR code">Télécharger</BoutonSecondaire>
         </Ligne>
         {/* Coupée au bureau, la valeur se lit en entier au survol. */}
         {/* Une ligne à chevron, comme les autres ouvertures de Réglages (critique série 2 : un bouton bordé faisait exception). */}
-        <LigneLien nom="Aperçu dans Google et les réseaux" onClick={() => setFenetre('apercu')}
+        <LigneLien nom="Référencement" onClick={() => setFenetre('apercu')}
           valeur={<span title={[titreSeo, descriptionSeo].filter(Boolean).join(' · ') || undefined}>{[titreSeo, descriptionSeo].filter(Boolean).join(' · ') || 'Rien pour l’instant'}</span>} />
         <LigneBascule nom="Bouton Partager sur ma page" actif={reglages.partage} changer={v => onChange({ ...reglages, partage: v })} />
-        <LigneBascule nom="Ouvrir YouTube, Spotify… dans leur app" actif={reglages.ouvrirApps} changer={v => onChange({ ...reglages, ouvrirApps: v })} />
+        <LigneBascule nom="Deeplink" valeur="Ouvrir les liens dans leurs apps : YouTube, Spotify, etc." actif={reglages.ouvrirApps} changer={v => onChange({ ...reglages, ouvrirApps: v })} />
         {/* Starter : sans l'offre, pas d'interrupteur qui ne ferait rien, son nom et le chemin vers les offres. */}
         {utm
-          ? <LigneBascule nom="Suivi UTM sur mes liens" actif={reglages.utm} changer={v => onChange({ ...reglages, utm: v })} />
-          : <LigneLien nom="Suivi UTM sur mes liens" apres={<Etiquette fonction="utm" />} onClick={offres ? () => onOffres?.('utm') : undefined}
+          ? <LigneBascule nom="Suivi UTM sur mes liens" valeur="Tes sites voient que leurs visites viennent de Hopla" actif={reglages.utm} changer={v => onChange({ ...reglages, utm: v })} />
+          : <LigneLien nom="Suivi UTM sur mes liens" valeur="Tes sites voient que leurs visites viennent de Hopla" apres={<Etiquette fonction="utm" />} onClick={offres ? () => onOffres?.('utm') : undefined}
               label={offres ? 'Suivi UTM sur mes liens, avec Starter : voir les offres' : undefined} />}
         {rediriger ? (
           <Ligne nom="Redirection" valeur={versAilleurs ? <span className="font-medium text-bleu">{resumeRedirection(versAilleurs, reglages.redirection.fin, true)}</span> : 'Aucune'}>
@@ -200,7 +200,7 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
         </div>
       </Feuille>
 
-      <Feuille petite ouverte={fenetre === 'domaine'} onFermer={() => setFenetre(null)} titre="Nom de domaine">
+      <Feuille petite ouverte={fenetre === 'domaine'} onFermer={() => setFenetre(null)} titre="Domaine">
         {fermer => <ChoixDomaine compte={compte} valeur={reglages.domaine} choisir={d => { onChange({ ...reglages, domaine: d }); fermer(); }} />}
       </Feuille>
 

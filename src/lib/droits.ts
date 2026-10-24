@@ -47,6 +47,33 @@ export function selonDroits<T extends Bloc>(reglages: Reglages, blocs: T[], d: D
   };
 }
 
+/*
+ * Le design s'essaie avant de payer (24 octobre 2026, proposé après les parcours joués, choisi par Lilian) : sans
+ * Starter, couleurs, police, image de fond et grande photo se règlent quand même ; le back office les montre, la page
+ * publique non (`selonDroits`), et Ma page le dit, avec le chemin vers Starter ou le retour au thème.
+ */
+export const avecEssai = (d: Droits): Droits => ({ ...d, couleurs: true, fond: true, grandePhoto: true });
+
+/** Ce qui est à l'essai sur cette page : réglé, et pas compris dans l'offre. */
+export function enEssai(r: Reglages, d: Droits): Fonction[] {
+  const essais: [boolean, Fonction][] = [
+    [!d.couleurs && (Object.values(r.couleurs).some(Boolean) || !!r.police), 'couleurs'],
+    [!d.fond && !!r.imageFond, 'fond'],
+    [!d.grandePhoto && r.profil.photo === 'grande', 'grandePhoto'],
+  ];
+  return essais.flatMap(([oui, f]) => (oui ? [f] : []));
+}
+
+/** Le design rendu à ce que l'offre comprend : l'essai retiré, le reste tel quel. */
+export function sansEssai(r: Reglages, d: Droits): Reglages {
+  return {
+    ...r,
+    ...(d.couleurs ? {} : { couleurs: SANS_COULEURS, police: '' as const }),
+    ...(d.fond ? {} : { imageFond: '' }),
+    ...(d.grandePhoto ? {} : { profil: { ...r.profil, photo: 'ronde' as const } }),
+  };
+}
+
 type Dates = Pick<Bloc, 'debut' | 'fin' | 'compteARebours'>;
 
 /**
