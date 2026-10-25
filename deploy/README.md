@@ -31,6 +31,13 @@ pour l'offre Pro `CREEM_API_KEY`, `CREEM_WEBHOOK_SECRET`, `CREEM_PRODUIT_MOIS`,
 `LIENS_INSCRIPTION` (facultatif) : vide, chacun crée sa page depuis l'accueil ;
 `attente` remet la liste d'attente (on réserve son nom, l'invitation part à la main).
 
+`LIENS_CLE_INTEGRATIONS` (recommandé) : une valeur aléatoire (`openssl rand -base64 32`).
+Elle chiffre les clés d'API des newsletters, les webhooks et les inscrits des listes
+e-mail (`src/server/coffre.ts`) ; sans elle, le secret de la base sert de clé, et une
+copie de la base suffirait à tout lire. Posée, elle prend la suite au démarrage
+suivant (tout est rechiffré sous elle). Ne jamais la retirer ni la changer ensuite :
+ce qu'elle a chiffré deviendrait illisible.
+
 `TURNSTILE_SITE_KEY` et `TURNSTILE_SECRET` (facultatifs, les deux ou aucune) et
 `LIENS_CLOUDFLARE` : voir « Cloudflare ».
 

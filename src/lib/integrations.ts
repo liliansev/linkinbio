@@ -3,7 +3,7 @@ import { estWebhook } from './types.ts';
 
 /*
  * Où partent les inscrits de « Rejoins ma liste » (22 octobre 2026, demandé par
- * Lilian : chacun a sa newsletter). Six newsletters se branchent par leur API :
+ * Lilian : chacun a sa newsletter). Huit newsletters se branchent par leur API :
  * une clé, puis la liste choisie parmi celles du compte, sans chercher
  * d'identifiant. Make, Zapier et n8n se branchent par l'adresse d'un webhook,
  * qui reçoit chaque inscrit. Substack n'a pas d'API : ses inscrits se copient
@@ -11,7 +11,7 @@ import { estWebhook } from './types.ts';
  */
 
 export const NOMS_FOURNISSEURS: Record<FournisseurListe, string> = {
-  brevo: 'Brevo', mailchimp: 'Mailchimp', kit: 'Kit', mailerlite: 'MailerLite', beehiiv: 'beehiiv', systeme: 'Systeme.io',
+  brevo: 'Brevo', mailchimp: 'Mailchimp', kit: 'Kit', mailerlite: 'MailerLite', beehiiv: 'beehiiv', systeme: 'Systeme.io', mailcheap: 'MailCheap', loops: 'Loops',
   make: 'Make', zapier: 'Zapier', n8n: 'n8n',
 };
 
@@ -26,6 +26,8 @@ export const LISTE_CHEZ: Record<Newsletter, { mot: string; la: string; cette: st
   mailerlite: { mot: 'Groupe', la: 'le groupe', cette: 'ce groupe', vide: 'Aucun groupe chez MailerLite. Crées-en un, puis réessaie.' },
   beehiiv: { mot: 'Publication', la: 'la publication', cette: 'cette publication', vide: 'Aucune publication chez beehiiv.' },
   systeme: { mot: 'Tag', la: 'le tag', cette: 'ce tag', vide: '' },
+  mailcheap: { mot: 'Newsletter', la: 'la newsletter', cette: 'cette newsletter', vide: 'Aucune newsletter chez MailCheap. Crées-en une, puis réessaie.' },
+  loops: { mot: 'Liste', la: 'la liste', cette: 'cette liste', vide: '' },
 };
 
 /** Où partent les inscrits, en quelques mots : « chez Brevo, la liste « Newsletter » », « vers Make ». */
@@ -37,7 +39,7 @@ export function destination(i: Pick<IntegrationListe, 'fournisseur' | 'nom'>): s
 
 /** Le logo de chaque outil, une icône de `icones.ts` : le vrai, celui de la marque (la bulle de MailerLite, l'abeille de beehiiv, le rond de Systeme.io). */
 export const LOGOS_OUTILS: Record<FournisseurListe | 'substack', string> = {
-  brevo: 'brevo', mailchimp: 'mailchimp', kit: 'kit', mailerlite: 'mailerlite', beehiiv: 'beehiiv', systeme: 'systeme', substack: 'substack',
+  brevo: 'brevo', mailchimp: 'mailchimp', kit: 'kit', mailerlite: 'mailerlite', beehiiv: 'beehiiv', systeme: 'systeme', mailcheap: 'mailcheap', loops: 'loops', substack: 'substack',
   make: 'make', zapier: 'zapier', n8n: 'n8n',
 };
 

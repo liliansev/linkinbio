@@ -1640,3 +1640,88 @@ test('Rejoins ma liste : le cadeau s’ouvre une fois l’adresse donnée, jamai
   const sans = await liste.inscrire({}, fetchFaux, { page: '', bloc: 'liste-inconnue', email: 'lea@exemple.fr' }, { ip: '6.6.6.7', ua: 'Mozilla/5.0', referent: '' });
   assert.equal(sans.cadeau, undefined);
 });
+
+test('Rejoins ma liste : l’adresse et le prénom des inscrits sont chiffrés dans la base, sans doublon', () => {
+  db.ajouterContact(P, { email: 'Ines@Exemple.fr', prenom: 'Inès', source: 'Direct', bloc: 'liste' }, 1000);
+  assert.equal(db.ajouterContact(P, { email: 'ines@exemple.fr', prenom: '', source: 'Direct', bloc: 'liste' }, 2000), null, 'la même adresse, une fois');
+  const brut = db.base().prepare('SELECT email, prenom, empreinte FROM contacts WHERE compte = ?').get(P) as { email: string; prenom: string; empreinte: string };
+  assert.match(brut.email, /^v1:/);
+  assert.match(brut.prenom, /^v1:/);
+  assert.doesNotMatch(JSON.stringify(brut), /ines|Inès/i, 'rien en clair');
+  assert.deepEqual(db.tousLesContacts(P).map(c => [c.email, c.prenom]), [['ines@exemple.fr', 'Inès']]);
+  assert.equal(db.contactsAEnvoyer(P)[0].email, 'ines@exemple.fr');
+});
+
+test('Rejoins ma liste : les inscrits d’avant sont chiffrés au démarrage, et repassent sous la clé du serveur quand elle arrive', async () => {
+  const coffre = await import('./coffre.ts');
+  const d = db.base();
+  d.prepare("INSERT INTO contacts (id, compte, email, prenom, ts, source, bloc) VALUES ('ancien', ?, 'paul@exemple.fr', 'Paul', 1, 'Direct', 'liste')").run(P);
+  db.ecrireIntegration(P, { fournisseur: 'brevo', cle: coffre.chiffrer({}, 'xkeysib-secret'), liste: '7', nom: 'Ma liste' });
+  db.rechiffrer(d, {});
+  const avant = d.prepare("SELECT email, empreinte FROM contacts WHERE id = 'ancien'").get() as { email: string; empreinte: string };
+  assert.match(avant.email, /^v1:/);
+  assert.ok(avant.empreinte);
+  // La clé du serveur posée dans runtime.env : tout passe dessous, et se lit encore.
+  const env = { LIENS_CLE_INTEGRATIONS: 'cle-du-serveur' };
+  db.rechiffrer(d, env);
+  const apres = d.prepare("SELECT email, prenom FROM contacts WHERE id = 'ancien'").get() as { email: string; prenom: string };
+  assert.notEqual(apres.email, avant.email);
+  assert.equal(coffre.dechiffrer(env, apres.email), 'paul@exemple.fr');
+  assert.equal(coffre.dechiffrer(env, db.lireIntegration(P)!.cle), 'xkeysib-secret');
+  // Sans le secret de la base, seule la clé du serveur ouvre (ce qu'aurait une copie volée de la base sans runtime.env).
+  d.prepare("UPDATE reglages SET valeur = 'autre' WHERE cle = 'secret'").run();
+  assert.equal(coffre.dechiffrer(env, apres.email), 'paul@exemple.fr');
+  assert.equal(coffre.dechiffrer({}, apres.email), '');
+});
+
+test('MailCheap : une clé « Signups only » branche la première newsletter, et l’inscrit part avec son prénom', async () => {
+  const liste = await import('./liste.ts');
+  const appels: { url: string; methode: string; corps: any; headers: any }[] = [];
+  const fetchFaux = (async (url: string, init: RequestInit = {}) => {
+    appels.push({ url, methode: init.method ?? 'GET', corps: init.body ? JSON.parse(String(init.body)) : null, headers: init.headers });
+    if (url.endsWith('/newsletters')) return Response.json({ error: { code: 'forbidden', message: 'x' } }, { status: 403 });
+    const corps = init.body ? JSON.parse(String(init.body)) : {};
+    if (corps.email === 'hopla') return Response.json({ error: { code: 'validation_failed', message: 'x' } }, { status: 400 });
+    return Response.json({ id: 'c1', created: true }, { status: 201 });
+  }) as typeof fetch;
+  const r = await liste.listes('mailcheap', 'mc_cle', fetchFaux);
+  assert.deepEqual(r.listes, [{ id: '', nom: 'Ta newsletter' }]);
+  assert.equal(appels.at(-1)!.corps.email, 'hopla', 'la clé se vérifie sans inscrire personne');
+  assert.equal((await liste.verifier('mailcheap', 'mc_cle', '', fetchFaux)).ok, true);
+  const fausse = (async () => Response.json({ error: { code: 'unauthorized' } }, { status: 401 })) as unknown as typeof fetch;
+  assert.match((await liste.listes('mailcheap', 'mc_faux', fausse)).message, /refuse cette clé/);
+  // Une clé complète lit les newsletters, choisies par leur nom.
+  const complete = (async (url: string) => (url.endsWith('/newsletters') ? Response.json({ newsletters: [{ id: '65f1a2b3c4d5e6f7a8b9c0d1', name: 'Augmentés' }] }) : new Response('{}', { status: 201 }))) as typeof fetch;
+  assert.equal((await liste.verifier('mailcheap', 'mc_cle', '65f1a2b3c4d5e6f7a8b9c0d1', complete)).nom, 'Augmentés');
+  assert.equal((await liste.verifier('mailcheap', 'mc_cle', '../x', complete)).ok, false);
+  const env = { LIENS_CLE_INTEGRATIONS: 'test' };
+  db.ecrireIntegration(P, { fournisseur: 'mailcheap', cle: liste.chiffrer(env, 'mc_cle'), liste: '', nom: '' });
+  const contact = db.ajouterContact(P, { email: 'lea@exemple.fr', prenom: 'Léa', source: 'Instagram', bloc: 'liste' })!;
+  assert.equal(await liste.pousser(env, P, contact, fetchFaux), true);
+  const envoi = appels.at(-1)!;
+  assert.equal(envoi.url, 'https://mailcheap.ai/api/v1/contacts');
+  assert.deepEqual(envoi.corps, { email: 'lea@exemple.fr', source: 'hopla', firstName: 'Léa' });
+  assert.equal(envoi.headers.Authorization, 'Bearer mc_cle');
+});
+
+test('Loops : la clé se vérifie, la liste est facultative, l’inscrit rejoint la liste choisie', async () => {
+  const liste = await import('./liste.ts');
+  const appels: { url: string; methode: string; corps: any }[] = [];
+  const fetchFaux = (async (url: string, init: RequestInit = {}) => {
+    appels.push({ url, methode: init.method ?? 'GET', corps: init.body ? JSON.parse(String(init.body)) : null });
+    if (url.endsWith('/lists')) return Response.json([{ id: 'clm2k8j4h6g0f8d6s4a2b0z8', name: 'Newsletter', description: null, isPublic: true }]);
+    if (url.endsWith('/api-key')) return Response.json({ success: true, teamName: 'Hopla' });
+    return Response.json({ success: true, id: 'x' });
+  }) as typeof fetch;
+  const r = await liste.listes('loops', 'cle', fetchFaux);
+  assert.deepEqual(r.listes.map(l => l.nom), ['Toute ton audience', 'Newsletter']);
+  assert.equal((await liste.verifier('loops', 'cle', '', fetchFaux)).ok, true);
+  assert.equal((await liste.verifier('loops', 'cle', 'clm2k8j4h6g0f8d6s4a2b0z8', fetchFaux)).nom, 'Newsletter');
+  const env = { LIENS_CLE_INTEGRATIONS: 'test' };
+  db.ecrireIntegration(P, { fournisseur: 'loops', cle: liste.chiffrer(env, 'cle'), liste: 'clm2k8j4h6g0f8d6s4a2b0z8', nom: 'Newsletter' });
+  const contact = db.ajouterContact(P, { email: 'tom@exemple.fr', prenom: '', source: 'Direct', bloc: 'liste' })!;
+  assert.equal(await liste.pousser(env, P, contact, fetchFaux), true);
+  const envoi = appels.at(-1)!;
+  assert.equal(`${envoi.methode} ${envoi.url}`, 'PUT https://app.loops.so/api/v1/contacts/update');
+  assert.deepEqual(envoi.corps, { email: 'tom@exemple.fr', source: 'Hopla', mailingLists: { clm2k8j4h6g0f8d6s4a2b0z8: true } });
+});

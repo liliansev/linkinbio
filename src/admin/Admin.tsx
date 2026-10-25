@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { Api, Bloc, EtatAdmin, PagePublique, Reglages, TypeBloc, TypeVitrine } from '../lib/types.ts';
+import type { Api, Bloc, EtatAdmin, IntegrationListe, PagePublique, Reglages, TypeBloc, TypeVitrine } from '../lib/types.ts';
 import { TYPES_PRINCIPAL, adressePartage, nouveauBloc, urlPage } from '../lib/types.ts';
 import { composerMoment } from '../lib/moments.ts';
 import type { TypeAdresse } from '../lib/detection.ts';
@@ -16,7 +16,7 @@ import { RegleAOuvrir } from './ReglesBloc.tsx';
 import type { OptionsEnregistrement } from './EditeurBloc.tsx';
 import { OngletStats } from './OngletStats.tsx';
 import { MaListe } from './MaListe.tsx';
-import { OngletIntegrations } from './OngletIntegrations.tsx';
+import { FenetreListe, ListeBranchee, OngletIntegrations } from './OngletIntegrations.tsx';
 import { OngletReglages, resumeRedirection } from './OngletReglages.tsx';
 import { redirectionActive } from '../lib/sorties.ts';
 import { OngletComptes } from './OngletComptes.tsx';
@@ -116,6 +116,9 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
   const depuisIntegrations = useRef<{ bloc: string; outil: string | null; type: TypeBloc } | null>(null);
   const [sousIntegration, setSousIntegration] = useState<string | null>(null);
   const [raccourci, setRaccourci] = useState<TypeBloc | null>(null);
+  // Où partent les inscrits (`undefined` tant que ce n'est pas lu), et la feuille du parcours pour brancher sa newsletter.
+  const [integration, setIntegration] = useState<IntegrationListe | null | undefined>(undefined);
+  const [fenetreListe, setFenetreListe] = useState(false);
   useEffect(() => {
     const d = depuisIntegrations.current;
     if (!d || edition?.bloc.id === d.bloc) return;
@@ -173,6 +176,11 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
   const [cguAJour, setCguAJour] = useState(initial.cguAJour);
   const [abonnement, setAbonnement] = useState(initial.abonnement);
   const [droits, setDroits] = useState(initial.droits);
+  // Lu une fois, avec l'offre de la liste : la liste e-mail ouverte dit où partent ses inscrits.
+  useEffect(() => {
+    if (!droits.listeEmail) { setIntegration(undefined); return; }
+    api.liste().then(l => setIntegration(l.integration)).catch(() => {});
+  }, [droits.listeEmail, api]);
   // Un compte neuf arrive sur ses premiers pas, une seule fois, et seulement tant que sa page est vide.
   const [premiersPas, setPremiersPas] = useState(() => !initial.compte.principal && pageNeuve(initial.reglages, initial.blocs));
   // Remis à plus tard sur cet appareil : lu après l'hydratation, le serveur n'en sait rien.
@@ -521,12 +529,16 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
       setToast({ texte: 'Gardé, masqué de ta page', action: 'Afficher', annuler: () => afficher(bloc.id) });
       if (!options.discret) montrer(bloc.id);
     } else if (nouveau) {
+      // Une liste e-mail posée sans newsletter branchée : ses inscrits ne partiraient nulle part. Le parcours s'ouvre de lui-même.
+      if (bloc.type === 'inscription' && integration === null) setTimeout(() => setFenetreListe(true), 420);
       const rang = liste.findIndex(b => b.id === bloc.id);
       const ou = ancien ? (rang === 0 ? 'en haut de ta page' : rang === liste.length - 1 ? 'en bas de ta page' : 'à ta page') : enBas ? 'en bas de ta page' : 'en haut de ta page';
       setToast({ texte: `Ajouté ${ou}`, annuler: () => {
         // Gardé masqué avant d'être ajouté, il le redevient ; sinon, il s'en va.
         poserListe(ancien ? blocsRef.current.map(b => (b.id === bloc.id ? ancien : b)) : blocsRef.current.filter(b => b.id !== bloc.id));
         setEdition(e => (e?.bloc.id === bloc.id ? null : e));
+        // La feuille « Où vont tes inscrits ? » ouverte pour ce bloc n'a plus lieu d'être.
+        if (bloc.type === 'inscription') setFenetreListe(false);
         setToast({ texte: 'Ajout annulé', genre: 'info' });
         ecrire(async () => { if (ancien) await api.enregistrerBloc(ancien); else await api.supprimerBloc(bloc.id); });
       } });
@@ -781,6 +793,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
 
   return (
     <FournisseurOffre value={offre}>
+    <ListeBranchee.Provider value={{ integration, brancher: () => setFenetreListe(true) }}>
     <SourceFlux.Provider value={lireFlux}>
     <div className="adm adm-shell min-h-dvh font-sans text-white antialiased" data-onglet={onglet} data-sous={fil ? '' : undefined}>
       {/* Au clavier, le premier arrêt passe la navigation et l'en-tête : il mène droit au contenu de l'onglet (critique série 2). */}
@@ -887,7 +900,8 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
             raccourci={raccourci} raccourciVu={() => setRaccourci(null)}
             onAjouter={(t, outil) => { const b = nouveauBloc(t, nouvelId()); choisirOnglet('page'); depuisIntegrations.current = { bloc: b.id, outil, type: t }; ajouterBloc(b); }}
             onOuvrir={b => { choisirOnglet('page'); depuisIntegrations.current = { bloc: b.id, outil: null, type: b.type }; ouvrirBloc(b); }}
-            onOffres={peutAcheter ? (pour?: Fonction, suite?: SuiteAchat) => ouvrirOffres(pour, undefined, { ...suite, integrations: true }) : undefined} />}
+            onOffres={peutAcheter ? (pour?: Fonction, suite?: SuiteAchat) => ouvrirOffres(pour, undefined, { ...suite, integrations: true }) : undefined}
+            onListe={l => setIntegration(droits.listeEmail ? l.integration : undefined)} />}
           {onglet === 'reglages' && <OngletReglages reglages={reglages} compte={compte} onChange={changerReglages} onDeconnexion={deconnexion} urlExport={api.urlExport} supprimerMonCompte={api.supprimerMonCompte}
             abonnement={abonnement} onOffres={peutAcheter ? (pour?: Fonction) => ouvrirOffres(pour) : undefined} ouvrirPortail={api.ouvrirPortail}
             onResilier={peutAcheter ? () => setOffres({ resilier: true }) : undefined} />}
@@ -939,9 +953,12 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
           onFermer={() => { retourFerme.current = true; mainApresRetour.current = true; setRetour(null); }} />
       )}
 
+      {fenetreListe && <FenetreListe api={api} onFermer={() => setFenetreListe(false)} onListe={l => setIntegration(l.integration)} />}
+
       {!offres && !retour && bulle}
     </div>
     </SourceFlux.Provider>
+    </ListeBranchee.Provider>
     </FournisseurOffre>
   );
 }

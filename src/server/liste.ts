@@ -1,4 +1,4 @@
-import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'node:crypto';
+import { createHash } from 'node:crypto';
 import { MINUTE, cleIp, limiteur } from './limites.ts';
 import { MESSAGE_ROBOT, verifierTurnstile } from './turnstile.ts';
 import type { FournisseurListe, IntegrationListe, ListeFournisseur, Webhook } from '../lib/types.ts';
@@ -12,8 +12,8 @@ import type { Env } from './courriel.ts';
 
 /*
  * « Rejoins ma liste » : les inscrits d'une page restent chez Hopla (export
- * CSV), et partent aussi là où la personne a branché sa liste : une des six
- * newsletters (Brevo, Mailchimp, Kit, MailerLite, beehiiv, Systeme.io), par
+ * CSV), et partent aussi là où la personne a branché sa liste : une des huit
+ * newsletters (Brevo, Mailchimp, Kit, MailerLite, beehiiv, Systeme.io, MailCheap, Loops), par
  * leur API, ou Make, Zapier ou n8n, par un webhook. La clé (ou l'adresse du
  * webhook) est chiffrée au repos et ne revient jamais au navigateur. Les API
  * des newsletters ont des adresses fixes (le centre de données Mailchimp, lu
@@ -23,24 +23,8 @@ import type { Env } from './courriel.ts';
  * vers une adresse publique.
  */
 
-const cleChiffrement = (env: Env) => createHash('sha256').update(env.LIENS_CLE_INTEGRATIONS || db.secret()).digest();
-
-export function chiffrer(env: Env, texte: string): string {
-  const iv = randomBytes(12);
-  const c = createCipheriv('aes-256-gcm', cleChiffrement(env), iv);
-  const donnees = Buffer.concat([c.update(texte, 'utf8'), c.final()]);
-  return ['v1', iv.toString('base64url'), c.getAuthTag().toString('base64url'), donnees.toString('base64url')].join(':');
-}
-
-export function dechiffrer(env: Env, valeur: string): string {
-  const [v, iv, tag, donnees] = valeur.split(':');
-  if (v !== 'v1') return '';
-  try {
-    const d = createDecipheriv('aes-256-gcm', cleChiffrement(env), Buffer.from(iv, 'base64url'));
-    d.setAuthTag(Buffer.from(tag, 'base64url'));
-    return Buffer.concat([d.update(Buffer.from(donnees, 'base64url')), d.final()]).toString('utf8');
-  } catch { return ''; }
-}
+export { chiffrer, dechiffrer } from './coffre.ts';
+import { dechiffrer } from './coffre.ts';
 
 /** Un refus du fournisseur : la clé, la liste, l'adresse d'un webhook, ou une panne (avec son statut). `message` remplace le message ordinaire. */
 class Refus extends Error {
@@ -53,13 +37,18 @@ class Refus extends Error {
 /** Une requête chez le fournisseur, sans suivre de redirection, bornée dans le temps. */
 const requete = (f: typeof fetch, url: string, init: RequestInit = {}, delai = 8000) => f(url, { ...init, redirect: 'error', signal: AbortSignal.timeout(delai) });
 
-/** Une requête chez le fournisseur, et sa réponse lue en JSON ; un refus si elle ne va pas. */
-async function appeler(f: typeof fetch, url: string, init: RequestInit = {}, delai = 8000): Promise<Record<string, unknown>> {
+/** Une requête chez le fournisseur, et sa réponse lue en JSON, telle quelle ; un refus si elle ne va pas. */
+async function appelerBrut(f: typeof fetch, url: string, init: RequestInit = {}, delai = 8000): Promise<unknown> {
   const r = await requete(f, url, init, delai);
   if (r.status === 401 || r.status === 403) throw new Refus('cle', r.status);
   if (r.status === 404) throw new Refus('liste', r.status);
   if (!r.ok) throw new Refus('panne', r.status);
-  const corps = await r.json().catch(() => ({}));
+  return r.json().catch(() => ({}));
+}
+
+/** La même, quand la réponse est un objet (le reste devient un objet vide). */
+async function appeler(f: typeof fetch, url: string, init: RequestInit = {}, delai = 8000): Promise<Record<string, unknown>> {
+  const corps = await appelerBrut(f, url, init, delai);
   return corps && typeof corps === 'object' && !Array.isArray(corps) ? corps as Record<string, unknown> : {};
 }
 
@@ -195,7 +184,8 @@ const beehiiv: Pilote = {
 const enteteSysteme = (cle: string) => ({ 'X-API-Key': cle, accept: 'application/json' });
 const systeme: Pilote = {
   forme: /^(\d{1,12})?$/,
-  listes: async (cle, f) => enListes((await appeler(f, 'https://api.systeme.io/api/tags?limit=100', { headers: enteteSysteme(cle) })).items),
+  // Un tag est facultatif : « Sans tag » vient en premier.
+  listes: async (cle, f) => [{ id: '', nom: 'Sans tag' }, ...enListes((await appeler(f, 'https://api.systeme.io/api/tags?limit=100', { headers: enteteSysteme(cle) })).items)],
   async nom(cle, liste, f) {
     // Sans tag, il reste à vérifier la clé.
     if (!liste) { await appeler(f, 'https://api.systeme.io/api/tags?limit=10', { headers: enteteSysteme(cle) }); return ''; }
@@ -213,6 +203,64 @@ const systeme: Pilote = {
     if (!/^\d{1,15}$/.test(id)) throw new Refus('panne');
     if (!liste || objets(existant?.tags).some(t => propre(t.id, 20) === liste)) return;
     await appeler(f, `https://api.systeme.io/api/contacts/${id}/tags`, { method: 'POST', headers: { ...entetes, ...json }, body: JSON.stringify({ tagId: Number(liste) }) }, 6000);
+  },
+};
+
+/**
+ * MailCheap (25 octobre 2026, demandé par Lilian) : un inscrit part comme par le formulaire de son archive, et reçoit
+ * l'e-mail de bienvenue ou de confirmation. Une clé « Signups only » suffit et ne lit rien d'autre : elle ne voit pas
+ * les newsletters du compte (403), ses inscrits vont dans la première, celle que le compte a depuis le plus longtemps.
+ */
+const MAILCHEAP = 'https://mailcheap.ai/api/v1';
+const enteteMailcheap = (cle: string) => ({ Authorization: `Bearer ${cle}`, accept: 'application/json' });
+/** Vérifie une clé sans inscrire personne : une adresse qui n'en est pas une est refusée (400) après la clé (401). */
+async function essaiMailcheap(cle: string, f: typeof fetch) {
+  const r = await requete(f, `${MAILCHEAP}/contacts`, { method: 'POST', headers: { ...enteteMailcheap(cle), ...json }, body: JSON.stringify({ email: 'hopla' }) });
+  if (r.status === 401 || r.status === 403) throw new Refus('cle', r.status);
+  if (r.status >= 500) throw new Refus('panne', r.status);
+}
+async function newslettersMailcheap(cle: string, f: typeof fetch): Promise<ListeFournisseur[]> {
+  try {
+    return enListes((await appeler(f, `${MAILCHEAP}/newsletters`, { headers: enteteMailcheap(cle) })).newsletters);
+  } catch (e) {
+    if (!(e instanceof Refus && e.statut === 403)) throw e;
+    await essaiMailcheap(cle, f);
+    return [{ id: '', nom: 'Ta newsletter' }];
+  }
+}
+const mailcheap: Pilote = {
+  forme: /^([a-f0-9]{24})?$/,
+  listes: newslettersMailcheap,
+  async nom(cle, liste, f) {
+    if (!liste) { await essaiMailcheap(cle, f); return ''; }
+    return parmi(await newslettersMailcheap(cle, f), liste);
+  },
+  async pousser(cle, liste, c, f) {
+    await appeler(f, `${MAILCHEAP}/contacts`, {
+      method: 'POST', headers: { ...enteteMailcheap(cle), ...json },
+      body: JSON.stringify({ email: c.email, source: 'hopla', ...(liste ? { newsletter: liste } : {}), ...(c.prenom ? { firstName: c.prenom } : {}) }),
+    }, 6000);
+  },
+};
+
+/** Loops (25 octobre 2026, demandé par Lilian) : un contact de l'audience, ajouté s'il le faut à une liste. */
+const LOOPS = 'https://app.loops.so/api/v1';
+const enteteLoops = (cle: string) => ({ Authorization: `Bearer ${cle}`, accept: 'application/json' });
+const listesLoops = async (cle: string, f: typeof fetch) => enListes(await appelerBrut(f, `${LOOPS}/lists`, { headers: enteteLoops(cle) }));
+const loops: Pilote = {
+  forme: /^([a-z0-9]{8,40})?$/,
+  // Une liste est facultative : sans elle, l'inscrit rejoint l'audience.
+  listes: async (cle, f) => [{ id: '', nom: 'Toute ton audience' }, ...await listesLoops(cle, f)],
+  async nom(cle, liste, f) {
+    await appeler(f, `${LOOPS}/api-key`, { headers: enteteLoops(cle) });
+    return liste ? parmi(await listesLoops(cle, f), liste) : '';
+  },
+  async pousser(cle, liste, c, f) {
+    // Met à jour le contact, ou le crée : une adresse déjà là ne fait pas d'erreur.
+    await appeler(f, `${LOOPS}/contacts/update`, {
+      method: 'PUT', headers: { ...enteteLoops(cle), ...json },
+      body: JSON.stringify({ email: c.email, source: 'Hopla', ...(c.prenom ? { firstName: c.prenom } : {}), ...(liste ? { mailingLists: { [liste]: true } } : {}) }),
+    }, 6000);
   },
 };
 
@@ -235,7 +283,7 @@ const webhook = (outil: Webhook): Pilote => {
 };
 
 const PILOTES: Record<FournisseurListe, Pilote> = {
-  brevo, mailchimp, kit, mailerlite, beehiiv, systeme, make: webhook('make'), zapier: webhook('zapier'), n8n: webhook('n8n'),
+  brevo, mailchimp, kit, mailerlite, beehiiv, systeme, mailcheap, loops, make: webhook('make'), zapier: webhook('zapier'), n8n: webhook('n8n'),
 };
 
 /** Le nom de la connexion refusée par `requeteSortante` : une adresse du réseau interne. */
@@ -263,7 +311,8 @@ export async function listes(fournisseur: FournisseurListe, cle: string, f: type
   if (estWebhook(fournisseur)) return { ok: false, message: 'Un webhook n’a pas de liste.', listes: [] };
   const pilote = PILOTES[fournisseur];
   try {
-    const trouvees = (await pilote.listes(cle, f)).filter(l => l.id && pilote.forme.test(l.id));
+    // Un identifiant vide, quand la forme l'accepte : sans tag, sans liste, la première newsletter.
+    const trouvees = (await pilote.listes(cle, f)).filter(l => pilote.forme.test(l.id));
     return { ok: true, message: trouvees.length ? '' : LISTE_CHEZ[fournisseur].vide, listes: trouvees };
   } catch (e) {
     // Une liste vide peut répondre 404 : la clé, elle, est passée.
