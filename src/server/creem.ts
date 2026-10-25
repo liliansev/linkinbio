@@ -381,7 +381,8 @@ const instant = (v: unknown): number | null => {
 /** Un client ou un abonnement arrive en objet (`{ id, … }`) ou, parfois, en simple identifiant. */
 const idDe = (v: unknown) => (typeof v === 'string' ? v.slice(0, 200) : texte(objet(v).id));
 
-export type Issue = { status: number; message: string };
+/** `alerte` : un paiement que Hopla n'a su rattacher à aucun compte, à regarder à la main. */
+export type Issue = { status: number; message: string; alerte?: string };
 
 /**
  * Un webhook Creem. Toujours 200 une fois la signature vérifiée, même pour un
@@ -417,7 +418,7 @@ export function traiterWebhook(env: Env, corps: string, signature: string | null
   const compte = (compteMeta && compteMeta !== PRINCIPAL ? compteParId(compteMeta) : undefined) ?? compteParAbonnement(idAbonnement) ?? compteParClientCreem(client);
   if (!compte || !statut) {
     console.error('[liens] webhook Creem sans compte', type, idAbonnement);
-    return { status: 200, message: 'aucun compte' };
+    return { status: 200, message: 'aucun compte', alerte: `Événement ${type}, abonnement ${idAbonnement || 'inconnu'}, client ${client || 'inconnu'}, compte annoncé ${compteMeta || 'aucun'}, statut ${statut || 'inconnu'}.` };
   }
   // La fin d'un ancien abonnement n'éteint pas celui qui l'a remplacé.
   if (compte.creem_abonnement && idAbonnement && idAbonnement !== compte.creem_abonnement && !(STATUTS_PRO as readonly string[]).includes(statut)) {

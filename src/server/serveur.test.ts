@@ -290,8 +290,9 @@ test('export : tout le compte, sans l’empreinte des visiteurs', () => {
   assert.equal(e.compte.email, 'zoe@exemple.fr');
   assert.deepEqual(e.compte.conditionsAcceptees, { version: '2026-10-17', le: new Date(1_000).toISOString() });
   assert.deepEqual(e.blocs.map(b => b.id), ['z1']);
-  assert.equal(e.images.length, 1);
-  assert.match(e.images[0].donnees, /^data:image\/webp;base64,AQID$/);
+  const images = [...db.imagesExportees(zoe.id)];
+  assert.equal(images.length, 1);
+  assert.match(images[0].donnees, /^data:image\/webp;base64,AQID$/);
   assert.equal(e.statistiques.length, 1);
   assert.ok(!JSON.stringify(e).includes('secret'));
   assert.equal(db.exporter(P).blocs.some(b => b.id === 'z1'), false, 'l’export d’un compte ne contient que lui');
@@ -417,6 +418,7 @@ test('offres : webhooks Creem signés, idempotents, dans le désordre', async ()
 
   // Des métadonnées qui visent le compte principal ou un compte inconnu n'accordent rien.
   assert.equal(envoyer({ id: 'evt_5', eventType: 'subscription.active', created_at: t, object: { id: 'sub_x', status: 'active', customer: 'cust_x', metadata: { compte: P } } }).message, 'aucun compte');
+  assert.match(envoyer({ id: 'evt_5b', eventType: 'subscription.active', created_at: t, object: { id: 'sub_y', status: 'active', customer: 'cust_y' } }).alerte ?? '', /sub_y/, 'un paiement sans compte prévient Lilian');
   assert.equal(envoyer({ id: 'evt_6', eventType: 'refund.created', created_at: t, object: {} }).message, 'ignoré : refund.created');
 
   // Le Pro débloque la place pour les images ; la liste du back office le montre.

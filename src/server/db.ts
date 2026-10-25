@@ -672,8 +672,6 @@ export function exporter(compte: string) {
   const d = base();
   const c = compteParId(compte);
   if (!c) throw new Error('Compte inconnu.');
-  const medias = (d.prepare('SELECT id, extension, octets, cree FROM medias WHERE compte = ? ORDER BY cree').all(compte) as { id: string; extension: string; octets: Uint8Array; cree: number }[])
-    .map(m => ({ fichier: `${m.id}.${m.extension}`, cree: new Date(m.cree).toISOString(), donnees: `data:image/${m.extension === 'jpg' ? 'jpeg' : 'webp'};base64,${Buffer.from(m.octets).toString('base64')}` }));
   const evenements = d.prepare('SELECT ts, type, bloc, source, appareil, pays FROM evenements WHERE compte = ? ORDER BY ts').all(compte) as { ts: number; type: string; bloc: string | null; source: string; appareil: string; pays: string }[];
   return {
     exporte: new Date().toISOString(),
@@ -686,11 +684,23 @@ export function exporter(compte: string) {
     },
     reglages: lireReglages(compte),
     blocs: lireBlocs(compte),
-    images: medias,
     statistiques: evenements.map(e => ({ ...e, ts: new Date(e.ts).toISOString() })),
     inscrits: tousLesContacts(compte).map(c => ({ ...c, ts: new Date(c.ts).toISOString() })),
     listeBranchee: lireIntegration(compte) ? { fournisseur: lireIntegration(compte)!.fournisseur, liste: lireIntegration(compte)!.liste } : null,
   };
+}
+
+/**
+ * Les images d'un compte pour l'export, une à la fois : un compte Pro peut en
+ * garder 200 Mo, que le conteneur (256 Mo) ne tiendrait pas en une seule chaîne.
+ */
+export function* imagesExportees(compte: string): Generator<{ fichier: string; cree: string; donnees: string }> {
+  const ids = base().prepare('SELECT id FROM medias WHERE compte = ? ORDER BY cree').all(compte) as { id: string }[];
+  const une = base().prepare('SELECT id, extension, octets, cree FROM medias WHERE id = ?');
+  for (const { id } of ids) {
+    const m = une.get(id) as { id: string; extension: string; octets: Uint8Array; cree: number } | undefined;
+    if (m) yield { fichier: `${m.id}.${m.extension}`, cree: new Date(m.cree).toISOString(), donnees: `data:image/${m.extension === 'jpg' ? 'jpeg' : 'webp'};base64,${Buffer.from(m.octets).toString('base64')}` };
+  }
 }
 
 /* ---- Signalements (DSA, article 16) ---- */
