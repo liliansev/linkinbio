@@ -401,6 +401,12 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
 @media (max-width: 1023px) and (prefers-reduced-motion: no-preference) {
   .adm-onglet:has(.adm-editor-tools) { animation-name: adm-fondu; }
 }
+/* Au bureau, de même pour un onglet qui porte une zone fixée au bord droit (l'iPhone de Ma page, le détail d'une liste) :
+ * en glissant, il la tirait dans la colonne du milieu le temps de son entrée, puis elle sautait au bord de l'écran
+ * (25 octobre 2026, Lilian : « quand je rafraîchis, le milieu pousse l'écran de l'iPhone à droite »). */
+@media (min-width: 1024px) {
+  .adm-onglet:has(.adm-apercu-cote, .adm-detail-cote) { animation-name: adm-fondu; }
+}
 /*
  * Ma page au bureau (direction A, 21 octobre 2026, choisie par Lilian) :
  * l'édition à gauche, la page à droite. À gauche, une colonne de 820 px au
