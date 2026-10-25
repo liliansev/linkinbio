@@ -216,6 +216,14 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
  * l'édition et la page ensemble), `--adm-bord` la marge qu'elle garde quand l'écran est plus étroit, et
  * `--adm-largeur` la largeur qu'elle prend, pour ce qui est fixé à l'écran (le message du bas).
  */
+/*
+ * Au bureau, l'iPhone de l'aperçu fixe tout (25 octobre 2026, demandé par Lilian) : il prend la hauteur de l'écran
+ * dans ses vraies proportions (422 × 894 avec son bord), sa zone en prend la largeur, sans jamais laisser moins de
+ * 40 % de l'écran à l'édition ; la barre latérale suit l'écran jusqu'à 256 px, et l'édition prend le reste.
+ */
+@media (min-width: 1024px) {
+  :root { --adm-barre: clamp(216px, 12vw, 256px); }
+}
 @media (min-width: 1024px) {
   .adm-shell {
     /* Tout suit la largeur de l'écran, sans palier (25 octobre 2026, demandé par Lilian : « ça devrait auto sizer ») :
@@ -223,29 +231,29 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
     --adm-bord: clamp(20px, 3vw, 72px);
     --adm-colonne: clamp(1120px, 64vw, 1680px);
     /* La zone de l'aperçu, à droite de Ma page : le téléphone y grandit avec elle (voir `Telephone`). */
-    --adm-zone-apercu: clamp(440px, 30vw, 900px);
+    --adm-zone-apercu: max(380px, min((100dvh - 150px) * 0.472 + 48px, 60vw - var(--adm-barre)));
     /* La zone du détail (un outil, la fiche d'un compte, Mon abonnement), à droite de sa liste : voir `PanneauDetail`. */
     --adm-zone-detail: clamp(420px, 32vw, 800px);
-    --adm-largeur: min(100% - 216px - 2 * var(--adm-bord), var(--adm-colonne));
+    --adm-largeur: min(100% - var(--adm-barre) - 2 * var(--adm-bord), var(--adm-colonne));
   }
   .adm-shell:is([data-onglet='reglages'], [data-onglet='integrations']) { --adm-colonne: clamp(680px, 42vw, 1040px); }
-  .adm-shell[data-onglet='page'] { --adm-colonne: 1800px; --adm-largeur: min(100% - 216px - var(--adm-zone-apercu) - 2 * var(--adm-bord), var(--adm-colonne)); }
-  .adm-travail { padding-left: 216px; }
+  .adm-shell[data-onglet='page'] { --adm-colonne: 100vw; --adm-largeur: min(100% - var(--adm-barre) - var(--adm-zone-apercu) - 2 * var(--adm-bord), var(--adm-colonne)); }
+  .adm-travail { padding-left: var(--adm-barre); }
   .adm-shell[data-onglet='page'] .adm-travail { padding-right: var(--adm-zone-apercu); }
-  .adm-shell:has(.adm-detail-cote) { --adm-largeur: min(100% - 216px - var(--adm-zone-detail) - 2 * var(--adm-bord), var(--adm-colonne)); }
+  .adm-shell:has(.adm-detail-cote) { --adm-largeur: min(100% - var(--adm-barre) - var(--adm-zone-detail) - 2 * var(--adm-bord), var(--adm-colonne)); }
   .adm-shell:has(.adm-detail-cote) .adm-travail { padding-right: var(--adm-zone-detail); }
   /* L'en-tête d'une zone va d'un bord à l'autre : le titre au bord gauche du travail, les gestes au bord droit. */
   .adm-entete-bureau { padding-inline: 28px; }
   .adm-colonne { width: min(100% - 2 * var(--adm-bord), var(--adm-colonne)); margin-inline: auto; }
   /* Le message se pose en bas à droite, hors des rangées qu'on édite (24 octobre 2026 : centré, il en couvrait une). */
   /* Au bord droit de la colonne de l'onglet, pas au bord de l'écran : sur un écran de 3440 px, il reste près du travail. */
-  .adm-shell .adm-toast { left: auto; right: max(24px, (100% - 216px - var(--adm-largeur)) / 2); width: min(24rem, 100% - 216px - 48px); margin: 0; }
-  .adm-shell[data-onglet='page'] .adm-toast { right: calc(var(--adm-zone-apercu) + max(24px, (100% - 216px - var(--adm-zone-apercu) - var(--adm-largeur)) / 2)); }
-  .adm-shell:has(.adm-detail-cote) .adm-toast { right: calc(var(--adm-zone-detail) + max(24px, (100% - 216px - var(--adm-zone-detail) - var(--adm-largeur)) / 2)); }
+  .adm-shell .adm-toast { left: auto; right: max(24px, (100% - var(--adm-barre) - var(--adm-largeur)) / 2); width: min(24rem, 100% - var(--adm-barre) - 48px); margin: 0; }
+  .adm-shell[data-onglet='page'] .adm-toast { right: calc(var(--adm-zone-apercu) + max(24px, (100% - var(--adm-barre) - var(--adm-zone-apercu) - var(--adm-largeur)) / 2)); }
+  .adm-shell:has(.adm-detail-cote) .adm-toast { right: calc(var(--adm-zone-detail) + max(24px, (100% - var(--adm-barre) - var(--adm-zone-detail) - var(--adm-largeur)) / 2)); }
 }
 /* Une fenêtre centrée (les offres, une confirmation) se centre sur l'espace de travail, à droite de la barre latérale. */
 @media (min-width: 1024px) {
-  body:has(.adm-shell) [data-calque='centre'] { padding-left: 216px; }
+  body:has(.adm-shell) [data-calque='centre'] { padding-left: var(--adm-barre); }
 }
 .adm-nav-item { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 10px; border-radius: 7px; color: #dcdcff; font-size: 14px; font-weight: 500; text-align: left; transition: background-color 150ms, color 150ms; }
 .adm-nav-item:hover { background: rgb(255 255 255 / 0.1); color: #fff; }
@@ -555,13 +563,20 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
   /* Le téléphone : 390 px d'écran dans un bord de 9, réduit d'un bloc (voir `Telephone`) ; son écran défile seul. */
   .adm-tel-lieu { display: flex; width: 100%; flex: none; justify-content: center; }
   .adm-tel-cadre { flex: none; }
-  .adm-tel { width: 408px; height: 778px; padding: 9px; border-radius: 54px; background: #141414; box-shadow: 0 24px 60px -24px rgb(10 10 10 / 0.35); transform-origin: 0 0; }
+  /* Un iPhone 17 : l'écran de 402 × 874 points dans un bord de 10, le cadre d'aluminium sombre, ses coins de 64. */
+  .adm-tel { position: relative; width: 422px; height: 894px; padding: 10px; border-radius: 64px; background: #0b0b0c; box-shadow: inset 0 0 0 1.5px #3b3b3f, inset 0 0 0 4px #161618, 0 30px 70px -30px rgb(10 10 10 / 0.45); transform-origin: 0 0; }
+  /* Les boutons sur la tranche : Action et volume à gauche, le côté à droite. */
+  .adm-tel::before, .adm-tel::after { content: ''; position: absolute; width: 3px; border-radius: 2px; background: #2c2c30; }
+  .adm-tel::before { top: 150px; left: -3px; height: 32px; border-radius: 2px 0 0 2px; box-shadow: 0 64px 0 0 #2c2c30, 0 64px 0 0 #2c2c30; }
+  .adm-tel::after { top: 236px; right: -3px; height: 100px; border-radius: 0 2px 2px 0; }
+  /* La Dynamic Island, posée sur l'écran, au-dessus de la page qui défile dessous. */
+  .adm-tel-ile { position: absolute; top: 21px; left: 50%; z-index: 2; width: 124px; height: 36px; border-radius: 18px; background: #000; transform: translateX(-50%); pointer-events: none; }
   /* L'écran prend la couleur du cadre : le bord arrondi de la page s'y fond, sans liseré clair. */
-  .adm-tel-ecran { width: 390px; height: 100%; overflow-y: auto; overscroll-behavior: contain; border-radius: 45px; background: #141414; scrollbar-width: none; }
+  .adm-tel-ecran { width: 402px; height: 100%; overflow-y: auto; overscroll-behavior: contain; border-radius: 54px; background: #0b0b0c; scrollbar-width: none; }
   .adm-tel-ecran::-webkit-scrollbar { display: none; }
   /* Sur un ordinateur, la page couvre l'espace de travail, sous l'en-tête et à droite de la barre latérale, sur le crème de l'aperçu ;
      elle défile seule, et se réduit seulement quand l'écran est plus étroit qu'elle. */
-  .adm-ordi-calque { position: fixed; top: 0; right: 0; bottom: 0; left: 216px; z-index: 35; display: flex; flex-direction: column; align-items: center; gap: 16px; overflow-y: auto; overscroll-behavior: contain; padding: 16px var(--adm-bord) 40px; background: var(--adm-creme); }
+  .adm-ordi-calque { position: fixed; top: 0; right: 0; bottom: 0; left: var(--adm-barre); z-index: 35; display: flex; flex-direction: column; align-items: center; gap: 16px; overflow-y: auto; overscroll-behavior: contain; padding: 16px var(--adm-bord) 40px; background: var(--adm-creme); }
   .adm-ordi-calque .adm-ordi-lieu { width: 100%; }
 }
 /* Une tablette en paysage a la mise en page du bureau, avec des cibles pour le doigt. */

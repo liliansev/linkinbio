@@ -799,7 +799,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
       {/* Au clavier, le premier arrêt passe la navigation et l'en-tête : il mène droit au contenu de l'onglet (critique série 2). */}
       <a href="#contenu-admin" className={`${classeBouton.principal} sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-[70]`}>Aller au contenu</a>
       {/* Au bureau, une barre latérale fine : la marque, les sections, et le compte en bas, qui s'ouvre sur « Me déconnecter ». */}
-      <aside className="adm-sidebar fixed inset-y-0 left-0 z-30 hidden w-[216px] flex-col lg:flex" aria-label="Navigation">
+      <aside className="adm-sidebar fixed inset-y-0 left-0 z-30 hidden w-(--adm-barre) flex-col lg:flex" aria-label="Navigation">
         <Marque petite surBleu className="h-14 shrink-0 px-2" />
         <nav className="flex flex-col gap-0.5 pt-1.5" aria-label="Sections">
           {onglets.map(o => (
