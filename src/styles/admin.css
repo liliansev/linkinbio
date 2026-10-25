@@ -218,16 +218,18 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
  */
 @media (min-width: 1024px) {
   .adm-shell {
-    --adm-bord: clamp(20px, 2.5vw, 40px);
-    --adm-colonne: 1120px;
-    /* La zone de l'aperçu, à droite de Ma page : le téléphone à sa vraie taille dès 1470 px d'écran. */
-    --adm-zone-apercu: clamp(440px, 30vw, 560px);
+    /* Tout suit la largeur de l'écran, sans palier (25 octobre 2026, demandé par Lilian : « ça devrait auto sizer ») :
+       les marges, les colonnes, les zones de droite, puis, sur Ma page, les rangées et le profil (plus bas). */
+    --adm-bord: clamp(20px, 3vw, 72px);
+    --adm-colonne: clamp(1120px, 64vw, 1680px);
+    /* La zone de l'aperçu, à droite de Ma page : le téléphone y grandit avec elle (voir `Telephone`). */
+    --adm-zone-apercu: clamp(440px, 30vw, 900px);
     /* La zone du détail (un outil, la fiche d'un compte, Mon abonnement), à droite de sa liste : voir `PanneauDetail`. */
-    --adm-zone-detail: clamp(420px, 32vw, 600px);
+    --adm-zone-detail: clamp(420px, 32vw, 800px);
     --adm-largeur: min(100% - 216px - 2 * var(--adm-bord), var(--adm-colonne));
   }
-  .adm-shell:is([data-onglet='reglages'], [data-onglet='integrations']) { --adm-colonne: 680px; }
-  .adm-shell[data-onglet='page'] { --adm-colonne: clamp(820px, 38vw, 960px); --adm-largeur: min(100% - 216px - var(--adm-zone-apercu) - 2 * var(--adm-bord), var(--adm-colonne)); }
+  .adm-shell:is([data-onglet='reglages'], [data-onglet='integrations']) { --adm-colonne: clamp(680px, 42vw, 1040px); }
+  .adm-shell[data-onglet='page'] { --adm-colonne: 1800px; --adm-largeur: min(100% - 216px - var(--adm-zone-apercu) - 2 * var(--adm-bord), var(--adm-colonne)); }
   .adm-travail { padding-left: 216px; }
   .adm-shell[data-onglet='page'] .adm-travail { padding-right: var(--adm-zone-apercu); }
   .adm-shell:has(.adm-detail-cote) { --adm-largeur: min(100% - 216px - var(--adm-zone-detail) - 2 * var(--adm-bord), var(--adm-colonne)); }
@@ -1122,24 +1124,25 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
   .adm-tableau tbody tr:last-child td { border-bottom: 0; }
 }
 
+
 /*
- * Ma page sur un grand écran (25 octobre 2026, demandé par Lilian : « trop d'espaces blancs ») : dès 1680 px,
- * la colonne d'édition suit l'écran au lieu de rester à 960 px au milieu d'une zone vide, et ses rangées,
- * son profil et son champ grandissent avec elle. Les hauteurs collées (en-tête, onglets) ne changent pas.
+ * Ma page au bureau (25 octobre 2026, demandé par Lilian) : l'édition remplit sa zone, et ses rangées, son profil
+ * et son champ grandissent avec l'écran, de leur taille d'un portable (1440 px) à celle d'un grand écran (2400 px).
+ * Les hauteurs collées (en-tête, onglets Contenu / Design) ne changent pas.
  */
-@media (min-width: 1680px) {
-  .adm-shell[data-onglet='page'] { --adm-colonne: clamp(960px, 52vw, 1400px); }
-  .adm-profil-photo { width: 64px; height: 64px; }
-  .adm-profil-haut { gap: 16px; }
-  .adm-profil-texte { padding-top: 6px; }
-  .adm-profil-nom { height: 30px; font-size: 17px; }
-  .adm-profil-bio { font-size: 14.5px; }
-  .adm-lien { font-size: 14px; }
-  .adm-coller-champ > input { height: 46px; font-size: 14.5px; }
-  .adm-rangee-tete { min-height: 54px; padding: 0 12px 0 10px; }
-  .adm-rangee-bouton { gap: 10px; }
-  .adm-rangee-nom { font-size: 14.5px; }
-  .adm-rangee-sous, .adm-rangee-clics { font-size: 13px; }
-  .adm-rangee-geste { width: 32px; height: 32px; }
-  .adm-rangee-reglages { padding: 4px 20px 20px 48px; }
+@media (min-width: 1024px) {
+  .adm-profil-photo { width: clamp(52px, calc(20px + 2.3vw), 76px); height: clamp(52px, calc(20px + 2.3vw), 76px); }
+  .adm-profil-haut { gap: clamp(14px, calc(4px + 0.6vw), 20px); }
+  .adm-profil-texte { padding-top: clamp(3px, calc(0.5vw - 4px), 8px); }
+  .adm-profil-nom { height: clamp(28px, calc(18px + 0.6vw), 32px); font-size: clamp(15px, calc(8px + 0.5vw), 19px); }
+  .adm-profil-bio { font-size: clamp(13.5px, calc(9px + 0.32vw), 16px); }
+  .adm-lien { font-size: clamp(13.5px, calc(9px + 0.32vw), 15.5px); }
+  .adm-coller-champ > input { height: clamp(40px, calc(18px + 1.5vw), 52px); font-size: clamp(13.5px, calc(9px + 0.32vw), 16px); }
+  .adm-rangee-tete { min-height: clamp(44px, calc(16px + 1.75vw), 60px); padding: 0 clamp(8px, calc(0.5vw + 1px), 14px) 0 clamp(6px, calc(0.5vw - 1px), 12px); }
+  .adm-rangee-bouton { gap: clamp(8px, calc(0.25vw + 4px), 12px); }
+  .adm-rangee-nom { font-size: clamp(13.5px, calc(9px + 0.32vw), 16px); }
+  .adm-rangee-sous, .adm-rangee-clics { font-size: clamp(12px, calc(8.5px + 0.25vw), 14px); }
+  .adm-rangee-reglages { padding: 2px clamp(16px, 1.1vw, 24px) clamp(16px, 1.1vw, 24px) clamp(40px, 2.8vw, 52px); }
 }
+/* Une tablette en paysage garde ses cibles pour le doigt, quelle que soit la largeur. */
+@media (min-width: 1024px) and (pointer: coarse) { .adm-rangee-tete { min-height: max(52px, calc(16px + 1.75vw)); } }

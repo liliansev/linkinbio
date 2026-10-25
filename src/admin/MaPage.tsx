@@ -846,7 +846,8 @@ function Rangee({ bloc, droits, clics, neuf, ouvert, editeur, ouvrir, fermer, ge
 /**
  * La page à droite, au bureau, dans un téléphone : 390 px d'écran, haut de
  * 760 px, et jusqu'à 932 (un grand iPhone) quand l'écran de l'ordinateur a la
- * place ; réduit d'un bloc seulement quand la hauteur ou la largeur manque. La
+ * place ; agrandi d'un bloc au-delà, jusqu'à 1,4 fois, quand sa zone le tient
+ * (25 octobre 2026 : il suit l'écran), réduit quand la hauteur ou la largeur manque. La
  * carte crème autour en prend la taille. Le bloc ouvert dans la liste vient en
  * vue sur l'écran s'il n'y est pas.
  */
@@ -861,7 +862,7 @@ function Telephone({ ecran, choisi, children }: { ecran: RefObject<HTMLDivElemen
       // La place sous le haut du téléphone, jusqu'au bas de sa zone, fixée à l'écran.
       const dispo = window.innerHeight - el.getBoundingClientRect().top - (parseFloat(getComputedStyle(carte).paddingBottom) || 0);
       const haut = Math.round(Math.min(932, Math.max(760, dispo - 18)));
-      setMesure({ echelle: Math.min(1, el.clientWidth / 408, dispo / (haut + 18)), haut });
+      setMesure({ echelle: Math.min(1.4, el.clientWidth / 408, dispo / (haut + 18)), haut });
     };
     mesurer();
     const obs = new ResizeObserver(mesurer);
