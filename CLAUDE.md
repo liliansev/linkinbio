@@ -194,7 +194,9 @@ embarque tout : l'image n'a pas de `node_modules`.
   jusqu'au geste suivant, fait ailleurs, et son geste rend la main au contenu ; les autres s'en vont après 4 s (8 s
   pour une phrase longue). Au bureau, elle se pose en bas à droite.
   Au téléphone, le champ vide montre quatre tuiles en couleur (`SUGGESTIONS` : Lien, Galerie, Avis et preuves, Liste
-  e-mail, avec le badge de l'offre) puis les blocs rangés en familles repliées (`FAMILLES`, 24 octobre 2026, demandé par Lilian).
+  e-mail, avec le badge de l'offre) puis les blocs rangés en familles repliées (`FAMILLES`, 24 octobre 2026, demandé par Lilian) ;
+  une tuile prend la hauteur de ce qu'elle dit, jamais un carré, et tuiles, familles et lignes suivent la largeur de l'écran
+  en `clamp()` (`.adm-tuile-ajout`, `.adm-famille-ajout`, `.adm-ligne-ajout`, 25 octobre 2026, audit Impeccable).
   Le choix des blocs (`OngletLiens.tsx`) est un seul champ, « Colle une adresse ou cherche un bloc » : au téléphone une
   feuille qui s'ouvre sur lui et son bouton Coller (`FeuilleAjout`), au bureau le champ au-dessus des blocs
   (`ChampAjout`), que le bouton « Ajouter un bloc » de l'en-tête et la touche A mettent en vue (flèches, Entrée, Échap
