@@ -115,7 +115,11 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
   async function lireSite(l: Ligne) {
     const url = adresseSaisie(l.url);
     if (!url || l.titre.trim()) return;
-    const produit = typeDeAdresse(url, vitrine) === 'produit';
+    const type = typeDeAdresse(url, vitrine);
+    // Un agenda ou une page de soutien garde le nom de son bloc (« Prendre rendez-vous ») : le nom du
+    // service (« Calendly »), déjà écrit dessous, le doublerait. Une vidéo ou un morceau prend son titre.
+    if (type === 'reservation' || type === 'soutien') return;
+    const produit = type === 'produit';
     const repli = nomSite(url);
     majLigne(l.id, { titre: repli, lecture: true });
     try {
