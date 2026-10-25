@@ -64,9 +64,13 @@ embarque tout : l'image n'a pas de `node_modules`.
   d'un bloc Avis lue sur la page d'avis collée, dans son JSON-LD `aggregateRating` ou les données de Trustpilot, ramenée
   sur 5 ; `lireNoteAvis` pendant qu'on tape, `LienAvis` dans l'éditeur, puis relue chaque jour par `planifierAvis`,
   éteinte par `HOPLA_AVIS=0` ; une page muette laisse la note tapée à la main, et une fiche Google demanderait l'API Places).
+- `server/coffre.ts` (25 octobre 2026, demandé par Lilian : « même moi ne dois pas avoir accès ») : AES-256-GCM pour les clés
+  d'API, les webhooks et les e-mails et prénoms des inscrits (`chiffrer`, `dechiffrer`, `empreinte` pour les doublons sans
+  l'adresse en clair). La clé vient de `LIENS_CLE_INTEGRATIONS` (voir `deploy/README.md`), sinon du secret de la base ;
+  `rechiffrer` dans `db.ts` remet tout sous la clé courante au démarrage.
 - `server/liste.ts` : « Rejoins ma liste ». Les inscrits restent chez Hopla (export CSV) et partent là où la personne a
-  branché sa liste (22 octobre 2026) : six newsletters par leur API (Brevo, Mailchimp, Kit, MailerLite, beehiiv,
-  Systeme.io ; `listes()` pour choisir la liste par son nom, `verifier()`, `pousser()`), ou Make, Zapier et n8n par un
+  branché sa liste (22 octobre 2026) : huit newsletters par leur API (Brevo, Mailchimp, Kit, MailerLite, beehiiv,
+  Systeme.io, et depuis le 25 octobre MailCheap, dont une clé « Signups only » se vérifie sans inscrire personne, et Loops ; `listes()` pour choisir la liste par son nom, `verifier()`, `pousser()`), ou Make, Zapier et n8n par un
   webhook, qui reçoit un inscrit d'exemple au branchement. Substack n'a pas d'API : `adressesSubstack` et `csvSubstack`
   (`/api/contacts?format=substack`). La clé, ou l'adresse du webhook, est chiffrée au repos et ne revient jamais au
   navigateur. Un inscrit n'attend pas un fournisseur lent plus de 4 secondes. `server/sortante.ts` : `requeteSortante`, le
@@ -123,6 +127,12 @@ embarque tout : l'image n'a pas de `node_modules`.
   une résiliation ou un impayé) : `Offres.tsx` (`FenetreOffres`, le récapitulatif avant Creem, `RepasserGratuit` qui résilie pour
   la fin de la période payée, `RetourPaiement` au retour, dont le geste ramène où servir l'offre ; parti d'une règle de bloc, au bloc,
   la règle ouverte par `RegleAOuvrir` dans `ReglesBloc.tsx`).
+  Brancher sa newsletter (25 octobre 2026, demandé par Lilian) : Intégrations n'a plus qu'une ligne « Où vont tes inscrits »,
+  qui ouvre `ParcoursListe` : l'outil choisi dans une liste qui se cherche (Newsletter, Automatisations, Sans outil), puis
+  deux gestes, « Ouvrir X » vers sa page de clés (`CREER_LA_CLE`) et la clé collée ; une seule liste se prend d'office.
+  Poser une liste e-mail sans rien de branché ouvre ce parcours dans une feuille (`FenetreListe`, depuis `Admin.tsx`),
+  qui finit sur « Envoyer mes N inscrits » ; le bloc dit où partent ses inscrits (`DestinationListe`, `ListeBranchee`).
+  Débrancher demande une confirmation.
   Intégrations (`OngletIntegrations.tsx`, 22 octobre 2026, demandé par Lilian) reprend les lignes de Réglages, une par outil,
   son vrai logo seul dans la couleur de sa marque (la bulle de MailerLite, l'abeille de beehiiv, le rond de Systeme.io). Un bloc ouvert depuis Intégrations y ramène quand on le referme (croix, Annuler, retour du téléphone), sur la sous-page d'où l'on venait ; le retour du téléphone depuis un autre onglet que Ma page ramène à Ma page : Newsletter (une clé, puis la liste
   choisie par son nom ; Substack par la copie des adresses ou le fichier), Sur ta page (avis, rendez-vous, soutien, produit :

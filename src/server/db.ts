@@ -11,6 +11,7 @@ import { OFFRES, estPaye, estPlanPayant, rang } from '../lib/abonnement.ts';
 import { appDe } from '../lib/ouvrirApp.ts';
 import type { PeriodeStats } from '../lib/periode.ts';
 import { ajouterJours, jourDe, longueur, plageDe } from '../lib/periode.ts';
+import { chiffrer, dechiffrer, empreinte, estChiffre, repereCle } from './coffre.ts';
 
 /*
  * Toutes les pages tiennent dans un fichier SQLite (`node:sqlite`, rien à
@@ -108,6 +109,8 @@ export function base(): DatabaseSync {
   colonne(db, 'evenements', 'app', 'INTEGER NOT NULL DEFAULT 0');
   // Le pays du visiteur, lu chez Cloudflare (24 octobre 2026) ; vide avant, ou quand il ne le sait pas.
   colonne(db, 'evenements', 'pays', "TEXT NOT NULL DEFAULT ''");
+  // L'empreinte de l'e-mail d'un inscrit (25 octobre 2026) : l'adresse est chiffrée, l'empreinte évite les doublons.
+  colonne(db, 'contacts', 'empreinte', "TEXT NOT NULL DEFAULT ''");
   db.exec(`
     CREATE UNIQUE INDEX IF NOT EXISTS comptes_email ON comptes (email);
     CREATE INDEX IF NOT EXISTS blocs_compte ON blocs (compte, position);
@@ -116,6 +119,7 @@ export function base(): DatabaseSync {
     CREATE INDEX IF NOT EXISTS evenements_compte ON evenements (compte, jour, type);
     CREATE INDEX IF NOT EXISTS evenements_ts ON evenements (ts);
     CREATE INDEX IF NOT EXISTS signalements_statut ON signalements (statut, ts);
+    CREATE UNIQUE INDEX IF NOT EXISTS contacts_empreinte ON contacts (compte, empreinte) WHERE empreinte != '';
   `);
   if (!db.prepare('SELECT 1 FROM comptes WHERE id = ?').get(PRINCIPAL)) {
     // L'adresse du compte principal vient de l'environnement (voir auth.ts) : on n'en garde qu'un repère.
@@ -136,7 +140,41 @@ export function base(): DatabaseSync {
     db.prepare(`UPDATE ${table} SET ${col} = REPLACE(REPLACE(${col}, '"/liens/media/', '"/media/'), '"/liens/avatar.webp"', '"/avatar.webp"') WHERE ${col} LIKE '%"/liens/%'`).run();
   }
   purger(Date.now(), db);
+  rechiffrer(db);
   return db;
+}
+
+/**
+ * Chiffre ce qui ne l'est pas encore (les inscrits d'avant le 25 octobre 2026), et repasse tout sous la clé du serveur
+ * quand elle a changé (`LIENS_CLE_INTEGRATIONS` posée dans `runtime.env`) : au démarrage, une fois. Ce qu'aucune clé
+ * n'ouvre reste tel quel.
+ */
+export function rechiffrer(d = base(), env: Record<string, string | undefined> = process.env) {
+  const repere = repereCle(env);
+  const garde = (d.prepare('SELECT valeur FROM reglages WHERE cle = ?').get('repere-cle') as { valeur: string } | undefined)?.valeur;
+  const enClair = d.prepare("SELECT 1 FROM contacts WHERE empreinte = '' LIMIT 1").get();
+  if (garde === repere && !enClair) return;
+  const lire = (v: string) => (estChiffre(v) ? dechiffrer(env, v) : v);
+  d.exec('BEGIN');
+  try {
+    const maj = d.prepare('UPDATE contacts SET email = ?, prenom = ?, empreinte = ? WHERE id = ?');
+    for (const c of d.prepare('SELECT id, compte, email, prenom FROM contacts').all() as { id: string; compte: string; email: string; prenom: string }[]) {
+      const email = lire(c.email);
+      if (!email) continue;
+      const prenom = lire(c.prenom);
+      maj.run(chiffrer(env, email), prenom ? chiffrer(env, prenom) : '', empreinte(env, c.compte, email), c.id);
+    }
+    const cle = d.prepare('UPDATE integrations SET cle = ? WHERE compte = ?');
+    for (const i of d.prepare('SELECT compte, cle FROM integrations').all() as { compte: string; cle: string }[]) {
+      const clair = dechiffrer(env, i.cle);
+      if (clair) cle.run(chiffrer(env, clair), i.compte);
+    }
+    d.prepare('INSERT INTO reglages (cle, valeur) VALUES (?, ?) ON CONFLICT (cle) DO UPDATE SET valeur = excluded.valeur').run('repere-cle', repere);
+    d.exec('COMMIT');
+  } catch (error) {
+    d.exec('ROLLBACK');
+    console.error('[liens] rechiffrement :', (error as Error).message);
+  }
 }
 
 /** Ce qu'on garde, annoncé dans la politique de confidentialité (`lib/legal.ts`). */
@@ -582,25 +620,31 @@ export interface ContactAEnvoyer { id: string; email: string; prenom: string; ts
 /** Un nouvel inscrit, ou null s'il l'était déjà. */
 export function ajouterContact(compte: string, c: { email: string; prenom: string; source: string; bloc: string }, maintenant = Date.now()): ContactAEnvoyer | null {
   const id = nouvelId();
-  const r = base().prepare('INSERT OR IGNORE INTO contacts (id, compte, email, prenom, ts, source, bloc) VALUES (?, ?, ?, ?, ?, ?, ?)').run(id, compte, c.email.toLowerCase(), c.prenom, maintenant, c.source, c.bloc);
-  return Number(r.changes) ? { id, email: c.email.toLowerCase(), prenom: c.prenom, ts: maintenant, source: c.source } : null;
+  const email = c.email.toLowerCase();
+  // L'adresse et le prénom sont chiffrés ; l'empreinte dit si l'adresse est déjà là.
+  const r = base().prepare('INSERT OR IGNORE INTO contacts (id, compte, email, prenom, ts, source, bloc, empreinte) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+    .run(id, compte, chiffrer(process.env, email), c.prenom ? chiffrer(process.env, c.prenom) : '', maintenant, c.source, c.bloc, empreinte(process.env, compte, email));
+  return Number(r.changes) ? { id, email, prenom: c.prenom, ts: maintenant, source: c.source } : null;
 }
+
+/** Un inscrit lu dans la base : son adresse et son prénom déchiffrés. */
+const ouvrir = <T extends { email: string; prenom: string }>(c: T): T => ({ ...c, email: estChiffre(c.email) ? dechiffrer(process.env, c.email) : c.email, prenom: estChiffre(c.prenom) ? dechiffrer(process.env, c.prenom) : c.prenom });
 
 export const contactsDuJour = (compte: string, maintenant = Date.now()) => (base().prepare('SELECT COUNT(*) AS n FROM contacts WHERE compte = ? AND ts > ?').get(compte, maintenant - 86_400_000) as { n: number }).n;
 export const noterSynchro = (id: string, etat: 'ok' | 'erreur') => base().prepare('UPDATE contacts SET synchro = ? WHERE id = ?').run(etat, id);
 export const supprimerContact = (compte: string, id: string) => base().prepare('DELETE FROM contacts WHERE id = ? AND compte = ?').run(id, compte);
 
 const LIRE_CONTACT = 'SELECT id, email, prenom, ts, source, synchro FROM contacts WHERE compte = ?';
-export const tousLesContacts = (compte: string) => base().prepare(`${LIRE_CONTACT} ORDER BY ts DESC`).all(compte) as unknown as Contact[];
+export const tousLesContacts = (compte: string) => (base().prepare(`${LIRE_CONTACT} ORDER BY ts DESC`).all(compte) as unknown as Contact[]).map(ouvrir);
 
 export function resumeContacts(compte: string, maintenant = Date.now()) {
   const d = base();
   const { total, semaine, attente } = d.prepare(`SELECT COUNT(*) AS total, SUM(ts > ?) AS semaine, SUM(synchro != 'ok') AS attente FROM contacts WHERE compte = ?`).get(maintenant - 7 * 86_400_000, compte) as { total: number; semaine: number | null; attente: number | null };
-  return { total, semaine: semaine ?? 0, enAttente: attente ?? 0, derniers: d.prepare(`${LIRE_CONTACT} ORDER BY ts DESC LIMIT 50`).all(compte) as unknown as Contact[] };
+  return { total, semaine: semaine ?? 0, enAttente: attente ?? 0, derniers: (d.prepare(`${LIRE_CONTACT} ORDER BY ts DESC LIMIT 50`).all(compte) as unknown as Contact[]).map(ouvrir) };
 }
 
 /** Les inscrits pas encore chez le fournisseur, du plus ancien au plus récent. */
-export const contactsAEnvoyer = (compte: string, limite = 200) => base().prepare(`SELECT id, email, prenom, ts, source FROM contacts WHERE compte = ? AND synchro != 'ok' ORDER BY ts LIMIT ?`).all(compte, limite) as unknown as ContactAEnvoyer[];
+export const contactsAEnvoyer = (compte: string, limite = 200) => (base().prepare(`SELECT id, email, prenom, ts, source FROM contacts WHERE compte = ? AND synchro != 'ok' ORDER BY ts LIMIT ?`).all(compte, limite) as unknown as ContactAEnvoyer[]).map(ouvrir);
 
 export interface Integration { fournisseur: FournisseurListe; cle: string; liste: string; nom: string }
 export const lireIntegration = (compte: string) => base().prepare('SELECT fournisseur, cle, liste, nom FROM integrations WHERE compte = ?').get(compte) as Integration | undefined;

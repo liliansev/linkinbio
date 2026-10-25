@@ -63,7 +63,7 @@ export function requetePublique(entree: string | URL | Request, init: RequestIni
 }
 
 /** Les API des newsletters (et Turnstile) : des hôtes fixes, que l'utilisateur ne choisit pas. */
-const HOTES_FIXES = /^(api\.brevo\.com|[a-z]{2,4}\d{1,3}\.api\.mailchimp\.com|api\.kit\.com|connect\.mailerlite\.com|api\.beehiiv\.com|api\.systeme\.io|challenges\.cloudflare\.com)$/;
+const HOTES_FIXES = /^(api\.brevo\.com|[a-z]{2,4}\d{1,3}\.api\.mailchimp\.com|api\.kit\.com|connect\.mailerlite\.com|api\.beehiiv\.com|api\.systeme\.io|mailcheap\.ai|app\.loops\.so|challenges\.cloudflare\.com)$/;
 
 /** Le transport des intégrations en production : les hôtes fixes par `fetch`, tout le reste par `requetePublique`. */
 export const requeteSortante: typeof fetch = (entree, init) => {

@@ -86,7 +86,10 @@ function inscritsDemo() {
   const prenoms = ['Camille', 'Hugo', 'Sarah', 'Léa', 'Malik', 'Inès', 'Tom', 'Jade'];
   return prenoms.map((p, i) => ({ id: `c${i}`, email: `${p.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')}@exemple.fr`, prenom: p, ts: Date.now() - i * 7_200_000, source: ['Instagram', 'TikTok', 'LinkedIn'][i % 3], synchro: 'ok' as const }));
 }
-let integrationDemo: IntegrationListe | null = { fournisseur: 'brevo', liste: '7', nom: 'Newsletter', cle: '•••• a91f' };
+// `#liste` : rien de branché, pour jouer le parcours « Où vont tes inscrits ? » (25 octobre 2026).
+let integrationDemo: IntegrationListe | null = typeof location !== 'undefined' && location.hash.startsWith('#liste') ? null : { fournisseur: 'brevo', liste: '7', nom: 'Newsletter', cle: '•••• a91f' };
+// Les inscrits gardés chez Hopla avant le branchement, qui attendent de partir.
+let inscritsEnAttente = 0;
 /** Ce que les newsletters répondraient à « tes listes » : de quoi choisir par le nom. */
 const LISTES_DEMO: Record<Exclude<FournisseurListe, 'make' | 'zapier' | 'n8n'>, ListeFournisseur[]> = {
   brevo: [{ id: '7', nom: 'Newsletter' }, { id: '12', nom: 'Clients' }, { id: '3', nom: 'Atelier de janvier' }],
@@ -94,7 +97,9 @@ const LISTES_DEMO: Record<Exclude<FournisseurListe, 'make' | 'zapier' | 'n8n'>, 
   kit: [{ id: '7123456', nom: 'Inscription à la newsletter' }, { id: '7123457', nom: 'Guide gratuit' }],
   mailerlite: [{ id: '131072415', nom: 'Newsletter' }, { id: '131072416', nom: 'Clients' }],
   beehiiv: [{ id: 'pub_3f0c2b1e-5d1a-4c7e-9b52-8a6f0e4d2c11', nom: 'Les lettres de Lilian' }],
-  systeme: [{ id: '4521', nom: 'Hopla' }, { id: '4522', nom: 'Clients' }],
+  systeme: [{ id: '', nom: 'Sans tag' }, { id: '4521', nom: 'Hopla' }, { id: '4522', nom: 'Clients' }],
+  mailcheap: [{ id: '', nom: 'Ta newsletter' }],
+  loops: [{ id: '', nom: 'Toute ton audience' }, { id: 'cm2k8j4h6g0f8d6s4a2b0z8', nom: 'Newsletter' }],
 };
 
 export const apiDemo: Api = {
@@ -148,7 +153,7 @@ export const apiDemo: Api = {
   async resilierAbonnement() { throw new Error('Pas de paiement dans l’aperçu.'); },
   async liste() {
     await pause();
-    return { total: 184, semaine: 23, derniers: inscritsDemo(), integration: integrationDemo, enAttente: 0 };
+    return { total: 184, semaine: 23, derniers: inscritsDemo(), integration: integrationDemo, enAttente: integrationDemo ? inscritsEnAttente : 0 };
   },
   async listesFournisseur({ fournisseur, cle }) {
     await pause();
@@ -159,6 +164,7 @@ export const apiDemo: Api = {
   async brancherListe(i) {
     await pause();
     if (!i) { integrationDemo = null; return { ok: true, message: 'Ta liste reste chez Hopla seulement.' }; }
+    inscritsEnAttente = 184;
     const nom = NOMS_FOURNISSEURS[i.fournisseur];
     if (estWebhook(i.fournisseur)) {
       const u = adresseWebhook(i.fournisseur, i.cle);
@@ -167,12 +173,12 @@ export const apiDemo: Api = {
       return { ok: true, message: `Branché sur ${nom}. Dans l’aperçu, rien n’y part pour de vrai.` };
     }
     const choisie = LISTES_DEMO[i.fournisseur].find(l => l.id === i.liste);
-    if (!choisie && !(i.fournisseur === 'systeme' && !i.liste)) return { ok: false, message: `Choisis ${LISTE_CHEZ[i.fournisseur].la} où vont tes inscrits.` };
-    integrationDemo = { fournisseur: i.fournisseur, liste: i.liste, nom: choisie?.nom ?? '', cle: i.cle ? `•••• ${i.cle.slice(-4)}` : integrationDemo?.cle ?? '•••• a91f' };
-    return { ok: true, message: `Branché sur ${nom}${choisie ? `, ${LISTE_CHEZ[i.fournisseur].la} « ${choisie.nom} »` : ''}. Dans l’aperçu, rien n’y part pour de vrai.` };
+    if (!choisie) return { ok: false, message: `Choisis ${LISTE_CHEZ[i.fournisseur].la} où vont tes inscrits.` };
+    integrationDemo = { fournisseur: i.fournisseur, liste: i.liste, nom: choisie?.id ? choisie.nom : '', cle: i.cle ? `•••• ${i.cle.slice(-4)}` : integrationDemo?.cle ?? '•••• a91f' };
+    return { ok: true, message: `Branché sur ${nom}${choisie?.id ? `, ${LISTE_CHEZ[i.fournisseur].la} « ${choisie.nom} »` : ''}. Dans l’aperçu, rien n’y part pour de vrai.` };
   },
   async supprimerContact() { await pause(); },
-  async resynchroniser() { await pause(); return { envoyes: 0, erreurs: 0 }; },
+  async resynchroniser() { await pause(); const envoyes = inscritsEnAttente; inscritsEnAttente = 0; return { envoyes, erreurs: 0 }; },
   async adresses() { await pause(); return inscritsDemo().map(c => c.email); },
   urlContacts: null,
   comptes: {

@@ -323,7 +323,7 @@ export interface Stats {
 }
 
 /** Les newsletters branchées par leur API : une clé, puis la liste choisie parmi celles du compte. */
-export const NEWSLETTERS = ['brevo', 'mailchimp', 'kit', 'mailerlite', 'beehiiv', 'systeme'] as const;
+export const NEWSLETTERS = ['brevo', 'mailchimp', 'mailcheap', 'kit', 'mailerlite', 'beehiiv', 'loops', 'systeme'] as const;
 /** Les outils d'automatisation, branchés par l'adresse d'un webhook. */
 export const WEBHOOKS = ['make', 'zapier', 'n8n'] as const;
 export const FOURNISSEURS_LISTE = [...NEWSLETTERS, ...WEBHOOKS] as const;

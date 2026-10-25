@@ -28,6 +28,7 @@ import type { Fonction } from '../lib/abonnement.ts';
 import type { SuiteAchat } from '../lib/achat.ts';
 import { focusAuto, focusSaisie } from '../lib/clavier';
 import { ChampLieu, ChampsCoordonnees, ChampsFaq, ChampsGalerie } from './ChampsBlocs.tsx';
+import { DestinationListe } from './OngletIntegrations.tsx';
 
 /** Au téléphone, la page ouverte dans la feuille d'un bloc : l'essentiel (`null`), la visibilité, l'apparence, « Plus de réglages », ou une règle rare. */
 type PageBloc = 'plus' | PageRegle | null;
@@ -1183,10 +1184,13 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
     <>
       {/* Un bloc neuf sans adresse (une liste d'inscrits, un avis) dit d'abord, en une ligne, ce qu'on ne devine pas ; celui qui
           en a une le dit sous son champ, tant qu'il est vide. Rien quand c'est évident. */}
-      {nouveau && type.aide && !avecUrl && <p className="text-[13.5px] leading-snug text-white/60">{type.aide}.</p>}
+      {/* La liste e-mail dit déjà où vont ses inscrits, juste dessous : son aide ferait doublon. */}
+      {nouveau && type.aide && !avecUrl && !(b.type === 'inscription' && droits.listeEmail) && <p className="text-[13.5px] leading-snug text-white/60">{type.aide}.</p>}
       {/* Un avis ou une liste gardés d'une offre passée : ils attendent, rien n'est perdu. */}
       {type.fonction && !droits[type.fonction] && <Reserve fonction={type.fonction} type={TYPES_VITRINE.includes(b.type) ? b.type as TypeVitrine : undefined}
         phrase={`Ce bloc n’est pas montré sur ta page sans Hopla ${offreDe(type.fonction)}. Il revient tel quel dès que tu la prends.`} />}
+      {/* Une liste e-mail dit où partent ses inscrits, et mène à sa newsletter (25 octobre 2026, demandé par Lilian). */}
+      {b.type === 'inscription' && droits.listeEmail && <DestinationListe />}
       {/* L'ancienne « Ma newsletter » : elle reste en ligne telle quelle, et dit ce qui la remplace, avec le geste pour y passer. */}
       {b.type === 'newsletter' && (
         <div className="flex flex-col items-start">
