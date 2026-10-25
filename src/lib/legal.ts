@@ -22,7 +22,7 @@ export const DOCUMENTS = ['cgu', 'traitement-des-donnees', 'confidentialite', 's
 export type NomDocument = (typeof DOCUMENTS)[number];
 
 /** L'éditeur de Hopla, d'après son avis de situation au répertoire Sirene du 25 octobre 2026. */
-const EDITEUR = 'AURA GROUP, SARL, 5 avenue du Maréchal de Lattre de Tassigny, 94600 Choisy-le-Roi';
+const EDITEUR = 'AURA GROUP, SARL au capital de 100 €, 5 avenue du Maréchal de Lattre de Tassigny, 94600 Choisy-le-Roi';
 
 const HEBERGEUR = 'Hostinger International Limited, 61 Lordou Vironos Street, 6023 Larnaca, Chypre';
 
