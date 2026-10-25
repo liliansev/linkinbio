@@ -139,6 +139,29 @@ navigateurs.
 
 Le 18 octobre 2026, l'app est passée à la racine de hopla.page (voir « Adresses »).
 
+## Sauvegarde
+
+`deploy/sauvegarde.sh` copie la base chaque nuit sans l'arrêter (`VACUUM INTO`
+dans le conteneur), vérifie que la copie s'ouvre, la garde 14 nuits dans
+`/opt/linkinbio/sauvegardes` et, si `HOPLA_SAUVEGARDE_DISTANTE` est posée, l'envoie
+hors du VPS par rclone (30 nuits). À installer à la main, comme les autres scripts :
+
+```
+install -m 755 deploy/sauvegarde.sh /opt/linkinbio/bin/sauvegarde.sh
+# hors du VPS : un seau Cloudflare R2 « hopla-sauvegardes », un jeton R2 limité à ce seau,
+# puis `rclone config` (type s3, fournisseur Cloudflare) sous le nom r2
+crontab -e
+15 3 * * * HOPLA_SAUVEGARDE_DISTANTE=r2:hopla-sauvegardes /opt/linkinbio/bin/sauvegarde.sh >> /opt/linkinbio/sauvegarde.log 2>&1
+```
+
+Restaurer : arrêter le conteneur, `gunzip` la copie, la poser à la place de
+`/data/liens.db` dans le volume (`docker cp`), redémarrer. La faire une fois à blanc
+sur une copie avant d'en avoir besoin.
+
+`LIENS_CLE_INTEGRATIONS` ne part jamais avec la base : sans elle, les clés d'API et
+les inscrits chiffrés d'une sauvegarde sont illisibles. La garder à part, dans un
+gestionnaire de mots de passe ; la perdre rend ces données illisibles pour de bon.
+
 ## Reste à faire
 
-- Sauvegarde nocturne de la base hors du VPS, avec un test de restauration.
+- Installer la sauvegarde nocturne (voir « Sauvegarde ») et faire un test de restauration.
