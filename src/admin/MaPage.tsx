@@ -844,16 +844,18 @@ function Rangee({ bloc, droits, clics, neuf, ouvert, editeur, ouvrir, fermer, ge
 }
 
 /**
- * La page à droite, au bureau, dans un téléphone : 390 px d'écran, haut de
- * 760 px, et jusqu'à 932 (un grand iPhone) quand l'écran de l'ordinateur a la
- * place ; agrandi d'un bloc au-delà, jusqu'à 1,4 fois, quand sa zone le tient
- * (25 octobre 2026 : il suit l'écran), réduit quand la hauteur ou la largeur manque. La
- * carte crème autour en prend la taille. Le bloc ouvert dans la liste vient en
- * vue sur l'écran s'il n'y est pas.
+ * La page à droite, au bureau, dans un iPhone 17 (25 octobre 2026, demandé par
+ * Lilian : « que ça ressemble vraiment à un écran d'iPhone 17, peu importe la
+ * taille ») : son écran de 402 × 874 points, son bord, sa Dynamic Island et ses
+ * boutons, toujours dans ces proportions, agrandi ou réduit d'un bloc pour
+ * prendre toute la hauteur de sa zone. La zone en prend la largeur (voir
+ * `--adm-zone-apercu`). Le bloc ouvert dans la liste vient en vue sur l'écran
+ * s'il n'y est pas.
  */
+const TEL_L = 422, TEL_H = 894;
 function Telephone({ ecran, choisi, children }: { ecran: RefObject<HTMLDivElement | null>; choisi: string | null; children: ReactNode }) {
   const lieu = useRef<HTMLDivElement>(null);
-  const [mesure, setMesure] = useState({ echelle: 0, haut: 760 });
+  const [echelle, setEchelle] = useState(0);
   useLayoutEffect(() => {
     const el = lieu.current;
     const carte = el?.closest<HTMLElement>('.adm-apercu-colle');
@@ -861,8 +863,7 @@ function Telephone({ ecran, choisi, children }: { ecran: RefObject<HTMLDivElemen
     const mesurer = () => {
       // La place sous le haut du téléphone, jusqu'au bas de sa zone, fixée à l'écran.
       const dispo = window.innerHeight - el.getBoundingClientRect().top - (parseFloat(getComputedStyle(carte).paddingBottom) || 0);
-      const haut = Math.round(Math.min(932, Math.max(760, dispo - 18)));
-      setMesure({ echelle: Math.min(1.4, el.clientWidth / 408, dispo / (haut + 18)), haut });
+      setEchelle(Math.min(el.clientWidth / TEL_L, dispo / TEL_H));
     };
     mesurer();
     const obs = new ResizeObserver(mesurer);
@@ -872,7 +873,6 @@ function Telephone({ ecran, choisi, children }: { ecran: RefObject<HTMLDivElemen
     document.addEventListener('animationend', mesurer);
     return () => { obs.disconnect(); window.removeEventListener('resize', mesurer); document.removeEventListener('animationend', mesurer); };
   }, []);
-  const { echelle, haut } = mesure;
   useEffect(() => {
     const e = ecran.current;
     if (!choisi || !e) return;
@@ -887,10 +887,11 @@ function Telephone({ ecran, choisi, children }: { ecran: RefObject<HTMLDivElemen
   }, [choisi, ecran]);
   return (
     <div ref={lieu} className="adm-tel-lieu">
-      <div className="adm-tel-cadre" style={{ width: 408 * echelle, height: (haut + 18) * echelle, visibility: echelle ? undefined : 'hidden' }}>
-        <div className="adm-tel" style={{ height: haut + 18, transform: `scale(${echelle})` }}>
+      <div className="adm-tel-cadre" style={{ width: TEL_L * echelle, height: TEL_H * echelle, visibility: echelle ? undefined : 'hidden' }}>
+        <div className="adm-tel" style={{ transform: `scale(${echelle})` }}>
           {/* L'écran se lit à la souris ; au clavier et pour un lecteur d'écran, tout se fait dans la liste. */}
           <div ref={ecran} className="adm-tel-ecran adm-apercu" aria-hidden="true">{children}</div>
+          <span className="adm-tel-ile" aria-hidden="true" />
         </div>
       </div>
     </div>
