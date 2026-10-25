@@ -3,8 +3,11 @@ import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import type { AddressInfo, LookupFunction } from 'node:net';
 
+
 process.env.LIENS_DB = ':memory:';
 const db = await import('./db.ts');
+/** Un compte neuf sans son essai de Pro : la page Gratuit que la plupart de ces tests mettent à l'épreuve. */
+const creerGratuit = (...a: Parameters<typeof db.creerCompte>) => { const c = db.creerCompte(...a); db.retirerEssai(c.id); return db.compteParId(c.id)!; };
 const auth = await import('./auth.ts');
 const attente = await import('./attente.ts');
 const { cleIp, limiteur, destinataireSature, MINUTE, HEURE, JOUR } = await import('./limites.ts');
@@ -72,7 +75,7 @@ test('cinq e-mails par heure et dix par jour vers une même adresse, quelle que 
 test('l’accueil ne sert pas à inonder une boîte, ni à créer des pages en changeant d’IPv6', async () => {
   const { envois, fetchFaux } = boite();
   const t = 20 * JOUR;
-  db.creerCompte('victime@exemple.fr', 'victime', t);
+  creerGratuit('victime@exemple.fr', 'victime', t);
   // Chaque demande vient d'une autre adresse IP : seule la limite par destinataire les arrête.
   for (let i = 0; i < 5; i++) {
     const r = await attente.creerHopla(O, env, { nom: `essai-${i}`, email: 'Victime@Exemple.fr' }, fetchFaux, t + i, `198.51.100.${i + 1}`);
@@ -112,7 +115,7 @@ test('le plafond du jour des liens de connexion ne compte pas les bienvenues de 
 });
 
 test('les images d’un compte suspendu ne sont plus servies', () => {
-  const c = db.creerCompte('images@exemple.fr', 'images-test');
+  const c = creerGratuit('images@exemple.fr', 'images-test');
   const id = db.ajouterMedia(c.id, new Uint8Array([1, 2, 3]), 'webp');
   assert.deepEqual([...db.lireMedia(id, 'webp')!], [1, 2, 3]);
   db.changerStatut(c.id, 'suspendu');

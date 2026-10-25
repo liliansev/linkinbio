@@ -5,7 +5,7 @@ import { DOMAINES_COURTS, adressePartage, sansSchema, urlPage } from '../lib/typ
 import { adresseSaisie } from '../lib/valider.ts';
 import { redirectionActive } from '../lib/sorties.ts';
 import type { Abonnement as EtatAbonnement, Fonction, Plan } from '../lib/abonnement.ts';
-import { OFFRES, accesAbonnement, apresOffre, estPaye, estResilie, euros, offerteAuDessus } from '../lib/abonnement.ts';
+import { OFFRES, accesAbonnement, apresOffre, estPaye, estResilie, euros, offerteAuDessus, planHorsEssai } from '../lib/abonnement.ts';
 import { BoutonCopier, BoutonPrincipal, BoutonSecondaire, Champ, Feuille, Groupe, Interrupteur, Ligne, LigneBascule, LigneLien, PanneauDetail, SousPage, classeBouton, classeSaisie, useGrandEcran } from './ui.tsx';
 import { Facturation, nomAbonnement, nomApres, nomOffre } from './Facturation.tsx';
 import { Etiquette, usePermis } from './offre.tsx';
@@ -140,6 +140,10 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
           <Ligne nom="Offre" valeur={<strong>{nomOffre(abonnement)}</strong>}>
             {!resilie && <BoutonSecondaire onClick={() => onOffres?.()} aria-haspopup="dialog">{paye ? 'Changer d’offre' : 'Voir les offres'}</BoutonSecondaire>}
           </Ligne>
+          {/* L'essai de Pro : sa fin, et ce que la page garde ensuite. */}
+          {abonnement.essai && (
+            <Ligne nom="Fin de l’essai" valeur={<span className="tabular-nums">{`${dateLongue(abonnement.essai)}, puis ${OFFRES[planHorsEssai(abonnement)].nom}`}</span>} />
+          )}
           {offerte && (
             <Ligne nom="Fin de l’offre" valeur={<span className="tabular-nums">{offerte.jusqu ? `${dateLongue(offerte.jusqu)}, puis ${OFFRES[apresOffre(abonnement)].nom}` : 'Sans limite de durée'}</span>} />
           )}

@@ -7,7 +7,7 @@ import { PRINCIPAL } from '../lib/types.ts';
 import { REGLAGES_DEFAUT, blocsDefaut, reglagesNouveauCompte } from '../lib/defauts.ts';
 import { validerBloc, validerReglages } from '../lib/valider.ts';
 import type { Abonnement, Periode, Plan, PlanPayant } from '../lib/abonnement.ts';
-import { OFFRES, estPaye, estPlanPayant, rang } from '../lib/abonnement.ts';
+import { ESSAI_JOURS, OFFRES, PLAN_ESSAI, estPaye, estPlanPayant, rang } from '../lib/abonnement.ts';
 import { appDe } from '../lib/ouvrirApp.ts';
 import type { PeriodeStats } from '../lib/periode.ts';
 import { ajouterJours, jourDe, longueur, plageDe } from '../lib/periode.ts';
@@ -104,6 +104,10 @@ export function base(): DatabaseSync {
   colonne(db, 'comptes', 'offerte', "TEXT NOT NULL DEFAULT ''");
   colonne(db, 'comptes', 'offerte_jusqu', 'INTEGER');
   colonne(db, 'comptes', 'offerte_le', 'INTEGER');
+  // L'essai de Pro d'un compte neuf (25 octobre 2026) : sa fin (vide : pas d'essai, compte d'avant), et les e-mails partis
+  // (1 : « plus que 3 jours », 2 : « c'est fini »).
+  colonne(db, 'comptes', 'essai_jusqu', 'INTEGER');
+  colonne(db, 'comptes', 'essai_rappel', 'INTEGER NOT NULL DEFAULT 0');
   // Vu depuis le navigateur intégré d'une app (Instagram, TikTok…), et pour un clic, ouvert dans l'app visée.
   colonne(db, 'evenements', 'integre', 'INTEGER NOT NULL DEFAULT 0');
   colonne(db, 'evenements', 'app', 'INTEGER NOT NULL DEFAULT 0');
@@ -226,10 +230,10 @@ export function secret(): string {
 export interface Compte {
   id: string; email: string; pseudo: string; statut: 'actif' | 'suspendu'; cree: number; connexion: number | null; cgu: string; cgu_le: number | null;
   creem_client: string; creem_abonnement: string; abonnement_statut: string; fin_periode: number | null; abonnement_maj: number; abonnement_produit: string;
-  offerte: string; offerte_jusqu: number | null; offerte_le: number | null;
+  offerte: string; offerte_jusqu: number | null; offerte_le: number | null; essai_jusqu: number | null; essai_rappel: number;
 }
 
-const COLONNES_COMPTE = 'id, email, pseudo, statut, cree, connexion, cgu, cgu_le, creem_client, creem_abonnement, abonnement_statut, fin_periode, abonnement_maj, abonnement_produit, offerte, offerte_jusqu, offerte_le';
+const COLONNES_COMPTE = 'id, email, pseudo, statut, cree, connexion, cgu, cgu_le, creem_client, creem_abonnement, abonnement_statut, fin_periode, abonnement_maj, abonnement_produit, offerte, offerte_jusqu, offerte_le, essai_jusqu, essai_rappel';
 const LIRE_COMPTE = `SELECT ${COLONNES_COMPTE} FROM comptes`;
 export const compteParId = (id: string) => base().prepare(`${LIRE_COMPTE} WHERE id = ?`).get(id) as Compte | undefined;
 export const compteParPseudo = (pseudo: string) => base().prepare(`${LIRE_COMPTE} WHERE pseudo = ?`).get(pseudo.toLowerCase()) as Compte | undefined;
@@ -247,7 +251,8 @@ export function creerCompte(email: string, pseudo: string, maintenant = Date.now
   try {
     // Une personne de la liste d'attente qui reçoit son compte la quitte.
     d.prepare('DELETE FROM attente WHERE email = ?').run(e);
-    d.prepare('INSERT INTO comptes (id, email, pseudo, cree) VALUES (?, ?, ?, ?)').run(id, e, p, maintenant);
+    // Chaque compte neuf commence par son essai de Pro, sans carte.
+    d.prepare('INSERT INTO comptes (id, email, pseudo, cree, essai_jusqu) VALUES (?, ?, ?, ?, ?)').run(id, e, p, maintenant, maintenant + ESSAI_JOURS * 86_400_000);
     d.prepare('INSERT INTO pages (compte, valeur) VALUES (?, ?)').run(id, JSON.stringify(reglagesNouveauCompte(p)));
     d.exec('COMMIT');
   } catch (error) { d.exec('ROLLBACK'); throw error; }
@@ -358,13 +363,16 @@ export function produitConnu(id: string): ProduitCreem | undefined {
  * Le compte principal a tout, sans abonnement.
  */
 function abonnementSelon(c: Compte, catalogue: ProduitCreem[], maintenant: number): Abonnement {
-  if (c.id === PRINCIPAL) return { plan: 'premium', payee: 'gratuit', statut: '', finPeriode: null, periode: null, portail: false, offerte: null };
+  if (c.id === PRINCIPAL) return { plan: 'premium', payee: 'gratuit', statut: '', finPeriode: null, periode: null, portail: false, offerte: null, essai: null };
   const produit = c.abonnement_produit ? catalogue.find(p => p.id === c.abonnement_produit) : undefined;
   const payee: Plan = estPaye({ statut: c.abonnement_statut, finPeriode: c.fin_periode }, maintenant) ? produit?.plan ?? 'pro' : 'gratuit';
   const offerte = estPlanPayant(c.offerte) && (c.offerte_jusqu === null || maintenant < c.offerte_jusqu) ? { plan: c.offerte, jusqu: c.offerte_jusqu } : null;
+  const sansEssai: Plan = offerte && rang(offerte.plan) > rang(payee) ? offerte.plan : payee;
+  // L'essai passe devant tant qu'il court et qu'il donne plus : un abonné à Pro pendant son essai n'en a plus besoin.
+  const essai = c.essai_jusqu !== null && maintenant < c.essai_jusqu && rang(PLAN_ESSAI) > rang(sansEssai) ? c.essai_jusqu : null;
   return {
-    plan: offerte && rang(offerte.plan) > rang(payee) ? offerte.plan : payee, payee,
-    statut: c.abonnement_statut, finPeriode: c.fin_periode, periode: produit?.periode ?? null, portail: !!c.creem_client, offerte,
+    plan: essai ? PLAN_ESSAI : sansEssai, payee,
+    statut: c.abonnement_statut, finPeriode: c.fin_periode, periode: produit?.periode ?? null, portail: !!c.creem_client, offerte, essai,
   };
 }
 export const abonnement = (c: Compte, maintenant = Date.now()): Abonnement => abonnementSelon(c, lireCatalogue(), maintenant);
@@ -428,6 +436,19 @@ export function offrir(id: string, plan: PlanPayant, jusqu: number | null, maint
   if (id === PRINCIPAL) throw new Error('Le compte principal a déjà tout.');
   base().prepare('UPDATE comptes SET offerte = ?, offerte_jusqu = ?, offerte_le = ? WHERE id = ?').run(plan, jusqu, maintenant, id);
 }
+/**
+ * Les comptes dont l'essai finit dans `avant` ms ou a fini depuis moins de `apres` ms, et dont il reste un e-mail
+ * à envoyer (`essai_rappel` sous `etape`) : ceux qui le prolongent par un abonnement ou une offre se trient ensuite.
+ */
+export const comptesEnFinDEssai = (etape: number, de: number, a: number) =>
+  base().prepare(`${LIRE_COMPTE} WHERE essai_jusqu IS NOT NULL AND essai_jusqu > ? AND essai_jusqu <= ? AND essai_rappel < ? AND statut = 'actif' AND id != ?`)
+    .all(de, a, etape, PRINCIPAL) as unknown as Compte[];
+/** Réserve l'e-mail d'une étape de l'essai : vrai une seule fois par compte et par étape. */
+export const reserverRappelEssai = (id: string, etape: number) =>
+  Number(base().prepare('UPDATE comptes SET essai_rappel = ? WHERE id = ? AND essai_rappel < ?').run(etape, id, etape).changes) === 1;
+
+/** Retire l'essai d'un compte : sa page passe tout de suite à ce qu'elle paie, ou à Gratuit. */
+export const retirerEssai = (id: string) => base().prepare('UPDATE comptes SET essai_jusqu = NULL WHERE id = ?').run(id);
 export const retirerOffre = (id: string) => base().prepare("UPDATE comptes SET offerte = '', offerte_jusqu = NULL, offerte_le = NULL WHERE id = ?").run(id);
 
 /* ---- Pages et blocs ---- */
@@ -680,6 +701,7 @@ export function exporter(compte: string) {
       derniereConnexion: c.connexion ? new Date(c.connexion).toISOString() : null,
       conditionsAcceptees: c.cgu ? { version: c.cgu, le: c.cgu_le ? new Date(c.cgu_le).toISOString() : null } : null,
       abonnement: c.creem_abonnement ? { statut: c.abonnement_statut, finPeriode: c.fin_periode ? new Date(c.fin_periode).toISOString() : null, creemClient: c.creem_client, creemAbonnement: c.creem_abonnement } : null,
+      essai: c.essai_jusqu ? { offre: PLAN_ESSAI, jusqu: new Date(c.essai_jusqu).toISOString() } : null,
       offreOfferte: c.offerte ? { offre: c.offerte, le: c.offerte_le ? new Date(c.offerte_le).toISOString() : null, jusqu: c.offerte_jusqu ? new Date(c.offerte_jusqu).toISOString() : null } : null,
     },
     reglages: lireReglages(compte),

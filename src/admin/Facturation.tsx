@@ -21,8 +21,8 @@ export const NOM_PERIODE: Record<Periode, string> = { mois: 'mensuel', an: 'annu
 
 /** « Starter, annuel », « Gratuit » : l'offre de l'abonnement. */
 export const nomAbonnement = (a: Abonnement) => `${OFFRES[a.payee].nom}${a.payee !== 'gratuit' && a.periode ? `, ${NOM_PERIODE[a.periode]}` : ''}`;
-/** L'offre du compte : « Pro, offert » quand l'offre offerte passe devant son abonnement, l'abonnement sinon. */
-export const nomOffre = (a: Abonnement) => (offerteAuDessus(a) ? `${OFFRES[a.plan].nom}, offert` : a.plan === a.payee ? nomAbonnement(a) : OFFRES[a.plan].nom);
+/** L'offre du compte : « Pro, à l'essai » pendant l'essai, « Pro, offert » quand l'offre offerte passe devant son abonnement, l'abonnement sinon. */
+export const nomOffre = (a: Abonnement) => (a.essai ? `${OFFRES[a.plan].nom}, à l’essai` : offerteAuDessus(a) ? `${OFFRES[a.plan].nom}, offert` : a.plan === a.payee ? nomAbonnement(a) : OFFRES[a.plan].nom);
 /** Ce que la page devient après l'abonnement arrêté à `fin` : « Gratuit », ou « Starter offert ». */
 export const nomApres = (a: Abonnement, fin: number | null) => { const p = apresAbonnement(a, fin); return p === 'gratuit' ? OFFRES.gratuit.nom : `${OFFRES[p].nom} offert`; };
 

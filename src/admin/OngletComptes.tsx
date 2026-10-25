@@ -451,6 +451,7 @@ function FicheCompte({ compte: c, statut, gestes, fermer, message, cote = false 
             <BoutonSecondaire onClick={gestes.offrir} aria-haspopup="dialog">Offrir</BoutonSecondaire>
           </Ligne>
         )}
+        {a.essai && <Ligne nom="Essai" valeur={`${OFFRES[c.plan].nom}, jusqu’au ${dateLongue(a.essai)}`} />}
         {offerte && (
           <Ligne nom="Offerte" valeur={`${OFFRES[offerte.plan].nom}, ${offerteAuDessus(a) ? '' : 'après l’abonnement, '}${offerte.jusqu ? `jusqu’au ${dateLongue(offerte.jusqu)}` : 'sans fin'}`}>
             {gestes.retirer && <BoutonSecondaire onClick={gestes.retirer} aria-haspopup="dialog">Retirer</BoutonSecondaire>}
@@ -488,7 +489,7 @@ function Pastille({ pseudo, avatar }: { pseudo: string; avatar?: string }) {
 
 /**
  * L'offre d'un compte : une étiquette aux couleurs de l'offre quand elle est payante, le mot seul pour Gratuit.
- * Une offre offerte qui passe devant l'abonnement le dit à côté : « offert ».
+ * Une offre offerte qui passe devant l'abonnement le dit à côté : « offert », et l'essai de Pro : « essai ».
  */
 function Offre({ compte }: { compte: Pick<CompteResume, 'plan' | 'abonnement'> }) {
   const plan = compte.plan;
@@ -496,7 +497,8 @@ function Offre({ compte }: { compte: Pick<CompteResume, 'plan' | 'abonnement'> }
   return (
     <span className="inline-flex items-center gap-1.5">
       <span className={classeBadge} data-offre={plan}>{OFFRES[plan].nom}</span>
-      {offerteAuDessus(compte.abonnement) && <span className="text-[12.5px] font-normal text-white/60">offert</span>}
+      {compte.abonnement.essai ? <span className="text-[12.5px] font-normal text-white/60">essai</span>
+        : offerteAuDessus(compte.abonnement) && <span className="text-[12.5px] font-normal text-white/60">offert</span>}
     </span>
   );
 }

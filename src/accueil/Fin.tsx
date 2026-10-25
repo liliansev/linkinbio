@@ -2,7 +2,7 @@ import { Avatar } from './Profils.tsx';
 import { useState } from 'react';
 import type { CSSProperties, KeyboardEvent, MouseEvent } from 'react';
 import { Icone } from '../components/Icone.tsx';
-import { OFFRES, PLANS, PLANS_PAYANTS, economie, euros, parMoisAnnuel } from '../lib/abonnement.ts';
+import { ESSAI_JOURS, OFFRES, PLANS, PLANS_PAYANTS, PLAN_ESSAI, economie, euros, parMoisAnnuel } from '../lib/abonnement.ts';
 import { CONTACT_LEGAL } from '../lib/legal.ts';
 import type { Periode, Plan } from '../lib/abonnement.ts';
 import { Marque } from './Ouverture.tsx';
@@ -106,20 +106,20 @@ export function Prix() {
                   ? <a className="hl-offre-demo" href={DEMOS[g]}>{insecables(g)}<span className="hl-cache">, à revoir plus haut</span></a>
                   : insecables(g)}</span></li>)}
               </ul>
-              {/* On commence toujours en Gratuit : l'offre se prend ensuite depuis les réglages. */}
+              {/* On commence toujours par l'essai de Pro : l'offre se prend ensuite depuis les réglages. */}
               {!envoye && o.enVente && (
                 <div className="hp-offre-action">
                   <a href="#reserver" className={`hl-btn ${plan === 'gratuit' ? '' : 'hl-btn-contour'}`} onClick={ev => reserver(ev, plan)}>
                     {plan === 'gratuit' || mode !== 'libre' ? libelle : 'Créer mon compte'}
                   </a>
-                  {plan !== 'gratuit' && mode === 'libre' && <p>Puis active {o.nom}{periode === 'an' ? ' à l’année' : ''} dans tes réglages.</p>}
+                  {plan !== 'gratuit' && mode === 'libre' && <p>{plan === PLAN_ESSAI ? `${ESSAI_JOURS} jours offerts, puis active ${o.nom}${periode === 'an' ? ' à l’année' : ''} dans tes réglages.` : `Puis active ${o.nom}${periode === 'an' ? ' à l’année' : ''} dans tes réglages.`}</p>}
                 </div>
               )}
             </article>
           );
         })}
       </div>
-      <p className="hl-gris hl-petit hl-centre">Prix TTC. Tu commences en Gratuit, puis tu prends une offre depuis tes réglages, quand tu veux. Résiliable à tout moment : l’offre reste jusqu’à la fin de la période payée.</p>
+      <p className="hl-gris hl-petit hl-centre">Prix TTC. Ta page commence par {ESSAI_JOURS} jours de {OFFRES[PLAN_ESSAI].nom} offerts, sans carte bancaire ; ensuite elle reste en ligne en Gratuit, ou tu prends une offre depuis tes réglages. Résiliable à tout moment : l’offre reste jusqu’à la fin de la période payée.</p>
     </section>
   );
 }

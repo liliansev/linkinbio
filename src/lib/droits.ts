@@ -1,5 +1,5 @@
 import type { Fonction } from './abonnement.ts';
-import { GALERIE_GRATUITE, SANS_COULEURS, TYPES_VITRINE } from './types.ts';
+import { BLOCS_GRATUITS, GALERIE_GRATUITE, SANS_COULEURS, TYPES_VITRINE, compteDansLaLimite } from './types.ts';
 import type { Bloc, Reglages } from './types.ts';
 
 /** Ce qu'un compte peut faire de sa page, fonction par fonction (voir `FONCTIONS` dans abonnement.ts). */
@@ -14,6 +14,7 @@ export type Droits = Record<Fonction, boolean>;
  * doit rester cachée ; un formulaire de liste ou de contact ; un avis ; un bloc de la vitrine). Une galerie ne montre
  * que ses trois premières photos, un bloc selon le pays se montre partout, une liste e-mail n'offre plus de cadeau, et
  * les derniers articles d'un flux RSS s'en vont. Les liens perdent leurs UTM, et la page ne renvoie plus ailleurs.
+ * Sans `blocs`, la page ne montre que ses cinq premiers blocs (`BLOCS_GRATUITS`, titres et textes à part).
  * Un lien partenaire garde sa mention « Publicité », que la loi demande à tous,
  * et perd son code promo. La page selon le réseau du visiteur reste à tous.
  * Les dates d'un bloc tiennent toujours : un lien
@@ -21,6 +22,7 @@ export type Droits = Record<Fonction, boolean>;
  * reprendre l'offre remet tout comme avant.
  */
 export function selonDroits<T extends Bloc>(reglages: Reglages, blocs: T[], d: Droits): { reglages: Reglages; blocs: T[] } {
+  let places = d.blocs ? Number.POSITIVE_INFINITY : BLOCS_GRATUITS;
   return {
     // Une page qui a tout garde ses réglages tels quels.
     reglages: d.couleurs && d.utm && d.redirection && d.fond && d.grandePhoto ? reglages : {
@@ -34,6 +36,7 @@ export function selonDroits<T extends Bloc>(reglages: Reglages, blocs: T[], d: D
     blocs: blocs.flatMap(b => {
       if ((!d.drops && b.acces) || (!d.listeEmail && b.type === 'inscription') || (!d.avis && b.type === 'preuve') || (!d.vitrine && TYPES_VITRINE.includes(b.type))
         || (!d.formulaire && b.type === 'formulaire') || (!d.flux && b.type === 'flux')) return [];
+      if (compteDansLaLimite(b) && places-- <= 0) return [];
       let bloc = b;
       if (!d.heure && bloc.creneau) bloc = { ...bloc, creneau: null };
       if (!d.programmation && bloc.compteARebours) bloc = { ...bloc, compteARebours: false };
@@ -84,6 +87,13 @@ type Dates = Pick<Bloc, 'debut' | 'fin' | 'compteARebours'>;
  */
 export const nouvellesDates = (avant: Dates | undefined, bloc: Dates) =>
   (!!bloc.debut && bloc.debut !== avant?.debut) || (!!bloc.fin && bloc.fin !== avant?.fin) || (!!bloc.debut && bloc.compteARebours && !avant?.compteARebours);
+
+/** Les blocs visibles que la page ne montre pas faute de Starter : ceux qui passent les cinq premiers, par leur id. */
+export function horsLimite(reglages: Reglages, blocs: Bloc[], d: Droits): ReadonlySet<string> {
+  if (d.blocs) return new Set();
+  const montres = new Set(selonDroits(reglages, blocs, d).blocs.map(b => b.id));
+  return new Set(selonDroits(reglages, blocs, { ...d, blocs: true }).blocs.filter(b => compteDansLaLimite(b) && !montres.has(b.id)).map(b => b.id));
+}
 
 /** Le refus du serveur, que le back office reconnaît pour proposer les offres. */
 export const REFUS_PROGRAMMATION = 'Programmer un bloc à l’avance demande Hopla Starter.';

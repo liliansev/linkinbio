@@ -26,6 +26,12 @@ export const ARTICLES_FLUX = 3;
 export const MAX_QUESTIONS = 20;
 export const MAX_IMAGES = 12;
 export const GALERIE_GRATUITE = 3;
+/**
+ * Les blocs qu'une page Gratuit montre (25 octobre 2026) : les cinq premiers blocs visibles, sans compter les titres de
+ * section ni les textes, qui ne mènent nulle part. Les autres attendent Starter, gardés tels quels.
+ */
+export const BLOCS_GRATUITS = 5;
+export const compteDansLaLimite = (b: Pick<Bloc, 'type' | 'public'>) => b.public && b.type !== 'titre' && b.type !== 'texte';
 
 /** Les mouvements qui attirent l'œil sur un bouton. */
 export const ANIMATIONS = ['aucune', 'reflet', 'orbite', 'lueur', 'onde', 'respiration', 'rebond', 'secousse'] as const;

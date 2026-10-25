@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Api, Bloc, EtatAdmin, IntegrationListe, PagePublique, Reglages, TypeBloc, TypeVitrine } from '../lib/types.ts';
-import { TYPES_PRINCIPAL, adressePartage, nouveauBloc, urlPage } from '../lib/types.ts';
+import { BLOCS_GRATUITS, TYPES_PRINCIPAL, adressePartage, nouveauBloc, urlPage } from '../lib/types.ts';
 import { composerMoment } from '../lib/moments.ts';
 import type { TypeAdresse } from '../lib/detection.ts';
 import { EN_FAIRE } from '../lib/catalogue.ts';
@@ -30,13 +30,13 @@ import type { Fil } from './ui.tsx';
 import { Marque } from './Marque.tsx';
 import { useCouche } from './couches.ts';
 import { AnneauDemarrage, noterPartage, useDemarrage } from './BienDemarrer.tsx';
-import { AppelOffre, FournisseurOffre } from './offre.tsx';
+import { AppelEssai, AppelOffre, FournisseurOffre } from './offre.tsx';
 import { FenetreOffres, RetourPaiement } from './Offres.tsx';
 import { nomApres } from './Facturation.tsx';
 import type { Fonction, PlanPayant } from '../lib/abonnement.ts';
 import { FONCTIONS, OFFRES, joursStats, offreSuivante, peut } from '../lib/abonnement.ts';
 import type { Droits } from '../lib/droits.ts';
-import { REFUS_PROGRAMMATION, avecEssai, enEssai, nouvellesDates, sansEssai, selonDroits } from '../lib/droits.ts';
+import { REFUS_PROGRAMMATION, avecEssai, enEssai, horsLimite, nouvellesDates, sansEssai, selonDroits } from '../lib/droits.ts';
 import type { Achat, EtapeRetour, SuiteAchat } from '../lib/achat.ts';
 import { CLE_ACHAT, achatDeRetour, delaiAvantEssai, etapeRetour } from '../lib/achat.ts';
 import type { PeriodeStats } from '../lib/periode.ts';
@@ -234,9 +234,11 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
   // ni juste après un achat (24 octobre 2026) : on vient de prendre Starter, Pro ne se propose pas aussitôt.
   const [vientDAcheter, setVientDAcheter] = useState(false);
   const suivante = peutAcheter && !vientDAcheter ? offreSuivante(abonnement, droits, initial.enVente) : null;
-  const appel = (className = '') => suivante && (
-    <AppelOffre suivante={suivante} className={className} onClick={() => ouvrirOffres(suivante.fonction, suivante.fonction ? undefined : suivante.plan)} />
-  );
+  // Pendant l'essai de Pro, ses jours qui restent prennent la place de l'offre du dessus : les offres s'ouvrent sur Starter.
+  const essai = peutAcheter && !vientDAcheter ? abonnement.essai ?? null : null;
+  const appel = (className = '') => (essai
+    ? <AppelEssai fin={essai} className={className} onClick={() => ouvrirOffres()} />
+    : suivante && <AppelOffre suivante={suivante} className={className} onClick={() => ouvrirOffres(suivante.fonction, suivante.fonction ? undefined : suivante.plan)} />);
   /** Repasser en Gratuit : Creem résilie pour la fin de la période payée, l'abonnement relu le dit aussitôt (avec l'année : un annuel finit l'an prochain). */
   async function resilier() {
     const a = await api.resilierAbonnement();
@@ -772,7 +774,9 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
     if (onglet !== 'page') return null;
     const vers = redirectionActive(reglages.redirection, Date.now(), urlPage(compte));
     const essais = peutAcheter ? enEssai(reglages, droits) : [];
-    if (!vers && !essais.length) return null;
+    // Au-delà de cinq blocs, une page Gratuit montre les cinq premiers : Ma page dit combien attendent Starter.
+    const attente = peutAcheter ? horsLimite(reglages, blocs, droits).size : 0;
+    if (!vers && !essais.length && !attente) return null;
     const perso = Object.values(reglages.couleurs).some(Boolean);
     const noms: Partial<Record<Fonction, string>> = {
       couleurs: perso && reglages.police ? 'tes couleurs et ta police' : perso ? 'tes couleurs' : 'ta police',
@@ -786,6 +790,12 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
           <p role="status" className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl bg-amber-400/15 py-1.5 pr-1.5 pl-3.5 text-[13.5px] leading-snug text-amber-100">
             <span className="min-w-[14rem] flex-1 text-pretty">Ta page renvoie ses visiteurs {resumeRedirection(vers, reglages.redirection.fin).replace(/^Vers/, 'vers')}.</span>
             <button type="button" onClick={() => changerReglages({ ...reglages, redirection: { url: '', fin: '' } })} className={`ml-auto ${classeBouton.secondaire}`}>Arrêter</button>
+          </p>
+        )}
+        {attente > 0 && (
+          <p role="status" className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl bg-[var(--adm-citron)] py-2 pr-2 pl-3.5 text-[13.5px] leading-snug text-[var(--adm-citron-encre)] sm:py-1.5">
+            <span className="min-w-[14rem] flex-1 text-pretty">Ta page montre ses {BLOCS_GRATUITS} premiers blocs. {attente === 1 ? 'Un autre attend' : `Les ${attente} autres attendent`} Starter.</span>
+            <button type="button" onClick={() => ouvrirOffres('blocs')} className={`ml-auto ${classeBouton.principal}`}>Passer en Starter</button>
           </p>
         )}
         {essais.length > 0 && (
