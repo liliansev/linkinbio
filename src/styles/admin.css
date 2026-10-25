@@ -1121,3 +1121,25 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
   .adm-tableau td:last-child .adm-points { margin-right: 0; }
   .adm-tableau tbody tr:last-child td { border-bottom: 0; }
 }
+
+/*
+ * Ma page sur un grand écran (25 octobre 2026, demandé par Lilian : « trop d'espaces blancs ») : dès 1680 px,
+ * la colonne d'édition suit l'écran au lieu de rester à 960 px au milieu d'une zone vide, et ses rangées,
+ * son profil et son champ grandissent avec elle. Les hauteurs collées (en-tête, onglets) ne changent pas.
+ */
+@media (min-width: 1680px) {
+  .adm-shell[data-onglet='page'] { --adm-colonne: clamp(960px, 52vw, 1400px); }
+  .adm-profil-photo { width: 64px; height: 64px; }
+  .adm-profil-haut { gap: 16px; }
+  .adm-profil-texte { padding-top: 6px; }
+  .adm-profil-nom { height: 30px; font-size: 17px; }
+  .adm-profil-bio { font-size: 14.5px; }
+  .adm-lien { font-size: 14px; }
+  .adm-coller-champ > input { height: 46px; font-size: 14.5px; }
+  .adm-rangee-tete { min-height: 54px; padding: 0 12px 0 10px; }
+  .adm-rangee-bouton { gap: 10px; }
+  .adm-rangee-nom { font-size: 14.5px; }
+  .adm-rangee-sous, .adm-rangee-clics { font-size: 13px; }
+  .adm-rangee-geste { width: 32px; height: 32px; }
+  .adm-rangee-reglages { padding: 4px 20px 20px 48px; }
+}
