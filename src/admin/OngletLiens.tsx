@@ -363,7 +363,7 @@ function DepartBureau({ id, choix, prendre }: { id: string; choix: Choix; prendr
           );
         })}
       </div>
-      <p className="adm-depart-aide">Une vidéo, un agenda, une boutique ? Colle son adresse : Hopla en fait le bon bloc.</p>
+      <p className="adm-depart-aide">Une vidéo, un agenda, une boutique ? Colle son adresse : Hopla en fait le bon bloc.</p>
       <div className="adm-depart-familles">
         {familles.map(f => (
           <div key={f.nom} role="group" aria-label={f.nom} className="break-inside-avoid pb-1.5">
@@ -405,7 +405,7 @@ function Depart({ lignes, ligne, prendre, reserve, permise, nomDe }: {
           </li>
         ))}
       </ul>
-      <p className="adm-ajout-aide text-white/60">Une vidéo, un agenda, une boutique ? Colle son adresse : Hopla en fait le bon bloc.</p>
+      <p className="adm-ajout-aide text-white/60">Une vidéo, un agenda, une boutique ? Colle son adresse : Hopla en fait le bon bloc.</p>
       <ul className="-mx-2 flex flex-col">
         {familles.map(f => {
           const ici = ouverte === f.nom;

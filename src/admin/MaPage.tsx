@@ -977,9 +977,10 @@ function ApercuDirect({ page }: { page: PagePublique }) {
     obs.observe(el);
     return () => obs.disconnect();
   }, []);
-  // Une page de téléphone fait 390 de large ; la miniature garde ses proportions, sans dépasser 62 % de l'écran.
+  // Une page de téléphone fait 390 de large ; la miniature garde ses proportions, les trois quarts de l'écran au plus
+  // (25 octobre 2026, audit : à 62 %, le crème restait vide de chaque côté).
   const LARGEUR = 390;
-  const l = Math.min(taille.l * 0.62, 260), echelle = l / LARGEUR;
+  const l = Math.min(taille.l * 0.76, 330), echelle = l / LARGEUR;
   return (
     <div ref={cadre} className="flex flex-col items-center gap-2" aria-hidden="true">
       {taille.h > 0 && (

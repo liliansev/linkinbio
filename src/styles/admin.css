@@ -47,6 +47,28 @@ html:has(.adm-shell:not(.adm-entree)) { scrollbar-gutter: stable; }
   }
 
 /*
+ * Au téléphone, le texte suit la largeur de l'écran (25 octobre 2026, audit Impeccable demandé par Lilian : « pas super
+ * responsive ») : `--adm-k` vaut 1 px jusqu'à 390 px de large, puis grandit avec l'écran jusqu'à 1,1 px (un 440). Toute
+ * taille du back office s'écrit `calc(N * var(--adm-k))` ; au bureau, `--adm-k` reste 1 px. Les classes `text-[Npx]` y
+ * passent ici ; la page publique (`lp-`) et le téléphone de l'aperçu gardent leurs tailles.
+ */
+.adm { --adm-k: 1px; }
+@media (max-width: 1023.98px) {
+  .adm { --adm-k: clamp(1px, 100vw / 390, 1.1px); }
+  .adm .text-\[10\.5px\]:not([class*="max-[359px]:text-"]) { font-size: calc(10.5 * var(--adm-k)); }
+  .adm .text-\[11\.5px\]:not([class*="max-[359px]:text-"]) { font-size: calc(11.5 * var(--adm-k)); }
+  .adm .text-\[12px\]:not([class*="max-[359px]:text-"]) { font-size: calc(12 * var(--adm-k)); }
+  .adm .text-\[12\.5px\]:not([class*="max-[359px]:text-"]) { font-size: calc(12.5 * var(--adm-k)); }
+  .adm .text-\[13px\]:not([class*="max-[359px]:text-"]) { font-size: calc(13 * var(--adm-k)); }
+  .adm .text-\[13\.5px\]:not([class*="max-[359px]:text-"]) { font-size: calc(13.5 * var(--adm-k)); }
+  .adm .text-\[14px\]:not([class*="max-[359px]:text-"]) { font-size: calc(14 * var(--adm-k)); }
+  .adm .text-\[14\.5px\]:not([class*="max-[359px]:text-"]) { font-size: calc(14.5 * var(--adm-k)); }
+  .adm .text-\[15px\]:not([class*="max-[359px]:text-"]) { font-size: calc(15 * var(--adm-k)); }
+  .adm .text-\[16px\]:not([class*="max-[359px]:text-"]) { font-size: calc(16 * var(--adm-k)); }
+  .adm .text-\[18px\]:not([class*="max-[359px]:text-"]) { font-size: calc(18 * var(--adm-k)); }
+}
+
+/*
  * Les gris secondaires, pensés en blanc transparent sur la nuit, deviennent du
  * noir transparent trop pâle sur le blanc : on les fixe à des gris lisibles
  * (4,5:1 au moins sur le blanc et sur les cartes). Dans la couche utilities et
@@ -92,8 +114,8 @@ html:has(.adm-shell:not(.adm-entree)) { scrollbar-gutter: stable; }
 .adm-barre { animation: adm-barre 0.7s var(--adm-sortie) both; }
 @keyframes adm-barre { from { transform: scaleX(0); } }
 
-/* Ce qui vient de s'ajouter (un choix des premiers pas, la coche de la fin) : un petit rebond. */
-.adm-pop { animation: adm-pop 0.42s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+/* Ce qui vient de s'ajouter (un choix des premiers pas, la coche de la fin) : il se pose, sans rebond. */
+.adm-pop { animation: adm-pop 0.36s cubic-bezier(0.16, 1, 0.3, 1) both; }
 @keyframes adm-pop { from { opacity: 0; transform: scale(0.92); } }
 
 /* Le bravo de la fin des premiers pas : trois gerbes, une fois, puis plus rien. */
@@ -255,7 +277,7 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
 @media (min-width: 1024px) {
   body:has(.adm-shell) [data-calque='centre'] { padding-left: var(--adm-barre); }
 }
-.adm-nav-item { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 10px; border-radius: 7px; color: #dcdcff; font-size: 14px; font-weight: 500; text-align: left; transition: background-color 150ms, color 150ms; }
+.adm-nav-item { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 10px; border-radius: 7px; color: #dcdcff; font-size: calc(14 * var(--adm-k)); font-weight: 500; text-align: left; transition: background-color 150ms, color 150ms; }
 .adm-nav-item:hover { background: rgb(255 255 255 / 0.1); color: #fff; }
 .adm-nav-item[aria-current='page'] { background: #fff; color: var(--adm-bleu); font-weight: 600; }
 .adm-compte { display: flex; min-height: 44px; width: 100%; align-items: center; gap: 10px; padding: 0 8px; border-radius: 7px; text-align: left; transition: background-color 150ms; }
@@ -266,7 +288,7 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
  * page. Sur le bleu, l'accent est le citron (comme le bouton du haut de l'accueil) : le diamant en citron,
  * le nom de l'offre en blanc, ce qu'elle apporte en blanc teinté (4,6:1).
  */
-.adm-appel { display: flex; width: 100%; align-items: flex-start; gap: 10px; min-height: 44px; padding: 12px 10px; border-radius: 7px; color: #c9caff; font-size: 14px; line-height: 1.35; text-align: left; transition: background-color 150ms, color 150ms; }
+.adm-appel { display: flex; width: 100%; align-items: flex-start; gap: 10px; min-height: 44px; padding: 12px 10px; border-radius: 7px; color: #c9caff; font-size: calc(14 * var(--adm-k)); line-height: 1.35; text-align: left; transition: background-color 150ms, color 150ms; }
 .adm-appel:hover { background: rgb(255 255 255 / 0.1); color: #dcdcff; }
 .adm-appel strong { color: #fff; font-weight: 500; }
 .adm-appel-picto { margin-top: 1px; color: var(--adm-citron); }
@@ -304,16 +326,16 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
 @media (max-width: 389px) {
   .adm-topbar .adm-apercu-bouton, .adm-topbar .adm-apercu-bouton:hover { border-color: transparent; background: none; }
 }
-.adm-entete-titre { font-size: 15px; font-weight: 600; letter-spacing: -0.015em; }
+.adm-entete-titre { font-size: calc(15 * var(--adm-k)); font-weight: 600; letter-spacing: -0.015em; }
 /* L'adresse dans l'en-tête : le domaine en gris, le pseudo à l'encre, et Copier collé à elle. */
 .adm-adresse-entete { display: flex; align-items: stretch; overflow: hidden; border: 1px solid #dcdcd7; border-radius: 8px; background: #fff; }
 .adm-adresse-entete > button { border-left: 1px solid #dcdcd7; transition: background-color 150ms; }
 .adm-adresse-entete > button:hover { background: #f4f4f0; }
-.adm-etat { display: flex; align-items: center; gap: 5px; color: #5f5f5a; font-size: 12px; }
+.adm-etat { display: flex; align-items: center; gap: 5px; color: #5f5f5a; font-size: calc(12 * var(--adm-k)); }
 .adm-etat[data-erreur] { color: #c62828; }
 /* Un menu (compte, actions d'un bloc, période) : une petite surface posée au-dessus du travail. */
 .adm-menu { padding: 4px; border: 1px solid #e3e3df; border-radius: 10px; background: #fff; box-shadow: 0 14px 34px -14px rgb(0 0 0 / 0.22), 0 2px 6px -2px rgb(0 0 0 / 0.06); }
-.adm-menu-item { display: flex; width: 100%; min-height: 44px; align-items: center; gap: 9px; padding: 0 10px; border-radius: 6px; font-size: 14px; font-weight: 500; transition: background-color 120ms; }
+.adm-menu-item { display: flex; width: 100%; min-height: 44px; align-items: center; gap: 9px; padding: 0 10px; border-radius: 6px; font-size: calc(14 * var(--adm-k)); font-weight: 500; transition: background-color 120ms; }
 .adm-menu-item:hover, .adm-menu-item:focus-visible { background: #f2f2ef; }
 .adm .adm-menu-item:focus-visible { outline-offset: -2px; }
 /*
@@ -325,9 +347,9 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
 .adm-menu-item[role='option']:hover { background: transparent; }
 .adm-menu-item[role='option'][aria-selected='true'] { background: #f2f2ef; }
 .adm-menu-item[role='option'][aria-disabled='true'] { cursor: default; opacity: 0.45; }
-.adm-menu-hote { max-width: 45%; overflow: hidden; color: #6b6b66; font-size: 12.5px; font-weight: 400; text-overflow: ellipsis; white-space: nowrap; }
-.adm-menu-vide { padding: 10px 10px 12px; color: #5f5f5a; font-size: 13.5px; }
-.adm-menu-erreur { padding: 6px 10px 4px; color: #c62828; font-size: 13px; font-weight: 500; line-height: 1.35; }
+.adm-menu-hote { max-width: 45%; overflow: hidden; color: #6b6b66; font-size: calc(12.5 * var(--adm-k)); font-weight: 400; text-overflow: ellipsis; white-space: nowrap; }
+.adm-menu-vide { padding: 10px 10px 12px; color: #5f5f5a; font-size: calc(13.5 * var(--adm-k)); }
+.adm-menu-erreur { padding: 6px 10px 4px; color: #c62828; font-size: calc(13 * var(--adm-k)); font-weight: 500; line-height: 1.35; }
 /* Le titre d'un écran, le même partout : les onglets, la connexion, les CGU, les premiers pas. */
 .adm-page-heading { margin-bottom: 24px; }
 .adm-titre, .adm-page-heading h1 { font-size: 32px; line-height: 1.2; font-weight: 600; letter-spacing: -0.035em; text-wrap: balance; }
@@ -406,7 +428,7 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
   /* Contenu, Design : les onglets de Comptes, collés sous l'en-tête. */
   .adm-onglets-edition { position: sticky; top: 57px; z-index: 20; display: flex; height: 44px; align-items: center; gap: 8px; border-bottom: 1px solid var(--adm-trait); background: var(--adm-fond); }
   .adm-onglets { display: flex; align-self: stretch; gap: 22px; }
-  .adm-onglets > button { display: flex; align-items: center; color: #55554f; font-size: 13.5px; font-weight: 500; transition: color 150ms, box-shadow 200ms var(--adm-sortie); }
+  .adm-onglets > button { display: flex; align-items: center; color: #55554f; font-size: calc(13.5 * var(--adm-k)); font-weight: 500; transition: color 150ms, box-shadow 200ms var(--adm-sortie); }
   .adm-onglets > button:hover { color: #0a0a0a; }
   .adm-onglets > button[aria-selected='true'] { color: var(--adm-bleu); box-shadow: inset 0 -2px 0 var(--adm-bleu); }
   .adm .adm-onglets > button:focus-visible { outline-offset: -2px; }
@@ -427,8 +449,8 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
   .adm-profil-ligne { display: flex; min-width: 0; align-items: center; gap: 2px; }
   .adm-profil-badge { display: inline-flex; flex: none; color: var(--adm-bleu); }
   .adm-profil-nom, .adm-profil-bio { min-width: 0; margin-left: -6px; border: 0; border-radius: 6px; background: transparent; transition: background-color 150ms; }
-  .adm-profil-nom { max-width: calc(100% + 6px); height: 28px; padding: 0 6px; color: #0a0a0a; font-size: 15px; font-weight: 600; letter-spacing: -0.01em; }
-  .adm-profil-bio { display: block; width: calc(100% + 12px); padding: 3px 6px; color: #5f5f5a; font-size: 13.5px; line-height: 1.45; resize: none; overflow: hidden; field-sizing: content; }
+  .adm-profil-nom { max-width: calc(100% + 6px); height: 28px; padding: 0 6px; color: #0a0a0a; font-size: calc(15 * var(--adm-k)); font-weight: 600; letter-spacing: -0.01em; }
+  .adm-profil-bio { display: block; width: calc(100% + 12px); padding: 3px 6px; color: #5f5f5a; font-size: calc(13.5 * var(--adm-k)); line-height: 1.45; resize: none; overflow: hidden; field-sizing: content; }
   :is(.adm-profil-nom, .adm-profil-bio):hover { background: #f4f4f0; }
   :is(.adm-profil-nom, .adm-profil-bio):focus { background: #fff; }
   .adm :is(.adm-profil-nom, .adm-profil-bio):focus-visible { outline-offset: 0; }
@@ -437,7 +459,7 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
   .adm-profil-reseaux { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
   /* Un réseau a son logo dans la couleur de sa marque, comme dans Stats (`couleurReseau`) ; les autres restent à l'encre. Le logo seul, sans cadre. */
   .adm-reseau { display: grid; width: 24px; height: 30px; place-items: center; color: #0a0a0a; }
-  .adm-lien { display: inline-flex; min-height: 30px; align-items: center; padding: 0 6px; border-radius: 6px; color: var(--adm-bleu); font-size: 13.5px; font-weight: 500; text-decoration: underline; text-decoration-color: rgb(41 43 255 / 0.35); text-underline-offset: 3px; transition: color 150ms, text-decoration-color 150ms; }
+  .adm-lien { display: inline-flex; min-height: 30px; align-items: center; padding: 0 6px; border-radius: 6px; color: var(--adm-bleu); font-size: calc(13.5 * var(--adm-k)); font-weight: 500; text-decoration: underline; text-decoration-color: rgb(41 43 255 / 0.35); text-underline-offset: 3px; transition: color 150ms, text-decoration-color 150ms; }
   .adm-lien:hover { color: var(--adm-bleu-fonce); text-decoration-color: currentColor; }
   /* Seul sur sa ligne (pas encore de réseaux), il s'aligne sur la photo, comme le nom et la bio. */
   .adm-profil-reseaux > .adm-lien:first-child { margin-left: -6px; }
@@ -447,7 +469,7 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
   .adm-coller { display: flex; flex-direction: column; gap: 6px; }
   .adm-coller-champ { position: relative; display: flex; align-items: center; }
   .adm-coller-signe { position: absolute; left: 12px; color: var(--adm-bleu); pointer-events: none; }
-  .adm-coller-champ > input { width: 100%; height: 40px; padding: 0 12px 0 34px; border: 1px solid #dcdcd7; border-radius: 8px; background: #fff; color: #0a0a0a; font-size: 13.5px; transition: border-color 150ms; }
+  .adm-coller-champ > input { width: 100%; height: 40px; padding: 0 12px 0 34px; border: 1px solid #dcdcd7; border-radius: 8px; background: #fff; color: #0a0a0a; font-size: calc(13.5 * var(--adm-k)); transition: border-color 150ms; }
   .adm-coller-champ > input:hover { border-color: #b5b5ae; }
   .adm-coller-champ > input::placeholder { color: #737373; }
   .adm-coller-champ > input[aria-invalid='true'] { border-color: #c62828; }
@@ -460,16 +482,16 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
   .adm-depart-tuile { position: relative; display: flex; min-height: 104px; flex-direction: column; gap: 2px; padding: 12px; border-radius: 12px; color: #0a0a0a; cursor: pointer; outline: 2px solid transparent; outline-offset: -2px; transition: outline-color 120ms; }
   .adm-depart-tuile[aria-selected='true'] { outline-color: var(--adm-bleu); }
   .adm-depart-tuile[aria-disabled='true'] { cursor: default; opacity: 0.45; }
-  .adm-depart-aide { padding: 12px 10px 4px; color: #5f5f5a; font-size: 12px; line-height: 1.4; }
+  .adm-depart-aide { padding: 12px 10px 4px; color: #5f5f5a; font-size: calc(12 * var(--adm-k)); line-height: 1.4; }
   .adm-depart-familles { columns: 2; column-gap: 12px; }
-  .adm-depart-famille { padding: 8px 10px 2px; color: #737373; font-size: 12px; font-weight: 600; }
+  .adm-depart-famille { padding: 8px 10px 2px; color: #737373; font-size: calc(12 * var(--adm-k)); font-weight: 600; }
 
   /*
    * La liste des blocs : un trait fin autour, une rangée de 44 px par bloc. La
    * poignée à gauche, le nom et ce qui le distingue, ses clics, puis l'œil et
    * « … ». La rangée ouverte passe sur un voile bleu, ses réglages dessous.
    */
-  .adm-liste-vide { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 32px 16px; border: 1px solid #e6e6e2; border-radius: 10px; color: #5f5f5a; font-size: 13.5px; text-align: center; }
+  .adm-liste-vide { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 32px 16px; border: 1px solid #e6e6e2; border-radius: 10px; color: #5f5f5a; font-size: calc(13.5 * var(--adm-k)); text-align: center; }
   .adm-liste-blocs { margin: 0; padding: 0; list-style: none; border: 1px solid #e6e6e2; border-radius: 10px; background: #fff; overflow-anchor: none; }
   .adm-rangee { position: relative; background: #fff; transition: background-color 150ms; }
   .adm-rangee + .adm-rangee { border-top: 1px solid #efefec; }
@@ -497,13 +519,13 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
   .adm .adm-rangee-bouton:focus-visible { outline-offset: -2px; }
   .adm-rangee-picto { flex: none; color: #0a0a0a; }
   /* Le nom passe d'abord : l'adresse, à côté, se coupe bien avant lui (24 octobre 2026). */
-  .adm-rangee-nom { min-width: 0; flex: 0 1 auto; overflow: hidden; color: #0a0a0a; font-size: 13.5px; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
-  .adm-rangee-sous { min-width: 0; flex: 0 1000 auto; overflow: hidden; color: #5f5f5a; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+  .adm-rangee-nom { min-width: 0; flex: 0 1 auto; overflow: hidden; color: #0a0a0a; font-size: calc(13.5 * var(--adm-k)); font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
+  .adm-rangee-sous { min-width: 0; flex: 0 1000 auto; overflow: hidden; color: #5f5f5a; font-size: calc(12 * var(--adm-k)); text-overflow: ellipsis; white-space: nowrap; }
   /* « Mis en avant » : l'étiquette citron de l'accueil, son encre vert foncé (12,4:1). */
-  .adm-rangee-marque { display: inline-flex; height: 22px; flex: none; align-items: center; padding: 0 7px; border-radius: 6px; background: var(--adm-citron); color: var(--adm-citron-encre); font-size: 12px; font-weight: 500; white-space: nowrap; }
+  .adm-rangee-marque { display: inline-flex; height: 22px; flex: none; align-items: center; padding: 0 7px; border-radius: 6px; background: var(--adm-citron); color: var(--adm-citron-encre); font-size: calc(12 * var(--adm-k)); font-weight: 500; white-space: nowrap; }
   .adm-rangee-marque-picto { display: none; }
   .adm-rangee-etats { display: inline-flex; flex: none; align-items: center; gap: 6px; color: #55554f; }
-  .adm-rangee-clics { flex: none; margin-left: auto; padding-left: 8px; color: #5f5f5a; font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .adm-rangee-clics { flex: none; margin-left: auto; padding-left: 8px; color: #5f5f5a; font-size: calc(12 * var(--adm-k)); font-variant-numeric: tabular-nums; white-space: nowrap; }
   /* L'œil et « … » : l'icône seule, qui fonce au survol et passe au bleu, menu ouvert. */
   .adm-rangee-geste { display: grid; width: 28px; height: 28px; flex: none; place-items: center; border-radius: 6px; color: #55554f; transition: color 150ms; }
   .adm-rangee-geste:hover { color: #0a0a0a; }
@@ -550,14 +572,14 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
   .adm-detail-corps .adm-lignes { background: #fafaf8; }
   /* Plus étroit que Réglages : la valeur se lit sous le nom, comme au téléphone, plutôt que coupée entre lui et le bouton. */
   .adm-detail-corps .adm-ligne-texte { flex-direction: column; align-items: flex-start; gap: 1px; }
-  .adm-detail-corps .adm-ligne-valeur { display: -webkit-box; flex: none; font-size: 13.5px; text-align: left; white-space: normal; }
+  .adm-detail-corps .adm-ligne-valeur { display: -webkit-box; flex: none; font-size: calc(13.5 * var(--adm-k)); text-align: left; white-space: normal; }
   .adm-ligne-lien[aria-current] { background: var(--adm-bleu-pale); }
   .adm-tableau tr[data-choisi] td { background: var(--adm-bleu-pale); }
   /* La carte prend la place qui reste : le téléphone grandit avec l'écran, réduit seulement quand la place manque. */
   .adm-apercu-colle { display: flex; min-height: 0; flex: 1; flex-direction: column; align-items: center; gap: 14px; padding: 16px 24px 24px; }
   /* Téléphone ou ordinateur : une icône et son mot, sans cadre autour ni fond derrière ; la vue prise en bleu, soulignée comme un onglet. */
   .adm-vues { display: flex; flex: none; gap: 4px; }
-  .adm-outil { display: inline-flex; height: 30px; align-items: center; gap: 6px; padding: 0 10px; color: #0a0a0a; font-size: 13.5px; font-weight: 500; transition: color 150ms, box-shadow 200ms var(--adm-sortie); }
+  .adm-outil { display: inline-flex; height: 30px; align-items: center; gap: 6px; padding: 0 10px; color: #0a0a0a; font-size: calc(13.5 * var(--adm-k)); font-weight: 500; transition: color 150ms, box-shadow 200ms var(--adm-sortie); }
   .adm-outil:hover { color: var(--adm-bleu); }
   .adm-outil:is([aria-pressed='true'], [aria-checked='true']) { color: var(--adm-bleu); box-shadow: inset 0 -2px 0 var(--adm-bleu); }
   /* Le téléphone : 390 px d'écran dans un bord de 9, réduit d'un bloc (voir `Telephone`) ; son écran défile seul. */
@@ -601,11 +623,11 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
  * réglage, son nom à gauche, sa valeur à droite dans un petit bouton bordé
  * (36 px de haut, bouton de 32).
  */
-.adm-section-panneau { margin: 0 0 6px; color: #3d3d39; font-size: 12px; font-weight: 600; }
-.adm-valeur { display: inline-flex; min-width: 0; max-width: 62%; height: 44px; flex-shrink: 0; align-items: center; gap: 6px; padding: 0 10px; border: 1px solid #e3e3df; border-radius: 10px; background: #fff; color: #0a0a0a; font-size: 13.5px; white-space: nowrap; transition: border-color 150ms, background-color 150ms; }
+.adm-section-panneau { margin: 0 0 6px; color: #3d3d39; font-size: calc(12 * var(--adm-k)); font-weight: 600; }
+.adm-valeur { display: inline-flex; min-width: 0; max-width: 62%; height: 44px; flex-shrink: 0; align-items: center; gap: 6px; padding: 0 10px; border: 1px solid #e3e3df; border-radius: 10px; background: #fff; color: #0a0a0a; font-size: calc(13.5 * var(--adm-k)); white-space: nowrap; transition: border-color 150ms, background-color 150ms; }
 .adm-valeur:hover { border-color: #c7c7c0; }
 .adm-valeur:disabled { opacity: 0.45; }
-.adm-field.adm-field-ligne { min-height: 44px; padding: 0 10px; border-color: #e3e3df; border-radius: 10px; background: #fff; font-size: 16px; }
+.adm-field.adm-field-ligne { min-height: 44px; padding: 0 10px; border-color: #e3e3df; border-radius: 10px; background: #fff; font-size: calc(16 * var(--adm-k)); }
 /*
  * La vignette d'un lien, ou la photo d'un produit, posée au début de son champ (23 octobre 2026) : l'image ou
  * l'icône et un petit crayon, puis un trait fin ; le texte commence après, au même endroit qu'il y ait une image ou non.
@@ -621,7 +643,7 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
   .adm-titre, .adm-page-heading h1 { font-size: 28px; }
   .adm-card { padding: 18px; }
   .adm-kpi { padding: 16px; }
-  .adm-editor-tools [data-principal], .adm-editor-tools .adm-button-outline { font-size: 13px; }
+  .adm-editor-tools [data-principal], .adm-editor-tools .adm-button-outline { font-size: calc(13 * var(--adm-k)); }
 }
 @media (prefers-reduced-motion: reduce) {
   .adm-nav-item, .adm-compte, .adm-appel, .adm-menu-item, .adm-button-outline, .adm-button-primary, .adm-button-danger { transition: none; }
@@ -635,11 +657,11 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
  * publique, qui n'utilise aucune de ces classes, garde sa typographie.
  */
 @media (min-width: 1024px) and (pointer: fine) {
-  .adm-nav-item { min-height: 32px; font-size: 13.5px; }
-  .adm-appel { min-height: 32px; padding: 7px 10px; font-size: 13.5px; }
-  .adm-menu-item { min-height: 32px; font-size: 13.5px; }
+  .adm-nav-item { min-height: 32px; font-size: calc(13.5 * var(--adm-k)); }
+  .adm-appel { min-height: 32px; padding: 7px 10px; font-size: calc(13.5 * var(--adm-k)); }
+  .adm-menu-item { min-height: 32px; font-size: calc(13.5 * var(--adm-k)); }
   .adm-button-outline { border-radius: 8px; }
-  .adm-field { min-height: 40px; padding: 8px 12px; border-radius: 8px; font-size: 13.5px; }
+  .adm-field { min-height: 40px; padding: 8px 12px; border-radius: 8px; font-size: calc(13.5 * var(--adm-k)); }
   .adm-titre, .adm-page-heading h1 { font-size: 24px; letter-spacing: -0.025em; }
 }
 /* Une classe `bureau:` écrite sur l'élément garde la main : la correspondance ne s'applique qu'aux autres. */
@@ -674,12 +696,12 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
 @media (min-width: 640px) {
   .adm-feuille:is(.adm-feuille-large, .adm-feuille-moyenne) { border: 0; border-radius: 14px; box-shadow: 0 0 0 1px rgb(10 10 10 / 0.08), 0 32px 64px -16px rgb(10 10 10 / 0.35); }
 }
-.adm-offres, .adm-recap, .adm-retour { font-size: 15px; line-height: 1.4; }
+.adm-offres, .adm-recap, .adm-retour { font-size: calc(15 * var(--adm-k)); line-height: 1.4; }
 .adm-offres { display: flex; min-height: 0; flex: 1; flex-direction: column; }
 .adm-offres-tete { display: flex; height: 56px; flex: none; align-items: center; gap: 12px; padding: 0 4px 0 16px; }
-.adm-offres-titre { font-size: 18px; font-weight: 600; letter-spacing: -0.01em; }
+.adm-offres-titre { font-size: calc(18 * var(--adm-k)); font-weight: 600; letter-spacing: -0.01em; }
 .adm-offres-corps { min-height: 0; flex: 1; overflow-y: auto; overscroll-behavior: contain; }
-.adm-offres-badge { display: inline-flex; height: 22px; flex: none; align-items: center; padding: 0 8px; border-radius: 7px; background: rgb(10 10 10 / 0.07); color: #3d3d39; font-size: 12px; font-weight: 500; white-space: nowrap; }
+.adm-offres-badge { display: inline-flex; height: 22px; flex: none; align-items: center; padding: 0 8px; border-radius: 7px; background: rgb(10 10 10 / 0.07); color: #3d3d39; font-size: calc(12 * var(--adm-k)); font-weight: 500; white-space: nowrap; }
 /* Comme sur l'accueil : l'offre qui débloque ce qu'on venait chercher en blanc sur le bleu, la sienne sur le bleu pâle,
  * et ce que fait gagner l'annuel dans l'étiquette citron. */
 .adm-offres-badge[data-fort] { background: var(--adm-bleu); color: #fff; }
@@ -705,7 +727,7 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
 .adm-offres-pied { display: flex; flex: none; flex-direction: column; gap: 8px; padding: 12px 16px max(22px, env(safe-area-inset-bottom)); border-top: 1px solid #ececea; background: #fff; }
 .adm-offres-pied > button { min-height: 48px; }
 .adm-offres-pied > .adm-offres-note { text-align: center; }
-.adm-offres-note { color: #5f5f5a; font-size: 12px; }
+.adm-offres-note { color: #5f5f5a; font-size: calc(12 * var(--adm-k)); }
 
 .adm-offre { display: flex; flex-direction: column; gap: 16px; padding: 19px; border: 1px solid #e3e3df; border-radius: 14px; background: #fff; }
 /*
@@ -724,25 +746,25 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
 .adm-offre[data-mis] :focus-visible { outline-color: var(--adm-citron); }
 /* Une pastille trop longue passe sous le nom plutôt que de déborder de la carte. */
 .adm-offre-tete { display: flex; min-height: 22px; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 8px; }
-.adm-offre-nom { font-size: 18px; font-weight: 600; }
+.adm-offre-nom { font-size: calc(18 * var(--adm-k)); font-weight: 600; }
 .adm-offre-tarif { display: flex; flex-direction: column; gap: 2px; }
 .adm-offre-tarif > p:first-child { display: flex; align-items: baseline; gap: 6px; }
 .adm-offre-prix { font-size: 24px; line-height: 1.25; font-weight: 600; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
 .adm-offre-unite { color: #5f5f5a; }
 /* Le prix de douze mois, en gris lisible (6,5:1), pas barré ; l'économie en euros, à l'encre. */
-.adm-offre-sous { color: #5f5f5a; font-size: 13.5px; }
+.adm-offre-sous { color: #5f5f5a; font-size: calc(13.5 * var(--adm-k)); }
 /* L'économie de l'annuel : l'étiquette citron de l'accueil, sur le blanc comme sur le bleu. */
-.adm-offre-gain { width: fit-content; margin-top: 2px; padding: 1px 6px; border-radius: 6px; background: var(--adm-citron); color: var(--adm-citron-encre); font-size: 13.5px; font-weight: 600; }
+.adm-offre-gain { width: fit-content; margin-top: 2px; padding: 1px 6px; border-radius: 6px; background: var(--adm-citron); color: var(--adm-citron-encre); font-size: calc(13.5 * var(--adm-k)); font-weight: 600; }
 .adm-offre-etat { display: grid; min-height: 48px; place-items: center; padding: 0 12px; border-radius: 12px; background: #f3f3f1; color: #5f5f5a; font-weight: 500; text-align: center; }
 .adm .adm-offre-etat:focus-visible { outline: none; }
-.adm-offre-inclus { margin-bottom: 4px; color: #5f5f5a; font-size: 13.5px; font-weight: 500; }
+.adm-offre-inclus { margin-bottom: 4px; color: #5f5f5a; font-size: calc(13.5 * var(--adm-k)); font-weight: 500; }
 .adm-offre-liste > li { display: flex; min-height: 44px; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid #efefec; }
 .adm-offre-liste > li > svg { flex: none; color: var(--adm-bleu); }
 .adm-offre-liste > li[data-fort] { font-weight: 600; }
 /* Au téléphone, une carte tient dans l'écran sans défiler (Lilian, 24 octobre 2026 : « faut tout rentrer sur le screen »). */
 .adm-offres-rail { padding-block: 12px 16px; }
 .adm-offres-rail .adm-offre { gap: 12px; padding: 16px; }
-.adm-offres-rail .adm-offre-liste > li { min-height: 34px; padding: 5px 0; font-size: 14.5px; line-height: 1.3; }
+.adm-offres-rail .adm-offre-liste > li { min-height: 34px; padding: 5px 0; font-size: calc(14.5 * var(--adm-k)); line-height: 1.3; }
 
 /* Le récapitulatif : la période, ce qu'on paie, ce qu'on débloque ; au bureau, la page telle qu'elle sera. */
 .adm-recap-corps { display: flex; flex-direction: column; gap: 20px; padding: 4px 16px 24px; }
@@ -768,7 +790,7 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
 .adm-recap-lignes dt { color: #5f5f5a; }
 .adm-recap-lignes dd { margin: 0; text-align: right; }
 .adm-recap-lignes dd[data-fort] { font-weight: 600; font-variant-numeric: tabular-nums; }
-.adm-recap-sous-titre { font-size: 15px; font-weight: 600; }
+.adm-recap-sous-titre { font-size: calc(15 * var(--adm-k)); font-weight: 600; }
 .adm-recap-liste { display: flex; flex-direction: column; gap: 8px; }
 .adm-recap-liste > li { min-height: 0; align-items: flex-start; padding: 0; border-top: 0; }
 .adm-recap-liste > li > svg { margin-top: 2px; }
@@ -791,10 +813,10 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
 .adm-retour-liste { border-top: 1px solid #efefec; }
 .adm-retour-liste > li { display: flex; min-height: 44px; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 1px solid #efefec; }
 .adm-retour-liste > li > svg { flex: none; color: var(--adm-bleu); }
-.adm-retour-deja { flex: none; color: #5f5f5a; font-size: 12px; }
+.adm-retour-deja { flex: none; color: #5f5f5a; font-size: calc(12 * var(--adm-k)); }
 .adm-retour-gestes { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
 /* Le bloc que touche le geste d'après l'achat (« Ton lien « Calendly », calendly.com/lilian »), juste au-dessus de lui. */
-.adm-retour-objet { overflow-wrap: anywhere; color: #3d3d39; font-size: 13.5px; line-height: 1.4; text-align: right; }
+.adm-retour-objet { overflow-wrap: anywhere; color: #3d3d39; font-size: calc(13.5 * var(--adm-k)); line-height: 1.4; text-align: right; }
 @media (max-width: 639px) { .adm-retour-objet { text-align: left; } }
 @media (max-width: 639px) { .adm-retour-gestes > * { flex: 1 1 auto; } }
 @media (min-width: 520px) { .adm-recap-periodes { grid-template-columns: 1fr 1fr; } }
@@ -810,14 +832,14 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
   .adm-offres-grille { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; padding: 4px 24px 0; }
   .adm-offres-grille + .adm-offres-note { padding: 16px 24px 20px; }
   .adm-offre { padding: 20px; border-radius: 12px; }
-  .adm-offre-nom { font-size: 15px; }
+  .adm-offre-nom { font-size: calc(15 * var(--adm-k)); }
   .adm-offre-etat { min-height: 36px; border-radius: 8px; }
-  .adm-offre-inclus { margin-bottom: 0; font-size: 12px; }
+  .adm-offre-inclus { margin-bottom: 0; font-size: calc(12 * var(--adm-k)); }
   .adm-offre > div:last-child { display: flex; flex-direction: column; gap: 9px; }
   .adm-offre-liste { display: flex; flex-direction: column; gap: 9px; }
   .adm-offre-liste > li { min-height: 0; align-items: flex-start; gap: 8px; padding: 0; border-top: 0; }
   .adm-offre-liste > li > svg { width: 14px; height: 14px; margin-top: 2px; }
-  .adm-offre-sous, .adm-offre-gain { font-size: 12px; }
+  .adm-offre-sous, .adm-offre-gain { font-size: calc(12 * var(--adm-k)); }
   /* Gratuit n'a qu'une ligne sous son prix, l'annuel en a deux : les boutons restent alignés d'une carte à l'autre. */
   .adm-offres-grille .adm-offre-tarif { min-height: 68px; }
   .adm-recap { position: relative; display: grid; min-height: 0; grid-template-columns: minmax(0, 1fr); gap: 32px; overflow-y: auto; padding: 16px 24px 24px; }
@@ -827,7 +849,7 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
   .adm-recap[data-seul] > .adm-recap-corps { width: 100%; max-width: 520px; }
   .adm-recap .adm-recap-corps { padding: 0; }
   .adm-recap-lignes > div { min-height: 40px; padding: 0; }
-  .adm-recap-sous-titre { font-size: 13.5px; }
+  .adm-recap-sous-titre { font-size: calc(13.5 * var(--adm-k)); }
   .adm-recap-liste > li > svg { width: 14px; height: 14px; }
   .adm-retour-liste > li { min-height: 40px; padding: 0; }
   .adm-retour-etapes > li > svg { width: 14px; height: 14px; }
@@ -850,7 +872,7 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
  * baisse, en gris s'il ne bouge pas, et son signe le dit aussi.
  */
 .adm-encart { border: 1px solid #e6e6e2; border-radius: 12px; background: #fff; }
-.adm-stats-phrase { max-width: 46rem; font-size: 18px; line-height: 1.4; font-weight: 500; letter-spacing: -0.01em; text-wrap: pretty; }
+.adm-stats-phrase { max-width: 46rem; font-size: calc(18 * var(--adm-k)); line-height: 1.4; font-weight: 500; letter-spacing: -0.01em; text-wrap: pretty; }
 .adm-stats-chiffre { color: var(--adm-bleu); white-space: nowrap; }
 .adm-stats .adm-card { border-color: #e6e6e2; border-radius: 12px; padding: 16px; }
 .adm-courbe { overflow: hidden; }
@@ -861,40 +883,40 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
 .adm-courbe-onglets > button:hover { background: #f4f4f2; }
 .adm-courbe-onglets > button[aria-selected='true'] { background: #fff; box-shadow: inset 0 -2px 0 var(--adm-bleu); }
 .adm .adm-courbe-onglets > button:focus-visible { outline-offset: -3px; }
-.adm-courbe-nom { font-size: 12px; font-weight: 500; color: #5f5f5a; }
+.adm-courbe-nom { font-size: calc(12 * var(--adm-k)); font-weight: 500; color: #5f5f5a; }
 [aria-selected='true'] > .adm-courbe-nom { color: #3d3d39; }
 .adm-courbe-chiffre { font-size: 24px; line-height: 1.25; font-weight: 600; letter-spacing: -0.02em; color: #3d3d39; font-variant-numeric: proportional-nums; white-space: nowrap; }
 [aria-selected='true'] .adm-courbe-chiffre { color: #0a0a0a; }
-.adm-courbe-vide { font-size: 14px; line-height: 30px; font-weight: 500; color: #5f5f5a; }
-.adm-courbe-ecart { display: inline-flex; height: 20px; align-items: center; padding: 0 6px; border-radius: 6px; background: #efefec; color: #55554f; font-size: 12px; font-weight: 600; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.adm-courbe-vide { font-size: calc(14 * var(--adm-k)); line-height: 30px; font-weight: 500; color: #5f5f5a; }
+.adm-courbe-ecart { display: inline-flex; height: 20px; align-items: center; padding: 0 6px; border-radius: 6px; background: #efefec; color: #55554f; font-size: calc(12 * var(--adm-k)); font-weight: 600; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .adm-courbe-ecart[data-sens='hausse'] { background: var(--adm-citron); color: var(--adm-citron-encre); }
 .adm-courbe-ecart[data-sens='baisse'] { background: #fdeaea; color: #a51f1f; }
 /* Ce qui se gagne, dans une phrase (« +23 cette semaine ») : le citron de l'accueil, comme une hausse. */
 .adm-gain { padding: 1px 5px; border-radius: 6px; background: var(--adm-citron); color: var(--adm-citron-encre); font-weight: 600; white-space: nowrap; }
 .adm-courbe-svg { font-family: inherit; }
 .adm .adm-courbe-svg:focus-visible { outline-offset: -2px; border-radius: 0 0 10px 10px; }
-.adm-courbe-texte { fill: #5f5f5a; font-size: 12px; font-variant-numeric: tabular-nums; }
-.adm-courbe-dernier { fill: var(--adm-bleu); font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; }
-.adm-voir-tableau { display: inline-flex; min-height: 36px; align-items: center; padding: 0 12px; border: 1px solid #e3e3df; border-radius: 8px; background: #fff; font-size: 12px; font-weight: 500; transition: background-color 150ms; }
+.adm-courbe-texte { fill: #5f5f5a; font-size: calc(12 * var(--adm-k)); font-variant-numeric: tabular-nums; }
+.adm-courbe-dernier { fill: var(--adm-bleu); font-size: calc(12 * var(--adm-k)); font-weight: 600; font-variant-numeric: tabular-nums; }
+.adm-voir-tableau { display: inline-flex; min-height: 36px; align-items: center; padding: 0 12px; border: 1px solid #e3e3df; border-radius: 8px; background: #fff; font-size: calc(12 * var(--adm-k)); font-weight: 500; transition: background-color 150ms; }
 .adm-voir-tableau:hover { background: #f4f4f0; }
-.adm-bulle { z-index: 2; display: flex; flex-direction: column; gap: 1px; padding: 8px 10px; border: 1px solid #e3e3df; border-radius: 8px; background: #fff; box-shadow: 0 8px 24px -12px rgb(10 10 10 / 0.25); white-space: nowrap; font-size: 13.5px; }
-.adm-tableau-jours { border-collapse: collapse; font-size: 13.5px; font-variant-numeric: tabular-nums; }
-.adm-tableau-jours thead th { position: sticky; top: 0; z-index: 1; height: 36px; padding: 0 16px; border-bottom: 1px solid #ececea; background: #fff; color: #5f5f5a; font-size: 12px; font-weight: 500; text-align: right; }
+.adm-bulle { z-index: 2; display: flex; flex-direction: column; gap: 1px; padding: 8px 10px; border: 1px solid #e3e3df; border-radius: 8px; background: #fff; box-shadow: 0 8px 24px -12px rgb(10 10 10 / 0.25); white-space: nowrap; font-size: calc(13.5 * var(--adm-k)); }
+.adm-tableau-jours { border-collapse: collapse; font-size: calc(13.5 * var(--adm-k)); font-variant-numeric: tabular-nums; }
+.adm-tableau-jours thead th { position: sticky; top: 0; z-index: 1; height: 36px; padding: 0 16px; border-bottom: 1px solid #ececea; background: #fff; color: #5f5f5a; font-size: calc(12 * var(--adm-k)); font-weight: 500; text-align: right; }
 .adm-tableau-jours th:first-child { text-align: left; }
 .adm-tableau-jours tbody th { font-weight: 400; text-align: left; white-space: nowrap; }
 .adm-tableau-jours tbody th, .adm-tableau-jours td { height: 36px; padding: 0 16px; border-bottom: 1px solid #efefec; }
 .adm-tableau-jours td { text-align: right; }
 .adm-repartition { padding: 14px 16px 12px; }
 .adm-repartition li { display: grid; grid-template-columns: 18px minmax(0, 1fr) 52px 40px; align-items: center; gap: 8px; min-height: 32px; }
-.adm-repartition-nom { position: relative; display: flex; min-width: 0; height: 32px; align-items: center; gap: 8px; padding-left: 10px; font-size: 14px; }
+.adm-repartition-nom { position: relative; display: flex; min-width: 0; height: 32px; align-items: center; gap: 8px; padding-left: 10px; font-size: calc(14 * var(--adm-k)); }
 .adm-repartition-barre { position: absolute; inset: 0 auto 0 0; min-width: 4px; border-radius: 6px; background: var(--barre, var(--adm-bleu-pale)); }
 /* Un réseau a son logo dans sa couleur et sa barre dans une teinte claire de celle-ci (`COULEURS_SOURCES`) ; une provenance
  * sans marque, le gris ; les liens et les appareils, le bleu Hopla. Le logo se pose devant la barre, jamais dessus. */
 .adm-repartition-picto { color: var(--picto, var(--adm-bleu)); }
 /* Les deux lettres d'un pays, à la place d'un logo : petites, à l'encre douce, dans la même colonne. */
-.adm-repartition-code { font-size: 11px; font-weight: 600; letter-spacing: 0.02em; color: #5f5f5a; text-align: center; font-variant-numeric: tabular-nums; }
-.adm-repartition-valeur { text-align: right; font-size: 14px; font-weight: 500; font-variant-numeric: tabular-nums; }
-.adm-repartition-part { text-align: right; font-size: 12px; color: #5f5f5a; font-variant-numeric: tabular-nums; }
+.adm-repartition-code { font-size: calc(11 * var(--adm-k)); font-weight: 600; letter-spacing: 0.02em; color: #5f5f5a; text-align: center; font-variant-numeric: tabular-nums; }
+.adm-repartition-valeur { text-align: right; font-size: calc(14 * var(--adm-k)); font-weight: 500; font-variant-numeric: tabular-nums; }
+.adm-repartition-part { text-align: right; font-size: calc(12 * var(--adm-k)); color: #5f5f5a; font-variant-numeric: tabular-nums; }
 @media (min-width: 640px) {
   .adm-courbe-onglets { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .adm-courbe-onglets > button { min-height: 84px; padding: 0 20px; }
@@ -922,7 +944,7 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
  */
 .adm-periodes { display: flex; height: 44px; align-items: stretch; gap: 2px; padding: 3px; border-radius: 10px; background: rgb(10 10 10 / 0.055); }
 .adm-periodes-groupe { display: flex; flex: var(--n, 1) 1 0; gap: 2px; }
-.adm-periodes-groupe > button, .adm-periodes-dates { display: flex; align-items: center; justify-content: center; gap: 5px; border-radius: 8px; color: #45453f; font-size: 14px; font-weight: 500; white-space: nowrap; transition: background-color 150ms, color 150ms, box-shadow 150ms; }
+.adm-periodes-groupe > button, .adm-periodes-dates { display: flex; align-items: center; justify-content: center; gap: 5px; border-radius: 8px; color: #45453f; font-size: calc(14 * var(--adm-k)); font-weight: 500; white-space: nowrap; transition: background-color 150ms, color 150ms, box-shadow 150ms; }
 .adm-periodes-groupe > button { flex: 1 1 0; padding: 0 4px; }
 .adm-periodes-groupe > button:hover, .adm-periodes-dates[data-texte]:hover, .adm-periodes-dates[data-texte][aria-expanded='true'] { background: rgb(255 255 255 / 0.55); color: #0a0a0a; }
 .adm-periodes-groupe > button[aria-checked='true'], .adm-periodes-dates[data-texte][data-pris] { background: #fff; color: var(--adm-bleu); font-weight: 600; box-shadow: 0 1px 2px rgb(10 10 10 / 0.1), 0 0 0 1px rgb(10 10 10 / 0.06); }
@@ -934,16 +956,16 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
 .adm-periodes-trait { flex: none; width: 1px; margin: 9px 2px; background: rgb(10 10 10 / 0.12); }
 .adm-periodes-dates { flex: none; min-width: 44px; padding: 0 10px; }
 .adm-cal-boite { display: flex; flex-direction: column; gap: 4px; }
-.adm-cal-resume { min-height: 22px; color: #18191b; font-size: 15px; font-weight: 600; letter-spacing: -0.01em; }
+.adm-cal-resume { min-height: 22px; color: #18191b; font-size: calc(15 * var(--adm-k)); font-weight: 600; letter-spacing: -0.01em; }
 .adm-cal-mois { display: grid; gap: 24px; touch-action: pan-y; }
 .adm-cal-entete { display: flex; height: 44px; align-items: center; justify-content: space-between; }
 .adm-cal-place { width: 44px; flex: none; }
-.adm-cal-titre { flex: 1; font-size: 15px; font-weight: 600; letter-spacing: -0.01em; text-align: center; }
+.adm-cal-titre { flex: 1; font-size: calc(15 * var(--adm-k)); font-weight: 600; letter-spacing: -0.01em; text-align: center; }
 .adm .adm-cal-fleche { color: #3d3d39; }
 .adm-cal-fleche:disabled { opacity: 0.3; pointer-events: none; }
 /* Un mois de cinq semaines garde la place d'une sixième : la fenêtre ne saute pas d'un mois à l'autre. */
 .adm-cal { width: 100%; margin-bottom: calc((6 - var(--semaines, 6)) * 48px); border-collapse: collapse; table-layout: fixed; }
-.adm-cal th { height: 32px; padding: 0; color: #5f5f5a; font-size: 12px; font-weight: 500; }
+.adm-cal th { height: 32px; padding: 0; color: #5f5f5a; font-size: calc(12 * var(--adm-k)); font-weight: 500; }
 .adm-cal td { position: relative; height: 48px; padding: 0; text-align: center; }
 .adm-cal td[data-bande]::before { content: ''; position: absolute; inset: 2px 0; background: var(--adm-bleu-pale); }
 .adm-cal td[data-bande][data-esquisse]::before { background: var(--adm-bleu-voile); }
@@ -951,14 +973,14 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
 .adm-cal td[data-bande='fin']::before { right: 50%; }
 .adm-cal td[data-bord-g]::before { border-top-left-radius: 10px; border-bottom-left-radius: 10px; }
 .adm-cal td[data-bord-d]::before { border-top-right-radius: 10px; border-bottom-right-radius: 10px; }
-.adm-cal-jour { position: relative; display: inline-grid; width: 100%; max-width: 44px; height: 44px; place-items: center; vertical-align: middle; border-radius: 10px; color: #18191b; font-size: 15px; font-weight: 500; font-variant-numeric: tabular-nums; transition: background-color 120ms, color 120ms; }
+.adm-cal-jour { position: relative; display: inline-grid; width: 100%; max-width: 44px; height: 44px; place-items: center; vertical-align: middle; border-radius: 10px; color: #18191b; font-size: calc(15 * var(--adm-k)); font-weight: 500; font-variant-numeric: tabular-nums; transition: background-color 120ms, color 120ms; }
 .adm-cal-jour:hover { background: #efefea; }
 .adm-cal td[data-bande='milieu']:not([data-esquisse]) .adm-cal-jour:hover { background: #d4d4ff; }
 .adm-cal-jour[aria-current='date'] { font-weight: 700; box-shadow: inset 0 0 0 1px #cfcfc8; }
 .adm-cal td[data-vise] .adm-cal-jour { color: var(--adm-bleu); box-shadow: inset 0 0 0 1.5px var(--adm-bleu); }
 .adm-cal td[data-bout] .adm-cal-jour { background: var(--adm-bleu); color: #fff; font-weight: 600; box-shadow: none; }
 .adm-cal-jour:disabled { background: none; color: #c3c3bd; cursor: default; }
-.adm-cal-plus { align-self: flex-start; min-height: 44px; color: var(--adm-bleu); font-size: 13.5px; font-weight: 500; text-decoration: underline; text-decoration-color: rgb(41 43 255 / 0.35); text-underline-offset: 3px; transition: color 150ms, text-decoration-color 150ms; }
+.adm-cal-plus { align-self: flex-start; min-height: 44px; color: var(--adm-bleu); font-size: calc(13.5 * var(--adm-k)); font-weight: 500; text-decoration: underline; text-decoration-color: rgb(41 43 255 / 0.35); text-underline-offset: 3px; transition: color 150ms, text-decoration-color 150ms; }
 .adm-cal-plus:hover { color: var(--adm-bleu-fonce); text-decoration-color: currentColor; }
 .adm-cal-bulle { width: max-content; padding: 14px 16px 12px; }
 .adm-cal-pied { display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px; padding-top: 12px; border-top: 1px solid #efefec; }
@@ -996,7 +1018,7 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
 .adm-lignes { border: 1px solid #e3e3df; border-radius: 12px; background: #fff; }
 .adm-lignes > :first-child { border-top-left-radius: 11px; border-top-right-radius: 11px; }
 .adm-lignes > :last-child { border-bottom-left-radius: 11px; border-bottom-right-radius: 11px; }
-.adm-ligne { display: flex; width: 100%; min-height: 56px; align-items: center; gap: 12px; padding: 6px 16px; font-size: 15px; text-align: left; }
+.adm-ligne { display: flex; width: 100%; min-height: 56px; align-items: center; gap: 12px; padding: 6px 16px; font-size: calc(15 * var(--adm-k)); text-align: left; }
 .adm-ligne + .adm-ligne { border-top: 1px solid #efefec; }
 .adm-ligne-controle { padding-right: 8px; }
 .adm-ligne.adm-ligne-bascule { padding-right: 16px; }
@@ -1005,17 +1027,17 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
 .adm .adm-ligne-lien:focus-visible { outline-offset: -2px; }
 .adm-ligne-texte { display: flex; min-width: 0; flex: 1; flex-direction: column; gap: 1px; }
 .adm-ligne-nom { min-width: 0; }
-.adm-ligne-valeur { display: -webkit-box; min-width: 0; overflow: hidden; color: #5f5f5a; font-size: 13.5px; overflow-wrap: anywhere; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; }
+.adm-ligne-valeur { display: -webkit-box; min-width: 0; overflow: hidden; color: #5f5f5a; font-size: calc(13.5 * var(--adm-k)); overflow-wrap: anywhere; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; }
 .adm-ligne-valeur strong { color: #3d3d39; font-weight: 500; }
 .adm-ligne-valeur [data-alerte] { color: #a16207; }
 /* Une phrase et son bouton (Résilier) : au téléphone, le bouton passe sous la phrase au lieu de la tasser en colonne. */
 .adm-ligne-pile { flex-wrap: wrap; padding: 12px 16px; }
 .adm-ligne-pile > .adm-ligne-texte { flex-basis: 100%; }
-.adm-reglages-pied { display: flex; flex-direction: column; gap: 6px; color: #5f5f5a; font-size: 12px; }
+.adm-reglages-pied { display: flex; flex-direction: column; gap: 6px; color: #5f5f5a; font-size: calc(12 * var(--adm-k)); }
 .adm-reglages-pied a, .adm-offres-note a { color: var(--adm-bleu); text-decoration: underline; text-decoration-color: rgb(41 43 255 / 0.35); text-underline-offset: 2px; }
 .adm-reglages-pied a:hover, .adm-offres-note a:hover { text-decoration-color: currentColor; }
 /* Le fil d'une sous-page dans l'en-tête : « ‹ Réglages / Facturation ». */
-.adm-fil-retour { display: inline-flex; min-height: 44px; align-items: center; gap: 4px; padding: 0 8px; border-radius: 7px; color: #55554f; font-size: 13.5px; font-weight: 500; transition: background-color 150ms, color 150ms; }
+.adm-fil-retour { display: inline-flex; min-height: 44px; align-items: center; gap: 4px; padding: 0 8px; border-radius: 7px; color: #55554f; font-size: calc(13.5 * var(--adm-k)); font-weight: 500; transition: background-color 150ms, color 150ms; }
 .adm-fil-retour:hover { background: #f2f2ef; color: #0a0a0a; }
 @media (min-width: 640px) {
   .adm-ligne-texte { flex-direction: row; align-items: center; gap: 16px; }
@@ -1039,7 +1061,7 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
 @media (prefers-reduced-motion: reduce) { .adm-ligne-lien, .adm-fil-retour { transition: none; } }
 
 /* Un champ précédé d'un texte fixe (« hopla.page/ ») : un seul cadre, le focus l'entoure en entier. */
-.adm-champ-prefixe { display: flex; min-height: 48px; align-items: center; overflow: hidden; border: 1px solid rgb(10 10 10 / 0.15); border-radius: 12px; background: #fdfdfc; font-size: 16px; transition: border-color 150ms; }
+.adm-champ-prefixe { display: flex; min-height: 48px; align-items: center; overflow: hidden; border: 1px solid rgb(10 10 10 / 0.15); border-radius: 12px; background: #fdfdfc; font-size: calc(16 * var(--adm-k)); transition: border-color 150ms; }
 .adm-champ-prefixe:hover { border-color: #b2b2ab; }
 .adm-champ-prefixe:focus-within { border-color: rgb(10 10 10 / 0.7); outline: 2px solid var(--adm-bleu); outline-offset: 2px; }
 .adm-champ-prefixe > span { padding-left: 14px; color: #5f5f5a; white-space: nowrap; }
@@ -1061,20 +1083,20 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
  */
 .adm-comptes-barre { display: flex; flex-direction: column; gap: 12px; }
 .adm-comptes-onglets { display: flex; gap: 22px; overflow-x: auto; border-bottom: 1px solid #ececea; scrollbar-width: none; }
-.adm-comptes-onglets > button { display: flex; min-height: 44px; flex-shrink: 0; align-items: center; gap: 7px; color: #55554f; font-size: 14px; font-weight: 500; white-space: nowrap; transition: color 150ms, box-shadow 200ms var(--adm-sortie); }
+.adm-comptes-onglets > button { display: flex; min-height: 44px; flex-shrink: 0; align-items: center; gap: 7px; color: #55554f; font-size: calc(14 * var(--adm-k)); font-weight: 500; white-space: nowrap; transition: color 150ms, box-shadow 200ms var(--adm-sortie); }
 .adm-comptes-onglets > button:hover { color: #0a0a0a; }
 .adm-comptes-onglets > button[aria-selected='true'] { color: var(--adm-bleu); box-shadow: inset 0 -2px 0 var(--adm-bleu); }
 .adm .adm-comptes-onglets > button:focus-visible { outline-offset: -2px; }
-.adm-compteur { display: inline-flex; height: 20px; min-width: 20px; align-items: center; justify-content: center; padding: 0 7px; border-radius: 7px; background: rgb(10 10 10 / 0.07); color: #3d3d39; font-size: 12px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.adm-compteur { display: inline-flex; height: 20px; min-width: 20px; align-items: center; justify-content: center; padding: 0 7px; border-radius: 7px; background: rgb(10 10 10 / 0.07); color: #3d3d39; font-size: calc(12 * var(--adm-k)); font-weight: 500; font-variant-numeric: tabular-nums; }
 .adm-compteur[data-alerte] { background: #a16207; color: #fff; font-weight: 600; }
 .adm-comptes-onglets > button[aria-selected='true'] .adm-compteur:not([data-alerte]) { background: var(--adm-bleu-pale); color: var(--adm-bleu); }
 .adm-recherche { position: relative; display: flex; min-width: 0; flex: 1; align-items: center; }
 .adm-recherche > svg { position: absolute; left: 12px; color: #5f5f5a; pointer-events: none; }
-.adm-recherche > input { width: 100%; min-height: 44px; padding: 0 12px 0 34px; border: 1px solid #dcdcd7; border-radius: 10px; background: #fff; font-size: 16px; }
+.adm-recherche > input { width: 100%; min-height: 44px; padding: 0 12px 0 34px; border: 1px solid #dcdcd7; border-radius: 10px; background: #fff; font-size: calc(16 * var(--adm-k)); }
 .adm-recherche > input::placeholder { color: #737373; }
 .adm-recherche > input::-webkit-search-cancel-button { cursor: pointer; }
-.adm-tableau { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 13.5px; }
-.adm-tableau th { height: 36px; padding: 0 12px 0 0; border-bottom: 1px solid #ececea; color: #5f5f5a; font-size: 12px; font-weight: 500; text-align: left; }
+.adm-tableau { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: calc(13.5 * var(--adm-k)); }
+.adm-tableau th { height: 36px; padding: 0 12px 0 0; border-bottom: 1px solid #ececea; color: #5f5f5a; font-size: calc(12 * var(--adm-k)); font-weight: 500; text-align: left; }
 .adm-tableau td { height: 48px; padding: 0 12px 0 0; border-bottom: 1px solid #efefec; }
 .adm-tableau .adm-nombre { padding-right: 24px; text-align: right; font-variant-numeric: tabular-nums; }
 /* Le « … » d'une ligne au bord droit de la colonne, là où s'alignent la recherche et « Inviter » (critique série 2). */
@@ -1084,7 +1106,7 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
 .adm-tableau .adm-gris { overflow: hidden; color: #5f5f5a; text-overflow: ellipsis; white-space: nowrap; }
 .adm-tableau tbody tr { transition: background-color 120ms; }
 .adm-tableau tbody tr:hover { background: #fafaf9; }
-.adm-pastille { display: grid; width: 24px; height: 24px; flex-shrink: 0; place-items: center; overflow: hidden; border-radius: 50%; background: #ebebe7; color: #3d3d39; font-size: 12px; font-weight: 600; text-transform: uppercase; }
+.adm-pastille { display: grid; width: 24px; height: 24px; flex-shrink: 0; place-items: center; overflow: hidden; border-radius: 50%; background: #ebebe7; color: #3d3d39; font-size: calc(12 * var(--adm-k)); font-weight: 600; text-transform: uppercase; }
 .adm-pastille > img { width: 100%; height: 100%; object-fit: cover; }
 /* Les teintes de l'accueil, chacune avec son encre (7:1 et plus). */
 .adm-pastille[data-teinte='bleu'] { background: var(--adm-bleu-pale); color: var(--adm-bleu); }
@@ -1099,7 +1121,7 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
 .adm-points[aria-expanded='true'] { color: var(--adm-bleu); }
 .adm-liste-comptes > li { display: flex; min-height: 64px; align-items: center; gap: 12px; padding: 10px 0; }
 .adm-liste-comptes > li + li { border-top: 1px solid #efefec; }
-.adm-liste-comptes .adm-pastille { width: 36px; height: 36px; font-size: 14px; }
+.adm-liste-comptes .adm-pastille { width: 36px; height: 36px; font-size: calc(14 * var(--adm-k)); }
 /*
  * Un compte s'ouvre sur sa fiche (23 octobre 2026) : au bureau toute la rangée, et son nom pour le clavier ;
  * au téléphone la ligne entière, sauf « … ».
@@ -1108,7 +1130,7 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
 .adm-nom-compte { display: flex; min-width: 0; max-width: 100%; align-items: center; border-radius: 6px; text-align: left; }
 .adm-tableau tbody tr[data-ouvrable]:hover .adm-nom-texte { text-decoration: underline; text-decoration-color: rgb(10 10 10 / 0.3); text-underline-offset: 3px; }
 .adm-compte-ouvrir { display: flex; min-width: 0; flex: 1; align-items: center; gap: 12px; align-self: stretch; border-radius: 8px; text-align: left; }
-.adm-bandeau { display: flex; align-items: flex-start; gap: 12px; padding: 10px 8px 10px 14px; border: 1px solid #e3e3df; border-radius: 10px; background: #fafaf9; font-size: 14px; }
+.adm-bandeau { display: flex; align-items: flex-start; gap: 12px; padding: 10px 8px 10px 14px; border: 1px solid #e3e3df; border-radius: 10px; background: #fafaf9; font-size: calc(14 * var(--adm-k)); }
 .adm-bandeau[data-erreur] { border-color: #f1c7c7; background: #fdf3f3; color: #a51f1f; }
 @media (max-width: 1023px) { .adm-points { width: 44px; height: 44px; border-radius: 10px; } }
 @media (min-width: 1024px) {
