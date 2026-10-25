@@ -109,13 +109,14 @@ embarque tout : l'image n'a pas de `node_modules`.
   d'après Linktree, Later, Biosites, Buffer et Kit sur Mobbin ; le 22 octobre, d'après MailCheap et Resend, tout tenait dans
   une colonne centrée sur du blanc) : la barre latérale bleue collée au bord gauche ; le travail sur le papier teinté
   (`--adm-fond`), son en-tête blanc d'un bord à l'autre de la zone (`adm-entete-bureau`), et le contenu dans une colonne
-  centrée (`adm-colonne`, largeur `--adm-colonne` selon `data-onglet` : 1120 px, 680 pour Réglages et Intégrations, de 820
-  à 960 pour l'édition de Ma page) où groupes, encarts et tableaux se posent en blanc ; sur Ma page, l'aperçu dans sa
-  propre zone fixée au bord droit (`adm-apercu-cote`, `--adm-zone-apercu`, de 440 à 560 px), sur le crème, avec l'adresse,
+  centrée (`adm-colonne`, largeur `--adm-colonne` selon `data-onglet`, qui suit l'écran sans palier depuis le 25 octobre 2026,
+  demandé par Lilian : « ça devrait auto sizer » : de 1120 à 1680 px, de 680 à 1040 pour Réglages et Intégrations, toute
+  la zone pour l'édition de Ma page, jusqu'à 1800, dont rangées, profil et champ grandissent avec l'écran) où groupes, encarts et tableaux se posent en blanc ; sur Ma page, l'aperçu dans sa
+  propre zone fixée au bord droit (`adm-apercu-cote`, `--adm-zone-apercu`, 30vw de 440 à 900 px, le téléphone agrandi jusqu'à 1,4 fois), sur le crème, avec l'adresse,
   Copier et « Voir ma page » en tête (`teteApercu`, passé par `Admin.tsx`) ; les premiers pas dans 1200 px (`adm-premiers`).
   Le détail d'une liste (un outil d'Intégrations, la fiche d'un compte, « Mon abonnement » de Réglages) s'ouvre au bureau
   dans la même place que l'aperçu, en blanc (`PanneauDetail` dans `ui.tsx`, `adm-detail-cote`, `--adm-zone-detail`, de 420
-  à 600 px) : la liste reste à sa gauche, l'élément ouvert en bleu pâle (`courant` d'une `LigneLien`), sa tête porte son
+  à 800 px) : la liste reste à sa gauche, l'élément ouvert en bleu pâle (`courant` d'une `LigneLien`), sa tête porte son
   nom et la croix, Échap le referme ; ses valeurs se lisent sous leur nom, comme au téléphone, et le tableau des comptes ne
   garde que la page, l'offre, les vues et le statut (24 octobre 2026, demandé par Lilian). Au téléphone, une sous-page. Réglages tient sur une seule page de lignes
   (`Groupe`, `Ligne`, `LigneLien` dans `ui.tsx`) ; un détail s'y ouvre en sous-page (`SousPage`), avec un fil dans l'en-tête,
