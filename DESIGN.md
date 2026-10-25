@@ -27,6 +27,37 @@ colors:
   lime-hover: "#d4f57c"
   lime-ink: "#233016"
   cream: "#f3eee5"
+  cream-line: "#e3dccf"
+  ink-soft: "#3d3d39"
+  secondary-strong: "#55554f"
+  secondary-on-white: "#525252"
+  tertiary: "#737373"
+  disabled: "#9a9a9a"
+  disabled-day: "#c3c3bd"
+  control-border-hover: "#c7c7c0"
+  field-border-hover: "#b5b5ae"
+  error-hover: "#a51f1f"
+  error-line: "#f1c7c7"
+  error-pale: "#fdeaea"
+  error-veil: "#fdf3f3"
+  error-on-blue: "#ffd4d4"
+  alert-ink: "#a16207"
+  on-sidebar-muted: "#c9caff"
+  blue-spark: "#8f90ff"
+  blue-pale-hover: "#d4d4ff"
+  premium-ink: "#eee0fa"
+  tint-lilac: "#eee6f3"
+  tint-lilac-ink: "#5b3a74"
+  tint-mint: "#e7edde"
+  tint-cream-ink: "#5c4a2e"
+  device-black: "#000"
+  device-frame: "#141414"
+  device-edge: "#3b3b3f"
+  device-button: "#2c2c30"
+  shadow-menu: "rgb(0 0 0 / 0.22)"
+  shadow-menu-near: "rgb(0 0 0 / 0.06)"
+  shadow-entry-near: "rgb(8 9 60 / 0.18)"
+  shadow-entry: "rgb(8 9 60 / 0.4)"
 typography:
   headline:
     fontFamily: "Geist Variable, ui-sans-serif, system-ui, sans-serif"
@@ -86,6 +117,32 @@ typography:
     fontFamily: "Geist Variable, ui-sans-serif, system-ui, sans-serif"
     fontSize: "13.5px"
     lineHeight: 1.5
+  caption-xs:
+    fontFamily: "Geist Variable, ui-sans-serif, system-ui, sans-serif"
+    fontSize: "10.5px"
+    fontWeight: 500
+  row-fluid:
+    fontFamily: "Geist Variable, ui-sans-serif, system-ui, sans-serif"
+    fontSize: "17px"
+    fontWeight: 600
+  row-fluid-desk:
+    fontFamily: "Geist Variable, ui-sans-serif, system-ui, sans-serif"
+    fontSize: "19px"
+    fontWeight: 500
+  theme-name:
+    fontFamily: "Geist Variable, ui-sans-serif, system-ui, sans-serif"
+    fontSize: "26px"
+    fontWeight: 600
+  screen-title:
+    fontFamily: "Geist Variable, ui-sans-serif, system-ui, sans-serif"
+    fontSize: "28px"
+    fontWeight: 600
+    letterSpacing: "-0.03em"
+  metric-hero:
+    fontFamily: "Geist Variable, ui-sans-serif, system-ui, sans-serif"
+    fontSize: "40px"
+    fontWeight: 600
+    letterSpacing: "-0.035em"
 rounded:
   nav: "7px"
   control-desk: "8px"
@@ -95,6 +152,13 @@ rounded:
   compact-surface: "14px"
   surface: "16px"
   pill: "9999px"
+  hairline: "2px"
+  tag: "6px"
+  segment-tight: "9px"
+  device-island: "18px"
+  sheet: "28px"
+  device-screen: "54px"
+  device: "64px"
 spacing:
   xs: "8px"
   sm: "12px"
@@ -299,6 +363,8 @@ Dans le code hérité, `.adm` inverse les noms de couleur : `white` désigne l�
 
 Les tokens `error` et `pending` correspondent aux états d'erreur et d'enregistrement en cours. Ils ne constituent pas des accents de marque : le rouge reste au danger et aux erreurs, l'ambre aux alertes (un signalement à traiter). Un écart en baisse prend un rose pâle au texte rouge foncé (`#fdeaea` et `#a51f1f`).
 
+Les nuances de service sont nommées dans les tokens (25 octobre 2026) : les gris de texte (`ink-soft`, `secondary-strong`, `secondary-on-white`, `tertiary`, `disabled`), les contours au survol, les pâles de l'erreur et de l'alerte, les pastilles (`tint-*`), les ombres et le téléphone de l'aperçu (`device-*`). Une valeur qui n'y est pas n'entre pas dans `admin.css`.
+
 ### Named Rules
 
 **The Surface Accent Rule.** Comme sur l'accueil, l'appel prend l'accent de sa surface : bleu sur le papier, citron sur le bleu. Jamais deux appels pleins côte à côte.
@@ -329,6 +395,10 @@ Les tokens `error` et `pending` correspondent aux états d'erreur et d'enregistr
 ### Au bureau
 
 Sur un écran d'au moins (1024px) tenu à la souris ou au pavé (variante Tailwind `bureau:`, `@media (min-width: 1024px) and (pointer: fine)`), le texte se range sur cinq marches : (12px) pour les libellés, légendes et aides, (13.5px) pour le texte courant, (15px) pour les titres de carte, de panneau et d'écran, (18px) pour un titre de dialogue, (24px) pour un chiffre clé. Les tailles écrites pour le doigt se rangent sur la marche la plus proche (`admin.css`) ; une classe `bureau:text-…` posée sur l'élément garde la main. La page publique n'utilise aucune de ces classes et garde sa typographie.
+
+### Au téléphone
+
+Sous (1024px), le texte suit la largeur de l'écran (25 octobre 2026, audit Impeccable demandé par Lilian) : `--adm-k` vaut (1px) jusqu'à (390px) de large, puis grandit avec l'écran jusqu'à (1.1px) ; chaque taille du back office s'écrit `calc(N * var(--adm-k))`, et les classes `text-[Npx]` y sont ramenées dans `admin.css`. Un 440 lit donc 10 % plus grand qu'un 375. Les cartes ne sont jamais carrées par principe : elles prennent la hauteur de ce qu'elles disent.
 
 ### Named Rules
 
