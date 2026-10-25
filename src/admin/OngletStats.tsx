@@ -452,7 +452,7 @@ function TableauStats({ charger, adresse, pseudo, joursMax = 365, onOffres, ouvr
   const note = <p className="text-[12px] leading-snug text-[#5f5f5a]">Sans cookie : un visiteur compte une fois par jour, toi jamais.</p>;
 
   return (
-    <div className="adm-stats mx-auto flex w-full max-w-[1200px] flex-col gap-5">
+    <div className="adm-stats mx-auto flex w-full max-w-[1200px] flex-col gap-5 lg:max-w-none">
       {choixPeriode && (grand ? <ActionEntete>{choixPeriode}</ActionEntete> : <div className="-mt-2">{choixPeriode}</div>)}
       {erreur && (
         <div role="alert" className="flex items-center justify-between gap-3 rounded-xl bg-red-500/15 py-1.5 pr-1.5 pl-3.5 text-[14px] text-red-200">
@@ -470,15 +470,16 @@ function TableauStats({ charger, adresse, pseudo, joursMax = 365, onOffres, ouvr
         <div className={`flex flex-col gap-5 transition-opacity duration-200 ${charge ? 'opacity-50' : ''}`} aria-busy={charge}>
           <p className="adm-stats-phrase"><Phrase texte={enUnePhrase(stats)} /></p>
           <CourbeAOnglets stats={stats} />
-          {/* Deux encarts par rangée, de même hauteur : pas d'escalier entre Liens et Réseaux. */}
-          <div className="grid gap-5 lg:grid-cols-2">
+          {/* Deux encarts par rangée, trois sur un grand écran, de même hauteur : pas d'escalier entre Liens et Réseaux.
+              Ta liste ferme la grille, à côté des autres plutôt que seule sur toute la largeur. */}
+          <div className="adm-stats-grille grid gap-5">
             <Repartition titre="Liens" unite="Clics" lignes={lignesLiens} total={stats.clics} vide="Aucun clic sur cette période." />
             <Repartition titre="Réseaux" unite="Vues" lignes={lignesSources} total={stats.vues} />
             <Repartition titre="Appareils" unite="Vues" lignes={lignesAppareils} total={stats.vues} />
             <Repartition titre="Pays" unite="Vues" lignes={lignesPays} total={stats.vues} />
             <OuvertsDansLApp apps={stats.apps} actif={ouvrirApps} onActiver={onActiverApps} />
+            {liste}
           </div>
-          {liste}
           {note}
         </div>
       )}

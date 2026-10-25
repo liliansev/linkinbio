@@ -9,7 +9,7 @@ html:has(.adm-shell:not(.adm-entree)) { scrollbar-gutter: stable; }
 /* La place de la barre de défilement prend la couleur de la zone qu'elle borde : le papier teinté, ou le crème de l'aperçu sur Ma page. */
 @media (min-width: 1024px) {
   html:has(.adm-shell:not(.adm-entree)) { background: #f6f5ef; }
-  html:has(.adm-shell[data-onglet='page']) { background: #f3eee5; }
+  html:has(.adm-apercu-cote) { background: #f3eee5; }
   html:has(.adm-detail-cote) { background: #fff; }
 }
 
@@ -232,10 +232,9 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
 .adm-sidebar :is(.adm-nav-item, .adm-compte, .adm-appel):focus-visible { outline-color: var(--adm-citron); }
 /*
  * Sur un grand écran (22 octobre 2026, redit par Lilian, d'après MailCheap et Resend) : l'app prend toute la
- * largeur, la barre latérale collée au bord gauche, mais le contenu de chaque onglet tient dans une colonne
- * centrée sur l'espace de travail. L'en-tête suit la même colonne : le titre au-dessus du bord gauche du
- * contenu, les gestes au-dessus de son bord droit. `--adm-colonne` est sa largeur selon l'onglet (Ma page :
- * l'édition et la page ensemble), `--adm-bord` la marge qu'elle garde quand l'écran est plus étroit, et
+ * largeur, la barre latérale collée au bord gauche, et le contenu de chaque onglet tient dans une colonne
+ * qui prend toute sa zone (25 octobre 2026). `--adm-colonne` est sa largeur la plus grande, `--adm-bord` la
+ * marge qu'elle garde, et
  * `--adm-largeur` la largeur qu'elle prend, pour ce qui est fixé à l'écran (le message du bas).
  */
 /*
@@ -251,17 +250,20 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
     /* Tout suit la largeur de l'écran, sans palier (25 octobre 2026, demandé par Lilian : « ça devrait auto sizer ») :
        les marges, les colonnes, les zones de droite, puis, sur Ma page, les rangées et le profil (plus bas). */
     --adm-bord: clamp(20px, 3vw, 72px);
-    --adm-colonne: clamp(1120px, 64vw, 1680px);
+    /* Le travail prend toute sa zone, d'un bord à l'autre, comme sur Ma page (25 octobre 2026, demandé par Lilian :
+       « beaucoup d'espaces blancs ») ; seul un écran plus large que 2400 px garde ses marges. */
+    --adm-colonne: 2200px;
     /* La zone de l'aperçu, à droite de Ma page : le téléphone y grandit avec elle (voir `Telephone`). */
     --adm-zone-apercu: max(380px, min((100dvh - 150px) * 0.472 + 48px, 60vw - var(--adm-barre)));
     /* La zone du détail (un outil, la fiche d'un compte, Mon abonnement), à droite de sa liste : voir `PanneauDetail`. */
     --adm-zone-detail: clamp(420px, 32vw, 800px);
     --adm-largeur: min(100% - var(--adm-barre) - 2 * var(--adm-bord), var(--adm-colonne));
   }
-  .adm-shell:is([data-onglet='reglages'], [data-onglet='integrations']) { --adm-colonne: clamp(680px, 42vw, 1040px); }
-  .adm-shell[data-onglet='page'] { --adm-colonne: 100vw; --adm-largeur: min(100% - var(--adm-barre) - var(--adm-zone-apercu) - 2 * var(--adm-bord), var(--adm-colonne)); }
+  /* Ma page, Intégrations et Réglages : la page à droite, dans sa zone (`ZoneApercu`) ; un détail ouvert prend sa place, à la même largeur. */
+  .adm-shell:has(.adm-apercu-cote) { --adm-colonne: 100vw; --adm-zone-detail: max(420px, var(--adm-zone-apercu)); --adm-largeur: min(100% - var(--adm-barre) - var(--adm-zone-apercu) - 2 * var(--adm-bord), var(--adm-colonne)); }
+  .adm-shell:has(.adm-detail-cote) .adm-apercu-cote { visibility: hidden; }
   .adm-travail { padding-left: var(--adm-barre); }
-  .adm-shell[data-onglet='page'] .adm-travail { padding-right: var(--adm-zone-apercu); }
+  .adm-shell:has(.adm-apercu-cote) .adm-travail { padding-right: var(--adm-zone-apercu); }
   .adm-shell:has(.adm-detail-cote) { --adm-largeur: min(100% - var(--adm-barre) - var(--adm-zone-detail) - 2 * var(--adm-bord), var(--adm-colonne)); }
   .adm-shell:has(.adm-detail-cote) .adm-travail { padding-right: var(--adm-zone-detail); }
   /* L'en-tête d'une zone va d'un bord à l'autre : le titre au bord gauche du travail, les gestes au bord droit. */
@@ -270,7 +272,7 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
   /* Le message se pose en bas à droite, hors des rangées qu'on édite (24 octobre 2026 : centré, il en couvrait une). */
   /* Au bord droit de la colonne de l'onglet, pas au bord de l'écran : sur un écran de 3440 px, il reste près du travail. */
   .adm-shell .adm-toast { left: auto; right: max(24px, (100% - var(--adm-barre) - var(--adm-largeur)) / 2); width: min(24rem, 100% - var(--adm-barre) - 48px); margin: 0; }
-  .adm-shell[data-onglet='page'] .adm-toast { right: calc(var(--adm-zone-apercu) + max(24px, (100% - var(--adm-barre) - var(--adm-zone-apercu) - var(--adm-largeur)) / 2)); }
+  .adm-shell:has(.adm-apercu-cote) .adm-toast { right: calc(var(--adm-zone-apercu) + max(24px, (100% - var(--adm-barre) - var(--adm-zone-apercu) - var(--adm-largeur)) / 2)); }
   .adm-shell:has(.adm-detail-cote) .adm-toast { right: calc(var(--adm-zone-detail) + max(24px, (100% - var(--adm-barre) - var(--adm-zone-detail) - var(--adm-largeur)) / 2)); }
 }
 /* Une fenêtre centrée (les offres, une confirmation) se centre sur l'espace de travail, à droite de la barre latérale. */
@@ -880,6 +882,9 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
 .adm-encart { border: 1px solid #e6e6e2; border-radius: 12px; background: #fff; }
 .adm-stats-phrase { max-width: 46rem; font-size: calc(18 * var(--adm-k)); line-height: 1.4; font-weight: 500; letter-spacing: -0.01em; text-wrap: pretty; }
 .adm-stats-chiffre { color: var(--adm-bleu); white-space: nowrap; }
+/* Les encarts des stats : deux par rangée au bureau, trois sur un grand écran. */
+@media (min-width: 1024px) { .adm-stats-grille { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 1800px) { .adm-stats-grille { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 .adm-stats .adm-card { border-color: #e6e6e2; border-radius: 12px; padding: 16px; }
 .adm-courbe { overflow: hidden; }
 .adm-courbe-onglets { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-bottom: 1px solid #ececea; }
@@ -1021,6 +1026,8 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
  * souris ; sur un téléphone, la valeur passe sous le libellé.
  */
 .adm-reglages { display: flex; width: 100%; max-width: 680px; flex-direction: column; gap: 24px; margin-inline: auto; }
+/* Au bureau, Intégrations et Réglages prennent toute la largeur à gauche de la page, comme l'édition de Ma page (25 octobre 2026). */
+@media (min-width: 1024px) { .adm-shell:has(.adm-apercu-cote) .adm-reglages { max-width: none; } }
 .adm-lignes { border: 1px solid #e3e3df; border-radius: 12px; background: #fff; }
 .adm-lignes > :first-child { border-top-left-radius: 11px; border-top-right-radius: 11px; }
 .adm-lignes > :last-child { border-bottom-left-radius: 11px; border-bottom-right-radius: 11px; }

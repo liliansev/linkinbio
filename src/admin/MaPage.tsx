@@ -152,24 +152,6 @@ export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, chois
   const [tiroirDepart, setTiroirDepart] = useState<Tiroir | undefined>();
   const [cleDesign, setCleDesign] = useState(0);
   const [ajout, setAjout] = useState(false);
-  // Au bureau, la page à droite, à la largeur d'un téléphone ou sur un ordinateur.
-  const [largeur, setLargeur] = useState<'telephone' | 'ordinateur'>('telephone');
-  // La page sur un ordinateur s'ouvre par-dessus le travail : la bascule y prend la main, Échap revient au téléphone,
-  // et la main revient à la bascule de la carte.
-  const calque = useRef<HTMLDivElement>(null);
-  const ordiOuvert = useRef(false);
-  useEffect(() => {
-    if (largeur === 'telephone') {
-      if (ordiOuvert.current) document.querySelector<HTMLElement>('.adm-apercu-colle .adm-vues [aria-checked="true"]')?.focus({ preventScroll: true });
-      ordiOuvert.current = false;
-      return;
-    }
-    ordiOuvert.current = true;
-    calque.current?.querySelector<HTMLElement>('[aria-checked="true"]')?.focus({ preventScroll: true });
-    const touche = (e: KeyboardEvent) => { if (e.key === 'Escape' && !e.defaultPrevented && !document.querySelector('[role="dialog"]')) { e.preventDefault(); setLargeur('telephone'); } };
-    addEventListener('keydown', touche);
-    return () => removeEventListener('keydown', touche);
-  }, [largeur]);
   // Les réglages au moment où le design ou les réseaux s'ouvrent : « Annuler » y revient.
   const depart = useRef<Reglages | null>(null);
   const change = depart.current !== null && JSON.stringify(depart.current) !== JSON.stringify(reglages);
@@ -181,10 +163,9 @@ export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, chois
   const astuce = ouverts < 2 || (!deplace && blocs.length >= 3);
   const fichier = useRef<HTMLInputElement>(null);
   const toile = useRef<HTMLDivElement>(null);
-  // Au bureau : la photo et la bio du profil (où mènent les étapes de « Bien démarrer »), et l'écran du téléphone.
+  // Au bureau : la photo et la bio du profil (où mènent les étapes de « Bien démarrer »).
   const photoBureau = useRef<HTMLButtonElement>(null);
   const bioBureau = useRef<HTMLTextAreaElement>(null);
-  const ecran = useRef<HTMLDivElement>(null);
   const id = useId();
   const principal = compte.principal;
   const visibles = blocs.filter(b => principal || !TYPES_PRINCIPAL.includes(b.type));
@@ -411,16 +392,6 @@ export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, chois
     const actifs = reglages.reseaux.filter(r => adresseSaisie(r.url));
     /** Contenu ou Design : quitter le design le referme (et dit ce qui a changé). Faux si quelque chose retient. */
     const choisirOnglet = (o: 'contenu' | 'design') => (o === 'design' ? ouvrirCote('design') : !enDesign || quitterCote());
-    // Téléphone ou ordinateur : la même bascule, sur la carte de l'aperçu et en haut de la page sur un ordinateur.
-    const vues = (
-      <div role="radiogroup" aria-label="Voir ma page" onKeyDown={e => flechesRadio(e)} className="adm-vues">
-        {(['telephone', 'ordinateur'] as const).map(l => (
-          <button key={l} type="button" role="radio" aria-checked={largeur === l} tabIndex={largeur === l ? 0 : -1} onClick={() => setLargeur(l)} className="adm-outil">
-            <Icone nom={l === 'telephone' ? 'mobile' : 'ordinateur'} taille={l === 'telephone' ? 15 : 16} />{l === 'telephone' ? 'Téléphone' : 'Ordinateur'}
-          </button>
-        ))}
-      </div>
-    );
     // Le bloc neuf se voit sur la page, à la place qu'il prendra. Il n'y est pas encore : un clic sur lui ramène à sa rangée.
     return (
       <div className="adm-studio adm-studio-bureau">
@@ -513,25 +484,8 @@ export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, chois
 
         {/* La troisième zone, d'un bord à l'autre de l'écran à droite (24 octobre 2026, d'après Linktree et Later) : l'adresse en tête,
             puis la page, qui suit chaque frappe ; un clic sur un bloc ouvre sa rangée. */}
-        <aside className="adm-apercu-cote" aria-label="Aperçu de ta page">
-          <div className="adm-apercu-tete">{teteApercu}</div>
-          <div className="adm-apercu-colle">
-            {vues}
-            <Telephone ecran={ecran} choisi={choisi ?? neuf?.bloc.id ?? null}>
-              <PageLiens page={{ reglages: montree, blocs: avecNeuf, compte }}
-                liste={(liste, rendu) => <BlocsApercu blocs={liste} rendu={rendu} choisi={choisi ?? neuf?.bloc.id ?? null} ouvrir={ouvrirDepuisApercu} />} />
-            </Telephone>
-          </div>
-        </aside>
-
-        {/* Sur un ordinateur, la page s'ouvre par-dessus l'espace de travail, à sa vraie taille dès que l'écran la tient
-            (24 octobre 2026, critique série 2 : réduite à côté de l'édition, elle était illisible sur un portable, et la colonne sautait). */}
-        {largeur === 'ordinateur' && (
-          <div ref={calque} className="adm-ordi-calque" role="region" aria-label="Ta page sur un ordinateur">
-            {vues}
-            <ApercuBureau page={visiteurs} />
-          </div>
-        )}
+        <ZoneApercu tete={teteApercu} page={{ reglages: montree, blocs: avecNeuf, compte }} visiteurs={visiteurs} choisi={choisi ?? neuf?.bloc.id ?? null}
+          liste={(liste, rendu) => <BlocsApercu blocs={liste} rendu={rendu} choisi={choisi ?? neuf?.bloc.id ?? null} ouvrir={ouvrirDepuisApercu} />} />
 
         <input ref={fichier} type="file" accept="image/*" className="adm-fichier" tabIndex={-1} aria-hidden="true" onChange={e => photo(e.target.files?.[0])} />
       </div>
@@ -840,6 +794,76 @@ function Rangee({ bloc, droits, clics, neuf, ouvert, editeur, ouvrir, fermer, ge
       </div>
       {ouvert && <div id={idReglages} role="region" aria-label={`Réglages : ${nom}`} className="adm-rangee-reglages">{editeur}</div>}
     </li>
+  );
+}
+
+/**
+ * La zone de droite au bureau, fixée au bord de l'écran sur le crème : l'adresse en tête, la bascule Téléphone /
+ * Ordinateur, puis la page dans l'iPhone. Ma page y montre ses blocs à ouvrir d'un clic ; Intégrations et Réglages
+ * y montrent la page telle qu'elle est (25 octobre 2026, demandé par Lilian : la même mise en page sur tous les
+ * onglets). Sur un ordinateur, la page s'ouvre par-dessus l'espace de travail, à sa vraie taille dès que l'écran la
+ * tient (24 octobre 2026, critique série 2 : réduite à côté de l'édition, elle était illisible sur un portable).
+ */
+export function ZoneApercu({ tete, page, visiteurs, choisi = null, liste }: { tete: ReactNode; page: PagePublique; visiteurs: PagePublique; choisi?: string | null; liste: Edition['liste'] }) {
+  const [largeur, setLargeur] = useState<'telephone' | 'ordinateur'>('telephone');
+  const ecran = useRef<HTMLDivElement>(null);
+  // La page sur un ordinateur s'ouvre par-dessus le travail : la bascule y prend la main, Échap revient au téléphone,
+  // et la main revient à la bascule de la carte.
+  const calque = useRef<HTMLDivElement>(null);
+  const ordiOuvert = useRef(false);
+  useEffect(() => {
+    if (largeur === 'telephone') {
+      if (ordiOuvert.current) document.querySelector<HTMLElement>('.adm-apercu-colle .adm-vues [aria-checked="true"]')?.focus({ preventScroll: true });
+      ordiOuvert.current = false;
+      return;
+    }
+    ordiOuvert.current = true;
+    calque.current?.querySelector<HTMLElement>('[aria-checked="true"]')?.focus({ preventScroll: true });
+    const touche = (e: KeyboardEvent) => { if (e.key === 'Escape' && !e.defaultPrevented && !document.querySelector('[role="dialog"]')) { e.preventDefault(); setLargeur('telephone'); } };
+    addEventListener('keydown', touche);
+    return () => removeEventListener('keydown', touche);
+  }, [largeur]);
+  // Téléphone ou ordinateur : la même bascule, sur la carte de l'aperçu et en haut de la page sur un ordinateur.
+  const vues = (
+    <div role="radiogroup" aria-label="Voir ma page" onKeyDown={e => flechesRadio(e)} className="adm-vues">
+      {(['telephone', 'ordinateur'] as const).map(l => (
+        <button key={l} type="button" role="radio" aria-checked={largeur === l} tabIndex={largeur === l ? 0 : -1} onClick={() => setLargeur(l)} className="adm-outil">
+          <Icone nom={l === 'telephone' ? 'mobile' : 'ordinateur'} taille={l === 'telephone' ? 15 : 16} />{l === 'telephone' ? 'Téléphone' : 'Ordinateur'}
+        </button>
+      ))}
+    </div>
+  );
+  return (
+    <>
+      <aside className="adm-apercu-cote" aria-label="Aperçu de ta page">
+        <div className="adm-apercu-tete">{tete}</div>
+        <div className="adm-apercu-colle">
+          {vues}
+          <Telephone ecran={ecran} choisi={choisi}>
+            <PageLiens page={page} liste={liste} />
+          </Telephone>
+        </div>
+      </aside>
+      {largeur === 'ordinateur' && (
+        <div ref={calque} className="adm-ordi-calque" role="region" aria-label="Ta page sur un ordinateur">
+          {vues}
+          <ApercuBureau page={visiteurs} />
+        </div>
+      )}
+    </>
+  );
+}
+
+/** La même zone sur Intégrations et Réglages : la page telle que les visiteurs la verront ; un clic sur un bloc l'ouvre dans Ma page. */
+export function ApercuOnglet({ compte, reglages, blocs, visiteurs, tete, ouvrir }: { compte: PagePublique['compte']; reglages: Reglages; blocs: Bloc[]; visiteurs: PagePublique; tete: ReactNode; ouvrir: (b: Bloc) => void }) {
+  const droits = useDroits();
+  const essai = !!useVoirOffres();
+  const vus = essai ? avecEssai(droits) : droits;
+  const montree = vus.couleurs ? reglages : { ...reglages, couleurs: SANS_COULEURS };
+  const visibles = blocs.filter(b => compte.principal || !TYPES_PRINCIPAL.includes(b.type));
+  return (
+    <ZoneApercu tete={tete} page={{ reglages: montree, blocs: visibles, compte }} visiteurs={visiteurs}
+      liste={(liste, rendu) => <BlocsApercu blocs={liste} rendu={rendu} choisi={null} ouvrir={ouvrir} />} />
   );
 }
 

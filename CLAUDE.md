@@ -109,10 +109,12 @@ embarque tout : l'image n'a pas de `node_modules`.
   d'après Linktree, Later, Biosites, Buffer et Kit sur Mobbin ; le 22 octobre, d'après MailCheap et Resend, tout tenait dans
   une colonne centrée sur du blanc) : la barre latérale bleue collée au bord gauche ; le travail sur le papier teinté
   (`--adm-fond`), son en-tête blanc d'un bord à l'autre de la zone (`adm-entete-bureau`), et le contenu dans une colonne
-  centrée (`adm-colonne`, largeur `--adm-colonne` selon `data-onglet`, qui suit l'écran sans palier depuis le 25 octobre 2026,
-  demandé par Lilian : « ça devrait auto sizer » : de 1120 à 1680 px, de 680 à 1040 pour Réglages et Intégrations, toute
-  la zone pour l'édition de Ma page, dont rangées, profil et champ grandissent avec l'écran) où groupes, encarts et tableaux se posent en blanc ; sur Ma page, l'aperçu dans sa
-  propre zone fixée au bord droit (`adm-apercu-cote`), sur le crème, un iPhone 17 qui fixe tout (25 octobre 2026, demandé par Lilian : 402 × 874 points, son bord, sa Dynamic Island et ses boutons, toujours à ses proportions et de toute la hauteur ; `--adm-zone-apercu` en prend la largeur sans laisser moins de 40 % à l'édition, et la barre latérale, `--adm-barre`, suit l'écran de 216 à 256 px), avec l'adresse,
+  centrée (`adm-colonne`, qui prend toute sa zone depuis le 25 octobre 2026, demandé par Lilian : « beaucoup d'espaces
+  blancs, quelque chose de similaire sur toutes les tabs » : Stats et Comptes d'un bord à l'autre, jusqu'à 2200 px, les encarts
+  des stats trois par rangée dès 1800 px (`adm-stats-grille`) ; Ma page, Intégrations et Réglages à gauche de la page, dont
+  rangées, profil et champ grandissent avec l'écran) où groupes, encarts et tableaux se posent en blanc ; sur Ma page, Intégrations et Réglages, l'aperçu dans sa
+  propre zone fixée au bord droit (`ZoneApercu` dans `MaPage.tsx`, `adm-apercu-cote` ; `ApercuOnglet` hors de Ma page, où un clic
+  sur un bloc l'ouvre dans Ma page, et un détail ouvert prend sa place à la même largeur), sur le crème, un iPhone 17 qui fixe tout (25 octobre 2026, demandé par Lilian : 402 × 874 points, son bord, sa Dynamic Island et ses boutons, toujours à ses proportions et de toute la hauteur ; `--adm-zone-apercu` en prend la largeur sans laisser moins de 40 % à l'édition, et la barre latérale, `--adm-barre`, suit l'écran de 216 à 256 px), avec l'adresse,
   Copier et « Voir ma page » en tête (`teteApercu`, passé par `Admin.tsx`) ; les premiers pas dans 1200 px (`adm-premiers`).
   Le détail d'une liste (un outil d'Intégrations, la fiche d'un compte, « Mon abonnement » de Réglages) s'ouvre au bureau
   dans la même place que l'aperçu, en blanc (`PanneauDetail` dans `ui.tsx`, `adm-detail-cote`, `--adm-zone-detail`, de 420

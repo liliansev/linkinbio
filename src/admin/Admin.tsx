@@ -9,7 +9,7 @@ import type { BlocCommence } from '../lib/editionBloc.ts';
 import { cleBlocCommence, relireBlocCommence } from '../lib/editionBloc.ts';
 import { PageLiens } from '../components/PageLiens.tsx';
 import { SourceFlux } from '../components/BlocsPlus.tsx';
-import { MaPage } from './MaPage.tsx';
+import { ApercuOnglet, MaPage } from './MaPage.tsx';
 import type { Tiroir } from './OngletApparence.tsx';
 import { EditeurBloc } from './EditeurBloc.tsx';
 import { RegleAOuvrir } from './ReglesBloc.tsx';
@@ -749,6 +749,16 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
   const adresse = adressePartage(compte, reglages.domaine);
   const courte = sansSchema(adresse);
   const coupe = courte.lastIndexOf('/') + 1;
+  // La tête de la zone de droite, au bureau : l'adresse à copier et « Voir ma page ».
+  const teteApercu = (
+    <>
+      <div className="adm-adresse-entete h-9 min-w-0">
+        <span className="min-w-0 self-center truncate px-2.5 text-[13px] text-white/55" translate="no">{courte.slice(0, coupe)}<span className="font-medium text-white">{courte.slice(coupe)}</span></span>
+        <BoutonAdresse adresse={adresse} />
+      </div>
+      <a href={demo ? '#page' : adresse} target={demo ? undefined : '_blank'} rel={demo ? undefined : 'noopener'} className={classeBouton.secondaire}><Icone nom="ui-ouvrir" taille={15} className="shrink-0" />Voir ma page</a>
+    </>
+  );
   const titre = onglets.find(o => o.id === onglet)!.nom;
   // Sans photo, l'icône seule à sa place, en blanc sur le bleu : jamais de rond derrière une icône.
   const avatar = (taille: string, icone: number) => reglages.profil.avatar
@@ -867,7 +877,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
 
       <EmplacementEntete.Provider value={emplacement}>
       <PoserFil.Provider value={setFil}>
-      {/* Au bureau, la colonne de l'onglet, sous celle de l'en-tête : 1120 px, 680 pour Réglages et Intégrations, 1300 pour Ma page (l'édition et la page côte à côte). */}
+      {/* Au bureau, la colonne de l'onglet prend toute sa zone : à gauche de la page sur Ma page, Intégrations et Réglages, d'un bord à l'autre ailleurs. */}
       <div className="mx-auto max-w-[1120px] px-4 lg:max-w-none lg:px-0">
         <main id="contenu-admin" tabIndex={-1} className={`outline-none adm-colonne mx-auto w-full pb-28 ${onglet === 'page' ? 'pt-4 lg:p-0' : onglet === 'comptes' ? 'pt-6 lg:pb-12 lg:pt-0' : 'pt-6 lg:pb-12 lg:pt-7'}`}>
           <div key={onglet} className="adm-onglet">
@@ -885,15 +895,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
             demarrage={demarrage} demarrageOuvert={demarrageOuvert} fermerDemarrage={() => setDemarrageOuvert(false)} demandeDesign={demandeDesign} designOuvert={() => setDemandeDesign(null)}
             demandeAjout={demandeAjout} ajoutOuvert={() => setDemandeAjout(null)}
             appel={grand ? null : appel()} bandeaux={grand ? bandeaux : null}
-            teteApercu={(
-              <>
-                <div className="adm-adresse-entete h-9 min-w-0">
-                  <span className="min-w-0 self-center truncate px-2.5 text-[13px] text-white/55" translate="no">{courte.slice(0, coupe)}<span className="font-medium text-white">{courte.slice(coupe)}</span></span>
-                  <BoutonAdresse adresse={adresse} />
-                </div>
-                <a href={demo ? '#page' : adresse} target={demo ? undefined : '_blank'} rel={demo ? undefined : 'noopener'} className={classeBouton.secondaire}><Icone nom="ui-ouvrir" taille={15} className="shrink-0" />Voir ma page</a>
-              </>
-            )} />}
+            teteApercu={teteApercu} />}
           {onglet === 'stats' && <OngletStats charger={chargerStats} adresse={adressePartage(compte, reglages.domaine)} pseudo={compte.pseudo} joursMax={initial.paiement ? joursStats(compte.plan, droits.stats) : 365} onOffres={peutAcheter ? ouvrirOffres : undefined}
             ouvrirApps={reglages.ouvrirApps} onActiverApps={() => changerReglages({ ...reglages, ouvrirApps: true })} liste={<MaListe api={api} onIntegrations={() => choisirOnglet('integrations')} />} blocs={blocs} semaine={api.semaine} />}
           {onglet === 'integrations' && <OngletIntegrations api={api} blocs={blocs} sousOuverte={sousIntegration} sousLue={() => setSousIntegration(null)}
@@ -907,6 +909,11 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
             onResilier={peutAcheter ? () => setOffres({ resilier: true }) : undefined} />}
           {onglet === 'comptes' && api.comptes && <OngletComptes api={api.comptes} avatar={reglages.profil.avatar} />}
           </div>
+          {/* Au bureau, Intégrations et Réglages gardent la page à droite, comme Ma page (25 octobre 2026, demandé par Lilian) :
+              ce qu'on y règle s'y voit, et un clic sur un bloc l'ouvre dans Ma page. Un détail ouvert prend sa place. */}
+          {grand && (onglet === 'integrations' || onglet === 'reglages') && (
+            <ApercuOnglet compte={compte} reglages={reglages} blocs={blocs} visiteurs={page} tete={teteApercu} ouvrir={b => { choisirOnglet('page'); ouvrirBloc(b); }} />
+          )}
         </main>
 
       </div>
