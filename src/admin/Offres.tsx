@@ -140,7 +140,7 @@ export function FenetreOffres({ onFermer, abonnement, enVente, pour, vers, apres
       await avantDePartir?.();
       const url = await ouvrirPaiement(choix, periode);
       // De quoi dire au retour ce qui vient de s'ouvrir. Rien n'est accordé d'après cette note.
-      const n: NoteAchat = { plan: choix, periode, ...(pour ? { pour } : {}), avant: payee, ...(abonnement.periode ? { periodeAvant: abonnement.periode } : {}), ...(offerte ? { deja: offerte.plan } : {}), ...apresAchat, ts: Date.now() };
+      const n: NoteAchat = { plan: choix, periode, ...(pour ? { pour } : {}), avant: payee, ...(abonnement.periode ? { periodeAvant: abonnement.periode } : {}), ...(offerte ? { deja: offerte.plan } : essai ? { deja: PLAN_ESSAI } : {}), ...apresAchat, ts: Date.now() };
       try { sessionStorage.setItem(CLE_ACHAT, JSON.stringify(n)); } catch { /* onglet privé : le retour dira seulement l'offre */ }
       location.href = url;
       return;
@@ -177,7 +177,7 @@ export function FenetreOffres({ onFermer, abonnement, enVente, pour, vers, apres
           ) : (
             <OffresMobile id={idTitre} periode={periode} setPeriode={setPeriode} mois={mois} depart={miseEnAvant ?? actuelle}
               carte={(p, mis) => <CarteOffre id={`${idTitre}-${p}`} plan={p} periode={periode} badge={badge(p)} mis={mis} pour={pour} panneau />}
-              miseEnAvant={miseEnAvant} geste={geste} onChoisir={choisir} note={resilie || offerteVue ? note : 'Prix TTC, paiement chez Creem.'} />
+              miseEnAvant={miseEnAvant} geste={geste} onChoisir={choisir} note={resilie || offerteVue || essai ? note : 'Prix TTC, paiement chez Creem.'} />
           )}
         </div>
       )}
@@ -362,7 +362,7 @@ function Recapitulatif({ plan, periode, setPeriode, abonnement, grand, id, mois,
       </dl>
       {liste.length > 0 && (
         <div className="flex flex-col gap-2.5">
-          <h3 className="adm-recap-sous-titre">{monte ? 'Ce que tu débloques' : 'Ce qui s’arrête'}</h3>
+          <h3 className="adm-recap-sous-titre">{!monte ? 'Ce qui s’arrête' : abonnement.essai ? 'Ce que tu gardes après l’essai' : 'Ce que tu débloques'}</h3>
           <ul className="adm-offre-liste adm-recap-liste" data-perte={!monte || undefined}>
             {liste.map(a => <li key={a}>{monte && <Icone nom="ui-ok" taille={16} />}{a}</li>)}
           </ul>
@@ -571,6 +571,10 @@ export function RetourPaiement({ achat, etape, onFermer, action }: { achat: Acha
               <p className="adm-retour-texte">Creem ne nous a pas encore confirmé {changement ? 'le changement' : 'ton paiement'}. Ton offre s’activera d’elle-même dès que ce sera fait : tu peux fermer cette fenêtre. Si rien n’a changé dans une heure, <a href={`mailto:${CONTACT_LEGAL}?subject=${encodeURIComponent(`Hopla : mon offre ${nom}`)}`}>écris-nous</a>.</p>
             ) : <p className="adm-retour-texte">Creem nous confirme {changement ? 'le changement' : 'ton paiement'}. Ça prend quelques secondes.</p>}
           </div>
+          {/* Pris pendant l'essai (ou sous une offre offerte au-dessus) : rien de neuf ne s'ouvre, l'offre attend son tour. */}
+          {etape === 'fait' && !meme && base && rang(achat.plan) <= rang(base) && (
+            <p className="adm-retour-texte">Tout ce que ta page a aujourd’hui reste ouvert, puis {nom} prend la suite.</p>
+          )}
           {ouvertes.length > 0 && (
             <div className="flex flex-col gap-2">
               <h3 className="adm-recap-sous-titre">Ce qui vient de s’ouvrir</h3>
