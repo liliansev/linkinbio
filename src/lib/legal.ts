@@ -13,7 +13,7 @@ import { OFFRES, euros } from './abonnement.ts';
 /** « 9 € par mois ou 79 € par an » : le prix d'une offre, tel que Creem le facture. */
 const prixDe = (p: 'starter' | 'pro' | 'premium') => `${euros(OFFRES[p].prix.mois)} par mois ou ${euros(OFFRES[p].prix.an)} par an`;
 
-export const VERSION_CGU = '2026-10-24.4';
+export const VERSION_CGU = '2026-10-25.1';
 export const CONTACT_LEGAL = 'bonjour@liliansevoumian.fr';
 
 export interface DocumentLegal { titre: string; resume: string; sections: { titre: string; texte: string[] }[] }
@@ -21,15 +21,18 @@ export interface DocumentLegal { titre: string; resume: string; sections: { titr
 export const DOCUMENTS = ['cgu', 'traitement-des-donnees', 'confidentialite', 'sous-traitants', 'mentions-legales'] as const;
 export type NomDocument = (typeof DOCUMENTS)[number];
 
+/** L'éditeur de Hopla, d'après son avis de situation au répertoire Sirene du 25 octobre 2026. */
+const EDITEUR = 'AURA GROUP, SARL, 5 avenue du Maréchal de Lattre de Tassigny, 94600 Choisy-le-Roi';
+
 const HEBERGEUR = 'Hostinger International Limited, 61 Lordou Vironos Street, 6023 Larnaca, Chypre';
 
 export const LEGAL: Record<NomDocument, DocumentLegal> = {
   cgu: {
     titre: 'Conditions générales d’utilisation',
-    resume: `Les règles du service Hopla, en vigueur depuis le 24 octobre 2026 (version ${VERSION_CGU}).`,
+    resume: `Les règles du service Hopla, en vigueur depuis le 25 octobre 2026 (version ${VERSION_CGU}).`,
     sections: [
       { titre: 'Le service', texte: [
-        'Hopla permet de publier une page de liens personnelle à l’adresse hopla.page/<pseudo>, et de la gérer depuis un back office, sur app.hopla.page. Le service est édité par Lilian Sevoumian (voir les mentions légales).',
+        'Hopla permet de publier une page de liens personnelle à l’adresse hopla.page/<pseudo>, et de la gérer depuis un back office, sur app.hopla.page. Le service est édité par la société AURA GROUP (voir les mentions légales).',
         'Hopla existe en version gratuite et en offres payantes (voir « Les offres payantes et leur paiement »). Il peut évoluer, s’interrompre pour maintenance ou s’arrêter : dans ce dernier cas, tu es prévenu par e-mail au moins 30 jours avant, et tu peux exporter tes données jusqu’au dernier jour.',
       ] },
       { titre: 'Ton compte', texte: [
@@ -101,7 +104,7 @@ export const LEGAL: Record<NomDocument, DocumentLegal> = {
     resume: 'Ce que Hopla sait de toi, pourquoi, combien de temps, et comment exercer tes droits.',
     sections: [
       { titre: 'Qui est responsable', texte: [
-        `Lilian Sevoumian, éditeur de Hopla (voir les mentions légales). Pour toute question ou demande : ${CONTACT_LEGAL}.`,
+        `AURA GROUP, éditeur de Hopla (voir les mentions légales). Pour toute question ou demande : ${CONTACT_LEGAL}.`,
       ] },
       { titre: 'Si tu visites une page', texte: [
         'Aucun cookie n’est déposé, aucune publicité, aucun traceur d’un site à l’autre. Le serveur compte les vues et les clics de la page pour son propriétaire, avec une empreinte anonyme renouvelée chaque jour, et ton pays, que Cloudflare déduit de ta connexion ; ton adresse IP n’est pas enregistrée. Ton pays sert aussi, le temps de la visite, à montrer ou non les liens que le propriétaire réserve à certains pays. Ces statistiques sont gardées 13 mois. C’est une mesure d’audience strictement limitée, qui entre dans l’exemption de consentement prévue par la CNIL.',
@@ -161,7 +164,8 @@ export const LEGAL: Record<NomDocument, DocumentLegal> = {
     resume: 'Qui édite et héberge Hopla.',
     sections: [
       { titre: 'Éditeur', texte: [
-        `Lilian Sevoumian, entrepreneur individuel. Contact : ${CONTACT_LEGAL}. Directeur de la publication : Lilian Sevoumian.`,
+        `${EDITEUR}. SIREN 991 735 036, RCS Créteil, SIRET du siège 991 735 036 00014, TVA intracommunautaire FR71991735036.`,
+        `Contact : ${CONTACT_LEGAL}, 06 67 03 66 74. Directeur de la publication : Lilian Sevoumian.`,
       ] },
       { titre: 'Hébergeur', texte: [HEBERGEUR + ', www.hostinger.com.'] },
       { titre: 'Contenus des utilisateurs', texte: [
