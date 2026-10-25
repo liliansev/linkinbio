@@ -1161,3 +1161,18 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
 }
 /* Une tablette en paysage garde ses cibles pour le doigt, quelle que soit la largeur. */
 @media (min-width: 1024px) and (pointer: coarse) { .adm-rangee-tete { min-height: max(52px, calc(16px + 1.75vw)); } }
+
+/*
+ * « Ajouter un bloc » au téléphone (25 octobre 2026, Lilian : « les cartes sont trop hautes, beaucoup d'espace blanc, et
+ * les menus après sont trop petits ») : une tuile prend la hauteur de ce qu'elle dit, plus de carré ; les familles et
+ * leurs lignes se lisent comme des rangées de réglages. Tailles et marges suivent la largeur de l'écran, de 360 à 440 px.
+ */
+.adm-tuile-ajout { gap: 3px; padding: clamp(12px, 3.6vw, 16px); }
+.adm-tuile-ajout-nom { margin-top: clamp(8px, 2.4vw, 12px); font-size: clamp(15px, 4.1vw, 17px); line-height: 1.2; }
+.adm-tuile-ajout-bref { font-size: clamp(13px, 3.5vw, 14.5px); line-height: 1.35; }
+.adm-ajout-aide { font-size: clamp(13.5px, 3.6vw, 15px); line-height: 1.45; }
+.adm-famille-ajout { min-height: clamp(60px, 16vw, 68px); padding-block: 10px; }
+.adm-famille-ajout-nom { font-size: clamp(15.5px, 4.3vw, 17.5px); line-height: 1.25; }
+.adm-famille-ajout-liste { font-size: clamp(13.5px, 3.6vw, 15px); }
+.adm-ligne-ajout { min-height: clamp(52px, 14vw, 58px); }
+.adm-ligne-ajout-nom { font-size: clamp(15px, 4.1vw, 16.5px); }

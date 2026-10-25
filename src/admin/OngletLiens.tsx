@@ -245,10 +245,10 @@ function ChoixTelephone({ depart, principal, gestes, fermer }: { depart: string;
       <li key={l.entree.nom} style={{ '--i': i } as CSSProperties}>
         {/* La ligne qu'Entrée prendrait est teintée, comme au survol. */}
         <button type="button" disabled={!choix.permise(l)} onClick={() => prendre(l)} aria-label={choix.nomDe(l)} data-actif={i === choix.actif || undefined}
-          className="group flex min-h-12 w-full items-center gap-3 rounded-xl px-2 py-1 text-left transition duration-150 hover:bg-white/[0.05] active:scale-[0.985] active:bg-white/[0.07] data-[actif]:bg-white/[0.05]">
+          className="adm-ligne-ajout group flex w-full items-center gap-3 rounded-xl px-2 py-1 text-left transition duration-150 hover:bg-white/[0.05] active:scale-[0.985] active:bg-white/[0.07] data-[actif]:bg-white/[0.05]">
           {/* Pas de pastille ni d'effet : le picto plein, d'une couleur, ou le logo du site, se suffit. */}
           <PictoLigne l={l} taille={22} className="grid h-10 w-9 shrink-0 place-items-center" />
-          <span className="min-w-0 flex-1 truncate text-[14.5px] font-medium text-white">{l.entree.nom}</span>
+          <span className="adm-ligne-ajout-nom min-w-0 flex-1 truncate font-medium text-white">{l.entree.nom}</span>
           {l.detail && <span className="min-w-0 max-w-[45%] truncate text-[13px] text-white/55">{l.detail}</span>}
           {/* Une ligne réservée garde son chevron : elle mène quelque part, aux offres. */}
           {reserve && l.entree.fonction && <Etiquette fonction={l.entree.fonction} />}
@@ -310,9 +310,9 @@ function ChoixTelephone({ depart, principal, gestes, fermer }: { depart: string;
  * ligne qui se déplie, une à la fois. Une tuile est un bouton avec son nom : sa couleur est celle du bouton, l'icône y
  * reste seule.
  */
-// `bref` : ce qu'en dit la tuile au bureau, quatre sur une rangée, en deux lignes au plus.
-const SUGGESTIONS: { type: TypeBloc; fond: string; sous?: string; bref: string }[] = [
-  { type: 'lien', fond: 'var(--adm-bleu-pale)', sous: 'Ton site, ta boutique, ton agenda…', bref: 'Site, boutique, agenda' },
+// `bref` : ce qu'en dit la tuile, au bureau comme au téléphone, en deux lignes au plus et jamais coupé.
+const SUGGESTIONS: { type: TypeBloc; fond: string; bref: string }[] = [
+  { type: 'lien', fond: 'var(--adm-bleu-pale)', bref: 'Site, boutique, agenda' },
   { type: 'galerie', fond: 'var(--adm-creme)', bref: 'Tes photos, qui défilent' },
   { type: 'preuve', fond: 'var(--adm-citron)', bref: 'Ta note, tes témoignages' },
   { type: 'inscription', fond: '#ffe3da', bref: 'Les e-mails de tes visiteurs' },
@@ -388,7 +388,7 @@ function Depart({ lignes, ligne, prendre, reserve, permise, nomDe }: {
 }) {
   const [ouverte, setOuverte] = useState<string | null>(null);
   const de = (type: TypeBloc) => lignes.find(l => l.entree.type === type && !l.entree.modele);
-  const tuiles = SUGGESTIONS.flatMap(s => { const l = de(s.type); return l ? [{ l, fond: s.fond, sous: s.sous ?? l.entree.aide }] : []; });
+  const tuiles = SUGGESTIONS.flatMap(s => { const l = de(s.type); return l ? [{ l, fond: s.fond, sous: s.bref }] : []; });
   const familles = FAMILLES.map(f => ({ ...f, lignes: f.types.flatMap(t => de(t) ?? []) })).filter(f => f.lignes.length);
   return (
     <div className="flex flex-col gap-4 pb-2">
@@ -396,30 +396,28 @@ function Depart({ lignes, ligne, prendre, reserve, permise, nomDe }: {
         {tuiles.map(({ l, fond, sous }, i) => (
           <li key={l.entree.nom} style={{ '--i': i } as CSSProperties}>
             <button type="button" disabled={!permise(l)} onClick={() => prendre(l)} aria-label={nomDe(l)} style={{ background: fond }}
-              className="relative flex aspect-square w-full flex-col justify-between rounded-2xl p-3.5 text-left text-white transition duration-150 hover:brightness-[0.97] active:scale-[0.97]">
-              <Icone nom={l.entree.picto} taille={30} className="text-bleu" />
+              className="adm-tuile-ajout relative flex h-full w-full flex-col rounded-2xl text-left text-white transition duration-150 hover:brightness-[0.97] active:scale-[0.97]">
+              <Icone nom={l.entree.picto} taille={24} className="text-bleu" />
               {reserve(l) && l.entree.fonction && <span className="absolute top-3 right-3"><Etiquette fonction={l.entree.fonction} /></span>}
-              <span className="flex flex-col gap-0.5">
-                <span className="text-[15px] leading-tight font-semibold">{l.entree.nom}</span>
-                {sous && <span className="line-clamp-2 text-[12.5px] leading-snug text-white/65">{sous}</span>}
-              </span>
+              <span className="adm-tuile-ajout-nom font-semibold">{l.entree.nom}</span>
+              <span className="adm-tuile-ajout-bref text-white/65">{sous}</span>
             </button>
           </li>
         ))}
       </ul>
-      <p className="text-[13px] leading-snug text-white/60">Une vidéo, un agenda, une boutique ? Colle son adresse : Hopla en fait le bon bloc.</p>
+      <p className="adm-ajout-aide text-white/60">Une vidéo, un agenda, une boutique ? Colle son adresse : Hopla en fait le bon bloc.</p>
       <ul className="-mx-2 flex flex-col">
         {familles.map(f => {
           const ici = ouverte === f.nom;
           return (
             <li key={f.nom} className="border-t border-white/10 first:border-t-0">
               <button type="button" aria-expanded={ici} onClick={() => setOuverte(ici ? null : f.nom)}
-                className="flex min-h-12 w-full items-center gap-3 rounded-xl px-2 py-1 text-left transition hover:bg-white/[0.05]">
-                <span className="flex min-w-0 flex-1 flex-col">
-                  <span className="text-[14.5px] font-semibold text-white">{f.nom}</span>
-                  {!ici && <span className="truncate text-[12.5px] text-white/55">{f.lignes.map(l => l.entree.nom).join(', ')}</span>}
+                className="adm-famille-ajout flex w-full items-center gap-3 rounded-xl px-2 text-left transition hover:bg-white/[0.05]">
+                <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                  <span className="adm-famille-ajout-nom font-semibold text-white">{f.nom}</span>
+                  {!ici && <span className="adm-famille-ajout-liste truncate text-white/55">{f.lignes.map(l => l.entree.nom).join(', ')}</span>}
                 </span>
-                <Icone nom="ui-chevron" taille={16} className={`shrink-0 text-white/40 transition-transform ${ici ? 'rotate-180' : ''}`} />
+                <Icone nom="ui-chevron" taille={18} className={`shrink-0 text-white/40 transition-transform ${ici ? 'rotate-180' : ''}`} />
               </button>
               {ici && <ul className="adm-cascade flex flex-col pb-1.5 pl-2">{f.lignes.map((l, i) => ligne(l, i))}</ul>}
             </li>
