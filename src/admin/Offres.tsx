@@ -1,7 +1,7 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import type { KeyboardEvent, ReactNode } from 'react';
 import type { Abonnement as EtatAbonnement, Fonction, Periode, Plan, PlanPayant } from '../lib/abonnement.ts';
-import { FONCTIONS, FONCTIONS_EN_MOTS, OFFRES, PLANS, apresAbonnement, avantagesEntre, echeance, economieAnnuelle, estResilie, euros, moisOfferts, offerteAuDessus, rang, sensDuChangement } from '../lib/abonnement.ts';
+import { FONCTIONS, FONCTIONS_EN_MOTS, OFFRES, PLANS, PLAN_ESSAI, apresAbonnement, planHorsEssai, avantagesEntre, echeance, economieAnnuelle, estResilie, euros, moisOfferts, offerteAuDessus, rang, sensDuChangement } from '../lib/abonnement.ts';
 import type { Achat, EtapeRetour, NoteAchat, SuiteAchat } from '../lib/achat.ts';
 import { CLE_ACHAT } from '../lib/achat.ts';
 import type { PagePublique } from '../lib/types.ts';
@@ -61,8 +61,10 @@ interface ProprietesOffres {
 
 export function FenetreOffres({ onFermer, abonnement, enVente, pour, vers, apresAchat, ouvrirPaiement, avantDePartir, apercu, resilier, ouvrirPortail, resiliation }: ProprietesOffres) {
   const grand = useGrandEcran();
-  // L'offre de la page (une offre offerte peut passer devant l'abonnement), et celle qu'on paie, que Creem change ou résilie.
-  const actuelle = abonnement.plan;
+  // L'offre de la page hors essai (une offre offerte peut passer devant l'abonnement), et celle qu'on paie, que Creem change
+  // ou résilie. L'essai de Pro ne s'achète ni ne se résilie : pendant qu'il court, toutes les offres se prennent.
+  const actuelle = planHorsEssai(abonnement);
+  const essai = abonnement.essai ?? null;
   const payee = abonnement.payee;
   const paye = payee !== 'gratuit';
   const resilie = paye && estResilie(abonnement.statut);
@@ -87,7 +89,7 @@ export function FenetreOffres({ onFermer, abonnement, enVente, pour, vers, apres
   function geste(p: Plan): Geste {
     if (p === 'gratuit') {
       if (paye && !resilie) return resilier ? { bouton: true, texte: 'Repasser en Gratuit', plan: 'gratuit' } : { bouton: false, texte: 'Comprise dans ton offre' };
-      if (!paye && !offerteVue) return { bouton: false, texte: 'Ton offre actuelle' };
+      if (!paye && !offerteVue) return essai ? { bouton: false, texte: `Dès le ${dateCourte(essai)}` } : { bouton: false, texte: 'Ton offre actuelle' };
       // Gratuit vient après l'abonnement résilié et l'offre offerte, la plus lointaine des deux ; jamais après une offre sans fin.
       if (offerteVue && offerteVue.jusqu === null) return { bouton: false, texte: 'Comprise dans ton offre' };
       const fin = Math.max(resilie ? abonnement.finPeriode ?? 0 : 0, offerteVue?.jusqu ?? 0);
@@ -111,7 +113,8 @@ export function FenetreOffres({ onFermer, abonnement, enVente, pour, vers, apres
   const note = resilie && abonnement.finPeriode
     ? `Ton offre ${OFFRES[payee].nom} s’arrête le ${dateLongue(abonnement.finPeriode)}${offert ? `, et ${offert}.` : ' : tu pourras en prendre une autre ensuite.'}`
     : offert ? `${offert}. Prix TTC, paiement chez Creem.`
-      : 'Prix TTC. Paiement sécurisé chez Creem, résiliable à tout moment.';
+      : essai ? `Ton essai ${OFFRES[PLAN_ESSAI].nom} court jusqu’au ${dateLongue(essai)}, puis ta page passe en ${OFFRES[actuelle].nom}. Prix TTC, paiement chez Creem.`
+        : 'Prix TTC. Paiement sécurisé chez Creem, résiliable à tout moment.';
 
   // Revenir aux offres rend le focus au bouton de l'offre choisie ; entrer dans le récapitulatif le pose sur son titre.
   const dernierChoix = useRef<Plan | null>(null);
@@ -315,8 +318,9 @@ function Recapitulatif({ plan, periode, setPeriode, abonnement, grand, id, mois,
   plan: PlanPayant; periode: Periode; setPeriode: (p: Periode) => void; abonnement: EtatAbonnement; grand: boolean; id: string; mois: number;
   retour: () => void; fermer: () => void; payer: () => void; envoi: boolean; erreur: string; apercu?: (plan: PlanPayant) => PagePublique;
 }) {
-  // Ce qu'on paie décide du chemin chez Creem (changer d'abonnement ou en prendre un) ; l'offre de la page, de ce qui s'ouvre.
-  const actuelle = abonnement.plan;
+  // Ce qu'on paie décide du chemin chez Creem (changer d'abonnement ou en prendre un) ; l'offre de la page hors essai, de ce
+  // qui s'ouvre : pendant l'essai, on choisit ce qu'on garde ensuite.
+  const actuelle = planHorsEssai(abonnement);
   const payee = abonnement.payee;
   const changement = payee !== 'gratuit' && !estResilie(abonnement.statut);
   const meme = plan === payee;

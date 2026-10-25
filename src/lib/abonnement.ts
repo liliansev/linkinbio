@@ -4,8 +4,10 @@
  * le 21 octobre 2026 ; ceux des produits Creem, que Hopla relit et que « Créer
  * les offres dans Creem » complète), ce que chacune débloque, et la lecture
  * d'un abonnement. Le compte principal (Lilian) a tout, sans abonnement.
- * Gratuit garde l'essentiel pour essayer : des liens sans limite, la page selon
- * le réseau du visiteur (la promesse de Hopla) et tous les thèmes.
+ * Gratuit garde l'essentiel pour rester en ligne : cinq blocs, la page selon le
+ * réseau du visiteur (la promesse de Hopla), tous les thèmes et la mention Hopla.
+ * Chaque inscription commence par 14 jours de Pro, sans carte (25 octobre 2026,
+ * choisi par Lilian) : voir `ESSAI_JOURS`.
  */
 
 /** Un prix en euros à la française : « 9 € », « 86,40 € » (espace insécable avant le symbole). */
@@ -44,12 +46,12 @@ export interface Offre {
 
 export const OFFRES: Record<Plan, Offre> = {
   gratuit: {
-    nom: 'Gratuit', phrase: 'Ta page et tous tes liens, pour toujours.', prix: { mois: 0, an: 0 }, quota: 25 * Mo, jours: 0, enVente: true,
-    avantages: ['Des liens sans limite', 'Ta page selon le réseau du visiteur', 'Les vingt thèmes'],
+    nom: 'Gratuit', phrase: 'Ta page en ligne, pour toujours.', prix: { mois: 0, an: 0 }, quota: 25 * Mo, jours: 0, enVente: true,
+    avantages: ['Cinq blocs sur ta page', 'Ta page selon le réseau du visiteur', 'Les vingt thèmes'],
   },
   starter: {
     nom: 'Starter', phrase: 'Ta page, sans la mention Hopla.', prix: { mois: 9, an: 79 }, quota: 100 * Mo, jours: 30, enVente: true,
-    avantages: ['Sans la mention Hopla', 'Ta vitrine : produits, rendez-vous, dons', 'Tes couleurs, ta police, ton fond', 'Grande photo, liens en grille', 'Tes liens programmés à l’avance', 'Les avis de tes clients', 'Ton formulaire et tes galeries', 'Tes stats sur 30 jours', 'Redirection et suivi UTM'],
+    avantages: ['Sans la mention Hopla', 'Des blocs sans limite', 'Ta vitrine : produits, rendez-vous, dons', 'Tes couleurs, ta police, ton fond', 'Grande photo, liens en grille', 'Tes liens programmés à l’avance', 'Les avis de tes clients', 'Ton formulaire et tes galeries', 'Tes stats sur 30 jours', 'Redirection et suivi UTM'],
   },
   pro: {
     nom: 'Pro', phrase: 'Le bon lien, au bon moment.', prix: { mois: 19, an: 169 }, quota: 200 * Mo, jours: 365, enVente: true,
@@ -86,10 +88,12 @@ export const libellePrix = (p: PlanPayant, periode: Periode) => `${euros(OFFRES[
  * lien partenaire (22 octobre 2026) ; `formulaire` : le bloc « Me contacter » ; `galerie` : plus de trois photos dans
  * une galerie (24 octobre 2026) ; `utm` : les liens sortants marqués `utm_source=hopla` ; `redirection` : toute
  * la page renvoyée vers une adresse ; `pays` : un bloc selon le pays du visiteur ; `cadeau` : un cadeau contre l'e-mail
- * dans « Rejoins ma liste » ; `flux` : le bloc des derniers articles d'un flux RSS (24 octobre 2026).
+ * dans « Rejoins ma liste » ; `flux` : le bloc des derniers articles d'un flux RSS (24 octobre 2026) ; `blocs` : plus de
+ * cinq blocs sur la page (`BLOCS_GRATUITS`, 25 octobre 2026).
  */
 export const FONCTIONS = {
   sansMention: 'starter',
+  blocs: 'starter',
   vitrine: 'starter',
   couleurs: 'starter',
   programmation: 'starter',
@@ -118,6 +122,7 @@ export type Fonction = keyof typeof FONCTIONS;
  */
 export const FONCTIONS_EN_MOTS: Record<Fonction, { avantage: string; pour: string }> = {
   sansMention: { avantage: 'Sans la mention Hopla', pour: 'Pour ôter la mention' },
+  blocs: { avantage: 'Des blocs sans limite', pour: 'Pour tous tes blocs' },
   vitrine: { avantage: 'Ta vitrine : produits, rendez-vous, dons', pour: 'Pour ta vitrine' },
   couleurs: { avantage: 'Tes couleurs, ta police, ton fond', pour: 'Pour tes couleurs' },
   programmation: { avantage: 'Tes liens programmés à l’avance', pour: 'Pour programmer' },
@@ -145,7 +150,7 @@ export const FONCTIONS_EN_MOTS: Record<Fonction, { avantage: string; pour: strin
  * à la suivante ; la dernière de chaque liste ne dépend d'aucune fonction.
  */
 export const ACCROCHES: Record<PlanPayant, { texte: string; fonction?: Fonction }[]> = {
-  starter: [{ texte: 'sans la mention Hopla', fonction: 'sansMention' }, { texte: 'tes couleurs', fonction: 'couleurs' }, { texte: 'tes stats sur 30 jours' }],
+  starter: [{ texte: 'sans la mention Hopla', fonction: 'sansMention' }, { texte: 'des blocs sans limite', fonction: 'blocs' }, { texte: 'tes couleurs', fonction: 'couleurs' }, { texte: 'tes stats sur 30 jours' }],
   pro: [{ texte: 'ta page selon l’heure', fonction: 'heure' }, { texte: 'les drops', fonction: 'drops' }, { texte: 'ta liste e-mail', fonction: 'listeEmail' }, { texte: 'tes stats sur un an' }],
   premium: [{ texte: 'ton nom de domaine' }],
 };
@@ -245,9 +250,20 @@ export const JOURS_AVANT_OFFRES = 7;
 /** Ce que ces pages ne faisaient pas en gratuit, et ne gardent donc pas : la page sans mention, et ce qui est venu après (la vitrine, le formulaire, la galerie complète, l'UTM, la redirection). */
 const PAS_AVANT_OFFRES: readonly Fonction[] = ['sansMention', 'vitrine', 'formulaire', 'galerie', 'utm', 'redirection', 'fond', 'grandePhoto', 'grille', 'pays', 'cadeau', 'flux'];
 
+/**
+ * L'essai (25 octobre 2026, choisi par Lilian) : chaque compte créé commence par 14 jours de Pro, sans carte ni
+ * abonnement. À sa fin, la page reste en ligne en Gratuit et perd ce que Gratuit ne comprend pas, sans rien effacer.
+ * Les pages créées avant `DEBUT_ESSAI` n'ont pas eu d'essai, et gardent leurs blocs sans limite, promis alors.
+ */
+export const ESSAI_JOURS = 14;
+export const DEBUT_ESSAI = Date.UTC(2026, 9, 25, 20, 30);
+/** L'offre d'un essai. */
+export const PLAN_ESSAI: PlanPayant = 'pro';
+
 /** Ce compte peut-il se servir de cette fonction ? `cree` : la création du compte (ms), pour les pages d'avant. */
 export function peut(plan: Plan, f: Fonction, cree = Number.POSITIVE_INFINITY): boolean {
   if (rang(plan) >= rang(FONCTIONS[f])) return true;
+  if (f === 'blocs' && cree < DEBUT_ESSAI) return true;
   return !PAS_AVANT_OFFRES.includes(f) && cree < BASCULE_OFFRES;
 }
 
@@ -283,7 +299,15 @@ export interface Abonnement {
   portail: boolean;
   /** L'offre offerte depuis l'onglet Comptes, tant qu'elle court ; null sinon. */
   offerte: OffreOfferte | null;
+  /** La fin (ms) de l'essai de Pro, tant qu'il court et qu'il donne plus que l'abonnement et l'offre offerte ; null sinon. */
+  essai?: number | null;
 }
+
+/** L'offre du compte sans son essai : ce qu'il paie, ou ce qu'on lui offre au-dessus. Ce qui reste à la fin de l'essai. */
+export const planHorsEssai = (a: Pick<Abonnement, 'payee' | 'offerte'>): Plan => offerteAuDessus(a)?.plan ?? a.payee;
+
+/** Les jours entiers qui restent à un essai qui finit à `fin` : 14 le jour de l'inscription, 1 le dernier jour. */
+export const joursRestants = (fin: number, maintenant = Date.now()) => Math.max(1, Math.ceil((fin - maintenant) / 86_400_000));
 
 /** L'offre offerte quand c'est elle qui donne au compte son offre (au-dessus de ce qu'il paie) ; null sinon. */
 export const offerteAuDessus = (a: Pick<Abonnement, 'payee' | 'offerte'>): OffreOfferte | null =>

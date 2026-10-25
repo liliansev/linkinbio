@@ -1,4 +1,4 @@
-import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import { createContext, useContext, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode, RefObject } from 'react';
 import { DndContext, KeyboardSensor, PointerSensor, TouchSensor, closestCenter, useSensor, useSensors } from '@dnd-kit/core';
 import type { DragEndEvent, Modifier } from '@dnd-kit/core';
@@ -9,7 +9,7 @@ import { GALERIE_GRATUITE, SANS_COULEURS, TYPES_ADRESSE, TYPES_PRINCIPAL, TYPES_
 import { etiquettes } from '../lib/etiquettes.ts';
 import { horsCreneauOuDates } from '../lib/moments.ts';
 import { enGrille } from '../lib/collections.ts';
-import { avecEssai, selonDroits } from '../lib/droits.ts';
+import { avecEssai, horsLimite, selonDroits } from '../lib/droits.ts';
 import type { Droits } from '../lib/droits.ts';
 import type { Destination } from '../lib/demarrage.ts';
 import { urlReseau } from '../lib/demarrage.ts';
@@ -177,6 +177,7 @@ export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, chois
   const essai = !!useVoirOffres();
   const vus = essai ? avecEssai(droits) : droits;
   const montree = vus.couleurs ? reglages : { ...reglages, couleurs: SANS_COULEURS };
+  const enTrop = useMemo(() => horsLimite(reglages, visibles, droits), [reglages, visibles, droits]);
 
   // Les réglages du dernier rendu : une annulation tardive ne défait que son propre champ.
   const derniers = useRef(reglages);
@@ -394,6 +395,7 @@ export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, chois
     const choisirOnglet = (o: 'contenu' | 'design') => (o === 'design' ? ouvrirCote('design') : !enDesign || quitterCote());
     // Le bloc neuf se voit sur la page, à la place qu'il prendra. Il n'y est pas encore : un clic sur lui ramène à sa rangée.
     return (
+      <HorsLimite.Provider value={enTrop}>
       <div className="adm-studio adm-studio-bureau">
         {/* Le geste principal est à droite de l'en-tête, comme celui de chaque onglet. */}
         <ActionEntete>
@@ -489,6 +491,7 @@ export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, chois
 
         <input ref={fichier} type="file" accept="image/*" className="adm-fichier" tabIndex={-1} aria-hidden="true" onChange={e => photo(e.target.files?.[0])} />
       </div>
+      </HorsLimite.Provider>
     );
   }
 
@@ -510,6 +513,7 @@ export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, chois
   );
 
   return (
+    <HorsLimite.Provider value={enTrop}>
     <div className="adm-studio">
       <div>
         {/* Au téléphone, les deux gestes de la page sont posés sur la barre des onglets, à portée du pouce : la page commence sous l'en-tête. */}
@@ -541,6 +545,7 @@ export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, chois
         {design}
       </Feuille>
     </div>
+    </HorsLimite.Provider>
   );
 }
 
@@ -582,9 +587,12 @@ function commeSurLaPage(bloc: Bloc, droits: Droits): Bloc {
 }
 
 /** Ce qu'un bloc a de particulier, dit de la même façon dans la liste du bureau et sur la page du téléphone. */
-function etatBloc(bloc: Bloc, droits: Droits) {
+/** Les blocs qu'une page Gratuit ne montre pas, au-delà des cinq premiers : grisés comme ceux qu'une offre attend. */
+const HorsLimite = createContext<ReadonlySet<string>>(new Set());
+
+function etatBloc(bloc: Bloc, droits: Droits, enTrop = false) {
   // Un bloc que l'offre ne comprend plus reste là, grisé comme un bloc masqué : il revient avec l'offre.
-  const attend = ([[!!bloc.acces, 'drops'], [bloc.type === 'inscription', 'listeEmail'], [bloc.type === 'preuve', 'avis'], [TYPES_VITRINE.includes(bloc.type), 'vitrine'], [bloc.type === 'formulaire', 'formulaire'], [bloc.disposition === 'grille', 'grille'], [bloc.type === 'flux', 'flux']] as [boolean, Fonction][]).find(([oui, f]) => oui && !droits[f])?.[1];
+  const attend = ([[!!bloc.acces, 'drops'], [bloc.type === 'inscription', 'listeEmail'], [bloc.type === 'preuve', 'avis'], [TYPES_VITRINE.includes(bloc.type), 'vitrine'], [bloc.type === 'formulaire', 'formulaire'], [bloc.disposition === 'grille', 'grille'], [bloc.type === 'flux', 'flux'], [enTrop, 'blocs']] as [boolean, Fonction][]).find(([oui, f]) => oui && !droits[f])?.[1];
   const prive = !bloc.public || !!attend;
   // Une règle que l'offre ne comprend plus n'est pas dite : sans Starter, un lancement attend sa date sans compte à rebours (« programmé »).
   const regles = etiquettes(bloc, droits);
@@ -714,7 +722,7 @@ function Rangee({ bloc, droits, clics, neuf, ouvert, editeur, ouvrir, fermer, ge
 }) {
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({ id: bloc.id, disabled: neuf, attributes: { roleDescription: 'bloc déplaçable' } });
   const type = typeDe(bloc);
-  const etat = etatBloc(bloc, droits);
+  const etat = etatBloc(bloc, droits, useContext(HorsLimite).has(bloc.id));
   const nom = neuf ? `Nouveau bloc : ${type?.nom ?? ''}` : nomBloc(bloc);
   const sous = neuf ? '' : sousBloc(bloc, nom);
   const idReglages = useId();
@@ -862,8 +870,10 @@ export function ApercuOnglet({ compte, reglages, blocs, visiteurs, tete, ouvrir 
   const montree = vus.couleurs ? reglages : { ...reglages, couleurs: SANS_COULEURS };
   const visibles = blocs.filter(b => compte.principal || !TYPES_PRINCIPAL.includes(b.type));
   return (
-    <ZoneApercu tete={tete} page={{ reglages: montree, blocs: visibles, compte }} visiteurs={visiteurs}
-      liste={(liste, rendu) => <BlocsApercu blocs={liste} rendu={rendu} choisi={null} ouvrir={ouvrir} />} />
+    <HorsLimite.Provider value={horsLimite(reglages, visibles, droits)}>
+      <ZoneApercu tete={tete} page={{ reglages: montree, blocs: visibles, compte }} visiteurs={visiteurs}
+        liste={(liste, rendu) => <BlocsApercu blocs={liste} rendu={rendu} choisi={null} ouvrir={ouvrir} />} />
+    </HorsLimite.Provider>
   );
 }
 
@@ -925,11 +935,12 @@ function Telephone({ ecran, choisi, children }: { ecran: RefObject<HTMLDivElemen
 /** Les blocs de la page à droite : grisés s'ils sont masqués, cerclés quand leur rangée est ouverte, ouverts d'un clic. */
 function BlocsApercu({ blocs, rendu, choisi, ouvrir }: { blocs: Bloc[]; rendu: (bloc: Bloc) => ReactNode; choisi: string | null; ouvrir: (b: Bloc) => void }) {
   const droits = useDroits();
+  const enTrop = useContext(HorsLimite);
   const tuiles = enGrille(blocs);
   return (
     <>
       {blocs.map((bloc, i) => {
-        const e = etatBloc(bloc, droits);
+        const e = etatBloc(bloc, droits, enTrop.has(bloc.id));
         return (
           <BlocApercu key={bloc.id} bloc={bloc} i={i} choisi={choisi === bloc.id} prive={e.prive || e.programme} tuile={tuiles.has(bloc.id)} ouvrir={ouvrir}>
             {rendu(commeSurLaPage(bloc, droits))}
@@ -1076,7 +1087,7 @@ function BlocsEditables({ blocs, rendu, choisi, neuf, onOrdonner, onOuvrir, onAj
 function BlocEditable({ bloc, i, choisi, neuf = false, tuile, ouvrir, children }: { bloc: Bloc; i: number; choisi: boolean; neuf?: boolean; tuile: boolean; ouvrir: (b: Bloc) => void; children: ReactNode }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: bloc.id, disabled: neuf });
   const droits = useDroits();
-  const { attend, prive, programme, puces, dit } = etatBloc(bloc, droits);
+  const { attend, prive, programme, puces, dit } = etatBloc(bloc, droits, useContext(HorsLimite).has(bloc.id));
   const nom = bloc.titre || bloc.url || 'ce bloc';
   // Le bloc entier est un seul bouton : ses liens et champs intérieurs sortent de l'ordre de tabulation.
   const noeud = useRef<HTMLDivElement | null>(null);

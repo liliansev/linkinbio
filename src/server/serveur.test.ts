@@ -1,15 +1,18 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
+
 process.env.LIENS_DB = ':memory:';
 const db = await import('./db.ts');
+/** Un compte neuf sans son essai de Pro : la page Gratuit que la plupart de ces tests mettent à l'épreuve. */
+const creerGratuit = (...a: Parameters<typeof db.creerCompte>) => { const c = db.creerCompte(...a); db.retirerEssai(c.id); return db.compteParId(c.id)!; };
 const auth = await import('./auth.ts');
 const { source, appareil, enregistrer, pays } = await import('./analytique.ts');
 const { validerBloc, validerReglages, adresse, pseudo, email } = await import('../lib/valider.ts');
 const P = 'principal';
 const O = { page: 'https://hopla.page', admin: 'https://app.hopla.page' };
 const { REGLAGES_DEFAUT } = await import('../lib/defauts.ts');
-const { BASCULE_OFFRES, OFFRES } = await import('../lib/abonnement.ts');
+const { BASCULE_OFFRES, DEBUT_ESSAI, OFFRES } = await import('../lib/abonnement.ts');
 
 test.beforeEach(() => { db.fermer(); });
 
@@ -130,10 +133,10 @@ test('statistiques : sources lisibles, robots et admin écartés, totaux et tend
 });
 
 test('comptes : chaque page est isolée des autres', async () => {
-  const camille = db.creerCompte('Camille@Exemple.fr', 'camille');
+  const camille = creerGratuit('Camille@Exemple.fr', 'camille');
   assert.equal(camille.email, 'camille@exemple.fr');
-  assert.throws(() => db.creerCompte('camille@exemple.fr', 'autre'), /déjà un compte/);
-  assert.throws(() => db.creerCompte('autre@exemple.fr', 'camille'), /déjà pris/);
+  assert.throws(() => creerGratuit('camille@exemple.fr', 'autre'), /déjà un compte/);
+  assert.throws(() => creerGratuit('autre@exemple.fr', 'camille'), /déjà pris/);
   assert.equal(db.lireBlocs(camille.id).length, 0, 'une page neuve est vide');
   assert.equal(db.lireReglages(camille.id).profil.nom, 'Camille');
   assert.equal(db.lireReglages(camille.id).seo.indexable, false);
@@ -259,16 +262,16 @@ test('conservation : les statistiques de plus de treize mois et les jetons expir
 
 test('conservation : une page où personne n’est jamais entré s’efface un mois après sa création', () => {
   const jour = 86_400_000, maintenant = Date.now(), ilYa = maintenant - 31 * jour;
-  const oubliee = db.creerCompte('oubliee@exemple.fr', 'oubliee', ilYa);
-  const ouverte = db.creerCompte('ouverte@exemple.fr', 'ouverte', ilYa);
+  const oubliee = creerGratuit('oubliee@exemple.fr', 'oubliee', ilYa);
+  const ouverte = creerGratuit('ouverte@exemple.fr', 'ouverte', ilYa);
   db.noterConnexion(ouverte.id, ilYa + jour);
-  const remplie = db.creerCompte('remplie@exemple.fr', 'remplie', ilYa);
+  const remplie = creerGratuit('remplie@exemple.fr', 'remplie', ilYa);
   db.enregistrerBloc(remplie.id, validerBloc({ type: 'lien', titre: 'Boutique', url: 'remplie.fr' }, 'r1'));
-  const relancee = db.creerCompte('relancee@exemple.fr', 'relancee', ilYa);
+  const relancee = creerGratuit('relancee@exemple.fr', 'relancee', ilYa);
   db.ajouterJeton('empreinte-relance', 'connexion', 7 * jour, relancee.id);
-  const suspendue = db.creerCompte('suspendue@exemple.fr', 'suspendue', ilYa);
+  const suspendue = creerGratuit('suspendue@exemple.fr', 'suspendue', ilYa);
   db.changerStatut(suspendue.id, 'suspendu');
-  db.creerCompte('recente@exemple.fr', 'recente', maintenant - 29 * jour);
+  creerGratuit('recente@exemple.fr', 'recente', maintenant - 29 * jour);
 
   db.purger(maintenant);
   assert.equal(db.compteParId(oubliee.id), undefined);
@@ -280,7 +283,7 @@ test('conservation : une page où personne n’est jamais entré s’efface un m
 });
 
 test('export : tout le compte, sans l’empreinte des visiteurs', () => {
-  const zoe = db.creerCompte('zoe@exemple.fr', 'zoe');
+  const zoe = creerGratuit('zoe@exemple.fr', 'zoe');
   db.enregistrerBloc(zoe.id, validerBloc({ type: 'lien', titre: 'Portfolio', url: 'zoe.fr' }, 'z1'));
   db.ajouterMedia(zoe.id, new Uint8Array([1, 2, 3]), 'webp');
   db.ajouterEvenement({ compte: zoe.id, type: 'clic', bloc: 'z1', visiteur: 'secret', source: 'Instagram', appareil: 'Mobile' });
@@ -303,7 +306,7 @@ test('signalements : formulaire, accusé de réception, suspension motivée, dé
   const envois: any[] = [];
   const fetchFaux = (async (_: string, init: RequestInit) => { envois.push(JSON.parse(String(init.body))); return new Response('{}'); }) as typeof fetch;
   const env = { RESEND_API_KEY: 'cle', NODE_ENV: 'production', CONTACT_TO: 'lilian@exemple.fr' };
-  const hugo = db.creerCompte('hugo@exemple.fr', 'hugo');
+  const hugo = creerGratuit('hugo@exemple.fr', 'hugo');
   const base = { page: 'hugo', motif: 'arnaque', details: 'Le lien mène à une fausse page Instagram.', email: 'Temoin@Exemple.fr', bonneFoi: true };
 
   assert.equal((await signaler(env, fetchFaux, { ...base, page: '' }, '5.5.5.1', O)).ok, false, 'pas de signalement sur la page de Lilian');
@@ -341,7 +344,7 @@ test('signalements : formulaire, accusé de réception, suspension motivée, dé
   assert.equal(envois.length, 0);
   assert.equal(db.compteParId(hugo.id), undefined);
   assert.equal(db.listerSignalements().some(x => x.compte === hugo.id), false, 'les signalements du compte partent avec lui');
-  const lea = db.creerCompte('lea@exemple.fr', 'lea');
+  const lea = creerGratuit('lea@exemple.fr', 'lea');
   await supprimerMotive(env, fetchFaux, lea.id, 'Usurpation d’identité.');
   assert.deepEqual(envois.map(e => e.to[0]), ['lea@exemple.fr']);
 });
@@ -369,7 +372,7 @@ test('offres : webhooks Creem signés, idempotents, dans le désordre', async ()
   const t = Date.parse('2026-10-17T12:00:00Z'), jour = 86_400_000;
   const signe = (corps: string, secret = env.CREEM_WEBHOOK_SECRET) => createHmac('sha256', secret).update(corps).digest('hex');
   const envoyer = (e: object, secret?: string) => { const corps = JSON.stringify(e); return creem.traiterWebhook(env, corps, signe(corps, secret), t); };
-  const lea = db.creerCompte('lea@exemple.fr', 'lea');
+  const lea = creerGratuit('lea@exemple.fr', 'lea');
   assert.equal(db.planDuCompte(lea.id, t), 'gratuit');
   assert.equal(db.planDuCompte(P, t), 'premium', 'le compte principal a tout, sans abonnement');
 
@@ -423,7 +426,7 @@ test('offres : webhooks Creem signés, idempotents, dans le désordre', async ()
 
   // Le Pro débloque la place pour les images ; la liste du back office le montre.
   const gros = new Uint8Array(30 * 1024 * 1024);
-  const max = db.creerCompte('max@exemple.fr', 'max');
+  const max = creerGratuit('max@exemple.fr', 'max');
   assert.throws(() => db.ajouterMedia(max.id, gros, 'webp'), /Plus de place/);
   assert.ok(db.ajouterMedia(lea.id, gros, 'webp'));
   assert.equal(db.listerComptes().find(x => x.id === lea.id)?.plan, 'pro');
@@ -446,9 +449,12 @@ test('offres : webhooks Creem signés, idempotents, dans le désordre', async ()
   for (const f of ['sansMention', 'couleurs', 'programmation', 'avis', 'stats'] as const) assert.equal(d[f], true, f);
   for (const f of ['heure', 'drops', 'listeEmail'] as const) assert.equal(d[f], false, f);
   assert.equal(joursLisibles(neuve, env, t + 43 * jour), 30);
-  // Gratuit : des liens sans limite, la page selon le réseau et les thèmes ; rien de réservé, pas de stats à lire.
-  const gratuite = { ...db.compteParId(max.id)!, cree: BASCULE_OFFRES + 1 };
+  // Gratuit : cinq blocs, la page selon le réseau et les thèmes ; rien de réservé, pas de stats à lire.
+  const gratuite = { ...db.compteParId(max.id)!, cree: DEBUT_ESSAI + 1 };
   assert.ok(Object.values(droits(gratuite, env, t)).every(v => !v));
+  // Une page créée entre les quatre offres et l'essai garde ses blocs sans limite, et rien d'autre.
+  const davant = droits({ ...gratuite, cree: DEBUT_ESSAI - 1 }, env, t);
+  assert.deepEqual(Object.keys(davant).filter(f => davant[f as keyof typeof davant]), ['blocs']);
   assert.equal(joursLisibles(gratuite, env, t), 0);
   // Une page d'avant les offres garde tout, sauf la page sans mention, et ses sept jours de stats.
   const ancienne = { ...db.compteParId(max.id)!, cree: BASCULE_OFFRES - 1 };
@@ -490,7 +496,7 @@ test('programmer un bloc demande Starter : refusé en Gratuit, permis en Starter
   const date = bloc(lancement);
 
   // Gratuit : un bloc sans dates s'enregistre ; un début, une fin ou un compte à rebours, non.
-  const noa = db.creerCompte('noa@exemple.fr', 'noa', t);
+  const noa = creerGratuit('noa@exemple.fr', 'noa', t);
   assert.doesNotThrow(() => verifierDates(noa, lien, env, t));
   db.enregistrerBloc(noa.id, lien);
   assert.throws(() => verifierDates(noa, date, env, t), refus);
@@ -505,12 +511,12 @@ test('programmer un bloc demande Starter : refusé en Gratuit, permis en Starter
 
   // Starter : tout est permis.
   db.ecrireCatalogue([{ id: 'prod_starter_an', plan: 'starter', periode: 'an', prix: 3600, actuel: true }]);
-  const sam = db.creerCompte('sam@exemple.fr', 'sam', t);
+  const sam = creerGratuit('sam@exemple.fr', 'sam', t);
   db.appliquerAbonnement(sam.id, { client: 'cust_s', abonnement: 'sub_s', statut: 'active', finPeriode: t + 365 * jour, maj: t, produit: 'prod_starter_an' });
   assert.doesNotThrow(() => verifierDates(db.compteParId(sam.id)!, bloc({ ...lancement, fin: '2099-02-01T10:00:00Z' }), env, t));
 
   // Une page d'avant les offres programme sans abonnement ; sans paiement branché, rien n'est réservé.
-  const zoe = db.creerCompte('zoe@exemple.fr', 'zoe', BASCULE_OFFRES - jour);
+  const zoe = creerGratuit('zoe@exemple.fr', 'zoe', BASCULE_OFFRES - jour);
   assert.doesNotThrow(() => verifierDates(zoe, date, env, t));
   assert.doesNotThrow(() => verifierDates(noa, bloc(lancement, 'l3'), {}, t));
 });
@@ -523,7 +529,7 @@ test('offres : la page de paiement, le changement d’offre et le portail passen
     appels.push({ url, cle: new Headers(init.headers).get('x-api-key'), corps: JSON.parse(String(init.body)) });
     return Response.json(url.endsWith('/checkouts') ? { checkout_url: 'https://checkout.creem.io/ch_1' } : url.endsWith('/upgrade') ? { id: 'sub_9' } : { customer_portal_link: 'https://creem.io/portal/x' });
   }) as typeof fetch;
-  const noa = db.creerCompte('noa@exemple.fr', 'noa');
+  const noa = creerGratuit('noa@exemple.fr', 'noa');
   assert.equal(await creem.ouvrirPaiement(env, fetchFaux, noa, 'pro', 'an', O.admin, 5), 'https://checkout.creem.io/ch_1');
   assert.equal(appels[0].url, 'https://test-api.creem.io/v1/checkouts');
   assert.equal(appels[0].cle, 'creem_test_x');
@@ -951,10 +957,10 @@ test('le résumé du lundi ne part qu’aux pages qui lisent leurs stats', async
   const fetchFaux = (async (_: string, init: RequestInit) => { envois.push(JSON.parse(String(init.body))); return new Response('{}'); }) as typeof fetch;
   const env = { RESEND_API_KEY: 'cle', LIENS_ADMIN_EMAIL: 'moi@exemple.fr', CREEM_API_KEY: 'creem_test_x', CREEM_WEBHOOK_SECRET: 'whsec_test', CREEM_PRODUIT_MOIS: 'prod_mois', CREEM_PRODUIT_AN: 'prod_an' };
   db.ecrireCatalogue([{ id: 'prod_starter_an', plan: 'starter', periode: 'an', prix: 3600, actuel: true }]);
-  const gratuite = db.creerCompte('noa@exemple.fr', 'noa', BASCULE_OFFRES + jour);
-  const starter = db.creerCompte('sam@exemple.fr', 'sam', BASCULE_OFFRES + jour);
+  const gratuite = creerGratuit('noa@exemple.fr', 'noa', BASCULE_OFFRES + jour);
+  const starter = creerGratuit('sam@exemple.fr', 'sam', BASCULE_OFFRES + jour);
   db.appliquerAbonnement(starter.id, { client: 'cust_s', abonnement: 'sub_s', statut: 'active', finPeriode: lundi10h + 300 * jour, maj: lundi10h - 3 * jour, produit: 'prod_starter_an' });
-  const ancienne = db.creerCompte('zoe@exemple.fr', 'zoe', BASCULE_OFFRES - jour);
+  const ancienne = creerGratuit('zoe@exemple.fr', 'zoe', BASCULE_OFFRES - jour);
   for (const c of [gratuite, starter, ancienne]) db.ajouterEvenement({ compte: c.id, type: 'vue', bloc: null, visiteur: 'v', source: 'TikTok', appareil: 'Mobile', ts: lundi10h - jour });
   // Les visites se comptent pour tout le monde ; seul le résumé est réservé aux offres qui montrent les stats.
   assert.equal(db.stats(gratuite.id, 7, lundi10h).vues, 1);
@@ -1051,7 +1057,7 @@ test('liste d’attente : nom vérifié, réservé, gardé, puis invité jusqu�
   assert.equal(attente.verifierNom('marie-bis').etat, 'libre');
 
   // Une invitation à la main ne prend pas un nom réservé par quelqu'un d'autre.
-  assert.throws(() => db.creerCompte('x@exemple.fr', 'marie-dupont'), /liste d’attente/);
+  assert.throws(() => creerGratuit('x@exemple.fr', 'marie-dupont'), /liste d’attente/);
 
   // Cinq réservations par heure depuis une même adresse IP.
   for (let i = 0; i < 5; i++) await attente.reserverNom(O, env, { nom: `essai-${i}`, email: `e${i}@exemple.fr` }, fetchFaux, 3_000_000 + i, '7.7.7.7');
@@ -1256,7 +1262,7 @@ test('supprimer un compte résilie son abonnement Creem tout de suite, avant d�
   const { etat, fetchFaux } = fauxCreem();
   const t = Date.parse('2026-11-02T10:00:00Z'), jour = 86_400_000;
   const abonne = (pseudo: string, statut = 'active') => {
-    const c = db.creerCompte(`${pseudo}@exemple.fr`, pseudo);
+    const c = creerGratuit(`${pseudo}@exemple.fr`, pseudo);
     db.appliquerAbonnement(c.id, { client: `cust_${pseudo}`, abonnement: `sub_${pseudo}`, statut, finPeriode: t + 20 * jour, maj: 1 });
     return db.compteParId(c.id)!;
   };
@@ -1270,7 +1276,7 @@ test('supprimer un compte résilie son abonnement Creem tout de suite, avant d�
   assert.equal(db.compteParId(ana.id), undefined);
 
   // Sans abonnement, ou un abonnement déjà terminé chez Creem : rien à lui demander.
-  const sans = db.creerCompte('bob@exemple.fr', 'bob');
+  const sans = creerGratuit('bob@exemple.fr', 'bob');
   for (const c of [sans, abonne('fini', 'canceled'), abonne('expire', 'expired')]) {
     assert.deepEqual(await supprimerAvecAbonnement(env, fetchFaux, db.compteParId(c.id)!, t), { ok: true, resiliation: 'aucune' });
     assert.equal(db.compteParId(c.id), undefined);
@@ -1329,7 +1335,7 @@ test('supprimer un compte résilie son abonnement Creem tout de suite, avant d�
 
 test('la purge des pages jamais ouvertes ne touche pas un compte qui a un abonnement', () => {
   const jour = 86_400_000, maintenant = Date.now(), ilYa = maintenant - 40 * jour;
-  const payeur = db.creerCompte('payeur@exemple.fr', 'payeur', ilYa);
+  const payeur = creerGratuit('payeur@exemple.fr', 'payeur', ilYa);
   // Un abonnement sans client connu (un webhook incomplet) : la purge le garde quand même.
   db.appliquerAbonnement(payeur.id, { client: '', abonnement: 'sub_payeur', statut: 'active', finPeriode: null, maj: 1 });
   db.purger(maintenant);
@@ -1340,7 +1346,7 @@ test('repasser en Gratuit : Creem résilie pour la fin de la période payée, l�
   const creem = await import('./creem.ts');
   const t = Date.parse('2026-11-02T10:00:00Z'), jour = 86_400_000, fin = t + 20 * jour;
   const { etat, fetchFaux } = fauxCreem(() => ({ id: 'sub_ines', status: 'scheduled_cancel', current_period_end_date: new Date(fin).toISOString(), customer: { id: 'cust_ines' } }));
-  const ines = db.creerCompte('ines@exemple.fr', 'ines');
+  const ines = creerGratuit('ines@exemple.fr', 'ines');
   await assert.rejects(creem.resilierEnFinDePeriode(ENV_CREEM, fetchFaux, ines, t), /Aucun abonnement/);
   await assert.rejects(creem.resilierEnFinDePeriode({}, fetchFaux, ines, t), /pas encore branché/);
   await assert.rejects(creem.resilierEnFinDePeriode(ENV_CREEM, fetchFaux, db.compteParId(P)!, t), /Aucun abonnement/);
@@ -1362,7 +1368,7 @@ test('repasser en Gratuit : Creem résilie pour la fin de la période payée, l�
 
   // Creem refuse (clé sans le droit) : le message renvoie au portail, rien ne change.
   const { createHmac } = await import('node:crypto');
-  const jo = db.creerCompte('jo@exemple.fr', 'jo');
+  const jo = creerGratuit('jo@exemple.fr', 'jo');
   db.appliquerAbonnement(jo.id, { client: 'cust_jo', abonnement: 'sub_jo', statut: 'active', finPeriode: fin, maj: 1, produit: 'prod_mois' });
   etat.statut = 403;
   await assert.rejects(creem.resilierEnFinDePeriode(ENV_CREEM, fetchFaux, db.compteParId(jo.id)!, t), /portail Creem/);
@@ -1378,7 +1384,7 @@ test('repasser en Gratuit : Creem résilie pour la fin de la période payée, l�
 test('Comptes : une offre offerte passe devant l’abonnement, s’éteint à sa fin, et garde la page de la purge', () => {
   const t = Date.parse('2026-11-02T10:00:00Z'), jour = 86_400_000;
   // Une page jamais ouverte, créée il y a quarante jours : la purge la prendrait.
-  const kim = db.creerCompte('kim@exemple.fr', 'kim', t - 40 * jour);
+  const kim = creerGratuit('kim@exemple.fr', 'kim', t - 40 * jour);
   db.offrir(kim.id, 'pro', t + 30 * jour, t);
   const a = db.abonnement(db.compteParId(kim.id)!, t);
   assert.deepEqual({ plan: a.plan, payee: a.payee, offerte: a.offerte }, { plan: 'pro', payee: 'gratuit', offerte: { plan: 'pro', jusqu: t + 30 * jour } });
@@ -1396,7 +1402,7 @@ test('Comptes : une offre offerte passe devant l’abonnement, s’éteint à sa
   assert.equal(db.compteParId(kim.id), undefined);
 
   // Sous l'abonnement, l'offre offerte ne change rien ; sans fin, elle court toujours.
-  const lou = db.creerCompte('lou@exemple.fr', 'lou');
+  const lou = creerGratuit('lou@exemple.fr', 'lou');
   db.appliquerAbonnement(lou.id, { client: 'cust_lou', abonnement: 'sub_lou', statut: 'active', finPeriode: t + 20 * jour, maj: 1 });
   db.offrir(lou.id, 'starter', null, t);
   const b = db.abonnement(db.compteParId(lou.id)!, t + 400 * jour);
@@ -1413,7 +1419,7 @@ test('Comptes : offrir une offre prévient la personne, la remplace, se refuse q
   const env = { RESEND_API_KEY: 'cle', NODE_ENV: 'production' };
   const { etat, fetchFaux } = fauxCreem();
   const t = Date.parse('2026-11-02T10:00:00Z'), jour = 86_400_000;
-  const mia = db.creerCompte('mia@exemple.fr', 'mia', t - jour);
+  const mia = creerGratuit('mia@exemple.fr', 'mia', t - jour);
 
   const r = await offrirAuCompte(env, fetchFaux, O, mia.id, 'pro', '3m', 'Merci pour tes retours sur la bêta !', t);
   assert.equal(r.ok, true);
@@ -1438,7 +1444,7 @@ test('Comptes : offrir une offre prévient la personne, la remplace, se refuse q
   assert.doesNotMatch(etat.courriels.at(-1).text, /repassera/);
 
   // Ce qui ne donnerait rien, ou n'est pas en vente, est refusé ; une page suspendue se réactive d'abord.
-  const noe = db.creerCompte('noe@exemple.fr', 'noe');
+  const noe = creerGratuit('noe@exemple.fr', 'noe');
   db.appliquerAbonnement(noe.id, { client: 'cust_noe', abonnement: 'sub_noe', statut: 'active', finPeriode: t + 20 * jour, maj: 1 });
   await assert.rejects(offrirAuCompte(env, fetchFaux, O, noe.id, 'pro', '1m', '', t), /noe paie déjà Pro : offrir Pro ne lui donnerait rien de plus/);
   await assert.rejects(offrirAuCompte(env, fetchFaux, O, noe.id, 'starter', '1m', '', t), /paie déjà Pro/);
@@ -1450,7 +1456,7 @@ test('Comptes : offrir une offre prévient la personne, la remplace, se refuse q
 
   // Resend en panne : l'offre est là, et Lilian sait qu'il faut prévenir la personne.
   const n = etat.courriels.length;
-  const ola = db.creerCompte('ola@exemple.fr', 'ola');
+  const ola = creerGratuit('ola@exemple.fr', 'ola');
   const r2 = await offrirAuCompte({ NODE_ENV: 'production' }, fetchFaux, O, ola.id, 'starter', '1m', '', t);
   assert.match(r2.message, /n’est pas parti : préviens-la toi-même/);
   assert.equal(db.planDuCompte(ola.id, t), 'starter');
@@ -1469,12 +1475,12 @@ test('Comptes : résilier l’abonnement d’un compte, pour la fin de la pério
   const env = { ...ENV_CREEM, RESEND_API_KEY: 'cle', NODE_ENV: 'production' };
   const { etat, fetchFaux } = fauxCreem(url => ({ id: url.split('/').at(-2), status: 'scheduled_cancel', current_period_end_date: new Date(fin).toISOString(), customer: { id: 'cust' } }));
   const abonne = (pseudo: string, statut = 'active') => {
-    const c = db.creerCompte(`${pseudo}@exemple.fr`, pseudo);
+    const c = creerGratuit(`${pseudo}@exemple.fr`, pseudo);
     db.appliquerAbonnement(c.id, { client: `cust_${pseudo}`, abonnement: `sub_${pseudo}`, statut, finPeriode: fin, maj: 1, produit: 'prod_mois' });
     return c;
   };
 
-  const sans = db.creerCompte('pia@exemple.fr', 'pia');
+  const sans = creerGratuit('pia@exemple.fr', 'pia');
   await assert.rejects(resilierPourLeCompte(env, fetchFaux, sans.id, '', t), /pia n’a pas d’abonnement à résilier/);
   assert.equal(etat.creem.length, 0);
 
@@ -1506,7 +1512,7 @@ test('Comptes : résilier l’abonnement d’un compte, pour la fin de la pério
   assert.equal(db.planDuCompte(rob.id, fin + jour), 'pro', 'la période payée finie, Pro continue, offert');
   assert.equal(retirerAuCompte(rob.id, t).message, 'rob n’a plus Pro offert. Son abonnement Pro ne change pas.');
   // Une offre qui finirait avant l'abonnement ne lui donnerait rien.
-  const ugo = db.creerCompte('ugo@exemple.fr', 'ugo');
+  const ugo = creerGratuit('ugo@exemple.fr', 'ugo');
   db.appliquerAbonnement(ugo.id, { client: 'cust_ugo', abonnement: 'sub_ugo', statut: 'scheduled_cancel', finPeriode: t + 200 * jour, maj: 1, produit: 'prod_an' });
   await assert.rejects(offrirAuCompte(env, fetchFaux, O, ugo.id, 'starter', '1m', '', t), /court jusqu’au 21 mai 2027 : une offre qui finit avant ne lui donnerait rien/);
   assert.equal((await offrirAuCompte(env, fetchFaux, O, ugo.id, 'starter', '1a', '', t)).ok, true);
@@ -1522,7 +1528,7 @@ test('Comptes : « Renvoyer son lien » redonne la bienvenue à une page jamais 
   const envois: any[] = [];
   const fetchFaux = (async (_url: string, init: RequestInit) => { envois.push(JSON.parse(String(init.body))); return new Response('{}', { status: 200 }); }) as typeof fetch;
   const env = { RESEND_API_KEY: 'cle', NODE_ENV: 'production' };
-  const tia = db.creerCompte('tia@exemple.fr', 'tia');
+  const tia = creerGratuit('tia@exemple.fr', 'tia');
   const r = await auth.renvoyerLienCompte(O, env, db.compteParId(tia.id)!, fetchFaux);
   assert.equal(r.message, 'Lien envoyé à tia@exemple.fr : il ouvre sa page, pendant 7 jours.');
   assert.equal(envois.at(-1).subject, 'Ta page Hopla t’attend');
@@ -1573,7 +1579,7 @@ test('Me contacter : le message part au propriétaire, l’adresse du visiteur e
   assert.equal((await envoyerMessage(env, fetchFaux, message, ctx)).status, 429);
   // Une page en Gratuit n'a pas « Me contacter » : le bloc n'accepte rien.
   const payant = { ...env, CREEM_API_KEY: 'creem_test_x', CREEM_WEBHOOK_SECRET: 'whsec_test', CREEM_PRODUIT_MOIS: 'prod_mois', CREEM_PRODUIT_AN: 'prod_an' };
-  const noa = db.creerCompte('noa@exemple.fr', 'noa', BASCULE_OFFRES + 86_400_000);
+  const noa = creerGratuit('noa@exemple.fr', 'noa', BASCULE_OFFRES + 86_400_000);
   db.enregistrerBloc(noa.id, validerBloc({ type: 'formulaire', titre: 'Me contacter' }, 'c2'));
   assert.equal((await envoyerMessage(payant, fetchFaux, { ...message, page: 'noa', bloc: 'c2' }, { ip: '8.8.8.8', hotes: new Set() })).status, 404);
 });
@@ -1619,7 +1625,7 @@ test('derniers articles : seul un bloc en ligne et compris dans l’offre se lit
   oublierFlux();
   const t = Date.now();
   const env = { CREEM_API_KEY: 'creem_test_x', CREEM_WEBHOOK_SECRET: 'whsec_test' };
-  const sam = db.creerCompte('sam@exemple.fr', 'sam', t);
+  const sam = creerGratuit('sam@exemple.fr', 'sam', t);
   db.enregistrerBloc(sam.id, validerBloc({ type: 'flux', url: 'https://blog.invalid/feed' }, 'flux'));
   db.enregistrerBloc(sam.id, validerBloc({ type: 'lien', url: 'https://blog.invalid/' }, 'lien'));
   db.enregistrerBloc(sam.id, validerBloc({ type: 'derniere-video', url: 'https://www.youtube.invalid/@sam', public: false }, 'masquee'));
@@ -1726,4 +1732,56 @@ test('Loops : la clé se vérifie, la liste est facultative, l’inscrit rejoint
   const envoi = appels.at(-1)!;
   assert.equal(`${envoi.methode} ${envoi.url}`, 'PUT https://app.loops.so/api/v1/contacts/update');
   assert.deepEqual(envoi.corps, { email: 'tom@exemple.fr', source: 'Hopla', mailingLists: { clm2k8j4h6g0f8d6s4a2b0z8: true } });
+});
+
+test('essai : 14 jours de Pro à l’inscription, puis Gratuit et ses cinq blocs, avec deux e-mails au plus', async () => {
+  const { droits } = await import('./droits.ts');
+  const { envoyerFinsDEssai } = await import('./essai.ts');
+  const { selonDroits, horsLimite } = await import('../lib/droits.ts');
+  const env = { CREEM_API_KEY: 'creem_test_x', CREEM_WEBHOOK_SECRET: 'whsec_test', RESEND_API_KEY: 're_x', LIENS_ORIGINE_ADMIN: 'https://app.hopla.page' };
+  const jour = 86_400_000, t = DEBUT_ESSAI + jour;
+  const envois: any[] = [];
+  const fetchFaux = (async (_: string, init: RequestInit) => { envois.push(JSON.parse(String(init.body))); return new Response('{}'); }) as typeof fetch;
+
+  const ines = db.creerCompte('ines@exemple.fr', 'ines', t);
+  const a = db.abonnement(ines, t);
+  assert.equal(a.plan, 'pro');
+  assert.equal(a.payee, 'gratuit');
+  assert.equal(a.essai, t + 14 * jour);
+  assert.ok(droits(ines, env, t).listeEmail, 'l’essai ouvre tout Pro');
+  assert.equal(db.abonnement(ines, t + 14 * jour).plan, 'gratuit', 'à sa fin, la page passe en Gratuit');
+  assert.equal(db.abonnement(ines, t + 14 * jour).essai, null);
+
+  // Sept liens et un titre : Gratuit en montre cinq, le titre à part, et rien n'est effacé.
+  for (let i = 0; i < 7; i++) db.enregistrerBloc(ines.id, validerBloc({ type: 'lien', titre: `Lien ${i}`, url: `exemple.fr/${i}` }, `l${i}`));
+  db.enregistrerBloc(ines.id, validerBloc({ type: 'titre', titre: 'Mes liens' }, 'titre'));
+  const blocs = db.lireBlocs(ines.id), reglages = db.lireReglages(ines.id);
+  assert.equal(selonDroits(reglages, blocs, droits(ines, env, t)).blocs.length, 8);
+  const apres = droits(ines, env, t + 15 * jour);
+  assert.deepEqual(selonDroits(reglages, blocs, apres).blocs.map(b => b.id), ['titre', 'l6', 'l5', 'l4', 'l3', 'l2']);
+  assert.deepEqual([...horsLimite(reglages, blocs, apres)], ['l1', 'l0']);
+  assert.equal(horsLimite(reglages, blocs, droits(ines, env, t)).size, 0);
+  assert.equal(db.lireBlocs(ines.id).length, 8);
+
+  // Les e-mails : rien pendant l'essai, un trois jours avant, un à la fin, chacun une seule fois.
+  assert.equal(await envoyerFinsDEssai(env, fetchFaux, t + 5 * jour), 0);
+  assert.equal(await envoyerFinsDEssai(env, fetchFaux, t + 11 * jour + 1), 1);
+  assert.match(envois[0].subject, /dans 3 jours/);
+  assert.deepEqual(envois[0].to, ['ines@exemple.fr']);
+  assert.equal(await envoyerFinsDEssai(env, fetchFaux, t + 12 * jour), 0);
+  assert.equal(await envoyerFinsDEssai(env, fetchFaux, t + 14 * jour + 1), 1);
+  assert.match(envois[1].subject, /est fini/);
+  assert.equal(await envoyerFinsDEssai(env, fetchFaux, t + 15 * jour), 0);
+
+  // Qui a pris une offre pendant l'essai n'est pas relancé ; l'offre prend la suite de l'essai.
+  const max = db.creerCompte('max@exemple.fr', 'max', t);
+  db.offrir(max.id, 'starter', null, t);
+  assert.equal(db.abonnement(db.compteParId(max.id)!, t).plan, 'pro', 'l’essai passe devant une offre en dessous');
+  assert.equal(await envoyerFinsDEssai(env, fetchFaux, t + 14 * jour + 1), 0);
+  assert.equal(db.abonnement(db.compteParId(max.id)!, t + 15 * jour).plan, 'starter');
+
+  // Une page d'avant l'essai garde ses blocs sans limite, et le compte principal n'a pas d'essai.
+  const ancienne = { ...db.compteParId(ines.id)!, cree: DEBUT_ESSAI - 1 };
+  assert.equal(droits(ancienne, env, t + 15 * jour).blocs, true);
+  assert.equal(db.abonnement(db.compteParId(P)!, t).essai, null);
 });

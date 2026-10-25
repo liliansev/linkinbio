@@ -1,7 +1,7 @@
 import { createContext, useContext } from 'react';
 import type { ReactNode } from 'react';
 import type { Fonction, OffreSuivante } from '../lib/abonnement.ts';
-import { FONCTIONS, FONCTIONS_EN_MOTS, OFFRES } from '../lib/abonnement.ts';
+import { FONCTIONS, FONCTIONS_EN_MOTS, OFFRES, PLAN_ESSAI, joursRestants } from '../lib/abonnement.ts';
 import type { Droits } from '../lib/droits.ts';
 import type { SuiteAchat } from '../lib/achat.ts';
 import type { TypeVitrine } from '../lib/types.ts';
@@ -73,6 +73,20 @@ export function AppelOffre({ suivante, onClick, className = '' }: { suivante: Of
       {/* Les espaces insécables gardent les deux-points avec le nom de l'offre, et le premier mot de l'accroche
           (« ta », « tes », « sans ») avec le suivant, quand la ligne se replie dans la barre latérale. */}
       <span className="min-w-0 flex-1"><strong>Passer en {OFFRES[suivante.plan].nom}</strong>{'\u00a0'}: {suivante.texte.replace(' ', '\u00a0')}</span>
+    </button>
+  );
+}
+
+/**
+ * L'essai de Pro, à la place de l'offre du dessus (25 octobre 2026) : les jours qui restent, et les offres pour garder
+ * ce que l'essai ouvre. Même place et même forme que `AppelOffre`.
+ */
+export function AppelEssai({ fin, onClick, className = '' }: { fin: number; onClick: () => void; className?: string }) {
+  const jours = joursRestants(fin);
+  return (
+    <button type="button" onClick={onClick} aria-haspopup="dialog" className={`adm-appel ${className}`}>
+      <Icone nom="diamant" taille={16} className="adm-appel-picto shrink-0" />
+      <span className="min-w-0 flex-1"><strong>Essai {OFFRES[PLAN_ESSAI].nom}{'\u00a0'}: {jours === 1 ? 'dernier jour' : `encore ${jours}\u00a0jours`}</strong>. Choisir mon offre</span>
     </button>
   );
 }

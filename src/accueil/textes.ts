@@ -23,7 +23,7 @@ export const appel = (m: Inscription) => APPEL[m].join('');
  */
 export const MOTS: Record<Inscription, { note: string; adresse: string; rassure: string; envoyer: string; duree: string; renvoi: string; fin: string }> = {
   libre: {
-    note: 'Gratuit pour toujours. En ligne en deux minutes.',
+    note: '14 jours de Pro offerts, sans carte. En ligne en deux minutes.',
     adresse: 'À quelle adresse e‑mail t’envoyer le lien de ta page ?',
     rassure: 'Ni mot de passe ni carte bancaire : un lien arrive par e‑mail, et on ne t’écrit que pour ta page.',
     envoyer: 'Recevoir mon lien',
@@ -32,7 +32,7 @@ export const MOTS: Record<Inscription, { note: string; adresse: string; rassure:
     fin: 'Ton lien t’attend dans ta boîte.',
   },
   attente: {
-    note: 'Gratuit pour toujours, sans carte bancaire.',
+    note: '14 jours de Pro offerts, sans carte bancaire.',
     adresse: 'À quelle adresse e‑mail t’envoyer ton invitation ?',
     rassure: 'Ni carte bancaire ni engagement : on ne t’écrit que pour ton invitation.',
     envoyer: 'Garder ce nom',
@@ -42,7 +42,7 @@ export const MOTS: Record<Inscription, { note: string; adresse: string; rassure:
   },
 };
 
-export const DESCRIPTION = 'Ta page de liens sur hopla.page/ton-nom : elle se réorganise selon le réseau d’où arrive ton visiteur, ouvre tes liens dans leurs apps et se modifie depuis ton téléphone. Gratuit pour toujours ; Starter et Pro y ajoutent ta vitrine, tes couleurs, tes liens programmés, la page selon l’heure et tes stats.';
+export const DESCRIPTION = 'Ta page de liens sur hopla.page/ton-nom : elle se réorganise selon le réseau d’où arrive ton visiteur, ouvre tes liens dans leurs apps et se modifie depuis ton téléphone. 14 jours de Pro offerts à l’inscription, puis gratuit pour toujours ; Starter et Pro y ajoutent ta vitrine, tes couleurs, tes liens programmés, la page selon l’heure et tes stats.';
 
 /**
  * Ce que fait Hopla, en une liste, pour les données structurées et llms.txt ;
@@ -52,11 +52,13 @@ export const DESCRIPTION = 'Ta page de liens sur hopla.page/ton-nom : elle se r
 export const FONCTIONS = [
   'Ordre des liens selon le réseau d’origine du visiteur',
   'Liens YouTube, Spotify et autres ouverts dans leur app depuis Instagram ou TikTok',
-  'Liens sans limite, vidéos lues sur la page et QR code',
+  'Cinq blocs, vidéos lues sur la page et QR code',
+  'Quatorze jours de Pro offerts à l’inscription, sans carte bancaire',
   'Vingt thèmes',
   'Modification de la page depuis le téléphone',
   'Liens partenaires avec la mention « Publicité » que demande la loi',
   'Page sans la mention « Créer ma page avec Hopla » (Starter)',
+  'Blocs sans limite (Starter)',
   'Vitrine sans commission : produits avec leur photo et leur prix lus sur la boutique, prise de rendez-vous Calendly ou Cal.com dans la page, bouton de soutien PayPal ou Ko‑fi, code promo copié d’un geste (Starter)',
   'Couleurs personnalisées par-dessus le thème (Starter)',
   'Liens programmés à l’avance, compte à rebours avant un lancement (Starter)',
@@ -74,7 +76,7 @@ export const QUESTION_LINKTREE = 'J’ai déjà un Linktree. Comment passer à H
 export function questions(m: Inscription): [string, string][] {
   return [
     ['C’est quoi, Hopla ?', 'Une page de liens à mettre dans ta bio Instagram, TikTok ou YouTube, sur hopla.page/ton-nom. Elle change l’ordre de ses liens selon le réseau d’où arrive ton visiteur (et selon l’heure, avec Pro), ouvre tes liens dans leurs apps et se modifie depuis ton téléphone.'],
-    ['C’est vraiment gratuit ?', 'Oui, pour toujours : des liens sans limite, une page qui se réorganise selon le réseau du visiteur, et les vingt thèmes. Starter retire la mention « Créer ma page avec Hopla » et ajoute tes couleurs, tes liens programmés à l’avance, les avis de tes clients et tes stats sur 30 jours ; Pro réorganise ta page selon l’heure, avec les drops, ta liste e‑mail et un an de stats.'],
+    ['C’est vraiment gratuit ?', 'Oui. Ta page commence par 14 jours de Pro offerts, sans carte bancaire. Ensuite, elle reste en ligne gratuitement, pour toujours : cinq blocs, une page qui se réorganise selon le réseau du visiteur, et les vingt thèmes. Starter retire la mention « Créer ma page avec Hopla » et ajoute des blocs sans limite, tes couleurs, tes liens programmés à l’avance, les avis de tes clients et tes stats sur 30 jours ; Pro réorganise ta page selon l’heure, avec les drops, ta liste e‑mail et un an de stats.'],
     m === 'libre'
       ? ['Combien de temps pour avoir ma page ?', 'Deux minutes. Tu choisis ton nom, tu laisses ton e‑mail, et le lien pour entrer dans ta page arrive par e‑mail. Quatre questions plus tard, elle est en ligne.']
       : ['Quand aurai-je ma page ?', 'On ouvre les pages petit à petit, dans l’ordre des réservations. Ton invitation arrive par e‑mail, avec un lien valable une semaine ; quatre questions plus tard, ta page est en ligne.'],

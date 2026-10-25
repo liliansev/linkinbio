@@ -118,7 +118,7 @@ test('une offre offerte : sa fin, ce qu’on peut offrir, et ce que la page a en
 });
 
 test('une fonction se débloque avec son offre et celles du dessus', () => {
-  // Gratuit : des liens sans limite, la page selon le réseau et les thèmes, rien de réservé.
+  // Gratuit : cinq blocs, la page selon le réseau et les thèmes, rien de réservé.
   for (const f of Object.keys(FONCTIONS) as (keyof typeof FONCTIONS)[]) assert.equal(peut('gratuit', f), false, f);
   for (const f of ['sansMention', 'vitrine', 'couleurs', 'programmation', 'avis', 'stats'] as const) assert.equal(peut('starter', f), true, f);
   for (const f of ['heure', 'drops', 'listeEmail'] as const) {
