@@ -4,9 +4,7 @@ import type { Bloc, CompteResume, EtatAdmin, FournisseurListe, ImageApercu, List
 import { FOURNISSEURS_LISTE } from '../lib/types.ts';
 import * as liste from './liste.ts';
 import { requeteSortante } from './sortante.ts';
-import { planifierResumes } from './resume.ts';
-import { planifierFinsDEssai } from './essai.ts';
-import { lireNote, planifierAvis } from './avis.ts';
+import { lireNote } from './avis.ts';
 import { VERSION_CGU } from '../lib/legal.ts';
 import { ARTICLES_FLUX, ORIGINE_ADMIN, ORIGINE_PUBLIQUE, PRINCIPAL, TYPES_PRINCIPAL, urlPage } from '../lib/types.ts';
 import { masquerAcces } from '../lib/acces.ts';
@@ -40,14 +38,6 @@ import type { DureeOfferte, Periode, PlanPayant } from '../lib/abonnement.ts';
  * (middleware) et ne touche qu'à ce qui lui appartient ; la gestion des comptes
  * est réservée au compte principal.
  */
-
-// Le résumé de la semaine part le lundi matin (voir resume.ts).
-planifierResumes();
-planifierAvis();
-// La fin de l'essai de Pro se dit par e-mail, trois jours avant puis le jour venu (voir essai.ts).
-planifierFinsDEssai();
-// Les prix des produits sont relus dans Creem au démarrage, puis toutes les heures (voir creem.ts).
-creem.planifierRelecture();
 
 const enProduction = () => process.env.NODE_ENV === 'production';
 /** Les pages sur hopla.page, le back office sur app.hopla.page ; en dev, tout sur l'adresse de la requête. */
