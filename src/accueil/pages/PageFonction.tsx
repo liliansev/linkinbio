@@ -12,7 +12,7 @@ import {
   ADRESSE_LISTE, AVIS_MOT, AVIS_NOTE, EcranAvis, EcranDansApp, EcranDrop, EcranHeure, EcranListe, EcranRebours,
   LISTE_BREVO, LISTE_NOTEE, LISTE_TOUCHE, Phrase,
 } from '../Fonctions.tsx';
-import { OffreFonction, Personne } from '../Profils.tsx';
+import { Personne } from '../Profils.tsx';
 import { Barre } from '../Ouverture.tsx';
 import { DernierAppel, Pied } from '../Fin.tsx';
 import { API } from '../api.ts';
@@ -112,7 +112,7 @@ const SCENES: Record<string, { ratio?: number; rendu: (i: number, t: number, l: 
     rendu: i => (
       <article className="hl-mail hp-doc-email hf-mail" aria-label="L’e-mail du lundi d’Inès">
         <div className="hl-mail-tete"><Symbole className="hl-mail-logo" /><b>Hopla</b><span className="hl-gris">lundi, 9 h</span></div>
-        <Personne profil="ines" badge={false} />
+        <Personne profil="ines" />
         <p className="hl-mail-sujet">Ce qui a plu cette semaine</p>
         <ol className="hl-stats-liste">
           <Phrase joue={i >= 0} depart={0} hausse morceaux={['Ta page a eu', { n: 412 }, 'vues, soit', { n: 18, suite: ' %' }, 'de plus que la semaine d’avant.']} />
@@ -164,7 +164,6 @@ export function PageFonction({ page, mode = 'libre' }: { page: Donnees; mode?: I
             <nav className="hf-fil" aria-label="Fil d’Ariane"><a href="/">Hopla</a><span aria-hidden="true">/</span><a href="/fonctions">Fonctions</a></nav>
             <h1 id="titre" className="hl-h1 hf-titre">{page.titre[0]}<span className="hl-cache">. </span><span>{page.titre[1]}</span></h1>
             <p className="hl-chapo">{page.chapo}</p>
-            <OffreFonction offre={page.offre} prix="/#prix" />
           </section>
           <Defile etapes={page.etapes} titre={`${page.nom}, en ${page.etapes.length} étapes`} ratio={scene.ratio} rendu={scene.rendu} />
           <section className="hl-section hf-points" data-teinte="creme" aria-labelledby="pourquoi">
@@ -195,7 +194,7 @@ export function PageFonction({ page, mode = 'libre' }: { page: Donnees; mode?: I
   );
 }
 
-/** Les fonctions en liste : le nom, la promesse, l'offre. */
+/** Les fonctions en liste : le nom et la promesse ; l'offre de chacune se lit dans le tableau des tarifs. */
 export function ListeFonctions({ pages }: { pages: Donnees[] }) {
   return (
     <ul className="hf-liste">
@@ -204,7 +203,6 @@ export function ListeFonctions({ pages }: { pages: Donnees[] }) {
           <a href={`/fonctions/${p.slug}`}>
             <b>{p.nom}</b>
             <span>{p.chapo.split('. ')[0].replace(/\.$/, '')}.</span>
-            {p.offre === 'gratuit' ? <span className="hf-gratuit">Gratuit</span> : <span className="hp-badge-offre" data-offre={p.offre}>{p.offre === 'pro' ? 'Pro' : 'Starter'}</span>}
           </a>
         </li>
       ))}

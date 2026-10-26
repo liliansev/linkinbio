@@ -23,7 +23,7 @@ export const appel = (m: Inscription) => APPEL[m].join('');
  */
 export const MOTS: Record<Inscription, { note: string; adresse: string; rassure: string; envoyer: string; duree: string; renvoi: string; fin: string }> = {
   libre: {
-    note: '14 jours de Pro offerts, sans carte. En ligne en deux minutes.',
+    note: '14 jours avec toutes les fonctions, sans carte. En ligne en deux minutes.',
     adresse: 'À quelle adresse e‑mail t’envoyer le lien de ta page ?',
     rassure: 'Ni mot de passe ni carte bancaire : un lien arrive par e‑mail, et on ne t’écrit que pour ta page.',
     envoyer: 'Recevoir mon lien',
@@ -32,7 +32,7 @@ export const MOTS: Record<Inscription, { note: string; adresse: string; rassure:
     fin: 'Ton lien t’attend dans ta boîte.',
   },
   attente: {
-    note: '14 jours de Pro offerts, sans carte bancaire.',
+    note: '14 jours avec toutes les fonctions, sans carte bancaire.',
     adresse: 'À quelle adresse e‑mail t’envoyer ton invitation ?',
     rassure: 'Ni carte bancaire ni engagement : on ne t’écrit que pour ton invitation.',
     envoyer: 'Garder ce nom',
@@ -42,7 +42,7 @@ export const MOTS: Record<Inscription, { note: string; adresse: string; rassure:
   },
 };
 
-export const DESCRIPTION = 'Ta page de liens sur hopla.page/ton-nom : elle se réorganise selon le réseau d’où arrive ton visiteur, ouvre tes liens dans leurs apps et se modifie depuis ton téléphone. 14 jours de Pro offerts à l’inscription, puis gratuit pour toujours ; Starter et Pro y ajoutent ta vitrine, tes couleurs, tes liens programmés, la page selon l’heure et tes stats.';
+export const DESCRIPTION = 'Ta page de liens sur hopla.page/ton-nom : elle se réorganise selon le réseau d’où arrive ton visiteur, ouvre tes liens dans leurs apps et se modifie depuis ton téléphone. 14 jours avec toutes les fonctions à l’inscription, puis gratuit pour toujours.';
 
 /**
  * Ce que fait Hopla, en une liste, pour les données structurées et llms.txt ;
@@ -75,16 +75,16 @@ export const QUESTION_LINKTREE = 'J’ai déjà un Linktree. Comment passer à H
 
 export function questions(m: Inscription): [string, string][] {
   return [
-    ['C’est quoi, Hopla ?', 'Une page de liens à mettre dans ta bio Instagram, TikTok ou YouTube, sur hopla.page/ton-nom. Elle change l’ordre de ses liens selon le réseau d’où arrive ton visiteur (et selon l’heure, avec Pro), ouvre tes liens dans leurs apps et se modifie depuis ton téléphone.'],
-    ['C’est vraiment gratuit ?', 'Oui. Ta page commence par 14 jours de Pro offerts, sans carte bancaire. Ensuite, elle reste en ligne gratuitement, pour toujours : cinq blocs, une page qui se réorganise selon le réseau du visiteur, et les vingt thèmes. Starter retire la mention « Créer ma page avec Hopla » et ajoute des blocs sans limite, tes couleurs, tes liens programmés à l’avance, les avis de tes clients et tes stats sur 30 jours ; Pro réorganise ta page selon l’heure, avec les drops, ta liste e‑mail et un an de stats.'],
+    ['C’est quoi, Hopla ?', 'Une page de liens à mettre dans ta bio Instagram, TikTok ou YouTube, sur hopla.page/ton-nom. Elle change l’ordre de ses liens selon le réseau d’où arrive ton visiteur ouvre tes liens dans leurs apps et se modifie depuis ton téléphone.'],
+    ['C’est vraiment gratuit ?', 'Oui. Ta page commence par 14 jours avec toutes les fonctions, sans carte bancaire. Ensuite, elle reste en ligne gratuitement, pour toujours, avec une page qui se réorganise selon le réseau du visiteur et les vingt thèmes. Ce que chaque offre ajoute se lit dans le tableau des tarifs.'],
     m === 'libre'
       ? ['Combien de temps pour avoir ma page ?', 'Deux minutes. Tu choisis ton nom, tu laisses ton e‑mail, et le lien pour entrer dans ta page arrive par e‑mail. Quatre questions plus tard, elle est en ligne.']
       : ['Quand aurai-je ma page ?', 'On ouvre les pages petit à petit, dans l’ordre des réservations. Ton invitation arrive par e‑mail, avec un lien valable une semaine ; quatre questions plus tard, ta page est en ligne.'],
     m === 'libre'
       ? ['Quelle sera mon adresse ?', 'hopla.page/ suivi du nom que tu choisis ici : 3 à 30 caractères, lettres, chiffres et tirets. Une fois pris, un nom n’est donné à personne d’autre, sauf si personne n’entre jamais dans la page : elle s’efface au bout d’un mois. Une faute de frappe ? Juste après l’envoi, tant que tu n’es pas entré dans ta page, tu peux encore le changer.']
       : ['Quelle sera mon adresse ?', 'hopla.page/ suivi du nom que tu réserves ici : 3 à 30 caractères, lettres, chiffres et tirets. Un nom réservé n’est donné à personne d’autre. Une faute de frappe ? Juste après la réservation, tu peux encore le changer.'],
-    ['Je peux vendre depuis ma page ?', 'Oui, avec Starter. Colle l’adresse d’un produit (Etsy, Shopify, Gumroad, Payhip…) : Hopla affiche sa photo et son prix. Ajoute ta prise de rendez-vous Calendly, Cal.com ou Planity, et un bouton « Me soutenir » vers PayPal, Ko‑fi ou Tipeee. Le paiement se fait chez eux : Hopla ne prend aucune commission. Tes liens partenaires portent la mention « Publicité » dans toutes les versions, et leur code promo se copie d’un geste.'],
-    ['En quoi Hopla change d’une page de liens classique ?', 'Ta page se réorganise toute seule selon le réseau d’où arrive ton visiteur (et selon l’heure, avec Pro), tes liens s’ouvrent dans leurs apps plutôt que dans le navigateur d’Instagram, et tes stats se lisent en une phrase, sans cookie (avec Starter).'],
+    ['Je peux vendre depuis ma page ?', 'Oui. Colle l’adresse d’un produit (Etsy, Shopify, Gumroad, Payhip…) : Hopla affiche sa photo et son prix. Ajoute ta prise de rendez-vous Calendly, Cal.com ou Planity, et un bouton « Me soutenir » vers PayPal, Ko‑fi ou Tipeee. Le paiement se fait chez eux : Hopla ne prend aucune commission. Tes liens partenaires portent la mention « Publicité », et leur code promo se copie d’un geste.'],
+    ['En quoi Hopla change d’une page de liens classique ?', 'Ta page se réorganise toute seule selon le réseau d’où arrive ton visiteur, tes liens s’ouvrent dans leurs apps plutôt que dans le navigateur d’Instagram, et tes stats se lisent en une phrase, sans cookie.'],
     [QUESTION_LINKTREE, 'Colle ton adresse Linktree dans le champ : Hopla en garde le nom, s’il est libre ici. Ensuite, dans ta page, colle les adresses de tes liens, Hopla retrouve leurs titres tout seul. Il ne reste qu’à mettre hopla.page/ton-nom à la place de l’ancien lien dans tes bios.'],
     ['Comment Hopla sait d’où vient un visiteur ?', 'Instagram, TikTok et les autres apps se signalent quand elles ouvrent ta page. Tu mets un seul lien dans toutes tes bios, Hopla fait le tri. Quand rien ne le dit, par exemple un lien envoyé sur WhatsApp ou tapé dans Safari, ta page garde l’ordre que tu as choisi.'],
     ['Mes visiteurs sont-ils pistés ?', 'Non. Aucun cookie, aucune publicité, aucun traceur d’un site à l’autre. Les stats comptent les visites sans garder l’adresse IP : pas de bannière à imposer à tes visiteurs.'],

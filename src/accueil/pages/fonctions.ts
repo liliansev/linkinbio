@@ -52,7 +52,6 @@ export const PAGES_FONCTIONS: PageFonction[] = [
     questions: [
       ['Comment Hopla sait d’où vient mon visiteur ?', 'Par le navigateur intégré de l’app d’où il arrive (Instagram, TikTok, LinkedIn… se nomment), par le site qu’il quittait, ou par un petit repère que tu ajoutes à ton lien, comme ?s=tiktok. Rien n’est gardé sur lui.'],
       ['Et s’il arrive d’ailleurs ?', 'Il voit ta page dans l’ordre que tu as choisi. Le réseau ne fait que mettre un lien en avant, il ne cache rien sans que tu le demandes.'],
-      ['C’est vraiment gratuit ?', 'Oui. C’est la raison d’être de Hopla, elle fait partie de l’offre gratuite, pour toujours.'],
     ],
   },
   {
@@ -78,7 +77,6 @@ export const PAGES_FONCTIONS: PageFonction[] = [
     questions: [
       ['Quelles apps sont reconnues ?', 'YouTube, YouTube Music, Spotify, Instagram, TikTok, Threads, X, LinkedIn, Facebook, Pinterest, Snapchat, Twitch, WhatsApp et Telegram. La liste grandit avec les demandes.'],
       ['Ça marche sur iPhone et Android ?', 'Oui, sur les deux, depuis les navigateurs intégrés d’Instagram, de TikTok, de Facebook, de LinkedIn, de Threads et de Snapchat.'],
-      ['Je dois payer pour ça ?', 'Non, c’est dans l’offre gratuite.'],
     ],
   },
   {
@@ -86,7 +84,7 @@ export const PAGES_FONCTIONS: PageFonction[] = [
     nom: 'Ta page selon l’heure',
     titre: ['Le midi, le menu', 'Le soir, la réservation'],
     chapo: 'Tu choisis des horaires, Hopla met le bon lien en tête au bon moment. Ta page suit ta journée sans que tu y touches.',
-    resume: 'Ta page de liens change selon l’heure : le menu du jour le midi, la réservation le soir. Des créneaux par jour de la semaine, avec l’offre Pro de Hopla.',
+    resume: 'Ta page de liens change selon l’heure : le menu du jour le midi, la réservation le soir. Des créneaux par jour de la semaine avec Hopla.',
     offre: 'pro',
     droit: 'heure',
     etapes: [
@@ -102,7 +100,6 @@ export const PAGES_FONCTIONS: PageFonction[] = [
     questions: [
       ['Je peux régler plusieurs créneaux ?', 'Oui, un par lien, et chaque lien a le sien.'],
       ['Que voit un visiteur hors créneau ?', 'Le lien reprend sa place habituelle, ou disparaît si tu l’as réglé pour ne s’afficher que pendant son créneau.'],
-      ['C’est dans quelle offre ?', 'Pro, à essayer gratuitement pendant les 14 premiers jours.'],
     ],
   },
   {
@@ -110,7 +107,7 @@ export const PAGES_FONCTIONS: PageFonction[] = [
     nom: 'Tes lancements programmés',
     titre: ['Un compte à rebours', 'Puis le lien s’ouvre'],
     chapo: 'Annonce ta nouvelle collection sans dévoiler son adresse. À l’heure dite, le lien s’ouvre tout seul, même si tu es occupée ailleurs.',
-    resume: 'Programme un lien sur ta page : un compte à rebours, puis il s’ouvre à l’heure dite. Des dates de début et de fin, avec l’offre Starter de Hopla.',
+    resume: 'Programme un lien sur ta page : un compte à rebours, puis il s’ouvre à l’heure dite. Des dates de début et de fin avec Hopla.',
     offre: 'starter',
     droit: 'programmation',
     etapes: [
@@ -126,7 +123,6 @@ export const PAGES_FONCTIONS: PageFonction[] = [
     questions: [
       ['L’adresse peut-elle fuiter avant l’heure ?', 'Non : tant que le lien n’est pas ouvert, son adresse n’est pas dans la page.'],
       ['Et après la date de fin ?', 'Le lien disparaît de ta page. Il reste dans ton back office, prêt à resservir.'],
-      ['C’est dans quelle offre ?', 'Starter, à essayer gratuitement pendant les 14 premiers jours.'],
     ],
   },
   {
@@ -134,7 +130,7 @@ export const PAGES_FONCTIONS: PageFonction[] = [
     nom: 'Tes drops',
     titre: ['Un lien réservé', 'Des places comptées'],
     chapo: 'Une édition limitée, une avant-première, une liste d’invités : le lien s’ouvre avec un code, pour le nombre de places que tu choisis.',
-    resume: 'Les drops Hopla : un lien de ta page qui s’ouvre avec un code, pour un nombre de places choisi, avec un compteur à jour. Avec l’offre Pro.',
+    resume: 'Les drops Hopla : un lien de ta page qui s’ouvre avec un code, pour un nombre de places choisi, avec un compteur à jour.',
     offre: 'pro',
     droit: 'drops',
     etapes: [
@@ -151,7 +147,6 @@ export const PAGES_FONCTIONS: PageFonction[] = [
     questions: [
       ['Le code peut-il circuler ?', 'Oui, comme tout code. Le nombre de places, lui, ne bouge pas : une fois atteint, le lien se ferme.'],
       ['Je peux rouvrir un drop ?', 'Oui, en changeant le nombre de places ou le code, depuis le bloc.'],
-      ['C’est dans quelle offre ?', 'Pro, à essayer gratuitement pendant les 14 premiers jours.'],
     ],
   },
   {
@@ -159,7 +154,7 @@ export const PAGES_FONCTIONS: PageFonction[] = [
     nom: 'Les avis de tes clients',
     titre: ['Ta note sur 5', 'En bonne place'],
     chapo: 'Ta note Google ou Trustpilot, le nombre d’avis et le mot d’un client, sur ta page. Hopla les reprend chaque jour, tu n’as rien à recopier.',
-    resume: 'Affiche ta note Google ou Trustpilot et le mot d’un client sur ta page de liens. Hopla la relit chaque jour. Avec l’offre Starter.',
+    resume: 'Affiche ta note Google ou Trustpilot et le mot d’un client sur ta page de liens. Hopla la relit chaque jour.',
     offre: 'starter',
     droit: 'avis',
     etapes: [
@@ -175,7 +170,6 @@ export const PAGES_FONCTIONS: PageFonction[] = [
     questions: [
       ['Quelles plateformes ?', 'Toute page qui publie sa note dans ses données (Trustpilot, beaucoup de boutiques et de sites d’avis). Pour une fiche Google, tu tapes ta note toi-même.'],
       ['Je choisis le mot affiché ?', 'Oui, tu choisis la phrase et le prénom.'],
-      ['C’est dans quelle offre ?', 'Starter, à essayer gratuitement pendant les 14 premiers jours.'],
     ],
   },
   {
@@ -183,7 +177,7 @@ export const PAGES_FONCTIONS: PageFonction[] = [
     nom: 'Ta liste e-mail',
     titre: ['Garde le contact', 'Avec tes visiteurs'],
     chapo: 'Un visiteur laisse son e-mail sur ta page et rejoint ta liste. Il part tout seul vers ta newsletter si tu l’as branchée.',
-    resume: 'Un champ e-mail sur ta page de liens : tes inscrits partent vers Brevo, Mailchimp, Kit, MailerLite, beehiiv ou un webhook. Avec l’offre Pro de Hopla.',
+    resume: 'Un champ e-mail sur ta page de liens : tes inscrits partent vers Brevo, Mailchimp, Kit, MailerLite, beehiiv ou un webhook.',
     offre: 'pro',
     droit: 'listeEmail',
     etapes: [
@@ -199,7 +193,6 @@ export const PAGES_FONCTIONS: PageFonction[] = [
     questions: [
       ['Et sans newsletter ?', 'Tes inscrits restent dans Hopla, prêts à exporter le jour où tu en choisis une.'],
       ['Mes clés d’API sont-elles protégées ?', 'Elles sont chiffrées et ne reviennent jamais dans ton navigateur.'],
-      ['C’est dans quelle offre ?', 'Pro, à essayer gratuitement pendant les 14 premiers jours.'],
     ],
   },
   {
@@ -207,7 +200,7 @@ export const PAGES_FONCTIONS: PageFonction[] = [
     nom: 'Tes stats, en clair',
     titre: ['Tes chiffres', 'En phrases'],
     chapo: 'Tes vues, tes clics et d’où viennent tes visiteurs, dans un tableau de bord. Et chaque lundi à 9 h, l’essentiel par e-mail, écrit comme on le dirait.',
-    resume: 'Les stats de ta page de liens : vues, clics, réseaux et pays, sans cookie. Et chaque lundi, l’essentiel par e-mail en phrases. Avec l’offre Starter.',
+    resume: 'Les stats de ta page de liens : vues, clics, réseaux et pays, sans cookie. Et chaque lundi, l’essentiel par e-mail en phrases.',
     offre: 'starter',
     droit: 'stats',
     etapes: [
@@ -220,12 +213,10 @@ export const PAGES_FONCTIONS: PageFonction[] = [
     points: [
       { titre: 'Sans cookie ni bannière', texte: 'L’adresse IP de tes visiteurs n’est jamais gardée. Tu n’as rien à déclarer.' },
       { titre: 'Les bons chiffres', texte: 'Vues, visiteurs, clics, taux de clic, réseaux, pays et liens les plus cliqués.' },
-      { titre: 'Trente jours ou un an', texte: 'Trente jours d’historique avec Starter, un an avec Pro.' },
+      { titre: 'Trente jours ou un an', texte: 'Jusqu’à un an d’historique, pour voir ce qui marche d’une saison à l’autre.' },
     ],
     questions: [
       ['L’e-mail du lundi, je peux l’arrêter ?', 'Oui, d’un interrupteur dans tes réglages.'],
-      ['Et en Gratuit ?', 'Tes vues des 7 derniers jours s’affichent. Le détail commence avec Starter.'],
-      ['C’est dans quelle offre ?', 'Starter, à essayer gratuitement pendant les 14 premiers jours.'],
     ],
   },
   {
@@ -233,7 +224,7 @@ export const PAGES_FONCTIONS: PageFonction[] = [
     nom: 'Ta vitrine',
     titre: ['Ta page qui vend', 'Sans boutique à part'],
     chapo: 'Tes produits avec leur photo et leur prix, ta prise de rendez-vous, un bouton pour te soutenir. Chaque bloc mène au site qui encaisse, Hopla ne prend rien.',
-    resume: 'La vitrine Hopla : produits avec photo et prix, prise de rendez-vous, dons et liens partenaires avec code promo, sur ta page de liens. Avec l’offre Starter.',
+    resume: 'La vitrine Hopla : produits avec photo et prix, prise de rendez-vous, dons et liens partenaires avec code promo, sur ta page de liens.',
     offre: 'starter',
     droit: 'vitrine',
     etapes: [
@@ -245,12 +236,11 @@ export const PAGES_FONCTIONS: PageFonction[] = [
     points: [
       { titre: 'Zéro commission', texte: 'Hopla n’encaisse rien : ton client paie sur ta boutique, ton agenda ou ta cagnotte.' },
       { titre: 'Une adresse suffit', texte: 'Hopla reconnaît une fiche produit, un agenda ou une page de soutien, et prend le bon bloc.' },
-      { titre: 'Dans les règles', texte: 'La mention « Publicité » d’un lien partenaire s’affiche toujours, dans toutes les offres.' },
+      { titre: 'Dans les règles', texte: 'La mention « Publicité » d’un lien partenaire s’affiche toujours, comme le demande la loi.' },
     ],
     questions: [
       ['Quelles boutiques sont reconnues ?', 'Shopify, Etsy, WooCommerce et toute page qui déclare son prix. Sinon, tu tapes le prix toi-même.'],
       ['Quels agendas ?', 'Calendly, Cal.com et Google Agenda s’ouvrent dans la page ; Doctolib, Planity, TidyCal et les autres sur leur site.'],
-      ['C’est dans quelle offre ?', 'Starter, à essayer gratuitement pendant les 14 premiers jours.'],
     ],
   },
   {
@@ -258,23 +248,22 @@ export const PAGES_FONCTIONS: PageFonction[] = [
     nom: 'Vingt thèmes',
     titre: ['Une page à toi', 'Ça se voit'],
     chapo: 'Vingt thèmes, des plus sobres aux plus audacieux, chacun avec sa typographie réglée à la main. Change d’ambiance en un geste.',
-    resume: 'Vingt thèmes pour ta page de liens, chacun avec sa typographie réglée à la main, tous gratuits. Tes couleurs, ta police et ton fond avec Starter.',
+    resume: 'Vingt thèmes pour ta page de liens, chacun avec sa typographie réglée à la main, tous gratuits. Et tes couleurs, ta police et ton fond.',
     offre: 'gratuit',
     etapes: [
       { titre: 'Sobres', texte: 'Pour que tes photos parlent.' },
       { titre: 'Chaleureux', texte: 'Des tons de papier et d’argile.' },
       { titre: 'Audacieux', texte: 'Pour qu’on te reconnaisse au premier coup d’œil.' },
-      { titre: 'À toi', texte: 'Avec Starter, tes couleurs, ta police et ton fond, sur la typographie du thème.' },
+      { titre: 'À toi', texte: 'Tes couleurs, ta police et ton fond, sur la typographie du thème.' },
     ],
     points: [
-      { titre: 'Tous gratuits', texte: 'Les vingt thèmes sont dans l’offre gratuite.' },
+      { titre: 'Pour toutes les pages', texte: 'Les vingt thèmes sont là dès ta première page.' },
       { titre: 'Lisibles partout', texte: 'Chaque thème est vérifié pour ses contrastes, ses tailles et sa lecture sur un petit écran.' },
       { titre: 'Un geste pour changer', texte: 'Ton contenu ne bouge pas : seule l’ambiance change.' },
     ],
     questions: [
-      ['Je peux mettre mes couleurs ?', 'Oui, avec Starter : le fond, les boutons, l’accent, la police et une image de fond.'],
+      ['Je peux mettre mes couleurs ?', 'Oui : le fond, les boutons, l’accent, la police et une image de fond.'],
       ['Mes visiteurs voient-ils un changement brusque ?', 'Non, ta page change dès que tu valides, sans rien casser.'],
-      ['C’est dans quelle offre ?', 'Les thèmes sont gratuits ; tes propres couleurs viennent avec Starter.'],
     ],
   },
 ];

@@ -4,8 +4,7 @@ import { Icone } from '../components/Icone.tsx';
 import { Symbole } from '../components/Logo.tsx';
 import { Reserver, allerAuChamp, useReservation } from './Reserver.tsx';
 import type { ApiAccueil } from './Reserver.tsx';
-import { OFFRES, euros } from '../lib/abonnement.ts';
-import { HeroProfils, OffreFonction } from './Profils.tsx';
+import { HeroProfils } from './Profils.tsx';
 import { Roue } from './Roue.tsx';
 import { APPEL, MOTS, useInscription } from './textes.ts';
 
@@ -143,8 +142,8 @@ export function Ouverture({ api }: { api: ApiAccueil }) {
         <a className="hp-decouvrir" href="#inspiration">Trouve l’inspiration <Icone nom="ui-chevron" taille={20} /></a>
       </div>
       <HeroProfils />
-      {/* Les prix dès l'ouverture, en une ligne qui mène aux tarifs : au téléphone, ils sont loin plus bas. */}
-      <div className="hp-heros-pied"><span>Pour ceux qui ont quelque chose à partager</span><a className="hp-heros-prix" href="#prix">Gratuit · Starter {euros(OFFRES.starter.prix.mois)} · Pro {euros(OFFRES.pro.prix.mois)} par mois</a></div>
+      {/* Une ligne qui mène aux tarifs, sans prix : les prix ne se lisent que dans les tarifs (Lilian, 26 octobre 2026). */}
+      <div className="hp-heros-pied"><span>Pour ceux qui ont quelque chose à partager</span><a className="hp-heros-prix" href="#prix">Gratuit pour commencer · Voir les offres</a></div>
     </section>
   );
 }
@@ -160,7 +159,6 @@ export function Selon() {
           <li><Icone nom="linkedin" taille={20} /><span>Depuis LinkedIn<b>Son contact, pour travailler ensemble</b></span></li>
           <li><Icone nom="youtube" taille={20} /><span>Depuis TikTok<b>Sa vidéo s’ouvre dans YouTube, pas coincée dans l’app</b></span></li>
         </ol>
-        <OffreFonction offre="gratuit" />
         {/* La preuve arrive avec la promesse : une vraie page, en ligne aujourd'hui. */}
         <a className="hp-vraie-page" href="/lilian">Voir une vraie page Hopla <Icone nom="ui-fleche" taille={18} /></a>
       </div>

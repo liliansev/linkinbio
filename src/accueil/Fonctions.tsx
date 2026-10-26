@@ -315,14 +315,13 @@ export function PlusLoin() {
             <li key={f.nom} className="hl-entre" style={d(i * 50)}>
               <a href={`/fonctions/${f.page}`} className="hp-plus-loin-nom"><b>{f.nom}</b></a>
               <span>{f.texte}</span>
-              <a href="#prix" className="hp-badge-offre" data-offre={f.offre}>{f.offre === 'pro' ? 'Pro' : 'Starter'}</a>
             </li>
           ))}
           <li className="hp-plus-loin-tout hl-entre"><a href="/fonctions">Toutes les fonctions, une page chacune</a></li>
         </ul>
         <article className="hl-mail hp-doc-dashboard hl-entre" aria-label="Exemple de tableau de bord">
           <div className="hl-mail-tete"><Symbole className="hl-mail-logo" /><b>Hopla</b></div>
-          <Personne profil="ines" badge={false} />
+          <Personne profil="ines" />
           <DashboardStats />
           <p className="hl-gris hl-petit">Chiffres d’exemple.</p>
         </article>
