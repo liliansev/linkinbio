@@ -64,7 +64,7 @@ export function numeroAppel(v: string): string {
 export function image(v: unknown): string {
   const s = texte(v, 2000);
   // `/liens/...` : les adresses d'avant hopla.page, dans un back office ouvert avant la mise à jour.
-  const m = /^(?:\/liens)?(\/(media\/[\w-]+\.(webp|jpg)|avatar\.webp))$/.exec(s);
+  const m = /^(?:\/liens)?(\/(media\/[\w-]+\.(webp|jpg|png)|avatar\.webp))$/.exec(s);
   if (m) return m[1];
   if (s.startsWith('https://')) { try { return new URL(s).href; } catch { return ''; } }
   return '';

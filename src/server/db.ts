@@ -85,6 +85,7 @@ export function base(): DatabaseSync {
       id TEXT PRIMARY KEY, compte TEXT NOT NULL, motif TEXT NOT NULL, details TEXT NOT NULL, email TEXT NOT NULL DEFAULT '',
       ts INTEGER NOT NULL, statut TEXT NOT NULL DEFAULT 'ouvert', decision TEXT NOT NULL DEFAULT '', traite INTEGER
     );
+    CREATE TABLE IF NOT EXISTS vignettes_avant (bloc TEXT PRIMARY KEY, compte TEXT NOT NULL, image TEXT NOT NULL, favicon TEXT NOT NULL, ts INTEGER NOT NULL);
     CREATE TABLE IF NOT EXISTS attente (id TEXT PRIMARY KEY, email TEXT NOT NULL UNIQUE, pseudo TEXT NOT NULL UNIQUE, ts INTEGER NOT NULL);
   `);
   // Les tables d'avant les comptes : tout ce qu'elles contiennent est à Lilian.
@@ -271,7 +272,7 @@ export function supprimerCompte(id: string, d = base()) {
   if (id === PRINCIPAL) throw new Error('Le compte principal ne se supprime pas.');
   d.exec('BEGIN');
   try {
-    for (const table of ['blocs', 'medias', 'evenements', 'jetons', 'signalements', 'contacts', 'integrations', 'resumes', 'acces']) d.prepare(`DELETE FROM ${table} WHERE compte = ?`).run(id);
+    for (const table of ['blocs', 'medias', 'evenements', 'jetons', 'signalements', 'contacts', 'integrations', 'resumes', 'acces', 'vignettes_avant']) d.prepare(`DELETE FROM ${table} WHERE compte = ?`).run(id);
     d.prepare('DELETE FROM pages WHERE compte = ?').run(id);
     d.prepare('DELETE FROM comptes WHERE id = ?').run(id);
     d.exec('COMMIT');
@@ -495,7 +496,10 @@ export function ordonner(compte: string, ids: string[]) {
 
 /* ---- Médias ---- */
 
-export function ajouterMedia(compte: string, octets: Uint8Array, extension: 'webp' | 'jpg'): string {
+/** Les images qu'on garde : celles du back office (WebP, JPEG), et les favicons des sites, gardés tels quels (PNG). */
+export type ExtensionMedia = 'webp' | 'jpg' | 'png';
+
+export function ajouterMedia(compte: string, octets: Uint8Array, extension: ExtensionMedia): string {
   const d = base();
   if (compte !== PRINCIPAL) {
     const quota = OFFRES[planDuCompte(compte)].quota;
@@ -515,6 +519,20 @@ export function lireMedia(id: string, extension: string): Uint8Array | null {
   const ligne = base().prepare(`SELECT m.octets FROM medias m JOIN comptes c ON c.id = m.compte
     WHERE m.id = ? AND m.extension = ? AND c.statut = 'actif'`).get(id, extension) as { octets: Uint8Array } | undefined;
   return ligne?.octets ?? null;
+}
+
+/* ---- Vignettes passées au favicon (voir favicons.ts) ---- */
+
+export function garderVignette(compte: string, bloc: string, image: string, favicon: string, maintenant = Date.now()) {
+  base().prepare('INSERT OR IGNORE INTO vignettes_avant (bloc, compte, image, favicon, ts) VALUES (?, ?, ?, ?, ?)').run(bloc, compte, image, favicon, maintenant);
+}
+
+export const vignettesGardees = () => base().prepare('SELECT bloc, compte, image, favicon FROM vignettes_avant').all() as { bloc: string; compte: string; image: string; favicon: string }[];
+
+/** Un repère posé une fois pour toutes dans les réglages du serveur (une reprise déjà faite). */
+export const repere = (cle: string) => !!base().prepare('SELECT 1 FROM reglages WHERE cle = ?').get(`repere:${cle}`);
+export function poserRepere(cle: string, maintenant = Date.now()) {
+  base().prepare('INSERT OR REPLACE INTO reglages (cle, valeur) VALUES (?, ?)').run(`repere:${cle}`, new Date(maintenant).toISOString());
 }
 
 /* ---- Jetons de connexion et sessions (on ne garde que leur empreinte) ---- */
@@ -721,7 +739,7 @@ export function* imagesExportees(compte: string): Generator<{ fichier: string; c
   const une = base().prepare('SELECT id, extension, octets, cree FROM medias WHERE id = ?');
   for (const { id } of ids) {
     const m = une.get(id) as { id: string; extension: string; octets: Uint8Array; cree: number } | undefined;
-    if (m) yield { fichier: `${m.id}.${m.extension}`, cree: new Date(m.cree).toISOString(), donnees: `data:image/${m.extension === 'jpg' ? 'jpeg' : 'webp'};base64,${Buffer.from(m.octets).toString('base64')}` };
+    if (m) yield { fichier: `${m.id}.${m.extension}`, cree: new Date(m.cree).toISOString(), donnees: `data:image/${m.extension === 'jpg' ? 'jpeg' : m.extension};base64,${Buffer.from(m.octets).toString('base64')}` };
   }
 }
 
