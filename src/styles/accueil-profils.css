@@ -46,19 +46,16 @@
 .hp-page-ines .hp-page-corps { padding-top: 0; }
 .hp-page-ines .hp-page-corps > .hp-avatar { width: 25%; margin-top: -30px; position: relative; }
 .hp-page-nom { display: block; font-family: 'Bricolage Grotesque Variable', sans-serif; font-size: clamp(15px, 1.8vw, 25px); line-height: 1.05; letter-spacing: -.04em; }
-.hp-page-corps > p { font-size: 10px; line-height: 1.5; margin-top: 10px; }
-.hp-page-corps > small { font-size: 8px; display: block; margin-top: 12px; }
+.hp-page-corps > p { font-size: 12px; line-height: 1.4; margin-top: 10px; }
+.hp-page-corps > small { display: none; }
 .hp-page-liens { margin-top: 22px; display: grid; gap: 9px; }
-.hp-page-liens > div { transition: background-color .4s, color .4s; display: flex; justify-content: space-between; align-items: center; gap: 8px; min-height: 42px; padding: 9px 10px; background: #ffffffa8; border-radius: 7px; text-align: left; font-size: 9px; font-weight: 600; }
+.hp-page-liens > div { transition: background-color .4s, color .4s; display: flex; justify-content: space-between; align-items: center; gap: 8px; min-height: 42px; padding: 9px 10px; background: #ffffffa8; border-radius: 7px; text-align: left; font-size: 12px; line-height: 1.25; font-weight: 600; }
 .hp-page-liens svg { flex: none; }
 .hp-page-ines [data-premier] { background: #785833; color: #fff; }
 .hp-page-sacha [data-premier] { background: #573064; color: #fff; }
 .hp-page-camille [data-premier] { background: #2b507b; color: #fff; }
-.hp-page-marque { display: flex; align-items: center; justify-content: center; gap: 5px; margin-top: 25px; font-size: 6px; }
+.hp-page-marque { display: flex; align-items: center; justify-content: center; gap: 5px; margin-top: 25px; font-size: 12px; }
 .hp-page-marque svg { width: 20px; height: 20px; }
-.hp-note { position: absolute; z-index: 4; font-family: 'Instrument Serif', serif; font-style: italic; font-size: 26px; line-height: 1; color: #fff; }
-.hp-note-haut { right: 5%; top: 2%; transform: rotate(7deg); }
-.hp-note-bas { left: 6%; bottom: 2%; transform: rotate(-7deg); }
 .hp-visage-libre { position: absolute; width: 64px; border-radius: 50%; border: 4px solid #fff; z-index: 4; }
 .hp-visage-lea { right: -1%; top: 12%; transform: rotate(8deg); }
 .hp-visage-hugo { left: 3%; bottom: 12%; transform: rotate(-8deg); }
@@ -117,7 +114,13 @@
 .hp-selon .hl-roue-moyeu { box-shadow: 0 14px 28px -10px #292bff38; }
 .hp-selon .hl-roue-lien { box-shadow: 0 0 0 1px #d3d1c7; }
 .hp-selon .hl-roue-avatar { object-fit: cover; }
-.hp-selon .hl-roue-nom { font-size: 10cqi; }
+.hp-selon .hl-roue-nom { font-size: max(12px, 10cqi); }
+/* 26 octobre 2026 (retours d'un ami : « les boutons sont beaucoup trop petits et trop rapprochés ») : aucun mot
+ * des pages de Camille sous 12 px, des lignes plus hautes et plus d'air entre elles. Sous 95 px de large, la
+ * page ne garde que les pictos (règle de `accueil.css`). */
+.hp-selon .hl-roue-cadre { max-width: 680px; }
+.hp-selon .hl-roue-liens { gap: 7cqi; --place: calc(max(28px, 20cqi) + 7cqi); }
+.hp-selon .hl-roue-ligne { height: max(28px, 20cqi); font-size: max(12px, 8cqi); }
 .hp-personne { display: flex; align-items: center; gap: 12px; margin-block: 20px; }
 .hp-personne > .hp-avatar { width: 48px; border-radius: 50%; }
 .hp-personne > span { display: flex; flex-direction: column; min-width: 0; }
@@ -128,12 +131,12 @@
 .hp-personne > .hp-badge-offre { margin-left: auto; }
 .hl-chapitre .hp-badge-offre { margin-bottom: 15px; }
 .hl-humain .hl-cq-avatar { display: block; object-fit: cover; }
-.hp-cq-bio { display: block; font-size: 11px; line-height: 1.5; max-width: 180px; color: #62685f; }
+.hp-cq-bio { display: block; font-size: 12px; line-height: 1.5; max-width: 180px; color: #62685f; }
 .hp-video-sacha { position: relative; overflow: hidden; }
 .hp-video-sacha > .hp-avatar { position: absolute; width: 100%; height: 100%; object-fit: cover; object-position: 50% 35%; opacity: .75; }
 .hp-video-sacha > svg { position: relative; z-index: 1; color: #fff; filter: drop-shadow(0 2px 4px #0009); }
 .hp-video-titre { display: block; font-size: 13px; margin-bottom: 10px; }
-.hp-chaine { font-size: 11px; white-space: nowrap; }
+.hp-chaine { font-size: 12px; white-space: nowrap; }
 .hl-humain .hl-app-rond { width: 28px; height: 28px; border-radius: 50%; }
 .hl-humain .hl-app-ligne { gap: 8px; }
 .hp-stats-confidentialite { margin-top: 22px; max-width: 44ch; color: var(--gris); font-size: 14px; line-height: 1.65; }
@@ -214,7 +217,6 @@
 }
 /* Sous 1280 px, la carte d’Inès prend plus de place : « Et bientôt, toi » se range contre le bord, hors du papier crème où le blanc disparaît. */
 @media (max-width: 1279px) {
-  .hp-note-bas { left: 0; }
 }
 @media (min-width: 1024px) and (max-height: 850px) {
   .hl-humain .hp-heros { padding-top: 38px; gap: 20px; }
@@ -258,19 +260,14 @@
   .hp-page-ines { top: 10%; width: 48%; left: 24%; }
   .hp-page-corps { padding: 16px 8px 12px; }
   .hp-page-nom { font-size: 16px; }
-  .hp-page-corps > p { font-size: 7px; margin-top: 6px; }
-  .hp-page-corps > small { font-size: 6px; margin-top: 8px; }
+  .hp-page-corps > p { display: none; }
   .hp-page-liens { margin-top: 12px; gap: 6px; }
-  .hp-page-liens > div { min-height: 30px; padding: 6px; font-size: 6px; gap: 3px; }
+  .hp-page-liens > div { min-height: 30px; padding: 6px 7px; font-size: 12px; gap: 3px; }
   .hp-page-liens svg { width: 9px; height: 9px; }
-  .hp-page-marque { margin-top: 15px; font-size: 5px; }
+  .hp-page-marque { display: none; }
   .hp-page-marque svg { width: 14px; height: 14px; }
   .hp-page-ines .hp-page-corps > .hp-avatar { margin-top: -16px; }
-  .hp-note { font-size: 18px; }
-  .hp-note-haut { right: 2%; top: 0; }
   /* Au téléphone, il passe sous Hugo, sur deux lignes. */
-  .hp-note-bas { left: 0; bottom: -12%; }
-  .hp-note-fin { display: block; }
   .hp-visage-libre { width: 38px; border-width: 3px; }
   .hp-heros-pied { padding-top: 48px; }
   /* Au téléphone, les six profils glissent sur une rangée (26 octobre 2026 : en grille, ils prenaient un écran). */
@@ -284,7 +281,6 @@
   .hp-selon .hl-roue { --d: 180px; --ecart: 58px; }
   .hp-selon .hl-roue-pages { gap: 7px; }
   .hp-selon .hl-roue-source { font-size: 12px; gap: 4px; }
-  .hp-selon .hl-roue-nom { display: block; }
   .hl-humain #prix { margin: 65px 8px 0; padding: 55px 22px; }
   .hl-humain .hl-offre { padding: 24px; }
   .hl-humain .hl-offres { margin-top: 24px; }
@@ -293,9 +289,7 @@
 /* Sous 360 px, la carte d’Inès dépasse davantage de la composition : la ligne du bas s’écarte d’autant. */
 @media (max-width: 359px) {
   .hp-heros-pied { padding-top: 54px; }
-  .hp-note-bas { bottom: -18%; }
   /* La pastille du réseau prend la place de la note du haut : sous 360 px, les deux ne tiennent pas côte à côte. */
-  .hp-note-haut { display: none; }
   /* « jusqu’à −27 % » reste entier : sans « jusqu’à », le chiffre se lirait pour Starter aussi. La section et le rail se resserrent. */
   .hl-humain #prix { padding-inline: 16px; }
   .hl-humain .hl-periode button { padding-inline: 6px; font-size: 14px; }
@@ -348,7 +342,6 @@
 .hp-source { position: absolute; z-index: 5; left: 56%; top: 18%; display: inline-flex; align-items: center; gap: 7px; padding: 8px 12px; border-radius: 10px; color: #fff; font-size: 14px; font-weight: 650; line-height: 1; white-space: nowrap; transform: rotate(-4deg); box-shadow: 0 14px 30px -16px #0c0e4f99; animation: hl-pop .45s var(--ease) both; }
 .hp-source[data-reseau='instagram'] { background: #c42a6e; }
 .hp-source[data-reseau='youtube'] { background: #d40000; }
-.hp-note-fin[data-nom] { animation: hp-nom .35s ease both; }
 @keyframes hp-nom { from { opacity: 0; } }
 @media (max-width: 599px) {
   .hp-source { left: 54%; top: 15%; gap: 5px; padding: 6px 9px; font-size: 13px; border-radius: 8px; }

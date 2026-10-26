@@ -161,7 +161,7 @@ export function Prise() {
           {!mouvementReduit() && suite('hl-grand-seul')}
         </div>
         <div ref={ref} className="hl-prise-tel">
-          <Telephone largeur={290} label={onglet === 'creer'
+          <Telephone largeur={300} label={onglet === 'creer'
             ? 'La page de Léa se remplit à chaque étape de l’inscription.'
             : 'Le back office de Hopla au téléphone : le nom s’écrit sur la page, un lien se déplace, le design s’ouvre dans une feuille.'}>
             <div key={jeu} className="hl-fondu">{onglet === 'modifier' ? <BackOffice etape={etape} />

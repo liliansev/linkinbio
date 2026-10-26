@@ -49,20 +49,12 @@ export function Personne({ profil, badge = true }: { profil: ProfilExemple; badg
  * fait se ranger, ses coulisses en vidéo en premier. Une fois, quand la
  * composition est à l'écran (au téléphone, elle est sous le champ) ; avec moins
  * de mouvement, la carte est déjà rangée pour YouTube. Une pastille du réseau
- * marque le lien monté, et une légende lisible le dit en clair. La note du
- * bas reprend le nom qu'on tape dans le champ, tant qu'il n'est pas pris.
+ * marque le lien monté, et une légende lisible le dit en clair. Les notes en
+ * serif italique (« Ton visage », « Et bientôt, toi ») sont retirées le 26 octobre 2026 : elles faisaient
+ * « page générée ».
  */
 const SOURCES = ['instagram', 'youtube'] as const;
 const AVANT_YOUTUBE = 2200;
-
-/** Le nom tapé, tel qu'on l'a écrit, pour la note « Et bientôt, … » ; rien tant qu'il est trop court ou pris. */
-function useNomTape() {
-  const { nom, saisie, verif } = useReservation();
-  const propre = nom.replace(/-$/, '');
-  if (propre.length < 3 || (verif?.nom === propre && verif.etat !== 'libre')) return '';
-  const tape = saisie.trim() || propre;
-  return tape.length > 18 ? `${tape.slice(0, 17)}…` : tape;
-}
 
 /** Des cartes compactes composées avec les mêmes données que les vraies pages de démonstration. */
 export function HeroProfils() {
@@ -78,7 +70,6 @@ export function HeroProfils() {
   const reseau = SOURCES[source];
   const blocsInes = composerAudience(BLOCS_EXEMPLES.ines, reseau);
   useGlisse(liens, blocsInes.map(b => b.id).join(), 600);
-  const nom = useNomTape();
   return <div className="hp-figure"><div ref={scene} className="hp-composition" role="img" aria-label={`Les pages de Sacha, Inès et Camille. Ouverte depuis ${NOMS_AUDIENCES[reseau]}, celle d’Inès met « ${blocsInes[0].titre} » en premier.`}>
     {(['sacha', 'ines', 'camille'] as const).map(id => {
       const p = PROFILS[id];
@@ -102,8 +93,6 @@ export function HeroProfils() {
       </div>;
     })}
     <span key={reseau} className="hp-source" data-reseau={reseau}><Icone nom={reseau} taille={16} />Depuis {NOMS_AUDIENCES[reseau]}</span>
-    <span className="hp-note hp-note-haut">Ton visage<br />Tout ton univers</span>
-    <span className="hp-note hp-note-bas">Et bientôt,<span key={nom} className="hp-note-fin" data-nom={nom || undefined}> {nom || 'toi'}</span></span>
     <Avatar profil="lea" className="hp-visage-libre hp-visage-lea" prioritaire />
     <Avatar profil="hugo" className="hp-visage-libre hp-visage-hugo" prioritaire />
   </div>
