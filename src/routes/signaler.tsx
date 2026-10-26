@@ -4,8 +4,8 @@ import type { FormEvent } from 'react';
 import { MOTIFS_SIGNALEMENT } from '../lib/legal.ts';
 import { envoyerSignalement } from '../server/fonctions.ts';
 import { avecJeton, preparerTurnstile } from '../lib/turnstile.ts';
-import { BoutonPrincipal, Champ, classeSaisie } from '../admin/ui.tsx';
 import { Pied } from '../accueil/Fin.tsx';
+import { Barre } from '../accueil/Ouverture.tsx';
 
 /*
  * « Signaler cette page » (DSA, article 16) : le motif, l'explication, une
@@ -13,7 +13,7 @@ import { Pied } from '../accueil/Fin.tsx';
  */
 export const Route = createFileRoute('/signaler')({
   validateSearch: (s: Record<string, unknown>) => ({ page: typeof s.page === 'string' ? s.page.toLowerCase().slice(0, 40) : '' }),
-  head: () => ({ meta: [{ title: 'Signaler une page · Hopla' }, { name: 'robots', content: 'noindex, nofollow' }, { name: 'theme-color', content: '#0c121f' }] }),
+  head: () => ({ meta: [{ title: 'Signaler une page · Hopla' }, { name: 'robots', content: 'noindex, nofollow' }, { name: 'theme-color', content: '#292bff' }] }),
   component: PageSignaler,
 });
 
@@ -35,45 +35,60 @@ function PageSignaler() {
     setEnvoi(false);
   }
 
+  // Le gabarit des pages publiques (26 octobre 2026, audit des alignements), comme les textes légaux.
   return (
-    <div className="adm min-h-dvh bg-nuit font-sans text-white antialiased">
-      <main className="mx-auto max-w-lg px-5 py-12">
-        <h1 className="text-[28px] font-semibold tracking-[-0.025em]">Signaler une page</h1>
-        <p className="mt-2 text-[15px] leading-relaxed text-white/60">
-          {page ? <>Page <a href={`/${page}`} className="text-white underline">hopla.page/{page}</a>. </> : null}
-          Chaque signalement est lu par une personne. Pour un contenu qui menace quelqu’un, préviens aussi les autorités (17 ou internet-signalement.gouv.fr).
-        </p>
-        {resultat?.ok ? (
-          <p role="status" className="mt-8 rounded-2xl bg-emerald-400/10 px-4 py-4 text-[15px] text-emerald-100">{resultat.message}</p>
-        ) : (
-          <form onSubmit={envoyer} className="mt-8 flex flex-col gap-4">
-            <fieldset>
-              <legend className="mb-2 text-[13px] font-medium text-white/70">Motif</legend>
-              <div className="flex flex-col gap-1.5">
-                {MOTIFS_SIGNALEMENT.map(([id, nom]) => (
-                  <label key={id} className={`flex min-h-11 cursor-pointer items-center gap-3 rounded-xl px-3.5 text-[15px] transition ${motif === id ? 'bg-peche/15 text-white' : 'bg-white/[0.04] text-white/80 hover:bg-white/[0.07]'}`}>
-                    <input type="radio" name="motif" value={id} checked={motif === id} onChange={() => setMotif(id)} className="accent-[#0a0a0a]" required />{nom}
-                  </label>
-                ))}
-              </div>
-            </fieldset>
-            <Champ label="Ce qui pose problème" aide="Où sur la page (le lien ou le texte en cause) et pourquoi c’est illégal ou interdit.">
-              <textarea required minLength={10} maxLength={2000} className={`${classeSaisie} min-h-32`} value={details} onChange={e => setDetails(e.target.value)} />
-            </Champ>
-            <Champ label="Ton adresse e-mail (facultatif)" aide="Pour recevoir un accusé de réception et la décision. Obligatoire en pratique si tu signales une atteinte à tes droits.">
-              <input type="email" className={classeSaisie} value={email} onChange={e => setEmail(e.target.value)} autoComplete="email" placeholder="toi@exemple.fr" />
-            </Champ>
-            <label className="flex cursor-pointer items-start gap-3 text-[14px] leading-snug text-white/75">
-              <input type="checkbox" checked={bonneFoi} onChange={e => setBonneFoi(e.target.checked)} required className="mt-0.5 h-5 w-5 shrink-0 accent-[#0a0a0a]" />
-              Je déclare de bonne foi que les informations de ce signalement sont exactes et complètes.
-            </label>
-            <BoutonPrincipal type="submit" disabled={envoi}>{envoi ? 'Envoi…' : 'Envoyer le signalement'}</BoutonPrincipal>
-            {resultat && <p role="alert" className="text-[14px] text-red-300">{resultat.message}</p>}
-          </form>
-        )}
-        <p className="mt-10 text-[13px] text-white/45"><a href="/legal/cgu" className="hover:text-white">Conditions d’utilisation</a> · <a href="/legal/confidentialite" className="hover:text-white">Confidentialité</a></p>
+    <div className="hl hl-humain hf">
+      <a href="#contenu" className="hl-evitement">Aller au contenu</a>
+      <Barre ailleurs />
+      <main id="contenu">
+        <section className="hl-heros hf-heros" data-teinte="klein" aria-labelledby="titre">
+          <nav className="hf-fil" aria-label="Fil d’Ariane"><a href="/">Hopla</a></nav>
+          <h1 id="titre" className="hl-h1 hf-titre">Signaler une page</h1>
+          <p className="hl-chapo">
+            {page ? <>Page <a href={`/${page}`}>hopla.page/{page}</a>. </> : null}
+            Chaque signalement est lu par une personne. Pour un contenu qui menace quelqu’un, préviens aussi les autorités (17 ou internet-signalement.gouv.fr).
+          </p>
+        </section>
+        <div className="hl-section hl-etroite hf-signaler">
+          {resultat?.ok ? (
+            <p role="status" className="hf-signaler-fait">{resultat.message}</p>
+          ) : (
+            <form onSubmit={envoyer}>
+              <fieldset>
+                <legend>Motif</legend>
+                <div className="hf-motifs">
+                  {MOTIFS_SIGNALEMENT.map(([id, nom]) => (
+                    <label key={id}>
+                      <input type="radio" name="motif" value={id} checked={motif === id} onChange={() => setMotif(id)} required />{nom}
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+              <label className="hf-champ">
+                <span>Ce qui pose problème</span>
+                <small>Où sur la page (le lien ou le texte en cause) et pourquoi c’est illégal ou interdit.</small>
+                <textarea required minLength={10} maxLength={2000} value={details} onChange={e => setDetails(e.target.value)} />
+              </label>
+              <label className="hf-champ">
+                <span>Ton adresse e-mail (facultatif)</span>
+                <small>Pour recevoir un accusé de réception et la décision. Obligatoire en pratique si tu signales une atteinte à tes droits.</small>
+                <input type="email" value={email} onChange={e => setEmail(e.target.value)} autoComplete="email" placeholder="toi@exemple.fr" />
+              </label>
+              <label className="hf-bonne-foi">
+                <input type="checkbox" checked={bonneFoi} onChange={e => setBonneFoi(e.target.checked)} required />
+                Je déclare de bonne foi que les informations de ce signalement sont exactes et complètes.
+              </label>
+              <button type="submit" className="hl-btn" disabled={envoi}>{envoi ? 'Envoi…' : 'Envoyer le signalement'}</button>
+              {resultat && <p role="alert" className="hf-signaler-erreur">{resultat.message}</p>}
+            </form>
+          )}
+          <nav className="hf-legal-docs" aria-label="Textes légaux">
+            <a href="/legal/cgu">Conditions d’utilisation</a>
+            <a href="/legal/confidentialite">Confidentialité</a>
+          </nav>
+        </div>
       </main>
-      <div className="hl hl-humain"><Pied /></div>
+      <Pied />
     </div>
   );
 }

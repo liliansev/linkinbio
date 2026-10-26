@@ -427,6 +427,7 @@
   .lp-fin :is(.lp-signature a:not(.lp-hopla), .lp-legal a):hover { color: var(--texte); }
 }
 /* Le point et « Signaler » restent ensemble quand la ligne se coupe ; le point écarte les deux cibles. */
+.lp-legal a { white-space: nowrap; }
 .lp-legal-suite { display: inline-flex; align-items: center; white-space: nowrap; }
 .lp-legal-point { padding-inline: 4px; }
 .lp-fin :is(.lp-signature, .lp-legal) a:focus-visible { outline: 2px solid var(--texte); outline-offset: -2px; border-radius: 8px; }
