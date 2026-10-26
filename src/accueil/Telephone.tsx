@@ -8,15 +8,19 @@ import { PageLiens } from '../components/PageLiens.tsx';
  * Le téléphone de l'accueil : un cadre arrondi, une barre d'adresse facultative,
  * et un écran qu'on ne touche pas (`inert`) ; les démos se pilotent de dehors.
  * Une vraie page s'y affiche à 390 px puis se réduit à la largeur du cadre.
+ * `defile` : l'écran se fait défiler (molette, doigt, flèches), sans qu'on puisse
+ * toucher ce qu'il montre, pour lire une page entière (la galerie des profils).
  */
 
-export function Telephone({ largeur = 300, adresse, label, children, className = '', style }: {
-  largeur?: number; adresse?: ReactNode; label: string; children: ReactNode; className?: string; style?: CSSProperties;
+export function Telephone({ largeur = 300, adresse, label, children, className = '', style, defile = false }: {
+  largeur?: number; adresse?: ReactNode; label: string; children: ReactNode; className?: string; style?: CSSProperties; defile?: boolean;
 }) {
   return (
     <figure className={`hl-tel ${className}`} style={{ '--l': `${largeur}px`, '--z': largeur / 390, ...style } as CSSProperties} role="img" aria-label={label}>
       {adresse !== undefined && <div className="hl-tel-barre" aria-hidden="true"><span>{adresse}</span></div>}
-      <div className="hl-tel-ecran" inert>{children}</div>
+      {defile
+        ? <div className="hl-tel-ecran" data-defile tabIndex={0} aria-label={label}><div className="hl-tel-contenu" inert>{children}</div></div>
+        : <div className="hl-tel-ecran" inert>{children}</div>}
     </figure>
   );
 }

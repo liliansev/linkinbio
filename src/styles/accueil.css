@@ -473,6 +473,11 @@ html:has(.hl-reserver input:focus) { overflow-anchor: none; }
 /* Composé à part, l'écran garde lui-même l'arrondi du cadre ; sous une barre d'adresse, seulement en bas. */
 .hl-tel-barre + .hl-tel-ecran { border-radius: 0 0 28px 28px; }
 .hl-tel-page { width: 390px; height: 100%; zoom: var(--z); }
+/* La galerie des profils : la page entière se lit en faisant défiler l'écran, sans barre visible. */
+.hl-tel-ecran[data-defile] { overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; }
+.hl-tel-ecran[data-defile]::-webkit-scrollbar { display: none; }
+.hl-tel-ecran[data-defile]:focus-visible { outline: 2px solid var(--encre); outline-offset: -2px; }
+.hl-tel-contenu { height: 100%; }
 /* 26 octobre 2026 (retours d'un ami : « plein d'éléments sous 12 px ») : réduite dans un téléphone, une vraie page
  * garde ses petits textes (bio, sous-titres, places, pied) à 12 px au moins une fois rendus. */
 .hl-tel-page :is(.lp-bio, .lp-sous, .lp-carte-sous, .lp-carte-description, .lp-drop-places, .lp-legal, .lp-legal a, .lp-legal-point, .lp-mention, .lp-hopla, .lp-hopla-haut, .lp-pub, .lp-badge) { font-size: max(1em, calc(12px / var(--z))); }

@@ -38,7 +38,7 @@ const TENUE: Record<Onglet, number> = { creer: 1600, modifier: 2600 };
 const somme = (l: number[]) => l.reduce((a, b) => a + b, 0);
 
 function pageEtape(n: number) {
-  return pageExemple('lea', n >= 4 ? 'sauge' : 'neige', {
+  return pageExemple('lea', n >= 4 ? PROFILS.lea.theme : 'neige', {
     profil: n >= 1 ? {} : { nom: '', bio: '', avatar: PROFILS.lea.avatar },
     blocs: n >= 2 ? BLOCS_EXEMPLES.lea.slice(0, 2) : [],
     reseaux: n >= 3,
