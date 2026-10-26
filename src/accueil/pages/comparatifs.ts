@@ -42,7 +42,7 @@ export const COMPARATIFS: Comparatif[] = [
     nom: 'Linktree',
     qui: 'le plus connu des liens en bio, né en Australie en 2016',
     chapo: 'Linktree a inventé la page de liens en bio. Hopla part de la même idée, et la page change selon d’où vient le visiteur : le réseau, l’heure, l’app.',
-    resume: 'Hopla ou Linktree ? Le comparatif : prix, commissions, stats, et ce que Hopla fait de plus, une page qui s’adapte au réseau de chaque visiteur.',
+    resume: 'Hopla vs Linktree, le comparatif : prix, commissions, stats, et ce que Hopla fait de plus, une page qui s’adapte au réseau de chaque visiteur.',
     lignes: [
       ['Prix', HOPLA_PRIX, 'Gratuit, puis 8 $, 15 $ ou 35 $ par mois'],
       ['Offre gratuite', 'Oui, cinq blocs, les vingt thèmes', 'Oui, liens sans limite'],
@@ -77,7 +77,7 @@ export const COMPARATIFS: Comparatif[] = [
     nom: 'Beacons',
     qui: 'une page de liens doublée d’une boutique et d’outils pour créateurs, née aux États-Unis',
     chapo: 'Beacons veut tout faire : boutique, kit média, e-mails, IA. Hopla fait une chose : une page de liens qui s’adapte à chaque visiteur, et qui mène à tes outils.',
-    resume: 'Hopla ou Beacons ? Le comparatif : prix, commission de 9 % sur les ventes, et une page de liens qui se range selon le réseau du visiteur avec Hopla.',
+    resume: 'Hopla vs Beacons, le comparatif : prix, commission de 9 % sur les ventes, et une page de liens qui se range selon le réseau du visiteur avec Hopla.',
     lignes: [
       ['Prix', HOPLA_PRIX, 'Gratuit, puis 10 $, 30 $ ou 100 $ par mois'],
       ['Offre gratuite', 'Oui, cinq blocs, les vingt thèmes', 'Oui, liens sans limite'],
@@ -107,7 +107,7 @@ export const COMPARATIFS: Comparatif[] = [
     nom: 'Stan',
     qui: 'une boutique en lien de bio pour vendre des formations et des rendez-vous, née aux États-Unis',
     chapo: 'Stan est une boutique : formations, rendez-vous payants, abonnements. Hopla est une page de liens qui s’adapte à chaque visiteur, avec une offre gratuite.',
-    resume: 'Hopla ou Stan Store ? Le comparatif : Stan démarre à 29 $ par mois sans offre gratuite ; Hopla a une offre gratuite et ne prend aucune commission.',
+    resume: 'Hopla vs Stan Store, le comparatif : Stan démarre à 29 $ par mois sans offre gratuite ; Hopla est gratuit, puis 9 € par mois, sans commission.',
     lignes: [
       ['Prix', HOPLA_PRIX, '29 $ ou 99 $ par mois'],
       ['Offre gratuite', 'Oui, cinq blocs, les vingt thèmes', 'Non, 14 jours d’essai'],
@@ -134,7 +134,7 @@ export const COMPARATIFS: Comparatif[] = [
     nom: 'Lnk.Bio',
     qui: 'une page de liens à petit prix, payée une fois pour toutes, née en Italie',
     chapo: 'Lnk.Bio vend sa page de liens pour presque rien, une fois pour toutes. Hopla coûte plus cher passé l’offre gratuite, et fait ce que les autres ne font pas : s’adapter à chaque visiteur.',
-    resume: 'Hopla ou Lnk.Bio ? Le comparatif : prix à vie contre abonnement, et une page de liens qui se range selon le réseau du visiteur avec Hopla, gratuitement.',
+    resume: 'Hopla vs Lnk.Bio, le comparatif : prix à vie contre abonnement, et une page de liens qui se range selon le réseau du visiteur avec Hopla, gratuitement.',
     lignes: [
       ['Prix', HOPLA_PRIX, 'Gratuit, puis 0,99 $ par mois, ou 9,99 $ et 24,99 $ à vie'],
       ['Offre gratuite', 'Oui, cinq blocs, les vingt thèmes', 'Oui, liens sans limite'],
@@ -160,7 +160,7 @@ export const COMPARATIFS: Comparatif[] = [
     nom: 'Taplink',
     qui: 'une mini-page à blocs avec formulaires et paiements, très utilisée en Europe de l’Est',
     chapo: 'Taplink construit une mini-page avec des blocs, des formulaires et des paiements. Hopla construit une page de liens qui change selon le visiteur.',
-    resume: 'Hopla ou Taplink ? Le comparatif : prix, blocs, paiements, et une page de liens qui se range selon le réseau de chaque visiteur avec Hopla.',
+    resume: 'Hopla vs Taplink, le comparatif : prix, blocs, paiements, et une page de liens qui se range selon le réseau de chaque visiteur avec Hopla.',
     lignes: [
       ['Prix', HOPLA_PRIX, 'Gratuit, puis environ 3 $ ou 9 $ par mois'],
       ['Offre gratuite', 'Oui, cinq blocs, les vingt thèmes', 'Oui, avec moins de blocs'],
@@ -184,7 +184,7 @@ export const COMPARATIFS: Comparatif[] = [
     nom: 'Later Linkin.bio',
     qui: 'la page de liens de Later, l’outil de programmation de posts, née au Canada',
     chapo: 'Linkin.bio est la page de liens de Later, comprise dans ses offres de programmation de posts. Hopla est une page de liens seule, qui s’adapte à chaque visiteur.',
-    resume: 'Hopla ou Later Linkin.bio ? Le comparatif : Linkin.bio vient avec Later, dès 25 $ par mois ; Hopla est une page de liens seule, avec une offre gratuite.',
+    resume: 'Hopla vs Later Linkin.bio, le comparatif : Linkin.bio vient avec Later, dès 25 $ par mois ; Hopla est une page de liens seule, gratuite, puis 9 € par mois.',
     lignes: [
       ['Prix', HOPLA_PRIX, 'Compris dans Later, dès 25 $ par mois'],
       ['Vendu seul', 'Oui', 'Non, avec la programmation de posts'],

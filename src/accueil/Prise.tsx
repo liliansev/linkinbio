@@ -14,6 +14,9 @@ import { mouvementReduit, useEnVue, useEnchainement, useGlisse, useSequence } fr
  * téléphone est à l'écran, et s'arrêtent là où ils en sont quand on le quitte
  * (26 octobre 2026, demandé par Lilian : rien à toucher pour voir la suite,
  * ni onglet à choisir : Créer et Modifier se disent, ils ne se cliquent pas).
+ * Au bureau, la scène se pose sur le bleu Klein, Créer à gauche du téléphone et
+ * Modifier à droite, en miroir ; celle qui se joue s'allume (26 octobre 2026,
+ * demandé par Lilian : « vide, mal aligné et manque de punch »).
  */
 
 type Onglet = 'creer' | 'modifier';
@@ -77,11 +80,12 @@ function BackOffice({ etape }: { etape: number }) {
   }, [ecrit]);
 
   const swatches = ['nuit-peche', 'champagne', 'klein', 'aurore'].map(id => THEMES.find(t => t.id === id)!);
-  const klein = swatches[2];
+  // Le thème choisi tranche sur le bleu de la scène : la nuit et sa pêche.
+  const choisi = swatches[0];
   return (
     <div className="hl-bo">
       <div className="hl-bo-tete"><b>Ma page</b><span className="hl-gris">hopla.page/lea-respire</span></div>
-      <div className="hl-bo-page" style={etape >= 6 ? { background: klein.fondUni, color: klein.texte } : undefined}>
+      <div className="hl-bo-page" style={etape >= 6 ? { background: choisi.fondUni, color: choisi.texte } : undefined}>
         <img className="hl-cq-avatar" src={PROFILS.lea.avatar} alt="" width="62" height="62" loading="lazy" />
         <span className="hl-bo-nom" data-edite={(etape >= 1 && etape < 2) || undefined}>Léa{SUITE.slice(0, lettres)}{etape >= 1 && etape < 2 && <i className="hl-curseur" />}</span>
         <span className="hl-cq-trait" style={{ width: '58%' }} />
@@ -92,7 +96,7 @@ function BackOffice({ etape }: { etape: number }) {
       <div className="hl-bo-feuille" data-ouvert={etape >= 5 || undefined}>
         <b>Personnaliser</b>
         <div className="hl-bo-themes">
-          {swatches.map(t => <span key={t.id} style={{ background: t.fondUni }} data-choisi={(etape >= 6 ? t.id === 'klein' : t.id === 'nuit-peche') || undefined} title={t.nom} />)}
+          {swatches.map(t => <span key={t.id} style={{ background: t.fondUni }} data-choisi={(etape >= 6 ? t.id === choisi.id : t.id === 'champagne') || undefined} title={t.nom} />)}
         </div>
       </div>
       <nav className="hl-bo-onglets">
@@ -121,36 +125,45 @@ export function Prise() {
   // Le pas lu, de 0 à liste.length - 1.
   const rang = onglet === 'creer' ? Math.max(1, etape) - 1 : etape < 2 ? 0 : etape < 5 ? 1 : 2;
 
+  const temps = (o: Onglet) => ({
+    key: o === onglet ? `${o}-${jeu}` : o, 'data-actif': onglet === o || undefined, 'aria-current': onglet === o ? 'step' as const : undefined,
+    'data-remplit': (o === onglet && !mouvementReduit()) || undefined, style: { '--duree': `${somme(PAS[o]) + TENUE[o]}ms` } as CSSProperties,
+  });
+  const pausee = pause || !enVue || undefined;
+
+  /** Au bureau, une colonne de chaque côté du téléphone : Créer à gauche, Modifier à droite ; celle qui se joue s'allume. */
+  const colonne = (o: Onglet) => {
+    const pas = o === 'creer' ? ETAPES : GESTES;
+    const { key, ...t } = temps(o);
+    return (
+      <div className="hl-prise-col" data-cote={o} data-actif={onglet === o || undefined}>
+        <p className="hl-prise-temps" data-pause={pausee}><span key={key} {...t}>{o === 'creer' ? 'Créer' : 'Modifier'}</span></p>
+        <ol className="hl-etapes">
+          {pas.map((p, i) => (
+            <li key={p.titre} data-lu={(onglet === o && rang === i) || undefined} aria-current={onglet === o && rang === i ? 'step' : undefined}>
+              <span className="hl-etape-num">{p.picto ? <Icone nom={p.picto} taille={26} /> : i + 1}</span>
+              <span><b>{p.titre}</b><span className="hl-etape-texte">{p.texte}</span></span>
+            </li>
+          ))}
+        </ol>
+      </div>
+    );
+  };
+
   return (
-    <section className="hl-section" aria-labelledby="prise">
+    <section className="hl-section hl-prise-scene" data-teinte="klein" aria-labelledby="prise">
       <div className="hl-tete-section hl-entre">
         <h2 id="prise" className="hl-h2">Ta page en deux minutes<br /><span className="hl-cache">. </span>Depuis ton téléphone</h2>
         <p className="hl-chapo">Quatre questions pour la créer. Ensuite, tu la modifies en la touchant : pas de formulaire à part.</p>
       </div>
       <div className="hl-prise" {...garde}>
-        <div className="hl-prise-texte">
-          {/* Les deux temps de la scène, dits et non choisis : celui qui se joue se remplit, puis passe la main. */}
-          <ol className="hl-onglets hl-onglets-scene hl-temps" aria-label="Créer, puis modifier : les deux se jouent l’un après l’autre" data-pause={pause || !enVue || undefined}>
-            {(['creer', 'modifier'] as const).map(o => (
-              <li key={o === onglet ? `${o}-${jeu}` : o} data-actif={onglet === o || undefined} aria-current={onglet === o ? 'step' : undefined}
-                data-remplit={(o === onglet && !mouvementReduit()) || undefined} style={{ '--duree': `${somme(PAS[o]) + TENUE[o]}ms` } as CSSProperties}>
-                {o === 'creer' ? 'Créer' : 'Modifier'}
-              </li>
-            ))}
-          </ol>
-          <ol key={onglet} className="hl-etapes">
-            {liste.map((p, i) => (
-              <li key={p.titre} data-lu={rang === i || undefined} aria-current={rang === i ? 'step' : undefined}>
-                <div>
-                  <span className="hl-etape-num">{p.picto ? <Icone nom={p.picto} taille={18} /> : i + 1}</span>
-                  <span><b>{p.titre}</b><span className="hl-etape-texte">{p.texte}</span></span>
-                </div>
-              </li>
-            ))}
-          </ol>
-        </div>
+        {/* Au téléphone, les deux temps de la scène, dits et non choisis : celui qui se joue se remplit, puis passe la main. */}
+        <ol className="hl-onglets hl-onglets-scene hl-temps hl-petit-seul" aria-label="Créer, puis modifier : les deux se jouent l’un après l’autre" data-pause={pausee}>
+          {(['creer', 'modifier'] as const).map(o => { const { key, ...t } = temps(o); return <li key={key} {...t}>{o === 'creer' ? 'Créer' : 'Modifier'}</li>; })}
+        </ol>
+        {colonne('creer')}
         <div ref={ref} className="hl-prise-tel">
-          <Telephone largeur={300} label={onglet === 'creer'
+          <Telephone largeur={320} label={onglet === 'creer'
             ? 'La page de Léa se remplit à chaque étape de l’inscription.'
             : 'Le back office de Hopla au téléphone : le nom s’écrit sur la page, un lien se déplace, le design s’ouvre dans une feuille.'}>
             <div key={jeu} className="hl-fondu">{onglet === 'modifier' ? <BackOffice etape={etape} />
@@ -161,6 +174,7 @@ export function Prise() {
             <p><span className="hl-gris">{rang + 1} sur {liste.length}</span> <b>{liste[rang].titre}</b><span className="hl-etape-texte">{liste[rang].texte}</span></p>
           </div>
         </div>
+        {colonne('modifier')}
       </div>
     </section>
   );
