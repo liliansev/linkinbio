@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1000"><defs><filter id="g" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="2" stitchTiles="stitch"/><feColorMatrix values="0 0 0 0 .1  0 0 0 0 .15  0 0 0 0 .5  0 0 0 .25 0"/><feComposite in2="SourceGraphic" operator="in"/></filter></defs><rect width="800" height="1000" fill="#2a3cb8"/>
+<g style="mix-blend-mode:screen"><circle cx="560" cy="250" r="120" fill="#4b5be0"/></g>
+<g><path d="M170 620 Q300 380 560 470 Q470 560 520 700 Q360 720 170 620Z" fill="#ff6fae"/><path d="M330 520 Q420 300 640 330 Q560 420 470 560Z" fill="#ffd23f"/><circle cx="520" cy="500" r="13" fill="#2a3cb8"/><path d="M560 492 L630 470 L572 520Z" fill="#ff5a36"/>
+<rect x="0" y="830" width="800" height="170" fill="#f6efe3"/><rect x="300" y="700" width="10" height="130" fill="#f6efe3"/><rect x="380" y="700" width="10" height="130" fill="#f6efe3"/></g>
+<rect width="800" height="1000" filter="url(#g)"/></svg>

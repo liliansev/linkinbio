@@ -5,7 +5,7 @@ import { Symbole } from '../components/Logo.tsx';
 import { OFFRES, euros, peut } from '../lib/abonnement.ts';
 import type { Plan } from '../lib/abonnement.ts';
 import { NOMS_AUDIENCES, composerAudience, deReseau } from '../lib/provenance.ts';
-import { BLOCS_EXEMPLES, IDS_PROFILS, PROFILS, de, pageExemple } from './exemples.ts';
+import { BLOCS_EXEMPLES, IDS_PROFILS, PROFILS, de, pageExemple, pageProfil } from './exemples.ts';
 import type { ProfilExemple } from './exemples.ts';
 import { mouvementReduit, useEnVue, useGlisse } from './mouvement.ts';
 import { allerAuChamp, useReservation } from './Reserver.tsx';
@@ -75,7 +75,7 @@ export function HeroProfils() {
     {(['sacha', 'ines', 'camille'] as const).map(id => {
       const p = PROFILS[id];
       const page = pageExemple(id);
-      const blocs = id === 'ines' ? blocsInes : page.blocs;
+      const blocs = id === 'ines' ? blocsInes : composerAudience(BLOCS_EXEMPLES[id], '');
       return <div key={id} className={`hp-page hp-page-${id}`}>
         {id === 'ines' && <Avatar profil={id} className="hp-couverture" prioritaire />}
         <div className="hp-page-corps">
@@ -132,7 +132,7 @@ export function GalerieProfils() {
         <h3 id="profil-titre" aria-live="polite">La page {de(p.nom)} <span className="hp-dialogue-rang">{i + 1} sur {IDS_PROFILS.length}</span></h3>
         <button type="button" autoFocus onClick={() => boite.current?.close()} aria-label="Fermer l’aperçu"><Icone nom="ui-fermer" taille={24} /></button>
       </div>
-      <Telephone largeur={largeur} className="hl-tel-court" adresse={`hopla.page/${p.pseudo}`} label={`Exemple de page ${de(p.nom)}`}><EcranPage page={pageExemple(profil)} /></Telephone>
+      <Telephone largeur={largeur} defile className="hl-tel-court" adresse={`hopla.page/${p.pseudo}`} label={`Exemple de page ${de(p.nom)}`}><EcranPage page={pageProfil(profil)} /></Telephone>
       <p className="hp-dialogue-qui">{p.metier} à {p.ville}{p.offre !== 'gratuit' && <BadgeOffre offre={p.offre} long />}</p>
       <div className="hp-dialogue-pied">
         <button type="button" className="hp-dialogue-voisin" onClick={() => setProfil(voisin(-1))} aria-label={`Page précédente : ${PROFILS[voisin(-1)].nom}`}><Icone nom="ui-chevron" taille={20} className="hl-gauche" /></button>
