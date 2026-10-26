@@ -12,7 +12,7 @@ import { APPEL, MOTS, useInscription } from './textes.ts';
 export function Marque() {
   return (
     <a href="/" className="hl-marque" aria-label="Hopla, accueil">
-      <Symbole />
+      <Symbole dessin="var(--marque-dessin, #fff)" />
       <span>Hopla</span>
     </a>
   );
@@ -94,6 +94,7 @@ export function Barre({ ailleurs = false }: { ailleurs?: boolean }) {
   }, [menu]);
   return (
     <header className="hl-barre" style={{ '--creer': `${creer}px` } as CSSProperties} data-defile={defile || menu || undefined} data-champ={(champ && !menu) || undefined} data-envoye={envoye || undefined}>
+      <div className="hl-barre-capsule">
       <div className="hl-barre-dedans">
         <Marque />
         <nav className="hl-barre-nav" aria-label="Sections">
@@ -111,6 +112,7 @@ export function Barre({ ailleurs = false }: { ailleurs?: boolean }) {
         {SECTIONS.map(([lien, texte]) => <a key={lien} href={ailleurs ? `/${lien}` : lien} aria-current={ici === lien || undefined} onClick={() => { setMenu(false); if (!ailleurs) titreDe(lien); }}>{texte}</a>)}
         <a href="/admin">Connexion</a>
       </nav>
+      </div>
     </header>
   );
 }

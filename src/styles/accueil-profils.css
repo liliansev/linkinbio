@@ -454,3 +454,33 @@
 .hp-plus-loin-nom:hover b { text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 1px; }
 .hp-plus-loin-liste li.hp-plus-loin-tout { display: block; border-bottom: 0; }
 .hp-plus-loin-tout a { display: inline-flex; min-height: 44px; align-items: center; font-size: 15px; font-weight: 600; color: var(--accent); text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 1px; }
+
+/* La barre (26 octobre 2026, demandé par Lilian : « elle est fade ») : en bleu Klein, à la marge du héros. En haut de la page,
+   elle se pose dans le héros, bleu sur bleu, sans bord ; au défilement, elle se détache en une capsule bleue qui flotte sur la page.
+   Le texte au blanc, la section où l'on est soulignée de citron, et l'appel en citron, comme tout appel posé sur le bleu. */
+.hl-humain .hl-barre { padding: 10px 8px 0; background: none; border: 0; pointer-events: none; }
+.hl-humain .hl-barre-capsule {
+  --encre: #fff; --gris: #d9dcff; --filet: rgb(255 255 255 / .2); --marque-dessin: #292bff;
+  pointer-events: auto; border-radius: 22px; background: transparent; color: var(--encre);
+  transition: background-color .25s var(--ease), box-shadow .25s var(--ease);
+}
+.hl-humain .hl-barre[data-defile] .hl-barre-capsule { background: #292bff; box-shadow: 0 14px 34px -18px rgb(14 16 120 / .55), 0 1px 0 rgb(255 255 255 / .12) inset; }
+.hl-humain .hl-barre-dedans { padding-inline: 22px 18px; }
+.hl-humain .hl-marque svg { color: #fff; }
+.hl-humain .hl-barre-nav a { font-weight: 500; }
+.hl-humain .hl-barre-nav a[aria-current] { text-decoration-color: #e3fc96; }
+.hl-humain .hl-barre-connexion { color: #fff; font-weight: 500; }
+.hl-humain .hl-barre-connexion:hover { color: #e3fc96; }
+.hl-humain .hl-barre-actions .hl-btn { background: #e3fc96; border-color: #e3fc96; color: #233016; }
+.hl-humain .hl-barre-actions .hl-btn:hover { background: #d4f57c; }
+.hl-humain .hl-barre:has(.hl-menu:not([hidden])) { background: none; }
+.hl-humain .hl-menu { padding-inline: 22px; }
+.hl-humain .hl-menu a { color: #fff; }
+/* Le héros de chaque page remonte sous la barre : sa marge du haut reste celle d'avant, la barre occupe ses 60 premiers pixels. */
+.hl-humain #contenu > .hl-heros:first-child { margin-top: -60px; border-top: 60px solid transparent; }
+html:has(.hl-humain) { scroll-padding-top: 90px; }
+@media (min-width: 1024px) {
+  .hl-humain .hl-barre { padding: 14px 14px 0; }
+  .hl-humain .hl-barre-capsule { border-radius: 24px; }
+  .hl-humain .hl-barre-dedans { padding-inline: max(28px, calc((100% - 1200px) / 2 + 14px)); max-width: none; }
+}
