@@ -600,9 +600,19 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
   /** Plusieurs liens d'un coup (les premiers pas) : les nouveaux en tête, dans l'ordre donné ; les autres mis à jour sur place. */
   function poserBlocs(liste: Bloc[]) {
     const nouveaux = liste.filter(b => !blocs.some(x => x.id === b.id));
-    setBlocs(l => [...nouveaux, ...l.map(b => liste.find(x => x.id === b.id) ?? b)]);
+    // Les premiers pas montrent leurs blocs dans l'ordre de la liste, en tête de page : revenu à l'étape pour en
+    // ajouter, les nouveaux se rangent après ceux déjà posés, comme dans la miniature.
+    const ordre = [...liste.map(b => b.id), ...blocs.filter(b => !liste.some(x => x.id === b.id)).map(b => b.id)];
+    const remettre = nouveaux.length > 0 && nouveaux.length < liste.length;
+    setBlocs(l => {
+      const tous = [...nouveaux, ...l.map(b => liste.find(x => x.id === b.id) ?? b)];
+      return remettre ? [...ordre.flatMap(id => tous.filter(b => b.id === id)), ...tous.filter(b => !ordre.includes(b.id))] : tous;
+    });
     // Le serveur pose chaque nouveau bloc en tête : on les envoie du dernier au premier.
-    ecrire(async () => { for (const b of [...liste].reverse()) await api.enregistrerBloc(b); });
+    ecrire(async () => {
+      for (const b of [...liste].reverse()) await api.enregistrerBloc(b);
+      if (remettre) await api.ordonner(ordre);
+    });
   }
 
   /** Un nouvel ordre : seuls les identifiants comptent, la page peut montrer un bloc en cours de saisie. */
