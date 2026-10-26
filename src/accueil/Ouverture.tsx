@@ -7,6 +7,8 @@ import type { ApiAccueil } from './Reserver.tsx';
 import { HeroProfils } from './Profils.tsx';
 import { Roue } from './Roue.tsx';
 import { APPEL, MOTS, useInscription } from './textes.ts';
+import { PAGES_FONCTIONS } from './pages/fonctions.ts';
+import { COMPARATIFS } from './pages/comparatifs.ts';
 
 export function Marque() {
   return (
@@ -21,6 +23,11 @@ export function Marque() {
 export function Barre({ ailleurs = false }: { ailleurs?: boolean }) {
   const [defile, setDefile] = useState(false);
   const [menu, setMenu] = useState(false);
+  // Au bureau, Fonctions et Comparatifs déroulent la liste de leurs pages, une seule à la fois.
+  const [deroule, setDeroule] = useState<'' | 'fonctions' | 'comparatifs'>('');
+  // Sur une page de fonction ou de comparatif, son entrée de la barre se souligne comme une section.
+  const [chemin, setChemin] = useState('');
+  useEffect(() => setChemin(location.pathname), []);
   // Au chargement, le champ de l'ouverture est à l'écran : le bouton de la barre attend qu'il en sorte.
   const [champ, setChamp] = useState(true);
   const [debut, suite] = APPEL[useInscription()];
@@ -79,6 +86,23 @@ export function Barre({ ailleurs = false }: { ailleurs?: boolean }) {
   // Au téléphone, le menu se ferme avec Échap ou en touchant ailleurs ; fermé au clavier depuis le menu, il rend le focus à son bouton.
   const boutonMenu = useRef<HTMLButtonElement>(null);
   useEffect(() => {
+    if (!deroule) return;
+    const echap = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      const bouton = document.querySelector<HTMLButtonElement>(`[aria-controls="hl-deroule-${deroule}"]`);
+      const dedans = !!(document.activeElement as Element | null)?.closest('.hl-barre-nav');
+      setDeroule('');
+      if (dedans) bouton?.focus();
+    };
+    const ailleurs = (e: PointerEvent) => { if (!(e.target as Element).closest('.hl-deroulant')) setDeroule(''); };
+    const sortie = (e: FocusEvent) => { if (!(e.relatedTarget as Element | null)?.closest('.hl-deroulant')) setDeroule(''); };
+    const nav = document.querySelector('.hl-barre-nav');
+    addEventListener('keydown', echap);
+    addEventListener('pointerdown', ailleurs);
+    nav?.addEventListener('focusout', sortie as EventListener);
+    return () => { removeEventListener('keydown', echap); removeEventListener('pointerdown', ailleurs); nav?.removeEventListener('focusout', sortie as EventListener); };
+  }, [deroule]);
+  useEffect(() => {
     if (!menu) return;
     const echap = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
@@ -97,7 +121,30 @@ export function Barre({ ailleurs = false }: { ailleurs?: boolean }) {
       <div className="hl-barre-dedans">
         <Marque />
         <nav className="hl-barre-nav" aria-label="Sections">
-          {SECTIONS.map(([lien, texte]) => <a key={lien} href={ailleurs ? `/${lien}` : lien} aria-current={ici === lien || undefined} onClick={() => { if (!ailleurs) titreDe(lien); }}>{texte}</a>)}
+          {BARRE.map(entree => {
+            if (typeof entree === 'string') {
+              const liste = entree === 'fonctions'
+                ? { titre: 'Fonctions', tete: '', tout: ['/fonctions', 'Toutes les fonctions'], pages: PAGES_FONCTIONS.map(p => [`/fonctions/${p.slug}`, p.nom, OFFRE[p.offre]]) }
+                : { titre: 'Comparatifs', tete: 'Hopla face à', tout: ['/comparatif', 'Tous les comparatifs'], pages: COMPARATIFS.map(c => [`/comparatif/${c.slug}`, c.nom, '']) };
+              const ouvert = deroule === entree;
+              return (
+                <div key={entree} className="hl-deroulant" data-ouvert={ouvert || undefined}>
+                  <button type="button" data-ici={chemin.startsWith(entree === 'fonctions' ? '/fonctions' : '/comparatif') || ici === entree || undefined} aria-expanded={ouvert} aria-controls={`hl-deroule-${entree}`} onClick={() => setDeroule(d => d === entree ? '' : entree)}>
+                    {liste.titre}<Icone nom="ui-chevron" taille={16} />
+                  </button>
+                  <div id={`hl-deroule-${entree}`} className="hl-deroule" data-sorte={entree} hidden={!ouvert}>
+                    {liste.tete && <p className="hl-deroule-tete">{liste.tete}</p>}
+                    <ul>
+                      {liste.pages.map(([href, nom, offre]) => <li key={href}><a href={href} aria-current={chemin === href ? 'page' : undefined} onClick={() => setDeroule('')}><span>{nom}</span>{offre && <small>{offre}</small>}</a></li>)}
+                    </ul>
+                    <a className="hl-deroule-tout" href={liste.tout[0]} onClick={() => setDeroule('')}>{liste.tout[1]}<Icone nom="ui-fleche" taille={16} /></a>
+                  </div>
+                </div>
+              );
+            }
+            const [lien, texte] = entree;
+            return <a key={lien} href={ailleurs ? `/${lien}` : lien} aria-current={ici === lien || undefined} onClick={() => { if (!ailleurs) titreDe(lien); }}>{texte}</a>;
+          })}
         </nav>
         <div className="hl-barre-actions">
           <a href="/admin" className="hl-barre-connexion">Connexion</a>
@@ -108,8 +155,10 @@ export function Barre({ ailleurs = false }: { ailleurs?: boolean }) {
         </div>
       </div>
       <nav id="hl-menu" className="hl-menu" aria-label="Menu" hidden={!menu}>
-        {SECTIONS.map(([lien, texte]) => <a key={lien} href={ailleurs ? `/${lien}` : lien} aria-current={ici === lien || undefined} onClick={() => { setMenu(false); if (!ailleurs) titreDe(lien); }}>{texte}</a>)}
-        <a href="/admin">Connexion</a>
+        {MENU.map(([lien, texte]) => lien.startsWith('#')
+          ? <a key={lien} href={ailleurs ? `/${lien}` : lien} aria-current={ici === lien || undefined} onClick={() => { setMenu(false); if (!ailleurs) titreDe(lien); }}>{texte}</a>
+          : <a key={lien} href={lien} aria-current={chemin === lien || chemin.startsWith(lien + '/') ? 'page' : undefined}>{texte}</a>)}
+        <a href="/admin" className="hl-menu-connexion">Connexion</a>
       </nav>
       </div>
     </header>
@@ -126,10 +175,15 @@ function titreDe(lien: string) {
   });
 }
 
-/** Les sections de la barre, et du menu au téléphone, dans l'ordre de la page. */
+/** Les sections de l'accueil, dans l'ordre de la page. */
 const SECTIONS = [['#inspiration', 'Inspiration'], ['#fonctionnement', 'Comment ça marche'], ['#themes', 'Thèmes'], ['#prix', 'Tarifs'], ['#questions', 'Questions']];
+/** La barre au bureau (26 octobre 2026, demandé par Lilian) : trois sections, et les pages des fonctions et des comparatifs en listes déroulantes. */
+const BARRE: (string[] | 'fonctions' | 'comparatifs')[] = [['#fonctionnement', 'Comment ça marche'], 'fonctions', ['#themes', 'Thèmes'], ['#prix', 'Tarifs'], 'comparatifs'];
+/** Le menu du téléphone : toutes les sections, et les pages des fonctions et des comparatifs à leur place. */
+const MENU = [SECTIONS[0], SECTIONS[1], ['/fonctions', 'Fonctions'], SECTIONS[2], SECTIONS[3], ['/comparatif', 'Comparatifs'], SECTIONS[4]];
+const OFFRE = { gratuit: 'Gratuit', starter: 'Starter', pro: 'Pro' } as const;
 /** Où commence chaque lien de la barre ; les sections sans lien (Prise, le dernier appel) le referment. */
-const REPERES = [...SECTIONS.map(([lien]) => [lien, lien]), ['#prise', ''], ['#dernier', '']];
+const REPERES = [...SECTIONS.map(([lien]) => [lien, lien]), ['#plus-loin', 'fonctions'], ['#prise', ''], ['#dernier', '']];
 
 export function Ouverture({ api }: { api: ApiAccueil }) {
   const mode = useInscription();

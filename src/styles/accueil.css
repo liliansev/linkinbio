@@ -172,7 +172,7 @@ html:has(.hl) { background: #fff; scroll-padding-top: 76px; }
  * Au bureau, il est posé au bord, hors du flux, et Connexion glisse à sa place quand il s'efface (`--creer`, sa largeur). */
 /* Un bouton qui a le focus reste là : le clavier ne tombe jamais dans le vide. */
 .hl-barre[data-champ] .hl-barre-actions .hl-btn:not(:focus), .hl-barre[data-envoye] .hl-barre-actions .hl-btn { opacity: 0; visibility: hidden; }
-@media (min-width: 900px) {
+@media (min-width: 1120px) {
   .hl-barre-actions { position: relative; }
   .hl-barre-actions .hl-btn { position: absolute; top: 0; right: 0; bottom: 0; width: max-content; height: fit-content; margin-block: auto; }
   .hl-barre-connexion { transform: translateX(calc(-18px - var(--creer, 0px))); transition: color .15s, transform .35s var(--ease); }
@@ -187,12 +187,12 @@ html:has(.hl) { background: #fff; scroll-padding-top: 76px; }
 /* La section où l'on est : à l'encre, soulignée. */
 .hl-barre-nav a[aria-current] { color: var(--encre); text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 8px; }
 .hl-menu a[aria-current] { font-weight: 650; }
-/* Entre 900 et 1100 px, les cinq liens se resserrent pour tenir à côté de Connexion et du bouton. */
-@media (max-width: 1099px) { .hl-barre-nav { gap: 18px; margin-left: 4px; } .hl-barre-actions { gap: 14px; } }
+/* Entre 1120 et 1280 px, les cinq entrées se resserrent pour tenir à côté de Connexion et du bouton. */
+@media (max-width: 1279px) { .hl-barre-nav { gap: 18px; margin-left: 4px; } .hl-barre-actions { gap: 14px; } }
 /* Sur une tablette tactile en paysage, la barre large garde des cibles de 44 px. */
 @media (pointer: coarse) { .hl-barre-nav a, .hl-barre-connexion { display: inline-flex; align-items: center; min-height: 44px; } }
 .hl-barre-actions { margin-left: auto; display: flex; align-items: center; gap: 18px; }
-@media (min-width: 900px) { .hl-barre-nav { display: flex; } }
+@media (min-width: 1120px) { .hl-barre-nav { display: flex; } }
 @media (min-width: 380px) { .hl-barre-actions .hl-large { display: inline; } }
 .hl-barre-menu {
   display: none; place-items: center; width: 44px; height: 44px; margin-right: -10px; padding: 0;
@@ -202,12 +202,12 @@ html:has(.hl) { background: #fff; scroll-padding-top: 76px; }
 .hl-menu[hidden] { display: none; }
 .hl-menu a { display: flex; align-items: center; min-height: 52px; border-top: 1px solid var(--filet); color: var(--encre); font-size: 18px; font-weight: 500; letter-spacing: -0.01em; text-decoration: none; }
 .hl-barre:has(.hl-menu:not([hidden])) { background: #fff; }
-@media (max-width: 899px) {
+@media (max-width: 1119px) {
   .hl-barre-connexion { display: none; }
   .hl-barre-menu { display: grid; }
   .hl-barre-actions { gap: 8px; }
 }
-@media (min-width: 900px) { .hl-menu { display: none !important; } }
+@media (min-width: 1120px) { .hl-menu { display: none !important; } }
 
 /* ---- 01 · L'ouverture ----
  * Au téléphone, centrée : la promesse, le champ du nom, puis trois téléphones
