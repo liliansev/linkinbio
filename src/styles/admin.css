@@ -1167,7 +1167,13 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
  * Réglages et les encarts de Stats (24 octobre 2026, trois zones) : ses lignes ne flottent plus sur le fond.
  */
 @media (min-width: 1024px) {
-  .adm-tableau { border-collapse: separate; border-spacing: 0; overflow: hidden; border: 1px solid #e6e6e2; border-radius: 12px; background: #fff; }
+  /* Sans overflow : le menu « … » d'une ligne déborde du tableau en entier (26 octobre 2026). Les cellules des coins
+   * épousent l'arrondi, pour qu'un fond de ligne (survol, fiche ouverte) ne le dépasse pas. */
+  .adm-tableau { border-collapse: separate; border-spacing: 0; border: 1px solid #e6e6e2; border-radius: 12px; background: #fff; }
+  .adm-tableau thead tr:first-child > :first-child { border-top-left-radius: 11px; }
+  .adm-tableau thead tr:first-child > :last-child { border-top-right-radius: 11px; }
+  .adm-tableau tbody tr:last-child > :first-child { border-bottom-left-radius: 11px; }
+  .adm-tableau tbody tr:last-child > :last-child { border-bottom-right-radius: 11px; }
   .adm-tableau :is(th, td):first-child { padding-left: 16px; }
   .adm-tableau td:last-child { padding-right: 8px; }
   .adm-tableau td:last-child .adm-points { margin-right: 0; }
