@@ -25,9 +25,9 @@ export function Telephone({ largeur = 300, adresse, label, children, className =
   );
 }
 
-/** Une page Hopla, la vraie, dans l'écran. */
+/** Une page Hopla, la vraie, dans l'écran, sans la mention Hopla : un exemple ne la porte jamais. */
 export function EcranPage({ page }: { page: PagePublique }) {
-  return <div className="hl-tel-page"><PageLiens page={page} apercu /></div>;
+  return <div className="hl-tel-page"><PageLiens page={page} apercu sansMention /></div>;
 }
 
 /*
