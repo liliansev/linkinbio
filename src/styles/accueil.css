@@ -738,11 +738,13 @@ html:has(.hl-reserver input:focus) { overflow-anchor: none; }
   overflow-x: auto; scroll-snap-type: x mandatory; scroll-padding-inline: var(--bord); overscroll-behavior-x: contain; scrollbar-width: none;
 }
 .hl-rail::-webkit-scrollbar { display: none; }
-/* Le rail entre une fois : les téléphones glissent de 24 px, les six premiers l'un après l'autre. La glissade est sur
- * le contenu, pas sur l'élément aimanté : le rail ne bouge pas sous la flèche ou le focus. */
+/* En boucle, le rail défile seul : l'aimant le ramènerait à chaque image. */
+.hl-rail[data-boucle] { scroll-snap-type: none; }
+/* Le rail paraît en fondu, un peu avant d'arriver à l'écran : les six premiers téléphones l'un après l'autre. Le
+ * fondu est sur le contenu, pas sur l'élément aimanté : le rail ne bouge pas sous la flèche ou le focus. */
 @media (scripting: enabled) and (prefers-reduced-motion: no-preference) {
-  .hl-rail-item > * { transition: opacity .5s var(--ease), transform .5s var(--ease); transition-delay: var(--d, 0ms); }
-  .hl-rail:not([data-vu]) .hl-rail-item > * { opacity: 0; transform: translateX(24px); }
+  .hl-rail-item > * { transition: opacity .9s var(--ease), transform .9s var(--ease); transition-delay: var(--d, 0ms); }
+  .hl-rail:not([data-vu]) .hl-rail-item > * { opacity: 0; transform: translateX(16px); }
 }
 .hl-rail-item { flex: none; width: 300px; display: flex; flex-direction: column; gap: 12px; scroll-snap-align: start; }
 .hl-rail-item > :first-child { content-visibility: auto; contain-intrinsic-size: auto 300px auto 600px; }
