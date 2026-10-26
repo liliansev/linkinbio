@@ -361,16 +361,15 @@ export interface Liste {
 }
 
 /**
- * L'image qu'on demande avec l'aperçu d'un site : aucune (`false`, plus vite), son image de partage ou sinon une capture
- * de la page (`true`), son image de partage seule (`'partage'`, la photo d'un produit), son logo seul (`'logo'`), ou ce
- * qui tient le mieux dans la petite vignette carrée d'un bouton (`'vignette'` : l'image de partage si elle est carrée,
- * sinon le logo, sinon l'image de partage ; jamais une capture).
+ * L'image qu'on demande avec l'aperçu d'un site : aucune (`false`, plus vite), son image de partage (`true` ou
+ * `'partage'`, la photo d'un produit), son logo seul (`'logo'`), ou la petite vignette carrée d'un bouton (`'vignette'` :
+ * le favicon du site, sinon une image de partage carrée, sinon rien). Jamais une capture de la page (26 octobre 2026).
  */
 export type ImageApercu = boolean | 'partage' | 'logo' | 'vignette';
 /** La note d'une page d'avis, lue dans ses données structurées : sur 5, le nombre d'avis, le nom du site. */
 export interface NoteAvis { note: number; nombre: number; source: string }
-/** D'où vient l'image d'un aperçu : l'image de partage du site, son logo, ou une capture de sa page. */
-export type VisuelApercu = 'partage' | 'logo' | 'capture';
+/** D'où vient l'image d'un aperçu : l'image de partage du site, ou son logo (son favicon). */
+export type VisuelApercu = 'partage' | 'logo';
 
 /** Ce que le back office demande au serveur (ou à la démo, dans l'aperçu). */
 export interface Api {

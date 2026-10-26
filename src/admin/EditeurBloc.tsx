@@ -186,7 +186,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
   const efface = useRef(false);
   /** La prochaine lecture part sans attendre : une adresse arrivée toute faite, ou « En faire un simple lien ». */
   const immediat = useRef(nouveau && !repris && !!bloc.url);
-  /** D'où vient l'image : l'image de partage du site, son logo, une capture, une photo choisie ; null si on ne sait pas. */
+  /** D'où vient l'image : l'image de partage du site, son logo, une photo choisie ; null si on ne sait pas. */
   const genreImage = useRef<VisuelApercu | 'photo' | null>(null);
   // Une erreur dit sur quel champ elle porte : elle s'affiche dessous, et part dès qu'on y touche.
   // Plusieurs champs peuvent manquer à la fois (une note, son nombre d'avis, sa source) : chacun dit le sien.
@@ -1037,7 +1037,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
   const source = b.image ? genreImage.current : !produit && b.icone ? 'icone' : null;
   const coche = (de: (typeof source)[]) => (source ? de.includes(source) : undefined);
   const elementsVignette: ElementMenu[] = [
-    ...(web && !rdv ? [{ nom: produit ? 'Photo de la boutique' : musique ? 'Pochette' : 'Image du site', coche: coche(['partage', 'capture']), action: () => void prendreDuSite('partage') }] : []),
+    ...(web && !rdv ? [{ nom: produit ? 'Photo de la boutique' : musique ? 'Pochette' : 'Image du site', coche: coche(['partage']), action: () => void prendreDuSite('partage') }] : []),
     ...(web && !produit && !rdv && !musique ? [{ nom: 'Logo du site', coche: coche(['logo']), action: () => void prendreDuSite('logo') }] : []),
     { nom: 'Choisir une photo', coche: coche(['photo']), action: () => choisirFichier(fichier.current, vignette.current) },
     ...(!produit && !musique ? [{ nom: 'Choisir une icône', coche: coche(['icone']), action: () => setIcones(true) }] : []),
