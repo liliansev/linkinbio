@@ -18,8 +18,8 @@ import { mouvementReduit, useVisible } from './mouvement.ts';
  * fasse glisser soi-même.
  */
 
-/** Pixels par seconde : on lit un nom de thème au passage sans courir après. */
-const VITESSE = 36;
+/** Pixels par seconde (90 depuis le 26 octobre 2026, Lilian : « pas assez vite ») : le rail vit, un nom se lit encore au passage. */
+const VITESSE = 90;
 /** Après un geste du visiteur, le rail attend avant de reprendre sa course. */
 const REPRISE = 3000;
 
