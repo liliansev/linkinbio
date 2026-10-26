@@ -1,10 +1,9 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { avecJeton, preparerTurnstile } from '../lib/turnstile.ts';
 import { Accueil } from '../accueil/Accueil.tsx';
-import type { ApiAccueil } from '../accueil/Reserver.tsx';
+import { API } from '../accueil/api.ts';
 import { DESCRIPTION, FONCTIONS, questions } from '../accueil/textes.ts';
 import type { Inscription } from '../accueil/textes.ts';
-import { corrigerAdresse, modeInscription, renommerPage, renvoyerLien, reserverNom, verifierNom } from '../server/fonctions.ts';
+import { modeInscription } from '../server/fonctions.ts';
 import { OFFRES, PERIODES, PLANS_PAYANTS } from '../lib/abonnement.ts';
 import { ORIGINE_PUBLIQUE, SITE_LILIAN } from '../lib/types.ts';
 
@@ -86,16 +85,7 @@ export const Route = createFileRoute('/')({
   component: Page,
 });
 
-// Chaque envoi part avec son jeton anti-robot (lib/turnstile.ts), préparé dès qu'on tape un nom.
-const api = (mode: Inscription): ApiAccueil => ({
-  verifier: nom => { preparerTurnstile('accueil'); return verifierNom({ data: nom }); },
-  reserver: (nom, email) => avecJeton('accueil', jeton => reserverNom({ data: { nom, email, jeton } })),
-  // Une page pas encore ouverte reçoit de nouveau sa bienvenue (sinon un lien de connexion). En liste d'attente, la réservation se rappelle.
-  renvoyer: (nom, email) => avecJeton('accueil', jeton => (mode === 'libre' ? renvoyerLien({ data: { nom, email, jeton } }) : reserverNom({ data: { nom, email, jeton } }))),
-  corriger: (nom, ancienne, nouvelle) => avecJeton('accueil', jeton => corrigerAdresse({ data: { nom, ancienne, nouvelle, jeton } })),
-  renommer: (ancien, nouveau, email) => avecJeton('accueil', jeton => renommerPage({ data: { ancien, nouveau, email, jeton } })),
-});
-const API = { libre: api('libre'), attente: api('attente') };
+
 
 function Page() {
   const mode = Route.useLoaderData() ?? 'libre';

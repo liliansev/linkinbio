@@ -40,7 +40,7 @@ function Revoir({ onClick, quoi }: { onClick: () => void; quoi: string }) {
  * que la scène joue, et la légende dessous.
  */
 
-type Cote = 'sans' | 'avec';
+export type Cote = 'sans' | 'avec';
 /*
  * Sans Hopla, 1 : la touche sur le lien ; 2 : le navigateur d'Instagram s'ouvre ;
  * 3 : la demande de connexion reste à l'écran, le temps de la lire ; 4 : le
@@ -56,6 +56,56 @@ const LEGENDES: Record<Cote, string> = {
   sans: 'Le lien s’ouvre dans le navigateur d’Instagram. Une connexion peut être demandée avant de regarder le clip de Sacha.',
   avec: 'Hopla ouvre le clip de Sacha dans l’app YouTube si elle est installée. Le visiteur retrouve son compte et peut s’abonner.',
 };
+
+/** Le trajet du visiteur de Sacha, sans Hopla ou avec, à l'étape `etape` (voir PAS_SANS et PAS_AVEC). */
+export function EcranDansApp({ cote, etape, reduit = false }: { cote: Cote; etape: number; reduit?: boolean }) {
+  return (
+    <div className="hl-scene-app">
+      <div className="hl-cq">
+        <CroquisTete profil="sacha" />
+        <div className="hl-cq-liens">
+          <CroquisLien titre="Les jours bleus, le clip" picto={<Icone nom="youtube" taille={14} />} data-touche={etape >= 1 || undefined} />
+          <CroquisLien titre="Écouter sur Spotify" />
+          <CroquisLien titre="Les prochaines dates" />
+          <CroquisLien titre="Le merch de la tournée" />
+          <CroquisLien titre="M’écrire pour un concert" />
+        </div>
+      </div>
+      {cote === 'sans' ? <>
+        <div className="hl-integre" data-ouvert={(etape >= 2 && (etape < 5 || reduit)) || undefined}>
+          <div className="hl-integre-barre"><span className="hl-tap" data-touche={etape >= 4 || undefined}><Icone nom="ui-fermer" taille={14} /></span><span>youtube.com</span></div>
+          <i className="hl-integre-charge" data-joue={etape >= 2 || undefined} />
+          <div className="hl-integre-video hp-video-sacha"><Avatar profil="sacha" /></div>
+          <div className="hl-cq-trait" style={{ width: '70%' }} />
+          <div className="hl-cq-trait" style={{ width: '45%' }} />
+          <div className="hl-integre-feuille">
+            <b>Connecte-toi pour continuer</b>
+            <span className="hl-cq-trait" style={{ width: '80%' }} />
+            <span className="hl-integre-bouton">Se connecter</span>
+          </div>
+        </div>
+        {etape >= 5 && <p className="hl-toast" role="status">Ton visiteur est reparti.</p>}
+      </> : (
+        <div className="hl-app" data-ouvert={etape >= 2 || undefined}>
+          <div className="hl-app-barre"><Icone nom="youtube" taille={18} /><b>YouTube</b></div>
+          <div className="hl-app-video hp-video-sacha"><Avatar profil="sacha" /><Icone nom="play" taille={30} /><i data-joue={etape >= 3 || undefined} /></div>
+          <div className="hl-app-corps">
+            <b className="hp-video-titre">Les jours bleus · le clip</b>
+            <div className="hl-app-ligne">
+              <Avatar profil="sacha" className="hl-app-rond" /><b className="hp-chaine">Sacha Diop</b>
+              <span className="hl-app-abonne hl-tap" data-touche={etape >= 4 || undefined} data-fait={etape >= 4 || undefined}>
+                {etape >= 4 ? <><Icone nom="check" taille={12} />Abonné</> : 'S’abonner'}
+              </span>
+            </div>
+          </div>
+          <ul className="hl-app-suite" aria-hidden="true">
+            {[0, 1, 2].map(k => <li key={k}><i /><span><span className="hl-app-trait" style={{ width: `${86 - k * 14}%` }} /><span className="hl-app-trait" style={{ width: '44%' }} /></span></li>)}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function DansApp() {
   const [ref, vu] = useVu<HTMLDivElement>(0.85);
@@ -86,50 +136,7 @@ export function DansApp() {
           <Telephone largeur={290} className="hl-tel-court" label={cote === 'sans'
             ? 'Sans Hopla : le lien YouTube s’ouvre dans le navigateur d’Instagram, qui demande de se connecter, et le visiteur repart.'
             : 'Avec Hopla : le lien YouTube s’ouvre directement dans l’app YouTube, où le visiteur s’abonne.'}>
-            <div key={jeu} className="hl-scene-app">
-              <div className="hl-cq">
-                <CroquisTete profil="sacha" />
-                <div className="hl-cq-liens">
-                  <CroquisLien titre="Les jours bleus, le clip" picto={<Icone nom="youtube" taille={14} />} data-touche={etape >= 1 || undefined} />
-                  <CroquisLien titre="Écouter sur Spotify" />
-                  <CroquisLien titre="Les prochaines dates" />
-                  <CroquisLien titre="Le merch de la tournée" />
-                  <CroquisLien titre="M’écrire pour un concert" />
-                </div>
-              </div>
-              {cote === 'sans' ? <>
-                <div className="hl-integre" data-ouvert={(etape >= 2 && (etape < 5 || reduit)) || undefined}>
-                  <div className="hl-integre-barre"><span className="hl-tap" data-touche={etape >= 4 || undefined}><Icone nom="ui-fermer" taille={14} /></span><span>youtube.com</span></div>
-                  <i className="hl-integre-charge" data-joue={etape >= 2 || undefined} />
-                  <div className="hl-integre-video hp-video-sacha"><Avatar profil="sacha" /></div>
-                  <div className="hl-cq-trait" style={{ width: '70%' }} />
-                  <div className="hl-cq-trait" style={{ width: '45%' }} />
-                  <div className="hl-integre-feuille">
-                    <b>Connecte-toi pour continuer</b>
-                    <span className="hl-cq-trait" style={{ width: '80%' }} />
-                    <span className="hl-integre-bouton">Se connecter</span>
-                  </div>
-                </div>
-                {etape >= 5 && <p className="hl-toast" role="status">Ton visiteur est reparti.</p>}
-              </> : (
-                <div className="hl-app" data-ouvert={etape >= 2 || undefined}>
-                  <div className="hl-app-barre"><Icone nom="youtube" taille={18} /><b>YouTube</b></div>
-                  <div className="hl-app-video hp-video-sacha"><Avatar profil="sacha" /><Icone nom="play" taille={30} /><i data-joue={etape >= 3 || undefined} /></div>
-                  <div className="hl-app-corps">
-                    <b className="hp-video-titre">Les jours bleus · le clip</b>
-                    <div className="hl-app-ligne">
-                      <Avatar profil="sacha" className="hl-app-rond" /><b className="hp-chaine">Sacha Diop</b>
-                      <span className="hl-app-abonne hl-tap" data-touche={etape >= 4 || undefined} data-fait={etape >= 4 || undefined}>
-                        {etape >= 4 ? <><Icone nom="check" taille={12} />Abonné</> : 'S’abonner'}
-                      </span>
-                    </div>
-                  </div>
-                  <ul className="hl-app-suite" aria-hidden="true">
-                    {[0, 1, 2].map(k => <li key={k}><i /><span><span className="hl-app-trait" style={{ width: `${86 - k * 14}%` }} /><span className="hl-app-trait" style={{ width: '44%' }} /></span></li>)}
-                  </ul>
-                </div>
-              )}
-            </div>
+            <EcranDansApp key={jeu} cote={cote} etape={etape} reduit={reduit} />
           </Telephone>
         </div>
         <div className="hl-dans-app-commande" {...garde}>
@@ -171,14 +178,14 @@ const DEPART: EtatVivant = { heure: 9, rebours: 5, drop: 0, avis: 0, liste: 0 };
 const ORDRE: Chapitre[] = ['heure', 'rebours', 'drop', 'avis', 'liste'];
 
 /** L'adresse que tape le visiteur de Malik, une lettre après l'autre. */
-const ADRESSE_LISTE = 'noa@mail.fr';
+export const ADRESSE_LISTE = 'noa@mail.fr';
 /* La liste : l'adresse s'écrit (1 à 11), le bouton est touché (12), « C'est noté » (13), l'inscrit part vers Brevo (14). */
-const LISTE_TOUCHE = ADRESSE_LISTE.length + 1;
-const LISTE_NOTEE = ADRESSE_LISTE.length + 2;
-const LISTE_BREVO = ADRESSE_LISTE.length + 3;
+export const LISTE_TOUCHE = ADRESSE_LISTE.length + 1;
+export const LISTE_NOTEE = ADRESSE_LISTE.length + 2;
+export const LISTE_BREVO = ADRESSE_LISTE.length + 3;
 /* Les avis : les cinq étoiles se remplissent (1 à 5), la note et le nombre d'avis (6), le mot d'une cliente (7). */
-const AVIS_NOTE = 6;
-const AVIS_MOT = 7;
+export const AVIS_NOTE = 6;
+export const AVIS_MOT = 7;
 const IMMOBILE: EtatVivant = { heure: 21, rebours: ((2 * 60) + 14) * 60 + 8, drop: 3, avis: AVIS_MOT, liste: LISTE_BREVO };
 
 /** Les pas de chaque démo : [délai en ms, valeur]. */
@@ -200,14 +207,14 @@ const LIENS_HEURE: Record<string, { titre: string; picto: string }> = {
   boutique: { titre: 'Réserver un dîner', picto: 'agenda' },
 };
 
-function EcranHeure({ heure }: { heure: number }) {
+export function EcranHeure({ heure }: { heure: number }) {
   const liste = useRef<HTMLDivElement>(null);
   const soir = heure >= 18;
   const ordre = soir ? ['boutique', 'tiktok', 'atelier'] : ['atelier', 'tiktok', 'boutique'];
   useGlisse(liste, ordre.join(), 550);
   return (
     <div className="hl-cq">
-      <div className="hl-cq-horloge"><b>{deux(heure)}:00</b><span>{soir ? 'le soir' : 'le matin'}</span></div>
+      <div className="hl-cq-horloge"><b>{deux(heure)}:00</b><span>{soir ? 'le soir' : heure >= 14 ? 'l’après-midi' : heure >= 12 ? 'le midi' : 'le matin'}</span></div>
       <CroquisTete profil="malik" />
       <div className="hl-cq-liens" ref={liste}>
         {ordre.map((c, k) => <CroquisLien key={c} cle={c} titre={LIENS_HEURE[c].titre} vedette={k === 0} picto={<Icone nom={LIENS_HEURE[c].picto} taille={14} />} />)}
@@ -217,7 +224,7 @@ function EcranHeure({ heure }: { heure: number }) {
 }
 
 /** Un lancement : le compte à rebours, sans l'adresse, puis le lien qui s'ouvre à l'heure dite. L'horloge dit l'heure qu'il est : à 17:59, il ne reste que des secondes. */
-function EcranRebours({ reste }: { reste: number }) {
+export function EcranRebours({ reste }: { reste: number }) {
   const h = Math.floor(reste / 3600), m = Math.floor((reste % 3600) / 60), s = reste % 60;
   const maintenant = 18 * 3600 - reste;
   return (
@@ -239,7 +246,7 @@ function EcranRebours({ reste }: { reste: number }) {
   );
 }
 
-function EcranDrop({ drop }: { drop: number }) {
+export function EcranDrop({ drop }: { drop: number }) {
   const code = 'MERCI'.slice(0, drop >= 2 ? 5 : drop === 1 ? 3 : 0);
   const ouvert = drop >= 2;
   return (
@@ -264,7 +271,7 @@ function EcranDrop({ drop }: { drop: number }) {
 }
 
 /** Les avis d'Inès : ses étoiles se remplissent, puis sa note, le nombre d'avis et le mot d'une cliente. */
-function EcranAvis({ avis }: { avis: number }) {
+export function EcranAvis({ avis }: { avis: number }) {
   return (
     <div className="hl-cq">
       <CroquisTete profil="ines" />
@@ -286,7 +293,7 @@ function EcranAvis({ avis }: { avis: number }) {
 }
 
 /** La liste de Malik : un visiteur tape son adresse, s'inscrit, et l'inscrit part vers Brevo. */
-function EcranListe({ liste }: { liste: number }) {
+export function EcranListe({ liste }: { liste: number }) {
   const note = liste >= LISTE_NOTEE;
   return (
     <div className="hl-cq">
@@ -408,9 +415,9 @@ export function Vivante() {
  * Jamais les mêmes chiffres deux fois côte à côte.
  */
 
-type Morceau = string | { n: number; avant?: string; suite?: string };
+export type Morceau = string | { n: number; avant?: string; suite?: string };
 
-function Phrase({ morceaux, joue, depart, hausse }: { morceaux: Morceau[]; joue: boolean; depart: number; hausse?: boolean }) {
+export function Phrase({ morceaux, joue, depart, hausse }: { morceaux: Morceau[]; joue: boolean; depart: number; hausse?: boolean }) {
   let k = 0;
   return (
     <li className="hl-stat" data-joue={joue || undefined}>
@@ -535,13 +542,13 @@ export function Stats() {
  * dans une seule section, une ligne chacun, à côté du tableau de bord. `Vivante` et `Stats` restent écrits
  * pour les pages de chaque fonction.
  */
-const PLUS_LOIN: { nom: string; texte: string; offre: 'starter' | 'pro' }[] = [
-  { nom: 'Tes stats, en clair', texte: 'Tes vues, tes clics, d’où viennent tes visiteurs, et l’essentiel chaque lundi par e‑mail.', offre: 'starter' },
-  { nom: 'Ta vitrine', texte: 'Tes produits avec leur photo et leur prix, ta prise de rendez-vous, tes dons.', offre: 'starter' },
-  { nom: 'Tes lancements', texte: 'Un lien qui apparaît à l’heure dite, avec son compte à rebours.', offre: 'starter' },
-  { nom: 'Tes avis clients', texte: 'Ta note Google ou Trustpilot, recopiée chaque jour.', offre: 'starter' },
-  { nom: 'Ta page selon l’heure', texte: 'Le menu du jour le midi, la réservation le soir.', offre: 'pro' },
-  { nom: 'Tes drops et ta liste e‑mail', texte: 'Des places comptées, et des inscrits qui partent vers ta newsletter.', offre: 'pro' },
+const PLUS_LOIN: { nom: string; texte: string; offre: 'starter' | 'pro'; page: string }[] = [
+  { nom: 'Tes stats, en clair', texte: 'Tes vues, tes clics, d’où viennent tes visiteurs, et l’essentiel chaque lundi par e‑mail.', offre: 'starter', page: 'stats' },
+  { nom: 'Ta vitrine', texte: 'Tes produits avec leur photo et leur prix, ta prise de rendez-vous, tes dons.', offre: 'starter', page: 'vitrine' },
+  { nom: 'Tes lancements', texte: 'Un lien qui apparaît à l’heure dite, avec son compte à rebours.', offre: 'starter', page: 'lancement' },
+  { nom: 'Tes avis clients', texte: 'Ta note Google ou Trustpilot, recopiée chaque jour.', offre: 'starter', page: 'avis' },
+  { nom: 'Ta page selon l’heure', texte: 'Le menu du jour le midi, la réservation le soir.', offre: 'pro', page: 'page-selon-l-heure' },
+  { nom: 'Tes drops et ta liste e‑mail', texte: 'Des places comptées, et des inscrits qui partent vers ta newsletter.', offre: 'pro', page: 'drops' },
 ];
 
 export function PlusLoin() {
@@ -555,11 +562,12 @@ export function PlusLoin() {
         <ul className="hp-plus-loin-liste">
           {PLUS_LOIN.map((f, i) => (
             <li key={f.nom} className="hl-entre" style={d(i * 50)}>
-              <b>{f.nom}</b>
+              <a href={`/fonctions/${f.page}`} className="hp-plus-loin-nom"><b>{f.nom}</b></a>
               <span>{f.texte}</span>
               <a href="#prix" className="hp-badge-offre" data-offre={f.offre}>{f.offre === 'pro' ? 'Pro' : 'Starter'}</a>
             </li>
           ))}
+          <li className="hp-plus-loin-tout hl-entre"><a href="/fonctions">Toutes les fonctions, une page chacune</a></li>
         </ul>
         <article className="hl-mail hp-doc-dashboard hl-entre" aria-label="Exemple de tableau de bord">
           <div className="hl-mail-tete"><Symbole className="hl-mail-logo" /><b>Hopla</b></div>

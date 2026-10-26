@@ -22,17 +22,17 @@ const insecables = (g: string) => g.replace(/« /g, '«\u00a0').replace(/ »/g, 
 
 /** Ce que la page a déjà montré : l'avantage ramène à sa démonstration (un chapitre de la page vivante s'ouvre en arrivant). */
 const DEMOS: Record<string, string> = {
-  'Ta page selon le réseau du visiteur': '#fonctionnement',
-  'Les vingt thèmes': '#themes',
-  'Tes couleurs, ta police, ton fond': '#couleurs',
-  'Ta vitrine : produits, rendez-vous, dons': '#plus-loin',
-  'Tes liens programmés à l’avance': '#plus-loin',
-  'Les avis de tes clients': '#plus-loin',
-  'Tes stats sur 30 jours': '#plus-loin',
-  'Ta page selon l’heure et le pays': '#plus-loin',
-  'Les drops : un code, des places comptées': '#plus-loin',
-  'Ta liste e-mail, vers ta newsletter': '#plus-loin',
-  'Tes stats sur un an': '#plus-loin',
+  'Ta page selon le réseau du visiteur': '/fonctions/selon-le-reseau',
+  'Les vingt thèmes': '/fonctions/themes',
+  'Tes couleurs, ta police, ton fond': '/fonctions/themes',
+  'Ta vitrine : produits, rendez-vous, dons': '/fonctions/vitrine',
+  'Tes liens programmés à l’avance': '/fonctions/lancement',
+  'Les avis de tes clients': '/fonctions/avis',
+  'Tes stats sur 30 jours': '/fonctions/stats',
+  'Ta page selon l’heure et le pays': '/fonctions/page-selon-l-heure',
+  'Les drops : un code, des places comptées': '/fonctions/drops',
+  'Ta liste e-mail, vers ta newsletter': '/fonctions/liste-email',
+  'Tes stats sur un an': '/fonctions/stats',
 };
 
 /**
@@ -141,7 +141,7 @@ export function Prix() {
 function Avantage({ g }: { g: string }) {
   return (
     <li><Icone nom="check" taille={18} /><span>{DEMOS[g]
-      ? <a className="hl-offre-demo" href={DEMOS[g]}>{insecables(g)}<span className="hl-cache">, à revoir plus haut</span></a>
+      ? <a className="hl-offre-demo" href={DEMOS[g]}>{insecables(g)}<span className="hl-cache">, voir la fonction</span></a>
       : insecables(g)}</span></li>
   );
 }
@@ -201,6 +201,7 @@ export function Pied() {
       <Marque />
       <nav aria-label="Liens utiles">
         <a href="/admin">Connexion</a>
+        <a href="/fonctions">Fonctions</a>
         <a href="/legal/cgu">Conditions</a>
         <a href="/legal/confidentialite">Confidentialité</a>
         <a href="/legal/mentions-legales">Mentions légales</a>

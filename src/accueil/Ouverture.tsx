@@ -18,7 +18,8 @@ export function Marque() {
   );
 }
 
-export function Barre() {
+/** `ailleurs` : sur une autre page que l'accueil, les sections de la barre mènent à l'accueil. */
+export function Barre({ ailleurs = false }: { ailleurs?: boolean }) {
   const [defile, setDefile] = useState(false);
   const [menu, setMenu] = useState(false);
   // Au chargement, le champ de l'ouverture est à l'écran : le bouton de la barre attend qu'il en sorte.
@@ -58,6 +59,7 @@ export function Barre() {
   // Prise et le dernier appel, qui n'ont pas de lien, n'en marquent aucun.
   const [ici, setIci] = useState('');
   useEffect(() => {
+    if (ailleurs) return;
     let image = 0;
     const f = () => {
       cancelAnimationFrame(image);
@@ -74,7 +76,7 @@ export function Barre() {
     addEventListener('scroll', f, { passive: true });
     addEventListener('resize', f);
     return () => { cancelAnimationFrame(image); removeEventListener('scroll', f); removeEventListener('resize', f); };
-  }, []);
+  }, [ailleurs]);
   // Au téléphone, le menu se ferme avec Échap ou en touchant ailleurs ; fermé au clavier depuis le menu, il rend le focus à son bouton.
   const boutonMenu = useRef<HTMLButtonElement>(null);
   useEffect(() => {
@@ -95,7 +97,7 @@ export function Barre() {
       <div className="hl-barre-dedans">
         <Marque />
         <nav className="hl-barre-nav" aria-label="Sections">
-          {SECTIONS.map(([lien, texte]) => <a key={lien} href={lien} aria-current={ici === lien || undefined} onClick={() => titreDe(lien)}>{texte}</a>)}
+          {SECTIONS.map(([lien, texte]) => <a key={lien} href={ailleurs ? `/${lien}` : lien} aria-current={ici === lien || undefined} onClick={() => { if (!ailleurs) titreDe(lien); }}>{texte}</a>)}
         </nav>
         <div className="hl-barre-actions">
           <a href="/admin" className="hl-barre-connexion">Connexion</a>
@@ -106,7 +108,7 @@ export function Barre() {
         </div>
       </div>
       <nav id="hl-menu" className="hl-menu" aria-label="Menu" hidden={!menu}>
-        {SECTIONS.map(([lien, texte]) => <a key={lien} href={lien} aria-current={ici === lien || undefined} onClick={() => { setMenu(false); titreDe(lien); }}>{texte}</a>)}
+        {SECTIONS.map(([lien, texte]) => <a key={lien} href={ailleurs ? `/${lien}` : lien} aria-current={ici === lien || undefined} onClick={() => { setMenu(false); if (!ailleurs) titreDe(lien); }}>{texte}</a>)}
         <a href="/admin">Connexion</a>
       </nav>
     </header>
