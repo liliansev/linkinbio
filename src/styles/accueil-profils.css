@@ -415,3 +415,12 @@
 @media (prefers-reduced-motion: reduce) {
   .hp-lien-source, .hp-preuve { animation: none; }
 }
+
+/* Les cartes de prix (26 octobre 2026) : ce qui sépare l'offre d'abord, le reste replié sous « Et N autres ». */
+.hl-humain .hl-offre > ul:has(+ .hl-offre-reste) { flex: none; }
+.hl-offre-reste { flex: 1; margin-top: -8px; font-size: 14px; }
+.hl-offre-reste > summary { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; cursor: pointer; list-style: none; font-weight: 600; text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 1px; text-decoration-color: color-mix(in srgb, currentColor 45%, transparent); }
+.hl-offre-reste > summary::-webkit-details-marker { display: none; }
+.hl-offre-reste > summary svg { transition: transform .2s; }
+.hl-offre-reste[open] > summary svg { transform: rotate(45deg); }
+.hl-offre-reste > ul { margin-top: 6px; }

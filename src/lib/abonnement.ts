@@ -46,15 +46,15 @@ export interface Offre {
 
 export const OFFRES: Record<Plan, Offre> = {
   gratuit: {
-    nom: 'Gratuit', phrase: 'Ta page en ligne, pour toujours.', prix: { mois: 0, an: 0 }, quota: 25 * Mo, jours: 0, enVente: true,
+    nom: 'Gratuit', phrase: 'Ta page qui s’adapte à chaque réseau, pour toujours.', prix: { mois: 0, an: 0 }, quota: 25 * Mo, jours: 0, enVente: true,
     avantages: ['Cinq blocs sur ta page', 'Ta page selon le réseau du visiteur', 'Les vingt thèmes'],
   },
   starter: {
-    nom: 'Starter', phrase: 'Ta page, sans la mention Hopla.', prix: { mois: 9, an: 79 }, quota: 100 * Mo, jours: 30, enVente: true,
+    nom: 'Starter', phrase: 'Ta marque : tes couleurs, ta vitrine, tes stats.', prix: { mois: 9, an: 79 }, quota: 100 * Mo, jours: 30, enVente: true,
     avantages: ['Sans la mention Hopla', 'Des blocs sans limite', 'Ta vitrine : produits, rendez-vous, dons', 'Tes couleurs, ta police, ton fond', 'Grande photo, liens en grille', 'Tes liens programmés à l’avance', 'Les avis de tes clients', 'Ton formulaire et tes galeries', 'Tes stats sur 30 jours', 'Redirection et suivi UTM'],
   },
   pro: {
-    nom: 'Pro', phrase: 'Le bon lien, au bon moment.', prix: { mois: 19, an: 169 }, quota: 200 * Mo, jours: 365, enVente: true,
+    nom: 'Pro', phrase: 'Ta page qui bouge seule : l’heure, les lancements, ta liste.', prix: { mois: 19, an: 169 }, quota: 200 * Mo, jours: 365, enVente: true,
     avantages: ['Ta page selon l’heure et le pays', 'Les drops : un code, des places comptées', 'Ta liste e-mail, vers ta newsletter', 'Un cadeau contre l’e-mail, tes articles en RSS', 'Tes stats sur un an'],
   },
   premium: {

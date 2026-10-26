@@ -34,6 +34,15 @@ const DEMOS: Record<string, string> = {
   'Tes stats sur un an': '#stats',
 };
 
+/**
+ * Ce qu'une carte montre d'abord (26 octobre 2026, retours d'un ami relayés par Lilian : « on ne comprend pas la
+ * différence entre le gratuit, le starter et le pro ») : ce qui sépare l'offre de celle d'avant, quatre lignes au
+ * plus ; le reste attend derrière « Et N autres ». Pro n'en a que cinq : tout se lit.
+ */
+const EN_AVANT: Partial<Record<Plan, string[]>> = {
+  starter: ['Tes couleurs, ta police, ton fond', 'Ta vitrine : produits, rendez-vous, dons', 'Tes stats sur 30 jours', 'Sans la mention Hopla'],
+};
+
 /** L'e-mail est parti (ou se corrige) : la page ne propose plus de créer. */
 function useEnvoye() {
   const { etape, ancien, correction } = useReservation();
@@ -102,10 +111,14 @@ export function Prix() {
               <p className="hl-offre-phrase">{o.phrase}</p>
               <ul id={`offre-${plan}`} data-ouvert="">
                 {avant && <li className="hl-offre-avant">Tout {avant}, et :</li>}
-                {o.avantages.map(g => <li key={g}><Icone nom="check" taille={18} /><span>{DEMOS[g]
-                  ? <a className="hl-offre-demo" href={DEMOS[g]}>{insecables(g)}<span className="hl-cache">, à revoir plus haut</span></a>
-                  : insecables(g)}</span></li>)}
+                {(EN_AVANT[plan] ?? o.avantages).map(g => <Avantage key={g} g={g} />)}
               </ul>
+              {EN_AVANT[plan] && (
+                <details className="hl-offre-reste">
+                  <summary>Et {o.avantages.length - EN_AVANT[plan].length} autres<Icone nom="ui-plus" taille={16} /></summary>
+                  <ul data-ouvert="">{o.avantages.filter(g => !EN_AVANT[plan]?.includes(g)).map(g => <Avantage key={g} g={g} />)}</ul>
+                </details>
+              )}
               {/* On commence toujours par l'essai de Pro : l'offre se prend ensuite depuis les réglages. */}
               {!envoye && o.enVente && (
                 <div className="hp-offre-action">
@@ -121,6 +134,14 @@ export function Prix() {
       </div>
       <p className="hl-gris hl-petit hl-centre">Prix TTC. Ta page commence par {ESSAI_JOURS} jours de {OFFRES[PLAN_ESSAI].nom} offerts, sans carte bancaire ; ensuite elle reste en ligne en Gratuit, ou tu prends une offre depuis tes réglages. Résiliable à tout moment : l’offre reste jusqu’à la fin de la période payée.</p>
     </section>
+  );
+}
+
+function Avantage({ g }: { g: string }) {
+  return (
+    <li><Icone nom="check" taille={18} /><span>{DEMOS[g]
+      ? <a className="hl-offre-demo" href={DEMOS[g]}>{insecables(g)}<span className="hl-cache">, à revoir plus haut</span></a>
+      : insecables(g)}</span></li>
   );
 }
 
