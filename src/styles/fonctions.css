@@ -84,3 +84,30 @@
   .hf-mail .hp-personne { display: none; }
   .hf-mail .hl-stats-liste li { padding-block: 8px; font-size: 14px; }
 }
+
+/* Les comparatifs (26 octobre 2026, lot 6) : le tableau sur le crème, la colonne Hopla en blanc. */
+.hf-tableau-cadre { margin-top: 36px; overflow-x: auto; border-radius: 20px; background: #fbfaf5; box-shadow: 0 0 0 1px #e3e0d3; }
+.hf-tableau table { width: 100%; min-width: 560px; border-collapse: collapse; font-size: 15px; line-height: 1.45; }
+.hf-tableau :is(th, td) { padding: 16px 20px; text-align: left; vertical-align: top; border-top: 1px solid #e8e5d9; text-wrap: pretty; }
+.hf-tableau thead :is(th, td) { border-top: 0; padding-block: 20px 14px; font-size: 17px; font-weight: 700; letter-spacing: -.01em; }
+.hf-tableau tbody th { width: 30%; font-weight: 600; }
+.hf-tableau .hf-nous { width: 35%; background: #fff; font-weight: 600; }
+.hf-tableau thead .hf-nous { color: #292bff; }
+.hf-tableau td[data-vide] { color: var(--gris); }
+.hf-releve { margin-top: 16px; max-width: 70ch; font-size: 13px; line-height: 1.5; color: var(--gris); }
+.hf-texte > div + div { margin-top: 56px; }
+.hf-texte p { margin-top: 16px; max-width: 62ch; font-size: 17px; line-height: 1.7; color: var(--gris); text-wrap: pretty; }
+.hf-pour-eux { padding: 24px 28px; border-radius: 20px; box-shadow: 0 0 0 1px #e3e0d3; }
+.hf-pour-eux p { margin-top: 8px; }
+@media (max-width: 639px) {
+  /* Au téléphone, le critère passe au-dessus de ses deux réponses, côte à côte. */
+  .hf-tableau table { min-width: 0; font-size: 14px; }
+  .hf-tableau tr { display: grid; grid-template-columns: 1fr 1fr; }
+  .hf-tableau :is(th, td) { padding: 12px 14px; }
+  .hf-tableau thead th:first-child { display: none; }
+  .hf-tableau tbody th { grid-column: 1 / -1; width: auto; padding-bottom: 0; }
+  .hf-tableau tbody td { border-top: 0; width: auto; }
+  .hf-tableau .hf-nous { width: auto; }
+  .hf-tableau thead :is(th, td) { font-size: 15px; }
+  .hf-pour-eux { padding: 20px; }
+}

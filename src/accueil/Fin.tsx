@@ -202,6 +202,7 @@ export function Pied() {
       <nav aria-label="Liens utiles">
         <a href="/admin">Connexion</a>
         <a href="/fonctions">Fonctions</a>
+        <a href="/comparatif">Comparatifs</a>
         <a href="/legal/cgu">Conditions</a>
         <a href="/legal/confidentialite">Confidentialité</a>
         <a href="/legal/mentions-legales">Mentions légales</a>
