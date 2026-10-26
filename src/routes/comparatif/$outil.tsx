@@ -13,7 +13,7 @@ export const Route = createFileRoute('/comparatif/$outil')({
   head: ({ params }) => {
     const c = comparatif(params.outil);
     if (!c) return { meta: [{ title: 'Hopla' }] };
-    const titre = `Hopla ou ${c.nom} : le comparatif · Hopla`;
+    const titre = `Hopla vs ${c.nom} : le comparatif · Hopla`;
     const url = `${ORIGINE_PUBLIQUE}/comparatif/${c.slug}`;
     return {
       meta: [
@@ -40,7 +40,7 @@ export const Route = createFileRoute('/comparatif/$outil')({
               '@type': 'BreadcrumbList', itemListElement: [
                 { '@type': 'ListItem', position: 1, name: 'Hopla', item: `${ORIGINE_PUBLIQUE}/` },
                 { '@type': 'ListItem', position: 2, name: 'Comparatifs', item: `${ORIGINE_PUBLIQUE}/comparatif` },
-                { '@type': 'ListItem', position: 3, name: `Hopla ou ${c.nom}`, item: url },
+                { '@type': 'ListItem', position: 3, name: `Hopla vs ${c.nom}`, item: url },
               ],
             },
             { '@type': 'FAQPage', inLanguage: 'fr-FR', mainEntity: c.questions.map(([q, r]) => ({ '@type': 'Question', name: q, acceptedAnswer: { '@type': 'Answer', text: r } })) },
