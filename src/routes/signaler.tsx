@@ -5,6 +5,7 @@ import { MOTIFS_SIGNALEMENT } from '../lib/legal.ts';
 import { envoyerSignalement } from '../server/fonctions.ts';
 import { avecJeton, preparerTurnstile } from '../lib/turnstile.ts';
 import { BoutonPrincipal, Champ, classeSaisie } from '../admin/ui.tsx';
+import { Pied } from '../accueil/Fin.tsx';
 
 /*
  * « Signaler cette page » (DSA, article 16) : le motif, l'explication, une
@@ -72,6 +73,7 @@ function PageSignaler() {
         )}
         <p className="mt-10 text-[13px] text-white/45"><a href="/legal/cgu" className="hover:text-white">Conditions d’utilisation</a> · <a href="/legal/confidentialite" className="hover:text-white">Confidentialité</a></p>
       </main>
+      <div className="hl hl-humain"><Pied /></div>
     </div>
   );
 }
