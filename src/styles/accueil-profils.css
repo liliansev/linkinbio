@@ -438,34 +438,45 @@
 .hp-plus-loin-liste li.hp-plus-loin-tout { display: block; border-bottom: 0; }
 .hp-plus-loin-tout a { display: inline-flex; min-height: 44px; align-items: center; font-size: 15px; font-weight: 600; color: var(--accent); text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 1px; }
 
-/* La barre (26 octobre 2026, demandé par Lilian : « elle est fade ») : en bleu Klein, à la marge du héros. En haut de la page,
-   elle se pose dans le héros, bleu sur bleu, sans bord ; au défilement, elle se détache en une capsule bleue qui flotte sur la page.
-   Le texte au blanc, la section où l'on est soulignée de citron, et l'appel en citron, comme tout appel posé sur le bleu. */
-.hl-humain .hl-barre { padding: 10px 8px 0; background: none; border: 0; pointer-events: none; }
+/* La barre (26 octobre 2026, demandé par Lilian : « elle est fade », puis « une belle navbar flottante, séparée du haut ») :
+   une capsule détachée du haut et des bords, à la largeur du contenu. Sur le bleu du héros, en verre (un voile blanc et un
+   filet clair) ; au défilement, bleu Klein plein avec une ombre douce. Le texte au blanc, la section où l'on est soulignée
+   de citron, l'appel en citron, comme tout appel posé sur le bleu. */
+.hl-humain .hl-barre { --haut: 18px; height: calc(var(--haut) + 60px); padding: var(--haut) 18px 0; background: none; border: 0; pointer-events: none; }
 .hl-humain .hl-barre-capsule {
-  --encre: #fff; --gris: #d9dcff; --filet: rgb(255 255 255 / .2); --marque-dessin: #292bff;
-  pointer-events: auto; border-radius: 22px; background: transparent; color: var(--encre);
-  transition: background-color .25s var(--ease), box-shadow .25s var(--ease);
+  --encre: #fff; --gris: rgb(255 255 255 / .86); --filet: rgb(255 255 255 / .18); --marque-dessin: #292bff;
+  pointer-events: auto; max-width: 1228px; margin: 0 auto; border-radius: 22px; color: var(--encre);
+  background: rgb(255 255 255 / .12); box-shadow: inset 0 1px 0 rgb(255 255 255 / .28), inset 0 0 0 1px rgb(255 255 255 / .16);
+  transition: background-color .3s var(--ease), box-shadow .3s var(--ease);
 }
-.hl-humain .hl-barre[data-defile] .hl-barre-capsule { background: #292bff; box-shadow: 0 14px 34px -18px rgb(14 16 120 / .55), 0 1px 0 rgb(255 255 255 / .12) inset; }
-.hl-humain .hl-barre-dedans { padding-inline: 22px 18px; }
+.hl-humain .hl-barre[data-defile] .hl-barre-capsule {
+  background: rgb(41 43 255 / .94);
+  -webkit-backdrop-filter: blur(16px) saturate(140%); backdrop-filter: blur(16px) saturate(140%);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / .16), inset 0 0 0 1px rgb(255 255 255 / .14), 0 18px 40px -20px rgb(14 16 120 / .6), 0 4px 12px -6px rgb(14 16 120 / .35);
+}
+.hl-humain .hl-barre-dedans { max-width: none; height: 60px; padding-inline: 12px 10px; }
 .hl-humain .hl-marque svg { color: #fff; }
 .hl-humain .hl-barre-nav a { font-weight: 500; }
-.hl-humain .hl-barre-nav a[aria-current] { text-decoration-color: #e3fc96; }
+.hl-humain .hl-barre-nav > a:hover { color: #fff; }
+.hl-humain .hl-barre-nav > a[aria-current] { color: #fff; text-decoration-color: #e3fc96; text-underline-offset: 6px; }
 .hl-humain .hl-barre-connexion { color: #fff; font-weight: 500; }
 .hl-humain .hl-barre-connexion:hover { color: #e3fc96; }
-.hl-humain .hl-barre-actions .hl-btn { background: #e3fc96; border-color: #e3fc96; color: #233016; }
+.hl-humain .hl-barre-actions .hl-btn { background: #e3fc96; border-color: #e3fc96; color: #233016; border-radius: 11px; }
 .hl-humain .hl-barre-actions .hl-btn:hover { background: #d4f57c; }
-.hl-humain .hl-barre:has(.hl-menu:not([hidden])) { background: none; }
-.hl-humain .hl-menu { padding-inline: 22px; }
+.hl-humain .hl-barre :focus-visible { outline-color: #e3fc96; }
+.hl-humain .hl-menu { padding: 0 12px 12px; max-height: calc(100dvh - var(--haut) - 72px); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; }
 .hl-humain .hl-menu a { color: #fff; }
-/* Le héros de chaque page remonte sous la barre : sa marge du haut reste celle d'avant, la barre occupe ses 60 premiers pixels. */
-.hl-humain #contenu > .hl-heros:first-child { margin-top: -60px; border-top: 60px solid transparent; }
-html:has(.hl-humain) { scroll-padding-top: 90px; }
+.hl-humain .hl-menu .hl-menu-connexion { justify-content: center; min-height: 48px; margin-top: 10px; border: 1px solid rgb(255 255 255 / .5); border-radius: 12px; font-size: 16px; }
+@media (max-width: 1119px) { .hl-humain .hl-barre-actions .hl-btn { min-height: 44px; height: 44px; padding-inline: 14px; border-radius: 12px; } }
+/* Le héros de chaque page remonte sous la barre : sa marge d'avant reste au-dessus de lui, la capsule se pose dedans. */
+.hl-humain #contenu > .hl-heros:first-child { margin-top: calc(-1 * var(--dans)); border-top: var(--dans) solid transparent; }
+.hl-humain:has(.hl-barre) #contenu > .hl-heros:first-child { --dans: 68px; }
+html:has(.hl-humain) { scroll-padding-top: 96px; }
 @media (min-width: 1024px) {
-  .hl-humain .hl-barre { padding: 14px 14px 0; }
+  .hl-humain .hl-barre { --haut: 26px; padding-inline: 26px; }
   .hl-humain .hl-barre-capsule { border-radius: 24px; }
-  .hl-humain .hl-barre-dedans { padding-inline: max(28px, calc((100% - 1200px) / 2 + 14px)); max-width: none; }
+  .hl-humain .hl-barre-dedans { height: 60px; padding-inline: 28px 12px; }
+  .hl-humain:has(.hl-barre) #contenu > .hl-heros:first-child { --dans: 72px; }
 }
 
 /* Le tableau des offres (26 octobre 2026) : le seul endroit qui dit quelle offre donne quoi. Une carte blanche sous les
@@ -474,7 +485,7 @@ html:has(.hl-humain) { scroll-padding-top: 90px; }
 .hl-tableau { margin: 8px 0 32px; padding: 32px 32px 24px; background: #fff; border: 1px solid #dedfd7; border-radius: 20px; }
 .hl-humain .hl-tableau-titre { font-size: 28px; margin-bottom: 8px; }
 .hl-tableau table { width: 100%; border-collapse: separate; border-spacing: 0; table-layout: fixed; font-size: 15px; line-height: 1.4; }
-.hl-tableau thead th, .hl-tableau thead td { position: sticky; top: 74px; z-index: 2; background: #fff; padding: 14px 8px; border-bottom: 1px solid #20241f; vertical-align: bottom; }
+.hl-tableau thead th, .hl-tableau thead td { position: sticky; top: 94px; z-index: 2; background: #fff; padding: 14px 8px; border-bottom: 1px solid #20241f; vertical-align: bottom; }
 .hl-tableau thead td:first-child { width: 40%; }
 .hl-tableau thead th { text-align: center; font-weight: 400; }
 .hl-tableau-offre { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 18px; font-weight: 650; letter-spacing: -.01em; }
@@ -506,7 +517,7 @@ html:has(.hl-humain) { scroll-padding-top: 90px; }
   .hl-tableau { margin-inline: -8px; padding: 22px 12px 12px; border-radius: 18px; }
   .hl-humain .hl-tableau-titre { font-size: 24px; }
   .hl-tableau table { font-size: 14px; }
-  .hl-tableau thead th, .hl-tableau thead td { top: 70px; padding: 10px 2px; }
+  .hl-tableau thead th, .hl-tableau thead td { top: 86px; padding: 10px 2px; }
   .hl-tableau thead td:first-child { width: 37%; }
   /* Collé au téléphone, l'en-tête reste bas : le nom et le prix, sans visage ni étiquette (l'essai se lit sur la carte Pro). */
   .hl-tableau-offre { font-size: 14px; }
@@ -520,3 +531,51 @@ html:has(.hl-humain) { scroll-padding-top: 90px; }
   .hl-tableau tfoot td { padding: 14px 3px 10px; }
   .hl-tableau tfoot .hl-btn { min-height: 44px; padding-inline: 4px; font-size: 13px; }
 }
+/* Fonctions et Comparatifs déroulent leurs pages sous la barre : une carte blanche, la liste en deux colonnes, l'offre
+   au gris à côté du nom, et le lien vers la page qui les rassemble au pied. */
+.hl-deroulant { position: relative; display: flex; }
+.hl-deroulant > button {
+  display: inline-flex; align-items: center; gap: 4px; padding: 0; border: 0; background: none; cursor: pointer;
+  color: var(--gris); font: inherit; font-size: 15px; font-weight: 500; transition: color .15s;
+}
+.hl-deroulant > button:hover, .hl-deroulant[data-ouvert] > button { color: #fff; }
+.hl-deroulant > button[data-ici] { color: #fff; text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 7px; text-decoration-color: #e3fc96; }
+.hl-deroulant > button svg { transition: transform .2s var(--ease); }
+.hl-deroulant[data-ouvert] > button svg { transform: rotate(180deg); }
+@media (pointer: coarse) { .hl-deroulant > button { min-height: 44px; } }
+.hl-deroule {
+  --encre: #20241f; --gris: #62685f;
+  position: absolute; top: calc(100% + 30px); left: 50%; transform: translateX(-50%); z-index: 2; width: 520px; padding: 10px;
+  border-radius: 20px; background: #fff; color: var(--encre);
+  box-shadow: 0 0 0 1px rgb(20 22 60 / .06), 0 24px 48px -20px rgb(14 16 90 / .4), 0 6px 16px -8px rgb(14 16 90 / .18);
+  animation: hl-deroule .18s var(--ease) both;
+}
+.hl-deroule[hidden] { display: none; }
+.hl-deroule[data-sorte='comparatifs'] { width: 360px; }
+.hl-deroule-tete { margin: 0; padding: 8px 12px 4px; color: var(--gris); font-size: 12px; font-weight: 500; }
+@keyframes hl-deroule { from { opacity: 0; translate: 0 -4px; } }
+@media (prefers-reduced-motion: reduce) { .hl-deroule { animation: none; } }
+.hl-deroule ul { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; margin: 0; padding: 0; list-style: none; }
+.hl-deroule li a {
+  display: flex; flex-direction: column; gap: 1px; padding: 10px 12px; border-radius: 11px;
+  color: var(--encre); font-size: 14px; font-weight: 550; line-height: 1.35; text-decoration: none; transition: background-color .15s;
+}
+.hl-deroule li a small { color: var(--gris); font-size: 12px; font-weight: 500; }
+.hl-deroule li a:hover { background: #f2f0e7; }
+.hl-deroule :focus-visible { outline-color: #292bff; outline-offset: -2px; }
+.hl-deroule-tout {
+  display: flex; align-items: center; justify-content: space-between; margin-top: 6px; padding: 12px 12px 10px;
+  border-top: 1px solid #ecebe4; color: #292bff; font-size: 14px; font-weight: 600; text-decoration: none;
+}
+.hl-deroule-tout:hover { text-decoration: underline; text-underline-offset: 3px; }
+.hl-barre-nav .hl-deroule li a { font-size: 14px; color: var(--encre); }
+.hl-barre-nav .hl-deroule-tout { color: #292bff; font-size: 14px; }
+.hl-barre-nav .hl-deroule-tout:hover { color: #1d1fd6; }
+/* Au bureau, la navigation se centre dans la capsule : la marque à gauche, Connexion et l'appel à droite. */
+@media (min-width: 1120px) {
+  .hl-humain .hl-barre-dedans { display: grid; grid-template-columns: 1fr auto 1fr; }
+  .hl-humain .hl-barre-nav { margin: 0; justify-self: center; }
+  .hl-humain .hl-barre-actions { justify-self: end; margin: 0; }
+  .hl-humain .hl-marque { justify-self: start; }
+}
+.hl-barre-nav .hl-deroule a[aria-current] { background: #f2f0e7; color: var(--encre); text-decoration: none; }
