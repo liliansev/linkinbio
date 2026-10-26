@@ -1,5 +1,6 @@
 import { Avatar } from './Profils.tsx';
 import { useState } from 'react';
+import { useRouterState } from '@tanstack/react-router';
 import type { CSSProperties, KeyboardEvent, MouseEvent } from 'react';
 import { Icone } from '../components/Icone.tsx';
 import { ESSAI_JOURS, FONCTIONS, OFFRES, PLANS, PLANS_PAYANTS, PLAN_ESSAI, economie, euros, parMoisAnnuel, rang } from '../lib/abonnement.ts';
@@ -312,7 +313,7 @@ export function DernierAppel({ api }: { api: ApiAccueil }) {
  * dans leur section.
  */
 const COLONNES: { titre: string; liens: [string, string][] }[] = [
-  { titre: 'Hopla', liens: [
+  { titre: 'Découvrir', liens: [
     ['Toutes les fonctions', '/fonctions'],
     ['Tarifs', '/#prix'],
     ['Questions', '/#questions'],
@@ -321,7 +322,7 @@ const COLONNES: { titre: string; liens: [string, string][] }[] = [
   ] },
   { titre: 'Fonctions', liens: PAGES_FONCTIONS.map(f => [f.nom, `/fonctions/${f.slug}`]) },
   { titre: 'Comparatifs', liens: [
-    ...COMPARATIFS.map((c): [string, string] => [`Hopla ou ${c.nom}`, `/comparatif/${c.slug}`]),
+    ...COMPARATIFS.map((c): [string, string] => [`Hopla vs ${c.nom}`, `/comparatif/${c.slug}`]),
     ['Tous les comparatifs', '/comparatif'],
   ] },
   { titre: 'Aide et légal', liens: [
@@ -336,6 +337,8 @@ const COLONNES: { titre: string; liens: [string, string][] }[] = [
 ];
 
 export function Pied() {
+  // Le lien de la page où l'on est se dit, et se lit à l'encre.
+  const chemin = useRouterState({ select: st => st.location.pathname });
   return (
     <footer className="hl-pied" data-teinte="nuit">
       <div className="hl-pied-dedans">
@@ -343,10 +346,10 @@ export function Pied() {
           <Marque />
           <p>Un lien qui te ressemble, et s’adapte à chaque visiteur.</p>
         </div>
-        {COLONNES.map(c => (
-          <nav key={c.titre} className="hl-pied-colonne" aria-labelledby={`pied-${c.titre}`}>
-            <h2 id={`pied-${c.titre}`}>{c.titre}</h2>
-            <ul>{c.liens.map(([nom, href]) => <li key={href}><a href={href}>{nom}</a></li>)}</ul>
+        {COLONNES.map((c, i) => (
+          <nav key={c.titre} className="hl-pied-colonne" aria-labelledby={`pied-${i}`}>
+            <h2 id={`pied-${i}`}>{c.titre}</h2>
+            <ul>{c.liens.map(([nom, href]) => <li key={href}><a href={href} aria-current={href === chemin ? 'page' : undefined}>{nom}</a></li>)}</ul>
           </nav>
         ))}
         <p className="hl-pied-bas">© 2026 Hopla, édité par AURA GROUP</p>
