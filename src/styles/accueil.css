@@ -143,7 +143,7 @@ html:has(.hl) { background: #fff; scroll-padding-top: 76px; }
 /* Au téléphone (et sur une tablette tactile, même large), les liens écrits gardent leur taille mais se touchent
  * sur 44 px : seuls dans leur ligne, ils en prennent la hauteur ; dans une phrase, une zone invisible les agrandit. */
 @media (max-width: 1023px), (pointer: coarse) {
-  :is(.hl-revoir, .hl-lien-gris, .hl-marque, .hl-pied nav a, .hl-couleurs-reglage > .hl-lien-texte) { display: inline-flex; align-items: center; min-height: 44px; }
+  :is(.hl-revoir, .hl-lien-gris, .hl-marque, .hl-pied-colonne a, .hl-couleurs-reglage > .hl-lien-texte) { display: inline-flex; align-items: center; min-height: 44px; }
   .hl-revoir { justify-content: center; min-width: 44px; }
   /* Dans une phrase, la zone de toucher grandit sans écarter les lignes. */
   p :is(.hl-lien-texte, a) { padding-block: 13px; margin-block: -13px; }
@@ -917,13 +917,36 @@ html:has(.hl-reserver input:focus) { overflow-anchor: none; }
 @media (max-width: 359px) { .hl-h2-grand { font-size: 32px; } }
 .hl-dernier > div { width: 100%; max-width: 560px; }
 .hl-dernier .hl-reserver-etat, .hl-dernier .hl-reserver-note { text-align: center; }
-.hl-pied { position: relative; max-width: 1120px; margin: 112px auto 0; padding: 32px var(--gout) 48px; display: flex; flex-direction: column; gap: 20px; }
-.hl-pied::before { content: ''; position: absolute; top: 0; left: var(--gout); right: var(--gout); height: 1px; background: var(--filet); }
-@media (min-width: 800px) { .hl-pied { flex-direction: row; align-items: center; justify-content: space-between; } }
-.hl-pied nav { display: flex; flex-wrap: wrap; gap: 4px 22px; font-size: 14px; }
-@media (min-width: 1024px) { .hl-pied nav { gap: 10px 22px; } }
-.hl-pied nav a { color: var(--gris); text-decoration: none; }
-.hl-pied nav a:hover { color: var(--encre); }
+/* Le pied (26 octobre 2026) : une carte de nuit, arrondie comme le dernier appel au-dessus ; la marque et cinq colonnes,
+   au téléphone deux colonnes sous la marque. */
+.hl-pied { --gris: #b3a9be; --marque-dessin: var(--papier); margin: 14px; border-radius: 36px; padding: 64px max(var(--gout), 28px) 32px; font-size: 14px; }
+@media (max-width: 599px) { .hl-pied { margin: 8px; border-radius: 24px; padding-inline: 22px; } }
+.hl-pied-dedans {
+  max-width: 1280px; margin-inline: auto; display: grid; gap: 40px 24px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.hl-pied-marque { grid-column: 1 / -1; }
+.hl-pied-marque p { margin-top: 10px; max-width: 34ch; text-wrap: balance; color: var(--gris); font-size: 15px; }
+.hl-pied-colonne h2 { margin: 0 0 12px; color: var(--encre); font-size: 14px; font-weight: 600; letter-spacing: 0; }
+.hl-pied-colonne ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 2px; }
+.hl-pied-colonne a { display: inline-block; padding-block: 5px; color: var(--gris); text-decoration: none; line-height: 1.4; }
+.hl-pied-colonne a[aria-current] { color: var(--encre); }
+.hl-pied-colonne a:hover { color: var(--encre); text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
+.hl-pied-bas { grid-column: 1 / -1; margin-top: 8px; padding-top: 24px; border-top: 1px solid var(--filet); color: var(--gris); font-size: 13px; }
+/* Au téléphone, Découvrir et l'aide côte à côte ; les fonctions et les comparatifs sur toute la largeur, en deux colonnes. */
+@media (max-width: 719px) {
+  .hl-pied-colonne:nth-of-type(4) { order: 1; }
+  .hl-pied-colonne:is(:nth-of-type(2), :nth-of-type(3)) { order: 2; grid-column: 1 / -1; }
+  .hl-pied-colonne:is(:nth-of-type(2), :nth-of-type(3)) ul { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 24px; }
+  .hl-pied-bas { order: 3; }
+}
+@media (max-width: 1023px) { .hl-pied-colonne ul { gap: 0; } .hl-pied-colonne a { text-wrap: balance; } }
+@media (min-width: 720px) { .hl-pied-dedans { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (min-width: 1100px) {
+  .hl-pied { padding-top: 80px; }
+  .hl-pied-dedans { grid-template-columns: minmax(0, 1.3fr) repeat(4, minmax(0, 1fr)); column-gap: 40px; }
+  .hl-pied-marque { grid-column: auto; }
+}
 
 /* ---- Les entrées : une fois, à l'arrivée à l'écran ---- */
 

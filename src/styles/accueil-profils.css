@@ -354,7 +354,6 @@
 }
 
 /* Le pied de page s'aligne sur la barre et les sections, à 1280 px. */
-.hl-humain .hl-pied { max-width: 1280px; }
 
 /* Les questions : au bureau, le titre et le contact à gauche, les réponses à droite ; la moitié droite n'est plus vide. */
 .hl-questions-tete > p { margin-top: 14px; color: var(--gris); font-size: 15px; }

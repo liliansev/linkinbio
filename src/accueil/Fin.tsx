@@ -1,11 +1,14 @@
 import { Avatar } from './Profils.tsx';
 import { useState } from 'react';
+import { useRouterState } from '@tanstack/react-router';
 import type { CSSProperties, KeyboardEvent, MouseEvent } from 'react';
 import { Icone } from '../components/Icone.tsx';
 import { ESSAI_JOURS, FONCTIONS, OFFRES, PLANS, PLANS_PAYANTS, PLAN_ESSAI, economie, euros, parMoisAnnuel, rang } from '../lib/abonnement.ts';
 import { CONTACT_LEGAL } from '../lib/legal.ts';
 import type { Fonction, Periode, Plan } from '../lib/abonnement.ts';
 import { Marque } from './Ouverture.tsx';
+import { PAGES_FONCTIONS } from './pages/fonctions.ts';
+import { COMPARATIFS } from './pages/comparatifs.ts';
 import { Reserver, allerAuChamp, choisirOffre, useReservation } from './Reserver.tsx';
 import type { ApiAccueil } from './Reserver.tsx';
 import { MOTS, QUESTION_LINKTREE, appel, questions, useInscription } from './textes.ts';
@@ -303,20 +306,54 @@ export function DernierAppel({ api }: { api: ApiAccueil }) {
   );
 }
 
+/**
+ * Le pied de toutes les pages publiques de hopla.page (26 octobre 2026, demandé par Lilian : « il manque un vrai footer,
+ * avec toutes les pages, les vs ») : la marque et sa promesse, puis quatre colonnes, Hopla, les dix fonctions, les six
+ * comparatifs, l'aide et les textes légaux ; sur la nuit, sous le dernier appel en bleu. Aucun prix : les tarifs se lisent
+ * dans leur section.
+ */
+const COLONNES: { titre: string; liens: [string, string][] }[] = [
+  { titre: 'Découvrir', liens: [
+    ['Toutes les fonctions', '/fonctions'],
+    ['Tarifs', '/#prix'],
+    ['Questions', '/#questions'],
+    ['Voir une vraie page', '/lilian'],
+    ['Connexion', '/admin'],
+  ] },
+  { titre: 'Fonctions', liens: PAGES_FONCTIONS.map(f => [f.nom, `/fonctions/${f.slug}`]) },
+  { titre: 'Comparatifs', liens: [
+    ...COMPARATIFS.map((c): [string, string] => [`Hopla vs ${c.nom}`, `/comparatif/${c.slug}`]),
+    ['Tous les comparatifs', '/comparatif'],
+  ] },
+  { titre: 'Aide et légal', liens: [
+    ['Écrire à Lilian', `mailto:${CONTACT_LEGAL}`],
+    ['Signaler un contenu', '/signaler'],
+    ['Conditions d’utilisation', '/legal/cgu'],
+    ['Confidentialité', '/legal/confidentialite'],
+    ['Traitement des données', '/legal/traitement-des-donnees'],
+    ['Sous-traitants', '/legal/sous-traitants'],
+    ['Mentions légales', '/legal/mentions-legales'],
+  ] },
+];
+
 export function Pied() {
+  // Le lien de la page où l'on est se dit, et se lit à l'encre.
+  const chemin = useRouterState({ select: st => st.location.pathname });
   return (
-    <footer className="hl-pied">
-      <Marque />
-      <nav aria-label="Liens utiles">
-        <a href="/admin">Connexion</a>
-        <a href="/fonctions">Fonctions</a>
-        <a href="/comparatif">Comparatifs</a>
-        <a href="/legal/cgu">Conditions</a>
-        <a href="/legal/confidentialite">Confidentialité</a>
-        <a href="/legal/mentions-legales">Mentions légales</a>
-        <a href="/signaler">Signaler un contenu</a>
-        <a href={`mailto:${CONTACT_LEGAL}`}>Contact</a>
-      </nav>
+    <footer className="hl-pied" data-teinte="nuit">
+      <div className="hl-pied-dedans">
+        <div className="hl-pied-marque">
+          <Marque />
+          <p>Un lien qui te ressemble, et s’adapte à chaque visiteur.</p>
+        </div>
+        {COLONNES.map((c, i) => (
+          <nav key={c.titre} className="hl-pied-colonne" aria-labelledby={`pied-${i}`}>
+            <h2 id={`pied-${i}`}>{c.titre}</h2>
+            <ul>{c.liens.map(([nom, href]) => <li key={href}><a href={href} aria-current={href === chemin ? 'page' : undefined}>{nom}</a></li>)}</ul>
+          </nav>
+        ))}
+        <p className="hl-pied-bas">© 2026 Hopla, édité par AURA GROUP</p>
+      </div>
     </footer>
   );
 }

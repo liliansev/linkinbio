@@ -1,6 +1,7 @@
 import { createFileRoute, notFound } from '@tanstack/react-router';
 import type { NomDocument } from '../../lib/legal.ts';
 import { DOCUMENTS, LEGAL } from '../../lib/legal.ts';
+import { Pied } from '../../accueil/Fin.tsx';
 
 /* Les textes légaux de Hopla (CGU, accord de traitement, confidentialité, sous-traitants, mentions). */
 export const Route = createFileRoute('/legal/$document')({
@@ -33,6 +34,7 @@ function PageLegale() {
           ))}
         </nav>
       </main>
+      <div className="hl hl-humain"><Pied /></div>
     </div>
   );
 }
