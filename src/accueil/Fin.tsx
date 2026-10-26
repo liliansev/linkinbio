@@ -141,7 +141,7 @@ function TableauOffres({ periode, reserver, action }: { periode: Periode; reserv
               <td />
               {EN_VENTE.map(plan => (
                 <td key={plan}>
-                  {action(plan) && <a href="#reserver" className={`hl-btn ${plan === 'pro' ? '' : 'hl-btn-contour'}`} onClick={ev => reserver(ev, plan)}>{action(plan)}</a>}
+                  {action(plan) && <a href="#reserver" className={`hl-btn ${plan === 'pro' ? '' : 'hl-btn-contour'}`} onClick={ev => reserver(ev, plan)}>{action(plan)} <span className="hl-tableau-btn-offre">{OFFRES[plan].nom}</span></a>}
                 </td>
               ))}
             </tr>
