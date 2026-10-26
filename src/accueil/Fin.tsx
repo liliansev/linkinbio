@@ -25,17 +25,17 @@ const insecables = (g: string) => g.replace(/« /g, '«\u00a0').replace(/ »/g, 
 
 /** Ce que la page a déjà montré : l'avantage ramène à sa démonstration (un chapitre de la page vivante s'ouvre en arrivant). */
 const DEMOS: Record<string, string> = {
-  'Ta page selon le réseau du visiteur': '/fonctions/selon-le-reseau',
-  'Les vingt thèmes': '/fonctions/themes',
-  'Tes couleurs, ta police, ton fond': '/fonctions/themes',
-  'Ta vitrine : produits, rendez-vous, dons': '/fonctions/vitrine',
-  'Tes liens programmés à l’avance': '/fonctions/lancement',
-  'Les avis de tes clients': '/fonctions/avis',
-  'Tes stats sur 30 jours': '/fonctions/stats',
-  'Ta page selon l’heure et le pays': '/fonctions/page-selon-l-heure',
-  'Les drops : un code, des places comptées': '/fonctions/drops',
-  'Ta liste e-mail, vers ta newsletter': '/fonctions/liste-email',
-  'Tes stats sur un an': '/fonctions/stats',
+  'Ta page selon le réseau du visiteur': '/fonctionnalites/selon-le-reseau',
+  'Les vingt thèmes': '/fonctionnalites/themes',
+  'Tes couleurs, ta police, ton fond': '/fonctionnalites/themes',
+  'Ta vitrine : produits, rendez-vous, dons': '/fonctionnalites/vitrine',
+  'Tes liens programmés à l’avance': '/fonctionnalites/lancement',
+  'Les avis de tes clients': '/fonctionnalites/avis',
+  'Tes stats sur 30 jours': '/fonctionnalites/stats',
+  'Ta page selon l’heure et le pays': '/fonctionnalites/page-selon-l-heure',
+  'Les drops : un code, des places comptées': '/fonctionnalites/drops',
+  'Ta liste e-mail, vers ta newsletter': '/fonctionnalites/liste-email',
+  'Tes stats sur un an': '/fonctionnalites/stats',
 };
 
 /**
@@ -129,7 +129,7 @@ function TableauOffres({ periode, reserver, action }: { periode: Periode; reserv
             <tr className="hl-tableau-groupe"><th scope="rowgroup">{groupe}</th>{EN_VENTE.map(plan => <td key={plan} />)}</tr>
             {lignes.map(l => (
               <tr key={l.nom}>
-                <th scope="row">{l.page ? <a href={`/fonctions/${l.page}`}>{l.nom}<span className="hl-cache">, voir la fonction</span></a> : l.nom}</th>
+                <th scope="row">{l.page ? <a href={`/fonctionnalites/${l.page}`}>{l.nom}<span className="hl-cache">, voir la fonctionnalité</span></a> : l.nom}</th>
                 {EN_VENTE.map(plan => <Case key={plan} ligne={l} plan={plan} />)}
               </tr>
             ))}
@@ -252,7 +252,7 @@ export function Prix() {
 function Avantage({ g }: { g: string }) {
   return (
     <li><Icone nom="check" taille={18} /><span>{DEMOS[g]
-      ? <a className="hl-offre-demo" href={DEMOS[g]}>{insecables(g)}<span className="hl-cache">, voir la fonction</span></a>
+      ? <a className="hl-offre-demo" href={DEMOS[g]}>{insecables(g)}<span className="hl-cache">, voir la fonctionnalité</span></a>
       : insecables(g)}</span></li>
   );
 }
@@ -314,13 +314,13 @@ export function DernierAppel({ api }: { api: ApiAccueil }) {
  */
 const COLONNES: { titre: string; liens: [string, string][] }[] = [
   { titre: 'Découvrir', liens: [
-    ['Toutes les fonctions', '/fonctions'],
+    ['Toutes les fonctionnalités', '/fonctionnalites'],
     ['Tarifs', '/#prix'],
     ['Questions', '/#questions'],
     ['Voir une vraie page', '/lilian'],
     ['Connexion', '/admin'],
   ] },
-  { titre: 'Fonctions', liens: PAGES_FONCTIONS.map(f => [f.nom, `/fonctions/${f.slug}`]) },
+  { titre: 'Fonctionnalités', liens: PAGES_FONCTIONS.map(f => [f.nom, `/fonctionnalites/${f.slug}`]) },
   { titre: 'Comparatifs', liens: [
     ...COMPARATIFS.map((c): [string, string] => [`Hopla vs ${c.nom}`, `/comparatif/${c.slug}`]),
     ['Tous les comparatifs', '/comparatif'],

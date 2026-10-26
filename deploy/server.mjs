@@ -130,6 +130,10 @@ export function createLiensServer({ appDir = appRoot, site = process.env.LIENS_S
       // Les anciennes adresses, liliansevoumian.fr/liens/... : la page de Lilian est /lilian, le reste garde son chemin.
       if (chemin === '/liens' || chemin === '/liens/') return send(308, '', { Location: `/lilian${url.search}` });
       if (chemin.startsWith('/liens/')) return send(308, '', { Location: `${chemin.slice(6)}${url.search}` });
+      // Les pages des fonctions s'appellent fonctionnalités depuis le 26 octobre 2026 (demandé par Lilian) : les anciennes adresses y mènent.
+      if (chemin === '/fonctions' || chemin.startsWith('/fonctions/')) {
+        return send(301, '', { Location: `/fonctionnalites${chemin.slice(10)}${url.search}`, 'Cache-Control': 'public, max-age=86400' });
+      }
       // Les noms courts (hpla.art/camille…) renvoient vers hopla.page, chemin et requête gardés : la page ne vit qu'à un endroit.
       // Cloudflare le fait d'habitude par une règle de redirection ; ceci sert si la requête arrive jusqu'ici.
       if (DOMAINES_COURTS.has((req.headers.host ?? '').toLowerCase().replace(/:\d+$/, '').replace(/^www\./, ''))) {

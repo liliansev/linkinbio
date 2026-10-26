@@ -161,7 +161,7 @@ export function PageFonction({ page, mode = 'libre' }: { page: Donnees; mode?: I
         <Barre ailleurs />
         <main id="contenu">
           <section className="hl-heros hf-heros" data-teinte="klein" aria-labelledby="titre">
-            <nav className="hf-fil" aria-label="Fil d’Ariane"><a href="/">Hopla</a><span aria-hidden="true">/</span><a href="/fonctions">Fonctions</a></nav>
+            <nav className="hf-fil" aria-label="Fil d’Ariane"><a href="/">Hopla</a><span aria-hidden="true">/</span><a href="/fonctionnalites">Fonctionnalités</a></nav>
             <h1 id="titre" className="hl-h1 hf-titre">{page.titre[0]}<span className="hl-cache">. </span><span>{page.titre[1]}</span></h1>
             <p className="hl-chapo">{page.chapo}</p>
           </section>
@@ -183,7 +183,7 @@ export function PageFonction({ page, mode = 'libre' }: { page: Donnees; mode?: I
             </div>
           </section>
           <section className="hl-section hf-autres" aria-labelledby="autres">
-            <h2 id="autres" className="hl-h2 hl-entre">Les autres fonctions</h2>
+            <h2 id="autres" className="hl-h2 hl-entre">Les autres fonctionnalités</h2>
             <ListeFonctions pages={autres} />
           </section>
           <DernierAppel api={API[mode]} />
@@ -200,7 +200,7 @@ export function ListeFonctions({ pages }: { pages: Donnees[] }) {
     <ul className="hf-liste">
       {pages.map(p => (
         <li key={p.slug}>
-          <a href={`/fonctions/${p.slug}`}>
+          <a href={`/fonctionnalites/${p.slug}`}>
             <b>{p.nom}</b>
             <span>{p.chapo.split('. ')[0].replace(/\.$/, '')}.</span>
           </a>
@@ -210,7 +210,7 @@ export function ListeFonctions({ pages }: { pages: Donnees[] }) {
   );
 }
 
-/** /fonctions : toutes les fonctions, une ligne chacune. */
+/** /fonctionnalites : toutes les fonctions, une ligne chacune. */
 export function IndexFonctions({ mode = 'libre' }: { mode?: Inscription }) {
   useEntrees();
   return (
@@ -221,10 +221,10 @@ export function IndexFonctions({ mode = 'libre' }: { mode?: Inscription }) {
         <main id="contenu">
           <section className="hl-heros hf-heros" data-teinte="klein" aria-labelledby="titre">
             <nav className="hf-fil" aria-label="Fil d’Ariane"><a href="/">Hopla</a></nav>
-            <h1 id="titre" className="hl-h1 hf-titre">Ce que fait Hopla<span className="hl-cache">. </span><span>Fonction par fonction</span></h1>
-            <p className="hl-chapo">Chaque page montre une fonction en mouvement : fais défiler, la scène se joue.</p>
+            <h1 id="titre" className="hl-h1 hf-titre">Ce que fait Hopla<span className="hl-cache">. </span><span>Toutes ses fonctionnalités</span></h1>
+            <p className="hl-chapo">Chaque page montre une fonctionnalité en mouvement : fais défiler, la scène se joue.</p>
           </section>
-          <section className="hl-section hf-autres" aria-label="Les fonctions">
+          <section className="hl-section hf-autres" aria-label="Les fonctionnalités">
             <ListeFonctions pages={PAGES_FONCTIONS} />
           </section>
           <DernierAppel api={API[mode]} />
