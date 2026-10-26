@@ -584,6 +584,12 @@ html:has(.hl-reserver input:focus) { overflow-anchor: none; }
 .hl-onglets button[data-remplit]::after { transform-origin: left; animation: hl-remplit var(--duree) linear both; }
 /* La souris sur la scène suspend le passage à la suite : la barre s'arrête avec lui. */
 .hl-onglets[data-pause] button[data-remplit]::after { animation-play-state: paused; }
+/* Les temps d'une scène qui s'enchaîne seule (Prise) : écrits comme des onglets, mais rien à toucher. */
+.hl-temps > li { position: relative; padding: 12px 0; color: var(--gris); font-size: 16px; font-weight: 500; white-space: nowrap; transition: color .3s; }
+.hl-temps > li[data-actif] { color: var(--encre); }
+.hl-temps > li[data-actif]::after { content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; background: var(--accent); }
+.hl-temps > li[data-remplit]::after { transform-origin: left; animation: hl-remplit var(--duree) linear both; }
+.hl-temps[data-pause] > li[data-remplit]::after { animation-play-state: paused; }
 @keyframes hl-remplit { from { transform: scaleX(0); } }
 /* La suite d'une scène, dite quand elle finit (« Voir avec Hopla », « Voir comment la modifier ») ; sa place est gardée, rien ne saute. */
 .hl-suite[data-cache] { visibility: hidden; }
@@ -778,17 +784,16 @@ html:has(.hl-reserver input:focus) { overflow-anchor: none; }
 @media (min-width: 1024px) { .hl-prise { grid-template-columns: 1fr 340px; align-items: start; justify-items: stretch; gap: 72px; } }
 .hl-etapes { display: none; }
 @media (min-width: 1024px) { .hl-etapes { display: flex; flex-direction: column; gap: 6px; margin-top: 24px; } }
-/* Sans mouvement, au téléphone, rien ne fait défiler les étapes : leur liste remplace la légende, et chacune se montre d'un toucher. */
+/* Sans mouvement, au téléphone, la liste des étapes remplace la légende. */
 @media (max-width: 1023px) and (prefers-reduced-motion: reduce) {
   .hl-etapes { display: flex; flex-direction: column; gap: 6px; margin-top: 24px; }
   .hl-prise .hl-prise-legende { display: none; }
 }
-.hl-etapes button {
-  display: flex; gap: 16px; width: 100%; padding: 16px; border: 0; border-radius: 12px; background: none;
-  color: var(--gris); font: inherit; text-align: left; cursor: pointer; transition: color .3s, background-color .3s;
+.hl-etapes li > div {
+  display: flex; gap: 16px; width: 100%; padding: 16px; border-radius: 12px;
+  color: var(--gris); text-align: left; transition: color .3s, background-color .3s;
 }
-.hl-etapes button:hover { color: var(--encre); }
-.hl-etapes li[data-lu] button { color: var(--encre); background: var(--pale); }
+.hl-etapes li[data-lu] > div { color: var(--encre); background: var(--pale); }
 /* Le numéro ou le picto de l'étape, seul : ni cadre ni carré de couleur ; l'étape lue passe à l'accent. */
 .hl-etape-num { flex: none; display: grid; place-items: center; width: 32px; height: 32px; font-size: 18px; font-weight: 600; font-variant-numeric: tabular-nums; transition: color .3s; }
 .hl-etapes li[data-lu] .hl-etape-num { color: var(--accent); }
