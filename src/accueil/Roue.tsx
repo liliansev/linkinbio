@@ -5,7 +5,7 @@ import { Symbole } from '../components/Logo.tsx';
 import { POLICES, THEMES } from '../lib/themes.ts';
 import { NOMS_AUDIENCES, composerAudience } from '../lib/provenance.ts';
 import { PROFILS, BLOCS_EXEMPLES } from './exemples.ts';
-import { mouvementReduit, useVu } from './mouvement.ts';
+import { mouvementReduit, useEnVue } from './mouvement.ts';
 
 /*
  * La roue de l'ouverture (20 octobre 2026, à la demande de Lilian) : les
@@ -14,9 +14,11 @@ import { mouvementReduit, useVu } from './mouvement.ts';
  * arrivée, la page fait un petit bond ; la première fois, le lien de ce
  * réseau se glisse en tête, dans la couleur du réseau, qu'il garde : au repos,
  * on lit encore quel réseau a rangé chaque page. Camille Nguyen, une photographe inventée, dans le thème
- * Neige. Le trafic se joue
- * une fois, puis la roue ralentit et s'arrête ; « Passer » le saute, « Revoir » le rejoue. Avec
- * moins de mouvement, les quatre pages sont déjà rangées.
+ * Neige. Le trafic part dès
+ * que la roue arrive à l'écran, se met en pause quand on la quitte et reprend au retour ; joué
+ * jusqu'au bout, la roue ralentit et s'arrête, et il se rejoue quand on revient (26 octobre 2026,
+ * demandé par Lilian : rien à toucher). « Passer » le saute. Avec moins de mouvement, les quatre
+ * pages sont déjà rangées.
  *
  * Le dessin est en HTML (roue, lien, pages) ; les chemins et les traînées sont
  * dans un SVG mesuré sur la scène ; les visiteurs se déplacent hors de React,
@@ -48,7 +50,12 @@ const facile = (p: number) => (p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2
 interface Geo { cx: number; cy: number; r: number; bas: number; pages: { x: number; y: number }[]; w: number; h: number; base: number[] }
 
 export function Roue() {
-  const [refVu, vu] = useVu<HTMLDivElement>(0.6);
+  const [refVu, enVue] = useEnVue<HTMLDivElement>(0.5);
+  const [vu, setVu] = useState(false);
+  // Les images du trafic ne tournent que la roue à l'écran ; `reprendre` relance celles d'une lecture en pause.
+  const joue = useRef(false);
+  joue.current = enVue;
+  const reprendre = useRef<(() => void) | null>(null);
   const scene = useRef<HTMLDivElement>(null);
   const anneau = useRef<HTMLDivElement>(null);
   const lien = useRef<HTMLDivElement>(null);
@@ -57,14 +64,22 @@ export function Roue() {
   const points = useRef<(HTMLSpanElement | null)[]>([]);
   const traines = useRef<(SVGPathElement | null)[]>([]);
   const geo = useRef<Geo | null>(null);
-  // L'angle où la roue s'est arrêtée : « Revoir » repart de là.
+  // L'angle où la roue s'est arrêtée : la lecture suivante repart de là.
   const arret = useRef(0);
   const [traces, setTraces] = useState<{ w: number; h: number; tige: string; voies: string[] } | null>(null);
   const [rangees, setRangees] = useState<Reseau[]>([]);
   const [fini, setFini] = useState(false);
   const [tour, setTour] = useState(0);
-  // « Passer » pose la roue sur sa fin, les quatre pages rangées ; « Revoir » rejoue le trafic.
+  // « Passer » pose la roue sur sa fin, les quatre pages rangées.
   const [passe, setPasse] = useState(false);
+  // Finie (ou passée) puis quittée, la scène se rejoue au retour.
+  const quittee = useRef(false);
+  useEffect(() => {
+    if (enVue) setVu(true);
+    if (!enVue && (fini || passe)) quittee.current = true;
+    if (enVue && quittee.current) { quittee.current = false; setPasse(false); setTour(t => t + 1); }
+    if (enVue) reprendre.current?.();
+  }, [enVue]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Les positions de la roue, du lien et des pages, relues à chaque changement de taille.
   useLayoutEffect(() => {
@@ -88,7 +103,7 @@ export function Roue() {
     return () => o.disconnect();
   }, []);
 
-  // Le trafic : une fois, quand la roue est à l'écran ; « Revoir » le relance.
+  // Le trafic : quand la roue est à l'écran, en pause hors de l'écran.
   useEffect(() => {
     if (!vu) return;
     if (mouvementReduit() || passe) { setRangees([...RESEAUX]); setFini(true); return; }
@@ -96,7 +111,7 @@ export function Roue() {
     setFini(false);
     const libres = RESEAUX.map((_, i) => Array.from({ length: PAR_RESEAU }, (_, k) => i * PAR_RESEAU + k));
     const vols: { reseau: number; case: number; depart: number; long: number }[] = [];
-    let suivante = 0, image = 0, debut = 0, fin = 0, dernier = arret.current;
+    let suivante = 0, image = 0, t = 0, prec = 0, fin = 0, termine = false, dernier = arret.current;
     const vus = new Set<Reseau>();
     // À chaque arrivée, la ligne du réseau prend sa couleur un instant (`data-arrive`), puis celle du thème.
     const teintes: ReturnType<typeof setTimeout>[] = [];
@@ -127,8 +142,10 @@ export function Roue() {
       if (!vus.has(reseau)) { vus.add(reseau); setRangees(r => [...r, reseau]); }
     };
     const pas = (now: number) => {
-      if (!debut) debut = now;
-      const t = now - debut;
+      // Hors de l'écran, le temps de la scène s'arrête : `reprendre` la relance là où elle en était.
+      if (!joue.current) { image = 0; prec = 0; return; }
+      if (prec) t += Math.min(now - prec, 100);
+      prec = now;
       const g = geo.current;
       const a = tourner(t);
       // Un visiteur part de son réseau, là où la roue l'a amené.
@@ -166,11 +183,13 @@ export function Roue() {
         chemin.style.opacity = '1';
       }
       if (!fin && suivante >= VISITES.length && !vols.length) fin = t;
-      if (fin && t - fin > FREIN * 4000) { setFini(true); return; }
+      if (fin && t - fin > FREIN * 4000) { termine = true; image = 0; setFini(true); return; }
       image = requestAnimationFrame(pas);
     };
-    const depart = setTimeout(() => { image = requestAnimationFrame(pas); }, 700);
+    reprendre.current = () => { if (!termine && !image) image = requestAnimationFrame(pas); };
+    const depart = setTimeout(() => reprendre.current?.(), 200);
     return () => {
+      reprendre.current = null;
       clearTimeout(depart);
       cancelAnimationFrame(image);
       teintes.forEach(clearTimeout);
@@ -249,9 +268,7 @@ export function Roue() {
         </div>
       </div>
       <p className="hl-roue-pied">
-        {!mouvementReduit() && vu && (fini
-          ? <button type="button" className="hl-revoir" onClick={() => { setPasse(false); setTour(t => t + 1); }}>Revoir les visiteurs</button>
-          : <button type="button" className="hl-revoir" onClick={() => setPasse(true)}>Passer l’animation</button>)}
+        {!mouvementReduit() && vu && !fini && <button type="button" className="hl-revoir" onClick={() => setPasse(true)}>Passer l’animation</button>}
       </p>
     </div>
   );

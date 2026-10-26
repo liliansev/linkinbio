@@ -7,6 +7,9 @@
 .hl-humain [data-teinte='menthe'] { --papier: #e7edde; --lueur: none; --encre: #202820; --gris: #56624d; --accent: #292bff; }
 .hl-humain [data-teinte] { background: var(--papier); }
 .hl-humain [data-teinte='lilas'] { --papier: #eee6f3; --lueur: none; --accent: #292bff; }
+/* Trois fonds (26 octobre 2026, retours d'un ami : sept teintes dispersaient la page) : le bleu Klein ouvre et ferme,
+   le crème porte ce qu'on regarde (Selon, thèmes, prix), la nuit ce qui se paie ; le blanc entre eux, le citron pour accent. */
+.hl-humain [data-teinte='creme'] { --papier: #f2f0e7; --lueur: none; --gris: #5d6159; --accent: #292bff; }
 .hl-humain :is(.hl-section, .hl-heros)[data-teinte] { padding-inline: max(28px, calc((100% - 1200px) / 2)); }
 .hl-humain .hl-section { max-width: 1280px; padding-top: 100px; }
 .hl-humain .hl-section[data-teinte] { max-width: none; }
@@ -175,7 +178,7 @@
   .hp-dashboard-mesures { grid-template-columns: repeat(2,minmax(0,1fr)); }
   .hp-dashboard-details { grid-template-columns: 1fr; gap: 20px; }
 }
-.hl-humain #prix { max-width: none; padding: 90px max(28px, calc((100% - 1200px) / 2)); margin: 100px 14px 0; background: #f6f5ef; border-radius: 30px; }
+.hl-humain #prix { max-width: none; padding: 90px max(28px, calc((100% - 1200px) / 2)); margin: 100px 14px 0; background: #f2f0e7; border-radius: 30px; }
 .hl-humain #prix .hl-tete-section { margin-bottom: 28px; max-width: 760px; }
 .hl-humain #prix .hl-h2 > span { color: #292bff; }
 /* Le choix de la période se lit comme une commande : un rail bordé, la période choisie en blanc, et ce que fait gagner l'annuel dans une étiquette à côté de son nom. */
@@ -427,7 +430,7 @@
 .hp-plus-loin-liste li { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 16px; row-gap: 4px; padding-block: 18px; border-top: 1px solid color-mix(in srgb, currentColor 14%, transparent); }
 .hp-plus-loin-liste li:last-child { border-bottom: 1px solid color-mix(in srgb, currentColor 14%, transparent); }
 .hp-plus-loin-liste b { font-size: 17px; font-weight: 600; letter-spacing: -.01em; }
-.hp-plus-loin-liste span { grid-column: 1; font-size: 15px; line-height: 1.5; color: #4f554c; text-wrap: pretty; }
+.hp-plus-loin-liste span { grid-column: 1; font-size: 15px; line-height: 1.5; color: var(--gris); text-wrap: pretty; }
 .hp-plus-loin-liste .hp-badge-offre { grid-column: 2; grid-row: 1 / span 2; align-self: center; text-decoration: none; }
 .hp-plus-loin .hp-doc-dashboard { display: block; }
 .hp-plus-loin .hp-doc-dashboard > .hl-petit { margin-top: 14px; }

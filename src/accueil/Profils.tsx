@@ -7,7 +7,7 @@ import type { Plan } from '../lib/abonnement.ts';
 import { NOMS_AUDIENCES, composerAudience, deReseau } from '../lib/provenance.ts';
 import { BLOCS_EXEMPLES, IDS_PROFILS, PROFILS, de, pageExemple } from './exemples.ts';
 import type { ProfilExemple } from './exemples.ts';
-import { mouvementReduit, useGlisse, useVu } from './mouvement.ts';
+import { mouvementReduit, useEnVue, useGlisse } from './mouvement.ts';
 import { allerAuChamp, useReservation } from './Reserver.tsx';
 import { EcranPage, Telephone } from './Telephone.tsx';
 import { appel, useInscription } from './textes.ts';
@@ -46,27 +46,28 @@ export function Personne({ profil, badge = true }: { profil: ProfilExemple; badg
 /*
  * L'ouverture tient sa promesse sous les yeux : la carte d'Inès, au premier
  * plan, arrive d'Instagram, ses pièces en tête, puis un visiteur de YouTube la
- * fait se ranger, ses coulisses en vidéo en premier. Une fois, quand la
- * composition est à l'écran (au téléphone, elle est sous le champ) ; avec moins
+ * fait se ranger, ses coulisses en vidéo en premier. Une seconde après que la
+ * composition arrive à l'écran (au téléphone, elle est sous le champ), et de
+ * nouveau à chaque retour : quittée, elle se remet sur Instagram ; avec moins
  * de mouvement, la carte est déjà rangée pour YouTube. Une pastille du réseau
  * marque le lien monté, et une légende lisible le dit en clair. Les notes en
  * serif italique (« Ton visage », « Et bientôt, toi ») sont retirées le 26 octobre 2026 : elles faisaient
  * « page générée ».
  */
 const SOURCES = ['instagram', 'youtube'] as const;
-const AVANT_YOUTUBE = 2200;
+const AVANT_YOUTUBE = 1000;
 
 /** Des cartes compactes composées avec les mêmes données que les vraies pages de démonstration. */
 export function HeroProfils() {
   const [source, setSource] = useState(0);
   const liens = useRef<HTMLDivElement>(null);
-  const [scene, vu] = useVu<HTMLDivElement>(0.6);
+  const [scene, enVue] = useEnVue<HTMLDivElement>(0.5);
   useEffect(() => {
     if (mouvementReduit()) { setSource(1); return; }
-    if (!vu) return;
+    if (!enVue) { setSource(0); return; }
     const t = setTimeout(() => setSource(1), AVANT_YOUTUBE);
     return () => clearTimeout(t);
-  }, [vu]);
+  }, [enVue]);
   const reseau = SOURCES[source];
   const blocsInes = composerAudience(BLOCS_EXEMPLES.ines, reseau);
   useGlisse(liens, blocsInes.map(b => b.id).join(), 600);

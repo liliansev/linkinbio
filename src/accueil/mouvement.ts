@@ -5,7 +5,9 @@ import type { FocusEvent, PointerEvent, RefObject } from 'react';
  * Le mouvement de l'accueil, en quelques outils : un élément « vu » une fois
  * (et une seule), le réglage « moins de mouvement » du système, un nombre qui
  * compte jusqu'à sa valeur, et une liste qui glisse quand son ordre change.
- * Tout se joue une fois ; avec moins de mouvement, l'état final s'affiche.
+ * Une scène part dès qu'elle arrive à l'écran, se met en pause quand on la
+ * quitte et reprend au retour, sans rien à toucher (26 octobre 2026, demandé
+ * par Lilian) ; avec moins de mouvement, l'état final s'affiche.
  */
 
 export const mouvementReduit = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -17,7 +19,7 @@ export const mouvementReduit = () => typeof matchMedia === 'function' && matchMe
  * l'élément occupe 40 % de l'écran : un téléphone, au téléphone, part quand on
  * s'arrête sur ses onglets, sans qu'il faille l'avoir entier au pixel près.
  */
-export function useVu<T extends Element>(seuil = 0.2, tenue = 450): [RefObject<T | null>, boolean] {
+export function useVu<T extends Element>(seuil = 0.2, tenue = 150): [RefObject<T | null>, boolean] {
   const ref = useRef<T>(null);
   const [vu, setVu] = useState(false);
   useEffect(() => {
@@ -36,6 +38,33 @@ export function useVu<T extends Element>(seuil = 0.2, tenue = 450): [RefObject<T
     return () => { clearTimeout(minuterie); o.disconnect(); };
   }, [vu, seuil, tenue]);
   return [ref, vu];
+}
+
+/**
+ * Vrai tant que l'élément tient `seuil` de lui-même dans l'écran (ou 40 % de
+ * l'écran, s'il est plus grand) : la scène joue, puis se met en pause dès
+ * qu'on la quitte. `tenue` ms à l'écran avant de partir, pour un défilement
+ * qui ne fait que passer.
+ */
+export function useEnVue<T extends Element>(seuil = 0.3, tenue = 120): [RefObject<T | null>, boolean] {
+  const ref = useRef<T>(null);
+  const [enVue, setEnVue] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    if (typeof IntersectionObserver !== 'function') { setEnVue(true); return; }
+    const hauteur = el.getBoundingClientRect().height;
+    const s = hauteur ? Math.min(seuil, (innerHeight * 0.4) / hauteur) : seuil;
+    let minuterie: ReturnType<typeof setTimeout> | undefined;
+    const o = new IntersectionObserver(([e]) => {
+      clearTimeout(minuterie);
+      if (e.isIntersecting && e.intersectionRatio >= s - 0.01) minuterie = setTimeout(() => setEnVue(true), tenue);
+      else setEnVue(false);
+    }, { threshold: [0, s] });
+    o.observe(el);
+    return () => { clearTimeout(minuterie); o.disconnect(); };
+  }, [seuil, tenue]);
+  return [ref, enVue];
 }
 
 /** Vrai tant que l'élément est à l'écran : ce qui égrène le temps s'arrête quand on ne le regarde plus. */
@@ -66,21 +95,27 @@ export function useEntrees() {
   }, []);
 }
 
-/** Une suite d'étapes jouée une fois : `pas[i]` est le délai avant l'étape i + 1. Rejouer remet à zéro. */
+/**
+ * Une suite d'étapes : `pas[i]` est le délai avant l'étape i + 1. Elle joue
+ * tant que `actif`, s'arrête là où elle en est quand `actif` tombe, et repart
+ * de cette étape. Rejouer remet à zéro.
+ */
 export function useSequence(actif: boolean, pas: number[]): [number, () => void] {
   const [etape, setEtape] = useState(0);
   const [tour, setTour] = useState(0);
+  const courante = useRef(0);
+  courante.current = etape;
   useEffect(() => {
     if (!actif) return;
     if (mouvementReduit()) { setEtape(pas.length); return; }
-    setEtape(0);
+    const depart = courante.current;
     let total = 0;
-    const minuteries = pas.map((d, i) => { total += d; return setTimeout(() => setEtape(i + 1), total); });
+    const minuteries = pas.slice(depart).map((d, k) => { total += d; return setTimeout(() => setEtape(depart + k + 1), total); });
     return () => minuteries.forEach(clearTimeout);
     // `pas` est une constante de chaque démo : seuls `actif` et « Revoir » relancent.
   }, [actif, tour]);
   // Rejouer repart de zéro dans le même rendu : l'écran remonté ne montre jamais la fin de la lecture d'avant.
-  return [etape, () => { setEtape(mouvementReduit() ? pas.length : 0); setTour(t => t + 1); }];
+  return [etape, () => { const zero = mouvementReduit() ? pas.length : 0; courante.current = zero; setEtape(zero); setTour(t => t + 1); }];
 }
 
 /** Le temps sans mouvement de souris après lequel une scène en pause repart. */
