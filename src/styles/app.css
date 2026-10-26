@@ -38,3 +38,14 @@
 html { -webkit-text-size-adjust: 100%; }
 body { margin: 0; }
 
+/*
+ * L'appui long au doigt (26 octobre 2026, signalé par Lilian) : sur iPhone, un
+ * lien ou une image tenus se soulèvent dans un cadre aux coins qui s'arrondissent,
+ * puis l'aperçu du site ou de la photo s'ouvre. Un bouton, un lien ou une photo
+ * ne réagissent ici qu'au toucher, sans aperçu ni texte sélectionné.
+ */
+@media (pointer: coarse) {
+  a, button, img, [role='button'] { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+  img { -webkit-user-drag: none; }
+}
+
