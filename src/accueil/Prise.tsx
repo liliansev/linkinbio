@@ -133,7 +133,7 @@ export function Prise() {
   );
 
   return (
-    <section className="hl-section" data-teinte="lilas" aria-labelledby="prise">
+    <section className="hl-section" aria-labelledby="prise">
       <div className="hl-tete-section hl-entre">
         <h2 id="prise" className="hl-h2">Ta page en deux minutes<br /><span className="hl-cache">. </span>Depuis ton téléphone</h2>
         <p className="hl-chapo">Quatre questions pour la créer. Ensuite, tu la modifies en la touchant : pas de formulaire à part.</p>

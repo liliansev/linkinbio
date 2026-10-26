@@ -10,9 +10,9 @@ import { OffreFonction } from './Profils.tsx';
 import { useVu } from './mouvement.ts';
 
 /*
- * 06 · Vingt thèmes sur un rail, puis les couleurs qu'on change soi-même. La
- * scène prend la teinte du thème qu'on regarde : le premier entier dans le
- * rail, ou celui que la souris survole. Le rail entre une fois, en glissant.
+ * 06 · Vingt thèmes sur un rail, puis les couleurs qu'on change soi-même, sur
+ * le crème (26 octobre 2026 : la scène ne prend plus la teinte du thème
+ * regardé, l'accueil tient en trois fonds). Le rail entre une fois, en glissant.
  */
 
 const NUANCES: { role: keyof Couleurs; nom: string; choix: [string, string][] }[] = [
@@ -26,8 +26,6 @@ export function Themes() {
   // Le rail entre dès qu'il paraît : ce n'est pas une scène, rien ne s'y joue sans le visiteur.
   const [refVu, vu] = useVu<HTMLDivElement>(0.3, 0);
   const rail = useRef<HTMLUListElement>(null);
-  const [premier, setPremier] = useState(-1);
-  const [survol, setSurvol] = useState(-1);
   const defiler = (sens: number) => rail.current?.scrollBy({ left: sens * rail.current.clientWidth * 0.8, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
 
   // Les flèches s'éteignent aux deux bouts du rail, sans `disabled` : le focus reste sur la flèche qu'on vient d'utiliser.
@@ -42,28 +40,9 @@ export function Themes() {
     return () => { el.removeEventListener('scroll', lire); removeEventListener('resize', lire); };
   }, []);
 
-  // Le premier thème entier dans le rail donne sa teinte à la scène ; si aucun n'est entier (un écran très étroit), le plus visible.
-  useEffect(() => {
-    const el = rail.current;
-    if (!el || typeof IntersectionObserver !== 'function') return;
-    const parts = new Map<number, number>();
-    const o = new IntersectionObserver(entrees => {
-      for (const e of entrees) {
-        const i = Number((e.target as HTMLElement).dataset.i);
-        if (e.isIntersecting) parts.set(i, e.intersectionRatio); else parts.delete(i);
-      }
-      if (!parts.size) return;
-      const entiers = [...parts].filter(([, r]) => r >= 0.97).map(([i]) => i);
-      setPremier(entiers.length ? Math.min(...entiers) : [...parts].reduce((a, b) => (b[1] > a[1] ? b : a))[0]);
-    }, { root: el, threshold: [0, 0.25, 0.5, 0.75, 0.97, 1] });
-    el.querySelectorAll('[data-i]').forEach(li => o.observe(li));
-    return () => o.disconnect();
-  }, []);
-  const regarde = survol >= 0 ? survol : premier;
 
   return (
-    <section className="hl-section" id="themes" data-teinte="theme" aria-labelledby="titre-themes"
-      style={regarde >= 0 ? { '--teinte': THEMES[regarde].vedette } as CSSProperties : undefined}>
+    <section className="hl-section" id="themes" data-teinte="creme" aria-labelledby="titre-themes">
       <div className="hl-tete-section hl-entre">
         <h2 id="titre-themes" className="hl-h2">Une page à toi<br /><span className="hl-cache">. </span>Ça se voit</h2>
         <p className="hl-chapo">Des plus sobres aux plus audacieux, chacun avec sa typographie réglée à la main. Change d’ambiance en un geste.</p>
@@ -76,10 +55,9 @@ export function Themes() {
         </div>
       </div>
       <div ref={refVu}>
-      <ul ref={rail} className="hl-rail" tabIndex={0} data-vu={vu || undefined} aria-label={`${THEMES.length} thèmes`} onPointerLeave={() => setSurvol(-1)}>
+      <ul ref={rail} className="hl-rail" tabIndex={0} data-vu={vu || undefined} aria-label={`${THEMES.length} thèmes`}>
         {THEMES.map((t, i) => (
-          <li key={t.id} className="hl-rail-item" data-i={i} style={i < 6 ? { '--d': `${i * 40}ms` } as CSSProperties : undefined}
-            onPointerEnter={e => { if (e.pointerType === 'mouse') setSurvol(i); }}>
+          <li key={t.id} className="hl-rail-item" data-i={i} style={i < 6 ? { '--d': `${i * 40}ms` } as CSSProperties : undefined}>
             <Telephone largeur={300} label={`La page ${de(PROFILS[IDS_PROFILS[i % IDS_PROFILS.length]].nom)} dans le thème ${t.nom}`}>
               <EcranPage page={pageExemple(IDS_PROFILS[i % IDS_PROFILS.length], t.id)} />
             </Telephone>

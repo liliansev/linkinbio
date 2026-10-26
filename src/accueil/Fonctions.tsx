@@ -546,7 +546,7 @@ const PLUS_LOIN: { nom: string; texte: string; offre: 'starter' | 'pro' }[] = [
 
 export function PlusLoin() {
   return (
-    <section className="hl-section hp-plus-loin" id="plus-loin" data-teinte="menthe" aria-labelledby="titre-plus-loin">
+    <section className="hl-section hp-plus-loin" id="plus-loin" data-teinte="nuit" aria-labelledby="titre-plus-loin">
       <div className="hl-tete-section hl-entre">
         <h2 id="titre-plus-loin" className="hl-h2">Quand tu veux<br /><span className="hl-cache"> </span>aller plus loin</h2>
         <p className="hl-chapo">Ta page vend, compte et suit ton rythme. Sans cookie ni bannière : l’adresse IP de tes visiteurs n’est jamais gardée.</p>
@@ -557,7 +557,7 @@ export function PlusLoin() {
             <li key={f.nom} className="hl-entre" style={d(i * 50)}>
               <b>{f.nom}</b>
               <span>{f.texte}</span>
-              <a href="#prix" className="hp-badge-offre">{f.offre === 'pro' ? 'Pro' : 'Starter'}</a>
+              <a href="#prix" className="hp-badge-offre" data-offre={f.offre}>{f.offre === 'pro' ? 'Pro' : 'Starter'}</a>
             </li>
           ))}
         </ul>
