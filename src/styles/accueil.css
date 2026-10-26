@@ -723,8 +723,9 @@ html:has(.hl-reserver input:focus) { overflow-anchor: none; }
   overflow-x: auto; scroll-snap-type: x mandatory; scroll-padding-inline: var(--bord); overscroll-behavior-x: contain; scrollbar-width: none;
 }
 .hl-rail::-webkit-scrollbar { display: none; }
-/* En boucle, le rail défile seul : l'aimant le ramènerait à chaque image. */
-.hl-rail[data-boucle] { scroll-snap-type: none; }
+/* En boucle, le rail défile seul : l'aimant le ramènerait à chaque image. Il part du bord de la fenêtre, rempli dès
+ * l'arrivée (26 octobre 2026, Lilian : « les thèmes démarrent trop au centre »). */
+.hl-rail[data-boucle] { scroll-snap-type: none; padding-inline-start: 0; }
 /* Le rail paraît en fondu, un peu avant d'arriver à l'écran : les six premiers téléphones l'un après l'autre. Le
  * fondu est sur le contenu, pas sur l'élément aimanté : le rail ne bouge pas sous la flèche ou le focus. */
 @media (scripting: enabled) and (prefers-reduced-motion: no-preference) {
