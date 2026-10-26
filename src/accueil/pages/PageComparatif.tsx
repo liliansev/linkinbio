@@ -6,7 +6,7 @@ import { API } from '../api.ts';
 import { ModeInscription } from '../textes.ts';
 import type { Inscription } from '../textes.ts';
 import { useEntrees } from '../mouvement.ts';
-import { COMPARATIFS, RELEVE } from './comparatifs.ts';
+import { COMPARATIFS } from './comparatifs.ts';
 import type { Comparatif } from './comparatifs.ts';
 
 /*
@@ -26,7 +26,7 @@ export function PageComparatif({ c, mode = 'libre' }: { c: Comparatif; mode?: In
         <main id="contenu">
           <section className="hl-heros hf-heros" data-teinte="klein" aria-labelledby="titre">
             <nav className="hf-fil" aria-label="Fil d’Ariane"><a href="/">Hopla</a><span aria-hidden="true">/</span><a href="/comparatif">Comparatifs</a></nav>
-            <h1 id="titre" className="hl-h1 hf-titre">Hopla ou {c.nom}<span className="hl-cache"> : </span><span>Le comparatif</span></h1>
+            <h1 id="titre" className="hl-h1 hf-titre">Hopla vs {c.nom}<span className="hl-cache"> : </span><span>Le comparatif</span></h1>
             <p className="hl-chapo">{c.chapo}</p>
           </section>
           <section className="hl-section hf-tableau" data-teinte="creme" aria-labelledby="tableau">
@@ -43,7 +43,6 @@ export function PageComparatif({ c, mode = 'libre' }: { c: Comparatif; mode?: In
                 </tbody>
               </table>
             </div>
-            <p className="hf-releve">Prix publics de {c.nom} en dollars, hors taxes, relevés le {RELEVE} : vérifie-les sur son site. « Pas annoncé » : {c.nom} ne le présente pas dans ses offres.</p>
           </section>
           <section className="hl-section hl-etroite hf-texte" aria-label={`Hopla et ${c.nom}`}>
             {c.parties.map(p => (
@@ -82,7 +81,7 @@ export function ListeComparatifs({ liste }: { liste: Comparatif[] }) {
     <ul className="hf-liste">
       {liste.map((c, k) => (
         <li key={c.slug} className="hl-entre" style={{ '--d': `${k * 40}ms` } as CSSProperties}>
-          <a href={`/comparatif/${c.slug}`}><b>Hopla ou {c.nom}</b><span>{c.qui[0].toUpperCase() + c.qui.slice(1)}.</span></a>
+          <a href={`/comparatif/${c.slug}`}><b>Hopla vs {c.nom}</b><span>{c.qui[0].toUpperCase() + c.qui.slice(1)}.</span></a>
         </li>
       ))}
     </ul>

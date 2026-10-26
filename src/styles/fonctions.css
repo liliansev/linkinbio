@@ -94,7 +94,6 @@
 .hf-tableau .hf-nous { width: 35%; background: #fff; font-weight: 600; }
 .hf-tableau thead .hf-nous { color: #292bff; }
 .hf-tableau td[data-vide] { color: var(--gris); }
-.hf-releve { margin-top: 16px; max-width: 70ch; font-size: 13px; line-height: 1.5; color: var(--gris); }
 .hf-texte > div + div { margin-top: 56px; }
 .hf-texte p { margin-top: 16px; max-width: 62ch; font-size: 17px; line-height: 1.7; color: var(--gris); text-wrap: pretty; }
 .hf-pour-eux { padding: 24px 28px; border-radius: 20px; box-shadow: 0 0 0 1px #e3e0d3; }
