@@ -301,6 +301,7 @@ html:has(.hl) { background: #fff; scroll-padding-top: 76px; }
   .hl-roue-ligne svg { width: 12cqi; height: 12cqi; }
   .hl-roue-ligne span { display: none; }
   .hl-roue-liens { --place: 25cqi; }
+  .hp-selon .hl-roue-ligne svg { width: 16cqi; height: 16cqi; }
 }
 /* Sous chaque page, son réseau : le logo seul dans sa couleur, le nom à l'encre ; sans étiquette de couleur derrière. */
 .hl-roue-source { display: inline-flex; align-items: center; justify-content: center; gap: 5px; min-width: 26px; height: 24px; font-size: 12px; font-weight: 600; white-space: nowrap; }
@@ -472,6 +473,9 @@ html:has(.hl-reserver input:focus) { overflow-anchor: none; }
 /* Composé à part, l'écran garde lui-même l'arrondi du cadre ; sous une barre d'adresse, seulement en bas. */
 .hl-tel-barre + .hl-tel-ecran { border-radius: 0 0 28px 28px; }
 .hl-tel-page { width: 390px; height: 100%; zoom: var(--z); }
+/* 26 octobre 2026 (retours d'un ami : « plein d'éléments sous 12 px ») : réduite dans un téléphone, une vraie page
+ * garde ses petits textes (bio, sous-titres, places, pied) à 12 px au moins une fois rendus. */
+.hl-tel-page :is(.lp-bio, .lp-sous, .lp-carte-sous, .lp-carte-description, .lp-drop-places, .lp-legal, .lp-legal a, .lp-legal-point, .lp-mention, .lp-hopla, .lp-hopla-haut, .lp-pub, .lp-badge) { font-size: max(1em, calc(12px / var(--z))); }
 .hl-tel-page > .lp { min-height: 100%; background-attachment: scroll; overflow: hidden; }
 .hl-tel [data-decor]::before { position: absolute; animation: none; }
 .hl-fondu { height: 100%; animation: hl-fondu .5s ease both; }
@@ -729,8 +733,8 @@ html:has(.hl-reserver input:focus) { overflow-anchor: none; }
   .hl-rail-item > * { transition: opacity .5s var(--ease), transform .5s var(--ease); transition-delay: var(--d, 0ms); }
   .hl-rail:not([data-vu]) .hl-rail-item > * { opacity: 0; transform: translateX(24px); }
 }
-.hl-rail-item { flex: none; width: 210px; display: flex; flex-direction: column; gap: 12px; scroll-snap-align: start; }
-.hl-rail-item > :first-child { content-visibility: auto; contain-intrinsic-size: auto 210px auto 420px; }
+.hl-rail-item { flex: none; width: 300px; display: flex; flex-direction: column; gap: 12px; scroll-snap-align: start; }
+.hl-rail-item > :first-child { content-visibility: auto; contain-intrinsic-size: auto 300px auto 600px; }
 .hl-rail:focus-visible { outline-offset: -2px; }
 .hl-rail-item p { display: flex; flex-direction: column; font-size: 14px; line-height: 1.4; }
 .hl-couleurs {
@@ -742,8 +746,8 @@ html:has(.hl-reserver input:focus) { overflow-anchor: none; }
 .hl-couleurs-tel { grid-area: tel; justify-self: center; }
 /* Au téléphone, l'aperçu ne garde que le haut de la page (avatar, nom, deux boutons) : il tient dans l'écran avec les pastilles. */
 @media (max-width: 899px) {
-  .hl-couleurs-tel .hl-tel { --l: 220px !important; --z: .5641 !important; }
-  .hl-couleurs-tel { max-height: 300px; overflow: hidden; -webkit-mask-image: linear-gradient(#000 80%, transparent); mask-image: linear-gradient(#000 80%, transparent); }
+  .hl-couleurs-tel .hl-tel { --l: 300px !important; --z: .7692 !important; }
+  .hl-couleurs-tel { max-height: 360px; overflow: hidden; -webkit-mask-image: linear-gradient(#000 80%, transparent); mask-image: linear-gradient(#000 80%, transparent); }
 }
 .hl-couleurs-reglage > .hl-lien-texte[data-cache] { visibility: hidden; }
 @media (min-width: 900px) {

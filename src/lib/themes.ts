@@ -176,7 +176,7 @@ export const THEMES: Theme[] = [
   {
     id: 'sauge', nom: 'Sauge', humeur: 'Doux', famille: 'clair',
     fond: lueur('#f4f6f0', '#e3e9de'), fondUni: '#e3e9de', texte: '#1d2a22', doux: '#4c5c51',
-    surface: '#ffffff', surfaceTexte: '#1d2a22', vedette: '#b5502c', vedetteTexte: '#ffffff', ombre: '#2e4a37',
+    surface: '#ffffff', surfaceTexte: '#1d2a22', vedette: '#8f3b1c', vedetteTexte: '#ffffff', ombre: '#2e4a37',
     police: 'geometrique',
     typo: { nom: { taille: 1.9, graisse: 560, approche: -0.03 }, section: { taille: 0.92, graisse: 540, approche: 0 }, bouton: { graisse: 520, approche: -0.005 }, carte: { graisse: 600, approche: -0.015 } },
     conseil: { style: 'plein', forme: 'pilule', ombre: 'subtile' },
@@ -184,7 +184,7 @@ export const THEMES: Theme[] = [
   {
     id: 'lin', nom: 'Lin', humeur: 'Chaleureux', famille: 'clair',
     fond: '#f4ece1', fondUni: '#f4ece1', texte: '#2b2118', doux: '#6a5a4a',
-    surface: '#2b2118', surfaceTexte: '#f8f1e7', vedette: '#c8693f', vedetteTexte: '#1f0e04', ombre: '#5a4630',
+    surface: '#2b2118', surfaceTexte: '#f8f1e7', vedette: '#e38b5c', vedetteTexte: '#1f0e04', ombre: '#5a4630',
     police: 'serif',
     typo: { nom: { taille: 2.25, graisse: 500, approche: -0.015 }, section: { taille: 1.1, graisse: 450, approche: 0, italique: true }, bouton: { graisse: 520, approche: 0 }, carte: { taille: 1.12, graisse: 560, approche: -0.005 } },
     conseil: { style: 'plein', forme: 'arrondi', ombre: 'aucune' },
@@ -330,6 +330,13 @@ export const legalPied = (theme: Theme) => lisibleAuPied(theme, theme.doux)[0];
 /** Le texte qui se lit sur `fond` : le premier proposé qui passe 4,5, sinon le blanc ou le presque noir. */
 const lisibleSur = (fond: string, ...choix: string[]) =>
   choix.find(c => contraste(c, fond) >= 4.5) ?? (contraste('#ffffff', fond) >= contraste('#111111', fond) ? '#ffffff' : '#111111');
+/**
+ * Le texte d'un bouton, plus petit et plus gras qu'un paragraphe : la couleur du thème si elle passe 7, sinon celle
+ * des trois qui se lit le mieux (26 octobre 2026, retours d'un ami : un corail vif sous un texte presque noir, à 4,9,
+ * se lisait mal).
+ */
+const lisibleBouton = (fond: string, propre: string) =>
+  contraste(propre, fond) >= 7 ? propre : [propre, '#ffffff', '#111111'].reduce((a, b) => (contraste(b, fond) > contraste(a, fond) ? b : a));
 const estCouleur = (c: string | undefined): c is string => !!c && /^#[0-9a-f]{6}$/i.test(c);
 
 /**
@@ -353,11 +360,11 @@ export function personnaliser(theme: Theme, couleurs?: Partial<Couleurs>): Theme
   }
   if (estCouleur(couleurs?.boutons)) {
     t.surface = couleurs.boutons.toLowerCase();
-    t.surfaceTexte = lisibleSur(t.surface, theme.surfaceTexte, '#ffffff', '#111111');
+    t.surfaceTexte = lisibleBouton(t.surface, theme.surfaceTexte);
   }
   if (estCouleur(couleurs?.accent)) {
     t.vedette = couleurs.accent.toLowerCase();
-    t.vedetteTexte = lisibleSur(t.vedette, theme.vedetteTexte, '#ffffff', '#111111');
+    t.vedetteTexte = lisibleBouton(t.vedette, theme.vedetteTexte);
   }
   return t;
 }

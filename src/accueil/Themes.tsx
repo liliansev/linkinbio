@@ -18,7 +18,7 @@ import { useVu } from './mouvement.ts';
 const NUANCES: { role: keyof Couleurs; nom: string; choix: [string, string][] }[] = [
   { role: 'fond', nom: 'Fond', choix: [['#f4efe6', 'crème'], ['#1d2b3a', 'nuit'], ['#f6d9d0', 'rose poudré'], ['#dfe8dc', 'sauge']] },
   { role: 'boutons', nom: 'Boutons', choix: [['#ffffff', 'blancs'], ['#1b1b1b', 'noirs'], ['#33524a', 'vert forêt'], ['#f2c94c', 'moutarde']] },
-  { role: 'accent', nom: 'Accent', choix: [['#e2552d', 'corail'], ['#3651d4', 'bleu'], ['#b0186b', 'framboise'], ['#1f7a4d', 'vert']] },
+  { role: 'accent', nom: 'Accent', choix: [['#c4421a', 'corail'], ['#3651d4', 'bleu'], ['#b0186b', 'framboise'], ['#1f7a4d', 'vert']] },
 ];
 
 export function Themes() {
@@ -80,7 +80,7 @@ export function Themes() {
         {THEMES.map((t, i) => (
           <li key={t.id} className="hl-rail-item" data-i={i} style={i < 6 ? { '--d': `${i * 40}ms` } as CSSProperties : undefined}
             onPointerEnter={e => { if (e.pointerType === 'mouse') setSurvol(i); }}>
-            <Telephone largeur={210} label={`La page ${de(PROFILS[IDS_PROFILS[i % IDS_PROFILS.length]].nom)} dans le thème ${t.nom}`}>
+            <Telephone largeur={300} label={`La page ${de(PROFILS[IDS_PROFILS[i % IDS_PROFILS.length]].nom)} dans le thème ${t.nom}`}>
               <EcranPage page={pageExemple(IDS_PROFILS[i % IDS_PROFILS.length], t.id)} />
             </Telephone>
             <p><b>{t.nom}</b> <span className="hl-gris">{t.humeur}</span></p>
@@ -112,7 +112,7 @@ export function Themes() {
           <button type="button" className="hl-lien-texte" data-cache={(!couleurs.fond && !couleurs.boutons && !couleurs.accent) || undefined} onClick={() => setCouleurs(SANS_COULEURS)}>Revenir aux couleurs du thème</button>
         </div>
         <div className="hl-couleurs-tel">
-          <Telephone largeur={260} className="hl-tel-court" label="La page d’Inès Laurent dans le thème Lin, avec les couleurs choisies">
+          <Telephone largeur={300} className="hl-tel-court" label="La page d’Inès Laurent dans le thème Lin, avec les couleurs choisies">
             <EcranPage page={pageExemple('ines', 'lin', { couleurs })} />
           </Telephone>
         </div>
