@@ -528,3 +528,46 @@ export function Stats() {
     </section>
   );
 }
+
+/* ---- 05 · Plus loin ----
+ * 26 octobre 2026, retours d'un ami relayés par Lilian (« la page perd ta promesse, elle s'étale sur cinq
+ * pistes ») : la page selon l'heure, le lancement, les drops, les avis, la liste e-mail et les stats tiennent
+ * dans une seule section, une ligne chacun, à côté du tableau de bord. `Vivante` et `Stats` restent écrits
+ * pour les pages de chaque fonction.
+ */
+const PLUS_LOIN: { nom: string; texte: string; offre: 'starter' | 'pro' }[] = [
+  { nom: 'Tes stats, en clair', texte: 'Tes vues, tes clics, d’où viennent tes visiteurs, et l’essentiel chaque lundi par e‑mail.', offre: 'starter' },
+  { nom: 'Ta vitrine', texte: 'Tes produits avec leur photo et leur prix, ta prise de rendez-vous, tes dons.', offre: 'starter' },
+  { nom: 'Tes lancements', texte: 'Un lien qui apparaît à l’heure dite, avec son compte à rebours.', offre: 'starter' },
+  { nom: 'Tes avis clients', texte: 'Ta note Google ou Trustpilot, recopiée chaque jour.', offre: 'starter' },
+  { nom: 'Ta page selon l’heure', texte: 'Le menu du jour le midi, la réservation le soir.', offre: 'pro' },
+  { nom: 'Tes drops et ta liste e‑mail', texte: 'Des places comptées, et des inscrits qui partent vers ta newsletter.', offre: 'pro' },
+];
+
+export function PlusLoin() {
+  return (
+    <section className="hl-section hp-plus-loin" id="plus-loin" data-teinte="menthe" aria-labelledby="titre-plus-loin">
+      <div className="hl-tete-section hl-entre">
+        <h2 id="titre-plus-loin" className="hl-h2">Quand tu veux<br /><span className="hl-cache"> </span>aller plus loin</h2>
+        <p className="hl-chapo">Ta page vend, compte et suit ton rythme. Sans cookie ni bannière : l’adresse IP de tes visiteurs n’est jamais gardée.</p>
+      </div>
+      <div className="hp-plus-loin-corps">
+        <ul className="hp-plus-loin-liste">
+          {PLUS_LOIN.map((f, i) => (
+            <li key={f.nom} className="hl-entre" style={d(i * 50)}>
+              <b>{f.nom}</b>
+              <span>{f.texte}</span>
+              <a href="#prix" className="hp-badge-offre">{f.offre === 'pro' ? 'Pro' : 'Starter'}</a>
+            </li>
+          ))}
+        </ul>
+        <article className="hl-mail hp-doc-dashboard hl-entre" aria-label="Exemple de tableau de bord">
+          <div className="hl-mail-tete"><Symbole className="hl-mail-logo" /><b>Hopla</b></div>
+          <Personne profil="ines" badge={false} />
+          <DashboardStats />
+          <p className="hl-gris hl-petit">Chiffres d’exemple.</p>
+        </article>
+      </div>
+    </section>
+  );
+}

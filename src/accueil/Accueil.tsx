@@ -1,6 +1,6 @@
 import { GalerieProfils } from './Profils.tsx';
 import { Barre, Ouverture, Selon } from './Ouverture.tsx';
-import { DansApp, Stats, Vivante } from './Fonctions.tsx';
+import { PlusLoin } from './Fonctions.tsx';
 import { Themes } from './Themes.tsx';
 import { Prise } from './Prise.tsx';
 import { DernierAppel, Pied, Prix, Questions } from './Fin.tsx';
@@ -28,9 +28,7 @@ export function Accueil({ api, mode = 'libre' }: { api: ApiAccueil; mode?: Inscr
         <Ouverture api={api} />
         <GalerieProfils />
         <Selon />
-        <DansApp />
-        <Vivante />
-        <Stats />
+        <PlusLoin />
         <Themes />
         <Prise />
         <Prix />

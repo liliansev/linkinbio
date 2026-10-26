@@ -273,7 +273,10 @@
   .hp-note-fin { display: block; }
   .hp-visage-libre { width: 38px; border-width: 3px; }
   .hp-heros-pied { padding-top: 48px; }
-  .hp-galerie { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 24px 14px; }
+  /* Au téléphone, les six profils glissent sur une rangée (26 octobre 2026 : en grille, ils prenaient un écran). */
+  .hp-galerie { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: 42%; gap: 14px; overflow-x: auto; scroll-snap-type: x mandatory; margin-inline: -22px; padding-inline: 22px; scroll-padding-inline: 22px; scrollbar-width: none; }
+  .hp-galerie::-webkit-scrollbar { display: none; }
+  .hp-galerie > .hp-profil { scroll-snap-align: start; }
   .hp-profil > b { font-size: 16px; }
   .hl-humain .hp-selon { margin: 65px 8px 0; padding: 55px 22px; }
   .hp-selon .hl-chapo { font-size: 15px; }
@@ -424,3 +427,26 @@
 .hl-offre-reste > summary svg { transition: transform .2s; }
 .hl-offre-reste[open] > summary svg { transform: rotate(45deg); }
 .hl-offre-reste > ul { margin-top: 6px; }
+
+/* Plus loin (26 octobre 2026) : une ligne par fonction payante, à côté du tableau de bord. */
+.hp-plus-loin-corps { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: clamp(32px, 5vw, 80px); align-items: start; margin-top: 40px; }
+.hp-plus-loin-liste { display: flex; flex-direction: column; }
+.hp-plus-loin-liste li { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 16px; row-gap: 4px; padding-block: 18px; border-top: 1px solid color-mix(in srgb, currentColor 14%, transparent); }
+.hp-plus-loin-liste li:last-child { border-bottom: 1px solid color-mix(in srgb, currentColor 14%, transparent); }
+.hp-plus-loin-liste b { font-size: 17px; font-weight: 600; letter-spacing: -.01em; }
+.hp-plus-loin-liste span { grid-column: 1; font-size: 15px; line-height: 1.5; color: #4f554c; text-wrap: pretty; }
+.hp-plus-loin-liste .hp-badge-offre { grid-column: 2; grid-row: 1 / span 2; align-self: center; text-decoration: none; }
+.hp-plus-loin .hp-doc-dashboard { display: block; }
+.hp-plus-loin .hp-doc-dashboard > .hl-petit { margin-top: 14px; }
+@media (max-width: 1023px) { .hp-plus-loin-corps { grid-template-columns: 1fr; } }
+
+/* Les questions repliées (26 octobre 2026) : un lien sous les six premières, qui les déplie à la suite. */
+.hl-questions-plus > summary { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; margin-top: 16px; cursor: pointer; list-style: none; font-size: 15px; font-weight: 600; text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 1px; text-decoration-color: color-mix(in srgb, currentColor 45%, transparent); }
+.hl-questions-plus > summary::-webkit-details-marker { display: none; }
+.hl-questions-plus[open] > summary { display: none; }
+
+@media (max-width: 1023px) {
+  .hp-plus-loin .hp-doc-dashboard .hp-personne, .hp-plus-loin .hp-dashboard-details { display: none; }
+  .hl-humain .hp-offre-personne { display: none; }
+}
+.hp-plus-loin-liste .hp-badge-offre { min-width: 64px; justify-content: center; }

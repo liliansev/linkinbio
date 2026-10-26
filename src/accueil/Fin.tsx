@@ -25,13 +25,14 @@ const DEMOS: Record<string, string> = {
   'Ta page selon le réseau du visiteur': '#fonctionnement',
   'Les vingt thèmes': '#themes',
   'Tes couleurs, ta police, ton fond': '#couleurs',
-  'Tes liens programmés à l’avance': '#vivante-lancement',
-  'Les avis de tes clients': '#vivante-avis',
-  'Tes stats sur 30 jours': '#stats',
-  'Ta page selon l’heure et le pays': '#vivante-heure',
-  'Les drops : un code, des places comptées': '#vivante-drops',
-  'Ta liste e-mail, vers ta newsletter': '#vivante-liste',
-  'Tes stats sur un an': '#stats',
+  'Ta vitrine : produits, rendez-vous, dons': '#plus-loin',
+  'Tes liens programmés à l’avance': '#plus-loin',
+  'Les avis de tes clients': '#plus-loin',
+  'Tes stats sur 30 jours': '#plus-loin',
+  'Ta page selon l’heure et le pays': '#plus-loin',
+  'Les drops : un code, des places comptées': '#plus-loin',
+  'Ta liste e-mail, vers ta newsletter': '#plus-loin',
+  'Tes stats sur un an': '#plus-loin',
 };
 
 /**
@@ -145,8 +146,23 @@ function Avantage({ g }: { g: string }) {
   );
 }
 
+/** Les six questions qu'on lit d'abord (26 octobre 2026 : onze à la suite allongeaient trop la page). */
+const ESSENTIELLES = ['C’est quoi, Hopla', 'C’est vraiment gratuit', 'Combien de temps', 'Quand aurai-je', 'Quelle sera mon adresse', QUESTION_LINKTREE, 'Mes visiteurs sont-ils pistés'];
+
+const essentielle = ([q]: [string, string]) => ESSENTIELLES.some(e => q.startsWith(e));
+
+function question([q, r]: [string, string]) {
+  return (
+    <details key={q} className="hl-question">
+      <summary>{q}<Icone nom="ui-plus" taille={18} /></summary>
+      <p>{r}{q === QUESTION_LINKTREE && <> <button type="button" className="hl-lien-texte" onClick={() => allerAuChamp()}>Coller mon adresse Linktree</button></>}</p>
+    </details>
+  );
+}
+
 export function Questions() {
   const liste = questions(useInscription());
+  const autres = liste.filter(q => !essentielle(q));
   return (
     <section className="hl-section hl-etroite" id="questions" aria-labelledby="titre-questions">
       <div className="hl-questions-tete hl-entre">
@@ -155,12 +171,12 @@ export function Questions() {
         <p>Une autre question ? <a href={`mailto:${CONTACT_LEGAL}`}>Écris à Lilian</a>, qui fait Hopla.</p>
       </div>
       <div className="hl-questions">
-        {liste.map(([q, r]) => (
-          <details key={q} className="hl-question">
-            <summary>{q}<Icone nom="ui-plus" taille={18} /></summary>
-            <p>{r}{q === QUESTION_LINKTREE && <> <button type="button" className="hl-lien-texte" onClick={() => allerAuChamp()}>Coller mon adresse Linktree</button></>}</p>
-          </details>
-        ))}
+        {liste.filter(essentielle).map(question)}
+        {/* Les autres restent dans la page (et dans les données structurées), repliées : la page reste courte. */}
+        <details className="hl-questions-plus">
+          <summary>Les {autres.length} autres questions<Icone nom="ui-plus" taille={18} /></summary>
+          {autres.map(question)}
+        </details>
       </div>
     </section>
   );
