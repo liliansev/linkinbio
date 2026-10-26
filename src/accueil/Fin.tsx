@@ -57,20 +57,21 @@ const TABLEAU: { groupe: string; lignes: LigneTableau[] }[] = [
     { nom: 'Tes liens ouverts dans leur app', page: 'ouvrir-dans-l-app' },
     { nom: 'Les vingt thèmes', page: 'themes' },
     { nom: 'Blocs sur ta page', valeurs: ['5', 'Sans limite', 'Sans limite'] },
-    { nom: 'Sans la mention Hopla', fonction: 'sansMention' },
+    { nom: 'Ta page sans la mention Hopla', fonction: 'sansMention' },
   ] },
   { groupe: 'Ton style', lignes: [
     { nom: 'Tes couleurs, ta police, ton fond', fonction: 'couleurs', page: 'themes' },
     { nom: 'Grande photo, liens en grille', fonction: 'grille' },
-    { nom: 'Formulaire de contact et galeries', fonction: 'formulaire' },
+    { nom: 'Photos par galerie', valeurs: ['3', '12', '12'] },
+    { nom: 'Ton formulaire de contact', fonction: 'formulaire' },
   ] },
   { groupe: 'Vendre', lignes: [
     { nom: 'Ta vitrine : produits, rendez-vous, dons', fonction: 'vitrine', page: 'vitrine' },
     { nom: 'Les avis de tes clients', fonction: 'avis', page: 'avis' },
-    { nom: 'Liens partenaires et mention « Publicité »' },
+    { nom: 'Liens partenaires, mention « Publicité »' },
   ] },
   { groupe: 'Au bon moment', lignes: [
-    { nom: 'Liens programmés, compte à rebours', fonction: 'programmation', page: 'lancement' },
+    { nom: 'Tes liens programmés à l’avance', fonction: 'programmation', page: 'lancement' },
     { nom: 'Ta page selon l’heure et le pays', fonction: 'heure', page: 'page-selon-l-heure' },
     { nom: 'Les drops : un code, des places comptées', fonction: 'drops', page: 'drops' },
   ] },
@@ -79,23 +80,30 @@ const TABLEAU: { groupe: string; lignes: LigneTableau[] }[] = [
     { nom: 'Un cadeau contre l’e-mail', fonction: 'cadeau' },
     { nom: 'Tes derniers articles, en RSS', fonction: 'flux' },
   ] },
-  { groupe: 'Tes stats et ton suivi, sans cookie', lignes: [
-    { nom: 'Historique', valeurs: ['Vues, 7 jours', '30 jours', 'Un an'], page: 'stats' },
+  { groupe: 'Tes stats, sans cookie', lignes: [
+    { nom: 'Tes vues', valeurs: ['7 jours', '30 jours', 'Un an'], page: 'stats' },
+    { nom: 'Clics, réseaux et pays de tes visiteurs', fonction: 'stats', page: 'stats' },
     { nom: 'L’essentiel chaque lundi par e-mail', fonction: 'stats' },
     { nom: 'Redirection et suivi UTM', fonction: 'utm' },
   ] },
 ];
 const EN_VENTE = PLANS.filter(plan => OFFRES[plan].enVente);
+/** Le visage de chaque offre, celui de sa carte au-dessus. */
+const VISAGE = { gratuit: 'camille', starter: 'ines', pro: 'malik', premium: 'malik' } as const;
 
 function Case({ ligne, plan }: { ligne: LigneTableau; plan: Plan }) {
   if (ligne.valeurs) return <td>{ligne.valeurs[EN_VENTE.indexOf(plan)]}</td>;
   const inclus = !ligne.fonction || rang(plan) >= rang(FONCTIONS[ligne.fonction]);
   return inclus
     ? <td><Icone nom="check" taille={20} className="hl-tableau-oui" /><span className="hl-cache">Inclus</span></td>
-    : <td><span className="hl-tableau-non" aria-hidden="true" /><span className="hl-cache">Non</span></td>;
+    : <td><span className="hl-tableau-non" aria-hidden="true" /><span className="hl-cache">Non inclus</span></td>;
 }
 
-function TableauOffres() {
+/**
+ * En tête, chaque offre avec son visage et son prix de la période choisie au-dessus (Pro sur le bleu, comme sa carte) ;
+ * au pied, le même bouton que sa carte : on choisit là où l'on a fini de comparer.
+ */
+function TableauOffres({ periode, reserver, action }: { periode: Periode; reserver: (ev: MouseEvent, plan: Plan) => void; action: (plan: Plan) => string | null }) {
   return (
     <div className="hl-tableau hl-entre">
       <h3 className="hl-h3 hl-tableau-titre">Tout comparer</h3>
@@ -103,21 +111,39 @@ function TableauOffres() {
         <caption className="hl-cache">Ce que comprend chaque offre</caption>
         <thead>
           <tr>
-            <td />
-            {EN_VENTE.map(plan => <th key={plan} scope="col" className={plan === 'pro' ? 'hl-tableau-pro' : ''}>{OFFRES[plan].nom}</th>)}
+            <td><span className="hl-cache">Fonction</span></td>
+            {EN_VENTE.map(plan => (
+              <th key={plan} scope="col" className={plan === 'pro' ? 'hl-tableau-pro' : ''}>
+                <span className="hl-tableau-offre"><Avatar profil={VISAGE[plan]} />{OFFRES[plan].nom}</span>
+                <span className="hl-tableau-prix"><b>{plan === 'gratuit' ? '0 €' : euros(OFFRES[plan].prix[periode])}</b> {plan === 'gratuit' ? 'pour toujours' : periode === 'an' ? 'par an' : 'par mois'}</span>
+                {plan === PLAN_ESSAI && <span className="hl-tableau-essai">{ESSAI_JOURS} jours offerts</span>}
+              </th>
+            ))}
           </tr>
         </thead>
         {TABLEAU.map(({ groupe, lignes }) => (
           <tbody key={groupe}>
-            <tr className="hl-tableau-groupe"><th scope="colgroup" colSpan={EN_VENTE.length + 1}>{groupe}</th></tr>
+            <tr className="hl-tableau-groupe"><th scope="rowgroup">{groupe}</th>{EN_VENTE.map(plan => <td key={plan} />)}</tr>
             {lignes.map(l => (
               <tr key={l.nom}>
-                <th scope="row">{l.page ? <a className="hl-offre-demo" href={`/fonctions/${l.page}`}>{l.nom}</a> : l.nom}</th>
+                <th scope="row">{l.page ? <a href={`/fonctions/${l.page}`}>{l.nom}<span className="hl-cache">, voir la fonction</span></a> : l.nom}</th>
                 {EN_VENTE.map(plan => <Case key={plan} ligne={l} plan={plan} />)}
               </tr>
             ))}
           </tbody>
         ))}
+        {EN_VENTE.some(plan => action(plan)) && (
+          <tfoot>
+            <tr>
+              <td />
+              {EN_VENTE.map(plan => (
+                <td key={plan}>
+                  {action(plan) && <a href="#reserver" className={`hl-btn ${plan === 'pro' ? '' : 'hl-btn-contour'}`} onClick={ev => reserver(ev, plan)}>{action(plan)}</a>}
+                </td>
+              ))}
+            </tr>
+          </tfoot>
+        )}
       </table>
     </div>
   );
@@ -214,7 +240,7 @@ export function Prix() {
         })}
       </div>
       </div>
-      <TableauOffres />
+      <TableauOffres periode={periode} reserver={reserver} action={plan => envoye || !OFFRES[plan].enVente ? null : 'Choisir'} />
       <p className="hl-gris hl-petit hl-centre">Prix TTC. Ta page commence par {ESSAI_JOURS} jours de {OFFRES[PLAN_ESSAI].nom} offerts, sans carte bancaire ; ensuite elle reste en ligne en Gratuit, ou tu prends une offre depuis tes réglages. Résiliable à tout moment : l’offre reste jusqu’à la fin de la période payée.</p>
     </section>
   );
