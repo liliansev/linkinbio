@@ -84,8 +84,6 @@
 .hp-page-ines [data-premier] { background: #173b33; color: #fff7ef; }
 .hp-page-sacha [data-premier] { background: #7cf5c8; color: #05061a; }
 .hp-page-camille [data-premier] { background: #d9b46a; color: #16110a; }
-.hp-page-marque { display: flex; align-items: center; justify-content: center; gap: 5px; margin-top: 25px; font-size: 12px; }
-.hp-page-marque svg { width: 20px; height: 20px; }
 .hp-visage-libre { position: absolute; width: 64px; border-radius: 50%; border: 4px solid #fff; z-index: 4; }
 .hp-visage-lea { right: -1%; top: 12%; transform: rotate(8deg); }
 .hp-visage-hugo { left: 3%; bottom: 12%; transform: rotate(-8deg); }
@@ -285,8 +283,6 @@
   .hp-page-liens { margin-top: 12px; gap: 6px; }
   .hp-page-liens > div { min-height: 30px; padding: 6px 7px; font-size: 12px; gap: 3px; }
   .hp-page-liens svg { width: 9px; height: 9px; }
-  .hp-page-marque { display: none; }
-  .hp-page-marque svg { width: 14px; height: 14px; }
   .hp-page-ines .hp-page-corps > .hp-avatar { margin-top: -16px; }
   /* Au téléphone, il passe sous Hugo, sur deux lignes. */
   .hp-visage-libre { width: 38px; border-width: 3px; }
@@ -527,7 +523,7 @@ html:has(.hl-humain) { scroll-padding-top: 96px; }
 .hl-tableau-non { display: inline-block; width: 12px; height: 2px; border-radius: 1px; background: #9a9e93; vertical-align: middle; }
 .hl-tableau tfoot td { padding: 20px 8px 16px; text-align: center; }
 .hl-tableau tfoot td:last-child { border-radius: 0 0 14px 14px; }
-.hl-tableau tfoot .hl-btn { width: 100%; max-width: 200px; justify-content: center; }
+.hl-tableau tfoot .hl-btn { width: 100%; max-width: 200px; justify-content: center; gap: 0; white-space: pre; }
 .hl-tableau tfoot td:last-child .hl-btn { background: #292bff; border-color: #292bff; color: #fff; }
 .hl-tableau tfoot td:last-child .hl-btn:hover { background: #1f21e0; }
 .hl-tableau tfoot td:not(:last-child) .hl-btn-contour { background: #fff; color: #20241f; border-color: #b8bdb0; }
@@ -547,7 +543,9 @@ html:has(.hl-humain) { scroll-padding-top: 96px; }
   .hl-tableau tbody td { padding: 12px 0; font-size: 13px; }
   .hl-tableau tbody th a { scroll-margin-top: 170px; }
   .hl-tableau tfoot td { padding: 14px 3px 10px; }
-  .hl-tableau tfoot .hl-btn { min-height: 44px; padding-inline: 4px; font-size: 13px; }
+  /* Au téléphone, le nom de l'offre passe sous « Choisir » : la colonne n'a que 57 px. */
+  .hl-tableau tfoot .hl-btn { flex-direction: column; gap: 0; min-height: 52px; padding: 6px 2px; font-size: 13px; line-height: 1.2; }
+  .hl-tableau-btn-offre { font-weight: 700; }
 }
 /* Au téléphone (audit du 26 octobre 2026), chaque ligne lit son critère sur toute la largeur, puis ses trois réponses
    dessous : plus de libellé coupé en quatre lignes. L'en-tête des offres reste collé sous la barre. */
@@ -595,7 +593,6 @@ html:has(.hl-humain) { scroll-padding-top: 96px; }
   display: flex; flex-direction: column; gap: 1px; padding: 10px 12px; border-radius: 11px;
   color: var(--encre); font-size: 14px; font-weight: 550; line-height: 1.35; text-decoration: none; transition: background-color .15s;
 }
-.hl-deroule li a small { color: var(--gris); font-size: 12px; font-weight: 500; }
 .hl-deroule li a:hover { background: #f2f0e7; }
 .hl-deroule :focus-visible { outline-color: #292bff; outline-offset: -2px; }
 .hl-deroule-tout {

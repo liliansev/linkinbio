@@ -34,10 +34,10 @@ const GESTES: Pas[] = [
   { picto: 'palette', titre: 'Personnaliser', texte: 'Le design s’ouvre dans une feuille qui laisse voir ta page.' },
 ];
 
-/** Créer : une étape remplie toutes les 1,4 s. Modifier : 1 le nom s'écrit ; 2 un bloc se soulève ; 3 il monte ; 4 il se pose ; 5 la feuille s'ouvre ; 6 un thème est choisi. */
-const PAS: Record<Onglet, number[]> = { creer: [500, 1400, 1400, 1400], modifier: [500, 1500, 500, 600, 800, 900] };
-/** Le temps laissé sur la fin de chaque scène avant de passer à l'autre. */
-const TENUE: Record<Onglet, number> = { creer: 1600, modifier: 2600 };
+/** Créer : une étape remplie toutes les 0,8 s. Modifier : 1 le nom s'écrit ; 2 un bloc se soulève ; 3 il monte ; 4 il se pose ; 5 la feuille s'ouvre ; 6 un thème est choisi. */
+const PAS: Record<Onglet, number[]> = { creer: [300, 800, 800, 800], modifier: [300, 800, 350, 400, 500, 600] };
+/** Le temps laissé sur la fin de chaque scène avant de passer à l'autre (26 octobre 2026, demandé par Lilian : le tour entier en moins de 8 s, contre 14). */
+const TENUE: Record<Onglet, number> = { creer: 900, modifier: 1200 };
 const somme = (l: number[]) => l.reduce((a, b) => a + b, 0);
 
 function pageEtape(n: number) {
