@@ -360,6 +360,14 @@ function Recapitulatif({ plan, periode, setPeriode, abonnement, grand, id, mois,
       <dl className="adm-recap-lignes">
         {lignes.map(([nom, valeur, fort]) => <div key={nom}><dt>{nom}</dt><dd data-fort={fort || undefined}>{valeur}</dd></div>)}
       </dl>
+      {/* Creem ne décale pas un premier paiement : pris pendant l'essai, l'abonnement commence le jour même. */}
+      {abonnement.essai && !changement && (
+        <p className="adm-recap-periode-detail">
+          {rang(plan) >= rang(PLAN_ESSAI)
+            ? 'Ton abonnement commence aujourd’hui, l’essai s’arrête là.'
+            : `Ton abonnement commence aujourd’hui. Ton essai ${OFFRES[PLAN_ESSAI].nom} continue jusqu’au ${dateLongue(abonnement.essai)}, puis ${o.nom} prend la suite.`}
+        </p>
+      )}
       {liste.length > 0 && (
         <div className="flex flex-col gap-2.5">
           <h3 className="adm-recap-sous-titre">{!monte ? 'Ce qui s’arrête' : abonnement.essai ? 'Ce que tu gardes après l’essai' : 'Ce que tu débloques'}</h3>
