@@ -130,6 +130,9 @@
 .lp-emoji { font-size: 1.35rem; }
 .lp-vignette { object-fit: cover; border-radius: calc(min(var(--r), 20px) - 4px); }
 .lp[data-forme='pilule'] .lp-vignette { border-radius: 999px; }
+/* Un favicon gardé tel quel (PNG, les liens passés au favicon le 26 octobre 2026) se pose comme le logo préparé par le back
+   office (`preparerLogo`) : centré, avec de l'air, sur du blanc, pour qu'un logo transparent se lise sur un thème sombre. */
+.lp-vignette[src$='.png'] { box-sizing: border-box; padding: 7px; object-fit: contain; background: #fff; }
 
 [data-bouton]:not([data-bouton='plein']) :is(.lp-btn, .lp-carte) { --lp-encre: var(--texte); --lp-halo: var(--texte); --lp-trait: var(--texte); }
 .lp-accent { --lp-fond: var(--vedette); --lp-encre: var(--vedette-texte); }

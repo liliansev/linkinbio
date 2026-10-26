@@ -65,6 +65,11 @@ embarque tout : l'image n'a pas de `node_modules`.
   d'un bloc Avis lue sur la page d'avis collée, dans son JSON-LD `aggregateRating` ou les données de Trustpilot, ramenée
   sur 5 ; `lireNoteAvis` pendant qu'on tape, `LienAvis` dans l'éditeur, puis relue chaque jour par `planifierAvis`,
   éteinte par `HOPLA_AVIS=0` ; une page muette laisse la note tapée à la main, et une fiche Google demanderait l'API Places).
+- `server/favicons.ts` (26 octobre 2026, demandé par Lilian : « mets à jour tous les liens existants et même ceux de mes
+  clients ») : une seule fois, une minute après le démarrage (repère `favicons-liens` dans `reglages`, éteint par
+  `HOPLA_FAVICONS=0`), la vignette de chaque bouton de lien de toutes les pages prend le favicon de son site, gardé tel
+  quel en PNG (`/media/<id>.png`, posé sur du blanc par `.lp-vignette[src$='.png']`) ; un réseau, une carte, un site
+  sans favicon ou une page pleine gardent leur image. L'image d'avant reste dans `vignettes_avant` : `rendreVignettes()` la remet.
 - `server/coffre.ts` (25 octobre 2026, demandé par Lilian : « même moi ne dois pas avoir accès ») : AES-256-GCM pour les clés
   d'API, les webhooks et les e-mails et prénoms des inscrits (`chiffrer`, `dechiffrer`, `empreinte` pour les doublons sans
   l'adresse en clair). La clé vient de `LIENS_CLE_INTEGRATIONS` (voir `deploy/README.md`), sinon du secret de la base ;

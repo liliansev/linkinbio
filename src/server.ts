@@ -2,6 +2,7 @@ import handler, { createServerEntry } from '@tanstack/react-start/server-entry';
 import { planifierResumes } from './server/resume.ts';
 import { planifierAvis } from './server/avis.ts';
 import { planifierFinsDEssai } from './server/essai.ts';
+import { planifierFavicons } from './server/favicons.ts';
 import * as creem from './server/creem.ts';
 
 /*
@@ -18,5 +19,7 @@ planifierAvis();
 planifierFinsDEssai();
 // Les prix des produits sont relus dans Creem au démarrage, puis toutes les heures (voir creem.ts).
 creem.planifierRelecture();
+// Les liens déjà posés passent au favicon de leur site, une fois pour toutes (voir favicons.ts).
+planifierFavicons();
 
 export default createServerEntry({ fetch: handler.fetch });
