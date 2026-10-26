@@ -9,9 +9,10 @@ import type { ImageApercu, VisuelApercu } from '../lib/types.ts';
 
 /*
  * L'aperçu d'un site, pour habiller un lien : son titre, sa description et son
- * image de partage (`og:image`), lus dans la page, et le prix d'un produit. Sans image de partage, une
- * capture de la page la remplace. Seul le back office l'appelle, et le serveur
- * ne suit que des adresses publiques.
+ * image de partage (`og:image`), lus dans la page, et le prix d'un produit. Jamais une capture de la page
+ * (26 octobre 2026, demandé par Lilian : « que ça scrape le favicon plutôt qu'une capture d'écran du site ») :
+ * la vignette d'un bouton prend le favicon du site. Seul le back office l'appelle, et le serveur ne suit que des
+ * adresses publiques.
  *
  * Des sites ne se laissaient pas lire (22 octobre 2026) : une page trop lourde
  * était refusée en entier, une page en latin-1 sortait illisible, YouTube
@@ -31,7 +32,7 @@ import type { ImageApercu, VisuelApercu } from '../lib/types.ts';
 
 export interface ApercuSite {
   titre: string; description: string; image: string | null; prix: string;
-  /** D'où vient l'image : l'image de partage, le logo du site, ou une capture de la page. */
+  /** D'où vient l'image : l'image de partage, ou le logo du site. */
   visuel?: VisuelApercu;
 }
 
@@ -44,7 +45,6 @@ const DELAI = 7000;
 const DELAI_LOGO = 4000;
 const ESSAIS_LOGO = 4;
 const SAUTS = 8;
-const CAPTURE = (url: string) => `https://image.thum.io/get/width/1200/crop/675/noanimate/${url}`;
 
 /**
  * Deux façons de se présenter. D'abord comme les aperçus de liens (la voix d'iMessage, avec le nom de Hopla) :
@@ -513,10 +513,10 @@ async function logoDuSite(page: (Meta & { url: string }) | null, url: string, mi
 
 /**
  * L'aperçu d'un site. `image` à faux : le titre, la description et le prix seuls, pour remplir le texte d'un lien
- * sans attendre une image ni une capture. `'partage'` : l'image de partage, ou rien, jamais une capture (la photo
- * d'un produit ne peut pas être un morceau de sa page). `'logo'` : le logo du site seul. `'vignette'` : ce qui tient le
- * mieux dans la petite vignette carrée d'un bouton, l'image de partage si elle est carrée, sinon le logo du site,
- * sinon l'image de partage, jamais une capture.
+ * sans attendre une image. `true` ou `'partage'` : l'image de partage, ou rien (la photo d'un produit, la grande image
+ * d'une carte). `'logo'` : le logo du site seul. `'vignette'` : la petite vignette carrée d'un bouton, le favicon du
+ * site dans sa meilleure taille (voir `logoDuSite`), sinon une image de partage carrée, sinon rien : jamais une
+ * bannière coupée ni une capture de la page.
  */
 export async function apercuSite(url: string, { image: mode = true }: { image?: ImageApercu } = {}): Promise<ApercuSite> {
   const viaOembed = adresseOembed(url);
@@ -532,14 +532,13 @@ export async function apercuSite(url: string, { image: mode = true }: { image?: 
   const base = { titre, description, prix };
   if (!mode) return { ...base, image: null };
   const avec = (i: ImageLue | null, visuel: VisuelApercu): ApercuSite => (i ? { ...base, image: i.donnees, visuel } : { ...base, image: null });
-  if (mode === 'logo') return avec(await logoDuSite(page, url, 32), 'logo');
+  if (mode === 'logo') return avec(await logoDuSite(page, url, 16), 'logo');
+  if (mode === 'vignette') {
+    const logo = await logoDuSite(page, url, 16);
+    if (logo) return avec(logo, 'logo');
+  }
   const source = page?.image || o?.image || annonce?.image || '';
   const partage = source ? await imageDe(source, page?.url) : null;
-  if (mode === 'vignette') {
-    if (partage && carree(partage) && cote(partage) >= 96) return avec(partage, 'partage');
-    const logo = await logoDuSite(page, url, 64);
-    return logo ? avec(logo, 'logo') : avec(partage, 'partage');
-  }
-  if (partage || mode === 'partage') return avec(partage, 'partage');
-  return avec(await imageDe(CAPTURE(page?.url ?? url)), 'capture');
+  if (mode === 'vignette') return avec(partage && carree(partage) && cote(partage) >= 96 ? partage : null, 'partage');
+  return avec(partage, 'partage');
 }
