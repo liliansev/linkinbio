@@ -1,8 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { KeyboardEvent } from 'react';
 import { Icone, NOMS_RESEAUX } from '../components/Icone.tsx';
-import { Symbole } from '../components/Logo.tsx';
-import { peut } from '../lib/abonnement.ts';
 import { NOMS_AUDIENCES, composerAudience, deReseau } from '../lib/provenance.ts';
 import { BLOCS_EXEMPLES, IDS_PROFILS, PROFILS, de, pageExemple, pageProfil } from './exemples.ts';
 import type { ProfilExemple } from './exemples.ts';
@@ -66,8 +64,6 @@ export function HeroProfils() {
               ? <span key={reseau} className="hp-lien-source" data-reseau={reseau}><Icone nom={reseau} taille={16} /></span>
               : <Icone nom="ui-fleche" taille={14} />}</div>)}
           </div>
-          {/* Inès est en Starter : sa page n'a plus la mention. */}
-          {!peut(p.offre, 'sansMention') && <span className="hp-page-marque"><Symbole /> fait avec Hopla</span>}
         </div>
       </div>;
     })}

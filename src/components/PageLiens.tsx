@@ -63,9 +63,11 @@ export interface Edition {
   modifie?: (champ: 'nom' | 'bio', avant: string) => void;
 }
 
-export function PageLiens({ page, apercu = false, edition, liste }: {
+export function PageLiens({ page, apercu = false, edition, liste, sansMention = false }: {
   page: PagePublique;
   apercu?: boolean;
+  /** Les exemples de l'accueil (26 octobre 2026, demandé par Lilian) : aucune ne porte « Créer ma page avec Hopla », quelle que soit son offre. */
+  sansMention?: boolean;
   edition?: Edition;
   /** L'aperçu du bureau : les blocs passent par le back office (cerclés, grisés, cliquables) ; le reste de la page est figé. */
   liste?: Edition['liste'];
@@ -229,7 +231,7 @@ export function PageLiens({ page, apercu = false, edition, liste }: {
           {/* La page de Lilian signe de son site ; ailleurs, la mention, qui disparaît dès Starter. */}
           {compte.principal
             ? <p className="lp-signature"><a href="https://liliansevoumian.fr" {...cible}>liliansevoumian.fr</a></p>
-            : !peut(compte.plan, 'sansMention') && <p className="lp-signature"><a className="lp-hopla" href={ORIGINE_PUBLIQUE} {...cible}>{t.creeAvec} <strong>Hopla</strong></a></p>}
+            : !sansMention && !peut(compte.plan, 'sansMention') && <p className="lp-signature"><a className="lp-hopla" href={ORIGINE_PUBLIQUE} {...cible}>{t.creeAvec} <strong>Hopla</strong></a></p>}
           {/* Les liens légaux, sur toutes les pages, celle de Lilian comprise. */}
           <p className="lp-legal">
             <a href="/legal/confidentialite" {...cible}>{t.confidentialite}</a>
