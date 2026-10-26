@@ -154,6 +154,7 @@ export function Selon() {
         <ol className="hp-source-legendes">
           <li><Icone nom="instagram" taille={20} /><span>Depuis Instagram<b>Son portfolio, pour découvrir ses photos</b></span></li>
           <li><Icone nom="linkedin" taille={20} /><span>Depuis LinkedIn<b>Son contact, pour travailler ensemble</b></span></li>
+          <li><Icone nom="youtube" taille={20} /><span>Depuis TikTok<b>Sa vidéo s’ouvre dans YouTube, pas coincée dans l’app</b></span></li>
         </ol>
         <OffreFonction offre="gratuit" />
         {/* La preuve arrive avec la promesse : une vraie page, en ligne aujourd'hui. */}
