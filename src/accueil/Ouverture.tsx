@@ -124,8 +124,8 @@ export function Barre({ ailleurs = false }: { ailleurs?: boolean }) {
           {BARRE.map(entree => {
             if (typeof entree === 'string') {
               const liste = entree === 'fonctions'
-                ? { titre: 'Fonctionnalités', tete: '', tout: ['/fonctionnalites', 'Toutes les fonctionnalités'], pages: PAGES_FONCTIONS.map(p => [`/fonctionnalites/${p.slug}`, p.nom, OFFRE[p.offre]]) }
-                : { titre: 'Comparatifs', tete: 'Hopla face à', tout: ['/comparatif', 'Tous les comparatifs'], pages: COMPARATIFS.map(c => [`/comparatif/${c.slug}`, c.nom, '']) };
+                ? { titre: 'Fonctionnalités', tete: '', tout: ['/fonctionnalites', 'Toutes les fonctionnalités'], pages: PAGES_FONCTIONS.map(p => [`/fonctionnalites/${p.slug}`, p.nom]) }
+                : { titre: 'Comparatifs', tete: 'Hopla face à', tout: ['/comparatif', 'Tous les comparatifs'], pages: COMPARATIFS.map(c => [`/comparatif/${c.slug}`, c.nom]) };
               const ouvert = deroule === entree;
               return (
                 <div key={entree} className="hl-deroulant" data-ouvert={ouvert || undefined}>
@@ -135,7 +135,7 @@ export function Barre({ ailleurs = false }: { ailleurs?: boolean }) {
                   <div id={`hl-deroule-${entree}`} className="hl-deroule" data-sorte={entree} hidden={!ouvert}>
                     {liste.tete && <p className="hl-deroule-tete">{liste.tete}</p>}
                     <ul>
-                      {liste.pages.map(([href, nom, offre]) => <li key={href}><a href={href} aria-current={chemin === href ? 'page' : undefined} onClick={() => setDeroule('')}><span>{nom}</span>{offre && <small>{offre}</small>}</a></li>)}
+                      {liste.pages.map(([href, nom]) => <li key={href}><a href={href} aria-current={chemin === href ? 'page' : undefined} onClick={() => setDeroule('')}>{nom}</a></li>)}
                     </ul>
                     <a className="hl-deroule-tout" href={liste.tout[0]} onClick={() => setDeroule('')}>{liste.tout[1]}<Icone nom="ui-fleche" taille={16} /></a>
                   </div>
@@ -181,7 +181,6 @@ const SECTIONS = [['#inspiration', 'Inspiration'], ['#fonctionnement', 'Comment 
 const BARRE: (string[] | 'fonctions' | 'comparatifs')[] = [['#fonctionnement', 'Comment ça marche'], 'fonctions', ['#themes', 'Thèmes'], ['#prix', 'Tarifs'], 'comparatifs'];
 /** Le menu du téléphone : toutes les sections, et les pages des fonctions et des comparatifs à leur place. */
 const MENU = [SECTIONS[0], SECTIONS[1], ['/fonctionnalites', 'Fonctionnalités'], SECTIONS[2], SECTIONS[3], ['/comparatif', 'Comparatifs'], SECTIONS[4]];
-const OFFRE = { gratuit: 'Gratuit', starter: 'Starter', pro: 'Pro' } as const;
 /** Où commence chaque lien de la barre ; les sections sans lien (Prise, le dernier appel) le referment. */
 const REPERES = [...SECTIONS.map(([lien]) => [lien, lien]), ['#plus-loin', 'fonctions'], ['#prise', ''], ['#dernier', '']];
 
