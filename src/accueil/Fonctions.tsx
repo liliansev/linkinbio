@@ -69,7 +69,7 @@ export function EcranDansApp({ cote, etape, reduit = false }: { cote: Cote; etap
             <div className="hl-app-ligne">
               <Avatar profil="sacha" className="hl-app-rond" /><b className="hp-chaine">Sacha Diop</b>
               <span className="hl-app-abonne hl-tap" data-touche={etape >= 4 || undefined} data-fait={etape >= 4 || undefined}>
-                {etape >= 4 ? <><Icone nom="check" taille={12} />Abonné</> : 'S’abonner'}
+                {etape >= 4 ? <><Icone nom="coche" taille={12} />Abonné</> : 'S’abonner'}
               </span>
             </div>
           </div>
@@ -201,7 +201,7 @@ export function EcranListe({ liste }: { liste: number }) {
             <span><b>Rejoins ma liste</b><span className="hl-cq-sous">Une recette chaque dimanche</span></span>
           </div>
           {note
-            ? <p key="note" className="hl-cq-merci"><Icone nom="check" taille={14} />C’est noté, merci !</p>
+            ? <p key="note" className="hl-cq-merci"><Icone nom="coche" taille={14} />C’est noté, merci !</p>
             : <div className="hl-cq-code">
               <span className="hl-cq-saisie hl-cq-adresse">{ADRESSE_LISTE.slice(0, liste)}{liste < LISTE_TOUCHE && <i />}{liste === 0 && <span className="hl-cq-indice">ton@email.fr</span>}</span>
               <span className="hl-cq-ok hl-cq-inscrire" data-touche={liste >= LISTE_TOUCHE || undefined}>Je m’inscris</span>
@@ -209,7 +209,7 @@ export function EcranListe({ liste }: { liste: number }) {
         </div>
         <CroquisLien titre="Réserver un dîner" picto={<Icone nom="agenda" taille={14} />} />
       </div>
-      {liste >= LISTE_BREVO && <p className="hl-toast hl-toast-vite"><Icone nom="check" taille={14} />Ajouté à ta liste Brevo</p>}
+      {liste >= LISTE_BREVO && <p className="hl-toast hl-toast-vite"><Icone nom="coche" taille={14} />Ajouté à ta liste Brevo</p>}
     </div>
   );
 }

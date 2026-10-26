@@ -275,7 +275,7 @@ export function Reserver({ api, note, apercu, id, grand, premier, libelleNom }: 
     return (
       <div className={classe} id={id} onFocusCapture={prendre} onPointerDownCapture={prendre}>
         <div ref={fait} className="hl-reserver-fait" role={parle ? 'status' : undefined} tabIndex={-1}>
-          <Icone nom="check" taille={20} />
+          <Icone nom="coche" taille={20} />
           <div>
             <p className="hl-reserver-adresse">hopla.page/{insecable(e.nom)}</p>
             <p>{avecAdresse(e.message, e.envoyee)}</p>
@@ -345,18 +345,18 @@ export function Reserver({ api, note, apercu, id, grand, premier, libelleNom }: 
           )
           : e.ancien && (sien || (v?.etat !== 'pris' && v?.etat !== 'invalide')) ? (
             <p>
-              {v?.etat === 'libre' && v.nom !== e.ancien && <><Icone nom="check" taille={16} /><span><b>hopla.page/{insecable(v.nom)}</b> est libre. </span></>}
+              {v?.etat === 'libre' && v.nom !== e.ancien && <><Icone nom="coche" taille={16} /><span><b>hopla.page/{insecable(v.nom)}</b> est libre. </span></>}
               <span>{e.nom.replace(/-$/, '') === e.ancien ? 'Tape le bon nom.' : <>Ta page prendra ce nom ; le lien envoyé pour <b>hopla.page/{insecable(e.ancien)}</b> ne marchera plus.</>}</span>{' '}
               <button type="button" className="hl-lien-texte" onClick={revenir}>Annuler</button>
             </p>
           )
           : e.etape === 'email' ? (
             <p>
-              <Icone nom="check" taille={16} /><span><b>hopla.page/{insecable(e.nom)}</b> est libre. {MOTS[mode].adresse}</span>{' '}
+              <Icone nom="coche" taille={16} /><span><b>hopla.page/{insecable(e.nom)}</b> est libre. {MOTS[mode].adresse}</span>{' '}
               <button type="button" className="hl-lien-texte" onClick={() => changer({ etape: 'nom', focus: moi })}>Changer de nom</button>
             </p>
           )
-          : v?.etat === 'libre' ? <p><Icone nom="check" taille={16} /><span><b>hopla.page/{insecable(v.nom)}</b> est libre</span></p>
+          : v?.etat === 'libre' ? <p><Icone nom="coche" taille={16} /><span><b>hopla.page/{insecable(v.nom)}</b> est libre</span></p>
           : v?.etat === 'pris' ? (
             <p className="hl-reserver-pris">
               <Icone nom="cadenas" taille={16} /><span><b>hopla.page/{insecable(v.nom)}</b> est déjà pris.{v.suggestions.length > 0 && ' Essaie '}</span>

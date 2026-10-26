@@ -20,8 +20,8 @@ const PERIODES: Periode[] = ['mois', 'an'];
 /** Ce que l'annuel fait gagner au mieux, pour l'onglet (27 % sur Starter). */
 const MEILLEURE = Math.max(...PLANS_PAYANTS.filter(p => OFFRES[p].enVente).map(economie));
 
-/** Un avantage ne laisse ni guillemet ni dernier mot seul sur sa ligne (« ta newsletter »). */
-const insecables = (g: string) => g.replace(/« /g, '«\u00a0').replace(/ »/g, '\u00a0»').replace(/ (\S+)$/, '\u00a0$1');
+/** Un avantage ne laisse ni guillemet, ni deux-points, ni dernier mot seul sur sa ligne (« ta newsletter »). */
+const insecables = (g: string) => g.replace(/« /g, '«\u00a0').replace(/ »/g, '\u00a0»').replace(/ ([:;?!])/g, '\u00a0$1').replace(/ (\S+)$/, '\u00a0$1');
 
 /** Ce que la page a déjà montré : l'avantage ramène à sa démonstration (un chapitre de la page vivante s'ouvre en arrivant). */
 const DEMOS: Record<string, string> = {
@@ -95,11 +95,11 @@ const EN_VENTE = PLANS.filter(plan => OFFRES[plan].enVente);
 const VISAGE = { gratuit: 'camille', starter: 'ines', pro: 'malik', premium: 'malik' } as const;
 
 function Case({ ligne, plan }: { ligne: LigneTableau; plan: Plan }) {
-  if (ligne.valeurs) return <td>{ligne.valeurs[EN_VENTE.indexOf(plan)]}</td>;
+  if (ligne.valeurs) return <td role="cell">{ligne.valeurs[EN_VENTE.indexOf(plan)]}</td>;
   const inclus = !ligne.fonction || rang(plan) >= rang(FONCTIONS[ligne.fonction]);
   return inclus
-    ? <td><Icone nom="check" taille={20} className="hl-tableau-oui" /><span className="hl-cache">Inclus</span></td>
-    : <td><span className="hl-tableau-non" aria-hidden="true" /><span className="hl-cache">Non inclus</span></td>;
+    ? <td role="cell"><Icone nom="coche" taille={20} className="hl-tableau-oui" /><span className="hl-cache">Inclus</span></td>
+    : <td role="cell"><span className="hl-tableau-non" aria-hidden="true" /><span className="hl-cache">Non inclus</span></td>;
 }
 
 /**
@@ -110,13 +110,14 @@ function TableauOffres({ periode, reserver, action }: { periode: Periode; reserv
   return (
     <div className="hl-tableau hl-entre">
       <h3 className="hl-h3 hl-tableau-titre">Tout comparer</h3>
-      <table>
+      {/* Les rôles gardent le tableau lisible au lecteur d'écran quand, au téléphone, ses rangées passent en grille. */}
+      <table role="table">
         <caption className="hl-cache">Ce que comprend chaque offre</caption>
-        <thead>
-          <tr>
-            <td><span className="hl-cache">Fonction</span></td>
+        <thead role="rowgroup">
+          <tr role="row">
+            <td role="cell"><span className="hl-cache">Fonction</span></td>
             {EN_VENTE.map(plan => (
-              <th key={plan} scope="col" className={plan === 'pro' ? 'hl-tableau-pro' : ''}>
+              <th key={plan} scope="col" role="columnheader" className={plan === 'pro' ? 'hl-tableau-pro' : ''}>
                 <span className="hl-tableau-offre"><Avatar profil={VISAGE[plan]} />{OFFRES[plan].nom}</span>
                 <span className="hl-tableau-prix"><b>{plan === 'gratuit' ? '0 €' : euros(OFFRES[plan].prix[periode])}</b> {plan === 'gratuit' ? 'pour toujours' : periode === 'an' ? 'par an' : 'par mois'}</span>
                 {plan === PLAN_ESSAI && <span className="hl-tableau-essai">{ESSAI_JOURS} jours offerts</span>}
@@ -125,22 +126,22 @@ function TableauOffres({ periode, reserver, action }: { periode: Periode; reserv
           </tr>
         </thead>
         {TABLEAU.map(({ groupe, lignes }) => (
-          <tbody key={groupe}>
-            <tr className="hl-tableau-groupe"><th scope="rowgroup">{groupe}</th>{EN_VENTE.map(plan => <td key={plan} />)}</tr>
+          <tbody key={groupe} role="rowgroup">
+            <tr className="hl-tableau-groupe" role="row"><th scope="rowgroup" role="rowheader">{groupe}</th>{EN_VENTE.map(plan => <td key={plan} role="cell" />)}</tr>
             {lignes.map(l => (
-              <tr key={l.nom}>
-                <th scope="row">{l.page ? <a href={`/fonctionnalites/${l.page}`}>{l.nom}<span className="hl-cache">, voir la fonctionnalité</span></a> : l.nom}</th>
+              <tr key={l.nom} role="row">
+                <th scope="row" role="rowheader">{l.page ? <a href={`/fonctionnalites/${l.page}`}>{insecables(l.nom)}<span className="hl-cache">, voir la fonctionnalité</span></a> : insecables(l.nom)}</th>
                 {EN_VENTE.map(plan => <Case key={plan} ligne={l} plan={plan} />)}
               </tr>
             ))}
           </tbody>
         ))}
         {EN_VENTE.some(plan => action(plan)) && (
-          <tfoot>
-            <tr>
-              <td />
+          <tfoot role="rowgroup">
+            <tr role="row">
+              <td role="cell" />
               {EN_VENTE.map(plan => (
-                <td key={plan}>
+                <td key={plan} role="cell">
                   {action(plan) && <a href="#reserver" className={`hl-btn ${plan === 'pro' ? '' : 'hl-btn-contour'}`} onClick={ev => reserver(ev, plan)}>{action(plan)}</a>}
                 </td>
               ))}
@@ -244,14 +245,14 @@ export function Prix() {
       </div>
       </div>
       <TableauOffres periode={periode} reserver={reserver} action={plan => envoye || !OFFRES[plan].enVente ? null : 'Choisir'} />
-      <p className="hl-gris hl-petit hl-centre">Prix TTC. Ta page commence par {ESSAI_JOURS} jours de {OFFRES[PLAN_ESSAI].nom} offerts, sans carte bancaire ; ensuite elle reste en ligne en Gratuit, ou tu prends une offre depuis tes réglages. Résiliable à tout moment : l’offre reste jusqu’à la fin de la période payée.</p>
+      <p className="hl-gris hl-petit hp-prix-note">Prix TTC. Ta page commence par {ESSAI_JOURS} jours de {OFFRES[PLAN_ESSAI].nom} offerts, sans carte bancaire&nbsp;; ensuite elle reste en ligne en Gratuit, ou tu prends une offre depuis tes réglages. Résiliable à tout moment&nbsp;: l’offre reste jusqu’à la fin de la période payée.</p>
     </section>
   );
 }
 
 function Avantage({ g }: { g: string }) {
   return (
-    <li><Icone nom="check" taille={18} /><span>{DEMOS[g]
+    <li><Icone nom="coche" taille={18} /><span>{DEMOS[g]
       ? <a className="hl-offre-demo" href={DEMOS[g]}>{insecables(g)}<span className="hl-cache">, voir la fonctionnalité</span></a>
       : insecables(g)}</span></li>
   );
@@ -278,8 +279,8 @@ export function Questions() {
     <section className="hl-section hl-etroite" id="questions" aria-labelledby="titre-questions">
       <div className="hl-questions-tete hl-entre">
         <h2 id="titre-questions" className="hl-h2">Questions</h2>
-        {/* Qui répond, dit avant d'écrire : l'adresse est celle de Lilian, qui fait Hopla. */}
-        <p>Une autre question ? <a href={`mailto:${CONTACT_LEGAL}`}>Écris à Lilian</a>, qui fait Hopla.</p>
+        {/* Sur le site, on écrit « nous », jamais un prénom (26 octobre 2026, demandé par Lilian). */}
+        <p>Une autre question ? <a href={`mailto:${CONTACT_LEGAL}`}>Écris-nous</a>.</p>
       </div>
       <div className="hl-questions">
         {liste.filter(essentielle).map(question)}
@@ -326,7 +327,7 @@ const COLONNES: { titre: string; liens: [string, string][] }[] = [
     ['Tous les comparatifs', '/comparatif'],
   ] },
   { titre: 'Aide et légal', liens: [
-    ['Écrire à Lilian', `mailto:${CONTACT_LEGAL}`],
+    ['Nous écrire', `mailto:${CONTACT_LEGAL}`],
     ['Signaler un contenu', '/signaler'],
     ['Conditions d’utilisation', '/legal/cgu'],
     ['Confidentialité', '/legal/confidentialite'],
