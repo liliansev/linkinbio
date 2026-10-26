@@ -560,7 +560,6 @@ html:has(.hl-humain) { scroll-padding-top: 96px; }
   display: flex; flex-direction: column; gap: 1px; padding: 10px 12px; border-radius: 11px;
   color: var(--encre); font-size: 14px; font-weight: 550; line-height: 1.35; text-decoration: none; transition: background-color .15s;
 }
-.hl-deroule li a small { color: var(--gris); font-size: 12px; font-weight: 500; }
 .hl-deroule li a:hover { background: #f2f0e7; }
 .hl-deroule :focus-visible { outline-color: #292bff; outline-offset: -2px; }
 .hl-deroule-tout {
