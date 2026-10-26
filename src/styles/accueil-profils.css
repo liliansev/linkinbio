@@ -220,7 +220,7 @@
 /* Un avantage déjà montré plus haut y ramène : souligné discrètement, plus franchement au survol. */
 .hl-offre-demo { color: inherit; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; text-decoration-color: color-mix(in srgb, currentColor 45%, transparent); }
 .hl-offre-demo:hover { text-decoration-color: currentColor; }
-@media (max-width: 1023px), (pointer: coarse) { .hl-offre-demo { display: inline-block; padding-block: 11px; margin-block: -11px; } }
+@media (max-width: 1023px), (pointer: coarse) { .hl-offre-demo { display: inline-block; padding-block: 12px; margin-block: -12px; } }
 .hp-offre-action { display: grid; grid-template-rows: auto minmax(34px,auto); gap: 8px; margin-top: auto; }
 .hl-humain .hp-offre-action .hl-btn { margin-top: 0; }
 @media (max-width: 1023px) { .hp-offre-action { grid-template-rows: auto; } .hp-offre-action > p:empty { display: none; } }
@@ -554,7 +554,8 @@ html:has(.hl-humain) { scroll-padding-top: 96px; }
 @media (max-width: 599px) {
   .hl-tableau table, .hl-tableau :is(thead, tbody, tfoot) { display: block; }
   .hl-tableau tr { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .hl-tableau thead { position: sticky; top: 78px; z-index: 2; background: #fff; }
+  .hl-tableau tbody th a { display: inline-block; padding-block: 13px; margin-block: -13px; }
+  .hl-tableau thead { position: sticky; top: 86px; z-index: 2; background: #fff; }
   .hl-tableau thead :is(th, td) { position: static; }
   .hl-tableau :is(thead, tfoot) td:first-child, .hl-tableau-groupe > td { display: none; }
   .hl-tableau tbody th[scope='row'] { grid-column: 1 / -1; padding: 14px 0 2px; text-wrap: pretty; }
@@ -564,7 +565,7 @@ html:has(.hl-humain) { scroll-padding-top: 96px; }
   .hl-tableau tbody td { padding: 8px 0 12px; }
 }
 /* La note des prix s'aligne sur la colonne, comme le tableau au-dessus. */
-.hp-prix-note { max-width: 72ch; text-wrap: pretty; }
+.hp-prix-note { max-width: 52ch; text-wrap: pretty; }
 /* Fonctions et Comparatifs déroulent leurs pages sous la barre : une carte blanche, la liste en deux colonnes, l'offre
    au gris à côté du nom, et le lien vers la page qui les rassemble au pied. */
 .hl-deroulant { position: relative; display: flex; }
@@ -637,6 +638,15 @@ html:has(.hl-humain .hl-barre[data-menu]) { overflow: hidden; }
   .hl-humain .hf-titre { font-size: calc(76px * var(--echelle)); }
   .hl-humain .hl-chapo, .hl-humain .hl-heros .hl-chapo { font-size: calc(17px * var(--echelle)); }
   .hl-humain { font-size: calc(17px * var(--echelle)); }
-}@media (min-width: 1700px) {
+  /* Les petits textes suivent aussi : à 2400 px, 15 px se lisaient comme une note de bas de page. */
+  .hl-humain :is(.hp-plus-loin-liste span, .hl-offre li, .hl-tableau table, .hp-inspiration-tete > p, .hl-prise-col p, .hp-prix-note, .hl-dernier p, .hp-heros-pied) { font-size: calc(15px * var(--echelle)); }
+  .hl-humain .hp-plus-loin-liste b { font-size: calc(17px * var(--echelle)); }
+  .hl-humain .hl-question summary { font-size: calc(18px * var(--echelle)); }
+}
+/* Un écran de portable (1440 × 900) : le premier écran tient sans laisser le bas du titre sous la ligne de flottaison. */
+@media (min-width: 1024px) and (min-height: 851px) and (max-height: 920px) { .hl-humain .hp-heros { padding-top: 56px; } }
+/* La dernière section blanche d'une page (un texte légal, un signalement) garde son air avant le pied. */
+.hl-humain main > .hl-section:not([data-teinte], .hp-selon, #prix):last-child { padding-bottom: var(--ecart); }
+@media (min-width: 1700px) {
   .hl-humain .hl-heros .hl-reserver { max-width: calc(540px * var(--echelle)); }
 }

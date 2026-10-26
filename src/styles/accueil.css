@@ -754,7 +754,6 @@ html:has(.hl-reserver input:focus) { overflow-anchor: none; }
   .hl-couleurs-tel .hl-tel { --l: 250px !important; --z: .641 !important; }
   .hl-couleurs .hl-couleurs-tel { max-height: 300px; }
   .hl-couleurs .hl-nuances fieldset { gap: 8px; }
-  .hl-couleurs .hl-nuance { width: clamp(34px, 10vw, 44px); }
 }
 @media (max-width: 899px) {
   .hl-couleurs-tel { max-height: 360px; overflow: hidden; -webkit-mask-image: linear-gradient(#000 80%, transparent); mask-image: linear-gradient(#000 80%, transparent); }
@@ -762,7 +761,7 @@ html:has(.hl-reserver input:focus) { overflow-anchor: none; }
 .hl-couleurs-reglage > .hl-lien-texte[data-cache] { visibility: hidden; }
 @media (min-width: 900px) {
   /* Le texte à sa mesure et le téléphone à côté, au milieu de la carte : pas de vide entre les pastilles et l'aperçu. */
-  .hl-couleurs { grid-template-columns: minmax(0, 480px) auto; grid-template-areas: 'texte tel' 'reglage tel'; justify-content: center; column-gap: 96px; row-gap: 0; padding: 48px; }
+  .hl-couleurs { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 'texte tel' 'reglage tel'; justify-content: stretch; column-gap: 96px; row-gap: 0; padding: 48px; }
   .hl-couleurs-texte { align-self: end; }
   .hl-couleurs-reglage { align-self: start; padding-top: 24px; }
 }
@@ -770,7 +769,7 @@ html:has(.hl-reserver input:focus) { overflow-anchor: none; }
 .hl-nuances { display: flex; flex-direction: column; gap: 14px; margin: 0 0 18px; }
 .hl-nuances fieldset { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 0; padding: 0; border: 0; min-width: 0; }
 .hl-nuances legend { width: 100%; margin-bottom: 2px; padding: 0; font-size: 14px; color: var(--gris); }
-@media (min-width: 375px) { .hl-nuances fieldset { flex-wrap: nowrap; } .hl-nuances legend { float: left; width: 68px; margin: 0; } }
+@media (min-width: 400px) { .hl-nuances fieldset { flex-wrap: nowrap; } .hl-nuances legend { float: left; width: 68px; margin: 0; } }
 /* L'aperçu change en douceur ; la règle ne vise que lui, pas la page publique. */
 .hl-couleurs-tel :is(.lp, .lp-btn, .lp-carte) { transition: background-color .4s var(--ease), color .4s var(--ease), border-color .4s var(--ease); }
 .hl-nuance { position: relative; display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 1px solid rgb(0 0 0 / .12); border-radius: 12px; cursor: pointer; transition: box-shadow .15s, transform .15s; }
@@ -781,10 +780,6 @@ html:has(.hl-reserver input:focus) { overflow-anchor: none; }
 /* ---- 07 · Créer et modifier ---- */
 
 /* La scène sur le bleu Klein, un peu plus large que les autres : Créer, le téléphone et Modifier tiennent côte à côte. */
-@media (min-width: 1024px) {
-  .hl-prise-scene .hl-tete-section { margin-left: auto; margin-right: auto; text-align: center; }
-  .hl-prise-scene .hl-chapo { margin-left: auto; margin-right: auto; }
-}
 .hl-prise { display: grid; justify-items: center; gap: 24px; }
 .hl-prise > .hl-temps { width: 100%; max-width: 420px; margin: 0; }
 .hl-prise-col { display: none; }
@@ -797,7 +792,7 @@ html:has(.hl-reserver input:focus) { overflow-anchor: none; }
 @media (min-width: 1024px) {
   .hl-prise { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: start; column-gap: clamp(48px, 5.5vw, 104px); }
   /* Les deux colonnes partent de la même hauteur, au premier tiers du téléphone : leurs titres se lisent sur une ligne. */
-  .hl-prise-col { margin-top: 112px; display: flex; flex-direction: column; gap: 22px; width: 100%; max-width: 420px; opacity: .72; transition: opacity .5s var(--ease); }
+  .hl-prise-col { margin-top: 112px; display: flex; flex-direction: column; gap: 22px; width: 100%; max-width: calc(420px * var(--echelle, 1)); opacity: .9; transition: opacity .5s var(--ease); }
   .hl-prise-col[data-actif] { opacity: 1; }
   /* En miroir autour du téléphone : Créer s'aligne sur sa gauche, Modifier sur sa droite. */
   .hl-prise-col[data-cote='creer'] { justify-self: end; text-align: right; }
@@ -814,7 +809,7 @@ html:has(.hl-reserver input:focus) { overflow-anchor: none; }
 .hl-etapes li { display: flex; align-items: flex-start; gap: 18px; padding: 12px 0; color: var(--gris); transition: color .3s; }
 .hl-etapes li[data-lu] { color: var(--encre); }
 /* Le numéro ou le picto de l'étape, seul et en grand : ni cadre ni fond ; l'étape lue passe à l'accent. */
-.hl-etape-num { flex: none; display: grid; place-items: center; width: 40px; height: 40px; font-size: 40px; font-weight: 600; line-height: 1; letter-spacing: -0.04em; font-variant-numeric: tabular-nums; opacity: .55; transition: color .3s, opacity .3s; }
+.hl-etape-num { flex: none; display: grid; place-items: center; width: 40px; height: 40px; font-size: 40px; font-weight: 600; line-height: 1; letter-spacing: -0.04em; font-variant-numeric: tabular-nums; opacity: .7; transition: color .3s, opacity .3s; }
 .hl-etapes li[data-lu] .hl-etape-num { color: var(--accent); opacity: 1; }
 .hl-etapes b { display: block; font-size: clamp(19px, 1.5vw, 23px); font-weight: 600; letter-spacing: -0.02em; line-height: 1.2; }
 .hl-etape-texte { display: block; margin-top: 4px; font-size: 15px; line-height: 1.45; color: var(--gris); }
