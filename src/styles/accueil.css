@@ -227,22 +227,27 @@ html:has(.hl) { background: #fff; scroll-padding-top: 76px; }
 .hl-heros-visuel { width: 100%; display: flex; flex-direction: column; align-items: center; }
 .hl-legende { font-size: 14px; color: var(--gris); text-align: center; }
 
-/* La roue des réseaux : les badges tournent sur un anneau, le Hopla au moyeu, le lien dessous, puis
- * quatre pages. Les visiteurs (`.hl-roue-point`) passent sous le moyeu, le lien et les pages : ils
- * plongent dedans. Les chemins et les traînées sont dans le SVG, sous tout le reste. */
-.hl-roue-cadre { width: 100%; max-width: 520px; margin: 48px auto 0; }
-.hl-roue { --d: 192px; --badge: 40px; --ecart: 72px; position: relative; isolation: isolate; }
-@media (min-width: 480px) { .hl-roue { --d: 224px; --badge: 46px; --ecart: 88px; } }
+/* La roue des réseaux (refaite le 26 octobre 2026) : une petite roue, la photo de Camille au moyeu, son lien
+ * dessous, et une seule page en grand, dans son thème. La scène se règle sur sa propre largeur : au-delà de
+ * 520 px, la page à droite de la roue ; en dessous, la roue et le lien côte à côte, la page dessous. Le visiteur
+ * (`.hl-roue-point`) passe sous le moyeu, le lien et la page : il plonge dedans. Le chemin et la traînée sont
+ * dans le SVG, sous tout le reste. */
+.hl-roue-cadre { width: 100%; max-width: 640px; margin: 48px auto 0; container-type: inline-size; }
+.hl-roue {
+  --d: 112px; --badge: 32px; --moyeu: 46px; --page: min(100%, 300px);
+  position: relative; isolation: isolate; display: grid; justify-items: center; gap: 30px;
+}
 .hl-roue-traces { position: absolute; left: 0; top: 0; z-index: 1; overflow: visible; pointer-events: none; }
 .hl-roue-voie { fill: none; stroke: rgb(255 255 255 / .28); stroke-width: 1.5; }
 .hl-roue-traine { fill: none; stroke: #fff; stroke-width: 3; stroke-linecap: round; }
-.hl-roue-points { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
 /* Un visiteur : le logo de son réseau, seul, dans sa couleur ; ni rond ni ombre derrière lui (22 octobre 2026). */
 .hl-roue-point {
-  position: absolute; left: -12px; top: -12px; display: grid; place-items: center; width: 24px; height: 24px;
-  will-change: transform;
+  position: absolute; left: -12px; top: -12px; z-index: 2; display: grid; place-items: center; width: 24px; height: 24px;
+  pointer-events: none; will-change: transform;
 }
-.hl-roue-haut { position: relative; z-index: 3; display: grid; place-items: center; width: var(--d); height: var(--d); margin: 0 auto; }
+.hl-roue-point > span { display: grid; }
+.hl-roue-source-zone { position: relative; z-index: 3; display: flex; align-items: center; gap: 22px; }
+.hl-roue-haut { position: relative; display: grid; place-items: center; flex: none; width: var(--d); height: var(--d); }
 .hl-roue-anneau { position: absolute; inset: 0; border-radius: 50%; box-shadow: inset 0 0 0 1.5px rgb(255 255 255 / .34); transform: rotate(var(--a, 0deg)); }
 /* Un réseau sur l'anneau : son logo seul, dans sa couleur. Le rond derrière lui est celui de la section
  * (`--roue-fond`), invisible : il coupe seulement le trait de l'anneau sous le logo. */
@@ -251,62 +256,42 @@ html:has(.hl) { background: #fff; scroll-padding-top: 76px; }
   border-radius: 50%; background: var(--roue-fond, transparent);
   transform: rotate(var(--b)) translateY(calc(var(--d) / -2)) rotate(calc(-1 * var(--b) - var(--a, 0deg)));
 }
-.hl-roue-moyeu { position: relative; display: block; width: 60px; height: 60px; border-radius: 17px; color: #0a0a0a; box-shadow: 0 14px 28px -10px rgb(0 0 30 / .6); }
-.hl-roue-moyeu svg { display: block; width: 100%; height: 100%; }
+.hl-roue-badge svg { width: calc(var(--badge) * .66); height: calc(var(--badge) * .66); }
+/* Au moyeu, celle qui partage : la photo de Camille. */
+.hl-roue-moyeu { position: relative; display: block; width: var(--moyeu); height: var(--moyeu); border-radius: 50%; object-fit: cover; box-shadow: 0 0 0 3px #fff, 0 12px 26px -10px rgb(0 0 30 / .55); }
 .hl-roue-lien {
-  position: relative; z-index: 3; width: fit-content; max-width: 100%; margin: calc(var(--badge) / 2 + 10px) auto 0; padding: 8px 14px; border-radius: 10px;
-  background: #fff; color: #0a0a0a; font-size: 14px; font-weight: 600; letter-spacing: -0.01em; line-height: 1.3;
-  box-shadow: 0 10px 22px -12px rgb(0 0 30 / .6); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  position: relative; flex: none; padding: 9px 15px; border-radius: 10px;
+  background: #fff; color: #0a0a0a; font-size: 15px; font-weight: 600; letter-spacing: -0.01em; line-height: 1.3; white-space: nowrap;
+  box-shadow: 0 10px 22px -12px rgb(0 0 30 / .6);
 }
-.hl-roue-pages { position: relative; z-index: 3; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-top: var(--ecart); }
-@media (min-width: 480px) { .hl-roue-pages { gap: 14px; } }
-.hl-roue-colonne { position: relative; display: flex; flex-direction: column; align-items: center; gap: 10px; min-width: 0; }
-/* La page tient juste ce qu'elle montre : la tête et trois liens, sans bas vide. */
-.hl-roue-page, .hl-roue-onde { width: 100%; aspect-ratio: 18 / 25; border-radius: 14px; }
-.hl-roue-onde { position: absolute; left: 0; top: 0; box-shadow: 0 0 0 2px #fff; opacity: 0; pointer-events: none; }
-/* Le retrait de la page en %, pas en cqi : les unités de conteneur d'une boîte ne valent que pour ce qu'elle contient. */
+.hl-roue-ecran { position: relative; z-index: 3; display: flex; flex-direction: column; align-items: center; gap: 12px; width: var(--page); }
+/* D'où vient le visiteur : le logo de son réseau et son nom, au-dessus de la page ; la place est gardée avant le premier. */
+.hl-roue-depuis { display: inline-flex; align-items: center; gap: 7px; min-height: 24px; font-size: 15px; font-weight: 600; white-space: nowrap; animation: hl-fondu .35s ease both; }
+.hl-roue-depuis > span { display: grid; }
 .hl-roue-page {
-  position: relative; container-type: inline-size; display: flex; flex-direction: column; align-items: center; padding: 11% 8% 0;
-  background: var(--fond); color: var(--texte); font-family: var(--police); overflow: hidden; box-shadow: 0 20px 34px -20px rgb(0 0 40 / .7);
+  width: 100%; display: flex; flex-direction: column; align-items: center; padding: 26px 18px 18px; border-radius: 26px;
+  background: var(--fond); color: var(--texte); font-family: var(--police); text-align: center; box-shadow: 0 28px 44px -26px rgb(0 0 40 / .75);
 }
-.hl-roue-page > * { flex: none; }
-.hl-roue-avatar { display: grid; place-items: center; width: 28cqi; aspect-ratio: 1; border-radius: 50%; background: rgb(255 255 255 / .55); font-size: 11cqi; font-weight: 600; }
-.hl-roue-nom { max-width: 100%; margin-top: 5cqi; font-size: 10cqi; font-weight: 620; letter-spacing: -0.02em; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.hl-roue-liens { display: flex; flex-direction: column; gap: 4.5cqi; width: 100%; margin-top: 8cqi; }
+.hl-roue-avatar { width: 76px; aspect-ratio: 1; border-radius: 50%; object-fit: cover; }
+.hl-roue-nom { margin-top: 12px; font-family: var(--police-titre); font-size: 21px; font-weight: 440; letter-spacing: -0.02em; line-height: 1.15; }
+.hl-roue-bio { margin-top: 6px; max-width: 24ch; color: var(--doux); font-size: 13px; line-height: 1.4; text-wrap: balance; }
+.hl-roue-liens { display: flex; flex-direction: column; gap: 9px; width: 100%; margin-top: 18px; }
 .hl-roue-ligne {
-  flex: none; display: flex; align-items: center; gap: 4cqi; height: 19cqi; padding: 0 6cqi; border-radius: 99px;
-  background: var(--surface); color: var(--surface-texte); font-size: 8cqi; font-weight: 560; white-space: nowrap; overflow: hidden;
-  box-shadow: 0 2px 0 rgb(122 46 74 / .28); transition: background-color .35s, color .35s;
+  display: grid; grid-template-columns: 22px 1fr 22px; align-items: center; min-height: 46px; padding: 6px 12px; border-radius: 12px;
+  background: var(--surface); color: var(--surface-texte); font-size: 14px; font-weight: 500; line-height: 1.2;
+  box-shadow: 0 3px 0 rgb(0 0 0 / .45); transition: background-color .35s, color .35s;
 }
-.hl-roue-ligne svg { flex: none; width: 9cqi; height: 9cqi; }
-/* Un titre long passe sur deux lignes plutôt que d'être coupé. */
-.hl-roue-ligne span { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; white-space: normal; line-height: 1.1; }
+.hl-roue-ligne span { grid-column: 2; }
 .hl-roue-ligne[data-vedette] { background: var(--vedette); color: var(--vedette-texte); }
-/* Le lien du réseau n'est pas là tant que personne n'en est venu ; à la première arrivée, il se glisse en tête.
- * Sans rien mesurer ni animer de hauteur : la liste est remontée d'une place (une ligne et son écart), le lien
- * caché au-dessus ; à l'arrivée, elle redescend et le lien paraît. Seuls `transform` et `opacity` bougent. */
-.hl-roue-liens { --place: 23.5cqi; transition: transform .45s var(--ease); }
-.hl-roue-page:not([data-rangee]) .hl-roue-liens { transform: translateY(calc(-1 * var(--place))); }
-.hl-roue-nouvelle { transition: opacity .3s, transform .45s var(--ease), background-color .35s, color .35s; }
-.hl-roue-page:not([data-rangee]) .hl-roue-nouvelle { opacity: 0; transform: scale(.9); }
-/* À chaque arrivée, elle s'allume de la couleur du réseau (`--reseau`, sur la colonne), puis revient au thème. */
-.hl-roue-page[data-rangee] .hl-roue-nouvelle { background: var(--reseau); color: #fff; }
-.hl-roue-page[data-arrive] .hl-roue-nouvelle { background: var(--reseau); color: #fff; transition-duration: .3s, .45s, .15s, .15s; }
-@media (prefers-reduced-motion: reduce) { .hl-roue-liens, .hl-roue-nouvelle { transition: none; } }
-@container (max-width: 95px) {
-  .hl-roue-nom { display: none; }
-  .hl-roue-avatar { width: 32cqi; font-size: 12cqi; }
-  .hl-roue-liens { margin-top: 12cqi; gap: 6cqi; }
-  .hl-roue-ligne { justify-content: center; height: 19cqi; }
-  .hl-roue-ligne svg { width: 12cqi; height: 12cqi; }
-  .hl-roue-ligne span { display: none; }
-  .hl-roue-liens { --place: 25cqi; }
-  .hp-selon .hl-roue-ligne svg { width: 16cqi; height: 16cqi; }
+.hl-roue-images { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; width: 100%; margin-top: 16px; }
+.hl-roue-images img { width: 100%; height: auto; aspect-ratio: 1; border-radius: 8px; object-fit: cover; }
+/* Assez de place : la page à droite de la roue et de son lien, empilés. */
+@container (min-width: 520px) {
+  .hl-roue { --d: 148px; --badge: 38px; --moyeu: 58px; --page: 300px; grid-template-columns: auto auto; justify-content: center; align-items: center; column-gap: clamp(48px, 9cqi, 76px); }
+  .hl-roue-source-zone { flex-direction: column; gap: 30px; }
+  .hl-roue-nom { font-size: 23px; }
+  .hl-roue-ligne { min-height: 50px; font-size: 15px; }
 }
-/* Sous chaque page, son réseau : le logo seul dans sa couleur, le nom à l'encre ; sans étiquette de couleur derrière. */
-.hl-roue-source { display: inline-flex; align-items: center; justify-content: center; gap: 5px; min-width: 26px; height: 24px; font-size: 12px; font-weight: 600; white-space: nowrap; }
-.hl-roue-source svg { flex: none; color: var(--reseau); }
-@media (max-width: 479px) { .hl-roue-source { font-size: 0; gap: 0; } }
 .hl-roue-pied { min-height: 44px; margin-top: 10px; display: flex; justify-content: center; align-items: center; }
 .hl-roue-pied .hl-revoir { animation: hl-fondu .4s ease both; }
 

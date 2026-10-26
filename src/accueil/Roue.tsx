@@ -1,87 +1,72 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { Icone } from '../components/Icone.tsx';
-import { Symbole } from '../components/Logo.tsx';
 import { POLICES, THEMES } from '../lib/themes.ts';
 import { NOMS_AUDIENCES, composerAudience } from '../lib/provenance.ts';
 import { PROFILS, BLOCS_EXEMPLES } from './exemples.ts';
-import { mouvementReduit, useEnVue } from './mouvement.ts';
+import { mouvementReduit, useEnVue, useGlisse } from './mouvement.ts';
 
 /*
- * La roue de l'ouverture (20 octobre 2026, à la demande de Lilian) : les
- * réseaux tournent sur une roue, et chaque visiteur en part, passe par le
- * même lien Hopla, puis descend vers la page rangée pour son réseau. À son
- * arrivée, la page fait un petit bond ; la première fois, le lien de ce
- * réseau se glisse en tête, dans la couleur du réseau, qu'il garde : au repos,
- * on lit encore quel réseau a rangé chaque page. Camille Nguyen, une photographe inventée, dans le thème
- * Neige. Le trafic part dès
- * que la roue arrive à l'écran, se met en pause quand on la quitte et reprend au retour ; joué
- * jusqu'au bout, la roue ralentit et s'arrête, et il se rejoue quand on revient (26 octobre 2026,
- * demandé par Lilian : rien à toucher). « Passer » le saute. Avec moins de mouvement, les quatre
- * pages sont déjà rangées.
+ * La roue de « Camille partage, Hopla s'adapte » (20 octobre 2026, refaite le
+ * 26 octobre 2026 à la demande de Lilian : « trop petites les pages, police
+ * trop petite, roue trop grosse ») : une petite roue des réseaux, la photo de
+ * Camille au moyeu, son lien dessous, et une seule page, en grand, dans son
+ * thème (Onyx et or). Chaque visiteur part de son réseau, passe par le moyeu
+ * et le lien, plonge dans la page : elle dit d'où il vient et range ses liens
+ * pour lui, en glissant. Les quatre réseaux passent à tour de rôle, en boucle,
+ * tant que la scène est à l'écran ; hors de l'écran ou après « Pause », le
+ * temps s'arrête et reprend là où il en était. Avec moins de mouvement, la
+ * page rangée pour Instagram reste posée.
  *
- * Le dessin est en HTML (roue, lien, pages) ; les chemins et les traînées sont
- * dans un SVG mesuré sur la scène ; les visiteurs se déplacent hors de React,
- * image par image, le long de ces chemins.
+ * Le dessin est en HTML ; les chemins et la traînée sont dans un SVG mesuré
+ * sur la scène ; le visiteur se déplace hors de React, image par image.
  */
 
 const RESEAUX = ['instagram', 'tiktok', 'youtube', 'linkedin'] as const;
 type Reseau = (typeof RESEAUX)[number];
 const COULEURS: Record<Reseau, string> = { instagram: '#d62976', tiktok: '#111111', youtube: '#e00000', linkedin: '#0a66c2' };
-/** Le lien que la page met en tête pour chaque réseau. */
-const PAGES = Object.fromEntries(RESEAUX.map(r => [r, composerAudience(BLOCS_EXEMPLES.camille, r)])) as Record<Reseau, typeof BLOCS_EXEMPLES.camille>;
-const EN_TETE = Object.fromEntries(RESEAUX.map(r => [r, PAGES[r][0]])) as Record<Reseau, typeof BLOCS_EXEMPLES.camille[number]>;
-const THEME = THEMES.find(t => t.id === 'neige')!;
+const BLOCS = BLOCS_EXEMPLES.camille;
+/** Les liens de la page pour chaque réseau, et pour un visiteur venu d'ailleurs (avant le premier). */
+const PAGES = Object.fromEntries(RESEAUX.map(r => [r, composerAudience(BLOCS, r)])) as Record<Reseau, typeof BLOCS>;
+const DIRECT = composerAudience(BLOCS, '');
+const PROFIL = PROFILS.camille;
+const THEME = THEMES.find(t => t.id === PROFIL.theme)!;
 const POLICE = POLICES[THEME.police];
+const IMAGES = ['/exemple-camille-dune.svg', '/exemple-camille-miroir.svg', '/exemple-camille-pins.svg'];
 
-/** Qui arrive, et quand (ms) : les quatre premiers un par un, le temps de voir chaque page se ranger, puis la foule. */
-const VISITES: [number, Reseau][] = [
-  [300, 'instagram'], [1050, 'tiktok'], [1800, 'youtube'], [2550, 'linkedin'],
-  [3150, 'tiktok'], [3500, 'instagram'], [3800, 'tiktok'], [4150, 'youtube'], [4450, 'instagram'],
-  [4800, 'tiktok'], [5100, 'linkedin'], [5450, 'youtube'], [5750, 'instagram'], [6100, 'tiktok'],
-];
-const TRAJET = 1650;
-/** Degrés par seconde pendant le trafic ; ensuite la roue ralentit et s'arrête. */
-const VITESSE = 26, FREIN = 0.7;
-const PAR_RESEAU = 4;
+/** Le trajet d'un visiteur, puis le temps de lire la page rangée (ms). */
+const TRAJET = 1150, TENUE = 1950, CYCLE = TRAJET + TENUE;
+/** Degrés par seconde : la roue tourne doucement, le visiteur part de là où elle a amené son réseau. */
+const VITESSE = 16;
 
 const facile = (p: number) => (p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2);
 
-interface Geo { cx: number; cy: number; r: number; bas: number; pages: { x: number; y: number }[]; w: number; h: number; base: number[] }
+interface Point { x: number; y: number }
+interface Geo { cx: number; cy: number; r: number; lien: Point; sortie: Point; entree: Point; bas: boolean }
 
 export function Roue() {
   const [refVu, enVue] = useEnVue<HTMLDivElement>(0.5);
-  const [vu, setVu] = useState(false);
-  // Les images du trafic ne tournent que la roue à l'écran ; `reprendre` relance celles d'une lecture en pause.
+  const [pause, setPause] = useState(false);
   const joue = useRef(false);
-  joue.current = enVue;
+  joue.current = enVue && !pause;
   const reprendre = useRef<(() => void) | null>(null);
   const scene = useRef<HTMLDivElement>(null);
   const anneau = useRef<HTMLDivElement>(null);
   const lien = useRef<HTMLDivElement>(null);
-  const pages = useRef<(HTMLDivElement | null)[]>([]);
-  const ondes = useRef<(HTMLSpanElement | null)[]>([]);
-  const points = useRef<(HTMLSpanElement | null)[]>([]);
-  const traines = useRef<(SVGPathElement | null)[]>([]);
+  const page = useRef<HTMLDivElement>(null);
+  const liens = useRef<HTMLDivElement>(null);
+  const point = useRef<HTMLSpanElement>(null);
+  const icones = useRef<(HTMLSpanElement | null)[]>([]);
+  const traine = useRef<SVGPathElement>(null);
   const geo = useRef<Geo | null>(null);
-  // L'angle où la roue s'est arrêtée : la lecture suivante repart de là.
-  const arret = useRef(0);
-  const [traces, setTraces] = useState<{ w: number; h: number; tige: string; voies: string[] } | null>(null);
-  const [rangees, setRangees] = useState<Reseau[]>([]);
-  const [fini, setFini] = useState(false);
-  const [tour, setTour] = useState(0);
-  // « Passer » pose la roue sur sa fin, les quatre pages rangées.
-  const [passe, setPasse] = useState(false);
-  // Finie (ou passée) puis quittée, la scène se rejoue au retour.
-  const quittee = useRef(false);
-  useEffect(() => {
-    if (enVue) setVu(true);
-    if (!enVue && (fini || passe)) quittee.current = true;
-    if (enVue && quittee.current) { quittee.current = false; setPasse(false); setTour(t => t + 1); }
-    if (enVue) reprendre.current?.();
-  }, [enVue]); // eslint-disable-line react-hooks/exhaustive-deps
+  const [traces, setTraces] = useState<{ w: number; h: number; d: string } | null>(null);
+  const [actif, setActif] = useState<Reseau | null>(null);
+  const [lancee, setLancee] = useState(false);
 
-  // Les positions de la roue, du lien et des pages, relues à chaque changement de taille.
+  const blocs = actif ? PAGES[actif] : DIRECT;
+  useGlisse(liens, blocs.map(b => b.titre).join('|'), 520);
+
+  // Les positions du moyeu, du lien et de la page, relues à chaque changement de taille.
   useLayoutEffect(() => {
     const el = scene.current;
     if (!el) return;
@@ -89,12 +74,16 @@ export function Roue() {
       const s = el.getBoundingClientRect();
       const a = anneau.current!.getBoundingClientRect();
       const l = lien.current!.getBoundingClientRect();
+      const p = page.current!.getBoundingClientRect();
       const cx = a.left - s.left + a.width / 2, cy = a.top - s.top + a.height / 2;
-      const bas = l.bottom - s.top;
-      const ps = pages.current.map(p => { const r = p!.getBoundingClientRect(); return { x: r.left - s.left + r.width / 2, y: r.top - s.top + 6 }; });
-      const g: Geo = { cx, cy, r: a.width / 2, bas, pages: ps, w: s.width, h: s.height, base: RESEAUX.map((_, i) => 45 + i * 90) };
+      const lx = l.left - s.left, ly = l.top - s.top;
+      // La page est sous le lien (téléphone) ou à sa droite (bureau) : le chemin sort par le bas ou par le côté.
+      const bas = p.top - s.top > ly + l.height;
+      const sortie = bas ? { x: lx + l.width / 2, y: ly + l.height } : { x: lx + l.width, y: ly + l.height / 2 };
+      const entree = bas ? { x: p.left - s.left + p.width / 2, y: p.top - s.top + 28 } : { x: p.left - s.left + 28, y: p.top - s.top + p.height * 0.42 };
+      const g: Geo = { cx, cy, r: a.width / 2, lien: { x: lx + l.width / 2, y: ly + l.height / 2 }, sortie, entree, bas };
       geo.current = g;
-      setTraces({ w: s.width, h: s.height, tige: `M${cx} ${cy}L${cx} ${bas}`, voies: ps.map(p => voie(g, p)) });
+      setTraces({ w: s.width, h: s.height, d: `M${cx} ${cy}L${g.lien.x} ${g.lien.y}${voie(g)}` });
     };
     mesurer();
     if (typeof ResizeObserver !== 'function') return;
@@ -103,179 +92,128 @@ export function Roue() {
     return () => o.disconnect();
   }, []);
 
-  // Le trafic : quand la roue est à l'écran, en pause hors de l'écran.
+  // Le trafic : un réseau après l'autre, en boucle, tant que la scène joue.
   useEffect(() => {
-    if (!vu) return;
-    if (mouvementReduit() || passe) { setRangees([...RESEAUX]); setFini(true); return; }
-    setRangees([]);
-    setFini(false);
-    const libres = RESEAUX.map((_, i) => Array.from({ length: PAR_RESEAU }, (_, k) => i * PAR_RESEAU + k));
-    const vols: { reseau: number; case: number; depart: number; long: number }[] = [];
-    let suivante = 0, image = 0, t = 0, prec = 0, fin = 0, termine = false, dernier = arret.current;
-    const vus = new Set<Reseau>();
-    // À chaque arrivée, la ligne du réseau prend sa couleur un instant (`data-arrive`), puis celle du thème.
-    const teintes: ReturnType<typeof setTimeout>[] = [];
-    const tourner = (t: number) => {
-      // Vitesse constante pendant le trafic, puis un freinage exponentiel.
-      const s = t / 1000;
-      const a = arret.current + (!fin || t < fin ? VITESSE * s : VITESSE * (fin / 1000) + VITESSE * FREIN * (1 - Math.exp(-(t - fin) / 1000 / FREIN)));
-      anneau.current?.style.setProperty('--a', `${a}deg`);
-      dernier = a;
-      return a;
-    };
-    const arriver = (i: number) => {
-      const reseau = RESEAUX[i];
-      pages.current[i]?.animate(
-        [{ transform: 'none' }, { transform: 'translateY(-7px) scale(1.045)', offset: 0.32 }, { transform: 'none' }],
-        { duration: 560, easing: 'cubic-bezier(.2,.7,.2,1)' },
-      );
-      ondes.current[i]?.animate(
-        [{ opacity: 0.9, transform: 'scale(1)' }, { opacity: 0, transform: 'scale(1.16)' }],
-        { duration: 650, easing: 'cubic-bezier(.16,1,.3,1)' },
-      );
-      const page = pages.current[i];
-      if (page) {
-        clearTimeout(teintes[i]);
-        page.dataset.arrive = '';
-        teintes[i] = setTimeout(() => { delete page.dataset.arrive; }, 1200);
-      }
-      if (!vus.has(reseau)) { vus.add(reseau); setRangees(r => [...r, reseau]); }
-    };
+    if (mouvementReduit()) { setActif('instagram'); return; }
+    let image = 0, t = 0, prec = 0, depart = -1, long = 0;
+    let angle = 0;
     const pas = (now: number) => {
-      // Hors de l'écran, le temps de la scène s'arrête : `reprendre` la relance là où elle en était.
+      // En pause ou hors de l'écran, le temps de la scène s'arrête : `reprendre` le relance là où il en était.
       if (!joue.current) { image = 0; prec = 0; return; }
       if (prec) t += Math.min(now - prec, 100);
       prec = now;
-      const g = geo.current;
-      const a = tourner(t);
-      // Un visiteur part de son réseau, là où la roue l'a amené.
-      while (g && suivante < VISITES.length && VISITES[suivante][0] <= t) {
-        const [quand, reseau] = VISITES[suivante++];
-        const i = RESEAUX.indexOf(reseau);
-        const c = libres[i].shift();
-        const chemin = c === undefined ? null : traines.current[c];
-        if (c === undefined || !chemin) continue;
-        const angle = ((g.base[i] + a) * Math.PI) / 180;
-        const bx = g.cx + g.r * Math.sin(angle), by = g.cy - g.r * Math.cos(angle);
-        chemin.setAttribute('d', `M${bx} ${by}L${g.cx} ${g.cy}L${g.cx} ${g.bas}${voie(g, g.pages[i]).replace(/^M[^C]*/, '')}`);
-        vols.push({ reseau: i, case: c, depart: quand, long: chemin.getTotalLength() });
-      }
-      for (let k = vols.length - 1; k >= 0; k--) {
-        const v = vols[k];
-        const p = Math.min(1, (t - v.depart) / TRAJET);
-        const point = points.current[v.case], chemin = traines.current[v.case];
-        if (!point || !chemin) continue;
-        if (p >= 1) {
-          point.style.opacity = '0';
+      angle = (VITESSE * t) / 1000;
+      anneau.current?.style.setProperty('--a', `${angle}deg`);
+      const g = geo.current, chemin = traine.current, p = point.current;
+      const tour = Math.floor(t / CYCLE), i = tour % RESEAUX.length, local = t - tour * CYCLE;
+      if (g && chemin && p) {
+        if (local < TRAJET) {
+          // Un nouveau visiteur : son chemin part du logo de son réseau, là où la roue l'a amené.
+          if (depart !== tour) {
+            depart = tour;
+            const a = ((45 + i * 90 + angle) * Math.PI) / 180;
+            chemin.setAttribute('d', `M${g.cx + g.r * Math.sin(a)} ${g.cy - g.r * Math.cos(a)}L${g.cx} ${g.cy}L${g.lien.x} ${g.lien.y}${voie(g)}`);
+            long = chemin.getTotalLength();
+            icones.current.forEach((ic, k) => { if (ic) ic.style.display = k === i ? '' : 'none'; });
+            p.style.color = COULEURS[RESEAUX[i]];
+          }
+          const d = facile(local / TRAJET) * long;
+          const q = chemin.getPointAtLength(d);
+          p.style.transform = `translate(${q.x}px, ${q.y}px)`;
+          p.style.opacity = '1';
+          chemin.style.strokeDasharray = `${Math.min(56, d)} ${long + 56}`;
+          chemin.style.strokeDashoffset = `${-Math.max(0, d - 56)}`;
+          chemin.style.opacity = '1';
+        } else if (depart === tour) {
+          // Arrivé : la page se range pour son réseau.
+          depart = -1;
+          p.style.opacity = '0';
           chemin.style.opacity = '0';
-          libres[v.reseau].push(v.case);
-          vols.splice(k, 1);
-          arriver(v.reseau);
-          continue;
+          setActif(RESEAUX[i]);
+          page.current?.animate(
+            [{ transform: 'none' }, { transform: 'scale(1.025)', offset: 0.3 }, { transform: 'none' }],
+            { duration: 520, easing: 'cubic-bezier(.2,.7,.2,1)' },
+          );
         }
-        const d = facile(p) * v.long;
-        const q = chemin.getPointAtLength(d);
-        point.style.transform = `translate(${q.x}px, ${q.y}px)`;
-        point.style.opacity = '1';
-        // La traînée : les 48 px de chemin derrière le visiteur.
-        chemin.style.strokeDasharray = `${Math.min(48, d)} ${v.long + 48}`;
-        chemin.style.strokeDashoffset = `${-Math.max(0, d - 48)}`;
-        chemin.style.opacity = '1';
       }
-      if (!fin && suivante >= VISITES.length && !vols.length) fin = t;
-      if (fin && t - fin > FREIN * 4000) { termine = true; image = 0; setFini(true); return; }
       image = requestAnimationFrame(pas);
     };
-    reprendre.current = () => { if (!termine && !image) image = requestAnimationFrame(pas); };
-    const depart = setTimeout(() => reprendre.current?.(), 200);
-    return () => {
-      reprendre.current = null;
-      clearTimeout(depart);
-      cancelAnimationFrame(image);
-      teintes.forEach(clearTimeout);
-      pages.current.forEach(p => { if (p) delete p.dataset.arrive; });
-      arret.current = dernier % 360;
-      points.current.forEach(p => { if (p) p.style.opacity = '0'; });
-      traines.current.forEach(c => { if (c) c.style.opacity = '0'; });
-    };
-  }, [vu, tour, passe]);
+    reprendre.current = () => { if (!image) image = requestAnimationFrame(pas); };
+    if (joue.current) reprendre.current();
+    return () => { reprendre.current = null; cancelAnimationFrame(image); };
+  }, []);
 
-  const adresse = `hopla.page/${PROFILS.camille.pseudo}`;
-  const qui = PROFILS.camille.nom;
-  const page = {
-    '--fond': THEME.fond, '--texte': THEME.texte, '--surface': THEME.surface, '--surface-texte': THEME.surfaceTexte,
-    '--vedette': THEME.vedette, '--vedette-texte': THEME.vedetteTexte, '--police': POLICE.titre,
+  useEffect(() => {
+    if (enVue) setLancee(true);
+    if (joue.current) reprendre.current?.();
+  }, [enVue, pause]);
+
+  const adresse = `hopla.page/${PROFIL.pseudo}`;
+  const style = {
+    '--fond': THEME.fond, '--texte': THEME.texte, '--doux': THEME.doux, '--surface': THEME.surface, '--surface-texte': THEME.surfaceTexte,
+    '--vedette': THEME.vedette, '--vedette-texte': THEME.vedetteTexte, '--police-titre': POLICE.titre, '--police': POLICE.corps,
   } as CSSProperties;
 
   return (
     <div ref={refVu} className="hl-roue-cadre">
       <div ref={scene} className="hl-roue" role="img"
-        aria-label={`Des visiteurs arrivent d’Instagram, de TikTok, de YouTube et de LinkedIn par le même lien, ${adresse}. Chacun tombe sur la page de ${qui} rangée pour son réseau : ${RESEAUX.map(r => `« ${EN_TETE[r].titre} » en tête depuis ${NOMS_AUDIENCES[r]}`).join(', ')}.`}>
+        aria-label={`Des visiteurs arrivent d’Instagram, de TikTok, de YouTube et de LinkedIn par le même lien, ${adresse}. La page de ${PROFIL.nom} se range pour chacun : ${RESEAUX.map(r => `« ${PAGES[r][0].titre} » en tête depuis ${NOMS_AUDIENCES[r]}`).join(', ')}.`}>
         {traces && (
           <svg className="hl-roue-traces" width={traces.w} height={traces.h} viewBox={`0 0 ${traces.w} ${traces.h}`} aria-hidden="true">
-            <path d={traces.tige} className="hl-roue-voie" />
-            {traces.voies.map((d, i) => <path key={i} d={d} className="hl-roue-voie" />)}
-            {Array.from({ length: RESEAUX.length * PAR_RESEAU }, (_, c) => (
-              <path key={c} ref={el => { traines.current[c] = el; }} className="hl-roue-traine" style={{ opacity: 0 }} />
-            ))}
+            <path d={traces.d} className="hl-roue-voie" />
+            <path ref={traine} className="hl-roue-traine" style={{ opacity: 0 }} />
           </svg>
         )}
-        <div className="hl-roue-points" aria-hidden="true">
-          {Array.from({ length: RESEAUX.length * PAR_RESEAU }, (_, c) => {
-            const r = RESEAUX[Math.floor(c / PAR_RESEAU)];
-            return (
-              <span key={c} ref={el => { points.current[c] = el; }} className="hl-roue-point" style={{ color: COULEURS[r], opacity: 0 }}>
-                <Icone nom={r} taille={16} />
-              </span>
-            );
-          })}
-        </div>
-        <div className="hl-roue-haut">
-          <div ref={anneau} className="hl-roue-anneau">
-            {RESEAUX.map((r, i) => (
-              <span key={r} className="hl-roue-badge" style={{ '--b': `${45 + i * 90}deg`, color: COULEURS[r] } as CSSProperties}>
-                <Icone nom={r} taille={26} />
-              </span>
-            ))}
+        <span ref={point} className="hl-roue-point" style={{ opacity: 0 }} aria-hidden="true">
+          {RESEAUX.map((r, k) => <span key={r} ref={el => { icones.current[k] = el; }}><Icone nom={r} taille={18} /></span>)}
+        </span>
+        <div className="hl-roue-source-zone">
+          <div className="hl-roue-haut">
+            <div ref={anneau} className="hl-roue-anneau">
+              {RESEAUX.map((r, i) => (
+                <span key={r} className="hl-roue-badge" style={{ '--b': `${45 + i * 90}deg`, color: COULEURS[r] } as CSSProperties}>
+                  <Icone nom={r} taille={22} />
+                </span>
+              ))}
+            </div>
+            <img className="hl-roue-moyeu" src={PROFIL.avatar} alt="" width="120" height="120" loading="lazy" />
           </div>
-          <span className="hl-roue-moyeu"><Symbole /></span>
+          <div ref={lien} className="hl-roue-lien">{adresse}</div>
         </div>
-        <div ref={lien} className="hl-roue-lien">{adresse}</div>
-        <div className="hl-roue-pages">
-          {RESEAUX.map((r, i) => {
-            const rangee = rangees.includes(r);
-            return (
-              <div key={r} className="hl-roue-colonne" style={{ '--reseau': COULEURS[r] } as CSSProperties}>
-                <span ref={el => { ondes.current[i] = el; }} className="hl-roue-onde" />
-                <div ref={el => { pages.current[i] = el; }} className="hl-roue-page" style={page} data-rangee={rangee || undefined}>
-                  <img className="hl-roue-avatar" src={PROFILS.camille.avatar} alt="" width="64" height="64" loading="lazy" />
-                  <b className="hl-roue-nom">{qui}</b>
-                  <div className="hl-roue-liens">
-                    <div className="hl-roue-ligne hl-roue-nouvelle" data-vedette={rangee || undefined}>
-                      <Icone nom={EN_TETE[r].icone} taille={10} /><span>{EN_TETE[r].titre}</span>
-                    </div>
-                    {PAGES[r].slice(1).map((l, k) => (
-                      <div key={l.titre} className="hl-roue-ligne" data-vedette={(!rangee && k === 0) || undefined}>
-                        <Icone nom={l.icone} taille={10} /><span>{l.titre}</span>
-                      </div>
-                    ))}
-                  </div>
+        <div className="hl-roue-ecran">
+          <span className="hl-roue-depuis" key={actif ?? 'direct'} data-vide={!actif || undefined}>
+            {actif && <><span style={{ color: COULEURS[actif] }}><Icone nom={actif} taille={18} /></span>Depuis {NOMS_AUDIENCES[actif]}</>}
+          </span>
+          <div ref={page} className="hl-roue-page" style={style}>
+            <img className="hl-roue-avatar" src={PROFIL.avatar} alt="" width="120" height="120" loading="lazy" />
+            <b className="hl-roue-nom">{PROFIL.nom}</b>
+            <span className="hl-roue-bio">{PROFIL.bio}</span>
+            <div ref={liens} className="hl-roue-liens">
+              {blocs.map((b, k) => (
+                <div key={b.titre} data-cle="" className="hl-roue-ligne" data-vedette={(actif ? k === 0 : b.vedette) || undefined}>
+                  <Icone nom={b.icone} taille={16} /><span>{b.titre}</span>
                 </div>
-                <span className="hl-roue-source"><Icone nom={r} taille={14} />{NOMS_AUDIENCES[r]}</span>
-              </div>
-            );
-          })}
+              ))}
+            </div>
+            <div className="hl-roue-images">
+              {IMAGES.map(src => <img key={src} src={src} alt="" width="120" height="120" loading="lazy" />)}
+            </div>
+          </div>
         </div>
       </div>
       <p className="hl-roue-pied">
-        {!mouvementReduit() && vu && !fini && <button type="button" className="hl-revoir" onClick={() => setPasse(true)}>Passer l’animation</button>}
+        {!mouvementReduit() && lancee && (
+          <button type="button" className="hl-revoir" onClick={() => setPause(p => !p)}>{pause ? 'Reprendre l’animation' : 'Mettre l’animation en pause'}</button>
+        )}
       </p>
     </div>
   );
 }
 
-/** Du bas du lien au haut d'une page : une courbe qui descend droit, s'écarte, puis retombe droit dans la page. */
-function voie(g: Geo, p: { x: number; y: number }) {
-  const k = (p.y - g.bas) * 0.55;
-  return `M${g.cx} ${g.bas}C${g.cx} ${g.bas + k} ${p.x} ${p.y - k} ${p.x} ${p.y}`;
+/** De la sortie du lien à l'entrée de la page : une courbe qui part droit du lien et arrive droit dans la page. */
+function voie(g: Geo) {
+  const { sortie: a, entree: b } = g;
+  if (g.bas) { const k = (b.y - a.y) * 0.5; return `L${a.x} ${a.y}C${a.x} ${a.y + k} ${b.x} ${b.y - k} ${b.x} ${b.y}`; }
+  const k = (b.x - a.x) * 0.5;
+  return `L${a.x} ${a.y}C${a.x + k} ${a.y} ${b.x - k} ${b.y} ${b.x} ${b.y}`;
 }

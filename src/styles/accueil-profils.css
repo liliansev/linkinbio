@@ -111,22 +111,14 @@
 .hl-couleurs-texte .hp-inclus { margin-top: 16px; }
 .hp-vraie-page { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; margin-top: 10px; color: #292bff; font-size: 15px; font-weight: 600; text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 1px; }
 .hp-vraie-page:hover { text-decoration-thickness: 2px; }
-.hp-selon .hl-roue-cadre { max-width: 600px; margin: 0; }
+.hp-selon .hl-roue-cadre { margin: 0; }
 /* Le fond de la section, pour couper l'anneau sous chaque logo sans rond visible. */
 .hp-selon .hl-roue { --roue-fond: #f2f0e7; }
 .hp-selon .hl-roue-voie { stroke: #292bff40; }
 .hp-selon .hl-roue-traine { stroke: #292bff; }
 .hp-selon .hl-roue-anneau { box-shadow: inset 0 0 0 1.5px #292bff40; }
-.hp-selon .hl-roue-moyeu { box-shadow: 0 14px 28px -10px #292bff38; }
+.hp-selon .hl-roue-moyeu { box-shadow: 0 0 0 3px #fff, 0 14px 28px -10px #292bff55; }
 .hp-selon .hl-roue-lien { box-shadow: 0 0 0 1px #d3d1c7; }
-.hp-selon .hl-roue-avatar { object-fit: cover; }
-.hp-selon .hl-roue-nom { font-size: max(12px, 10cqi); }
-/* 26 octobre 2026 (retours d'un ami : « les boutons sont beaucoup trop petits et trop rapprochés ») : aucun mot
- * des pages de Camille sous 12 px, des lignes plus hautes et plus d'air entre elles. Sous 95 px de large, la
- * page ne garde que les pictos (règle de `accueil.css`). */
-.hp-selon .hl-roue-cadre { max-width: 680px; }
-.hp-selon .hl-roue-liens { gap: 7cqi; --place: calc(max(28px, 20cqi) + 7cqi); }
-.hp-selon .hl-roue-ligne { height: max(28px, 20cqi); font-size: max(12px, 8cqi); }
 .hp-personne { display: flex; align-items: center; gap: 12px; margin-block: 20px; }
 .hp-personne > .hp-avatar { width: 48px; border-radius: 50%; }
 .hp-personne > span { display: flex; flex-direction: column; min-width: 0; }
@@ -284,9 +276,6 @@
   .hl-humain .hp-selon { margin: 65px 8px 0; padding: 55px 22px; }
   .hp-selon .hl-chapo { font-size: 15px; }
   .hp-source-legendes b { font-size: 15px; }
-  .hp-selon .hl-roue { --d: 180px; --ecart: 58px; }
-  .hp-selon .hl-roue-pages { gap: 7px; }
-  .hp-selon .hl-roue-source { font-size: 12px; gap: 4px; }
   .hl-humain #prix { margin: 65px 8px 0; padding: 55px 22px; }
   .hl-humain .hl-offre { padding: 24px; }
   .hl-humain .hl-offres { margin-top: 24px; }
@@ -352,11 +341,6 @@
 @media (max-width: 599px) {
   .hp-source { left: 54%; top: 15%; gap: 5px; padding: 6px 9px; font-size: 13px; border-radius: 8px; }
   .hp-source svg { width: 14px; height: 14px; }
-}
-/* Sous 480 px, les colonnes de la roue sont trop étroites pour un nom : le picto du réseau suffit, plus grand. */
-@media (max-width: 479px) {
-  .hp-selon .hl-roue-source { font-size: 0; gap: 0; height: 28px; }
-  .hp-selon .hl-roue-source svg { width: 20px; height: 20px; }
 }
 .hl-couleurs-titre { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
 /* Au téléphone, la pastille passe au coin gauche de la carte d'Inès : la note du haut et le visage de Léa gardent leur place. */
