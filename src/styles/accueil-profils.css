@@ -484,3 +484,35 @@ html:has(.hl-humain) { scroll-padding-top: 90px; }
   .hl-humain .hl-barre-capsule { border-radius: 24px; }
   .hl-humain .hl-barre-dedans { padding-inline: max(28px, calc((100% - 1200px) / 2 + 14px)); max-width: none; }
 }
+
+/* Le tableau des offres (26 octobre 2026) : le seul endroit qui dit quelle offre donne quoi. Une carte blanche sous les
+   cartes des prix, les noms des offres collés sous la barre tant qu'on le lit, la colonne Pro sur un bleu pâle. */
+.hl-tableau { margin: 8px 0 32px; padding: 32px 32px 20px; background: #fff; border: 1px solid #dedfd7; border-radius: 20px; }
+.hl-humain .hl-tableau-titre { font-size: 28px; margin-bottom: 8px; }
+.hl-tableau table { width: 100%; border-collapse: separate; border-spacing: 0; table-layout: fixed; font-size: 15px; line-height: 1.4; }
+.hl-tableau thead th, .hl-tableau thead td { position: sticky; top: 61px; z-index: 2; background: #fff; padding: 16px 8px 14px; border-bottom: 1px solid #20241f; }
+.hl-tableau thead th { font-size: 18px; font-weight: 650; letter-spacing: -.01em; text-align: center; }
+.hl-tableau thead .hl-tableau-pro { color: #292bff; }
+.hl-tableau thead td:first-child { width: 46%; }
+.hl-tableau tbody th[scope='row'] { padding: 13px 16px 13px 0; font-weight: 500; text-align: left; text-wrap: pretty; }
+.hl-tableau tbody td { padding: 13px 8px; text-align: center; vertical-align: middle; font-variant-numeric: tabular-nums; color: #20241f; }
+.hl-tableau tbody tr:not(.hl-tableau-groupe) > * { border-bottom: 1px solid #ecebe4; }
+.hl-tableau tbody td:last-child { background: #f1f1ff; }
+.hl-tableau thead th:last-child { background: #f1f1ff; border-radius: 12px 12px 0 0; }
+.hl-tableau tbody:last-of-type tr:last-child > * { border-bottom: 0; }
+.hl-tableau tbody:last-of-type tr:last-child td:last-child { border-radius: 0 0 12px 12px; }
+.hl-tableau-groupe th { padding: 30px 0 10px; text-align: left; font-size: 13px; font-weight: 650; color: #5b6056; border-bottom: 1px solid #dedfd7; }
+.hl-tableau tbody:first-of-type .hl-tableau-groupe th { padding-top: 22px; }
+.hl-tableau-groupe th { background: #fff; }
+.hl-tableau tbody .hl-tableau-groupe th:last-child { background: #fff; }
+.hl-tableau-oui { display: inline-block; vertical-align: middle; color: #292bff; }
+.hl-tableau-non { display: inline-block; width: 12px; height: 2px; border-radius: 1px; background: #c9cbc2; vertical-align: middle; }
+@media (max-width: 1023px) {
+  .hl-tableau { margin-inline: -8px; padding: 22px 14px 12px; border-radius: 18px; }
+  .hl-humain .hl-tableau-titre { font-size: 24px; }
+  .hl-tableau table { font-size: 14px; }
+  .hl-tableau thead td:first-child { width: 43%; }
+  .hl-tableau thead th { font-size: 13px; padding-inline: 0; }
+  .hl-tableau tbody th[scope='row'] { padding: 12px 10px 12px 0; text-wrap: balance; }
+  .hl-tableau tbody td { padding: 12px 0; font-size: 13px; }
+}

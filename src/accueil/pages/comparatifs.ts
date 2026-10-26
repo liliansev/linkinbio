@@ -33,7 +33,7 @@ const PROMESSE = (nom: string): Ligne[] => [
   ['Page rangée selon le réseau du visiteur', 'Oui, gratuit', `Pas annoncé par ${nom}`],
   ['Liens ouverts dans leur app (YouTube, Spotify…)', 'Oui, gratuit', `Pas annoncé par ${nom}`],
 ];
-const HOPLA_PRIX = 'Gratuit, puis 9 € ou 19 € par mois';
+const HOPLA_PRIX = 'Gratuit, puis deux offres au mois ou à l’année';
 const HOPLA_COMMISSION = 'Aucune : Hopla n’encaisse rien';
 
 export const COMPARATIFS: Comparatif[] = [
@@ -47,11 +47,11 @@ export const COMPARATIFS: Comparatif[] = [
       ['Prix', HOPLA_PRIX, 'Gratuit, puis 8 $, 15 $ ou 35 $ par mois'],
       ['Offre gratuite', 'Oui, cinq blocs, les vingt thèmes', 'Oui, liens sans limite'],
       ['Commission sur tes ventes', HOPLA_COMMISSION, '12 % en gratuit, 9 % en Starter et Pro, 0 % en Premium'],
-      ['Retirer la marque', 'Avec Starter, 9 € par mois', 'Avec Pro, 15 $ par mois'],
-      ['Programmer un lien', 'Avec Starter', 'Avec Starter'],
-      ['Historique des stats', '30 jours en Starter, un an en Pro', '28 jours en gratuit, 90 jours en Starter'],
+      ['Retirer la marque', 'Oui', 'Avec Pro, 15 $ par mois'],
+      ['Programmer un lien', 'Oui', 'Avec Starter'],
+      ['Historique des stats', 'Jusqu’à un an', '28 jours en gratuit, 90 jours en Starter'],
       ...PROMESSE('Linktree'),
-      ['Résumé des stats chaque lundi, en phrases', 'Oui, avec Starter', 'Pas annoncé par Linktree'],
+      ['Résumé des stats chaque lundi, en phrases', 'Oui', 'Pas annoncé par Linktree'],
     ],
     parties: [
       { titre: 'La même page pour tous, ou la bonne page pour chacun', texte: [
@@ -68,7 +68,7 @@ export const COMPARATIFS: Comparatif[] = [
     pourEux: 'Si tu vends des produits numériques directement depuis ta page, sans boutique à toi, Linktree le fait et Hopla non : Hopla mène à ta boutique, il ne la remplace pas.',
     questions: [
       ['Comment passer de Linktree à Hopla ?', 'Colle ton adresse Linktree dans le champ de l’accueil : Hopla en garde le nom, s’il est libre. Ensuite, colle les adresses de tes liens, Hopla retrouve leurs titres tout seul. Il ne reste qu’à changer le lien de tes bios.'],
-      ['Hopla est-il gratuit comme Linktree ?', 'Oui. L’offre gratuite garde la page selon le réseau, les liens ouverts dans leur app et les vingt thèmes, avec cinq blocs. Chaque compte commence par 14 jours de Pro, sans carte.'],
+      ['Hopla est-il gratuit comme Linktree ?', 'Oui. L’offre gratuite garde la page selon le réseau, les liens ouverts dans leur app et les vingt thèmes, avec cinq blocs. Chaque compte commence par 14 jours avec toutes les fonctions, sans carte.'],
       ['Puis-je garder mon nom ?', 'Si personne ne l’a pris sur Hopla, oui : ta page sera hopla.page/ton-nom.'],
     ],
   },
@@ -82,9 +82,9 @@ export const COMPARATIFS: Comparatif[] = [
       ['Prix', HOPLA_PRIX, 'Gratuit, puis 10 $, 30 $ ou 100 $ par mois'],
       ['Offre gratuite', 'Oui, cinq blocs, les vingt thèmes', 'Oui, liens sans limite'],
       ['Commission sur tes ventes', HOPLA_COMMISSION, '9 % en gratuit et en Creator, 0 % dès 30 $ par mois'],
-      ['Retirer la marque', 'Avec Starter, 9 € par mois', 'Avec Creator Plus, 30 $ par mois'],
+      ['Retirer la marque', 'Oui', 'Avec Creator Plus, 30 $ par mois'],
       ['Boutique intégrée', 'Non : Hopla mène à la tienne', 'Oui'],
-      ['Liste e-mail', 'Avec Pro, vers Brevo, Mailchimp, Kit…', 'Oui, avec ses propres envois'],
+      ['Liste e-mail', 'Oui, vers Brevo, Mailchimp, Kit…', 'Oui, avec ses propres envois'],
       ...PROMESSE('Beacons'),
     ],
     parties: [
@@ -99,7 +99,7 @@ export const COMPARATIFS: Comparatif[] = [
     pourEux: 'Si tu n’as encore ni boutique ni newsletter et que tu veux tout au même endroit, Beacons te les donne d’un coup.',
     questions: [
       ['Hopla prend-il une commission ?', 'Non. Hopla n’encaisse rien : ton client paie sur ta boutique, ton agenda ou ta cagnotte.'],
-      ['Puis-je vendre avec Hopla ?', 'Oui, avec la vitrine de Starter : tes produits avec leur photo et leur prix, ta prise de rendez-vous, un bouton de soutien. Chaque bloc mène au site qui encaisse.'],
+      ['Puis-je vendre avec Hopla ?', 'Oui, avec la vitrine : tes produits avec leur photo et leur prix, ta prise de rendez-vous, un bouton de soutien. Chaque bloc mène au site qui encaisse.'],
     ],
   },
   {
@@ -107,14 +107,14 @@ export const COMPARATIFS: Comparatif[] = [
     nom: 'Stan',
     qui: 'une boutique en lien de bio pour vendre des formations et des rendez-vous, née aux États-Unis',
     chapo: 'Stan est une boutique : formations, rendez-vous payants, abonnements. Hopla est une page de liens qui s’adapte à chaque visiteur, avec une offre gratuite.',
-    resume: 'Hopla ou Stan Store ? Le comparatif : Stan démarre à 29 $ par mois sans offre gratuite ; Hopla est gratuit, puis 9 € par mois, sans commission.',
+    resume: 'Hopla ou Stan Store ? Le comparatif : Stan démarre à 29 $ par mois sans offre gratuite ; Hopla a une offre gratuite et ne prend aucune commission.',
     lignes: [
       ['Prix', HOPLA_PRIX, '29 $ ou 99 $ par mois'],
       ['Offre gratuite', 'Oui, cinq blocs, les vingt thèmes', 'Non, 14 jours d’essai'],
-      ['Essai', '14 jours de Pro, sans carte', '14 jours'],
+      ['Essai', '14 jours avec toutes les fonctions, sans carte', '14 jours'],
       ['Commission sur tes ventes', HOPLA_COMMISSION, '0 % de Stan, frais de paiement en plus'],
       ['Vendre des formations', 'Non : Hopla mène à ta plateforme', 'Oui'],
-      ['Prise de rendez-vous', 'Avec Starter, ton Calendly ou Cal.com dans la page', 'Oui, avec son agenda'],
+      ['Prise de rendez-vous', 'Oui, ton Calendly ou Cal.com dans la page', 'Oui, avec son agenda'],
       ...PROMESSE('Stan'),
     ],
     parties: [
@@ -125,8 +125,8 @@ export const COMPARATIFS: Comparatif[] = [
     ],
     pourEux: 'Si tu vends une formation en ligne ou des appels payants et que tu n’as pas de plateforme, Stan est fait pour ça.',
     questions: [
-      ['Hopla a-t-il une offre gratuite ?', 'Oui, pour toujours. Et chaque compte commence par 14 jours de Pro, sans carte.'],
-      ['Mon agenda peut-il s’ouvrir dans ma page ?', 'Oui, avec Starter : Calendly, Cal.com et Google Agenda s’ouvrent dans la page, sans quitter Hopla.'],
+      ['Hopla a-t-il une offre gratuite ?', 'Oui, pour toujours. Et chaque compte commence par 14 jours avec toutes les fonctions, sans carte.'],
+      ['Mon agenda peut-il s’ouvrir dans ma page ?', 'Oui : Calendly, Cal.com et Google Agenda s’ouvrent dans la page, sans quitter Hopla.'],
     ],
   },
   {
@@ -138,11 +138,11 @@ export const COMPARATIFS: Comparatif[] = [
     lignes: [
       ['Prix', HOPLA_PRIX, 'Gratuit, puis 0,99 $ par mois, ou 9,99 $ et 24,99 $ à vie'],
       ['Offre gratuite', 'Oui, cinq blocs, les vingt thèmes', 'Oui, liens sans limite'],
-      ['Retirer la marque', 'Avec Starter, 9 € par mois', 'Avec Unique, 24,99 $ à vie'],
-      ['Programmer un lien', 'Avec Starter', 'Avec Mini'],
+      ['Retirer la marque', 'Oui', 'Avec Unique, 24,99 $ à vie'],
+      ['Programmer un lien', 'Oui', 'Avec Mini'],
       ['Commission sur tes ventes', HOPLA_COMMISSION, 'Pas annoncé par Lnk.Bio'],
       ...PROMESSE('Lnk.Bio'),
-      ['Résumé des stats chaque lundi, en phrases', 'Oui, avec Starter', 'Pas annoncé par Lnk.Bio'],
+      ['Résumé des stats chaque lundi, en phrases', 'Oui', 'Pas annoncé par Lnk.Bio'],
     ],
     parties: [
       { titre: 'Le moins cher, ou celui qui fait cliquer', texte: [
@@ -152,7 +152,7 @@ export const COMPARATIFS: Comparatif[] = [
     ],
     pourEux: 'Si tu veux une liste de liens sans rien de plus, au plus bas prix et payée une fois, Lnk.Bio est un bon choix.',
     questions: [
-      ['Hopla a-t-il un prix à vie ?', 'Non : Hopla est gratuit, puis 9 € ou 19 € par mois, ou 79 € et 169 € par an.'],
+      ['Hopla a-t-il un prix à vie ?', 'Non : Hopla a une offre gratuite, puis des offres au mois ou à l’année. Le détail est dans les tarifs.'],
     ],
   },
   {
@@ -167,7 +167,7 @@ export const COMPARATIFS: Comparatif[] = [
       ['Paiements dans la page', 'Non : Hopla mène à ta boutique', 'Oui, avec Business'],
       ['Commission sur tes ventes', HOPLA_COMMISSION, 'Aucune de Taplink, frais de paiement en plus'],
       ...PROMESSE('Taplink'),
-      ['Avis Google ou Trustpilot recopiés', 'Oui, avec Starter', 'Pas annoncé par Taplink'],
+      ['Avis Google ou Trustpilot recopiés', 'Oui', 'Pas annoncé par Taplink'],
     ],
     parties: [
       { titre: 'Une mini-page, ou une page qui s’adapte', texte: [
@@ -184,7 +184,7 @@ export const COMPARATIFS: Comparatif[] = [
     nom: 'Later Linkin.bio',
     qui: 'la page de liens de Later, l’outil de programmation de posts, née au Canada',
     chapo: 'Linkin.bio est la page de liens de Later, comprise dans ses offres de programmation de posts. Hopla est une page de liens seule, qui s’adapte à chaque visiteur.',
-    resume: 'Hopla ou Later Linkin.bio ? Le comparatif : Linkin.bio vient avec Later, dès 25 $ par mois ; Hopla est une page de liens seule, gratuite, puis 9 € par mois.',
+    resume: 'Hopla ou Later Linkin.bio ? Le comparatif : Linkin.bio vient avec Later, dès 25 $ par mois ; Hopla est une page de liens seule, avec une offre gratuite.',
     lignes: [
       ['Prix', HOPLA_PRIX, 'Compris dans Later, dès 25 $ par mois'],
       ['Vendu seul', 'Oui', 'Non, avec la programmation de posts'],

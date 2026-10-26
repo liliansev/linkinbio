@@ -2,8 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { KeyboardEvent } from 'react';
 import { Icone, NOMS_RESEAUX } from '../components/Icone.tsx';
 import { Symbole } from '../components/Logo.tsx';
-import { OFFRES, euros, peut } from '../lib/abonnement.ts';
-import type { Plan } from '../lib/abonnement.ts';
+import { peut } from '../lib/abonnement.ts';
 import { NOMS_AUDIENCES, composerAudience, deReseau } from '../lib/provenance.ts';
 import { BLOCS_EXEMPLES, IDS_PROFILS, PROFILS, de, pageExemple, pageProfil } from './exemples.ts';
 import type { ProfilExemple } from './exemples.ts';
@@ -16,31 +15,10 @@ export function Avatar({ profil, className = '', prioritaire = false }: { profil
   return <img className={`hp-avatar ${className}`} src={PROFILS[profil].avatar} alt="" width="512" height="512" loading={prioritaire ? 'eager' : 'lazy'} />;
 }
 
-/** `long` : « Offre Starter », là où la pastille paraît seule, sans phrase pour la définir. */
-export function BadgeOffre({ offre, long = false }: { offre: 'starter' | 'pro'; long?: boolean }) {
-  return <span className="hp-badge-offre" data-offre={offre}>{long ? 'Offre ' : ''}{OFFRES[offre].nom}</span>;
-}
-
-/**
- * L'offre qui comprend une fonction, dite au même endroit et dans les mêmes
- * mots pour toutes : « Inclus dans l'offre gratuite », ou l'offre payante et
- * son prix au mois, celui que les tarifs montrent en arrivant, qui y mène.
- */
-export function OffreFonction({ offre, quoi = '', prix = '#prix' }: { offre: Plan; quoi?: string; prix?: string }) {
-  return (
-    <p className="hp-inclus">
-      <Icone nom="check" taille={18} />
-      {offre === 'gratuit'
-        ? <span>{quoi ? `${quoi}, inclus` : 'Inclus'} dans l’offre gratuite</span>
-        : <span>{quoi ? `${quoi}, inclus` : 'Inclus'} dans l’offre {OFFRES[offre].nom}, <a href={prix}>{euros(OFFRES[offre].prix.mois)} par mois</a></span>}
-    </p>
-  );
-}
-
-/** `badge` : la pastille de son offre ; là où la fonction dit déjà la sienne, elle se tait. */
-export function Personne({ profil, badge = true }: { profil: ProfilExemple; badge?: boolean }) {
+/** Une personne d'exemple : son visage, son nom, son métier. Jamais son offre : elle ne se lit que dans les tarifs. */
+export function Personne({ profil }: { profil: ProfilExemple }) {
   const p = PROFILS[profil];
-  return <div className="hp-personne"><Avatar profil={profil} /><span><b>{p.nom}</b><small>{p.metier} · {p.ville}</small></span>{badge && p.offre !== 'gratuit' && <BadgeOffre offre={p.offre} />}</div>;
+  return <div className="hp-personne"><Avatar profil={profil} /><span><b>{p.nom}</b><small>{p.metier} · {p.ville}</small></span></div>;
 }
 
 /*
@@ -133,7 +111,7 @@ export function GalerieProfils() {
         <button type="button" autoFocus onClick={() => boite.current?.close()} aria-label="Fermer l’aperçu"><Icone nom="ui-fermer" taille={24} /></button>
       </div>
       <Telephone largeur={largeur} defile className="hl-tel-court" adresse={`hopla.page/${p.pseudo}`} label={`Exemple de page ${de(p.nom)}`}><EcranPage page={pageProfil(profil)} /></Telephone>
-      <p className="hp-dialogue-qui">{p.metier} à {p.ville}{p.offre !== 'gratuit' && <BadgeOffre offre={p.offre} long />}</p>
+      <p className="hp-dialogue-qui">{p.metier} à {p.ville}</p>
       <div className="hp-dialogue-pied">
         <button type="button" className="hp-dialogue-voisin" onClick={() => setProfil(voisin(-1))} aria-label={`Page précédente : ${PROFILS[voisin(-1)].nom}`}><Icone nom="ui-chevron" taille={20} className="hl-gauche" /></button>
         {!envoye && <button type="button" className="hl-btn" onClick={() => { retour.current = false; boite.current?.close(); allerAuChamp(); }}>{appel(mode)}</button>}

@@ -2,9 +2,9 @@ import { Avatar } from './Profils.tsx';
 import { useState } from 'react';
 import type { CSSProperties, KeyboardEvent, MouseEvent } from 'react';
 import { Icone } from '../components/Icone.tsx';
-import { ESSAI_JOURS, OFFRES, PLANS, PLANS_PAYANTS, PLAN_ESSAI, economie, euros, parMoisAnnuel } from '../lib/abonnement.ts';
+import { ESSAI_JOURS, FONCTIONS, OFFRES, PLANS, PLANS_PAYANTS, PLAN_ESSAI, economie, euros, parMoisAnnuel, rang } from '../lib/abonnement.ts';
 import { CONTACT_LEGAL } from '../lib/legal.ts';
-import type { Periode, Plan } from '../lib/abonnement.ts';
+import type { Fonction, Periode, Plan } from '../lib/abonnement.ts';
 import { Marque } from './Ouverture.tsx';
 import { Reserver, allerAuChamp, choisirOffre, useReservation } from './Reserver.tsx';
 import type { ApiAccueil } from './Reserver.tsx';
@@ -44,6 +44,85 @@ const EN_AVANT: Partial<Record<Plan, string[]>> = {
   starter: ['Tes couleurs, ta police, ton fond', 'Ta vitrine : produits, rendez-vous, dons', 'Tes stats sur 30 jours', 'Sans la mention Hopla'],
 };
 
+/**
+ * Le tableau des offres (26 octobre 2026, demandé par Lilian : « faut pas préciser sur quel plan on a quelle
+ * feature, cela doit être détaillé dans un tableau dans la section pricing ») : le seul endroit du site qui dit
+ * quelle offre donne quelle fonction. Une ligne nomme sa fonction réservée (`FONCTIONS`, la seule source) et la
+ * coche se calcule ; `valeurs` pour ce qui se compte (blocs, stats), une valeur par offre en vente.
+ */
+type LigneTableau = { nom: string; page?: string } & ({ fonction?: Fonction; valeurs?: never } | { fonction?: never; valeurs: [string, string, string] });
+const TABLEAU: { groupe: string; lignes: LigneTableau[] }[] = [
+  { groupe: 'Ta page', lignes: [
+    { nom: 'Ta page selon le réseau du visiteur', page: 'selon-le-reseau' },
+    { nom: 'Tes liens ouverts dans leur app', page: 'ouvrir-dans-l-app' },
+    { nom: 'Les vingt thèmes', page: 'themes' },
+    { nom: 'Blocs sur ta page', valeurs: ['5', 'Sans limite', 'Sans limite'] },
+    { nom: 'Sans la mention Hopla', fonction: 'sansMention' },
+  ] },
+  { groupe: 'Ton style', lignes: [
+    { nom: 'Tes couleurs, ta police, ton fond', fonction: 'couleurs', page: 'themes' },
+    { nom: 'Grande photo, liens en grille', fonction: 'grille' },
+    { nom: 'Formulaire de contact et galeries', fonction: 'formulaire' },
+  ] },
+  { groupe: 'Vendre', lignes: [
+    { nom: 'Ta vitrine : produits, rendez-vous, dons', fonction: 'vitrine', page: 'vitrine' },
+    { nom: 'Les avis de tes clients', fonction: 'avis', page: 'avis' },
+    { nom: 'Liens partenaires et mention « Publicité »' },
+  ] },
+  { groupe: 'Au bon moment', lignes: [
+    { nom: 'Liens programmés, compte à rebours', fonction: 'programmation', page: 'lancement' },
+    { nom: 'Ta page selon l’heure et le pays', fonction: 'heure', page: 'page-selon-l-heure' },
+    { nom: 'Les drops : un code, des places comptées', fonction: 'drops', page: 'drops' },
+  ] },
+  { groupe: 'Ton audience', lignes: [
+    { nom: 'Ta liste e-mail, vers ta newsletter', fonction: 'listeEmail', page: 'liste-email' },
+    { nom: 'Un cadeau contre l’e-mail', fonction: 'cadeau' },
+    { nom: 'Tes derniers articles, en RSS', fonction: 'flux' },
+  ] },
+  { groupe: 'Tes stats et ton suivi, sans cookie', lignes: [
+    { nom: 'Historique', valeurs: ['Vues, 7 jours', '30 jours', 'Un an'], page: 'stats' },
+    { nom: 'L’essentiel chaque lundi par e-mail', fonction: 'stats' },
+    { nom: 'Redirection et suivi UTM', fonction: 'utm' },
+  ] },
+];
+const EN_VENTE = PLANS.filter(plan => OFFRES[plan].enVente);
+
+function Case({ ligne, plan }: { ligne: LigneTableau; plan: Plan }) {
+  if (ligne.valeurs) return <td>{ligne.valeurs[EN_VENTE.indexOf(plan)]}</td>;
+  const inclus = !ligne.fonction || rang(plan) >= rang(FONCTIONS[ligne.fonction]);
+  return inclus
+    ? <td><Icone nom="check" taille={20} className="hl-tableau-oui" /><span className="hl-cache">Inclus</span></td>
+    : <td><span className="hl-tableau-non" aria-hidden="true" /><span className="hl-cache">Non</span></td>;
+}
+
+function TableauOffres() {
+  return (
+    <div className="hl-tableau hl-entre">
+      <h3 className="hl-h3 hl-tableau-titre">Tout comparer</h3>
+      <table>
+        <caption className="hl-cache">Ce que comprend chaque offre</caption>
+        <thead>
+          <tr>
+            <td />
+            {EN_VENTE.map(plan => <th key={plan} scope="col" className={plan === 'pro' ? 'hl-tableau-pro' : ''}>{OFFRES[plan].nom}</th>)}
+          </tr>
+        </thead>
+        {TABLEAU.map(({ groupe, lignes }) => (
+          <tbody key={groupe}>
+            <tr className="hl-tableau-groupe"><th scope="colgroup" colSpan={EN_VENTE.length + 1}>{groupe}</th></tr>
+            {lignes.map(l => (
+              <tr key={l.nom}>
+                <th scope="row">{l.page ? <a className="hl-offre-demo" href={`/fonctions/${l.page}`}>{l.nom}</a> : l.nom}</th>
+                {EN_VENTE.map(plan => <Case key={plan} ligne={l} plan={plan} />)}
+              </tr>
+            ))}
+          </tbody>
+        ))}
+      </table>
+    </div>
+  );
+}
+
 /** L'e-mail est parti (ou se corrige) : la page ne propose plus de créer. */
 function useEnvoye() {
   const { etape, ancien, correction } = useReservation();
@@ -77,6 +156,7 @@ export function Prix() {
       <div className="hl-tete-section hl-entre">
         <h2 id="titre-prix" className="hl-h2">Ta place sur internet<br /><span className="hl-cache">. </span><span>À ton rythme</span></h2>
       </div>
+      <div className="hl-prix-cartes">
       <div className="hl-periode hl-entre" role="radiogroup" aria-label="Paiement" onKeyDown={fleches}>
         {PERIODES.map(p => (
           <button key={p} type="button" role="radio" data-periode={p} aria-checked={periode === p} tabIndex={periode === p ? 0 : -1} onClick={() => changer(p)}>
@@ -133,6 +213,8 @@ export function Prix() {
           );
         })}
       </div>
+      </div>
+      <TableauOffres />
       <p className="hl-gris hl-petit hl-centre">Prix TTC. Ta page commence par {ESSAI_JOURS} jours de {OFFRES[PLAN_ESSAI].nom} offerts, sans carte bancaire ; ensuite elle reste en ligne en Gratuit, ou tu prends une offre depuis tes réglages. Résiliable à tout moment : l’offre reste jusqu’à la fin de la période payée.</p>
     </section>
   );

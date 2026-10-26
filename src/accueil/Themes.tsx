@@ -6,7 +6,6 @@ import { THEMES } from '../lib/themes.ts';
 import { Icone } from '../components/Icone.tsx';
 import { EcranPage, Telephone } from './Telephone.tsx';
 import { de, pageExemple, IDS_PROFILS, PROFILS } from './exemples.ts';
-import { OffreFonction } from './Profils.tsx';
 import { mouvementReduit, useVisible } from './mouvement.ts';
 
 /*
@@ -117,7 +116,6 @@ export function Themes() {
       <div className="hl-tete-section hl-entre">
         <h2 id="titre-themes" className="hl-h2">Une page à toi<br /><span className="hl-cache">. </span>Ça se voit</h2>
         <p className="hl-chapo">Des plus sobres aux plus audacieux, chacun avec sa typographie réglée à la main. Change d’ambiance en un geste.</p>
-        <OffreFonction offre="gratuit" quoi="Les vingt thèmes" />
       </div>
       <div className="hl-rail-tete hl-grand-seul">
         <div className="hl-fleches">
@@ -147,7 +145,6 @@ export function Themes() {
         <div className="hl-couleurs-texte">
           <h3 className="hl-h3 hl-couleurs-titre">Tes couleurs</h3>
           <p>Garde la typographie d’un thème, ici Lin, et change son fond, ses boutons ou son accent. Un geste remet tout comme avant.</p>
-          <OffreFonction offre="starter" />
         </div>
         <div className="hl-couleurs-reglage">
           <div className="hl-nuances">
