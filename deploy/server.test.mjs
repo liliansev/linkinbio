@@ -30,6 +30,12 @@ test('les anciennes adresses /liens mènent à la racine, /healthz répond', asy
   }
   assert.equal(await (await fetch(`${url}/healthz`)).text(), 'ok');
 });
+test('les anciennes pages /fonctions mènent aux fonctionnalités', async t => {
+  const url = await fixture(t);
+  for (const [path, location] of [['/fonctions', '/fonctionnalites'], ['/fonctions/drops?s=ig', '/fonctionnalites/drops?s=ig']]) {
+    const r = await fetch(url + path, { redirect: 'manual' }); assert.equal(r.status, 301, path); assert.equal(r.headers.get('location'), location);
+  }
+});
 test('les pages sur hopla.page, le back office sur app.hopla.page', async t => {
   const url = await fixture(t);
   const pub = { host: 'hopla.page' }, adm = { host: 'app.hopla.page' };

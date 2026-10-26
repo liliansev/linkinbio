@@ -5,11 +5,11 @@ import { modeInscription } from '../../server/fonctions.ts';
 import { ORIGINE_PUBLIQUE } from '../../lib/types.ts';
 
 /*
- * hopla.page/fonctions/<fonction> : une fonction de Hopla, sa scène jouée en
+ * hopla.page/fonctionnalites/<fonction> : une fonction de Hopla, sa scène jouée en
  * défilant (26 octobre 2026, demandé par Lilian). Les mots vivent dans
  * `accueil/pages/fonctions.ts`.
  */
-export const Route = createFileRoute('/fonctions/$fonction')({
+export const Route = createFileRoute('/fonctionnalites/$fonction')({
   loader: async ({ params }) => {
     if (!pageFonction(params.fonction)) throw notFound();
     return modeInscription();
@@ -18,7 +18,7 @@ export const Route = createFileRoute('/fonctions/$fonction')({
     const page = pageFonction(params.fonction);
     if (!page) return { meta: [{ title: 'Hopla' }] };
     const titre = `${page.nom} · Hopla`;
-    const url = `${ORIGINE_PUBLIQUE}/fonctions/${page.slug}`;
+    const url = `${ORIGINE_PUBLIQUE}/fonctionnalites/${page.slug}`;
     const image = `${ORIGINE_PUBLIQUE}/og.png`;
     return {
       meta: [
@@ -44,7 +44,7 @@ export const Route = createFileRoute('/fonctions/$fonction')({
             {
               '@type': 'BreadcrumbList', itemListElement: [
                 { '@type': 'ListItem', position: 1, name: 'Hopla', item: `${ORIGINE_PUBLIQUE}/` },
-                { '@type': 'ListItem', position: 2, name: 'Fonctions', item: `${ORIGINE_PUBLIQUE}/fonctions` },
+                { '@type': 'ListItem', position: 2, name: 'Fonctionnalités', item: `${ORIGINE_PUBLIQUE}/fonctionnalites` },
                 { '@type': 'ListItem', position: 3, name: page.nom, item: url },
               ],
             },

@@ -467,7 +467,7 @@
 .hl-humain .hl-menu { padding: 0 12px 12px; max-height: calc(100dvh - var(--haut) - 72px); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; }
 .hl-humain .hl-menu a { color: #fff; }
 .hl-humain .hl-menu .hl-menu-connexion { justify-content: center; min-height: 48px; margin-top: 10px; border: 1px solid rgb(255 255 255 / .5); border-radius: 12px; font-size: 16px; }
-@media (max-width: 1119px) { .hl-humain .hl-barre-actions .hl-btn { min-height: 44px; height: 44px; padding-inline: 14px; border-radius: 12px; } }
+@media (max-width: 1199px) { .hl-humain .hl-barre-actions .hl-btn { min-height: 44px; height: 44px; padding-inline: 14px; border-radius: 12px; } }
 /* Le héros de chaque page remonte sous la barre : sa marge d'avant reste au-dessus de lui, la capsule se pose dedans. */
 .hl-humain #contenu > .hl-heros:first-child { margin-top: calc(-1 * var(--dans)); border-top: var(--dans) solid transparent; }
 .hl-humain:has(.hl-barre) #contenu > .hl-heros:first-child { --dans: 68px; }
@@ -572,10 +572,25 @@ html:has(.hl-humain) { scroll-padding-top: 96px; }
 .hl-barre-nav .hl-deroule-tout { color: #292bff; font-size: 14px; }
 .hl-barre-nav .hl-deroule-tout:hover { color: #1d1fd6; }
 /* Au bureau, la navigation se centre dans la capsule : la marque à gauche, Connexion et l'appel à droite. */
-@media (min-width: 1120px) {
+@media (min-width: 1200px) {
   .hl-humain .hl-barre-dedans { display: grid; grid-template-columns: 1fr auto 1fr; }
   .hl-humain .hl-barre-nav { margin: 0; justify-self: center; }
   .hl-humain .hl-barre-actions { justify-self: end; margin: 0; }
   .hl-humain .hl-marque { justify-self: start; }
 }
 .hl-barre-nav .hl-deroule a[aria-current] { background: #f2f0e7; color: var(--encre); text-decoration: none; }
+
+/* Le menu du téléphone ouvert (26 octobre 2026, Lilian : « bizarre sur mobile ») : la capsule devient l'écran entier, en bleu
+   Klein, sans rien de la page autour ni dessous. La marque, l'appel et la croix restent où ils étaient ; la page ne défile plus. */
+.hl-humain .hl-barre[data-menu] .hl-barre-capsule {
+  position: fixed; inset: 0; z-index: 60; display: flex; flex-direction: column; max-width: none; height: 100dvh;
+  padding: var(--haut) 18px 0; border-radius: 0; background: #292bff; box-shadow: none;
+  -webkit-backdrop-filter: none; backdrop-filter: none; animation: hl-fondu .18s ease both;
+}
+.hl-humain .hl-barre[data-menu] .hl-barre-dedans { width: 100%; flex: none; }
+.hl-humain .hl-barre[data-menu] .hl-menu { width: 100%; max-width: none; flex: 1; max-height: none; padding: 8px 12px max(24px, env(safe-area-inset-bottom)); animation: none; }
+.hl-humain .hl-barre[data-menu] .hl-menu a { min-height: 56px; font-size: 20px; }
+.hl-humain .hl-barre[data-menu] .hl-menu a:first-child { border-top: 0; }
+.hl-humain .hl-barre[data-menu] .hl-menu .hl-menu-connexion { min-height: 52px; margin-top: 16px; font-size: 17px; }
+html:has(.hl-humain .hl-barre[data-menu]) { overflow: hidden; }
+@media (min-width: 1200px) { .hl-humain .hl-barre[data-menu] .hl-barre-capsule { position: static; height: auto; } }

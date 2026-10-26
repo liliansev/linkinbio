@@ -313,11 +313,11 @@ export function PlusLoin() {
         <ul className="hp-plus-loin-liste">
           {PLUS_LOIN.map((f, i) => (
             <li key={f.nom} className="hl-entre" style={d(i * 50)}>
-              <a href={`/fonctions/${f.page}`} className="hp-plus-loin-nom"><b>{f.nom}</b></a>
+              <a href={`/fonctionnalites/${f.page}`} className="hp-plus-loin-nom"><b>{f.nom}</b></a>
               <span>{f.texte}</span>
             </li>
           ))}
-          <li className="hp-plus-loin-tout hl-entre"><a href="/fonctions">Toutes les fonctions, une page chacune</a></li>
+          <li className="hp-plus-loin-tout hl-entre"><a href="/fonctionnalites">Toutes les fonctionnalités, une page chacune</a></li>
         </ul>
         <article className="hl-mail hp-doc-dashboard hl-entre" aria-label="Exemple de tableau de bord">
           <div className="hl-mail-tete"><Symbole className="hl-mail-logo" /><b>Hopla</b></div>

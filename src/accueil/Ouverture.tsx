@@ -23,7 +23,7 @@ export function Marque() {
 export function Barre({ ailleurs = false }: { ailleurs?: boolean }) {
   const [defile, setDefile] = useState(false);
   const [menu, setMenu] = useState(false);
-  // Au bureau, Fonctions et Comparatifs déroulent la liste de leurs pages, une seule à la fois.
+  // Au bureau, Fonctionnalités et Comparatifs déroulent la liste de leurs pages, une seule à la fois.
   const [deroule, setDeroule] = useState<'' | 'fonctions' | 'comparatifs'>('');
   // Sur une page de fonction ou de comparatif, son entrée de la barre se souligne comme une section.
   const [chemin, setChemin] = useState('');
@@ -116,7 +116,7 @@ export function Barre({ ailleurs = false }: { ailleurs?: boolean }) {
     return () => { removeEventListener('keydown', echap); removeEventListener('pointerdown', ailleurs); };
   }, [menu]);
   return (
-    <header className="hl-barre" style={{ '--creer': `${creer}px` } as CSSProperties} data-defile={defile || menu || undefined} data-champ={(champ && !menu) || undefined} data-envoye={envoye || undefined}>
+    <header className="hl-barre" style={{ '--creer': `${creer}px` } as CSSProperties} data-defile={defile || menu || undefined} data-menu={menu || undefined} data-champ={(champ && !menu) || undefined} data-envoye={envoye || undefined}>
       <div className="hl-barre-capsule">
       <div className="hl-barre-dedans">
         <Marque />
@@ -124,12 +124,12 @@ export function Barre({ ailleurs = false }: { ailleurs?: boolean }) {
           {BARRE.map(entree => {
             if (typeof entree === 'string') {
               const liste = entree === 'fonctions'
-                ? { titre: 'Fonctions', tete: '', tout: ['/fonctions', 'Toutes les fonctions'], pages: PAGES_FONCTIONS.map(p => [`/fonctions/${p.slug}`, p.nom, OFFRE[p.offre]]) }
+                ? { titre: 'Fonctionnalités', tete: '', tout: ['/fonctionnalites', 'Toutes les fonctionnalités'], pages: PAGES_FONCTIONS.map(p => [`/fonctionnalites/${p.slug}`, p.nom, OFFRE[p.offre]]) }
                 : { titre: 'Comparatifs', tete: 'Hopla face à', tout: ['/comparatif', 'Tous les comparatifs'], pages: COMPARATIFS.map(c => [`/comparatif/${c.slug}`, c.nom, '']) };
               const ouvert = deroule === entree;
               return (
                 <div key={entree} className="hl-deroulant" data-ouvert={ouvert || undefined}>
-                  <button type="button" data-ici={chemin.startsWith(entree === 'fonctions' ? '/fonctions' : '/comparatif') || ici === entree || undefined} aria-expanded={ouvert} aria-controls={`hl-deroule-${entree}`} onClick={() => setDeroule(d => d === entree ? '' : entree)}>
+                  <button type="button" data-ici={chemin.startsWith(entree === 'fonctions' ? '/fonctionnalites' : '/comparatif') || ici === entree || undefined} aria-expanded={ouvert} aria-controls={`hl-deroule-${entree}`} onClick={() => setDeroule(d => d === entree ? '' : entree)}>
                     {liste.titre}<Icone nom="ui-chevron" taille={16} />
                   </button>
                   <div id={`hl-deroule-${entree}`} className="hl-deroule" data-sorte={entree} hidden={!ouvert}>
@@ -180,7 +180,7 @@ const SECTIONS = [['#inspiration', 'Inspiration'], ['#fonctionnement', 'Comment 
 /** La barre au bureau (26 octobre 2026, demandé par Lilian) : trois sections, et les pages des fonctions et des comparatifs en listes déroulantes. */
 const BARRE: (string[] | 'fonctions' | 'comparatifs')[] = [['#fonctionnement', 'Comment ça marche'], 'fonctions', ['#themes', 'Thèmes'], ['#prix', 'Tarifs'], 'comparatifs'];
 /** Le menu du téléphone : toutes les sections, et les pages des fonctions et des comparatifs à leur place. */
-const MENU = [SECTIONS[0], SECTIONS[1], ['/fonctions', 'Fonctions'], SECTIONS[2], SECTIONS[3], ['/comparatif', 'Comparatifs'], SECTIONS[4]];
+const MENU = [SECTIONS[0], SECTIONS[1], ['/fonctionnalites', 'Fonctionnalités'], SECTIONS[2], SECTIONS[3], ['/comparatif', 'Comparatifs'], SECTIONS[4]];
 const OFFRE = { gratuit: 'Gratuit', starter: 'Starter', pro: 'Pro' } as const;
 /** Où commence chaque lien de la barre ; les sections sans lien (Prise, le dernier appel) le referment. */
 const REPERES = [...SECTIONS.map(([lien]) => [lien, lien]), ['#plus-loin', 'fonctions'], ['#prise', ''], ['#dernier', '']];

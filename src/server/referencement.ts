@@ -45,7 +45,7 @@ export function plan(publique: string): string {
   const adresses = [`${publique}/`];
   const lilian = db.compteParId(PRINCIPAL);
   if (lilian && db.lireReglages(PRINCIPAL).seo.indexable) adresses.push(`${publique}/${lilian.pseudo}`);
-  adresses.push(`${publique}/fonctions`, ...PAGES_FONCTIONS.map(p => `${publique}/fonctions/${p.slug}`));
+  adresses.push(`${publique}/fonctionnalites`, ...PAGES_FONCTIONS.map(p => `${publique}/fonctionnalites/${p.slug}`));
   adresses.push(`${publique}/comparatif`, ...COMPARATIFS.map(c => `${publique}/comparatif/${c.slug}`));
   adresses.push(...DOCUMENTS.map(d => `${publique}/legal/${d}`));
   return `<?xml version="1.0" encoding="UTF-8"?>
@@ -84,8 +84,8 @@ ${questions(mode).map(([q, r]) => `### ${q}\n\n${r}`).join('\n\n')}
 
 - [Accueil de Hopla](${publique}/) : présentation, thèmes, prix${mode === 'libre' ? ', création d’une page' : ', réservation d’un nom'}
 - [Un exemple : la page de Lilian Sevoumian](${publique}/lilian)
-- [Les fonctions de Hopla](${publique}/fonctions), une page chacune :
-${PAGES_FONCTIONS.map(p => `  - [${p.nom}](${publique}/fonctions/${p.slug}) : ${p.resume}`).join('\n')}
+- [Les fonctionnalités de Hopla](${publique}/fonctionnalites), une page chacune :
+${PAGES_FONCTIONS.map(p => `  - [${p.nom}](${publique}/fonctionnalites/${p.slug}) : ${p.resume}`).join('\n')}
 - [Hopla face aux autres outils](${publique}/comparatif) :
 ${COMPARATIFS.map(c => `  - [Hopla vs ${c.nom}](${publique}/comparatif/${c.slug}) : ${c.resume}`).join('\n')}
 ${DOCUMENTS.map(d => `- [${LEGAL[d].titre}](${publique}/legal/${d}) : ${LEGAL[d].resume}`).join('\n')}
