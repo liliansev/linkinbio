@@ -2,6 +2,7 @@ import { DESCRIPTION, FONCTIONS, questions } from '../accueil/textes.ts';
 import { OFFRES, PLANS, euros } from '../lib/abonnement.ts';
 import { DOCUMENTS, LEGAL } from '../lib/legal.ts';
 import { ORIGINE_ADMIN, ORIGINE_PUBLIQUE, PRINCIPAL, SITE_LILIAN } from '../lib/types.ts';
+import { PAGES_FONCTIONS } from '../accueil/pages/fonctions.ts';
 import * as db from './db.ts';
 import { inscriptionLibre } from './attente.ts';
 
@@ -9,7 +10,7 @@ import { inscriptionLibre } from './attente.ts';
  * Ce que Hopla dit aux robots : robots.txt, sitemap.xml et llms.txt. Sur
  * hopla.page, tout se lit ; le back office (app.hopla.page) ne s'indexe pas.
  * Les pages des comptes restent hors de Google pendant la bêta (voir
- * `lib/tete.ts`) : le plan du site ne liste que l'accueil, la page de Lilian
+ * `lib/tete.ts`) : le plan du site ne liste que l'accueil, les pages des fonctions, la page de Lilian
  * quand elle est visible par Google, et les textes légaux.
  */
 
@@ -43,6 +44,7 @@ export function plan(publique: string): string {
   const adresses = [`${publique}/`];
   const lilian = db.compteParId(PRINCIPAL);
   if (lilian && db.lireReglages(PRINCIPAL).seo.indexable) adresses.push(`${publique}/${lilian.pseudo}`);
+  adresses.push(`${publique}/fonctions`, ...PAGES_FONCTIONS.map(p => `${publique}/fonctions/${p.slug}`));
   adresses.push(...DOCUMENTS.map(d => `${publique}/legal/${d}`));
   return `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
@@ -80,6 +82,8 @@ ${questions(mode).map(([q, r]) => `### ${q}\n\n${r}`).join('\n\n')}
 
 - [Accueil de Hopla](${publique}/) : présentation, thèmes, prix${mode === 'libre' ? ', création d’une page' : ', réservation d’un nom'}
 - [Un exemple : la page de Lilian Sevoumian](${publique}/lilian)
+- [Les fonctions de Hopla](${publique}/fonctions), une page chacune :
+${PAGES_FONCTIONS.map(p => `  - [${p.nom}](${publique}/fonctions/${p.slug}) : ${p.resume}`).join('\n')}
 ${DOCUMENTS.map(d => `- [${LEGAL[d].titre}](${publique}/legal/${d}) : ${LEGAL[d].resume}`).join('\n')}
 `;
 }

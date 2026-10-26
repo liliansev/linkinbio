@@ -26,13 +26,13 @@ export function BadgeOffre({ offre, long = false }: { offre: 'starter' | 'pro'; 
  * mots pour toutes : « Inclus dans l'offre gratuite », ou l'offre payante et
  * son prix au mois, celui que les tarifs montrent en arrivant, qui y mène.
  */
-export function OffreFonction({ offre, quoi = '' }: { offre: Plan; quoi?: string }) {
+export function OffreFonction({ offre, quoi = '', prix = '#prix' }: { offre: Plan; quoi?: string; prix?: string }) {
   return (
     <p className="hp-inclus">
       <Icone nom="check" taille={18} />
       {offre === 'gratuit'
         ? <span>{quoi ? `${quoi}, inclus` : 'Inclus'} dans l’offre gratuite</span>
-        : <span>{quoi ? `${quoi}, inclus` : 'Inclus'} dans l’offre {OFFRES[offre].nom}, <a href="#prix">{euros(OFFRES[offre].prix.mois)} par mois</a></span>}
+        : <span>{quoi ? `${quoi}, inclus` : 'Inclus'} dans l’offre {OFFRES[offre].nom}, <a href={prix}>{euros(OFFRES[offre].prix.mois)} par mois</a></span>}
     </p>
   );
 }
