@@ -255,7 +255,7 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
        comme Shopify ou Meetup), et l'en-tête aligne son titre et ses gestes sur les bords de cette colonne. */
     --adm-colonne: 1280px;
     /* La zone de l'aperçu, à droite de Ma page : le téléphone y grandit avec elle (voir `Telephone`). */
-    --adm-zone-apercu: max(380px, min((100dvh - 150px) * 0.472 + 48px, 60vw - var(--adm-barre)));
+    --adm-zone-apercu: max(380px, min(min(100dvh - 150px, 760px) * 0.472 + 48px, 60vw - var(--adm-barre)));
     /* La zone du détail (un outil, la fiche d'un compte, Mon abonnement), à droite de sa liste : voir `PanneauDetail`. */
     --adm-zone-detail: clamp(420px, 32vw, 800px);
     --adm-largeur: min(100% - var(--adm-barre) - 2 * var(--adm-bord), var(--adm-colonne));
@@ -1249,38 +1249,36 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
 .adm .adm-liste-blocs { border: 1.5px solid var(--adm-trait-groupe); border-radius: 14px; }
 .adm .adm-rangee + .adm-rangee { border-top-color: var(--adm-filet); }
 .adm .adm-rangee-nom { font-weight: 600; }
+.adm-tuile-picto { display: block; color: var(--adm-encre); }
 .adm-rangee-picto { display: grid; width: 22px; height: 22px; flex: none; place-items: center; color: var(--adm-encre); }
 /* Une couleur par famille, chacune à 3:1 au moins sur le blanc ; un réseau garde la sienne (posée sur l'élément). */
-.adm-rangee-picto[data-famille='liens'] { color: var(--adm-bleu); }
-.adm-rangee-picto[data-famille='medias'] { color: #c2185b; }
-.adm-rangee-picto[data-famille='vitrine'] { color: #12864a; }
-.adm-rangee-picto[data-famille='contact'] { color: #8a3ffc; }
-.adm-rangee-picto[data-famille='preuve'] { color: #c76a00; }
+:is(.adm-rangee-picto, .adm-tuile-picto)[data-famille='liens'] { color: var(--adm-bleu); }
+:is(.adm-rangee-picto, .adm-tuile-picto)[data-famille='medias'] { color: #c2185b; }
+:is(.adm-rangee-picto, .adm-tuile-picto)[data-famille='vitrine'] { color: #12864a; }
+:is(.adm-rangee-picto, .adm-tuile-picto)[data-famille='contact'] { color: #8a3ffc; }
+:is(.adm-rangee-picto, .adm-tuile-picto)[data-famille='preuve'] { color: #c76a00; }
 /* Le favicon du site, ou la photo du produit, à la place du picto : du contenu, posé tel quel. */
 .adm-rangee-vignette { width: 22px; height: 22px; flex: none; border-radius: 6px; object-fit: cover; }
 .adm-rangee-vignette[src$='.png'] { object-fit: contain; background: #fff; }
 .adm .adm-rangee[data-prive] .adm-rangee-vignette { opacity: 0.5; filter: grayscale(1); }
 
-/* Le bloc ouvert : une carte cernée de bleu, détachée de la liste, sa tête en aplat bleu (comme l'offre Pro de l'accueil),
-   son nom en blanc dans la grotesque de l'accueil, « Mis en avant » en citron dessus. */
+/* Le bloc ouvert : une carte blanche cernée de bleu, détachée de la liste, sa tête sous un voile bleu pâle, son nom en Geist
+   comme le reste de l'édition (critique du 27 octobre 2026 : l'aplat bleu et la grotesque faisaient un troisième langage). */
 @media (min-width: 1024px) {
-  .adm .adm-rangee[data-ouvert] { z-index: 2; margin: 8px 6px; border-radius: 12px; background: #fff; box-shadow: 0 0 0 2px var(--adm-bleu); }
+  .adm .adm-rangee[data-ouvert] { z-index: 2; margin: 8px 6px; border-radius: 12px; background: #fff; box-shadow: 0 0 0 2px var(--adm-bleu), 0 8px 24px -12px rgb(41 43 255 / 0.35); }
   .adm .adm-rangee[data-ouvert] + .adm-rangee { border-top-color: transparent; }
   .adm .adm-rangee[data-ouvert]:first-child { margin-top: 6px; }
   .adm .adm-rangee[data-ouvert]:last-child { margin-bottom: 6px; }
-  .adm .adm-rangee[data-ouvert] > .adm-rangee-tete { min-height: 50px; background: var(--adm-bleu); }
-  .adm .adm-rangee[data-ouvert] > .adm-rangee-tete :is(.adm-rangee-nom, .adm-rangee-picto, .adm-rangee-poignee, .adm-rangee-geste, .adm-rangee-etats) { color: #fff; }
-  .adm .adm-rangee[data-ouvert] > .adm-rangee-tete .adm-rangee-marque-picto { color: var(--adm-citron); }
-  .adm .adm-rangee[data-ouvert] > .adm-rangee-tete .adm-rangee-sous { color: rgb(255 255 255 / 0.82); }
-  .adm .adm-rangee[data-ouvert] > .adm-rangee-tete :focus-visible { outline-color: var(--adm-citron); }
-  .adm .adm-rangee[data-ouvert] > .adm-rangee-tete .adm-rangee-vignette { box-shadow: 0 0 0 1.5px #fff; }
-  .adm .adm-rangee[data-ouvert] .adm-rangee-nom { font-family: 'Bricolage Grotesque Variable', 'Geist Variable', sans-serif; font-size: calc(15.5 * var(--adm-k)); font-weight: 650; letter-spacing: -0.015em; }
+  .adm .adm-rangee[data-ouvert] > .adm-rangee-tete { min-height: 50px; border-radius: 12px 12px 0 0; background: #eef0ff; box-shadow: inset 0 -1px 0 #d9dcff; }
+  .adm .adm-rangee[data-ouvert] .adm-rangee-nom { font-size: calc(15 * var(--adm-k)); font-weight: 650; letter-spacing: -0.01em; }
   .adm .adm-rangee-reglages { padding-top: 16px; }
+  .adm .adm-place button { width: 32px; height: 36px; }
 }
 
 /* Les réglages courants d'un bloc au bureau (Visibilité, Mis en avant, Apparence, Plus de réglages) : un groupe bordé, une ligne chacun. */
-.adm-reglages-groupe { display: flex; flex-direction: column; border: 1.5px solid var(--adm-trait-groupe); border-radius: 12px; background: #fff; }
-.adm-reglages-groupe > * { padding-inline: 14px; }
+/* Dans la carte du bloc ouvert, des lignes entre deux filets, pas une carte de plus (critique du 27 octobre 2026). */
+.adm-reglages-groupe { display: flex; flex-direction: column; border-block: 1px solid var(--adm-filet); background: #fff; }
+.adm-reglages-groupe > * { padding-inline: 2px; }
 .adm-reglages-groupe > * + * { border-top: 1px solid var(--adm-filet); }
 .adm-reglages-groupe > .adm-plus-contenu { border-top: 0; padding-bottom: 8px; }
 @media (min-width: 1024px) and (pointer: fine) {
@@ -1296,5 +1294,11 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
   .adm .adm-coller-champ > input { height: 44px; border: 1.5px solid var(--adm-trait-champ); border-radius: 12px; }
   .adm .adm-coller-champ > input:hover { border-color: var(--adm-trait-fort); }
 }
-/* Le nom du bloc en tête de sa feuille, au téléphone : la grotesque de l'accueil, comme la tête d'un bloc ouvert au bureau. */
-.adm-feuille-bloc .adm-feuille-titre { font-family: 'Bricolage Grotesque Variable', 'Geist Variable', sans-serif; font-weight: 650; }
+
+/* Sous la liste de Ma page, au bureau : les raccourcis, en petit et au gris (critique du 27 octobre 2026). */
+.adm-raccourcis { display: none; }
+@media (min-width: 1024px) and (not (pointer: coarse)) {
+  .adm-raccourcis { display: flex; flex-wrap: wrap; gap: 6px 20px; margin-top: 16px; padding-inline: 4px; color: var(--adm-gris, #6b6b66); font-size: 12.5px; }
+  .adm-raccourcis span { display: inline-flex; align-items: center; gap: 5px; }
+  .adm-raccourcis kbd { display: inline-grid; min-width: 22px; height: 22px; place-items: center; padding-inline: 5px; border: 1px solid var(--adm-trait-groupe); border-bottom-width: 2px; border-radius: 6px; background: #fff; color: var(--adm-encre); font: inherit; font-size: 11.5px; font-weight: 600; }
+}
