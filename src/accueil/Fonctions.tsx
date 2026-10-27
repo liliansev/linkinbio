@@ -84,7 +84,7 @@ export function EcranDansApp({ cote, etape, reduit = false }: { cote: Cote; etap
 
 /* ---- Une page vivante ---- */
 
-/** L'adresse que tape le visiteur de Malik, une lettre après l'autre. */
+/** L'adresse que tape le visiteur de Nadia, une lettre après l'autre. */
 export const ADRESSE_LISTE = 'noa@mail.fr';
 /* La liste : l'adresse s'écrit (1 à 11), le bouton est touché (12), « C'est noté » (13), l'inscrit part vers Brevo (14). */
 export const LISTE_TOUCHE = ADRESSE_LISTE.length + 1;
@@ -95,11 +95,11 @@ export const AVIS_NOTE = 6;
 export const AVIS_MOT = 7;
 const deux = (n: number) => String(n).padStart(2, '0');
 
-/** Les trois liens de Malik selon l'heure : le soir, « Réserver un dîner » monte de la dernière place à la première. */
+/** Les trois liens de Nadia selon l'heure : le soir, « Réserver un bilan » monte de la dernière place à la première. */
 const LIENS_HEURE: Record<string, { titre: string; picto: string }> = {
-  atelier: { titre: 'Le menu du jour', picto: 'document' },
-  tiktok: { titre: 'Ma recette du dimanche', picto: 'youtube' },
-  boutique: { titre: 'Réserver un dîner', picto: 'agenda' },
+  atelier: { titre: 'Le podcast du matin', picto: 'podcast' },
+  tiktok: { titre: 'Ma méthode en vidéo', picto: 'youtube' },
+  boutique: { titre: 'Réserver un bilan', picto: 'agenda' },
 };
 
 export function EcranHeure({ heure }: { heure: number }) {
@@ -110,7 +110,7 @@ export function EcranHeure({ heure }: { heure: number }) {
   return (
     <div className="hl-cq">
       <div className="hl-cq-horloge"><b>{deux(heure)}:00</b><span>{soir ? 'le soir' : heure >= 14 ? 'l’après-midi' : heure >= 12 ? 'le midi' : 'le matin'}</span></div>
-      <CroquisTete profil="malik" />
+      <CroquisTete profil="nadia" />
       <div className="hl-cq-liens" ref={liste}>
         {ordre.map((c, k) => <CroquisLien key={c} cle={c} titre={LIENS_HEURE[c].titre} vedette={k === 0} picto={<Icone nom={LIENS_HEURE[c].picto} taille={14} />} />)}
       </div>
@@ -146,20 +146,20 @@ export function EcranDrop({ drop }: { drop: number }) {
   const ouvert = drop >= 2;
   return (
     <div className="hl-cq">
-      <CroquisTete profil="hugo" />
+      <CroquisTete profil="theo" />
       <div className="hl-cq-liens">
-        <CroquisLien titre="Mes affiches" />
+        <CroquisLien titre="Mes cours en ligne" />
         <div className="hl-cq-drop" data-ouvert={ouvert || undefined}>
           <div className="hl-cq-drop-tete">
             <span key={String(ouvert)} className="hl-cq-drop-picto"><Icone nom={ouvert ? 'check' : 'cadenas'} taille={22} /></span>
-            <span><b>Accès en avant-première</b><span className="hl-cq-sous">{ouvert ? 'Débloqué, la place est à toi' : 'Avec un code'}</span></span>
+            <span><b>Le stage d’ouvertures</b><span className="hl-cq-sous">{ouvert ? 'Débloqué, la place est à toi' : 'Avec un code'}</span></span>
             <span key={drop >= 3 ? 2 : 3} className="hl-cq-places">Plus que {drop >= 3 ? 2 : 3} places</span>
           </div>
           {ouvert
             ? <div className="hl-cq-ouvrir">Ouvrir le lien</div>
             : <div className="hl-cq-code"><span className="hl-cq-saisie">{code}<i /></span><span className="hl-cq-ok">Ouvrir</span></div>}
         </div>
-        <CroquisLien titre="Dessiner ton projet" />
+        <CroquisLien titre="Un cours particulier" />
       </div>
     </div>
   );
@@ -187,18 +187,18 @@ export function EcranAvis({ avis }: { avis: number }) {
   );
 }
 
-/** La liste de Malik : un visiteur tape son adresse, s'inscrit, et l'inscrit part vers Brevo. */
+/** La liste de Nadia : un visiteur tape son adresse, s'inscrit, et l'inscrit part vers Brevo. */
 export function EcranListe({ liste }: { liste: number }) {
   const note = liste >= LISTE_NOTEE;
   return (
     <div className="hl-cq">
-      <CroquisTete profil="malik" />
+      <CroquisTete profil="nadia" />
       <div className="hl-cq-liens">
-        <CroquisLien titre="Ma recette du dimanche" picto={<Icone nom="youtube" taille={14} />} />
+        <CroquisLien titre="Le podcast du matin" picto={<Icone nom="podcast" taille={14} />} />
         <div className="hl-cq-liste" data-note={note || undefined}>
           <div className="hl-cq-drop-tete">
             <span className="hl-cq-drop-picto"><Icone nom="courrier" taille={22} /></span>
-            <span><b>Rejoins ma liste</b><span className="hl-cq-sous">Une recette chaque dimanche</span></span>
+            <span><b>Rejoins ma liste</b><span className="hl-cq-sous">Une astuce chaque dimanche</span></span>
           </div>
           {note
             ? <p key="note" className="hl-cq-merci"><Icone nom="coche" taille={14} />C’est noté, merci !</p>
@@ -207,7 +207,7 @@ export function EcranListe({ liste }: { liste: number }) {
               <span className="hl-cq-ok hl-cq-inscrire" data-touche={liste >= LISTE_TOUCHE || undefined}>Je m’inscris</span>
             </div>}
         </div>
-        <CroquisLien titre="Réserver un dîner" picto={<Icone nom="agenda" taille={14} />} />
+        <CroquisLien titre="Réserver un bilan" picto={<Icone nom="agenda" taille={14} />} />
       </div>
       {liste >= LISTE_BREVO && <p className="hl-toast hl-toast-vite"><Icone nom="coche" taille={14} />Ajouté à ta liste Brevo</p>}
     </div>

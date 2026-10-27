@@ -68,8 +68,8 @@ export function HeroProfils() {
       </div>;
     })}
     <span key={reseau} className="hp-source" data-reseau={reseau}><Icone nom={reseau} taille={16} />Depuis {NOMS_AUDIENCES[reseau]}</span>
-    <Avatar profil="lea" className="hp-visage-libre hp-visage-lea" prioritaire />
-    <Avatar profil="hugo" className="hp-visage-libre hp-visage-hugo" prioritaire />
+    <Avatar profil="yanis" className="hp-visage-libre hp-visage-yanis" prioritaire />
+    <Avatar profil="theo" className="hp-visage-libre hp-visage-theo" prioritaire />
   </div>
     {/* La composition se dit déjà aux lecteurs d'écran : la légende est pour les yeux. */}
     <p key={reseau} className="hp-preuve" aria-hidden="true">Venu {deReseau(reseau)}, le visiteur voit d’abord <b>« {blocsInes[0].titre} »</b></p>
@@ -96,10 +96,19 @@ export function GalerieProfils() {
     if (ev.key === 'ArrowRight') setProfil(voisin(1));
     else if (ev.key === 'ArrowLeft') setProfil(voisin(-1));
   };
+  // Neuf profils (27 octobre 2026) : la galerie défile en rail, ses flèches disent où l'on en est.
+  const [bouts, setBouts] = useState({ debut: true, fin: false });
+  const lireBouts = () => { const g = galerie.current; if (g) setBouts({ debut: g.scrollLeft < 4, fin: g.scrollLeft + g.clientWidth > g.scrollWidth - 4 }); };
+  useEffect(() => { lireBouts(); addEventListener('resize', lireBouts); return () => removeEventListener('resize', lireBouts); }, []);
+  const defiler = (sens: number) => { const g = galerie.current; if (g) g.scrollBy({ left: sens * g.clientWidth * .8, behavior: mouvementReduit() ? 'auto' : 'smooth' }); };
   const p = PROFILS[profil];
   return <section id="inspiration" className="hl-section hp-inspiration" aria-labelledby="titre-inspiration">
-    <div className="hp-inspiration-tete"><div><h2 id="titre-inspiration" className="hl-h2">Il y a tout un monde<br />derrière un lien</h2></div><p>Ton activité ne ressemble à aucune autre.<br />Ta page non plus.<small>Explore ces six profils imaginés pour te donner des idées.</small></p></div>
-    <div ref={galerie} className="hp-galerie">{IDS_PROFILS.map(id => <button key={id} className="hp-profil" type="button" data-profil={id} onClick={() => ouvrir(id)} aria-label={`Découvrir la page ${de(PROFILS[id].nom)}, ${PROFILS[id].metier.toLowerCase()} à ${PROFILS[id].ville}`}><span className="hp-profil-photo"><Avatar profil={id} /></span><b className="hp-profil-nom">{PROFILS[id].nom}<Icone nom="ui-oeil" taille={18} /></b><small>{PROFILS[id].metier} · {PROFILS[id].ville}</small></button>)}</div>
+    <div className="hp-inspiration-tete"><div><h2 id="titre-inspiration" className="hl-h2">Il y a tout un monde<br />derrière un lien</h2></div><p>Ton activité ne ressemble à aucune autre.<br />Ta page non plus.<small>Explore ces neuf profils imaginés pour te donner des idées.</small></p></div>
+    <div className="hl-fleches hp-galerie-fleches">
+      <button type="button" onClick={() => { if (!bouts.debut) defiler(-1); }} aria-disabled={bouts.debut || undefined} aria-label="Profils précédents"><Icone nom="ui-chevron" taille={18} className="hl-gauche" /></button>
+      <button type="button" onClick={() => { if (!bouts.fin) defiler(1); }} aria-disabled={bouts.fin || undefined} aria-label="Profils suivants"><Icone nom="ui-chevron" taille={18} className="hl-droite" /></button>
+    </div>
+    <div ref={galerie} className="hp-galerie" onScroll={lireBouts}>{IDS_PROFILS.map(id => <button key={id} className="hp-profil" type="button" data-profil={id} onClick={() => ouvrir(id)} aria-label={`Découvrir la page ${de(PROFILS[id].nom)}, ${PROFILS[id].metier.toLowerCase()} à ${PROFILS[id].ville}`}><span className="hp-profil-photo"><Avatar profil={id} /></span><b className="hp-profil-nom">{PROFILS[id].nom}<Icone nom="ui-oeil" taille={18} /></b><small>{PROFILS[id].metier} · {PROFILS[id].ville}</small></button>)}</div>
     <dialog ref={boite} className="hp-dialogue" aria-labelledby="profil-titre" onKeyDown={fleches}
       onClose={() => { if (retour.current) galerie.current?.querySelector<HTMLButtonElement>(`[data-profil="${profil}"]`)?.focus(); retour.current = true; }} onClick={e => { if (e.target === e.currentTarget) boite.current?.close(); }}>
       <div className="hp-dialogue-tete">

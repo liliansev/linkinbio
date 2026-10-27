@@ -77,7 +77,7 @@ const SCENES: Record<string, { ratio?: number; rendu: (i: number, t: number, l: 
     ratio: 610 / 390,
     rendu: (i, t, l) => {
       const heure = borne(9 + Math.floor(((i + t) / 3) * 13), 9, 21);
-      return <Telephone largeur={l} className="hl-tel-court hl-tel-vivante" label={`La page de Malik à ${heure} h.`}><EcranHeure heure={heure} /></Telephone>;
+      return <Telephone largeur={l} className="hl-tel-court hl-tel-vivante" label={`La page de Nadia à ${heure} h.`}><EcranHeure heure={heure} /></Telephone>;
     },
   },
   lancement: {
@@ -105,7 +105,7 @@ const SCENES: Record<string, { ratio?: number; rendu: (i: number, t: number, l: 
     ratio: 610 / 390,
     rendu: (i, t, l) => {
       const liste = i === 0 ? borne(Math.ceil(t * ADRESSE_LISTE.length), 0, ADRESSE_LISTE.length) : i === 1 ? (t < 0.4 ? LISTE_TOUCHE : LISTE_NOTEE) : LISTE_BREVO;
-      return <Telephone largeur={l} className="hl-tel-court hl-tel-vivante" label="Un visiteur s’inscrit à la liste de Malik, et part vers Brevo."><EcranListe liste={liste} /></Telephone>;
+      return <Telephone largeur={l} className="hl-tel-court hl-tel-vivante" label="Un visiteur s’inscrit à la liste de Nadia, et part vers Brevo."><EcranListe liste={liste} /></Telephone>;
     },
   },
   stats: {
@@ -141,8 +141,8 @@ const SCENES: Record<string, { ratio?: number; rendu: (i: number, t: number, l: 
       return (
         <div className="hf-tel-source">
           <span key={perso ? 'perso' : theme.id} className="hf-source">{perso ? 'Tes couleurs, sur Lin' : theme.nom}</span>
-          <Telephone largeur={l} label={`La page de Léa dans le thème ${theme.nom}.`}>
-            <EcranPage page={pageExemple('lea', theme.id, perso ? { couleurs: { fond: '#f4efe6', boutons: '#33524a', accent: '#c4421a' } } : {})} />
+          <Telephone largeur={l} label={`La page de Yanis dans le thème ${theme.nom}.`}>
+            <EcranPage page={pageExemple('yanis', theme.id, perso ? { couleurs: { fond: '#f4efe6', boutons: '#33524a', accent: '#c4421a' } } : {})} />
           </Telephone>
         </div>
       );

@@ -41,9 +41,9 @@ const TENUE: Record<Onglet, number> = { creer: 900, modifier: 1200 };
 const somme = (l: number[]) => l.reduce((a, b) => a + b, 0);
 
 function pageEtape(n: number) {
-  return pageExemple('lea', n >= 4 ? PROFILS.lea.theme : 'neige', {
-    profil: n >= 1 ? {} : { nom: '', bio: '', avatar: PROFILS.lea.avatar },
-    blocs: n >= 2 ? BLOCS_EXEMPLES.lea.slice(0, 2) : [],
+  return pageExemple('yanis', n >= 4 ? PROFILS.yanis.theme : 'neige', {
+    profil: n >= 1 ? {} : { nom: '', bio: '', avatar: PROFILS.yanis.avatar },
+    blocs: n >= 2 ? BLOCS_EXEMPLES.yanis.slice(0, 2) : [],
     reseaux: n >= 3,
   });
 }
@@ -53,7 +53,7 @@ function Silhouette() {
   return (
     <div className="hl-cq" aria-hidden="true">
       <div className="hl-cq-tete">
-        <img className="hl-cq-avatar" src={PROFILS.lea.avatar} alt="" width="62" height="62" loading="lazy" />
+        <img className="hl-cq-avatar" src={PROFILS.yanis.avatar} alt="" width="62" height="62" loading="lazy" />
         <span className="hl-cq-trait" style={{ width: '46%', height: 12 }} />
         <span className="hl-cq-trait" style={{ width: '64%' }} />
       </div>
@@ -61,8 +61,8 @@ function Silhouette() {
   );
 }
 
-const SUITE = ' Morel';
-const TITRES: Record<string, string> = { atelier: 'Réserver un cours', tiktok: '10 minutes pour respirer', boutique: 'Le planning de la semaine' };
+const SUITE = ' Bertrand';
+const TITRES: Record<string, string> = { atelier: 'La vidéo de mercredi', tiktok: 'Les coulisses sur TikTok', boutique: 'Mon matériel de tournage' };
 
 /** Le back office au téléphone : le nom s'écrit sur la page, un bloc change de place, le design s'ouvre dans une feuille. */
 function BackOffice({ etape }: { etape: number }) {
@@ -84,10 +84,10 @@ function BackOffice({ etape }: { etape: number }) {
   const choisi = swatches[0];
   return (
     <div className="hl-bo">
-      <div className="hl-bo-tete"><b>Ma page</b><span className="hl-gris">hopla.page/lea-respire</span></div>
+      <div className="hl-bo-tete"><b>Ma page</b><span className="hl-gris">hopla.page/yanis</span></div>
       <div className="hl-bo-page" style={etape >= 6 ? { background: choisi.fondUni, color: choisi.texte } : undefined}>
-        <img className="hl-cq-avatar" src={PROFILS.lea.avatar} alt="" width="62" height="62" loading="lazy" />
-        <span className="hl-bo-nom" data-edite={(etape >= 1 && etape < 2) || undefined}>Léa{SUITE.slice(0, lettres)}{etape >= 1 && etape < 2 && <i className="hl-curseur" />}</span>
+        <img className="hl-cq-avatar" src={PROFILS.yanis.avatar} alt="" width="62" height="62" loading="lazy" />
+        <span className="hl-bo-nom" data-edite={(etape >= 1 && etape < 2) || undefined}>Yanis{SUITE.slice(0, lettres)}{etape >= 1 && etape < 2 && <i className="hl-curseur" />}</span>
         <span className="hl-cq-trait" style={{ width: '58%' }} />
         <div className="hl-cq-liens" ref={liste}>
           {ordre.map(c => <CroquisLien key={c} cle={c} titre={TITRES[c]} vedette={c === 'boutique'} data-souleve={c === 'boutique' && etape >= 2 && etape < 4 ? '' : undefined} />)}
@@ -164,7 +164,7 @@ export function Prise() {
         {colonne('creer')}
         <div ref={ref} className="hl-prise-tel">
           <Telephone largeur={320} label={onglet === 'creer'
-            ? 'La page de Léa se remplit à chaque étape de l’inscription.'
+            ? 'La page de Yanis se remplit à chaque étape de l’inscription.'
             : 'Le back office de Hopla au téléphone : le nom s’écrit sur la page, un lien se déplace, le design s’ouvre dans une feuille.'}>
             <div key={jeu} className="hl-fondu">{onglet === 'modifier' ? <BackOffice etape={etape} />
               : etape === 0 ? <Silhouette /> : <div className="hl-fondu"><EcranPage page={pageEtape(etape)} /></div>}</div>
