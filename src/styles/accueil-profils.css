@@ -86,12 +86,16 @@
 .hp-page-sacha [data-premier] { background: #7cf5c8; color: #05061a; }
 .hp-page-camille [data-premier] { background: #d9b46a; color: #16110a; }
 .hp-visage-libre { position: absolute; width: 64px; border-radius: 50%; border: 4px solid #fff; z-index: 4; }
-.hp-visage-lea { right: -1%; top: 12%; transform: rotate(8deg); }
-.hp-visage-hugo { left: 3%; bottom: 12%; transform: rotate(-8deg); }
+.hp-visage-yanis { right: -1%; top: 12%; transform: rotate(8deg); }
+.hp-visage-theo { left: 3%; bottom: 12%; transform: rotate(-8deg); }
 .hp-inspiration-tete { display: flex; align-items: end; justify-content: space-between; gap: 36px; margin-bottom: 40px; }
 .hp-inspiration-tete > p { font-size: 15px; line-height: 1.7; max-width: 330px; }
 .hp-inspiration-tete small { display: block; margin-top: 16px; font-size: 14px; font-weight: 550; color: #20241f; }
-.hp-galerie { display: grid; grid-template-columns: repeat(6,minmax(0,1fr)); gap: 16px; }
+.hp-galerie { display: grid; grid-auto-flow: column; grid-auto-columns: calc((100% - 5 * 16px) / 5.6); gap: 16px; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; }
+/* Neuf profils (27 octobre 2026) : un rail à toutes les largeurs, dont la dernière carte entamée dit qu'il y a une suite, et deux flèches au-dessus. */
+.hp-galerie::-webkit-scrollbar { display: none; }
+.hp-galerie > .hp-profil { scroll-snap-align: start; }
+.hp-galerie-fleches { justify-content: flex-end; margin: -8px -10px 12px 0; }
 .hp-profil { appearance: none; color: inherit; font: inherit; text-align: left; background: none; border: 0; padding: 0; cursor: pointer; }
 .hp-profil-photo { position: relative; display: block; border-radius: 14px; overflow: hidden; }
 /* L'œil qui dit « voir la page » se pose à côté du nom, seul : jamais dans un rond blanc sur la photo. */
@@ -254,7 +258,7 @@
   .hp-heros-pied { flex-direction: column; gap: 7px; padding-top: 36px; }
   .hp-inspiration-tete { display: block; }
   .hp-inspiration-tete > p { margin-top: 24px; max-width: none; }
-  .hp-galerie { grid-template-columns: repeat(3,minmax(0,1fr)); row-gap: 28px; }
+  .hp-galerie { grid-auto-columns: calc((100% - 2 * 16px) / 3.4); }
   .hl-humain .hp-selon { grid-template-columns: 1fr; gap: 45px; }
   .hp-selon .hl-roue-cadre { margin: auto; }
   .hl-humain .hl-offres { grid-template-columns: 1fr; }
@@ -286,13 +290,12 @@
   .hp-page-liens > div { min-height: 30px; padding: 6px 7px; font-size: 12px; gap: 3px; }
   .hp-page-liens svg { width: 9px; height: 9px; }
   .hp-page-ines .hp-page-corps > .hp-avatar { margin-top: -16px; }
-  /* Au téléphone, il passe sous Hugo, sur deux lignes. */
+  /* Au téléphone, il passe sous Théo, sur deux lignes. */
   .hp-visage-libre { width: 38px; border-width: 3px; }
   .hp-heros-pied { padding-top: 48px; }
-  /* Au téléphone, les six profils glissent sur une rangée (26 octobre 2026 : en grille, ils prenaient un écran). */
-  .hp-galerie { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: 42%; gap: 14px; overflow-x: auto; scroll-snap-type: x mandatory; margin-inline: calc(-1 * var(--marge) - var(--retrait)); padding-inline: calc(var(--marge) + var(--retrait)); scroll-padding-inline: calc(var(--marge) + var(--retrait)); scrollbar-width: none; }
-  .hp-galerie::-webkit-scrollbar { display: none; }
-  .hp-galerie > .hp-profil { scroll-snap-align: start; }
+  /* Au téléphone, les profils glissent sur une rangée (26 octobre 2026 : en grille, ils prenaient un écran), sous le doigt, sans flèches. */
+  .hp-galerie-fleches { display: none; }
+  .hp-galerie { grid-auto-columns: 42%; gap: 14px; margin-inline: calc(-1 * var(--marge) - var(--retrait)); padding-inline: calc(var(--marge) + var(--retrait)); scroll-padding-inline: calc(var(--marge) + var(--retrait)); scrollbar-width: none; }
   .hp-profil > b { font-size: 16px; }
   .hp-selon .hl-chapo { font-size: 15px; }
   .hp-source-legendes b { font-size: 15px; }
@@ -360,7 +363,7 @@
   .hp-source svg { width: 14px; height: 14px; }
 }
 .hl-couleurs-titre { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
-/* Au téléphone, la pastille passe au coin gauche de la carte d'Inès : la note du haut et le visage de Léa gardent leur place. */
+/* Au téléphone, la pastille passe au coin gauche de la carte d'Inès : la note du haut et le visage de Yanis gardent leur place. */
 @media (max-width: 599px) {
   .hp-source { left: 21%; top: 4%; transform: rotate(-7deg); }
 }

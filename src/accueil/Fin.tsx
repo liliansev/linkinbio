@@ -92,7 +92,7 @@ const TABLEAU: { groupe: string; lignes: LigneTableau[] }[] = [
 ];
 const EN_VENTE = PLANS.filter(plan => OFFRES[plan].enVente);
 /** Le visage de chaque offre, celui de sa carte au-dessus. */
-const VISAGE = { gratuit: 'camille', starter: 'ines', pro: 'malik', premium: 'malik' } as const;
+const VISAGE = { gratuit: 'camille', starter: 'ines', pro: 'nadia', premium: 'nadia' } as const;
 
 function Case({ ligne, plan }: { ligne: LigneTableau; plan: Plan }) {
   if (ligne.valeurs) return <td role="cell">{ligne.valeurs[EN_VENTE.indexOf(plan)]}</td>;
@@ -202,7 +202,7 @@ export function Prix() {
           const avant = i ? OFFRES[PLANS[i - 1]].nom : null;
           return (
             <article key={plan} className={`hl-offre hl-entre ${plan === 'pro' ? 'hl-offre-pro' : ''}`} style={{ '--d': `${i * 60}ms` } as CSSProperties}>
-              <div className="hp-offre-personne"><Avatar profil={plan === 'gratuit' ? 'camille' : plan === 'starter' ? 'ines' : 'malik'} /><span>{plan === 'gratuit' ? 'Pour partager ce que tu fais' : plan === 'starter' ? 'Pour affirmer ton univers' : 'Pour une page qui travaille avec toi'}</span></div>
+              <div className="hp-offre-personne"><Avatar profil={plan === 'gratuit' ? 'camille' : plan === 'starter' ? 'ines' : 'nadia'} /><span>{plan === 'gratuit' ? 'Pour partager ce que tu fais' : plan === 'starter' ? 'Pour affirmer ton univers' : 'Pour une page qui travaille avec toi'}</span></div>
               <div className="hl-offre-tete">
                 <h3 className="hl-h3">{o.nom}</h3>
                 {plan === 'pro' && <span className="hl-offre-badge">Conseillé</span>}

@@ -84,13 +84,13 @@ export const PAGES_FONCTIONS: PageFonction[] = [
     nom: 'Ta page selon l’heure',
     titre: ['Le midi, le menu', 'Le soir, la réservation'],
     chapo: 'Tu choisis des horaires, Hopla met le bon lien en tête au bon moment. Ta page suit ta journée sans que tu y touches.',
-    resume: 'Ta page de liens change selon l’heure : le menu du jour le midi, la réservation le soir. Des créneaux par jour de la semaine avec Hopla.',
+    resume: 'Ta page de liens change selon l’heure : le podcast le matin, la prise de rendez-vous le soir. Des créneaux par jour de la semaine avec Hopla.',
     offre: 'pro',
     droit: 'heure',
     etapes: [
-      { titre: '9 h, la journée commence', texte: 'Malik est chef. Le matin, sa page met le menu du jour en premier.' },
+      { titre: '9 h, la journée commence', texte: 'Nadia forme à la gestion de budget. Le matin, sa page met son podcast en premier.' },
       { titre: 'Les heures passent', texte: 'Tu n’as rien à faire : le créneau est réglé une fois pour toutes.' },
-      { titre: '18 h, le soir arrive', texte: '« Réserver un dîner » monte en tête, le menu passe derrière.' },
+      { titre: '18 h, le soir arrive', texte: '« Réserver un bilan » monte en tête, le podcast passe derrière.' },
     ],
     points: [
       { titre: 'Un créneau par lien', texte: 'Du lundi au vendredi de 9 h à 18 h, le week-end, le soir : tu choisis les jours et les heures.' },
@@ -134,7 +134,7 @@ export const PAGES_FONCTIONS: PageFonction[] = [
     offre: 'pro',
     droit: 'drops',
     etapes: [
-      { titre: 'Un lien sous cadenas', texte: 'Hugo sort une affiche en édition limitée. Sa page montre le lien, fermé, et les places qui restent.' },
+      { titre: 'Un lien sous cadenas', texte: 'Théo ouvre un stage d’ouvertures à 30 places. Sa page montre le lien, fermé, et les places qui restent.' },
       { titre: 'Le code', texte: 'Ses abonnés l’ont reçu dans sa newsletter. Ils le tapent sur la page.' },
       { titre: 'Débloqué', texte: 'Le lien s’ouvre pour eux, et pour eux seuls.' },
       { titre: 'Une place de moins', texte: 'Le compteur se met à jour tout seul. À zéro, le lien se ferme.' },
@@ -181,9 +181,9 @@ export const PAGES_FONCTIONS: PageFonction[] = [
     offre: 'pro',
     droit: 'listeEmail',
     etapes: [
-      { titre: 'Une recette chaque dimanche', texte: 'Malik propose sa newsletter sur sa page. Un visiteur tape son adresse.' },
+      { titre: 'Une astuce chaque dimanche', texte: 'Nadia propose sa newsletter sur sa page. Un visiteur tape son adresse.' },
       { titre: '« C’est noté »', texte: 'Un toucher, et c’est fait. Pas de page à part, pas de formulaire à remplir.' },
-      { titre: 'Direction ta newsletter', texte: 'L’inscrit part vers Brevo, où Malik écrit déjà. Il le retrouve aussi dans Hopla.' },
+      { titre: 'Direction ta newsletter', texte: 'L’inscrit part vers Brevo, où Nadia écrit déjà. Il le retrouve aussi dans Hopla.' },
     ],
     points: [
       { titre: 'Tes inscrits t’appartiennent', texte: 'Exporte-les quand tu veux, en CSV, et pour Substack.' },
