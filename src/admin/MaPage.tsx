@@ -531,7 +531,7 @@ export function MaPage({ compte, reglages, blocs, clics, visiteurs, grand, chois
         <div ref={toile} className="adm-apercu adm-toile relative scroll-mt-24 overflow-hidden rounded-[24px]">
           <PageLiens page={{ reglages: montree, blocs: avecNeuf, compte }} edition={edition} />
           {/* Le geste s'écrit sur la page même, dans sa couleur, en haut à gauche : pas une ligne de plus au-dessus d'elle. */}
-          {astuce && <p className="pointer-events-none absolute top-4 left-4 right-16 text-[13px] font-medium leading-snug" style={{ color: variablesTheme(themeDe(montree))['--doux'] }}>{visibles.length < 2 ? 'Touche pour modifier.' : 'Touche pour modifier, maintiens pour déplacer.'}</p>}
+          {astuce && <p className="pointer-events-none absolute top-4 left-4 right-16 text-[13px] font-medium leading-snug" style={{ color: variablesTheme(themeDe(montree))['--doux'] }}>{visibles.length < 2 ? 'Touche pour modifier.' : 'Touche pour modifier, maintiens pour\u00a0déplacer.'}</p>}
         </div>
         {appel && <div className="adm-appel-sous">{appel}</div>}
       </div>
@@ -712,6 +712,13 @@ function ListeBlocs({ blocs, clics, choisi, editeur, neuf, gestes, onOrdonner, o
           ))}
         </ul>
       </SortableContext>
+      {/* Les raccourcis, dits une fois sous la liste (critique du 27 octobre 2026 : ils existaient sans que rien ne les montre). */}
+      <p className="adm-raccourcis" aria-hidden="true">
+        <span><kbd>A</kbd> ajouter un bloc</span>
+        <span><kbd>Échap</kbd> replier</span>
+        <span><kbd>⌘</kbd><kbd>Entrée</kbd> ajouter le bloc neuf</span>
+        <span>La poignée <Icone nom="ui-poignee" taille={12} /> déplace, à la souris ou au clavier</span>
+      </p>
     </DndContext>
   );
 }
@@ -766,6 +773,8 @@ function Rangee({ bloc, droits, clics, neuf, ouvert, editeur, ouvrir, fermer, ge
             {signe}
             <span className="adm-rangee-nom">{nom}</span>
             {sous && <span className="adm-rangee-sous">{sous}</span>}
+            {/* Masqué, le bloc le dit en toutes lettres, pas seulement par le gris (critique du 27 octobre 2026). */}
+            {!bloc.public && <span className="shrink-0 rounded-md bg-white/[0.06] px-1.5 py-0.5 text-[12px] font-medium text-white/70">Masqué</span>}
             {bloc.vedette && (
               <span className="adm-rangee-marque">
                 <span className="adm-rangee-marque-picto" title="Mis en avant" aria-hidden="true"><Icone nom="etoile" taille={13} /></span>
@@ -895,6 +904,9 @@ export function ApercuOnglet({ compte, reglages, blocs, visiteurs, tete, ouvrir 
  * s'il n'y est pas.
  */
 const TEL_L = 422, TEL_H = 894;
+/** La hauteur du téléphone de l'aperçu, au plus. */
+const TEL_MAX = 760;
+
 function Telephone({ ecran, choisi, children }: { ecran: RefObject<HTMLDivElement | null>; choisi: string | null; children: ReactNode }) {
   const lieu = useRef<HTMLDivElement>(null);
   const [echelle, setEchelle] = useState(0);
@@ -905,7 +917,8 @@ function Telephone({ ecran, choisi, children }: { ecran: RefObject<HTMLDivElemen
     const mesurer = () => {
       // La place sous le haut du téléphone, jusqu'au bas de sa zone, fixée à l'écran.
       const dispo = window.innerHeight - el.getBoundingClientRect().top - (parseFloat(getComputedStyle(carte).paddingBottom) || 0);
-      setEchelle(Math.min(el.clientWidth / TEL_L, dispo / TEL_H));
+      // Le téléphone s'arrête à 760 px de haut (critique du 27 octobre 2026) : au grand écran, l'édition reste la plus grande.
+      setEchelle(Math.min(el.clientWidth / TEL_L, Math.min(dispo, TEL_MAX) / TEL_H));
     };
     mesurer();
     const obs = new ResizeObserver(mesurer);

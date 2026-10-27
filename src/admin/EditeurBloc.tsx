@@ -931,7 +931,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
   const visibilite = <ReglageVisibilite key={`visibilite-${b.id}`} b={b} maj={maj} erreur={erreurDe('dates')} reseaux={reseauxDePartage(reglages.vuesReseaux)} />;
   const acces = b.type === 'lien' && <RegleAcces key={`acces-${b.id}`} b={b} maj={maj} prises={prises} />;
   const dejaVisible = resumeVisibilite(b, !!droits.heure, !!droits.pays);
-  // Au téléphone seulement : au bureau, la rangée se déplace par sa poignée, à la souris ou au clavier.
+  // Un cran plus haut ou plus bas, au téléphone comme au bureau (où la poignée de la rangée le fait aussi).
   const fleche = (sens: -1 | 1) => place && onDeplacer && (
     <button type="button" disabled={sens < 0 ? place.rang === 0 : place.rang === place.total - 1} onClick={() => onDeplacer(enregistre.current ?? b, sens)} aria-label={sens < 0 ? 'Monter d’un cran' : 'Descendre d’un cran'}
       className="grid h-11 w-10 place-items-center text-white/75 hover:text-white disabled:text-white/25">
@@ -1281,7 +1281,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
 
         {/* Le bas de la rangée : un bloc neuf s'ajoute ou s'oublie ; un bloc posé se duplique ou se retire, et revient d'un geste à ce qu'il était. */}
         <div className="adm-editeur-pied">
-          {!nouveau && compteClics && clics > 0 && <p className="mr-auto text-[12px] tabular-nums text-white/55">{clics.toLocaleString('fr-FR')} clic{clics > 1 ? 's' : ''} ces 30 derniers jours</p>}
+          {!nouveau && compteClics && clics > 0 && <p className="text-[12px] tabular-nums text-white/55">{clics.toLocaleString('fr-FR')} clic{clics > 1 ? 's' : ''} ces 30 derniers jours</p>}
           {nouveau ? (
             <div className="ml-auto flex items-center gap-2">
               {/* Le seul moyen d'oublier un bloc neuf : replier la rangée le garde, masqué, s'il est valable. */}
@@ -1289,22 +1289,31 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
               <BoutonPrincipal disabled={envoi} onClick={ajouter}>Ajouter à ma page</BoutonPrincipal>
             </div>
           ) : (
-            <div className="ml-auto flex flex-wrap items-center justify-end gap-0.5">
-              {annulable && (
-                <button type="button" onClick={() => {
-                  // Le bloc revient tel qu'il était, sans relire son site ; le bouton disparaît, la main passe à Dupliquer.
-                  lu.current = { ...lu.current, url: adresseSaisie(depart.current!.url) };
-                  setB(depart.current!); setErreurs({}); vibrer(6); setAnnonce('Changements annulés.');
-                  requestAnimationFrame(() => boutonDupliquer.current?.focus({ preventScroll: true }));
-                }} className={classeBouton.discret}>
-                  <Icone nom="ui-retour" taille={15} className="shrink-0" />Annuler mes changements
-                </button>
-              )}
-              <button ref={boutonDupliquer} type="button" onClick={dupliquer} className={classeBouton.discret}><Icone nom="ui-copier" taille={15} className="shrink-0" />Dupliquer</button>
-              <button type="button" onClick={retirer} className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl px-3 text-[14px] font-medium text-red-300 transition hover:bg-red-500/[0.06] bureau:min-h-9 bureau:rounded-lg bureau:px-2.5">
-                <Icone nom="ui-corbeille" taille={15} className="shrink-0" />Retirer
+            <>
+              {/* Le geste qui détruit à gauche, loin des autres ; la place et « Terminé » comme au téléphone (critique du 27 octobre 2026). */}
+              <button type="button" onClick={retirer} className="mr-auto inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg px-2.5 text-[14px] font-medium text-red-300 transition hover:bg-red-500/[0.06]">
+                <Icone nom="ui-corbeille" taille={15} className="shrink-0" />Retirer de ma page
               </button>
-            </div>
+              <div className="flex flex-wrap items-center justify-end gap-0.5">
+                {annulable && (
+                  <button type="button" onClick={() => {
+                    // Le bloc revient tel qu'il était, sans relire son site ; le bouton disparaît, la main passe à Dupliquer.
+                    lu.current = { ...lu.current, url: adresseSaisie(depart.current!.url) };
+                    setB(depart.current!); setErreurs({}); vibrer(6); setAnnonce('Changements annulés.');
+                    requestAnimationFrame(() => boutonDupliquer.current?.focus({ preventScroll: true }));
+                  }} className={classeBouton.discret}>
+                    <Icone nom="ui-retour" taille={15} className="shrink-0" />Annuler mes changements
+                  </button>
+                )}
+                <button ref={boutonDupliquer} type="button" onClick={dupliquer} className={classeBouton.discret}><Icone nom="ui-copier" taille={15} className="shrink-0" />Dupliquer</button>
+                {place && onDeplacer && place.total > 1 && (
+                  <span className="adm-place inline-flex items-center pl-2 text-[13px] tabular-nums text-white/60">
+                    Place {place.rang + 1} sur {place.total}{fleche(-1)}{fleche(1)}
+                  </span>
+                )}
+                <BoutonPrincipal className="ml-2" onClick={onFermer}>Terminé</BoutonPrincipal>
+              </div>
+            </>
           )}
         </div>
       </div>

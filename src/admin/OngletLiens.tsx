@@ -2,7 +2,7 @@ import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode, KeyboardEvent as ToucheClavier, RefObject } from 'react';
 import type { Bloc, TypeBloc, TypeVitrine } from '../lib/types.ts';
 import { TYPES_VITRINE } from '../lib/types.ts';
-import { DEVENU, aideSaisie, choixAjout, choixPour, seColle } from '../lib/catalogue.ts';
+import { DEVENU, aideSaisie, familleBloc, choixAjout, choixPour, seColle } from '../lib/catalogue.ts';
 import type { LigneAjout } from '../lib/catalogue.ts';
 import type { TypeAdresse } from '../lib/detection.ts';
 import { reseauDeUrl } from '../lib/demarrage.ts';
@@ -312,10 +312,11 @@ function ChoixTelephone({ depart, principal, gestes, fermer }: { depart: string;
  */
 // `bref` : ce qu'en dit la tuile, au bureau comme au téléphone, en deux lignes au plus et jamais coupé.
 const SUGGESTIONS: { type: TypeBloc; fond: string; bref: string }[] = [
-  { type: 'lien', fond: 'var(--adm-bleu-pale)', bref: 'Site, boutique, agenda' },
-  { type: 'galerie', fond: 'var(--adm-creme)', bref: 'Tes photos, qui défilent' },
-  { type: 'preuve', fond: 'var(--adm-citron)', bref: 'Ta note, tes témoignages' },
-  { type: 'inscription', fond: '#ffe3da', bref: 'Les e-mails de tes visiteurs' },
+  // Le fond pâle et le picto de la famille du bloc, les couleurs de la liste de Ma page (critique du 27 octobre 2026).
+  { type: 'lien', fond: '#eef0ff', bref: 'Site, boutique, agenda' },
+  { type: 'galerie', fond: '#fde8f1', bref: 'Tes photos, qui défilent' },
+  { type: 'preuve', fond: '#fff0dc', bref: 'Ta note, tes témoignages' },
+  { type: 'inscription', fond: '#f2eaff', bref: 'Les e-mails de tes visiteurs' },
 ];
 const FAMILLES: { nom: string; types: TypeBloc[] }[] = [
   { nom: 'Liens', types: ['lien', 'derniere-video'] },
@@ -355,7 +356,7 @@ function DepartBureau({ id, choix, prendre }: { id: string; choix: Choix; prendr
           const s = SUGGESTIONS.find(x => x.type === l.entree.type);
           return (
             <div key={l.entree.nom} {...attributsOption(id, choix, prendre, l, i)} className="adm-depart-tuile" style={{ background: s?.fond }}>
-              <Icone nom={l.entree.picto} taille={22} className="text-bleu" />
+              <span className="adm-tuile-picto" data-famille={familleBloc(l.entree.type)}><Icone nom={l.entree.picto} taille={22} /></span>
               {choix.reserve(l) && l.entree.fonction && <span className="absolute top-2.5 right-2.5"><Etiquette fonction={l.entree.fonction} /></span>}
               <span className="mt-auto text-[13.5px] leading-tight font-semibold">{l.entree.nom}</span>
               {s && <span className="line-clamp-2 text-[12px] leading-snug text-white/65">{s.bref}</span>}
@@ -397,7 +398,7 @@ function Depart({ lignes, ligne, prendre, reserve, permise, nomDe }: {
           <li key={l.entree.nom} style={{ '--i': i } as CSSProperties}>
             <button type="button" disabled={!permise(l)} onClick={() => prendre(l)} aria-label={nomDe(l)} style={{ background: fond }}
               className="adm-tuile-ajout relative flex h-full w-full flex-col rounded-2xl text-left text-white transition duration-150 hover:brightness-[0.97] active:scale-[0.97]">
-              <Icone nom={l.entree.picto} taille={24} className="text-bleu" />
+              <span className="adm-tuile-picto" data-famille={familleBloc(l.entree.type)}><Icone nom={l.entree.picto} taille={24} /></span>
               {reserve(l) && l.entree.fonction && <span className="absolute top-3 right-3"><Etiquette fonction={l.entree.fonction} /></span>}
               <span className="adm-tuile-ajout-nom font-semibold">{l.entree.nom}</span>
               <span className="adm-tuile-ajout-bref text-white/65">{sous}</span>
