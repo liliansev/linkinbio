@@ -58,13 +58,15 @@ function Demo() {
     if (hash.startsWith('#blocs')) {
       return <PageLiens key={hash} page={{ reglages: { ...p.reglages, bureau }, blocs: blocsLinktree(), compte: p.compte }} apercu />;
     }
-    // `#mention=klein` : une page courte (deux liens) d'un compte Gratuit, pour la planche du pied de page : la mention Hopla et les liens légaux.
+    // `#mention=klein` : une page courte (deux liens) d'un compte Gratuit, pour la planche du pied de page : la barre Hopla et les liens légaux ;
+    // `#mention=klein,longue` : toute la page, pour voir la barre rester collée au bas de l'écran.
     const mention = hash.startsWith('#mention');
+    const longue = hash.includes(',longue');
     const liens = p.blocs.filter(b => b.type === 'lien' && estEnLigne(b));
     return (
       <>
         {mention
-          ? <PageLiens key={hash} page={{ reglages: { ...p.reglages, bureau }, blocs: [liens[0], liens[1]].filter(Boolean), compte: { pseudo: 'camille', principal: false, plan: 'gratuit' } }} apercu />
+          ? <PageLiens key={hash} page={{ reglages: { ...p.reglages, bureau }, blocs: longue ? p.blocs.filter(b => estEnLigne(b)) : [liens[0], liens[1]].filter(Boolean), compte: { pseudo: 'camille', principal: false, plan: 'gratuit' } }} apercu />
           : <PageLiens page={{ reglages: { ...p.reglages, bureau }, blocs: p.blocs.filter(b => estEnLigne(b)), compte: p.compte }} apercu />}
         <div className="fixed left-1/2 top-4 z-50 hidden -translate-x-1/2 gap-1 rounded-xl border border-black/10 bg-white/90 p-1 font-sans text-[13px] font-semibold text-[#0a0a0a] shadow-lg backdrop-blur lg:flex" role="radiogroup" aria-label="Mise en page sur ordinateur">
           {([['colonne', 'Colonne'], ['profil', 'Profil'], ['onepage', 'One page']] as const).map(([id, nom]) => (

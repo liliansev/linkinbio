@@ -57,7 +57,7 @@ export const FONCTIONS = [
   'Vingt-quatre thèmes',
   'Modification de la page depuis le téléphone',
   'Liens partenaires avec la mention « Publicité » que demande la loi',
-  'Page sans la mention « Créer ma page avec Hopla » (Starter)',
+  'Page sans la barre Hopla (Starter)',
   'Blocs sans limite (Starter)',
   'Vitrine sans commission : produits avec leur photo et leur prix lus sur la boutique, prise de rendez-vous Calendly ou Cal.com dans la page, bouton de soutien PayPal ou Ko‑fi, code promo copié d’un geste (Starter)',
   'Couleurs personnalisées par-dessus le thème (Starter)',

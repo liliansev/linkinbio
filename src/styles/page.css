@@ -435,6 +435,34 @@
 .lp-legal-point { padding-inline: 4px; }
 .lp-fin :is(.lp-signature, .lp-legal) a:focus-visible { outline: 2px solid var(--texte); outline-offset: -2px; border-radius: 8px; }
 
+/* ---- La barre Hopla ----
+ * En Gratuit (27 octobre 2026, Lilian, d'après Beacons) : collée au bas de l'écran pendant tout le défilement, posée à
+ * la fin de la scène pour ne jamais couvrir les liens légaux quand on arrive en bas. Toujours aux couleurs de Hopla,
+ * quel que soit le thème : papier blanc, encre et bleu Hopla (7,3:1 sur le blanc). Le dessin du logo seul, sans son
+ * carré. Toute la barre est le lien : une seule cible, haute de 56 px.
+ */
+.lp-barre-hopla {
+  position: sticky; bottom: calc(12px + env(safe-area-inset-bottom)); z-index: 5;
+  align-self: center; width: calc(100% - 32px); max-width: 548px; margin: 8px auto calc(12px + env(safe-area-inset-bottom));
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  min-height: 56px; padding: 8px 18px; box-sizing: border-box;
+  border-radius: 16px; background: #fff; color: #0e1116; text-decoration: none;
+  font-family: 'Geist Variable', ui-sans-serif, system-ui, sans-serif; font-size: 15px; line-height: 1.2;
+  box-shadow: 0 0 0 1px rgb(14 17 22 / 0.08), 0 10px 30px -10px rgb(14 17 22 / 0.35);
+  -webkit-tap-highlight-color: transparent;
+}
+.lp-barre-marque { display: inline-flex; align-items: center; gap: 8px; flex: none; }
+.lp-barre-marque svg { width: 22px; height: 22px; color: #292bff; }
+.lp-barre-marque strong { font-weight: 700; font-size: 16px; letter-spacing: -0.01em; }
+.lp-barre-appel { color: #292bff; font-weight: 600; text-align: right; }
+.lp-barre-hopla:active .lp-barre-appel { text-decoration: underline; text-underline-offset: 3px; }
+@media (hover: hover) { .lp-barre-hopla:hover .lp-barre-appel { text-decoration: underline; text-underline-offset: 3px; } }
+.lp-barre-hopla:focus-visible { outline: 2px solid #292bff; outline-offset: 3px; }
+/* Le pied n'a plus de mention au-dessus des liens légaux : ils ne gardent que leur propre écart. */
+.lp:has(.lp-barre-hopla) .lp-fin { margin-top: 24px; }
+/* Une bulle passe au-dessus de la barre plutôt que dessous. */
+.lp:has(.lp-barre-hopla) .lp-toast { bottom: calc(88px + env(safe-area-inset-bottom)); }
+
 .lp-toast {
   position: fixed; left: 50%; bottom: 24px; translate: -50% 0; z-index: 10;
   /* Sa propre largeur, pas la moitié de l'écran qui reste à droite de son ancrage. */
