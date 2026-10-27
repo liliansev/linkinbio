@@ -10,21 +10,22 @@
 .hl-humain { --encre: #20241f; --accent: #292bff; --gris: #62685f; }
 /* Une seule colonne pour tout le site public (26 octobre 2026, audit des alignements) : le logo de la barre, les titres de
    chaque section, sur un panneau ou sur le blanc, et le pied tombent sur le même bord. Les panneaux gardent `--marge` au
-   bord de la fenêtre ; au-delà de 1714 px, la colonne grandit avec l'écran (70 % de sa largeur, 1760 px au plus).
+   bord de la fenêtre ; la colonne s'arrête à 1280 px, comme sur les landings de SaaS relevées sur Mobbin (27 octobre 2026,
+   demandé par Lilian : Intercom, Lyssna, Maze, le pied de Slack), et ne grandit plus avec l'écran.
    `--pad-panneau` va aux éléments posés à `--marge` du bord, `--pad-plein` à ceux qui vont d'un bord à l'autre ; leurs
    pourcentages se lisent sur la largeur de la page. `--ecart` sépare deux sections, quelles qu'elles soient. */
 .hl-humain {
-  --marge: 8px; --retrait: 22px; --dedans: 12px; --colonne: clamp(1200px, 70vw, 1760px);
+  --marge: 8px; --retrait: 22px; --dedans: 12px; --colonne: 1280px;
   --ecart: 64px; --pad-v: 56px; --echelle: 1;
   --pad-panneau: max(var(--retrait), calc((100% - var(--colonne)) / 2 - var(--marge)));
   --pad-plein: max(calc(var(--marge) + var(--retrait)), calc((100% - var(--colonne)) / 2));
 }
 @media (min-width: 600px) { .hl-humain { --marge: 14px; --retrait: 28px; --ecart: 88px; --pad-v: 80px; } }
 @media (min-width: 1024px) { .hl-humain { --dedans: 28px; --ecart: 100px; --pad-v: 100px; } }
-/* Au grand écran, tout grandit avec la colonne : les titres, les textes d'appui et les téléphones (`--echelle`). */
-@media (min-width: 1700px) { .hl-humain { --ecart: 116px; --pad-v: 116px; --echelle: 1.1; } }
-@media (min-width: 2000px) { .hl-humain { --ecart: 132px; --pad-v: 132px; --echelle: 1.2; } }
-@media (min-width: 2300px) { .hl-humain { --ecart: 144px; --pad-v: 144px; --echelle: 1.3; } }
+/* Au grand écran, seuls les écarts entre sections grandissent ; la colonne et `--echelle` restent (27 octobre 2026). */
+@media (min-width: 1700px) { .hl-humain { --ecart: 116px; --pad-v: 116px; } }
+@media (min-width: 2000px) { .hl-humain { --ecart: 132px; --pad-v: 132px; } }
+@media (min-width: 2300px) { .hl-humain { --ecart: 144px; --pad-v: 144px; } }
 .hl-humain :is(.hl-h1, .hl-h2, .hl-h3) { font-family: 'Bricolage Grotesque Variable', 'Geist Variable', sans-serif; font-weight: 650; }
 .hl-humain [data-teinte='klein'] { --papier: #292bff; --accent: #e3fc96; }
 .hl-humain [data-teinte='nuit'] { --papier: #292530; --lueur: none; --encre: #eee0fa; --gris: #d3c9dc; --accent: #e3fc96; }

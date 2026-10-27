@@ -250,9 +250,10 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
     /* Tout suit la largeur de l'écran, sans palier (25 octobre 2026, demandé par Lilian : « ça devrait auto sizer ») :
        les marges, les colonnes, les zones de droite, puis, sur Ma page, les rangées et le profil (plus bas). */
     --adm-bord: clamp(20px, 3vw, 72px);
-    /* Le travail prend toute sa zone, d'un bord à l'autre, comme sur Ma page (25 octobre 2026, demandé par Lilian :
-       « beaucoup d'espaces blancs ») ; seul un écran plus large que 2400 px garde ses marges. */
-    --adm-colonne: 2200px;
+    /* Des largeurs max relevées sur Mobbin (27 octobre 2026, demandé par Lilian) : un tableau de bord tient dans
+       1280 px (Stats, Comptes), un écran d'édition ou de réglages dans 760 px (Ma page, Intégrations, Réglages,
+       comme Shopify ou Meetup), et l'en-tête aligne son titre et ses gestes sur les bords de cette colonne. */
+    --adm-colonne: 1280px;
     /* La zone de l'aperçu, à droite de Ma page : le téléphone y grandit avec elle (voir `Telephone`). */
     --adm-zone-apercu: max(380px, min((100dvh - 150px) * 0.472 + 48px, 60vw - var(--adm-barre)));
     /* La zone du détail (un outil, la fiche d'un compte, Mon abonnement), à droite de sa liste : voir `PanneauDetail`. */
@@ -260,14 +261,14 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
     --adm-largeur: min(100% - var(--adm-barre) - 2 * var(--adm-bord), var(--adm-colonne));
   }
   /* Ma page, Intégrations et Réglages : la page à droite, dans sa zone (`ZoneApercu`) ; un détail ouvert prend sa place, à la même largeur. */
-  .adm-shell:has(.adm-apercu-cote) { --adm-colonne: 100vw; --adm-zone-detail: max(420px, var(--adm-zone-apercu)); --adm-largeur: min(100% - var(--adm-barre) - var(--adm-zone-apercu) - 2 * var(--adm-bord), var(--adm-colonne)); }
+  .adm-shell:has(.adm-apercu-cote) { --adm-colonne: 760px; --adm-zone-detail: max(420px, var(--adm-zone-apercu)); --adm-largeur: min(100% - var(--adm-barre) - var(--adm-zone-apercu) - 2 * var(--adm-bord), var(--adm-colonne)); }
   .adm-shell:has(.adm-detail-cote) .adm-apercu-cote { visibility: hidden; }
   .adm-travail { padding-left: var(--adm-barre); }
   .adm-shell:has(.adm-apercu-cote) .adm-travail { padding-right: var(--adm-zone-apercu); }
   .adm-shell:has(.adm-detail-cote) { --adm-largeur: min(100% - var(--adm-barre) - var(--adm-zone-detail) - 2 * var(--adm-bord), var(--adm-colonne)); }
   .adm-shell:has(.adm-detail-cote) .adm-travail { padding-right: var(--adm-zone-detail); }
   /* L'en-tête d'une zone va d'un bord à l'autre : le titre au bord gauche du travail, les gestes au bord droit. */
-  .adm-entete-bureau { padding-inline: 28px; }
+  .adm-entete-bureau { padding-inline: max(28px, (100% - var(--adm-colonne)) / 2); }
   .adm-colonne { width: min(100% - 2 * var(--adm-bord), var(--adm-colonne)); margin-inline: auto; }
   /* Le message se pose en bas à droite, hors des rangées qu'on édite (24 octobre 2026 : centré, il en couvrait une). */
   /* Au bord droit de la colonne de l'onglet, pas au bord de l'écran : sur un écran de 3440 px, il reste près du travail. */
@@ -427,9 +428,8 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
   .adm-studio-bureau { min-height: calc(100dvh - 57px); }
   /* Sur un ordinateur, l'édition garde 760 px et la page prend le reste. */
   .adm-edition { min-width: 0; padding-bottom: 96px; }
-  /* La colonne d'édition s'arrête à 920 px, centrée dans sa zone (27 octobre 2026, demandé par Lilian : « les menus
-     sont super longs ») : un champ, une ligne de réglage restent à portée d'œil, l'étiquette près de sa valeur. */
-  .adm-edition-col { container: edition / inline-size; padding-top: 16px; max-width: 920px; margin-inline: auto; }
+  /* La colonne d'édition suit `--adm-colonne` (760 px) : un champ, une ligne de réglage restent à portée d'œil. */
+  .adm-edition-col { container: edition / inline-size; padding-top: 16px; }
   .adm-demarrage { margin-bottom: 12px; }
   .adm-demarrage:empty { display: none; }
   /* La redirection en cours, le design à l'essai : dans la colonne, au-dessus des onglets, alignés sur eux. */
