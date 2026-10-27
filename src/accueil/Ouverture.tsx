@@ -186,6 +186,8 @@ export function Barre({ ailleurs = false }: { ailleurs?: boolean }) {
         {MENU.map(([lien, texte]) => lien.startsWith('#')
           ? <a key={lien} href={ailleurs ? `/${lien}` : lien} aria-current={ici === lien || undefined} onClick={() => { setMenu(false); if (!ailleurs) titreDe(lien); }}>{texte}</a>
           : <a key={lien} href={lien} aria-current={chemin === lien || chemin.startsWith(lien + '/') ? 'page' : undefined}>{texte}</a>)}
+        {/* Au téléphone, l'appel quitte la barre pour le menu (27 octobre 2026, demandé par Lilian) : la barre garde la marque et le burger. */}
+        {!envoye && <a href="#reserver" className="hl-btn hl-menu-creer" onClick={ev => { ev.preventDefault(); setMenu(false); allerAuChamp(); }}>{debut}{suite}</a>}
         <a href="/admin" className="hl-menu-connexion">Connexion</a>
       </nav>
       </div>

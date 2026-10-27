@@ -650,6 +650,10 @@ html:has(.hl-humain) { scroll-padding-top: 96px; }
 .hl-humain .hl-barre[data-menu] .hl-menu a { min-height: 56px; font-size: 20px; }
 .hl-humain .hl-barre[data-menu] .hl-menu a:first-child { border-top: 0; }
 .hl-humain .hl-barre[data-menu] .hl-menu .hl-menu-connexion { min-height: 52px; margin-top: 16px; font-size: 17px; }
+/* L'appel du téléphone vit dans le menu, en citron sur le bleu, au-dessus de Connexion ; la barre fermée ne le montre plus. */
+@media (max-width: 1199px) { .hl-humain .hl-barre-actions .hl-btn { display: none; } }
+.hl-humain .hl-menu .hl-menu-creer { justify-content: center; min-height: 52px; margin-top: auto; border: 0; border-radius: 12px; background: #e3fc96; color: #233016; font-size: 17px; font-weight: 600; }
+.hl-humain .hl-menu .hl-menu-creer + .hl-menu-connexion { margin-top: 10px; }
 html:has(.hl-humain .hl-barre[data-menu]) { overflow: hidden; }
 @media (min-width: 1200px) { .hl-humain .hl-barre[data-menu] .hl-barre-capsule { position: static; height: auto; } }
 
