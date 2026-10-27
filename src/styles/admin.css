@@ -427,7 +427,9 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
   .adm-studio-bureau { min-height: calc(100dvh - 57px); }
   /* Sur un ordinateur, l'édition garde 760 px et la page prend le reste. */
   .adm-edition { min-width: 0; padding-bottom: 96px; }
-  .adm-edition-col { container: edition / inline-size; padding-top: 16px; }
+  /* La colonne d'édition s'arrête à 920 px, centrée dans sa zone (27 octobre 2026, demandé par Lilian : « les menus
+     sont super longs ») : un champ, une ligne de réglage restent à portée d'œil, l'étiquette près de sa valeur. */
+  .adm-edition-col { container: edition / inline-size; padding-top: 16px; max-width: 920px; margin-inline: auto; }
   .adm-demarrage { margin-bottom: 12px; }
   .adm-demarrage:empty { display: none; }
   /* La redirection en cours, le design à l'essai : dans la colonne, au-dessus des onglets, alignés sur eux. */
