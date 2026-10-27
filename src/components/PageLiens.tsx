@@ -82,6 +82,8 @@ export function PageLiens({ page, apercu = false, edition, liste, sansMention = 
   // Les liens rangés en tuiles sous un titre de section réglé en grille (un compte à rebours garde sa largeur).
   const tuiles = enGrille(blocs, b => enAttente(b, page.maintenant ?? Date.now()));
   const grande = reglages.profil.photo === 'grande' && !!reglages.profil.avatar;
+  // En édition au téléphone, la barre resterait collée sur les blocs qu'on touche : elle se montre partout ailleurs.
+  const barreHopla = !compte.principal && !sansMention && !edition && !peut(compte.plan, 'sansMention');
   const [toast, setToast] = useState('');
   // La réservation ouverte dans sa feuille, et ce qui avait le focus avant elle, pour l'y rendre.
   const [agenda, setAgenda] = useState<Bloc | null>(null);
@@ -228,10 +230,8 @@ export function PageLiens({ page, apercu = false, edition, liste, sansMention = 
         */}
         {/* En édition, le pied ne mène nulle part : on ne quitte pas sa page en touchant la mention. */}
         <footer className="lp-fin" {...(edition ? { inert: true } : fige)}>
-          {/* La page de Lilian signe de son site ; ailleurs, la mention, qui disparaît dès Starter. */}
-          {compte.principal
-            ? <p className="lp-signature"><a href="https://liliansevoumian.fr" {...cible}>liliansevoumian.fr</a></p>
-            : !sansMention && !peut(compte.plan, 'sansMention') && <p className="lp-signature"><a className="lp-hopla" href={ORIGINE_PUBLIQUE} {...cible}>{t.creeAvec} <strong>Hopla</strong></a></p>}
+          {/* La page de Lilian signe de son site ; en Gratuit, la mention est la barre collée en bas de l'écran (`barreHopla`). */}
+          {compte.principal && <p className="lp-signature"><a href="https://liliansevoumian.fr" {...cible}>liliansevoumian.fr</a></p>}
           {/* Les liens légaux, sur toutes les pages, celle de Lilian comprise. */}
           <p className="lp-legal">
             <a href="/legal/confidentialite" {...cible}>{t.confidentialite}</a>
@@ -242,6 +242,17 @@ export function PageLiens({ page, apercu = false, edition, liste, sansMention = 
           </p>
         </footer>
       </div>
+      {/*
+        La barre Hopla (27 octobre 2026, demandé par Lilian, d'après Beacons) : en Gratuit, hors essai, collée au bas de
+        l'écran pendant tout le défilement, aux couleurs de Hopla quel que soit le thème. Elle tient lieu de mention :
+        elle disparaît dès Starter, et jamais sur la page de Lilian ni sur les exemples de l'accueil.
+      */}
+      {barreHopla && (
+        <a className="lp-barre-hopla" href={ORIGINE_PUBLIQUE} {...cible}>
+          <span className="lp-barre-marque"><Trace /><strong>Hopla</strong></span>
+          <span className="lp-barre-appel">{t.barreHopla}</span>
+        </a>
+      )}
       </div>
       {agenda && <FeuilleAgenda bloc={agenda} t={t} fermer={() => { setAgenda(null); requestAnimationFrame(() => avantAgenda.current?.focus({ preventScroll: true })); }} />}
       {adulte && <FeuilleAdultes t={t} confirmer={confirmerAdulte} fermer={() => { const { lien } = adulte; setAdulte(null); requestAnimationFrame(() => lien.focus({ preventScroll: true })); }} />}

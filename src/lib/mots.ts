@@ -11,9 +11,9 @@ const tu = {
   j: 'j', h: 'h', ouTrouver: 'Le code est donné en story, en live ou dans la newsletter.',
   rien: 'Rien ici pour l’instant.',
   partager: 'Partager cette page', copie: 'Lien copié', reseaux: 'Réseaux', verifie: 'Compte vérifié',
-  // Le pied : « Créer ma page avec Hopla », le nom en gras (`PageLiens`), à la première personne comme les boutons de la page :
-  // il va au tu comme au vous.
-  confidentialite: 'Confidentialité', signaler: 'Signaler', signalerPage: 'Signaler cette page', creeAvec: 'Créer ma page avec', creeTaPage: 'Crée ta page avec',
+  confidentialite: 'Confidentialité', signaler: 'Signaler', signalerPage: 'Signaler cette page', creeTaPage: 'Crée ta page avec',
+  // La barre Hopla des pages en Gratuit, à la première personne comme la mention d'avant : au tu comme au vous.
+  barreHopla: 'Créer ma page gratuitement',
   bientot: 'Bientôt', ouvert: 'C’est ouvert', ouvreLe: (quand: string) => `Ouvre le ${quand}`,
   prenom: 'Prénom', prenomAria: 'Ton prénom', email: 'ton@email.fr', emailAria: 'Ton adresse e-mail', inscrire: 'Je m’inscris',
   mention: 'Ton adresse sert seulement à recevoir ces e-mails. Désinscription en un clic, quand tu veux.',
