@@ -92,7 +92,9 @@ export function Themes() {
   // La boucle (et sa copie des thèmes) n'existe qu'avec le mouvement : sinon le rail reste celui qu'on fait glisser.
   const [boucle, setBoucle] = useState(false);
   useEffect(() => setBoucle(!mouvementReduit()), []);
-  useDefilement(rail, boucle && vu && visible);
+  // Une boucle sans fin a son bouton pause, comme l'animation de Camille (critique du 27 octobre 2026, WCAG 2.2.2).
+  const [pause, setPause] = useState(false);
+  useDefilement(rail, boucle && vu && visible && !pause);
   const defiler = (sens: number) => {
     rail.current?.dispatchEvent(new PointerEvent('pointerdown'));
     rail.current?.scrollBy({ left: sens * rail.current.clientWidth * 0.8, behavior: mouvementReduit() ? 'auto' : 'smooth' });
@@ -118,6 +120,7 @@ export function Themes() {
         <p className="hl-chapo">Des plus sobres aux plus audacieux, chacun avec sa typographie réglée à la main. Change d’ambiance en un geste.</p>
       </div>
       <div className="hl-rail-tete hl-grand-seul">
+        {boucle && <button type="button" className="hl-revoir" onClick={() => setPause(p => !p)}>{pause ? 'Reprendre le défilement' : 'Mettre en pause'}</button>}
         <div className="hl-fleches">
           <button type="button" onClick={() => { if (!bouts.debut) defiler(-1); }} aria-disabled={bouts.debut || undefined} aria-label="Thèmes précédents"><Icone nom="ui-chevron" taille={18} className="hl-gauche" /></button>
           <button type="button" onClick={() => { if (!bouts.fin) defiler(1); }} aria-disabled={bouts.fin || undefined} aria-label="Thèmes suivants"><Icone nom="ui-chevron" taille={18} className="hl-droite" /></button>

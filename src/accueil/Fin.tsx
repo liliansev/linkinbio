@@ -232,11 +232,11 @@ export function Prix() {
                 </details>
               )}
               {/* Un seul geste, un seul mot (critique du 27 octobre 2026) : toutes les cartes créent la page, qui commence
-                  par l'essai de Pro ; seule l'offre conseillée a le bouton plein. */}
+                  par l'essai de Pro ; seule l'offre conseillée a le bouton plein. La ligne dessous dit ce que la carte change. */}
               {!envoye && o.enVente && (
                 <div className="hp-offre-action">
                   <a href="#reserver" className={`hl-btn ${plan === PLAN_ESSAI ? '' : 'hl-btn-contour'}`} onClick={ev => reserver(ev, plan)}>{libelle}</a>
-                  {plan === PLAN_ESSAI && <p>{ESSAI_JOURS} jours offerts, sans carte bancaire.</p>}
+                  <p>{plan === 'gratuit' ? 'En ligne pour toujours, sans carte bancaire.' : plan === PLAN_ESSAI ? `${ESSAI_JOURS} jours offerts, sans carte bancaire.` : `${ESSAI_JOURS} jours de ${OFFRES[PLAN_ESSAI].nom} offerts, puis ${o.nom}.`}</p>
                 </div>
               )}
             </article>

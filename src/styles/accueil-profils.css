@@ -117,7 +117,7 @@
 /* Précédent et suivant : les chevrons seuls, sans cadre. */
 .hp-dialogue-voisin { flex: none; display: grid; place-items: center; width: 46px; height: 48px; border: 0; border-radius: 10px; background: none; color: #20241f; cursor: pointer; transition: color .15s; }
 .hp-dialogue-voisin:hover { color: #292bff; }
-.hl-humain .hp-selon { display: grid; grid-template-columns: 1fr 1.12fr; align-items: center; gap: 56px; background: #f2f0e7; border-radius: 30px; }
+.hl-humain .hp-selon { display: grid; grid-template-columns: 1fr 1.12fr; align-items: center; gap: 56px; background: #f2f0e7; border-radius: 36px; }
 .hp-selon .hl-h2 > span { color: #292bff; }
 .hp-selon .hl-chapo { font-size: 17px; }
 .hp-source-legendes { display: grid; gap: 20px; margin-top: 30px; }
@@ -196,7 +196,8 @@
   .hp-dashboard-mesures { grid-template-columns: repeat(2,minmax(0,1fr)); }
   .hp-dashboard-details { grid-template-columns: 1fr; gap: 20px; }
 }
-.hl-humain #prix { background: #f2f0e7; border-radius: 30px; }
+.hl-humain #prix { background: #f2f0e7; border-radius: 36px; }
+@media (max-width: 1023px) { .hl-humain :is(#prix, .hp-selon) { border-radius: 28px; } }
 .hl-humain #prix .hl-tete-section { margin-bottom: 28px; max-width: 760px; }
 .hl-humain #prix .hl-h2 > span { color: #292bff; }
 /* Le choix de la période se lit comme une commande : un rail bordé, la période choisie en blanc, et ce que fait gagner l'annuel dans une étiquette à côté de son nom. */
@@ -364,9 +365,10 @@
   .hp-source { left: 21%; top: 4%; transform: rotate(-7deg); }
 }
 
-/* Au téléphone, les cartes s'empilent : le choix Mensuel ou Annuel reste collé sous la barre tant qu'on lit les prix. */
+/* Au téléphone, le choix Mensuel ou Annuel ne colle plus sous la barre : il cachait le nom et le prix des offres (critique du
+   27 octobre 2026). */
 @media (max-width: 1023px) {
-  .hl-humain .hl-periode { position: sticky; top: 86px; z-index: 5; display: flex; width: fit-content; box-shadow: inset 0 0 0 1px #d3d1c5, 0 12px 24px -14px rgb(32 36 31 / .5); }
+  .hl-humain .hl-periode { display: flex; width: fit-content; }
 }
 
 /* Le pied de page s'aligne sur la barre et les sections, à 1280 px. */
@@ -485,7 +487,7 @@
    bleu, 8,1:1) ; sur un fond clair, elle reste bleu Klein, texte blanc (8,1:1) et appel citron. Le menu ouvert du téléphone reste bleu. */
 .hl-humain .hl-barre[data-fond] .hl-barre-capsule {
   -webkit-backdrop-filter: blur(16px) saturate(140%); backdrop-filter: blur(16px) saturate(140%);
-  transition: background-color .35s var(--ease), color .35s var(--ease), box-shadow .35s var(--ease);
+  transition: background-color .15s var(--ease), color .15s var(--ease), box-shadow .15s var(--ease);
 }
 .hl-humain .hl-barre[data-fond='clair'] .hl-barre-capsule {
   background: rgb(41 43 255 / .96);
@@ -676,9 +678,6 @@ html:has(.hl-humain .hl-barre[data-menu]) { overflow: hidden; }
 /* Le citron en fond une fois, sur « Ta page en deux minutes » : l'encre olive y tient 12:1, l'accent bleu 7:1. */
 .hl-humain [data-teinte='citron'] { --papier: #e3fc96; --lueur: none; --encre: #1d2410; --encre-2: #2b3518; --gris: #3f4a2a; --filet: rgb(29 36 16 / .18); --pale: rgb(255 255 255 / .5); --accent: #292bff; }
 .hl-humain [data-teinte='citron'] .hl-h2 > span:not(.hl-cache) { color: #292bff; }
-/* Le mur des thèmes passe bord à bord, sans bande arrondie ; sa colonne reste celle de la page. */
-.hl-humain #themes { margin-inline: 0; border-radius: 0; padding-inline: calc(var(--pad-panneau) + var(--marge)); }
-.hl-humain #themes .hl-rail { --bord: max(calc(var(--retrait) + var(--marge)), calc((100vw - var(--colonne)) / 2)); }
 /* Au très grand écran, les bandes s'arrêtent à 1760 px autour de la colonne de 1280 px. */
 @media (min-width: 1800px) { .hl-humain { --marge: calc((100vw - 1760px) / 2); } }
 /* « Tout comparer » se replie : un titre et un plus, comme les questions. */

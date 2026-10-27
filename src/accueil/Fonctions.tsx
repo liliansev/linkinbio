@@ -299,7 +299,7 @@ const PLUS_LOIN: { nom: string; texte: string; offre: 'starter' | 'pro'; page: s
   { nom: 'Tes lancements', texte: 'Un lien qui apparaît à l’heure dite, avec son compte à rebours.', offre: 'starter', page: 'lancement' },
   { nom: 'Tes avis clients', texte: 'Ta note Google ou Trustpilot, recopiée chaque jour.', offre: 'starter', page: 'avis' },
   { nom: 'Ta page selon l’heure', texte: 'Le menu du jour le midi, la réservation le soir.', offre: 'pro', page: 'page-selon-l-heure' },
-  { nom: 'Tes drops et ta liste e‑mail', texte: 'Des places comptées, et des inscrits qui partent vers ta newsletter.', offre: 'pro', page: 'drops' },
+  { nom: 'Tes places comptées et ta liste e‑mail', texte: 'Un lien qui s’ouvre avec un code, et des inscrits qui partent vers ta newsletter.', offre: 'pro', page: 'drops' },
 ];
 
 export function PlusLoin() {

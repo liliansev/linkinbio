@@ -62,8 +62,9 @@ export function Barre({ ailleurs = false }: { ailleurs?: boolean }) {
     return () => removeEventListener('scroll', f);
   }, []);
   // La barre prend la couleur qui tranche sur le fond qu'elle survole (27 octobre 2026, demandé par Lilian) : citron sur le bleu
-  // ou la nuit, bleu sur le blanc et les papiers clairs. Le fond se lit sur la première bande large sous la capsule (les cartes
-  // et les téléphones posés dans une section ne comptent pas), puis sa luminance décide.
+  // ou la nuit, bleu sur le blanc et les papiers clairs. Le fond se lit sur la section (ou le pied) sous la capsule, jamais sur
+  // ce qu'elle porte : au téléphone, une maquette de page ou le champ du nom tiennent toute la largeur et trompaient la barre.
+  // Seule la carte Pro, bleue de bord à bord au téléphone, compte comme un fond : la barre n'y est jamais bleue sur bleu.
   const [fond, setFond] = useState<'sombre' | 'clair'>('sombre');
   useEffect(() => {
     let image = 0;
@@ -73,8 +74,7 @@ export function Barre({ ailleurs = false }: { ailleurs?: boolean }) {
         const capsule = document.querySelector('.hl-barre-capsule')?.getBoundingClientRect();
         if (!capsule) return;
         const sous = document.elementsFromPoint(innerWidth / 2, capsule.top + capsule.height / 2).find(el => !el.closest('.hl-barre'));
-        for (let el: Element | null = sous ?? null; el; el = el.parentElement) {
-          if (el.getBoundingClientRect().width < innerWidth * 0.6) continue;
+        for (let el: Element | null = sous?.closest('.hl-offre-pro, .hl-heros, .hl-section, .hl-pied') ?? null; el; el = el.parentElement) {
           const [r, g, b, a = 1] = (getComputedStyle(el).backgroundColor.match(/[\d.]+/g) ?? []).map(Number);
           if (!a) continue;
           const lin = (c: number) => { c /= 255; return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; };
