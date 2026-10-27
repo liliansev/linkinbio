@@ -55,8 +55,8 @@
 .hl-humain .hl-suite:hover { background: var(--pale, rgb(0 0 0 / .05)); }
 .hl-humain [data-teinte='nuit'] .hl-suite { color: #e3fc96; }
 .hl-humain [data-teinte='nuit'] .hl-suite:hover { background: rgb(227 252 150 / .1); }
-.hl-humain :is(.hp-heros,.hl-dernier) .hl-reserver .hl-btn { background: #e3fc96; border-color: #e3fc96; color: #233016; }
-.hl-humain :is(.hp-heros,.hl-dernier) .hl-reserver .hl-btn:hover { background: #d4f57c; }
+/* « Créer ma page » du haut et du bas se pose dans le champ blanc du nom, pas sur le bleu : il y reste bleu, texte blanc (8,1:1 ;
+   le citron s'y perdait, 1,1:1 avec le blanc, 27 octobre 2026, relevé par Lilian). */
 .hp-decouvrir { display: inline-flex; align-items: center; gap: 26px; min-height: 44px; padding-block: 12px; margin-top: 25px; border-bottom: 1px solid #e3fc96; color: #fff; font-size: 14px; font-weight: 600; text-decoration: none; }
 .hp-heros-pied { grid-column: 1 / -1; display: flex; justify-content: space-between; gap: 16px; width: 100%; padding-top: 20px; color: #d9dcff; font-size: 13px; }
 .hp-heros-prix { color: inherit; text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
