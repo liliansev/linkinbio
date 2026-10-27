@@ -35,6 +35,21 @@
  */
 @custom-variant bureau (@media (min-width: 1024px) and (pointer: fine));
 
+/*
+ * La main sur tout ce qui se clique (27 octobre 2026, demandé par Lilian :
+ * Tailwind v4 rend aux boutons le curseur classique). En couche `base` : une
+ * classe `cursor-*` ou une règle d'une feuille du site passe toujours devant.
+ */
+@layer base {
+  :where(a[href], button, summary, select,
+    label:has(input[type='checkbox'], input[type='radio'], input[type='file']),
+    input:is([type='checkbox'], [type='radio'], [type='file'], [type='color'], [type='range'], [type='submit'], [type='button'], [type='reset']),
+    [role='button'], [role='link'], [role='tab'], [role='switch'], [role='checkbox'], [role='radio'],
+    [role='option'], [role='menuitem'], [role='menuitemradio'], [role='menuitemcheckbox']) { cursor: pointer; }
+  input::file-selector-button { cursor: pointer; }
+  :where(:is(button, select, input):disabled, [aria-disabled='true'], label:has(input:disabled)) { cursor: default; }
+}
+
 html { -webkit-text-size-adjust: 100%; }
 body { margin: 0; }
 
