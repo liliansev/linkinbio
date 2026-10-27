@@ -51,11 +51,11 @@ export const OFFRES: Record<Plan, Offre> = {
   },
   starter: {
     nom: 'Starter', phrase: 'Ta marque : tes couleurs, ta vitrine, tes stats.', prix: { mois: 9, an: 79 }, quota: 100 * Mo, jours: 30, enVente: true,
-    avantages: ['Sans la mention Hopla', 'Des blocs sans limite', 'Ta vitrine : produits, rendez-vous, dons', 'Tes couleurs, ta police, ton fond', 'Grande photo, liens en grille', 'Tes liens programmés à l’avance', 'Les avis de tes clients', 'Ton formulaire et tes galeries', 'Tes stats sur 30 jours', 'Redirection et suivi UTM'],
+    avantages: ['Sans la mention Hopla', 'Des blocs sans limite', 'Ta vitrine : produits, rendez-vous, dons', 'Tes couleurs, ta police, ton fond', 'Grande photo, liens en grille', 'Tes liens programmés à l’avance', 'Les avis de tes clients', 'Ton formulaire et tes galeries', 'Tes stats sur 30 jours', 'Redirection, clics suivis jusqu’à ton site'],
   },
   pro: {
     nom: 'Pro', phrase: 'Ta page qui bouge seule : l’heure, les lancements, ta liste.', prix: { mois: 19, an: 169 }, quota: 200 * Mo, jours: 365, enVente: true,
-    avantages: ['Ta page selon l’heure et le pays', 'Les drops : un code, des places comptées', 'Ta liste e-mail, vers ta newsletter', 'Un cadeau contre l’e-mail, tes articles en RSS', 'Tes stats sur un an'],
+    avantages: ['Ta page selon l’heure et le pays', 'Des liens à code ou à places comptées', 'Ta liste e-mail, vers ta newsletter', 'Un cadeau contre l’e-mail, tes derniers articles', 'Tes stats sur un an'],
   },
   premium: {
     nom: 'Premium', phrase: 'Ta page à ton nom de domaine.', prix: { mois: 29, an: 259 }, quota: 1024 * Mo, jours: 365, enVente: false,
@@ -130,17 +130,17 @@ export const FONCTIONS_EN_MOTS: Record<Fonction, { avantage: string; pour: strin
   stats: { avantage: 'Tes stats sur 30 jours', pour: 'Pour tes stats' },
   formulaire: { avantage: 'Ton formulaire et tes galeries', pour: 'Pour ton formulaire' },
   galerie: { avantage: 'Ton formulaire et tes galeries', pour: 'Pour ta galerie' },
-  utm: { avantage: 'Redirection et suivi UTM', pour: 'Pour les UTM' },
-  redirection: { avantage: 'Redirection et suivi UTM', pour: 'Pour la redirection' },
+  utm: { avantage: 'Redirection, clics suivis jusqu’à ton site', pour: 'Pour les UTM' },
+  redirection: { avantage: 'Redirection, clics suivis jusqu’à ton site', pour: 'Pour la redirection' },
   fond: { avantage: 'Tes couleurs, ta police, ton fond', pour: 'Pour ton fond' },
   grandePhoto: { avantage: 'Grande photo, liens en grille', pour: 'Pour ta grande photo' },
   grille: { avantage: 'Grande photo, liens en grille', pour: 'Pour la grille' },
   heure: { avantage: 'Ta page selon l’heure et le pays', pour: 'Pour tes créneaux' },
-  drops: { avantage: 'Les drops : un code, des places comptées', pour: 'Pour les drops' },
+  drops: { avantage: 'Des liens à code ou à places comptées', pour: 'Pour les drops' },
   listeEmail: { avantage: 'Ta liste e-mail, vers ta newsletter', pour: 'Pour ta liste e-mail' },
   pays: { avantage: 'Ta page selon l’heure et le pays', pour: 'Pour le pays' },
-  cadeau: { avantage: 'Un cadeau contre l’e-mail, tes articles en RSS', pour: 'Pour ton cadeau' },
-  flux: { avantage: 'Un cadeau contre l’e-mail, tes articles en RSS', pour: 'Pour ton flux RSS' },
+  cadeau: { avantage: 'Un cadeau contre l’e-mail, tes derniers articles', pour: 'Pour ton cadeau' },
+  flux: { avantage: 'Un cadeau contre l’e-mail, tes derniers articles', pour: 'Pour ton flux RSS' },
 };
 
 /**
