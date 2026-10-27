@@ -127,17 +127,17 @@ export const PAGES_FONCTIONS: PageFonction[] = [
   },
   {
     slug: 'drops',
-    nom: 'Tes drops',
+    nom: 'Tes places comptées',
     titre: ['Un lien réservé', 'Des places comptées'],
     chapo: 'Une édition limitée, une avant-première, une liste d’invités : le lien s’ouvre avec un code, pour le nombre de places que tu choisis.',
-    resume: 'Les drops Hopla : un lien de ta page qui s’ouvre avec un code, pour un nombre de places choisi, avec un compteur à jour.',
+    resume: 'Les places comptées de Hopla : un lien de ta page qui s’ouvre avec un code, pour un nombre de places choisi, avec un compteur à jour.',
     offre: 'pro',
     droit: 'drops',
     etapes: [
       { titre: 'Un lien sous cadenas', texte: 'Hugo sort une affiche en édition limitée. Sa page montre le lien, fermé, et les places qui restent.' },
       { titre: 'Le code', texte: 'Ses abonnés l’ont reçu dans sa newsletter. Ils le tapent sur la page.' },
       { titre: 'Débloqué', texte: 'Le lien s’ouvre pour eux, et pour eux seuls.' },
-      { titre: 'Une place de moins', texte: 'Le compteur se met à jour tout seul. À zéro, le drop se ferme.' },
+      { titre: 'Une place de moins', texte: 'Le compteur se met à jour tout seul. À zéro, le lien se ferme.' },
     ],
     points: [
       { titre: 'L’exclusivité, simplement', texte: 'Pas de boutique à part ni de liste à gérer : un code et un nombre de places.' },
