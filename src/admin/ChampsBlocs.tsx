@@ -15,7 +15,7 @@ import { focusAuto } from '../lib/clavier';
 type Maj = (c: Partial<Bloc>) => void;
 type ErreurDe = (champ: string) => string | undefined;
 
-const libelle = 'mb-1.5 block text-[12.5px] font-medium text-white/60 bureau:text-white/75';
+const libelle = 'mb-1.5 block text-[13px] font-semibold text-white';
 const erreurClasse = 'mt-1.5 block text-[13px] font-medium leading-snug text-red-300';
 const lienAjout = '-my-1.5 flex min-h-11 items-center gap-2 self-start text-[13.5px] font-medium text-white/70 transition hover:text-white bureau:min-h-8';
 const petitBouton = 'grid h-9 w-9 place-items-center rounded-lg text-white/55 transition hover:text-white disabled:opacity-30 bureau:h-7 bureau:w-7';

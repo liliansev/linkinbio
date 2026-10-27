@@ -91,7 +91,7 @@ export function Repli({ id, depuis = 'plus', titre, icone, resume, regle = false
     return (
       <button id={`regle-${id}`} type="button" onClick={() => { vibrer(4); pages.ouvrir(id); }}
         className="flex min-h-12 w-full items-center gap-3 px-4 text-left transition hover:bg-white/[0.03] active:bg-white/[0.05]">
-        <span className="shrink-0 text-[14.5px] font-medium text-white">{titre}</span>
+        <span className="shrink-0 text-[14.5px] font-semibold text-white">{titre}</span>
         {etiquette}
         <span className={`min-w-0 flex-1 truncate text-right text-[13.5px] ${regle ? 'font-medium text-bleu' : 'text-white/55'}`}>{resume}</span>
         <Icone nom="ui-chevron" taille={16} className="-rotate-90 shrink-0 text-white/55" />
@@ -129,7 +129,7 @@ export function LigneRepli({ titre, etiquette, resume, regle = false, ouvert, on
   return (
     <button type="button" onClick={() => { vibrer(4); onClick(); }} aria-expanded={ouvert} aria-controls={controle}
       className="group flex min-h-11 w-full items-center gap-2 text-left bureau:min-h-9">
-      <span className={`min-w-0 shrink-0 text-[13.5px] ${sous ? 'text-white/70' : 'text-white'}`}>{titre}</span>
+      <span className={`min-w-0 shrink-0 text-[13.5px] ${sous ? 'text-white/70' : 'font-semibold text-white'}`}>{titre}</span>
       {etiquette}
       <span className={`ml-auto min-w-0 truncate text-right text-[13.5px] ${regle ? 'font-medium text-bleu' : 'text-white/55'}`}>{resume}</span>
       <Icone nom="ui-chevron" taille={14} className={`shrink-0 text-white/55 transition duration-300 group-hover:text-white ${ouvert ? 'rotate-180' : ''}`} />

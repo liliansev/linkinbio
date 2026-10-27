@@ -297,7 +297,7 @@ Les animations de démonstration démarrent avec l’entrée dans le champ de vi
 - **Don't** réintroduire les points retirés de l’ouverture ou la légende séparée retirée sous la galerie.
 - **Don't** transformer les profils générés, adresses d’exemple ou chiffres de démonstration en preuve client.
 - **Don't** remplacer le formulaire d’inscription réel par un formulaire factice pour reproduire le prototype.
-- **Don't** imposer Bricolage au back office ni aux thèmes des pages publiques. Le back office reprend la palette de cette page depuis le 22 octobre 2026 (voir `DESIGN.md`), pas sa typographie.
+- **Don't** imposer Bricolage aux thèmes des pages publiques, ni au texte courant du back office. Le back office reprend la palette de cette page depuis le 22 octobre 2026 et, depuis le 27 octobre 2026 (Lilian : « reprendre la DA de Hopla, un peu punch, pop »), sa grotesque pour deux titres seulement : celui de l'écran au bureau et le nom du bloc ouvert (voir `DESIGN.md`).
 - **Don't** prendre les captures de revue pour une preuve de déploiement ou un instantané permanent des tarifs et droits.
 
 **Limites de l’extraction :** les anciennes teintes et certains effets spécifiques des démonstrations subsistent dans la feuille de base ; la palette du frontmatter décrit les surcharges de cette LP, sans réécrire ces composants ni le système du back office. Les écarts détectés par comparaison avec le système du back office ne constituent pas à eux seuls des défauts de la LP approuvée. Aucune mesure d’accessibilité, de conversion ou de performance n’est déduite de cette extraction.

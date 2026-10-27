@@ -1068,7 +1068,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
   );
   const champTitre = b.type !== 'derniere-video' && b.type !== 'preuve' && (avecVignette ? (
     <div>
-      <label htmlFor="bloc-titre" className="mb-1.5 block text-[12.5px] font-medium text-white/60 bureau:text-white/75">{produit ? 'Nom du produit' : musique ? 'Titre' : 'Texte du bouton'}</label>
+      <label htmlFor="bloc-titre" className="mb-1.5 block text-[13px] font-semibold text-white">{produit ? 'Nom du produit' : musique ? 'Titre' : 'Texte du bouton'}</label>
       {/* Le champ d'abord, la vignette par-dessus : le libellé nomme le champ, pas le bouton de la vignette. Vide, il dit le
           nom que la page montre déjà, celui du site, en attendant sa lecture. */}
       <div className="relative">
@@ -1082,7 +1082,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
       {icones && !produit && (
         <div className="mt-2">
           <div className="mb-1 flex items-center justify-between">
-            <span className="text-[12.5px] font-medium text-white/60 bureau:text-white/75">Icône</span>
+            <span className="text-[13px] font-semibold text-white">Icône</span>
             <button type="button" onClick={() => setIcones(false)} aria-label="Fermer les icônes" className="grid h-8 w-8 place-items-center rounded-lg text-white/55 transition hover:text-white bureau:h-7 bureau:w-7">
               <Icone nom="ui-fermer" taille={15} />
             </button>
@@ -1111,7 +1111,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
   const partenaire = b.partenariat && (
     <>
       <div>
-        <span className="mb-1.5 block text-[12.5px] font-medium text-white/60 bureau:text-white/75">Mention</span>
+        <span className="mb-1.5 block text-[13px] font-semibold text-white">Mention</span>
         <Segments label="Mention du lien partenaire" souple valeur={b.partenariat.mention} options={MENTIONS} onChange={v => maj({ partenariat: { ...b.partenariat!, mention: v } })} />
       </div>
       {droits.vitrine ? (
@@ -1121,7 +1121,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
         </Champ>
       ) : (
         <div>
-          <span className="mb-1.5 flex items-center gap-2 text-[12.5px] font-medium text-white/60 bureau:text-white/75">Code promo <Etiquette fonction="vitrine" /></span>
+          <span className="mb-1.5 flex items-center gap-2 text-[13px] font-semibold text-white">Code promo <Etiquette fonction="vitrine" /></span>
           {/* Un produit non compris dans l'offre dit déjà, plus haut, où voir les offres : un seul chemin par endroit. */}
           <Reserve fonction="vitrine" bouton={!type.fonction} phrase={b.partenariat.code
             ? `Ton code ${b.partenariat.code} n’est pas montré sans Hopla Starter. Il revient dès que tu la prends.`
@@ -1144,7 +1144,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
     </Champ>
   ) : (
     <button type="button" onClick={() => { vibrer(4); setSousTitreDemande(true); }}
-      className="-my-1.5 flex min-h-11 items-center gap-2 self-start text-[13.5px] font-medium text-white/70 transition hover:text-white bureau:min-h-8">
+      className="-my-1.5 flex min-h-11 items-center gap-2 self-start text-[13.5px] font-semibold text-bleu transition hover:text-[var(--adm-bleu-fonce)] bureau:min-h-8">
       <Icone nom="ui-plus" taille={15} className="shrink-0" />Ajouter un sous-titre
     </button>
   ));
@@ -1152,7 +1152,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
   // l'adresse e-mail donnée, et ne part jamais avec la page. Il sert rarement : il attend derrière une ligne, comme le sous-titre.
   const champCadeau = b.type === 'inscription' && (b.cadeau || cadeauDemande ? (
     <div className="flex flex-col gap-3">
-      <span className="-mb-1.5 flex items-center gap-2 text-[12.5px] font-medium text-white/60 bureau:text-white/75">Le cadeau {!droits.cadeau && <Etiquette fonction="cadeau" />}</span>
+      <span className="-mb-1.5 flex items-center gap-2 text-[13px] font-semibold text-white">Le cadeau {!droits.cadeau && <Etiquette fonction="cadeau" />}</span>
       {!droits.cadeau && <Reserve fonction="cadeau" phrase="Sans Hopla Pro, ce cadeau n’est pas proposé sur ta page. Il revient dès que tu la prends." />}
       <div className={bureau ? 'adm-paire' : 'flex flex-col gap-3'}>
         <Champ label="Son nom">
@@ -1167,13 +1167,13 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
     </div>
   ) : (
     <button type="button" onClick={() => { vibrer(4); if (!droits.cadeau && voir) { voir('cadeau'); return; } setCadeauDemande(true); }} aria-haspopup={droits.cadeau ? undefined : 'dialog'}
-      className="-my-1.5 flex min-h-11 items-center gap-2 self-start text-[13.5px] font-medium text-white/70 transition hover:text-white bureau:min-h-8">
+      className="-my-1.5 flex min-h-11 items-center gap-2 self-start text-[13.5px] font-semibold text-bleu transition hover:text-[var(--adm-bleu-fonce)] bureau:min-h-8">
       <Icone nom="ui-plus" taille={15} className="shrink-0" />Offrir un cadeau contre l’e-mail{!droits.cadeau && <Etiquette fonction="cadeau" />}
     </button>
   ));
   const champMontants = b.type === 'soutien' && avecMontants(adresseValide) && (
     <div>
-      <span className="mb-1.5 block text-[12.5px] font-medium text-white/60 bureau:text-white/75">Montants proposés, en euros</span>
+      <span className="mb-1.5 block text-[13px] font-semibold text-white">Montants proposés, en euros</span>
       <div className="bureau:max-w-[360px]"><ChampMontants montants={b.montants} onChange={m => maj({ montants: m })} /></div>
     </div>
   );
@@ -1219,7 +1219,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
       {/* Une collection : les liens qui suivent ce titre, jusqu'au suivant, en liste ou en tuiles (Starter). */}
       {b.type === 'titre' && (
         <div>
-          <span className="mb-1.5 flex items-center gap-2 text-[12.5px] font-medium text-white/60 bureau:text-white/75">Les liens dessous {!droits.grille && <Etiquette fonction="grille" />}</span>
+          <span className="mb-1.5 flex items-center gap-2 text-[13px] font-semibold text-white">Les liens dessous {!droits.grille && <Etiquette fonction="grille" />}</span>
           <Segments label="Les liens sous ce titre" valeur={b.disposition ?? 'liste'} options={DISPOSITIONS_NOMMEES}
             onChange={v => { if (v === 'grille' && !droits.grille && voir) return voir('grille'); maj({ disposition: v }); }} />
         </div>
@@ -1256,7 +1256,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
         {/* Les gestes courants après le texte, comme au téléphone : la visibilité, une ligne qui dit ce qui est réglé et se
             déplie en place (le bloc sur la page ou non, selon la date, l'heure, le réseau), puis « Mis en avant » et, juste
             sous lui, ce qu'il ouvre. Allumé à l'instant, l'apparence arrive dépliée. */}
-        <div className="flex flex-col">
+        <div className="adm-reglages-groupe">
           <Repli key={erreurDe('dates') ? 'visibilite-erreur' : `visibilite-${b.id}`} titre="Visibilité" resume={dejaVisible} regle={dejaVisible !== 'Visible'}
             ouvert={!!erreurDe('dates') || regleAOuvrir === 'moment'} montrer={regleAOuvrir === 'moment'}>{visibilite}</Repli>
           {vedette(true)}
@@ -1326,7 +1326,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
   const ligneRegle = (id: PageRegle, valeur: string, regle: boolean) => (
     <button id={`regle-${id}`} type="button" onClick={() => { vibrer(4); allerA(id); }}
       className="flex min-h-12 w-full items-center gap-3 px-4 text-left transition hover:bg-white/[0.03] active:bg-white/[0.05]">
-      <span className="shrink-0 text-[14.5px] font-medium text-white">{NOMS_PAGES[id]}</span>
+      <span className="shrink-0 text-[14.5px] font-semibold text-white">{NOMS_PAGES[id]}</span>
       <span className={`min-w-0 flex-1 truncate text-right text-[13.5px] ${regle ? 'font-medium text-bleu' : 'text-white/55'}`}>{valeur}</span>
       <Icone nom="ui-chevron" taille={16} className="-rotate-90 shrink-0 text-white/55" />
     </button>
@@ -1372,7 +1372,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
           <div className={groupe}>
             <button id={`${idPlus}-ligne`} type="button" onClick={() => { vibrer(4); allerA('plus'); }}
               className="flex min-h-12 w-full items-center gap-3 px-4 text-left transition hover:bg-white/[0.03] active:bg-white/[0.05]">
-              <span className="shrink-0 whitespace-nowrap text-[14.5px] font-medium text-white">Plus de réglages</span>
+              <span className="shrink-0 whitespace-nowrap text-[14.5px] font-semibold text-white">Plus de réglages</span>
               <span className="min-w-0 flex-1 truncate text-right text-[13.5px] font-medium text-bleu">{reglees}</span>
               <Icone nom="ui-chevron" taille={16} className="-rotate-90 shrink-0 text-white/55" />
             </button>
