@@ -61,6 +61,34 @@ export function Barre({ ailleurs = false }: { ailleurs?: boolean }) {
     addEventListener('scroll', f, { passive: true });
     return () => removeEventListener('scroll', f);
   }, []);
+  // La barre prend la couleur qui tranche sur le fond qu'elle survole (27 octobre 2026, demandé par Lilian) : citron sur le bleu
+  // ou la nuit, bleu sur le blanc et les papiers clairs. Le fond se lit sur la première bande large sous la capsule (les cartes
+  // et les téléphones posés dans une section ne comptent pas), puis sa luminance décide.
+  const [fond, setFond] = useState<'sombre' | 'clair'>('sombre');
+  useEffect(() => {
+    let image = 0;
+    const lire = () => {
+      cancelAnimationFrame(image);
+      image = requestAnimationFrame(() => {
+        const capsule = document.querySelector('.hl-barre-capsule')?.getBoundingClientRect();
+        if (!capsule) return;
+        const sous = document.elementsFromPoint(innerWidth / 2, capsule.top + capsule.height / 2).find(el => !el.closest('.hl-barre'));
+        for (let el: Element | null = sous ?? null; el; el = el.parentElement) {
+          if (el.getBoundingClientRect().width < innerWidth * 0.6) continue;
+          const [r, g, b, a = 1] = (getComputedStyle(el).backgroundColor.match(/[\d.]+/g) ?? []).map(Number);
+          if (!a) continue;
+          const lin = (c: number) => { c /= 255; return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; };
+          setFond(0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b) < 0.4 ? 'sombre' : 'clair');
+          return;
+        }
+        setFond('clair');
+      });
+    };
+    lire();
+    addEventListener('scroll', lire, { passive: true });
+    addEventListener('resize', lire);
+    return () => { cancelAnimationFrame(image); removeEventListener('scroll', lire); removeEventListener('resize', lire); };
+  }, []);
   // La section où l'on est : la dernière dont le haut a passé les deux cinquièmes de l'écran. La barre la dit (`aria-current`) ;
   // Prise et le dernier appel, qui n'ont pas de lien, n'en marquent aucun.
   const [ici, setIci] = useState('');
@@ -116,7 +144,7 @@ export function Barre({ ailleurs = false }: { ailleurs?: boolean }) {
     return () => { removeEventListener('keydown', echap); removeEventListener('pointerdown', ailleurs); };
   }, [menu]);
   return (
-    <header className="hl-barre" style={{ '--creer': `${creer}px` } as CSSProperties} data-defile={defile || menu || undefined} data-menu={menu || undefined} data-champ={(champ && !menu) || undefined} data-envoye={envoye || undefined}>
+    <header className="hl-barre" style={{ '--creer': `${creer}px` } as CSSProperties} data-fond={fond} data-defile={defile || menu || undefined} data-menu={menu || undefined} data-champ={(champ && !menu) || undefined} data-envoye={envoye || undefined}>
       <div className="hl-barre-capsule">
       <div className="hl-barre-dedans">
         <Marque />
