@@ -33,7 +33,7 @@ const DEMOS: Record<string, string> = {
   'Les avis de tes clients': '/fonctionnalites/avis',
   'Tes stats sur 30 jours': '/fonctionnalites/stats',
   'Ta page selon l’heure et le pays': '/fonctionnalites/page-selon-l-heure',
-  'Les drops : un code, des places comptées': '/fonctionnalites/drops',
+  'Des liens à code ou à places comptées': '/fonctionnalites/drops',
   'Ta liste e-mail, vers ta newsletter': '/fonctionnalites/liste-email',
   'Tes stats sur un an': '/fonctionnalites/stats',
 };
@@ -76,18 +76,18 @@ const TABLEAU: { groupe: string; lignes: LigneTableau[] }[] = [
   { groupe: 'Au bon moment', lignes: [
     { nom: 'Tes liens programmés à l’avance', fonction: 'programmation', page: 'lancement' },
     { nom: 'Ta page selon l’heure et le pays', fonction: 'heure', page: 'page-selon-l-heure' },
-    { nom: 'Les drops : un code, des places comptées', fonction: 'drops', page: 'drops' },
+    { nom: 'Des liens à code ou à places comptées', fonction: 'drops', page: 'drops' },
   ] },
   { groupe: 'Ton audience', lignes: [
     { nom: 'Ta liste e-mail, vers ta newsletter', fonction: 'listeEmail', page: 'liste-email' },
     { nom: 'Un cadeau contre l’e-mail', fonction: 'cadeau' },
-    { nom: 'Tes derniers articles, en RSS', fonction: 'flux' },
+    { nom: 'Tes derniers articles de blog ou de podcast', fonction: 'flux' },
   ] },
   { groupe: 'Tes stats, sans cookie', lignes: [
     { nom: 'Tes vues', valeurs: ['7 jours', '30 jours', 'Un an'], page: 'stats' },
     { nom: 'Clics, réseaux et pays de tes visiteurs', fonction: 'stats', page: 'stats' },
     { nom: 'L’essentiel chaque lundi par e-mail', fonction: 'stats' },
-    { nom: 'Redirection et suivi UTM', fonction: 'utm' },
+    { nom: 'Redirection, clics suivis jusqu’à ton site', fonction: 'utm' },
   ] },
 ];
 const EN_VENTE = PLANS.filter(plan => OFFRES[plan].enVente);
@@ -108,8 +108,9 @@ function Case({ ligne, plan }: { ligne: LigneTableau; plan: Plan }) {
  */
 function TableauOffres({ periode, reserver, action }: { periode: Periode; reserver: (ev: MouseEvent, plan: Plan) => void; action: (plan: Plan) => string | null }) {
   return (
-    <div className="hl-tableau hl-entre">
-      <h3 className="hl-h3 hl-tableau-titre">Tout comparer</h3>
+    // Replié (critique du 27 octobre 2026) : les cartes disent déjà l'essentiel, le détail s'ouvre pour qui compare.
+    <details className="hl-tableau hl-entre">
+      <summary className="hl-tableau-titre"><span className="hl-h3">Tout comparer</span><span className="hl-gris">fonction par fonction</span><Icone nom="ui-plus" taille={20} /></summary>
       {/* Les rôles gardent le tableau lisible au lecteur d'écran quand, au téléphone, ses rangées passent en grille. */}
       <table role="table">
         <caption className="hl-cache">Ce que comprend chaque offre</caption>
@@ -149,7 +150,7 @@ function TableauOffres({ periode, reserver, action }: { periode: Periode; reserv
           </tfoot>
         )}
       </table>
-    </div>
+    </details>
   );
 }
 
@@ -204,7 +205,7 @@ export function Prix() {
               <div className="hp-offre-personne"><Avatar profil={plan === 'gratuit' ? 'camille' : plan === 'starter' ? 'ines' : 'malik'} /><span>{plan === 'gratuit' ? 'Pour partager ce que tu fais' : plan === 'starter' ? 'Pour affirmer ton univers' : 'Pour une page qui travaille avec toi'}</span></div>
               <div className="hl-offre-tete">
                 <h3 className="hl-h3">{o.nom}</h3>
-                {plan === 'pro' && <span className="hl-offre-badge">Le plus complet</span>}
+                {plan === 'pro' && <span className="hl-offre-badge">Conseillé</span>}
                 {!o.enVente && <span className="hl-offre-badge hl-offre-badge-pale">Bientôt</span>}
               </div>
               {plan === 'gratuit' ? (
@@ -230,13 +231,12 @@ export function Prix() {
                   <ul data-ouvert="">{o.avantages.filter(g => !EN_AVANT[plan]?.includes(g)).map(g => <Avantage key={g} g={g} />)}</ul>
                 </details>
               )}
-              {/* On commence toujours par l'essai de Pro : l'offre se prend ensuite depuis les réglages. */}
+              {/* Un seul geste, un seul mot (critique du 27 octobre 2026) : toutes les cartes créent la page, qui commence
+                  par l'essai de Pro ; seule l'offre conseillée a le bouton plein. */}
               {!envoye && o.enVente && (
                 <div className="hp-offre-action">
-                  <a href="#reserver" className={`hl-btn ${plan === 'gratuit' ? '' : 'hl-btn-contour'}`} onClick={ev => reserver(ev, plan)}>
-                    {plan === 'gratuit' || mode !== 'libre' ? libelle : 'Créer mon compte'}
-                  </a>
-                  {plan !== 'gratuit' && mode === 'libre' && <p>{plan === PLAN_ESSAI ? `${ESSAI_JOURS} jours offerts, puis active ${o.nom}${periode === 'an' ? ' à l’année' : ''} dans tes réglages.` : `Puis active ${o.nom}${periode === 'an' ? ' à l’année' : ''} dans tes réglages.`}</p>}
+                  <a href="#reserver" className={`hl-btn ${plan === PLAN_ESSAI ? '' : 'hl-btn-contour'}`} onClick={ev => reserver(ev, plan)}>{libelle}</a>
+                  {plan === PLAN_ESSAI && <p>{ESSAI_JOURS} jours offerts, sans carte bancaire.</p>}
                 </div>
               )}
             </article>
@@ -300,8 +300,9 @@ export function DernierAppel({ api }: { api: ApiAccueil }) {
   const envoye = useEnvoye();
   return (
     <section className="hl-section hl-dernier" data-teinte="klein" aria-labelledby="dernier">
-      <h2 id="dernier" className="hl-h2 hl-h2-grand hl-entre">{envoye ? MOTS[mode].fin : <>Réserve ton nom <br className="hl-br-large" />en premier</>}</h2>
-      <div className="hl-entre" style={{ '--d': '120ms' } as CSSProperties} data-zone-appel=""><Reserver api={api} id="reserver-fin" grand libelleNom={mode === 'libre' ? 'Réserver mon nom' : undefined} note={MOTS[mode].note} /></div>
+      <h2 id="dernier" className="hl-h2 hl-h2-grand hl-entre">{envoye ? MOTS[mode].fin : mode === 'libre' ? <>À toi <br className="hl-br-large" />de partager</> : <>Réserve ton nom <br className="hl-br-large" />en premier</>}</h2>
+      {/* La fin redit la promesse de l'ouverture, avec le même bouton (critique du 27 octobre 2026 : « Réserver mon nom » sonnait liste d'attente). */}
+      <div className="hl-entre" style={{ '--d': '120ms' } as CSSProperties} data-zone-appel=""><Reserver api={api} id="reserver-fin" grand note={MOTS[mode].note} /></div>
       <a href="/lilian" className="hl-lien-gris">Voir une vraie page</a>
     </section>
   );

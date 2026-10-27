@@ -151,9 +151,9 @@ export function Prise() {
   };
 
   return (
-    <section className="hl-section hl-prise-scene" data-teinte="klein" aria-labelledby="prise">
+    <section className="hl-section hl-prise-scene" data-teinte="citron" aria-labelledby="prise">
       <div className="hl-tete-section hl-entre">
-        <h2 id="prise" className="hl-h2">Ta page en deux minutes<br /><span className="hl-cache">. </span>Depuis ton téléphone</h2>
+        <h2 id="prise" className="hl-h2">Ta page en deux minutes<br /><span className="hl-cache">. </span><span>Depuis ton téléphone</span></h2>
         <p className="hl-chapo">Quatre questions pour la créer. Ensuite, tu la modifies en la touchant : pas de formulaire à part.</p>
       </div>
       <div className="hl-prise" {...garde}>

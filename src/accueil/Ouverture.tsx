@@ -217,10 +217,9 @@ export function Ouverture({ api }: { api: ApiAccueil }) {
   return (
     <section className="hl-heros hp-heros" data-teinte="klein" aria-labelledby="titre">
       <div className="hl-heros-texte">
-        <h1 id="titre" className="hl-h1 hl-heros-titre">Un lien qui{' '}<br />te ressemble<span className="hl-cache">. </span><span>Et s’adapte à{' '}<br />chaque visiteur</span></h1>
+        <h1 id="titre" className="hl-h1 hl-heros-titre">Un lien qui{' '}<br />te ressemble<span className="hl-cache">, </span><span>et s’adapte à{' '}<br />chaque visiteur</span></h1>
         <p className="hl-chapo">Tes créations, tes projets, tes coups de cœur. Qu’on arrive d’Instagram, de TikTok ou de LinkedIn, ta page met le bon lien en premier.</p>
         <div data-zone-appel=""><Reserver api={api} id="reserver" grand premier note={MOTS[mode].note} /></div>
-        <a className="hp-decouvrir" href="#inspiration">Trouve l’inspiration <Icone nom="ui-chevron" taille={20} /></a>
       </div>
       <HeroProfils />
       {/* Une ligne qui mène aux tarifs, sans prix : les prix ne se lisent que dans les tarifs (Lilian, 26 octobre 2026). */}
