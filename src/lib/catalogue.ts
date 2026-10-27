@@ -203,3 +203,18 @@ export const DEVENU: Record<TypeAdresse, string> = {
   lien: 'un simple lien', video: 'une vidéo', musique: 'un lecteur', reservation: 'une prise de rendez-vous', soutien: 'un bouton « Me soutenir »', produit: 'un produit',
   'derniere-video': 'ta dernière vidéo YouTube', flux: 'tes derniers articles',
 };
+
+/**
+ * La famille d'un type de bloc, qui donne sa couleur à son picto dans la liste de Ma page (27 octobre 2026, Lilian :
+ * « aider l'utilisateur à trouver l'information plus vite grâce aux couleurs ») : ce qui mène ailleurs, ce qui se
+ * regarde ou s'écoute, ce qui se vend, ce qui fait venir à soi, et le texte, à l'encre.
+ */
+export type FamilleBloc = 'liens' | 'medias' | 'vitrine' | 'contact' | 'preuve' | 'texte';
+const FAMILLE: Partial<Record<TypeBloc, FamilleBloc>> = {
+  lien: 'liens',
+  video: 'medias', musique: 'medias', galerie: 'medias', 'derniere-video': 'medias', flux: 'medias',
+  produit: 'vitrine', reservation: 'vitrine', soutien: 'vitrine',
+  inscription: 'contact', newsletter: 'contact', formulaire: 'contact', coordonnees: 'contact', lieu: 'contact',
+  preuve: 'preuve',
+};
+export const familleBloc = (type: TypeBloc): FamilleBloc => FAMILLE[type] ?? 'texte';

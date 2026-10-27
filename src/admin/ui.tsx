@@ -161,7 +161,7 @@ export function Interrupteur({ actif, onChange, label, aide, disabled, compact =
   return (
     <div className={`flex items-center justify-between gap-4 ${compact ? 'min-h-11 bureau:min-h-9' : 'py-2.5'}`}>
       <label htmlFor={id} className="min-w-0 flex-1 cursor-pointer" title={compact && typeof aide === 'string' ? aide : undefined}>
-        <span className={`block text-white ${compact ? 'text-[13.5px]' : 'text-[14.5px] font-medium'}`}>{label}</span>
+        <span className={`block font-semibold text-white ${compact ? 'text-[13.5px]' : 'text-[14.5px]'}`}>{label}</span>
         {aide && !compact && <span className="mt-0.5 block text-[12.5px] leading-snug text-white/50">{aide}</span>}
       </label>
       <Bascule id={id} actif={actif} disabled={disabled} onClick={() => { vibrer(); onChange(!actif); }} />
@@ -183,6 +183,12 @@ export function Bascule({ actif, onClick, id, disabled, label, decrit }: { actif
   );
 }
 
+/** « Sous-titre (facultatif) » : le nom en gras, « (facultatif) » au poids du texte, en gris. */
+export const nomChamp = (label: string): ReactNode => {
+  const m = /^(.*?)\s*(\(facultatif\))$/.exec(label);
+  return m ? <>{m[1]} <span className="font-normal text-white/60">{m[2]}</span></> : label;
+};
+
 /** Un champ et son nom ; `erreur` s'affiche dessous, rattachée au champ (aria-invalid, aria-describedby). */
 export function Champ({ label, aide, erreur, children }: { label: string; aide?: ReactNode; erreur?: string; children: ReactNode }) {
   const id = useId();
@@ -191,7 +197,7 @@ export function Champ({ label, aide, erreur, children }: { label: string; aide?:
     : children;
   return (
     <label className="block">
-      <span className="mb-1.5 block text-[12.5px] font-medium text-white/60 bureau:text-white/75">{label}</span>
+      <span className="adm-champ-nom mb-1.5 block text-[13px] font-semibold text-white">{nomChamp(label)}</span>
       {champ}
       {erreur && <span id={id} role="alert" className="mt-1.5 block text-[13px] font-medium leading-snug text-red-300">{erreur}</span>}
       {aide && !erreur && <span className="mt-1.5 block text-[12.5px] leading-snug text-white/55">{aide}</span>}
@@ -420,7 +426,7 @@ export function Feuille({ ouverte, onFermer, retenir, titre, children, pied, cot
                       <Icone nom="ui-chevron" taille={18} className="rotate-90" />
                     </button>
                   )}
-                  <h2 className={`min-w-0 truncate text-[18px] font-semibold tracking-[-0.025em] text-white ${petite ? 'bureau:text-[15px] bureau:tracking-[-0.015em]' : ''}`}>{fil?.titre ?? titre}</h2>
+                  <h2 className={`adm-feuille-titre min-w-0 truncate text-[18px] font-semibold tracking-[-0.025em] text-white ${petite ? 'bureau:text-[15px] bureau:tracking-[-0.015em]' : ''}`}>{fil?.titre ?? titre}</h2>
                 </div>
               );
             })()}

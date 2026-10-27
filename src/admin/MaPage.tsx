@@ -24,7 +24,7 @@ import { themeDe, variablesTheme } from '../lib/themes.ts';
 import { HautLiens } from './BienDemarrer.tsx';
 import type { Demarrage } from './BienDemarrer.tsx';
 import { ChampAjout, FeuilleAjout } from './OngletLiens.tsx';
-import { typeDe } from '../lib/catalogue.ts';
+import { familleBloc, typeDe } from '../lib/catalogue.ts';
 import { DesignTiroirs, OngletApparence } from './OngletApparence.tsx';
 import type { Tiroir } from './OngletApparence.tsx';
 import { ActionEntete, BoutonPrincipal, BoutonSecondaire, Feuille, Interrupteur, Menu, choisirFichier, classeBouton, couleurReseau, flechesRadio, preparerImage, vibrer } from './ui.tsx';
@@ -738,8 +738,16 @@ function Rangee({ bloc, droits, clics, neuf, ouvert, editeur, ouvrir, fermer, ge
     addEventListener('resize', voir);
     return () => { removeEventListener('scroll', voir, { capture: true }); removeEventListener('resize', voir); t.removeAttribute('data-colle'); };
   }, [ouvert]);
-  // Le picto du bloc s'il en a un (un réseau, un picto choisi), sinon celui de son genre.
+  // Le picto du bloc s'il en a un (un réseau, un picto choisi), sinon celui de son genre. Un lien ou un produit qui a son
+  // image (le favicon de son site, la photo du produit) la montre à la place : on reconnaît le site avant de lire son nom
+  // (27 octobre 2026). Le picto prend la couleur de sa famille, un réseau la sienne.
   const picto = bloc.icone && ICONES[bloc.icone] ? bloc.icone : type?.picto ?? 'bloc-lien';
+  const vignette = (bloc.type === 'lien' || bloc.type === 'produit') && /^\/media\/|^https:\/\//.test(bloc.image) ? bloc.image : '';
+  const signe = vignette
+    ? <img src={vignette} alt="" className="adm-rangee-vignette" draggable={false} />
+    : <span className="adm-rangee-picto" data-famille={familleBloc(bloc.type)} style={NOMS_RESEAUX[picto] && !etat.prive && !etat.programme ? { color: couleurReseau(picto) } : undefined}>
+        <Icone nom={picto} taille={18} />
+      </span>;
   return (
     <li ref={setNodeRef} className="adm-rangee" data-id={bloc.id} data-nom={nom} data-ouvert={ouvert || undefined} data-glisse={isDragging || undefined}
       data-prive={(!neuf && (etat.prive || etat.programme)) || undefined} style={{ transform: CssDnd.Translate.toString(transform), transition }}>
@@ -751,11 +759,11 @@ function Rangee({ bloc, droits, clics, neuf, ouvert, editeur, ouvrir, fermer, ge
         )}
         {/* Le nom est le bouton : il déplie la rangée, ou la replie. Un bloc neuf ne se replie pas : il s'ajoute ou s'oublie, en bas. */}
         {neuf ? (
-          <span className="adm-rangee-bouton"><Icone nom={picto} taille={15} className="adm-rangee-picto" /><span className="adm-rangee-nom">{nom}</span></span>
+          <span className="adm-rangee-bouton">{signe}<span className="adm-rangee-nom">{nom}</span></span>
         ) : (
           <button type="button" className="adm-rangee-bouton" aria-expanded={ouvert} aria-controls={ouvert ? idReglages : undefined}
             onClick={() => { vibrer(4); if (ouvert) fermer(); else ouvrir(bloc); }}>
-            <Icone nom={picto} taille={15} className="adm-rangee-picto" />
+            {signe}
             <span className="adm-rangee-nom">{nom}</span>
             {sous && <span className="adm-rangee-sous">{sous}</span>}
             {bloc.vedette && (

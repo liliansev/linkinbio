@@ -574,7 +574,7 @@ export function DestinationListe() {
   if (!c || c.integration === undefined) return null;
   const i = c.integration;
   return (
-    <div className={`flex items-center gap-3 rounded-xl border px-3.5 py-2.5 ${i ? 'border-white/12' : 'border-amber-400/40 bg-amber-400/[0.08]'}`}>
+    <div className={`flex items-center gap-3 rounded-xl border-[1.5px] px-3.5 py-2.5 ${i ? 'adm-encart-citron' : 'border-amber-400/40 bg-amber-400/[0.08]'}`}>
       {i && <Logo nom={LOGOS_OUTILS[i.fournisseur]} className="w-5" />}
       <span className="min-w-0 flex-1 text-[13.5px] leading-snug">{i ? <>Tes inscrits partent {destination(i)}.</> : <>Aucune newsletter branchée : tes inscrits restent chez Hopla.</>}</span>
       <LienGeste onClick={c.brancher} aria-haspopup="dialog">{i ? 'Changer' : 'Brancher'}</LienGeste>

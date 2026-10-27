@@ -578,7 +578,7 @@ function FormInviter({ inviter, fini }: { inviter: (email: string, pseudo: strin
         <input type="email" required autoFocus={focusAuto()} className={classeSaisie} value={email} onChange={e => setEmail(e.target.value)} placeholder="prenom@exemple.fr" autoComplete="off" />
       </Champ>
       <div>
-        <label htmlFor={idPseudo} className="mb-1.5 block text-[12.5px] font-medium text-white/60 bureau:text-white/75">Son pseudo</label>
+        <label htmlFor={idPseudo} className="mb-1.5 block text-[13px] font-semibold text-white">Son pseudo</label>
         <div className="adm-champ-prefixe">
           <span aria-hidden="true">hopla.page/</span>
           <input id={idPseudo} required value={pseudo} maxLength={30} placeholder="prenom-nom" autoComplete="off" autoCapitalize="none" spellCheck={false}
@@ -646,7 +646,7 @@ function FormOffrir({ compte: c, offrir, annuler, fini }: { compte: CompteResume
       a.offerte ? `Cette offre remplace ${OFFRES[a.offerte.plan].nom} offert${a.offerte.jusqu ? ` jusqu’au ${dateLongue(a.offerte.jusqu)}` : ''}.` : '',
       a.payee !== 'gratuit' && !estResilie(a.statut) ? `Son abonnement ${paye} continue d’être prélevé : le résilier est un autre geste.` : '',
     ].filter(Boolean).join(' ');
-  const titre = 'mb-1.5 block text-[12.5px] font-medium text-white/60 bureau:text-white/75';
+  const titre = 'mb-1.5 block text-[13px] font-semibold text-white';
   async function valider(e: FormEvent) {
     e.preventDefault();
     if (!effet) return;

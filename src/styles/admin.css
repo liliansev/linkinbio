@@ -508,7 +508,6 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
   .adm-rangee:not([data-ouvert]):hover { background: #fafaf9; }
   /* La rangée ouverte passe sur un voile bleu, son picto en bleu : c'est la sélection. */
   .adm-rangee[data-ouvert] { background: var(--adm-bleu-voile); }
-  .adm-rangee[data-ouvert] .adm-rangee-picto { color: var(--adm-bleu); }
   .adm-rangee[data-glisse] { z-index: 3; border-radius: 9px; background: #fff; box-shadow: 0 0 0 1.5px var(--adm-bleu), 0 14px 30px -14px rgb(10 10 10 / 0.35); }
   /* Un bloc qui vient d'arriver s'éclaire un instant, comme sur la page. */
   .adm-rangee[data-neuf] { animation: adm-rangee-neuf 1.8s ease-out; }
@@ -1217,3 +1216,83 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
 .adm-famille-ajout-liste { font-size: clamp(13.5px, 3.6vw, 15px); }
 .adm-ligne-ajout { min-height: clamp(52px, 14vw, 58px); }
 .adm-ligne-ajout-nom { font-size: clamp(15px, 4.1vw, 16.5px); }
+
+/*
+ * Le punch (27 octobre 2026, Lilian : « c'est très fade, ça donne pas envie de remplir […] reprendre la DA de Hopla,
+ * un peu punch, pop, mettre des bordures, aider l'utilisateur à trouver l'information plus vite grâce aux couleurs,
+ * gras »). La liste et l'édition des blocs prennent les traits de l'accueil : des bords qui se voient, les noms en gras,
+ * une couleur par famille de blocs, le favicon d'un site à la place du picto, et le bloc ouvert qui sort de la liste
+ * comme une carte cernée de bleu, sa tête sur le bleu pâle, ses réglages sur le blanc.
+ */
+.adm {
+  /* Le bord des champs et des groupes : visible sur le blanc comme sur le papier, plus foncé au survol. */
+  --adm-trait-champ: #8f8e85;
+  --adm-trait-fort: #5f5e57;
+  /* Le bord d'une liste ou d'un groupe, qui range sans se lire comme un champ. */
+  --adm-trait-groupe: #d4d3c9;
+  --adm-filet: #ecebe4;
+}
+/* Les champs : un bord d'un pixel et demi, le bleu et son halo quand on y écrit. */
+.adm .adm-field, .adm .adm-champ-prefixe { border-width: 1.5px; border-color: var(--adm-trait-champ); background: #fff; }
+.adm .adm-field:hover, .adm .adm-champ-prefixe:hover { border-color: var(--adm-trait-fort); }
+.adm .adm-field:focus-visible, .adm .adm-field:focus { border-color: var(--adm-bleu); outline: none; box-shadow: 0 0 0 3px rgb(41 43 255 / 0.3); }
+.adm .adm-champ-prefixe:focus-within { border-color: var(--adm-bleu); outline: none; box-shadow: 0 0 0 3px rgb(41 43 255 / 0.3); }
+.adm .adm-field[aria-invalid='true'] { border-color: #d92d20; }
+
+/* Où partent les inscrits, branché : le citron de ce qui marche, son encre vert foncé. */
+.adm-encart-citron { border-color: var(--adm-citron-fonce); background: #f6fdde; color: var(--adm-citron-encre); }
+.adm-encart-citron button { color: var(--adm-citron-encre); font-weight: 650; }
+
+/* La liste : un bord franc, un filet entre les rangées, les noms en gras. */
+.adm .adm-liste-blocs { border: 1.5px solid var(--adm-trait-groupe); border-radius: 14px; }
+.adm .adm-rangee + .adm-rangee { border-top-color: var(--adm-filet); }
+.adm .adm-rangee-nom { font-weight: 600; }
+.adm-rangee-picto { display: grid; width: 22px; height: 22px; flex: none; place-items: center; color: var(--adm-encre); }
+/* Une couleur par famille, chacune à 3:1 au moins sur le blanc ; un réseau garde la sienne (posée sur l'élément). */
+.adm-rangee-picto[data-famille='liens'] { color: var(--adm-bleu); }
+.adm-rangee-picto[data-famille='medias'] { color: #c2185b; }
+.adm-rangee-picto[data-famille='vitrine'] { color: #12864a; }
+.adm-rangee-picto[data-famille='contact'] { color: #8a3ffc; }
+.adm-rangee-picto[data-famille='preuve'] { color: #c76a00; }
+/* Le favicon du site, ou la photo du produit, à la place du picto : du contenu, posé tel quel. */
+.adm-rangee-vignette { width: 22px; height: 22px; flex: none; border-radius: 6px; object-fit: cover; }
+.adm-rangee-vignette[src$='.png'] { object-fit: contain; background: #fff; }
+.adm .adm-rangee[data-prive] .adm-rangee-vignette { opacity: 0.5; filter: grayscale(1); }
+
+/* Le bloc ouvert : une carte cernée de bleu, détachée de la liste, sa tête en aplat bleu (comme l'offre Pro de l'accueil),
+   son nom en blanc dans la grotesque de l'accueil, « Mis en avant » en citron dessus. */
+@media (min-width: 1024px) {
+  .adm .adm-rangee[data-ouvert] { z-index: 2; margin: 8px 6px; border-radius: 12px; background: #fff; box-shadow: 0 0 0 2px var(--adm-bleu); }
+  .adm .adm-rangee[data-ouvert] + .adm-rangee { border-top-color: transparent; }
+  .adm .adm-rangee[data-ouvert]:first-child { margin-top: 6px; }
+  .adm .adm-rangee[data-ouvert]:last-child { margin-bottom: 6px; }
+  .adm .adm-rangee[data-ouvert] > .adm-rangee-tete { min-height: 50px; background: var(--adm-bleu); }
+  .adm .adm-rangee[data-ouvert] > .adm-rangee-tete :is(.adm-rangee-nom, .adm-rangee-picto, .adm-rangee-poignee, .adm-rangee-geste, .adm-rangee-etats) { color: #fff; }
+  .adm .adm-rangee[data-ouvert] > .adm-rangee-tete .adm-rangee-marque-picto { color: var(--adm-citron); }
+  .adm .adm-rangee[data-ouvert] > .adm-rangee-tete .adm-rangee-sous { color: rgb(255 255 255 / 0.82); }
+  .adm .adm-rangee[data-ouvert] > .adm-rangee-tete :focus-visible { outline-color: var(--adm-citron); }
+  .adm .adm-rangee[data-ouvert] > .adm-rangee-tete .adm-rangee-vignette { box-shadow: 0 0 0 1.5px #fff; }
+  .adm .adm-rangee[data-ouvert] .adm-rangee-nom { font-family: 'Bricolage Grotesque Variable', 'Geist Variable', sans-serif; font-size: calc(15.5 * var(--adm-k)); font-weight: 650; letter-spacing: -0.015em; }
+  .adm .adm-rangee-reglages { padding-top: 16px; }
+}
+
+/* Les réglages courants d'un bloc au bureau (Visibilité, Mis en avant, Apparence, Plus de réglages) : un groupe bordé, une ligne chacun. */
+.adm-reglages-groupe { display: flex; flex-direction: column; border: 1.5px solid var(--adm-trait-groupe); border-radius: 12px; background: #fff; }
+.adm-reglages-groupe > * { padding-inline: 14px; }
+.adm-reglages-groupe > * + * { border-top: 1px solid var(--adm-filet); }
+.adm-reglages-groupe > .adm-plus-contenu { border-top: 0; padding-bottom: 8px; }
+@media (min-width: 1024px) and (pointer: fine) {
+  .adm-reglages-groupe > * > button.group, .adm-reglages-groupe > button.group, .adm-reglages-groupe > div > .min-h-11 { min-height: 42px; }
+}
+
+/* Au téléphone, les groupes de la feuille d'un bloc prennent le même bord. */
+.adm .adm-groupe { border: 1.5px solid var(--adm-trait-groupe); }
+/* Le titre de l'écran, au bureau : la grotesque de l'accueil. */
+.adm .adm-entete-bureau h1 { font-family: 'Bricolage Grotesque Variable', 'Geist Variable', sans-serif; font-size: 20px; font-weight: 650; letter-spacing: -0.02em; }
+/* « Colle une adresse ou cherche un bloc » : le même bord que les champs, plus haut, son « + » en bleu. */
+@media (min-width: 1024px) {
+  .adm .adm-coller-champ > input { height: 44px; border: 1.5px solid var(--adm-trait-champ); border-radius: 12px; }
+  .adm .adm-coller-champ > input:hover { border-color: var(--adm-trait-fort); }
+}
+/* Le nom du bloc en tête de sa feuille, au téléphone : la grotesque de l'accueil, comme la tête d'un bloc ouvert au bureau. */
+.adm-feuille-bloc .adm-feuille-titre { font-family: 'Bricolage Grotesque Variable', 'Geist Variable', sans-serif; font-weight: 650; }
