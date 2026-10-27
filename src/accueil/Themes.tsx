@@ -9,7 +9,7 @@ import { de, pageExemple, IDS_PROFILS, PROFILS } from './exemples.ts';
 import { mouvementReduit, useVisible } from './mouvement.ts';
 
 /*
- * 06 · Vingt thèmes sur un rail, puis les couleurs qu'on change soi-même, sur
+ * 06 · Vingt-quatre thèmes sur un rail, puis les couleurs qu'on change soi-même, sur
  * le crème (26 octobre 2026 : la scène ne prend plus la teinte du thème
  * regardé, l'accueil tient en trois fonds). Le rail paraît en fondu un peu
  * avant d'arriver à l'écran, puis défile seul, en boucle (26 octobre 2026,
@@ -17,6 +17,12 @@ import { mouvementReduit, useVisible } from './mouvement.ts';
  * Il s'arrête hors de l'écran, sous la souris, au focus et le temps qu'on le
  * fasse glisser soi-même.
  */
+
+/** L'ordre du rail (27 octobre 2026, demandé par Lilian : « les plus beaux en premier ») : les thèmes francs et colorés
+ *  ouvrent, les sobres ferment. Un thème ajouté sans place ici vient à la fin. */
+const ORDRE = ['coucher', 'klein', 'mangue', 'aurore', 'lampe', 'brutal', 'lagon', 'riso', 'cerise', 'galaxie', 'memphis', 'arcade',
+  'skate', 'bauhaus', 'champagne', 'argile', 'lilas', 'sauge', 'lin', 'neige', 'foret', 'onyx', 'marine', 'nuit-peche'];
+const RAIL = [...THEMES].sort((a, b) => (ORDRE.indexOf(a.id) + 1 || 99) - (ORDRE.indexOf(b.id) + 1 || 99));
 
 /** Pixels par seconde (90 depuis le 26 octobre 2026, Lilian : « pas assez vite ») : le rail vit, un nom se lit encore au passage. */
 const VITESSE = 90;
@@ -50,7 +56,7 @@ function useDefilement(rail: RefObject<HTMLUListElement | null>, actif: boolean)
       if (!survol && !el.contains(document.activeElement) && t >= repos) {
         // Le visiteur a pu faire glisser le rail : on repart d'où il l'a laissé.
         if (Math.abs(el.scrollLeft - pos) > 2) pos = el.scrollLeft;
-        const copie = el.children[THEMES.length] as HTMLElement | undefined;
+        const copie = el.children[RAIL.length] as HTMLElement | undefined;
         const moitie = copie ? copie.offsetLeft - (el.children[0] as HTMLElement).offsetLeft : 0;
         pos += (VITESSE * dt) / 1000;
         if (moitie && pos >= moitie) pos -= moitie;
@@ -127,9 +133,9 @@ export function Themes() {
         </div>
       </div>
       <div ref={refVu}>
-      <ul ref={rail} className="hl-rail" tabIndex={0} data-vu={vu || undefined} data-boucle={boucle || undefined} aria-label={`${THEMES.length} thèmes`}>
-        {(boucle ? [...THEMES, ...THEMES] : THEMES).map((t, k) => {
-          const i = k % THEMES.length, copie = k >= THEMES.length;
+      <ul ref={rail} className="hl-rail" tabIndex={0} data-vu={vu || undefined} data-boucle={boucle || undefined} aria-label={`${RAIL.length} thèmes`}>
+        {(boucle ? [...RAIL, ...RAIL] : RAIL).map((t, k) => {
+          const i = k % RAIL.length, copie = k >= RAIL.length;
           return (
             <li key={`${t.id}${copie ? '-copie' : ''}`} className="hl-rail-item" data-i={i} aria-hidden={copie || undefined} inert={copie || undefined}
               style={k < 6 ? { '--d': `${k * 90}ms` } as CSSProperties : undefined}>

@@ -245,10 +245,10 @@ export const PAGES_FONCTIONS: PageFonction[] = [
   },
   {
     slug: 'themes',
-    nom: 'Vingt thèmes',
+    nom: 'Vingt-quatre thèmes',
     titre: ['Une page à toi', 'Ça se voit'],
-    chapo: 'Vingt thèmes, des plus sobres aux plus audacieux, chacun avec sa typographie réglée à la main. Change d’ambiance en un geste.',
-    resume: 'Vingt thèmes pour ta page de liens, chacun avec sa typographie réglée à la main, tous gratuits. Et tes couleurs, ta police et ton fond.',
+    chapo: 'Vingt-quatre thèmes, des plus sobres aux plus audacieux, chacun avec sa typographie réglée à la main. Change d’ambiance en un geste.',
+    resume: 'Vingt-quatre thèmes pour ta page de liens, chacun avec sa typographie réglée à la main, tous gratuits. Et tes couleurs, ta police et ton fond.',
     offre: 'gratuit',
     etapes: [
       { titre: 'Sobres', texte: 'Pour que tes photos parlent.' },
@@ -257,7 +257,7 @@ export const PAGES_FONCTIONS: PageFonction[] = [
       { titre: 'À toi', texte: 'Tes couleurs, ta police et ton fond, sur la typographie du thème.' },
     ],
     points: [
-      { titre: 'Pour toutes les pages', texte: 'Les vingt thèmes sont là dès ta première page.' },
+      { titre: 'Pour toutes les pages', texte: 'Les vingt-quatre thèmes sont là dès ta première page.' },
       { titre: 'Lisibles partout', texte: 'Chaque thème est vérifié pour ses contrastes, ses tailles et sa lecture sur un petit écran.' },
       { titre: 'Un geste pour changer', texte: 'Ton contenu ne bouge pas : seule l’ambiance change.' },
     ],

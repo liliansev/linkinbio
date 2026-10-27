@@ -26,7 +26,7 @@ const insecables = (g: string) => g.replace(/« /g, '«\u00a0').replace(/ »/g, 
 /** Ce que la page a déjà montré : l'avantage ramène à sa démonstration (un chapitre de la page vivante s'ouvre en arrivant). */
 const DEMOS: Record<string, string> = {
   'Ta page selon le réseau du visiteur': '/fonctionnalites/selon-le-reseau',
-  'Les vingt thèmes': '/fonctionnalites/themes',
+  'Les vingt-quatre thèmes': '/fonctionnalites/themes',
   'Tes couleurs, ta police, ton fond': '/fonctionnalites/themes',
   'Ta vitrine : produits, rendez-vous, dons': '/fonctionnalites/vitrine',
   'Tes liens programmés à l’avance': '/fonctionnalites/lancement',
@@ -58,7 +58,7 @@ const TABLEAU: { groupe: string; lignes: LigneTableau[] }[] = [
   { groupe: 'Ta page', lignes: [
     { nom: 'Ta page selon le réseau du visiteur', page: 'selon-le-reseau' },
     { nom: 'Tes liens ouverts dans leur app', page: 'ouvrir-dans-l-app' },
-    { nom: 'Les vingt thèmes', page: 'themes' },
+    { nom: 'Les vingt-quatre thèmes', page: 'themes' },
     { nom: 'Blocs sur ta page', valeurs: ['5', 'Sans limite', 'Sans limite'] },
     { nom: 'Ta page sans la mention Hopla', fonction: 'sansMention' },
   ] },

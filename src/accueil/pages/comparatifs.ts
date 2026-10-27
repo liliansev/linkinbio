@@ -45,7 +45,7 @@ export const COMPARATIFS: Comparatif[] = [
     resume: 'Hopla vs Linktree, le comparatif : prix, commissions, stats, et ce que Hopla fait de plus, une page qui s’adapte au réseau de chaque visiteur.',
     lignes: [
       ['Prix', HOPLA_PRIX, 'Gratuit, puis 8 $, 15 $ ou 35 $ par mois'],
-      ['Offre gratuite', 'Oui, cinq blocs, les vingt thèmes', 'Oui, liens sans limite'],
+      ['Offre gratuite', 'Oui, cinq blocs, les vingt-quatre thèmes', 'Oui, liens sans limite'],
       ['Commission sur tes ventes', HOPLA_COMMISSION, '12 % en gratuit, 9 % en Starter et Pro, 0 % en Premium'],
       ['Retirer la marque', 'Oui', 'Avec Pro, 15 $ par mois'],
       ['Programmer un lien', 'Oui', 'Avec Starter'],
@@ -68,7 +68,7 @@ export const COMPARATIFS: Comparatif[] = [
     pourEux: 'Si tu vends des produits numériques directement depuis ta page, sans boutique à toi, Linktree le fait et Hopla non : Hopla mène à ta boutique, il ne la remplace pas.',
     questions: [
       ['Comment passer de Linktree à Hopla ?', 'Colle ton adresse Linktree dans le champ de l’accueil : Hopla en garde le nom, s’il est libre. Ensuite, colle les adresses de tes liens, Hopla retrouve leurs titres tout seul. Il ne reste qu’à changer le lien de tes bios.'],
-      ['Hopla est-il gratuit comme Linktree ?', 'Oui. L’offre gratuite garde la page selon le réseau, les liens ouverts dans leur app et les vingt thèmes, avec cinq blocs. Chaque compte commence par 14 jours avec toutes les fonctions, sans carte.'],
+      ['Hopla est-il gratuit comme Linktree ?', 'Oui. L’offre gratuite garde la page selon le réseau, les liens ouverts dans leur app et les vingt-quatre thèmes, avec cinq blocs. Chaque compte commence par 14 jours avec toutes les fonctions, sans carte.'],
       ['Puis-je garder mon nom ?', 'Si personne ne l’a pris sur Hopla, oui : ta page sera hopla.page/ton-nom.'],
     ],
   },
@@ -80,7 +80,7 @@ export const COMPARATIFS: Comparatif[] = [
     resume: 'Hopla vs Beacons, le comparatif : prix, commission de 9 % sur les ventes, et une page de liens qui se range selon le réseau du visiteur avec Hopla.',
     lignes: [
       ['Prix', HOPLA_PRIX, 'Gratuit, puis 10 $, 30 $ ou 100 $ par mois'],
-      ['Offre gratuite', 'Oui, cinq blocs, les vingt thèmes', 'Oui, liens sans limite'],
+      ['Offre gratuite', 'Oui, cinq blocs, les vingt-quatre thèmes', 'Oui, liens sans limite'],
       ['Commission sur tes ventes', HOPLA_COMMISSION, '9 % en gratuit et en Creator, 0 % dès 30 $ par mois'],
       ['Retirer la marque', 'Oui', 'Avec Creator Plus, 30 $ par mois'],
       ['Boutique intégrée', 'Non : Hopla mène à la tienne', 'Oui'],
@@ -110,7 +110,7 @@ export const COMPARATIFS: Comparatif[] = [
     resume: 'Hopla vs Stan Store, le comparatif : Stan démarre à 29 $ par mois sans offre gratuite ; Hopla est gratuit, puis 9 € par mois, sans commission.',
     lignes: [
       ['Prix', HOPLA_PRIX, '29 $ ou 99 $ par mois'],
-      ['Offre gratuite', 'Oui, cinq blocs, les vingt thèmes', 'Non, 14 jours d’essai'],
+      ['Offre gratuite', 'Oui, cinq blocs, les vingt-quatre thèmes', 'Non, 14 jours d’essai'],
       ['Essai', '14 jours avec toutes les fonctions, sans carte', '14 jours'],
       ['Commission sur tes ventes', HOPLA_COMMISSION, '0 % de Stan, frais de paiement en plus'],
       ['Vendre des formations', 'Non : Hopla mène à ta plateforme', 'Oui'],
@@ -137,7 +137,7 @@ export const COMPARATIFS: Comparatif[] = [
     resume: 'Hopla vs Lnk.Bio, le comparatif : prix à vie contre abonnement, et une page de liens qui se range selon le réseau du visiteur avec Hopla, gratuitement.',
     lignes: [
       ['Prix', HOPLA_PRIX, 'Gratuit, puis 0,99 $ par mois, ou 9,99 $ et 24,99 $ à vie'],
-      ['Offre gratuite', 'Oui, cinq blocs, les vingt thèmes', 'Oui, liens sans limite'],
+      ['Offre gratuite', 'Oui, cinq blocs, les vingt-quatre thèmes', 'Oui, liens sans limite'],
       ['Retirer la marque', 'Oui', 'Avec Unique, 24,99 $ à vie'],
       ['Programmer un lien', 'Oui', 'Avec Mini'],
       ['Commission sur tes ventes', HOPLA_COMMISSION, 'Pas annoncé par Lnk.Bio'],
@@ -163,7 +163,7 @@ export const COMPARATIFS: Comparatif[] = [
     resume: 'Hopla vs Taplink, le comparatif : prix, blocs, paiements, et une page de liens qui se range selon le réseau de chaque visiteur avec Hopla.',
     lignes: [
       ['Prix', HOPLA_PRIX, 'Gratuit, puis environ 3 $ ou 9 $ par mois'],
-      ['Offre gratuite', 'Oui, cinq blocs, les vingt thèmes', 'Oui, avec moins de blocs'],
+      ['Offre gratuite', 'Oui, cinq blocs, les vingt-quatre thèmes', 'Oui, avec moins de blocs'],
       ['Paiements dans la page', 'Non : Hopla mène à ta boutique', 'Oui, avec Business'],
       ['Commission sur tes ventes', HOPLA_COMMISSION, 'Aucune de Taplink, frais de paiement en plus'],
       ...PROMESSE('Taplink'),

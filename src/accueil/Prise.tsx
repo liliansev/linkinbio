@@ -26,7 +26,7 @@ const ETAPES: Pas[] = [
   { titre: 'Ta page, à ton nom', texte: 'Ta photo, ton nom, une phrase sur ce que tu fais.' },
   { titre: 'Tes liens les plus utiles', texte: 'Colle une adresse, Hopla trouve le titre du site tout seul.' },
   { titre: 'Où te suivre ?', texte: 'Ton pseudo suffit, l’adresse se complète.' },
-  { titre: 'Choisis ton thème', texte: 'Dix au choix pour commencer, les vingt ensuite, tous gratuits.' },
+  { titre: 'Choisis ton thème', texte: 'Dix au choix pour commencer, les vingt-quatre ensuite, tous gratuits.' },
 ];
 const GESTES: Pas[] = [
   { picto: 'plume', titre: 'Toucher pour écrire', texte: 'Ton nom, ta bio, un lien : touche, tape, c’est en ligne.' },
