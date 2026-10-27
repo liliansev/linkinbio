@@ -1,7 +1,7 @@
 /*
- * Vingt thèmes, travaillés un par un (18 octobre 2026, à la demande de Lilian :
+ * Vingt-quatre thèmes, travaillés un par un (18 octobre 2026, à la demande de Lilian :
  * dix très soignés, un pour chaque goût, puis cinq très créatifs et cinq
- * simples et jolis). Chacun a trois
+ * simples et jolis ; quatre de plus, francs, le 27 octobre). Chacun a trois
  * rôles de couleur : un fond, des boutons d'une valeur nette, et un accent
  * d'une autre teinte pour la carte mise en avant, les titres de section et la
  * lueur derrière le portrait. Chacun a aussi sa typographie réglée à la main
@@ -212,6 +212,39 @@ export const THEMES: Theme[] = [
     police: 'serif', decor: 'grain',
     typo: { nom: { taille: 2.25, graisse: 520, approche: -0.015 }, section: { taille: 1.08, graisse: 450, approche: 0, italique: true }, bouton: { graisse: 540, approche: 0 }, carte: { taille: 1.12, graisse: 600, approche: -0.005 } },
     conseil: { style: 'plein', forme: 'pilule', ombre: 'subtile' },
+  },
+  // Quatre thèmes francs de plus (27 octobre 2026, demandé par Lilian : « mets les plus beaux en premier, ajoutes-en »).
+  {
+    id: 'mangue', nom: 'Mangue', humeur: 'Solaire', famille: 'degrade',
+    fond: 'linear-gradient(165deg, #ffd84d 0%, #ff9a3c 55%, #ff6a5c 100%)', fondUni: '#ffa042', texte: '#2a0c00', doux: '#4d1d08',
+    surface: '#2a0c00', surfaceTexte: '#fff4e0', vedette: '#ffffff', vedetteTexte: '#2a0c00', ombre: '#8a2a10',
+    police: 'display', decor: 'grain',
+    typo: { nom: { taille: 1.7, graisse: 700, approche: -0.02 }, section: { taille: 0.82, graisse: 620, approche: 0.03 }, bouton: { graisse: 600, approche: 0 }, carte: { taille: 0.9, graisse: 640, approche: -0.01 } },
+    conseil: { style: 'plein', forme: 'pilule', ombre: 'marquee' },
+  },
+  {
+    id: 'lagon', nom: 'Lagon', humeur: 'Frais', famille: 'degrade',
+    fond: 'linear-gradient(170deg, #0a7d8c 0%, #1658b8 55%, #23257f 100%)', fondUni: '#1658b8', texte: '#ffffff', doux: '#e2f6ff',
+    surface: '#ffffff', surfaceTexte: '#0b2a5e', vedette: '#ffe66d', vedetteTexte: '#0b2a5e', ombre: '#0a1c4a',
+    police: 'geometrique', decor: 'grain',
+    typo: { nom: { taille: 2.2, graisse: 650, approche: -0.04 }, section: { taille: 0.96, graisse: 580, approche: -0.005 }, bouton: { graisse: 580, approche: -0.01 }, carte: { graisse: 640, approche: -0.02 } },
+    conseil: { style: 'verre', forme: 'pilule', ombre: 'subtile' },
+  },
+  {
+    id: 'cerise', nom: 'Cerise', humeur: 'Audacieux', famille: 'couleur',
+    fond: lueur('#cf2a3e', '#a8182b'), fondUni: '#a8182b', texte: '#fff5f0', doux: '#ffd9d3',
+    surface: '#fff5f0', surfaceTexte: '#7a0f1c', vedette: '#1c0a0d', vedetteTexte: '#fff5f0', ombre: '#4f0710',
+    police: 'grotesque', decor: 'grain',
+    typo: { nom: { taille: 2.4, graisse: 760, approche: -0.045 }, section: { taille: 1, graisse: 680, approche: -0.01 }, bouton: { graisse: 640, approche: -0.01 }, carte: { taille: 1.08, graisse: 720, approche: -0.025 } },
+    conseil: { style: 'plein', forme: 'arrondi', ombre: 'marquee' },
+  },
+  {
+    id: 'memphis', nom: 'Memphis', humeur: 'Joueur', famille: 'decale',
+    fond: '#fff3d6', fondUni: '#fff3d6', texte: '#1b1b3a', doux: '#46436a',
+    surface: '#4ad8c7', surfaceTexte: '#1b1b3a', vedette: '#ff5c8a', vedetteTexte: '#1b1b3a', ombre: '#1b1b3a',
+    police: 'expressive', decor: 'points',
+    typo: { nom: { taille: 2.15, graisse: 700, approche: -0.035 }, section: { taille: 1, graisse: 640, approche: -0.01 }, bouton: { graisse: 620, approche: -0.01 }, carte: { taille: 1.05, graisse: 680, approche: -0.025 } },
+    conseil: { style: 'relief', forme: 'arrondi', ombre: 'aucune' },
   },
 ];
 

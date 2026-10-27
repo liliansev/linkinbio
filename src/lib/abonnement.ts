@@ -47,7 +47,7 @@ export interface Offre {
 export const OFFRES: Record<Plan, Offre> = {
   gratuit: {
     nom: 'Gratuit', phrase: 'Ta page qui s’adapte à chaque réseau, pour toujours.', prix: { mois: 0, an: 0 }, quota: 25 * Mo, jours: 0, enVente: true,
-    avantages: ['Cinq blocs sur ta page', 'Ta page selon le réseau du visiteur', 'Les vingt thèmes'],
+    avantages: ['Cinq blocs sur ta page', 'Ta page selon le réseau du visiteur', 'Les vingt-quatre thèmes'],
   },
   starter: {
     nom: 'Starter', phrase: 'Ta marque : tes couleurs, ta vitrine, tes stats.', prix: { mois: 9, an: 79 }, quota: 100 * Mo, jours: 30, enVente: true,

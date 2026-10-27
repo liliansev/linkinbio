@@ -467,7 +467,7 @@ html:has(.hl-reserver input:focus) { overflow-anchor: none; }
  * garde ses petits textes (bio, sous-titres, places, pied) à 12 px au moins une fois rendus. */
 .hl-tel-page :is(.lp-bio, .lp-sous, .lp-carte-sous, .lp-carte-description, .lp-drop-places, .lp-legal, .lp-legal a, .lp-legal-point, .lp-mention, .lp-hopla, .lp-hopla-haut, .lp-pub, .lp-badge) { font-size: max(1em, calc(12px / var(--z))); }
 /* Dans les téléphones de l'accueil, le texte grossi pour rester lisible faisait passer « Signaler » seul sous le point. */
-.hl-tel-page .lp-legal { flex-wrap: nowrap; white-space: nowrap; }
+.hl-tel-page .lp-legal { flex-direction: row; flex-wrap: nowrap; white-space: nowrap; }
 .hl-tel-page .lp-fin .lp-legal a { padding-inline: 4px; }
 .hl-tel-page > .lp { min-height: 100%; background-attachment: scroll; overflow: hidden; }
 .hl-tel [data-decor]::before { position: absolute; animation: none; }

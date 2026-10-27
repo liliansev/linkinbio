@@ -54,7 +54,7 @@ export const FONCTIONS = [
   'Liens YouTube, Spotify et autres ouverts dans leur app depuis Instagram ou TikTok',
   'Cinq blocs, vidéos lues sur la page et QR code',
   'Quatorze jours de Pro offerts à l’inscription, sans carte bancaire',
-  'Vingt thèmes',
+  'Vingt-quatre thèmes',
   'Modification de la page depuis le téléphone',
   'Liens partenaires avec la mention « Publicité » que demande la loi',
   'Page sans la mention « Créer ma page avec Hopla » (Starter)',
@@ -76,7 +76,7 @@ export const QUESTION_LINKTREE = 'J’ai déjà un Linktree. Comment passer à H
 export function questions(m: Inscription): [string, string][] {
   return [
     ['C’est quoi, Hopla ?', 'Une page de liens à mettre dans ta bio Instagram, TikTok ou YouTube, sur hopla.page/ton-nom. Elle change l’ordre de ses liens selon le réseau d’où arrive ton visiteur ouvre tes liens dans leurs apps et se modifie depuis ton téléphone.'],
-    ['C’est vraiment gratuit ?', 'Oui. Ta page commence par 14 jours avec toutes les fonctions, sans carte bancaire. Ensuite, elle reste en ligne gratuitement, pour toujours, avec une page qui se réorganise selon le réseau du visiteur et les vingt thèmes. Ce que chaque offre ajoute se lit dans le tableau des tarifs.'],
+    ['C’est vraiment gratuit ?', 'Oui. Ta page commence par 14 jours avec toutes les fonctions, sans carte bancaire. Ensuite, elle reste en ligne gratuitement, pour toujours, avec une page qui se réorganise selon le réseau du visiteur et les vingt-quatre thèmes. Ce que chaque offre ajoute se lit dans le tableau des tarifs.'],
     m === 'libre'
       ? ['Combien de temps pour avoir ma page ?', 'Deux minutes. Tu choisis ton nom, tu laisses ton e‑mail, et le lien pour entrer dans ta page arrive par e‑mail. Quatre questions plus tard, elle est en ligne.']
       : ['Quand aurai-je ma page ?', 'On ouvre les pages petit à petit, dans l’ordre des réservations. Ton invitation arrive par e‑mail, avec un lien valable une semaine ; quatre questions plus tard, ta page est en ligne.'],
