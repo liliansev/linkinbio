@@ -482,8 +482,8 @@
 .hl-humain .hl-barre-actions .hl-btn { background: #e3fc96; border-color: #e3fc96; color: #233016; border-radius: 11px; }
 .hl-humain .hl-barre-actions .hl-btn:hover { background: #d4f57c; }
 .hl-humain .hl-barre :focus-visible { outline-color: #e3fc96; }
-/* La couleur suit le fond survolé (27 octobre 2026, demandé par Lilian : « verte sur le bleu, bleue sur le blanc ») : `data-fond`,
-   lu par `Barre`. Sur le bleu ou la nuit, la capsule est citron, son texte et son appel en bleu Klein (7,2:1 ; l'appel, blanc sur
+/* La couleur suit le fond survolé (27 octobre 2026, demandé par Lilian : « blanche sur le bleu, bleue sur le blanc ») : `data-fond`,
+   lu par `Barre`. Sur le bleu ou la nuit, la capsule est blanche, son texte et son appel en bleu Klein (8,1:1 ; l'appel, blanc sur
    bleu, 8,1:1) ; sur un fond clair, elle reste bleu Klein, texte blanc (8,1:1) et appel citron. Le menu ouvert du téléphone reste bleu. */
 .hl-humain .hl-barre[data-fond] .hl-barre-capsule {
   -webkit-backdrop-filter: blur(16px) saturate(140%); backdrop-filter: blur(16px) saturate(140%);
@@ -494,8 +494,8 @@
   box-shadow: inset 0 1px 0 rgb(255 255 255 / .16), inset 0 0 0 1px rgb(255 255 255 / .14), 0 18px 40px -20px rgb(14 16 120 / .6), 0 4px 12px -6px rgb(14 16 120 / .35);
 }
 .hl-humain .hl-barre[data-fond='sombre']:not([data-menu]) .hl-barre-capsule {
-  --encre: #292bff; --gris: #292bff; --filet: rgb(41 43 255 / .2); --marque-dessin: #e3fc96;
-  background: rgb(227 252 150 / .97);
+  --encre: #292bff; --gris: #292bff; --filet: rgb(41 43 255 / .2); --marque-dessin: #fff;
+  background: rgb(255 255 255 / .97);
   box-shadow: inset 0 1px 0 rgb(255 255 255 / .5), inset 0 0 0 1px rgb(41 43 255 / .1), 0 18px 40px -20px rgb(10 12 90 / .55), 0 4px 12px -6px rgb(10 12 90 / .3);
 }
 .hl-humain .hl-barre[data-fond='sombre']:not([data-menu]) :is(.hl-marque svg, .hl-barre-nav > a:hover, .hl-barre-nav > a[aria-current], .hl-barre-connexion, .hl-barre-menu) { color: #292bff; }
