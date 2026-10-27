@@ -480,6 +480,29 @@
 .hl-humain .hl-barre-actions .hl-btn { background: #e3fc96; border-color: #e3fc96; color: #233016; border-radius: 11px; }
 .hl-humain .hl-barre-actions .hl-btn:hover { background: #d4f57c; }
 .hl-humain .hl-barre :focus-visible { outline-color: #e3fc96; }
+/* La couleur suit le fond survolé (27 octobre 2026, demandé par Lilian : « verte sur le bleu, bleue sur le blanc ») : `data-fond`,
+   lu par `Barre`. Sur le bleu ou la nuit, la capsule est citron, son texte et son appel en bleu Klein (7,2:1 ; l'appel, blanc sur
+   bleu, 8,1:1) ; sur un fond clair, elle reste bleu Klein, texte blanc (8,1:1) et appel citron. Le menu ouvert du téléphone reste bleu. */
+.hl-humain .hl-barre[data-fond] .hl-barre-capsule {
+  -webkit-backdrop-filter: blur(16px) saturate(140%); backdrop-filter: blur(16px) saturate(140%);
+  transition: background-color .35s var(--ease), color .35s var(--ease), box-shadow .35s var(--ease);
+}
+.hl-humain .hl-barre[data-fond='clair'] .hl-barre-capsule {
+  background: rgb(41 43 255 / .96);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / .16), inset 0 0 0 1px rgb(255 255 255 / .14), 0 18px 40px -20px rgb(14 16 120 / .6), 0 4px 12px -6px rgb(14 16 120 / .35);
+}
+.hl-humain .hl-barre[data-fond='sombre']:not([data-menu]) .hl-barre-capsule {
+  --encre: #292bff; --gris: #292bff; --filet: rgb(41 43 255 / .2); --marque-dessin: #e3fc96;
+  background: rgb(227 252 150 / .97);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / .5), inset 0 0 0 1px rgb(41 43 255 / .1), 0 18px 40px -20px rgb(10 12 90 / .55), 0 4px 12px -6px rgb(10 12 90 / .3);
+}
+.hl-humain .hl-barre[data-fond='sombre']:not([data-menu]) :is(.hl-marque svg, .hl-barre-nav > a:hover, .hl-barre-nav > a[aria-current], .hl-barre-connexion, .hl-barre-menu) { color: #292bff; }
+.hl-humain .hl-barre[data-fond='sombre']:not([data-menu]) :is(.hl-barre-nav > a[aria-current], .hl-deroulant > button[data-ici]) { text-decoration-color: #292bff; }
+.hl-humain .hl-barre[data-fond='sombre']:not([data-menu]) :is(.hl-deroulant > button:hover, .hl-deroulant[data-ouvert] > button, .hl-deroulant > button[data-ici]) { color: #1517b8; }
+.hl-humain .hl-barre[data-fond='sombre']:not([data-menu]) .hl-barre-connexion:hover { color: #1517b8; text-decoration: underline; text-underline-offset: 4px; }
+.hl-humain .hl-barre[data-fond='sombre']:not([data-menu]) .hl-barre-actions .hl-btn { background: #292bff; border-color: #292bff; color: #fff; }
+.hl-humain .hl-barre[data-fond='sombre']:not([data-menu]) .hl-barre-actions .hl-btn:hover { background: #1d1fd6; border-color: #1d1fd6; }
+.hl-humain .hl-barre[data-fond='sombre']:not([data-menu]) :focus-visible { outline-color: #292bff; }
 .hl-humain .hl-menu { padding: 0 12px 12px; max-height: calc(100dvh - var(--haut) - 72px); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; }
 .hl-humain .hl-menu a { color: #fff; }
 .hl-humain .hl-menu .hl-menu-connexion { justify-content: center; min-height: 48px; margin-top: 10px; border: 1px solid rgb(255 255 255 / .5); border-radius: 12px; font-size: 16px; }
