@@ -1,8 +1,9 @@
 /*
  * L'instance : ce qui distingue hopla.page d'un Hopla auto-hébergé (28 octobre 2026). Les valeurs viennent de
- * l'environnement au moment du build (`vite.config.ts` les pose dans `__HOPLA_INSTANCE__`), parce que la page et le
- * back office en ont besoin dans le navigateur. Sans rien de posé (le build de hopla.page, les tests), ce sont celles
- * de hopla.page. Voir `.env.example` et `docs/AUTO-HEBERGEMENT.md`.
+ * l'environnement du serveur, au démarrage (29 octobre 2026, pour qu'une image Docker serve n'importe quelle instance) :
+ * `deploy/server.mjs` les pose dans `globalThis.__HOPLA_INSTANCE__` avant de charger l'app, et les écrit dans chaque page
+ * HTML pour le navigateur. En développement, `vite.config.ts` les lit dans `.env`. Sans rien de posé (le serveur de
+ * hopla.page, les tests), ce sont celles de hopla.page. Voir `.env.example` et `docs/AUTO-HEBERGEMENT.md`.
  */
 
 export interface ValeursInstance {
@@ -22,8 +23,6 @@ export interface ValeursInstance {
   depot: string;
 }
 
-declare const __HOPLA_INSTANCE__: Partial<ValeursInstance> | undefined;
-
 const HOPLA: ValeursInstance = {
   origine: 'https://hopla.page',
   origineAdmin: 'https://app.hopla.page',
@@ -34,11 +33,14 @@ const HOPLA: ValeursInstance = {
   depot: 'https://github.com/liliansev/linkinbio',
 };
 
-const posees: Partial<ValeursInstance> = typeof __HOPLA_INSTANCE__ === 'object' && __HOPLA_INSTANCE__ ? __HOPLA_INSTANCE__ : {};
+const global = (globalThis as { __HOPLA_INSTANCE__?: Partial<ValeursInstance> }).__HOPLA_INSTANCE__;
+const posees: Partial<ValeursInstance> = typeof global === 'object' && global ? global : {};
 const origine = (v: string | undefined, defaut: string) => (v && /^https?:\/\/[^/]+/.test(v) ? v.replace(/\/+$/, '') : defaut);
 const texte = (v: string | undefined, defaut: string) => v?.trim() || defaut;
 
-const origines = { origine: origine(posees.origine, HOPLA.origine), origineAdmin: origine(posees.origineAdmin, HOPLA.origineAdmin) };
+const publique = origine(posees.origine, HOPLA.origine);
+/** Une instance auto-hébergée sans adresse de back office le sert sur le même nom que ses pages. */
+const origines = { origine: publique, origineAdmin: origine(posees.origineAdmin, publique === HOPLA.origine ? HOPLA.origineAdmin : publique) };
 
 /**
  * L'instance de hopla.page, celle de Lilian : seule elle porte sa page par défaut, sa signature, sa chaîne YouTube et
@@ -69,7 +71,7 @@ export const LIEN_SOURCE = !EST_HOPLA_PAGE || DEPOT_OUVERT ? INSTANCE.depot : ''
 /** Le nom de l'éditeur, sans sa forme ni son adresse : « AURA GROUP ». */
 export const NOM_EDITEUR = INSTANCE.editeur.split(',')[0].trim();
 
-/** Ce que `vite.config.ts` lit dans l'environnement du build. */
+/** Ce qui se lit dans l'environnement (le même calcul dans `deploy/server.mjs`, qui ne charge pas ce fichier). */
 export const valeursDuBuild = (env: Record<string, string | undefined>): Partial<ValeursInstance> => ({
   origine: env.LIENS_ORIGINE, origineAdmin: env.LIENS_ORIGINE_ADMIN, contact: env.LIENS_CONTACT_LEGAL,
   editeur: env.LIENS_EDITEUR, hebergeur: env.LIENS_HEBERGEUR, directeur: env.LIENS_DIRECTEUR, depot: env.LIENS_DEPOT_SOURCE,

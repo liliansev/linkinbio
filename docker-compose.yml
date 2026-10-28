@@ -1,0 +1,44 @@
+# Hopla en un seul service, pour l'auto-hébergement : Coolify, Dokploy, ou tout
+# serveur avec Docker Compose. Coller l'adresse du dépôt, remplir les deux
+# variables obligatoires, déployer. Le guide : docs/AUTO-HEBERGEMENT.md.
+# (Celui de hopla.page est deploy/compose.yaml.)
+services:
+  hopla:
+    build: .
+    restart: unless-stopped
+    init: true
+    read_only: true
+    environment:
+      NODE_ENV: production
+      PORT: '3000'
+      # Obligatoires. L'adresse de l'instance, avec https:// (les pages sur /<pseudo>, le back office sur /admin),
+      # et l'adresse e-mail de son administrateur.
+      LIENS_ORIGINE: ${LIENS_ORIGINE:?l'adresse de l'instance, par exemple https://liens.example.org}
+      LIENS_ADMIN_EMAIL: ${LIENS_ADMIN_EMAIL:?l'adresse e-mail de l'administrateur}
+      # Le pseudo de la page de l'administrateur.
+      LIENS_PSEUDO_PRINCIPAL: ${LIENS_PSEUDO_PRINCIPAL:-moi}
+      # Facultatif : le back office sur un autre nom (https://app.liens.example.org). Vide, il vit sur le même.
+      LIENS_ORIGINE_ADMIN: ${LIENS_ORIGINE_ADMIN:-}
+      # Recommandé : les e-mails de connexion. Sans lui, seul l'administrateur entre, par le lien écrit dans les journaux.
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      CONTACT_FROM: ${CONTACT_FROM:-}
+      # Recommandé : chiffre les clés d'API et les inscrits (openssl rand -base64 32). Ne plus la changer une fois posée.
+      LIENS_CLE_INTEGRATIONS: ${LIENS_CLE_INTEGRATIONS:-}
+      # Les mentions légales d'une instance ouverte au public.
+      LIENS_EDITEUR: ${LIENS_EDITEUR:-}
+      LIENS_HEBERGEUR: ${LIENS_HEBERGEUR:-}
+      LIENS_DIRECTEUR: ${LIENS_DIRECTEUR:-}
+      LIENS_CONTACT_LEGAL: ${LIENS_CONTACT_LEGAL:-}
+      # Vide : chacun crée sa page depuis l'accueil. « attente » : liste d'attente, invitations depuis Comptes.
+      LIENS_INSCRIPTION: ${LIENS_INSCRIPTION:-}
+      # Ton fork, si tu as modifié le code (AGPL-3.0) : le lien « Code source » y mène.
+      LIENS_DEPOT_SOURCE: ${LIENS_DEPOT_SOURCE:-}
+    # La base SQLite et les images envoyées : tout l'état de l'instance, à sauvegarder.
+    volumes:
+      - hopla-data:/data
+    # Coolify et Dokploy y branchent leur domaine et leur HTTPS (port 3000). Sur un serveur nu, publier ce port
+    # derrière un frontal HTTPS (voir le guide).
+    expose:
+      - '3000'
+volumes:
+  hopla-data:

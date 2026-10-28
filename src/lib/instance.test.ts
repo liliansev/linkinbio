@@ -1,6 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
+process.env.LIENS_DB = ':memory:';
+
 // Un fichier de test tourne dans son propre processus : l'instance se pose avant le premier import, comme le ferait le build.
 (globalThis as Record<string, unknown>).__HOPLA_INSTANCE__ = {
   origine: 'https://liens.example.org/', origineAdmin: 'https://app.liens.example.org',
@@ -35,4 +37,18 @@ test('sans adresse, le compte principal d’une instance n’est pas celui de Li
   const { adresseAdmin } = await import('../server/auth.ts');
   assert.equal(adresseAdmin({}), '');
   assert.equal(adresseAdmin({ LIENS_ADMIN_EMAIL: 'moi@example.org' }), 'moi@example.org');
+});
+
+test('sans Resend, seul l’administrateur entre, par le lien écrit dans les journaux du serveur', async t => {
+  const { demanderConnexion } = await import('../server/auth.ts');
+  const { creerCompte } = await import('../server/db.ts');
+  const origines = { page: 'https://liens.example.org', admin: 'https://liens.example.org' };
+  const env = { NODE_ENV: 'production', LIENS_ADMIN_EMAIL: 'moi@example.org' };
+  const journal: string[] = [];
+  t.mock.method(console, 'log', (m: string) => { journal.push(m); });
+  const r = await demanderConnexion(origines, env, 'moi@example.org');
+  assert.ok(r.ok && !('lienDev' in r && r.lienDev), 'rien dans la page');
+  assert.match(journal.join('\n'), /https:\/\/liens\.example\.org\/admin\/connexion\?jeton=/);
+  creerCompte('camille@example.org', 'camille');
+  assert.deepEqual(await demanderConnexion(origines, env, 'camille@example.org'), { ok: false, message: 'L’envoi d’e-mails n’est pas configuré sur le serveur.' });
 });

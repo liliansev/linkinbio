@@ -84,7 +84,14 @@ async function envoyerLien(o: {
 }): Promise<Reponse> {
   const jeton = nouveauJeton();
   const lien = `${o.origines.admin}/admin/connexion?jeton=${jeton}`;
-  if (!o.env.RESEND_API_KEY && o.env.NODE_ENV === 'production') return { ok: false, message: 'L’envoi d’e-mails n’est pas configuré sur le serveur.' };
+  if (!o.env.RESEND_API_KEY && o.env.NODE_ENV === 'production') {
+    /* Une instance auto-hébergée sans Resend : son administrateur entre quand même, par le lien écrit dans les journaux
+       du serveur, que lui seul lit. Jamais dans la page, où n'importe qui taperait son adresse. */
+    if (EST_HOPLA_PAGE || o.compte !== PRINCIPAL) return { ok: false, message: 'L’envoi d’e-mails n’est pas configuré sur le serveur.' };
+    ajouterJeton(empreinte(jeton), 'connexion', o.duree, o.compte);
+    console.log(`[liens] lien de connexion de l’administrateur (sans RESEND_API_KEY) : ${lien}`);
+    return { ok: true, message: '' };
+  }
   ajouterJeton(empreinte(jeton), 'connexion', o.duree, o.compte);
   if (!o.env.RESEND_API_KEY) {
     console.log(`[liens] lien de connexion (dev) : ${lien}`);
