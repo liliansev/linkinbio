@@ -159,3 +159,17 @@ test('sans documentation construite, /docs répond 404 sans passer par l’app',
   const url = await fixture(t);
   const r = await fetch(`${url}/docs/mcp`); assert.equal(r.status, 404); assert.doesNotMatch(await r.text(), /^app /);
 });
+test("l'instance se lit au démarrage : l'app la trouve dans globalThis, le navigateur en tête de page", async t => {
+  const app = "export default { fetch: async r => new Response(new URL(r.url).pathname === '/x.json' ? '{}' : '<!DOCTYPE html><html lang=\"fr\"><head><meta charset=\"utf-8\"></head><body>' + JSON.stringify(globalThis.__HOPLA_INSTANCE__) + '</body></html>', { headers: { 'content-type': new URL(r.url).pathname === '/x.json' ? 'application/json' : 'text/html; charset=utf-8' } }) };";
+  const instance = { origine: 'https://liens.example.org', editeur: 'Exemple </script><script>alert(1)' };
+  const url = await fixture(t, { instance }, app);
+  const page = await (await fetch(`${url}/camille`)).text();
+  assert.ok(page.startsWith('<!DOCTYPE html><html lang="fr"><head><script>globalThis.__HOPLA_INSTANCE__={"origine":"https://liens.example.org","editeur":"Exemple \\u003c/script>\\u003cscript>alert(1)"}</script><meta charset="utf-8">'), page);
+  assert.ok(page.endsWith(`<body>${JSON.stringify(instance)}</body></html>`), "l'app a reçu l'instance avant d'être chargée");
+  assert.equal(await (await fetch(`${url}/x.json`)).text(), '{}', 'seul le HTML reçoit le script');
+});
+test("sans rien de posé, l'instance est hopla.page et aucune page ne change", async t => {
+  const { instanceDe, scriptInstance } = await import('./server.mjs');
+  assert.deepEqual(instanceDe({ LIENS_ORIGINE: ' ', PORT: '3000', LIENS_DIRECTEUR: 'Camille' }), { directeur: 'Camille' });
+  assert.equal(scriptInstance(instanceDe({})), '');
+});

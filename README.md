@@ -49,11 +49,23 @@ personne, éditée depuis un back office pensé d'abord pour le téléphone.
 | | [hopla.page](https://hopla.page) | Auto-hébergé |
 | --- | --- | --- |
 | Prix | Gratuit, puis Starter, Pro | Gratuit, ton serveur à ta charge |
-| Mise en route | Deux minutes | Un serveur Node 24 et un nom de domaine |
+| Mise en route | Deux minutes | Dix minutes avec Coolify ou Dokploy, et un nom de domaine |
 | Mises à jour, sauvegardes, e-mails | Faits pour toi | À ta charge |
 | Support | Oui | Les issues de ce dépôt |
 
-Le guide : [`docs/AUTO-HEBERGEMENT.md`](docs/AUTO-HEBERGEMENT.md).
+### Déployer en dix minutes
+
+Dans [Coolify](https://coolify.io) ou [Dokploy](https://dokploy.com) (Hostinger
+les installe sur un VPS en un clic) :
+
+1. Nouveau projet, à partir de l'adresse de ce dépôt, en **Docker Compose**
+   (`docker-compose.yml`, à la racine).
+2. Deux variables : `LIENS_ORIGINE` (l'adresse de l'instance, avec `https://`)
+   et `LIENS_ADMIN_EMAIL` (la tienne).
+3. Le domaine sur le service `hopla`, port 3000, puis Déployer.
+
+Ouvre ensuite `/admin` et entre ton adresse. Le reste (e-mails, mentions
+légales, sauvegardes) : [`docs/AUTO-HEBERGEMENT.md`](docs/AUTO-HEBERGEMENT.md).
 
 ## Démarrer en local
 

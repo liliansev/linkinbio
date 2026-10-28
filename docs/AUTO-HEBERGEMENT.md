@@ -9,64 +9,77 @@ publique doit porter un autre nom (voir « Licence et marque » dans le README).
 
 ## Ce qu'il faut
 
-- Un serveur Linux avec Docker (512 Mo de mémoire suffisent), ou Node 24 et pnpm 10.
-- Un nom de domaine, et un frontal HTTPS (Caddy, Traefik, Nginx…).
-- Un compte [Resend](https://resend.com) pour envoyer les liens de connexion
-  (gratuit jusqu'à 3 000 e-mails par mois), avec un domaine vérifié.
+- Un serveur avec Docker (1 Go de mémoire pour construire l'image, 256 Mo
+  ensuite). Le plus simple : [Coolify](https://coolify.io) ou
+  [Dokploy](https://dokploy.com), qui s'occupent du domaine et du HTTPS.
+  Hostinger, entre autres, propose des VPS où l'un ou l'autre est déjà installé.
+- Un nom de domaine qui pointe vers ce serveur.
+- Pour les e-mails de connexion, un compte [Resend](https://resend.com)
+  (gratuit jusqu'à 3 000 e-mails par mois) avec un domaine vérifié. Sans lui,
+  l'instance marche, mais seul l'administrateur peut entrer (voir plus bas).
 
 Le reste est facultatif : Cloudflare Turnstile contre les robots, Creem pour
 faire payer des offres.
 
-## Les deux adresses
+## Les variables
 
-Hopla sert deux origines depuis le même processus :
+Tout se règle par l'environnement, lu au démarrage : changer une variable
+demande un redémarrage, jamais une reconstruction de l'image. Deux sont
+obligatoires :
 
-- `LIENS_ORIGINE` : les pages publiques, `https://liens.example.org/<pseudo>` ;
-- `LIENS_ORIGINE_ADMIN` : le back office, `https://app.liens.example.org/admin`.
+| Variable | Exemple | Rôle |
+| --- | --- | --- |
+| `LIENS_ORIGINE` | `https://liens.example.org` | L'adresse de l'instance : les pages sur `/<pseudo>`, le back office sur `/admin` |
+| `LIENS_ADMIN_EMAIL` | `moi@example.org` | L'adresse de l'administrateur, qui reçoit aussi les signalements |
 
-Le serveur renvoie de l'une à l'autre ce qui ne la concerne pas. Les deux noms
-pointent vers le même conteneur.
+Les autres, toutes dans [`docker-compose.yml`](../docker-compose.yml) et
+[`.env.example`](../.env.example) : `RESEND_API_KEY` et `CONTACT_FROM` pour
+les e-mails, `LIENS_CLE_INTEGRATIONS` pour chiffrer les clés d'API et les
+inscrits, `LIENS_EDITEUR`, `LIENS_HEBERGEUR`, `LIENS_DIRECTEUR` et
+`LIENS_CONTACT_LEGAL` pour les mentions légales, `LIENS_PSEUDO_PRINCIPAL` pour
+le pseudo de ta page (`moi` à défaut).
 
-## Avec Docker
+Le back office vit sur le même nom que les pages. Pour le mettre ailleurs
+(`https://app.liens.example.org`), pose `LIENS_ORIGINE_ADMIN` et fais pointer
+ce second nom vers le même service : chacun renvoie vers l'autre ce qui ne le
+concerne pas.
 
-Le `Dockerfile` construit l'app, passe le typecheck et les tests, puis produit
-une image sans `node_modules`.
+## Avec Coolify
+
+1. **Nouvelle ressource**, depuis un dépôt Git (public, ou privé par
+   l'application GitHub de Coolify) : colle l'adresse de ce dépôt (ou de ton
+   fork), branche `main`.
+2. **Build Pack** : Docker Compose, fichier `/docker-compose.yml`.
+3. Dans **Environment Variables**, remplis `LIENS_ORIGINE` et
+   `LIENS_ADMIN_EMAIL` (Coolify signale celles qui manquent).
+4. Sur le service `hopla`, le domaine : `https://liens.example.org:3000`
+   (Coolify route le domaine vers le port 3000 et pose le certificat).
+5. **Deploy**. La première construction prend quelques minutes : elle passe le
+   typecheck et les tests.
+
+## Avec Dokploy
+
+1. **Create Service**, **Compose**, puis la source : le dépôt Git, branche
+   `main`, chemin `./docker-compose.yml`.
+2. Dans **Environment**, `LIENS_ORIGINE` et `LIENS_ADMIN_EMAIL`.
+3. Dans **Domains**, ton nom, le service `hopla`, le port 3000, HTTPS avec
+   Let's Encrypt.
+4. **Deploy**.
+
+## Sur un serveur nu
 
 ```bash
 git clone https://github.com/liliansev/linkinbio.git hopla && cd hopla
-cp .env.example .env        # puis le remplir : adresses, identité légale, e-mails
-docker build -t hopla .
+cp .env.example .env        # puis le remplir
+docker compose up -d --build
 ```
 
-Les adresses et l'identité légale sont lues **au build** : la page et le back
-office en ont besoin dans le navigateur. Sans elles, le build est celui de
-hopla.page. Après un changement de `.env`, reconstruis l'image.
-
-Un `compose.yaml` minimal (celui de `deploy/` est propre à hopla.page) :
-
-```yaml
-services:
-  app:
-    image: hopla
-    restart: unless-stopped
-    init: true
-    read_only: true
-    env_file: .env
-    environment:
-      NODE_ENV: production
-      PORT: '3000'
-    volumes:
-      - hopla-data:/data   # la base SQLite et les images envoyées
-    ports:
-      - '127.0.0.1:3000:3000'
-volumes:
-  hopla-data:
-```
-
-Et le frontal, par exemple avec Caddy, qui obtient les certificats seul :
+Le service écoute sur le port 3000 du réseau Docker. Mets un frontal HTTPS
+devant, par exemple Caddy, qui obtient les certificats seul, en publiant le
+port (`ports: ['127.0.0.1:3000:3000']` dans un `compose.override.yaml`) :
 
 ```
-liens.example.org, app.liens.example.org {
+liens.example.org {
 	reverse_proxy 127.0.0.1:3000 {
 		header_up X-Real-IP {remote_host}
 	}
@@ -74,30 +87,30 @@ liens.example.org, app.liens.example.org {
 ```
 
 `X-Real-IP` donne au serveur l'adresse du visiteur, dont dépendent les limites
-anti-abus. Elle n'est jamais enregistrée.
+anti-abus (Traefik, chez Coolify et Dokploy, la pose déjà). Elle n'est jamais
+enregistrée.
 
-## Sans Docker
-
-```bash
-pnpm install --frozen-lockfile
-pnpm build
-NODE_ENV=production LIENS_DB=/srv/hopla/liens.db pnpm start
-```
+Sans Docker : `pnpm install --frozen-lockfile && pnpm build`, puis
+`NODE_ENV=production LIENS_DB=/srv/hopla/liens.db pnpm start` avec les mêmes
+variables.
 
 ## Premier démarrage
 
 1. Au premier lancement, la base se crée avec le **compte principal**,
    l'administrateur de l'instance : son adresse est `LIENS_ADMIN_EMAIL`, son
-   pseudo `LIENS_PSEUDO_PRINCIPAL` (`moi` à défaut), sa page est vide.
-2. Ouvre `LIENS_ORIGINE_ADMIN/admin`, entre cette adresse : le lien de connexion
-   arrive par e-mail (ou dans les journaux du conteneur sans `RESEND_API_KEY`).
+   pseudo `LIENS_PSEUDO_PRINCIPAL`, sa page est vide.
+2. Ouvre `https://liens.example.org/admin` et entre cette adresse. Le lien de
+   connexion arrive par e-mail ; sans `RESEND_API_KEY`, il est écrit dans les
+   journaux du service (« Logs » dans Coolify ou Dokploy), et lui seul : les
+   autres comptes attendent que les e-mails soient branchés.
 3. L'onglet Comptes, réservé au compte principal, liste les comptes, les
    signalements, et permet d'offrir une offre à un compte, pour une durée ou
    sans fin. Sans Creem, c'est ainsi qu'on ouvre Starter ou Pro à quelqu'un.
 
 ## Sauvegardes
 
-Tout l'état tient dans un fichier SQLite (`/data/liens.db`). `deploy/sauvegarde.sh`
+Tout l'état tient dans le volume `hopla-data` : la base SQLite (`/data/liens.db`),
+images envoyées comprises. `deploy/sauvegarde.sh`
 en fait une copie à chaud (`VACUUM INTO`), vérifiée, gardée 14 nuits, et
 l'envoie ailleurs par rclone si `HOPLA_SAUVEGARDE_DISTANTE` est posée. Garde
 aussi `LIENS_CLE_INTEGRATIONS` en lieu sûr : sans elle, les clés d'API et les
@@ -105,8 +118,11 @@ inscrits chiffrés de la base sont illisibles.
 
 ## Mettre à jour
 
+Avec Coolify ou Dokploy, **Redeploy** (ou le déploiement automatique à chaque
+push). Sur un serveur nu :
+
 ```bash
-git pull && docker build -t hopla . && docker compose up -d
+git pull && docker compose up -d --build
 ```
 
 La base se met à jour seule au démarrage. Fais une sauvegarde avant.
@@ -118,7 +134,7 @@ identité légale et son lien « Code source » ; la page, la signature et la ch
 YouTube de l'auteur n'y apparaissent pas. Restent à adapter avant d'ouvrir une
 instance au public :
 
-- **Les textes légaux** (`src/lib/legal.ts`) : l'identité vient de `.env`, mais
+- **Les textes légaux** (`src/lib/legal.ts`) : l'identité vient des variables, mais
   les CGU décrivent les offres, les prix et les sous-traitants de hopla.page.
   Relis-les et adapte-les à ton service.
 - **La marque et l'accueil** : le nom Hopla, le logo (`src/components/Logo.tsx`,

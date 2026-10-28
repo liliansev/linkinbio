@@ -10,8 +10,9 @@ import { createHash } from 'node:crypto';
    les pages sur l'origine publique (hopla.page), le back office sur celle de
    l'admin (app.hopla.page). Chacun renvoie vers l'autre ce qui ne le concerne
    pas. Sur un autre nom (localhost en dev), tout est servi tel quel. */
-const origin = process.env.LIENS_ORIGINE ?? 'https://hopla.page';
-const originAdmin = process.env.LIENS_ORIGINE_ADMIN ?? 'https://app.hopla.page';
+const origin = (process.env.LIENS_ORIGINE || 'https://hopla.page').replace(/\/+$/, '');
+// Une instance auto-hébergée sans adresse de back office le sert sur le même nom (comme src/lib/instance.ts).
+const originAdmin = (process.env.LIENS_ORIGINE_ADMIN || (origin === 'https://hopla.page' ? 'https://app.hopla.page' : origin)).replace(/\/+$/, '');
 const hostPublic = new URL(origin).host;
 const hostAdmin = new URL(originAdmin).host;
 /** Les mêmes que `DOMAINES_COURTS` dans src/lib/types.ts. */
@@ -29,6 +30,15 @@ const DU_SITE = /^\/api\/(newsletter|derniere-video(\/vignette)?)$/;
 /** Ce que le back office sert lui-même (et l'API, le serveur MCP) ; le reste (pages, textes légaux) vit sur l'origine publique. */
 const DU_BACK_OFFICE = /^\/(admin(\/|$)|_serverFn\/|api\/|assets\/|media\/|mcp$)/;
 const appRoot = fileURLToPath(new URL('../dist', import.meta.url));
+/* L'instance (src/lib/instance.ts), lue dans l'environnement au démarrage et non au build : une même image sert
+   hopla.page ou n'importe quelle instance auto-hébergée. L'app la trouve dans globalThis, posé avant de la charger ;
+   le navigateur, dans un script en tête de chaque page HTML. Rien de posé : hopla.page, et aucun script. */
+export function instanceDe(env) {
+  const valeurs = { origine: env.LIENS_ORIGINE, origineAdmin: env.LIENS_ORIGINE_ADMIN, contact: env.LIENS_CONTACT_LEGAL, editeur: env.LIENS_EDITEUR, hebergeur: env.LIENS_HEBERGEUR, directeur: env.LIENS_DIRECTEUR, depot: env.LIENS_DEPOT_SOURCE };
+  return Object.fromEntries(Object.entries(valeurs).filter(([, v]) => v?.trim()));
+}
+/** Le script qui donne l'instance au navigateur ; `<` échappé, rien ne referme la balise. */
+export const scriptInstance = valeurs => Object.keys(valeurs).length ? `<script>globalThis.__HOPLA_INSTANCE__=${JSON.stringify(valeurs).replace(/</g, '\\u003c')}</script>` : '';
 const mime = { md: 'text/markdown; charset=utf-8', html: 'text/html; charset=utf-8', css: 'text/css', js: 'text/javascript', mjs: 'text/javascript', json: 'application/json', svg: 'image/svg+xml', png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', avif: 'image/avif', gif: 'image/gif', ico: 'image/x-icon', woff: 'font/woff', woff2: 'font/woff2', webmanifest: 'application/manifest+json', txt: 'text/plain; charset=utf-8', xml: 'application/xml; charset=utf-8' };
 const etagOf = bytes => `"${createHash('sha1').update(bytes).digest('base64url').slice(0, 27)}"`;
 class HttpError extends Error { constructor(status) { super(`HTTP ${status}`); this.status = status; } }
@@ -53,8 +63,9 @@ async function readBody(req, limit) {
   return Buffer.concat(chunks);
 }
 /** À n'exposer que derrière Caddy, qui doit écraser X-Real-IP avec l'IP du visiteur. */
-export function createLiensServer({ appDir = appRoot, site = process.env.LIENS_SITE, cloudflare = process.env.LIENS_CLOUDFLARE } = {}) {
+export function createLiensServer({ appDir = appRoot, site = process.env.LIENS_SITE, cloudflare = process.env.LIENS_CLOUDFLARE, instance = instanceDe(process.env) } = {}) {
   const exclusif = cloudflare === 'exclusif';
+  const enTete = scriptInstance(instance);
   let appPromise;
   /* La documentation (28 octobre 2026) : un site statique, construit à part (documentation/, Next en export) et
      copié dans dist/docs. /docs/mcp se lit dans mcp.html, /docs dans index.html ; l'index de recherche n'a pas
@@ -97,7 +108,7 @@ export function createLiensServer({ appDir = appRoot, site = process.env.LIENS_S
       } catch (error) { if (!['ENOENT', 'ENOTDIR'].includes(error.code)) throw error; }
       if (local.startsWith('/assets/')) return send(404, 'Not found', { 'Cache-Control': 'no-store' });
     }
-    appPromise ??= import(pathToFileURL(resolve(appDir, 'server/server.js')).href);
+    if (!appPromise) { globalThis.__HOPLA_INSTANCE__ = instance; appPromise = import(pathToFileURL(resolve(appDir, 'server/server.js')).href); }
     const app = (await appPromise).default;
     const headers = new Headers();
     for (const [key, value] of Object.entries(req.headers)) if (typeof value === 'string' && !key.startsWith(':')) headers.set(key, value);
@@ -117,7 +128,9 @@ export function createLiensServer({ appDir = appRoot, site = process.env.LIENS_S
     out['Content-Security-Policy'] ??= "frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'self'";
     out['X-Frame-Options'] ??= 'DENY';
     out['Referrer-Policy'] ??= local.startsWith('/admin') ? 'no-referrer' : 'strict-origin-when-cross-origin';
-    return send(response.status, Buffer.from(await response.arrayBuffer()), out);
+    let corps = Buffer.from(await response.arrayBuffer());
+    if (enTete && /^text\/html/i.test(response.headers.get('content-type') ?? '')) corps = Buffer.from(corps.toString('utf8').replace(/<head(\s[^>]*)?>/i, tete => tete + enTete));
+    return send(response.status, corps, out);
   }
   async function relaisSite(req, url, ip, send) {
     if (!site) return send(404, 'Not found', { 'Cache-Control': 'no-store' });
