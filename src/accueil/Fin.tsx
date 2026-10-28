@@ -321,6 +321,7 @@ const COLONNES: { titre: string; liens: [string, string][] }[] = [
     ['Tarifs', '/#prix'],
     ['Questions', '/#questions'],
     ['Voir une vraie page', '/lilian'],
+    ['API et MCP', '/docs'],
     ['Connexion', '/admin'],
   ] },
   { titre: 'Fonctionnalités', liens: PAGES_FONCTIONS.map(f => [f.nom, `/fonctionnalites/${f.slug}`]) },
