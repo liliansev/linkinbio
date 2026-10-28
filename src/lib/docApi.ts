@@ -4,21 +4,23 @@
  * guides et référence, est dans documentation/ (hopla.page/docs). Elles suivent `server/api.ts` et `server/mcp.ts` :
  * un changement là-bas se reporte ici, dans documentation/content/docs et dans documentation/scripts/openapi.ts.
  */
+import { NOM_ADMIN, ORIGINE_ADMIN, ORIGINE_PUBLIQUE } from './types.ts';
+
 export const DOC_API = `# API et serveur MCP de Hopla
 
 Ta page Hopla se gère aussi depuis ton code ou ton agent IA (Claude, ChatGPT, Cursor…) :
 profil, thème, réseaux, blocs, ordre des blocs, statistiques.
 
-- API REST : https://app.hopla.page/api/v1
-- Serveur MCP (HTTP « streamable ») : https://app.hopla.page/mcp
-- Documentation complète, guides et référence : https://hopla.page/docs
-- Fichier OpenAPI : https://hopla.page/docs/openapi.json
+- API REST : ${ORIGINE_ADMIN}/api/v1
+- Serveur MCP (HTTP « streamable ») : ${ORIGINE_ADMIN}/mcp
+- Documentation complète, guides et référence : ${ORIGINE_PUBLIQUE}/docs
+- Fichier OpenAPI : ${ORIGINE_PUBLIQUE}/docs/openapi.json
 
 Réservé à l'offre Pro (et à l'essai de 14 jours). Les échanges sont en JSON, en UTF-8.
 
 ## Clé d'API
 
-Crée une clé dans le back office : app.hopla.page, Réglages, « API et MCP ». Elle ne s'affiche
+Crée une clé dans le back office : ${NOM_ADMIN}, Réglages, « API et MCP ». Elle ne s'affiche
 qu'une fois : copie-la tout de suite. Une clé « lecture seule » lit sans rien modifier.
 Envoie-la dans chaque requête :
 
@@ -49,14 +51,14 @@ Toute erreur répond un statut HTTP et :
 
 La page entière : son adresse et son offre, ses réglages, ses blocs dans l'ordre.
 
-    curl https://app.hopla.page/api/v1/page -H "Authorization: Bearer $HOPLA_CLE"
+    curl ${ORIGINE_ADMIN}/api/v1/page -H "Authorization: Bearer $HOPLA_CLE"
 
 ### PATCH /api/v1/reglages
 
 Change une partie des réglages ; le reste est gardé. profil, bouton, seo, couleurs et redirection
 se complètent champ par champ ; reseaux se remplace en entier.
 
-    curl -X PATCH https://app.hopla.page/api/v1/reglages \\
+    curl -X PATCH ${ORIGINE_ADMIN}/api/v1/reglages \\
       -H "Authorization: Bearer $HOPLA_CLE" -H "Content-Type: application/json" \\
       -d '{"profil": {"bio": "Coach sportive à Lyon"}, "theme": "onyx"}'
 
@@ -85,7 +87,7 @@ Les blocs, dans l'ordre de la page.
 
 Ajoute un bloc, en haut de la page, ou à "position" (0 : en haut).
 
-    curl -X POST https://app.hopla.page/api/v1/blocs \\
+    curl -X POST ${ORIGINE_ADMIN}/api/v1/blocs \\
       -H "Authorization: Bearer $HOPLA_CLE" -H "Content-Type: application/json" \\
       -d '{"type": "lien", "titre": "Mon nouveau podcast", "url": "https://exemple.fr/podcast", "position": 2}'
 
@@ -115,7 +117,7 @@ Un bloc.
 
 Change une partie d'un bloc ; le reste est gardé.
 
-    curl -X PATCH https://app.hopla.page/api/v1/blocs/a1b2c3d4e5f6 \\
+    curl -X PATCH ${ORIGINE_ADMIN}/api/v1/blocs/a1b2c3d4e5f6 \\
       -H "Authorization: Bearer $HOPLA_CLE" -H "Content-Type: application/json" \\
       -d '{"public": false}'
 
@@ -141,19 +143,19 @@ Les thèmes de la page : id, nom, humeur, famille.
 
 ## Serveur MCP
 
-Adresse : https://app.hopla.page/mcp (transport HTTP « streamable », réponses JSON, sans session).
+Adresse : ${ORIGINE_ADMIN}/mcp (transport HTTP « streamable », réponses JSON, sans session).
 La clé passe dans l'en-tête Authorization, comme pour l'API.
 
 Claude Code :
 
-    claude mcp add --transport http hopla https://app.hopla.page/mcp --header "Authorization: Bearer hopla_…"
+    claude mcp add --transport http hopla ${ORIGINE_ADMIN}/mcp --header "Authorization: Bearer hopla_…"
 
 Cursor, Windsurf et les clients qui lisent un fichier mcp.json :
 
     {
       "mcpServers": {
         "hopla": {
-          "url": "https://app.hopla.page/mcp",
+          "url": "${ORIGINE_ADMIN}/mcp",
           "headers": { "Authorization": "Bearer hopla_…" }
         }
       }

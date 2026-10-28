@@ -1,6 +1,6 @@
 import { randomBytes } from 'node:crypto';
 import type { Bloc, Reglages, Stats } from '../lib/types.ts';
-import { PRINCIPAL, TYPES_BLOC, TYPES_PRINCIPAL, adressePartage } from '../lib/types.ts';
+import { NOM_ADMIN, PRINCIPAL, TYPES_BLOC, TYPES_PRINCIPAL, adressePartage } from '../lib/types.ts';
 import { THEMES } from '../lib/themes.ts';
 import { lirePeriode } from '../lib/periode.ts';
 import { validerBloc, validerReglages } from '../lib/valider.ts';
@@ -48,7 +48,7 @@ const clesFaussesParIp = limiteur([20, MINUTE]);
 /** Le compte d'une clé passée en `Authorization: Bearer hopla_…`, ou l'erreur à rendre. */
 export function authentifier(entete: string | null, ip: string, env: Record<string, string | undefined> = process.env, maintenant = Date.now()): Appelant {
   const cle = /^Bearer\s+(\S+)$/i.exec(entete?.trim() ?? '')?.[1] ?? '';
-  if (!cle) throw new ErreurApi(401, 'cle_absente', 'Ajoute ta clé d’API dans l’en-tête Authorization: Bearer hopla_… Elle se crée dans Réglages, sur app.hopla.page.');
+  if (!cle) throw new ErreurApi(401, 'cle_absente', `Ajoute ta clé d’API dans l’en-tête Authorization: Bearer hopla_… Elle se crée dans Réglages, sur ${NOM_ADMIN}.`);
   const trouvee = FORME_CLE.test(cle) ? db.cleApiParEmpreinte(empreinte(cle)) : undefined;
   if (!trouvee) {
     if (clesFaussesParIp(cleIp(ip || 'inconnue'), maintenant)) throw new ErreurApi(429, 'trop_d_essais', 'Trop de clés refusées. Réessaie dans une minute.');
@@ -56,7 +56,7 @@ export function authentifier(entete: string | null, ip: string, env: Record<stri
   }
   const compte = db.compteParId(trouvee.compte);
   if (!compte || compte.statut !== 'actif') throw new ErreurApi(403, 'compte_suspendu', 'Ce compte est suspendu.');
-  if (compte.id !== PRINCIPAL && compte.cgu !== VERSION_CGU) throw new ErreurApi(403, 'conditions', 'Accepte les nouvelles conditions d’utilisation sur app.hopla.page, puis réessaie.');
+  if (compte.id !== PRINCIPAL && compte.cgu !== VERSION_CGU) throw new ErreurApi(403, 'conditions', `Accepte les nouvelles conditions d’utilisation sur ${NOM_ADMIN}, puis réessaie.`);
   if (!droits(compte, env, maintenant).api) throw new ErreurApi(403, 'offre', 'L’API et le serveur MCP demandent Hopla Pro. Ta clé reprendra du service dès que ta page y repasse.');
   if (appelsParCle(trouvee.id, maintenant)) throw new ErreurApi(429, 'trop_d_appels', 'Trop d’appels avec cette clé. Réessaie dans une minute.');
   db.noterUsageCleApi(trouvee.id, maintenant);

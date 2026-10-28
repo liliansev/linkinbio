@@ -96,6 +96,11 @@ embarque tout : l'image n'a pas de `node_modules`.
   dix par jour vers une adresse tapée par un inconnu. `server/turnstile.ts` vérifie
   le jeton Turnstile des formulaires publics, que `lib/turnstile.ts` obtient dans la
   page (`avecJeton`) ; en sommeil sans `TURNSTILE_SITE_KEY` et `TURNSTILE_SECRET`.
+- `lib/instance.ts` (28 octobre 2026) : hopla.page ou une instance auto-hébergée. Adresses, identité légale et dépôt
+  lus au build (`LIENS_ORIGINE`, `LIENS_EDITEUR`… par `define` dans `vite.config.ts`) ; sans rien, hopla.page.
+  `EST_HOPLA_PAGE` garde à hopla.page la page par défaut, la signature et la chaîne de Lilian ; `LIEN_SOURCE`, le
+  lien « Code source » (AGPL), vide sur hopla.page tant que `DEPOT_OUVERT` est faux. Un texte dit `NOM_PUBLIC` ou
+  `NOM_ADMIN` (`types.ts`), jamais « hopla.page » écrit à la main.
 - `lib/` : `types.ts` (origines, `cheminPage`, `urlPage`), `valider.ts`, `themes.ts`, `legal.ts` (`VERSION_CGU`),
   `abonnement.ts` (les quatre offres Gratuit, Starter, Pro, Premium : prix, `FONCTIONS`, `peut()`, `joursStats()`, `estPaye()` ;
   `offreSuivante()` et ses `ACCROCHES` pour l'appel à l'offre du dessus, `sensDuChangement()`, `accesAbonnement()` ; dans `Abonnement`,

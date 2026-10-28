@@ -1,4 +1,4 @@
-import { RESEAUX, TYPES_BLOC } from '../lib/types.ts';
+import { NOM_PUBLIC, RESEAUX, TYPES_BLOC } from '../lib/types.ts';
 import { THEMES } from '../lib/themes.ts';
 import type { Appelant } from './api.ts';
 import {
@@ -16,7 +16,7 @@ import {
 const VERSIONS = ['2025-06-18', '2025-03-26', '2024-11-05'];
 const VERSION_SERVEUR = '1.0.0';
 
-const INSTRUCTIONS = 'Hopla est une page de liens (comme Linktree) sur hopla.page/<pseudo>. Ces outils lisent et modifient la page '
+const INSTRUCTIONS = `Hopla est une page de liens (comme Linktree) sur ${NOM_PUBLIC}/<pseudo>. Ces outils lisent et modifient la page `
   + 'de la personne qui a créé la clé : son profil, son thème, ses réseaux, ses blocs (liens, titres, textes, vidéos, produits…) '
   + 'et leurs statistiques. Commence par lire_page pour connaître les id des blocs. Écris en français, au tutoiement, sauf si la page vouvoie.';
 

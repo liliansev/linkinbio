@@ -9,22 +9,25 @@
  */
 
 import { OFFRES, euros } from './abonnement.ts';
+import { EST_HOPLA_PAGE, INSTANCE, NOM_EDITEUR } from './instance.ts';
+import { NOM_ADMIN, NOM_PUBLIC } from './types.ts';
 
 /** « 9 € par mois ou 79 € par an » : le prix d'une offre, tel que Creem le facture. */
 const prixDe = (p: 'starter' | 'pro' | 'premium') => `${euros(OFFRES[p].prix.mois)} par mois ou ${euros(OFFRES[p].prix.an)} par an`;
 
 export const VERSION_CGU = '2026-10-25.2';
-export const CONTACT_LEGAL = 'bonjour@liliansevoumian.fr';
+/** L'adresse de contact : celle de hopla.page, ou `LIENS_CONTACT_LEGAL` pour une instance auto-hébergée (`lib/instance.ts`). */
+export const CONTACT_LEGAL = INSTANCE.contact;
 
 export interface DocumentLegal { titre: string; resume: string; sections: { titre: string; texte: string[] }[] }
 
 export const DOCUMENTS = ['cgu', 'traitement-des-donnees', 'confidentialite', 'sous-traitants', 'mentions-legales'] as const;
 export type NomDocument = (typeof DOCUMENTS)[number];
 
-/** L'éditeur de Hopla, d'après son avis de situation au répertoire Sirene du 25 octobre 2026. */
-const EDITEUR = 'AURA GROUP, SARL au capital de 100 €, 5 avenue du Maréchal de Lattre de Tassigny, 94600 Choisy-le-Roi';
+/** L'éditeur de Hopla, d'après son avis de situation au répertoire Sirene du 25 octobre 2026, ou celui de l'instance. */
+const EDITEUR = INSTANCE.editeur;
 
-const HEBERGEUR = 'Hostinger International Limited, 61 Lordou Vironos Street, 6023 Larnaca, Chypre';
+const HEBERGEUR = INSTANCE.hebergeur;
 
 export const LEGAL: Record<NomDocument, DocumentLegal> = {
   cgu: {
@@ -32,7 +35,7 @@ export const LEGAL: Record<NomDocument, DocumentLegal> = {
     resume: `Les règles du service Hopla, en vigueur depuis le 25 octobre 2026 (version ${VERSION_CGU}).`,
     sections: [
       { titre: 'Le service', texte: [
-        'Hopla permet de publier une page de liens personnelle à l’adresse hopla.page/<pseudo>, et de la gérer depuis un back office, sur app.hopla.page. Le service est édité par la société AURA GROUP (voir les mentions légales).',
+        'Hopla permet de publier une page de liens personnelle à l’adresse ' + NOM_PUBLIC + '/<pseudo>, et de la gérer depuis un back office, sur ' + NOM_ADMIN + '. Le service est édité par ' + (EST_HOPLA_PAGE ? 'la société ' : '') + NOM_EDITEUR + ' (voir les mentions légales).',
         'Hopla existe en version gratuite et en offres payantes (voir « Les offres payantes et leur paiement »). Il peut évoluer, s’interrompre pour maintenance ou s’arrêter : dans ce dernier cas, tu es prévenu par e-mail au moins 30 jours avant, et tu peux exporter tes données jusqu’au dernier jour.',
       ] },
       { titre: 'Ton compte', texte: [
@@ -105,12 +108,12 @@ export const LEGAL: Record<NomDocument, DocumentLegal> = {
     resume: 'Ce que Hopla sait de toi, pourquoi, combien de temps, et comment exercer tes droits.',
     sections: [
       { titre: 'Qui est responsable', texte: [
-        `AURA GROUP, éditeur de Hopla (voir les mentions légales). Pour toute question ou demande : ${CONTACT_LEGAL}.`,
+        `${NOM_EDITEUR}, éditeur de Hopla (voir les mentions légales). Pour toute question ou demande : ${CONTACT_LEGAL}.`,
       ] },
       { titre: 'Si tu visites une page', texte: [
         'Aucun cookie n’est déposé, aucune publicité, aucun traceur d’un site à l’autre. Le serveur compte les vues et les clics de la page pour son propriétaire, avec une empreinte anonyme renouvelée chaque jour, et ton pays, que Cloudflare déduit de ta connexion ; ton adresse IP n’est pas enregistrée. Ton pays sert aussi, le temps de la visite, à montrer ou non les liens que le propriétaire réserve à certains pays. Ces statistiques sont gardées 13 mois. C’est une mesure d’audience strictement limitée, qui entre dans l’exemption de consentement prévue par la CNIL.',
         'Le lecteur d’une vidéo (YouTube, Vimeo, TikTok) ou d’une musique (Spotify, Apple Music, Apple Podcasts, Deezer, SoundCloud), la carte d’une adresse (Google Maps), comme l’agenda d’une prise de rendez-vous (Calendly, Cal.com, Google Agenda), ne se charge dans la page que si tu le touches : ce service applique alors ses propres règles, cookies compris. Les derniers articles d’un blog ou d’un podcast, et la dernière vidéo d’une chaîne, sont lus par le serveur de Hopla : ton navigateur ne contacte ce site que si tu ouvres un article. Un produit, un bouton de soutien ou un lien te mène sur un autre site, qui a les siennes ; si le propriétaire de la page l’a choisi, ce lien dit au site d’arrivée que tu viens de Hopla (utm_source=hopla), sans rien dire de toi.',
-        'Tu peux t’y opposer : un navigateur qui bloque les requêtes vers hopla.page/api/evenement (la plupart des bloqueurs de contenus le permettent) n’est pas compté, sans que la page cesse de fonctionner. Le propriétaire de la page est responsable de ces statistiques ; Hopla les traite pour lui.',
+        'Tu peux t’y opposer : un navigateur qui bloque les requêtes vers ' + NOM_PUBLIC + '/api/evenement (la plupart des bloqueurs de contenus le permettent) n’est pas compté, sans que la page cesse de fonctionner. Le propriétaire de la page est responsable de ces statistiques ; Hopla les traite pour lui.',
         'Si tu t’inscris à la liste d’une page (« Rejoins ma liste »), ton adresse et, s’il est demandé, ton prénom vont à son propriétaire, qui seul décide des e-mails qu’il t’envoie ; il peut les transmettre à son outil d’envoi ou d’automatisation (Brevo, Mailchimp, Kit, Substack ou Make, par exemple). Si la page offre un cadeau à l’inscription, son lien s’ouvre une fois ton adresse donnée, sur le site où le propriétaire l’a déposé. Pour te désinscrire ou faire effacer ton adresse, écris-lui, ou à ' + CONTACT_LEGAL + '.',
         'Si tu écris par « Me contacter », ton nom, ton adresse et ton message partent par e-mail au propriétaire de la page, qui te répond à cette adresse ; Hopla ne les garde pas. Enregistrer une carte de visite dans tes contacts ne dit rien de toi à Hopla.',
         'Pour un lien à accès réservé (mode drop), Hopla garde, pour compter les places, une empreinte chiffrée propre à ce lien, tirée de ton adresse IP et de ton navigateur : elle ne sert qu’à ça, ne permet pas de te suivre d’un lien à l’autre, et s’efface au bout de treize mois.',
@@ -128,7 +131,7 @@ export const LEGAL: Record<NomDocument, DocumentLegal> = {
         'Le motif, ton explication et, si tu la donnes, ton adresse e-mail, pour te tenir informé de la décision. Base légale : l’obligation légale de traiter les signalements (règlement sur les services numériques). Gardés un an après la décision.',
       ] },
       { titre: 'Protection contre les attaques', texte: [
-        'Les visites de hopla.page et du back office passent par Cloudflare, qui arrête les attaques et les robots avant le serveur. Cloudflare voit alors ton adresse IP, ton navigateur et l’adresse demandée, le temps d’acheminer la requête ; il ne dépose pas de cookie. Base légale : l’intérêt légitime de Hopla à protéger le service et ceux qui s’en servent.',
+        'Les visites de ' + NOM_PUBLIC + ' et du back office passent par Cloudflare, qui arrête les attaques et les robots avant le serveur. Cloudflare voit alors ton adresse IP, ton navigateur et l’adresse demandée, le temps d’acheminer la requête ; il ne dépose pas de cookie. Base légale : l’intérêt légitime de Hopla à protéger le service et ceux qui s’en servent.',
         'Les formulaires publics (connexion, création de page, signalement, « Rejoins ma liste », « Me contacter ») passent aussi par Turnstile, la vérification anti-robot de Cloudflare. Elle ne se charge que lorsque tu te sers de l’un d’eux, et ne montre une case à cocher qu’à un visiteur jugé suspect.',
       ] },
       { titre: 'Où vont les données', texte: [
@@ -152,7 +155,7 @@ export const LEGAL: Record<NomDocument, DocumentLegal> = {
         'Envoi des e-mails : liens de connexion, réservations de nom, invitations, décisions de modération, messages laissés par « Me contacter ». Ne reçoit que l’adresse du destinataire et le contenu du message. Resend, Inc., États-Unis ; le transfert est encadré par l’accord de traitement de Resend et les clauses contractuelles types de la Commission européenne.',
       ] },
       { titre: 'Cloudflare', texte: [
-        'Protection et acheminement du trafic de hopla.page et app.hopla.page, et vérification anti-robot des formulaires publics (Turnstile). Voit l’adresse IP, le navigateur et l’adresse demandée de chaque visite, le temps de l’acheminer ; ne dépose pas de cookie. Cloudflare, Inc., 101 Townsend St, San Francisco, CA 94107, États-Unis ; le transfert est encadré par l’accord de traitement de Cloudflare et les clauses contractuelles types de la Commission européenne.',
+        'Protection et acheminement du trafic de ' + NOM_PUBLIC + ' et ' + NOM_ADMIN + ', et vérification anti-robot des formulaires publics (Turnstile). Voit l’adresse IP, le navigateur et l’adresse demandée de chaque visite, le temps de l’acheminer ; ne dépose pas de cookie. Cloudflare, Inc., 101 Townsend St, San Francisco, CA 94107, États-Unis ; le transfert est encadré par l’accord de traitement de Cloudflare et les clauses contractuelles types de la Commission européenne.',
       ] },
       { titre: 'Creem', texte: [
         'Paiement des offres payantes (creem.io), par Armitage Labs OÜ, Rotermanni 14, 10111 Tallinn, Estonie. Creem n’est pas un sous-traitant au sens strict : revendeur officiel de l’abonnement, il est responsable des données de paiement et de facturation qu’il collecte. Hopla lui transmet ton adresse e-mail et l’identifiant de ton compte au moment du paiement, et reçoit en retour l’état de l’abonnement.',
@@ -165,12 +168,14 @@ export const LEGAL: Record<NomDocument, DocumentLegal> = {
     resume: 'Qui édite et héberge Hopla.',
     sections: [
       { titre: 'Éditeur', texte: [
-        `${EDITEUR}. SIREN 991 735 036, RCS Créteil, SIRET du siège 991 735 036 00014, TVA intracommunautaire FR71991735036.`,
-        `Contact : ${CONTACT_LEGAL}, 06 67 03 66 74. Directeur de la publication : Lilian Sevoumian.`,
+        ...(EST_HOPLA_PAGE ? [
+          `${EDITEUR}. SIREN 991 735 036, RCS Créteil, SIRET du siège 991 735 036 00014, TVA intracommunautaire FR71991735036.`,
+          `Contact : ${CONTACT_LEGAL}, 06 67 03 66 74. Directeur de la publication : ${INSTANCE.directeur}.`,
+        ] : [`${EDITEUR}.`, `Contact : ${CONTACT_LEGAL}. Directeur de la publication : ${INSTANCE.directeur}.`]),
       ] },
-      { titre: 'Hébergeur', texte: [HEBERGEUR + ', www.hostinger.com.'] },
+      { titre: 'Hébergeur', texte: [EST_HOPLA_PAGE ? HEBERGEUR + ', www.hostinger.com.' : HEBERGEUR + '.'] },
       { titre: 'Contenus des utilisateurs', texte: [
-        'Les pages publiées sur hopla.page/<pseudo> sont écrites par leurs auteurs, sous leur responsabilité. Pour signaler un contenu, utilise le lien « Signaler » en bas de la page concernée, ou écris à ' + CONTACT_LEGAL + '. Ce point de contact vaut aussi pour les autorités (règlement sur les services numériques, articles 11 et 12), en français ou en anglais.',
+        'Les pages publiées sur ' + NOM_PUBLIC + '/<pseudo> sont écrites par leurs auteurs, sous leur responsabilité. Pour signaler un contenu, utilise le lien « Signaler » en bas de la page concernée, ou écris à ' + CONTACT_LEGAL + '. Ce point de contact vaut aussi pour les autorités (règlement sur les services numériques, articles 11 et 12), en français ou en anglais.',
       ] },
     ],
   },

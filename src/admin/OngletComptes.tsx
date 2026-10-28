@@ -2,7 +2,7 @@ import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import type { FormEvent, KeyboardEvent, MouseEvent, ReactNode } from 'react';
 import type { ApiComptes, CompteResume, Reservation, SignalementResume } from '../lib/types.ts';
 import { nomMotif } from '../lib/legal.ts';
-import { cheminPage, sansSchema, urlPage } from '../lib/types.ts';
+import { NOM_PUBLIC, cheminPage, sansSchema, urlPage } from '../lib/types.ts';
 import type { Abonnement, DureeOfferte, EtatOffre, PlanPayant } from '../lib/abonnement.ts';
 import { DUREES_OFFERTES, OFFRES, effetOffert, estResilie, euros, finOfferte, offerteAuDessus, offresAOffrir, rang } from '../lib/abonnement.ts';
 import type { StatutCompte } from '../lib/comptes.ts';
@@ -323,7 +323,7 @@ export function OngletComptes({ api, avatar }: { api: ApiComptes; avatar?: strin
             )}
 
             {vue === 'attente' && attente && (
-              attente.length === 0 ? <p className="py-6 text-[14px] text-white/60">Les noms réservés depuis hopla.page arrivent ici, dans l’ordre d’arrivée.</p>
+              attente.length === 0 ? <p className="py-6 text-[14px] text-white/60">Les noms réservés depuis {NOM_PUBLIC} arrivent ici, dans l’ordre d’arrivée.</p>
               : attenteVue.length === 0 ? rien('nom')
               : (
                 <>
@@ -580,7 +580,7 @@ function FormInviter({ inviter, fini }: { inviter: (email: string, pseudo: strin
       <div>
         <label htmlFor={idPseudo} className="mb-1.5 block text-[13px] font-semibold text-white">Son pseudo</label>
         <div className="adm-champ-prefixe">
-          <span aria-hidden="true">hopla.page/</span>
+          <span aria-hidden="true">{NOM_PUBLIC}/</span>
           <input id={idPseudo} required value={pseudo} maxLength={30} placeholder="prenom-nom" autoComplete="off" autoCapitalize="none" spellCheck={false}
             onChange={e => setPseudo(e.target.value.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9-]/g, '-').replace(/-{2,}/g, '-'))} />
         </div>
