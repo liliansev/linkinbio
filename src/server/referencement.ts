@@ -88,6 +88,7 @@ ${questions(mode).map(([q, r]) => `### ${q}\n\n${r}`).join('\n\n')}
 ${PAGES_FONCTIONS.map(p => `  - [${p.nom}](${publique}/fonctionnalites/${p.slug}) : ${p.resume}`).join('\n')}
 - [Hopla face aux autres outils](${publique}/comparatif) :
 ${COMPARATIFS.map(c => `  - [Hopla vs ${c.nom}](${publique}/comparatif/${c.slug}) : ${c.resume}`).join('\n')}
+- [API et serveur MCP](${ORIGINE_ADMIN}/api/v1) : gérer sa page depuis un agent IA ou son code (offre Pro)
 ${DOCUMENTS.map(d => `- [${LEGAL[d].titre}](${publique}/legal/${d}) : ${LEGAL[d].resume}`).join('\n')}
 `;
 }

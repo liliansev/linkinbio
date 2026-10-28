@@ -2,7 +2,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { randomBytes, randomUUID } from 'node:crypto';
-import type { Bloc, CompteResume, Contact, FournisseurListe, Reglages, Reservation, Stats } from '../lib/types.ts';
+import type { Bloc, CleApi, CompteResume, Contact, FournisseurListe, Reglages, Reservation, Stats } from '../lib/types.ts';
 import { PRINCIPAL } from '../lib/types.ts';
 import { REGLAGES_DEFAUT, blocsDefaut, reglagesNouveauCompte } from '../lib/defauts.ts';
 import { validerBloc, validerReglages } from '../lib/valider.ts';
@@ -87,6 +87,10 @@ export function base(): DatabaseSync {
     );
     CREATE TABLE IF NOT EXISTS vignettes_avant (bloc TEXT PRIMARY KEY, compte TEXT NOT NULL, image TEXT NOT NULL, favicon TEXT NOT NULL, ts INTEGER NOT NULL);
     CREATE TABLE IF NOT EXISTS attente (id TEXT PRIMARY KEY, email TEXT NOT NULL UNIQUE, pseudo TEXT NOT NULL UNIQUE, ts INTEGER NOT NULL);
+    CREATE TABLE IF NOT EXISTS cles_api (
+      id TEXT PRIMARY KEY, compte TEXT NOT NULL, nom TEXT NOT NULL, hash TEXT NOT NULL UNIQUE, debut TEXT NOT NULL,
+      ecriture INTEGER NOT NULL, cree INTEGER NOT NULL, utilisee INTEGER
+    );
   `);
   // Les tables d'avant les comptes : tout ce qu'elles contiennent est à Lilian.
   for (const table of ['blocs', 'medias', 'evenements', 'jetons']) colonne(db, table, 'compte', `TEXT NOT NULL DEFAULT '${PRINCIPAL}'`);
@@ -124,6 +128,7 @@ export function base(): DatabaseSync {
     CREATE INDEX IF NOT EXISTS evenements_compte ON evenements (compte, jour, type);
     CREATE INDEX IF NOT EXISTS evenements_ts ON evenements (ts);
     CREATE INDEX IF NOT EXISTS signalements_statut ON signalements (statut, ts);
+    CREATE INDEX IF NOT EXISTS cles_api_compte ON cles_api (compte);
     CREATE UNIQUE INDEX IF NOT EXISTS contacts_empreinte ON contacts (compte, empreinte) WHERE empreinte != '';
   `);
   if (!db.prepare('SELECT 1 FROM comptes WHERE id = ?').get(PRINCIPAL)) {
@@ -272,7 +277,7 @@ export function supprimerCompte(id: string, d = base()) {
   if (id === PRINCIPAL) throw new Error('Le compte principal ne se supprime pas.');
   d.exec('BEGIN');
   try {
-    for (const table of ['blocs', 'medias', 'evenements', 'jetons', 'signalements', 'contacts', 'integrations', 'resumes', 'acces', 'vignettes_avant']) d.prepare(`DELETE FROM ${table} WHERE compte = ?`).run(id);
+    for (const table of ['blocs', 'medias', 'evenements', 'jetons', 'signalements', 'contacts', 'integrations', 'resumes', 'acces', 'vignettes_avant', 'cles_api']) d.prepare(`DELETE FROM ${table} WHERE compte = ?`).run(id);
     d.prepare('DELETE FROM pages WHERE compte = ?').run(id);
     d.prepare('DELETE FROM comptes WHERE id = ?').run(id);
     d.exec('COMMIT');
@@ -535,6 +540,37 @@ export function poserRepere(cle: string, maintenant = Date.now()) {
   base().prepare('INSERT OR REPLACE INTO reglages (cle, valeur) VALUES (?, ?)').run(`repere:${cle}`, new Date(maintenant).toISOString());
 }
 
+/* ---- Clés d'API ---- */
+
+/**
+ * Les clés d'API d'un compte (28 octobre 2026) : pour l'API et le serveur MCP (voir `api.ts`). On ne garde que
+ * l'empreinte de la clé et ses premiers caractères, de quoi la reconnaître dans Réglages ; la clé elle-même ne se
+ * montre qu'une fois, à sa création.
+ */
+export const MAX_CLES_API = 10;
+
+export const clesApi = (compte: string): CleApi[] => (base().prepare('SELECT id, nom, debut, ecriture, cree, utilisee FROM cles_api WHERE compte = ? ORDER BY cree DESC')
+  .all(compte) as unknown as (Omit<CleApi, 'ecriture'> & { ecriture: number })[]).map(c => ({ ...c, ecriture: c.ecriture === 1 }));
+
+export function ajouterCleApi(compte: string, c: { nom: string; hash: string; debut: string; ecriture: boolean }, maintenant = Date.now()): CleApi {
+  const d = base();
+  if ((d.prepare('SELECT COUNT(*) AS n FROM cles_api WHERE compte = ?').get(compte) as { n: number }).n >= MAX_CLES_API) {
+    throw new Error(`${MAX_CLES_API} clés au plus : révoque celles qui ne servent plus.`);
+  }
+  const id = nouvelId();
+  d.prepare('INSERT INTO cles_api (id, compte, nom, hash, debut, ecriture, cree) VALUES (?, ?, ?, ?, ?, ?, ?)').run(id, compte, c.nom, c.hash, c.debut, c.ecriture ? 1 : 0, maintenant);
+  return { id, nom: c.nom, debut: c.debut, ecriture: c.ecriture, cree: maintenant, utilisee: null };
+}
+
+export const cleApiParEmpreinte = (hash: string) => base().prepare('SELECT id, compte, ecriture, utilisee FROM cles_api WHERE hash = ?').get(hash) as
+  { id: string; compte: string; ecriture: number; utilisee: number | null } | undefined;
+
+/** La dernière fois qu'une clé a servi, à la minute près : pas une écriture par appel. */
+export const noterUsageCleApi = (id: string, maintenant = Date.now()) =>
+  base().prepare('UPDATE cles_api SET utilisee = ?1 WHERE id = ?2 AND (utilisee IS NULL OR utilisee < ?1 - 60000)').run(maintenant, id);
+
+export const revoquerCleApi = (compte: string, id: string) => base().prepare('DELETE FROM cles_api WHERE id = ? AND compte = ?').run(id, compte).changes > 0;
+
 /* ---- Jetons de connexion et sessions (on ne garde que leur empreinte) ---- */
 
 export function ajouterJeton(hash: string, type: 'connexion' | 'session', dureeMs: number, compte: string, maintenant = Date.now()) {
@@ -726,6 +762,7 @@ export function exporter(compte: string) {
     blocs: lireBlocs(compte),
     statistiques: evenements.map(e => ({ ...e, ts: new Date(e.ts).toISOString() })),
     inscrits: tousLesContacts(compte).map(c => ({ ...c, ts: new Date(c.ts).toISOString() })),
+    clesApi: clesApi(compte).map(c => ({ nom: c.nom, debut: c.debut, ecriture: c.ecriture, cree: new Date(c.cree).toISOString(), utilisee: c.utilisee ? new Date(c.utilisee).toISOString() : null })),
     listeBranchee: lireIntegration(compte) ? { fournisseur: lireIntegration(compte)!.fournisseur, liste: lireIntegration(compte)!.liste } : null,
   };
 }

@@ -55,7 +55,7 @@ export const OFFRES: Record<Plan, Offre> = {
   },
   pro: {
     nom: 'Pro', phrase: 'Ta page qui bouge seule : l’heure, les lancements, ta liste.', prix: { mois: 19, an: 169 }, quota: 200 * Mo, jours: 365, enVente: true,
-    avantages: ['Ta page selon l’heure et le pays', 'Des liens à code ou à places comptées', 'Ta liste e-mail, vers ta newsletter', 'Un cadeau contre l’e-mail, tes derniers articles', 'Tes stats sur un an'],
+    avantages: ['Ta page selon l’heure et le pays', 'Des liens à code ou à places comptées', 'Ta liste e-mail, vers ta newsletter', 'Un cadeau contre l’e-mail, tes derniers articles', 'Tes stats sur un an', 'Ta page pilotée par tes agents IA : API et MCP'],
   },
   premium: {
     nom: 'Premium', phrase: 'Ta page à ton nom de domaine.', prix: { mois: 29, an: 259 }, quota: 1024 * Mo, jours: 365, enVente: false,
@@ -89,7 +89,8 @@ export const libellePrix = (p: PlanPayant, periode: Periode) => `${euros(OFFRES[
  * une galerie (24 octobre 2026) ; `utm` : les liens sortants marqués `utm_source=hopla` ; `redirection` : toute
  * la page renvoyée vers une adresse ; `pays` : un bloc selon le pays du visiteur ; `cadeau` : un cadeau contre l'e-mail
  * dans « Rejoins ma liste » ; `flux` : le bloc des derniers articles d'un flux RSS (24 octobre 2026) ; `blocs` : plus de
- * cinq blocs sur la page (`BLOCS_GRATUITS`, 25 octobre 2026).
+ * cinq blocs sur la page (`BLOCS_GRATUITS`, 25 octobre 2026) ; `api` : les clés d'API, pour l'API et le serveur MCP
+ * (28 octobre 2026, demandé par Lilian).
  */
 export const FONCTIONS = {
   sansMention: 'starter',
@@ -112,6 +113,7 @@ export const FONCTIONS = {
   pays: 'pro',
   cadeau: 'pro',
   flux: 'pro',
+  api: 'pro',
 } as const satisfies Record<string, PlanPayant>;
 export type Fonction = keyof typeof FONCTIONS;
 
@@ -141,6 +143,7 @@ export const FONCTIONS_EN_MOTS: Record<Fonction, { avantage: string; pour: strin
   pays: { avantage: 'Ta page selon l’heure et le pays', pour: 'Pour le pays' },
   cadeau: { avantage: 'Un cadeau contre l’e-mail, tes derniers articles', pour: 'Pour ton cadeau' },
   flux: { avantage: 'Un cadeau contre l’e-mail, tes derniers articles', pour: 'Pour ton flux RSS' },
+  api: { avantage: 'Ta page pilotée par tes agents IA : API et MCP', pour: 'Pour l’API' },
 };
 
 /**
@@ -248,7 +251,7 @@ export const BASCULE_OFFRES = Date.UTC(2026, 9, 21);
 /** Les jours de stats qu'une page d'avant les offres lisait en gratuit : elle les garde. */
 export const JOURS_AVANT_OFFRES = 7;
 /** Ce que ces pages ne faisaient pas en gratuit, et ne gardent donc pas : la page sans mention, et ce qui est venu après (la vitrine, le formulaire, la galerie complète, l'UTM, la redirection). */
-const PAS_AVANT_OFFRES: readonly Fonction[] = ['sansMention', 'vitrine', 'formulaire', 'galerie', 'utm', 'redirection', 'fond', 'grandePhoto', 'grille', 'pays', 'cadeau', 'flux'];
+const PAS_AVANT_OFFRES: readonly Fonction[] = ['sansMention', 'vitrine', 'formulaire', 'galerie', 'utm', 'redirection', 'fond', 'grandePhoto', 'grille', 'pays', 'cadeau', 'flux', 'api'];
 
 /**
  * L'essai (25 octobre 2026, choisi par Lilian) : chaque compte créé commence par 14 jours de Pro, sans carte ni

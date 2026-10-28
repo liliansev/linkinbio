@@ -372,6 +372,17 @@ export interface NoteAvis { note: number; nombre: number; source: string }
 export type VisuelApercu = 'partage' | 'logo';
 
 /** Ce que le back office demande au serveur (ou à la démo, dans l'aperçu). */
+/** Une clé d'API, telle que Réglages la montre : son nom, ses premiers caractères, ce qu'elle peut, quand elle a servi. */
+export interface CleApi { id: string; nom: string; debut: string; ecriture: boolean; cree: number; utilisee: number | null }
+
+/** Les clés d'API du compte, pour l'API et le serveur MCP (Réglages, « API et MCP »). */
+export interface ApiCles {
+  lister(): Promise<CleApi[]>;
+  /** La clé en clair ne revient qu'ici, une fois. */
+  creer(nom: string, ecriture: boolean): Promise<{ cle: string; infos: CleApi }>;
+  revoquer(id: string): Promise<void>;
+}
+
 export interface Api {
   charger(): Promise<EtatAdmin>;
   enregistrerBloc(bloc: Bloc): Promise<Bloc>;
@@ -428,6 +439,8 @@ export interface Api {
   urlContacts: string | null;
   /** Seulement pour le compte principal : gérer les autres comptes. */
   comptes?: ApiComptes;
+  /** Absent dans l'aperçu statique sans serveur. */
+  cles?: ApiCles;
 }
 
 /**
