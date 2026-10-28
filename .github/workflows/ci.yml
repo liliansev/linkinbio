@@ -21,8 +21,16 @@ jobs:
         with:
           node-version: 24
           cache: pnpm
+          cache-dependency-path: |
+            pnpm-lock.yaml
+            documentation/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
       # Le build régénère routeTree.gen.ts, que le typecheck et les tests lisent.
       - run: pnpm build
       - run: pnpm typecheck
       - run: pnpm test
+      # La documentation (hopla.page/docs), un projet Next à part dans documentation/.
+      - run: pnpm --dir documentation install --frozen-lockfile
+      - run: pnpm --dir documentation build
+        env:
+          NEXT_TELEMETRY_DISABLED: '1'

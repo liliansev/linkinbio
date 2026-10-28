@@ -29,7 +29,7 @@ const DU_SITE = /^\/api\/(newsletter|derniere-video(\/vignette)?)$/;
 /** Ce que le back office sert lui-même (et l'API, le serveur MCP) ; le reste (pages, textes légaux) vit sur l'origine publique. */
 const DU_BACK_OFFICE = /^\/(admin(\/|$)|_serverFn\/|api\/|assets\/|media\/|mcp$)/;
 const appRoot = fileURLToPath(new URL('../dist', import.meta.url));
-const mime = { html: 'text/html; charset=utf-8', css: 'text/css', js: 'text/javascript', mjs: 'text/javascript', json: 'application/json', svg: 'image/svg+xml', png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', avif: 'image/avif', gif: 'image/gif', ico: 'image/x-icon', woff: 'font/woff', woff2: 'font/woff2', webmanifest: 'application/manifest+json', txt: 'text/plain; charset=utf-8', xml: 'application/xml; charset=utf-8' };
+const mime = { md: 'text/markdown; charset=utf-8', html: 'text/html; charset=utf-8', css: 'text/css', js: 'text/javascript', mjs: 'text/javascript', json: 'application/json', svg: 'image/svg+xml', png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', avif: 'image/avif', gif: 'image/gif', ico: 'image/x-icon', woff: 'font/woff', woff2: 'font/woff2', webmanifest: 'application/manifest+json', txt: 'text/plain; charset=utf-8', xml: 'application/xml; charset=utf-8' };
 const etagOf = bytes => `"${createHash('sha1').update(bytes).digest('base64url').slice(0, 27)}"`;
 class HttpError extends Error { constructor(status) { super(`HTTP ${status}`); this.status = status; } }
 /* Derrière Cloudflare, Caddy voit une adresse de Cloudflare (X-Real-IP) et celle
@@ -56,6 +56,33 @@ async function readBody(req, limit) {
 export function createLiensServer({ appDir = appRoot, site = process.env.LIENS_SITE, cloudflare = process.env.LIENS_CLOUDFLARE } = {}) {
   const exclusif = cloudflare === 'exclusif';
   let appPromise;
+  /* La documentation (28 octobre 2026) : un site statique, construit à part (documentation/, Next en export) et
+     copié dans dist/docs. /docs/mcp se lit dans mcp.html, /docs dans index.html ; l'index de recherche n'a pas
+     d'extension. Rien d'autre ne passe : une adresse inconnue reçoit la page 404 de la documentation. */
+  async function docs(req, chemin, send) {
+    const local = chemin.slice('/docs'.length) || '/';
+    if (local !== '/' && local.endsWith('/')) return send(308, '', { Location: `/docs${local.replace(/\/+$/, '')}` });
+    const base = await realpath(resolve(appDir, 'docs')).catch(() => null);
+    if (!base) return send(404, 'Not found', { 'Cache-Control': 'no-store' });
+    const essais = local === '/' ? ['index.html'] : [local.slice(1), `${local.slice(1)}.html`];
+    for (const essai of essais) {
+      try {
+        const filename = await realpath(resolve(base, essai));
+        if (!filename.startsWith(base + sep) || !(await stat(filename)).isFile()) continue;
+        const bytes = await readFile(filename); const ext = extname(filename).slice(1).toLowerCase();
+        const immutable = local.startsWith('/_next/static/');
+        return send(200, bytes, {
+          'Content-Type': mime[ext] ?? (ext ? 'application/octet-stream' : 'application/json'),
+          'Cache-Control': immutable ? 'public, max-age=31536000, immutable' : 'public, max-age=300',
+          ETag: etagOf(bytes),
+          ...(ext === 'html' ? { 'Content-Security-Policy': "frame-ancestors 'none'; base-uri 'self'; object-src 'none'", 'X-Frame-Options': 'DENY', 'Referrer-Policy': 'strict-origin-when-cross-origin' } : {}),
+          ...(ext === 'json' ? { 'Access-Control-Allow-Origin': '*' } : {}),
+        });
+      } catch (error) { if (!['ENOENT', 'ENOTDIR'].includes(error.code)) throw error; }
+    }
+    const introuvable = await readFile(resolve(base, '404.html')).catch(() => Buffer.from('Not found'));
+    return send(404, introuvable, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
+  }
   async function liens(req, url, ip, send, parCloudflare = false) {
     const local = url.pathname;
     if (STATIQUE.test(local)) {
@@ -145,6 +172,7 @@ export function createLiensServer({ appDir = appRoot, site = process.env.LIENS_S
       if (host === hostAdmin && chemin === '/') return send(302, '', { Location: '/admin', 'Cache-Control': 'no-store' });
       if (host === hostAdmin && !DU_BACK_OFFICE.test(chemin) && !STATIQUE.test(chemin)) return send(308, '', { Location: `${origin}${chemin}${url.search}` });
       if (DU_SITE.test(chemin)) return relaisSite(req, url, ip, send);
+      if (chemin === '/docs' || chemin.startsWith('/docs/')) return docs(req, chemin, send);
       return liens(req, url, ip, send, parCloudflare);
     }
     handle().catch(error => { if (!res.headersSent) send(error instanceof HttpError ? error.status : 500, error instanceof HttpError ? error.message : 'Internal server error', { 'Cache-Control': 'no-store' }); else res.destroy(); if (!(error instanceof HttpError)) console.error(error); });

@@ -1,0 +1,48 @@
+---
+title: Clés d’API
+description: Créer une clé, choisir ce qu’elle peut faire, la garder en sécurité et la révoquer.
+---
+
+Chaque appel à l’API ou au serveur MCP porte une clé, dans l’en-tête `Authorization` :
+
+```http
+Authorization: Bearer hopla_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+```
+
+## Créer une clé
+
+Sur [app.hopla.page](https://app.hopla.page/admin), ouvre **Réglages**, puis **API et MCP**, et touche **Nouvelle clé**.
+
+- **Nom** : pour la reconnaître ensuite, par exemple « Claude Code » ou « Script du lundi ».
+- **Peut modifier ma page** : allumé, la clé lit et modifie ton profil, ton thème et tes blocs. Éteint, elle lit ta page et tes stats sans rien changer.
+
+La clé ne s’affiche qu’une fois. Hopla n’en garde qu’une empreinte : personne, pas même nous, ne peut te la redonner. Si tu la perds, crée-en une autre.
+
+Un compte a dix clés au plus. Une par usage, c’est le plus simple : tu sais laquelle révoquer le jour où un outil ne sert plus.
+
+## Ce qu’une clé peut faire
+
+| Geste | Lecture seule | Lecture et modification |
+| --- | --- | --- |
+| Lire la page, les blocs, les thèmes | Oui | Oui |
+| Lire les statistiques | Oui | Oui |
+| Modifier les réglages et les blocs | Non, 403 `lecture_seule` | Oui |
+| Outils MCP proposés | Les trois qui lisent | Les huit |
+
+Une clé ne touche qu’à la page du compte qui l’a créée.
+
+## L’offre Pro
+
+L’API et le serveur MCP font partie de Hopla Pro, et des 14 jours d’essai à l’inscription. Si ta page quitte Pro, tes clés s’arrêtent (403 `offre`) sans être effacées : elles reprennent dès que ta page y revient.
+
+## Garder sa clé en sécurité
+
+<Callout type="warn" title="Une clé, c’est ta page">
+  Qui a ta clé de modification peut changer ta page. Ne la colle jamais dans une page web publique, une application mobile ou un dépôt Git.
+</Callout>
+
+- Garde-la dans une variable d’environnement ou un gestionnaire de secrets.
+- Préfère une clé en lecture seule pour un tableau de bord ou un agent qui n’a rien à changer.
+- Révoque-la dans Réglages, **API et MCP**, dès qu’elle ne sert plus ou si elle a fuité. Elle cesse de marcher à l’instant.
+
+L’API n’envoie et ne lit aucun cookie : une requête d’un autre site n’emporte aucun droit sans la clé. C’est pourquoi elle répond à tous les sites (CORS ouvert).

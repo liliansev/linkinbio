@@ -1,9 +1,10 @@
 /*
  * La documentation de l'API et du serveur MCP (28 octobre 2026), servie telle quelle, sans clé, sur
- * GET https://app.hopla.page/api/v1 : lisible par un humain dans le navigateur, et par un agent IA.
- * Elle suit `server/api.ts` et `server/mcp.ts` : un changement là-bas se reporte ici.
+ * GET https://app.hopla.page/api/v1 : lisible par un humain dans le navigateur, et par un agent IA. La version complète,
+ * guides et référence, est dans documentation/ (hopla.page/docs). Elles suivent `server/api.ts` et `server/mcp.ts` :
+ * un changement là-bas se reporte ici, dans documentation/content/docs et dans documentation/scripts/openapi.ts.
  */
-import { NOM_ADMIN, ORIGINE_ADMIN } from './types.ts';
+import { NOM_ADMIN, ORIGINE_ADMIN, ORIGINE_PUBLIQUE } from './types.ts';
 
 export const DOC_API = `# API et serveur MCP de Hopla
 
@@ -12,6 +13,8 @@ profil, thème, réseaux, blocs, ordre des blocs, statistiques.
 
 - API REST : ${ORIGINE_ADMIN}/api/v1
 - Serveur MCP (HTTP « streamable ») : ${ORIGINE_ADMIN}/mcp
+- Documentation complète, guides et référence : ${ORIGINE_PUBLIQUE}/docs
+- Fichier OpenAPI : ${ORIGINE_PUBLIQUE}/docs/openapi.json
 
 Réservé à l'offre Pro (et à l'essai de 14 jours). Les échanges sont en JSON, en UTF-8.
 

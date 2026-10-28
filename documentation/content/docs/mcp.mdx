@@ -1,0 +1,144 @@
+---
+title: Serveur MCP
+description: Claude, Cursor ou ton propre agent gèrent ta page Hopla en langage courant.
+---
+
+Le serveur MCP de Hopla donne à ton agent IA les mêmes gestes que l’API : il lit ta page, ajoute un lien, change ton thème, regarde tes chiffres. Tu lui parles comme à quelqu’un, il appelle les bons outils.
+
+- **Adresse** : `https://app.hopla.page/mcp`
+- **Transport** : HTTP « streamable », réponses JSON, sans session
+- **Clé** : `Authorization: Bearer hopla_…`, comme pour l’API
+
+## Installer
+
+Crée d’abord une [clé](/cles), puis branche le serveur dans ton outil.
+
+<Tabs items={['Claude Code', 'Cursor', 'VS Code', 'Windsurf', 'Claude Desktop']} groupId="client" persist>
+
+<Tab value="Claude Code">
+
+```bash title="Terminal"
+claude mcp add --transport http hopla https://app.hopla.page/mcp \
+  --header "Authorization: Bearer hopla_…"
+```
+
+Ajoute `--scope user` pour l’avoir dans tous tes projets. Vérifie ensuite avec `/mcp` dans Claude Code.
+
+Dans Réglages, **API et MCP**, la commande toute prête, avec ta clé dedans, se copie juste après la création de la clé.
+
+</Tab>
+
+<Tab value="Cursor">
+
+```json title="~/.cursor/mcp.json"
+{
+  "mcpServers": {
+    "hopla": {
+      "url": "https://app.hopla.page/mcp",
+      "headers": { "Authorization": "Bearer hopla_…" }
+    }
+  }
+}
+```
+
+Le fichier `.cursor/mcp.json` d’un projet marche aussi. Hopla apparaît ensuite dans les réglages de Cursor, rubrique MCP.
+
+</Tab>
+
+<Tab value="VS Code">
+
+```json title=".vscode/mcp.json"
+{
+  "servers": {
+    "hopla": {
+      "type": "http",
+      "url": "https://app.hopla.page/mcp",
+      "headers": { "Authorization": "Bearer ${input:hopla-cle}" }
+    }
+  },
+  "inputs": [
+    { "id": "hopla-cle", "type": "promptString", "description": "Ta clé Hopla", "password": true }
+  ]
+}
+```
+
+VS Code te demande la clé au premier lancement et la garde pour toi : elle n’est pas écrite dans le fichier.
+
+</Tab>
+
+<Tab value="Windsurf">
+
+```json title="~/.codeium/windsurf/mcp_config.json"
+{
+  "mcpServers": {
+    "hopla": {
+      "serverUrl": "https://app.hopla.page/mcp",
+      "headers": { "Authorization": "Bearer hopla_…" }
+    }
+  }
+}
+```
+
+</Tab>
+
+<Tab value="Claude Desktop">
+
+Claude Desktop lance les serveurs sur ton ordinateur : passe par `mcp-remote`, qui relaie vers Hopla (Node.js requis).
+
+```json title="claude_desktop_config.json"
+{
+  "mcpServers": {
+    "hopla": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "https://app.hopla.page/mcp", "--header", "Authorization:${HOPLA_AUTH}"],
+      "env": { "HOPLA_AUTH": "Bearer hopla_…" }
+    }
+  }
+}
+```
+
+Le fichier s’ouvre depuis Claude Desktop : Réglages, Développeur, Modifier la configuration. Redémarre l’application ensuite.
+
+</Tab>
+
+</Tabs>
+
+<Callout title="claude.ai et ChatGPT">
+  Les connecteurs personnalisés de claude.ai et de ChatGPT demandent une connexion OAuth, que Hopla ne propose pas encore. En attendant, passe par Claude Code, Cursor, VS Code, Windsurf ou Claude Desktop.
+</Callout>
+
+## Les outils
+
+| Outil | Ce qu’il fait | Clé |
+| --- | --- | --- |
+| `lire_page` | La page entière : adresse, offre, réglages et blocs avec leurs id | Lecture |
+| `lister_themes` | Les thèmes possibles | Lecture |
+| `lire_stats` | Vues, visiteurs et clics d’une période | Lecture |
+| `modifier_reglages` | Profil, thème, réseaux, couleurs, référencement… | Modification |
+| `ajouter_bloc` | Un bloc neuf, en haut ou à une position | Modification |
+| `modifier_bloc` | Une partie d’un bloc ; `public: false` le masque | Modification |
+| `supprimer_bloc` | Un bloc, pour de bon | Modification |
+| `ordonner_blocs` | Le nouvel ordre de tous les blocs | Modification |
+
+Avec une clé en lecture seule, ton agent ne voit que les trois premiers.
+
+## À demander à ton agent
+
+- « Ajoute en haut de ma page Hopla un lien vers mon nouveau podcast : https://exemple.fr/podcast. »
+- « Passe ma page sur un thème plus sombre et mets ma bio à jour : coach sportive à Lyon. »
+- « Quel lien a eu le plus de clics ces 30 derniers jours, et d’où venaient les visiteurs ? »
+- « Masque le bloc de la promo d’été, sans le supprimer. »
+- « Programme le lien de ma masterclass pour qu’il apparaisse lundi à 9 h, avec un compte à rebours. »
+
+Ton agent commence par `lire_page` pour connaître les id des blocs, puis agit. Ce qu’il change se voit tout de suite sur ta page et dans le back office.
+
+## Pour les curieux
+
+Le serveur suit la spécification MCP (versions `2025-06-18`, `2025-03-26` et `2024-11-05`). Chaque requête `POST` porte un message JSON-RPC, ou un lot de 50 au plus, et la réponse revient en JSON. Il n’ouvre ni session ni flux : `GET` répond 405.
+
+```bash title="Lister les outils à la main"
+curl https://app.hopla.page/mcp \
+  -H "Authorization: Bearer $HOPLA_CLE" \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc": "2.0", "id": 1, "method": "tools/list"}'
+```

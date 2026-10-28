@@ -1,0 +1,64 @@
+---
+title: Limites et erreurs
+description: Combien d’appels, et ce que l’API répond quand quelque chose ne va pas.
+---
+
+## Les limites
+
+| Quoi | Limite |
+| --- | --- |
+| Appels par clé | 120 par minute, 5 000 par jour |
+| Clés refusées, par adresse IP | 20 par minute |
+| Corps d’une requête | 256 Ko |
+| Clés par compte | 10 |
+
+Au-delà d’une limite d’appels, l’API répond `429` avec l’en-tête `Retry-After` : attends ce nombre de secondes, puis réessaie.
+
+```js title="Réessayer après un 429"
+async function appeler(url, options, essais = 3) {
+  const reponse = await fetch(url, options);
+  if (reponse.status === 429 && essais > 0) {
+    const secondes = Number(reponse.headers.get('Retry-After') ?? 60);
+    await new Promise(r => setTimeout(r, secondes * 1000));
+    return appeler(url, options, essais - 1);
+  }
+  return reponse;
+}
+```
+
+## Le format des erreurs
+
+Toute erreur répond un statut HTTP et un objet `erreur` :
+
+```json
+{ "erreur": { "code": "cle_invalide", "message": "Cette clé n’existe pas ou a été révoquée." } }
+```
+
+Teste `code` dans ton code : il ne change pas. `message` est une phrase en français, à montrer telle quelle.
+
+## Les codes
+
+| Statut | `code` | Ce qui se passe |
+| --- | --- | --- |
+| 400 | `json` | Le corps n’est pas du JSON valide |
+| 400 | `rien_a_changer` | `PATCH /reglages` sans aucun réglage |
+| 400 | `theme_inconnu` | Ce thème n’existe pas : voir `GET /themes` |
+| 400 | `type_inconnu` | Ce type de bloc n’existe pas |
+| 400 | `bloc_refuse` | Un champ du bloc est refusé, par exemple une fin avant le début |
+| 400 | `ordre_incomplet` | `PUT /ordre` sans tous les id, ou avec un id en double |
+| 400 | `periode` | Période refusée, ou plus ancienne que ton historique |
+| 401 | `cle_absente` | Pas d’en-tête `Authorization: Bearer hopla_…` |
+| 401 | `cle_invalide` | La clé n’existe pas ou a été révoquée |
+| 403 | `lecture_seule` | La clé ne peut pas modifier la page |
+| 403 | `offre` | La page n’a pas Hopla Pro |
+| 403 | `conditions` | De nouvelles conditions d’utilisation sont à accepter sur app.hopla.page |
+| 403 | `compte_suspendu` | Le compte est suspendu |
+| 404 | `bloc_introuvable` | Aucun bloc de ta page n’a cet id |
+| 404 | `introuvable` | Cette adresse n’existe pas dans l’API |
+| 405 | `methode` | La méthode n’est pas permise sur cette adresse |
+| 413 | `trop_gros` | Le corps dépasse 256 Ko |
+| 429 | `trop_d_appels` | Trop d’appels avec cette clé |
+| 429 | `trop_d_essais` | Trop de clés refusées depuis ton adresse |
+| 500 | `serveur` | Un souci chez Hopla : réessaie dans un instant |
+
+Le serveur MCP rend les mêmes refus : un outil répond `isError: true`, avec le message en texte, et l’agent te l’explique.

@@ -330,6 +330,12 @@ embarque tout : l'image n'a pas de `node_modules`.
 - Marque : `components/Logo.tsx` (le symbole, un « h » et sa balle) ; favicon, icônes, manifeste et
   image de partage dans `public/`. `server/referencement.ts` écrit `robots.txt`, `sitemap.xml` et
   `llms.txt` (routes `robots[.]txt.ts`…) ; le back office ne s'indexe pas.
+- `documentation/` (28 octobre 2026, demandé par Lilian, sur le modèle de Stripe et Resend) : la documentation de l'API et
+  du serveur MCP, servie sur `hopla.page/docs`. Un projet Next à part (son `pnpm-lock.yaml`), en export statique : Fumadocs
+  pour les guides (`content/docs/*.mdx`), Scalar pour la référence (`/docs/reference`), lue dans `public/openapi.json`, que
+  `scripts/openapi.ts` écrit au build à partir des listes de `src/lib` (thèmes, réseaux, types de blocs). `pnpm --dir
+  documentation build`, copié dans `dist/docs` par le Dockerfile ; `deploy/server.mjs` le sert (`docs()`). Un changement de
+  `server/api.ts` ou `server/mcp.ts` se reporte dans les guides, dans `scripts/openapi.ts` et dans `lib/docApi.ts`.
 - `demo/` : aperçu statique avec une API simulée, publié en Artifact ; `#design=<thème>[,<police>[,<mise en page>]]`
   montre le lot 3 (photo de fond, grande photo, une police, une collection en grille) ; `#nouveau` y
   rejoue l'arrivée d'un nouvel inscrit, `#page=<thème>` montre la page dans un thème, `#vitrine=<thème>`

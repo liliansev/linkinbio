@@ -1,0 +1,56 @@
+---
+title: Les réglages
+description: Profil, thème, réseaux, couleurs, boutons, référencement et redirection de ta page.
+---
+
+<Route m="GET" chemin="/page" href="/reference#tag/page/GET/page">La page entière, réglages compris</Route>
+<Route m="PATCH" chemin="/reglages" href="/reference#tag/page/PATCH/reglages">Modifier les réglages</Route>
+<Route m="GET" chemin="/themes" href="/reference#tag/themes/GET/themes">Les thèmes</Route>
+
+`PATCH /reglages` change seulement ce que tu envoies. Les objets `profil`, `bouton`, `seo`, `couleurs` et `redirection` se complètent champ par champ ; la liste `reseaux` se remplace en entier.
+
+```bash
+curl -X PATCH https://app.hopla.page/api/v1/reglages \
+  -H "Authorization: Bearer $HOPLA_CLE" \
+  -H "Content-Type: application/json" \
+  -d '{"profil": {"bio": "Coach sportive à Lyon"}, "theme": "onyx"}'
+```
+
+La réponse rend tous les réglages, après le changement.
+
+## Ce qui se règle
+
+| Réglage | Valeur |
+| --- | --- |
+| `profil` | `{ nom, bio, avatar, photo }` : `avatar` est l’adresse https d’une image, `photo` vaut `ronde` ou `grande` |
+| `theme` | L’id d’un thème, voir plus bas |
+| `reseaux` | `[{ reseau, url }]`, 20 au plus |
+| `reseauxPosition` | `haut` (sous la bio) ou `bas` |
+| `couleurs` | `{ fond, boutons, accent }` en `#rrggbb` ; vide, celle du thème |
+| `bouton` | `{ style, forme, ombre }` : `plein`, `contour`, `doux`, `relief` ou `verre` ; `pilule`, `arrondi` ou `carre` ; `aucune`, `subtile` ou `marquee` |
+| `seo` | `{ titre, description }` pour Google et les aperçus de lien |
+| `partage` | Le bouton Partager en haut de la page |
+| `vouvoiement` | Les mots de la page vouvoient le visiteur |
+| `redirection` | `{ url, fin }` envoie toute la page ailleurs jusqu’à `fin` ; `{ "url": "" }` l’arrête |
+
+## Les réseaux
+
+```json
+{
+  "reseaux": [
+    { "reseau": "instagram", "url": "https://instagram.com/camille" },
+    { "reseau": "youtube", "url": "https://youtube.com/@camille" },
+    { "reseau": "email", "url": "mailto:camille@exemple.fr" }
+  ]
+}
+```
+
+Envoie toujours la liste complète, dans l’ordre voulu : un réseau absent de la liste disparaît de la page. Les réseaux possibles :
+
+<ListeReseaux />
+
+## Les thèmes
+
+`GET /themes` donne la même liste, à jour.
+
+<ListeThemes />

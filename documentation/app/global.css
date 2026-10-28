@@ -1,0 +1,212 @@
+@import 'tailwindcss';
+@import 'fumadocs-ui/css/neutral.css';
+@import 'fumadocs-ui/css/preset.css';
+
+/*
+ * La documentation aux couleurs de Hopla (docs/DESIGN-LP.md) : le bleu pour agir et choisir, le citron pour ce qui
+ * se gagne, le papier chaud pour la page ; Bricolage pour les titres, Geist pour le reste. Clair seulement.
+ */
+:root {
+  --hd-bleu: #292bff;
+  --hd-bleu-survol: #1d1fd6;
+  --hd-bleu-pale: #eeeeff;
+  --hd-citron: #e3fc96;
+  --hd-citron-encre: #233016;
+  --hd-encre: #20241f;
+  --hd-gris: #62685f;
+  --hd-papier: #fbfaf6;
+  --hd-creme: #f3eee5;
+  --hd-filet: #e4e2d9;
+
+  --color-fd-background: var(--hd-papier);
+  --color-fd-foreground: var(--hd-encre);
+  --color-fd-muted: #f1efe8;
+  --color-fd-muted-foreground: var(--hd-gris);
+  --color-fd-popover: #fff;
+  --color-fd-popover-foreground: var(--hd-encre);
+  --color-fd-card: #fff;
+  --color-fd-card-foreground: var(--hd-encre);
+  --color-fd-border: var(--hd-filet);
+  --color-fd-primary: var(--hd-bleu);
+  --color-fd-primary-foreground: #fff;
+  --color-fd-secondary: #f4f2ec;
+  --color-fd-secondary-foreground: var(--hd-encre);
+  --color-fd-accent: var(--hd-bleu-pale);
+  --color-fd-accent-foreground: var(--hd-bleu);
+  --color-fd-ring: var(--hd-bleu);
+  --color-fd-info: var(--hd-bleu);
+
+  --font-sans: 'Geist Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  --hd-titres: 'Bricolage Grotesque Variable', 'Geist Variable', sans-serif;
+}
+
+html {
+  scrollbar-gutter: stable;
+  -webkit-font-smoothing: antialiased;
+  font-family: var(--font-sans);
+}
+
+html > body[data-scroll-locked] {
+  margin-right: 0px !important;
+  --removed-body-scroll-bar-size: 0px !important;
+}
+
+::selection { background: var(--hd-citron); color: var(--hd-citron-encre); }
+
+/* Les titres : Bricolage, serrés, au poids de l'accueil. */
+h1, h2, h3, #nd-page h1 {
+  font-family: var(--hd-titres);
+  letter-spacing: -0.025em;
+}
+#nd-page h1 { font-weight: 650; letter-spacing: -0.035em; }
+.prose :where(h2, h3):not(:where(.not-prose *)) { font-weight: 640; }
+.prose { --tw-prose-links: var(--hd-bleu); }
+.prose :where(a):not(:where(.not-prose *)) { text-decoration-color: color-mix(in srgb, var(--hd-bleu) 35%, transparent); text-underline-offset: 3px; }
+.prose :where(a):not(:where(.not-prose *)):hover { text-decoration-color: var(--hd-bleu); }
+.prose :where(code):not(:where(pre *, .not-prose *)) { background: #f1efe8; border-color: var(--hd-filet); }
+
+/* Les blocs de code : sur blanc, bordés d'un filet. */
+figure.shiki { background: #fff; }
+
+/* La marque, en tête du menu. */
+.hd-marque { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; }
+.hd-symbole { width: 24px; height: 24px; color: var(--hd-bleu); flex: none; }
+.hd-nom { font-family: var(--hd-titres); font-weight: 650; font-size: 17px; letter-spacing: -0.02em; }
+.hd-docs { color: var(--hd-gris); font-weight: 500; font-size: 15px; }
+
+/* Le lien actif du menu : bleu sur bleu pâle. */
+#nd-sidebar a[data-active='true'] { color: var(--hd-bleu); background: var(--hd-bleu-pale); font-weight: 550; }
+
+/* Les méthodes HTTP. */
+.hd-methode {
+  display: inline-block; min-width: 3.6em; text-align: center; padding: 2px 6px; border-radius: 6px;
+  font: 650 11px/1.5 var(--font-mono); letter-spacing: 0.02em;
+}
+.hd-methode-get { background: var(--hd-bleu-pale); color: var(--hd-bleu); }
+.hd-methode-post { background: #e3f6e9; color: #146c2e; }
+.hd-methode-patch, .hd-methode-put { background: #fdf0dc; color: #8a4b00; }
+.hd-methode-delete { background: #fde7e7; color: #b42318; }
+
+/* Une route dans une liste. */
+.hd-route {
+  display: grid; grid-template-columns: auto auto 1fr; align-items: center; gap: 12px;
+  padding: 12px 14px; border: 1px solid var(--hd-filet); border-radius: 12px; background: #fff; margin: 8px 0;
+  transition: border-color .15s;
+}
+.hd-route:hover { border-color: color-mix(in srgb, var(--hd-bleu) 45%, var(--hd-filet)); }
+.hd-route code { font: 550 13.5px/1.4 var(--font-mono); color: var(--hd-encre); }
+.hd-route span:last-child { color: var(--hd-gris); font-size: 14px; }
+@media (max-width: 560px) {
+  .hd-route { grid-template-columns: auto 1fr; row-gap: 4px; }
+  .hd-route span:last-child { grid-column: 1 / -1; }
+}
+
+/* L'accueil de la documentation. */
+.hd-accueil { padding: clamp(8px, 3vw, 32px) 0 8px; }
+.hd-accueil-titre {
+  font-family: var(--hd-titres); font-weight: 650; letter-spacing: -0.04em; line-height: 1.02;
+  font-size: clamp(36px, 6.4vw, 60px); margin: 0 0 18px; color: var(--hd-encre);
+}
+.hd-accueil-titre span { color: var(--hd-bleu); }
+.hd-accueil-chapo { font-size: clamp(16px, 1.6vw, 18px); line-height: 1.55; color: var(--hd-gris); max-width: 36em; margin: 0 0 26px; }
+.hd-accueil-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 34px; }
+.hd-bouton {
+  display: inline-flex; align-items: center; min-height: 44px; padding: 0 18px; border-radius: 10px;
+  font-weight: 600; font-size: 15px; border: 1px solid var(--hd-filet); background: #fff; color: var(--hd-encre);
+  transition: background .15s, border-color .15s, transform .1s;
+}
+.hd-bouton:hover { border-color: #cfcdc3; }
+.hd-bouton:active { transform: scale(.98); }
+.hd-bouton-plein { background: var(--hd-bleu); border-color: var(--hd-bleu); color: #fff; }
+.hd-bouton-plein:hover { background: var(--hd-bleu-survol); border-color: var(--hd-bleu-survol); }
+.hd-bouton:focus-visible, .hd-porte:focus-visible, .hd-route:focus-visible { outline: 2px solid var(--hd-bleu); outline-offset: 3px; }
+
+.hd-accueil-code {
+  margin: 0 0 36px; padding: 18px 20px; border-radius: 14px; background: #17181f; color: #e8e8ef;
+  font: 13.5px/1.7 var(--font-mono); overflow-x: auto; white-space: pre;
+}
+.hd-c-cmd { color: var(--hd-citron); }
+.hd-c-str { color: #b9bcff; }
+
+.hd-portes { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); }
+.hd-porte {
+  position: relative; display: flex; flex-direction: column; gap: 6px; padding: 18px 44px 18px 18px;
+  border: 1px solid var(--hd-filet); border-radius: 14px; background: #fff; transition: border-color .15s, box-shadow .15s;
+}
+.hd-porte:hover { border-color: color-mix(in srgb, var(--hd-bleu) 45%, var(--hd-filet)); box-shadow: 0 6px 20px -12px rgb(41 43 255 / .35); }
+.hd-porte-titre { font-family: var(--hd-titres); font-weight: 650; font-size: 18px; letter-spacing: -0.02em; color: var(--hd-encre); }
+.hd-porte-texte { color: var(--hd-gris); font-size: 14.5px; line-height: 1.5; }
+.hd-porte-fleche { position: absolute; top: 18px; right: 18px; color: var(--hd-bleu); font-weight: 600; transition: transform .15s; }
+.hd-porte:hover .hd-porte-fleche { transform: translateX(3px); }
+
+@media (prefers-reduced-motion: reduce) {
+  .hd-bouton, .hd-porte, .hd-porte-fleche, .hd-route { transition: none; }
+}
+
+/* La référence (Scalar) aux couleurs de Hopla. */
+.hd-ref { --hd-barre: 60px; min-height: 100vh; background: #fff; }
+.hd-ref-barre {
+  position: sticky; top: 0; z-index: 30; height: var(--hd-barre); display: flex; align-items: center; justify-content: space-between;
+  gap: 16px; padding: 0 clamp(16px, 3vw, 28px); background: color-mix(in srgb, var(--hd-papier) 92%, transparent);
+  backdrop-filter: blur(10px); border-bottom: 1px solid var(--hd-filet);
+}
+.hd-ref-liens { display: flex; gap: clamp(12px, 2.4vw, 24px); font-size: 14.5px; font-weight: 500; color: var(--hd-gris); }
+.hd-ref-liens a:hover { color: var(--hd-bleu); }
+@media (max-width: 420px) { .hd-ref-liens a:nth-child(2) { display: none; } }
+
+.hd-ref .scalar-app, .hd-ref .light-mode {
+  --scalar-custom-header-height: var(--hd-barre);
+  --scalar-font: 'Geist Variable', ui-sans-serif, system-ui, sans-serif;
+  --scalar-font-code: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  --scalar-color-1: var(--hd-encre);
+  --scalar-color-2: var(--hd-gris);
+  --scalar-color-3: #8a8f86;
+  --scalar-color-accent: var(--hd-bleu);
+  --scalar-background-1: #fff;
+  --scalar-background-2: var(--hd-papier);
+  --scalar-background-3: #f1efe8;
+  --scalar-background-accent: var(--hd-bleu-pale);
+  --scalar-border-color: var(--hd-filet);
+  --scalar-sidebar-background-1: var(--hd-papier);
+  --scalar-sidebar-color-1: var(--hd-encre);
+  --scalar-sidebar-color-2: var(--hd-gris);
+  --scalar-sidebar-color-active: var(--hd-bleu);
+  --scalar-sidebar-item-active-background: var(--hd-bleu-pale);
+  --scalar-sidebar-border-color: var(--hd-filet);
+  --scalar-sidebar-search-background: #fff;
+  --scalar-sidebar-search-border-color: var(--hd-filet);
+  --scalar-button-1: var(--hd-bleu);
+  --scalar-button-1-hover: var(--hd-bleu-survol);
+  --scalar-button-1-color: #fff;
+  --scalar-color-green: #146c2e;
+  --scalar-color-blue: var(--hd-bleu);
+  --scalar-color-orange: #8a4b00;
+  --scalar-color-yellow: #8a6a00;
+  --scalar-color-red: #b42318;
+  --scalar-color-purple: #6b3fd4;
+  --scalar-radius: 8px;
+  --scalar-radius-lg: 12px;
+  --scalar-radius-xl: 14px;
+}
+.hd-ref .scalar-app h1, .hd-ref .scalar-app h2, .hd-ref .scalar-app .section-header { font-family: var(--hd-titres); letter-spacing: -0.025em; }
+
+.hd-puces { display: flex; flex-wrap: wrap; gap: 6px; }
+.hd-puces code { font-size: 13px; }
+/* La recherche de Scalar : le raccourci tient sur une ligne. */
+.hd-ref .sidebar-search-shortcut, .hd-ref .sidebar-search kbd { white-space: nowrap; }
+
+/* Sur un grand écran, tout grandit avec lui : le texte (en rem), la colonne et la page. */
+@media (min-width: 1700px) {
+  html { font-size: clamp(16px, calc(0.55vw + 6px), 19px); }
+  #nd-docs-layout { --fd-layout-width: 92vw !important; --fd-page-width: 52rem !important; }
+  #nd-page { max-width: 56rem; }
+}
+
+/* Les onglets d'exemples défilent sans barre sur un téléphone. */
+[role='tablist'] { scrollbar-width: none; }
+[role='tablist']::-webkit-scrollbar { display: none; }
+
+@media (max-width: 560px) {
+  .hd-accueil-code { white-space: pre-wrap; word-break: break-word; font-size: 12.5px; padding: 16px; }
+}
