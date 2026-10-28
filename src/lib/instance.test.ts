@@ -52,3 +52,18 @@ test('sans Resend, seul l’administrateur entre, par le lien écrit dans les jo
   creerCompte('camille@example.org', 'camille');
   assert.deepEqual(await demanderConnexion(origines, env, 'camille@example.org'), { ok: false, message: 'L’envoi d’e-mails n’est pas configuré sur le serveur.' });
 });
+
+test('sans Creem, chaque compte d’une instance a tout, API et MCP compris ; avec Creem, les offres reviennent', async () => {
+  const db = await import('../server/db.ts');
+  const { droits } = await import('../server/droits.ts');
+  const c = db.creerCompte('alex@example.org', 'alex');
+  assert.equal(db.abonnement(c).plan, 'premium');
+  const d = droits(c, {});
+  assert.ok(d.api && d.sansMention && d.listeEmail && d.programmation);
+  const avant = { ...process.env };
+  Object.assign(process.env, { CREEM_API_KEY: 'creem_test', CREEM_WEBHOOK_SECRET: 'whsec' });
+  try {
+    assert.equal(db.abonnement(c).plan, 'pro', 'l’essai de Pro, comme sur hopla.page');
+    assert.equal(db.abonnement(c, Date.now() + 30 * 86_400_000).plan, 'gratuit');
+  } finally { process.env = avant; }
+});

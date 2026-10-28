@@ -376,12 +376,20 @@ export function produitConnu(id: string): ProduitCreem | undefined {
 }
 
 /**
+ * Une instance auto-hébergée sans Creem (29 octobre 2026, demandé par Lilian : « les users open source pourront aussi
+ * générer des clés API ») : rien ne s'y vend, chaque compte a tout, comme le compte principal, API et MCP compris.
+ * Avec `CREEM_API_KEY` et `CREEM_WEBHOOK_SECRET`, l'instance retrouve les offres, l'essai et leurs limites.
+ */
+export const sansPaiement = (env: Record<string, string | undefined> = process.env) =>
+  !EST_HOPLA_PAGE && !(env.CREEM_API_KEY?.trim() && env.CREEM_WEBHOOK_SECRET?.trim());
+
+/**
  * Où en est l'abonnement d'un compte : l'offre qu'il paie (celle de son produit, Pro pour un abonnement d'avant
  * les quatre offres), celle qu'on lui offre tant qu'elle court, et la plus haute des deux, qui est la sienne.
- * Le compte principal a tout, sans abonnement.
+ * Le compte principal a tout, sans abonnement, comme chaque compte d'une instance sans paiement.
  */
 function abonnementSelon(c: Compte, catalogue: ProduitCreem[], maintenant: number): Abonnement {
-  if (c.id === PRINCIPAL) return { plan: 'premium', payee: 'gratuit', statut: '', finPeriode: null, periode: null, portail: false, offerte: null, essai: null };
+  if (c.id === PRINCIPAL || sansPaiement()) return { plan: 'premium', payee: 'gratuit', statut: '', finPeriode: null, periode: null, portail: false, offerte: null, essai: null };
   const produit = c.abonnement_produit ? catalogue.find(p => p.id === c.abonnement_produit) : undefined;
   const payee: Plan = estPaye({ statut: c.abonnement_statut, finPeriode: c.fin_periode }, maintenant) ? produit?.plan ?? 'pro' : 'gratuit';
   const offerte = estPlanPayant(c.offerte) && (c.offerte_jusqu === null || maintenant < c.offerte_jusqu) ? { plan: c.offerte, jusqu: c.offerte_jusqu } : null;

@@ -21,6 +21,16 @@ publique doit porter un autre nom (voir « Licence et marque » dans le README).
 Le reste est facultatif : Cloudflare Turnstile contre les robots, Creem pour
 faire payer des offres.
 
+## Sans paiement, tout est ouvert
+
+Sans Creem, rien ne se vend sur l'instance : chaque compte a tout, sans essai
+ni limite d'offre. Blocs sans limite, programmation, liste e-mail, un an de
+stats, et l'API et le serveur MCP : chacun crée ses clés dans Réglages (« API
+et MCP ») et les utilise sur le domaine de l'instance, `LIENS_ORIGINE/api/v1`
+et `LIENS_ORIGINE/mcp` (ou `LIENS_ORIGINE_ADMIN` s'il est posé). Avec
+`CREEM_API_KEY` et `CREEM_WEBHOOK_SECRET`, l'instance retrouve les offres de
+hopla.page, l'essai de 14 jours et leurs limites.
+
 ## Les variables
 
 Tout se règle par l'environnement, lu au démarrage : changer une variable
@@ -104,8 +114,7 @@ variables.
    journaux du service (« Logs » dans Coolify ou Dokploy), et lui seul : les
    autres comptes attendent que les e-mails soient branchés.
 3. L'onglet Comptes, réservé au compte principal, liste les comptes, les
-   signalements, et permet d'offrir une offre à un compte, pour une durée ou
-   sans fin. Sans Creem, c'est ainsi qu'on ouvre Starter ou Pro à quelqu'un.
+   signalements, la modération et la suppression d'un compte.
 
 ## Sauvegardes
 
