@@ -2,10 +2,14 @@ FROM node:24-alpine AS build
 WORKDIR /app
 RUN corepack enable && corepack prepare pnpm@10.26.2 --activate
 COPY package.json pnpm-lock.yaml ./
-RUN pnpm install --frozen-lockfile
+COPY documentation/package.json documentation/pnpm-lock.yaml ./documentation/
+RUN pnpm install --frozen-lockfile && pnpm --dir documentation install --frozen-lockfile
 COPY . .
 # Le build régénère routeTree.gen.ts, que les tests et le typecheck lisent.
 RUN pnpm build && pnpm typecheck && pnpm test
+# La documentation (hopla.page/docs) : un site statique, que deploy/server.mjs sert depuis dist/docs.
+ENV NEXT_TELEMETRY_DISABLED=1
+RUN pnpm --dir documentation build && cp -r documentation/out dist/docs
 
 FROM node:24-alpine
 ENV NODE_ENV=production PORT=3000

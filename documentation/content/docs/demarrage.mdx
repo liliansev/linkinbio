@@ -1,0 +1,141 @@
+---
+title: Démarrer
+description: Une clé, un premier appel, un lien ajouté à ta page. Deux minutes.
+---
+
+<Steps>
+
+<Step>
+
+### Crée une clé
+
+Sur [app.hopla.page](https://app.hopla.page/admin), ouvre **Réglages**, puis **API et MCP**, et crée une clé qui peut modifier ta page.
+
+Elle commence par `hopla_` et ne s’affiche qu’une fois : copie-la tout de suite.
+
+</Step>
+
+<Step>
+
+### Garde-la dans une variable
+
+Ne l’écris jamais dans ton code : place-la dans une variable d’environnement.
+
+```bash title="Terminal"
+export HOPLA_CLE="hopla_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+```
+
+</Step>
+
+<Step>
+
+### Lis ta page
+
+<Tabs items={['curl', 'JavaScript', 'Python']} groupId="langage" persist>
+
+<Tab value="curl">
+
+```bash
+curl https://app.hopla.page/api/v1/page \
+  -H "Authorization: Bearer $HOPLA_CLE"
+```
+
+</Tab>
+
+<Tab value="JavaScript">
+
+```js title="lire.mjs"
+const reponse = await fetch('https://app.hopla.page/api/v1/page', {
+  headers: { Authorization: `Bearer ${process.env.HOPLA_CLE}` },
+});
+const { page, reglages, blocs } = await reponse.json();
+console.log(page.adresse, blocs.length, 'blocs');
+```
+
+</Tab>
+
+<Tab value="Python">
+
+```python title="lire.py"
+import os, requests
+
+reponse = requests.get(
+    "https://app.hopla.page/api/v1/page",
+    headers={"Authorization": f"Bearer {os.environ['HOPLA_CLE']}"},
+)
+donnees = reponse.json()
+print(donnees["page"]["adresse"], len(donnees["blocs"]), "blocs")
+```
+
+</Tab>
+
+</Tabs>
+
+La réponse donne l’adresse de ta page, son offre, ses réglages et ses blocs, chacun avec son `id`.
+
+</Step>
+
+<Step>
+
+### Ajoute un lien
+
+<Tabs items={['curl', 'JavaScript', 'Python']} groupId="langage" persist>
+
+<Tab value="curl">
+
+```bash
+curl -X POST https://app.hopla.page/api/v1/blocs \
+  -H "Authorization: Bearer $HOPLA_CLE" \
+  -H "Content-Type: application/json" \
+  -d '{"titre": "Mon nouveau podcast", "url": "https://exemple.fr/podcast"}'
+```
+
+</Tab>
+
+<Tab value="JavaScript">
+
+```js title="ajouter.mjs"
+const reponse = await fetch('https://app.hopla.page/api/v1/blocs', {
+  method: 'POST',
+  headers: {
+    Authorization: `Bearer ${process.env.HOPLA_CLE}`,
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({ titre: 'Mon nouveau podcast', url: 'https://exemple.fr/podcast' }),
+});
+const { bloc } = await reponse.json();
+console.log('Ajouté :', bloc.id);
+```
+
+</Tab>
+
+<Tab value="Python">
+
+```python title="ajouter.py"
+import os, requests
+
+reponse = requests.post(
+    "https://app.hopla.page/api/v1/blocs",
+    headers={"Authorization": f"Bearer {os.environ['HOPLA_CLE']}"},
+    json={"titre": "Mon nouveau podcast", "url": "https://exemple.fr/podcast"},
+)
+print("Ajouté :", reponse.json()["bloc"]["id"])
+```
+
+</Tab>
+
+</Tabs>
+
+Le lien arrive en haut de ta page, tout de suite visible. Ouvre-la pour le voir.
+
+</Step>
+
+</Steps>
+
+## Et ensuite
+
+<Cards>
+  <Card title="Les blocs" href="/blocs">Titres, produits, FAQ, vidéos : tous les types et leurs champs.</Card>
+  <Card title="Le serveur MCP" href="/mcp">La même chose, en parlant à Claude ou à Cursor.</Card>
+  <Card title="La référence" href="/reference">Chaque route, à essayer avec ta clé.</Card>
+</Cards>

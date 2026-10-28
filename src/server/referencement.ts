@@ -39,6 +39,9 @@ Sitemap: ${publique}/sitemap.xml
 `;
 }
 
+/** Les pages de la documentation, celles de documentation/content/docs et la référence. */
+const PAGES_DOCS = ['', '/demarrage', '/cles', '/mcp', '/blocs', '/reglages', '/stats', '/limites-et-erreurs', '/reference'];
+
 const echapper = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
 export function plan(publique: string): string {
@@ -48,6 +51,8 @@ export function plan(publique: string): string {
   adresses.push(`${publique}/fonctionnalites`, ...PAGES_FONCTIONS.map(p => `${publique}/fonctionnalites/${p.slug}`));
   adresses.push(`${publique}/comparatif`, ...COMPARATIFS.map(c => `${publique}/comparatif/${c.slug}`));
   adresses.push(...DOCUMENTS.map(d => `${publique}/legal/${d}`));
+  // La documentation de l'API (hopla.page/docs, un site statique à part : documentation/).
+  adresses.push(...PAGES_DOCS.map(d => `${publique}/docs${d}`));
   return `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${adresses.map(a => `  <url><loc>${echapper(a)}</loc></url>`).join('\n')}
@@ -88,7 +93,7 @@ ${questions(mode).map(([q, r]) => `### ${q}\n\n${r}`).join('\n\n')}
 ${PAGES_FONCTIONS.map(p => `  - [${p.nom}](${publique}/fonctionnalites/${p.slug}) : ${p.resume}`).join('\n')}
 - [Hopla face aux autres outils](${publique}/comparatif) :
 ${COMPARATIFS.map(c => `  - [Hopla vs ${c.nom}](${publique}/comparatif/${c.slug}) : ${c.resume}`).join('\n')}
-- [API et serveur MCP](${ORIGINE_ADMIN}/api/v1) : gérer sa page depuis un agent IA ou son code (offre Pro)
+- [Documentation de l’API et du serveur MCP](${publique}/docs) : gérer sa page depuis un agent IA ou son code (offre Pro) ; pour les agents, [${publique}/docs/llms.txt](${publique}/docs/llms.txt)
 ${DOCUMENTS.map(d => `- [${LEGAL[d].titre}](${publique}/legal/${d}) : ${LEGAL[d].resume}`).join('\n')}
 `;
 }

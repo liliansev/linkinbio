@@ -1,0 +1,163 @@
+---
+title: Les blocs
+description: Ajouter, modifier, masquer, programmer, réordonner et supprimer les blocs de ta page.
+---
+
+Une page Hopla est une suite de blocs : des liens, des titres de section, des textes, des vidéos, des produits… L’API les donne dans l’ordre de la page, chacun avec son `id`.
+
+<Route m="GET" chemin="/blocs" href="/reference#tag/blocs/GET/blocs">Les blocs, dans l’ordre</Route>
+<Route m="POST" chemin="/blocs" href="/reference#tag/blocs/POST/blocs">Ajouter un bloc</Route>
+<Route m="GET" chemin="/blocs/{id}" href="/reference#tag/blocs/GET/blocs/{id}">Lire un bloc</Route>
+<Route m="PATCH" chemin="/blocs/{id}" href="/reference#tag/blocs/PATCH/blocs/{id}">Modifier un bloc</Route>
+<Route m="DELETE" chemin="/blocs/{id}" href="/reference#tag/blocs/DELETE/blocs/{id}">Supprimer un bloc</Route>
+<Route m="PUT" chemin="/ordre" href="/reference#tag/blocs/PUT/ordre">Réordonner les blocs</Route>
+
+## Les types
+
+<ListeTypes />
+
+Sans `type`, un bloc neuf est un lien. Son type ne change plus ensuite : pour passer d’un lien à une vidéo, supprime l’un et ajoute l’autre.
+
+## Les champs
+
+| Champ | Ce qu’il porte |
+| --- | --- |
+| `titre` | Le libellé du bouton, le titre de section ou le texte d’un paragraphe. 160 caractères, 1 000 pour un texte |
+| `url` | L’adresse : `https://…`, `mailto:` ou `tel:` |
+| `sousTitre`, `description` | Une ligne sous le titre, puis un texte plus long |
+| `icone` | Le nom d’un picto ou d’un réseau : `youtube`, `instagram`, `fusee`… |
+| `image` | L’adresse https de la vignette |
+| `public` | Visible sur la page (`true` par défaut). `false` le garde, masqué |
+| `vedette`, `format` | Mis en avant, en `bouton`, `bandeau` ou `carte` |
+| `debut`, `fin` | Les dates ISO 8601 entre lesquelles il s’affiche |
+| `compteARebours` | Avant `debut`, un compte à rebours plutôt que rien |
+| `prix` | Pour un produit, tel qu’il s’affiche : « 29 € » |
+| `montants` | Pour `soutien`, les montants proposés en euros |
+| `questions` | Pour `faq`, une liste de `{ question, reponse }` |
+| `preuve` | Pour `preuve`, `{ genre, note, nombre, source }` |
+
+La [référence](/reference#model/bloc) donne tous les champs, et ceux que l’API rend en lecture.
+
+## Ajouter
+
+`POST /blocs` pose le bloc en haut de la page, ou à `position` (0 : en haut).
+
+```bash
+curl -X POST https://app.hopla.page/api/v1/blocs \
+  -H "Authorization: Bearer $HOPLA_CLE" \
+  -H "Content-Type: application/json" \
+  -d '{"type": "titre", "titre": "Mes formations", "position": 3}'
+```
+
+Quelques blocs courants :
+
+<Tabs items={['Lien mis en avant', 'Produit', 'FAQ', 'Avis', 'Vidéo']}>
+
+<Tab value="Lien mis en avant">
+
+```json
+{
+  "titre": "Réserver une séance",
+  "url": "https://cal.com/camille/seance",
+  "vedette": true,
+  "format": "carte",
+  "description": "45 minutes, en visio ou à Lyon."
+}
+```
+
+</Tab>
+
+<Tab value="Produit">
+
+```json
+{
+  "type": "produit",
+  "titre": "Programme 8 semaines",
+  "url": "https://boutique.exemple.fr/programme",
+  "prix": "49 €",
+  "image": "https://boutique.exemple.fr/programme.jpg"
+}
+```
+
+</Tab>
+
+<Tab value="FAQ">
+
+```json
+{
+  "type": "faq",
+  "titre": "Questions fréquentes",
+  "questions": [
+    { "question": "Les séances se font où ?", "reponse": "À Lyon, ou en visio." },
+    { "question": "Faut-il du matériel ?", "reponse": "Un tapis suffit." }
+  ]
+}
+```
+
+</Tab>
+
+<Tab value="Avis">
+
+```json
+{
+  "type": "preuve",
+  "titre": "Ce qu’en disent mes élèves",
+  "url": "https://g.page/r/exemple",
+  "preuve": { "genre": "note", "note": 4.9, "nombre": 128, "source": "Google" }
+}
+```
+
+</Tab>
+
+<Tab value="Vidéo">
+
+```json
+{
+  "type": "video",
+  "titre": "Ma routine du matin",
+  "url": "https://www.youtube.com/watch?v=xxxxxxxxxxx"
+}
+```
+
+</Tab>
+
+</Tabs>
+
+## Modifier, masquer, programmer
+
+`PATCH /blocs/{id}` change seulement les champs envoyés ; le reste est gardé.
+
+```bash title="Masquer un bloc sans le perdre"
+curl -X PATCH https://app.hopla.page/api/v1/blocs/a1b2c3d4e5f6 \
+  -H "Authorization: Bearer $HOPLA_CLE" \
+  -H "Content-Type: application/json" \
+  -d '{"public": false}'
+```
+
+```bash title="L’afficher du 1er au 15 décembre, avec un compte à rebours avant"
+curl -X PATCH https://app.hopla.page/api/v1/blocs/a1b2c3d4e5f6 \
+  -H "Authorization: Bearer $HOPLA_CLE" \
+  -H "Content-Type: application/json" \
+  -d '{"debut": "2026-12-01T09:00:00+01:00", "fin": "2026-12-15T23:59:00+01:00", "compteARebours": true}'
+```
+
+Pour retirer une date, envoie une chaîne vide : `{"fin": ""}`.
+
+## Réordonner
+
+`PUT /ordre` reçoit les `id` de **tous** les blocs, chacun une fois, le premier en haut. Un id oublié, répété ou étranger à ta page, et l’API répond 400 `ordre_incomplet` sans rien changer.
+
+```bash
+curl -X PUT https://app.hopla.page/api/v1/ordre \
+  -H "Authorization: Bearer $HOPLA_CLE" \
+  -H "Content-Type: application/json" \
+  -d '{"ids": ["f6e5d4c3b2a1", "a1b2c3d4e5f6", "0a1b2c3d4e5f"]}'
+```
+
+## Supprimer
+
+`DELETE /blocs/{id}` supprime le bloc pour de bon, sans corbeille. Pour le cacher un temps, préfère `{"public": false}`.
+
+## Ce que l’offre change
+
+Chaque bloc passe par les mêmes contrôles que dans le back office. Si ta page quitte un jour Pro, rien n’est effacé : ce que la nouvelle offre ne comprend pas reste enregistré et revient avec elle.

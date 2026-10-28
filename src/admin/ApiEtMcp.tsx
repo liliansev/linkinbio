@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { ApiCles, CleApi } from '../lib/types.ts';
-import { ORIGINE_ADMIN, sansSchema } from '../lib/types.ts';
+import { ORIGINE_ADMIN, ORIGINE_PUBLIQUE, sansSchema } from '../lib/types.ts';
 import { focusAuto } from '../lib/clavier';
 import { BoutonCopier, BoutonPrincipal, BoutonSecondaire, Champ, Feuille, Groupe, Interrupteur, Ligne, LigneLien, classeBouton, classeSaisie } from './ui.tsx';
 import { Etiquette, Reserve, usePermis } from './offre.tsx';
@@ -14,6 +14,8 @@ import { Etiquette, Reserve, usePermis } from './offre.tsx';
 
 export const ADRESSE_MCP = `${ORIGINE_ADMIN}/mcp`;
 export const ADRESSE_API = `${ORIGINE_ADMIN}/api/v1`;
+/** La documentation (documentation/, servie sur hopla.page/docs). */
+export const ADRESSE_DOCS = `${ORIGINE_PUBLIQUE}/docs`;
 
 /** « 28 oct. », avec l'année quand ce n'est pas celle-ci. */
 const jour = (ms: number) => new Date(ms).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', ...(new Date(ms).getFullYear() === new Date().getFullYear() ? {} : { year: 'numeric' }) });
@@ -47,7 +49,7 @@ export function ApiEtMcp({ api }: { api?: ApiCles }) {
         <Ligne nom="API REST" valeur={<span translate="no">{sansSchema(ADRESSE_API)}</span>}>
           <BoutonCopier texte={ADRESSE_API} label="Copier l’adresse de l’API" />
         </Ligne>
-        <LigneLien nom="Documentation" valeur="Les outils, les adresses, des exemples" externe onClick={() => open(ADRESSE_API, '_blank', 'noopener')} label="Lire la documentation, dans un nouvel onglet" />
+        <LigneLien nom="Documentation" valeur="Les outils, les adresses, des exemples" externe onClick={() => open(ADRESSE_DOCS, '_blank', 'noopener')} label="Lire la documentation, dans un nouvel onglet" />
       </Groupe>
 
       <Groupe titre="Mes clés" apres={permis ? undefined : <Etiquette fonction="api" />}>

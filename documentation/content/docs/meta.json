@@ -1,0 +1,17 @@
+{
+  "title": "Documentation",
+  "root": true,
+  "pages": [
+    "index",
+    "---Pour commencer---",
+    "demarrage",
+    "cles",
+    "---Agents IA---",
+    "mcp",
+    "---API REST---",
+    "blocs",
+    "reglages",
+    "stats",
+    "limites-et-erreurs"
+  ]
+}

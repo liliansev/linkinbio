@@ -1,0 +1,51 @@
+---
+title: Les statistiques
+description: Vues, visiteurs et clics de ta page, par jour, par bloc, par réseau, par appareil et par pays.
+---
+
+<Route m="GET" chemin="/stats" href="/reference#tag/statistiques/GET/stats">Les statistiques d’une période</Route>
+
+```bash
+curl "https://app.hopla.page/api/v1/stats?periode=7" \
+  -H "Authorization: Bearer $HOPLA_CLE"
+```
+
+## La période
+
+- `periode` : les derniers jours, `7`, `14`, `30` (par défaut), `90` ou `365`.
+- `du` et `au` : deux dates, `AAAA-MM-JJ`, en jours de Paris. Par exemple `?du=2026-10-01&au=2026-10-15`.
+
+Chaque chiffre vient avec celui de la période d’avant, de même longueur, pour la tendance.
+
+## La réponse
+
+```json
+{
+  "stats": {
+    "jours": 7,
+    "vues": 1284,
+    "visiteurs": 902,
+    "clics": 311,
+    "serie": [{ "jour": "2026-10-22", "vues": 170, "visiteurs": 121, "clics": 40 }],
+    "blocs": [{ "id": "a1b2c3d4e5f6", "titre": "Mon nouveau podcast", "clics": 96, "avant": 71 }],
+    "sources": [{ "nom": "instagram", "vues": 640, "avant": 512 }],
+    "appareils": [{ "nom": "mobile", "vues": 1101 }],
+    "pays": [{ "code": "FR", "vues": 1050, "avant": 930 }],
+    "precedent": { "vues": 1120, "visiteurs": 801, "clics": 260 }
+  }
+}
+```
+
+| Champ | Ce qu’il compte |
+| --- | --- |
+| `vues`, `visiteurs`, `clics` | Les totaux de la période. Un visiteur compte une fois par jour |
+| `serie` | Un jour par entrée, du plus ancien au plus récent |
+| `blocs` | Les clics de chaque bloc, et `avant` sur la période d’avant |
+| `sources` | D’où viennent les visiteurs : un réseau, un QR code, ou un accès direct |
+| `appareils` | Téléphone, ordinateur, tablette |
+| `pays` | Le code du pays (`FR`), vide quand on ne le sait pas |
+| `precedent` | Les trois totaux de la période d’avant |
+
+## La vie privée
+
+Les statistiques se comptent sans cookie, et l’adresse IP des visiteurs n’est jamais gardée.

@@ -136,3 +136,26 @@ test('en production, chaque réponse demande HTTPS (HSTS)', async t => {
     assert.equal(r.headers.get('strict-transport-security'), 'max-age=31536000', chemin);
   }
 });
+test('la documentation se sert telle quelle sur /docs, une adresse inconnue reçoit sa page 404', async t => {
+  const dir = await mkdtemp(join(tmpdir(), 'linkinbio-'));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  await mkdir(join(dir, 'server'), { recursive: true }); await mkdir(join(dir, 'docs/_next/static/chunks'), { recursive: true }); await mkdir(join(dir, 'docs/api'));
+  await writeFile(join(dir, 'server/server.js'), APP);
+  await writeFile(join(dir, 'docs/index.html'), 'accueil'); await writeFile(join(dir, 'docs/mcp.html'), 'mcp'); await writeFile(join(dir, 'docs/404.html'), 'perdu');
+  await writeFile(join(dir, 'docs/mcp.txt'), 'rsc'); await writeFile(join(dir, 'docs/api/search'), '{}'); await writeFile(join(dir, 'docs/openapi.json'), '{}');
+  await writeFile(join(dir, 'docs/_next/static/chunks/a.js'), 'js');
+  const url = await ecouter(t, createLiensServer({ appDir: dir }));
+  for (const [path, corps, type] of [['/docs', 'accueil', 'text/html'], ['/docs/mcp', 'mcp', 'text/html'], ['/docs/mcp.txt', 'rsc', 'text/plain'], ['/docs/api/search', '{}', 'application/json'], ['/docs/openapi.json', '{}', 'application/json']]) {
+    const r = await fetch(url + path); assert.equal(r.status, 200, path); assert.equal(await r.text(), corps, path); assert.match(r.headers.get('content-type'), new RegExp(type), path);
+  }
+  const chunk = await fetch(`${url}/docs/_next/static/chunks/a.js`);
+  assert.match(chunk.headers.get('cache-control'), /immutable/);
+  assert.equal((await fetch(`${url}/docs/mcp`)).headers.get('x-frame-options'), 'DENY');
+  const perdu = await fetch(`${url}/docs/nulle-part`); assert.equal(perdu.status, 404); assert.equal(await perdu.text(), 'perdu');
+  const barre = await fetch(`${url}/docs/mcp/`, { redirect: 'manual' }); assert.equal(barre.status, 308); assert.equal(barre.headers.get('location'), '/docs/mcp');
+  assert.equal((await brut(url, '/docs/%2e%2e/server/server.js')).status, 400);
+});
+test('sans documentation construite, /docs répond 404 sans passer par l’app', async t => {
+  const url = await fixture(t);
+  const r = await fetch(`${url}/docs/mcp`); assert.equal(r.status, 404); assert.doesNotMatch(await r.text(), /^app /);
+});
