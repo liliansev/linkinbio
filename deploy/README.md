@@ -1,7 +1,8 @@
 # Production (Hostinger)
 
-VPS srv1870777 (147.93.52.144), le même que le site. Projet Compose
-`/docker/linkinbio`, fichiers d'exploitation dans `/opt/linkinbio`.
+Le VPS Hostinger qui sert aussi le site de Lilian (son adresse et son nom
+restent hors du dépôt). Projet Compose `/docker/linkinbio`, fichiers
+d'exploitation dans `/opt/linkinbio`.
 
 ## Ce que le dépôt contient
 

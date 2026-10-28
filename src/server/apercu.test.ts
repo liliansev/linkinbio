@@ -160,7 +160,7 @@ test('le titre d’un lien perd le nom du site collé derrière', () => {
 
 test('refuse les adresses du réseau local', () => {
   for (const ip of ['127.0.0.1', '10.2.3.4', '192.168.1.1', '172.20.0.1', '169.254.169.254', '::1', 'fd00::1', '::ffff:127.0.0.1']) assert.ok(estPrivee(ip), ip);
-  for (const ip of ['147.93.52.144', '8.8.8.8', '2a00:1450::1']) assert.ok(!estPrivee(ip), ip);
+  for (const ip of ['93.184.215.14', '8.8.8.8', '2a00:1450::1']) assert.ok(!estPrivee(ip), ip);
 });
 
 test('refuse les adresses privées, réservées ou glissées dans une IPv6', () => {
