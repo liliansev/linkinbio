@@ -3,6 +3,7 @@ import { BLOCS_GRATUITS, ORIGINE_ADMIN } from '../lib/types.ts';
 import * as db from './db.ts';
 import type { Env } from './courriel.ts';
 import { bouton, echapper, enveloppe, envoyer } from './courriel.ts';
+import { config } from './creem.ts';
 import { CONTACT_LEGAL } from '../lib/legal.ts';
 
 /*
@@ -61,9 +62,10 @@ export async function envoyerFinsDEssai(env: Env, fetchImpl: typeof fetch, maint
 }
 
 let minuteur: ReturnType<typeof setInterval> | null = null;
-/** Vérifie toutes les heures s'il y a des e-mails de fin d'essai à envoyer. Sans clé Resend, rien ne part. */
+/** Vérifie toutes les heures s'il y a des e-mails de fin d'essai à envoyer. Sans clé Resend ni Creem, rien ne part. */
 export function planifierFinsDEssai(env: Env = process.env) {
-  if (minuteur || !env.RESEND_API_KEY || env.HOPLA_ESSAI_COURRIELS === '0') return;
+  // Sans Creem, il n'y a pas d'offre à prendre : la fin d'un essai n'a rien à annoncer.
+  if (minuteur || !env.RESEND_API_KEY || !config(env) || env.HOPLA_ESSAI_COURRIELS === '0') return;
   const tour = () => { envoyerFinsDEssai(env, fetch).catch(error => console.error('[liens] fins d’essai', (error as Error).message)); };
   minuteur = setInterval(tour, 3_600_000);
   minuteur.unref?.();

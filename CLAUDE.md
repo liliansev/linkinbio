@@ -105,7 +105,9 @@ embarque tout : l'image n'a pas de `node_modules`.
   l'app et les écrit en tête de chaque page HTML (`scriptInstance`) ; en dev, `define` de `vite.config.ts` les lit dans
   `.env`. Sans rien, hopla.page ; sans `LIENS_ORIGINE_ADMIN`, une instance sert son back office sur le même nom.
   `docker-compose.yml` à la racine : l'auto-hébergement (celui de hopla.page reste `deploy/compose.yaml`). Sans
-  Resend en production, seul le compte principal d'une instance entre, par un lien écrit dans les journaux.
+  Resend en production, seul le compte principal d'une instance entre, par un lien écrit dans les journaux. Sans
+  Creem, une instance ne vend rien et chaque compte a tout, API et MCP compris (`sansPaiement` dans `server/db.ts`) ;
+  les e-mails de fin d'essai ne partent pas sans Creem.
   `EST_HOPLA_PAGE` garde à hopla.page la page par défaut, la signature et la chaîne de Lilian ; `LIEN_SOURCE`, le
   lien « Code source » (AGPL), vide sur hopla.page tant que `DEPOT_OUVERT` est faux. Un texte dit `NOM_PUBLIC` ou
   `NOM_ADMIN` (`types.ts`), jamais « hopla.page » écrit à la main.
