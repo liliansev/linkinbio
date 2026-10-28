@@ -17,7 +17,18 @@ export function ListeThemes() {
 }
 
 export function ListeReseaux() {
-  return <p className="hd-puces">{genere.reseaux.map(r => <code key={r}>{r}</code>)}</p>;
+  return (
+    <div className="hd-table">
+      <table>
+        <thead><tr><th>reseau</th><th>Nom</th></tr></thead>
+        <tbody>{genere.reseaux.map(r => <tr key={r.id}><td><code>{r.id}</code></td><td>{r.nom}</td></tr>)}</tbody>
+      </table>
+    </div>
+  );
+}
+
+export function ListePictos() {
+  return <p className="hd-puces">{genere.pictos.map(p => <code key={p.nom} title={p.libelle}>{p.nom}</code>)}</p>;
 }
 
 export function ListeTypes() {

@@ -88,29 +88,52 @@ figure.shiki { background: #fff; }
 .hd-methode-patch, .hd-methode-put { background: #fdf0dc; color: #8a4b00; }
 .hd-methode-delete { background: #fde7e7; color: #b42318; }
 
-/* Une route dans une liste. */
-.hd-route {
-  display: grid; grid-template-columns: auto auto 1fr; align-items: center; gap: 12px;
-  padding: 12px 14px; border: 1px solid var(--hd-filet); border-radius: 12px; background: #fff; margin: 8px 0;
-  transition: border-color .15s;
+/* Un encart de routes, une par ligne, séparées d'un filet (comme « Endpoints » chez Stripe). */
+.hd-routes { margin: 20px 0 28px; border: 1px solid var(--hd-filet); border-radius: 14px; background: #fff; overflow: hidden; }
+.hd-routes-titre {
+  padding: 10px 16px; border-bottom: 1px solid var(--hd-filet); background: #faf9f5;
+  font-size: 12.5px; font-weight: 600; color: var(--hd-gris); letter-spacing: 0.01em;
 }
-.hd-route:hover { border-color: color-mix(in srgb, var(--hd-bleu) 45%, var(--hd-filet)); }
-.hd-route code { font: 550 13.5px/1.4 var(--font-mono); color: var(--hd-encre); }
-.hd-route span:last-child { color: var(--hd-gris); font-size: 14px; }
+.hd-route {
+  display: grid; grid-template-columns: 4.4em minmax(0, auto) 1fr; align-items: center; gap: 14px;
+  padding: 11px 16px; color: var(--hd-encre); transition: background .15s;
+}
+.hd-route + .hd-route { border-top: 1px solid #efede6; }
+.hd-route:hover { background: color-mix(in srgb, var(--hd-bleu-pale) 55%, #fff); }
+.hd-route code { font: 550 13.5px/1.4 var(--font-mono); white-space: nowrap; }
+.hd-route span:last-child { color: var(--hd-gris); font-size: 14px; text-align: right; }
 @media (max-width: 560px) {
-  .hd-route { grid-template-columns: auto 1fr; row-gap: 4px; }
-  .hd-route span:last-child { grid-column: 1 / -1; }
+  .hd-route { grid-template-columns: 4.4em 1fr; row-gap: 2px; padding: 12px 14px; }
+  .hd-route span:last-child { grid-column: 2; text-align: left; font-size: 13.5px; }
+  .hd-route code { white-space: normal; word-break: break-all; }
 }
 
-/* L'accueil de la documentation. */
-.hd-accueil { padding: clamp(8px, 3vw, 32px) 0 8px; }
+/* Toutes les routes, groupe par groupe. */
+.hd-groupe { margin-top: 36px; }
+.hd-groupe-titre { font-family: var(--hd-titres); font-weight: 640; font-size: 21px; letter-spacing: -0.02em; margin: 0 0 4px; }
+.hd-groupe-texte { color: var(--hd-gris); font-size: 15px; line-height: 1.55; margin: 0; }
+.hd-groupe .hd-routes { margin-top: 14px; }
+
+/* L'accueil de la documentation : le texte à gauche, l'exemple à droite dès que la place le permet. */
+.hd-accueil { padding: clamp(8px, 3vw, 28px) 0 8px; container-type: inline-size; }
+.hd-accueil-tete { display: grid; gap: clamp(28px, 4vw, 48px); align-items: center; margin-bottom: clamp(32px, 5vw, 56px); }
+@container (min-width: 880px) {
+  .hd-accueil-tete { grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); }
+  .hd-accueil-titre { font-size: clamp(40px, 5.2cqi, 64px); }
+}
+.hd-accueil-sur { margin: 0 0 14px; font-size: 13.5px; font-weight: 600; color: var(--hd-bleu); }
 .hd-accueil-titre {
   font-family: var(--hd-titres); font-weight: 650; letter-spacing: -0.04em; line-height: 1.02;
-  font-size: clamp(36px, 6.4vw, 60px); margin: 0 0 18px; color: var(--hd-encre);
+  font-size: clamp(36px, 5.4vw, 58px); margin: 0 0 18px; color: var(--hd-encre); text-wrap: balance;
 }
 .hd-accueil-titre span { color: var(--hd-bleu); }
-.hd-accueil-chapo { font-size: clamp(16px, 1.6vw, 18px); line-height: 1.55; color: var(--hd-gris); max-width: 36em; margin: 0 0 26px; }
-.hd-accueil-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 34px; }
+.hd-accueil-chapo { font-size: clamp(16px, 1.5vw, 18px); line-height: 1.55; color: var(--hd-gris); max-width: 34em; margin: 0 0 26px; text-wrap: pretty; }
+.hd-accueil-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 30px; }
+.hd-accueil-chiffres { display: flex; flex-wrap: wrap; gap: 10px 28px; margin: 0; padding-top: 22px; border-top: 1px solid var(--hd-filet); }
+.hd-accueil-chiffres div { display: flex; align-items: baseline; gap: 7px; }
+.hd-accueil-chiffres dt { font-family: var(--hd-titres); font-weight: 650; font-size: 24px; letter-spacing: -0.03em; color: var(--hd-encre); }
+.hd-accueil-chiffres dd { margin: 0; color: var(--hd-gris); font-size: 14px; }
+
 .hd-bouton {
   display: inline-flex; align-items: center; min-height: 44px; padding: 0 18px; border-radius: 10px;
   font-weight: 600; font-size: 15px; border: 1px solid var(--hd-filet); background: #fff; color: var(--hd-encre);
@@ -120,14 +143,30 @@ figure.shiki { background: #fff; }
 .hd-bouton:active { transform: scale(.98); }
 .hd-bouton-plein { background: var(--hd-bleu); border-color: var(--hd-bleu); color: #fff; }
 .hd-bouton-plein:hover { background: var(--hd-bleu-survol); border-color: var(--hd-bleu-survol); }
-.hd-bouton:focus-visible, .hd-porte:focus-visible, .hd-route:focus-visible { outline: 2px solid var(--hd-bleu); outline-offset: 3px; }
+.hd-bouton:focus-visible, .hd-porte:focus-visible, .hd-route:focus-visible, .hd-exemple-onglet:focus-visible,
+.hd-carte-groupe a:focus-visible { outline: 2px solid var(--hd-bleu); outline-offset: 2px; }
 
-.hd-accueil-code {
-  margin: 0 0 36px; padding: 18px 20px; border-radius: 14px; background: #17181f; color: #e8e8ef;
-  font: 13.5px/1.7 var(--font-mono); overflow-x: auto; white-space: pre;
+/* L'exemple : un même geste dans quatre langues, et la réponse dessous. */
+.hd-exemple { border-radius: 16px; background: #15161d; color: #e8e8ef; overflow: hidden; box-shadow: 0 24px 48px -28px rgb(21 22 29 / .55); min-width: 0; }
+.hd-exemple-onglets { display: flex; gap: 2px; padding: 8px 8px 0; border-bottom: 1px solid #2a2c37; overflow-x: auto; }
+.hd-exemple-onglet {
+  position: relative; padding: 9px 12px 11px; font-size: 13px; font-weight: 550; color: #9a9db0; border-radius: 8px 8px 0 0;
+  transition: color .15s; white-space: nowrap;
 }
+.hd-exemple-onglet:hover { color: #e8e8ef; }
+.hd-exemple-onglet[aria-selected='true'] { color: #fff; }
+.hd-exemple-onglet[aria-selected='true']::after { content: ''; position: absolute; left: 12px; right: 12px; bottom: -1px; height: 2px; border-radius: 2px; background: var(--hd-citron); }
+.hd-exemple-code { margin: 0; padding: 20px 22px; height: 24.5em; font: 12.5px/1.7 var(--font-mono); overflow: auto; white-space: pre; scrollbar-width: thin; scrollbar-color: #3a3c48 transparent; }
+.hd-exemple-reponse {
+  display: flex; align-items: center; gap: 10px; padding: 12px 22px; border-top: 1px solid #2a2c37; background: #1b1c25;
+  font-size: 12.5px; color: #9a9db0; min-width: 0;
+}
+.hd-exemple-reponse code { font: 12.5px/1.5 var(--font-mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.hd-exemple-statut { flex: none; padding: 1px 7px; border-radius: 6px; background: var(--hd-citron); color: var(--hd-citron-encre); font: 650 11.5px/1.6 var(--font-mono); }
 .hd-c-cmd { color: var(--hd-citron); }
 .hd-c-str { color: #b9bcff; }
+.hd-c-cle { color: #ff9fb8; }
+.hd-c-com { color: #8b8fa3; }
 
 .hd-portes { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); }
 .hd-porte {
@@ -140,8 +179,26 @@ figure.shiki { background: #fff; }
 .hd-porte-fleche { position: absolute; top: 18px; right: 18px; color: var(--hd-bleu); font-weight: 600; transition: transform .15s; }
 .hd-porte:hover .hd-porte-fleche { transform: translateX(3px); }
 
+/* Ce que l'API sait faire : un groupe par carte, ses routes dedans. */
+.hd-accueil-h2 { font-family: var(--hd-titres); font-weight: 650; font-size: clamp(24px, 2.6vw, 30px); letter-spacing: -0.03em; margin: clamp(44px, 6vw, 64px) 0 6px; color: var(--hd-encre); }
+.hd-accueil-sous { color: var(--hd-gris); font-size: 15.5px; margin: 0 0 20px; }
+.hd-carte-groupes { display: grid; gap: 12px; align-items: start; grid-template-columns: repeat(auto-fill, minmax(min(100%, 270px), 1fr)); }
+.hd-carte-groupe { display: flex; flex-direction: column; padding: 18px 18px 12px; border: 1px solid var(--hd-filet); border-radius: 14px; background: #fff; }
+.hd-carte-groupe-titre {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 8px;
+  font-family: var(--hd-titres); font-weight: 650; font-size: 18px; letter-spacing: -0.02em; color: var(--hd-encre);
+}
+.hd-carte-groupe-titre span { color: var(--hd-bleu); font-family: var(--font-sans); font-weight: 600; transition: transform .15s; }
+.hd-carte-groupe-titre:hover span { transform: translateX(3px); }
+.hd-carte-groupe p { margin: 6px 0 12px; color: var(--hd-gris); font-size: 14px; line-height: 1.5; }
+.hd-carte-groupe ul { margin: 0; padding: 10px 0 0; list-style: none; border-top: 1px solid #efede6; }
+.hd-carte-groupe li a { display: flex; align-items: center; gap: 10px; padding: 4px 0; border-radius: 6px; }
+.hd-carte-groupe li code { font: 500 12.5px/1.5 var(--font-mono); color: var(--hd-encre); overflow-wrap: anywhere; }
+.hd-carte-groupe li a:hover code { color: var(--hd-bleu); }
+.hd-carte-groupe .hd-methode { min-width: 4.2em; }
+
 @media (prefers-reduced-motion: reduce) {
-  .hd-bouton, .hd-porte, .hd-porte-fleche, .hd-route { transition: none; }
+  .hd-bouton, .hd-porte, .hd-porte-fleche, .hd-route, .hd-carte-groupe-titre span, .hd-exemple-onglet { transition: none; }
 }
 
 /* La référence (Scalar) aux couleurs de Hopla. */
@@ -208,5 +265,6 @@ figure.shiki { background: #fff; }
 [role='tablist']::-webkit-scrollbar { display: none; }
 
 @media (max-width: 560px) {
-  .hd-accueil-code { white-space: pre-wrap; word-break: break-word; font-size: 12.5px; padding: 16px; }
+  .hd-exemple-code { font-size: 11.5px; padding: 16px; height: auto; min-height: 15em; }
+  .hd-exemple-reponse { padding: 11px 16px; }
 }

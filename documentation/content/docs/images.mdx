@@ -1,0 +1,92 @@
+---
+title: Les images
+description: Envoyer une photo chez Hopla, puis la poser en photo de profil, en vignette, dans une galerie ou en fond de page.
+---
+
+<RoutesDe tag="Images" />
+
+Ta page ne montre que des images gardées chez Hopla : elles s’affichent vite, ne disparaissent pas quand un autre site change, et ne suivent pas tes visiteurs. Une image s’envoie en deux temps : `POST /medias` la garde et rend son `chemin`, puis tu poses ce chemin où tu veux.
+
+## Envoyer une image
+
+WebP, JPEG ou PNG, 1,5 Mo au plus. Deux façons de l’envoyer, au choix :
+
+<Tabs items={['Le fichier tel quel', 'En JSON']} groupId="envoi">
+
+<Tab value="Le fichier tel quel">
+
+Le corps de la requête est l’image elle-même, avec son type dans `Content-Type`.
+
+```bash
+curl -X POST https://app.hopla.page/api/v1/medias \
+  -H "Authorization: Bearer $HOPLA_CLE" \
+  -H "Content-Type: image/jpeg" \
+  --data-binary @portrait.jpg
+```
+
+</Tab>
+
+<Tab value="En JSON">
+
+L’image en data URL, dans le champ `image`. C’est ce que le serveur MCP attend de ton agent.
+
+```bash
+curl -X POST https://app.hopla.page/api/v1/medias \
+  -H "Authorization: Bearer $HOPLA_CLE" \
+  -H "Content-Type: application/json" \
+  -d "{\"image\": \"data:image/png;base64,$(base64 -w0 logo.png)\"}"
+```
+
+</Tab>
+
+</Tabs>
+
+```json title="201 Created"
+{
+  "media": {
+    "chemin": "/media/054a3c6991bc.png",
+    "url": "https://hopla.page/media/054a3c6991bc.png"
+  }
+}
+```
+
+Hopla lit le format dans les premiers octets du fichier, pas dans son nom : une image GIF renommée en `.png` répond 415.
+
+## La poser
+
+| Où | Le champ |
+| --- | --- |
+| La photo de profil | `PATCH /reglages` avec `{"profil": {"avatar": "/media/…"}}` |
+| Le fond de la page (Starter) | `PATCH /reglages` avec `{"imageFond": "/media/…"}` |
+| La vignette d’un lien, la photo d’un produit | `image` du bloc |
+| Une galerie | `images` du bloc `galerie`, une liste de chemins |
+
+```js title="Changer de photo de profil en Node.js"
+import { readFile } from 'node:fs/promises';
+
+const cle = process.env.HOPLA_CLE;
+const api = 'https://app.hopla.page/api/v1';
+
+const envoi = await fetch(`${api}/medias`, {
+  method: 'POST',
+  headers: { Authorization: `Bearer ${cle}`, 'Content-Type': 'image/jpeg' },
+  body: await readFile('portrait.jpg'),
+});
+const { media } = await envoi.json();
+
+await fetch(`${api}/reglages`, {
+  method: 'PATCH',
+  headers: { Authorization: `Bearer ${cle}`, 'Content-Type': 'application/json' },
+  body: JSON.stringify({ profil: { avatar: media.chemin } }),
+});
+```
+
+## Les refus
+
+| Statut | `code` | Pourquoi |
+| --- | --- | --- |
+| 400 | `image_absente` | Le corps est vide, ou `image` n’est pas une data URL |
+| 413 | `image_trop_grosse` | Plus de 1,5 Mo |
+| 413 | `plus_de_place` | Le compte a rempli sa place pour les images : supprime-en dans le back office |
+| 415 | `format_image` | Ni WebP, ni JPEG, ni PNG |
+| 403 | `lecture_seule` | La clé ne peut rien envoyer |

@@ -5,12 +5,7 @@ description: Ajouter, modifier, masquer, programmer, réordonner et supprimer le
 
 Une page Hopla est une suite de blocs : des liens, des titres de section, des textes, des vidéos, des produits… L’API les donne dans l’ordre de la page, chacun avec son `id`.
 
-<Route m="GET" chemin="/blocs" href="/reference#tag/blocs/GET/blocs">Les blocs, dans l’ordre</Route>
-<Route m="POST" chemin="/blocs" href="/reference#tag/blocs/POST/blocs">Ajouter un bloc</Route>
-<Route m="GET" chemin="/blocs/{id}" href="/reference#tag/blocs/GET/blocs/{id}">Lire un bloc</Route>
-<Route m="PATCH" chemin="/blocs/{id}" href="/reference#tag/blocs/PATCH/blocs/{id}">Modifier un bloc</Route>
-<Route m="DELETE" chemin="/blocs/{id}" href="/reference#tag/blocs/DELETE/blocs/{id}">Supprimer un bloc</Route>
-<Route m="PUT" chemin="/ordre" href="/reference#tag/blocs/PUT/ordre">Réordonner les blocs</Route>
+<RoutesDe tag="Blocs" />
 
 ## Les types
 
@@ -23,7 +18,7 @@ Sans `type`, un bloc neuf est un lien. Son type ne change plus ensuite : pour pa
 | Champ | Ce qu’il porte |
 | --- | --- |
 | `titre` | Le libellé du bouton, le titre de section ou le texte d’un paragraphe. 160 caractères, 1 000 pour un texte |
-| `url` | L’adresse : `https://…`, `mailto:` ou `tel:` |
+| `url` | L’adresse : `https://…`, `mailto:` ou `tel:`. Sans `https://`, Hopla l’ajoute ; une adresse qu’il ne peut pas lire répond 400 `adresse_invalide` |
 | `sousTitre`, `description` | Une ligne sous le titre, puis un texte plus long |
 | `icone` | Le nom d’un picto ou d’un réseau : `youtube`, `instagram`, `fusee`… |
 | `image` | L’adresse https de la vignette |
@@ -142,6 +137,21 @@ curl -X PATCH https://app.hopla.page/api/v1/blocs/a1b2c3d4e5f6 \
 ```
 
 Pour retirer une date, envoie une chaîne vide : `{"fin": ""}`.
+
+## Dupliquer
+
+`POST /blocs/{id}/dupliquer` pose une copie juste sous le bloc, avec un nouvel `id`. Avec `{"masquer": true}`, la copie reste hors de la page le temps de la retoucher : pratique pour préparer la version de la semaine prochaine d’un lien.
+
+```bash
+curl -X POST https://app.hopla.page/api/v1/blocs/a1b2c3d4e5f6/dupliquer \
+  -H "Authorization: Bearer $HOPLA_CLE" \
+  -H "Content-Type: application/json" \
+  -d '{"masquer": true}'
+```
+
+## Une image dans un bloc
+
+`image` (la vignette d’un lien, la photo d’un produit) et `images` (une galerie) prennent l’adresse d’une image gardée chez Hopla. Envoie-la d’abord avec [`POST /medias`](/images), puis pose le `chemin` rendu dans le bloc.
 
 ## Réordonner
 

@@ -1,0 +1,10 @@
+---
+title: Toutes les routes
+description: Chaque route de l’API, groupe par groupe, avec le lien vers sa référence.
+---
+
+L’API répond sur `https://app.hopla.page/api/v1`, en JSON et en UTF-8. Chaque appel porte ta [clé](/cles) dans l’en-tête `Authorization`. Une route marquée d’une méthode autre que `GET` modifie ta page, sauf les trois qui [lisent le web](/lire-le-web) : une clé en lecture seule y reçoit 403 `lecture_seule`.
+
+<ToutesLesRoutes />
+
+`GET https://app.hopla.page/api/v1`, sans clé, donne cette documentation en texte brut, pour un agent IA qui la lit d’un coup.

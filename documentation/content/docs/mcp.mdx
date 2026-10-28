@@ -109,26 +109,82 @@ Le fichier s’ouvre depuis Claude Desktop : Réglages, Développeur, Modifier l
 
 ## Les outils
 
-| Outil | Ce qu’il fait | Clé |
-| --- | --- | --- |
-| `lire_page` | La page entière : adresse, offre, réglages et blocs avec leurs id | Lecture |
-| `lister_themes` | Les thèmes possibles | Lecture |
-| `lire_stats` | Vues, visiteurs et clics d’une période | Lecture |
-| `modifier_reglages` | Profil, thème, réseaux, couleurs, référencement… | Modification |
-| `ajouter_bloc` | Un bloc neuf, en haut ou à une position | Modification |
-| `modifier_bloc` | Une partie d’un bloc ; `public: false` le masque | Modification |
-| `supprimer_bloc` | Un bloc, pour de bon | Modification |
-| `ordonner_blocs` | Le nouvel ordre de tous les blocs | Modification |
+Vingt-cinq outils, les mêmes gestes que l’API. Avec une clé en lecture seule, ton agent ne voit que les seize qui lisent.
 
-Avec une clé en lecture seule, ton agent ne voit que les trois premiers.
+### Lire
+
+| Outil | Ce qu’il fait |
+| --- | --- |
+| `lire_page` | La page entière : adresse, offre, réglages et blocs avec leurs id |
+| `lire_compte` | L’offre, l’essai, l’abonnement, et ce que l’offre comprend |
+| `lire_stats` | Vues, visiteurs et clics d’une période (`jours`, ou `du` et `au`) |
+| `lire_semaine` | Les vues des 7 derniers jours et des 7 d’avant |
+| `lire_resume` | La période en une phrase, et ses faits marquants |
+| `lire_liste` | Le nombre d’inscrits, et où ils partent |
+| `lister_inscrits` | Les inscrits, par pages |
+| `lire_qr_code` | Le QR code de la page, en image |
+| `lire_site` | Le titre, la description, le prix et l’image d’une adresse |
+| `lire_flux` | Les derniers articles d’un blog, ou la dernière vidéo d’une chaîne |
+| `lire_note_avis` | La note d’une page d’avis, sur 5 |
+| `lister_themes` | Les thèmes possibles |
+| `lister_reseaux` | Les réseaux qu’une page affiche en icônes |
+| `lister_pictos` | Les pictos d’un bloc |
+| `lister_types` | Les types de bloc que la page peut poser |
+| `lister_cles` | Les clés du compte, sans elles |
+
+### Modifier
+
+| Outil | Ce qu’il fait |
+| --- | --- |
+| `modifier_reglages` | Profil, thème, réseaux, couleurs, référencement… |
+| `ajouter_bloc` | Un bloc neuf, en haut ou à une position |
+| `modifier_bloc` | Une partie d’un bloc ; `public: false` le masque |
+| `dupliquer_bloc` | Une copie, juste sous lui, masquée si tu veux |
+| `supprimer_bloc` | Un bloc, pour de bon |
+| `ordonner_blocs` | Le nouvel ordre de tous les blocs |
+| `envoyer_image` | Une image en data URL, gardée chez Hopla, à poser dans un bloc ou en photo |
+| `supprimer_inscrit` | Un inscrit de la liste, pour de bon |
+| `envoyer_inscrits` | Les inscrits en attente, vers la newsletter branchée |
 
 ## À demander à ton agent
 
+<Tabs items={['Ta page', 'Tes chiffres', 'Ta liste', 'Avec le web']}>
+
+<Tab value="Ta page">
+
 - « Ajoute en haut de ma page Hopla un lien vers mon nouveau podcast : https://exemple.fr/podcast. »
 - « Passe ma page sur un thème plus sombre et mets ma bio à jour : coach sportive à Lyon. »
-- « Quel lien a eu le plus de clics ces 30 derniers jours, et d’où venaient les visiteurs ? »
 - « Masque le bloc de la promo d’été, sans le supprimer. »
 - « Programme le lien de ma masterclass pour qu’il apparaisse lundi à 9 h, avec un compte à rebours. »
+- « Duplique le bloc de l’atelier de novembre, masqué, et change sa date pour décembre. »
+
+</Tab>
+
+<Tab value="Tes chiffres">
+
+- « Quel lien a eu le plus de clics ces 30 derniers jours, et d’où venaient les visiteurs ? »
+- « Résume ma semaine sur Hopla en trois lignes, pour mon équipe. »
+- « Compare octobre et septembre : vues, clics, et les pays qui progressent. »
+
+</Tab>
+
+<Tab value="Ta liste">
+
+- « Combien de personnes se sont inscrites à ma liste cette semaine, et d’où venaient-elles ? »
+- « Supprime ana@exemple.fr de ma liste : elle me l’a demandé. »
+- « J’ai branché Brevo : envoie-lui les inscrits qui attendent. »
+
+</Tab>
+
+<Tab value="Avec le web">
+
+- « Ajoute ce produit à ma page, avec sa photo et son prix : https://boutique.exemple.fr/programme. »
+- « Lis mon blog et mets en avant mon dernier article. »
+- « Donne-moi le QR code de ma page, pour mon affiche. »
+
+</Tab>
+
+</Tabs>
 
 Ton agent commence par `lire_page` pour connaître les id des blocs, puis agit. Ce qu’il change se voit tout de suite sur ta page et dans le back office.
 

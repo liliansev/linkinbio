@@ -24,12 +24,15 @@ Un compte a dix clés au plus. Une par usage, c’est le plus simple : tu sais l
 
 | Geste | Lecture seule | Lecture et modification |
 | --- | --- | --- |
-| Lire la page, les blocs, les thèmes | Oui | Oui |
-| Lire les statistiques | Oui | Oui |
-| Modifier les réglages et les blocs | Non, 403 `lecture_seule` | Oui |
-| Outils MCP proposés | Les trois qui lisent | Les huit |
+| Lire la page, le compte, les listes | Oui | Oui |
+| Lire les statistiques et le résumé | Oui | Oui |
+| Lire la liste e-mail et ses inscrits | Oui | Oui |
+| Lire un site, un blog, une page d’avis | Oui | Oui |
+| Modifier les réglages et les blocs, envoyer une image | Non, 403 `lecture_seule` | Oui |
+| Supprimer un inscrit, envoyer les inscrits | Non, 403 `lecture_seule` | Oui |
+| Outils MCP proposés | Les seize qui lisent | Les vingt-cinq |
 
-Une clé ne touche qu’à la page du compte qui l’a créée.
+Une clé ne touche qu’à la page du compte qui l’a créée. `GET /cles` liste les clés du compte, sans jamais les redonner : voir [Ton compte](/compte).
 
 ## L’offre Pro
 

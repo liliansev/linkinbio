@@ -32,6 +32,12 @@ const mcp = (cle: string, message: unknown) => repondreMcp(new Request('https://
   method: 'POST', headers: { authorization: `Bearer ${cle}`, 'content-type': 'application/json', accept: 'application/json, text/event-stream' }, body: JSON.stringify(message),
 }), ENV);
 
+const LECTURE_MCP = ['lire_page', 'lister_themes', 'lire_stats', 'lire_compte', 'lire_semaine', 'lire_resume', 'lire_liste', 'lister_inscrits',
+  'lire_qr_code', 'lire_site', 'lire_flux', 'lire_note_avis', 'lister_reseaux', 'lister_pictos', 'lister_types', 'lister_cles'];
+
+/** Une petite image PNG (1 × 1), pour les envois. */
+const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+
 test('une clé neuve : le préfixe, 32 caractères tirés au hasard, seule son empreinte est gardée', () => {
   const a = nouvelleCle(), b = nouvelleCle();
   assert.match(a.cle, /^hopla_[\w-]{32}$/);
@@ -168,7 +174,8 @@ test('le serveur MCP : initialisation, outils, appels', async () => {
 
   const liste = await (await mcp(cle, { jsonrpc: '2.0', id: 2, method: 'tools/list' })).json();
   const noms = liste.result.tools.map((t: { name: string }) => t.name);
-  assert.deepEqual(noms, ['lire_page', 'lister_themes', 'lire_stats', 'modifier_reglages', 'ajouter_bloc', 'modifier_bloc', 'supprimer_bloc', 'ordonner_blocs']);
+  assert.deepEqual(noms, [...LECTURE_MCP, 'modifier_reglages', 'ajouter_bloc', 'modifier_bloc', 'supprimer_bloc', 'ordonner_blocs',
+    'dupliquer_bloc', 'envoyer_image', 'supprimer_inscrit', 'envoyer_inscrits']);
   for (const t of liste.result.tools) { assert.equal(t.inputSchema.type, 'object'); assert.ok(!('appeler' in t)); }
 
   const ajout = await (await mcp(cle, { jsonrpc: '2.0', id: 3, method: 'tools/call', params: { name: 'ajouter_bloc', arguments: { titre: 'Par Claude', url: 'exemple.fr' } } })).json();
@@ -193,8 +200,178 @@ test('le serveur MCP : initialisation, outils, appels', async () => {
 test('le serveur MCP en lecture seule ne propose que la lecture', async () => {
   const { cle } = compteAvecCle('lena', { ecriture: false });
   const liste = await (await mcp(cle, { jsonrpc: '2.0', id: 1, method: 'tools/list' })).json();
-  assert.deepEqual(liste.result.tools.map((t: { name: string }) => t.name), ['lire_page', 'lister_themes', 'lire_stats']);
+  assert.deepEqual(liste.result.tools.map((t: { name: string }) => t.name), LECTURE_MCP);
   const r = await (await mcp(cle, { jsonrpc: '2.0', id: 2, method: 'tools/call', params: { name: 'ajouter_bloc', arguments: { titre: 'Non' } } })).json();
   assert.equal(r.result.isError, true);
   assert.match(r.result.content[0].text, /lecture seule/);
+});
+
+test('le compte, les réglages, les listes de référence', async () => {
+  const { cle } = compteAvecCle('mona');
+  const { compte } = await (await appel(cle, 'GET', '/compte')).json();
+  assert.equal(compte.pseudo, 'mona');
+  assert.equal(compte.offre, 'pro');
+  assert.ok(compte.essai.jusqu);
+  assert.deepEqual(compte.fonctions.api, { incluse: true, offre: 'pro' });
+  assert.equal(compte.historiqueStats, 365);
+  const { reglages } = await (await appel(cle, 'GET', '/reglages')).json();
+  assert.ok('profil' in reglages && 'theme' in reglages);
+  const { reseaux } = await (await appel(cle, 'GET', '/reseaux')).json();
+  assert.deepEqual(reseaux.find((r: { id: string }) => r.id === 'linkedin'), { id: 'linkedin', nom: 'LinkedIn' });
+  const { pictos } = await (await appel(cle, 'GET', '/pictos')).json();
+  assert.ok(pictos.some((p: { nom: string }) => p.nom === 'micro'));
+  const { types } = await (await appel(cle, 'GET', '/types')).json();
+  assert.ok(types.includes('lien') && !types.includes('newsletter'));
+  const { cles } = await (await appel(cle, 'GET', '/cles')).json();
+  assert.equal(cles.length, 1);
+  assert.equal(cles[0].courante, true);
+  assert.ok(!JSON.stringify(cles).includes(cle));
+});
+
+test('le QR code, en SVG ou en PNG', async () => {
+  const { cle } = compteAvecCle('noor');
+  const svg = await appel(cle, 'GET', '/qr');
+  assert.equal(svg.headers.get('content-type'), 'image/svg+xml');
+  assert.match(await svg.text(), /^<svg/);
+  const png = await appel(cle, 'GET', '/qr?format=png&taille=300');
+  assert.equal(png.headers.get('content-type'), 'image/png');
+  assert.equal(Buffer.from(await png.arrayBuffer()).subarray(1, 4).toString(), 'PNG');
+});
+
+test('dupliquer un bloc : la copie juste sous lui, masquée si demandé', async () => {
+  const { cle, id } = compteAvecCle('olga');
+  const a = (await (await appel(cle, 'POST', '/blocs', { titre: 'A', url: 'https://a.fr' })).json()).bloc;
+  await appel(cle, 'POST', '/blocs', { titre: 'B', url: 'https://b.fr', position: 1 });
+  const r = await appel(cle, 'POST', `/blocs/${a.id}/dupliquer`, { masquer: true });
+  assert.equal(r.status, 201);
+  const copie = (await r.json()).bloc;
+  assert.notEqual(copie.id, a.id);
+  assert.equal(copie.public, false);
+  assert.deepEqual(db.lireBlocs(id).map(b => b.titre), ['A', 'A', 'B']);
+  assert.equal((await appel(cle, 'POST', '/blocs/inconnu/dupliquer')).status, 404);
+});
+
+test('envoyer une image : brute ou en data URL ; un autre format est refusé', async () => {
+  const { cle, id } = compteAvecCle('pia');
+  const brute = await repondreApi(new Request('https://app.hopla.page/api/v1/medias', {
+    method: 'POST', headers: { authorization: `Bearer ${cle}`, 'content-type': 'image/png' }, body: PNG,
+  }), ENV);
+  assert.equal(brute.status, 201);
+  const { media } = await brute.json();
+  assert.match(media.chemin, /^\/media\/[\w-]+\.png$/);
+  assert.equal(media.url, `https://hopla.page${media.chemin}`);
+  const enData = await appel(cle, 'POST', '/medias', { image: `data:image/png;base64,${PNG.toString('base64')}` });
+  assert.equal(enData.status, 201);
+  // L'adresse rendue se pose en avatar.
+  await appel(cle, 'PATCH', '/reglages', { profil: { avatar: media.chemin } });
+  assert.equal(db.lireReglages(id).profil.avatar, media.chemin);
+  const gif = await appel(cle, 'POST', '/medias', { image: 'data:image/png;base64,' + Buffer.from('GIF89a').toString('base64') });
+  assert.equal(gif.status, 415);
+  assert.equal((await appel(cle, 'POST', '/medias', {})).status, 400);
+});
+
+test('les stats de la semaine (toutes les offres) et le résumé', async () => {
+  const { cle } = compteAvecCle('quentin');
+  const { semaine } = await (await appel(cle, 'GET', '/stats/semaine')).json();
+  assert.deepEqual(semaine, { vues: 0, avant: 0, dejaVue: false });
+  const { resume } = await (await appel(cle, 'GET', '/stats/resume?periode=7')).json();
+  assert.equal(typeof resume.phrase, 'string');
+  assert.ok(Array.isArray(resume.faits));
+  assert.equal(resume.jours, 7);
+  assert.equal((await appel(cle, 'GET', '/stats/resume?periode=8')).status, 400);
+});
+
+test('une adresse que la validation écarte est refusée, pas enregistrée vide', async () => {
+  const { cle } = compteAvecCle('adresses');
+  const r = await appel(cle, 'POST', '/blocs', { type: 'lien', titre: 'Mon site', url: 'pas une adresse' });
+  assert.equal(r.status, 400);
+  assert.equal((await r.json()).erreur.code, 'adresse_invalide');
+  const { bloc } = await (await appel(cle, 'POST', '/blocs', { type: 'lien', titre: 'Mon site', url: 'example.com' })).json();
+  assert.equal(bloc.url, 'https://example.com/');
+  assert.equal((await appel(cle, 'PATCH', `/blocs/${bloc.id}`, { url: 'javascript:alert(1)' })).status, 400);
+  const gif = await appel(cle, 'POST', '/medias', { image: 'data:image/gif;base64,R0lGODlhAQABAAAAACw=' });
+  assert.equal(gif.status, 415);
+});
+
+test('une image en data URL passe au-delà des 256 Ko d’un corps JSON, jusqu’à 1,5 Mo', async () => {
+  const { cle } = compteAvecCle('grande-image');
+  const grosse = Buffer.concat([PNG, Buffer.alloc(600_000)]);
+  const r = await appel(cle, 'POST', '/medias', { image: 'data:image/png;base64,' + grosse.toString('base64') });
+  assert.equal(r.status, 201);
+  const reponse = await mcp(cle, { jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'envoyer_image', arguments: { image: 'data:image/png;base64,' + grosse.toString('base64') } } });
+  assert.equal((await reponse.json()).result.isError, undefined);
+});
+
+test('la liste e-mail : le résumé, les inscrits par pages, en CSV, la suppression', async () => {
+  const { cle, id } = compteAvecCle('rose');
+  for (const [i, email] of ['a@exemple.fr', 'b@exemple.fr', 'c@exemple.fr'].entries()) {
+    db.ajouterContact(id, { email, prenom: i === 1 ? 'Bea, "B"' : '', source: 'instagram', bloc: '' }, Date.now() - i * 1000);
+  }
+  const { liste } = await (await appel(cle, 'GET', '/liste')).json();
+  assert.deepEqual(liste, { inscrits: 3, semaine: 3, enAttente: 3, branchee: null });
+  const page = await (await appel(cle, 'GET', '/inscrits?limite=2')).json();
+  assert.deepEqual(page.inscrits.map((c: { email: string }) => c.email), ['a@exemple.fr', 'b@exemple.fr']);
+  assert.equal(page.total, 3);
+  assert.equal(page.suivant, 2);
+  const fin = await (await appel(cle, 'GET', '/inscrits?limite=2&depart=2')).json();
+  assert.equal(fin.suivant, null);
+  const csv = await appel(cle, 'GET', '/inscrits?format=csv');
+  assert.match(csv.headers.get('content-type') ?? '', /text\/csv/);
+  const texte = await csv.text();
+  assert.match(texte, /^email,prenom,inscrit,source\n/);
+  assert.match(texte, /b@exemple\.fr,"Bea, ""B""",/);
+  const cible = page.inscrits[0].id;
+  assert.equal((await appel(cle, 'DELETE', `/inscrits/${cible}`)).status, 200);
+  assert.equal((await appel(cle, 'DELETE', `/inscrits/${cible}`)).status, 404);
+  assert.equal(db.tousLesContacts(id).length, 2);
+  const rien = await appel(cle, 'POST', '/inscrits/envoyer');
+  assert.equal(rien.status, 409);
+  assert.equal((await rien.json()).erreur.code, 'rien_de_branche');
+});
+
+test('lire un site, un flux, une note : une adresse web est demandée', async () => {
+  const { cle } = compteAvecCle('sami');
+  for (const chemin of ['/apercu', '/flux', '/avis']) {
+    const r = await appel(cle, 'POST', chemin, { url: 'ftp://exemple.fr' });
+    assert.equal(r.status, 400, chemin);
+    assert.equal((await r.json()).erreur.code, 'adresse');
+  }
+});
+
+test('l’export : tout ce que Hopla garde du compte', async () => {
+  const { cle } = compteAvecCle('tess');
+  const r = await appel(cle, 'GET', '/export');
+  assert.equal(r.status, 200);
+  const e = await r.json();
+  assert.equal(e.compte.pseudo, 'tess');
+  assert.ok(Array.isArray(e.blocs) && Array.isArray(e.inscrits));
+  assert.equal(e.clesApi.length, 1);
+});
+
+test('une clé en lecture seule lit tout, n’écrit rien', async () => {
+  const { cle } = compteAvecCle('ugo', { ecriture: false });
+  for (const chemin of ['/compte', '/reglages', '/qr', '/stats/semaine', '/liste', '/inscrits', '/cles', '/export', '/reseaux', '/pictos', '/types']) {
+    assert.equal((await appel(cle, 'GET', chemin)).status, 200, chemin);
+  }
+  for (const [methode, chemin, corps] of [['POST', '/medias', { image: `data:image/png;base64,${PNG.toString('base64')}` }], ['POST', '/blocs/x/dupliquer', {}], ['DELETE', '/inscrits/x', undefined], ['POST', '/inscrits/envoyer', {}]] as const) {
+    const r = await appel(cle, methode, chemin, corps);
+    assert.equal(r.status, 403, chemin);
+    assert.equal((await r.json()).erreur.code, 'lecture_seule');
+  }
+});
+
+test('le serveur MCP : les outils ajoutés', async () => {
+  const { cle } = compteAvecCle('vera');
+  const appelOutil = async (name: string, args: unknown = {}) => (await (await mcp(cle, { jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name, arguments: args } })).json()).result;
+  assert.equal((await appelOutil('lire_compte')).structuredContent.compte.pseudo, 'vera');
+  assert.equal((await appelOutil('lire_liste')).structuredContent.liste.inscrits, 0);
+  const qr = await appelOutil('lire_qr_code');
+  assert.equal(qr.content[0].type, 'image');
+  assert.equal(qr.content[0].mimeType, 'image/png');
+  const image = await appelOutil('envoyer_image', { image: `data:image/png;base64,${PNG.toString('base64')}` });
+  assert.match(image.structuredContent.media.chemin, /^\/media\//);
+  const ajout = await appelOutil('ajouter_bloc', { titre: 'Original', url: 'https://exemple.fr' });
+  const copie = await appelOutil('dupliquer_bloc', { id: ajout.structuredContent.bloc.id });
+  assert.equal(copie.structuredContent.bloc.titre, 'Original');
+  assert.equal((await appelOutil('lire_site', { url: 'pas une adresse' })).isError, true);
 });
