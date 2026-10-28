@@ -74,6 +74,14 @@ embarque tout : l'image n'a pas de `node_modules`.
   d'API, les webhooks et les e-mails et prénoms des inscrits (`chiffrer`, `dechiffrer`, `empreinte` pour les doublons sans
   l'adresse en clair). La clé vient de `LIENS_CLE_INTEGRATIONS` (voir `deploy/README.md`), sinon du secret de la base ;
   `rechiffrer` dans `db.ts` remet tout sous la clé courante au démarrage.
+- `server/api.ts` et `server/mcp.ts` (28 octobre 2026, demandés par Lilian) : l'API publique (`/api/v1/…`, routes
+  `api/v1/$.ts` et `api/v1/index.ts`) et le serveur MCP (`/mcp`, HTTP « streamable », réponses JSON, sans session),
+  servis sur app.hopla.page (`DU_BACK_OFFICE` dans `deploy/server.mjs`), une seule couche de gestes pour les deux. Une
+  clé `hopla_…` créée dans Réglages (« API et MCP », `admin/ApiEtMcp.tsx`), table `cles_api` : seule son empreinte
+  SHA-256 est gardée, montrée une fois, lecture seule ou lecture et modification, dix par compte. Elle sert tant que le
+  compte a Pro (`FONCTIONS.api`), est actif et a accepté les CGU ; 120 appels par minute et 5 000 par jour par clé, CORS
+  ouvert (aucun cookie). Les gestes passent par `validerBloc`, `validerReglages` et `verifierDates`, comme le back office.
+  La documentation (`lib/docApi.ts`) se lit sans clé sur GET /api/v1 : un changement de l'API s'y reporte.
 - `server/liste.ts` : « Rejoins ma liste ». Les inscrits restent chez Hopla (export CSV) et partent là où la personne a
   branché sa liste (22 octobre 2026) : huit newsletters par leur API (Brevo, Mailchimp, Kit, MailerLite, beehiiv,
   Systeme.io, et depuis le 25 octobre MailCheap, dont une clé « Signups only » se vérifie sans inscrire personne, et Loops ; `listes()` pour choisir la liste par son nom, `verifier()`, `pousser()`), ou Make, Zapier et n8n par un

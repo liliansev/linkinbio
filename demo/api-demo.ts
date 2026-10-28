@@ -1,4 +1,4 @@
-import type { Api, Bloc, CompteResume, EtatAdmin, FournisseurListe, IntegrationListe, ListeFournisseur, Reglages, Reservation, SignalementResume, Stats } from '../src/lib/types.ts';
+import type { Api, Bloc, CleApi, CompteResume, EtatAdmin, FournisseurListe, IntegrationListe, ListeFournisseur, Reglages, Reservation, SignalementResume, Stats } from '../src/lib/types.ts';
 import { estWebhook, nouveauBloc } from '../src/lib/types.ts';
 import { ADRESSE_WEBHOOK, LISTE_CHEZ, NOMS_FOURNISSEURS, adresseWebhook } from '../src/lib/integrations.ts';
 import { REGLAGES_DEFAUT, blocsDefaut, reglagesNouveauCompte } from '../src/lib/defauts.ts';
@@ -19,7 +19,7 @@ import avatar from '../public/avatar.webp?inline';
 const CLE = 'liens-demo-v3';
 const SANS_ABONNEMENT: Abonnement = { plan: 'gratuit', payee: 'gratuit', statut: '', finPeriode: null, periode: null, portail: false, offerte: null };
 /** Sans paiement, rien n'est réservé : l'aperçu montre toutes les fonctions (seule la mention reste sans offre). */
-const DROITS_APERCU: Droits = { sansMention: false, vitrine: true, couleurs: true, programmation: true, avis: true, stats: true, heure: true, drops: true, listeEmail: true, formulaire: true, galerie: true, utm: true, redirection: true, fond: true, grandePhoto: true, grille: true, pays: true, cadeau: true, flux: true };
+const DROITS_APERCU: Droits = { sansMention: false, vitrine: true, couleurs: true, programmation: true, avis: true, stats: true, heure: true, drops: true, listeEmail: true, formulaire: true, galerie: true, utm: true, redirection: true, fond: true, grandePhoto: true, grille: true, pays: true, cadeau: true, flux: true, api: true };
 let n = 0;
 const id = () => `d${Date.now().toString(36)}${n++}`;
 
@@ -102,6 +102,9 @@ const LISTES_DEMO: Record<Exclude<FournisseurListe, 'make' | 'zapier' | 'n8n'>, 
   loops: [{ id: '', nom: 'Toute ton audience' }, { id: 'cm2k8j4h6g0f8d6s4a2b0z8', nom: 'Newsletter' }],
 };
 
+/** Les clés d'API de l'aperçu (Réglages, API et MCP). */
+let clesDemo: CleApi[] = [{ id: 'c1', nom: 'Claude', debut: 'hopla_4fQa', ecriture: true, cree: Date.now() - 9 * 86_400_000, utilisee: Date.now() - 3_600_000 }];
+
 export const apiDemo: Api = {
   async charger(): Promise<EtatAdmin> {
     const s = statsFictives(30);
@@ -181,6 +184,16 @@ export const apiDemo: Api = {
   async resynchroniser() { await pause(); const envoyes = inscritsEnAttente; inscritsEnAttente = 0; return { envoyes, erreurs: 0 }; },
   async adresses() { await pause(); return inscritsDemo().map(c => c.email); },
   urlContacts: null,
+  cles: {
+    async lister() { await pause(); return clesDemo; },
+    async creer(nom, ecriture) {
+      await pause();
+      const infos = { id: `c${Date.now()}`, nom: nom || 'Ma clé', debut: 'hopla_Xq7v', ecriture, cree: Date.now(), utilisee: null };
+      clesDemo = [infos, ...clesDemo];
+      return { cle: 'hopla_Xq7vK2mPz9TfLw4sRb8nYc1hJd6uAe3G', infos };
+    },
+    async revoquer(id) { await pause(); clesDemo = clesDemo.filter(c => c.id !== id); },
+  },
   comptes: {
     async lister() { await pause(); return comptesDemo; },
     async offres() { await pause(); return []; },

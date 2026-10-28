@@ -41,6 +41,11 @@ function PageAdmin() {
     resynchroniser: () => fn.resynchroniser(),
     adresses: () => fn.lireAdresses(),
     urlContacts: '/api/contacts',
+    cles: {
+      lister: () => fn.listerClesApi(),
+      creer: (nom, ecriture) => fn.creerCleApi({ data: { nom, ecriture } }),
+      revoquer: async id => { await fn.revoquerCleApi({ data: id }); },
+    },
     comptes: acces.connecte && acces.etat.compte.principal ? {
       lister: () => fn.listerComptes(),
       offres: () => fn.lireOffresCreem(),

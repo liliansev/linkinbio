@@ -26,8 +26,8 @@ const STATIQUE = /^\/(assets\/[\w.-]+|[\w-]+\.(webp|png|svg|ico|webmanifest|txt|
    origine, et l'inscription, qui n'accepte que l'origine du site, la reçoit. */
 const SITE_PUBLIC = 'https://liliansevoumian.fr';
 const DU_SITE = /^\/api\/(newsletter|derniere-video(\/vignette)?)$/;
-/** Ce que le back office sert lui-même ; le reste (pages, textes légaux) vit sur l'origine publique. */
-const DU_BACK_OFFICE = /^\/(admin(\/|$)|_serverFn\/|api\/|assets\/|media\/)/;
+/** Ce que le back office sert lui-même (et l'API, le serveur MCP) ; le reste (pages, textes légaux) vit sur l'origine publique. */
+const DU_BACK_OFFICE = /^\/(admin(\/|$)|_serverFn\/|api\/|assets\/|media\/|mcp$)/;
 const appRoot = fileURLToPath(new URL('../dist', import.meta.url));
 const mime = { html: 'text/html; charset=utf-8', css: 'text/css', js: 'text/javascript', mjs: 'text/javascript', json: 'application/json', svg: 'image/svg+xml', png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', avif: 'image/avif', gif: 'image/gif', ico: 'image/x-icon', woff: 'font/woff', woff2: 'font/woff2', webmanifest: 'application/manifest+json', txt: 'text/plain; charset=utf-8', xml: 'application/xml; charset=utf-8' };
 const etagOf = bytes => `"${createHash('sha1').update(bytes).digest('base64url').slice(0, 27)}"`;

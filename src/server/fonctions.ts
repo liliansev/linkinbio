@@ -1,6 +1,6 @@
 import { createMiddleware, createServerFn } from '@tanstack/react-start';
 import { deleteCookie, getCookie, getRequestHeader, getRequestUrl, setCookie } from '@tanstack/react-start/server';
-import type { Bloc, CompteResume, EtatAdmin, FournisseurListe, ImageApercu, Liste, ListeFournisseur, Origines, PagePublique, Reglages, NoteAvis, Reservation, Semaine, SignalementResume, Stats } from '../lib/types.ts';
+import type { Bloc, CleApi, CompteResume, EtatAdmin, FournisseurListe, ImageApercu, Liste, ListeFournisseur, Origines, PagePublique, Reglages, NoteAvis, Reservation, Semaine, SignalementResume, Stats } from '../lib/types.ts';
 import { FOURNISSEURS_LISTE } from '../lib/types.ts';
 import * as liste from './liste.ts';
 import { requeteSortante } from './sortante.ts';
@@ -23,6 +23,7 @@ import { changerStatutMotive, signaler, supprimerMotive, traiter } from './moder
 import { supprimerAvecAbonnement } from './suppression.ts';
 import { corrigerAdresse as corriger, creerHopla, inscriptionLibre, inviterReservation, renommerPage as renommer, renvoyerInscription, reserverNom as reserver, verifierNom as verifier } from './attente.ts';
 import * as creem from './creem.ts';
+import { nouvelleCle } from './api.ts';
 import { droits, joursLisibles, periodeLisible, verifierDates } from './droits.ts';
 import { lirePeriode } from '../lib/periode.ts';
 import { selonDroits } from '../lib/droits.ts';
@@ -316,6 +317,31 @@ export const lireSemaine = createServerFn({ method: 'GET' })
     const s = db.stats(context.compte, 7);
     return { vues: s.vues, avant: s.precedent.vues, dejaVue: s.dejaVue };
   });
+
+/* ---- Les clés d'API (Réglages, « API et MCP ») ---- */
+
+export const listerClesApi = createServerFn({ method: 'GET' })
+  .middleware([session])
+  .handler(async ({ context }): Promise<CleApi[]> => db.clesApi(context.compte));
+
+/** Une clé neuve, montrée une seule fois : on n'en garde que l'empreinte. Pro seulement (`FONCTIONS.api`). */
+export const creerCleApi = createServerFn({ method: 'POST' })
+  .middleware([session])
+  .validator((data: unknown) => {
+    const o = (data && typeof data === 'object' ? data : {}) as { nom?: unknown; ecriture?: unknown };
+    return { nom: String(o.nom ?? '').replace(/\s+/g, ' ').trim().slice(0, 60), ecriture: o.ecriture !== false };
+  })
+  .handler(async ({ data, context }): Promise<{ cle: string; infos: CleApi }> => {
+    if (!droits(db.compteParId(context.compte)!).api) throw new Error('L’API et le serveur MCP demandent Hopla Pro.');
+    const neuve = nouvelleCle();
+    const infos = db.ajouterCleApi(context.compte, { nom: data.nom || 'Ma clé', hash: neuve.hash, debut: neuve.debut, ecriture: data.ecriture });
+    return { cle: neuve.cle, infos };
+  });
+
+export const revoquerCleApi = createServerFn({ method: 'POST' })
+  .middleware([session])
+  .validator((data: unknown) => String(data ?? '').slice(0, 40))
+  .handler(async ({ data, context }) => ({ ok: db.revoquerCleApi(context.compte, data) }));
 
 /* ---- « Rejoins ma liste », et où partent ses inscrits (onglet Intégrations) ---- */
 

@@ -926,7 +926,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
             onListe={l => setIntegration(droits.listeEmail ? l.integration : undefined)} />}
           {onglet === 'reglages' && <OngletReglages reglages={reglages} compte={compte} onChange={changerReglages} onDeconnexion={deconnexion} urlExport={api.urlExport} supprimerMonCompte={api.supprimerMonCompte}
             abonnement={abonnement} onOffres={peutAcheter ? (pour?: Fonction) => ouvrirOffres(pour) : undefined} ouvrirPortail={api.ouvrirPortail}
-            onResilier={peutAcheter ? () => setOffres({ resilier: true }) : undefined} />}
+            onResilier={peutAcheter ? () => setOffres({ resilier: true }) : undefined} cles={api.cles} />}
           {onglet === 'comptes' && api.comptes && <OngletComptes api={api.comptes} avatar={reglages.profil.avatar} />}
           </div>
           {/* Au bureau, Intégrations et Réglages gardent la page à droite, comme Ma page (25 octobre 2026, demandé par Lilian) :

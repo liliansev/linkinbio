@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { CONTACT_LEGAL } from '../lib/legal.ts';
-import type { ComptePage, DomaineCourt, Reglages } from '../lib/types.ts';
+import type { ApiCles, ComptePage, DomaineCourt, Reglages } from '../lib/types.ts';
 import { DOMAINES_COURTS, adressePartage, sansSchema, urlPage } from '../lib/types.ts';
 import { adresseSaisie } from '../lib/valider.ts';
 import { redirectionActive } from '../lib/sorties.ts';
@@ -13,6 +13,7 @@ import { telechargerQR } from './CodeQR.tsx';
 import { noterPartage } from './BienDemarrer.tsx';
 import { focusAuto } from '../lib/clavier';
 import { Icone } from '../components/Icone.tsx';
+import { ApiEtMcp } from './ApiEtMcp.tsx';
 
 /*
  * Réglages sur une seule page (direction B, 20 octobre 2026) : trois groupes,
@@ -27,7 +28,7 @@ import { Icone } from '../components/Icone.tsx';
 
 const dateLongue = (ms: number) => new Date(ms).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
 
-export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlExport, supprimerMonCompte, abonnement, onOffres, ouvrirPortail, onResilier }: {
+export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlExport, supprimerMonCompte, abonnement, onOffres, ouvrirPortail, onResilier, cles }: {
   reglages: Reglages; compte: ComptePage & { email?: string; plan: Plan }; onChange: (r: Reglages) => void; onDeconnexion: () => void;
   urlExport: string | null; supprimerMonCompte: (confirmation: string) => Promise<{ ok: boolean; message: string; aLaMain?: boolean }>;
   abonnement: EtatAbonnement;
@@ -36,17 +37,19 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
   ouvrirPortail: () => Promise<string>;
   /** Ouvre les offres sur « Repasser en Gratuit » : la résiliation se fait dans Hopla, pour la fin de la période payée. */
   onResilier?: () => void;
+  /** Les clés d'API, pour l'API et le serveur MCP ; absent dans l'aperçu sans serveur. */
+  cles?: ApiCles;
 }) {
   // La page vit sur hopla.page ; on partage son nom court s'il en a choisi un.
   const adresse = urlPage(compte);
   const partage = adressePartage(compte, reglages.domaine);
-  const [sous, setSous] = useState<'abonnement' | null>(null);
+  const [sous, setSous] = useState<'abonnement' | 'api' | null>(null);
   const [fenetre, setFenetre] = useState<'apercu' | 'supprimer' | 'redirection' | 'domaine' | null>(null);
   const [portail, setPortail] = useState<'' | 'ouverture' | string>('');
   // Ce qui a ouvert la sous-page reprend le focus quand on en revient (la page se redessine : on le retrouve par son id).
   const ouvreur = useRef('');
   const grand = useGrandEcran();
-  const ouvrirSous = (id: string) => () => { ouvreur.current = id; setSous('abonnement'); if (!grand) scrollTo({ top: 0 }); };
+  const ouvrirSous = (id: string, quoi: 'abonnement' | 'api' = 'abonnement') => () => { ouvreur.current = id; setSous(quoi); if (!grand) scrollTo({ top: 0 }); };
   useEffect(() => {
     if (sous || !ouvreur.current) return;
     document.getElementById(ouvreur.current)?.focus({ preventScroll: true });
@@ -58,6 +61,7 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
   const stats = usePermis('stats');
   const utm = usePermis('utm');
   const rediriger = usePermis('redirection');
+  const avecApi = usePermis('api');
   const versAilleurs = redirectionActive(reglages.redirection, Date.now(), adresse);
   const seo = (champs: Partial<Reglages['seo']>) => onChange({ ...reglages, seo: { ...reglages.seo, ...champs } });
 
@@ -72,6 +76,12 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
     <div className="adm-reglages">
       <SousPage nom="Mon abonnement" retour={() => setSous(null)} />
       {facturation}
+    </div>
+  );
+  if (sous === 'api' && !grand) return (
+    <div className="adm-reglages">
+      <SousPage nom="API et MCP" retour={() => setSous(null)} />
+      <ApiEtMcp api={cles} />
     </div>
   );
 
@@ -135,6 +145,12 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
         )}
       </Groupe>
 
+      {/* L'API et le serveur MCP (28 octobre 2026) : la sous-page s'ouvre aussi sans Pro, pour révoquer une clé déjà créée. */}
+      <Groupe titre="Agents IA">
+        <LigneLien id="reglage-api" nom="API et MCP" valeur="Ta page pilotée par Claude, ChatGPT, Cursor…" apres={avecApi ? undefined : <Etiquette fonction="api" />}
+          courant={sous === 'api'} onClick={ouvrirSous('reglage-api', 'api')} />
+      </Groupe>
+
       {offres && (
         <Groupe titre="Abonnement">
           <Ligne nom="Offre" valeur={<strong>{nomOffre(abonnement)}</strong>}>
@@ -175,6 +191,11 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
       {sous === 'abonnement' && (
         <PanneauDetail titre="Mon abonnement" fermer={() => setSous(null)}>
           <div className="adm-reglages">{facturation}</div>
+        </PanneauDetail>
+      )}
+      {sous === 'api' && (
+        <PanneauDetail titre="API et MCP" fermer={() => setSous(null)}>
+          <div className="adm-reglages"><ApiEtMcp api={cles} /></div>
         </PanneauDetail>
       )}
       {/* Au bureau, « Me déconnecter » est dans le menu du compte, en bas de la barre latérale. */}
