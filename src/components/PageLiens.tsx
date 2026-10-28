@@ -18,6 +18,7 @@ import { Trace } from './Logo.tsx';
 import { peut } from '../lib/abonnement.ts';
 import { adresseIntegree, avecMontants, lienMontant, lienSansMontant, nomAgenda, nomSoutien, seIntegre } from '../lib/vitrine.ts';
 import { focusAuto } from '../lib/clavier';
+import { EST_HOPLA_PAGE } from '../lib/instance.ts';
 import { lecteurDe } from '../lib/lecteurs.ts';
 import { CarteVisite, Contact, Faq, Flux, Galerie, Lieu, Musique, VideoIntegree, useArticles } from './BlocsPlus.tsx';
 
@@ -203,7 +204,7 @@ export function PageLiens({ page, apercu = false, edition, liste, sansMention = 
             ? <ChampBio valeur={reglages.profil.bio} onChange={bio => edition.profil({ bio })} onQuitter={avant => edition.modifie?.('bio', avant)} />
             : reglages.profil.bio && <p className="lp-bio">{reglages.profil.bio}</p>}
           {/* La page de Lilian met Hopla en avant sous sa bio (24 octobre 2026) : une ligne à l'accent du thème, le logo après le mot. */}
-          {compte.principal && (
+          {compte.principal && EST_HOPLA_PAGE && (
             <p className="lp-hopla-haut" {...(edition ? { inert: true } : {})}>
               <a href={ORIGINE_PUBLIQUE} {...cible}>{t.creeTaPage} <strong>Hopla</strong><Trace /></a>
             </p>
@@ -230,8 +231,8 @@ export function PageLiens({ page, apercu = false, edition, liste, sansMention = 
         */}
         {/* En édition, le pied ne mène nulle part : on ne quitte pas sa page en touchant la mention. */}
         <footer className="lp-fin" {...(edition ? { inert: true } : fige)}>
-          {/* La page de Lilian signe de son site ; en Gratuit, la mention est la barre collée en bas de l'écran (`barreHopla`). */}
-          {compte.principal && <p className="lp-signature"><a href="https://liliansevoumian.fr" {...cible}>liliansevoumian.fr</a></p>}
+          {/* La page de Lilian signe de son site (sur hopla.page seulement) ; en Gratuit, la mention est la barre collée en bas de l'écran (`barreHopla`). */}
+          {compte.principal && EST_HOPLA_PAGE && <p className="lp-signature"><a href="https://liliansevoumian.fr" {...cible}>liliansevoumian.fr</a></p>}
           {/* Les liens légaux, sur toutes les pages, celle de Lilian comprise. */}
           <p className="lp-legal">
             <a href="/legal/confidentialite" {...cible}>{t.confidentialite}</a>
@@ -701,7 +702,9 @@ function DerniereVideo({ titre, clic }: { titre: string; clic: () => void }) {
     fetch('/api/derniere-video').then(r => (r.ok ? r.json() : Promise.reject())).then(v => { if (!annule) setVideo(v?.id ? v : 'absente'); }).catch(() => { if (!annule) setVideo('absente'); });
     return () => { annule = true; };
   }, []);
+  // Sans vidéo relevée, la chaîne de Lilian sur hopla.page ; rien sur une autre instance.
   if (video === 'absente') {
+    if (!EST_HOPLA_PAGE) return null;
     return <a className="lp-btn" href="https://www.youtube.com/@lilian.sevoumian" onClick={clic}><span className="lp-picto"><Icone nom="youtube" taille={22} /></span><span className="lp-btn-texte"><span className="lp-btn-titre">{titre}</span></span></a>;
   }
   if (!video) return <div className="lp-video lp-video-attente" aria-hidden="true"><div className="lp-video-cadre" /></div>;

@@ -4,8 +4,9 @@ import { dirname, resolve } from 'node:path';
 import { randomBytes, randomUUID } from 'node:crypto';
 import type { Bloc, CleApi, CompteResume, Contact, FournisseurListe, Reglages, Reservation, Stats } from '../lib/types.ts';
 import { PRINCIPAL } from '../lib/types.ts';
+import { EST_HOPLA_PAGE } from '../lib/instance.ts';
 import { REGLAGES_DEFAUT, blocsDefaut, reglagesNouveauCompte } from '../lib/defauts.ts';
-import { validerBloc, validerReglages } from '../lib/valider.ts';
+import { pseudo, validerBloc, validerReglages } from '../lib/valider.ts';
 import type { Abonnement, Periode, Plan, PlanPayant } from '../lib/abonnement.ts';
 import { ESSAI_JOURS, OFFRES, PLAN_ESSAI, estPaye, estPlanPayant, rang } from '../lib/abonnement.ts';
 import { appDe } from '../lib/ouvrirApp.ts';
@@ -133,7 +134,7 @@ export function base(): DatabaseSync {
   `);
   if (!db.prepare('SELECT 1 FROM comptes WHERE id = ?').get(PRINCIPAL)) {
     // L'adresse du compte principal vient de l'environnement (voir auth.ts) : on n'en garde qu'un repère.
-    db.prepare('INSERT INTO comptes (id, email, pseudo, cree) VALUES (?, ?, ?, ?)').run(PRINCIPAL, '', 'lilian', Date.now());
+    db.prepare('INSERT INTO comptes (id, email, pseudo, cree) VALUES (?, ?, ?, ?)').run(PRINCIPAL, '', pseudoPrincipal(), Date.now());
   }
   const ancienne = db.prepare('SELECT valeur FROM reglages WHERE cle = ?').get('page') as { valeur: string } | undefined;
   if (ancienne) {
@@ -141,9 +142,11 @@ export function base(): DatabaseSync {
     db.prepare('DELETE FROM reglages WHERE cle = ?').run('page');
   }
   if (!db.prepare('SELECT 1 FROM pages WHERE compte = ?').get(PRINCIPAL)) {
-    db.prepare('INSERT INTO pages (compte, valeur) VALUES (?, ?)').run(PRINCIPAL, JSON.stringify(REGLAGES_DEFAUT));
+    // La page de Lilian sur hopla.page ; ailleurs, celle d'un compte neuf, que l'administrateur remplit lui-même.
+    const reglages = EST_HOPLA_PAGE ? REGLAGES_DEFAUT : reglagesNouveauCompte(pseudoPrincipal());
+    db.prepare('INSERT INTO pages (compte, valeur) VALUES (?, ?)').run(PRINCIPAL, JSON.stringify(reglages));
     const inserer = db.prepare('INSERT INTO blocs (id, position, donnees, compte) VALUES (?, ?, ?, ?)');
-    blocsDefaut(nouvelId).forEach((bloc, i) => inserer.run(bloc.id, i, JSON.stringify(bloc), PRINCIPAL));
+    if (EST_HOPLA_PAGE) blocsDefaut(nouvelId).forEach((bloc, i) => inserer.run(bloc.id, i, JSON.stringify(bloc), PRINCIPAL));
   }
   // Le passage sur hopla.page (18 octobre 2026) : l'app quitte /liens, les images aussi. Sans effet ensuite.
   for (const [table, col] of [['blocs', 'donnees'], ['pages', 'valeur']]) {
@@ -245,6 +248,15 @@ export const compteParId = (id: string) => base().prepare(`${LIRE_COMPTE} WHERE 
 export const compteParPseudo = (pseudo: string) => base().prepare(`${LIRE_COMPTE} WHERE pseudo = ?`).get(pseudo.toLowerCase()) as Compte | undefined;
 /** Jamais le compte principal : son adresse se lit dans l'environnement. */
 export const compteParEmail = (email: string) => base().prepare(`${LIRE_COMPTE} WHERE email = ? AND id != ?`).get(email.toLowerCase(), PRINCIPAL) as Compte | undefined;
+
+/**
+ * Le nom du compte principal à la création de la base : `lilian` sur hopla.page, `LIENS_PSEUDO_PRINCIPAL` sur une
+ * instance auto-hébergée (`moi` à défaut). Lu une seule fois : une base existante garde le sien.
+ */
+export function pseudoPrincipal(env: Record<string, string | undefined> = process.env): string {
+  if (EST_HOPLA_PAGE) return 'lilian';
+  return pseudo(env.LIENS_PSEUDO_PRINCIPAL ?? '') || 'moi';
+}
 
 export function creerCompte(email: string, pseudo: string, maintenant = Date.now()): Compte {
   const d = base();

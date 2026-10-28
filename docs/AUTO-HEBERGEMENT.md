@@ -34,9 +34,13 @@ une image sans `node_modules`.
 
 ```bash
 git clone https://github.com/liliansev/linkinbio.git hopla && cd hopla
+cp .env.example .env        # puis le remplir : adresses, identité légale, e-mails
 docker build -t hopla .
-cp .env.example hopla.env   # puis le remplir
 ```
+
+Les adresses et l'identité légale sont lues **au build** : la page et le back
+office en ont besoin dans le navigateur. Sans elles, le build est celui de
+hopla.page. Après un changement de `.env`, reconstruis l'image.
 
 Un `compose.yaml` minimal (celui de `deploy/` est propre à hopla.page) :
 
@@ -47,7 +51,7 @@ services:
     restart: unless-stopped
     init: true
     read_only: true
-    env_file: hopla.env
+    env_file: .env
     environment:
       NODE_ENV: production
       PORT: '3000'
@@ -83,7 +87,8 @@ NODE_ENV=production LIENS_DB=/srv/hopla/liens.db pnpm start
 ## Premier démarrage
 
 1. Au premier lancement, la base se crée avec le **compte principal**,
-   l'administrateur de l'instance. Son adresse est `LIENS_ADMIN_EMAIL`.
+   l'administrateur de l'instance : son adresse est `LIENS_ADMIN_EMAIL`, son
+   pseudo `LIENS_PSEUDO_PRINCIPAL` (`moi` à défaut), sa page est vide.
 2. Ouvre `LIENS_ORIGINE_ADMIN/admin`, entre cette adresse : le lien de connexion
    arrive par e-mail (ou dans les journaux du conteneur sans `RESEND_API_KEY`).
 3. L'onglet Comptes, réservé au compte principal, liste les comptes, les
@@ -108,20 +113,16 @@ La base se met à jour seule au démarrage. Fais une sauvegarde avant.
 
 ## Ce qui reste propre à hopla.page
 
-Hopla est né comme le service de son auteur, et quelques réglages de la version
-hébergée sont encore écrits dans le code. Une instance auto-hébergée fonctionne,
-mais il faut les connaître, et les adapter avant d'ouvrir l'instance au public :
+Hors de hopla.page, l'instance a ses adresses, son compte principal, son
+identité légale et son lien « Code source » ; la page, la signature et la chaîne
+YouTube de l'auteur n'y apparaissent pas. Restent à adapter avant d'ouvrir une
+instance au public :
 
-- **Les textes légaux** (`src/lib/legal.ts`) : CGU, confidentialité,
-  sous-traitants et mentions légales nomment l'éditeur et l'hébergeur de
-  hopla.page. À réécrire pour ton instance.
-- **Le compte principal** a le pseudo `lilian` et une page d'exemple remplie
-  avec les liens de l'auteur (`src/lib/defauts.ts`) : à modifier depuis le back
-  office.
-- **La marque** : le nom, le logo (`src/components/Logo.tsx`, `public/`), l'accueil
-  (`src/accueil/`) et l'image de partage parlent de Hopla.
-- **Les noms courts** `hpla.*` et l'adresse de contact par défaut.
+- **Les textes légaux** (`src/lib/legal.ts`) : l'identité vient de `.env`, mais
+  les CGU décrivent les offres, les prix et les sous-traitants de hopla.page.
+  Relis-les et adapte-les à ton service.
+- **La marque et l'accueil** : le nom Hopla, le logo (`src/components/Logo.tsx`,
+  `public/`), la page d'accueil (`src/accueil/`) et l'image de partage.
 - **Les prix** des offres (`src/lib/abonnement.ts`) et le paiement par Creem.
 
-Rendre tout cela configurable est la prochaine étape du projet ; les
-contributions sont les bienvenues.
+Les réglages de l'instance vivent dans `src/lib/instance.ts`.

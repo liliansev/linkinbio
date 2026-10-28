@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { CONTACT_LEGAL } from '../lib/legal.ts';
+import { LIEN_SOURCE } from '../lib/instance.ts';
 import type { ApiCles, ComptePage, DomaineCourt, Reglages } from '../lib/types.ts';
 import { DOMAINES_COURTS, adressePartage, sansSchema, urlPage } from '../lib/types.ts';
 import { adresseSaisie } from '../lib/valider.ts';
@@ -186,6 +187,7 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
           <a href="/legal/cgu" target="_blank" rel="noopener">Conditions d’utilisation</a>
           <a href="/legal/confidentialite" target="_blank" rel="noopener">Confidentialité</a>
           <a href="/legal/traitement-des-donnees" target="_blank" rel="noopener">Accord de traitement</a>
+          {LIEN_SOURCE && <a href={LIEN_SOURCE} target="_blank" rel="noopener">Code source</a>}
         </p>
       </footer>
       {sous === 'abonnement' && (

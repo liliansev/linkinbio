@@ -1,6 +1,6 @@
 import { CONTACT_LEGAL } from '../lib/legal.ts';
 import type { Origines } from '../lib/types.ts';
-import { sansSchema } from '../lib/types.ts';
+import { NOM_PUBLIC, sansSchema } from '../lib/types.ts';
 import { nomSaisi, email as validerEmail, pseudo as validerPseudo } from '../lib/valider.ts';
 import * as db from './db.ts';
 import { demanderConnexion, inviter } from './auth.ts';
@@ -73,13 +73,13 @@ export async function reserverNom(origines: Origines, env: Env, saisie: { nom: s
   const note = { ok: true as const, message: `C’est noté. Ton invitation arrivera à ${adresse}.` };
   const deja = db.dejaInscrit(adresse);
   if (deja) { await rappeler(origines, env, adresse, deja, fetchImpl); return note; }
-  if (!db.reserver(adresse, nom, maintenant)) return { ok: false, message: `hopla.page/${nom} vient d’être pris. Essaie une variante.` };
+  if (!db.reserver(adresse, nom, maintenant)) return { ok: false, message: `${NOM_PUBLIC}/${nom} vient d’être pris. Essaie une variante.` };
   await confirmerReservation(env, adresse, nom, fetchImpl);
   return note;
 }
 
 async function confirmerReservation(env: Env, adresse: string, nom: string, fetchImpl: typeof fetch) {
-  const texte = `hopla.page/${nom} est à toi. On ouvre les pages petit à petit : ton invitation arrivera à cette adresse, avec un lien pour créer ta page en quatre questions.`;
+  const texte = `${NOM_PUBLIC}/${nom} est à toi. On ouvre les pages petit à petit : ton invitation arrivera à cette adresse, avec un lien pour créer ta page en quatre questions.`;
   const parti = await envoyer(env, fetchImpl, {
     to: adresse, subject: 'Ton nom Hopla est réservé', replyTo: CONTACT_LEGAL,
     html: enveloppe(`<p>${texte}</p>
@@ -120,9 +120,9 @@ export async function creerHopla(origines: Origines, env: Env, saisie: { nom: st
   if (reservation) return (await inviterReservation(origines, env, reservation.id, fetchImpl)).ok ? note : { ok: false, message: 'L’e-mail n’est pas parti. Réessaie dans un instant.' };
   const deja = db.dejaInscrit(adresse);
   if (deja) { await rappeler(origines, env, adresse, deja, fetchImpl); return note; }
-  if (db.nomPris(nom)) return { ok: false, message: `hopla.page/${nom} vient d’être pris. Essaie une variante.` };
+  if (db.nomPris(nom)) return { ok: false, message: `${NOM_PUBLIC}/${nom} vient d’être pris. Essaie une variante.` };
   let compte: db.Compte;
-  try { compte = db.creerCompte(adresse, nom, maintenant); } catch { return { ok: false, message: `hopla.page/${nom} vient d’être pris. Essaie une variante.` }; }
+  try { compte = db.creerCompte(adresse, nom, maintenant); } catch { return { ok: false, message: `${NOM_PUBLIC}/${nom} vient d’être pris. Essaie une variante.` }; }
   const envoi = await inviter(origines, env, compte, fetchImpl, 'inscription');
   // Sans e-mail, personne ne peut entrer dans la page : elle s'efface, le nom redevient libre.
   if (!envoi.ok) { db.supprimerCompte(compte.id); return { ok: false, message: 'L’e-mail n’est pas parti. Réessaie dans un instant.' }; }
@@ -210,8 +210,8 @@ export async function renommerPage(origines: Origines, env: Env, saisie: { ancie
   const refus = { ok: false as const, message: `Ce nom ne se change plus d’ici. Écris-nous à ${CONTACT_LEGAL}.` };
   if (!ancien || !adresse) return refus;
   if (nouveau.etat === 'invalide') return { ok: false, message: 'Ce nom ne peut pas servir d’adresse : 3 à 30 caractères, lettres, chiffres et tirets.' };
-  if (nouveau.nom === ancien) return { ok: true, message: `hopla.page/${ancien} reste ton adresse.`, nom: ancien };
-  if (nouveau.etat === 'pris') return { ok: false, message: `hopla.page/${nouveau.nom} est déjà pris. Essaie une variante.` };
+  if (nouveau.nom === ancien) return { ok: true, message: `${NOM_PUBLIC}/${ancien} reste ton adresse.`, nom: ancien };
+  if (nouveau.etat === 'pris') return { ok: false, message: `${NOM_PUBLIC}/${nouveau.nom} est déjà pris. Essaie une variante.` };
   if (tropInsistante(ip, maintenant)) return { ok: false, message: 'Trop d’essais depuis ce réseau. Réessaie dans une heure.' };
   const nom = nouveau.nom;
 
@@ -219,7 +219,7 @@ export async function renommerPage(origines: Origines, env: Env, saisie: { ancie
     const r = db.reservationParEmail(adresse);
     if (!r || r.pseudo !== ancien || maintenant - r.ts > DELAI_CORRECTION) return refus;
     if (destinataireSature(adresse, maintenant)) return TROP_DE_COURRIELS;
-    try { db.changerPseudoReservation(r.id, nom); } catch { return { ok: false, message: `hopla.page/${nom} vient d’être pris. Essaie une variante.` }; }
+    try { db.changerPseudoReservation(r.id, nom); } catch { return { ok: false, message: `${NOM_PUBLIC}/${nom} vient d’être pris. Essaie une variante.` }; }
     await confirmerReservation(env, adresse, nom, fetchImpl);
     return { ok: true, message: `C’est changé. Ton invitation arrivera à ${adresse}.`, nom };
   }
@@ -227,7 +227,7 @@ export async function renommerPage(origines: Origines, env: Env, saisie: { ancie
   const compte = db.compteParPseudo(ancien);
   if (!compte || compte.email !== adresse || compte.connexion || maintenant - compte.cree > DELAI_CORRECTION) return refus;
   if (destinataireSature(adresse, maintenant)) return TROP_DE_COURRIELS;
-  try { db.changerPseudo(compte.id, nom); } catch { return { ok: false, message: `hopla.page/${nom} vient d’être pris. Essaie une variante.` }; }
+  try { db.changerPseudo(compte.id, nom); } catch { return { ok: false, message: `${NOM_PUBLIC}/${nom} vient d’être pris. Essaie une variante.` }; }
   const envoi = await inviter(origines, env, { ...compte, pseudo: nom }, fetchImpl, 'inscription');
   // L'e-mail n'est pas parti : l'ancien nom revient, et l'on peut réessayer.
   if (!envoi.ok) { db.changerPseudo(compte.id, ancien); return { ok: false, message: 'L’e-mail n’est pas parti. Réessaie dans un instant.' }; }

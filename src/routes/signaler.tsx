@@ -6,6 +6,7 @@ import { envoyerSignalement } from '../server/fonctions.ts';
 import { avecJeton, preparerTurnstile } from '../lib/turnstile.ts';
 import { Pied } from '../accueil/Fin.tsx';
 import { Barre } from '../accueil/Ouverture.tsx';
+import { NOM_PUBLIC } from '../lib/types.ts';
 
 /*
  * « Signaler cette page » (DSA, article 16) : le motif, l'explication, une
@@ -45,7 +46,7 @@ function PageSignaler() {
           <nav className="hf-fil" aria-label="Fil d’Ariane"><a href="/">Hopla</a></nav>
           <h1 id="titre" className="hl-h1 hf-titre">Signaler une page</h1>
           <p className="hl-chapo">
-            {page ? <>Page <a href={`/${page}`}>hopla.page/{page}</a>. </> : null}
+            {page ? <>Page <a href={`/${page}`}>{NOM_PUBLIC}/{page}</a>. </> : null}
             Chaque signalement est lu par une personne. Pour un contenu qui menace quelqu’un, préviens aussi les autorités (17 ou internet-signalement.gouv.fr).
           </p>
         </section>
