@@ -6,6 +6,7 @@ import type { Compte } from './db.ts';
 import { bouton, envoyer, enveloppe } from './courriel.ts';
 import { HEURE, cleIp, limiteur } from './limites.ts';
 import type { Env } from './courriel.ts';
+import { EST_HOPLA_PAGE } from '../lib/instance.ts';
 
 /*
  * La connexion au back office, sans mot de passe : on saisit son adresse, un
@@ -19,7 +20,8 @@ import type { Env } from './courriel.ts';
  *
  * Variables d'environnement (facultatives) :
  *   LIENS_ADMIN_EMAIL  l'adresse du compte principal, CONTACT_TO sinon,
- *                      bonjour@liliansevoumian.fr à défaut ;
+ *                      bonjour@liliansevoumian.fr à défaut sur hopla.page seulement :
+ *                      une instance auto-hébergée sans adresse n'a pas de compte principal joignable ;
  *   CONTACT_FROM       l'expéditeur, Hopla <connexion@hopla.page> en production ;
  *   RESEND_API_KEY     requise en production pour envoyer les liens.
  */
@@ -35,7 +37,7 @@ const DUREE_LIEN_ENVOYE = 86_400_000;
 export const empreinte = (jeton: string) => createHash('sha256').update(jeton).digest('hex');
 const nouveauJeton = () => randomBytes(32).toString('base64url');
 
-export const adresseAdmin = (env: Env) => env.LIENS_ADMIN_EMAIL?.trim() || env.CONTACT_TO?.trim() || 'bonjour@liliansevoumian.fr';
+export const adresseAdmin = (env: Env) => env.LIENS_ADMIN_EMAIL?.trim() || env.CONTACT_TO?.trim() || (EST_HOPLA_PAGE ? 'bonjour@liliansevoumian.fr' : '');
 
 /** `bonjour@liliansevoumian.fr` devient `b•••••r@liliansevoumian.fr`. */
 export function masquer(email: string): string {

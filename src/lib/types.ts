@@ -11,6 +11,7 @@ import type { PeriodeStats } from './periode.ts';
 import type { Audience, EffetAudience } from './provenance.ts';
 import type { Police } from './themes.ts';
 import type { ArticleFlux } from './flux.ts';
+import { INSTANCE } from './instance.ts';
 
 export const TYPES_BLOC = ['lien', 'titre', 'texte', 'video', 'derniere-video', 'newsletter', 'inscription', 'preuve', 'produit', 'soutien', 'reservation',
   'musique', 'faq', 'coordonnees', 'lieu', 'galerie', 'formulaire', 'flux'] as const;
@@ -228,9 +229,9 @@ export const TYPES_PRINCIPAL: readonly TypeBloc[] = ['newsletter'];
 /** Qui possède la page : de quoi construire son adresse. */
 export interface ComptePage { pseudo: string; principal: boolean }
 
-/** Les pages publiques, et le back office sur son propre nom (son cookie n'est jamais envoyé aux pages). */
-export const ORIGINE_PUBLIQUE = 'https://hopla.page';
-export const ORIGINE_ADMIN = 'https://app.hopla.page';
+/** Les pages publiques, et le back office sur son propre nom (son cookie n'est jamais envoyé aux pages) : hopla.page, ou ceux de l'instance (`lib/instance.ts`). */
+export const ORIGINE_PUBLIQUE = INSTANCE.origine;
+export const ORIGINE_ADMIN = INSTANCE.origineAdmin;
 export interface Origines { page: string; admin: string }
 /** Le site de Lilian, l'éditeur du service. */
 export const SITE_LILIAN = 'https://liliansevoumian.fr';
@@ -247,6 +248,9 @@ export type DomaineCourt = (typeof DOMAINES_COURTS)[number];
 export const adressePartage = (c: ComptePage, domaine: DomaineCourt | '' = '') => (domaine ? `https://${domaine}${cheminPage(c)}` : urlPage(c));
 /** `https://hopla.page/camille` devient `hopla.page/camille`. */
 export const sansSchema = (url: string) => url.replace(/^https?:\/\//, '');
+/** `hopla.page` et `app.hopla.page`, ou les noms de l'instance : pour les dire dans un texte. */
+export const NOM_PUBLIC = sansSchema(ORIGINE_PUBLIQUE);
+export const NOM_ADMIN = sansSchema(ORIGINE_ADMIN);
 
 /** Une ligne de la liste des comptes, dans le back office de Lilian. */
 export interface CompteResume {

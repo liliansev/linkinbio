@@ -5,6 +5,7 @@ import type { CSSProperties, KeyboardEvent, MouseEvent } from 'react';
 import { Icone } from '../components/Icone.tsx';
 import { ESSAI_JOURS, FONCTIONS, OFFRES, PLANS, PLANS_PAYANTS, PLAN_ESSAI, economie, euros, parMoisAnnuel, rang } from '../lib/abonnement.ts';
 import { CONTACT_LEGAL } from '../lib/legal.ts';
+import { LIEN_SOURCE, NOM_EDITEUR } from '../lib/instance.ts';
 import type { Fonction, Periode, Plan } from '../lib/abonnement.ts';
 import { Marque } from './Ouverture.tsx';
 import { PAGES_FONCTIONS } from './pages/fonctions.ts';
@@ -335,6 +336,7 @@ const COLONNES: { titre: string; liens: [string, string][] }[] = [
     ['Traitement des données', '/legal/traitement-des-donnees'],
     ['Sous-traitants', '/legal/sous-traitants'],
     ['Mentions légales', '/legal/mentions-legales'],
+    ...(LIEN_SOURCE ? [['Code source', LIEN_SOURCE] as [string, string]] : []),
   ] },
 ];
 
@@ -354,7 +356,7 @@ export function Pied() {
             <ul>{c.liens.map(([nom, href]) => <li key={href}><a href={href} aria-current={href === chemin ? 'page' : undefined}>{nom}</a></li>)}</ul>
           </nav>
         ))}
-        <p className="hl-pied-bas">© 2026 Hopla, édité par AURA GROUP</p>
+        <p className="hl-pied-bas">© 2026 Hopla, édité par {NOM_EDITEUR}</p>
       </div>
     </footer>
   );
