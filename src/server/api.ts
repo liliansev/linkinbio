@@ -1,15 +1,24 @@
 import { randomBytes } from 'node:crypto';
-import type { Bloc, Reglages, Stats } from '../lib/types.ts';
-import { NOM_ADMIN, PRINCIPAL, TYPES_BLOC, TYPES_PRINCIPAL, adressePartage } from '../lib/types.ts';
+import QRCode from 'qrcode';
+import type { Bloc, ImageApercu, Reglages, Stats } from '../lib/types.ts';
+import { ARTICLES_FLUX, NOM_ADMIN, ORIGINE_PUBLIQUE, PRINCIPAL, RESEAUX, TYPES_BLOC, TYPES_PRINCIPAL, adressePartage } from '../lib/types.ts';
 import { THEMES } from '../lib/themes.ts';
+import { NOMS_RESEAUX, PICTOS } from '../lib/pictos.ts';
 import { lirePeriode } from '../lib/periode.ts';
-import { validerBloc, validerReglages } from '../lib/valider.ts';
+import { resumer, enUnePhrase } from '../lib/resume.ts';
+import { FONCTIONS } from '../lib/abonnement.ts';
+import { adresse, validerBloc, validerReglages } from '../lib/valider.ts';
 import { VERSION_CGU } from '../lib/legal.ts';
 import { DOC_API } from '../lib/docApi.ts';
 import * as db from './db.ts';
 import { empreinte } from './auth.ts';
 import { droits, joursLisibles, periodeLisible, verifierDates } from './droits.ts';
 import { JOUR, MINUTE, cleIp, limiteur } from './limites.ts';
+import { apercuSite } from './apercu.ts';
+import { articlesDe } from './flux.ts';
+import { lireNote } from './avis.ts';
+import * as liste from './liste.ts';
+import { requeteSortante } from './sortante.ts';
 
 /*
  * L'API publique de Hopla (28 octobre 2026, demandée par Lilian) : chacun, ou son agent IA, lit et modifie sa
@@ -123,6 +132,13 @@ function enregistrer(a: Appelant, bloc: Bloc) {
   }
 }
 
+/** Une adresse envoyée que la validation a dû laisser de côté : on le dit, plutôt que d'enregistrer un bloc sans adresse. */
+function adresseGardee(envoye: Record<string, unknown>, bloc: Bloc) {
+  if (typeof envoye.url === 'string' && envoye.url.trim() && !(bloc as { url?: string }).url) {
+    throw new ErreurApi(400, 'adresse_invalide', 'Adresse invalide : une adresse https://, mailto: ou tel: est attendue.');
+  }
+}
+
 /** Les types qu'un compte peut poser. */
 export const typesPermis = (compte: string) => TYPES_BLOC.filter(t => compte === PRINCIPAL || !TYPES_PRINCIPAL.includes(t));
 
@@ -134,6 +150,7 @@ export function ajouterBloc(a: Appelant, donnees: unknown, position?: unknown): 
     throw new ErreurApi(400, 'type_inconnu', `Type de bloc inconnu. Les types : ${typesPermis(a.compte).join(', ')}.`);
   }
   const bloc = validerBloc(o, db.nouvelId());
+  adresseGardee(o, bloc);
   enregistrer(a, bloc);
   if (typeof position === 'number' && Number.isInteger(position) && position > 0) {
     const autres = db.lireBlocs(a.compte).map(b => b.id).filter(id => id !== bloc.id);
@@ -147,7 +164,9 @@ export function ajouterBloc(a: Appelant, donnees: unknown, position?: unknown): 
 export function modifierBloc(a: Appelant, id: string, partiel: unknown): Bloc {
   ecrire(a);
   const avant = blocDuCompte(a, id);
-  const bloc = validerBloc({ ...avant, ...objet(partiel), type: avant.type }, avant.id);
+  const o = objet(partiel);
+  const bloc = validerBloc({ ...avant, ...o, type: avant.type }, avant.id);
+  adresseGardee(o, bloc);
   enregistrer(a, bloc);
   return bloc;
 }
@@ -184,6 +203,181 @@ export function lireStats(a: Appelant, periode: unknown, env: Record<string, str
 
 export const listerThemes = () => THEMES.map(t => ({ id: t.id, nom: t.nom, humeur: t.humeur, famille: t.famille }));
 
+/* ---- Ce que le back office fait aussi (29 octobre 2026, demandé par Lilian : « tout ce qui est dans l'outil, dans l'API ») ---- */
+
+const iso = (ms: number | null | undefined) => (ms ? new Date(ms).toISOString() : null);
+
+/** Le compte : son adresse, son offre, son essai, et ce que son offre lui ouvre (`fonctions`). */
+export function lireCompte(a: Appelant, env: Record<string, string | undefined> = process.env) {
+  const c = db.compteParId(a.compte)!;
+  const ab = db.abonnement(c);
+  const reglages = db.lireReglages(a.compte);
+  const d = droits(c, env);
+  return {
+    compte: {
+      pseudo: c.pseudo,
+      adresse: adressePartage({ pseudo: c.pseudo, principal: c.id === PRINCIPAL }, reglages.domaine),
+      cree: iso(c.cree),
+      offre: ab.plan,
+      essai: ab.essai ? { jusqu: iso(ab.essai) } : null,
+      abonnement: ab.statut ? { offre: ab.payee, statut: ab.statut, periode: ab.periode, finPeriode: iso(ab.finPeriode) } : null,
+      offreOfferte: ab.offerte ? { offre: ab.offerte.plan, jusqu: iso(ab.offerte.jusqu) } : null,
+      fonctions: Object.fromEntries((Object.keys(FONCTIONS) as (keyof typeof FONCTIONS)[]).map(f => [f, { incluse: d[f], offre: FONCTIONS[f] }])),
+      historiqueStats: joursLisibles(c, env),
+    },
+  };
+}
+
+export const lireReglagesApi = (a: Appelant) => ({ reglages: db.lireReglages(a.compte) });
+
+/** Le QR code de la page, qui mène à son adresse marquée `?s=qr` (ses scans se comptent à part dans les stats). */
+export async function qrCode(a: Appelant, format: string, taille: number) {
+  const { compte } = lireCompte(a);
+  const cible = `${compte.adresse}?s=qr`;
+  const options = { margin: 2, errorCorrectionLevel: 'M' as const, color: { dark: '#0a0a0a', light: '#ffffff' } };
+  if (format === 'png') return { type: 'image/png', corps: new Uint8Array(await QRCode.toBuffer(cible, { ...options, width: taille })) as Uint8Array<ArrayBuffer> };
+  return { type: 'image/svg+xml', corps: await QRCode.toString(cible, { ...options, type: 'svg', width: taille }) };
+}
+
+/** Une copie d'un bloc, posée juste sous lui (masquée si `masquer`). */
+export function dupliquerBloc(a: Appelant, id: string, options: unknown = {}): Bloc {
+  ecrire(a);
+  const avant = blocDuCompte(a, id);
+  const copie = validerBloc({ ...avant, ...(objet(options).masquer === true ? { public: false } : {}) }, db.nouvelId());
+  enregistrer(a, copie);
+  const ids = db.lireBlocs(a.compte).map(b => b.id).filter(i => i !== copie.id);
+  ids.splice(ids.indexOf(avant.id) + 1, 0, copie.id);
+  db.ordonner(a.compte, ids);
+  return copie;
+}
+
+/** Les vues des 7 derniers jours et celles des 7 d'avant : pour toutes les offres, comme l'onglet Stats en Gratuit. */
+export function lireSemaine(a: Appelant) {
+  const s = db.stats(a.compte, 7);
+  return { semaine: { vues: s.vues, avant: s.precedent.vues, dejaVue: s.dejaVue } };
+}
+
+/** « En bref » : la période en une phrase, puis ses faits marquants, comme en tête de l'onglet Stats. */
+export function lireResume(a: Appelant, periode: unknown, env: Record<string, string | undefined> = process.env) {
+  const stats = lireStats(a, periode, env);
+  return { resume: { phrase: enUnePhrase(stats), faits: resumer(stats), jours: stats.jours } };
+}
+
+/** Une image envoyée chez Hopla (WebP, JPEG ou PNG, 1,5 Mo au plus) : son adresse se pose en avatar, en vignette, dans une galerie. */
+export function envoyerMedia(a: Appelant, octets: Uint8Array) {
+  ecrire(a);
+  if (!octets.length) throw new ErreurApi(400, 'image_absente', 'Envoie une image : son contenu brut (Content-Type: image/webp, image/jpeg ou image/png), ou {"image": "data:image/…;base64,…"}.');
+  if (octets.length > 1_500_000) throw new ErreurApi(413, 'image_trop_grosse', 'Image trop grosse : 1,5 Mo au plus.');
+  const ascii = (de: number, a2: number) => Buffer.from(octets.subarray(de, a2)).toString('latin1');
+  const extension = ascii(0, 4) === 'RIFF' && ascii(8, 12) === 'WEBP' ? 'webp'
+    : octets[0] === 0xff && octets[1] === 0xd8 && octets[2] === 0xff ? 'jpg'
+      : ascii(1, 4) === 'PNG' && octets[0] === 0x89 ? 'png' : null;
+  if (!extension) throw new ErreurApi(415, 'format_image', 'Format refusé : WebP, JPEG ou PNG.');
+  let id: string;
+  try { id = db.ajouterMedia(a.compte, octets, extension); }
+  catch (error) { throw new ErreurApi(413, 'plus_de_place', (error as Error).message); }
+  const chemin = `/media/${id}.${extension}`;
+  return { media: { chemin, url: `${ORIGINE_PUBLIQUE}${chemin}` } };
+}
+
+/** Une image en data URL (`data:image/png;base64,…`), décodée. */
+export function octetsDeDataUrl(v: unknown): Uint8Array {
+  const m = /^data:image\/[\w.+-]+;base64,([A-Za-z0-9+/=\s]+)$/.exec(String(v ?? ''));
+  if (!m) throw new ErreurApi(400, 'image_absente', 'Le champ « image » attend une data URL : data:image/webp;base64,…');
+  if (m[1].length > 2_100_000) throw new ErreurApi(413, 'image_trop_grosse', 'Image trop grosse : 1,5 Mo au plus.');
+  return new Uint8Array(Buffer.from(m[1], 'base64'));
+}
+
+/** La liste e-mail : combien d'inscrits, combien cette semaine, ceux pas encore partis, et où ils partent (sans la clé). */
+export function lireListe(a: Appelant, env: Record<string, string | undefined> = process.env) {
+  const { total, semaine, enAttente } = db.resumeContacts(a.compte);
+  const i = liste.resumeIntegration(env, a.compte);
+  return { liste: { inscrits: total, semaine, enAttente, branchee: i ? { outil: i.fournisseur, liste: i.nom || i.liste, cle: i.cle } : null } };
+}
+
+const contactPublic = (c: { id: string; email: string; prenom: string; ts: number; source: string; synchro: string }) =>
+  ({ id: c.id, email: c.email, prenom: c.prenom, inscrit: iso(c.ts), source: c.source, envoye: c.synchro === 'ok' });
+
+/** Les inscrits, du plus récent au plus ancien, par pages (`limite` 1 à 500, `depart` à partir de 0). */
+export function listerInscrits(a: Appelant, limite: unknown, depart: unknown) {
+  const tous = db.tousLesContacts(a.compte);
+  const n = Math.min(500, Math.max(1, Number.parseInt(String(limite ?? 100), 10) || 100));
+  const d = Math.max(0, Number.parseInt(String(depart ?? 0), 10) || 0);
+  const page = tous.slice(d, d + n);
+  return { inscrits: page.map(contactPublic), total: tous.length, suivant: d + n < tous.length ? d + n : null };
+}
+
+/** Tous les inscrits en CSV (email, prénom, date, provenance), comme l'export du back office. */
+export function inscritsCsv(a: Appelant): string {
+  const champ = (v: string) => (/[",\n;]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
+  return ['email,prenom,inscrit,source', ...db.tousLesContacts(a.compte).map(c => [c.email, c.prenom, iso(c.ts) ?? '', c.source].map(champ).join(','))].join('\n') + '\n';
+}
+
+export function supprimerInscrit(a: Appelant, id: string) {
+  ecrire(a);
+  if (!db.tousLesContacts(a.compte).some(c => c.id === id)) throw new ErreurApi(404, 'inscrit_introuvable', 'Aucun inscrit de ta liste n’a cet id.');
+  db.supprimerContact(a.compte, id);
+  return { supprime: id };
+}
+
+/** Renvoie chez l'outil branché les inscrits qui n'y sont pas encore. */
+export async function envoyerInscrits(a: Appelant, env: Record<string, string | undefined> = process.env) {
+  ecrire(a);
+  if (!liste.resumeIntegration(env, a.compte)) throw new ErreurApi(409, 'rien_de_branche', 'Aucune newsletter ni automatisation n’est branchée : branche-la dans Intégrations, sur ' + NOM_ADMIN + '.');
+  if (liste.tropDAppels(a.compte)) throw new ErreurApi(429, 'trop_d_appels', 'Trop d’envois. Réessaie dans quelques minutes.');
+  let envoyes = 0, erreurs = 0;
+  for (const c of db.contactsAEnvoyer(a.compte)) (await liste.pousser(env, a.compte, c, requeteSortante)) ? envoyes++ : erreurs++;
+  return { envoyes, erreurs };
+}
+
+/** Trente lectures du web par compte en dix minutes, comme dans le back office. */
+const lecturesWeb = limiteur([30, 10 * MINUTE]);
+const urlLue = (v: unknown) => {
+  const url = adresse(String(v ?? ''));
+  if (!/^https?:\/\//.test(url)) throw new ErreurApi(400, 'adresse', 'Donne une adresse https:// (ou http://).');
+  return url;
+};
+const lireLeWeb = (a: Appelant) => { if (lecturesWeb(a.compte)) throw new ErreurApi(429, 'trop_de_lectures', 'Trop de lectures de sites. Réessaie dans quelques minutes.'); };
+
+/** Ce qu'un site dit de lui : titre, description, prix d'un produit, et son image (data URL), comme quand on colle une adresse. */
+export async function lireApercu(a: Appelant, corps: unknown) {
+  const o = objet(corps);
+  const url = urlLue(o.url);
+  lireLeWeb(a);
+  const image: ImageApercu = o.image === 'logo' || o.image === 'vignette' || o.image === 'partage' ? o.image : o.image !== false;
+  try { return { apercu: await apercuSite(url, { image }) }; }
+  catch { throw new ErreurApi(422, 'site_illisible', 'Impossible de lire ce site.'); }
+}
+
+/** Les derniers articles d'un blog ou d'un podcast, ou la dernière vidéo d'une chaîne YouTube. */
+export async function lireFlux(a: Appelant, corps: unknown) {
+  const o = objet(corps);
+  const url = urlLue(o.url);
+  lireLeWeb(a);
+  const video = o.video === true;
+  try { return { articles: (await articlesDe(url, { video })).slice(0, video ? 1 : ARTICLES_FLUX) }; }
+  catch { return { articles: [] }; }
+}
+
+/** La note d'une page d'avis (Trustpilot, une page qui la déclare en JSON-LD), ramenée sur 5 ; null si la page ne la dit pas. */
+export async function lireNoteAvis(a: Appelant, corps: unknown) {
+  const url = urlLue(objet(corps).url);
+  lireLeWeb(a);
+  return { note: await lireNote(url).catch(() => null) };
+}
+
+/** Les clés du compte, sans elles : leur nom, leur début, ce qu'elles peuvent, quand elles ont servi. `courante` : celle de l'appel. */
+export const listerCles = (a: Appelant) => ({
+  cles: db.clesApi(a.compte).map(c => ({ id: c.id, nom: c.nom, debut: c.debut, ecriture: c.ecriture, cree: iso(c.cree), utilisee: iso(c.utilisee), courante: c.id === a.cle })),
+});
+
+/** Tout ce que Hopla garde du compte (droit d'accès), sans les images. */
+export const exporterCompte = (a: Appelant) => db.exporter(a.compte);
+
+export const listerReseaux = () => ({ reseaux: RESEAUX.map(id => ({ id, nom: NOMS_RESEAUX[id] ?? id })) });
+export const listerPictos = () => ({ pictos: PICTOS.map(p => ({ nom: p.nom, libelle: p.libelle })) });
+export const listerTypes = (a: Appelant) => ({ types: typesPermis(a.compte) });
+
 /* ---- L'API REST : /api/v1/… ---- */
 
 export const ENTETES_CORS = {
@@ -210,10 +404,10 @@ export function reponseErreur(error: unknown): Response {
   return json(500, { erreur: { code: 'serveur', message: 'Le serveur a eu un souci. Réessaie dans un instant.' } });
 }
 
-/** Le corps JSON d'une requête, 256 Ko au plus. */
-export async function lireCorps(requete: Request): Promise<unknown> {
+/** Le corps JSON d'une requête, 256 Ko au plus ; une image en data URL a droit à ses 1,5 Mo (2,1 millions de caractères en base64). */
+export async function lireCorps(requete: Request, max = 256_000): Promise<unknown> {
   const texte = await requete.text();
-  if (texte.length > 256_000) throw new ErreurApi(413, 'trop_gros', 'Corps de requête trop gros (256 Ko au plus).');
+  if (texte.length > max) throw new ErreurApi(413, 'trop_gros', `Corps de requête trop gros (${max > 256_000 ? '1,5 Mo d’image' : '256 Ko'} au plus).`);
   if (!texte.trim()) return {};
   try { return JSON.parse(texte); }
   catch { throw new ErreurApi(400, 'json', 'Le corps de la requête n’est pas du JSON valide.'); }
@@ -221,6 +415,16 @@ export async function lireCorps(requete: Request): Promise<unknown> {
 
 /** L'adresse IP du visiteur, que deploy/server.mjs a démêlée. */
 export const ipDe = (requete: Request) => requete.headers.get('x-real-ip') ?? '';
+
+/** Les adresses de l'API : une méthode qui n'y est pas permise répond 405, une autre adresse 404. */
+const ROUTES = ['/page', '/compte', '/reglages', '/qr', '/blocs', '/blocs/:id', '/blocs/:id/dupliquer', '/ordre', '/medias', '/stats', '/stats/semaine',
+  '/stats/resume', '/liste', '/inscrits', '/inscrits/:id', '/inscrits/envoyer', '/apercu', '/flux', '/avis', '/cles', '/export', '/themes', '/reseaux', '/pictos', '/types'];
+
+/** La période des stats lue dans l'adresse : `?periode=30`, ou `?du=…&au=…`. */
+const periodeDe = (q: URLSearchParams) => {
+  const du = q.get('du'), au = q.get('au');
+  return du || au ? { du, au } : q.get('periode') ?? undefined;
+};
 
 export async function repondreApi(requete: Request, env: Record<string, string | undefined> = process.env): Promise<Response> {
   const url = new URL(requete.url);
@@ -233,28 +437,62 @@ export async function repondreApi(requete: Request, env: Record<string, string |
   }
   try {
     const a = authentifier(requete.headers.get('authorization'), ipDe(requete), env);
-    const bloc = /^\/blocs\/([\w-]{1,40})$/.exec(chemin)?.[1];
-    const route = bloc ? '/blocs/:id' : chemin;
+    const [, base, id, suite] = /^(\/(?:blocs|inscrits))\/([\w-]{1,40})(\/dupliquer)?$/.exec(chemin) ?? [];
+    const route = base && chemin !== '/inscrits/envoyer' ? `${base}/:id${suite ?? ''}` : chemin;
+    const q = url.searchParams;
     switch (`${methode} ${route}`) {
       case 'GET /page': return json(200, lirePage(a));
+      case 'GET /compte': return json(200, lireCompte(a, env));
+      case 'GET /reglages': return json(200, lireReglagesApi(a));
       case 'PATCH /reglages': return json(200, { reglages: modifierReglages(a, await lireCorps(requete)) });
+      case 'GET /qr': {
+        const format = q.get('format') === 'png' ? 'png' : 'svg';
+        const taille = Math.min(2000, Math.max(120, Number.parseInt(q.get('taille') ?? '', 10) || 720));
+        const { type, corps } = await qrCode(a, format, taille);
+        return new Response(corps, { headers: { 'Content-Type': type, 'Cache-Control': 'no-store', 'Content-Disposition': `inline; filename="qr-hopla.${format}"`, ...ENTETES_CORS } });
+      }
       case 'GET /blocs': return json(200, { blocs: lireBlocs(a) });
       case 'POST /blocs': {
         const corps = objet(await lireCorps(requete));
         const { position, ...donnees } = corps;
         return json(201, { bloc: ajouterBloc(a, donnees, position) });
       }
-      case 'GET /blocs/:id': return json(200, { bloc: lireBloc(a, bloc!) });
-      case 'PATCH /blocs/:id': return json(200, { bloc: modifierBloc(a, bloc!, await lireCorps(requete)) });
-      case 'DELETE /blocs/:id': return json(200, supprimerBloc(a, bloc!));
+      case 'GET /blocs/:id': return json(200, { bloc: lireBloc(a, id!) });
+      case 'PATCH /blocs/:id': return json(200, { bloc: modifierBloc(a, id!, await lireCorps(requete)) });
+      case 'DELETE /blocs/:id': return json(200, supprimerBloc(a, id!));
+      case 'POST /blocs/:id/dupliquer': return json(201, { bloc: dupliquerBloc(a, id!, await lireCorps(requete)) });
       case 'PUT /ordre': return json(200, { blocs: ordonnerBlocs(a, objet(await lireCorps(requete)).ids) });
-      case 'GET /stats': {
-        const du = url.searchParams.get('du'), au = url.searchParams.get('au');
-        return json(200, { stats: lireStats(a, du || au ? { du, au } : url.searchParams.get('periode') ?? undefined, env) });
+      case 'POST /medias': {
+        const type = requete.headers.get('content-type') ?? '';
+        if (/^image\//i.test(type)) {
+          const brut = new Uint8Array(await requete.arrayBuffer());
+          return json(201, envoyerMedia(a, brut));
+        }
+        return json(201, envoyerMedia(a, octetsDeDataUrl(objet(await lireCorps(requete, 2_200_000)).image)));
       }
+      case 'GET /stats': return json(200, { stats: lireStats(a, periodeDe(q), env) });
+      case 'GET /stats/semaine': return json(200, lireSemaine(a));
+      case 'GET /stats/resume': return json(200, lireResume(a, periodeDe(q), env));
+      case 'GET /liste': return json(200, lireListe(a, env));
+      case 'GET /inscrits': {
+        if (q.get('format') === 'csv') {
+          return new Response(inscritsCsv(a), { headers: { 'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': 'attachment; filename="inscrits-hopla.csv"', 'Cache-Control': 'no-store', ...ENTETES_CORS } });
+        }
+        return json(200, listerInscrits(a, q.get('limite'), q.get('depart')));
+      }
+      case 'DELETE /inscrits/:id': return json(200, supprimerInscrit(a, id!));
+      case 'POST /inscrits/envoyer': return json(200, await envoyerInscrits(a, env));
+      case 'POST /apercu': return json(200, await lireApercu(a, await lireCorps(requete)));
+      case 'POST /flux': return json(200, await lireFlux(a, await lireCorps(requete)));
+      case 'POST /avis': return json(200, await lireNoteAvis(a, await lireCorps(requete)));
+      case 'GET /cles': return json(200, listerCles(a));
+      case 'GET /export': return json(200, exporterCompte(a), { 'Content-Disposition': 'attachment; filename="export-hopla.json"' });
       case 'GET /themes': return json(200, { themes: listerThemes() });
+      case 'GET /reseaux': return json(200, listerReseaux());
+      case 'GET /pictos': return json(200, listerPictos());
+      case 'GET /types': return json(200, listerTypes(a));
     }
-    const connue = ['/page', '/reglages', '/blocs', '/blocs/:id', '/ordre', '/stats', '/themes'].includes(route);
+    const connue = ROUTES.includes(route);
     throw new ErreurApi(connue ? 405 : 404, connue ? 'methode' : 'introuvable', connue ? 'Méthode non permise sur cette adresse.' : 'Adresse inconnue. La documentation : GET /api/v1');
   } catch (error) {
     return reponseErreur(error);

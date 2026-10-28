@@ -3,9 +3,10 @@ title: Les réglages
 description: Profil, thème, réseaux, couleurs, boutons, référencement et redirection de ta page.
 ---
 
-<Route m="GET" chemin="/page" href="/reference#tag/page/GET/page">La page entière, réglages compris</Route>
-<Route m="PATCH" chemin="/reglages" href="/reference#tag/page/PATCH/reglages">Modifier les réglages</Route>
-<Route m="GET" chemin="/themes" href="/reference#tag/themes/GET/themes">Les thèmes</Route>
+<RoutesDe tag="Page" />
+
+`GET /page` donne tout d’un coup : la page, ses réglages et ses blocs. `GET /reglages` ne donne que les réglages.
+
 
 `PATCH /reglages` change seulement ce que tu envoies. Les objets `profil`, `bouton`, `seo`, `couleurs` et `redirection` se complètent champ par champ ; la liste `reseaux` se remplace en entier.
 
@@ -51,6 +52,6 @@ Envoie toujours la liste complète, dans l’ordre voulu : un réseau absent de 
 
 ## Les thèmes
 
-`GET /themes` donne la même liste, à jour.
+`GET /themes` donne la même liste, à jour. Les réseaux, les pictos et les types de bloc ont aussi leur route : voir [Les listes](/listes).
 
 <ListeThemes />

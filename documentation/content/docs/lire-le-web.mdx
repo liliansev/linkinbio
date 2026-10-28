@@ -1,0 +1,66 @@
+---
+title: Lire le web
+description: "Ce que le back office lit d’une adresse collée, à ta disposition : le titre et l’image d’un site, les derniers articles d’un blog, la note d’une page d’avis."
+---
+
+<RoutesDe tag="Lire le web" />
+
+Quand tu colles une adresse dans le back office, Hopla va lire la page pour toi : son titre, son image, son prix si c’est un produit. Ces trois routes font la même chose, pour que ton script ou ton agent remplisse un bloc comme le back office le ferait.
+
+Chacune prend une adresse `https://` dans `url`. Hopla lit la page depuis ses serveurs, sans tes cookies, et ne suit que les adresses publiques. Trente lectures par compte toutes les dix minutes ; au-delà, 429 `trop_de_lectures`.
+
+## Lire un site
+
+```bash
+curl -X POST https://app.hopla.page/api/v1/apercu \
+  -H "Authorization: Bearer $HOPLA_CLE" \
+  -H "Content-Type: application/json" \
+  -d '{"url": "https://boutique.exemple.fr/programme", "image": "partage"}'
+```
+
+```json
+{
+  "apercu": {
+    "titre": "Programme 8 semaines",
+    "description": "Un plan simple pour reprendre le sport.",
+    "prix": "49 €",
+    "image": "data:image/webp;base64,…"
+  }
+}
+```
+
+| `image` | Ce qui revient |
+| --- | --- |
+| `true` (par défaut) | L’image de partage du site, ou à défaut son favicon |
+| `false` | Le texte seul, plus rapide |
+| `"partage"` | L’image de partage, ou rien : la photo d’un produit |
+| `"logo"` | Le logo du site, cherché dans ses icônes |
+| `"vignette"` | La meilleure vignette pour un bouton de lien |
+
+L’image revient en data URL : pour la poser dans un bloc, envoie-la telle quelle à [`POST /medias`](/images). Un site qui ne répond pas, ou pas en HTML, donne 422 `site_illisible`.
+
+## Lire un blog, un podcast ou une chaîne
+
+```bash
+curl -X POST https://app.hopla.page/api/v1/flux \
+  -H "Authorization: Bearer $HOPLA_CLE" \
+  -H "Content-Type: application/json" \
+  -d '{"url": "https://exemple.fr/blog"}'
+```
+
+Les trois derniers articles, du plus récent au plus ancien : `titre`, `url`, `date`, `image`, et `video` pour un épisode. L’adresse peut être le flux lui-même (RSS, Atom) ou la page qui l’annonce. Avec `{"video": true}` et l’adresse d’une chaîne YouTube, c’est sa dernière vidéo longue. Rien de lisible : `{"articles": []}`.
+
+## Lire la note d’une page d’avis
+
+```bash
+curl -X POST https://app.hopla.page/api/v1/avis \
+  -H "Authorization: Bearer $HOPLA_CLE" \
+  -H "Content-Type: application/json" \
+  -d '{"url": "https://fr.trustpilot.com/review/exemple.fr"}'
+```
+
+```json
+{ "note": { "note": 4.6, "nombre": 1820, "source": "Trustpilot" } }
+```
+
+La note est ramenée sur 5. Elle vient de Trustpilot, ou de toute page qui la déclare dans ses données structurées (`aggregateRating`). Une page qui ne la dit pas, ou qui refuse les robots, rend `{"note": null}`. Une fiche Google ne se lit pas ainsi : tape sa note à la main dans le bloc `preuve`.

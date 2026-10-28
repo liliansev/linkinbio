@@ -81,7 +81,10 @@ embarque tout : l'image n'a pas de `node_modules`.
   SHA-256 est gardée, montrée une fois, lecture seule ou lecture et modification, dix par compte. Elle sert tant que le
   compte a Pro (`FONCTIONS.api`), est actif et a accepté les CGU ; 120 appels par minute et 5 000 par jour par clé, CORS
   ouvert (aucun cookie). Les gestes passent par `validerBloc`, `validerReglages` et `verifierDates`, comme le back office.
-  La documentation (`lib/docApi.ts`) se lit sans clé sur GET /api/v1 : un changement de l'API s'y reporte.
+  Depuis le 28 octobre 2026 au soir (demandé par Lilian : « prévois tous les endpoints »), ce que fait le back office, ou presque :
+  compte, réglages, QR code, duplication, images (`POST /medias`, 1,5 Mo), semaine et résumé des stats, liste e-mail (inscrits,
+  CSV, suppression, envoi), lecture du web (`/apercu`, `/flux`, `/avis`, 30 par 10 minutes), clés, export et listes de référence ;
+  25 outils MCP. La documentation (`lib/docApi.ts`) se lit sans clé sur GET /api/v1 : un changement de l'API s'y reporte.
 - `server/liste.ts` : « Rejoins ma liste ». Les inscrits restent chez Hopla (export CSV) et partent là où la personne a
   branché sa liste (22 octobre 2026) : huit newsletters par leur API (Brevo, Mailchimp, Kit, MailerLite, beehiiv,
   Systeme.io, et depuis le 25 octobre MailCheap, dont une clé « Signups only » se vérifie sans inscrire personne, et Loops ; `listes()` pour choisir la liste par son nom, `verifier()`, `pousser()`), ou Make, Zapier et n8n par un

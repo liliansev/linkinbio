@@ -3,7 +3,7 @@ title: Les statistiques
 description: Vues, visiteurs et clics de ta page, par jour, par bloc, par réseau, par appareil et par pays.
 ---
 
-<Route m="GET" chemin="/stats" href="/reference#tag/statistiques/GET/stats">Les statistiques d’une période</Route>
+<RoutesDe tag="Statistiques" />
 
 ```bash
 curl "https://app.hopla.page/api/v1/stats?periode=7" \
@@ -45,6 +45,35 @@ Chaque chiffre vient avec celui de la période d’avant, de même longueur, pou
 | `appareils` | Téléphone, ordinateur, tablette |
 | `pays` | Le code du pays (`FR`), vide quand on ne le sait pas |
 | `precedent` | Les trois totaux de la période d’avant |
+
+## La semaine, pour toutes les offres
+
+`GET /stats/semaine` donne les vues des 7 derniers jours et celles des 7 d’avant, même sans historique de stats (Gratuit) : de quoi afficher une tendance n’importe où.
+
+```json
+{ "semaine": { "vues": 412, "avant": 377, "dejaVue": true } }
+```
+
+`dejaVue` dit si la page a déjà eu une vue : à `false`, mieux vaut inviter à la partager qu’afficher un zéro.
+
+## Le résumé en une phrase
+
+`GET /stats/resume` lit les stats pour toi, comme « En bref » dans l’onglet Stats : une phrase à montrer telle quelle, et les faits qui la portent. Il prend la même période que `GET /stats`.
+
+```json
+{
+  "resume": {
+    "phrase": "En 30 jours, 1 284 vues, 12 % de plus que les 30 jours d’avant.",
+    "faits": [
+      { "texte": "Ta page a eu 1 284 vues, 12 % de plus que les 30 jours d’avant.", "ton": "hausse" },
+      { "texte": "« Mon nouveau podcast » a eu 96 clics, 35 % de plus.", "ton": "hausse" }
+    ],
+    "jours": 30
+  }
+}
+```
+
+`faits` détaille, une phrase par fait, avec son `ton` : `hausse`, `baisse` ou `neutre`. Un bon début pour un message Slack ou un tableau de bord. Voir la [recette](/recettes#les-stats-du-lundi-dans-slack).
 
 ## La vie privée
 

@@ -1,0 +1,20 @@
+---
+title: Le QR code
+description: Le QR code de ta page, en SVG ou en PNG, à imprimer sur une carte, une affiche ou un emballage.
+---
+
+<RoutesDe tag="Partage" />
+
+```bash
+curl "https://app.hopla.page/api/v1/qr?format=png&taille=1200" \
+  -H "Authorization: Bearer $HOPLA_CLE" -o qr-hopla.png
+```
+
+| Paramètre | Valeurs |
+| --- | --- |
+| `format` | `svg` (par défaut), à agrandir sans perte pour l’impression, ou `png` |
+| `taille` | Le côté en pixels, de 120 à 2000 ; 720 par défaut |
+
+Le code mène à l’adresse que tu partages (celle de ton nom de domaine si tu en as choisi un), suivie de `?s=qr` : ses scans se comptent à part, sous « QR code », dans les sources des [statistiques](/stats).
+
+Le serveur MCP le rend en image (`lire_qr_code`) : ton agent peut te le montrer ou le glisser dans un document.
