@@ -14,5 +14,5 @@ test('sans rien de posé au build, c’est hopla.page, comme avant', () => {
   const mentions = LEGAL['mentions-legales'].sections[0].texte.join(' ');
   assert.match(mentions, /AURA GROUP, SARL.*SIREN 991 735 036/);
   assert.match(mentions, /06 67 03 66 74\. Directeur de la publication : Lilian Sevoumian\./);
-  assert.equal(LIEN_SOURCE, '', 'pas de lien « Code source » tant que le dépôt est privé');
+  assert.equal(LIEN_SOURCE, 'https://github.com/liliansev/linkinbio', 'le lien « Code source » mène au dépôt public');
 });

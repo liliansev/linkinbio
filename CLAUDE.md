@@ -109,7 +109,7 @@ embarque tout : l'image n'a pas de `node_modules`.
   Creem, une instance ne vend rien et chaque compte a tout, API et MCP compris (`sansPaiement` dans `server/db.ts`) ;
   les e-mails de fin d'essai ne partent pas sans Creem.
   `EST_HOPLA_PAGE` garde à hopla.page la page par défaut, la signature et la chaîne de Lilian ; `LIEN_SOURCE`, le
-  lien « Code source » (AGPL), vide sur hopla.page tant que `DEPOT_OUVERT` est faux. Un texte dit `NOM_PUBLIC` ou
+  lien « Code source » (AGPL), sur hopla.page aussi depuis que le dépôt est public (`DEPOT_OUVERT`, 29 octobre 2026). Un texte dit `NOM_PUBLIC` ou
   `NOM_ADMIN` (`types.ts`), jamais « hopla.page » écrit à la main.
 - `lib/` : `types.ts` (origines, `cheminPage`, `urlPage`), `valider.ts`, `themes.ts`, `legal.ts` (`VERSION_CGU`),
   `abonnement.ts` (les quatre offres Gratuit, Starter, Pro, Premium : prix, `FONCTIONS`, `peut()`, `joursStats()`, `estPaye()` ;

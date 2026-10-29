@@ -62,10 +62,10 @@ export const INSTANCE: ValeursInstance = {
 };
 
 /**
- * Le lien « Code source » (AGPL-3.0, article 13) : toujours sur une instance auto-hébergée ; sur hopla.page, dès que
- * le dépôt est public. Passer `DEPOT_OUVERT` à true le jour où Lilian l'ouvre.
+ * Le lien « Code source » (AGPL-3.0, article 13) : toujours sur une instance auto-hébergée ; sur hopla.page, depuis
+ * que le dépôt est public (29 octobre 2026). Le repasser à false si le dépôt redevenait privé.
  */
-const DEPOT_OUVERT = false;
+const DEPOT_OUVERT = true;
 export const LIEN_SOURCE = !EST_HOPLA_PAGE || DEPOT_OUVERT ? INSTANCE.depot : '';
 
 /** Le nom de l'éditeur, sans sa forme ni son adresse : « AURA GROUP ». */
