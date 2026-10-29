@@ -48,24 +48,24 @@ personne, éditée depuis un back office pensé d'abord pour le téléphone.
 
 | | [hopla.page](https://hopla.page) | Auto-hébergé |
 | --- | --- | --- |
-| Prix | Gratuit, puis Starter, Pro | Gratuit, ton serveur à ta charge |
-| Mise en route | Deux minutes | Dix minutes avec Coolify ou Dokploy, et un nom de domaine |
-| Mises à jour, sauvegardes, e-mails | Faits pour toi | À ta charge |
-| Support | Oui | Les issues de ce dépôt |
+| Prix | Gratuit, puis Starter, Pro | Gratuit, infrastructure non comprise |
+| Installation | Aucune | Docker Compose, compatible Coolify et Dokploy |
+| Mises à jour, sauvegardes, e-mails | Comprises | À la charge de l'administrateur |
+| Support | Oui | Issues GitHub de ce dépôt |
 
-### Déployer en dix minutes
+### Déploiement rapide
 
-Dans [Coolify](https://coolify.io) ou [Dokploy](https://dokploy.com) (Hostinger
-les installe sur un VPS en un clic) :
+Avec [Coolify](https://coolify.io) ou [Dokploy](https://dokploy.com) :
 
-1. Nouveau projet, à partir de l'adresse de ce dépôt, en **Docker Compose**
+1. Créer une ressource à partir de l'URL de ce dépôt, type **Docker Compose**
    (`docker-compose.yml`, à la racine).
-2. Deux variables : `LIENS_ORIGINE` (l'adresse de l'instance, avec `https://`)
-   et `LIENS_ADMIN_EMAIL` (la tienne).
-3. Le domaine sur le service `hopla`, port 3000, puis Déployer.
+2. Définir `LIENS_ORIGINE` (URL publique de l'instance, avec `https://`) et
+   `LIENS_ADMIN_EMAIL` (adresse de l'administrateur).
+3. Associer le domaine au service `hopla`, port 3000, puis déployer.
 
-Ouvre ensuite `/admin` et entre ton adresse. Le reste (e-mails, mentions
-légales, sauvegardes) : [`docs/AUTO-HEBERGEMENT.md`](docs/AUTO-HEBERGEMENT.md).
+Se connecter ensuite sur `/admin` avec l'adresse de l'administrateur. Variables
+d'environnement, e-mails, mentions légales et sauvegarde :
+[`docs/AUTO-HEBERGEMENT.md`](docs/AUTO-HEBERGEMENT.md).
 
 ## Démarrer en local
 
@@ -98,10 +98,10 @@ privé : [`SECURITY.md`](SECURITY.md).
 
 ## Licence et marque
 
-Le code est sous [GNU Affero General Public License v3.0](LICENSE) : tu peux
-l'utiliser, le modifier et le redistribuer, y compris pour un service en ligne,
-à condition de publier tes modifications sous la même licence pour les
-personnes qui utilisent ton service.
+Le code est distribué sous [GNU Affero General Public License v3.0](LICENSE) :
+il peut être utilisé, modifié et redistribué, y compris pour un service en
+ligne, à condition de publier les modifications sous la même licence pour les
+utilisateurs de ce service.
 
 Le nom **Hopla**, son logo et le domaine hopla.page ne sont pas couverts par la
 licence : une instance auto-hébergée ou un fork public doit porter un autre nom

@@ -1,15 +1,15 @@
 ---
-title: Lire le web
-description: "Ce que le back office lit d’une adresse collée, à ta disposition : le titre et l’image d’un site, les derniers articles d’un blog, la note d’une page d’avis."
+title: Aperçus d’URL
+description: "Extraire le titre et l’image d’un site, les derniers articles d’un flux, ou la note d’une page d’avis."
 ---
 
 <RoutesDe tag="Lire le web" />
 
-Quand tu colles une adresse dans le back office, Hopla va lire la page pour toi : son titre, son image, son prix si c’est un produit. Ces trois routes font la même chose, pour que ton script ou ton agent remplisse un bloc comme le back office le ferait.
+Lorsqu’une URL est collée dans le back office, Hopla en extrait le titre, l’image et, pour un produit, le prix. Ces trois routes exposent la même extraction, pour remplir un bloc depuis un script ou un agent.
 
-Chacune prend une adresse `https://` dans `url`. Hopla lit la page depuis ses serveurs, sans tes cookies, et ne suit que les adresses publiques. Trente lectures par compte toutes les dix minutes ; au-delà, 429 `trop_de_lectures`.
+Chaque route attend une URL `https://` dans `url`. La page est récupérée depuis les serveurs de Hopla, sans cookie, et seules les adresses publiques sont acceptées. Limite : 30 requêtes par compte toutes les 10 minutes ; au-delà, 429 `trop_de_lectures`.
 
-## Lire un site
+## Métadonnées d’un site
 
 ```bash
 curl -X POST https://app.hopla.page/api/v1/apercu \
@@ -29,7 +29,7 @@ curl -X POST https://app.hopla.page/api/v1/apercu \
 }
 ```
 
-| `image` | Ce qui revient |
+| `image` | Résultat |
 | --- | --- |
 | `true` (par défaut) | L’image de partage du site, ou à défaut son favicon |
 | `false` | Le texte seul, plus rapide |
@@ -37,9 +37,9 @@ curl -X POST https://app.hopla.page/api/v1/apercu \
 | `"logo"` | Le logo du site, cherché dans ses icônes |
 | `"vignette"` | La meilleure vignette pour un bouton de lien |
 
-L’image revient en data URL : pour la poser dans un bloc, envoie-la telle quelle à [`POST /medias`](/images). Un site qui ne répond pas, ou pas en HTML, donne 422 `site_illisible`.
+L’image est renvoyée en data URL : pour l’utiliser dans un bloc, envoyez-la telle quelle à [`POST /medias`](/images). Un site injoignable, ou qui ne répond pas en HTML, renvoie 422 `site_illisible`.
 
-## Lire un blog, un podcast ou une chaîne
+## Flux RSS et chaînes YouTube
 
 ```bash
 curl -X POST https://app.hopla.page/api/v1/flux \
@@ -48,9 +48,9 @@ curl -X POST https://app.hopla.page/api/v1/flux \
   -d '{"url": "https://exemple.fr/blog"}'
 ```
 
-Les trois derniers articles, du plus récent au plus ancien : `titre`, `url`, `date`, `image`, et `video` pour un épisode. L’adresse peut être le flux lui-même (RSS, Atom) ou la page qui l’annonce. Avec `{"video": true}` et l’adresse d’une chaîne YouTube, c’est sa dernière vidéo longue. Rien de lisible : `{"articles": []}`.
+Renvoie les trois derniers articles, du plus récent au plus ancien : `titre`, `url`, `date`, `image`, et `video` pour un épisode. L’URL peut être celle du flux (RSS, Atom) ou d’une page qui le déclare. Avec `{"video": true}` et l’URL d’une chaîne YouTube, renvoie la dernière vidéo longue. Sans flux exploitable : `{"articles": []}`.
 
-## Lire la note d’une page d’avis
+## Note d’une page d’avis
 
 ```bash
 curl -X POST https://app.hopla.page/api/v1/avis \
@@ -63,4 +63,4 @@ curl -X POST https://app.hopla.page/api/v1/avis \
 { "note": { "note": 4.6, "nombre": 1820, "source": "Trustpilot" } }
 ```
 
-La note est ramenée sur 5. Elle vient de Trustpilot, ou de toute page qui la déclare dans ses données structurées (`aggregateRating`). Une page qui ne la dit pas, ou qui refuse les robots, rend `{"note": null}`. Une fiche Google ne se lit pas ainsi : tape sa note à la main dans le bloc `preuve`.
+La note est ramenée sur 5. Elle provient de Trustpilot, ou de toute page qui la déclare dans ses données structurées (`aggregateRating`). Sans note déclarée, ou si la page bloque les robots, la réponse est `{"note": null}`. Les fiches Google ne sont pas prises en charge : saisissez la note manuellement dans le bloc `preuve`.

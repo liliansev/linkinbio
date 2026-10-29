@@ -1,17 +1,17 @@
 ---
-title: La liste e-mail
-description: "Les inscrits de ton bloc « Rejoins ma liste » : les lire, les exporter, en supprimer un, les envoyer à ta newsletter."
+title: Liste e-mail
+description: "Lire, exporter et supprimer les inscrits du bloc « Rejoins ma liste », et les synchroniser avec une newsletter."
 ---
 
 <RoutesDe tag="Liste e-mail" />
 
-Le bloc `inscription` (« Rejoins ma liste », offre Pro) garde chaque inscrit chez Hopla, et l’envoie aussi à la newsletter ou à l’automatisation que tu as branchée dans **Intégrations** : Brevo, Mailchimp, Kit, MailerLite, beehiiv, Systeme.io, MailCheap, Loops, ou Make, Zapier et n8n par un webhook. L’API lit cette liste et agit dessus.
+Le bloc `inscription` (« Rejoins ma liste », offre Pro) enregistre chaque inscrit chez Hopla et le transmet à l’intégration configurée dans **Intégrations** : Brevo, Mailchimp, Kit, MailerLite, beehiiv, Systeme.io, MailCheap, Loops, ou Make, Zapier et n8n par webhook. L’API permet de consulter et de gérer cette liste.
 
-<Callout title="Des données personnelles">
-  Ces adresses sont celles de tes visiteurs. Une clé qui lit ta liste les lit toutes : réserve-la à un outil de confiance, et préfère la lecture seule pour un tableau de bord.
+<Callout title="Données personnelles">
+  Ces adresses sont des données personnelles. Une clé ayant accès à la liste peut toutes les lire : réservez-la à des outils de confiance, et utilisez une clé en lecture seule pour un tableau de bord.
 </Callout>
 
-## Le résumé
+## Résumé
 
 ```bash
 curl https://app.hopla.page/api/v1/liste -H "Authorization: Bearer $HOPLA_CLE"
@@ -28,11 +28,11 @@ curl https://app.hopla.page/api/v1/liste -H "Authorization: Bearer $HOPLA_CLE"
 }
 ```
 
-`enAttente` compte les inscrits pas encore partis vers ta newsletter (elle ne répondait pas, ou rien n’était branché). `branchee` vaut `null` sans intégration ; la clé de ta newsletter n’en montre que le début.
+`enAttente` compte les inscrits pas encore transmis à la newsletter (service indisponible, ou aucune intégration configurée). `branchee` vaut `null` sans intégration ; seul le début de la clé de l’intégration est affiché.
 
-## Les inscrits
+## Inscrits
 
-Du plus récent au plus ancien, 100 par page (500 au plus avec `limite`). Passe le `suivant` d’une page en `depart` de la suivante, jusqu’à ce qu’il vaille `null`.
+Du plus récent au plus ancien, 100 par page (500 maximum avec `limite`). Pagination par curseur : passez la valeur `suivant` d’une réponse en paramètre `depart` de la requête suivante, jusqu’à ce qu’elle vaille `null`.
 
 <Tabs items={['curl', 'JavaScript', 'Python']} groupId="langage" persist>
 
@@ -94,15 +94,15 @@ print(len(tous), "inscrits")
 }
 ```
 
-| Champ | Ce qu’il dit |
+| Champ | Description |
 | --- | --- |
-| `prenom` | Vide si le bloc ne le demandait pas |
-| `source` | D’où venait le visiteur : `instagram`, `tiktok`, `qr`, `direct`… |
-| `envoye` | Déjà parti vers ta newsletter |
+| `prenom` | Vide si le bloc ne le demande pas |
+| `source` | Provenance du visiteur : `instagram`, `tiktok`, `qr`, `direct`… |
+| `envoye` | Déjà transmis à la newsletter |
 
-## Tout en CSV
+## Export CSV
 
-`?format=csv` rend tout le fichier d’un coup, comme l’export du back office : `email,prenom,inscrit,source`.
+`?format=csv` renvoie la liste complète en un seul fichier, comme l’export du back office : `email,prenom,inscrit,source`.
 
 ```bash
 curl "https://app.hopla.page/api/v1/inscrits?format=csv" \
@@ -111,19 +111,19 @@ curl "https://app.hopla.page/api/v1/inscrits?format=csv" \
 
 ## Supprimer un inscrit
 
-Pour une demande d’effacement : `DELETE /inscrits/{id}` le retire de ta liste chez Hopla, pour de bon. La copie partie vers ta newsletter y reste : efface-la là-bas aussi.
+Pour une demande d’effacement : `DELETE /inscrits/{id}` supprime définitivement l’inscrit chez Hopla. La copie transmise à la newsletter n’est pas supprimée : effacez-la également dans ce service.
 
 ```bash
 curl -X DELETE https://app.hopla.page/api/v1/inscrits/92c5ca872beb \
   -H "Authorization: Bearer $HOPLA_CLE"
 ```
 
-## Envoyer ceux qui attendent
+## Synchroniser les inscrits en attente
 
-Tu viens de brancher ta newsletter, ou elle était en panne ? `POST /inscrits/envoyer` pousse les inscrits en attente vers elle et dit combien sont partis.
+Après la configuration d’une intégration ou une indisponibilité du service, `POST /inscrits/envoyer` transmet les inscrits en attente et renvoie le nombre d’envois.
 
 ```json title="200 OK"
 { "envoyes": 9, "erreurs": 0 }
 ```
 
-Sans rien de branché, l’API répond 409 `rien_de_branche`. Brancher une newsletter se fait dans le back office, **Intégrations** : sa clé ne passe jamais par l’API.
+Sans intégration configurée, l’API répond 409 `rien_de_branche`. La configuration d’une intégration se fait dans le back office, **Intégrations** : sa clé ne transite jamais par l’API.

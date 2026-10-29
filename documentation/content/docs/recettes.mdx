@@ -1,13 +1,13 @@
 ---
-title: Recettes
-description: "Des scripts courts, prêts à copier, pour les gestes qui reviennent : un produit ajouté depuis son adresse, les stats du lundi, un lancement programmé, les inscrits sauvegardés."
+title: Exemples
+description: "Scripts d’exemple pour les cas d’usage courants : ajout d’un produit depuis son URL, rapport hebdomadaire, lancement programmé, sauvegarde des inscrits."
 ---
 
-Chaque recette lit ta clé dans la variable `HOPLA_CLE` et tient en un fichier. Les exemples en JavaScript tournent avec Node.js 20 ou plus, sans rien installer.
+Chaque exemple lit la clé dans la variable d’environnement `HOPLA_CLE` et tient en un seul fichier. Les exemples JavaScript s’exécutent avec Node.js 20 ou supérieur, sans dépendance.
 
-## Ajouter un produit depuis son adresse
+## Ajouter un produit depuis son URL
 
-Ce que fait le back office quand tu colles l’adresse d’une fiche de boutique : lire le titre, le prix et la photo, garder la photo chez Hopla, poser le bloc.
+Reproduit le comportement du back office lorsqu’une URL de fiche produit est collée : lecture du titre, du prix et de la photo, envoi de la photo vers Hopla, création du bloc.
 
 ```js title="ajouter-produit.mjs"
 const api = 'https://app.hopla.page/api/v1';
@@ -26,11 +26,11 @@ const { bloc } = await appel('POST', '/blocs', { type: 'produit', titre: apercu.
 console.log(`« ${bloc.titre} » ajouté, ${bloc.prix || 'sans prix'}.`);
 ```
 
-Un bloc `produit` s’affiche avec l’offre Starter ou plus.
+Un bloc `produit` nécessite l’offre Starter ou supérieure.
 
-## Les stats du lundi dans Slack
+## Rapport hebdomadaire dans Slack
 
-Chaque lundi, la phrase qui résume ta semaine et tes trois liens les plus cliqués, dans un canal Slack. Il te faut l’adresse d’un [webhook entrant](https://api.slack.com/messaging/webhooks) de Slack dans `SLACK_WEBHOOK`. Une clé en lecture seule suffit.
+Publie chaque lundi dans un canal Slack le résumé de la semaine et les trois liens les plus cliqués. Prérequis : l’URL d’un [webhook entrant](https://api.slack.com/messaging/webhooks) Slack dans `SLACK_WEBHOOK`. Une clé en lecture seule suffit.
 
 <Tabs items={['JavaScript', 'Python']} groupId="langage" persist>
 
@@ -74,11 +74,11 @@ requests.post(os.environ["SLACK_WEBHOOK"], json={"text": f"{phrase}\n{top}"})
 
 </Tabs>
 
-Lance-la chaque lundi à 9 h avec cron (`0 9 * * 1 node stats-du-lundi.mjs`), une GitHub Action planifiée, ou un scénario Make ou n8n.
+Planifiez l’exécution chaque lundi à 9 h avec cron (`0 9 * * 1 node stats-du-lundi.mjs`), une GitHub Action planifiée, ou un scénario Make ou n8n.
 
 ## Programmer un lancement
 
-Un lien qui apparaît lundi à 9 h, annoncé d’ici là par un compte à rebours, mis en avant, et qui disparaît dimanche soir. La programmation demande Starter.
+Un lien mis en avant, visible du lundi 9 h au dimanche soir, précédé d’un compte à rebours. La programmation nécessite l’offre Starter.
 
 ```bash
 curl -X POST https://app.hopla.page/api/v1/blocs \
@@ -95,9 +95,9 @@ curl -X POST https://app.hopla.page/api/v1/blocs \
   }'
 ```
 
-## Le lien de la semaine
+## Mettre à jour un lien récurrent
 
-Un seul bloc en haut de ta page, dont l’adresse change chaque semaine : ton dernier épisode, ta dernière vidéo, l’offre du moment. Garde son `id` dans `HOPLA_BLOC` et change-le quand il faut.
+Un bloc en haut de la page dont l’URL change régulièrement : dernier épisode, dernière vidéo, offre en cours. Son `id` est lu dans `HOPLA_BLOC`.
 
 ```js title="lien-de-la-semaine.mjs"
 // node lien-de-la-semaine.mjs "Épisode 12 : la reprise" https://exemple.fr/episode-12
@@ -110,11 +110,11 @@ const reponse = await fetch(`https://app.hopla.page/api/v1/blocs/${process.env.H
 console.log(reponse.ok ? 'Lien mis à jour.' : (await reponse.json()).erreur.message);
 ```
 
-Pour un blog, un podcast ou une chaîne YouTube, le bloc `flux` ou `derniere-video` le fait tout seul, sans script : voir [Les blocs](/blocs).
+Pour un blog, un podcast ou une chaîne YouTube, les blocs `flux` et `derniere-video` se mettent à jour automatiquement, sans script : voir [Blocs](/blocs).
 
-## Sauvegarder tes inscrits chaque nuit
+## Sauvegarde quotidienne des inscrits
 
-Une copie de ta liste e-mail, datée, dans un dossier à toi. Une clé en lecture seule suffit.
+Exporte chaque nuit la liste e-mail dans un fichier daté. Une clé en lecture seule suffit.
 
 ```bash title="sauvegarde-inscrits.sh"
 #!/bin/sh
@@ -124,9 +124,9 @@ curl -sf "https://app.hopla.page/api/v1/inscrits?format=csv" \
   -o ~/hopla/inscrits-$(date +%F).csv
 ```
 
-## Un QR code pour l’affiche
+## Générer un QR code pour l’impression
 
-En SVG, il s’agrandit sans perte jusqu’au format de l’affiche.
+Le format SVG permet un agrandissement sans perte, quel que soit le format d’impression.
 
 ```bash
 curl "https://app.hopla.page/api/v1/qr?format=svg" \

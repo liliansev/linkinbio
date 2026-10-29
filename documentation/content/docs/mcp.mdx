@@ -1,17 +1,17 @@
 ---
 title: Serveur MCP
-description: Claude, Cursor ou ton propre agent gèrent ta page Hopla en langage courant.
+description: Gérer une page Hopla depuis Claude, Cursor ou tout client MCP, en langage naturel.
 ---
 
-Le serveur MCP de Hopla donne à ton agent IA les mêmes gestes que l’API : il lit ta page, ajoute un lien, change ton thème, regarde tes chiffres. Tu lui parles comme à quelqu’un, il appelle les bons outils.
+Le serveur MCP de Hopla expose à un agent IA les mêmes opérations que l’API : lecture de la page, ajout de liens, modification du thème, consultation des statistiques. L’agent sélectionne les outils à appeler à partir d’instructions en langage naturel.
 
 - **Adresse** : `https://app.hopla.page/mcp`
 - **Transport** : HTTP « streamable », réponses JSON, sans session
 - **Clé** : `Authorization: Bearer hopla_…`, comme pour l’API
 
-## Installer
+## Installation
 
-Crée d’abord une [clé](/cles), puis branche le serveur dans ton outil.
+Créez d’abord une [clé d’API](/cles), puis configurez le serveur dans votre client.
 
 <Tabs items={['Claude Code', 'Cursor', 'VS Code', 'Windsurf', 'Claude Desktop']} groupId="client" persist>
 
@@ -22,9 +22,9 @@ claude mcp add --transport http hopla https://app.hopla.page/mcp \
   --header "Authorization: Bearer hopla_…"
 ```
 
-Ajoute `--scope user` pour l’avoir dans tous tes projets. Vérifie ensuite avec `/mcp` dans Claude Code.
+Ajoutez `--scope user` pour l’activer dans tous vos projets. Vérifiez ensuite la connexion avec `/mcp` dans Claude Code.
 
-Dans Réglages, **API et MCP**, la commande toute prête, avec ta clé dedans, se copie juste après la création de la clé.
+Dans Réglages, **API et MCP**, la commande complète, clé incluse, peut être copiée juste après la création de la clé.
 
 </Tab>
 
@@ -41,7 +41,7 @@ Dans Réglages, **API et MCP**, la commande toute prête, avec ta clé dedans, s
 }
 ```
 
-Le fichier `.cursor/mcp.json` d’un projet marche aussi. Hopla apparaît ensuite dans les réglages de Cursor, rubrique MCP.
+Le fichier `.cursor/mcp.json` d’un projet est également pris en charge. Hopla apparaît ensuite dans les réglages de Cursor, rubrique MCP.
 
 </Tab>
 
@@ -57,12 +57,12 @@ Le fichier `.cursor/mcp.json` d’un projet marche aussi. Hopla apparaît ensuit
     }
   },
   "inputs": [
-    { "id": "hopla-cle", "type": "promptString", "description": "Ta clé Hopla", "password": true }
+    { "id": "hopla-cle", "type": "promptString", "description": "Clé d’API Hopla", "password": true }
   ]
 }
 ```
 
-VS Code te demande la clé au premier lancement et la garde pour toi : elle n’est pas écrite dans le fichier.
+VS Code demande la clé au premier lancement et la stocke de façon sécurisée : elle n’est pas écrite dans le fichier.
 
 </Tab>
 
@@ -83,7 +83,7 @@ VS Code te demande la clé au premier lancement et la garde pour toi : elle n’
 
 <Tab value="Claude Desktop">
 
-Claude Desktop lance les serveurs sur ton ordinateur : passe par `mcp-remote`, qui relaie vers Hopla (Node.js requis).
+Claude Desktop exécute les serveurs MCP en local : utilisez `mcp-remote` comme passerelle vers Hopla (Node.js requis).
 
 ```json title="claude_desktop_config.json"
 {
@@ -97,23 +97,23 @@ Claude Desktop lance les serveurs sur ton ordinateur : passe par `mcp-remote`, q
 }
 ```
 
-Le fichier s’ouvre depuis Claude Desktop : Réglages, Développeur, Modifier la configuration. Redémarre l’application ensuite.
+Le fichier s’ouvre depuis Claude Desktop : Réglages, Développeur, Modifier la configuration. Redémarrez ensuite l’application.
 
 </Tab>
 
 </Tabs>
 
 <Callout title="claude.ai et ChatGPT">
-  Les connecteurs personnalisés de claude.ai et de ChatGPT demandent une connexion OAuth, que Hopla ne propose pas encore. En attendant, passe par Claude Code, Cursor, VS Code, Windsurf ou Claude Desktop.
+  Les connecteurs personnalisés de claude.ai et de ChatGPT nécessitent une authentification OAuth, non prise en charge pour le moment. Utilisez Claude Code, Cursor, VS Code, Windsurf ou Claude Desktop.
 </Callout>
 
-## Les outils
+## Outils
 
-Vingt-cinq outils, les mêmes gestes que l’API. Avec une clé en lecture seule, ton agent ne voit que les seize qui lisent.
+25 outils, qui couvrent les opérations de l’API. Avec une clé en lecture seule, seuls les 16 outils de lecture sont exposés.
 
-### Lire
+### Lecture
 
-| Outil | Ce qu’il fait |
+| Outil | Description |
 | --- | --- |
 | `lire_page` | La page entière : adresse, offre, réglages et blocs avec leurs id |
 | `lire_compte` | L’offre, l’essai, l’abonnement, et ce que l’offre comprend |
@@ -132,25 +132,25 @@ Vingt-cinq outils, les mêmes gestes que l’API. Avec une clé en lecture seule
 | `lister_types` | Les types de bloc que la page peut poser |
 | `lister_cles` | Les clés du compte, sans elles |
 
-### Modifier
+### Écriture
 
-| Outil | Ce qu’il fait |
+| Outil | Description |
 | --- | --- |
 | `modifier_reglages` | Profil, thème, réseaux, couleurs, référencement… |
 | `ajouter_bloc` | Un bloc neuf, en haut ou à une position |
 | `modifier_bloc` | Une partie d’un bloc ; `public: false` le masque |
-| `dupliquer_bloc` | Une copie, juste sous lui, masquée si tu veux |
+| `dupliquer_bloc` | Une copie, juste sous le bloc d’origine, masquée en option |
 | `supprimer_bloc` | Un bloc, pour de bon |
 | `ordonner_blocs` | Le nouvel ordre de tous les blocs |
 | `envoyer_image` | Une image en data URL, gardée chez Hopla, à poser dans un bloc ou en photo |
 | `supprimer_inscrit` | Un inscrit de la liste, pour de bon |
 | `envoyer_inscrits` | Les inscrits en attente, vers la newsletter branchée |
 
-## À demander à ton agent
+## Exemples d’instructions
 
-<Tabs items={['Ta page', 'Tes chiffres', 'Ta liste', 'Avec le web']}>
+<Tabs items={['Page', 'Statistiques', 'Liste e-mail', 'Web']}>
 
-<Tab value="Ta page">
+<Tab value="Page">
 
 - « Ajoute en haut de ma page Hopla un lien vers mon nouveau podcast : https://exemple.fr/podcast. »
 - « Passe ma page sur un thème plus sombre et mets ma bio à jour : coach sportive à Lyon. »
@@ -160,7 +160,7 @@ Vingt-cinq outils, les mêmes gestes que l’API. Avec une clé en lecture seule
 
 </Tab>
 
-<Tab value="Tes chiffres">
+<Tab value="Statistiques">
 
 - « Quel lien a eu le plus de clics ces 30 derniers jours, et d’où venaient les visiteurs ? »
 - « Résume ma semaine sur Hopla en trois lignes, pour mon équipe. »
@@ -168,7 +168,7 @@ Vingt-cinq outils, les mêmes gestes que l’API. Avec une clé en lecture seule
 
 </Tab>
 
-<Tab value="Ta liste">
+<Tab value="Liste e-mail">
 
 - « Combien de personnes se sont inscrites à ma liste cette semaine, et d’où venaient-elles ? »
 - « Supprime ana@exemple.fr de ma liste : elle me l’a demandé. »
@@ -176,7 +176,7 @@ Vingt-cinq outils, les mêmes gestes que l’API. Avec une clé en lecture seule
 
 </Tab>
 
-<Tab value="Avec le web">
+<Tab value="Web">
 
 - « Ajoute ce produit à ma page, avec sa photo et son prix : https://boutique.exemple.fr/programme. »
 - « Lis mon blog et mets en avant mon dernier article. »
@@ -186,9 +186,9 @@ Vingt-cinq outils, les mêmes gestes que l’API. Avec une clé en lecture seule
 
 </Tabs>
 
-Ton agent commence par `lire_page` pour connaître les id des blocs, puis agit. Ce qu’il change se voit tout de suite sur ta page et dans le back office.
+L’agent appelle d’abord `lire_page` pour obtenir les id des blocs. Les modifications sont visibles immédiatement sur la page et dans le back office.
 
-## Pour les curieux
+## Détails techniques
 
 Le serveur suit la spécification MCP (versions `2025-06-18`, `2025-03-26` et `2024-11-05`). Chaque requête `POST` porte un message JSON-RPC, ou un lot de 50 au plus, et la réponse revient en JSON. Il n’ouvre ni session ni flux : `GET` répond 405.
 

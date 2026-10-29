@@ -1,21 +1,21 @@
 ---
 title: Limites et erreurs
-description: Combien d’appels, et ce que l’API répond quand quelque chose ne va pas.
+description: Limites de débit et codes d’erreur de l’API.
 ---
 
-## Les limites
+## Limites
 
-| Quoi | Limite |
+| Ressource | Limite |
 | --- | --- |
-| Appels par clé | 120 par minute, 5 000 par jour |
-| Clés refusées, par adresse IP | 20 par minute |
+| Requêtes par clé | 120 par minute, 5 000 par jour |
+| Échecs d’authentification par adresse IP | 20 par minute |
 | Corps d’une requête | 256 Ko ; 2,2 Mo pour une image en data URL, et pour un message MCP |
 | Clés par compte | 10 |
-| Lectures du web (`/apercu`, `/flux`, `/avis`) | 30 par 10 minutes et par compte |
-| Envois vers ta newsletter (`/inscrits/envoyer`) | 20 par 10 minutes et par compte |
-| Une image (`/medias`) | 1,5 Mo, en WebP, JPEG ou PNG |
+| Lecture de pages web (`/apercu`, `/flux`, `/avis`) | 30 par 10 minutes et par compte |
+| Envoi vers la newsletter (`/inscrits/envoyer`) | 20 par 10 minutes et par compte |
+| Image (`/medias`) | 1,5 Mo, en WebP, JPEG ou PNG |
 
-Au-delà d’une limite d’appels, l’API répond `429` avec l’en-tête `Retry-After` : attends ce nombre de secondes, puis réessaie.
+Au-delà d’une limite de débit, l’API répond `429` avec l’en-tête `Retry-After` : attendez ce nombre de secondes avant de réessayer.
 
 ```js title="Réessayer après un 429"
 async function appeler(url, options, essais = 3) {
@@ -29,19 +29,19 @@ async function appeler(url, options, essais = 3) {
 }
 ```
 
-## Le format des erreurs
+## Format des erreurs
 
-Toute erreur répond un statut HTTP et un objet `erreur` :
+Chaque erreur renvoie un statut HTTP et un objet `erreur` :
 
 ```json
 { "erreur": { "code": "cle_invalide", "message": "Cette clé n’existe pas ou a été révoquée." } }
 ```
 
-Teste `code` dans ton code : il ne change pas. `message` est une phrase en français, à montrer telle quelle.
+Utilisez `code` dans votre logique de traitement : sa valeur est stable. `message` est un texte en français, destiné à l’affichage.
 
-## Les codes
+## Codes d’erreur
 
-| Statut | `code` | Ce qui se passe |
+| Statut | `code` | Description |
 | --- | --- | --- |
 | 400 | `json` | Le corps n’est pas du JSON valide |
 | 400 | `rien_a_changer` | `PATCH /reglages` sans aucun réglage |
@@ -49,7 +49,7 @@ Teste `code` dans ton code : il ne change pas. `message` est une phrase en fran�
 | 400 | `type_inconnu` | Ce type de bloc n’existe pas |
 | 400 | `bloc_refuse` | Un champ du bloc est refusé, par exemple une fin avant le début |
 | 400 | `ordre_incomplet` | `PUT /ordre` sans tous les id, ou avec un id en double |
-| 400 | `periode` | Période refusée, ou plus ancienne que ton historique |
+| 400 | `periode` | Période invalide, ou antérieure à l’historique accessible |
 | 400 | `adresse_invalide` | L’adresse d’un bloc ne se lit pas : `https://`, `mailto:` ou `tel:` |
 | 400 | `adresse` | `/apercu`, `/flux` ou `/avis` sans adresse `https://` |
 | 400 | `image_absente` | `POST /medias` sans image |
@@ -59,8 +59,8 @@ Teste `code` dans ton code : il ne change pas. `message` est une phrase en fran�
 | 403 | `offre` | La page n’a pas Hopla Pro |
 | 403 | `conditions` | De nouvelles conditions d’utilisation sont à accepter sur app.hopla.page |
 | 403 | `compte_suspendu` | Le compte est suspendu |
-| 404 | `bloc_introuvable` | Aucun bloc de ta page n’a cet id |
-| 404 | `inscrit_introuvable` | Aucun inscrit de ta liste n’a cet id |
+| 404 | `bloc_introuvable` | Aucun bloc de la page ne porte cet id |
+| 404 | `inscrit_introuvable` | Aucun inscrit de la liste ne porte cet id |
 | 404 | `introuvable` | Cette adresse n’existe pas dans l’API |
 | 405 | `methode` | La méthode n’est pas permise sur cette adresse |
 | 409 | `rien_de_branche` | `POST /inscrits/envoyer` sans newsletter ni webhook branché |
@@ -70,8 +70,8 @@ Teste `code` dans ton code : il ne change pas. `message` est une phrase en fran�
 | 415 | `format_image` | L’image n’est ni WebP, ni JPEG, ni PNG |
 | 422 | `site_illisible` | Le site ne répond pas, ou pas en HTML |
 | 429 | `trop_d_appels` | Trop d’appels avec cette clé |
-| 429 | `trop_d_essais` | Trop de clés refusées depuis ton adresse |
+| 429 | `trop_d_essais` | Trop d’échecs d’authentification depuis cette adresse IP |
 | 429 | `trop_de_lectures` | Trop de sites lus en dix minutes |
-| 500 | `serveur` | Un souci chez Hopla : réessaie dans un instant |
+| 500 | `serveur` | Erreur interne : réessayez dans quelques instants |
 
-Le serveur MCP rend les mêmes refus : un outil répond `isError: true`, avec le message en texte, et l’agent te l’explique.
+Le serveur MCP renvoie les mêmes erreurs : l’outil répond `isError: true`, avec le message en texte.

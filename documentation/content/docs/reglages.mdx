@@ -1,14 +1,14 @@
 ---
-title: Les réglages
-description: Profil, thème, réseaux, couleurs, boutons, référencement et redirection de ta page.
+title: Réglages
+description: Profil, thème, réseaux sociaux, couleurs, boutons, référencement et redirection d’une page.
 ---
 
 <RoutesDe tag="Page" />
 
-`GET /page` donne tout d’un coup : la page, ses réglages et ses blocs. `GET /reglages` ne donne que les réglages.
+`GET /page` renvoie la page complète : réglages et blocs. `GET /reglages` renvoie uniquement les réglages.
 
 
-`PATCH /reglages` change seulement ce que tu envoies. Les objets `profil`, `bouton`, `seo`, `couleurs` et `redirection` se complètent champ par champ ; la liste `reseaux` se remplace en entier.
+`PATCH /reglages` modifie uniquement les champs envoyés. Les objets `profil`, `bouton`, `seo`, `couleurs` et `redirection` sont fusionnés champ par champ ; la liste `reseaux` est remplacée entièrement.
 
 ```bash
 curl -X PATCH https://app.hopla.page/api/v1/reglages \
@@ -17,9 +17,9 @@ curl -X PATCH https://app.hopla.page/api/v1/reglages \
   -d '{"profil": {"bio": "Coach sportive à Lyon"}, "theme": "onyx"}'
 ```
 
-La réponse rend tous les réglages, après le changement.
+La réponse contient l’ensemble des réglages après modification.
 
-## Ce qui se règle
+## Champs
 
 | Réglage | Valeur |
 | --- | --- |
@@ -34,7 +34,7 @@ La réponse rend tous les réglages, après le changement.
 | `vouvoiement` | Les mots de la page vouvoient le visiteur |
 | `redirection` | `{ url, fin }` envoie toute la page ailleurs jusqu’à `fin` ; `{ "url": "" }` l’arrête |
 
-## Les réseaux
+## Réseaux sociaux
 
 ```json
 {
@@ -46,12 +46,12 @@ La réponse rend tous les réglages, après le changement.
 }
 ```
 
-Envoie toujours la liste complète, dans l’ordre voulu : un réseau absent de la liste disparaît de la page. Les réseaux possibles :
+Envoyez toujours la liste complète, dans l’ordre d’affichage : un réseau absent de la liste est retiré de la page. Valeurs acceptées :
 
 <ListeReseaux />
 
-## Les thèmes
+## Thèmes
 
-`GET /themes` donne la même liste, à jour. Les réseaux, les pictos et les types de bloc ont aussi leur route : voir [Les listes](/listes).
+`GET /themes` renvoie la même liste. Les réseaux, les pictos et les types de bloc ont aussi leur route : voir [Valeurs de référence](/listes).
 
 <ListeThemes />

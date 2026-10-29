@@ -48,10 +48,10 @@ const EXEMPLES = {
   ),
   Agent: (
     <>
-      <C k="com">Toi</C>{'\n'}
+      <C k="com">Utilisateur</C>{'\n'}
       Ajoute en haut de ma page Hopla un lien{'\n'}
       vers mon podcast : https://exemple.fr/podcast{'\n\n'}
-      <C k="com">Ton agent</C>{'  '}<C k="cmd">ajouter_bloc</C>{'\n'}
+      <C k="com">Agent</C>{'  '}<C k="cmd">ajouter_bloc</C>{'\n'}
       C’est fait : « Mon podcast » est en haut{'\n'}
       de hopla.page/camille.
     </>

@@ -5,7 +5,7 @@ import { Reference } from './reference';
 
 export const metadata: Metadata = {
   title: 'Référence de l’API',
-  description: 'Chaque route de l’API de Hopla, ses champs et ses réponses, à essayer avec ta clé.',
+  description: 'Chaque route de l’API de Hopla, ses champs et ses réponses, avec une console de test.',
   alternates: { canonical: '/docs/reference' },
 };
 

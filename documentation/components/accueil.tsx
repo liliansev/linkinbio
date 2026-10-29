@@ -11,9 +11,9 @@ const GUIDES: Record<string, string> = {
 };
 
 const PORTES = [
-  { href: '/demarrage', titre: 'Démarrer', texte: 'Une clé, un premier appel, un lien ajouté à ta page : deux minutes.' },
-  { href: '/mcp', titre: 'Serveur MCP', texte: 'Claude, Cursor ou ton agent gèrent ta page en langage courant.' },
-  { href: '/recettes', titre: 'Recettes', texte: 'Des scripts prêts à copier : le lien de la semaine, les stats du lundi, les inscrits.' },
+  { href: '/demarrage', titre: 'Démarrage rapide', texte: 'Créer une clé, effectuer une première requête, ajouter un lien.' },
+  { href: '/mcp', titre: 'Serveur MCP', texte: 'Connecter Claude, Cursor ou tout client MCP.' },
+  { href: '/recettes', titre: 'Exemples', texte: 'Scripts pour les cas d’usage courants : rapport hebdomadaire, lancement programmé, sauvegarde.' },
 ];
 
 /* L'ouverture de la documentation : une phrase et un exemple qui marche côte à côte, trois portes, puis tout ce que l'API sait faire. */
@@ -24,18 +24,18 @@ export function Accueil() {
       <div className="hd-accueil-tete">
         <div className="hd-accueil-texte">
           <p className="hd-accueil-sur">API REST et serveur MCP · Hopla Pro</p>
-          <h1 className="hd-accueil-titre">Ta page Hopla, <span>depuis ton code</span></h1>
+          <h1 className="hd-accueil-titre">API Hopla <span>et serveur MCP</span></h1>
           <p className="hd-accueil-chapo">
-            Tout ce que tu fais dans le back office se fait aussi par l’API, ou en parlant à ton agent IA : ta page, tes blocs, tes images, tes chiffres, ta liste e-mail.
+            Les fonctionnalités du back office sont accessibles par l’API REST et par le serveur MCP : page, blocs, images, statistiques, liste e-mail.
           </p>
           <div className="hd-accueil-actions">
-            <Link href="/demarrage" className="hd-bouton hd-bouton-plein">Démarrer</Link>
-            <Link href="/reference" className="hd-bouton">Voir la référence</Link>
+            <Link href="/demarrage" className="hd-bouton hd-bouton-plein">Démarrage rapide</Link>
+            <Link href="/reference" className="hd-bouton">Référence de l’API</Link>
           </div>
           <dl className="hd-accueil-chiffres">
             <div><dt>{routes}</dt><dd>routes</dd></div>
             <div><dt>25</dt><dd>outils MCP</dd></div>
-            <div><dt>120</dt><dd>appels par minute</dd></div>
+            <div><dt>120</dt><dd>requêtes par minute</dd></div>
           </dl>
         </div>
         <Exemple />
@@ -51,8 +51,8 @@ export function Accueil() {
         ))}
       </div>
 
-      <h2 className="hd-accueil-h2">Ce que l’API sait faire</h2>
-      <p className="hd-accueil-sous">Chaque route a sa page dans la référence, avec un bouton pour l’essayer avec ta clé.</p>
+      <h2 className="hd-accueil-h2">Ressources</h2>
+      <p className="hd-accueil-sous">Chaque route est documentée dans la référence, avec une console de test.</p>
       <div className="hd-carte-groupes">
         {GROUPES.filter(g => g.routes.length).map(g => (
           <section key={g.name} className="hd-carte-groupe">

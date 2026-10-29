@@ -1,25 +1,25 @@
 ---
-title: Démarrer
-description: Une clé, un premier appel, un lien ajouté à ta page. Deux minutes.
+title: Démarrage rapide
+description: Créer une clé d’API, effectuer une première requête et ajouter un lien à une page.
 ---
 
 <Steps>
 
 <Step>
 
-### Crée une clé
+### Créer une clé d’API
 
-Sur [app.hopla.page](https://app.hopla.page/admin), ouvre **Réglages**, puis **API et MCP**, et crée une clé qui peut modifier ta page.
+Sur [app.hopla.page](https://app.hopla.page/admin), ouvrez **Réglages**, puis **API et MCP**, et créez une clé en lecture et modification.
 
-Elle commence par `hopla_` et ne s’affiche qu’une fois : copie-la tout de suite.
+La clé commence par `hopla_` et ne s’affiche qu’une seule fois : copiez-la immédiatement.
 
 </Step>
 
 <Step>
 
-### Garde-la dans une variable
+### Stocker la clé dans une variable d’environnement
 
-Ne l’écris jamais dans ton code : place-la dans une variable d’environnement.
+N’écrivez jamais la clé dans le code source : stockez-la dans une variable d’environnement.
 
 ```bash title="Terminal"
 export HOPLA_CLE="hopla_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
@@ -29,7 +29,7 @@ export HOPLA_CLE="hopla_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 
 <Step>
 
-### Lis ta page
+### Lire la page
 
 <Tabs items={['curl', 'JavaScript', 'Python']} groupId="langage" persist>
 
@@ -71,13 +71,13 @@ print(donnees["page"]["adresse"], len(donnees["blocs"]), "blocs")
 
 </Tabs>
 
-La réponse donne l’adresse de ta page, son offre, ses réglages et ses blocs, chacun avec son `id`.
+La réponse contient l’URL de la page, son offre, ses réglages et ses blocs, chacun avec son `id`.
 
 </Step>
 
 <Step>
 
-### Ajoute un lien
+### Ajouter un lien
 
 <Tabs items={['curl', 'JavaScript', 'Python']} groupId="langage" persist>
 
@@ -126,16 +126,16 @@ print("Ajouté :", reponse.json()["bloc"]["id"])
 
 </Tabs>
 
-Le lien arrive en haut de ta page, tout de suite visible. Ouvre-la pour le voir.
+Le lien est ajouté en haut de la page et visible immédiatement.
 
 </Step>
 
 </Steps>
 
-## Et ensuite
+## Étapes suivantes
 
 <Cards>
-  <Card title="Les blocs" href="/blocs">Titres, produits, FAQ, vidéos : tous les types et leurs champs.</Card>
-  <Card title="Le serveur MCP" href="/mcp">La même chose, en parlant à Claude ou à Cursor.</Card>
-  <Card title="La référence" href="/reference">Chaque route, à essayer avec ta clé.</Card>
+  <Card title="Blocs" href="/blocs">Types de blocs et champs disponibles.</Card>
+  <Card title="Serveur MCP" href="/mcp">Les mêmes opérations depuis Claude, Cursor ou un autre client MCP.</Card>
+  <Card title="Référence de l’API" href="/reference">Toutes les routes, avec une console de test.</Card>
 </Cards>

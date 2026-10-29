@@ -1,13 +1,13 @@
 ---
-title: Ton compte
-description: Ton offre et ce qu’elle comprend, tes clés d’API, et tout ce que Hopla garde de toi, en un fichier.
+title: Compte
+description: Offre et fonctionnalités incluses, clés d’API et export des données du compte.
 ---
 
 <RoutesDe tag="Compte" />
 
-## L’offre et ce qu’elle comprend
+## Offre et fonctionnalités
 
-`GET /compte` dit ce que ta page peut faire aujourd’hui. Utile avant d’envoyer un bloc réservé : un script peut vérifier `fonctions.programmation.incluse` avant de poser des dates.
+`GET /compte` indique les fonctionnalités disponibles pour la page. Un script peut par exemple vérifier `fonctions.programmation.incluse` avant de définir des dates sur un bloc.
 
 ```json
 {
@@ -29,20 +29,20 @@ description: Ton offre et ce qu’elle comprend, tes clés d’API, et tout ce q
 }
 ```
 
-| Champ | Ce qu’il dit |
+| Champ | Description |
 | --- | --- |
-| `offre` | Ce que la page peut, essai compris : `gratuit`, `starter`, `pro` ou `premium` |
+| `offre` | Offre effective, période d’essai comprise : `gratuit`, `starter`, `pro` ou `premium` |
 | `essai` | La fin de l’essai de Pro, ou `null` |
-| `abonnement` | Ce que tu paies : l’offre, son statut, mois ou année, la fin de la période en cours |
+| `abonnement` | Abonnement payant : offre, statut, mensuel ou annuel, fin de la période en cours |
 | `offreOfferte` | Une offre offerte par Hopla, et sa fin (`null` : sans fin) |
-| `fonctions` | Chaque fonction réservée : incluse ou non, et l’offre qui la donne |
-| `historiqueStats` | Les jours de stats que ton offre laisse lire |
+| `fonctions` | Chaque fonctionnalité soumise à une offre : incluse ou non, et l’offre requise |
+| `historiqueStats` | Profondeur d’historique des statistiques accessible, en jours |
 
-Changer d’offre, payer ou résilier se fait dans le back office, jamais par l’API : rien n’est prélevé sans toi.
+Le changement d’offre, le paiement et la résiliation se font uniquement dans le back office, jamais par l’API.
 
-## Tes clés
+## Clés d’API
 
-`GET /cles` liste les clés du compte, jamais les clés elles-mêmes : leur nom, leurs premiers caractères, si elles modifient, quand elles ont servi pour la dernière fois. `courante` marque celle qui fait l’appel.
+`GET /cles` liste les clés du compte sans exposer leur valeur : nom, premiers caractères, permission d’écriture, date de dernière utilisation. `courante` désigne la clé utilisée pour la requête.
 
 ```json
 {
@@ -52,11 +52,11 @@ Changer d’offre, payer ou résilier se fait dans le back office, jamais par l�
 }
 ```
 
-Créer et révoquer une clé se font dans Réglages, **API et MCP** : une clé ne peut pas en fabriquer une autre. Voir [Clés d’API](/cles).
+La création et la révocation des clés se font dans Réglages, **API et MCP** : une clé ne peut pas en créer une autre. Voir [Clés d’API](/cles).
 
-## Tes données, en un fichier
+## Export des données
 
-`GET /export` rend tout ce que Hopla garde de ton compte, en JSON : ton compte et ton offre, tes réglages, tes blocs, chaque vue et chaque clic (sans adresse IP), tes inscrits et tes clés (sans elles). C’est ton droit d’accès (RGPD), les mêmes données que « Exporter mes données » dans Réglages, sans les images : leurs adresses y sont.
+`GET /export` renvoie l’ensemble des données du compte en JSON : compte et offre, réglages, blocs, vues et clics (sans adresse IP), inscrits et clés (sans leur valeur). Il correspond au droit d’accès RGPD et contient les mêmes données que « Exporter mes données » dans Réglages, sans les fichiers images (leurs URL sont incluses).
 
 ```bash
 curl https://app.hopla.page/api/v1/export \

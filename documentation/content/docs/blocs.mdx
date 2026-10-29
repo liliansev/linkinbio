@@ -1,21 +1,21 @@
 ---
-title: Les blocs
-description: Ajouter, modifier, masquer, programmer, réordonner et supprimer les blocs de ta page.
+title: Blocs
+description: Créer, modifier, masquer, programmer, réordonner et supprimer les blocs d’une page.
 ---
 
-Une page Hopla est une suite de blocs : des liens, des titres de section, des textes, des vidéos, des produits… L’API les donne dans l’ordre de la page, chacun avec son `id`.
+Une page Hopla est une liste ordonnée de blocs : liens, titres de section, textes, vidéos, produits… L’API les renvoie dans l’ordre d’affichage, chacun avec son `id`.
 
 <RoutesDe tag="Blocs" />
 
-## Les types
+## Types
 
 <ListeTypes />
 
-Sans `type`, un bloc neuf est un lien. Son type ne change plus ensuite : pour passer d’un lien à une vidéo, supprime l’un et ajoute l’autre.
+Sans `type`, un nouveau bloc est un lien. Le type n’est pas modifiable après la création : pour changer de type, supprimez le bloc et créez-en un nouveau.
 
-## Les champs
+## Champs
 
-| Champ | Ce qu’il porte |
+| Champ | Description |
 | --- | --- |
 | `titre` | Le libellé du bouton, le titre de section ou le texte d’un paragraphe. 160 caractères, 1 000 pour un texte |
 | `url` | L’adresse : `https://…`, `mailto:` ou `tel:`. Sans `https://`, Hopla l’ajoute ; une adresse qu’il ne peut pas lire répond 400 `adresse_invalide` |
@@ -31,11 +31,11 @@ Sans `type`, un bloc neuf est un lien. Son type ne change plus ensuite : pour pa
 | `questions` | Pour `faq`, une liste de `{ question, reponse }` |
 | `preuve` | Pour `preuve`, `{ genre, note, nombre, source }` |
 
-La [référence](/reference#model/bloc) donne tous les champs, et ceux que l’API rend en lecture.
+La [référence de l’API](/reference#model/bloc) détaille tous les champs, y compris ceux en lecture seule.
 
-## Ajouter
+## Créer un bloc
 
-`POST /blocs` pose le bloc en haut de la page, ou à `position` (0 : en haut).
+`POST /blocs` insère le bloc en haut de la page, ou à l’index `position` (0 : en haut).
 
 ```bash
 curl -X POST https://app.hopla.page/api/v1/blocs \
@@ -44,7 +44,7 @@ curl -X POST https://app.hopla.page/api/v1/blocs \
   -d '{"type": "titre", "titre": "Mes formations", "position": 3}'
 ```
 
-Quelques blocs courants :
+Exemples de blocs courants :
 
 <Tabs items={['Lien mis en avant', 'Produit', 'FAQ', 'Avis', 'Vidéo']}>
 
@@ -118,9 +118,9 @@ Quelques blocs courants :
 
 </Tabs>
 
-## Modifier, masquer, programmer
+## Modifier, masquer, programmer un bloc
 
-`PATCH /blocs/{id}` change seulement les champs envoyés ; le reste est gardé.
+`PATCH /blocs/{id}` modifie uniquement les champs envoyés ; les autres sont conservés.
 
 ```bash title="Masquer un bloc sans le perdre"
 curl -X PATCH https://app.hopla.page/api/v1/blocs/a1b2c3d4e5f6 \
@@ -136,11 +136,11 @@ curl -X PATCH https://app.hopla.page/api/v1/blocs/a1b2c3d4e5f6 \
   -d '{"debut": "2026-12-01T09:00:00+01:00", "fin": "2026-12-15T23:59:00+01:00", "compteARebours": true}'
 ```
 
-Pour retirer une date, envoie une chaîne vide : `{"fin": ""}`.
+Pour supprimer une date, envoyez une chaîne vide : `{"fin": ""}`.
 
-## Dupliquer
+## Dupliquer un bloc
 
-`POST /blocs/{id}/dupliquer` pose une copie juste sous le bloc, avec un nouvel `id`. Avec `{"masquer": true}`, la copie reste hors de la page le temps de la retoucher : pratique pour préparer la version de la semaine prochaine d’un lien.
+`POST /blocs/{id}/dupliquer` insère une copie juste sous le bloc, avec un nouvel `id`. Avec `{"masquer": true}`, la copie est masquée, ce qui permet de la préparer avant publication.
 
 ```bash
 curl -X POST https://app.hopla.page/api/v1/blocs/a1b2c3d4e5f6/dupliquer \
@@ -149,13 +149,13 @@ curl -X POST https://app.hopla.page/api/v1/blocs/a1b2c3d4e5f6/dupliquer \
   -d '{"masquer": true}'
 ```
 
-## Une image dans un bloc
+## Images dans un bloc
 
-`image` (la vignette d’un lien, la photo d’un produit) et `images` (une galerie) prennent l’adresse d’une image gardée chez Hopla. Envoie-la d’abord avec [`POST /medias`](/images), puis pose le `chemin` rendu dans le bloc.
+`image` (vignette d’un lien, photo d’un produit) et `images` (galerie) attendent le chemin d’une image hébergée par Hopla. Envoyez-la d’abord avec [`POST /medias`](/images), puis utilisez le `chemin` renvoyé dans le bloc.
 
-## Réordonner
+## Réordonner les blocs
 
-`PUT /ordre` reçoit les `id` de **tous** les blocs, chacun une fois, le premier en haut. Un id oublié, répété ou étranger à ta page, et l’API répond 400 `ordre_incomplet` sans rien changer.
+`PUT /ordre` attend les `id` de **tous** les blocs, chacun une seule fois, du haut vers le bas. Si un id est manquant, dupliqué ou n’appartient pas à la page, l’API répond 400 `ordre_incomplet` sans rien modifier.
 
 ```bash
 curl -X PUT https://app.hopla.page/api/v1/ordre \
@@ -164,10 +164,10 @@ curl -X PUT https://app.hopla.page/api/v1/ordre \
   -d '{"ids": ["f6e5d4c3b2a1", "a1b2c3d4e5f6", "0a1b2c3d4e5f"]}'
 ```
 
-## Supprimer
+## Supprimer un bloc
 
-`DELETE /blocs/{id}` supprime le bloc pour de bon, sans corbeille. Pour le cacher un temps, préfère `{"public": false}`.
+`DELETE /blocs/{id}` supprime définitivement le bloc. Pour le masquer temporairement, utilisez `{"public": false}`.
 
-## Ce que l’offre change
+## Restrictions selon l’offre
 
-Chaque bloc passe par les mêmes contrôles que dans le back office. Si ta page quitte un jour Pro, rien n’est effacé : ce que la nouvelle offre ne comprend pas reste enregistré et revient avec elle.
+Chaque bloc est soumis aux mêmes validations que dans le back office. En cas de changement d’offre, aucune donnée n’est supprimée : les fonctionnalités non incluses sont conservées et réactivées au retour sur l’offre.

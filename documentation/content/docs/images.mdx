@@ -1,21 +1,21 @@
 ---
-title: Les images
-description: Envoyer une photo chez Hopla, puis la poser en photo de profil, en vignette, dans une galerie ou en fond de page.
+title: Images
+description: Envoyer une image vers Hopla et l’utiliser en photo de profil, vignette, galerie ou fond de page.
 ---
 
 <RoutesDe tag="Images" />
 
-Ta page ne montre que des images gardées chez Hopla : elles s’affichent vite, ne disparaissent pas quand un autre site change, et ne suivent pas tes visiteurs. Une image s’envoie en deux temps : `POST /medias` la garde et rend son `chemin`, puis tu poses ce chemin où tu veux.
+Une page n’affiche que des images hébergées par Hopla : chargement rapide, aucune dépendance à un site tiers, aucun suivi des visiteurs. L’envoi se fait en deux étapes : `POST /medias` stocke l’image et renvoie son `chemin`, puis ce chemin est utilisé dans les réglages ou un bloc.
 
-## Envoyer une image
+## Envoi
 
-WebP, JPEG ou PNG, 1,5 Mo au plus. Deux façons de l’envoyer, au choix :
+Formats acceptés : WebP, JPEG ou PNG, 1,5 Mo maximum. Deux méthodes d’envoi :
 
 <Tabs items={['Le fichier tel quel', 'En JSON']} groupId="envoi">
 
 <Tab value="Le fichier tel quel">
 
-Le corps de la requête est l’image elle-même, avec son type dans `Content-Type`.
+Le corps de la requête contient l’image binaire, avec son type MIME dans `Content-Type`.
 
 ```bash
 curl -X POST https://app.hopla.page/api/v1/medias \
@@ -28,7 +28,7 @@ curl -X POST https://app.hopla.page/api/v1/medias \
 
 <Tab value="En JSON">
 
-L’image en data URL, dans le champ `image`. C’est ce que le serveur MCP attend de ton agent.
+L’image encodée en data URL, dans le champ `image`. C’est le format attendu par le serveur MCP.
 
 ```bash
 curl -X POST https://app.hopla.page/api/v1/medias \
@@ -50,11 +50,11 @@ curl -X POST https://app.hopla.page/api/v1/medias \
 }
 ```
 
-Hopla lit le format dans les premiers octets du fichier, pas dans son nom : une image GIF renommée en `.png` répond 415.
+Le format est détecté à partir des premiers octets du fichier, pas de son extension : une image GIF renommée en `.png` renvoie 415.
 
-## La poser
+## Utilisation
 
-| Où | Le champ |
+| Emplacement | Champ |
 | --- | --- |
 | La photo de profil | `PATCH /reglages` avec `{"profil": {"avatar": "/media/…"}}` |
 | Le fond de la page (Starter) | `PATCH /reglages` avec `{"imageFond": "/media/…"}` |
@@ -81,12 +81,12 @@ await fetch(`${api}/reglages`, {
 });
 ```
 
-## Les refus
+## Erreurs
 
-| Statut | `code` | Pourquoi |
+| Statut | `code` | Cause |
 | --- | --- | --- |
 | 400 | `image_absente` | Le corps est vide, ou `image` n’est pas une data URL |
 | 413 | `image_trop_grosse` | Plus de 1,5 Mo |
-| 413 | `plus_de_place` | Le compte a rempli sa place pour les images : supprime-en dans le back office |
+| 413 | `plus_de_place` | Quota de stockage des images atteint : supprimez des images dans le back office |
 | 415 | `format_image` | Ni WebP, ni JPEG, ni PNG |
-| 403 | `lecture_seule` | La clé ne peut rien envoyer |
+| 403 | `lecture_seule` | La clé est en lecture seule |

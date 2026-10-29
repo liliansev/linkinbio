@@ -8,8 +8,8 @@ import { NOM_ADMIN, ORIGINE_ADMIN, ORIGINE_PUBLIQUE } from './types.ts';
 
 export const DOC_API = `# API et serveur MCP de Hopla
 
-Ta page Hopla se gère aussi depuis ton code ou ton agent IA (Claude, ChatGPT, Cursor…) : ce que fait le
-back office, ou presque. Profil, thème, réseaux, blocs, images, statistiques, liste e-mail, QR code, et la
+Une page Hopla se gère depuis votre code ou un agent IA (Claude, ChatGPT, Cursor…), avec les mêmes
+fonctionnalités que le back office, ou presque. Profil, thème, réseaux, blocs, images, statistiques, liste e-mail, QR code, et la
 lecture d'un site, d'un blog ou d'une page d'avis.
 
 - API REST : ${ORIGINE_ADMIN}/api/v1
@@ -21,14 +21,14 @@ Réservé à l'offre Pro (et à l'essai de 14 jours). Les échanges sont en JSON
 
 ## Clé d'API
 
-Crée une clé dans le back office : ${NOM_ADMIN}, Réglages, « API et MCP ». Elle ne s'affiche
-qu'une fois : copie-la tout de suite. Une clé « lecture seule » lit sans rien modifier.
-Envoie-la dans chaque requête :
+Créez une clé dans le back office : ${NOM_ADMIN}, Réglages, « API et MCP ». Elle ne s'affiche
+qu'une fois : copiez-la immédiatement. Une clé « lecture seule » ne modifie aucune donnée.
+Envoyez-la dans chaque requête :
 
     Authorization: Bearer hopla_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
-Une clé ne touche qu'à ta page. Révoque-la dans Réglages dès qu'elle ne sert plus, ou si elle a fuité.
-Si ta page quitte l'offre Pro, tes clés s'arrêtent et reprennent quand elle y revient.
+Une clé n'a accès qu'à la page de son compte. Révoquez-la dans Réglages dès qu'elle n'est plus utilisée, ou en cas de fuite.
+Si le compte quitte l'offre Pro, ses clés sont suspendues, puis réactivées au retour sur l'offre.
 
 ## Limites
 

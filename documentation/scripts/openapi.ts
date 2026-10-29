@@ -96,11 +96,11 @@ const spec = {
     title: 'API de Hopla',
     version: '1.1.0',
     summary: 'Lire et modifier sa page Hopla depuis son code.',
-    description: 'Ta page Hopla se gère aussi depuis ton code : tout ce que fait le back office, ou presque. Profil, thème, réseaux, blocs, '
+    description: 'Gestion d’une page Hopla depuis votre code, avec les fonctionnalités du back office. Profil, thème, réseaux, blocs, '
       + 'images, statistiques, liste e-mail, QR code, et la lecture d’un site, d’un blog ou d’une page d’avis. '
       + 'Réservé à l’offre Pro (et aux 14 jours d’essai). Les échanges sont en JSON, en UTF-8.\n\n'
-      + 'Crée une clé dans Réglages, « API et MCP », sur [app.hopla.page](https://app.hopla.page/admin), puis envoie-la dans '
-      + 'l’en-tête `Authorization: Bearer hopla_…`. Les guides : [hopla.page/docs](https://hopla.page/docs).',
+      + 'Créez une clé dans Réglages, « API et MCP », sur [app.hopla.page](https://app.hopla.page/admin), puis envoyez-la dans '
+      + 'l’en-tête `Authorization: Bearer hopla_…`. Guides : [hopla.page/docs](https://hopla.page/docs).',
     contact: { name: 'Hopla', url: 'https://hopla.page/docs' },
     license: { name: 'AGPL-3.0', identifier: 'AGPL-3.0-only' },
   },
@@ -112,9 +112,9 @@ const spec = {
     { name: 'Statistiques', description: 'Vues, visiteurs et clics, sans cookie : l’adresse IP des visiteurs n’est jamais gardée.' },
     { name: 'Partage', description: 'Le QR code de la page.' },
     { name: 'Images', description: 'Envoyer une image chez Hopla, pour une photo de profil, une vignette, une galerie ou un fond.' },
-    { name: 'Liste e-mail', description: 'Les inscrits du bloc « Rejoins ma liste » : les lire, les exporter, les supprimer, les envoyer à ta newsletter.' },
+    { name: 'Liste e-mail', description: 'Les inscrits du bloc « Rejoins ma liste » : les lire, les exporter, les supprimer, les transmettre à la newsletter.' },
     { name: 'Lire le web', description: 'Ce que le back office lit d’une adresse collée : le titre et l’image d’un site, les articles d’un blog, la note d’une page d’avis.' },
-    { name: 'Compte', description: 'L’offre, l’essai, ce qu’elle comprend, les clés d’API et l’export de tes données.' },
+    { name: 'Compte', description: 'Offre, période d’essai, fonctionnalités incluses, clés d’API et export des données.' },
     { name: 'Référence', description: 'Les listes que la page connaît : thèmes, réseaux, pictos, types de bloc.' },
   ],
   paths: {
@@ -175,7 +175,7 @@ const spec = {
         tags: ['Blocs'], operationId: 'lireBloc', summary: 'Lire un bloc',
         responses: {
           200: { description: 'Le bloc.', content: { 'application/json': { schema: { type: 'object', properties: { bloc: ref('Bloc') } }, example: { bloc: BLOC_EXEMPLE } } } },
-          404: erreur('Aucun bloc de ta page n’a cet id.', 'bloc_introuvable', 'Aucun bloc de ta page n’a cet id.'),
+          404: erreur('Aucun bloc de la page ne porte cet id.', 'bloc_introuvable', 'Aucun bloc de ta page n’a cet id.'),
           ...ERREURS,
         },
       },
@@ -185,7 +185,7 @@ const spec = {
         requestBody: { required: true, content: { 'application/json': { schema: ref('BlocPartiel'), example: { public: false } } } },
         responses: {
           200: { description: 'Le bloc, après le changement.', content: { 'application/json': { schema: { type: 'object', properties: { bloc: ref('Bloc') } }, example: { bloc: { ...BLOC_EXEMPLE, public: false } } } } },
-          404: erreur('Aucun bloc de ta page n’a cet id.', 'bloc_introuvable', 'Aucun bloc de ta page n’a cet id.'),
+          404: erreur('Aucun bloc de la page ne porte cet id.', 'bloc_introuvable', 'Aucun bloc de ta page n’a cet id.'),
           ...ecriture,
         },
       },
@@ -194,7 +194,7 @@ const spec = {
         description: 'Supprime un bloc, pour de bon. Pour le cacher sans le perdre, préfère PATCH avec `{"public": false}`.',
         responses: {
           200: { description: 'Le bloc est supprimé.', content: { 'application/json': { schema: { type: 'object', properties: { supprime: { type: 'string' } } }, example: { supprime: 'a1b2c3d4e5f6' } } } },
-          404: erreur('Aucun bloc de ta page n’a cet id.', 'bloc_introuvable', 'Aucun bloc de ta page n’a cet id.'),
+          404: erreur('Aucun bloc de la page ne porte cet id.', 'bloc_introuvable', 'Aucun bloc de ta page n’a cet id.'),
           ...ERREURS,
         },
       },
@@ -207,7 +207,7 @@ const spec = {
         requestBody: { required: false, content: { 'application/json': { schema: objetDe({ masquer: oui('Poser la copie masquée.') }), example: { masquer: true } } } },
         responses: {
           201: json('La copie.', objetDe({ bloc: ref('Bloc') }), { bloc: { ...BLOC_EXEMPLE, id: 'f6e5d4c3b2a1', public: false } }),
-          404: erreur('Aucun bloc de ta page n’a cet id.', 'bloc_introuvable', 'Aucun bloc de ta page n’a cet id.'),
+          404: erreur('Aucun bloc de la page ne porte cet id.', 'bloc_introuvable', 'Aucun bloc de ta page n’a cet id.'),
           ...ecriture,
         },
       },
@@ -222,7 +222,7 @@ const spec = {
         },
         responses: {
           200: { description: 'Les blocs, dans leur nouvel ordre.', content: { 'application/json': { schema: { type: 'object', properties: { blocs: { type: 'array', items: ref('Bloc') } } } } } },
-          400: erreur('Un id manque, se répète ou n’est pas à ta page.', 'ordre_incomplet', 'Donne les id de tous les blocs de ta page, chacun une fois, dans le nouvel ordre.'),
+          400: erreur('Un id est manquant, dupliqué ou n’appartient pas à la page.', 'ordre_incomplet', 'Donne les id de tous les blocs de ta page, chacun une fois, dans le nouvel ordre.'),
           ...ERREURS,
         },
       },
@@ -231,11 +231,11 @@ const spec = {
       get: {
         tags: ['Statistiques'], operationId: 'lireStats', summary: 'Lire les statistiques',
         description: 'Les vues, visiteurs et clics, par jour, par bloc, par réseau, par appareil et par pays, comparés à la période d’avant. '
-          + 'Une période, ou deux dates. La période est bornée à l’historique de ton offre.',
+          + 'Une période, ou deux dates. La période est bornée à l’historique de l’offre.',
         parameters: PERIODE,
         responses: {
           200: { description: 'Les statistiques.', content: { 'application/json': { schema: { type: 'object', properties: { stats: ref('Stats') } } } } },
-          400: erreur('Période refusée, ou plus ancienne que ton historique.', 'periode', 'Période refusée : 7, 14, 30, 90 ou 365 jours, ou des dates du et au (AAAA-MM-JJ).'),
+          400: erreur('Période invalide, ou antérieure à l’historique accessible.', 'periode', 'Période refusée : 7, 14, 30, 90 ou 365 jours, ou des dates du et au (AAAA-MM-JJ).'),
           ...ERREURS,
         },
       },
@@ -302,7 +302,7 @@ const spec = {
     '/liste': {
       get: {
         tags: ['Liste e-mail'], operationId: 'lireListe', summary: 'Le résumé de la liste',
-        description: 'Combien d’inscrits, combien cette semaine, combien pas encore envoyés à ta newsletter, et où ils partent. La clé de la newsletter ne revient jamais.',
+        description: 'Combien d’inscrits, combien cette semaine, combien pas encore transmis à la newsletter, et l’intégration configurée. La clé de la newsletter ne revient jamais.',
         responses: {
           200: json('La liste.', objetDe({ liste: objetDe({ inscrits: entier('Tous les inscrits.'), semaine: entier('Inscrits ces 7 derniers jours.'), enAttente: entier('Pas encore envoyés.'),
             branchee: { anyOf: [objetDe({ outil: texte('brevo, mailchimp, kit, make…'), liste: texte('Le nom de la liste choisie.'), cle: texte('Le début de la clé, masqué.') }), { type: 'null' }] } }) }),
@@ -339,10 +339,10 @@ const spec = {
       parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', example: '92c5ca872beb' } }],
       delete: {
         tags: ['Liste e-mail'], operationId: 'supprimerInscrit', summary: 'Supprimer un inscrit',
-        description: 'Retire un inscrit de ta liste chez Hopla, pour de bon (une demande d’effacement, par exemple). Ta newsletter garde sa copie.',
+        description: 'Supprime définitivement un inscrit chez Hopla (demande d’effacement, par exemple). La copie transmise à la newsletter est conservée.',
         responses: {
           200: json('L’inscrit est supprimé.', objetDe({ supprime: { type: 'string' } }), { supprime: '92c5ca872beb' }),
-          404: erreur('Aucun inscrit de ta liste n’a cet id.', 'inscrit_introuvable', 'Aucun inscrit de ta liste n’a cet id.'),
+          404: erreur('Aucun inscrit de la liste ne porte cet id.', 'inscrit_introuvable', 'Aucun inscrit de ta liste n’a cet id.'),
           ...ERREURS,
         },
       },
@@ -466,12 +466,12 @@ const spec = {
   },
   components: {
     securitySchemes: {
-      cle: { type: 'http', scheme: 'bearer', bearerFormat: 'hopla_…', description: 'Ta clé d’API, créée dans Réglages, « API et MCP », sur app.hopla.page.' },
+      cle: { type: 'http', scheme: 'bearer', bearerFormat: 'hopla_…', description: 'Clé d’API, créée dans Réglages, « API et MCP », sur app.hopla.page.' },
     },
     schemas: {
       Erreur: {
         type: 'object', required: ['erreur'],
-        properties: { erreur: { type: 'object', required: ['code', 'message'], properties: { code: texte('Un code stable, à tester dans ton code.'), message: texte('Une phrase en français, à montrer telle quelle.') } } },
+        properties: { erreur: { type: 'object', required: ['code', 'message'], properties: { code: texte('Code stable, à utiliser dans la logique de traitement.'), message: texte('Texte en français, destiné à l’affichage.') } } },
       },
       Page: {
         type: 'object',

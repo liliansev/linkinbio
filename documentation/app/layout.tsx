@@ -7,7 +7,7 @@ import './global.css';
 export const metadata: Metadata = {
   metadataBase: new URL('https://hopla.page/docs/'),
   title: { default: 'Documentation de Hopla', template: '%s · Hopla Docs' },
-  description: 'L’API et le serveur MCP de Hopla : gère ta page de liens depuis ton code ou ton agent IA.',
+  description: 'L’API et le serveur MCP de Hopla : gestion d’une page de liens depuis votre code ou un agent IA.',
   icons: { icon: '/favicon.svg' },
   openGraph: { siteName: 'Hopla', locale: 'fr_FR', images: '/og.png' },
 };
