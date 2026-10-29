@@ -374,5 +374,5 @@ embarque tout : l'image n'a pas de `node_modules`.
 - La mention « Publicité » (ou « Collaboration commerciale ») d'un lien partenaire s'affiche dans toutes les offres, Gratuit compris : la loi du 9 juin 2023 la demande. Sans Starter, `selonDroits` retire le code promo et les blocs de la vitrine, jamais la mention.
 - Aucun secret dans le dépôt ; ils vivent dans `/opt/linkinbio/secrets/runtime.env`. Ni l'adresse IP ni le nom du VPS non
   plus : le dépôt est prévu pour être public (licence AGPL-3.0 depuis le 28 octobre 2026, `LICENSE`), et l'IP d'origine
-  doit rester cachée derrière Cloudflare. Auto-hébergement : `docs/AUTO-HEBERGEMENT.md` ; variables : `.env.example`.
+  doit rester cachée derrière Cloudflare. Auto-hébergement : `docs/SELF-HOSTING.md` ; variables : `.env.example`.
 - Ne jamais tuer un serveur local avec un `pkill -f` dont le motif correspond à sa propre commande.

@@ -43,7 +43,7 @@ export async function generateMetadata(props: PageProps<'/[[...slug]]'>): Promis
   const page = source.getPage(params.slug);
   if (!page) notFound();
   return {
-    title: page.slugs.length ? page.data.title : { absolute: 'Documentation de Hopla' },
+    title: page.slugs.length ? page.data.title : { absolute: 'Hopla Docs' },
     description: page.data.description,
     alternates: { canonical: page.url === '/' ? '/docs' : `/docs${page.url}` },
   };

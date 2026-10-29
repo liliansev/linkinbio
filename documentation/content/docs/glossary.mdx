@@ -1,0 +1,144 @@
+---
+title: Glossary
+description: English equivalents of the French identifiers used by the API and the MCP server.
+---
+
+Hopla is built in French, and its API identifiers (paths, fields, enum values, MCP tools) are kept as they are in the product. This page maps them to English.
+
+## Paths
+
+| Path | Resource |
+| --- | --- |
+| `/page` | Page |
+| `/reglages` | Settings |
+| `/blocs`, `/blocs/{id}` | Blocks |
+| `/blocs/{id}/dupliquer` | Duplicate a block |
+| `/ordre` | Block order |
+| `/medias` | Images (media) |
+| `/stats`, `/stats/semaine`, `/stats/resume` | Analytics, weekly views, summary |
+| `/qr` | QR code |
+| `/liste` | Email list |
+| `/inscrits`, `/inscrits/envoyer` | Subscribers, sync subscribers |
+| `/apercu` | URL preview (metadata) |
+| `/flux` | Feed |
+| `/avis` | Reviews (rating) |
+| `/compte` | Account |
+| `/cles` | API keys |
+| `/export` | Data export |
+| `/themes`, `/reseaux`, `/pictos`, `/types` | Themes, social networks, icons, block types |
+
+## Common fields
+
+| Field | English |
+| --- | --- |
+| `adresse` | URL (public page URL) |
+| `pseudo` | Username |
+| `offre` | Plan (`gratuit` = free) |
+| `essai` | Trial |
+| `abonnement` | Subscription |
+| `fonctions` | Features |
+| `profil` (`nom`, `bio`, `avatar`) | Profile (name, bio, photo) |
+| `reseaux` (`reseau`, `url`) | Social links (network, URL) |
+| `couleurs` (`fond`, `boutons`, `accent`) | Colors (background, buttons, accent) |
+| `bouton` (`style`, `forme`, `ombre`) | Button (style, shape, shadow) |
+| `partage` | Share button |
+| `vouvoiement` | Formal "vous" form in page copy |
+| `redirection` | Redirect |
+| `imageFond` | Background image |
+| `titre`, `sousTitre` | Title, subtitle |
+| `icone` | Icon |
+| `public` | Visible |
+| `vedette` | Featured |
+| `debut`, `fin` | Start, end |
+| `compteARebours` | Countdown |
+| `prix`, `montants` | Price, amounts |
+| `questions` (`question`, `reponse`) | FAQ items (question, answer) |
+| `preuve` (`note`, `nombre`) | Social proof (rating, count) |
+| `position` | Position |
+| `masquer` | Hide |
+| `chemin` | Path |
+| `jours`, `du`, `au`, `periode` | Days, from, to, period |
+| `vues`, `visiteurs`, `clics` | Views, visitors, clicks |
+| `serie`, `sources`, `appareils`, `pays`, `precedent`, `avant` | Time series, referrers, devices, countries, previous period, previous value |
+| `inscrits`, `prenom`, `inscrit`, `envoye` | Subscribers, first name, signup date, synced |
+| `limite`, `depart`, `suivant` | Limit, offset, next offset |
+| `enAttente`, `branchee`, `outil` | Pending, connected integration, provider |
+| `envoyes`, `erreurs` | Sent, failed |
+| `cles` (`nom`, `debut`, `ecriture`, `cree`, `utilisee`, `courante`) | API keys (name, prefix, write access, created, last used, current) |
+| `erreur` | Error |
+| `supprime` | Deleted (id) |
+
+## Block types
+
+| `type` | English |
+| --- | --- |
+| `lien` | Link |
+| `titre` | Section heading |
+| `texte` | Text |
+| `video` | Video |
+| `derniere-video` | Latest YouTube video |
+| `inscription` | Email signup |
+| `preuve` | Reviews and social proof |
+| `produit` | Product |
+| `soutien` | Tips and donations |
+| `reservation` | Booking |
+| `musique` | Music |
+| `faq` | FAQ |
+| `coordonnees` | Contact card (vCard) |
+| `lieu` | Location |
+| `galerie` | Gallery |
+| `formulaire` | Contact form |
+| `flux` | RSS feed |
+
+## Enum values
+
+| Field | Values |
+| --- | --- |
+| `format` | `bouton` (button), `bandeau` (banner), `carte` (card) |
+| `reseauxPosition` | `haut` (top), `bas` (bottom) |
+| `profil.photo` | `ronde` (round), `grande` (large) |
+| `bouton.style` | `plein` (filled), `contour` (outline), `doux` (soft), `relief` (raised), `verre` (glass) |
+| `bouton.forme` | `pilule` (pill), `arrondi` (rounded), `carre` (square) |
+| `bouton.ombre` | `aucune` (none), `subtile` (subtle), `marquee` (strong) |
+| `ton` | `hausse` (up), `baisse` (down), `neutre` (neutral) |
+| `periode` (subscription) | `mois` (monthly), `an` (yearly) |
+
+## MCP tools
+
+| Tool | English |
+| --- | --- |
+| `lire_page` | Get page |
+| `lire_compte` | Get account |
+| `lire_stats` | Get analytics |
+| `lire_semaine` | Get weekly views |
+| `lire_resume` | Get analytics summary |
+| `lire_liste` | Get email list |
+| `lister_inscrits` | List subscribers |
+| `lire_qr_code` | Get QR code |
+| `lire_site` | Fetch URL metadata |
+| `lire_flux` | Fetch feed |
+| `lire_note_avis` | Fetch review rating |
+| `lister_themes` | List themes |
+| `lister_reseaux` | List social networks |
+| `lister_pictos` | List icons |
+| `lister_types` | List block types |
+| `lister_cles` | List API keys |
+| `modifier_reglages` | Update settings |
+| `ajouter_bloc` | Create block |
+| `modifier_bloc` | Update block |
+| `dupliquer_bloc` | Duplicate block |
+| `supprimer_bloc` | Delete block |
+| `ordonner_blocs` | Reorder blocks |
+| `envoyer_image` | Upload image |
+| `supprimer_inscrit` | Delete subscriber |
+| `envoyer_inscrits` | Sync subscribers |
+
+## Admin panel
+
+| French | English |
+| --- | --- |
+| Réglages | Settings |
+| API et MCP | API and MCP |
+| Intégrations | Integrations |
+| Stats | Analytics |
+| Comptes | Accounts (instance administrator only) |

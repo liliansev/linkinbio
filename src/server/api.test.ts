@@ -50,7 +50,7 @@ test('une clé neuve : le préfixe, 32 caractères tirés au hasard, seule son e
 test('la documentation se lit sans clé ; le reste demande une clé valide', async () => {
   const doc = await appel(null, 'GET', '');
   assert.equal(doc.status, 200);
-  assert.match(await doc.text(), /# API et serveur MCP de Hopla/);
+  assert.match(await doc.text(), /# Hopla API and MCP server/);
   assert.equal((await appel(null, 'GET', '/page')).status, 401);
   const fausse = await appel('hopla_' + 'x'.repeat(32), 'GET', '/page');
   assert.equal(fausse.status, 401);
@@ -203,7 +203,7 @@ test('le serveur MCP en lecture seule ne propose que la lecture', async () => {
   assert.deepEqual(liste.result.tools.map((t: { name: string }) => t.name), LECTURE_MCP);
   const r = await (await mcp(cle, { jsonrpc: '2.0', id: 2, method: 'tools/call', params: { name: 'ajouter_bloc', arguments: { titre: 'Non' } } })).json();
   assert.equal(r.result.isError, true);
-  assert.match(r.result.content[0].text, /lecture seule/);
+  assert.match(r.result.content[0].text, /read-only/);
 });
 
 test('le compte, les réglages, les listes de référence', async () => {

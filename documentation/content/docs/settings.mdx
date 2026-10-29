@@ -1,0 +1,56 @@
+---
+title: Settings
+description: Page profile, theme, social links, colors, buttons, SEO and redirect.
+---
+
+<RoutesDe tag="Page" />
+
+`GET /page` returns the full page: settings and blocks. `GET /reglages` returns settings only.
+
+`PATCH /reglages` updates only the fields sent. The `profil`, `bouton`, `seo`, `couleurs` and `redirection` objects are merged field by field; the `reseaux` list is replaced as a whole.
+
+```bash
+curl -X PATCH https://app.hopla.page/api/v1/reglages \
+  -H "Authorization: Bearer $HOPLA_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"profil": {"bio": "Coach sportive à Lyon"}, "theme": "onyx"}'
+```
+
+The response contains the full settings after the update.
+
+## Fields
+
+| Setting | Value |
+| --- | --- |
+| `profil` | Profile: `{ nom, bio, avatar, photo }`. `nom` is the display name, `avatar` an https image URL, `photo` is `ronde` (round) or `grande` (large) |
+| `theme` | A theme id, see below |
+| `reseaux` | Social links: `[{ reseau, url }]`, 20 maximum |
+| `reseauxPosition` | `haut` (below the bio) or `bas` (bottom of the page) |
+| `couleurs` | Colors: `{ fond, boutons, accent }` (background, buttons, accent) as `#rrggbb`; empty: theme default |
+| `bouton` | Buttons: `{ style, forme, ombre }` (style, shape, shadow): `plein`, `contour`, `doux`, `relief` or `verre`; `pilule`, `arrondi` or `carre`; `aucune`, `subtile` or `marquee` |
+| `seo` | `{ titre, description }` for search engines and link previews |
+| `partage` | Show the Share button at the top of the page |
+| `vouvoiement` | Page copy uses the formal "vous" form |
+| `redirection` | Redirect: `{ url, fin }` sends the whole page to another URL until `fin`; `{ "url": "" }` stops it |
+
+## Social links
+
+```json
+{
+  "reseaux": [
+    { "reseau": "instagram", "url": "https://instagram.com/camille" },
+    { "reseau": "youtube", "url": "https://youtube.com/@camille" },
+    { "reseau": "email", "url": "mailto:camille@exemple.fr" }
+  ]
+}
+```
+
+Always send the full list, in display order: a network missing from the list is removed from the page. Valid values:
+
+<ListeReseaux />
+
+## Themes
+
+`GET /themes` returns the same list. Social networks, icons and block types have their own endpoints: see [Reference values](/reference-values).
+
+<ListeThemes />

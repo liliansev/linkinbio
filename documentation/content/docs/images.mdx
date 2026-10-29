@@ -1,38 +1,38 @@
 ---
 title: Images
-description: Envoyer une image vers Hopla et l’utiliser en photo de profil, vignette, galerie ou fond de page.
+description: Upload an image to Hopla and use it as a profile photo, thumbnail, gallery item or page background.
 ---
 
 <RoutesDe tag="Images" />
 
-Une page n’affiche que des images hébergées par Hopla : chargement rapide, aucune dépendance à un site tiers, aucun suivi des visiteurs. L’envoi se fait en deux étapes : `POST /medias` stocke l’image et renvoie son `chemin`, puis ce chemin est utilisé dans les réglages ou un bloc.
+Pages only display images hosted by Hopla: fast loading, no third-party dependency, no visitor tracking. Uploading is a two-step process: `POST /medias` stores the image and returns its `chemin` (path), then that path is used in settings or in a block.
 
-## Envoi
+## Upload
 
-Formats acceptés : WebP, JPEG ou PNG, 1,5 Mo maximum. Deux méthodes d’envoi :
+Supported formats: WebP, JPEG or PNG, 1.5 MB maximum. Two upload methods:
 
-<Tabs items={['Le fichier tel quel', 'En JSON']} groupId="envoi">
+<Tabs items={['Raw bytes', 'JSON']} groupId="upload">
 
-<Tab value="Le fichier tel quel">
+<Tab value="Raw bytes">
 
-Le corps de la requête contient l’image binaire, avec son type MIME dans `Content-Type`.
+The request body contains the binary image, with its MIME type in `Content-Type`.
 
 ```bash
 curl -X POST https://app.hopla.page/api/v1/medias \
-  -H "Authorization: Bearer $HOPLA_CLE" \
+  -H "Authorization: Bearer $HOPLA_API_KEY" \
   -H "Content-Type: image/jpeg" \
   --data-binary @portrait.jpg
 ```
 
 </Tab>
 
-<Tab value="En JSON">
+<Tab value="JSON">
 
-L’image encodée en data URL, dans le champ `image`. C’est le format attendu par le serveur MCP.
+The image encoded as a data URL, in the `image` field. This is the format used by the MCP server.
 
 ```bash
 curl -X POST https://app.hopla.page/api/v1/medias \
-  -H "Authorization: Bearer $HOPLA_CLE" \
+  -H "Authorization: Bearer $HOPLA_API_KEY" \
   -H "Content-Type: application/json" \
   -d "{\"image\": \"data:image/png;base64,$(base64 -w0 logo.png)\"}"
 ```
@@ -50,43 +50,43 @@ curl -X POST https://app.hopla.page/api/v1/medias \
 }
 ```
 
-Le format est détecté à partir des premiers octets du fichier, pas de son extension : une image GIF renommée en `.png` renvoie 415.
+The format is detected from the file signature (magic bytes), not from its extension: a GIF renamed to `.png` returns 415.
 
-## Utilisation
+## Usage
 
-| Emplacement | Champ |
+| Location | Field |
 | --- | --- |
-| La photo de profil | `PATCH /reglages` avec `{"profil": {"avatar": "/media/…"}}` |
-| Le fond de la page (Starter) | `PATCH /reglages` avec `{"imageFond": "/media/…"}` |
-| La vignette d’un lien, la photo d’un produit | `image` du bloc |
-| Une galerie | `images` du bloc `galerie`, une liste de chemins |
+| Profile photo | `PATCH /reglages` with `{"profil": {"avatar": "/media/…"}}` |
+| Page background (Starter) | `PATCH /reglages` with `{"imageFond": "/media/…"}` |
+| Link thumbnail, product photo | Block `image` |
+| Gallery | `images` of a `galerie` block, a list of paths |
 
-```js title="Changer de photo de profil en Node.js"
+```js title="Update the profile photo with Node.js"
 import { readFile } from 'node:fs/promises';
 
-const cle = process.env.HOPLA_CLE;
+const key = process.env.HOPLA_API_KEY;
 const api = 'https://app.hopla.page/api/v1';
 
-const envoi = await fetch(`${api}/medias`, {
+const upload = await fetch(`${api}/medias`, {
   method: 'POST',
-  headers: { Authorization: `Bearer ${cle}`, 'Content-Type': 'image/jpeg' },
+  headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'image/jpeg' },
   body: await readFile('portrait.jpg'),
 });
-const { media } = await envoi.json();
+const { media } = await upload.json();
 
 await fetch(`${api}/reglages`, {
   method: 'PATCH',
-  headers: { Authorization: `Bearer ${cle}`, 'Content-Type': 'application/json' },
+  headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
   body: JSON.stringify({ profil: { avatar: media.chemin } }),
 });
 ```
 
-## Erreurs
+## Errors
 
-| Statut | `code` | Cause |
+| Status | `code` | Cause |
 | --- | --- | --- |
-| 400 | `image_absente` | Le corps est vide, ou `image` n’est pas une data URL |
-| 413 | `image_trop_grosse` | Plus de 1,5 Mo |
-| 413 | `plus_de_place` | Quota de stockage des images atteint : supprimez des images dans le back office |
-| 415 | `format_image` | Ni WebP, ni JPEG, ni PNG |
-| 403 | `lecture_seule` | La clé est en lecture seule |
+| 400 | `image_absente` | Empty body, or `image` is not a data URL |
+| 413 | `image_trop_grosse` | Image over 1.5 MB |
+| 413 | `plus_de_place` | Image storage quota exceeded: delete images in the admin panel |
+| 415 | `format_image` | Format other than WebP, JPEG or PNG |
+| 403 | `lecture_seule` | The key is read-only |

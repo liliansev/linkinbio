@@ -5,7 +5,7 @@ export function ListeThemes() {
   return (
     <div className="hd-table">
       <table>
-        <thead><tr><th>id</th><th>Nom</th><th>Humeur</th></tr></thead>
+        <thead><tr><th>id</th><th>Name</th><th>Mood</th></tr></thead>
         <tbody>
           {genere.themes.map(t => (
             <tr key={t.id}><td><code>{t.id}</code></td><td>{t.nom}</td><td>{t.humeur}</td></tr>
@@ -20,7 +20,7 @@ export function ListeReseaux() {
   return (
     <div className="hd-table">
       <table>
-        <thead><tr><th>reseau</th><th>Nom</th></tr></thead>
+        <thead><tr><th>reseau</th><th>Name</th></tr></thead>
         <tbody>{genere.reseaux.map(r => <tr key={r.id}><td><code>{r.id}</code></td><td>{r.nom}</td></tr>)}</tbody>
       </table>
     </div>

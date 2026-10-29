@@ -1,32 +1,36 @@
 ---
 title: Introduction
 full: true
-description: L’API REST et le serveur MCP de Hopla, pour gérer une page de liens depuis votre code ou un agent IA.
+description: The Hopla REST API and MCP server, to manage a link-in-bio page from your code or an AI agent.
 ---
 
 <Accueil />
 
-## Points essentiels
+## Key concepts
 
 <Cards>
-  <Card title="Offre Pro requise" href="/compte">
-    L’API et le serveur MCP font partie de l’offre Pro, et des 14 jours d’essai à l’inscription.
+  <Card title="Pro plan required" href="/account">
+    The API and MCP server are included in the Pro plan and in the 14-day trial.
   </Card>
-  <Card title="Authentification" href="/cles">
-    Les clés se créent dans Réglages. Une clé en lecture seule ne modifie aucune donnée.
+  <Card title="Authentication" href="/authentication">
+    API keys are created in the admin panel. Read-only keys cannot modify any data.
   </Card>
-  <Card title="Limites de débit" href="/limites-et-erreurs">
-    120 requêtes par minute et 5 000 par jour pour une clé. Au-delà, l’API répond 429 avec le délai d’attente.
+  <Card title="Rate limits" href="/errors">
+    120 requests per minute and 5,000 per day per key. Above that, the API returns 429 with a Retry-After header.
   </Card>
 </Cards>
 
-## URL de base
+## Base URLs
 
 | | |
 | --- | --- |
-| API REST | `https://app.hopla.page/api/v1` |
-| Serveur MCP | `https://app.hopla.page/mcp` |
-| Fichier OpenAPI | [`hopla.page/docs/openapi.json`](https://hopla.page/docs/openapi.json), pour générer un client |
-| Agents IA | [`hopla.page/docs/llms.txt`](https://hopla.page/docs/llms.txt), et cette documentation en entier dans [`llms-full.txt`](https://hopla.page/docs/llms-full.txt) |
+| REST API | `https://app.hopla.page/api/v1` |
+| MCP server | `https://app.hopla.page/mcp` |
+| OpenAPI spec | [`hopla.page/docs/openapi.json`](https://hopla.page/docs/openapi.json), for client generation |
+| AI agents | [`hopla.page/docs/llms.txt`](https://hopla.page/docs/llms.txt), and the full documentation in [`llms-full.txt`](https://hopla.page/docs/llms-full.txt) |
 
-Chaque page de cette documentation est disponible en Markdown : le bouton « Copier en Markdown » permet de la transmettre telle quelle à un agent.
+## Naming
+
+Hopla is a French product: API paths, JSON fields, enum values and MCP tool names are in French (`/blocs`, `titre`, `lire_page`). The [glossary](/glossary) maps them to English. Error messages and documentation are in English.
+
+Every page of this documentation is available as Markdown: use **Copy Markdown** to pass it to an agent as is.

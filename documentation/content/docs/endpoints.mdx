@@ -1,0 +1,10 @@
+---
+title: Endpoints
+description: All API endpoints by group, with links to the API reference.
+---
+
+Base URL: `https://app.hopla.page/api/v1`, JSON over HTTPS, UTF-8. Every request is authenticated with an [API key](/authentication) in the `Authorization` header. Endpoints with a method other than `GET` modify the page, except the three [web fetching](/web-fetching) endpoints: a read-only key receives 403 `lecture_seule` on them.
+
+<ToutesLesRoutes />
+
+`GET https://app.hopla.page/api/v1`, without authentication, returns a plain text version of this documentation, for AI agents.

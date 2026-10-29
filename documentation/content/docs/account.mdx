@@ -1,0 +1,64 @@
+---
+title: Account
+description: Plan and included features, API keys and account data export.
+---
+
+<RoutesDe tag="Account" />
+
+## Plan and features
+
+`GET /compte` returns the features available to the page. For example, a script can check `fonctions.programmation.incluse` before setting dates on a block.
+
+```json
+{
+  "compte": {
+    "pseudo": "camille",
+    "adresse": "https://hopla.page/camille",
+    "cree": "2026-10-20T09:12:00.000Z",
+    "offre": "pro",
+    "essai": null,
+    "abonnement": { "offre": "pro", "statut": "active", "periode": "mois", "finPeriode": "2026-11-20T09:12:00.000Z" },
+    "offreOfferte": null,
+    "fonctions": {
+      "programmation": { "incluse": true, "offre": "starter" },
+      "listeEmail": { "incluse": true, "offre": "pro" },
+      "api": { "incluse": true, "offre": "pro" }
+    },
+    "historiqueStats": 365
+  }
+}
+```
+
+| Field | Description |
+| --- | --- |
+| `offre` | Effective plan, trial included: `gratuit` (free), `starter`, `pro` or `premium` |
+| `essai` | End date of the Pro trial, or `null` |
+| `abonnement` | Paid subscription: plan, status, billing period (`mois` monthly, `an` yearly), end of the current period |
+| `offreOfferte` | Complimentary plan granted by Hopla, and its end date (`null`: no end date) |
+| `fonctions` | Each gated feature: whether it is included (`incluse`), and the required plan (`offre`) |
+| `historiqueStats` | Analytics retention available, in days |
+
+Plan changes, payment and cancellation are only available in the admin panel, never through the API.
+
+## API keys
+
+`GET /cles` lists the account keys without exposing their secret: name, prefix, write access, last use. `courante` marks the key used for the request.
+
+```json
+{
+  "cles": [
+    { "id": "2916f190dae2", "nom": "Claude Code", "debut": "hopla_hT-a", "ecriture": true, "cree": "2026-10-28T10:00:00.000Z", "utilisee": "2026-10-28T21:40:00.000Z", "courante": true }
+  ]
+}
+```
+
+Keys are created and revoked in Réglages (Settings), **API et MCP**: a key cannot create another key. See [Authentication](/authentication).
+
+## Data export
+
+`GET /export` returns all account data as JSON: account and plan, settings, blocks, views and clicks (without IP addresses), subscribers and keys (without their secret). It implements the GDPR right of access and contains the same data as "Exporter mes données" (Export my data) in Réglages, without image files (their URLs are included).
+
+```bash
+curl https://app.hopla.page/api/v1/export \
+  -H "Authorization: Bearer $HOPLA_API_KEY" -o hopla-export.json
+```

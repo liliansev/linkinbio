@@ -62,6 +62,12 @@ async function readBody(req, limit) {
   for await (const chunk of req) { size += chunk.length; if (size > limit) throw new HttpError(413); chunks.push(chunk); }
   return Buffer.concat(chunks);
 }
+/* Les pages de la documentation passées en anglais le 29 octobre 2026 : l'ancienne adresse renvoie à la nouvelle. */
+const ANCIENNES_DOCS = {
+  demarrage: 'quickstart', cles: 'authentication', recettes: 'examples', blocs: 'blocks', reglages: 'settings', stats: 'analytics',
+  'liste-email': 'email-list', 'lire-le-web': 'web-fetching', compte: 'account', listes: 'reference-values', routes: 'endpoints',
+  'limites-et-erreurs': 'errors',
+};
 /** À n'exposer que derrière Caddy, qui doit écraser X-Real-IP avec l'IP du visiteur. */
 export function createLiensServer({ appDir = appRoot, site = process.env.LIENS_SITE, cloudflare = process.env.LIENS_CLOUDFLARE, instance = instanceDe(process.env) } = {}) {
   const exclusif = cloudflare === 'exclusif';
@@ -73,6 +79,8 @@ export function createLiensServer({ appDir = appRoot, site = process.env.LIENS_S
   async function docs(req, chemin, send) {
     const local = chemin.slice('/docs'.length) || '/';
     if (local !== '/' && local.endsWith('/')) return send(308, '', { Location: `/docs${local.replace(/\/+$/, '')}` });
+    const ancien = /^\/([a-z-]+)(\.mdx)?$/.exec(local);
+    if (ancien && ANCIENNES_DOCS[ancien[1]]) return send(308, '', { Location: `/docs/${ANCIENNES_DOCS[ancien[1]]}${ancien[2] ?? ''}` });
     const base = await realpath(resolve(appDir, 'docs')).catch(() => null);
     if (!base) return send(404, 'Not found', { 'Cache-Control': 'no-store' });
     const essais = local === '/' ? ['index.html'] : [local.slice(1), `${local.slice(1)}.html`];

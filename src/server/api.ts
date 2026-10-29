@@ -13,6 +13,7 @@ import { DOC_API } from '../lib/docApi.ts';
 import * as db from './db.ts';
 import { empreinte } from './auth.ts';
 import { droits, joursLisibles, periodeLisible, verifierDates } from './droits.ts';
+import { REFUS_PROGRAMMATION } from '../lib/droits.ts';
 import { JOUR, MINUTE, cleIp, limiteur } from './limites.ts';
 import { apercuSite } from './apercu.ts';
 import { articlesDe } from './flux.ts';
@@ -57,23 +58,23 @@ const clesFaussesParIp = limiteur([20, MINUTE]);
 /** Le compte d'une clé passée en `Authorization: Bearer hopla_…`, ou l'erreur à rendre. */
 export function authentifier(entete: string | null, ip: string, env: Record<string, string | undefined> = process.env, maintenant = Date.now()): Appelant {
   const cle = /^Bearer\s+(\S+)$/i.exec(entete?.trim() ?? '')?.[1] ?? '';
-  if (!cle) throw new ErreurApi(401, 'cle_absente', `Ajoute ta clé d’API dans l’en-tête Authorization: Bearer hopla_… Elle se crée dans Réglages, sur ${NOM_ADMIN}.`);
+  if (!cle) throw new ErreurApi(401, 'cle_absente', `Missing API key. Send it in the Authorization header: Bearer hopla_… Create one in Réglages (Settings) on ${NOM_ADMIN}.`);
   const trouvee = FORME_CLE.test(cle) ? db.cleApiParEmpreinte(empreinte(cle)) : undefined;
   if (!trouvee) {
-    if (clesFaussesParIp(cleIp(ip || 'inconnue'), maintenant)) throw new ErreurApi(429, 'trop_d_essais', 'Trop de clés refusées. Réessaie dans une minute.');
-    throw new ErreurApi(401, 'cle_invalide', 'Cette clé n’existe pas ou a été révoquée.');
+    if (clesFaussesParIp(cleIp(ip || 'inconnue'), maintenant)) throw new ErreurApi(429, 'trop_d_essais', 'Too many invalid API keys. Retry in one minute.');
+    throw new ErreurApi(401, 'cle_invalide', 'Invalid or revoked API key.');
   }
   const compte = db.compteParId(trouvee.compte);
-  if (!compte || compte.statut !== 'actif') throw new ErreurApi(403, 'compte_suspendu', 'Ce compte est suspendu.');
-  if (compte.id !== PRINCIPAL && compte.cgu !== VERSION_CGU) throw new ErreurApi(403, 'conditions', `Accepte les nouvelles conditions d’utilisation sur ${NOM_ADMIN}, puis réessaie.`);
-  if (!droits(compte, env, maintenant).api) throw new ErreurApi(403, 'offre', 'L’API et le serveur MCP demandent Hopla Pro. Ta clé reprendra du service dès que ta page y repasse.');
-  if (appelsParCle(trouvee.id, maintenant)) throw new ErreurApi(429, 'trop_d_appels', 'Trop d’appels avec cette clé. Réessaie dans une minute.');
+  if (!compte || compte.statut !== 'actif') throw new ErreurApi(403, 'compte_suspendu', 'This account is suspended.');
+  if (compte.id !== PRINCIPAL && compte.cgu !== VERSION_CGU) throw new ErreurApi(403, 'conditions', `Accept the updated terms of service on ${NOM_ADMIN}, then retry.`);
+  if (!droits(compte, env, maintenant).api) throw new ErreurApi(403, 'offre', 'The API and MCP server require the Pro plan. The key is reactivated when the account is back on Pro.');
+  if (appelsParCle(trouvee.id, maintenant)) throw new ErreurApi(429, 'trop_d_appels', 'Rate limit exceeded for this API key. Retry in one minute.');
   db.noterUsageCleApi(trouvee.id, maintenant);
   return { compte: compte.id, cle: trouvee.id, ecriture: trouvee.ecriture === 1 };
 }
 
 const ecrire = (a: Appelant) => {
-  if (!a.ecriture) throw new ErreurApi(403, 'lecture_seule', 'Cette clé est en lecture seule : crée une clé qui peut modifier ta page.');
+  if (!a.ecriture) throw new ErreurApi(403, 'lecture_seule', 'This API key is read-only. Use a key with write access.');
 };
 
 const objet = (v: unknown): Record<string, unknown> => (v && typeof v === 'object' && !Array.isArray(v) ? v as Record<string, unknown> : {});
@@ -99,8 +100,8 @@ const SOUS_OBJETS = ['profil', 'bouton', 'seo', 'couleurs', 'redirection'];
 export function modifierReglages(a: Appelant, partiel: unknown): Reglages {
   ecrire(a);
   const changes = objet(partiel);
-  if (!Object.keys(changes).length) throw new ErreurApi(400, 'rien_a_changer', 'Envoie au moins un réglage à changer, par exemple {"profil": {"bio": "…"}}.');
-  if ('theme' in changes && !THEMES.some(t => t.id === changes.theme)) throw new ErreurApi(400, 'theme_inconnu', `Thème inconnu. Les thèmes : ${THEMES.map(t => t.id).join(', ')}.`);
+  if (!Object.keys(changes).length) throw new ErreurApi(400, 'rien_a_changer', 'Request body must contain at least one setting, for example {"profil": {"bio": "…"}}.');
+  if ('theme' in changes && !THEMES.some(t => t.id === changes.theme)) throw new ErreurApi(400, 'theme_inconnu', `Unknown theme. Valid values: ${THEMES.map(t => t.id).join(', ')}.`);
   const actuel = db.lireReglages(a.compte);
   const fusion: Record<string, unknown> = { ...actuel };
   // Seules les clés connues passent : rien d'autre ne s'écrit sur l'objet.
@@ -115,7 +116,7 @@ export function modifierReglages(a: Appelant, partiel: unknown): Reglages {
 
 const blocDuCompte = (a: Appelant, id: string): Bloc => {
   const bloc = db.lireBlocs(a.compte).find(b => b.id === id);
-  if (!bloc) throw new ErreurApi(404, 'bloc_introuvable', 'Aucun bloc de ta page n’a cet id.');
+  if (!bloc) throw new ErreurApi(404, 'bloc_introuvable', 'Block not found.');
   return bloc;
 };
 
@@ -123,19 +124,22 @@ export const lireBlocs = (a: Appelant) => db.lireBlocs(a.compte);
 export const lireBloc = (a: Appelant, id: string) => blocDuCompte(a, id);
 
 function enregistrer(a: Appelant, bloc: Bloc) {
-  if (a.compte !== PRINCIPAL && TYPES_PRINCIPAL.includes(bloc.type)) throw new ErreurApi(400, 'type_reserve', 'Ce type de bloc n’est pas disponible.');
+  if (a.compte !== PRINCIPAL && TYPES_PRINCIPAL.includes(bloc.type)) throw new ErreurApi(400, 'type_reserve', 'This block type is not available.');
   try {
     verifierDates(db.compteParId(a.compte)!, bloc);
     db.enregistrerBloc(a.compte, bloc);
   } catch (error) {
-    throw new ErreurApi(400, 'bloc_refuse', (error as Error).message);
+    // Les refus du back office sont écrits en français pour l'interface : l'API les rend en anglais.
+    const message = (error as Error).message;
+    throw new ErreurApi(400, 'bloc_refuse', message === REFUS_PROGRAMMATION ? 'Scheduling a block (start or end date) requires the Starter plan or higher.'
+      : /^Deux cents blocs/.test(message) ? 'A page can have at most 200 blocks.' : 'Block rejected.');
   }
 }
 
 /** Une adresse envoyée que la validation a dû laisser de côté : on le dit, plutôt que d'enregistrer un bloc sans adresse. */
 function adresseGardee(envoye: Record<string, unknown>, bloc: Bloc) {
   if (typeof envoye.url === 'string' && envoye.url.trim() && !(bloc as { url?: string }).url) {
-    throw new ErreurApi(400, 'adresse_invalide', 'Adresse invalide : une adresse https://, mailto: ou tel: est attendue.');
+    throw new ErreurApi(400, 'adresse_invalide', 'Invalid url: expected an https://, mailto: or tel: URL.');
   }
 }
 
@@ -147,7 +151,7 @@ export function ajouterBloc(a: Appelant, donnees: unknown, position?: unknown): 
   ecrire(a);
   const o = objet(donnees);
   if (o.type !== undefined && !(typesPermis(a.compte) as readonly unknown[]).includes(o.type)) {
-    throw new ErreurApi(400, 'type_inconnu', `Type de bloc inconnu. Les types : ${typesPermis(a.compte).join(', ')}.`);
+    throw new ErreurApi(400, 'type_inconnu', `Unknown block type. Valid values: ${typesPermis(a.compte).join(', ')}.`);
   }
   const bloc = validerBloc(o, db.nouvelId());
   adresseGardee(o, bloc);
@@ -184,7 +188,7 @@ export function ordonnerBlocs(a: Appelant, ids: unknown): Bloc[] {
   const actuels = db.lireBlocs(a.compte).map(b => b.id);
   const liste = Array.isArray(ids) ? ids.map(String) : [];
   if (liste.length !== actuels.length || new Set(liste).size !== liste.length || !liste.every(id => actuels.includes(id))) {
-    throw new ErreurApi(400, 'ordre_incomplet', 'Donne les id de tous les blocs de ta page, chacun une fois, dans le nouvel ordre.');
+    throw new ErreurApi(400, 'ordre_incomplet', 'ids must list every block id exactly once, in the new order.');
   }
   db.ordonner(a.compte, liste);
   return db.lireBlocs(a.compte);
@@ -193,11 +197,11 @@ export function ordonnerBlocs(a: Appelant, ids: unknown): Bloc[] {
 /** Les stats d'une période : 7, 14, 30, 90 ou 365 derniers jours, ou des dates `{ du, au }` (AAAA-MM-JJ). */
 export function lireStats(a: Appelant, periode: unknown, env: Record<string, string | undefined> = process.env): Stats {
   const lue = lirePeriode(periode ?? 30);
-  if (lue === null) throw new ErreurApi(400, 'periode', 'Période refusée : 7, 14, 30, 90 ou 365 jours, ou des dates du et au (AAAA-MM-JJ).');
+  if (lue === null) throw new ErreurApi(400, 'periode', 'Invalid period: use 7, 14, 30, 90 or 365 days, or du and au dates (YYYY-MM-DD).');
   const compte = db.compteParId(a.compte)!;
-  if (!joursLisibles(compte, env)) throw new ErreurApi(403, 'offre', 'Tes stats demandent Hopla Starter.');
+  if (!joursLisibles(compte, env)) throw new ErreurApi(403, 'offre', 'Analytics require the Starter plan or higher.');
   const bornee = periodeLisible(compte, lue, env);
-  if (bornee === null) throw new ErreurApi(400, 'periode', 'Ces dates sont plus anciennes que ton historique.');
+  if (bornee === null) throw new ErreurApi(400, 'periode', 'These dates are outside the analytics retention period of the current plan.');
   return db.stats(a.compte, bornee);
 }
 
@@ -266,16 +270,16 @@ export function lireResume(a: Appelant, periode: unknown, env: Record<string, st
 /** Une image envoyée chez Hopla (WebP, JPEG ou PNG, 1,5 Mo au plus) : son adresse se pose en avatar, en vignette, dans une galerie. */
 export function envoyerMedia(a: Appelant, octets: Uint8Array) {
   ecrire(a);
-  if (!octets.length) throw new ErreurApi(400, 'image_absente', 'Envoie une image : son contenu brut (Content-Type: image/webp, image/jpeg ou image/png), ou {"image": "data:image/…;base64,…"}.');
-  if (octets.length > 1_500_000) throw new ErreurApi(413, 'image_trop_grosse', 'Image trop grosse : 1,5 Mo au plus.');
+  if (!octets.length) throw new ErreurApi(400, 'image_absente', 'Missing image: send the raw bytes (Content-Type: image/webp, image/jpeg or image/png), or {"image": "data:image/…;base64,…"}.');
+  if (octets.length > 1_500_000) throw new ErreurApi(413, 'image_trop_grosse', 'Image too large: 1.5 MB maximum.');
   const ascii = (de: number, a2: number) => Buffer.from(octets.subarray(de, a2)).toString('latin1');
   const extension = ascii(0, 4) === 'RIFF' && ascii(8, 12) === 'WEBP' ? 'webp'
     : octets[0] === 0xff && octets[1] === 0xd8 && octets[2] === 0xff ? 'jpg'
       : ascii(1, 4) === 'PNG' && octets[0] === 0x89 ? 'png' : null;
-  if (!extension) throw new ErreurApi(415, 'format_image', 'Format refusé : WebP, JPEG ou PNG.');
+  if (!extension) throw new ErreurApi(415, 'format_image', 'Unsupported image format: WebP, JPEG or PNG only.');
   let id: string;
   try { id = db.ajouterMedia(a.compte, octets, extension); }
-  catch (error) { throw new ErreurApi(413, 'plus_de_place', (error as Error).message); }
+  catch { throw new ErreurApi(413, 'plus_de_place', 'Image storage quota exceeded: delete unused images or reuse an uploaded one.'); }
   const chemin = `/media/${id}.${extension}`;
   return { media: { chemin, url: `${ORIGINE_PUBLIQUE}${chemin}` } };
 }
@@ -283,8 +287,8 @@ export function envoyerMedia(a: Appelant, octets: Uint8Array) {
 /** Une image en data URL (`data:image/png;base64,…`), décodée. */
 export function octetsDeDataUrl(v: unknown): Uint8Array {
   const m = /^data:image\/[\w.+-]+;base64,([A-Za-z0-9+/=\s]+)$/.exec(String(v ?? ''));
-  if (!m) throw new ErreurApi(400, 'image_absente', 'Le champ « image » attend une data URL : data:image/webp;base64,…');
-  if (m[1].length > 2_100_000) throw new ErreurApi(413, 'image_trop_grosse', 'Image trop grosse : 1,5 Mo au plus.');
+  if (!m) throw new ErreurApi(400, 'image_absente', 'The image field must be a data URL: data:image/webp;base64,…');
+  if (m[1].length > 2_100_000) throw new ErreurApi(413, 'image_trop_grosse', 'Image too large: 1.5 MB maximum.');
   return new Uint8Array(Buffer.from(m[1], 'base64'));
 }
 
@@ -315,7 +319,7 @@ export function inscritsCsv(a: Appelant): string {
 
 export function supprimerInscrit(a: Appelant, id: string) {
   ecrire(a);
-  if (!db.tousLesContacts(a.compte).some(c => c.id === id)) throw new ErreurApi(404, 'inscrit_introuvable', 'Aucun inscrit de ta liste n’a cet id.');
+  if (!db.tousLesContacts(a.compte).some(c => c.id === id)) throw new ErreurApi(404, 'inscrit_introuvable', 'Subscriber not found.');
   db.supprimerContact(a.compte, id);
   return { supprime: id };
 }
@@ -323,8 +327,8 @@ export function supprimerInscrit(a: Appelant, id: string) {
 /** Renvoie chez l'outil branché les inscrits qui n'y sont pas encore. */
 export async function envoyerInscrits(a: Appelant, env: Record<string, string | undefined> = process.env) {
   ecrire(a);
-  if (!liste.resumeIntegration(env, a.compte)) throw new ErreurApi(409, 'rien_de_branche', 'Aucune newsletter ni automatisation n’est branchée : branche-la dans Intégrations, sur ' + NOM_ADMIN + '.');
-  if (liste.tropDAppels(a.compte)) throw new ErreurApi(429, 'trop_d_appels', 'Trop d’envois. Réessaie dans quelques minutes.');
+  if (!liste.resumeIntegration(env, a.compte)) throw new ErreurApi(409, 'rien_de_branche', 'No newsletter or automation is connected. Connect one in Intégrations (Integrations) on ' + NOM_ADMIN + '.');
+  if (liste.tropDAppels(a.compte)) throw new ErreurApi(429, 'trop_d_appels', 'Too many sync requests. Retry in a few minutes.');
   let envoyes = 0, erreurs = 0;
   for (const c of db.contactsAEnvoyer(a.compte)) (await liste.pousser(env, a.compte, c, requeteSortante)) ? envoyes++ : erreurs++;
   return { envoyes, erreurs };
@@ -334,10 +338,10 @@ export async function envoyerInscrits(a: Appelant, env: Record<string, string | 
 const lecturesWeb = limiteur([30, 10 * MINUTE]);
 const urlLue = (v: unknown) => {
   const url = adresse(String(v ?? ''));
-  if (!/^https?:\/\//.test(url)) throw new ErreurApi(400, 'adresse', 'Donne une adresse https:// (ou http://).');
+  if (!/^https?:\/\//.test(url)) throw new ErreurApi(400, 'adresse', 'url must be an https:// or http:// URL.');
   return url;
 };
-const lireLeWeb = (a: Appelant) => { if (lecturesWeb(a.compte)) throw new ErreurApi(429, 'trop_de_lectures', 'Trop de lectures de sites. Réessaie dans quelques minutes.'); };
+const lireLeWeb = (a: Appelant) => { if (lecturesWeb(a.compte)) throw new ErreurApi(429, 'trop_de_lectures', 'Too many web fetch requests. Retry in a few minutes.'); };
 
 /** Ce qu'un site dit de lui : titre, description, prix d'un produit, et son image (data URL), comme quand on colle une adresse. */
 export async function lireApercu(a: Appelant, corps: unknown) {
@@ -346,7 +350,7 @@ export async function lireApercu(a: Appelant, corps: unknown) {
   lireLeWeb(a);
   const image: ImageApercu = o.image === 'logo' || o.image === 'vignette' || o.image === 'partage' ? o.image : o.image !== false;
   try { return { apercu: await apercuSite(url, { image }) }; }
-  catch { throw new ErreurApi(422, 'site_illisible', 'Impossible de lire ce site.'); }
+  catch { throw new ErreurApi(422, 'site_illisible', 'Unable to fetch this URL.'); }
 }
 
 /** Les derniers articles d'un blog ou d'un podcast, ou la dernière vidéo d'une chaîne YouTube. */
@@ -401,16 +405,16 @@ export function reponseErreur(error: unknown): Response {
     });
   }
   console.error('[api]', error);
-  return json(500, { erreur: { code: 'serveur', message: 'Le serveur a eu un souci. Réessaie dans un instant.' } });
+  return json(500, { erreur: { code: 'serveur', message: 'Internal server error. Retry shortly.' } });
 }
 
 /** Le corps JSON d'une requête, 256 Ko au plus ; une image en data URL a droit à ses 1,5 Mo (2,1 millions de caractères en base64). */
 export async function lireCorps(requete: Request, max = 256_000): Promise<unknown> {
   const texte = await requete.text();
-  if (texte.length > max) throw new ErreurApi(413, 'trop_gros', `Corps de requête trop gros (${max > 256_000 ? '1,5 Mo d’image' : '256 Ko'} au plus).`);
+  if (texte.length > max) throw new ErreurApi(413, 'trop_gros', `Request body too large (${max > 256_000 ? '1.5 MB image' : '256 KB'} maximum).`);
   if (!texte.trim()) return {};
   try { return JSON.parse(texte); }
-  catch { throw new ErreurApi(400, 'json', 'Le corps de la requête n’est pas du JSON valide.'); }
+  catch { throw new ErreurApi(400, 'json', 'Request body is not valid JSON.'); }
 }
 
 /** L'adresse IP du visiteur, que deploy/server.mjs a démêlée. */
@@ -493,7 +497,7 @@ export async function repondreApi(requete: Request, env: Record<string, string |
       case 'GET /types': return json(200, listerTypes(a));
     }
     const connue = ROUTES.includes(route);
-    throw new ErreurApi(connue ? 405 : 404, connue ? 'methode' : 'introuvable', connue ? 'Méthode non permise sur cette adresse.' : 'Adresse inconnue. La documentation : GET /api/v1');
+    throw new ErreurApi(connue ? 405 : 404, connue ? 'methode' : 'introuvable', connue ? 'Method not allowed on this route.' : 'Route not found. Documentation: GET /api/v1');
   } catch (error) {
     return reponseErreur(error);
   }

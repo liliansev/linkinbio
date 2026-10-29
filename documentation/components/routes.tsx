@@ -21,7 +21,7 @@ export const ROUTES = Object.entries(spec.paths as Record<string, Record<string,
 export const GROUPES = (spec.tags as { name: string; description: string }[]).map(t => ({ ...t, routes: ROUTES.filter(r => r.tag === t.name) }));
 
 /* Une liste de routes dans un cadre, une par ligne, comme l'encart « Endpoints » des documentations de Stripe. */
-export function Routes({ titre = 'Les routes', children }: { titre?: string; children: ReactNode }) {
+export function Routes({ titre = 'Endpoints', children }: { titre?: string; children: ReactNode }) {
   return (
     <div className="hd-routes not-prose">
       <div className="hd-routes-titre">{titre}</div>
@@ -47,7 +47,7 @@ export function RoutesDe({ tag, titre }: { tag: string; titre?: string }) {
   const g = GROUPES.find(x => x.name === tag);
   if (!g) return null;
   return (
-    <Routes titre={titre ?? 'Les routes'}>
+    <Routes titre={titre ?? 'Endpoints'}>
       {g.routes.map(r => <Route key={r.m + r.chemin} m={r.m} chemin={r.chemin}>{r.resume}</Route>)}
     </Routes>
   );
@@ -61,7 +61,7 @@ export function ToutesLesRoutes() {
         <section key={g.name} className="hd-groupe">
           <h3 className="hd-groupe-titre">{g.name}</h3>
           <p className="hd-groupe-texte">{g.description}</p>
-          <Routes titre={`${g.routes.length} route${g.routes.length > 1 ? 's' : ''}`}>
+          <Routes titre={`${g.routes.length} endpoint${g.routes.length > 1 ? 's' : ''}`}>
             {g.routes.map(r => <Route key={r.m + r.chemin} m={r.m} chemin={r.chemin}>{r.resume}</Route>)}
           </Routes>
         </section>

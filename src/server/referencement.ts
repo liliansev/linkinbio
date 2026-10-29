@@ -40,7 +40,7 @@ Sitemap: ${publique}/sitemap.xml
 }
 
 /** Les pages de la documentation, celles de documentation/content/docs et la référence. */
-const PAGES_DOCS = ['', '/demarrage', '/cles', '/mcp', '/blocs', '/reglages', '/stats', '/limites-et-erreurs', '/reference'];
+const PAGES_DOCS = ['', '/quickstart', '/authentication', '/mcp', '/blocks', '/settings', '/analytics', '/errors', '/reference'];
 
 const echapper = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 

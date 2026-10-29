@@ -3,7 +3,7 @@
  * l'environnement du serveur, au démarrage (29 octobre 2026, pour qu'une image Docker serve n'importe quelle instance) :
  * `deploy/server.mjs` les pose dans `globalThis.__HOPLA_INSTANCE__` avant de charger l'app, et les écrit dans chaque page
  * HTML pour le navigateur. En développement, `vite.config.ts` les lit dans `.env`. Sans rien de posé (le serveur de
- * hopla.page, les tests), ce sont celles de hopla.page. Voir `.env.example` et `docs/AUTO-HEBERGEMENT.md`.
+ * hopla.page, les tests), ce sont celles de hopla.page. Voir `.env.example` et `docs/SELF-HOSTING.md`.
  */
 
 export interface ValeursInstance {

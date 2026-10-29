@@ -1,0 +1,173 @@
+---
+title: Blocks
+description: Create, update, hide, schedule, reorder and delete page blocks.
+---
+
+A Hopla page is an ordered list of blocks (`blocs`): links, section headings, text, videos, products… The API returns them in display order, each with its `id`.
+
+<RoutesDe tag="Blocks" />
+
+## Types
+
+<ListeTypes />
+
+Without `type`, a new block is a link (`lien`). The type is immutable after creation: to change it, delete the block and create a new one. English names of each type: [glossary](/glossary#block-types).
+
+## Fields
+
+| Field | Description |
+| --- | --- |
+| `titre` | Title: button label, section heading or paragraph text. 160 characters, 1,000 for a text block |
+| `url` | Target URL: `https://…`, `mailto:` or `tel:`. Hopla adds a missing `https://`; an unparsable URL returns 400 `adresse_invalide` |
+| `sousTitre`, `description` | Subtitle (one line), then longer text |
+| `icone` | Icon or social network name: `youtube`, `instagram`, `fusee`… |
+| `image` | Thumbnail https URL |
+| `public` | Visible on the page (default: `true`). `false` keeps the block hidden |
+| `vedette`, `format` | Featured block, displayed as `bouton` (button), `bandeau` (banner) or `carte` (card) |
+| `debut`, `fin` | ISO 8601 start and end of the display window |
+| `compteARebours` | Show a countdown before `debut` instead of hiding the block |
+| `prix` | Product price, as displayed: "29 €" |
+| `montants` | Suggested tip amounts in euros, for `soutien` |
+| `questions` | FAQ items for `faq`: a list of `{ question, reponse }` |
+| `preuve` | Rating for `preuve` (reviews): `{ genre, note, nombre, source }` |
+
+The [API reference](/reference#model/block) documents every field, including read-only ones.
+
+## Create a block
+
+`POST /blocs` inserts the block at the top of the page, or at index `position` (0 = top).
+
+```bash
+curl -X POST https://app.hopla.page/api/v1/blocs \
+  -H "Authorization: Bearer $HOPLA_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"type": "titre", "titre": "Mes formations", "position": 3}'
+```
+
+Common block examples:
+
+<Tabs items={['Featured link', 'Product', 'FAQ', 'Reviews', 'Video']}>
+
+<Tab value="Featured link">
+
+```json
+{
+  "titre": "Réserver une séance",
+  "url": "https://cal.com/camille/seance",
+  "vedette": true,
+  "format": "carte",
+  "description": "45 minutes, en visio ou à Lyon."
+}
+```
+
+</Tab>
+
+<Tab value="Product">
+
+```json
+{
+  "type": "produit",
+  "titre": "Programme 8 semaines",
+  "url": "https://boutique.exemple.fr/programme",
+  "prix": "49 €",
+  "image": "https://boutique.exemple.fr/programme.jpg"
+}
+```
+
+</Tab>
+
+<Tab value="FAQ">
+
+```json
+{
+  "type": "faq",
+  "titre": "Questions fréquentes",
+  "questions": [
+    { "question": "Les séances se font où ?", "reponse": "À Lyon, ou en visio." },
+    { "question": "Faut-il du matériel ?", "reponse": "Un tapis suffit." }
+  ]
+}
+```
+
+</Tab>
+
+<Tab value="Reviews">
+
+```json
+{
+  "type": "preuve",
+  "titre": "Ce qu’en disent mes élèves",
+  "url": "https://g.page/r/exemple",
+  "preuve": { "genre": "note", "note": 4.9, "nombre": 128, "source": "Google" }
+}
+```
+
+</Tab>
+
+<Tab value="Video">
+
+```json
+{
+  "type": "video",
+  "titre": "Ma routine du matin",
+  "url": "https://www.youtube.com/watch?v=xxxxxxxxxxx"
+}
+```
+
+</Tab>
+
+</Tabs>
+
+## Update, hide or schedule a block
+
+`PATCH /blocs/{id}` updates only the fields sent; other fields are unchanged.
+
+```bash title="Hide a block without deleting it"
+curl -X PATCH https://app.hopla.page/api/v1/blocs/a1b2c3d4e5f6 \
+  -H "Authorization: Bearer $HOPLA_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"public": false}'
+```
+
+```bash title="Show it from December 1 to 15, with a countdown before"
+curl -X PATCH https://app.hopla.page/api/v1/blocs/a1b2c3d4e5f6 \
+  -H "Authorization: Bearer $HOPLA_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"debut": "2026-12-01T09:00:00+01:00", "fin": "2026-12-15T23:59:00+01:00", "compteARebours": true}'
+```
+
+To clear a date, send an empty string: `{"fin": ""}`.
+
+## Duplicate a block
+
+`POST /blocs/{id}/dupliquer` inserts a copy right below the block, with a new `id`. With `{"masquer": true}`, the copy is hidden, so you can edit it before publishing.
+
+```bash
+curl -X POST https://app.hopla.page/api/v1/blocs/a1b2c3d4e5f6/dupliquer \
+  -H "Authorization: Bearer $HOPLA_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"masquer": true}'
+```
+
+## Images in a block
+
+`image` (link thumbnail, product photo) and `images` (gallery) expect the path of an image hosted by Hopla. Upload it first with [`POST /medias`](/images), then use the returned `chemin` (path) in the block.
+
+## Reorder blocks
+
+`PUT /ordre` expects the `id` of **every** block, each exactly once, top to bottom. If an id is missing, duplicated or does not belong to the page, the API returns 400 `ordre_incomplet` and changes nothing.
+
+```bash
+curl -X PUT https://app.hopla.page/api/v1/ordre \
+  -H "Authorization: Bearer $HOPLA_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"ids": ["f6e5d4c3b2a1", "a1b2c3d4e5f6", "0a1b2c3d4e5f"]}'
+```
+
+## Delete a block
+
+`DELETE /blocs/{id}` permanently deletes the block. To hide it temporarily, use `{"public": false}`.
+
+## Plan restrictions
+
+Blocks go through the same validation as in the admin panel. When the plan changes, no data is deleted: features not included in the new plan are kept and reactivated when the account upgrades again.

@@ -1,0 +1,81 @@
+---
+title: Analytics
+description: Page views, visitors and clicks, by day, block, referrer, device and country.
+---
+
+<RoutesDe tag="Analytics" />
+
+```bash
+curl "https://app.hopla.page/api/v1/stats?periode=7" \
+  -H "Authorization: Bearer $HOPLA_API_KEY"
+```
+
+## Period
+
+- `periode`: number of trailing days, `7`, `14`, `30` (default), `90` or `365`.
+- `du` and `au`: start and end dates as `YYYY-MM-DD`, Europe/Paris time zone. For example `?du=2026-10-01&au=2026-10-15`.
+
+Each value comes with the value for the previous period of the same length, to compute trends. The period is capped to the analytics retention of the current plan (`historiqueStats` in [Account](/account)).
+
+## Response
+
+```json
+{
+  "stats": {
+    "jours": 7,
+    "vues": 1284,
+    "visiteurs": 902,
+    "clics": 311,
+    "serie": [{ "jour": "2026-10-22", "vues": 170, "visiteurs": 121, "clics": 40 }],
+    "blocs": [{ "id": "a1b2c3d4e5f6", "titre": "Mon nouveau podcast", "clics": 96, "avant": 71 }],
+    "sources": [{ "nom": "instagram", "vues": 640, "avant": 512 }],
+    "appareils": [{ "nom": "mobile", "vues": 1101 }],
+    "pays": [{ "code": "FR", "vues": 1050, "avant": 930 }],
+    "precedent": { "vues": 1120, "visiteurs": 801, "clics": 260 }
+  }
+}
+```
+
+| Field | Description |
+| --- | --- |
+| `jours` | Period length, in days |
+| `vues`, `visiteurs`, `clics` | Totals for the period: views, unique visitors, clicks. A visitor is counted once per day |
+| `serie` | Daily time series, oldest first |
+| `blocs` | Clicks per block, with `avant` for the previous period |
+| `sources` | Referrers: a social network, a QR code, or direct traffic |
+| `appareils` | Devices: mobile, desktop, tablet |
+| `pays` | ISO country code (`FR`), empty when unknown |
+| `precedent` | The three totals for the previous period |
+
+## Weekly views (all plans)
+
+`GET /stats/semaine` returns views for the last 7 days and the 7 days before, even without analytics history (free plan).
+
+```json
+{ "semaine": { "vues": 412, "avant": 377, "dejaVue": true } }
+```
+
+`dejaVue` is `true` if the page has had at least one view.
+
+## Summary
+
+`GET /stats/resume` returns the summary shown at the top of the admin panel analytics tab: a sentence ready to display, in French, and its highlights. It accepts the same period parameters as `GET /stats`.
+
+```json
+{
+  "resume": {
+    "phrase": "En 30 jours, 1 284 vues, 12 % de plus que les 30 jours d’avant.",
+    "faits": [
+      { "texte": "Ta page a eu 1 284 vues, 12 % de plus que les 30 jours d’avant.", "ton": "hausse" },
+      { "texte": "« Mon nouveau podcast » a eu 96 clics, 35 % de plus.", "ton": "hausse" }
+    ],
+    "jours": 30
+  }
+}
+```
+
+`faits` contains one sentence per highlight, with its trend in `ton`: `hausse` (up), `baisse` (down) or `neutre` (neutral). See the [Slack example](/examples#weekly-report-in-slack).
+
+## Privacy
+
+Analytics are collected without cookies, and visitor IP addresses are never stored.

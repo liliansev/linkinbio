@@ -1,14 +1,17 @@
-# Sécurité
+# Security policy
 
-Une faille dans Hopla se signale en privé, jamais dans une issue publique :
+## Reporting a vulnerability
 
-- par GitHub, onglet **Security › Report a vulnerability** de ce dépôt ;
-- ou par e-mail à bonjour@liliansevoumian.fr, avec « Sécurité Hopla » en objet.
+Report vulnerabilities privately, never in a public issue:
 
-Décris ce que tu as trouvé, comment le reproduire et ce qu'un attaquant
-pourrait en tirer. Une première réponse part sous 72 heures. Merci de ne pas
-tester sur les pages d'autres personnes : crée ton propre compte, ou fais
-tourner une instance locale (`pnpm dev`).
+- via GitHub: **Security › Report a vulnerability** on this repository;
+- or by email to bonjour@liliansevoumian.fr, with the subject "Hopla security".
 
-Seule la dernière version de `main`, celle qui tourne sur hopla.page, reçoit
-des correctifs.
+Include a description of the issue, steps to reproduce and the potential
+impact. We respond within 72 hours. Do not test against other users' pages:
+create your own account, or run a local instance (`pnpm dev`).
+
+## Supported versions
+
+Only the latest version of `main`, deployed on hopla.page, receives security
+fixes.

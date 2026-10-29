@@ -1,7 +1,7 @@
-# Hopla en un seul service, pour l'auto-hébergement : Coolify, Dokploy, ou tout
-# serveur avec Docker Compose. Coller l'adresse du dépôt, remplir les deux
-# variables obligatoires, déployer. Le guide : docs/AUTO-HEBERGEMENT.md.
-# (Celui de hopla.page est deploy/compose.yaml.)
+# Hopla as a single service, for self-hosting: Coolify, Dokploy, or any server
+# with Docker Compose. Point to the repository URL, set the two required
+# variables, deploy. Guide: docs/SELF-HOSTING.md.
+# (The hopla.page production stack is deploy/compose.yaml.)
 services:
   hopla:
     build: .
@@ -11,33 +11,33 @@ services:
     environment:
       NODE_ENV: production
       PORT: '3000'
-      # Obligatoires. L'adresse de l'instance, avec https:// (les pages sur /<pseudo>, le back office sur /admin),
-      # et l'adresse e-mail de son administrateur.
-      LIENS_ORIGINE: ${LIENS_ORIGINE:?l'adresse de l'instance, par exemple https://liens.example.org}
-      LIENS_ADMIN_EMAIL: ${LIENS_ADMIN_EMAIL:?l'adresse e-mail de l'administrateur}
-      # Le pseudo de la page de l'administrateur.
+      # Required. Public URL of the instance, including https:// (pages at /<username>, admin panel at /admin),
+      # and the administrator email address.
+      LIENS_ORIGINE: ${LIENS_ORIGINE:?public URL of the instance, for example https://links.example.org}
+      LIENS_ADMIN_EMAIL: ${LIENS_ADMIN_EMAIL:?administrator email address}
+      # Username of the administrator page.
       LIENS_PSEUDO_PRINCIPAL: ${LIENS_PSEUDO_PRINCIPAL:-moi}
-      # Facultatif : le back office sur un autre nom (https://app.liens.example.org). Vide, il vit sur le même.
+      # Optional: admin panel on another hostname (https://app.links.example.org). Empty: same hostname.
       LIENS_ORIGINE_ADMIN: ${LIENS_ORIGINE_ADMIN:-}
-      # Recommandé : les e-mails de connexion. Sans lui, seul l'administrateur entre, par le lien écrit dans les journaux.
+      # Recommended: sign-in emails. Without it, only the administrator can sign in, using the link written to the logs.
       RESEND_API_KEY: ${RESEND_API_KEY:-}
       CONTACT_FROM: ${CONTACT_FROM:-}
-      # Recommandé : chiffre les clés d'API et les inscrits (openssl rand -base64 32). Ne plus la changer une fois posée.
+      # Recommended: encrypts API credentials and subscribers (openssl rand -base64 32). Never change it once set.
       LIENS_CLE_INTEGRATIONS: ${LIENS_CLE_INTEGRATIONS:-}
-      # Les mentions légales d'une instance ouverte au public.
+      # Legal notice of an instance open to the public.
       LIENS_EDITEUR: ${LIENS_EDITEUR:-}
       LIENS_HEBERGEUR: ${LIENS_HEBERGEUR:-}
       LIENS_DIRECTEUR: ${LIENS_DIRECTEUR:-}
       LIENS_CONTACT_LEGAL: ${LIENS_CONTACT_LEGAL:-}
-      # Vide : chacun crée sa page depuis l'accueil. « attente » : liste d'attente, invitations depuis Comptes.
+      # Empty: open sign-up. "attente": waitlist, invitations sent from the Comptes (Accounts) tab.
       LIENS_INSCRIPTION: ${LIENS_INSCRIPTION:-}
-      # Ton fork, si tu as modifié le code (AGPL-3.0) : le lien « Code source » y mène.
+      # Your fork, if you modified the code (AGPL-3.0): target of the "Code source" link.
       LIENS_DEPOT_SOURCE: ${LIENS_DEPOT_SOURCE:-}
-    # La base SQLite et les images envoyées : tout l'état de l'instance, à sauvegarder.
+    # SQLite database and uploaded images: the entire instance state, back it up.
     volumes:
       - hopla-data:/data
-    # Coolify et Dokploy y branchent leur domaine et leur HTTPS (port 3000). Sur un serveur nu, publier ce port
-    # derrière un frontal HTTPS (voir le guide).
+    # Coolify and Dokploy route their domain and HTTPS to port 3000. On a bare server, publish this port
+    # behind an HTTPS reverse proxy (see the guide).
     expose:
       - '3000'
 volumes:

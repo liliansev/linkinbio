@@ -20,31 +20,31 @@ const typesPublics = TYPES_BLOC.filter(t => !TYPES_PRINCIPAL.includes(t));
 
 const erreur = (description: string, code: string, message: string) => ({
   description,
-  content: { 'application/json': { schema: ref('Erreur'), example: { erreur: { code, message } } } },
+  content: { 'application/json': { schema: ref('Error'), example: { erreur: { code, message } } } },
 });
 const ERREURS = {
-  401: erreur('Clé absente, mal formée ou révoquée.', 'cle_invalide', 'Cette clé n’existe pas ou a été révoquée.'),
-  403: erreur('Clé en lecture seule, offre sans l’API, conditions à accepter ou compte suspendu.', 'offre', 'L’API et le serveur MCP demandent Hopla Pro. Ta clé reprendra du service dès que ta page y repasse.'),
+  401: erreur('Missing, malformed or revoked API key.', 'cle_invalide', 'Invalid or revoked API key.'),
+  403: erreur('Read-only key, plan without API access, terms of service not accepted, or account suspended.', 'offre', 'The API and MCP server require the Pro plan. The key is reactivated when the account is back on Pro.'),
   429: {
-    ...erreur('Trop d’appels avec cette clé : 120 par minute, 5 000 par jour.', 'trop_d_appels', 'Trop d’appels avec cette clé. Réessaie dans une minute.'),
-    headers: { 'Retry-After': { description: 'Les secondes à attendre.', schema: { type: 'integer', example: 60 } } },
+    ...erreur('Rate limit exceeded: 120 requests per minute, 5,000 per day per key.', 'trop_d_appels', 'Rate limit exceeded for this API key. Retry in one minute.'),
+    headers: { 'Retry-After': { description: 'Seconds to wait before retrying.', schema: { type: 'integer', example: 60 } } },
   },
 };
-const ecriture = { 400: erreur('Requête refusée : un champ, une date ou un type de bloc.', 'bloc_refuse', 'La date de fin vient avant celle du début.'), ...ERREURS };
+const ecriture = { 400: erreur('Invalid request: field, date or block type.', 'bloc_refuse', 'Scheduling a block (start or end date) requires the Starter plan or higher.'), ...ERREURS };
 
 const json = (description: string, schema: unknown, example?: unknown) => ({ description, content: { 'application/json': { schema, ...(example === undefined ? {} : { example }) } } });
 const objetDe = (proprietes: Record<string, unknown>) => ({ type: 'object', properties: proprietes });
 const entier = (description: string, example?: number) => ({ type: 'integer', description, ...(example === undefined ? {} : { example }) });
-const lectureWeb = { 400: erreur('L’adresse n’est pas une adresse http(s).', 'adresse', 'Donne une adresse https:// (ou http://).'), ...ERREURS,
-  429: erreur('Trop de lectures du web : 30 par 10 minutes et par compte.', 'trop_de_lectures', 'Trop de lectures de sites. Réessaie dans quelques minutes.') };
+const lectureWeb = { 400: erreur('url is not an http(s) URL.', 'adresse', 'url must be an https:// or http:// URL.'), ...ERREURS,
+  429: erreur('Web fetch rate limit exceeded: 30 requests per 10 minutes per account.', 'trop_de_lectures', 'Too many web fetch requests. Retry in a few minutes.') };
 const corpsUrl = (exemple: string, extra: Record<string, unknown> = {}) => ({
   required: true,
-  content: { 'application/json': { schema: { type: 'object', required: ['url'], properties: { url: texte('L’adresse à lire, en https://.', { example: exemple }), ...extra } }, example: { url: exemple } } },
+  content: { 'application/json': { schema: { type: 'object', required: ['url'], properties: { url: texte('URL to fetch (https://).', { example: exemple }), ...extra } }, example: { url: exemple } } },
 });
 const PERIODE = [
-  { name: 'periode', in: 'query', description: 'Les derniers jours.', schema: { type: 'integer', enum: [7, 14, 30, 90, 365], default: 30 } },
-  { name: 'du', in: 'query', description: 'Premier jour, AAAA-MM-JJ, avec `au`.', schema: { type: 'string', format: 'date', example: '2026-10-01' } },
-  { name: 'au', in: 'query', description: 'Dernier jour, AAAA-MM-JJ.', schema: { type: 'string', format: 'date', example: '2026-10-15' } },
+  { name: 'periode', in: 'query', description: 'Number of past days.', schema: { type: 'integer', enum: [7, 14, 30, 90, 365], default: 30 } },
+  { name: 'du', in: 'query', description: 'Start date, YYYY-MM-DD, used with `au`.', schema: { type: 'string', format: 'date', example: '2026-10-01' } },
+  { name: 'au', in: 'query', description: 'End date, YYYY-MM-DD.', schema: { type: 'string', format: 'date', example: '2026-10-15' } },
 ];
 const INSCRIT_EXEMPLE = { id: '92c5ca872beb', email: 'ana@exemple.fr', prenom: 'Ana', inscrit: '2026-10-27T18:02:11.000Z', source: 'instagram', envoye: false };
 
@@ -66,186 +66,187 @@ const REGLAGES_EXEMPLE = {
 };
 
 const blocChamps = {
-  titre: texte('Le libellé du bouton, le titre de section ou le texte du paragraphe.', { example: 'Mon nouveau podcast' }),
-  url: texte('L’adresse : https://…, mailto: ou tel:.', { example: 'https://exemple.fr/podcast' }),
-  sousTitre: texte('Une ligne sous le titre.'),
-  description: texte('Un texte plus long, sous le titre d’un bandeau ou d’une carte.'),
-  icone: texte('Le nom d’un picto ou d’un réseau : youtube, instagram, fusee…', { example: 'micro' }),
-  image: texte('L’adresse https de la vignette.'),
-  public: oui('Visible sur la page. false le garde dans le back office, masqué.'),
-  vedette: oui('Mis en avant.'),
-  format: { type: 'string', enum: [...FORMATS_VEDETTE], description: 'La forme d’un bloc mis en avant.' },
-  teinte: { type: 'string', enum: [...TEINTES_VEDETTE], description: 'Sa couleur : l’accent du thème, ou celle des autres boutons.' },
-  animation: { type: 'string', enum: [...ANIMATIONS_BLOC], description: 'Le mouvement d’un bloc mis en avant ; auto suit les réglages.' },
-  debut: texte('Date ISO 8601 à partir de laquelle le bloc s’affiche ; vide : tout de suite. Demande Starter.', { example: '' }),
-  fin: texte('Date ISO 8601 où le bloc disparaît ; vide : jamais. Demande Starter.', { example: '' }),
-  compteARebours: oui('Avant son début, montrer un compte à rebours plutôt que rien.'),
-  prix: texte('Pour un produit, tel qu’il s’affiche : « 29 € », « Dès 12 € ».'),
-  montants: { type: 'array', items: { type: 'number' }, description: 'Pour « soutien » : les montants proposés, en euros.', example: [5, 10, 20] },
-  questions: { type: 'array', items: ref('Question'), description: 'Pour une FAQ, dans l’ordre. 20 au plus.' },
-  preuve: { anyOf: [ref('Preuve'), { type: 'null' }], description: 'Pour un bloc preuve : une note, un compteur ou un témoignage.' },
-  partenariat: { anyOf: [ref('Partenariat'), { type: 'null' }], description: 'Un lien partenaire : sa mention (toujours affichée) et son code promo.' },
-  adressePostale: texte('L’adresse d’un lieu ou d’une carte de visite, telle qu’on l’écrit sur une enveloppe.'),
-  sensible: oui('Réservé aux plus de 18 ans : la page demande confirmation avant d’ouvrir le lien.'),
-  disposition: { type: 'string', enum: [...DISPOSITIONS], description: 'Pour un titre de section : les liens qui le suivent en liste ou en grille.' },
+  titre: texte('Title: button label, section heading or paragraph text.', { example: 'Mon nouveau podcast' }),
+  url: texte('Target URL: https://…, mailto: or tel:.', { example: 'https://exemple.fr/podcast' }),
+  sousTitre: texte('Subtitle, one line below the title.'),
+  description: texte('Longer text below the title of a banner or card.'),
+  icone: texte('Icon or social network name: youtube, instagram, fusee…', { example: 'micro' }),
+  image: texte('Thumbnail https URL.'),
+  public: oui('Visible on the page. false keeps the block hidden in the admin panel.'),
+  vedette: oui('Featured (highlighted) block.'),
+  format: { type: 'string', enum: [...FORMATS_VEDETTE], description: 'Layout of a featured block: button, banner or card.' },
+  teinte: { type: 'string', enum: [...TEINTES_VEDETTE], description: 'Color of a featured block: theme accent, or same as other buttons.' },
+  animation: { type: 'string', enum: [...ANIMATIONS_BLOC], description: 'Animation of a featured block; auto follows the page settings.' },
+  debut: texte('ISO 8601 date when the block starts showing; empty: immediately. Requires Starter.', { example: '' }),
+  fin: texte('ISO 8601 date when the block stops showing; empty: never. Requires Starter.', { example: '' }),
+  compteARebours: oui('Show a countdown before the start date instead of hiding the block.'),
+  prix: texte('Product price, as displayed: "29 €", "Dès 12 €".'),
+  montants: { type: 'array', items: { type: 'number' }, description: 'For soutien (tip) blocks: suggested amounts, in euros.', example: [5, 10, 20] },
+  questions: { type: 'array', items: ref('Question'), description: 'FAQ items, in order. 20 maximum.' },
+  preuve: { anyOf: [ref('Proof'), { type: 'null' }], description: 'For preuve blocks: a rating, a counter or a testimonial.' },
+  partenariat: { anyOf: [ref('Partnership'), { type: 'null' }], description: 'Affiliate link: disclosure label (always displayed) and promo code.' },
+  adressePostale: texte('Postal address of a location or contact card.'),
+  sensible: oui('Adult content (18+): visitors must confirm before opening the link.'),
+  disposition: { type: 'string', enum: [...DISPOSITIONS], description: 'For section headings: display the following links as a list or a grid.' },
 };
 
 const spec = {
   openapi: '3.1.0',
   info: {
-    title: 'API de Hopla',
+    title: 'Hopla API',
     version: '1.1.0',
-    summary: 'Lire et modifier sa page Hopla depuis son code.',
-    description: 'Gestion d’une page Hopla depuis votre code, avec les fonctionnalités du back office. Profil, thème, réseaux, blocs, '
-      + 'images, statistiques, liste e-mail, QR code, et la lecture d’un site, d’un blog ou d’une page d’avis. '
-      + 'Réservé à l’offre Pro (et aux 14 jours d’essai). Les échanges sont en JSON, en UTF-8.\n\n'
-      + 'Créez une clé dans Réglages, « API et MCP », sur [app.hopla.page](https://app.hopla.page/admin), puis envoyez-la dans '
-      + 'l’en-tête `Authorization: Bearer hopla_…`. Guides : [hopla.page/docs](https://hopla.page/docs).',
+    summary: 'Read and update a Hopla page programmatically.',
+    description: 'Manage a Hopla page from your code, with the features of the admin panel: profile, theme, social links, blocks, '
+      + 'images, analytics, email list, QR code, and metadata fetching for websites, feeds and review pages. '
+      + 'Requires the Pro plan (or the 14-day trial). Requests and responses are JSON, UTF-8 encoded.\n\n'
+      + 'Create an API key in Réglages (Settings), "API et MCP", on [app.hopla.page](https://app.hopla.page/admin), then send it in the '
+      + '`Authorization: Bearer hopla_…` header. Guides: [hopla.page/docs](https://hopla.page/docs).\n\n'
+      + 'Identifiers (paths, fields, values) are in French: see the [glossary](https://hopla.page/docs/glossary).',
     contact: { name: 'Hopla', url: 'https://hopla.page/docs' },
     license: { name: 'AGPL-3.0', identifier: 'AGPL-3.0-only' },
   },
   servers: [{ url: 'https://app.hopla.page/api/v1', description: 'Production' }],
   security: [{ cle: [] }],
   tags: [
-    { name: 'Page', description: 'La page entière et ses réglages : profil, thème, réseaux, couleurs, référencement.' },
-    { name: 'Blocs', description: 'Les blocs de la page : liens, titres, textes, vidéos, produits, FAQ…' },
-    { name: 'Statistiques', description: 'Vues, visiteurs et clics, sans cookie : l’adresse IP des visiteurs n’est jamais gardée.' },
-    { name: 'Partage', description: 'Le QR code de la page.' },
-    { name: 'Images', description: 'Envoyer une image chez Hopla, pour une photo de profil, une vignette, une galerie ou un fond.' },
-    { name: 'Liste e-mail', description: 'Les inscrits du bloc « Rejoins ma liste » : les lire, les exporter, les supprimer, les transmettre à la newsletter.' },
-    { name: 'Lire le web', description: 'Ce que le back office lit d’une adresse collée : le titre et l’image d’un site, les articles d’un blog, la note d’une page d’avis.' },
-    { name: 'Compte', description: 'Offre, période d’essai, fonctionnalités incluses, clés d’API et export des données.' },
-    { name: 'Référence', description: 'Les listes que la page connaît : thèmes, réseaux, pictos, types de bloc.' },
+    { name: 'Page', description: 'Full page and its settings: profile, theme, social links, colors, SEO.' },
+    { name: 'Blocks', description: 'Page blocks: links, headings, text, videos, products, FAQ…' },
+    { name: 'Analytics', description: 'Views, visitors and clicks, cookieless: visitor IP addresses are never stored.' },
+    { name: 'Sharing', description: 'QR code of the page.' },
+    { name: 'Images', description: 'Upload images for profile photos, thumbnails, galleries or backgrounds.' },
+    { name: 'Email list', description: 'Subscribers collected by the email signup block: list, export, delete, sync to a newsletter.' },
+    { name: 'Web fetching', description: 'Metadata the admin panel reads from a pasted URL: website title and image, feed posts, review rating.' },
+    { name: 'Account', description: 'Plan, trial, included features, API keys and data export.' },
+    { name: 'Reference values', description: 'Valid values for themes, social networks, icons and block types.' },
   ],
   paths: {
     '/page': {
       get: {
-        tags: ['Page'], operationId: 'lirePage', summary: 'Lire la page',
-        description: 'La page entière : son adresse et son offre, ses réglages, ses blocs dans l’ordre, avec leurs id.',
+        tags: ['Page'], operationId: 'getPage', summary: 'Get page',
+        description: 'Full page: URL, plan, settings, and blocks in display order with their ids.',
         responses: {
-          200: { description: 'La page.', content: { 'application/json': { schema: ref('Page'), example: { page: { pseudo: 'camille', adresse: 'https://hopla.page/camille', offre: 'pro' }, reglages: REGLAGES_EXEMPLE, blocs: [BLOC_EXEMPLE] } } } },
+          200: { description: 'Page.', content: { 'application/json': { schema: ref('Page'), example: { page: { pseudo: 'camille', adresse: 'https://hopla.page/camille', offre: 'pro' }, reglages: REGLAGES_EXEMPLE, blocs: [BLOC_EXEMPLE] } } } },
           ...ERREURS,
         },
       },
     },
     '/reglages': {
       get: {
-        tags: ['Page'], operationId: 'lireReglages', summary: 'Lire les réglages',
-        description: 'Les réglages seuls, sans les blocs : profil, réseaux, thème, couleurs, boutons, référencement, redirection.',
-        responses: { 200: json('Les réglages.', objetDe({ reglages: ref('Reglages') }), { reglages: REGLAGES_EXEMPLE }), ...ERREURS },
+        tags: ['Page'], operationId: 'getSettings', summary: 'Get settings',
+        description: 'Settings only, without blocks: profile, social links, theme, colors, buttons, SEO, redirect.',
+        responses: { 200: json('Settings.', objetDe({ reglages: ref('Settings') }), { reglages: REGLAGES_EXEMPLE }), ...ERREURS },
       },
       patch: {
-        tags: ['Page'], operationId: 'modifierReglages', summary: 'Modifier les réglages',
-        description: 'Change une partie des réglages ; le reste est gardé. `profil`, `bouton`, `seo`, `couleurs` et `redirection` se complètent '
-          + 'champ par champ ; `reseaux` se remplace en entier. Une clé en lecture seule reçoit 403.',
+        tags: ['Page'], operationId: 'updateSettings', summary: 'Update settings',
+        description: 'Partially update settings; omitted fields are unchanged. `profil`, `bouton`, `seo`, `couleurs` and `redirection` are merged '
+          + 'field by field; `reseaux` is replaced as a whole. Requires a key with write access.',
         requestBody: {
           required: true,
-          content: { 'application/json': { schema: ref('ReglagesPartiels'), example: { profil: { bio: 'Coach sportive à Lyon' }, theme: 'onyx' } } },
+          content: { 'application/json': { schema: ref('SettingsUpdate'), example: { profil: { bio: 'Coach sportive à Lyon' }, theme: 'onyx' } } },
         },
         responses: {
-          200: { description: 'Les réglages, après le changement.', content: { 'application/json': { schema: { type: 'object', properties: { reglages: ref('Reglages') } }, example: { reglages: REGLAGES_EXEMPLE } } } },
+          200: { description: 'Updated settings.', content: { 'application/json': { schema: { type: 'object', properties: { reglages: ref('Settings') } }, example: { reglages: REGLAGES_EXEMPLE } } } },
           ...ecriture,
         },
       },
     },
     '/blocs': {
       get: {
-        tags: ['Blocs'], operationId: 'listerBlocs', summary: 'Lister les blocs', description: 'Les blocs, dans l’ordre de la page.',
+        tags: ['Blocks'], operationId: 'listBlocks', summary: 'List blocks', description: 'Blocks, in display order.',
         responses: {
-          200: { description: 'Les blocs.', content: { 'application/json': { schema: { type: 'object', properties: { blocs: { type: 'array', items: ref('Bloc') } } }, example: { blocs: [BLOC_EXEMPLE] } } } },
+          200: { description: 'Blocks.', content: { 'application/json': { schema: { type: 'object', properties: { blocs: { type: 'array', items: ref('Block') } } }, example: { blocs: [BLOC_EXEMPLE] } } } },
           ...ERREURS,
         },
       },
       post: {
-        tags: ['Blocs'], operationId: 'ajouterBloc', summary: 'Ajouter un bloc',
-        description: 'Ajoute un bloc, en haut de la page ou à `position` (0 : en haut). Sans `type`, c’est un lien.',
+        tags: ['Blocks'], operationId: 'createBlock', summary: 'Create block',
+        description: 'Create a block at the top of the page, or at `position` (zero-based, 0 = top). Without `type`, creates a link.',
         requestBody: {
           required: true,
-          content: { 'application/json': { schema: ref('NouveauBloc'), example: { type: 'lien', titre: 'Mon nouveau podcast', url: 'https://exemple.fr/podcast', position: 2 } } },
+          content: { 'application/json': { schema: ref('BlockCreate'), example: { type: 'lien', titre: 'Mon nouveau podcast', url: 'https://exemple.fr/podcast', position: 2 } } },
         },
         responses: {
-          201: { description: 'Le bloc ajouté, avec son id.', content: { 'application/json': { schema: { type: 'object', properties: { bloc: ref('Bloc') } }, example: { bloc: BLOC_EXEMPLE } } } },
+          201: { description: 'Created block, with its id.', content: { 'application/json': { schema: { type: 'object', properties: { bloc: ref('Block') } }, example: { bloc: BLOC_EXEMPLE } } } },
           ...ecriture,
         },
       },
     },
     '/blocs/{id}': {
-      parameters: [{ name: 'id', in: 'path', required: true, description: 'L’id du bloc, lu avec GET /page ou GET /blocs.', schema: { type: 'string', example: 'a1b2c3d4e5f6' } }],
+      parameters: [{ name: 'id', in: 'path', required: true, description: 'Block id, from GET /page or GET /blocs.', schema: { type: 'string', example: 'a1b2c3d4e5f6' } }],
       get: {
-        tags: ['Blocs'], operationId: 'lireBloc', summary: 'Lire un bloc',
+        tags: ['Blocks'], operationId: 'getBlock', summary: 'Get block',
         responses: {
-          200: { description: 'Le bloc.', content: { 'application/json': { schema: { type: 'object', properties: { bloc: ref('Bloc') } }, example: { bloc: BLOC_EXEMPLE } } } },
-          404: erreur('Aucun bloc de la page ne porte cet id.', 'bloc_introuvable', 'Aucun bloc de ta page n’a cet id.'),
+          200: { description: 'Block.', content: { 'application/json': { schema: { type: 'object', properties: { bloc: ref('Block') } }, example: { bloc: BLOC_EXEMPLE } } } },
+          404: erreur('Block not found.', 'bloc_introuvable', 'Block not found.'),
           ...ERREURS,
         },
       },
       patch: {
-        tags: ['Blocs'], operationId: 'modifierBloc', summary: 'Modifier un bloc',
-        description: 'Change une partie d’un bloc ; le reste est gardé. Son type et son id ne changent pas. `{"public": false}` le masque sans le supprimer.',
-        requestBody: { required: true, content: { 'application/json': { schema: ref('BlocPartiel'), example: { public: false } } } },
+        tags: ['Blocks'], operationId: 'updateBlock', summary: 'Update block',
+        description: 'Partially update a block; omitted fields are unchanged. Type and id are immutable. `{"public": false}` hides the block without deleting it.',
+        requestBody: { required: true, content: { 'application/json': { schema: ref('BlockUpdate'), example: { public: false } } } },
         responses: {
-          200: { description: 'Le bloc, après le changement.', content: { 'application/json': { schema: { type: 'object', properties: { bloc: ref('Bloc') } }, example: { bloc: { ...BLOC_EXEMPLE, public: false } } } } },
-          404: erreur('Aucun bloc de la page ne porte cet id.', 'bloc_introuvable', 'Aucun bloc de ta page n’a cet id.'),
+          200: { description: 'Updated block.', content: { 'application/json': { schema: { type: 'object', properties: { bloc: ref('Block') } }, example: { bloc: { ...BLOC_EXEMPLE, public: false } } } } },
+          404: erreur('Block not found.', 'bloc_introuvable', 'Block not found.'),
           ...ecriture,
         },
       },
       delete: {
-        tags: ['Blocs'], operationId: 'supprimerBloc', summary: 'Supprimer un bloc',
-        description: 'Supprime un bloc, pour de bon. Pour le cacher sans le perdre, préfère PATCH avec `{"public": false}`.',
+        tags: ['Blocks'], operationId: 'deleteBlock', summary: 'Delete block',
+        description: 'Permanently delete a block. To hide it instead, use PATCH with `{"public": false}`.',
         responses: {
-          200: { description: 'Le bloc est supprimé.', content: { 'application/json': { schema: { type: 'object', properties: { supprime: { type: 'string' } } }, example: { supprime: 'a1b2c3d4e5f6' } } } },
-          404: erreur('Aucun bloc de la page ne porte cet id.', 'bloc_introuvable', 'Aucun bloc de ta page n’a cet id.'),
+          200: { description: 'Block deleted.', content: { 'application/json': { schema: { type: 'object', properties: { supprime: { type: 'string' } } }, example: { supprime: 'a1b2c3d4e5f6' } } } },
+          404: erreur('Block not found.', 'bloc_introuvable', 'Block not found.'),
           ...ERREURS,
         },
       },
     },
     '/blocs/{id}/dupliquer': {
-      parameters: [{ name: 'id', in: 'path', required: true, description: 'L’id du bloc à copier.', schema: { type: 'string', example: 'a1b2c3d4e5f6' } }],
+      parameters: [{ name: 'id', in: 'path', required: true, description: 'Id of the block to duplicate.', schema: { type: 'string', example: 'a1b2c3d4e5f6' } }],
       post: {
-        tags: ['Blocs'], operationId: 'dupliquerBloc', summary: 'Dupliquer un bloc',
-        description: 'Une copie du bloc, posée juste sous lui, avec un nouvel id. `masquer: true` la garde hors de la page, le temps de la retoucher.',
-        requestBody: { required: false, content: { 'application/json': { schema: objetDe({ masquer: oui('Poser la copie masquée.') }), example: { masquer: true } } } },
+        tags: ['Blocks'], operationId: 'duplicateBlock', summary: 'Duplicate block',
+        description: 'Create a copy of the block right below it, with a new id. `masquer: true` creates the copy hidden.',
+        requestBody: { required: false, content: { 'application/json': { schema: objetDe({ masquer: oui('Create the copy hidden.') }), example: { masquer: true } } } },
         responses: {
-          201: json('La copie.', objetDe({ bloc: ref('Bloc') }), { bloc: { ...BLOC_EXEMPLE, id: 'f6e5d4c3b2a1', public: false } }),
-          404: erreur('Aucun bloc de la page ne porte cet id.', 'bloc_introuvable', 'Aucun bloc de ta page n’a cet id.'),
+          201: json('Copy.', objetDe({ bloc: ref('Block') }), { bloc: { ...BLOC_EXEMPLE, id: 'f6e5d4c3b2a1', public: false } }),
+          404: erreur('Block not found.', 'bloc_introuvable', 'Block not found.'),
           ...ecriture,
         },
       },
     },
     '/ordre': {
       put: {
-        tags: ['Blocs'], operationId: 'ordonnerBlocs', summary: 'Réordonner les blocs',
-        description: 'Le nouvel ordre de tous les blocs : chaque id une fois, le premier en haut.',
+        tags: ['Blocks'], operationId: 'reorderBlocks', summary: 'Reorder blocks',
+        description: 'New order of all blocks: every block id exactly once, first = top.',
         requestBody: {
           required: true,
           content: { 'application/json': { schema: { type: 'object', required: ['ids'], properties: { ids: { type: 'array', items: { type: 'string' } } } }, example: { ids: ['a1b2c3d4e5f6', 'f6e5d4c3b2a1'] } } },
         },
         responses: {
-          200: { description: 'Les blocs, dans leur nouvel ordre.', content: { 'application/json': { schema: { type: 'object', properties: { blocs: { type: 'array', items: ref('Bloc') } } } } } },
-          400: erreur('Un id est manquant, dupliqué ou n’appartient pas à la page.', 'ordre_incomplet', 'Donne les id de tous les blocs de ta page, chacun une fois, dans le nouvel ordre.'),
+          200: { description: 'Blocks, in their new order.', content: { 'application/json': { schema: { type: 'object', properties: { blocs: { type: 'array', items: ref('Block') } } } } } },
+          400: erreur('An id is missing, duplicated or does not belong to the page.', 'ordre_incomplet', 'ids must list every block id exactly once, in the new order.'),
           ...ERREURS,
         },
       },
     },
     '/stats': {
       get: {
-        tags: ['Statistiques'], operationId: 'lireStats', summary: 'Lire les statistiques',
-        description: 'Les vues, visiteurs et clics, par jour, par bloc, par réseau, par appareil et par pays, comparés à la période d’avant. '
-          + 'Une période, ou deux dates. La période est bornée à l’historique de l’offre.',
+        tags: ['Analytics'], operationId: 'getAnalytics', summary: 'Get analytics',
+        description: 'Views, visitors and clicks, by day, block, referrer, device and country, compared with the previous period. '
+          + 'Use a period or a date range. The period is capped to the analytics retention of the current plan.',
         parameters: PERIODE,
         responses: {
-          200: { description: 'Les statistiques.', content: { 'application/json': { schema: { type: 'object', properties: { stats: ref('Stats') } } } } },
-          400: erreur('Période invalide, ou antérieure à l’historique accessible.', 'periode', 'Période refusée : 7, 14, 30, 90 ou 365 jours, ou des dates du et au (AAAA-MM-JJ).'),
+          200: { description: 'Analytics.', content: { 'application/json': { schema: { type: 'object', properties: { stats: ref('Analytics') } } } } },
+          400: erreur('Invalid period, or outside the retention period.', 'periode', 'Invalid period: use 7, 14, 30, 90 or 365 days, or du and au dates (YYYY-MM-DD).'),
           ...ERREURS,
         },
       },
     },
     '/stats/semaine': {
       get: {
-        tags: ['Statistiques'], operationId: 'lireSemaine', summary: 'Les vues de la semaine',
-        description: 'Les vues des 7 derniers jours et celles des 7 d’avant. Pour toutes les offres, même sans historique.',
+        tags: ['Analytics'], operationId: 'getWeeklyViews', summary: 'Get weekly views',
+        description: 'Views for the last 7 days and the 7 days before. Available on all plans, including those without analytics history.',
         responses: {
-          200: json('La semaine.', objetDe({ semaine: objetDe({ vues: entier('Vues des 7 derniers jours.'), avant: entier('Vues des 7 jours d’avant.'), dejaVue: oui('La page a déjà eu au moins une vue.') }) }),
+          200: json('Weekly views.', objetDe({ semaine: objetDe({ vues: entier('Views in the last 7 days.'), avant: entier('Views in the previous 7 days.'), dejaVue: oui('The page has had at least one view.') }) }),
             { semaine: { vues: 412, avant: 377, dejaVue: true } }),
           ...ERREURS,
         },
@@ -253,11 +254,11 @@ const spec = {
     },
     '/stats/resume': {
       get: {
-        tags: ['Statistiques'], operationId: 'lireResume', summary: 'Le résumé en une phrase',
-        description: 'Ce que disent les stats, en français, comme « En bref » dans le back office : une phrase, et les faits qui la portent.',
+        tags: ['Analytics'], operationId: 'getAnalyticsSummary', summary: 'Get analytics summary',
+        description: 'Human-readable summary of the period, in French, as shown in the admin panel: one sentence and its highlights.',
         parameters: PERIODE,
         responses: {
-          200: json('Le résumé.', objetDe({ resume: objetDe({ phrase: texte('Une phrase à montrer telle quelle.'), faits: { type: 'array', items: objetDe({ texte: { type: 'string' }, ton: { type: 'string', enum: ['hausse', 'baisse', 'neutre'] } }) }, jours: entier('La période lue, en jours.') }) }),
+          200: json('Summary.', objetDe({ resume: objetDe({ phrase: texte('Summary sentence, ready to display.'), faits: { type: 'array', items: objetDe({ texte: { type: 'string' }, ton: { type: 'string', enum: ['hausse', 'baisse', 'neutre'], description: 'Trend: up, down or neutral.' } }) }, jours: entier('Period length, in days.') }) }),
             { resume: { phrase: 'En 30 jours, 1 284 vues, 12 % de plus que les 30 jours d’avant.', faits: [{ texte: 'Ta page a eu 1 284 vues, 12 % de plus que les 30 jours d’avant.', ton: 'hausse' }], jours: 30 } }),
           ...ERREURS,
         },
@@ -265,47 +266,47 @@ const spec = {
     },
     '/qr': {
       get: {
-        tags: ['Partage'], operationId: 'lireQrCode', summary: 'Le QR code de la page',
-        description: 'Il mène à l’adresse de la page, marquée `?s=qr` : ses scans se comptent à part dans les stats.',
+        tags: ['Sharing'], operationId: 'getQrCode', summary: 'Get QR code',
+        description: 'Links to the page URL with `?s=qr`, so scans are tracked separately in analytics.',
         parameters: [
           { name: 'format', in: 'query', schema: { type: 'string', enum: ['svg', 'png'], default: 'svg' } },
-          { name: 'taille', in: 'query', description: 'Le côté, en pixels.', schema: { type: 'integer', minimum: 120, maximum: 2000, default: 720 } },
+          { name: 'taille', in: 'query', description: 'Size, in pixels.', schema: { type: 'integer', minimum: 120, maximum: 2000, default: 720 } },
         ],
         responses: {
-          200: { description: 'L’image.', content: { 'image/svg+xml': { schema: { type: 'string' } }, 'image/png': { schema: { type: 'string', format: 'binary' } } } },
+          200: { description: 'Image.', content: { 'image/svg+xml': { schema: { type: 'string' } }, 'image/png': { schema: { type: 'string', format: 'binary' } } } },
           ...ERREURS,
         },
       },
     },
     '/medias': {
       post: {
-        tags: ['Images'], operationId: 'envoyerImage', summary: 'Envoyer une image',
-        description: 'Une image WebP, JPEG ou PNG de 1,5 Mo au plus, gardée chez Hopla. Envoie ses octets tels quels (`Content-Type: image/png`…), '
-          + 'ou du JSON `{"image": "data:image/png;base64,…"}`. Le `chemin` rendu se pose dans `profil.avatar`, `image` d’un bloc, `images` d’une galerie ou `imageFond`.',
+        tags: ['Images'], operationId: 'uploadImage', summary: 'Upload image',
+        description: 'Upload a WebP, JPEG or PNG image, 1.5 MB maximum, hosted by Hopla. Send the raw bytes (`Content-Type: image/png`…), '
+          + 'or JSON `{"image": "data:image/png;base64,…"}`. Use the returned `chemin` (path) in `profil.avatar`, a block `image`, gallery `images` or `imageFond`.',
         requestBody: {
           required: true,
           content: {
             'image/png': { schema: { type: 'string', format: 'binary' } }, 'image/jpeg': { schema: { type: 'string', format: 'binary' } }, 'image/webp': { schema: { type: 'string', format: 'binary' } },
-            'application/json': { schema: { type: 'object', required: ['image'], properties: { image: texte('Une data URL.', { example: 'data:image/png;base64,iVBORw0KGgo…' }) } } },
+            'application/json': { schema: { type: 'object', required: ['image'], properties: { image: texte('Data URL.', { example: 'data:image/png;base64,iVBORw0KGgo…' }) } } },
           },
         },
         responses: {
-          201: json('L’image est gardée.', objetDe({ media: objetDe({ chemin: texte('À poser dans un bloc ou les réglages.'), url: texte('Son adresse complète.') }) }),
+          201: json('Image uploaded.', objetDe({ media: objetDe({ chemin: texte('Path to use in a block or in settings.'), url: texte('Absolute URL.') }) }),
             { media: { chemin: '/media/054a3c6991bc.png', url: 'https://hopla.page/media/054a3c6991bc.png' } }),
-          400: erreur('Rien d’envoyé.', 'image_absente', 'Le champ « image » attend une data URL : data:image/webp;base64,…'),
-          413: erreur('Plus de 1,5 Mo, ou plus de place pour ce compte.', 'image_trop_grosse', 'Image trop grosse : 1,5 Mo au plus.'),
-          415: erreur('Ni WebP, ni JPEG, ni PNG.', 'format_image', 'Format refusé : WebP, JPEG ou PNG.'),
+          400: erreur('No image in the request.', 'image_absente', 'The image field must be a data URL: data:image/webp;base64,…'),
+          413: erreur('Image over 1.5 MB, or storage quota exceeded.', 'image_trop_grosse', 'Image too large: 1.5 MB maximum.'),
+          415: erreur('Format other than WebP, JPEG or PNG.', 'format_image', 'Unsupported image format: WebP, JPEG or PNG only.'),
           ...ERREURS,
         },
       },
     },
     '/liste': {
       get: {
-        tags: ['Liste e-mail'], operationId: 'lireListe', summary: 'Le résumé de la liste',
-        description: 'Combien d’inscrits, combien cette semaine, combien pas encore transmis à la newsletter, et l’intégration configurée. La clé de la newsletter ne revient jamais.',
+        tags: ['Email list'], operationId: 'getEmailList', summary: 'Get email list summary',
+        description: 'Total subscribers, new subscribers this week, subscribers pending sync, and the connected integration. The integration credential is never returned.',
         responses: {
-          200: json('La liste.', objetDe({ liste: objetDe({ inscrits: entier('Tous les inscrits.'), semaine: entier('Inscrits ces 7 derniers jours.'), enAttente: entier('Pas encore envoyés.'),
-            branchee: { anyOf: [objetDe({ outil: texte('brevo, mailchimp, kit, make…'), liste: texte('Le nom de la liste choisie.'), cle: texte('Le début de la clé, masqué.') }), { type: 'null' }] } }) }),
+          200: json('Email list.', objetDe({ liste: objetDe({ inscrits: entier('Total subscribers.'), semaine: entier('Subscribers in the last 7 days.'), enAttente: entier('Not yet synced.'),
+            branchee: { anyOf: [objetDe({ outil: texte('Integration: brevo, mailchimp, kit, make…'), liste: texte('Name of the selected list.'), cle: texte('Masked credential prefix.') }), { type: 'null' }] } }) }),
             { liste: { inscrits: 128, semaine: 9, enAttente: 0, branchee: { outil: 'brevo', liste: 'Newsletter', cle: 'xkeysib-…a3f' } } }),
           ...ERREURS,
         },
@@ -313,19 +314,19 @@ const spec = {
     },
     '/inscrits': {
       get: {
-        tags: ['Liste e-mail'], operationId: 'listerInscrits', summary: 'Lister les inscrits',
-        description: 'Les inscrits, du plus récent au plus ancien, par pages. `format=csv` rend tout le fichier (email, prenom, inscrit, source).',
+        tags: ['Email list'], operationId: 'listSubscribers', summary: 'List subscribers',
+        description: 'Subscribers, newest first, paginated. `format=csv` returns the full CSV export (email, prenom, inscrit, source).',
         parameters: [
-          { name: 'limite', in: 'query', schema: { type: 'integer', minimum: 1, maximum: 500, default: 100 } },
-          { name: 'depart', in: 'query', description: 'Le `suivant` de la page d’avant ; 0 au début.', schema: { type: 'integer', minimum: 0, default: 0 } },
+          { name: 'limite', in: 'query', description: 'Page size.', schema: { type: 'integer', minimum: 1, maximum: 500, default: 100 } },
+          { name: 'depart', in: 'query', description: 'Offset: the `suivant` value from the previous page; 0 for the first page.', schema: { type: 'integer', minimum: 0, default: 0 } },
           { name: 'format', in: 'query', schema: { type: 'string', enum: ['json', 'csv'], default: 'json' } },
         ],
         responses: {
           200: {
-            description: 'Une page d’inscrits, ou le CSV.',
+            description: 'A page of subscribers, or the CSV file.',
             content: {
               'application/json': {
-                schema: objetDe({ inscrits: { type: 'array', items: ref('Inscrit') }, total: entier('Tous les inscrits.'), suivant: { type: ['integer', 'null'], description: 'À passer en `depart` ; null à la dernière page.' } }),
+                schema: objetDe({ inscrits: { type: 'array', items: ref('Subscriber') }, total: entier('Total subscribers.'), suivant: { type: ['integer', 'null'], description: 'Next offset, to pass as `depart`; null on the last page.' } }),
                 example: { inscrits: [INSCRIT_EXEMPLE], total: 128, suivant: 100 },
               },
               'text/csv': { schema: { type: 'string' }, example: 'email,prenom,inscrit,source\nana@exemple.fr,Ana,2026-10-27T18:02:11.000Z,instagram\n' },
@@ -338,48 +339,48 @@ const spec = {
     '/inscrits/{id}': {
       parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', example: '92c5ca872beb' } }],
       delete: {
-        tags: ['Liste e-mail'], operationId: 'supprimerInscrit', summary: 'Supprimer un inscrit',
-        description: 'Supprime définitivement un inscrit chez Hopla (demande d’effacement, par exemple). La copie transmise à la newsletter est conservée.',
+        tags: ['Email list'], operationId: 'deleteSubscriber', summary: 'Delete subscriber',
+        description: 'Permanently delete a subscriber from Hopla (for example on an erasure request). The copy already synced to the newsletter is kept.',
         responses: {
-          200: json('L’inscrit est supprimé.', objetDe({ supprime: { type: 'string' } }), { supprime: '92c5ca872beb' }),
-          404: erreur('Aucun inscrit de la liste ne porte cet id.', 'inscrit_introuvable', 'Aucun inscrit de ta liste n’a cet id.'),
+          200: json('Subscriber deleted.', objetDe({ supprime: { type: 'string' } }), { supprime: '92c5ca872beb' }),
+          404: erreur('Subscriber not found.', 'inscrit_introuvable', 'Subscriber not found.'),
           ...ERREURS,
         },
       },
     },
     '/inscrits/envoyer': {
       post: {
-        tags: ['Liste e-mail'], operationId: 'envoyerInscrits', summary: 'Envoyer les inscrits en attente',
-        description: 'Pousse vers la newsletter branchée (Brevo, Mailchimp, Kit…) ou le webhook (Make, Zapier, n8n) les inscrits pas encore partis.',
+        tags: ['Email list'], operationId: 'syncSubscribers', summary: 'Sync pending subscribers',
+        description: 'Push pending subscribers to the connected newsletter (Brevo, Mailchimp, Kit…) or webhook (Make, Zapier, n8n).',
         responses: {
-          200: json('Ce qui est parti.', objetDe({ envoyes: entier('Inscrits envoyés.'), erreurs: entier('Inscrits refusés par l’outil.') }), { envoyes: 9, erreurs: 0 }),
-          409: erreur('Rien de branché.', 'rien_de_branche', 'Aucune newsletter ni automatisation n’est branchée : branche-la dans Intégrations, sur app.hopla.page.'),
+          200: json('Sync result.', objetDe({ envoyes: entier('Subscribers sent.'), erreurs: entier('Subscribers rejected by the integration.') }), { envoyes: 9, erreurs: 0 }),
+          409: erreur('No integration connected.', 'rien_de_branche', 'No newsletter or automation is connected. Connect one in Intégrations (Integrations) on app.hopla.page.'),
           ...ERREURS,
-          429: erreur('Trop d’envois : 20 par 10 minutes.', 'trop_d_appels', 'Trop d’envois. Réessaie dans quelques minutes.'),
+          429: erreur('Sync rate limit exceeded: 20 requests per 10 minutes.', 'trop_d_appels', 'Too many sync requests. Retry in a few minutes.'),
         },
       },
     },
     '/apercu': {
       post: {
-        tags: ['Lire le web'], operationId: 'lireSite', summary: 'Lire un site',
-        description: 'Le titre, la description, le prix (pour une fiche de boutique) et l’image d’une adresse, comme quand on la colle dans le back office. '
-          + '`image` : `true` (l’image de partage ou le favicon), `false`, `"partage"`, `"logo"` ou `"vignette"`.',
-        requestBody: corpsUrl('https://exemple.fr', { image: { description: 'L’image voulue.', oneOf: [{ type: 'boolean' }, { type: 'string', enum: ['partage', 'logo', 'vignette'] }] } }),
+        tags: ['Web fetching'], operationId: 'fetchUrlMetadata', summary: 'Fetch URL metadata',
+        description: 'Title, description, price (for product pages) and image of a URL, as the admin panel does when a URL is pasted. '
+          + '`image`: `true` (social sharing image or favicon), `false`, `"partage"` (sharing image), `"logo"` or `"vignette"` (thumbnail).',
+        requestBody: corpsUrl('https://exemple.fr', { image: { description: 'Image to return.', oneOf: [{ type: 'boolean' }, { type: 'string', enum: ['partage', 'logo', 'vignette'] }] } }),
         responses: {
-          200: json('Ce que le site dit de lui.', objetDe({ apercu: objetDe({ titre: { type: 'string' }, description: { type: 'string' }, prix: { type: 'string' }, image: { type: ['string', 'null'], description: 'L’image, en data URL ; null sans image.' } }) }),
+          200: json('Page metadata.', objetDe({ apercu: objetDe({ titre: { type: 'string' }, description: { type: 'string' }, prix: { type: 'string' }, image: { type: ['string', 'null'], description: 'Image as a data URL; null if none.' } }) }),
             { apercu: { titre: 'Example Domain', description: '', prix: '', image: null } }),
-          422: erreur('Le site ne répond pas, ou pas en HTML.', 'site_illisible', 'Impossible de lire ce site.'),
+          422: erreur('The site did not respond, or did not return HTML.', 'site_illisible', 'Unable to fetch this URL.'),
           ...lectureWeb,
         },
       },
     },
     '/flux': {
       post: {
-        tags: ['Lire le web'], operationId: 'lireFlux', summary: 'Lire un blog, un podcast ou une chaîne',
-        description: 'Les trois derniers articles d’un blog ou d’un podcast (RSS, Atom, ou la page qui annonce son flux), ou avec `video: true` la dernière vidéo longue d’une chaîne YouTube.',
-        requestBody: corpsUrl('https://exemple.fr/blog', { video: oui('Une chaîne YouTube : sa dernière vidéo.') }),
+        tags: ['Web fetching'], operationId: 'fetchFeed', summary: 'Fetch feed',
+        description: 'Latest three posts of a blog or podcast (RSS, Atom, or a page that declares its feed), or with `video: true` the latest long-form video of a YouTube channel.',
+        requestBody: corpsUrl('https://exemple.fr/blog', { video: oui('YouTube channel URL: return its latest video.') }),
         responses: {
-          200: json('Les articles ; une liste vide si rien n’a pu être lu.', objetDe({ articles: { type: 'array', items: objetDe({ titre: { type: 'string' }, url: { type: 'string' }, date: { type: 'string' }, image: { type: 'string' }, video: { type: 'string' } }) } }),
+          200: json('Posts; an empty list if nothing could be read.', objetDe({ articles: { type: 'array', items: objetDe({ titre: { type: 'string' }, url: { type: 'string' }, date: { type: 'string' }, image: { type: 'string' }, video: { type: 'string' } }) } }),
             { articles: [{ titre: 'Mon dernier épisode', url: 'https://exemple.fr/blog/episode-12', date: '2026-10-27T08:00:00.000Z', image: '', video: '' }] }),
           ...lectureWeb,
         },
@@ -387,11 +388,11 @@ const spec = {
     },
     '/avis': {
       post: {
-        tags: ['Lire le web'], operationId: 'lireNoteAvis', summary: 'Lire la note d’une page d’avis',
-        description: 'La note d’une page Trustpilot, ou de toute page qui la déclare (JSON-LD `aggregateRating`), ramenée sur 5. `null` si la page ne la dit pas.',
+        tags: ['Web fetching'], operationId: 'fetchReviewRating', summary: 'Fetch review rating',
+        description: 'Rating of a Trustpilot page, or of any page declaring it (JSON-LD `aggregateRating`), normalized to 5. `null` if the page has no rating.',
         requestBody: corpsUrl('https://fr.trustpilot.com/review/exemple.fr'),
         responses: {
-          200: json('La note.', objetDe({ note: { anyOf: [objetDe({ note: { type: 'number' }, nombre: { type: 'integer' }, source: { type: 'string' } }), { type: 'null' }] } }),
+          200: json('Rating.', objetDe({ note: { anyOf: [objetDe({ note: { type: 'number' }, nombre: { type: 'integer' }, source: { type: 'string' } }), { type: 'null' }] } }),
             { note: { note: 4.6, nombre: 1820, source: 'Trustpilot' } }),
           ...lectureWeb,
         },
@@ -399,10 +400,10 @@ const spec = {
     },
     '/compte': {
       get: {
-        tags: ['Compte'], operationId: 'lireCompte', summary: 'Lire le compte',
-        description: 'L’offre de la page, l’essai, l’abonnement, une offre offerte, et pour chaque fonction réservée : si elle est incluse, et l’offre qui la donne.',
+        tags: ['Account'], operationId: 'getAccount', summary: 'Get account',
+        description: 'Current plan, trial, subscription, complimentary plan, and for each gated feature whether it is included and which plan unlocks it.',
         responses: {
-          200: json('Le compte.', objetDe({ compte: ref('Compte') }), {
+          200: json('Account.', objetDe({ compte: ref('Account') }), {
             compte: {
               pseudo: 'camille', adresse: 'https://hopla.page/camille', cree: '2026-10-20T09:12:00.000Z', offre: 'pro', essai: null,
               abonnement: { offre: 'pro', statut: 'active', periode: 'mois', finPeriode: '2026-11-20T09:12:00.000Z' }, offreOfferte: null,
@@ -415,10 +416,10 @@ const spec = {
     },
     '/cles': {
       get: {
-        tags: ['Compte'], operationId: 'listerCles', summary: 'Lister les clés',
-        description: 'Les clés du compte, jamais elles-mêmes : leur nom, leur début, ce qu’elles peuvent et quand elles ont servi. `courante` marque celle de l’appel.',
+        tags: ['Account'], operationId: 'listApiKeys', summary: 'List API keys',
+        description: 'API keys of the account, never the secret itself: name, prefix, permissions and last use. `courante` marks the key used for this request.',
         responses: {
-          200: json('Les clés.', objetDe({ cles: { type: 'array', items: objetDe({ id: { type: 'string' }, nom: { type: 'string' }, debut: { type: 'string' }, ecriture: { type: 'boolean' }, cree: { type: 'string' }, utilisee: { type: ['string', 'null'] }, courante: { type: 'boolean' } }) } }),
+          200: json('API keys.', objetDe({ cles: { type: 'array', items: objetDe({ id: { type: 'string' }, nom: { type: 'string' }, debut: { type: 'string' }, ecriture: { type: 'boolean' }, cree: { type: 'string' }, utilisee: { type: ['string', 'null'] }, courante: { type: 'boolean' } }) } }),
             { cles: [{ id: '2916f190dae2', nom: 'Mon script', debut: 'hopla_hT-a', ecriture: true, cree: '2026-10-28T10:00:00.000Z', utilisee: '2026-10-28T21:40:00.000Z', courante: true }] }),
           ...ERREURS,
         },
@@ -426,37 +427,37 @@ const spec = {
     },
     '/export': {
       get: {
-        tags: ['Compte'], operationId: 'exporterCompte', summary: 'Exporter ses données',
-        description: 'Tout ce que Hopla garde du compte, en un fichier JSON (le droit d’accès du RGPD), sans les images.',
-        responses: { 200: json('Le fichier, servi en pièce jointe.', { type: 'object', additionalProperties: true }), ...ERREURS },
+        tags: ['Account'], operationId: 'exportAccount', summary: 'Export account data',
+        description: 'All data Hopla stores for the account, as a JSON file (GDPR right of access), images excluded.',
+        responses: { 200: json('JSON file, served as an attachment.', { type: 'object', additionalProperties: true }), ...ERREURS },
       },
     },
     '/reseaux': {
       get: {
-        tags: ['Référence'], operationId: 'listerReseaux', summary: 'Lister les réseaux',
-        responses: { 200: json('Les réseaux, avec leur nom.', objetDe({ reseaux: { type: 'array', items: objetDe({ id: { type: 'string', enum: [...RESEAUX] }, nom: { type: 'string' } }) } }), { reseaux: [{ id: 'instagram', nom: 'Instagram' }] }), ...ERREURS },
+        tags: ['Reference values'], operationId: 'listSocialNetworks', summary: 'List social networks',
+        responses: { 200: json('Social networks, with their display names.', objetDe({ reseaux: { type: 'array', items: objetDe({ id: { type: 'string', enum: [...RESEAUX] }, nom: { type: 'string' } }) } }), { reseaux: [{ id: 'instagram', nom: 'Instagram' }] }), ...ERREURS },
       },
     },
     '/pictos': {
       get: {
-        tags: ['Référence'], operationId: 'listerPictos', summary: 'Lister les pictos',
-        description: 'Les noms à poser dans `icone` d’un bloc.',
-        responses: { 200: json('Les pictos.', objetDe({ pictos: { type: 'array', items: objetDe({ nom: { type: 'string' }, libelle: { type: 'string' } }) } }), { pictos: [{ nom: 'micro', libelle: 'Micro' }] }), ...ERREURS },
+        tags: ['Reference values'], operationId: 'listIcons', summary: 'List icons',
+        description: 'Valid values for the `icone` field of a block.',
+        responses: { 200: json('Icons.', objetDe({ pictos: { type: 'array', items: objetDe({ nom: { type: 'string' }, libelle: { type: 'string' } }) } }), { pictos: [{ nom: 'micro', libelle: 'Micro' }] }), ...ERREURS },
       },
     },
     '/types': {
       get: {
-        tags: ['Référence'], operationId: 'listerTypes', summary: 'Lister les types de bloc',
-        description: 'Les types que ce compte peut poser.',
-        responses: { 200: json('Les types.', objetDe({ types: { type: 'array', items: { type: 'string', enum: [...typesPublics] } } }), { types: typesPublics }), ...ERREURS },
+        tags: ['Reference values'], operationId: 'listBlockTypes', summary: 'List block types',
+        description: 'Block types available to this account.',
+        responses: { 200: json('Block types.', objetDe({ types: { type: 'array', items: { type: 'string', enum: [...typesPublics] } } }), { types: typesPublics }), ...ERREURS },
       },
     },
     '/themes': {
       get: {
-        tags: ['Référence'], operationId: 'listerThemes', summary: 'Lister les thèmes',
+        tags: ['Reference values'], operationId: 'listThemes', summary: 'List themes',
         responses: {
           200: {
-            description: 'Les thèmes.',
+            description: 'Themes.',
             content: { 'application/json': { schema: { type: 'object', properties: { themes: { type: 'array', items: ref('Theme') } } }, example: { themes: THEMES.slice(0, 3).map(t => ({ id: t.id, nom: t.nom, humeur: t.humeur, famille: t.famille })) } } },
           },
           ...ERREURS,
@@ -466,99 +467,99 @@ const spec = {
   },
   components: {
     securitySchemes: {
-      cle: { type: 'http', scheme: 'bearer', bearerFormat: 'hopla_…', description: 'Clé d’API, créée dans Réglages, « API et MCP », sur app.hopla.page.' },
+      cle: { type: 'http', scheme: 'bearer', bearerFormat: 'hopla_…', description: 'API key, created in Réglages (Settings), "API et MCP", on app.hopla.page.' },
     },
     schemas: {
-      Erreur: {
+      Error: {
         type: 'object', required: ['erreur'],
-        properties: { erreur: { type: 'object', required: ['code', 'message'], properties: { code: texte('Code stable, à utiliser dans la logique de traitement.'), message: texte('Texte en français, destiné à l’affichage.') } } },
+        properties: { erreur: { type: 'object', required: ['code', 'message'], properties: { code: texte('Stable error code, for programmatic handling.'), message: texte('Human-readable message, in English.') } } },
       },
       Page: {
         type: 'object',
         properties: {
-          page: { type: 'object', properties: { pseudo: texte('Le pseudo de la page.'), adresse: texte('L’adresse à partager.'), offre: { type: 'string', enum: ['gratuit', 'starter', 'pro', 'premium'] } } },
-          reglages: ref('Reglages'),
-          blocs: { type: 'array', items: ref('Bloc') },
+          page: { type: 'object', properties: { pseudo: texte('Page username.'), adresse: texte('Public page URL.'), offre: { type: 'string', enum: ['gratuit', 'starter', 'pro', 'premium'], description: 'Plan (gratuit = free).' } } },
+          reglages: ref('Settings'),
+          blocs: { type: 'array', items: ref('Block') },
         },
       },
-      Reseau: {
+      SocialLink: {
         type: 'object', required: ['reseau', 'url'],
-        properties: { reseau: { type: 'string', enum: [...RESEAUX] }, url: texte('L’adresse du profil, ou un numéro pour WhatsApp.') },
+        properties: { reseau: { type: 'string', enum: [...RESEAUX] }, url: texte('Profile URL, or a phone number for WhatsApp.') },
       },
-      Reglages: {
-        type: 'object', description: 'Les réglages de la page.',
+      Settings: {
+        type: 'object', description: 'Page settings.',
         properties: {
           profil: {
             type: 'object',
             properties: {
-              nom: texte('Le nom en haut de la page.'), bio: texte('La phrase sous le nom.'), avatar: texte('L’adresse https de la photo.'),
-              badge: oui('Le badge vérifié, posé par Hopla.'), photo: { type: 'string', enum: [...FORMES_PHOTO], description: 'La photo en rond, ou en grand (Starter).' },
+              nom: texte('Name at the top of the page.'), bio: texte('Bio below the name.'), avatar: texte('Profile photo https URL.'),
+              badge: oui('Verified badge, set by Hopla.'), photo: { type: 'string', enum: [...FORMES_PHOTO], description: 'Profile photo layout: round (ronde) or large (grande, Starter).' },
             },
           },
-          reseaux: { type: 'array', items: ref('Reseau'), maxItems: MAX_RESEAUX },
-          reseauxPosition: { type: 'string', enum: ['haut', 'bas'] },
+          reseaux: { type: 'array', items: ref('SocialLink'), maxItems: MAX_RESEAUX },
+          reseauxPosition: { type: 'string', enum: ['haut', 'bas'], description: 'Social icons position: top (haut) or bottom (bas).' },
           theme: { type: 'string', enum: THEMES.map(t => t.id) },
-          couleurs: { type: 'object', description: 'En #rrggbb ; vide, celle du thème (Starter).', properties: { fond: { type: 'string' }, boutons: { type: 'string' }, accent: { type: 'string' } } },
+          couleurs: { type: 'object', description: 'Custom colors as #rrggbb; empty: theme default (Starter).', properties: { fond: { type: 'string', description: 'Background.' }, boutons: { type: 'string', description: 'Buttons.' }, accent: { type: 'string' } } },
           bouton: {
             type: 'object',
-            properties: { style: { type: 'string', enum: [...STYLES_BOUTON] }, forme: { type: 'string', enum: [...FORMES_BOUTON] }, ombre: { type: 'string', enum: [...OMBRES_BOUTON] } },
+            properties: { style: { type: 'string', enum: [...STYLES_BOUTON] }, forme: { type: 'string', enum: [...FORMES_BOUTON], description: 'Shape.' }, ombre: { type: 'string', enum: [...OMBRES_BOUTON], description: 'Shadow.' } },
           },
           seo: { type: 'object', properties: { titre: { type: 'string' }, description: { type: 'string' }, indexable: { type: 'boolean' } } },
-          partage: oui('Le bouton Partager en haut de la page.'),
-          vouvoiement: oui('Les mots de la page vouvoient le visiteur.'),
-          animation: { type: 'string', enum: [...ANIMATIONS], description: 'Le mouvement des blocs mis en avant.' },
-          redirection: { type: 'object', description: 'Toute la page envoyée vers une adresse jusqu’à `fin` ; `url` vide pour arrêter (Starter).', properties: { url: { type: 'string' }, fin: { type: 'string' } } },
+          partage: oui('Show the Share button at the top of the page.'),
+          vouvoiement: oui('Page copy uses the formal "vous" form.'),
+          animation: { type: 'string', enum: [...ANIMATIONS], description: 'Animation of featured blocks.' },
+          redirection: { type: 'object', description: 'Redirect the whole page to a URL until `fin`; empty `url` to stop (Starter).', properties: { url: { type: 'string' }, fin: { type: 'string' } } },
         },
         additionalProperties: true,
         example: REGLAGES_EXEMPLE,
       },
-      ReglagesPartiels: {
-        description: 'Les seuls réglages à changer. Les autres sont gardés.',
-        allOf: [ref('Reglages')],
+      SettingsUpdate: {
+        description: 'Settings to change. Omitted settings are unchanged.',
+        allOf: [ref('Settings')],
       },
-      Bloc: {
-        type: 'object', description: 'Un bloc de la page.',
+      Block: {
+        type: 'object', description: 'A page block.',
         properties: {
-          id: texte('Son id, donné par Hopla.', { readOnly: true }),
-          type: { type: 'string', enum: [...typesPublics], description: 'Il ne change plus une fois le bloc posé.' },
+          id: texte('Block id, assigned by Hopla.', { readOnly: true }),
+          type: { type: 'string', enum: [...typesPublics], description: 'Block type. Immutable after creation.' },
           ...blocChamps,
         },
         additionalProperties: true,
         example: BLOC_EXEMPLE,
       },
-      NouveauBloc: {
+      BlockCreate: {
         type: 'object',
         properties: {
           type: { type: 'string', enum: [...typesPublics], default: 'lien' },
           ...blocChamps,
-          position: { type: 'integer', minimum: 0, description: 'Sa place, 0 en haut (par défaut).' },
+          position: { type: 'integer', minimum: 0, description: 'Zero-based position, 0 = top (default).' },
         },
       },
-      BlocPartiel: { type: 'object', description: 'Les seuls champs à changer.', properties: blocChamps },
-      Inscrit: objetDe({
-        id: { type: 'string' }, email: { type: 'string', format: 'email' }, prenom: { type: 'string' }, inscrit: { type: 'string', format: 'date-time' },
-        source: texte('D’où venait le visiteur : instagram, direct, qr…'), envoye: oui('Déjà parti vers la newsletter branchée.'),
+      BlockUpdate: { type: 'object', description: 'Fields to change.', properties: blocChamps },
+      Subscriber: objetDe({
+        id: { type: 'string' }, email: { type: 'string', format: 'email' }, prenom: { type: 'string', description: 'First name.' }, inscrit: { type: 'string', format: 'date-time', description: 'Signup date.' },
+        source: texte('Referrer: instagram, direct, qr…'), envoye: oui('Already synced to the connected newsletter.'),
       }),
-      Compte: objetDe({
-        pseudo: { type: 'string' }, adresse: texte('L’adresse à partager.'), cree: { type: 'string', format: 'date-time' },
-        offre: { type: 'string', enum: ['gratuit', 'starter', 'pro', 'premium'], description: 'L’offre de la page : ce qu’elle peut, essai compris.' },
-        essai: { anyOf: [objetDe({ jusqu: { type: 'string', format: 'date-time' } }), { type: 'null' }] },
-        abonnement: { anyOf: [objetDe({ offre: { type: 'string' }, statut: { type: 'string' }, periode: { type: 'string' }, finPeriode: { type: 'string', format: 'date-time' } }), { type: 'null' }] },
-        offreOfferte: { anyOf: [objetDe({ offre: { type: 'string' }, jusqu: { type: ['string', 'null'] } }), { type: 'null' }] },
-        fonctions: { type: 'object', description: 'Chaque fonction réservée.', properties: Object.fromEntries(Object.keys(FONCTIONS).map(f => [f, objetDe({ incluse: { type: 'boolean' }, offre: { type: 'string' } })])) },
-        historiqueStats: entier('Les jours de stats que l’offre laisse lire.', 365),
+      Account: objetDe({
+        pseudo: { type: 'string' }, adresse: texte('Public page URL.'), cree: { type: 'string', format: 'date-time' },
+        offre: { type: 'string', enum: ['gratuit', 'starter', 'pro', 'premium'], description: 'Effective plan, trial included.' },
+        essai: { anyOf: [objetDe({ jusqu: { type: 'string', format: 'date-time' } }), { type: 'null' }], description: 'Trial, with its end date.' },
+        abonnement: { anyOf: [objetDe({ offre: { type: 'string' }, statut: { type: 'string' }, periode: { type: 'string' }, finPeriode: { type: 'string', format: 'date-time' } }), { type: 'null' }], description: 'Paid subscription.' },
+        offreOfferte: { anyOf: [objetDe({ offre: { type: 'string' }, jusqu: { type: ['string', 'null'] } }), { type: 'null' }], description: 'Complimentary plan.' },
+        fonctions: { type: 'object', description: 'Gated features.', properties: Object.fromEntries(Object.keys(FONCTIONS).map(f => [f, objetDe({ incluse: { type: 'boolean' }, offre: { type: 'string' } })])) },
+        historiqueStats: entier('Analytics retention of the current plan, in days.', 365),
       }),
-      Question: { type: 'object', properties: { question: { type: 'string' }, reponse: { type: 'string' } } },
-      Preuve: {
+      Question: { type: 'object', properties: { question: { type: 'string' }, reponse: { type: 'string', description: 'Answer.' } } },
+      Proof: {
         type: 'object',
         properties: {
-          genre: { type: 'string', enum: [...GENRES_PREUVE] }, note: { type: 'number', description: 'Sur 5.', example: 4.8 },
-          nombre: { type: 'number', description: 'Le nombre d’avis, ou le chiffre affiché.', example: 120 }, source: { type: 'string', example: 'Google' },
+          genre: { type: 'string', enum: [...GENRES_PREUVE] }, note: { type: 'number', description: 'Rating out of 5.', example: 4.8 },
+          nombre: { type: 'number', description: 'Review count, or the displayed number.', example: 120 }, source: { type: 'string', example: 'Google' },
         },
       },
-      Partenariat: { type: 'object', properties: { mention: { type: 'string', enum: [...MENTIONS_PARTENAIRE] }, code: texte('Le code promo, vide s’il n’y en a pas.') } },
-      Theme: { type: 'object', properties: { id: { type: 'string' }, nom: { type: 'string' }, humeur: { type: 'string' }, famille: { type: 'string' } } },
-      Stats: {
+      Partnership: { type: 'object', properties: { mention: { type: 'string', enum: [...MENTIONS_PARTENAIRE], description: 'Disclosure label.' }, code: texte('Promo code; empty if none.') } },
+      Theme: { type: 'object', properties: { id: { type: 'string' }, nom: { type: 'string' }, humeur: { type: 'string', description: 'Mood.' }, famille: { type: 'string', description: 'Family.' } } },
+      Analytics: {
         type: 'object',
         properties: {
           jours: { type: 'integer' }, vues: { type: 'integer' }, visiteurs: { type: 'integer' }, clics: { type: 'integer' },
@@ -567,7 +568,7 @@ const spec = {
           sources: { type: 'array', items: { type: 'object', properties: { nom: { type: 'string' }, vues: { type: 'integer' }, avant: { type: 'integer' } } } },
           appareils: { type: 'array', items: { type: 'object', properties: { nom: { type: 'string' }, vues: { type: 'integer' } } } },
           pays: { type: 'array', items: { type: 'object', properties: { code: { type: 'string', example: 'FR' }, vues: { type: 'integer' }, avant: { type: 'integer' } } } },
-          precedent: { type: 'object', description: 'Les mêmes totaux sur la période d’avant.', properties: { vues: { type: 'integer' }, visiteurs: { type: 'integer' }, clics: { type: 'integer' } } },
+          precedent: { type: 'object', description: 'Same totals for the previous period.', properties: { vues: { type: 'integer' }, visiteurs: { type: 'integer' }, clics: { type: 'integer' } } },
         },
         example: {
           jours: 7, vues: 1284, visiteurs: 902, clics: 311,
@@ -590,4 +591,4 @@ writeFileSync(new URL('../lib/genere.json', import.meta.url), `${JSON.stringify(
   pictos: PICTOS,
   types: typesPublics,
 }, null, 2)}\n`);
-console.log('public/openapi.json et lib/genere.json écrits');
+console.log('public/openapi.json and lib/genere.json written');

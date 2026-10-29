@@ -1,0 +1,78 @@
+---
+title: Errors and rate limits
+description: API rate limits, error format and error codes.
+---
+
+## Rate limits
+
+| Resource | Limit |
+| --- | --- |
+| Requests per key | 120 per minute, 5,000 per day |
+| Failed authentications per IP address | 20 per minute |
+| Request body | 256 KB; 2.2 MB for a data URL image and for an MCP message |
+| Keys per account | 10 |
+| Web fetching (`/apercu`, `/flux`, `/avis`) | 30 per 10 minutes per account |
+| Newsletter sync (`/inscrits/envoyer`) | 20 per 10 minutes per account |
+| Image (`/medias`) | 1.5 MB, WebP, JPEG or PNG |
+
+When a rate limit is exceeded, the API returns `429` with a `Retry-After` header: wait that many seconds before retrying.
+
+```js title="Retry after a 429"
+async function request(url, options, retries = 3) {
+  const response = await fetch(url, options);
+  if (response.status === 429 && retries > 0) {
+    const seconds = Number(response.headers.get('Retry-After') ?? 60);
+    await new Promise(r => setTimeout(r, seconds * 1000));
+    return request(url, options, retries - 1);
+  }
+  return response;
+}
+```
+
+## Error format
+
+Every error returns an HTTP status and an `erreur` (error) object:
+
+```json
+{ "erreur": { "code": "cle_invalide", "message": "Invalid or revoked API key." } }
+```
+
+Use `code` in your error handling logic: its value is stable. `message` is a human-readable description, in English, and may change.
+
+## Error codes
+
+| Status | `code` | Description |
+| --- | --- | --- |
+| 400 | `json` | Request body is not valid JSON |
+| 400 | `rien_a_changer` | `PATCH /reglages` without any setting |
+| 400 | `theme_inconnu` | Unknown theme: see `GET /themes` |
+| 400 | `type_inconnu` | Unknown block type |
+| 400 | `type_reserve` | Block type not available to this account |
+| 400 | `bloc_refuse` | Block rejected by validation, for example scheduling without the Starter plan |
+| 400 | `ordre_incomplet` | `PUT /ordre` without every id, or with a duplicate id |
+| 400 | `periode` | Invalid period, or outside the analytics retention |
+| 400 | `adresse_invalide` | Block `url` cannot be parsed: `https://`, `mailto:` or `tel:` expected |
+| 400 | `adresse` | `/apercu`, `/flux` or `/avis` without an `https://` URL |
+| 400 | `image_absente` | `POST /medias` without an image |
+| 401 | `cle_absente` | Missing `Authorization: Bearer hopla_…` header |
+| 401 | `cle_invalide` | Invalid or revoked key |
+| 403 | `lecture_seule` | The key is read-only |
+| 403 | `offre` | The plan does not include this feature (API: Pro; analytics: Starter) |
+| 403 | `conditions` | Updated terms of service must be accepted on app.hopla.page |
+| 403 | `compte_suspendu` | Account suspended |
+| 404 | `bloc_introuvable` | Block not found |
+| 404 | `inscrit_introuvable` | Subscriber not found |
+| 404 | `introuvable` | Route not found |
+| 405 | `methode` | Method not allowed on this route |
+| 409 | `rien_de_branche` | `POST /inscrits/envoyer` without a connected newsletter or webhook |
+| 413 | `trop_gros` | Request body over 256 KB (2.2 MB for an image) |
+| 413 | `image_trop_grosse` | Image over 1.5 MB |
+| 413 | `plus_de_place` | Image storage quota exceeded for this account |
+| 415 | `format_image` | Image format other than WebP, JPEG or PNG |
+| 422 | `site_illisible` | The site did not respond, or did not return HTML |
+| 429 | `trop_d_appels` | Rate limit exceeded for this key |
+| 429 | `trop_d_essais` | Too many failed authentications from this IP address |
+| 429 | `trop_de_lectures` | Web fetching rate limit exceeded |
+| 500 | `serveur` | Internal server error: retry shortly |
+
+The MCP server returns the same errors: the tool result has `isError: true`, with the message as text.
