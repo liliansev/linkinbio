@@ -10,8 +10,8 @@ import { mouvementReduit, useEnVue, useGlisse } from './mouvement.ts';
  * La roue de « Camille partage, Hopla s'adapte » (20 octobre 2026, refaite le
  * 26 octobre 2026 à la demande de Lilian : « trop petites les pages, police
  * trop petite, roue trop grosse ») : une petite roue des réseaux, la photo de
- * Camille au moyeu, son lien dessous, et une seule page, en grand, dans son
- * thème (Onyx et or). Chaque visiteur part de son réseau, passe par le moyeu
+ * Camille au moyeu, son lien dessous, et une seule page, en grand, dans le
+ * thème Couchant. Chaque visiteur part de son réseau, passe par le moyeu
  * et le lien, plonge dans la page : elle dit d'où il vient et range ses liens
  * pour lui, en glissant. Les quatre réseaux passent à tour de rôle, en boucle,
  * tant que la scène est à l'écran ; hors de l'écran ou après « Pause », le
@@ -30,7 +30,8 @@ const BLOCS = BLOCS_EXEMPLES.camille;
 const PAGES = Object.fromEntries(RESEAUX.map(r => [r, composerAudience(BLOCS, r)])) as Record<Reseau, typeof BLOCS>;
 const DIRECT = composerAudience(BLOCS, '');
 const PROFIL = PROFILS.camille;
-const THEME = THEMES.find(t => t.id === PROFIL.theme)!;
+/** Le thème de la scène : Couchant, la lumière de fin de journée d'une photographe (29 octobre 2026, Lilian n'aimait pas Onyx ici). */
+const THEME = THEMES.find(t => t.id === 'coucher')!;
 const POLICE = POLICES[THEME.police];
 const IMAGES = ['/exemple-camille-dune.svg', '/exemple-camille-miroir.svg', '/exemple-camille-pins.svg'];
 
@@ -152,6 +153,7 @@ export function Roue() {
   const style = {
     '--fond': THEME.fond, '--texte': THEME.texte, '--doux': THEME.doux, '--surface': THEME.surface, '--surface-texte': THEME.surfaceTexte,
     '--vedette': THEME.vedette, '--vedette-texte': THEME.vedetteTexte, '--police-titre': POLICE.titre, '--police': POLICE.corps,
+    '--ombre': THEME.ombre, '--rayon': THEME.conseil?.forme === 'pilule' ? '99px' : '12px', '--graisse-nom': THEME.typo?.nom?.graisse ?? 600,
   } as CSSProperties;
 
   return (
