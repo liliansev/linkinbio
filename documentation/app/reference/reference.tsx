@@ -29,8 +29,7 @@ export function Reference() {
         defaultHttpClient: { targetKey: 'shell', clientKey: 'curl' },
         mcp: { disabled: true },
         agent: { disabled: true },
-        localization: { locale: 'fr' },
-        metaData: { title: 'Référence de l’API · Hopla Docs' },
+        metaData: { title: 'API reference · Hopla Docs' },
       }}
     />
   );

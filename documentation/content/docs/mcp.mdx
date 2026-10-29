@@ -1,17 +1,17 @@
 ---
-title: Serveur MCP
-description: Gérer une page Hopla depuis Claude, Cursor ou tout client MCP, en langage naturel.
+title: MCP server
+description: Manage a Hopla page from Claude, Cursor or any MCP client, using natural language.
 ---
 
-Le serveur MCP de Hopla expose à un agent IA les mêmes opérations que l’API : lecture de la page, ajout de liens, modification du thème, consultation des statistiques. L’agent sélectionne les outils à appeler à partir d’instructions en langage naturel.
+The Hopla MCP server exposes the same operations as the REST API to AI agents: read the page, add links, change the theme, query analytics. The agent selects which tools to call from natural language instructions.
 
-- **Adresse** : `https://app.hopla.page/mcp`
-- **Transport** : HTTP « streamable », réponses JSON, sans session
-- **Clé** : `Authorization: Bearer hopla_…`, comme pour l’API
+- **Endpoint**: `https://app.hopla.page/mcp`
+- **Transport**: Streamable HTTP, JSON responses, stateless
+- **Authentication**: `Authorization: Bearer hopla_…`, as for the REST API
 
 ## Installation
 
-Créez d’abord une [clé d’API](/cles), puis configurez le serveur dans votre client.
+First create an [API key](/authentication), then configure the server in your client.
 
 <Tabs items={['Claude Code', 'Cursor', 'VS Code', 'Windsurf', 'Claude Desktop']} groupId="client" persist>
 
@@ -22,9 +22,9 @@ claude mcp add --transport http hopla https://app.hopla.page/mcp \
   --header "Authorization: Bearer hopla_…"
 ```
 
-Ajoutez `--scope user` pour l’activer dans tous vos projets. Vérifiez ensuite la connexion avec `/mcp` dans Claude Code.
+Add `--scope user` to enable it in all your projects. Then check the connection with `/mcp` in Claude Code.
 
-Dans Réglages, **API et MCP**, la commande complète, clé incluse, peut être copiée juste après la création de la clé.
+In Réglages (Settings), **API et MCP**, the full command, key included, can be copied right after the key is created.
 
 </Tab>
 
@@ -41,7 +41,7 @@ Dans Réglages, **API et MCP**, la commande complète, clé incluse, peut être 
 }
 ```
 
-Le fichier `.cursor/mcp.json` d’un projet est également pris en charge. Hopla apparaît ensuite dans les réglages de Cursor, rubrique MCP.
+A project-level `.cursor/mcp.json` file is also supported. Hopla then appears in Cursor settings, under MCP.
 
 </Tab>
 
@@ -53,16 +53,16 @@ Le fichier `.cursor/mcp.json` d’un projet est également pris en charge. Hopla
     "hopla": {
       "type": "http",
       "url": "https://app.hopla.page/mcp",
-      "headers": { "Authorization": "Bearer ${input:hopla-cle}" }
+      "headers": { "Authorization": "Bearer ${input:hopla-api-key}" }
     }
   },
   "inputs": [
-    { "id": "hopla-cle", "type": "promptString", "description": "Clé d’API Hopla", "password": true }
+    { "id": "hopla-api-key", "type": "promptString", "description": "Hopla API key", "password": true }
   ]
 }
 ```
 
-VS Code demande la clé au premier lancement et la stocke de façon sécurisée : elle n’est pas écrite dans le fichier.
+VS Code prompts for the key on first start and stores it securely: it is not written to the file.
 
 </Tab>
 
@@ -83,7 +83,7 @@ VS Code demande la clé au premier lancement et la stocke de façon sécurisée 
 
 <Tab value="Claude Desktop">
 
-Claude Desktop exécute les serveurs MCP en local : utilisez `mcp-remote` comme passerelle vers Hopla (Node.js requis).
+Claude Desktop runs MCP servers locally: use `mcp-remote` as a proxy to Hopla (requires Node.js).
 
 ```json title="claude_desktop_config.json"
 {
@@ -97,104 +97,106 @@ Claude Desktop exécute les serveurs MCP en local : utilisez `mcp-remote` comme 
 }
 ```
 
-Le fichier s’ouvre depuis Claude Desktop : Réglages, Développeur, Modifier la configuration. Redémarrez ensuite l’application.
+Open the file from Claude Desktop: Settings, Developer, Edit Config. Then restart the app.
 
 </Tab>
 
 </Tabs>
 
-<Callout title="claude.ai et ChatGPT">
-  Les connecteurs personnalisés de claude.ai et de ChatGPT nécessitent une authentification OAuth, non prise en charge pour le moment. Utilisez Claude Code, Cursor, VS Code, Windsurf ou Claude Desktop.
+<Callout title="claude.ai and ChatGPT">
+  Custom connectors in claude.ai and ChatGPT require OAuth, which is not supported yet. Use Claude Code, Cursor, VS Code, Windsurf or Claude Desktop.
 </Callout>
 
-## Outils
+## Tools
 
-25 outils, qui couvrent les opérations de l’API. Avec une clé en lecture seule, seuls les 16 outils de lecture sont exposés.
+25 tools, covering the REST API operations. With a read-only key, only the 16 read tools are exposed. Tool names and fields match API v2; the former French tool names (`lire_page`, `ajouter_bloc`…) are still accepted, with French field names.
 
-### Lecture
+### Read tools
 
-| Outil | Description |
+| Tool | Description |
 | --- | --- |
-| `lire_page` | La page entière : adresse, offre, réglages et blocs avec leurs id |
-| `lire_compte` | L’offre, l’essai, l’abonnement, et ce que l’offre comprend |
-| `lire_stats` | Vues, visiteurs et clics d’une période (`jours`, ou `du` et `au`) |
-| `lire_semaine` | Les vues des 7 derniers jours et des 7 d’avant |
-| `lire_resume` | La période en une phrase, et ses faits marquants |
-| `lire_liste` | Le nombre d’inscrits, et où ils partent |
-| `lister_inscrits` | Les inscrits, par pages |
-| `lire_qr_code` | Le QR code de la page, en image |
-| `lire_site` | Le titre, la description, le prix et l’image d’une adresse |
-| `lire_flux` | Les derniers articles d’un blog, ou la dernière vidéo d’une chaîne |
-| `lire_note_avis` | La note d’une page d’avis, sur 5 |
-| `lister_themes` | Les thèmes possibles |
-| `lister_reseaux` | Les réseaux qu’une page affiche en icônes |
-| `lister_pictos` | Les pictos d’un bloc |
-| `lister_types` | Les types de bloc que la page peut poser |
-| `lister_cles` | Les clés du compte, sans elles |
+| `get_page` | Full page: URL, plan, settings, and blocks with their ids |
+| `get_account` | Plan, trial, subscription, and included features |
+| `get_analytics` | Views, visitors and clicks for a period (`days`, or `from` and `to`) |
+| `get_weekly_views` | Views for the last 7 days and the 7 days before |
+| `get_analytics_summary` | One-sentence summary of the period and its highlights |
+| `get_email_list` | Subscriber count and connected integration |
+| `list_subscribers` | Subscribers, paginated |
+| `get_qr_code` | QR code of the page, as an image |
+| `fetch_url_preview` | Title, description, price and image of a URL |
+| `fetch_feed` | Latest posts of a feed, or latest video of a YouTube channel |
+| `fetch_review_rating` | Rating of a review page, out of 5 |
+| `list_themes` | Available themes |
+| `list_social_networks` | Social networks displayed as icons |
+| `list_icons` | Block icons |
+| `list_block_types` | Block types available to the page |
+| `list_api_keys` | Account API keys, without their secret |
 
-### Écriture
+### Write tools
 
-| Outil | Description |
+| Tool | Description |
 | --- | --- |
-| `modifier_reglages` | Profil, thème, réseaux, couleurs, référencement… |
-| `ajouter_bloc` | Un bloc neuf, en haut ou à une position |
-| `modifier_bloc` | Une partie d’un bloc ; `public: false` le masque |
-| `dupliquer_bloc` | Une copie, juste sous le bloc d’origine, masquée en option |
-| `supprimer_bloc` | Un bloc, pour de bon |
-| `ordonner_blocs` | Le nouvel ordre de tous les blocs |
-| `envoyer_image` | Une image en data URL, gardée chez Hopla, à poser dans un bloc ou en photo |
-| `supprimer_inscrit` | Un inscrit de la liste, pour de bon |
-| `envoyer_inscrits` | Les inscrits en attente, vers la newsletter branchée |
+| `update_settings` | Update profile, theme, social links, colors, SEO… |
+| `create_block` | Create a block at the top or at a given position |
+| `update_block` | Partially update a block; `visible: false` hides it |
+| `duplicate_block` | Duplicate a block right below the original, optionally hidden |
+| `delete_block` | Permanently delete a block |
+| `reorder_blocks` | Reorder all blocks |
+| `upload_image` | Upload a data URL image, for a block or a profile photo |
+| `delete_subscriber` | Permanently delete a subscriber |
+| `sync_subscribers` | Sync pending subscribers to the connected newsletter |
 
-## Exemples d’instructions
+## Example prompts
 
-<Tabs items={['Page', 'Statistiques', 'Liste e-mail', 'Web']}>
+Hopla pages are in French, so prompts usually are too. Agents also understand English instructions.
+
+<Tabs items={['Page', 'Analytics', 'Email list', 'Web']}>
 
 <Tab value="Page">
 
-- « Ajoute en haut de ma page Hopla un lien vers mon nouveau podcast : https://exemple.fr/podcast. »
-- « Passe ma page sur un thème plus sombre et mets ma bio à jour : coach sportive à Lyon. »
-- « Masque le bloc de la promo d’été, sans le supprimer. »
-- « Programme le lien de ma masterclass pour qu’il apparaisse lundi à 9 h, avec un compte à rebours. »
-- « Duplique le bloc de l’atelier de novembre, masqué, et change sa date pour décembre. »
+- "Add a link to my new podcast at the top of my Hopla page: https://example.com/podcast."
+- "Switch my page to a darker theme and update my bio: coach sportive à Lyon."
+- "Hide the summer sale block, without deleting it."
+- "Schedule my masterclass link to appear on Monday at 9 am, with a countdown."
+- "Duplicate the November workshop block, hidden, and change its date to December."
 
 </Tab>
 
-<Tab value="Statistiques">
+<Tab value="Analytics">
 
-- « Quel lien a eu le plus de clics ces 30 derniers jours, et d’où venaient les visiteurs ? »
-- « Résume ma semaine sur Hopla en trois lignes, pour mon équipe. »
-- « Compare octobre et septembre : vues, clics, et les pays qui progressent. »
+- "Which link got the most clicks in the last 30 days, and where did visitors come from?"
+- "Summarize my week on Hopla in three lines for my team."
+- "Compare October and September: views, clicks, and growing countries."
 
 </Tab>
 
-<Tab value="Liste e-mail">
+<Tab value="Email list">
 
-- « Combien de personnes se sont inscrites à ma liste cette semaine, et d’où venaient-elles ? »
-- « Supprime ana@exemple.fr de ma liste : elle me l’a demandé. »
-- « J’ai branché Brevo : envoie-lui les inscrits qui attendent. »
+- "How many people joined my list this week, and where did they come from?"
+- "Delete ana@example.com from my list: she asked me to."
+- "I connected Brevo: sync the pending subscribers."
 
 </Tab>
 
 <Tab value="Web">
 
-- « Ajoute ce produit à ma page, avec sa photo et son prix : https://boutique.exemple.fr/programme. »
-- « Lis mon blog et mets en avant mon dernier article. »
-- « Donne-moi le QR code de ma page, pour mon affiche. »
+- "Add this product to my page, with its photo and price: https://boutique.example.com/programme."
+- "Read my blog and feature my latest post."
+- "Give me the QR code of my page, for my poster."
 
 </Tab>
 
 </Tabs>
 
-L’agent appelle d’abord `lire_page` pour obtenir les id des blocs. Les modifications sont visibles immédiatement sur la page et dans le back office.
+The agent first calls `get_page` to get block ids. Changes are visible immediately on the page and in the admin panel.
 
-## Détails techniques
+## Protocol details
 
-Le serveur suit la spécification MCP (versions `2025-06-18`, `2025-03-26` et `2024-11-05`). Chaque requête `POST` porte un message JSON-RPC, ou un lot de 50 au plus, et la réponse revient en JSON. Il n’ouvre ni session ni flux : `GET` répond 405.
+The server implements the MCP specification (versions `2025-06-18`, `2025-03-26` and `2024-11-05`). Each `POST` request carries one JSON-RPC message, or a batch of up to 50, and the response is JSON. The server opens no session and no stream: `GET` returns 405.
 
-```bash title="Lister les outils à la main"
+```bash title="List tools manually"
 curl https://app.hopla.page/mcp \
-  -H "Authorization: Bearer $HOPLA_CLE" \
+  -H "Authorization: Bearer $HOPLA_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"jsonrpc": "2.0", "id": 1, "method": "tools/list"}'
 ```

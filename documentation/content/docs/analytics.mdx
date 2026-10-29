@@ -1,0 +1,81 @@
+---
+title: Analytics
+description: Page views, visitors and clicks, by day, block, referrer, device and country.
+---
+
+<RoutesDe tag="Analytics" />
+
+```bash
+curl "https://app.hopla.page/api/v2/analytics?period=7" \
+  -H "Authorization: Bearer $HOPLA_API_KEY"
+```
+
+## Period
+
+- `period`: number of trailing days, `7`, `14`, `30` (default), `90` or `365`.
+- `from` and `to`: start and end dates as `YYYY-MM-DD`, Europe/Paris time zone. For example `?from=2026-10-01&to=2026-10-15`.
+
+Each value comes with the value for the previous period of the same length, to compute trends. The period is capped to the analytics retention of the current plan (`analyticsRetentionDays` in [Account](/account)).
+
+## Response
+
+```json
+{
+  "analytics": {
+    "days": 7,
+    "views": 1284,
+    "visitors": 902,
+    "clicks": 311,
+    "daily": [{ "date": "2026-10-22", "views": 170, "visitors": 121, "clicks": 40 }],
+    "blocks": [{ "id": "a1b2c3d4e5f6", "title": "Mon nouveau podcast", "clicks": 96, "previous": 71 }],
+    "sources": [{ "name": "instagram", "views": 640, "previous": 512 }],
+    "devices": [{ "name": "mobile", "views": 1101 }],
+    "countries": [{ "code": "FR", "views": 1050, "previous": 930 }],
+    "previousPeriod": { "views": 1120, "visitors": 801, "clicks": 260 }
+  }
+}
+```
+
+| Field | Description |
+| --- | --- |
+| `days` | Period length, in days |
+| `views`, `visitors`, `clicks` | Totals for the period: views, unique visitors, clicks. A visitor is counted once per day |
+| `daily` | Daily time series, oldest first |
+| `blocks` | Clicks per block, with `previous` for the previous period |
+| `sources` | Referrers: a social network, a QR code, or direct traffic |
+| `devices` | Devices: mobile, desktop, tablet |
+| `countries` | ISO country code (`FR`), empty when unknown |
+| `previousPeriod` | The three totals for the previous period |
+
+## Weekly views (all plans)
+
+`GET /analytics/week` returns views for the last 7 days and the 7 days before, even without analytics history (free plan).
+
+```json
+{ "week": { "views": 412, "previous": 377, "everViewed": true } }
+```
+
+`everViewed` is `true` if the page has had at least one view.
+
+## Summary
+
+`GET /analytics/summary` returns the summary shown at the top of the admin panel analytics tab: a sentence ready to display, in French, and its highlights. It accepts the same period parameters as `GET /analytics`.
+
+```json
+{
+  "summary": {
+    "sentence": "En 30 jours, 1 284 vues, 12 % de plus que les 30 jours d’avant.",
+    "highlights": [
+      { "text": "Ta page a eu 1 284 vues, 12 % de plus que les 30 jours d’avant.", "trend": "up" },
+      { "text": "« Mon nouveau podcast » a eu 96 clics, 35 % de plus.", "trend": "up" }
+    ],
+    "days": 30
+  }
+}
+```
+
+`highlights` contains one sentence per highlight, with its trend in `trend`: `up`, `down` or `neutral`. See the [Slack example](/examples#weekly-report-in-slack).
+
+## Privacy
+
+Analytics are collected without cookies, and visitor IP addresses are never stored.

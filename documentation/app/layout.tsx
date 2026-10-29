@@ -6,17 +6,17 @@ import './global.css';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://hopla.page/docs/'),
-  title: { default: 'Documentation de Hopla', template: '%s · Hopla Docs' },
-  description: 'L’API et le serveur MCP de Hopla : gestion d’une page de liens depuis votre code ou un agent IA.',
+  title: { default: 'Hopla Docs', template: '%s · Hopla Docs' },
+  description: 'Hopla REST API and MCP server: manage a link-in-bio page from your code or an AI agent.',
   icons: { icon: '/favicon.svg' },
-  openGraph: { siteName: 'Hopla', locale: 'fr_FR', images: '/og.png' },
+  openGraph: { siteName: 'Hopla', locale: 'en_US', images: '/og.png' },
 };
 
 export const viewport: Viewport = { themeColor: '#292bff' };
 
 export default function Layout({ children }: LayoutProps<'/'>) {
   return (
-    <html lang="fr" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning>
       <body className="flex flex-col min-h-screen">
         <Provider>{children}</Provider>
       </body>

@@ -1,46 +1,47 @@
-# Contribuer à Hopla
+# Contributing to Hopla
 
-Merci de passer par ici. Hopla est un petit projet : une issue avant une grosse
-pull request évite de travailler pour rien.
+Hopla is a small project: for anything beyond a small fix, please open an issue
+before starting a large pull request.
 
-## Signaler un problème ou proposer une idée
+## Reporting a bug or suggesting a feature
 
-Ouvre une issue avec ce que tu as fait, ce que tu attendais et ce qui s'est
-passé (navigateur, téléphone ou ordinateur, capture si possible). Une faille de
-sécurité ne s'ouvre jamais en issue publique : voir [`SECURITY.md`](SECURITY.md).
+Open an issue with the steps to reproduce, the expected behavior and the actual
+behavior (browser, device, screenshot if possible). Never report a security
+vulnerability in a public issue: see [`SECURITY.md`](SECURITY.md).
 
-## Proposer une modification
+## Submitting changes
 
 ```bash
 pnpm install
 pnpm dev                                  # http://localhost:4400
-pnpm build && pnpm typecheck && pnpm test # ce que la CI vérifie
+pnpm build && pnpm typecheck && pnpm test # same checks as CI
 ```
 
-- Une pull request par sujet, partie de `main`.
-- Les tests passent, et un comportement nouveau vient avec son test
+- One pull request per topic, branched from `main`.
+- All tests pass, and new behavior comes with tests
   (`src/**/*.test.ts`, `deploy/server.test.mjs`).
-- Lis [`CLAUDE.md`](CLAUDE.md) avant de toucher au code : la carte de `src/` et
-  les règles du projet y sont, et [`DESIGN.md`](DESIGN.md) pour l'interface.
+- Read [`CLAUDE.md`](CLAUDE.md) before changing code: it contains the map of
+  `src/` and the project rules. [`DESIGN.md`](DESIGN.md) covers the UI. Both are
+  in French.
 
-## Les règles de la maison
+## Project rules
 
-- **Tout le texte de l'interface est en français**, sans tiret cadratin. Le
-  service s'appelle Hopla.
-- **Mobile d'abord** : chaque écran se vérifie au téléphone puis au bureau.
-- **Pas de nouvelle dépendance** sans en parler dans une issue : l'image de
-  production n'a pas de `node_modules`, tout est embarqué au build.
-- **Données des visiteurs** : ni cookie, ni adresse IP enregistrée, ni outil de
-  suivi tiers sur les pages publiques.
-- **Icônes** : Phosphor pleins, jamais d'emoji, jamais d'icône sur un fond.
-- **Navigateur de test** : agent-browser. Playwright n'est pas utilisé dans ce dépôt.
-- Toute modification des CGU ou de l'accord de traitement change `VERSION_CGU`.
+- **UI copy is in French**, without em dashes. The product name is Hopla.
+- **Mobile first**: test every screen on mobile, then on desktop.
+- **No new dependency** without prior discussion in an issue: the production
+  image has no `node_modules`, everything is bundled at build time.
+- **Visitor privacy**: no cookies, no stored IP addresses and no third-party
+  tracking on public pages.
+- **Icons**: filled Phosphor icons, no emoji, no icon on a background shape.
+- **Browser testing**: agent-browser. Playwright is not used in this repository.
+- Any change to the terms of service or the data processing agreement must bump
+  `VERSION_CGU`.
 
-## Licence de tes contributions
+## Licensing of contributions
 
-Le projet est sous [AGPL-3.0](LICENSE). En proposant une pull request, tu
-confirmes que tu as le droit de publier ce code, et tu acceptes qu'il soit
-distribué sous l'AGPL-3.0 et utilisé par AURA GROUP, éditeur de Hopla, dans la
-version hébergée sur hopla.page, y compris sous d'autres conditions de licence.
-Signe chaque commit (`git commit -s`), selon le
+This project is licensed under [AGPL-3.0](LICENSE). By submitting a pull
+request, you confirm that you have the right to submit the code, and you agree
+that it is distributed under AGPL-3.0 and may be used by AURA GROUP, publisher
+of Hopla, in the hosted service at hopla.page, including under other license
+terms. Sign off every commit (`git commit -s`) per the
 [Developer Certificate of Origin](https://developercertificate.org).

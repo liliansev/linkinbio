@@ -6,7 +6,7 @@ export function baseOptions(): BaseLayoutProps {
     nav: { title: <Marque />, url: '/' },
     themeSwitch: { enabled: false },
     links: [
-      { text: 'Référence de l’API', url: '/reference', active: 'nested-url' },
+      { text: 'API reference', url: '/reference', active: 'nested-url' },
       { text: 'hopla.page', url: 'https://hopla.page', external: true },
     ],
   };

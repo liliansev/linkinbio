@@ -153,6 +153,7 @@ test('la documentation se sert telle quelle sur /docs, une adresse inconnue reç
   assert.equal((await fetch(`${url}/docs/mcp`)).headers.get('x-frame-options'), 'DENY');
   const perdu = await fetch(`${url}/docs/nulle-part`); assert.equal(perdu.status, 404); assert.equal(await perdu.text(), 'perdu');
   const barre = await fetch(`${url}/docs/mcp/`, { redirect: 'manual' }); assert.equal(barre.status, 308); assert.equal(barre.headers.get('location'), '/docs/mcp');
+  const ancienne = await fetch(`${url}/docs/demarrage`, { redirect: 'manual' }); assert.equal(ancienne.status, 308); assert.equal(ancienne.headers.get('location'), '/docs/quickstart');
   assert.equal((await brut(url, '/docs/%2e%2e/server/server.js')).status, 400);
 });
 test('sans documentation construite, /docs répond 404 sans passer par l’app', async t => {

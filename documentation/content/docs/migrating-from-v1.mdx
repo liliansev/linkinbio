@@ -1,0 +1,60 @@
+---
+title: Migrating from v1
+description: API v2 uses English paths, fields, values and error codes. API v1 remains supported.
+---
+
+API v1 was released on October 28, 2026 with French names (`/blocs`, `titre`, `reglages`). API v2, released on October 29, 2026, exposes the same operations with English names. Both versions read and write the same data.
+
+**API v1 remains supported**: existing integrations keep working without changes. New integrations should use v2.
+
+## What changes
+
+| | v1 | v2 |
+| --- | --- | --- |
+| Base URL | `https://app.hopla.page/api/v1` | `https://app.hopla.page/api/v2` |
+| Paths, fields, enum values | French | English |
+| Error object | `{ "erreur": { "code", "message" } }`, French codes | `{ "error": { "code", "message" } }`, English codes |
+| CSV export header | `email,prenom,inscrit,source` | `email,first_name,subscribed_at,source` |
+| MCP tools | `lire_page`, `ajouter_bloc`… | `get_page`, `create_block`… |
+
+Authentication, rate limits, HTTP statuses and response structure do not change. In v2 requests, a field sent with its v1 name is still accepted: you can migrate one call at a time.
+
+Theme ids (`onyx`), social network ids (`instagram`), icon ids and the text of your page (titles, bio) are not translated.
+
+## MCP server
+
+The MCP server lists its tools with English names and fields. Former tool names are still accepted and keep their French fields, so an agent configured before October 29, 2026 keeps working. Reconnect the client to load the new tool list.
+
+<TableV1 quoi="outils" />
+
+## Endpoints
+
+<TableV1 quoi="routes" />
+
+Query parameters:
+
+<TableV1 quoi="parametres" />
+
+## Fields
+
+<TableV1 quoi="champs" />
+
+In `GET /api-keys`, `debut` becomes `prefix`; in `GET /email-list`, `semaine` becomes `thisWeek`; at the root of `GET /social-networks`, `reseaux` becomes `socialNetworks`.
+
+## Block types
+
+<TableV1 quoi="types" />
+
+## Enum values
+
+<TableV1 quoi="valeurs" />
+
+## Plan features
+
+Keys of `features` in `GET /account`:
+
+<TableV1 quoi="fonctions" />
+
+## Error codes
+
+<TableV1 quoi="codes" />

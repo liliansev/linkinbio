@@ -4,8 +4,8 @@ import { Marque } from '@/components/marque';
 import { Reference } from './reference';
 
 export const metadata: Metadata = {
-  title: 'Référence de l’API',
-  description: 'Chaque route de l’API de Hopla, ses champs et ses réponses, avec une console de test.',
+  title: 'API reference',
+  description: 'Every Hopla API endpoint with its parameters and responses, plus an interactive console.',
   alternates: { canonical: '/docs/reference' },
 };
 
@@ -14,10 +14,10 @@ export default function Page() {
   return (
     <div className="hd-ref">
       <header className="hd-ref-barre">
-        <Link href="/" aria-label="Documentation de Hopla"><Marque /></Link>
+        <Link href="/" aria-label="Hopla Docs"><Marque /></Link>
         <nav className="hd-ref-liens" aria-label="Documentation">
           <Link href="/">Guides</Link>
-          <Link href="/mcp">Serveur MCP</Link>
+          <Link href="/mcp">MCP server</Link>
           <a href="/docs/openapi.json" download>OpenAPI</a>
         </nav>
       </header>

@@ -1,75 +1,62 @@
 # Hopla
 
-**L'alternative open source et européenne à Linktree.** Une page de liens par
-personne, éditée depuis un back office pensé d'abord pour le téléphone.
+**The open source, EU-hosted alternative to Linktree.** One link-in-bio page per
+user, edited from a mobile-first admin panel.
 
-- La version hébergée, prête à l'emploi : [hopla.page](https://hopla.page)
-  (exemple : [hopla.page/lilian](https://hopla.page/lilian)).
-- Ce dépôt : tout le code de cette version, sous licence AGPL-3.0, que chacun
-  peut lire, auto-héberger et améliorer.
+- Hosted service: [hopla.page](https://hopla.page)
+  (example: [hopla.page/lilian](https://hopla.page/lilian)).
+- This repository: the full source code of the hosted service, licensed under
+  AGPL-3.0.
 
-> **English.** Hopla is an open source, EU-hosted alternative to Linktree: one
-> link-in-bio page per person, edited from a mobile-first back office. The hosted
-> service runs at hopla.page; this repository holds its full source under the
-> AGPL-3.0. The product and its docs are in French. Self-hosting guide:
-> [`docs/AUTO-HEBERGEMENT.md`](docs/AUTO-HEBERGEMENT.md).
+The user interface is in French. Code comments and internal design notes are
+mostly in French; developer-facing documentation is in English.
 
-## Ce que fait Hopla
+## Features
 
-- **Ta vraie page, éditée en place** : au téléphone, on touche son nom, sa bio
-  ou un bloc pour le changer ; au bureau, l'édition à gauche et la page dans un
-  iPhone à droite, qui suit chaque frappe.
-- **Une adresse collée choisit son bloc** : une vidéo YouTube devient un
-  lecteur, un agenda Calendly une prise de rendez-vous, une fiche produit une
-  vitrine avec sa photo et son prix.
-- **Des blocs pour tout** : liens, titres, textes, vidéos, musique, galeries,
-  FAQ, carte de visite (vCard), lieu, formulaire de contact, avis, liste e-mail,
-  derniers articles d'un flux RSS, dernière vidéo d'une chaîne.
-- **Une page qui s'adapte** : selon le réseau d'où arrive le visiteur, l'heure,
-  la date ou son pays ; liens programmés, comptes à rebours, drops.
-- **Des stats sans cookie** : vues, clics, provenance, pays, appareil. L'adresse
-  IP n'est jamais enregistrée.
-- **Ta liste e-mail branchée** sur Brevo, Mailchimp, Kit, MailerLite, beehiiv,
-  Systeme.io, MailCheap, Loops, ou Make, Zapier et n8n par webhook. Les clés
-  sont chiffrées au repos (AES-256-GCM).
-- **Vingt thèmes**, une police, une image de fond, des liens en grille.
-- **Connexion sans mot de passe**, par un lien reçu par e-mail.
+- **In-place editing**: on mobile, the page itself is the editor; on desktop,
+  the editor sits next to a live preview.
+- **URL detection**: a pasted URL picks the matching block type (YouTube video
+  player, Calendly booking, product card with image and price, and so on).
+- **Block types**: links, headings, text, video, music, image gallery, FAQ,
+  vCard contact card, map location, contact form, reviews, email signup, RSS
+  feed, latest YouTube video.
+- **Conditional display**: show or hide blocks by referrer, time of day, date
+  range or visitor country; scheduled links, countdowns, drops.
+- **Cookieless analytics**: views, clicks, referrers, countries, devices. IP
+  addresses are never stored.
+- **Email list integrations**: Brevo, Mailchimp, Kit, MailerLite, beehiiv,
+  Systeme.io, MailCheap, Loops, or Make, Zapier and n8n via webhook. Credentials
+  are encrypted at rest (AES-256-GCM).
+- **Theming**: 20 themes, custom font, background image, grid layout.
+- **Passwordless sign-in** via magic link.
+- **REST API and MCP server**: [hopla.page/docs](https://hopla.page/docs).
 
-## Pourquoi open source
+## Hosted vs self-hosted
 
-- **Confiance** : on voit ce que le service fait de tes données et de celles de
-  tes visiteurs. Rien de caché, rien de revendu.
-- **Liberté** : tes données s'exportent depuis Réglages, et le code peut tourner
-  sur ton propre serveur.
-- **Européen** : édité en France, chez un hébergeur établi dans l'Union
-  européenne, conçu pour le RGPD et le DSA (signalements, modération motivée).
-
-## Hébergé ou auto-hébergé
-
-| | [hopla.page](https://hopla.page) | Auto-hébergé |
+| | [hopla.page](https://hopla.page) | Self-hosted |
 | --- | --- | --- |
-| Prix | Gratuit, puis Starter, Pro | Gratuit, infrastructure non comprise |
-| Installation | Aucune | Docker Compose, compatible Coolify et Dokploy |
-| Mises à jour, sauvegardes, e-mails | Comprises | À la charge de l'administrateur |
-| Support | Oui | Issues GitHub de ce dépôt |
+| Price | Free tier, then Starter and Pro plans | Free, infrastructure not included |
+| Setup | None | Docker Compose, works with Coolify and Dokploy |
+| Updates, backups, email delivery | Included | Instance administrator |
+| Support | Yes | GitHub issues |
 
-### Déploiement rapide
+### Quick deploy
 
-Avec [Coolify](https://coolify.io) ou [Dokploy](https://dokploy.com) :
+With [Coolify](https://coolify.io) or [Dokploy](https://dokploy.com):
 
-1. Créer une ressource à partir de l'URL de ce dépôt, type **Docker Compose**
-   (`docker-compose.yml`, à la racine).
-2. Définir `LIENS_ORIGINE` (URL publique de l'instance, avec `https://`) et
-   `LIENS_ADMIN_EMAIL` (adresse de l'administrateur).
-3. Associer le domaine au service `hopla`, port 3000, puis déployer.
+1. Create a resource from this repository URL, build pack **Docker Compose**
+   (`docker-compose.yml` at the repository root).
+2. Set `LIENS_ORIGINE` (public URL of the instance, including `https://`) and
+   `LIENS_ADMIN_EMAIL` (administrator email address).
+3. Assign the domain to the `hopla` service on port 3000, then deploy.
 
-Se connecter ensuite sur `/admin` avec l'adresse de l'administrateur. Variables
-d'environnement, e-mails, mentions légales et sauvegarde :
-[`docs/AUTO-HEBERGEMENT.md`](docs/AUTO-HEBERGEMENT.md).
+Then sign in at `/admin` with the administrator email address. Environment
+variables, email delivery, legal notices and backups:
+[`docs/SELF-HOSTING.md`](docs/SELF-HOSTING.md).
 
-## Démarrer en local
+## Local development
 
-Node 24 et pnpm 10.
+Requires Node.js 24 and pnpm 10.
 
 ```bash
 pnpm install
@@ -77,35 +64,34 @@ pnpm dev          # http://localhost:4400
 pnpm build && pnpm typecheck && pnpm test
 ```
 
-Sans `RESEND_API_KEY`, les liens de connexion s'affichent dans la console.
-Toutes les variables : [`.env.example`](.env.example).
+Without `RESEND_API_KEY`, magic links are printed to the console. All
+environment variables: [`.env.example`](.env.example).
 
-## La pile
+## Stack
 
-TanStack Start (React 19, Vite), Tailwind CSS v4, SQLite par `node:sqlite`.
-En production, un seul processus Node (`deploy/server.mjs`) sert la page
-publique et le back office ; l'image Docker n'a pas de `node_modules`.
+TanStack Start (React 19, Vite), Tailwind CSS v4, SQLite via `node:sqlite`.
+In production, a single Node.js process (`deploy/server.mjs`) serves the public
+pages and the admin panel; the Docker image ships without `node_modules`.
 
-La carte du code et les conventions sont dans [`CLAUDE.md`](CLAUDE.md) : une
-grande partie de Hopla a été écrite avec Claude Code, et ce fichier est celui
-que lisent aussi bien les humains que les agents.
+The codebase map and project conventions are in [`CLAUDE.md`](CLAUDE.md) (in
+French). Much of Hopla was written with Claude Code, and this file is read by
+both humans and coding agents.
 
-## Contribuer
+## Contributing
 
-Les issues et les pull requests sont les bienvenues : voir
-[`CONTRIBUTING.md`](CONTRIBUTING.md). Une faille de sécurité se signale en
-privé : [`SECURITY.md`](SECURITY.md).
+Issues and pull requests are welcome: see [`CONTRIBUTING.md`](CONTRIBUTING.md).
+Report security vulnerabilities privately: [`SECURITY.md`](SECURITY.md).
 
-## Licence et marque
+## License and trademark
 
-Le code est distribué sous [GNU Affero General Public License v3.0](LICENSE) :
-il peut être utilisé, modifié et redistribué, y compris pour un service en
-ligne, à condition de publier les modifications sous la même licence pour les
-utilisateurs de ce service.
+The code is licensed under the [GNU Affero General Public License v3.0](LICENSE):
+you may use, modify and redistribute it, including to run a network service,
+provided you make your modifications available to the users of that service
+under the same license.
 
-Le nom **Hopla**, son logo et le domaine hopla.page ne sont pas couverts par la
-licence : une instance auto-hébergée ou un fork public doit porter un autre nom
-et un autre logo. Les portraits des profils d'exemple sont des images générées,
-fournies pour la démonstration.
+The **Hopla** name, logo and the hopla.page domain are not covered by the
+license: a self-hosted public instance or a public fork must use a different
+name and logo. Portraits in the example profiles are AI-generated images
+provided for demonstration purposes.
 
 © 2026 AURA GROUP.

@@ -189,7 +189,7 @@ const SUR_TON_SERVEUR = [
 const A_TA_CHARGE = ['Un serveur avec Docker et un nom de domaine', 'Les mises à jour et les sauvegardes', 'Un compte Resend pour l’envoi des e-mails'];
 
 function SurTonServeur() {
-  const guide = `${LIEN_SOURCE}/blob/main/docs/AUTO-HEBERGEMENT.md`;
+  const guide = `${LIEN_SOURCE}/blob/main/docs/SELF-HOSTING.md`;
   return (
     <div className="hl-offres hl-offres-serveur">
       <article className="hl-offre hl-entre">

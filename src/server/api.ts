@@ -9,10 +9,12 @@ import { resumer, enUnePhrase } from '../lib/resume.ts';
 import { FONCTIONS } from '../lib/abonnement.ts';
 import { adresse, validerBloc, validerReglages } from '../lib/valider.ts';
 import { VERSION_CGU } from '../lib/legal.ts';
-import { DOC_API } from '../lib/docApi.ts';
+import { DOC_API, DOC_API_V1 } from '../lib/docApi.ts';
+import { CODES_EN, PARAMETRES_EN, ROUTES_EN, TYPES_EN, versAnglais, versFrancais } from '../lib/apiAnglais.ts';
 import * as db from './db.ts';
 import { empreinte } from './auth.ts';
 import { droits, joursLisibles, periodeLisible, verifierDates } from './droits.ts';
+import { REFUS_PROGRAMMATION } from '../lib/droits.ts';
 import { JOUR, MINUTE, cleIp, limiteur } from './limites.ts';
 import { apercuSite } from './apercu.ts';
 import { articlesDe } from './flux.ts';
@@ -44,7 +46,9 @@ export function nouvelleCle() {
 export class ErreurApi extends Error {
   readonly statut: number;
   readonly code: string;
-  constructor(statut: number, code: string, message: string) { super(message); this.statut = statut; this.code = code; }
+  /** Le message de l'API v2 et des outils MCP en anglais, quand celui de la v1 cite des noms français. */
+  readonly enAnglais: string;
+  constructor(statut: number, code: string, message: string, enAnglais = message) { super(message); this.statut = statut; this.code = code; this.enAnglais = enAnglais; }
 }
 
 export interface Appelant { compte: string; cle: string; ecriture: boolean }
@@ -57,23 +61,23 @@ const clesFaussesParIp = limiteur([20, MINUTE]);
 /** Le compte d'une clé passée en `Authorization: Bearer hopla_…`, ou l'erreur à rendre. */
 export function authentifier(entete: string | null, ip: string, env: Record<string, string | undefined> = process.env, maintenant = Date.now()): Appelant {
   const cle = /^Bearer\s+(\S+)$/i.exec(entete?.trim() ?? '')?.[1] ?? '';
-  if (!cle) throw new ErreurApi(401, 'cle_absente', `Ajoute ta clé d’API dans l’en-tête Authorization: Bearer hopla_… Elle se crée dans Réglages, sur ${NOM_ADMIN}.`);
+  if (!cle) throw new ErreurApi(401, 'cle_absente', `Missing API key. Send it in the Authorization header: Bearer hopla_… Create one in Réglages (Settings) on ${NOM_ADMIN}.`);
   const trouvee = FORME_CLE.test(cle) ? db.cleApiParEmpreinte(empreinte(cle)) : undefined;
   if (!trouvee) {
-    if (clesFaussesParIp(cleIp(ip || 'inconnue'), maintenant)) throw new ErreurApi(429, 'trop_d_essais', 'Trop de clés refusées. Réessaie dans une minute.');
-    throw new ErreurApi(401, 'cle_invalide', 'Cette clé n’existe pas ou a été révoquée.');
+    if (clesFaussesParIp(cleIp(ip || 'inconnue'), maintenant)) throw new ErreurApi(429, 'trop_d_essais', 'Too many invalid API keys. Retry in one minute.');
+    throw new ErreurApi(401, 'cle_invalide', 'Invalid or revoked API key.');
   }
   const compte = db.compteParId(trouvee.compte);
-  if (!compte || compte.statut !== 'actif') throw new ErreurApi(403, 'compte_suspendu', 'Ce compte est suspendu.');
-  if (compte.id !== PRINCIPAL && compte.cgu !== VERSION_CGU) throw new ErreurApi(403, 'conditions', `Accepte les nouvelles conditions d’utilisation sur ${NOM_ADMIN}, puis réessaie.`);
-  if (!droits(compte, env, maintenant).api) throw new ErreurApi(403, 'offre', 'L’API et le serveur MCP demandent Hopla Pro. Ta clé reprendra du service dès que ta page y repasse.');
-  if (appelsParCle(trouvee.id, maintenant)) throw new ErreurApi(429, 'trop_d_appels', 'Trop d’appels avec cette clé. Réessaie dans une minute.');
+  if (!compte || compte.statut !== 'actif') throw new ErreurApi(403, 'compte_suspendu', 'This account is suspended.');
+  if (compte.id !== PRINCIPAL && compte.cgu !== VERSION_CGU) throw new ErreurApi(403, 'conditions', `Accept the updated terms of service on ${NOM_ADMIN}, then retry.`);
+  if (!droits(compte, env, maintenant).api) throw new ErreurApi(403, 'offre', 'The API and MCP server require the Pro plan. The key is reactivated when the account is back on Pro.');
+  if (appelsParCle(trouvee.id, maintenant)) throw new ErreurApi(429, 'trop_d_appels', 'Rate limit exceeded for this API key. Retry in one minute.');
   db.noterUsageCleApi(trouvee.id, maintenant);
   return { compte: compte.id, cle: trouvee.id, ecriture: trouvee.ecriture === 1 };
 }
 
 const ecrire = (a: Appelant) => {
-  if (!a.ecriture) throw new ErreurApi(403, 'lecture_seule', 'Cette clé est en lecture seule : crée une clé qui peut modifier ta page.');
+  if (!a.ecriture) throw new ErreurApi(403, 'lecture_seule', 'This API key is read-only. Use a key with write access.');
 };
 
 const objet = (v: unknown): Record<string, unknown> => (v && typeof v === 'object' && !Array.isArray(v) ? v as Record<string, unknown> : {});
@@ -99,8 +103,9 @@ const SOUS_OBJETS = ['profil', 'bouton', 'seo', 'couleurs', 'redirection'];
 export function modifierReglages(a: Appelant, partiel: unknown): Reglages {
   ecrire(a);
   const changes = objet(partiel);
-  if (!Object.keys(changes).length) throw new ErreurApi(400, 'rien_a_changer', 'Envoie au moins un réglage à changer, par exemple {"profil": {"bio": "…"}}.');
-  if ('theme' in changes && !THEMES.some(t => t.id === changes.theme)) throw new ErreurApi(400, 'theme_inconnu', `Thème inconnu. Les thèmes : ${THEMES.map(t => t.id).join(', ')}.`);
+  if (!Object.keys(changes).length) throw new ErreurApi(400, 'rien_a_changer', 'Request body must contain at least one setting, for example {"profil": {"bio": "…"}}.',
+    'Request body must contain at least one setting, for example {"profile": {"bio": "…"}}.');
+  if ('theme' in changes && !THEMES.some(t => t.id === changes.theme)) throw new ErreurApi(400, 'theme_inconnu', `Unknown theme. Valid values: ${THEMES.map(t => t.id).join(', ')}.`);
   const actuel = db.lireReglages(a.compte);
   const fusion: Record<string, unknown> = { ...actuel };
   // Seules les clés connues passent : rien d'autre ne s'écrit sur l'objet.
@@ -115,7 +120,7 @@ export function modifierReglages(a: Appelant, partiel: unknown): Reglages {
 
 const blocDuCompte = (a: Appelant, id: string): Bloc => {
   const bloc = db.lireBlocs(a.compte).find(b => b.id === id);
-  if (!bloc) throw new ErreurApi(404, 'bloc_introuvable', 'Aucun bloc de ta page n’a cet id.');
+  if (!bloc) throw new ErreurApi(404, 'bloc_introuvable', 'Block not found.');
   return bloc;
 };
 
@@ -123,19 +128,22 @@ export const lireBlocs = (a: Appelant) => db.lireBlocs(a.compte);
 export const lireBloc = (a: Appelant, id: string) => blocDuCompte(a, id);
 
 function enregistrer(a: Appelant, bloc: Bloc) {
-  if (a.compte !== PRINCIPAL && TYPES_PRINCIPAL.includes(bloc.type)) throw new ErreurApi(400, 'type_reserve', 'Ce type de bloc n’est pas disponible.');
+  if (a.compte !== PRINCIPAL && TYPES_PRINCIPAL.includes(bloc.type)) throw new ErreurApi(400, 'type_reserve', 'This block type is not available.');
   try {
     verifierDates(db.compteParId(a.compte)!, bloc);
     db.enregistrerBloc(a.compte, bloc);
   } catch (error) {
-    throw new ErreurApi(400, 'bloc_refuse', (error as Error).message);
+    // Les refus du back office sont écrits en français pour l'interface : l'API les rend en anglais.
+    const message = (error as Error).message;
+    throw new ErreurApi(400, 'bloc_refuse', message === REFUS_PROGRAMMATION ? 'Scheduling a block (start or end date) requires the Starter plan or higher.'
+      : /^Deux cents blocs/.test(message) ? 'A page can have at most 200 blocks.' : 'Block rejected.');
   }
 }
 
 /** Une adresse envoyée que la validation a dû laisser de côté : on le dit, plutôt que d'enregistrer un bloc sans adresse. */
 function adresseGardee(envoye: Record<string, unknown>, bloc: Bloc) {
   if (typeof envoye.url === 'string' && envoye.url.trim() && !(bloc as { url?: string }).url) {
-    throw new ErreurApi(400, 'adresse_invalide', 'Adresse invalide : une adresse https://, mailto: ou tel: est attendue.');
+    throw new ErreurApi(400, 'adresse_invalide', 'Invalid url: expected an https://, mailto: or tel: URL.');
   }
 }
 
@@ -147,7 +155,8 @@ export function ajouterBloc(a: Appelant, donnees: unknown, position?: unknown): 
   ecrire(a);
   const o = objet(donnees);
   if (o.type !== undefined && !(typesPermis(a.compte) as readonly unknown[]).includes(o.type)) {
-    throw new ErreurApi(400, 'type_inconnu', `Type de bloc inconnu. Les types : ${typesPermis(a.compte).join(', ')}.`);
+    throw new ErreurApi(400, 'type_inconnu', `Unknown block type. Valid values: ${typesPermis(a.compte).join(', ')}.`,
+      `Unknown block type. Valid values: ${typesPermis(a.compte).map(t => TYPES_EN[t]).join(', ')}.`);
   }
   const bloc = validerBloc(o, db.nouvelId());
   adresseGardee(o, bloc);
@@ -184,7 +193,7 @@ export function ordonnerBlocs(a: Appelant, ids: unknown): Bloc[] {
   const actuels = db.lireBlocs(a.compte).map(b => b.id);
   const liste = Array.isArray(ids) ? ids.map(String) : [];
   if (liste.length !== actuels.length || new Set(liste).size !== liste.length || !liste.every(id => actuels.includes(id))) {
-    throw new ErreurApi(400, 'ordre_incomplet', 'Donne les id de tous les blocs de ta page, chacun une fois, dans le nouvel ordre.');
+    throw new ErreurApi(400, 'ordre_incomplet', 'ids must list every block id exactly once, in the new order.');
   }
   db.ordonner(a.compte, liste);
   return db.lireBlocs(a.compte);
@@ -193,11 +202,12 @@ export function ordonnerBlocs(a: Appelant, ids: unknown): Bloc[] {
 /** Les stats d'une période : 7, 14, 30, 90 ou 365 derniers jours, ou des dates `{ du, au }` (AAAA-MM-JJ). */
 export function lireStats(a: Appelant, periode: unknown, env: Record<string, string | undefined> = process.env): Stats {
   const lue = lirePeriode(periode ?? 30);
-  if (lue === null) throw new ErreurApi(400, 'periode', 'Période refusée : 7, 14, 30, 90 ou 365 jours, ou des dates du et au (AAAA-MM-JJ).');
+  if (lue === null) throw new ErreurApi(400, 'periode', 'Invalid period: use 7, 14, 30, 90 or 365 days, or du and au dates (YYYY-MM-DD).',
+    'Invalid period: use 7, 14, 30, 90 or 365 days, or from and to dates (YYYY-MM-DD).');
   const compte = db.compteParId(a.compte)!;
-  if (!joursLisibles(compte, env)) throw new ErreurApi(403, 'offre', 'Tes stats demandent Hopla Starter.');
+  if (!joursLisibles(compte, env)) throw new ErreurApi(403, 'offre', 'Analytics require the Starter plan or higher.');
   const bornee = periodeLisible(compte, lue, env);
-  if (bornee === null) throw new ErreurApi(400, 'periode', 'Ces dates sont plus anciennes que ton historique.');
+  if (bornee === null) throw new ErreurApi(400, 'periode', 'These dates are outside the analytics retention period of the current plan.');
   return db.stats(a.compte, bornee);
 }
 
@@ -266,16 +276,16 @@ export function lireResume(a: Appelant, periode: unknown, env: Record<string, st
 /** Une image envoyée chez Hopla (WebP, JPEG ou PNG, 1,5 Mo au plus) : son adresse se pose en avatar, en vignette, dans une galerie. */
 export function envoyerMedia(a: Appelant, octets: Uint8Array) {
   ecrire(a);
-  if (!octets.length) throw new ErreurApi(400, 'image_absente', 'Envoie une image : son contenu brut (Content-Type: image/webp, image/jpeg ou image/png), ou {"image": "data:image/…;base64,…"}.');
-  if (octets.length > 1_500_000) throw new ErreurApi(413, 'image_trop_grosse', 'Image trop grosse : 1,5 Mo au plus.');
+  if (!octets.length) throw new ErreurApi(400, 'image_absente', 'Missing image: send the raw bytes (Content-Type: image/webp, image/jpeg or image/png), or {"image": "data:image/…;base64,…"}.');
+  if (octets.length > 1_500_000) throw new ErreurApi(413, 'image_trop_grosse', 'Image too large: 1.5 MB maximum.');
   const ascii = (de: number, a2: number) => Buffer.from(octets.subarray(de, a2)).toString('latin1');
   const extension = ascii(0, 4) === 'RIFF' && ascii(8, 12) === 'WEBP' ? 'webp'
     : octets[0] === 0xff && octets[1] === 0xd8 && octets[2] === 0xff ? 'jpg'
       : ascii(1, 4) === 'PNG' && octets[0] === 0x89 ? 'png' : null;
-  if (!extension) throw new ErreurApi(415, 'format_image', 'Format refusé : WebP, JPEG ou PNG.');
+  if (!extension) throw new ErreurApi(415, 'format_image', 'Unsupported image format: WebP, JPEG or PNG only.');
   let id: string;
   try { id = db.ajouterMedia(a.compte, octets, extension); }
-  catch (error) { throw new ErreurApi(413, 'plus_de_place', (error as Error).message); }
+  catch { throw new ErreurApi(413, 'plus_de_place', 'Image storage quota exceeded: delete unused images or reuse an uploaded one.'); }
   const chemin = `/media/${id}.${extension}`;
   return { media: { chemin, url: `${ORIGINE_PUBLIQUE}${chemin}` } };
 }
@@ -283,8 +293,8 @@ export function envoyerMedia(a: Appelant, octets: Uint8Array) {
 /** Une image en data URL (`data:image/png;base64,…`), décodée. */
 export function octetsDeDataUrl(v: unknown): Uint8Array {
   const m = /^data:image\/[\w.+-]+;base64,([A-Za-z0-9+/=\s]+)$/.exec(String(v ?? ''));
-  if (!m) throw new ErreurApi(400, 'image_absente', 'Le champ « image » attend une data URL : data:image/webp;base64,…');
-  if (m[1].length > 2_100_000) throw new ErreurApi(413, 'image_trop_grosse', 'Image trop grosse : 1,5 Mo au plus.');
+  if (!m) throw new ErreurApi(400, 'image_absente', 'The image field must be a data URL: data:image/webp;base64,…');
+  if (m[1].length > 2_100_000) throw new ErreurApi(413, 'image_trop_grosse', 'Image too large: 1.5 MB maximum.');
   return new Uint8Array(Buffer.from(m[1], 'base64'));
 }
 
@@ -308,14 +318,14 @@ export function listerInscrits(a: Appelant, limite: unknown, depart: unknown) {
 }
 
 /** Tous les inscrits en CSV (email, prénom, date, provenance), comme l'export du back office. */
-export function inscritsCsv(a: Appelant): string {
+export function inscritsCsv(a: Appelant, anglais = false): string {
   const champ = (v: string) => (/[",\n;]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
-  return ['email,prenom,inscrit,source', ...db.tousLesContacts(a.compte).map(c => [c.email, c.prenom, iso(c.ts) ?? '', c.source].map(champ).join(','))].join('\n') + '\n';
+  return [anglais ? 'email,first_name,subscribed_at,source' : 'email,prenom,inscrit,source', ...db.tousLesContacts(a.compte).map(c => [c.email, c.prenom, iso(c.ts) ?? '', c.source].map(champ).join(','))].join('\n') + '\n';
 }
 
 export function supprimerInscrit(a: Appelant, id: string) {
   ecrire(a);
-  if (!db.tousLesContacts(a.compte).some(c => c.id === id)) throw new ErreurApi(404, 'inscrit_introuvable', 'Aucun inscrit de ta liste n’a cet id.');
+  if (!db.tousLesContacts(a.compte).some(c => c.id === id)) throw new ErreurApi(404, 'inscrit_introuvable', 'Subscriber not found.');
   db.supprimerContact(a.compte, id);
   return { supprime: id };
 }
@@ -323,8 +333,8 @@ export function supprimerInscrit(a: Appelant, id: string) {
 /** Renvoie chez l'outil branché les inscrits qui n'y sont pas encore. */
 export async function envoyerInscrits(a: Appelant, env: Record<string, string | undefined> = process.env) {
   ecrire(a);
-  if (!liste.resumeIntegration(env, a.compte)) throw new ErreurApi(409, 'rien_de_branche', 'Aucune newsletter ni automatisation n’est branchée : branche-la dans Intégrations, sur ' + NOM_ADMIN + '.');
-  if (liste.tropDAppels(a.compte)) throw new ErreurApi(429, 'trop_d_appels', 'Trop d’envois. Réessaie dans quelques minutes.');
+  if (!liste.resumeIntegration(env, a.compte)) throw new ErreurApi(409, 'rien_de_branche', 'No newsletter or automation is connected. Connect one in Intégrations (Integrations) on ' + NOM_ADMIN + '.');
+  if (liste.tropDAppels(a.compte)) throw new ErreurApi(429, 'trop_d_appels', 'Too many sync requests. Retry in a few minutes.');
   let envoyes = 0, erreurs = 0;
   for (const c of db.contactsAEnvoyer(a.compte)) (await liste.pousser(env, a.compte, c, requeteSortante)) ? envoyes++ : erreurs++;
   return { envoyes, erreurs };
@@ -334,10 +344,10 @@ export async function envoyerInscrits(a: Appelant, env: Record<string, string | 
 const lecturesWeb = limiteur([30, 10 * MINUTE]);
 const urlLue = (v: unknown) => {
   const url = adresse(String(v ?? ''));
-  if (!/^https?:\/\//.test(url)) throw new ErreurApi(400, 'adresse', 'Donne une adresse https:// (ou http://).');
+  if (!/^https?:\/\//.test(url)) throw new ErreurApi(400, 'adresse', 'url must be an https:// or http:// URL.');
   return url;
 };
-const lireLeWeb = (a: Appelant) => { if (lecturesWeb(a.compte)) throw new ErreurApi(429, 'trop_de_lectures', 'Trop de lectures de sites. Réessaie dans quelques minutes.'); };
+const lireLeWeb = (a: Appelant) => { if (lecturesWeb(a.compte)) throw new ErreurApi(429, 'trop_de_lectures', 'Too many web fetch requests. Retry in a few minutes.'); };
 
 /** Ce qu'un site dit de lui : titre, description, prix d'un produit, et son image (data URL), comme quand on colle une adresse. */
 export async function lireApercu(a: Appelant, corps: unknown) {
@@ -346,7 +356,7 @@ export async function lireApercu(a: Appelant, corps: unknown) {
   lireLeWeb(a);
   const image: ImageApercu = o.image === 'logo' || o.image === 'vignette' || o.image === 'partage' ? o.image : o.image !== false;
   try { return { apercu: await apercuSite(url, { image }) }; }
-  catch { throw new ErreurApi(422, 'site_illisible', 'Impossible de lire ce site.'); }
+  catch { throw new ErreurApi(422, 'site_illisible', 'Unable to fetch this URL.'); }
 }
 
 /** Les derniers articles d'un blog ou d'un podcast, ou la dernière vidéo d'une chaîne YouTube. */
@@ -393,24 +403,27 @@ export const json = (statut: number, corps: unknown, entetes: Record<string, str
   headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', ...ENTETES_CORS, ...entetes },
 });
 
-export function reponseErreur(error: unknown): Response {
+/** Une erreur rendue : `{ erreur: … }` et ses codes français en v1, `{ error: … }` en v2. */
+export function reponseErreur(error: unknown, anglais = false): Response {
   if (error instanceof ErreurApi) {
-    return json(error.statut, { erreur: { code: error.code, message: error.message } }, {
+    const corps = anglais ? { error: { code: CODES_EN[error.code] ?? error.code, message: error.enAnglais } } : { erreur: { code: error.code, message: error.message } };
+    return json(error.statut, corps, {
       ...(error.statut === 429 ? { 'Retry-After': '60' } : {}),
       ...(error.statut === 401 ? { 'WWW-Authenticate': 'Bearer realm="hopla"' } : {}),
     });
   }
   console.error('[api]', error);
-  return json(500, { erreur: { code: 'serveur', message: 'Le serveur a eu un souci. Réessaie dans un instant.' } });
+  const message = 'Internal server error. Retry shortly.';
+  return json(500, anglais ? { error: { code: 'internal_error', message } } : { erreur: { code: 'serveur', message } });
 }
 
 /** Le corps JSON d'une requête, 256 Ko au plus ; une image en data URL a droit à ses 1,5 Mo (2,1 millions de caractères en base64). */
 export async function lireCorps(requete: Request, max = 256_000): Promise<unknown> {
   const texte = await requete.text();
-  if (texte.length > max) throw new ErreurApi(413, 'trop_gros', `Corps de requête trop gros (${max > 256_000 ? '1,5 Mo d’image' : '256 Ko'} au plus).`);
+  if (texte.length > max) throw new ErreurApi(413, 'trop_gros', `Request body too large (${max > 256_000 ? '1.5 MB image' : '256 KB'} maximum).`);
   if (!texte.trim()) return {};
   try { return JSON.parse(texte); }
-  catch { throw new ErreurApi(400, 'json', 'Le corps de la requête n’est pas du JSON valide.'); }
+  catch { throw new ErreurApi(400, 'json', 'Request body is not valid JSON.'); }
 }
 
 /** L'adresse IP du visiteur, que deploy/server.mjs a démêlée. */
@@ -426,75 +439,95 @@ const periodeDe = (q: URLSearchParams) => {
   return du || au ? { du, au } : q.get('periode') ?? undefined;
 };
 
+/** La route d'un chemin de la v2 (`/blocks/:id`…), et celle de la v1 qu'elle sert. */
+function routeV2(chemin: string) {
+  const [, base, id, suite] = /^(\/(?:blocks|subscribers))\/([\w-]{1,40})(\/duplicate)?$/.exec(chemin) ?? [];
+  const route = base && chemin !== '/blocks/order' && chemin !== '/subscribers/sync' ? `${base}/:id${suite ?? ''}` : chemin;
+  return { id, connue: route in ROUTES_EN, routeV1: ROUTES_EN[route] ?? `?${route}` };
+}
+
+/** La route d'un chemin de la v1 (`/blocs/:id`…). */
+function routeV1(chemin: string) {
+  const [, base, id, suite] = /^(\/(?:blocs|inscrits))\/([\w-]{1,40})(\/dupliquer)?$/.exec(chemin) ?? [];
+  const route = base && chemin !== '/inscrits/envoyer' ? `${base}/:id${suite ?? ''}` : chemin;
+  return { id, connue: ROUTES.includes(route), routeV1: route };
+}
+
+/*
+ * Deux versions (29 octobre 2026) : la v2, en anglais, et la v1, celle du 28 octobre, aux noms français, gardée telle
+ * quelle pour les intégrations déjà branchées. Les gestes ne parlent que français : la v2 traduit à l'entrée (chemin,
+ * paramètres, corps) et à la sortie (`lib/apiAnglais.ts`).
+ */
 export async function repondreApi(requete: Request, env: Record<string, string | undefined> = process.env): Promise<Response> {
   const url = new URL(requete.url);
-  const chemin = url.pathname.replace(/^\/api\/v1/, '').replace(/\/+$/, '');
+  const v2 = url.pathname.startsWith('/api/v2');
+  const chemin = url.pathname.replace(/^\/api\/v[12]/, '').replace(/\/+$/, '');
   const methode = requete.method.toUpperCase();
   if (methode === 'OPTIONS') return new Response(null, { status: 204, headers: ENTETES_CORS });
   // La documentation, sans clé : pour les humains comme pour les agents.
   if (chemin === '' && (methode === 'GET' || methode === 'HEAD')) {
-    return new Response(DOC_API, { headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'public, max-age=3600', ...ENTETES_CORS } });
+    return new Response(v2 ? DOC_API : DOC_API_V1, { headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'public, max-age=3600', ...ENTETES_CORS } });
   }
+  const repondre = (statut: number, corps: unknown, entetes: Record<string, string> = {}) => json(statut, v2 ? versAnglais(corps) : corps, entetes);
+  const lire = async (max?: number) => (v2 ? versFrancais(await lireCorps(requete, max)) : lireCorps(requete, max));
   try {
     const a = authentifier(requete.headers.get('authorization'), ipDe(requete), env);
-    const [, base, id, suite] = /^(\/(?:blocs|inscrits))\/([\w-]{1,40})(\/dupliquer)?$/.exec(chemin) ?? [];
-    const route = base && chemin !== '/inscrits/envoyer' ? `${base}/:id${suite ?? ''}` : chemin;
-    const q = url.searchParams;
-    switch (`${methode} ${route}`) {
-      case 'GET /page': return json(200, lirePage(a));
-      case 'GET /compte': return json(200, lireCompte(a, env));
-      case 'GET /reglages': return json(200, lireReglagesApi(a));
-      case 'PATCH /reglages': return json(200, { reglages: modifierReglages(a, await lireCorps(requete)) });
+    const { id, connue, routeV1: routeFr } = v2 ? routeV2(chemin) : routeV1(chemin);
+    const q = v2 ? new URLSearchParams([...url.searchParams].map(([k, v]) => [PARAMETRES_EN[k] ?? k, v])) : url.searchParams;
+    switch (`${methode} ${routeFr}`) {
+      case 'GET /page': return repondre(200, lirePage(a));
+      case 'GET /compte': return repondre(200, lireCompte(a, env));
+      case 'GET /reglages': return repondre(200, lireReglagesApi(a));
+      case 'PATCH /reglages': return repondre(200, { reglages: modifierReglages(a, await lire()) });
       case 'GET /qr': {
         const format = q.get('format') === 'png' ? 'png' : 'svg';
         const taille = Math.min(2000, Math.max(120, Number.parseInt(q.get('taille') ?? '', 10) || 720));
         const { type, corps } = await qrCode(a, format, taille);
         return new Response(corps, { headers: { 'Content-Type': type, 'Cache-Control': 'no-store', 'Content-Disposition': `inline; filename="qr-hopla.${format}"`, ...ENTETES_CORS } });
       }
-      case 'GET /blocs': return json(200, { blocs: lireBlocs(a) });
+      case 'GET /blocs': return repondre(200, { blocs: lireBlocs(a) });
       case 'POST /blocs': {
-        const corps = objet(await lireCorps(requete));
+        const corps = objet(await lire());
         const { position, ...donnees } = corps;
-        return json(201, { bloc: ajouterBloc(a, donnees, position) });
+        return repondre(201, { bloc: ajouterBloc(a, donnees, position) });
       }
-      case 'GET /blocs/:id': return json(200, { bloc: lireBloc(a, id!) });
-      case 'PATCH /blocs/:id': return json(200, { bloc: modifierBloc(a, id!, await lireCorps(requete)) });
-      case 'DELETE /blocs/:id': return json(200, supprimerBloc(a, id!));
-      case 'POST /blocs/:id/dupliquer': return json(201, { bloc: dupliquerBloc(a, id!, await lireCorps(requete)) });
-      case 'PUT /ordre': return json(200, { blocs: ordonnerBlocs(a, objet(await lireCorps(requete)).ids) });
+      case 'GET /blocs/:id': return repondre(200, { bloc: lireBloc(a, id!) });
+      case 'PATCH /blocs/:id': return repondre(200, { bloc: modifierBloc(a, id!, await lire()) });
+      case 'DELETE /blocs/:id': return repondre(200, supprimerBloc(a, id!));
+      case 'POST /blocs/:id/dupliquer': return repondre(201, { bloc: dupliquerBloc(a, id!, await lire()) });
+      case 'PUT /ordre': return repondre(200, { blocs: ordonnerBlocs(a, objet(await lire()).ids) });
       case 'POST /medias': {
         const type = requete.headers.get('content-type') ?? '';
         if (/^image\//i.test(type)) {
           const brut = new Uint8Array(await requete.arrayBuffer());
-          return json(201, envoyerMedia(a, brut));
+          return repondre(201, envoyerMedia(a, brut));
         }
-        return json(201, envoyerMedia(a, octetsDeDataUrl(objet(await lireCorps(requete, 2_200_000)).image)));
+        return repondre(201, envoyerMedia(a, octetsDeDataUrl(objet(await lire(2_200_000)).image)));
       }
-      case 'GET /stats': return json(200, { stats: lireStats(a, periodeDe(q), env) });
-      case 'GET /stats/semaine': return json(200, lireSemaine(a));
-      case 'GET /stats/resume': return json(200, lireResume(a, periodeDe(q), env));
-      case 'GET /liste': return json(200, lireListe(a, env));
+      case 'GET /stats': return repondre(200, { stats: lireStats(a, periodeDe(q), env) });
+      case 'GET /stats/semaine': return repondre(200, lireSemaine(a));
+      case 'GET /stats/resume': return repondre(200, lireResume(a, periodeDe(q), env));
+      case 'GET /liste': return repondre(200, lireListe(a, env));
       case 'GET /inscrits': {
         if (q.get('format') === 'csv') {
-          return new Response(inscritsCsv(a), { headers: { 'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': 'attachment; filename="inscrits-hopla.csv"', 'Cache-Control': 'no-store', ...ENTETES_CORS } });
+          return new Response(inscritsCsv(a, v2), { headers: { 'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': 'attachment; filename="inscrits-hopla.csv"', 'Cache-Control': 'no-store', ...ENTETES_CORS } });
         }
-        return json(200, listerInscrits(a, q.get('limite'), q.get('depart')));
+        return repondre(200, listerInscrits(a, q.get('limite'), q.get('depart')));
       }
-      case 'DELETE /inscrits/:id': return json(200, supprimerInscrit(a, id!));
-      case 'POST /inscrits/envoyer': return json(200, await envoyerInscrits(a, env));
-      case 'POST /apercu': return json(200, await lireApercu(a, await lireCorps(requete)));
-      case 'POST /flux': return json(200, await lireFlux(a, await lireCorps(requete)));
-      case 'POST /avis': return json(200, await lireNoteAvis(a, await lireCorps(requete)));
-      case 'GET /cles': return json(200, listerCles(a));
-      case 'GET /export': return json(200, exporterCompte(a), { 'Content-Disposition': 'attachment; filename="export-hopla.json"' });
-      case 'GET /themes': return json(200, { themes: listerThemes() });
-      case 'GET /reseaux': return json(200, listerReseaux());
-      case 'GET /pictos': return json(200, listerPictos());
-      case 'GET /types': return json(200, listerTypes(a));
+      case 'DELETE /inscrits/:id': return repondre(200, supprimerInscrit(a, id!));
+      case 'POST /inscrits/envoyer': return repondre(200, await envoyerInscrits(a, env));
+      case 'POST /apercu': return repondre(200, await lireApercu(a, await lire()));
+      case 'POST /flux': return repondre(200, await lireFlux(a, await lire()));
+      case 'POST /avis': return repondre(200, await lireNoteAvis(a, await lire()));
+      case 'GET /cles': return repondre(200, listerCles(a));
+      case 'GET /export': return repondre(200, exporterCompte(a), { 'Content-Disposition': 'attachment; filename="export-hopla.json"' });
+      case 'GET /themes': return repondre(200, { themes: listerThemes() });
+      case 'GET /reseaux': return repondre(200, listerReseaux());
+      case 'GET /pictos': return repondre(200, listerPictos());
+      case 'GET /types': return repondre(200, listerTypes(a));
     }
-    const connue = ROUTES.includes(route);
-    throw new ErreurApi(connue ? 405 : 404, connue ? 'methode' : 'introuvable', connue ? 'Méthode non permise sur cette adresse.' : 'Adresse inconnue. La documentation : GET /api/v1');
+    throw new ErreurApi(connue ? 405 : 404, connue ? 'methode' : 'introuvable', connue ? 'Method not allowed on this route.' : `Route not found. Documentation: GET /api/${v2 ? 'v2' : 'v1'}`);
   } catch (error) {
-    return reponseErreur(error);
+    return reponseErreur(error, v2);
   }
 }

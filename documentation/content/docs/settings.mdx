@@ -1,0 +1,56 @@
+---
+title: Settings
+description: Page profile, theme, social links, colors, buttons, SEO and redirect.
+---
+
+<RoutesDe tag="Page" />
+
+`GET /page` returns the full page: settings and blocks. `GET /settings` returns settings only.
+
+`PATCH /settings` updates only the fields sent. The `profile`, `button`, `seo`, `colors` and `redirect` objects are merged field by field; the `socialLinks` list is replaced as a whole.
+
+```bash
+curl -X PATCH https://app.hopla.page/api/v2/settings \
+  -H "Authorization: Bearer $HOPLA_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"profile": {"bio": "Coach sportive à Lyon"}, "theme": "onyx"}'
+```
+
+The response contains the full settings after the update.
+
+## Fields
+
+| Setting | Value |
+| --- | --- |
+| `profile` | Profile: `{ name, bio, avatar, photo }`. `name` is the display name, `avatar` an https image URL, `photo` is `round` or `large` |
+| `theme` | A theme id, see below |
+| `socialLinks` | Social links: `[{ network, url }]`, 20 maximum |
+| `socialLinksPosition` | `top` (below the bio) or `bottom` (bottom of the page) |
+| `colors` | Colors: `{ background, buttons, accent }` as `#rrggbb`; empty: theme default |
+| `button` | Buttons: `{ style, shape, shadow }`: `solid`, `outline`, `soft`, `raised` or `glass`; `pill`, `rounded` or `square`; `none`, `subtle` or `strong` |
+| `seo` | `{ title, description }` for search engines and link previews |
+| `shareButton` | Show the Share button at the top of the page |
+| `formal` | Page copy uses the formal "vous" form |
+| `redirect` | Redirect: `{ url, endsAt }` sends the whole page to another URL until `endsAt`; `{ "url": "" }` stops it |
+
+## Social links
+
+```json
+{
+  "socialLinks": [
+    { "network": "instagram", "url": "https://instagram.com/camille" },
+    { "network": "youtube", "url": "https://youtube.com/@camille" },
+    { "network": "email", "url": "mailto:camille@example.com" }
+  ]
+}
+```
+
+Always send the full list, in display order: a network missing from the list is removed from the page. Valid values:
+
+<ListeReseaux />
+
+## Themes
+
+`GET /themes` returns the same list. Social networks, icons and block types have their own endpoints: see [Reference values](/reference-values).
+
+<ListeThemes />

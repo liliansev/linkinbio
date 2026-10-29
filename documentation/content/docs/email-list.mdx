@@ -1,0 +1,130 @@
+---
+title: Email list
+description: "List, export and delete subscribers collected by the email signup block, and sync them to a newsletter."
+---
+
+<RoutesDe tag="Email list" />
+
+The `email-signup` block (Pro plan) stores each subscriber in Hopla and forwards it to the integration configured in **Intégrations** (Integrations): Brevo, Mailchimp, Kit, MailerLite, beehiiv, Systeme.io, MailCheap, Loops, or Make, Zapier and n8n via webhook. The API lets you read and manage this list.
+
+<Callout title="Personal data">
+  Email addresses are personal data. A key with access to the list can read all of them: only use it with trusted tools, and use a read-only key for dashboards.
+</Callout>
+
+## Summary
+
+```bash
+curl https://app.hopla.page/api/v2/email-list -H "Authorization: Bearer $HOPLA_API_KEY"
+```
+
+```json
+{
+  "list": {
+    "subscribers": 128,
+    "thisWeek": 9,
+    "pending": 0,
+    "connected": { "tool": "brevo", "list": "Newsletter", "key": "xkeysib-…a3f" }
+  }
+}
+```
+
+`subscribers` is the total, `thisWeek` the subscribers of the last 7 days. `pending` counts subscribers not yet synced to the newsletter (provider unavailable, or no integration configured). `connected` (connected integration) is `null` without an integration; only a masked prefix of the integration credential is returned.
+
+## Subscribers
+
+Newest first, 100 per page (up to 500 with `limit`). Offset pagination: pass the `next` value of a response as the `offset` parameter of the next request, until it is `null`.
+
+<Tabs items={['curl', 'JavaScript', 'Python']} groupId="language" persist>
+
+<Tab value="curl">
+
+```bash
+curl "https://app.hopla.page/api/v2/subscribers?limit=100&offset=0" \
+  -H "Authorization: Bearer $HOPLA_API_KEY"
+```
+
+</Tab>
+
+<Tab value="JavaScript">
+
+```js title="all-subscribers.mjs"
+const all = [];
+let offset = 0;
+while (offset !== null) {
+  const response = await fetch(`https://app.hopla.page/api/v2/subscribers?limit=500&offset=${offset}`, {
+    headers: { Authorization: `Bearer ${process.env.HOPLA_API_KEY}` },
+  });
+  const page = await response.json();
+  all.push(...page.subscribers);
+  offset = page.next;
+}
+console.log(all.length, 'subscribers');
+```
+
+</Tab>
+
+<Tab value="Python">
+
+```python title="all_subscribers.py"
+import os, requests
+
+subscribers, offset = [], 0
+while offset is not None:
+    page = requests.get(
+        "https://app.hopla.page/api/v2/subscribers",
+        params={"limit": 500, "offset": offset},
+        headers={"Authorization": f"Bearer {os.environ['HOPLA_API_KEY']}"},
+    ).json()
+    subscribers += page["subscribers"]
+    offset = page["next"]
+print(len(subscribers), "subscribers")
+```
+
+</Tab>
+
+</Tabs>
+
+```json
+{
+  "subscribers": [
+    { "id": "92c5ca872beb", "email": "ana@example.com", "firstName": "Ana", "subscribedAt": "2026-10-27T18:02:11.000Z", "source": "instagram", "synced": true }
+  ],
+  "total": 128,
+  "next": 100
+}
+```
+
+| Field | Description |
+| --- | --- |
+| `firstName` | First name; empty if the block does not ask for it |
+| `subscribedAt` | Signup date |
+| `source` | Referrer: `instagram`, `tiktok`, `qr`, `direct`… |
+| `synced` | Already synced to the newsletter |
+
+## CSV export
+
+`?format=csv` returns the full list as a single file, like the admin panel export: `email,first_name,subscribed_at,source`.
+
+```bash
+curl "https://app.hopla.page/api/v2/subscribers?format=csv" \
+  -H "Authorization: Bearer $HOPLA_API_KEY" -o subscribers.csv
+```
+
+## Delete a subscriber
+
+For an erasure request: `DELETE /subscribers/{id}` permanently deletes the subscriber from Hopla. The copy already synced to the newsletter is not deleted: remove it from that provider as well.
+
+```bash
+curl -X DELETE https://app.hopla.page/api/v2/subscribers/92c5ca872beb \
+  -H "Authorization: Bearer $HOPLA_API_KEY"
+```
+
+## Sync pending subscribers
+
+After configuring an integration or after a provider outage, `POST /subscribers/sync` pushes pending subscribers and returns the counts: `synced` (sent) and `failed` (rejected).
+
+```json title="200 OK"
+{ "synced": 9, "failed": 0 }
+```
+
+Without a configured integration, the API returns 409 `no_integration`. Integrations are configured in the admin panel, **Intégrations**: their credentials never go through the API.

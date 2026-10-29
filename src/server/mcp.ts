@@ -1,6 +1,7 @@
 import { NOM_PUBLIC, RESEAUX, TYPES_BLOC } from '../lib/types.ts';
 import { THEMES } from '../lib/themes.ts';
 import type { Appelant } from './api.ts';
+import { schemaEnAnglais, versAnglais, versFrancais } from '../lib/apiAnglais.ts';
 import {
   ENTETES_CORS, ErreurApi, ajouterBloc, authentifier, dupliquerBloc, envoyerInscrits, envoyerMedia, ipDe, json, lireApercu, lireCompte, lireFlux,
   lireListe, lireNoteAvis, lirePage, lireResume, lireSemaine, lireStats, listerCles, listerInscrits, listerPictos, listerReseaux, listerThemes,
@@ -12,17 +13,26 @@ import {
  * session ni flux SSE : chaque requête POST porte un message JSON-RPC (ou un lot), la réponse revient en JSON.
  * La clé d'API passe dans `Authorization: Bearer`, comme pour l'API REST, et les outils appellent les mêmes
  * gestes (`api.ts`). Une clé en lecture seule ne voit que les outils qui lisent.
+ *
+ * Depuis le 29 octobre 2026, les outils s'appellent en anglais, entrées et sorties comprises (`lib/apiAnglais.ts`) ;
+ * leurs anciens noms français (`ancien`) répondent encore, avec les noms de champs français, mais ne sont plus listés.
  */
 
 const VERSIONS = ['2025-06-18', '2025-03-26', '2024-11-05'];
 const VERSION_SERVEUR = '1.1.0';
 
-const INSTRUCTIONS = `Hopla est une page de liens (comme Linktree) sur ${NOM_PUBLIC}/<pseudo>. Ces outils lisent et modifient la page `
-  + 'de la personne qui a créé la clé : son profil, son thème, ses réseaux, ses blocs (liens, titres, textes, vidéos, produits…), '
-  + 'leurs statistiques, sa liste e-mail et ses images, son QR code ; ils savent aussi lire un site, un blog ou une page d’avis. Commence par lire_page pour connaître les id des blocs. Écris en français, au tutoiement, sauf si la page vouvoie.';
+const INSTRUCTIONS = `Hopla is a link-in-bio page service (like Linktree) at ${NOM_PUBLIC}/<username>. These tools read and update the page `
+  + 'of the API key owner: profile, theme, social links, blocks (links, headings, text, videos, products…), analytics, email list, '
+  + 'images and QR code; they can also fetch metadata from a website, a feed or a review page. Call get_page first to get block ids. '
+  + 'Write page content (titles, bio, text) in the language of the existing page, usually French, addressing visitors informally '
+  + 'unless the formal setting is true.';
 
 interface Outil {
   name: string;
+  /** Le nom français du 28 octobre 2026, qui répond encore, avec les noms de champs français. */
+  ancien: string;
+  /** Les entrées en anglais, quand la traduction de `inputSchema` (écrit avec les noms français) ne suffit pas. */
+  entreesEn?: Record<string, unknown>;
   title: string;
   description: string;
   inputSchema: Record<string, unknown>;
@@ -37,155 +47,167 @@ const vide = { type: 'object', properties: {}, additionalProperties: false };
 const PERIODE = {
   type: 'object', additionalProperties: false,
   properties: {
-    jours: { type: 'integer', enum: [7, 14, 30, 90, 365], description: 'Les derniers jours (30 par défaut).' },
-    du: { type: 'string', description: 'Premier jour, AAAA-MM-JJ (avec « au », à la place de « jours »).' },
-    au: { type: 'string', description: 'Dernier jour, AAAA-MM-JJ.' },
+    jours: { type: 'integer', enum: [7, 14, 30, 90, 365], description: 'Number of past days (default: 30).' },
+    du: { type: 'string', description: 'Start date, YYYY-MM-DD (use with au, instead of jours).' },
+    au: { type: 'string', description: 'End date, YYYY-MM-DD.' },
   },
 };
-const periodeMcp = (args: Record<string, unknown>) => (args.du || args.au ? { du: args.du, au: args.au } : args.jours);
+const PERIODE_EN = {
+  type: 'object', additionalProperties: false,
+  properties: {
+    days: { type: 'integer', enum: [7, 14, 30, 90, 365], description: 'Number of past days (default: 30).' },
+    from: { type: 'string', description: 'Start date, YYYY-MM-DD (use with to, instead of days).' },
+    to: { type: 'string', description: 'End date, YYYY-MM-DD.' },
+  },
+};
+// En anglais, `from` et `to` arrivent traduits en `de` et `a` (les noms du créneau d'un bloc).
+const periodeMcp = (args: Record<string, unknown>) => {
+  const du = args.du ?? args.de, au = args.au ?? args.a;
+  return du || au ? { du, au } : args.jours;
+};
 
 const PROPRIETES_BLOC = {
-  titre: { type: 'string', description: 'Libellé du bouton, titre de section ou texte du paragraphe.' },
-  url: { type: 'string', description: 'Adresse https://, mailto: ou tel:.' },
+  titre: { type: 'string', description: 'Button label, section heading or paragraph text.' },
+  url: { type: 'string', description: 'https://, mailto: or tel: URL.' },
   sousTitre: { type: 'string' },
   description: { type: 'string' },
-  icone: { type: 'string', description: 'Nom d’un picto ou d’un réseau : youtube, instagram, fusee…' },
-  image: { type: 'string', description: 'La vignette : le chemin rendu par envoyer_image (/media/…), ou une adresse https.' },
-  public: { type: 'boolean', description: 'Visible sur la page (vrai par défaut).' },
-  vedette: { type: 'boolean', description: 'Mis en avant.' },
-  format: { type: 'string', enum: ['bouton', 'bandeau', 'carte'], description: 'Forme d’un bloc mis en avant.' },
-  debut: { type: 'string', description: 'Date ISO 8601 à partir de laquelle le bloc s’affiche ; vide : tout de suite.' },
-  fin: { type: 'string', description: 'Date ISO 8601 où le bloc disparaît ; vide : jamais.' },
-  compteARebours: { type: 'boolean', description: 'Avant le début, montrer un compte à rebours.' },
-  prix: { type: 'string', description: 'Pour un produit : « 29 € ».' },
-  montants: { type: 'array', items: { type: 'number' }, description: 'Pour « soutien » : les montants proposés en euros.' },
-  questions: { type: 'array', items: { type: 'object', properties: { question: { type: 'string' }, reponse: { type: 'string' } } }, description: 'Pour une FAQ.' },
+  icone: { type: 'string', description: 'Icon name or social network id: youtube, instagram, fusee…' },
+  image: { type: 'string', description: 'Thumbnail: path returned by upload_image (/media/…), or an https URL.' },
+  public: { type: 'boolean', description: 'Visible on the page (default: true). false hides the block without deleting it.' },
+  vedette: { type: 'boolean', description: 'Featured (highlighted) block.' },
+  format: { type: 'string', enum: ['bouton', 'bandeau', 'carte'], description: 'Layout of a featured block.' },
+  debut: { type: 'string', description: 'ISO 8601 date when the block starts showing; empty: immediately.' },
+  fin: { type: 'string', description: 'ISO 8601 date when the block stops showing; empty: never.' },
+  compteARebours: { type: 'boolean', description: 'Show a countdown before the start date.' },
+  prix: { type: 'string', description: 'Product price, for example "29 €".' },
+  montants: { type: 'array', items: { type: 'number' }, description: 'For tip blocks: suggested amounts in euros.' },
+  questions: { type: 'array', items: { type: 'object', properties: { question: { type: 'string' }, reponse: { type: 'string' } } }, description: 'FAQ items.' },
 };
 
 const OUTILS: Outil[] = [
   {
-    name: 'lire_page', title: 'Lire la page',
-    description: 'La page entière : son adresse, son offre, ses réglages (profil, thème, réseaux, couleurs…) et ses blocs dans l’ordre, avec leurs id.',
+    name: 'get_page', ancien: 'lire_page', title: 'Get page',
+    description: 'Full page: URL, plan, settings (profile, theme, social links, colors…) and blocks in display order, with their ids.',
     inputSchema: vide, annotations: { readOnlyHint: true, openWorldHint: false },
     appeler: a => lirePage(a),
   },
   {
-    name: 'lister_themes', title: 'Lister les thèmes',
-    description: 'Les thèmes que la page peut prendre : id, nom, humeur, famille.',
+    name: 'list_themes', ancien: 'lister_themes', title: 'List themes',
+    description: 'Available themes: id, name, mood and family.',
     inputSchema: vide, annotations: { readOnlyHint: true, openWorldHint: false },
     appeler: () => ({ themes: listerThemes() }),
   },
   {
-    name: 'lire_stats', title: 'Lire les statistiques',
-    description: 'Vues, visiteurs et clics de la page sur une période, par jour, par bloc, par réseau, par appareil et par pays, comparés à la période d’avant.',
-    inputSchema: PERIODE,
+    name: 'get_analytics', ancien: 'lire_stats', title: 'Get analytics',
+    description: 'Page views, visitors and clicks for a period, broken down by day, block, referrer, device and country, compared with the previous period.',
+    inputSchema: PERIODE, entreesEn: PERIODE_EN,
     annotations: { readOnlyHint: true, openWorldHint: false },
     appeler: (a, args) => ({ stats: lireStats(a, periodeMcp(args)) }),
   },
   {
-    name: 'lire_compte', title: 'Lire le compte',
-    description: 'Le compte : adresse de la page, offre, essai, abonnement, et pour chaque fonction de Hopla si l’offre l’inclut.',
+    name: 'get_account', ancien: 'lire_compte', title: 'Get account',
+    description: 'Account details: page URL, plan, trial, subscription, and for each feature whether the current plan includes it.',
     inputSchema: vide, annotations: { readOnlyHint: true, openWorldHint: false },
     appeler: a => lireCompte(a),
   },
   {
-    name: 'lire_semaine', title: 'Lire les vues de la semaine',
-    description: 'Les vues des 7 derniers jours et celles des 7 d’avant, pour toutes les offres.',
+    name: 'get_weekly_views', ancien: 'lire_semaine', title: 'Get weekly views',
+    description: 'Views for the last 7 days and the 7 days before, available on all plans.',
     inputSchema: vide, annotations: { readOnlyHint: true, openWorldHint: false },
     appeler: a => lireSemaine(a),
   },
   {
-    name: 'lire_resume', title: 'Résumer les statistiques',
-    description: 'La période en une phrase (« En 30 jours, ta page a eu… ») et ses faits marquants, comme « En bref » dans Stats.',
-    inputSchema: PERIODE, annotations: { readOnlyHint: true, openWorldHint: false },
+    name: 'get_analytics_summary', ancien: 'lire_resume', title: 'Get analytics summary',
+    description: 'One-sentence summary of the period (in French) and its highlights, as shown in the admin panel.',
+    inputSchema: PERIODE, entreesEn: PERIODE_EN, annotations: { readOnlyHint: true, openWorldHint: false },
     appeler: (a, args) => lireResume(a, periodeMcp(args)),
   },
   {
-    name: 'lire_liste', title: 'Lire la liste e-mail',
-    description: 'Le nombre d’inscrits, ceux de la semaine, ceux pas encore envoyés, et l’outil où ils partent (Brevo, Mailchimp, Make…).',
+    name: 'get_email_list', ancien: 'lire_liste', title: 'Get email list',
+    description: 'Subscriber count, new subscribers this week, pending sync count, and the connected integration (Brevo, Mailchimp, Make…).',
     inputSchema: vide, annotations: { readOnlyHint: true, openWorldHint: false },
     appeler: a => lireListe(a),
   },
   {
-    name: 'lister_inscrits', title: 'Lister les inscrits',
-    description: 'Les inscrits de la liste e-mail, du plus récent au plus ancien : e-mail, prénom, date, provenance. Par pages.',
+    name: 'list_subscribers', ancien: 'lister_inscrits', title: 'List subscribers',
+    description: 'Email list subscribers, newest first: email, first name, date, source. Paginated.',
     inputSchema: {
       type: 'object', additionalProperties: false,
-      properties: { limite: { type: 'integer', minimum: 1, maximum: 500, description: '100 par défaut.' }, depart: { type: 'integer', minimum: 0, description: 'Le « suivant » de la page d’avant.' } },
+      properties: { limite: { type: 'integer', minimum: 1, maximum: 500, description: 'Page size (default: 100).' }, depart: { type: 'integer', minimum: 0, description: 'Offset: the next value from the previous page.' } },
     },
     annotations: { readOnlyHint: true, openWorldHint: false },
     appeler: (a, args) => listerInscrits(a, args.limite, args.depart),
   },
   {
-    name: 'lire_qr_code', title: 'QR code de la page',
-    description: 'Le QR code de la page, en image PNG. Ses scans se comptent à part dans les stats (source « QR code »).',
+    name: 'get_qr_code', ancien: 'lire_qr_code', title: 'Get QR code',
+    description: 'QR code of the page as a PNG image. Scans are tracked separately in analytics (QR code source).',
     inputSchema: vide, annotations: { readOnlyHint: true, openWorldHint: false }, image: true,
     appeler: async a => qrCode(a, 'png', 720),
   },
   {
-    name: 'lire_site', title: 'Lire un site',
-    description: 'Ce qu’un site dit de lui : titre, description, prix d’un produit et image, comme quand on colle une adresse dans Hopla.',
-    inputSchema: { type: 'object', required: ['url'], additionalProperties: false, properties: { url: { type: 'string' }, image: { type: 'boolean', description: 'Faux : le titre seul, plus rapide.' } } },
+    name: 'fetch_url_preview', ancien: 'lire_site', title: 'Fetch URL metadata',
+    description: 'Metadata of a web page: title, description, product price and image, as used when a URL is pasted in Hopla.',
+    inputSchema: { type: 'object', required: ['url'], additionalProperties: false, properties: { url: { type: 'string' }, image: { type: 'boolean', description: 'false: title only, faster.' } } },
     annotations: { readOnlyHint: true, openWorldHint: false },
     appeler: (a, args) => lireApercu(a, { url: args.url, image: args.image === true ? 'partage' : false }),
   },
   {
-    name: 'lire_flux', title: 'Lire un blog ou une chaîne',
-    description: 'Les derniers articles d’un blog ou d’un podcast, ou la dernière vidéo d’une chaîne YouTube (video: true).',
+    name: 'fetch_feed', ancien: 'lire_flux', title: 'Fetch feed',
+    description: 'Latest posts of a blog or podcast feed, or the latest video of a YouTube channel (video: true).',
     inputSchema: { type: 'object', required: ['url'], additionalProperties: false, properties: { url: { type: 'string' }, video: { type: 'boolean' } } },
     annotations: { readOnlyHint: true, openWorldHint: false },
     appeler: (a, args) => lireFlux(a, args),
   },
   {
-    name: 'lire_note_avis', title: 'Lire une note d’avis',
-    description: 'La note d’une page d’avis (Trustpilot, ou une page qui la déclare), sur 5, et le nombre d’avis.',
+    name: 'fetch_review_rating', ancien: 'lire_note_avis', title: 'Fetch review rating',
+    description: 'Rating of a review page (Trustpilot, or any page declaring it in JSON-LD), out of 5, with the review count.',
     inputSchema: { type: 'object', required: ['url'], additionalProperties: false, properties: { url: { type: 'string' } } },
     annotations: { readOnlyHint: true, openWorldHint: false },
     appeler: (a, args) => lireNoteAvis(a, args),
   },
   {
-    name: 'lister_reseaux', title: 'Lister les réseaux',
-    description: 'Les réseaux qu’une page peut afficher en icônes (id et nom).',
+    name: 'list_social_networks', ancien: 'lister_reseaux', title: 'List social networks',
+    description: 'Social networks a page can display as icons (id and name).',
     inputSchema: vide, annotations: { readOnlyHint: true, openWorldHint: false },
     appeler: () => listerReseaux(),
   },
   {
-    name: 'lister_pictos', title: 'Lister les pictos',
-    description: 'Les pictos qu’un bloc peut prendre dans son champ « icone ».',
+    name: 'list_icons', ancien: 'lister_pictos', title: 'List icons',
+    description: 'Icons available for the icon field of a block.',
     inputSchema: vide, annotations: { readOnlyHint: true, openWorldHint: false },
     appeler: () => listerPictos(),
   },
   {
-    name: 'lister_types', title: 'Lister les types de blocs',
-    description: 'Les types de blocs que cette page peut poser.',
+    name: 'list_block_types', ancien: 'lister_types', title: 'List block types',
+    description: 'Block types available for this page.',
     inputSchema: vide, annotations: { readOnlyHint: true, openWorldHint: false },
     appeler: a => listerTypes(a),
   },
   {
-    name: 'lister_cles', title: 'Lister les clés d’API',
-    description: 'Les clés du compte (jamais la clé elle-même) : nom, début, droits, dernière utilisation.',
+    name: 'list_api_keys', ancien: 'lister_cles', title: 'List API keys',
+    description: 'API keys of the account (never the secret): name, prefix, permissions, last used.',
     inputSchema: vide, annotations: { readOnlyHint: true, openWorldHint: false },
     appeler: a => listerCles(a),
   },
   {
-    name: 'modifier_reglages', title: 'Modifier les réglages',
-    description: 'Change une partie des réglages de la page ; le reste est gardé. profil, bouton, seo, couleurs et redirection se complètent champ par champ, reseaux se remplace en entier.',
+    name: 'update_settings', ancien: 'modifier_reglages', title: 'Update settings',
+    description: 'Partially update page settings; omitted fields are unchanged. profile, button, seo, colors and redirect are merged field by field; socialLinks is replaced as a whole.',
     inputSchema: {
       type: 'object', required: ['reglages'], additionalProperties: false,
       properties: {
         reglages: {
           type: 'object', additionalProperties: true,
           properties: {
-            profil: { type: 'object', properties: { nom: { type: 'string' }, bio: { type: 'string' }, avatar: { type: 'string', description: 'La photo : le chemin rendu par envoyer_image (/media/…), ou une adresse https.' } } },
+            profil: { type: 'object', properties: { nom: { type: 'string' }, bio: { type: 'string' }, avatar: { type: 'string', description: 'Profile photo: path returned by upload_image (/media/…), or an https URL.' } } },
             theme: { type: 'string', enum: THEMES.map(t => t.id) },
             reseaux: { type: 'array', items: { type: 'object', required: ['reseau', 'url'], properties: { reseau: { type: 'string', enum: [...RESEAUX] }, url: { type: 'string' } } } },
             reseauxPosition: { type: 'string', enum: ['haut', 'bas'] },
-            couleurs: { type: 'object', description: 'En #rrggbb ; vide : la couleur du thème.', properties: { fond: { type: 'string' }, boutons: { type: 'string' }, accent: { type: 'string' } } },
+            couleurs: { type: 'object', description: '#rrggbb values; empty: theme default.', properties: { fond: { type: 'string' }, boutons: { type: 'string' }, accent: { type: 'string' } } },
             bouton: { type: 'object', properties: { style: { type: 'string', enum: ['plein', 'contour', 'doux', 'relief', 'verre'] }, forme: { type: 'string', enum: ['pilule', 'arrondi', 'carre'] }, ombre: { type: 'string', enum: ['aucune', 'subtile', 'marquee'] } } },
             seo: { type: 'object', properties: { titre: { type: 'string' }, description: { type: 'string' } } },
-            partage: { type: 'boolean', description: 'Le bouton Partager en haut de la page.' },
+            partage: { type: 'boolean', description: 'Show the Share button at the top of the page.' },
             vouvoiement: { type: 'boolean' },
-            redirection: { type: 'object', description: 'Toute la page envoyée vers une adresse ; url vide pour arrêter.', properties: { url: { type: 'string' }, fin: { type: 'string' } } },
+            redirection: { type: 'object', description: 'Redirect the whole page to a URL; empty url to stop.', properties: { url: { type: 'string' }, fin: { type: 'string' } } },
           },
         },
       },
@@ -194,39 +216,39 @@ const OUTILS: Outil[] = [
     appeler: (a, args) => ({ reglages: modifierReglages(a, args.reglages) }),
   },
   {
-    name: 'ajouter_bloc', title: 'Ajouter un bloc',
-    description: 'Ajoute un bloc à la page, en haut ou à une position. Un lien par défaut.',
+    name: 'create_block', ancien: 'ajouter_bloc', title: 'Create block',
+    description: 'Create a block at the top of the page or at a given position. Defaults to a link.',
     inputSchema: {
       type: 'object', additionalProperties: false,
       properties: {
-        type: { type: 'string', enum: TYPES_BLOC.filter(t => t !== 'newsletter'), description: 'lien (par défaut), titre de section, texte, video, produit, faq…' },
+        type: { type: 'string', enum: TYPES_BLOC.filter(t => t !== 'newsletter'), description: 'link (default), heading, text, video, product, faq…' },
         ...PROPRIETES_BLOC,
-        position: { type: 'integer', minimum: 0, description: 'Sa place, 0 en haut (par défaut).' },
+        position: { type: 'integer', minimum: 0, description: 'Zero-based position, 0 = top (default).' },
       },
     },
     annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
     appeler: (a, { position, ...bloc }) => ({ bloc: ajouterBloc(a, bloc, position) }),
   },
   {
-    name: 'modifier_bloc', title: 'Modifier un bloc',
-    description: 'Change une partie d’un bloc ; le reste est gardé. Son type ne change pas. « public: false » le masque sans le supprimer.',
+    name: 'update_block', ancien: 'modifier_bloc', title: 'Update block',
+    description: 'Partially update a block; omitted fields are unchanged. The type cannot change. visible: false hides the block without deleting it.',
     inputSchema: {
       type: 'object', required: ['id'], additionalProperties: false,
-      properties: { id: { type: 'string', description: 'L’id du bloc, lu avec lire_page.' }, ...PROPRIETES_BLOC },
+      properties: { id: { type: 'string', description: 'Block id, from get_page.' }, ...PROPRIETES_BLOC },
     },
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     appeler: (a, { id, ...partiel }) => ({ bloc: modifierBloc(a, String(id ?? ''), partiel) }),
   },
   {
-    name: 'supprimer_bloc', title: 'Supprimer un bloc',
-    description: 'Supprime un bloc de la page, pour de bon. Pour le cacher sans le perdre, préfère modifier_bloc avec « public: false ».',
+    name: 'delete_block', ancien: 'supprimer_bloc', title: 'Delete block',
+    description: 'Permanently delete a block. To hide it instead, use update_block with visible: false.',
     inputSchema: { type: 'object', required: ['id'], additionalProperties: false, properties: { id: { type: 'string' } } },
     annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false },
     appeler: (a, { id }) => supprimerBloc(a, String(id ?? '')),
   },
   {
-    name: 'ordonner_blocs', title: 'Réordonner les blocs',
-    description: 'Le nouvel ordre de tous les blocs de la page : chaque id une fois, le premier en haut.',
+    name: 'reorder_blocks', ancien: 'ordonner_blocs', title: 'Reorder blocks',
+    description: 'New order of all blocks: every block id exactly once, first = top.',
     inputSchema: { type: 'object', required: ['ids'], additionalProperties: false, properties: { ids: { type: 'array', items: { type: 'string' } } } },
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     appeler: (a, { ids }) => ({ blocs: ordonnerBlocs(a, ids) }),
@@ -235,29 +257,29 @@ const OUTILS: Outil[] = [
 
 OUTILS.push(
   {
-    name: 'dupliquer_bloc', title: 'Dupliquer un bloc',
-    description: 'Copie un bloc et la pose juste sous lui. masquer: true la garde masquée le temps de la modifier.',
+    name: 'duplicate_block', ancien: 'dupliquer_bloc', title: 'Duplicate block',
+    description: 'Duplicate a block and insert the copy right below it. hidden: true creates the copy hidden.',
     inputSchema: { type: 'object', required: ['id'], additionalProperties: false, properties: { id: { type: 'string' }, masquer: { type: 'boolean' } } },
     annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
     appeler: (a, { id, masquer }) => ({ bloc: dupliquerBloc(a, String(id ?? ''), { masquer }) }),
   },
   {
-    name: 'envoyer_image', title: 'Envoyer une image',
-    description: 'Envoie une image chez Hopla (data URL WebP, JPEG ou PNG, 1,5 Mo au plus) et rend son adresse, à poser en avatar, en vignette (image) ou dans une galerie.',
+    name: 'upload_image', ancien: 'envoyer_image', title: 'Upload image',
+    description: 'Upload an image (WebP, JPEG or PNG data URL, 1.5 MB max) and return its path, for use as avatar, block thumbnail (image) or in a gallery.',
     inputSchema: { type: 'object', required: ['image'], additionalProperties: false, properties: { image: { type: 'string', description: 'data:image/png;base64,…' } } },
     annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
     appeler: (a, { image }) => envoyerMedia(a, octetsDeDataUrl(image)),
   },
   {
-    name: 'supprimer_inscrit', title: 'Supprimer un inscrit',
-    description: 'Retire un inscrit de la liste e-mail chez Hopla (pas chez l’outil branché), pour de bon.',
+    name: 'delete_subscriber', ancien: 'supprimer_inscrit', title: 'Delete subscriber',
+    description: 'Permanently delete a subscriber from the Hopla email list (not from the connected integration).',
     inputSchema: { type: 'object', required: ['id'], additionalProperties: false, properties: { id: { type: 'string' } } },
     annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false },
     appeler: (a, { id }) => supprimerInscrit(a, String(id ?? '')),
   },
   {
-    name: 'envoyer_inscrits', title: 'Envoyer les inscrits',
-    description: 'Envoie à l’outil branché (Brevo, Mailchimp, Make…) les inscrits qui n’y sont pas encore.',
+    name: 'sync_subscribers', ancien: 'envoyer_inscrits', title: 'Sync subscribers',
+    description: 'Push pending subscribers to the connected integration (Brevo, Mailchimp, Make…).',
     inputSchema: vide,
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     appeler: a => envoyerInscrits(a),
@@ -265,6 +287,7 @@ OUTILS.push(
 );
 
 const outilsPour = (a: Appelant) => OUTILS.filter(o => a.ecriture || o.annotations.readOnlyHint);
+const parNom = (nom: unknown) => OUTILS.find(o => o.name === nom || o.ancien === nom);
 
 type Id = string | number | null;
 interface Message { jsonrpc?: unknown; id?: Id; method?: unknown; params?: unknown }
@@ -275,7 +298,7 @@ const erreurRpc = (id: Id, code: number, message: string) => ({ jsonrpc: '2.0', 
 async function traiter(m: Message, a: Appelant): Promise<object | null> {
   const id = typeof m.id === 'string' || typeof m.id === 'number' ? m.id : null;
   const notification = !('id' in m);
-  if (m.jsonrpc !== '2.0' || typeof m.method !== 'string') return notification ? null : erreurRpc(id, -32600, 'Requête JSON-RPC invalide.');
+  if (m.jsonrpc !== '2.0' || typeof m.method !== 'string') return notification ? null : erreurRpc(id, -32600, 'Invalid JSON-RPC request.');
   if (notification) return null;
   const params = (m.params && typeof m.params === 'object' ? m.params : {}) as Record<string, unknown>;
   switch (m.method) {
@@ -290,16 +313,21 @@ async function traiter(m: Message, a: Appelant): Promise<object | null> {
     }
     case 'ping': return resultat(id, {});
     case 'tools/list':
-      return resultat(id, { tools: outilsPour(a).map(({ appeler: _, ...o }) => o) });
+      return resultat(id, {
+        tools: outilsPour(a).map(({ name, title, description, inputSchema, entreesEn, annotations }) =>
+          ({ name, title, description, inputSchema: entreesEn ?? schemaEnAnglais(inputSchema), annotations })),
+      });
     case 'tools/call': {
-      const outil = outilsPour(a).find(o => o.name === params.name);
-      if (!outil) {
-        const existe = OUTILS.some(o => o.name === params.name);
-        return resultat(id, { isError: true, content: [{ type: 'text', text: existe ? 'Cette clé est en lecture seule : crée une clé qui peut modifier ta page.' : `Outil inconnu : ${String(params.name)}.` }] });
+      const outil = parNom(params.name);
+      if (!outil || !outilsPour(a).includes(outil)) {
+        return resultat(id, { isError: true, content: [{ type: 'text', text: outil ? 'This API key is read-only. Use a key with write access.' : `Unknown tool: ${String(params.name)}.` }] });
       }
-      const args = (params.arguments && typeof params.arguments === 'object' && !Array.isArray(params.arguments) ? params.arguments : {}) as Record<string, unknown>;
+      const anglais = outil.name === params.name;
+      const brut = (params.arguments && typeof params.arguments === 'object' && !Array.isArray(params.arguments) ? params.arguments : {}) as Record<string, unknown>;
+      const args = (anglais ? versFrancais(brut) : brut) as Record<string, unknown>;
       try {
-        const sortie = await outil.appeler(a, args) as Record<string, unknown>;
+        const lue = await outil.appeler(a, args) as Record<string, unknown>;
+        const sortie = (anglais && !outil.image ? versAnglais(lue) : lue) as Record<string, unknown>;
         if (outil.image) {
           const { type, corps } = sortie as { type: string; corps: Uint8Array };
           return resultat(id, { content: [{ type: 'image', mimeType: type, data: Buffer.from(corps).toString('base64') }] });
@@ -307,13 +335,13 @@ async function traiter(m: Message, a: Appelant): Promise<object | null> {
         return resultat(id, { content: [{ type: 'text', text: JSON.stringify(sortie) }], structuredContent: sortie });
       } catch (error) {
         if (!(error instanceof ErreurApi)) console.error('[mcp]', error);
-        const message = error instanceof ErreurApi ? error.message : 'Le serveur a eu un souci. Réessaie dans un instant.';
+        const message = error instanceof ErreurApi ? (anglais ? error.enAnglais : error.message) : 'Internal server error. Retry shortly.';
         return resultat(id, { isError: true, content: [{ type: 'text', text: message }] });
       }
     }
     case 'resources/list': return resultat(id, { resources: [] });
     case 'prompts/list': return resultat(id, { prompts: [] });
-    default: return erreurRpc(id, -32601, `Méthode inconnue : ${m.method}.`);
+    default: return erreurRpc(id, -32601, `Method not found: ${m.method}.`);
   }
 }
 
@@ -327,13 +355,13 @@ export async function repondreMcp(requete: Request, env: Record<string, string |
   catch (error) { return reponseErreur(error); }
   const texte = await requete.text();
   // Assez pour une image de 1,5 Mo en base64 (envoyer_image), et ses quelques champs autour.
-  if (texte.length > 2_200_000) return json(413, erreurRpc(null, -32600, 'Message trop gros (2 Mo au plus).'));
+  if (texte.length > 2_200_000) return json(413, erreurRpc(null, -32600, 'Message too large (2 MB maximum).'));
   let corps: unknown;
   try { corps = JSON.parse(texte); }
-  catch { return json(400, erreurRpc(null, -32700, 'Le message n’est pas du JSON valide.')); }
+  catch { return json(400, erreurRpc(null, -32700, 'Message is not valid JSON.')); }
   const lot = Array.isArray(corps);
   const messages = (lot ? corps as unknown[] : [corps]).slice(0, 50).map(m => (m && typeof m === 'object' ? m : {}) as Message);
-  if (!messages.length) return json(400, erreurRpc(null, -32600, 'Lot vide.'));
+  if (!messages.length) return json(400, erreurRpc(null, -32600, 'Empty batch.'));
   const reponses = (await Promise.all(messages.map(m => traiter(m, a)))).filter((r): r is object => r !== null);
   // Que des notifications (notifications/initialized…) : rien à répondre.
   if (!reponses.length) return new Response(null, { status: 202, headers: ENTETES_CORS });
