@@ -3,6 +3,10 @@
  * documentation : la référence (Scalar, /docs/reference) le lit, et chacun peut le télécharger pour générer un client.
  * Les listes (types de bloc, réseaux, thèmes, styles) viennent du code de l'app, pour ne jamais s'en écarter ; les
  * routes et leurs erreurs suivent `src/server/api.ts` : un changement là-bas se reporte ici.
+ *
+ * Le fichier décrit l'API v2, en anglais (29 octobre 2026). La description ci-dessous garde les noms des gestes, en
+ * français, et `enAnglais` la traduit à la fin avec le dictionnaire de l'API (`src/lib/apiAnglais.ts`) : chemins,
+ * paramètres, propriétés, valeurs, exemples et codes d'erreur.
  */
 import { writeFileSync, mkdirSync } from 'node:fs';
 import {
@@ -12,6 +16,7 @@ import {
 import { THEMES } from '../../src/lib/themes.ts';
 import { FONCTIONS } from '../../src/lib/abonnement.ts';
 import { NOMS_RESEAUX, PICTOS } from '../../src/lib/pictos.ts';
+import { CHAMPS, CODES_EN, FONCTIONS_EN, OUTILS_EN, PARAMETRES_EN, ROUTES_EN, TYPES_EN, VALEURS, versAnglais } from '../../src/lib/apiAnglais.ts';
 
 const ref = (nom: string) => ({ $ref: `#/components/schemas/${nom}` });
 const texte = (description: string, extra: Record<string, unknown> = {}) => ({ type: 'string', description, ...extra });
@@ -43,13 +48,13 @@ const corpsUrl = (exemple: string, extra: Record<string, unknown> = {}) => ({
 });
 const PERIODE = [
   { name: 'periode', in: 'query', description: 'Number of past days.', schema: { type: 'integer', enum: [7, 14, 30, 90, 365], default: 30 } },
-  { name: 'du', in: 'query', description: 'Start date, YYYY-MM-DD, used with `au`.', schema: { type: 'string', format: 'date', example: '2026-10-01' } },
+  { name: 'du', in: 'query', description: 'Start date, YYYY-MM-DD, used with `to`.', schema: { type: 'string', format: 'date', example: '2026-10-01' } },
   { name: 'au', in: 'query', description: 'End date, YYYY-MM-DD.', schema: { type: 'string', format: 'date', example: '2026-10-15' } },
 ];
-const INSCRIT_EXEMPLE = { id: '92c5ca872beb', email: 'ana@exemple.fr', prenom: 'Ana', inscrit: '2026-10-27T18:02:11.000Z', source: 'instagram', envoye: false };
+const INSCRIT_EXEMPLE = { id: '92c5ca872beb', email: 'ana@example.com', prenom: 'Ana', inscrit: '2026-10-27T18:02:11.000Z', source: 'instagram', envoye: false };
 
 const BLOC_EXEMPLE = {
-  id: 'a1b2c3d4e5f6', type: 'lien', titre: 'Mon nouveau podcast', url: 'https://exemple.fr/podcast', sousTitre: '', description: '',
+  id: 'a1b2c3d4e5f6', type: 'lien', titre: 'Mon nouveau podcast', url: 'https://example.com/podcast', sousTitre: '', description: '',
   icone: 'micro', image: '', public: true, indexable: true, vedette: false, format: 'bandeau', teinte: 'accent', animation: 'auto',
   debut: '', fin: '', compteARebours: false, creneau: null, audience: null, cache: [], demanderPrenom: false, acces: null, preuve: null,
   prix: '', montants: [], partenariat: null, questions: [], images: [], coordonnees: null, adressePostale: '', sensible: false,
@@ -67,7 +72,7 @@ const REGLAGES_EXEMPLE = {
 
 const blocChamps = {
   titre: texte('Title: button label, section heading or paragraph text.', { example: 'Mon nouveau podcast' }),
-  url: texte('Target URL: https://…, mailto: or tel:.', { example: 'https://exemple.fr/podcast' }),
+  url: texte('Target URL: https://…, mailto: or tel:.', { example: 'https://example.com/podcast' }),
   sousTitre: texte('Subtitle, one line below the title.'),
   description: texte('Longer text below the title of a banner or card.'),
   icone: texte('Icon or social network name: youtube, instagram, fusee…', { example: 'micro' }),
@@ -81,9 +86,9 @@ const blocChamps = {
   fin: texte('ISO 8601 date when the block stops showing; empty: never. Requires Starter.', { example: '' }),
   compteARebours: oui('Show a countdown before the start date instead of hiding the block.'),
   prix: texte('Product price, as displayed: "29 €", "Dès 12 €".'),
-  montants: { type: 'array', items: { type: 'number' }, description: 'For soutien (tip) blocks: suggested amounts, in euros.', example: [5, 10, 20] },
+  montants: { type: 'array', items: { type: 'number' }, description: 'For tip blocks: suggested amounts, in euros.', example: [5, 10, 20] },
   questions: { type: 'array', items: ref('Question'), description: 'FAQ items, in order. 20 maximum.' },
-  preuve: { anyOf: [ref('Proof'), { type: 'null' }], description: 'For preuve blocks: a rating, a counter or a testimonial.' },
+  preuve: { anyOf: [ref('Proof'), { type: 'null' }], description: 'For proof blocks: a rating, a counter or a testimonial.' },
   partenariat: { anyOf: [ref('Partnership'), { type: 'null' }], description: 'Affiliate link: disclosure label (always displayed) and promo code.' },
   adressePostale: texte('Postal address of a location or contact card.'),
   sensible: oui('Adult content (18+): visitors must confirm before opening the link.'),
@@ -94,18 +99,19 @@ const spec = {
   openapi: '3.1.0',
   info: {
     title: 'Hopla API',
-    version: '1.1.0',
+    version: '2.0.0',
     summary: 'Read and update a Hopla page programmatically.',
     description: 'Manage a Hopla page from your code, with the features of the admin panel: profile, theme, social links, blocks, '
       + 'images, analytics, email list, QR code, and metadata fetching for websites, feeds and review pages. '
       + 'Requires the Pro plan (or the 14-day trial). Requests and responses are JSON, UTF-8 encoded.\n\n'
       + 'Create an API key in Réglages (Settings), "API et MCP", on [app.hopla.page](https://app.hopla.page/admin), then send it in the '
       + '`Authorization: Bearer hopla_…` header. Guides: [hopla.page/docs](https://hopla.page/docs).\n\n'
-      + 'Identifiers (paths, fields, values) are in French: see the [glossary](https://hopla.page/docs/glossary).',
+      + 'API v1 (`/api/v1`, French field names) remains supported for existing integrations: '
+      + 'see [Migrating from v1](https://hopla.page/docs/migrating-from-v1).',
     contact: { name: 'Hopla', url: 'https://hopla.page/docs' },
     license: { name: 'AGPL-3.0', identifier: 'AGPL-3.0-only' },
   },
-  servers: [{ url: 'https://app.hopla.page/api/v1', description: 'Production' }],
+  servers: [{ url: 'https://app.hopla.page/api/v2', description: 'Production' }],
   security: [{ cle: [] }],
   tags: [
     { name: 'Page', description: 'Full page and its settings: profile, theme, social links, colors, SEO.' },
@@ -137,8 +143,8 @@ const spec = {
       },
       patch: {
         tags: ['Page'], operationId: 'updateSettings', summary: 'Update settings',
-        description: 'Partially update settings; omitted fields are unchanged. `profil`, `bouton`, `seo`, `couleurs` and `redirection` are merged '
-          + 'field by field; `reseaux` is replaced as a whole. Requires a key with write access.',
+        description: 'Partially update settings; omitted fields are unchanged. `profile`, `button`, `seo`, `colors` and `redirect` are merged '
+          + 'field by field; `socialLinks` is replaced as a whole. Requires a key with write access.',
         requestBody: {
           required: true,
           content: { 'application/json': { schema: ref('SettingsUpdate'), example: { profil: { bio: 'Coach sportive à Lyon' }, theme: 'onyx' } } },
@@ -162,7 +168,7 @@ const spec = {
         description: 'Create a block at the top of the page, or at `position` (zero-based, 0 = top). Without `type`, creates a link.',
         requestBody: {
           required: true,
-          content: { 'application/json': { schema: ref('BlockCreate'), example: { type: 'lien', titre: 'Mon nouveau podcast', url: 'https://exemple.fr/podcast', position: 2 } } },
+          content: { 'application/json': { schema: ref('BlockCreate'), example: { type: 'lien', titre: 'Mon nouveau podcast', url: 'https://example.com/podcast', position: 2 } } },
         },
         responses: {
           201: { description: 'Created block, with its id.', content: { 'application/json': { schema: { type: 'object', properties: { bloc: ref('Block') } }, example: { bloc: BLOC_EXEMPLE } } } },
@@ -171,7 +177,7 @@ const spec = {
       },
     },
     '/blocs/{id}': {
-      parameters: [{ name: 'id', in: 'path', required: true, description: 'Block id, from GET /page or GET /blocs.', schema: { type: 'string', example: 'a1b2c3d4e5f6' } }],
+      parameters: [{ name: 'id', in: 'path', required: true, description: 'Block id, from GET /page or GET /blocks.', schema: { type: 'string', example: 'a1b2c3d4e5f6' } }],
       get: {
         tags: ['Blocks'], operationId: 'getBlock', summary: 'Get block',
         responses: {
@@ -182,7 +188,7 @@ const spec = {
       },
       patch: {
         tags: ['Blocks'], operationId: 'updateBlock', summary: 'Update block',
-        description: 'Partially update a block; omitted fields are unchanged. Type and id are immutable. `{"public": false}` hides the block without deleting it.',
+        description: 'Partially update a block; omitted fields are unchanged. Type and id are immutable. `{"visible": false}` hides the block without deleting it.',
         requestBody: { required: true, content: { 'application/json': { schema: ref('BlockUpdate'), example: { public: false } } } },
         responses: {
           200: { description: 'Updated block.', content: { 'application/json': { schema: { type: 'object', properties: { bloc: ref('Block') } }, example: { bloc: { ...BLOC_EXEMPLE, public: false } } } } },
@@ -192,7 +198,7 @@ const spec = {
       },
       delete: {
         tags: ['Blocks'], operationId: 'deleteBlock', summary: 'Delete block',
-        description: 'Permanently delete a block. To hide it instead, use PATCH with `{"public": false}`.',
+        description: 'Permanently delete a block. To hide it instead, use PATCH with `{"visible": false}`.',
         responses: {
           200: { description: 'Block deleted.', content: { 'application/json': { schema: { type: 'object', properties: { supprime: { type: 'string' } } }, example: { supprime: 'a1b2c3d4e5f6' } } } },
           404: erreur('Block not found.', 'bloc_introuvable', 'Block not found.'),
@@ -204,7 +210,7 @@ const spec = {
       parameters: [{ name: 'id', in: 'path', required: true, description: 'Id of the block to duplicate.', schema: { type: 'string', example: 'a1b2c3d4e5f6' } }],
       post: {
         tags: ['Blocks'], operationId: 'duplicateBlock', summary: 'Duplicate block',
-        description: 'Create a copy of the block right below it, with a new id. `masquer: true` creates the copy hidden.',
+        description: 'Create a copy of the block right below it, with a new id. `hidden: true` creates the copy hidden.',
         requestBody: { required: false, content: { 'application/json': { schema: objetDe({ masquer: oui('Create the copy hidden.') }), example: { masquer: true } } } },
         responses: {
           201: json('Copy.', objetDe({ bloc: ref('Block') }), { bloc: { ...BLOC_EXEMPLE, id: 'f6e5d4c3b2a1', public: false } }),
@@ -236,7 +242,7 @@ const spec = {
         parameters: PERIODE,
         responses: {
           200: { description: 'Analytics.', content: { 'application/json': { schema: { type: 'object', properties: { stats: ref('Analytics') } } } } },
-          400: erreur('Invalid period, or outside the retention period.', 'periode', 'Invalid period: use 7, 14, 30, 90 or 365 days, or du and au dates (YYYY-MM-DD).'),
+          400: erreur('Invalid period, or outside the retention period.', 'periode', 'Invalid period: use 7, 14, 30, 90 or 365 days, or from and to dates (YYYY-MM-DD).'),
           ...ERREURS,
         },
       },
@@ -282,7 +288,7 @@ const spec = {
       post: {
         tags: ['Images'], operationId: 'uploadImage', summary: 'Upload image',
         description: 'Upload a WebP, JPEG or PNG image, 1.5 MB maximum, hosted by Hopla. Send the raw bytes (`Content-Type: image/png`…), '
-          + 'or JSON `{"image": "data:image/png;base64,…"}`. Use the returned `chemin` (path) in `profil.avatar`, a block `image`, gallery `images` or `imageFond`.',
+          + 'or JSON `{"image": "data:image/png;base64,…"}`. Use the returned `path` in `profil.avatar`, a block `image`, gallery `images` or `imageFond`.',
         requestBody: {
           required: true,
           content: {
@@ -318,7 +324,7 @@ const spec = {
         description: 'Subscribers, newest first, paginated. `format=csv` returns the full CSV export (email, prenom, inscrit, source).',
         parameters: [
           { name: 'limite', in: 'query', description: 'Page size.', schema: { type: 'integer', minimum: 1, maximum: 500, default: 100 } },
-          { name: 'depart', in: 'query', description: 'Offset: the `suivant` value from the previous page; 0 for the first page.', schema: { type: 'integer', minimum: 0, default: 0 } },
+          { name: 'depart', in: 'query', description: 'Offset: the `next` value from the previous page; 0 for the first page.', schema: { type: 'integer', minimum: 0, default: 0 } },
           { name: 'format', in: 'query', schema: { type: 'string', enum: ['json', 'csv'], default: 'json' } },
         ],
         responses: {
@@ -326,10 +332,10 @@ const spec = {
             description: 'A page of subscribers, or the CSV file.',
             content: {
               'application/json': {
-                schema: objetDe({ inscrits: { type: 'array', items: ref('Subscriber') }, total: entier('Total subscribers.'), suivant: { type: ['integer', 'null'], description: 'Next offset, to pass as `depart`; null on the last page.' } }),
+                schema: objetDe({ inscrits: { type: 'array', items: ref('Subscriber') }, total: entier('Total subscribers.'), suivant: { type: ['integer', 'null'], description: 'Next offset, to pass as `offset`; null on the last page.' } }),
                 example: { inscrits: [INSCRIT_EXEMPLE], total: 128, suivant: 100 },
               },
-              'text/csv': { schema: { type: 'string' }, example: 'email,prenom,inscrit,source\nana@exemple.fr,Ana,2026-10-27T18:02:11.000Z,instagram\n' },
+              'text/csv': { schema: { type: 'string' }, example: 'email,prenom,inscrit,source\nana@example.com,Ana,2026-10-27T18:02:11.000Z,instagram\n' },
             },
           },
           ...ERREURS,
@@ -364,8 +370,8 @@ const spec = {
       post: {
         tags: ['Web fetching'], operationId: 'fetchUrlMetadata', summary: 'Fetch URL metadata',
         description: 'Title, description, price (for product pages) and image of a URL, as the admin panel does when a URL is pasted. '
-          + '`image`: `true` (social sharing image or favicon), `false`, `"partage"` (sharing image), `"logo"` or `"vignette"` (thumbnail).',
-        requestBody: corpsUrl('https://exemple.fr', { image: { description: 'Image to return.', oneOf: [{ type: 'boolean' }, { type: 'string', enum: ['partage', 'logo', 'vignette'] }] } }),
+          + '`image`: `true` (social sharing image or favicon), `false`, `"share"` (sharing image), `"logo"` or `"thumbnail"`.',
+        requestBody: corpsUrl('https://example.com', { image: { description: 'Image to return.', oneOf: [{ type: 'boolean' }, { type: 'string', enum: ['partage', 'logo', 'vignette'] }] } }),
         responses: {
           200: json('Page metadata.', objetDe({ apercu: objetDe({ titre: { type: 'string' }, description: { type: 'string' }, prix: { type: 'string' }, image: { type: ['string', 'null'], description: 'Image as a data URL; null if none.' } }) }),
             { apercu: { titre: 'Example Domain', description: '', prix: '', image: null } }),
@@ -378,10 +384,10 @@ const spec = {
       post: {
         tags: ['Web fetching'], operationId: 'fetchFeed', summary: 'Fetch feed',
         description: 'Latest three posts of a blog or podcast (RSS, Atom, or a page that declares its feed), or with `video: true` the latest long-form video of a YouTube channel.',
-        requestBody: corpsUrl('https://exemple.fr/blog', { video: oui('YouTube channel URL: return its latest video.') }),
+        requestBody: corpsUrl('https://example.com/blog', { video: oui('YouTube channel URL: return its latest video.') }),
         responses: {
           200: json('Posts; an empty list if nothing could be read.', objetDe({ articles: { type: 'array', items: objetDe({ titre: { type: 'string' }, url: { type: 'string' }, date: { type: 'string' }, image: { type: 'string' }, video: { type: 'string' } }) } }),
-            { articles: [{ titre: 'Mon dernier épisode', url: 'https://exemple.fr/blog/episode-12', date: '2026-10-27T08:00:00.000Z', image: '', video: '' }] }),
+            { articles: [{ titre: 'Mon dernier épisode', url: 'https://example.com/blog/episode-12', date: '2026-10-27T08:00:00.000Z', image: '', video: '' }] }),
           ...lectureWeb,
         },
       },
@@ -390,7 +396,7 @@ const spec = {
       post: {
         tags: ['Web fetching'], operationId: 'fetchReviewRating', summary: 'Fetch review rating',
         description: 'Rating of a Trustpilot page, or of any page declaring it (JSON-LD `aggregateRating`), normalized to 5. `null` if the page has no rating.',
-        requestBody: corpsUrl('https://fr.trustpilot.com/review/exemple.fr'),
+        requestBody: corpsUrl('https://fr.trustpilot.com/review/example.com'),
         responses: {
           200: json('Rating.', objetDe({ note: { anyOf: [objetDe({ note: { type: 'number' }, nombre: { type: 'integer' }, source: { type: 'string' } }), { type: 'null' }] } }),
             { note: { note: 4.6, nombre: 1820, source: 'Trustpilot' } }),
@@ -417,7 +423,7 @@ const spec = {
     '/cles': {
       get: {
         tags: ['Account'], operationId: 'listApiKeys', summary: 'List API keys',
-        description: 'API keys of the account, never the secret itself: name, prefix, permissions and last use. `courante` marks the key used for this request.',
+        description: 'API keys of the account, never the secret itself: name, prefix, permissions and last use. `current` marks the key used for this request.',
         responses: {
           200: json('API keys.', objetDe({ cles: { type: 'array', items: objetDe({ id: { type: 'string' }, nom: { type: 'string' }, debut: { type: 'string' }, ecriture: { type: 'boolean' }, cree: { type: 'string' }, utilisee: { type: ['string', 'null'] }, courante: { type: 'boolean' } }) } }),
             { cles: [{ id: '2916f190dae2', nom: 'Mon script', debut: 'hopla_hT-a', ecriture: true, cree: '2026-10-28T10:00:00.000Z', utilisee: '2026-10-28T21:40:00.000Z', courante: true }] }),
@@ -441,7 +447,7 @@ const spec = {
     '/pictos': {
       get: {
         tags: ['Reference values'], operationId: 'listIcons', summary: 'List icons',
-        description: 'Valid values for the `icone` field of a block.',
+        description: 'Valid values for the `icon` field of a block.',
         responses: { 200: json('Icons.', objetDe({ pictos: { type: 'array', items: objetDe({ nom: { type: 'string' }, libelle: { type: 'string' } }) } }), { pictos: [{ nom: 'micro', libelle: 'Micro' }] }), ...ERREURS },
       },
     },
@@ -508,7 +514,7 @@ const spec = {
           partage: oui('Show the Share button at the top of the page.'),
           vouvoiement: oui('Page copy uses the formal "vous" form.'),
           animation: { type: 'string', enum: [...ANIMATIONS], description: 'Animation of featured blocks.' },
-          redirection: { type: 'object', description: 'Redirect the whole page to a URL until `fin`; empty `url` to stop (Starter).', properties: { url: { type: 'string' }, fin: { type: 'string' } } },
+          redirection: { type: 'object', description: 'Redirect the whole page to a URL until `endsAt`; empty `url` to stop (Starter).', properties: { url: { type: 'string' }, fin: { type: 'string' } } },
         },
         additionalProperties: true,
         example: REGLAGES_EXEMPLE,
@@ -582,13 +588,71 @@ const spec = {
   },
 };
 
+/* ---- La traduction de la description, des noms des gestes à ceux de l'API v2 ---- */
+
+const estObjet = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
+const ROUTES_FR = Object.fromEntries(Object.entries(ROUTES_EN).map(([en, fr]) => [fr, en]));
+const PARAMETRES_FR = Object.fromEntries(Object.entries(PARAMETRES_EN).map(([en, fr]) => [fr, en]));
+const cheminEn = (chemin: string) => (ROUTES_FR[chemin.replace('{id}', ':id')] ?? chemin).replace(':id', '{id}');
+const valeurEn = (nom: string, v: unknown): unknown => {
+  const d = VALEURS[nom];
+  if (!d) return v;
+  return Array.isArray(v) ? v.map(x => (typeof x === 'string' ? d[x] ?? x : x)) : typeof v === 'string' ? d[v] ?? v : v;
+};
+/** Le nom anglais d'une propriété, selon la propriété qui la contient. */
+const proprieteEn = (p: string, parent: string) => (parent === 'fonctions' ? FONCTIONS_EN[p] ?? p
+  : parent === 'cles' && p === 'debut' ? 'prefix' : parent === 'liste' && p === 'semaine' ? 'thisWeek' : CHAMPS[p] ?? p);
+/** Un exemple : ses noms et ses valeurs, et le code d'une erreur. */
+const exempleEn = (x: unknown, nom: string): unknown => {
+  if (!estObjet(x) && !Array.isArray(x)) return valeurEn(nom, x);
+  const v = versAnglais(x, 'exemple') as Record<string, unknown>;
+  if (estObjet(v) && estObjet(v.error) && typeof v.error.code === 'string') v.error.code = CODES_EN[v.error.code] ?? v.error.code;
+  return v;
+};
+
+function enAnglais(n: unknown, nom = ''): unknown {
+  if (Array.isArray(n)) return n.map(x => enAnglais(x, nom));
+  if (!estObjet(n)) return n;
+  const sortie: Record<string, unknown> = {};
+  for (const [cle, x] of Object.entries(n)) {
+    if (cle === 'properties' && estObjet(x)) sortie[cle] = Object.fromEntries(Object.entries(x).map(([p, s]) => [proprieteEn(p, nom), enAnglais(s, p)]));
+    else if (cle === 'required' && Array.isArray(x)) sortie[cle] = x.map(p => proprieteEn(String(p), nom));
+    else if (cle === 'enum') sortie[cle] = valeurEn(nom, x);
+    else if (cle === 'example' || cle === 'default') sortie[cle] = exempleEn(x, nom);
+    else if (cle === 'parameters' && Array.isArray(x)) sortie[cle] = x.map(p => (estObjet(p) && p.in === 'query' ? { ...p, name: PARAMETRES_FR[String(p.name)] ?? p.name } : p));
+    else sortie[cle] = enAnglais(x, nom);
+  }
+  return sortie;
+}
+
+const v2 = enAnglais(spec) as typeof spec;
+v2.paths = Object.fromEntries(Object.entries(v2.paths).map(([chemin, op]) => [cheminEn(chemin), op])) as typeof spec.paths;
+// La seule liste rendue à la racine sous un autre nom : /social-networks.
+{
+  const r = (v2.paths as Record<string, any>)['/social-networks'].get.responses[200].content['application/json'];
+  r.schema.properties = { socialNetworks: r.schema.properties.socialLinks };
+  r.example = { socialNetworks: r.example.socialLinks };
+}
+
 mkdirSync(new URL('../public/', import.meta.url), { recursive: true });
-writeFileSync(new URL('../public/openapi.json', import.meta.url), `${JSON.stringify(spec, null, 2)}\n`);
+writeFileSync(new URL('../public/openapi.json', import.meta.url), `${JSON.stringify(v2, null, 2)}\n`);
 // Les listes que les guides montrent (thèmes, réseaux, types de bloc), tirées du même code.
 writeFileSync(new URL('../lib/genere.json', import.meta.url), `${JSON.stringify({
-  themes: THEMES.map(t => ({ id: t.id, nom: t.nom, humeur: t.humeur, famille: t.famille })),
+  themes: THEMES.map(t => ({ id: t.id, nom: t.nom, humeur: VALEURS.humeur[t.humeur] ?? t.humeur, famille: VALEURS.famille[t.famille] ?? t.famille })),
   reseaux: RESEAUX.map(id => ({ id, nom: NOMS_RESEAUX[id] ?? id })),
   pictos: PICTOS,
-  types: typesPublics,
+  types: typesPublics.map(t => TYPES_EN[t]),
+  // Le passage de la v1 à la v2 : chaque ancien nom et le nouveau.
+  v1: {
+    routes: Object.entries(ROUTES_EN).map(([v2, v1]) => [v1.replace(':id', '{id}'), v2.replace(':id', '{id}')]),
+    parametres: Object.entries(PARAMETRES_EN).filter(([v2, v1]) => v1 !== v2).map(([v2, v1]) => [v1, v2]),
+    champs: Object.entries(CHAMPS).filter(([v1, v2]) => v1 !== v2).sort(([a], [b]) => a.localeCompare(b)),
+    types: Object.entries(TYPES_EN).filter(([v1, v2]) => v1 !== v2),
+    valeurs: Object.entries(VALEURS).filter(([champ]) => !['type', 'types', 'humeur', 'synchro'].includes(champ) && !champ.includes('.'))
+      .flatMap(([champ, d]) => Object.entries(d).filter(([v1, v2]) => v1 !== v2).map(([v1, v2]) => [`${CHAMPS[champ] ?? champ}: ${v1}`, v2])),
+    fonctions: Object.entries(FONCTIONS_EN).filter(([v1, v2]) => v1 !== v2),
+    codes: Object.entries(CODES_EN),
+    outils: Object.entries(OUTILS_EN),
+  },
 }, null, 2)}\n`);
 console.log('public/openapi.json and lib/genere.json written');

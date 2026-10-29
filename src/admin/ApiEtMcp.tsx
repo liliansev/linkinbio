@@ -13,7 +13,7 @@ import { Etiquette, Reserve, usePermis } from './offre.tsx';
  */
 
 export const ADRESSE_MCP = `${ORIGINE_ADMIN}/mcp`;
-export const ADRESSE_API = `${ORIGINE_ADMIN}/api/v1`;
+export const ADRESSE_API = `${ORIGINE_ADMIN}/api/v2`;
 /** La documentation (documentation/, servie sur hopla.page/docs). */
 export const ADRESSE_DOCS = `${ORIGINE_PUBLIQUE}/docs`;
 

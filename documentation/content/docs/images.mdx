@@ -5,7 +5,7 @@ description: Upload an image to Hopla and use it as a profile photo, thumbnail, 
 
 <RoutesDe tag="Images" />
 
-Pages only display images hosted by Hopla: fast loading, no third-party dependency, no visitor tracking. Uploading is a two-step process: `POST /medias` stores the image and returns its `chemin` (path), then that path is used in settings or in a block.
+Pages only display images hosted by Hopla: fast loading, no third-party dependency, no visitor tracking. Uploading is a two-step process: `POST /media` stores the image and returns its `path`, then that path is used in settings or in a block.
 
 ## Upload
 
@@ -18,7 +18,7 @@ Supported formats: WebP, JPEG or PNG, 1.5 MB maximum. Two upload methods:
 The request body contains the binary image, with its MIME type in `Content-Type`.
 
 ```bash
-curl -X POST https://app.hopla.page/api/v1/medias \
+curl -X POST https://app.hopla.page/api/v2/media \
   -H "Authorization: Bearer $HOPLA_API_KEY" \
   -H "Content-Type: image/jpeg" \
   --data-binary @portrait.jpg
@@ -31,7 +31,7 @@ curl -X POST https://app.hopla.page/api/v1/medias \
 The image encoded as a data URL, in the `image` field. This is the format used by the MCP server.
 
 ```bash
-curl -X POST https://app.hopla.page/api/v1/medias \
+curl -X POST https://app.hopla.page/api/v2/media \
   -H "Authorization: Bearer $HOPLA_API_KEY" \
   -H "Content-Type: application/json" \
   -d "{\"image\": \"data:image/png;base64,$(base64 -w0 logo.png)\"}"
@@ -44,7 +44,7 @@ curl -X POST https://app.hopla.page/api/v1/medias \
 ```json title="201 Created"
 {
   "media": {
-    "chemin": "/media/054a3c6991bc.png",
+    "path": "/media/054a3c6991bc.png",
     "url": "https://hopla.page/media/054a3c6991bc.png"
   }
 }
@@ -56,28 +56,28 @@ The format is detected from the file signature (magic bytes), not from its exten
 
 | Location | Field |
 | --- | --- |
-| Profile photo | `PATCH /reglages` with `{"profil": {"avatar": "/media/…"}}` |
-| Page background (Starter) | `PATCH /reglages` with `{"imageFond": "/media/…"}` |
+| Profile photo | `PATCH /settings` with `{"profile": {"avatar": "/media/…"}}` |
+| Page background (Starter) | `PATCH /settings` with `{"backgroundImage": "/media/…"}` |
 | Link thumbnail, product photo | Block `image` |
-| Gallery | `images` of a `galerie` block, a list of paths |
+| Gallery | `images` of a `gallery` block, a list of paths |
 
 ```js title="Update the profile photo with Node.js"
 import { readFile } from 'node:fs/promises';
 
 const key = process.env.HOPLA_API_KEY;
-const api = 'https://app.hopla.page/api/v1';
+const api = 'https://app.hopla.page/api/v2';
 
-const upload = await fetch(`${api}/medias`, {
+const upload = await fetch(`${api}/media`, {
   method: 'POST',
   headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'image/jpeg' },
   body: await readFile('portrait.jpg'),
 });
 const { media } = await upload.json();
 
-await fetch(`${api}/reglages`, {
+await fetch(`${api}/settings`, {
   method: 'PATCH',
   headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-  body: JSON.stringify({ profil: { avatar: media.chemin } }),
+  body: JSON.stringify({ profile: { avatar: media.path } }),
 });
 ```
 
@@ -85,8 +85,8 @@ await fetch(`${api}/reglages`, {
 
 | Status | `code` | Cause |
 | --- | --- | --- |
-| 400 | `image_absente` | Empty body, or `image` is not a data URL |
-| 413 | `image_trop_grosse` | Image over 1.5 MB |
-| 413 | `plus_de_place` | Image storage quota exceeded: delete images in the admin panel |
-| 415 | `format_image` | Format other than WebP, JPEG or PNG |
-| 403 | `lecture_seule` | The key is read-only |
+| 400 | `missing_image` | Empty body, or `image` is not a data URL |
+| 413 | `image_too_large` | Image over 1.5 MB |
+| 413 | `storage_quota_exceeded` | Image storage quota exceeded: delete images in the admin panel |
+| 415 | `unsupported_image_format` | Format other than WebP, JPEG or PNG |
+| 403 | `read_only_key` | The key is read-only |

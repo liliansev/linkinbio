@@ -6,15 +6,15 @@ description: Generate the QR code of a page, as SVG or PNG.
 <RoutesDe tag="Sharing" />
 
 ```bash
-curl "https://app.hopla.page/api/v1/qr?format=png&taille=1200" \
+curl "https://app.hopla.page/api/v2/qr-code?format=png&size=1200" \
   -H "Authorization: Bearer $HOPLA_API_KEY" -o qr-hopla.png
 ```
 
 | Parameter | Values |
 | --- | --- |
 | `format` | `svg` (default), scalable without quality loss for print, or `png` |
-| `taille` | Size in pixels, from 120 to 2000; default 720 |
+| `size` | Size in pixels, from 120 to 2000; default 720 |
 
 The QR code points to the public page URL (the custom domain, if any), followed by `?s=qr`: scans are counted separately, as the "QR code" source, in [analytics](/analytics).
 
-The MCP server returns it as an image (`lire_qr_code`).
+The MCP server returns it as an image (`get_qr_code`).

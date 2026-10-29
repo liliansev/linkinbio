@@ -109,42 +109,42 @@ Open the file from Claude Desktop: Settings, Developer, Edit Config. Then restar
 
 ## Tools
 
-25 tools, covering the REST API operations. With a read-only key, only the 16 read tools are exposed. Tool names are in French: see the [glossary](/glossary).
+25 tools, covering the REST API operations. With a read-only key, only the 16 read tools are exposed. Tool names and fields match API v2; the former French tool names (`lire_page`, `ajouter_bloc`…) are still accepted, with French field names.
 
 ### Read tools
 
 | Tool | Description |
 | --- | --- |
-| `lire_page` | Full page: URL, plan, settings, and blocks with their ids |
-| `lire_compte` | Plan, trial, subscription, and included features |
-| `lire_stats` | Views, visitors and clicks for a period (`jours`, or `du` and `au`) |
-| `lire_semaine` | Views for the last 7 days and the 7 days before |
-| `lire_resume` | One-sentence summary of the period and its highlights |
-| `lire_liste` | Subscriber count and connected integration |
-| `lister_inscrits` | Subscribers, paginated |
-| `lire_qr_code` | QR code of the page, as an image |
-| `lire_site` | Title, description, price and image of a URL |
-| `lire_flux` | Latest posts of a feed, or latest video of a YouTube channel |
-| `lire_note_avis` | Rating of a review page, out of 5 |
-| `lister_themes` | Available themes |
-| `lister_reseaux` | Social networks displayed as icons |
-| `lister_pictos` | Block icons |
-| `lister_types` | Block types available to the page |
-| `lister_cles` | Account API keys, without their secret |
+| `get_page` | Full page: URL, plan, settings, and blocks with their ids |
+| `get_account` | Plan, trial, subscription, and included features |
+| `get_analytics` | Views, visitors and clicks for a period (`days`, or `from` and `to`) |
+| `get_weekly_views` | Views for the last 7 days and the 7 days before |
+| `get_analytics_summary` | One-sentence summary of the period and its highlights |
+| `get_email_list` | Subscriber count and connected integration |
+| `list_subscribers` | Subscribers, paginated |
+| `get_qr_code` | QR code of the page, as an image |
+| `fetch_url_preview` | Title, description, price and image of a URL |
+| `fetch_feed` | Latest posts of a feed, or latest video of a YouTube channel |
+| `fetch_review_rating` | Rating of a review page, out of 5 |
+| `list_themes` | Available themes |
+| `list_social_networks` | Social networks displayed as icons |
+| `list_icons` | Block icons |
+| `list_block_types` | Block types available to the page |
+| `list_api_keys` | Account API keys, without their secret |
 
 ### Write tools
 
 | Tool | Description |
 | --- | --- |
-| `modifier_reglages` | Update profile, theme, social links, colors, SEO… |
-| `ajouter_bloc` | Create a block at the top or at a given position |
-| `modifier_bloc` | Partially update a block; `public: false` hides it |
-| `dupliquer_bloc` | Duplicate a block right below the original, optionally hidden |
-| `supprimer_bloc` | Permanently delete a block |
-| `ordonner_blocs` | Reorder all blocks |
-| `envoyer_image` | Upload a data URL image, for a block or a profile photo |
-| `supprimer_inscrit` | Permanently delete a subscriber |
-| `envoyer_inscrits` | Sync pending subscribers to the connected newsletter |
+| `update_settings` | Update profile, theme, social links, colors, SEO… |
+| `create_block` | Create a block at the top or at a given position |
+| `update_block` | Partially update a block; `visible: false` hides it |
+| `duplicate_block` | Duplicate a block right below the original, optionally hidden |
+| `delete_block` | Permanently delete a block |
+| `reorder_blocks` | Reorder all blocks |
+| `upload_image` | Upload a data URL image, for a block or a profile photo |
+| `delete_subscriber` | Permanently delete a subscriber |
+| `sync_subscribers` | Sync pending subscribers to the connected newsletter |
 
 ## Example prompts
 
@@ -154,7 +154,7 @@ Hopla pages are in French, so prompts usually are too. Agents also understand En
 
 <Tab value="Page">
 
-- "Add a link to my new podcast at the top of my Hopla page: https://exemple.fr/podcast."
+- "Add a link to my new podcast at the top of my Hopla page: https://example.com/podcast."
 - "Switch my page to a darker theme and update my bio: coach sportive à Lyon."
 - "Hide the summer sale block, without deleting it."
 - "Schedule my masterclass link to appear on Monday at 9 am, with a countdown."
@@ -173,14 +173,14 @@ Hopla pages are in French, so prompts usually are too. Agents also understand En
 <Tab value="Email list">
 
 - "How many people joined my list this week, and where did they come from?"
-- "Delete ana@exemple.fr from my list: she asked me to."
+- "Delete ana@example.com from my list: she asked me to."
 - "I connected Brevo: sync the pending subscribers."
 
 </Tab>
 
 <Tab value="Web">
 
-- "Add this product to my page, with its photo and price: https://boutique.exemple.fr/programme."
+- "Add this product to my page, with its photo and price: https://boutique.example.com/programme."
 - "Read my blog and feature my latest post."
 - "Give me the QR code of my page, for my poster."
 
@@ -188,7 +188,7 @@ Hopla pages are in French, so prompts usually are too. Agents also understand En
 
 </Tabs>
 
-The agent first calls `lire_page` to get block ids. Changes are visible immediately on the page and in the admin panel.
+The agent first calls `get_page` to get block ids. Changes are visible immediately on the page and in the admin panel.
 
 ## Protocol details
 

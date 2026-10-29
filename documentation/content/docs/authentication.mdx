@@ -28,17 +28,17 @@ An account can have up to 10 keys. Use one key per integration, so each can be r
 | Read analytics and the summary | Yes | Yes |
 | Read the email list and subscribers | Yes | Yes |
 | Fetch website, feed or review page metadata | Yes | Yes |
-| Update settings and blocks, upload images | No, 403 `lecture_seule` | Yes |
-| Delete subscribers, sync subscribers | No, 403 `lecture_seule` | Yes |
+| Update settings and blocks, upload images | No, 403 `read_only_key` | Yes |
+| Delete subscribers, sync subscribers | No, 403 `read_only_key` | Yes |
 | MCP tools exposed | The 16 read tools | All 25 tools |
 
-A key can only access the page of the account that created it. `GET /cles` lists the account keys without exposing their secret: see [Account](/account).
+A key can only access the page of the account that created it. `GET /api-keys` lists the account keys without exposing their secret: see [Account](/account).
 
 ## Plan requirements
 
-The API and MCP server are included in the Pro plan and in the 14-day trial. If the account leaves the Pro plan, its keys are suspended (403 `offre`) but not deleted, and are reactivated when the account returns to Pro.
+The API and MCP server are included in the Pro plan and in the 14-day trial. If the account leaves the Pro plan, its keys are suspended (403 `plan`) but not deleted, and are reactivated when the account returns to Pro.
 
-On a self-hosted instance without billing configured (see the [self-hosting guide](https://github.com/liliansev/linkinbio/blob/main/docs/SELF-HOSTING.md)), every account has access to the API and MCP server on the instance domain: `https://your-domain/api/v1` and `https://your-domain/mcp`.
+On a self-hosted instance without billing configured (see the [self-hosting guide](https://github.com/liliansev/linkinbio/blob/main/docs/SELF-HOSTING.md)), every account has access to the API and MCP server on the instance domain: `https://your-domain/api/v2` and `https://your-domain/mcp`.
 
 ## Security
 

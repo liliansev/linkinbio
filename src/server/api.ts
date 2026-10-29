@@ -9,7 +9,8 @@ import { resumer, enUnePhrase } from '../lib/resume.ts';
 import { FONCTIONS } from '../lib/abonnement.ts';
 import { adresse, validerBloc, validerReglages } from '../lib/valider.ts';
 import { VERSION_CGU } from '../lib/legal.ts';
-import { DOC_API } from '../lib/docApi.ts';
+import { DOC_API, DOC_API_V1 } from '../lib/docApi.ts';
+import { CODES_EN, PARAMETRES_EN, ROUTES_EN, TYPES_EN, versAnglais, versFrancais } from '../lib/apiAnglais.ts';
 import * as db from './db.ts';
 import { empreinte } from './auth.ts';
 import { droits, joursLisibles, periodeLisible, verifierDates } from './droits.ts';
@@ -45,7 +46,9 @@ export function nouvelleCle() {
 export class ErreurApi extends Error {
   readonly statut: number;
   readonly code: string;
-  constructor(statut: number, code: string, message: string) { super(message); this.statut = statut; this.code = code; }
+  /** Le message de l'API v2 et des outils MCP en anglais, quand celui de la v1 cite des noms français. */
+  readonly enAnglais: string;
+  constructor(statut: number, code: string, message: string, enAnglais = message) { super(message); this.statut = statut; this.code = code; this.enAnglais = enAnglais; }
 }
 
 export interface Appelant { compte: string; cle: string; ecriture: boolean }
@@ -100,7 +103,8 @@ const SOUS_OBJETS = ['profil', 'bouton', 'seo', 'couleurs', 'redirection'];
 export function modifierReglages(a: Appelant, partiel: unknown): Reglages {
   ecrire(a);
   const changes = objet(partiel);
-  if (!Object.keys(changes).length) throw new ErreurApi(400, 'rien_a_changer', 'Request body must contain at least one setting, for example {"profil": {"bio": "…"}}.');
+  if (!Object.keys(changes).length) throw new ErreurApi(400, 'rien_a_changer', 'Request body must contain at least one setting, for example {"profil": {"bio": "…"}}.',
+    'Request body must contain at least one setting, for example {"profile": {"bio": "…"}}.');
   if ('theme' in changes && !THEMES.some(t => t.id === changes.theme)) throw new ErreurApi(400, 'theme_inconnu', `Unknown theme. Valid values: ${THEMES.map(t => t.id).join(', ')}.`);
   const actuel = db.lireReglages(a.compte);
   const fusion: Record<string, unknown> = { ...actuel };
@@ -151,7 +155,8 @@ export function ajouterBloc(a: Appelant, donnees: unknown, position?: unknown): 
   ecrire(a);
   const o = objet(donnees);
   if (o.type !== undefined && !(typesPermis(a.compte) as readonly unknown[]).includes(o.type)) {
-    throw new ErreurApi(400, 'type_inconnu', `Unknown block type. Valid values: ${typesPermis(a.compte).join(', ')}.`);
+    throw new ErreurApi(400, 'type_inconnu', `Unknown block type. Valid values: ${typesPermis(a.compte).join(', ')}.`,
+      `Unknown block type. Valid values: ${typesPermis(a.compte).map(t => TYPES_EN[t]).join(', ')}.`);
   }
   const bloc = validerBloc(o, db.nouvelId());
   adresseGardee(o, bloc);
@@ -197,7 +202,8 @@ export function ordonnerBlocs(a: Appelant, ids: unknown): Bloc[] {
 /** Les stats d'une période : 7, 14, 30, 90 ou 365 derniers jours, ou des dates `{ du, au }` (AAAA-MM-JJ). */
 export function lireStats(a: Appelant, periode: unknown, env: Record<string, string | undefined> = process.env): Stats {
   const lue = lirePeriode(periode ?? 30);
-  if (lue === null) throw new ErreurApi(400, 'periode', 'Invalid period: use 7, 14, 30, 90 or 365 days, or du and au dates (YYYY-MM-DD).');
+  if (lue === null) throw new ErreurApi(400, 'periode', 'Invalid period: use 7, 14, 30, 90 or 365 days, or du and au dates (YYYY-MM-DD).',
+    'Invalid period: use 7, 14, 30, 90 or 365 days, or from and to dates (YYYY-MM-DD).');
   const compte = db.compteParId(a.compte)!;
   if (!joursLisibles(compte, env)) throw new ErreurApi(403, 'offre', 'Analytics require the Starter plan or higher.');
   const bornee = periodeLisible(compte, lue, env);
@@ -312,9 +318,9 @@ export function listerInscrits(a: Appelant, limite: unknown, depart: unknown) {
 }
 
 /** Tous les inscrits en CSV (email, prénom, date, provenance), comme l'export du back office. */
-export function inscritsCsv(a: Appelant): string {
+export function inscritsCsv(a: Appelant, anglais = false): string {
   const champ = (v: string) => (/[",\n;]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
-  return ['email,prenom,inscrit,source', ...db.tousLesContacts(a.compte).map(c => [c.email, c.prenom, iso(c.ts) ?? '', c.source].map(champ).join(','))].join('\n') + '\n';
+  return [anglais ? 'email,first_name,subscribed_at,source' : 'email,prenom,inscrit,source', ...db.tousLesContacts(a.compte).map(c => [c.email, c.prenom, iso(c.ts) ?? '', c.source].map(champ).join(','))].join('\n') + '\n';
 }
 
 export function supprimerInscrit(a: Appelant, id: string) {
@@ -397,15 +403,18 @@ export const json = (statut: number, corps: unknown, entetes: Record<string, str
   headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', ...ENTETES_CORS, ...entetes },
 });
 
-export function reponseErreur(error: unknown): Response {
+/** Une erreur rendue : `{ erreur: … }` et ses codes français en v1, `{ error: … }` en v2. */
+export function reponseErreur(error: unknown, anglais = false): Response {
   if (error instanceof ErreurApi) {
-    return json(error.statut, { erreur: { code: error.code, message: error.message } }, {
+    const corps = anglais ? { error: { code: CODES_EN[error.code] ?? error.code, message: error.enAnglais } } : { erreur: { code: error.code, message: error.message } };
+    return json(error.statut, corps, {
       ...(error.statut === 429 ? { 'Retry-After': '60' } : {}),
       ...(error.statut === 401 ? { 'WWW-Authenticate': 'Bearer realm="hopla"' } : {}),
     });
   }
   console.error('[api]', error);
-  return json(500, { erreur: { code: 'serveur', message: 'Internal server error. Retry shortly.' } });
+  const message = 'Internal server error. Retry shortly.';
+  return json(500, anglais ? { error: { code: 'internal_error', message } } : { erreur: { code: 'serveur', message } });
 }
 
 /** Le corps JSON d'une requête, 256 Ko au plus ; une image en data URL a droit à ses 1,5 Mo (2,1 millions de caractères en base64). */
@@ -430,75 +439,95 @@ const periodeDe = (q: URLSearchParams) => {
   return du || au ? { du, au } : q.get('periode') ?? undefined;
 };
 
+/** La route d'un chemin de la v2 (`/blocks/:id`…), et celle de la v1 qu'elle sert. */
+function routeV2(chemin: string) {
+  const [, base, id, suite] = /^(\/(?:blocks|subscribers))\/([\w-]{1,40})(\/duplicate)?$/.exec(chemin) ?? [];
+  const route = base && chemin !== '/blocks/order' && chemin !== '/subscribers/sync' ? `${base}/:id${suite ?? ''}` : chemin;
+  return { id, connue: route in ROUTES_EN, routeV1: ROUTES_EN[route] ?? `?${route}` };
+}
+
+/** La route d'un chemin de la v1 (`/blocs/:id`…). */
+function routeV1(chemin: string) {
+  const [, base, id, suite] = /^(\/(?:blocs|inscrits))\/([\w-]{1,40})(\/dupliquer)?$/.exec(chemin) ?? [];
+  const route = base && chemin !== '/inscrits/envoyer' ? `${base}/:id${suite ?? ''}` : chemin;
+  return { id, connue: ROUTES.includes(route), routeV1: route };
+}
+
+/*
+ * Deux versions (29 octobre 2026) : la v2, en anglais, et la v1, celle du 28 octobre, aux noms français, gardée telle
+ * quelle pour les intégrations déjà branchées. Les gestes ne parlent que français : la v2 traduit à l'entrée (chemin,
+ * paramètres, corps) et à la sortie (`lib/apiAnglais.ts`).
+ */
 export async function repondreApi(requete: Request, env: Record<string, string | undefined> = process.env): Promise<Response> {
   const url = new URL(requete.url);
-  const chemin = url.pathname.replace(/^\/api\/v1/, '').replace(/\/+$/, '');
+  const v2 = url.pathname.startsWith('/api/v2');
+  const chemin = url.pathname.replace(/^\/api\/v[12]/, '').replace(/\/+$/, '');
   const methode = requete.method.toUpperCase();
   if (methode === 'OPTIONS') return new Response(null, { status: 204, headers: ENTETES_CORS });
   // La documentation, sans clé : pour les humains comme pour les agents.
   if (chemin === '' && (methode === 'GET' || methode === 'HEAD')) {
-    return new Response(DOC_API, { headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'public, max-age=3600', ...ENTETES_CORS } });
+    return new Response(v2 ? DOC_API : DOC_API_V1, { headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'public, max-age=3600', ...ENTETES_CORS } });
   }
+  const repondre = (statut: number, corps: unknown, entetes: Record<string, string> = {}) => json(statut, v2 ? versAnglais(corps) : corps, entetes);
+  const lire = async (max?: number) => (v2 ? versFrancais(await lireCorps(requete, max)) : lireCorps(requete, max));
   try {
     const a = authentifier(requete.headers.get('authorization'), ipDe(requete), env);
-    const [, base, id, suite] = /^(\/(?:blocs|inscrits))\/([\w-]{1,40})(\/dupliquer)?$/.exec(chemin) ?? [];
-    const route = base && chemin !== '/inscrits/envoyer' ? `${base}/:id${suite ?? ''}` : chemin;
-    const q = url.searchParams;
-    switch (`${methode} ${route}`) {
-      case 'GET /page': return json(200, lirePage(a));
-      case 'GET /compte': return json(200, lireCompte(a, env));
-      case 'GET /reglages': return json(200, lireReglagesApi(a));
-      case 'PATCH /reglages': return json(200, { reglages: modifierReglages(a, await lireCorps(requete)) });
+    const { id, connue, routeV1: routeFr } = v2 ? routeV2(chemin) : routeV1(chemin);
+    const q = v2 ? new URLSearchParams([...url.searchParams].map(([k, v]) => [PARAMETRES_EN[k] ?? k, v])) : url.searchParams;
+    switch (`${methode} ${routeFr}`) {
+      case 'GET /page': return repondre(200, lirePage(a));
+      case 'GET /compte': return repondre(200, lireCompte(a, env));
+      case 'GET /reglages': return repondre(200, lireReglagesApi(a));
+      case 'PATCH /reglages': return repondre(200, { reglages: modifierReglages(a, await lire()) });
       case 'GET /qr': {
         const format = q.get('format') === 'png' ? 'png' : 'svg';
         const taille = Math.min(2000, Math.max(120, Number.parseInt(q.get('taille') ?? '', 10) || 720));
         const { type, corps } = await qrCode(a, format, taille);
         return new Response(corps, { headers: { 'Content-Type': type, 'Cache-Control': 'no-store', 'Content-Disposition': `inline; filename="qr-hopla.${format}"`, ...ENTETES_CORS } });
       }
-      case 'GET /blocs': return json(200, { blocs: lireBlocs(a) });
+      case 'GET /blocs': return repondre(200, { blocs: lireBlocs(a) });
       case 'POST /blocs': {
-        const corps = objet(await lireCorps(requete));
+        const corps = objet(await lire());
         const { position, ...donnees } = corps;
-        return json(201, { bloc: ajouterBloc(a, donnees, position) });
+        return repondre(201, { bloc: ajouterBloc(a, donnees, position) });
       }
-      case 'GET /blocs/:id': return json(200, { bloc: lireBloc(a, id!) });
-      case 'PATCH /blocs/:id': return json(200, { bloc: modifierBloc(a, id!, await lireCorps(requete)) });
-      case 'DELETE /blocs/:id': return json(200, supprimerBloc(a, id!));
-      case 'POST /blocs/:id/dupliquer': return json(201, { bloc: dupliquerBloc(a, id!, await lireCorps(requete)) });
-      case 'PUT /ordre': return json(200, { blocs: ordonnerBlocs(a, objet(await lireCorps(requete)).ids) });
+      case 'GET /blocs/:id': return repondre(200, { bloc: lireBloc(a, id!) });
+      case 'PATCH /blocs/:id': return repondre(200, { bloc: modifierBloc(a, id!, await lire()) });
+      case 'DELETE /blocs/:id': return repondre(200, supprimerBloc(a, id!));
+      case 'POST /blocs/:id/dupliquer': return repondre(201, { bloc: dupliquerBloc(a, id!, await lire()) });
+      case 'PUT /ordre': return repondre(200, { blocs: ordonnerBlocs(a, objet(await lire()).ids) });
       case 'POST /medias': {
         const type = requete.headers.get('content-type') ?? '';
         if (/^image\//i.test(type)) {
           const brut = new Uint8Array(await requete.arrayBuffer());
-          return json(201, envoyerMedia(a, brut));
+          return repondre(201, envoyerMedia(a, brut));
         }
-        return json(201, envoyerMedia(a, octetsDeDataUrl(objet(await lireCorps(requete, 2_200_000)).image)));
+        return repondre(201, envoyerMedia(a, octetsDeDataUrl(objet(await lire(2_200_000)).image)));
       }
-      case 'GET /stats': return json(200, { stats: lireStats(a, periodeDe(q), env) });
-      case 'GET /stats/semaine': return json(200, lireSemaine(a));
-      case 'GET /stats/resume': return json(200, lireResume(a, periodeDe(q), env));
-      case 'GET /liste': return json(200, lireListe(a, env));
+      case 'GET /stats': return repondre(200, { stats: lireStats(a, periodeDe(q), env) });
+      case 'GET /stats/semaine': return repondre(200, lireSemaine(a));
+      case 'GET /stats/resume': return repondre(200, lireResume(a, periodeDe(q), env));
+      case 'GET /liste': return repondre(200, lireListe(a, env));
       case 'GET /inscrits': {
         if (q.get('format') === 'csv') {
-          return new Response(inscritsCsv(a), { headers: { 'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': 'attachment; filename="inscrits-hopla.csv"', 'Cache-Control': 'no-store', ...ENTETES_CORS } });
+          return new Response(inscritsCsv(a, v2), { headers: { 'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': 'attachment; filename="inscrits-hopla.csv"', 'Cache-Control': 'no-store', ...ENTETES_CORS } });
         }
-        return json(200, listerInscrits(a, q.get('limite'), q.get('depart')));
+        return repondre(200, listerInscrits(a, q.get('limite'), q.get('depart')));
       }
-      case 'DELETE /inscrits/:id': return json(200, supprimerInscrit(a, id!));
-      case 'POST /inscrits/envoyer': return json(200, await envoyerInscrits(a, env));
-      case 'POST /apercu': return json(200, await lireApercu(a, await lireCorps(requete)));
-      case 'POST /flux': return json(200, await lireFlux(a, await lireCorps(requete)));
-      case 'POST /avis': return json(200, await lireNoteAvis(a, await lireCorps(requete)));
-      case 'GET /cles': return json(200, listerCles(a));
-      case 'GET /export': return json(200, exporterCompte(a), { 'Content-Disposition': 'attachment; filename="export-hopla.json"' });
-      case 'GET /themes': return json(200, { themes: listerThemes() });
-      case 'GET /reseaux': return json(200, listerReseaux());
-      case 'GET /pictos': return json(200, listerPictos());
-      case 'GET /types': return json(200, listerTypes(a));
+      case 'DELETE /inscrits/:id': return repondre(200, supprimerInscrit(a, id!));
+      case 'POST /inscrits/envoyer': return repondre(200, await envoyerInscrits(a, env));
+      case 'POST /apercu': return repondre(200, await lireApercu(a, await lire()));
+      case 'POST /flux': return repondre(200, await lireFlux(a, await lire()));
+      case 'POST /avis': return repondre(200, await lireNoteAvis(a, await lire()));
+      case 'GET /cles': return repondre(200, listerCles(a));
+      case 'GET /export': return repondre(200, exporterCompte(a), { 'Content-Disposition': 'attachment; filename="export-hopla.json"' });
+      case 'GET /themes': return repondre(200, { themes: listerThemes() });
+      case 'GET /reseaux': return repondre(200, listerReseaux());
+      case 'GET /pictos': return repondre(200, listerPictos());
+      case 'GET /types': return repondre(200, listerTypes(a));
     }
-    const connue = ROUTES.includes(route);
-    throw new ErreurApi(connue ? 405 : 404, connue ? 'methode' : 'introuvable', connue ? 'Method not allowed on this route.' : 'Route not found. Documentation: GET /api/v1');
+    throw new ErreurApi(connue ? 405 : 404, connue ? 'methode' : 'introuvable', connue ? 'Method not allowed on this route.' : `Route not found. Documentation: GET /api/${v2 ? 'v2' : 'v1'}`);
   } catch (error) {
-    return reponseErreur(error);
+    return reponseErreur(error, v2);
   }
 }

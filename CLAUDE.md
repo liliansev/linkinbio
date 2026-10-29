@@ -84,7 +84,12 @@ embarque tout : l'image n'a pas de `node_modules`.
   Depuis le 28 octobre 2026 au soir (demandé par Lilian : « prévois tous les endpoints »), ce que fait le back office, ou presque :
   compte, réglages, QR code, duplication, images (`POST /medias`, 1,5 Mo), semaine et résumé des stats, liste e-mail (inscrits,
   CSV, suppression, envoi), lecture du web (`/apercu`, `/flux`, `/avis`, 30 par 10 minutes), clés, export et listes de référence ;
-  25 outils MCP. La documentation (`lib/docApi.ts`) se lit sans clé sur GET /api/v1 : un changement de l'API s'y reporte.
+  25 outils MCP. La documentation (`lib/docApi.ts`) se lit sans clé sur GET /api/v2 : un changement de l'API s'y reporte.
+  Depuis le 29 octobre 2026 (demandé par Lilian : « tout en anglais, anciens noms acceptés »), l'API v2 (`/api/v2/…`, routes
+  `api/v2/`) parle anglais : chemins, champs, valeurs, codes d'erreur ; la v1 garde ses noms français, telle quelle. Les gestes
+  et la base restent en français : `lib/apiAnglais.ts` traduit à l'entrée et à la sortie (`versFrancais`, `versAnglais`), et
+  donne aussi les noms anglais des outils MCP (`OUTILS_EN`), dont les anciens noms français répondent encore, en français, sans
+  être listés. Un champ ajouté à l'API prend son nom anglais dans ce dictionnaire, et la documentation le reprend.
 - `server/liste.ts` : « Rejoins ma liste ». Les inscrits restent chez Hopla (export CSV) et partent là où la personne a
   branché sa liste (22 octobre 2026) : huit newsletters par leur API (Brevo, Mailchimp, Kit, MailerLite, beehiiv,
   Systeme.io, et depuis le 25 octobre MailCheap, dont une clé « Signups only » se vérifie sans inscrire personne, et Loops ; `listes()` pour choisir la liste par son nom, `verifier()`, `pousser()`), ou Make, Zapier et n8n par un
@@ -341,7 +346,7 @@ embarque tout : l'image n'a pas de `node_modules`.
   image de partage dans `public/`. `server/referencement.ts` écrit `robots.txt`, `sitemap.xml` et
   `llms.txt` (routes `robots[.]txt.ts`…) ; le back office ne s'indexe pas.
 - `documentation/` (28 octobre 2026, demandé par Lilian, sur le modèle de Stripe et Resend) : la documentation de l'API et
-  du serveur MCP, servie sur `hopla.page/docs`. Un projet Next à part (son `pnpm-lock.yaml`), en export statique : Fumadocs
+  du serveur MCP, servie sur `hopla.page/docs`, en anglais (29 octobre 2026). Un projet Next à part (son `pnpm-lock.yaml`), en export statique : Fumadocs
   pour les guides (`content/docs/*.mdx`), Scalar pour la référence (`/docs/reference`), lue dans `public/openapi.json`, que
   `scripts/openapi.ts` écrit au build à partir des listes de `src/lib` (thèmes, réseaux, types de blocs). `pnpm --dir
   documentation build`, copié dans `dist/docs` par le Dockerfile ; `deploy/server.mjs` le sert (`docs()`). Un changement de

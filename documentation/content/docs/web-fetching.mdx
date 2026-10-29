@@ -7,23 +7,23 @@ description: "Fetch the title and image of a website, the latest posts of a feed
 
 When a URL is pasted in the admin panel, Hopla extracts its title, image and, for products, its price. These three endpoints expose the same extraction, to fill a block from a script or an agent.
 
-Each endpoint expects an `https://` URL in `url`. The page is fetched from Hopla servers, without cookies, and only public addresses are allowed (SSRF protection). Rate limit: 30 requests per account per 10 minutes; above that, 429 `trop_de_lectures`.
+Each endpoint expects an `https://` URL in `url`. The page is fetched from Hopla servers, without cookies, and only public addresses are allowed (SSRF protection). Rate limit: 30 requests per account per 10 minutes; above that, 429 `rate_limited`.
 
 ## URL metadata
 
 ```bash
-curl -X POST https://app.hopla.page/api/v1/apercu \
+curl -X POST https://app.hopla.page/api/v2/fetch/preview \
   -H "Authorization: Bearer $HOPLA_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"url": "https://boutique.exemple.fr/programme", "image": "partage"}'
+  -d '{"url": "https://boutique.example.com/programme", "image": "shareButton"}'
 ```
 
 ```json
 {
-  "apercu": {
-    "titre": "Programme 8 semaines",
+  "preview": {
+    "title": "Programme 8 semaines",
     "description": "Un plan simple pour reprendre le sport.",
-    "prix": "49 €",
+    "price": "49 €",
     "image": "data:image/webp;base64,…"
   }
 }
@@ -33,34 +33,34 @@ curl -X POST https://app.hopla.page/api/v1/apercu \
 | --- | --- |
 | `true` (default) | The site social sharing image, or its favicon as a fallback |
 | `false` | Text only, faster |
-| `"partage"` | The sharing image, or nothing: use it for product photos |
+| `"shareButton"` | The sharing image, or nothing: use it for product photos |
 | `"logo"` | The site logo, from its declared icons |
-| `"vignette"` | The best thumbnail for a link button |
+| `"thumbnail"` | The best thumbnail for a link button |
 
-The image is returned as a data URL: to use it in a block, send it as is to [`POST /medias`](/images). An unreachable site, or one that does not return HTML, returns 422 `site_illisible`.
+The image is returned as a data URL: to use it in a block, send it as is to [`POST /media`](/images). An unreachable site, or one that does not return HTML, returns 422 `fetch_failed`.
 
 ## RSS feeds and YouTube channels
 
 ```bash
-curl -X POST https://app.hopla.page/api/v1/flux \
+curl -X POST https://app.hopla.page/api/v2/fetch/feed \
   -H "Authorization: Bearer $HOPLA_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"url": "https://exemple.fr/blog"}'
+  -d '{"url": "https://example.com/blog"}'
 ```
 
-Returns the three latest posts, newest first: `titre`, `url`, `date`, `image`, and `video` for an episode. The URL can be the feed itself (RSS, Atom) or a page that declares it. With `{"video": true}` and a YouTube channel URL, returns the latest long-form video. Without a usable feed: `{"articles": []}`.
+Returns the three latest posts, newest first: `title`, `url`, `date`, `image`, and `video` for an episode. The URL can be the feed itself (RSS, Atom) or a page that declares it. With `{"video": true}` and a YouTube channel URL, returns the latest long-form video. Without a usable feed: `{"articles": []}`.
 
 ## Review rating
 
 ```bash
-curl -X POST https://app.hopla.page/api/v1/avis \
+curl -X POST https://app.hopla.page/api/v2/fetch/rating \
   -H "Authorization: Bearer $HOPLA_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"url": "https://fr.trustpilot.com/review/exemple.fr"}'
+  -d '{"url": "https://fr.trustpilot.com/review/example.com"}'
 ```
 
 ```json
-{ "note": { "note": 4.6, "nombre": 1820, "source": "Trustpilot" } }
+{ "rating": { "rating": 4.6, "count": 1820, "source": "Trustpilot" } }
 ```
 
-The rating (`note`) is normalized to 5, with the review count (`nombre`). It comes from Trustpilot, or from any page that declares it in its structured data (`aggregateRating`). Without a declared rating, or if the page blocks bots, the response is `{"note": null}`. Google Business Profile pages are not supported: enter the rating manually in the `preuve` block.
+The rating (`rating`) is normalized to 5, with the review count (`count`). It comes from Trustpilot, or from any page that declares it in its structured data (`aggregateRating`). Without a declared rating, or if the page blocks bots, the response is `{"rating": null}`. Google Business Profile pages are not supported: enter the rating manually in the `proof` block.

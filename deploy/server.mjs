@@ -66,7 +66,7 @@ async function readBody(req, limit) {
 const ANCIENNES_DOCS = {
   demarrage: 'quickstart', cles: 'authentication', recettes: 'examples', blocs: 'blocks', reglages: 'settings', stats: 'analytics',
   'liste-email': 'email-list', 'lire-le-web': 'web-fetching', compte: 'account', listes: 'reference-values', routes: 'endpoints',
-  'limites-et-erreurs': 'errors',
+  'limites-et-erreurs': 'errors', glossary: 'migrating-from-v1',
 };
 /** À n'exposer que derrière Caddy, qui doit écraser X-Real-IP avec l'IP du visiteur. */
 export function createLiensServer({ appDir = appRoot, site = process.env.LIENS_SITE, cloudflare = process.env.LIENS_CLOUDFLARE, instance = instanceDe(process.env) } = {}) {

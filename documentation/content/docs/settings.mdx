@@ -5,15 +5,15 @@ description: Page profile, theme, social links, colors, buttons, SEO and redirec
 
 <RoutesDe tag="Page" />
 
-`GET /page` returns the full page: settings and blocks. `GET /reglages` returns settings only.
+`GET /page` returns the full page: settings and blocks. `GET /settings` returns settings only.
 
-`PATCH /reglages` updates only the fields sent. The `profil`, `bouton`, `seo`, `couleurs` and `redirection` objects are merged field by field; the `reseaux` list is replaced as a whole.
+`PATCH /settings` updates only the fields sent. The `profile`, `button`, `seo`, `colors` and `redirect` objects are merged field by field; the `socialLinks` list is replaced as a whole.
 
 ```bash
-curl -X PATCH https://app.hopla.page/api/v1/reglages \
+curl -X PATCH https://app.hopla.page/api/v2/settings \
   -H "Authorization: Bearer $HOPLA_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"profil": {"bio": "Coach sportive à Lyon"}, "theme": "onyx"}'
+  -d '{"profile": {"bio": "Coach sportive à Lyon"}, "theme": "onyx"}'
 ```
 
 The response contains the full settings after the update.
@@ -22,25 +22,25 @@ The response contains the full settings after the update.
 
 | Setting | Value |
 | --- | --- |
-| `profil` | Profile: `{ nom, bio, avatar, photo }`. `nom` is the display name, `avatar` an https image URL, `photo` is `ronde` (round) or `grande` (large) |
+| `profile` | Profile: `{ name, bio, avatar, photo }`. `name` is the display name, `avatar` an https image URL, `photo` is `round` or `large` |
 | `theme` | A theme id, see below |
-| `reseaux` | Social links: `[{ reseau, url }]`, 20 maximum |
-| `reseauxPosition` | `haut` (below the bio) or `bas` (bottom of the page) |
-| `couleurs` | Colors: `{ fond, boutons, accent }` (background, buttons, accent) as `#rrggbb`; empty: theme default |
-| `bouton` | Buttons: `{ style, forme, ombre }` (style, shape, shadow): `plein`, `contour`, `doux`, `relief` or `verre`; `pilule`, `arrondi` or `carre`; `aucune`, `subtile` or `marquee` |
-| `seo` | `{ titre, description }` for search engines and link previews |
-| `partage` | Show the Share button at the top of the page |
-| `vouvoiement` | Page copy uses the formal "vous" form |
-| `redirection` | Redirect: `{ url, fin }` sends the whole page to another URL until `fin`; `{ "url": "" }` stops it |
+| `socialLinks` | Social links: `[{ network, url }]`, 20 maximum |
+| `socialLinksPosition` | `top` (below the bio) or `bottom` (bottom of the page) |
+| `colors` | Colors: `{ background, buttons, accent }` as `#rrggbb`; empty: theme default |
+| `button` | Buttons: `{ style, shape, shadow }`: `solid`, `outline`, `soft`, `raised` or `glass`; `pill`, `rounded` or `square`; `none`, `subtle` or `strong` |
+| `seo` | `{ title, description }` for search engines and link previews |
+| `shareButton` | Show the Share button at the top of the page |
+| `formal` | Page copy uses the formal "vous" form |
+| `redirect` | Redirect: `{ url, endsAt }` sends the whole page to another URL until `endsAt`; `{ "url": "" }` stops it |
 
 ## Social links
 
 ```json
 {
-  "reseaux": [
-    { "reseau": "instagram", "url": "https://instagram.com/camille" },
-    { "reseau": "youtube", "url": "https://youtube.com/@camille" },
-    { "reseau": "email", "url": "mailto:camille@exemple.fr" }
+  "socialLinks": [
+    { "network": "instagram", "url": "https://instagram.com/camille" },
+    { "network": "youtube", "url": "https://youtube.com/@camille" },
+    { "network": "email", "url": "mailto:camille@example.com" }
   ]
 }
 ```

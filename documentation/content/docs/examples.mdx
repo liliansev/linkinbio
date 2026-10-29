@@ -10,23 +10,23 @@ Each example reads the API key from the `HOPLA_API_KEY` environment variable and
 Reproduces what the admin panel does when a product URL is pasted: fetch the title, price and photo, upload the photo to Hopla, create the block.
 
 ```js title="add-product.mjs"
-const api = 'https://app.hopla.page/api/v1';
+const api = 'https://app.hopla.page/api/v2';
 const headers = { Authorization: `Bearer ${process.env.HOPLA_API_KEY}`, 'Content-Type': 'application/json' };
 const call = async (method, path, body) => {
   const r = await fetch(api + path, { method, headers, body: JSON.stringify(body) });
   const json = await r.json();
-  if (!r.ok) throw new Error(json.erreur.message);
+  if (!r.ok) throw new Error(json.error.message);
   return json;
 };
 
-const url = process.argv[2]; // node add-product.mjs https://boutique.exemple.fr/programme
-const { apercu } = await call('POST', '/apercu', { url, image: 'partage' });
-const image = apercu.image ? (await call('POST', '/medias', { image: apercu.image })).media.chemin : '';
-const { bloc } = await call('POST', '/blocs', { type: 'produit', titre: apercu.titre, url, prix: apercu.prix, image });
-console.log(`Added "${bloc.titre}", ${bloc.prix || 'no price'}.`);
+const url = process.argv[2]; // node add-product.mjs https://boutique.example.com/programme
+const { preview } = await call('POST', '/fetch/preview', { url, image: 'share' });
+const image = preview.image ? (await call('POST', '/media', { image: preview.image })).media.path : '';
+const { block } = await call('POST', '/blocks', { type: 'product', title: preview.title, url, price: preview.price, image });
+console.log(`Added "${block.title}", ${block.price || 'no price'}.`);
 ```
 
-`produit` blocks require the Starter plan or higher.
+`product` blocks require the Starter plan or higher.
 
 ## Weekly report in Slack
 
@@ -37,18 +37,18 @@ Posts the weekly summary and the three most clicked links to a Slack channel eve
 <Tab value="JavaScript">
 
 ```js title="weekly-report.mjs"
-const get = path => fetch(`https://app.hopla.page/api/v1${path}`, {
+const get = path => fetch(`https://app.hopla.page/api/v2${path}`, {
   headers: { Authorization: `Bearer ${process.env.HOPLA_API_KEY}` },
 }).then(r => r.json());
 
-const { resume } = await get('/stats/resume?periode=7');
-const { stats } = await get('/stats?periode=7');
-const top = stats.blocs.toSorted((a, b) => b.clics - a.clics).slice(0, 3).map(b => `• ${b.titre}: ${b.clics} clicks`).join('\n');
+const { summary } = await get('/analytics/summary?period=7');
+const { analytics } = await get('/analytics?period=7');
+const top = analytics.blocks.toSorted((a, b) => b.clicks - a.clicks).slice(0, 3).map(b => `• ${b.title}: ${b.clicks} clicks`).join('\n');
 
 await fetch(process.env.SLACK_WEBHOOK, {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ text: `${resume.phrase}\n${top}` }),
+  body: JSON.stringify({ text: `${summary.sentence}\n${top}` }),
 });
 ```
 
@@ -61,12 +61,12 @@ import os, requests
 
 def get(path):
     return requests.get(
-        f"https://app.hopla.page/api/v1{path}",
+        f"https://app.hopla.page/api/v2{path}",
         headers={"Authorization": f"Bearer {os.environ['HOPLA_API_KEY']}"},
     ).json()
 
-sentence = get("/stats/resume?periode=7")["resume"]["phrase"]
-top = "\n".join(f"• {b['titre']}: {b['clics']} clicks" for b in sorted(get("/stats?periode=7")["stats"]["blocs"], key=lambda b: -b["clics"])[:3])
+sentence = get("/analytics/summary?period=7")["summary"]["sentence"]
+top = "\n".join(f"• {b['title']}: {b['clicks']} clicks" for b in sorted(get("/analytics?period=7")["analytics"]["blocks"], key=lambda b: -b["clicks"])[:3])
 requests.post(os.environ["SLACK_WEBHOOK"], json={"text": f"{sentence}\n{top}"})
 ```
 
@@ -81,17 +81,17 @@ Schedule it every Monday at 9 am with cron (`0 9 * * 1 node weekly-report.mjs`),
 A featured link, visible from Monday 9 am to Sunday night, with a countdown before the start. Scheduling requires the Starter plan.
 
 ```bash
-curl -X POST https://app.hopla.page/api/v1/blocs \
+curl -X POST https://app.hopla.page/api/v2/blocks \
   -H "Authorization: Bearer $HOPLA_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-    "titre": "La masterclass est ouverte",
-    "url": "https://exemple.fr/masterclass",
-    "vedette": true,
-    "format": "carte",
-    "debut": "2026-11-02T09:00:00+01:00",
-    "fin": "2026-11-08T23:59:00+01:00",
-    "compteARebours": true
+    "title": "La masterclass est ouverte",
+    "url": "https://example.com/masterclass",
+    "featured": true,
+    "format": "card",
+    "startsAt": "2026-11-02T09:00:00+01:00",
+    "endsAt": "2026-11-08T23:59:00+01:00",
+    "countdown": true
   }'
 ```
 
@@ -100,17 +100,17 @@ curl -X POST https://app.hopla.page/api/v1/blocs \
 A block at the top of the page whose URL changes regularly: latest episode, latest video, current offer. Its `id` is read from `HOPLA_BLOCK_ID`.
 
 ```js title="update-link.mjs"
-// node update-link.mjs "Épisode 12 : la reprise" https://exemple.fr/episode-12
-const [titre, url] = process.argv.slice(2);
-const response = await fetch(`https://app.hopla.page/api/v1/blocs/${process.env.HOPLA_BLOCK_ID}`, {
+// node update-link.mjs "Épisode 12 : la reprise" https://example.com/episode-12
+const [title, url] = process.argv.slice(2);
+const response = await fetch(`https://app.hopla.page/api/v2/blocks/${process.env.HOPLA_BLOCK_ID}`, {
   method: 'PATCH',
   headers: { Authorization: `Bearer ${process.env.HOPLA_API_KEY}`, 'Content-Type': 'application/json' },
-  body: JSON.stringify({ titre, url, public: true }),
+  body: JSON.stringify({ title, url, visible: true }),
 });
-console.log(response.ok ? 'Link updated.' : (await response.json()).erreur.message);
+console.log(response.ok ? 'Link updated.' : (await response.json()).error.message);
 ```
 
-For a blog, podcast or YouTube channel, the `flux` (feed) and `derniere-video` (latest video) blocks update automatically, without a script: see [Blocks](/blocks).
+For a blog, podcast or YouTube channel, the `feed` and `latest-video` blocks update automatically, without a script: see [Blocks](/blocks).
 
 ## Daily subscriber backup
 
@@ -119,7 +119,7 @@ Exports the email list to a dated CSV file every night. A read-only key is enoug
 ```bash title="backup-subscribers.sh"
 #!/bin/sh
 mkdir -p ~/hopla
-curl -sf "https://app.hopla.page/api/v1/inscrits?format=csv" \
+curl -sf "https://app.hopla.page/api/v2/subscribers?format=csv" \
   -H "Authorization: Bearer $HOPLA_API_KEY" \
   -o ~/hopla/subscribers-$(date +%F).csv
 ```
@@ -129,6 +129,6 @@ curl -sf "https://app.hopla.page/api/v1/inscrits?format=csv" \
 SVG scales without quality loss, whatever the print size.
 
 ```bash
-curl "https://app.hopla.page/api/v1/qr?format=svg" \
+curl "https://app.hopla.page/api/v2/qr-code?format=svg" \
   -H "Authorization: Bearer $HOPLA_API_KEY" -o qr-hopla.svg
 ```

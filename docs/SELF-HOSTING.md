@@ -26,7 +26,7 @@ Without a Creem configuration, the instance sells no plans: every account gets
 all features, with no trial period and no limits. This includes unlimited
 blocks, scheduling, the email list, one year of analytics, the REST API and the
 MCP server. API keys are created in Réglages (Settings), section "API et MCP",
-and are used against the instance domain: `LIENS_ORIGINE/api/v1` and
+and are used against the instance domain: `LIENS_ORIGINE/api/v2` and
 `LIENS_ORIGINE/mcp` (or `LIENS_ORIGINE_ADMIN` if set).
 
 With `CREEM_API_KEY` and `CREEM_WEBHOOK_SECRET`, the instance enforces the

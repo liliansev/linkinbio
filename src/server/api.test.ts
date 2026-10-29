@@ -6,6 +6,7 @@ const db = await import('./db.ts');
 const { nouvelleCle, repondreApi } = await import('./api.ts');
 const { repondreMcp } = await import('./mcp.ts');
 const { VERSION_CGU } = await import('../lib/legal.ts');
+const { OUTILS_EN } = await import('../lib/apiAnglais.ts');
 
 /* Avec Creem branché, les offres comptent : sans lui, tout serait permis. */
 const ENV = { CREEM_API_KEY: 'creem_test_x', CREEM_WEBHOOK_SECRET: 'whsec_test' };
@@ -32,8 +33,9 @@ const mcp = (cle: string, message: unknown) => repondreMcp(new Request('https://
   method: 'POST', headers: { authorization: `Bearer ${cle}`, 'content-type': 'application/json', accept: 'application/json, text/event-stream' }, body: JSON.stringify(message),
 }), ENV);
 
-const LECTURE_MCP = ['lire_page', 'lister_themes', 'lire_stats', 'lire_compte', 'lire_semaine', 'lire_resume', 'lire_liste', 'lister_inscrits',
-  'lire_qr_code', 'lire_site', 'lire_flux', 'lire_note_avis', 'lister_reseaux', 'lister_pictos', 'lister_types', 'lister_cles'];
+const LECTURE_MCP = ['get_page', 'list_themes', 'get_analytics', 'get_account', 'get_weekly_views', 'get_analytics_summary', 'get_email_list',
+  'list_subscribers', 'get_qr_code', 'fetch_url_preview', 'fetch_feed', 'fetch_review_rating', 'list_social_networks', 'list_icons',
+  'list_block_types', 'list_api_keys'];
 
 /** Une petite image PNG (1 × 1), pour les envois. */
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
@@ -50,7 +52,7 @@ test('une clé neuve : le préfixe, 32 caractères tirés au hasard, seule son e
 test('la documentation se lit sans clé ; le reste demande une clé valide', async () => {
   const doc = await appel(null, 'GET', '');
   assert.equal(doc.status, 200);
-  assert.match(await doc.text(), /# Hopla API and MCP server/);
+  assert.match(await doc.text(), /# Hopla API v1 \(legacy\)/);
   assert.equal((await appel(null, 'GET', '/page')).status, 401);
   const fausse = await appel('hopla_' + 'x'.repeat(32), 'GET', '/page');
   assert.equal(fausse.status, 401);
@@ -174,8 +176,8 @@ test('le serveur MCP : initialisation, outils, appels', async () => {
 
   const liste = await (await mcp(cle, { jsonrpc: '2.0', id: 2, method: 'tools/list' })).json();
   const noms = liste.result.tools.map((t: { name: string }) => t.name);
-  assert.deepEqual(noms, [...LECTURE_MCP, 'modifier_reglages', 'ajouter_bloc', 'modifier_bloc', 'supprimer_bloc', 'ordonner_blocs',
-    'dupliquer_bloc', 'envoyer_image', 'supprimer_inscrit', 'envoyer_inscrits']);
+  assert.deepEqual(noms, [...LECTURE_MCP, 'update_settings', 'create_block', 'update_block', 'delete_block', 'reorder_blocks',
+    'duplicate_block', 'upload_image', 'delete_subscriber', 'sync_subscribers']);
   for (const t of liste.result.tools) { assert.equal(t.inputSchema.type, 'object'); assert.ok(!('appeler' in t)); }
 
   const ajout = await (await mcp(cle, { jsonrpc: '2.0', id: 3, method: 'tools/call', params: { name: 'ajouter_bloc', arguments: { titre: 'Par Claude', url: 'exemple.fr' } } })).json();
@@ -374,4 +376,99 @@ test('le serveur MCP : les outils ajoutés', async () => {
   const copie = await appelOutil('dupliquer_bloc', { id: ajout.structuredContent.bloc.id });
   assert.equal(copie.structuredContent.bloc.titre, 'Original');
   assert.equal((await appelOutil('lire_site', { url: 'pas une adresse' })).isError, true);
+});
+
+const appelV2 = (cle: string | null, methode: string, chemin: string, corps?: unknown) => repondreApi(new Request(`https://app.hopla.page/api/v2${chemin}`, {
+  method: methode,
+  headers: { ...(cle ? { authorization: `Bearer ${cle}` } : {}), 'content-type': 'application/json', 'x-real-ip': '203.0.113.7' },
+  body: corps === undefined ? undefined : JSON.stringify(corps),
+}), ENV);
+
+test('la v2 parle anglais : chemins, champs, valeurs, erreurs ; les noms français restent acceptés en entrée', async () => {
+  const { cle, id } = compteAvecCle('nora');
+  const doc = await appelV2(null, 'GET', '');
+  assert.match(await doc.text(), /# Hopla API and MCP server/);
+  const sansCle = await (await appelV2(null, 'GET', '/page')).json();
+  assert.equal(sansCle.error.code, 'missing_api_key');
+
+  const cree = await appelV2(cle, 'POST', '/blocks', { type: 'link', title: 'Podcast', url: 'https://exemple.fr', visible: true, featured: true, format: 'banner' });
+  assert.equal(cree.status, 201);
+  const { block } = await cree.json();
+  assert.equal(block.type, 'link');
+  assert.equal(block.title, 'Podcast');
+  assert.equal(block.format, 'banner');
+  assert.equal(block.visible, true);
+  assert.ok(!('titre' in block));
+  assert.equal(db.lireBlocs(id)[0].titre, 'Podcast');
+  assert.equal(db.lireBlocs(id)[0].format, 'bandeau');
+
+  // Un ancien nom de champ passe encore.
+  const modifie = await (await appelV2(cle, 'PATCH', `/blocks/${block.id}`, { titre: 'Mon podcast', visible: false })).json();
+  assert.equal(modifie.block.title, 'Mon podcast');
+  assert.equal(modifie.block.visible, false);
+
+  const copie = await appelV2(cle, 'POST', `/blocks/${block.id}/duplicate`, { hidden: true });
+  assert.equal(copie.status, 201);
+  const ordre = await appelV2(cle, 'PUT', '/blocks/order', { ids: db.lireBlocs(id).map(b => b.id).reverse() });
+  assert.equal(ordre.status, 200);
+
+  const reglages = await (await appelV2(cle, 'PATCH', '/settings', { profile: { name: 'Nora' }, socialLinksPosition: 'bottom', button: { shape: 'square' } })).json();
+  assert.equal(reglages.settings.profile.name, 'Nora');
+  assert.equal(reglages.settings.socialLinksPosition, 'bottom');
+  assert.equal(reglages.settings.button.shape, 'square');
+  assert.equal(db.lireReglages(id).reseauxPosition, 'bas');
+
+  const page = await (await appelV2(cle, 'GET', '/page')).json();
+  assert.equal(page.page.username, 'nora');
+  assert.equal(page.blocks.length, 2);
+  const { account } = await (await appelV2(cle, 'GET', '/account')).json();
+  assert.equal(account.plan, 'pro');
+  assert.deepEqual(account.features.api, { included: true, plan: 'pro' });
+  assert.ok(account.trial.until);
+  assert.ok((await (await appelV2(cle, 'GET', '/block-types')).json()).types.includes('contact-card'));
+  assert.ok((await (await appelV2(cle, 'GET', '/social-networks')).json()).socialNetworks.length > 10);
+  assert.ok((await (await appelV2(cle, 'GET', '/api-keys')).json()).apiKeys[0].prefix.startsWith('hopla_'));
+  assert.equal((await (await appelV2(cle, 'GET', '/analytics/week')).json()).week.views, 0);
+  assert.equal((await (await appelV2(cle, 'GET', '/email-list')).json()).list.subscribers, 0);
+  assert.match(await (await appelV2(cle, 'GET', '/subscribers?format=csv')).text(), /^email,first_name,subscribed_at,source/);
+
+  const inconnu = await appelV2(cle, 'POST', '/blocks', { type: 'lien-inconnu' });
+  assert.equal(inconnu.status, 400);
+  const erreur = (await inconnu.json()).error;
+  assert.equal(erreur.code, 'unknown_block_type');
+  assert.match(erreur.message, /link, heading/);
+  assert.equal((await (await appelV2(cle, 'GET', '/blocs')).json()).error.code, 'not_found');
+  assert.equal((await appelV2(cle, 'DELETE', '/settings')).status, 405);
+});
+
+test('la v1 garde ses noms français', async () => {
+  const { cle } = compteAvecCle('olga');
+  const { bloc } = await (await appel(cle, 'POST', '/blocs', { type: 'lien', titre: 'Garde', url: 'https://exemple.fr' })).json();
+  assert.equal(bloc.titre, 'Garde');
+  assert.equal(bloc.type, 'lien');
+});
+
+test('le serveur MCP : noms anglais, et les anciens noms français répondent encore en français', async () => {
+  const { cle } = compteAvecCle('paula');
+  const liste = await (await mcp(cle, { jsonrpc: '2.0', id: 1, method: 'tools/list' })).json();
+  const creer = liste.result.tools.find((t: { name: string }) => t.name === 'create_block');
+  assert.ok('title' in creer.inputSchema.properties);
+  assert.ok(creer.inputSchema.properties.type.enum.includes('link'));
+  const stats = liste.result.tools.find((t: { name: string }) => t.name === 'get_analytics');
+  assert.deepEqual(Object.keys(stats.inputSchema.properties), ['days', 'from', 'to']);
+  const appelOutil = async (name: string, args: unknown = {}) => (await (await mcp(cle, { jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name, arguments: args } })).json()).result;
+  const neuf = await appelOutil('create_block', { type: 'heading', title: 'Section' });
+  assert.equal(neuf.structuredContent.block.type, 'heading');
+  assert.equal(neuf.structuredContent.block.title, 'Section');
+  assert.deepEqual(liste.result.tools.map((t: { name: string }) => t.name).sort(), Object.values(OUTILS_EN).sort());
+  // Chaque ancien nom répond encore : avec une clé en lecture seule, un outil qui écrit se dit « read-only », pas inconnu.
+  const lecture = compteAvecCle('quentin', { ecriture: false }).cle;
+  for (const fr of Object.keys(OUTILS_EN)) {
+    const r = (await (await mcp(lecture, { jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: fr, arguments: {} } })).json()).result;
+    assert.ok(!r.content?.[0]?.text?.startsWith('Unknown tool'), fr);
+  }
+  const ancien = await appelOutil('ajouter_bloc', { titre: 'Ancien', url: 'https://exemple.fr' });
+  assert.equal(ancien.structuredContent.bloc.titre, 'Ancien');
+  assert.equal((await appelOutil('get_analytics', { days: 7 })).structuredContent.analytics.days, 7);
+  assert.equal((await appelOutil('get_page')).structuredContent.blocks.length, 2);
 });
