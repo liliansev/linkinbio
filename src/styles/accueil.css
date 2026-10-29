@@ -270,16 +270,16 @@ html:has(.hl) { background: #fff; scroll-padding-top: 76px; }
 .hl-roue-depuis > span { display: grid; }
 .hl-roue-page {
   width: 100%; display: flex; flex-direction: column; align-items: center; padding: 26px 18px 18px; border-radius: 26px;
-  background: var(--fond); color: var(--texte); font-family: var(--police); text-align: center; box-shadow: 0 28px 44px -26px rgb(0 0 40 / .75);
+  background: var(--fond); color: var(--texte); font-family: var(--police); text-align: center; box-shadow: 0 28px 44px -26px color-mix(in srgb, var(--ombre, #000) 80%, transparent);
 }
 .hl-roue-avatar { width: 76px; aspect-ratio: 1; border-radius: 50%; object-fit: cover; }
-.hl-roue-nom { margin-top: 12px; font-family: var(--police-titre); font-size: 21px; font-weight: 440; letter-spacing: -0.02em; line-height: 1.15; }
+.hl-roue-nom { margin-top: 12px; font-family: var(--police-titre); font-size: 21px; font-weight: var(--graisse-nom, 600); letter-spacing: -0.02em; line-height: 1.15; }
 .hl-roue-bio { margin-top: 6px; max-width: 24ch; color: var(--doux); font-size: 13px; line-height: 1.4; text-wrap: balance; }
 .hl-roue-liens { display: flex; flex-direction: column; gap: 9px; width: 100%; margin-top: 18px; }
 .hl-roue-ligne {
-  display: grid; grid-template-columns: 22px 1fr 22px; align-items: center; min-height: 46px; padding: 6px 12px; border-radius: 12px;
+  display: grid; grid-template-columns: 22px 1fr 22px; align-items: center; min-height: 46px; padding: 6px 12px; border-radius: var(--rayon, 12px);
   background: var(--surface); color: var(--surface-texte); font-size: 14px; font-weight: 500; line-height: 1.2;
-  box-shadow: 0 3px 0 rgb(0 0 0 / .45); transition: background-color .35s, color .35s;
+  box-shadow: 0 3px 0 color-mix(in srgb, var(--ombre, #000) 30%, transparent); transition: background-color .35s, color .35s;
 }
 .hl-roue-ligne span { grid-column: 2; }
 .hl-roue-ligne[data-vedette] { background: var(--vedette); color: var(--vedette-texte); }
