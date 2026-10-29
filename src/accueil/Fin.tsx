@@ -12,6 +12,7 @@ import { PAGES_FONCTIONS } from './pages/fonctions.ts';
 import { COMPARATIFS } from './pages/comparatifs.ts';
 import { Reserver, allerAuChamp, choisirOffre, useReservation } from './Reserver.tsx';
 import type { ApiAccueil } from './Reserver.tsx';
+import { NOM_PUBLIC } from '../lib/types.ts';
 import { MOTS, QUESTION_LINKTREE, appel, questions, useInscription } from './textes.ts';
 
 /* 09 · Les prix ; 10 · les questions ; 11 · le dernier appel et le pied de page. */
@@ -161,8 +162,61 @@ function useEnvoye() {
   return etape === 'fait' || !!ancien || correction;
 }
 
+/** Où vit la page : chez nous, ou sur son propre serveur (29 octobre 2026, demandé par Lilian). */
+type Hebergement = 'hopla' | 'serveur';
+const HEBERGEMENTS: [Hebergement, string][] = [['hopla', 'Chez Hopla'], ['serveur', 'Chez toi']];
+
+/** Un groupe de boutons radio : un seul arrêt de tabulation, les flèches passent de l'un à l'autre. */
+function flechesRadio<T extends string>(valeurs: readonly T[], courante: T, choisir: (v: T) => void, attribut: string) {
+  return (ev: KeyboardEvent<HTMLDivElement>) => {
+    if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(ev.key)) return;
+    ev.preventDefault();
+    const pas = ev.key === 'ArrowLeft' || ev.key === 'ArrowUp' ? -1 : 1;
+    const suivante = valeurs[(valeurs.indexOf(courante) + pas + valeurs.length) % valeurs.length];
+    choisir(suivante);
+    ev.currentTarget.querySelector<HTMLButtonElement>(`[${attribut}="${suivante}"]`)?.focus();
+  };
+}
+
+/** Ce qu'apporte une instance à soi : tout Hopla, sans offre à prendre (voir `sansPaiement` dans server/db.ts). */
+const SUR_TON_SERVEUR = [
+  'Toutes les fonctionnalités de Pro, pour chaque page',
+  'Des pages et des blocs sans limite',
+  'L’API et le serveur MCP, sur ton domaine',
+  'Tes données chez toi, dans un seul fichier',
+  'Le code sous licence AGPL-3.0',
+];
+const A_TA_CHARGE = ['Un serveur avec Docker, et un nom de domaine', 'Les mises à jour et les sauvegardes', 'L’envoi des e-mails, par Resend'];
+
+function SurTonServeur() {
+  const guide = `${LIEN_SOURCE}/blob/main/docs/AUTO-HEBERGEMENT.md`;
+  return (
+    <div className="hl-offres hl-offres-serveur">
+      <article className="hl-offre hl-entre">
+        <div className="hl-offre-tete"><h3 className="hl-h3">Auto-hébergé</h3></div>
+        <div>
+          <p className="hl-prix"><b>0 €</b></p>
+          <p className="hl-gris hl-petit hl-prix-an">Ton serveur à ta charge</p>
+        </div>
+        <p className="hl-offre-phrase">Tout Hopla, installé chez toi avec Docker, en dix minutes depuis Coolify ou Dokploy.</p>
+        <ul data-ouvert="">{SUR_TON_SERVEUR.map(g => <Avantage key={g} g={g} />)}</ul>
+        <div className="hp-offre-action">
+          <a href={LIEN_SOURCE} className="hl-btn"><Icone nom="github" taille={18} />Voir le code sur GitHub</a>
+          <p><a href={guide}>Lire le guide d’installation</a></p>
+        </div>
+      </article>
+      <article className="hl-offre hl-offre-charge hl-entre" style={{ '--d': '60ms' } as CSSProperties}>
+        <div className="hl-offre-tete"><h3 className="hl-h3">Ce qui reste à faire</h3></div>
+        <p className="hl-offre-phrase">Sur {NOM_PUBLIC}, on s’en occupe pour toi. Chez toi, c’est ton travail :</p>
+        <ul data-ouvert="">{A_TA_CHARGE.map(g => <li key={g}><span className="hl-puce" aria-hidden="true" /><span>{insecables(g)}</span></li>)}</ul>
+      </article>
+    </div>
+  );
+}
+
 export function Prix() {
   const [periode, setPeriode] = useState<Periode>('mois');
+  const [hebergement, setHebergement] = useState<Hebergement>('hopla');
   // Les prix changent sous les yeux ; aux lecteurs d'écran, une phrase les redit, seulement quand on change de période.
   const [annonce, setAnnonce] = useState('');
   const changer = (p: Periode) => {
@@ -175,19 +229,28 @@ export function Prix() {
   const libelle = appel(mode);
   // L'offre choisie suit le visiteur jusqu'au champ : il lit qu'il commence en Gratuit et où l'activer ensuite.
   const reserver = (ev: MouseEvent, plan: Plan) => { ev.preventDefault(); choisirOffre(plan === 'gratuit' ? '' : plan, periode); allerAuChamp(); };
-  // Un groupe de boutons radio : un seul arrêt de tabulation, les flèches changent de période.
-  const fleches = (ev: KeyboardEvent<HTMLDivElement>) => {
-    if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(ev.key)) return;
-    ev.preventDefault();
-    const suivante = periode === 'mois' ? 'an' : 'mois';
-    changer(suivante);
-    ev.currentTarget.querySelector<HTMLButtonElement>(`[data-periode="${suivante}"]`)?.focus();
+  const fleches = flechesRadio(PERIODES, periode, changer, 'data-periode');
+  // Les cartes de l'autre hébergement naissent sous les yeux, après le passage de l'observateur des entrées : elles se montrent tout de suite.
+  const heberger = (h: Hebergement) => {
+    setHebergement(h);
+    requestAnimationFrame(() => document.querySelectorAll<HTMLElement>('#prix .hl-entre:not([data-vu])').forEach(e => { e.dataset.vu = ''; }));
   };
+  const flechesHebergement = flechesRadio(HEBERGEMENTS.map(([h]) => h), hebergement, heberger, 'data-hebergement');
+  // Le choix « Chez toi » n'existe que si le code se lit quelque part (LIEN_SOURCE : le dépôt public, ou une instance).
+  const serveur = !!LIEN_SOURCE && hebergement === 'serveur';
   return (
     <section className="hl-section" id="prix" aria-labelledby="titre-prix">
       <div className="hl-tete-section hl-entre">
         <h2 id="titre-prix" className="hl-h2">Ta place sur internet<br /><span className="hl-cache">. </span><span>À ton rythme</span></h2>
+        {LIEN_SOURCE && (
+          <div className="hl-hebergement" role="radiogroup" aria-label="Hébergement" onKeyDown={flechesHebergement}>
+            {HEBERGEMENTS.map(([h, nom]) => (
+              <button key={h} type="button" role="radio" data-hebergement={h} aria-checked={hebergement === h} tabIndex={hebergement === h ? 0 : -1} onClick={() => heberger(h)}>{nom}</button>
+            ))}
+          </div>
+        )}
       </div>
+      {serveur ? <SurTonServeur /> : <>
       <div className="hl-prix-cartes">
       <div className="hl-periode hl-entre" role="radiogroup" aria-label="Paiement" onKeyDown={fleches}>
         {PERIODES.map(p => (
@@ -246,7 +309,8 @@ export function Prix() {
       </div>
       </div>
       <TableauOffres periode={periode} reserver={reserver} action={plan => envoye || !OFFRES[plan].enVente ? null : 'Choisir'} />
-      <p className="hl-gris hl-petit hp-prix-note">Prix TTC. Ta page commence par {ESSAI_JOURS} jours de {OFFRES[PLAN_ESSAI].nom} offerts, sans carte bancaire&nbsp;; ensuite elle reste en ligne en Gratuit, ou tu prends une offre depuis tes réglages. Résiliable à tout moment&nbsp;: l’offre reste jusqu’à la fin de la période payée.</p>
+      </>}
+      {!serveur && <p className="hl-gris hl-petit hp-prix-note">Prix TTC. Ta page commence par {ESSAI_JOURS} jours de {OFFRES[PLAN_ESSAI].nom} offerts, sans carte bancaire&nbsp;; ensuite elle reste en ligne en Gratuit, ou tu prends une offre depuis tes réglages. Résiliable à tout moment&nbsp;: l’offre reste jusqu’à la fin de la période payée.</p>}
     </section>
   );
 }
@@ -337,7 +401,6 @@ const COLONNES: { titre: string; liens: [string, string][] }[] = [
     ['Traitement des données', '/legal/traitement-des-donnees'],
     ['Sous-traitants', '/legal/sous-traitants'],
     ['Mentions légales', '/legal/mentions-legales'],
-    ...(LIEN_SOURCE ? [['Code source', LIEN_SOURCE] as [string, string]] : []),
   ] },
 ];
 
@@ -357,7 +420,10 @@ export function Pied() {
             <ul>{c.liens.map(([nom, href]) => <li key={href}><a href={href} aria-current={href === chemin ? 'page' : undefined}>{nom}</a></li>)}</ul>
           </nav>
         ))}
-        <p className="hl-pied-bas">© 2026 Hopla, édité par {NOM_EDITEUR}</p>
+        <div className="hl-pied-bas">
+          <p>© 2026 Hopla, édité par {NOM_EDITEUR}</p>
+          {LIEN_SOURCE && <a href={LIEN_SOURCE} className="hl-pied-github" aria-label="Le code de Hopla sur GitHub"><Icone nom="github" taille={22} /></a>}
+        </div>
       </div>
     </footer>
   );

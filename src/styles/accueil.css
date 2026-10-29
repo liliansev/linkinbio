@@ -944,7 +944,23 @@ html:has(.hl-reserver input:focus) { overflow-anchor: none; }
 .hl-pied-colonne a { display: inline-block; min-width: 44px; padding-block: 5px; color: var(--gris); text-decoration: none; line-height: 1.4; }
 .hl-pied-colonne a[aria-current] { color: var(--encre); }
 .hl-pied-colonne a:hover { color: var(--encre); text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
-.hl-pied-bas { grid-column: 1 / -1; margin-top: 8px; padding-top: 24px; border-top: 1px solid var(--filet); color: var(--gris); font-size: 13px; }
+.hl-pied-bas { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 8px; padding-top: 24px; border-top: 1px solid var(--filet); color: var(--gris); font-size: 13px; }
+.hl-pied-bas p { margin: 0; }
+/* Le code de Hopla (29 octobre 2026) : l'icône seule, à l'encre grise, une cible de 44 px. */
+.hl-pied-github { display: inline-grid; place-items: center; width: 44px; height: 44px; margin: -11px -11px -11px 0; color: var(--gris); transition: color .15s; }
+.hl-pied-github:hover { color: var(--encre); }
+/* Hébergé par nous ou sur ton serveur : deux mots, le choix pris souligné, rien qui pèse plus que les prix. */
+.hl-hebergement { display: flex; gap: 24px; margin-top: 20px; }
+.hl-hebergement button { min-height: 44px; padding: 0; border: 0; background: none; color: var(--gris); font: inherit; font-size: 16px; font-weight: 500; cursor: pointer; text-decoration: underline 2px transparent; text-underline-offset: 8px; transition: color .15s, text-decoration-color .15s; }
+.hl-hebergement button:hover { color: var(--encre); }
+.hl-hebergement button[aria-checked='true'] { color: var(--encre); text-decoration-color: var(--accent); }
+.hl-offres-serveur { grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 900px) { .hl-offres-serveur { grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: start; } }
+.hl-offre-charge { background: transparent; border-color: transparent; }
+.hl-offre-charge .hl-h3 { font-size: 18px; }
+.hl-offre-charge .hl-puce { flex: none; display: grid; place-items: center; width: 18px; height: 1lh; }
+.hl-offre-charge .hl-puce::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: var(--gris); }
+.hl-offres-serveur .hl-btn svg { margin-right: 8px; }
 /* Au téléphone, Découvrir et l'aide côte à côte ; les fonctions et les comparatifs sur toute la largeur, en deux colonnes. */
 @media (max-width: 719px) {
   .hl-pied-colonne:nth-of-type(4) { order: 1; }
