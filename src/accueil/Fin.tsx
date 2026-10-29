@@ -164,7 +164,7 @@ function useEnvoye() {
 
 /** Où vit la page : chez nous, ou sur son propre serveur (29 octobre 2026, demandé par Lilian). */
 type Hebergement = 'hopla' | 'serveur';
-const HEBERGEMENTS: [Hebergement, string][] = [['hopla', 'Chez Hopla'], ['serveur', 'Chez toi']];
+const HEBERGEMENTS: [Hebergement, string][] = [['hopla', 'Hébergé'], ['serveur', 'Auto-hébergé']];
 
 /** Un groupe de boutons radio : un seul arrêt de tabulation, les flèches passent de l'un à l'autre. */
 function flechesRadio<T extends string>(valeurs: readonly T[], courante: T, choisir: (v: T) => void, attribut: string) {
@@ -180,34 +180,34 @@ function flechesRadio<T extends string>(valeurs: readonly T[], courante: T, choi
 
 /** Ce qu'apporte une instance à soi : tout Hopla, sans offre à prendre (voir `sansPaiement` dans server/db.ts). */
 const SUR_TON_SERVEUR = [
-  'Toutes les fonctionnalités de Pro, pour chaque page',
-  'Des pages et des blocs sans limite',
-  'L’API et le serveur MCP, sur ton domaine',
-  'Tes données chez toi, dans un seul fichier',
-  'Le code sous licence AGPL-3.0',
+  'Toutes les fonctionnalités de l’offre Pro',
+  'Pages et blocs illimités',
+  'API REST et serveur MCP',
+  'Base SQLite sur ton infrastructure',
+  'Code source sous licence AGPL-3.0',
 ];
-const A_TA_CHARGE = ['Un serveur avec Docker, et un nom de domaine', 'Les mises à jour et les sauvegardes', 'L’envoi des e-mails, par Resend'];
+const A_TA_CHARGE = ['Un serveur avec Docker et un nom de domaine', 'Les mises à jour et les sauvegardes', 'Un compte Resend pour l’envoi des e-mails'];
 
 function SurTonServeur() {
   const guide = `${LIEN_SOURCE}/blob/main/docs/AUTO-HEBERGEMENT.md`;
   return (
     <div className="hl-offres hl-offres-serveur">
       <article className="hl-offre hl-entre">
-        <div className="hl-offre-tete"><h3 className="hl-h3">Auto-hébergé</h3></div>
+        <div className="hl-offre-tete"><h3 className="hl-h3">Open source</h3></div>
         <div>
           <p className="hl-prix"><b>0 €</b></p>
-          <p className="hl-gris hl-petit hl-prix-an">Ton serveur à ta charge</p>
+          <p className="hl-gris hl-petit hl-prix-an">Infrastructure non comprise</p>
         </div>
-        <p className="hl-offre-phrase">Tout Hopla, installé chez toi avec Docker, en dix minutes depuis Coolify ou Dokploy.</p>
+        <p className="hl-offre-phrase">Déploiement par Docker Compose, compatible avec Coolify et Dokploy.</p>
         <ul data-ouvert="">{SUR_TON_SERVEUR.map(g => <Avantage key={g} g={g} />)}</ul>
         <div className="hp-offre-action">
-          <a href={LIEN_SOURCE} className="hl-btn"><Icone nom="github" taille={18} />Voir le code sur GitHub</a>
-          <p><a href={guide}>Lire le guide d’installation</a></p>
+          <a href={LIEN_SOURCE} className="hl-btn"><Icone nom="github" taille={18} />Voir le dépôt GitHub</a>
+          <p><a href={guide}>Guide d’installation</a></p>
         </div>
       </article>
       <article className="hl-offre hl-offre-charge hl-entre" style={{ '--d': '60ms' } as CSSProperties}>
-        <div className="hl-offre-tete"><h3 className="hl-h3">Ce qui reste à faire</h3></div>
-        <p className="hl-offre-phrase">Sur {NOM_PUBLIC}, on s’en occupe pour toi. Chez toi, c’est ton travail :</p>
+        <div className="hl-offre-tete"><h3 className="hl-h3">Prérequis</h3></div>
+        <p className="hl-offre-phrase">À la charge de l’administrateur de l’instance, compris dans l’offre hébergée sur {NOM_PUBLIC} :</p>
         <ul data-ouvert="">{A_TA_CHARGE.map(g => <li key={g}><span className="hl-puce" aria-hidden="true" /><span>{insecables(g)}</span></li>)}</ul>
       </article>
     </div>
@@ -236,7 +236,7 @@ export function Prix() {
     requestAnimationFrame(() => document.querySelectorAll<HTMLElement>('#prix .hl-entre:not([data-vu])').forEach(e => { e.dataset.vu = ''; }));
   };
   const flechesHebergement = flechesRadio(HEBERGEMENTS.map(([h]) => h), hebergement, heberger, 'data-hebergement');
-  // Le choix « Chez toi » n'existe que si le code se lit quelque part (LIEN_SOURCE : le dépôt public, ou une instance).
+  // Le choix « Auto-hébergé » n'existe que si le code se lit quelque part (LIEN_SOURCE : le dépôt public, ou une instance).
   const serveur = !!LIEN_SOURCE && hebergement === 'serveur';
   return (
     <section className="hl-section" id="prix" aria-labelledby="titre-prix">

@@ -1,6 +1,6 @@
 ---
-title: Les statistiques
-description: Vues, visiteurs et clics de ta page, par jour, par bloc, par réseau, par appareil et par pays.
+title: Statistiques
+description: Vues, visiteurs et clics d’une page, par jour, par bloc, par source, par appareil et par pays.
 ---
 
 <RoutesDe tag="Statistiques" />
@@ -10,14 +10,14 @@ curl "https://app.hopla.page/api/v1/stats?periode=7" \
   -H "Authorization: Bearer $HOPLA_CLE"
 ```
 
-## La période
+## Période
 
-- `periode` : les derniers jours, `7`, `14`, `30` (par défaut), `90` ou `365`.
-- `du` et `au` : deux dates, `AAAA-MM-JJ`, en jours de Paris. Par exemple `?du=2026-10-01&au=2026-10-15`.
+- `periode` : nombre de jours glissants, `7`, `14`, `30` (par défaut), `90` ou `365`.
+- `du` et `au` : deux dates au format `AAAA-MM-JJ`, fuseau Europe/Paris. Par exemple `?du=2026-10-01&au=2026-10-15`.
 
-Chaque chiffre vient avec celui de la période d’avant, de même longueur, pour la tendance.
+Chaque valeur est accompagnée de celle de la période précédente de même durée, pour le calcul de la tendance.
 
-## La réponse
+## Réponse
 
 ```json
 {
@@ -36,7 +36,7 @@ Chaque chiffre vient avec celui de la période d’avant, de même longueur, pou
 }
 ```
 
-| Champ | Ce qu’il compte |
+| Champ | Description |
 | --- | --- |
 | `vues`, `visiteurs`, `clics` | Les totaux de la période. Un visiteur compte une fois par jour |
 | `serie` | Un jour par entrée, du plus ancien au plus récent |
@@ -46,19 +46,19 @@ Chaque chiffre vient avec celui de la période d’avant, de même longueur, pou
 | `pays` | Le code du pays (`FR`), vide quand on ne le sait pas |
 | `precedent` | Les trois totaux de la période d’avant |
 
-## La semaine, pour toutes les offres
+## Tendance hebdomadaire (toutes offres)
 
-`GET /stats/semaine` donne les vues des 7 derniers jours et celles des 7 d’avant, même sans historique de stats (Gratuit) : de quoi afficher une tendance n’importe où.
+`GET /stats/semaine` renvoie les vues des 7 derniers jours et des 7 jours précédents, y compris sans historique de statistiques (offre Gratuit).
 
 ```json
 { "semaine": { "vues": 412, "avant": 377, "dejaVue": true } }
 ```
 
-`dejaVue` dit si la page a déjà eu une vue : à `false`, mieux vaut inviter à la partager qu’afficher un zéro.
+`dejaVue` indique si la page a déjà été vue au moins une fois.
 
-## Le résumé en une phrase
+## Résumé
 
-`GET /stats/resume` lit les stats pour toi, comme « En bref » dans l’onglet Stats : une phrase à montrer telle quelle, et les faits qui la portent. Il prend la même période que `GET /stats`.
+`GET /stats/resume` renvoie le résumé affiché dans « En bref » de l’onglet Stats : une phrase prête à afficher et les faits qui la composent. Il accepte les mêmes paramètres de période que `GET /stats`.
 
 ```json
 {
@@ -73,8 +73,8 @@ Chaque chiffre vient avec celui de la période d’avant, de même longueur, pou
 }
 ```
 
-`faits` détaille, une phrase par fait, avec son `ton` : `hausse`, `baisse` ou `neutre`. Un bon début pour un message Slack ou un tableau de bord. Voir la [recette](/recettes#les-stats-du-lundi-dans-slack).
+`faits` contient une phrase par fait, avec son `ton` : `hausse`, `baisse` ou `neutre`. Voir l’[exemple Slack](/recettes#rapport-hebdomadaire-dans-slack).
 
-## La vie privée
+## Confidentialité
 
-Les statistiques se comptent sans cookie, et l’adresse IP des visiteurs n’est jamais gardée.
+Les statistiques sont collectées sans cookie, et l’adresse IP des visiteurs n’est jamais stockée.

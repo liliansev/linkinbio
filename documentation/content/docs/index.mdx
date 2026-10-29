@@ -1,32 +1,32 @@
 ---
-title: Accueil
+title: Introduction
 full: true
-description: L’API et le serveur MCP de Hopla, pour gérer ta page de liens depuis ton code ou ton agent IA.
+description: L’API REST et le serveur MCP de Hopla, pour gérer une page de liens depuis votre code ou un agent IA.
 ---
 
 <Accueil />
 
-## Ce qu’il faut savoir
+## Points essentiels
 
 <Cards>
-  <Card title="Réservé à Pro" href="/compte">
+  <Card title="Offre Pro requise" href="/compte">
     L’API et le serveur MCP font partie de l’offre Pro, et des 14 jours d’essai à l’inscription.
   </Card>
-  <Card title="Une clé par usage" href="/cles">
-    Une clé se crée dans Réglages. En lecture seule, elle lit tout et ne modifie rien.
+  <Card title="Authentification" href="/cles">
+    Les clés se créent dans Réglages. Une clé en lecture seule ne modifie aucune donnée.
   </Card>
-  <Card title="120 appels par minute" href="/limites-et-erreurs">
-    Et 5 000 par jour pour une clé. Au-delà, l’API répond 429 avec le temps à attendre.
+  <Card title="Limites de débit" href="/limites-et-erreurs">
+    120 requêtes par minute et 5 000 par jour pour une clé. Au-delà, l’API répond 429 avec le délai d’attente.
   </Card>
 </Cards>
 
-## Les adresses
+## URL de base
 
 | | |
 | --- | --- |
 | API REST | `https://app.hopla.page/api/v1` |
 | Serveur MCP | `https://app.hopla.page/mcp` |
 | Fichier OpenAPI | [`hopla.page/docs/openapi.json`](https://hopla.page/docs/openapi.json), pour générer un client |
-| Pour les agents IA | [`hopla.page/docs/llms.txt`](https://hopla.page/docs/llms.txt), et cette documentation en entier dans [`llms-full.txt`](https://hopla.page/docs/llms-full.txt) |
+| Agents IA | [`hopla.page/docs/llms.txt`](https://hopla.page/docs/llms.txt), et cette documentation en entier dans [`llms-full.txt`](https://hopla.page/docs/llms-full.txt) |
 
-Chaque page de cette documentation se lit aussi en Markdown : le bouton « Copier en Markdown » la donne telle quelle à ton agent.
+Chaque page de cette documentation est disponible en Markdown : le bouton « Copier en Markdown » permet de la transmettre telle quelle à un agent.
