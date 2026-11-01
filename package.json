@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite dev --port 4400",
     "build": "vite build",
-    "test": "node --disable-warning=ExperimentalWarning --test src/**/*.test.ts && node --test deploy/server.test.mjs",
+    "test": "node --disable-warning=ExperimentalWarning --test src/**/*.test.ts && node --disable-warning=ExperimentalWarning --test deploy/server.test.mjs deploy/sauvegarde.test.mjs",
     "typecheck": "tsc --noEmit",
     "start": "node --disable-warning=ExperimentalWarning deploy/server.mjs"
   },

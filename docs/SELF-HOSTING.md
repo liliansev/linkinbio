@@ -136,9 +136,15 @@ with the same environment variables.
 ## Backups
 
 All data lives in the `hopla-data` volume: the SQLite database
-(`/data/liens.db`) and uploaded images. The `deploy/sauvegarde.sh` script takes
-an online copy (`VACUUM INTO`), verifies it, keeps 14 days of copies and uploads
-them to remote storage with rclone when `HOPLA_SAUVEGARDE_DISTANTE` is set.
+(`/data/liens.db`) and uploaded images. `deploy/sauvegarde.mjs`, shipped in the
+image, takes an online copy (`VACUUM INTO`), verifies it, compresses it, uploads
+it to any S3-compatible storage (Cloudflare R2, MinIO, AWS S3) and deletes copies
+older than 30 days. Set `R2_BACKUP_ENDPOINT`, `R2_BACKUP_BUCKET`,
+`R2_BACKUP_ACCESS_KEY_ID` and `R2_BACKUP_SECRET_ACCESS_KEY` (optional:
+`R2_BACKUP_PREFIX`, `R2_BACKUP_JOURS`, `R2_BACKUP_REGION`), then run it every
+night: a Coolify or Dokploy scheduled task on the `hopla` service with the command
+`node --disable-warning=ExperimentalWarning deploy/sauvegarde.mjs`, or a host
+cron job running that command through `docker compose exec hopla`.
 
 Also keep a copy of `LIENS_CLE_INTEGRATIONS`: without it, the API credentials
 and subscribers encrypted in the database cannot be read.

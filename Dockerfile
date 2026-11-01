@@ -15,8 +15,8 @@ FROM node:24-alpine
 ENV NODE_ENV=production PORT=3000
 WORKDIR /app
 COPY --from=build --chown=node:node /app/dist ./dist
-COPY --chown=node:node deploy/server.mjs ./deploy/server.mjs
-# La base SQLite : un volume nommé monté ici (voir deploy/compose.yaml).
+COPY --chown=node:node deploy/server.mjs deploy/sauvegarde.mjs ./deploy/
+# La base SQLite : un volume nommé monté ici (volume persistant de Coolify, voir deploy/README.md).
 RUN mkdir -p /data && chown node:node /data
 USER node
 EXPOSE 3000

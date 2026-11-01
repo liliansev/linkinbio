@@ -1,7 +1,7 @@
 # Hopla as a single service, for self-hosting: Coolify, Dokploy, or any server
 # with Docker Compose. Point to the repository URL, set the two required
 # variables, deploy. Guide: docs/SELF-HOSTING.md.
-# (The hopla.page production stack is deploy/compose.yaml.)
+# (hopla.page runs as a Coolify application built from the Dockerfile: deploy/README.md.)
 services:
   hopla:
     build: .
@@ -33,6 +33,12 @@ services:
       LIENS_INSCRIPTION: ${LIENS_INSCRIPTION:-}
       # Your fork, if you modified the code (AGPL-3.0): target of the "Code source" link.
       LIENS_DEPOT_SOURCE: ${LIENS_DEPOT_SOURCE:-}
+      # Optional: nightly backups to S3-compatible storage (R2, MinIO, S3) by deploy/sauvegarde.mjs,
+      # run from a scheduled task (see the guide, "Backups").
+      R2_BACKUP_ENDPOINT: ${R2_BACKUP_ENDPOINT:-}
+      R2_BACKUP_BUCKET: ${R2_BACKUP_BUCKET:-}
+      R2_BACKUP_ACCESS_KEY_ID: ${R2_BACKUP_ACCESS_KEY_ID:-}
+      R2_BACKUP_SECRET_ACCESS_KEY: ${R2_BACKUP_SECRET_ACCESS_KEY:-}
     # SQLite database and uploaded images: the entire instance state, back it up.
     volumes:
       - hopla-data:/data

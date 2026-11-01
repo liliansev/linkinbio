@@ -159,7 +159,7 @@ export function base(): DatabaseSync {
 
 /**
  * Chiffre ce qui ne l'est pas encore (les inscrits d'avant le 25 octobre 2026), et repasse tout sous la clé du serveur
- * quand elle a changé (`LIENS_CLE_INTEGRATIONS` posée dans `runtime.env`) : au démarrage, une fois. Ce qu'aucune clé
+ * quand elle a changé (`LIENS_CLE_INTEGRATIONS` posée dans les variables du serveur) : au démarrage, une fois. Ce qu'aucune clé
  * n'ouvre reste tel quel.
  */
 export function rechiffrer(d = base(), env: Record<string, string | undefined> = process.env) {
