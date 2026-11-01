@@ -7,7 +7,7 @@ import { secret } from './db.ts';
  * prénoms des inscrits d'une liste (25 octobre 2026, demandé par Lilian) :
  * chiffrés en AES-256-GCM. Une copie de la base ou d'une sauvegarde ne donne
  * rien sans la clé, qui vit dans l'environnement du serveur
- * (`LIENS_CLE_INTEGRATIONS`, dans `runtime.env`). Sans elle, le secret de la
+ * (`LIENS_CLE_INTEGRATIONS`, dans les variables du serveur). Sans elle, le secret de la
  * base sert de clé, comme avant : ce qu'il a chiffré se relit toujours, et
  * passe sous la clé de l'environnement au démarrage suivant (`db.rechiffrer`).
  */

@@ -1669,14 +1669,14 @@ test('Rejoins ma liste : les inscrits d’avant sont chiffrés au démarrage, et
   const avant = d.prepare("SELECT email, empreinte FROM contacts WHERE id = 'ancien'").get() as { email: string; empreinte: string };
   assert.match(avant.email, /^v1:/);
   assert.ok(avant.empreinte);
-  // La clé du serveur posée dans runtime.env : tout passe dessous, et se lit encore.
+  // La clé posée sur le serveur : tout passe dessous, et se lit encore.
   const env = { LIENS_CLE_INTEGRATIONS: 'cle-du-serveur' };
   db.rechiffrer(d, env);
   const apres = d.prepare("SELECT email, prenom FROM contacts WHERE id = 'ancien'").get() as { email: string; prenom: string };
   assert.notEqual(apres.email, avant.email);
   assert.equal(coffre.dechiffrer(env, apres.email), 'paul@exemple.fr');
   assert.equal(coffre.dechiffrer(env, db.lireIntegration(P)!.cle), 'xkeysib-secret');
-  // Sans le secret de la base, seule la clé du serveur ouvre (ce qu'aurait une copie volée de la base sans runtime.env).
+  // Sans le secret de la base, seule la clé du serveur ouvre (ce qu'aurait une copie volée de la base sans les variables du serveur).
   d.prepare("UPDATE reglages SET valeur = 'autre' WHERE cle = 'secret'").run();
   assert.equal(coffre.dechiffrer(env, apres.email), 'paul@exemple.fr');
   assert.equal(coffre.dechiffrer({}, apres.email), '');
