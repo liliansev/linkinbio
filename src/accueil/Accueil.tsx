@@ -2,6 +2,7 @@ import { GalerieProfils } from './Profils.tsx';
 import { Barre, Ouverture, Selon } from './Ouverture.tsx';
 import { PlusLoin } from './Fonctions.tsx';
 import { Themes } from './Themes.tsx';
+import { Espace } from './Capture.tsx';
 import { Prise } from './Prise.tsx';
 import { DernierAppel, Pied, Prix, Questions } from './Fin.tsx';
 import type { ApiAccueil } from './Reserver.tsx';
@@ -29,6 +30,7 @@ export function Accueil({ api, mode = 'libre' }: { api: ApiAccueil; mode?: Inscr
         <GalerieProfils />
         <Selon />
         <PlusLoin />
+        <Espace />
         <Themes />
         <Prise />
         <Prix />
