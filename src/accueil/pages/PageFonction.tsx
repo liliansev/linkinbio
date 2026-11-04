@@ -20,6 +20,7 @@ import { ModeInscription } from '../textes.ts';
 import type { Inscription } from '../textes.ts';
 import { useEntrees } from '../mouvement.ts';
 import { Defile } from './Defile.tsx';
+import { CAPTURES_FONCTIONS, Ecran } from '../Capture.tsx';
 import { PAGES_FONCTIONS } from './fonctions.ts';
 import type { PageFonction as Donnees } from './fonctions.ts';
 
@@ -153,6 +154,7 @@ const SCENES: Record<string, { ratio?: number; rendu: (i: number, t: number, l: 
 export function PageFonction({ page, mode = 'libre' }: { page: Donnees; mode?: Inscription }) {
   useEntrees();
   const scene = SCENES[page.slug];
+  const capture = CAPTURES_FONCTIONS[page.slug];
   const autres = PAGES_FONCTIONS.filter(p => p.slug !== page.slug);
   return (
     <ModeInscription.Provider value={mode}>
@@ -166,6 +168,15 @@ export function PageFonction({ page, mode = 'libre' }: { page: Donnees; mode?: I
             <p className="hl-chapo">{page.chapo}</p>
           </section>
           <Defile etapes={page.etapes} titre={`${page.nom}, en ${page.etapes.length} étapes`} ratio={scene.ratio} rendu={scene.rendu} />
+          {capture && (
+            <section className="hl-section hf-espace" aria-labelledby="titre-espace">
+              <div className="hl-tete-section hl-entre">
+                <h2 id="titre-espace" className="hl-h2">Dans ton espace</h2>
+                <p className="hl-chapo">{capture.texte}</p>
+              </div>
+              <div className="hl-entre"><Ecran capture={capture.capture} telephone={capture.telephone} /></div>
+            </section>
+          )}
           <section className="hl-section hf-points" data-teinte="creme" aria-labelledby="pourquoi">
             <h2 id="pourquoi" className="hl-h2 hl-entre">Pourquoi ça compte</h2>
             <ul>

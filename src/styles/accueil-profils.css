@@ -707,3 +707,13 @@ html:has(.hl-humain .hl-barre[data-menu]) { overflow: hidden; }
 .hl-tableau thead .hl-tableau-pro { box-shadow: none; }
 /* Le formulaire qui passe à l'e-mail reste sous la barre. */
 .hl-humain .hl-reserver { scroll-margin-top: 120px; }
+
+/* Les vraies captures du back office (4 novembre 2026, `Capture.tsx`) : une fenêtre fine ; au téléphone, la capture
+   du téléphone prend la place de celle du bureau, trop fine à cette largeur. */
+.hl-capture { display: block; margin: 40px 0 0; }
+.hl-capture img { display: block; width: 100%; height: auto; border-radius: 14px; box-shadow: 0 0 0 1px #dcdad0, 0 40px 80px -48px rgb(20 20 60 / .4); }
+@media (max-width: 699px) {
+  .hl-capture { margin-top: 28px; }
+  .hl-capture:has(source) img { width: min(300px, 78vw); margin-inline: auto; border-radius: 30px; box-shadow: 0 0 0 1px #dcdad0, 0 0 0 7px #17171c, 0 40px 80px -36px rgb(20 20 60 / .55); }
+  .hl-capture img { border-radius: 10px; }
+}
