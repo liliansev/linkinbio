@@ -1259,7 +1259,7 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
 :is(.adm-rangee-picto, .adm-tuile-picto)[data-famille='preuve'] { color: #c76a00; }
 /* Le favicon du site, ou la photo du produit, à la place du picto : du contenu, posé tel quel. */
 .adm-rangee-vignette { width: 22px; height: 22px; flex: none; border-radius: 6px; object-fit: cover; }
-.adm-rangee-vignette[src$='.png'] { object-fit: contain; background: #fff; }
+.adm-rangee-vignette[src$='.png'] { object-fit: contain; }
 .adm .adm-rangee[data-prive] .adm-rangee-vignette { opacity: 0.5; filter: grayscale(1); }
 
 /* Le bloc ouvert : une carte blanche cernée de bleu, détachée de la liste, sa tête sous un voile bleu pâle, son nom en Geist

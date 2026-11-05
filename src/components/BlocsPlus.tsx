@@ -8,6 +8,7 @@ import type { Lecteur as InfosLecteur } from '../lib/lecteurs.ts';
 import { lecteurDe } from '../lib/lecteurs.ts';
 import { jetonTurnstile, preparerTurnstile } from '../lib/turnstile.ts';
 import { Icone } from './Icone.tsx';
+import { Vignette } from './Vignette.tsx';
 
 /*
  * Les blocs venus de Linktree (24 octobre 2026) : un lecteur de musique ou de podcast, une vidéo Vimeo ou TikTok, une
@@ -142,7 +143,7 @@ export function Musique({ bloc, clic, t }: { bloc: Bloc; clic: () => void; t: Te
     <button type="button" className={`lp-carte lp-lecteur ${bloc.vedette ? 'lp-accent' : ''}`} data-format="bandeau" onClick={() => { setJoue(true); clic(); }}
       aria-label={t.ecouter(bloc.titre, lecteur.nom)}>
       {bloc.image
-        ? <img className="lp-carte-tuile" src={bloc.image} alt="" loading="lazy" />
+        ? <Vignette className="lp-carte-tuile" src={bloc.image} />
         : <span className="lp-carte-picto" aria-hidden="true"><Icone nom={lecteur.service} taille={26} /></span>}
       <span className="lp-carte-texte">
         <span className="lp-carte-titre">{bloc.titre}</span>
