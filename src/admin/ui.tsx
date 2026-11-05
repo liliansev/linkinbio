@@ -695,39 +695,36 @@ export async function preparerImage(fichier: Blob, format: 'carre' | 'large' | '
 }
 
 /**
- * Le logo d'un site en vignette (23 octobre 2026) : posé bord à bord s'il remplit déjà son carré (une icône d'écran
- * d'accueil) ; sinon centré, avec de l'air, sur du blanc, comme une icône d'app. Un logo transparent ne disparaît
- * pas sur un thème sombre, et le JPEG de Safari n'a pas de transparence à noircir.
+ * Le logo d'un site (23 octobre 2026). En vignette de bouton (`carre`, 5 novembre 2026, demandé par Lilian : « sans
+ * fond blanc derrière ») : seul, de toute la place, sa transparence gardée, en PNG, ce qui le fait reconnaître à la page
+ * (`.lp-vignette[src$='.png']`) ; sur un thème où il ne se lit pas, la page le passe à l'encre du bouton. En grande
+ * image de carte (`large`) : centré, avec de l'air, sur du blanc, comme une icône d'app.
  */
 export async function preparerLogo(fichier: Blob, format: 'carre' | 'large'): Promise<string> {
   const bitmap = await createImageBitmap(fichier);
-  const [w, h] = format === 'carre' ? [400, 400] : [960, 540];
-  // La transparence se lit sur le pourtour, réduit à 24 pixels de côté.
-  const sonde = document.createElement('canvas');
-  sonde.width = 24; sonde.height = 24;
-  const s = sonde.getContext('2d', { willReadFrequently: true })!;
-  s.drawImage(bitmap, 0, 0, 24, 24);
-  const px = s.getImageData(0, 0, 24, 24).data;
-  let transparent = false;
-  for (let i = 0; i < 24 * 24 && !transparent; i++) {
-    const x = i % 24, y = Math.floor(i / 24);
-    if ((x === 0 || y === 0 || x === 23 || y === 23) && px[i * 4 + 3] < 250) transparent = true;
+  if (format === 'carre') {
+    // 192 pixels : trois fois la place de l'icône, de quoi rester net sur un écran Retina.
+    const cote = 192;
+    const canvas = document.createElement('canvas');
+    canvas.width = cote; canvas.height = cote;
+    const ctx = canvas.getContext('2d')!;
+    ctx.imageSmoothingQuality = 'high';
+    const echelle = Math.min(cote / bitmap.width, cote / bitmap.height);
+    const dw = bitmap.width * echelle, dh = bitmap.height * echelle;
+    ctx.drawImage(bitmap, (cote - dw) / 2, (cote - dh) / 2, dw, dh);
+    return canvas.toDataURL('image/png');
   }
-  const ratio = bitmap.width / bitmap.height;
-  const bordABord = !transparent && format === 'carre' && ratio > 0.9 && ratio < 1.1;
+  const [w, h] = [960, 540];
   const canvas = document.createElement('canvas');
   canvas.width = w; canvas.height = h;
   const ctx = canvas.getContext('2d')!;
   ctx.imageSmoothingQuality = 'high';
-  if (bordABord) ctx.drawImage(bitmap, 0, 0, w, h);
-  else {
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, w, h);
-    const place = Math.min(w, h) * (format === 'carre' ? 0.64 : 0.46);
-    const echelle = Math.min(place / bitmap.width, place / bitmap.height);
-    const dw = bitmap.width * echelle, dh = bitmap.height * echelle;
-    ctx.drawImage(bitmap, (w - dw) / 2, (h - dh) / 2, dw, dh);
-  }
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, w, h);
+  const place = h * 0.46;
+  const echelle = Math.min(place / bitmap.width, place / bitmap.height);
+  const dw = bitmap.width * echelle, dh = bitmap.height * echelle;
+  ctx.drawImage(bitmap, (w - dw) / 2, (h - dh) / 2, dw, dh);
   const webp = canvas.toDataURL('image/webp', 0.9);
   return webp.startsWith('data:image/webp') ? webp : canvas.toDataURL('image/jpeg', 0.9);
 }

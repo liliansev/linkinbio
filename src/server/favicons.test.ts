@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 
 process.env.LIENS_DB = ':memory:';
 const db = await import('./db.ts');
-const { passerAuxFavicons, rendreVignettes, vignetteARelire } = await import('./favicons.ts');
+const { passerAuxFavicons, rendreVignettes, vignetteARelire, vignetteSurFond } = await import('./favicons.ts');
 const { nouveauBloc } = await import('../lib/types.ts');
 const P = 'principal';
 
@@ -38,4 +38,19 @@ test('les liens prennent le favicon de leur site, un site lu une fois, et se ren
   assert.ok(db.lireMedia(image('un').slice(7, -4), 'png'));
   assert.equal(rendreVignettes(), 2);
   assert.equal(db.lireBlocs(P).find(b => b.id === 'un')!.image, '/media/avant1.webp');
+});
+
+test('la seconde reprise ne touche qu’aux favicons posés sur du blanc depuis, jamais à un lien déjà repris', async () => {
+  db.lireBlocs(P);
+  db.enregistrerBloc(P, lien('blanc', { url: 'https://fillout.com', image: '/media/blanc.webp' }));
+  db.enregistrerBloc(P, lien('seul', { url: 'https://atelier.fr', image: '/media/seul.png' }));
+  db.enregistrerBloc(P, lien('choisie', { url: 'https://atelier.fr/b', image: '/media/photo.webp' }));
+  db.garderVignette(P, 'choisie', '/media/avant.webp', '/media/favicon.png');
+  const aRelire = vignetteSurFond(new Set(db.vignettesGardees().map(v => v.bloc)));
+  const n = await passerAuxFavicons(async () => ({ octets: new Uint8Array([137, 80, 78, 71]), extension: 'png' }), aRelire);
+  assert.equal(n, 1);
+  const image = (id: string) => db.lireBlocs(P).find(b => b.id === id)!.image;
+  assert.match(image('blanc'), /\.png$/);
+  assert.equal(image('seul'), '/media/seul.png');
+  assert.equal(image('choisie'), '/media/photo.webp', 'une image choisie après la première reprise reste');
 });

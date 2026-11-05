@@ -15,6 +15,7 @@ import { LOCALE, textes } from '../lib/mots.ts';
 import type { Textes } from '../lib/mots.ts';
 import { Icone, NOMS_RESEAUX } from './Icone.tsx';
 import { Trace } from './Logo.tsx';
+import { Vignette } from './Vignette.tsx';
 import { peut } from '../lib/abonnement.ts';
 import { adresseIntegree, avecMontants, lienMontant, lienSansMontant, nomAgenda, nomSoutien, seIntegre } from '../lib/vitrine.ts';
 import { focusAuto } from '../lib/clavier';
@@ -372,7 +373,7 @@ function nomDeDomaine(url: string) {
 }
 
 function Pictogramme({ bloc }: { bloc: Bloc }) {
-  if (bloc.image) return <img className="lp-vignette" src={bloc.image} alt="" width={40} height={40} loading="lazy" />;
+  if (bloc.image) return <Vignette className="lp-vignette" src={bloc.image} />;
   if (bloc.icone && ICONES[bloc.icone]) return <span className="lp-picto"><Icone nom={bloc.icone} taille={22} /></span>;
   // Un emoji enregistré avant les pictos dessinés reste lisible.
   if (bloc.icone) return <span className="lp-picto lp-emoji" aria-hidden="true">{bloc.icone}</span>;
@@ -497,7 +498,7 @@ export function BlocPublic({ bloc, reglages, clic, cible, apercu, maintenant, ps
         }
         return avecCode(
           <a className={`lp-carte ${teinte} ${anim}`} data-format="bandeau" href={bloc.url} rel={rel} onClick={clic} {...cible} {...nosnippet}>
-            {bloc.image ? <img className="lp-carte-tuile" src={bloc.image} alt="" loading="lazy" /> : picto && <span className="lp-carte-picto" aria-hidden="true">{picto}</span>}
+            {bloc.image ? <Vignette className="lp-carte-tuile" src={bloc.image} /> : picto && <span className="lp-carte-picto" aria-hidden="true">{picto}</span>}
             <span className="lp-carte-texte">
               {mention}
               <span className="lp-carte-titre">{bloc.titre || hote}</span>

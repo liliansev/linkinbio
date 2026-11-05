@@ -68,7 +68,9 @@ embarque tout : l'image n'a pas de `node_modules`.
 - `server/favicons.ts` (26 octobre 2026, demandé par Lilian : « mets à jour tous les liens existants et même ceux de mes
   clients ») : une seule fois, une minute après le démarrage (repère `favicons-liens` dans `reglages`, éteint par
   `HOPLA_FAVICONS=0`), la vignette de chaque bouton de lien de toutes les pages prend le favicon de son site, gardé tel
-  quel en PNG (`/media/<id>.png`, posé sur du blanc par `.lp-vignette[src$='.png']`) ; un réseau, une carte, un site
+  quel en PNG (`/media/<id>.png`, posé seul, sans fond, par `.lp-vignette[src$='.png']` ; depuis le 5 novembre 2026, demandé par
+  Lilian, un favicon transparent sans couleur ou illisible sur le bouton prend l'encre du bouton, `components/Vignette.tsx`, et
+  une seconde reprise, repère `favicons-sans-fond`, rend leur favicon seul aux liens que le back office avait posés sur du blanc) ; un réseau, une carte, un site
   sans favicon ou une page pleine gardent leur image. L'image d'avant reste dans `vignettes_avant` : `rendreVignettes()` la remet.
 - `server/coffre.ts` (25 octobre 2026, demandé par Lilian : « même moi ne dois pas avoir accès ») : AES-256-GCM pour les clés
   d'API, les webhooks et les e-mails et prénoms des inscrits (`chiffrer`, `dechiffrer`, `empreinte` pour les doublons sans
