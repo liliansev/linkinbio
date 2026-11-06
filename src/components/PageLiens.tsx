@@ -674,7 +674,7 @@ function Lecteur({ id, titre, vignette, clic, legende }: { id: string; titre: st
   // Une vignette qui ne vient pas (vidéo privée, adresse en cours de frappe) laisse le cadre et son bouton, sans image cassée.
   const [cassee, setCassee] = useState<string | null>(null);
   return (
-    <figure className="lp-video">
+    <figure className="lp-video lp-carte">
       <div className="lp-video-cadre">
         {joue ? (
           <iframe src={`https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0`} title={titre} allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen />

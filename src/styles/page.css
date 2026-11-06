@@ -81,6 +81,12 @@
 
 .lp-section { margin: 26px 0 4px; line-height: 1.25; text-wrap: balance; text-align: center; font-size: calc(var(--section-taille, 0.86rem) * 1.18); font-weight: var(--section-graisse, 560); letter-spacing: var(--section-approche, 0.01em); font-style: var(--section-style, normal); color: var(--titre-section, var(--doux)); }
 .lp-blocs > :first-child > .lp-section { margin-top: 4px; }
+/*
+ * Un titre de section se lit comme un intertitre (6 novembre 2026, demandé par Lilian : « plus gras, un liseré ») :
+ * plus gras que le thème ne le règle, et un filet de chaque côté, de sa couleur, qui partage la page sans faire de cadre.
+ */
+.lp-section { display: flex; align-items: center; gap: 14px; font-weight: min(calc(var(--section-graisse, 560) + 140), 800); }
+.lp-section::before, .lp-section::after { content: ''; flex: 1 1 0; min-width: 20px; height: 1.5px; border-radius: 1px; background: currentColor; opacity: 0.3; }
 .lp-texte { margin: 0; text-align: center; color: var(--doux); line-height: 1.55; white-space: pre-line; }
 
 /* ---- Boutons ---- */
@@ -347,6 +353,17 @@
 .lp-video-play svg { margin-left: 4px; fill: currentColor; }
 .lp-video figcaption { font-size: 0.95rem; font-weight: 560; text-align: center; line-height: 1.35; padding: 0 8px; display: flex; flex-direction: column; gap: 2px; }
 .lp-video-etiquette { font-size: 0.8rem; font-weight: 450; color: var(--doux); }
+/*
+ * La vidéo est une carte (6 novembre 2026, demandé par Lilian : « le titre de la vidéo se retrouve en dessous ») :
+ * l'image en haut, bord à bord, son titre dessous dans la même carte, à l'habit des boutons du thème.
+ */
+.lp-video.lp-carte { display: flex; flex-direction: column; gap: 0; border-radius: var(--rc); }
+.lp-video.lp-carte:is(:hover, :active) { transform: none; }
+.lp-video.lp-carte .lp-video-cadre { border-radius: 0; }
+.lp-video.lp-carte figcaption { padding: 12px 18px 15px; color: inherit; }
+.lp-video.lp-carte .lp-video-etiquette { color: inherit; opacity: 0.72; }
+.lp-video.lp-carte[data-forme='vertical'] { width: min(100%, 325px); margin-inline: auto; }
+.lp-video.lp-carte[data-forme='vertical'] .lp-video-cadre { width: 100%; }
 .lp-video-attente .lp-video-cadre { animation: lp-attente 1.4s ease-in-out infinite alternate; }
 @keyframes lp-attente { from { opacity: 0.55; } to { opacity: 1; } }
 
@@ -665,6 +682,7 @@
     background: radial-gradient(50% 60% at 50% 0%, color-mix(in srgb, var(--vedette) 16%, transparent), transparent 70%);
   }
   .lp-section { text-align: left; }
+  .lp-section::before { display: none; }
   .lp-texte { text-align: left; }
   /* Le pied s'aligne à gauche avec la page, le texte de ses liens sur le bord de la colonne ; il ne descend plus au bas de la fenêtre. */
   .lp-col { flex-grow: 0; }
@@ -682,6 +700,7 @@
     box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--texte) 9%, transparent), 0 40px 120px -60px rgb(0 0 0 / 0.6);
   }
   .lp[data-bureau='colonne'] :is(.lp-section, .lp-texte) { text-align: center; }
+  .lp[data-bureau='colonne'] .lp-section::before { display: block; }
   .lp[data-bureau='colonne'] .lp-col::before { inset: -64px -60% auto; }
 
   /* ---- Profil ---- */

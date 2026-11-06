@@ -105,7 +105,7 @@ export function VideoIntegree({ lecteur, bloc, clic, t }: { lecteur: InfosLecteu
   const [cassee, setCassee] = useState(false);
   const vertical = lecteur.forme === 'vertical';
   return (
-    <figure className="lp-video" data-forme={vertical ? 'vertical' : undefined}>
+    <figure className="lp-video lp-carte" data-forme={vertical ? 'vertical' : undefined}>
       <div className="lp-video-cadre">
         {joue ? (
           <iframe src={lecteur.adresse} title={bloc.titre} allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen />
