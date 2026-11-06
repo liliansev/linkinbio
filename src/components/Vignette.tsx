@@ -63,19 +63,49 @@ export function seConfond(img: HTMLImageElement): boolean {
   return ecart(logo, lFond) < LISIBLE;
 }
 
+/**
+ * Un logo que le back office avait posé sur du blanc (du 26 octobre au 5 novembre 2026, `preparerLogo`) : opaque, un
+ * pourtour blanc, le logo au centre, sur 64 % du carré. Vrai pour une telle image ; la page n'en montre que le logo.
+ */
+export function surBlanc(img: HTMLImageElement): boolean {
+  const toile = document.createElement('canvas');
+  toile.width = 50; toile.height = 50;
+  const ctx = toile.getContext('2d', { willReadFrequently: true });
+  if (!ctx) return false;
+  ctx.drawImage(img, 0, 0, 50, 50);
+  const px = ctx.getImageData(0, 0, 50, 50).data;
+  const blanc = (x: number, y: number) => { const i = (y * 50 + x) * 4; return px[i + 3] > 250 && px[i] > 244 && px[i + 1] > 244 && px[i + 2] > 244; };
+  // Le pourtour : les 6 premiers pixels de chaque bord (le logo commence à 18 %), tous blancs.
+  for (let y = 0; y < 50; y++) for (let x = 0; x < 50; x++) {
+    if ((x < 6 || y < 6 || x > 43 || y > 43) && !blanc(x, y)) return false;
+  }
+  // Le centre : quelque chose d'autre que du blanc.
+  let autre = 0;
+  for (let y = 12; y < 38; y++) for (let x = 12; x < 38; x++) if (!blanc(x, y)) autre++;
+  return autre > 40;
+}
+
+/** Ce que la page fait d'une vignette, une fois lue : à l'encre, ou le logo seul, sans le blanc autour. */
+type Rendu = 'encre' | 'recadre';
+
 export function Vignette({ src, className }: { src: string; className: string }) {
   const ref = useRef<HTMLImageElement>(null);
-  /** L'adresse du favicon qui se dessine à l'encre : une autre adresse se relit. */
-  const [encrePour, setEncrePour] = useState('');
-  const encre = encrePour === src;
+  /** Le rendu choisi, et l'adresse lue pour lui : une autre adresse se relit. */
+  const [rendu, setRendu] = useState<{ src: string; rendu: Rendu } | null>(null);
+  const choisi = rendu?.src === src ? rendu.rendu : null;
   useEffect(() => {
     const img = ref.current;
     if (!img) return;
-    const lire = () => { try { if (seConfond(img)) setEncrePour(src); } catch { /* une image d'un autre site ne se lit pas : elle reste telle quelle */ } };
+    const lire = () => {
+      try {
+        if (surBlanc(img)) setRendu({ src, rendu: 'recadre' });
+        else if (seConfond(img)) setRendu({ src, rendu: 'encre' });
+      } catch { /* une image d'un autre site ne se lit pas : elle reste telle quelle */ }
+    };
     if (img.complete && img.naturalWidth) lire();
     else img.addEventListener('load', lire, { once: true });
     return () => img.removeEventListener('load', lire);
   }, [src]);
-  if (encre) return <span className={`${className} lp-vignette-encre`} aria-hidden="true" style={{ '--logo': `url("${src}")` } as CSSProperties} />;
+  if (choisi) return <span className={`${className} lp-vignette-${choisi}`} aria-hidden="true" style={{ '--logo': `url("${src}")` } as CSSProperties} />;
   return <img ref={ref} className={className} src={src} alt="" width={40} height={40} loading="lazy" />;
 }
