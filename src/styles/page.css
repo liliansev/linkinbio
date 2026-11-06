@@ -131,10 +131,13 @@
 .lp-emoji { font-size: 1.35rem; }
 .lp-vignette { object-fit: cover; border-radius: calc(min(var(--r), 20px) - 4px); }
 .lp[data-forme='pilule'] .lp-vignette { border-radius: 999px; }
-/* Un favicon (PNG) se pose seul, de toute la place de l'icône, sans fond ni cadre (5 novembre 2026, demandé par Lilian) :
-   entier, à sa vraie silhouette, sans arrondi qui le rogne. Transparent et sans couleur, ou illisible sur le bouton, il prend l'encre du bouton (`Vignette.tsx`). */
-.lp-vignette[src$='.png'], .lp-carte-tuile[src$='.png'] { object-fit: contain; background: none; border-radius: 0; }
+/* Un favicon (PNG) se pose seul, de toute la place de l'icône, sans fond ni cadre (5 novembre 2026, demandé par Lilian),
+   avec l'arrondi de toutes les vignettes (6 novembre 2026 : « tu vois le problème ? », des angles vifs à côté des coins
+   ronds). Transparent et sans couleur, ou illisible sur le bouton, il prend l'encre du bouton ; posé sur du blanc par
+   l'ancien back office, la page n'en montre que le logo, agrandi de 1/0,64 (`Vignette.tsx`). */
+.lp-vignette[src$='.png'], .lp-carte-tuile[src$='.png'] { object-fit: contain; background: none; }
 :is(.lp-vignette, .lp-carte-tuile).lp-vignette-encre { display: block; border-radius: 0; background: currentColor; -webkit-mask: var(--logo) center / contain no-repeat; mask: var(--logo) center / contain no-repeat; }
+:is(.lp-vignette, .lp-carte-tuile).lp-vignette-recadre { display: block; background: var(--logo) center / 156.25% no-repeat; }
 
 [data-bouton]:not([data-bouton='plein']) :is(.lp-btn, .lp-carte) { --lp-encre: var(--texte); --lp-halo: var(--texte); --lp-trait: var(--texte); }
 .lp-accent { --lp-fond: var(--vedette); --lp-encre: var(--vedette-texte); }
