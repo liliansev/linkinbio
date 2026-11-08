@@ -16,13 +16,15 @@ export interface Etape { id: Destination | 'partage'; nom: string; aide: string;
 export function etapesDemarrage(reglages: Reglages, blocs: Bloc[], partagee: boolean, themeVu = false): Etape[] {
   // Un produit ou une prise de rendez-vous compte comme un lien : la page mène déjà quelque part.
   const liens = blocs.filter(b => (b.type === 'lien' || TYPES_VITRINE.includes(b.type)) && b.public && b.url).length;
+  // Dans la langue du compte, celle de sa page et de son back office.
+  const l = (fr: string, en: string) => (reglages.langue === 'fr' ? fr : en);
   return [
-    { id: 'photo', nom: 'Ajoute ta photo', aide: 'Un visage rassure avant de cliquer.', faite: !!reglages.profil.avatar },
-    { id: 'bio', nom: 'Écris ta bio', aide: 'Une phrase : ce que tu fais, pour qui.', faite: !!reglages.profil.bio.trim() },
-    { id: 'lien', nom: 'Ajoute tes liens', aide: 'Ton site, ta prise de rendez-vous, ta boutique.', faite: liens >= 1 },
-    { id: 'reseaux', nom: 'Relie tes réseaux', aide: 'Leurs icônes s’affichent sous ton nom.', faite: reglages.reseaux.some(r => !!adresseSaisie(r.url)) },
-    { id: 'theme', nom: 'Choisis ton thème', aide: 'Des plus sobres aux plus audacieux, en un geste.', faite: themeVu || reglages.theme !== THEME_DEFAUT },
-    { id: 'partage', nom: 'Partage ta page', aide: 'Colle l’adresse dans ta bio Instagram ou TikTok.', faite: partagee },
+    { id: 'photo', nom: l('Ajoute ta photo', 'Add your photo'), aide: l('Un visage rassure avant de cliquer.', 'A face builds trust before the click.'), faite: !!reglages.profil.avatar },
+    { id: 'bio', nom: l('Écris ta bio', 'Write your bio'), aide: l('Une phrase : ce que tu fais, pour qui.', 'One line: what you do, and for whom.'), faite: !!reglages.profil.bio.trim() },
+    { id: 'lien', nom: l('Ajoute tes liens', 'Add your links'), aide: l('Ton site, ta prise de rendez-vous, ta boutique.', 'Your website, your booking page, your shop.'), faite: liens >= 1 },
+    { id: 'reseaux', nom: l('Relie tes réseaux', 'Connect your socials'), aide: l('Leurs icônes s’affichent sous ton nom.', 'Their icons show under your name.'), faite: reglages.reseaux.some(r => !!adresseSaisie(r.url)) },
+    { id: 'theme', nom: l('Choisis ton thème', 'Pick your theme'), aide: l('Des plus sobres aux plus audacieux, en un geste.', 'From the most understated to the boldest, in one tap.'), faite: themeVu || reglages.theme !== THEME_DEFAUT },
+    { id: 'partage', nom: l('Partage ta page', 'Share your page'), aide: l('Colle l’adresse dans ta bio Instagram ou TikTok.', 'Paste the address into your Instagram or TikTok bio.'), faite: partagee },
   ];
 }
 

@@ -31,7 +31,9 @@ function useLangueDocument(): string {
         // L'accueil, les fonctions et les comparatifs en anglais (8 novembre 2026) ; leur version française et
         // les autres pages du site restent en français.
         if (m.routeId === '/' || /^\/(features|compare)\//.test(m.routeId)) return 'en';
-        const langue = (m.loaderData as { reglages?: { langue?: string } } | undefined)?.reglages?.langue;
+        // Une page publique, ou le back office : la langue du compte, sinon (connexion) celle du navigateur.
+        const d = m.loaderData as { reglages?: { langue?: string }; etat?: { reglages?: { langue?: string } }; langue?: string } | undefined;
+        const langue = d?.reglages?.langue ?? d?.etat?.reglages?.langue ?? d?.langue;
         if (langue) return langue;
       }
       return 'fr';

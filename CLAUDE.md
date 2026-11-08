@@ -354,6 +354,10 @@ embarque tout : l'image n'a pas de `node_modules`.
   choisit sa scène et sa capture) et un slug par langue ; `<head>` et `hreflang` dans `accueil/pages/tetes.ts`, le lien
   « English » / « Français » du menu par `autreAdresse`. Les textes légaux restent en français
   (`LangueSite.Provider value="fr"`) jusqu'à leur traduction ; noms des thèmes et des offres : `nomTheme`, `nomOffre`.
+  Le back office suit la langue du compte (`reglages.langue`, la ligne « Langue · Language » de Réglages, qui règle
+  aussi la page) : `Admin.tsx` pose `LangueSite.Provider` et chaque écran prend `useL()` (`tr` là où `l` est déjà une
+  variable). Sans compte, la connexion et l'arrivée d'un lien parlent la langue du navigateur (`langueAcceptee`, en-tête
+  Accept-Language) ; l'e-mail de connexion part dans la langue du compte. Comptes reste en français (Lilian seul).
 - Marque : `components/Logo.tsx` (le symbole, un « h » et sa balle) ; favicon, icônes, manifeste et
   image de partage dans `public/`. `server/referencement.ts` écrit `robots.txt`, `sitemap.xml` et
   `llms.txt` (routes `robots[.]txt.ts`…) ; le back office ne s'indexe pas.

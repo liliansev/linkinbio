@@ -6,6 +6,7 @@ import { Connexion } from '../../admin/Connexion.tsx';
 import { COULEUR_NAVIGATEUR } from '../../admin/ui.tsx';
 import * as fn from '../../server/fonctions.ts';
 import { avecJeton, preparerTurnstile } from '../../lib/turnstile.ts';
+import { LangueSite } from '../../accueil/langue.ts';
 
 export const Route = createFileRoute('/admin/')({
   loader: () => fn.lireAdmin(),
@@ -66,6 +67,6 @@ function PageAdmin() {
   }), [acces.connecte]);
   // Sur la page de connexion, la vérification anti-robot se prépare pendant qu'on tape son adresse.
   useEffect(() => { if (!acces.connecte) preparerTurnstile('connexion'); }, [acces.connecte]);
-  if (!acces.connecte) return <Connexion demander={email => avecJeton('connexion', jeton => fn.demanderLien({ data: { email, jeton } }))} />;
+  if (!acces.connecte) return <LangueSite.Provider value={acces.langue}><Connexion demander={email => avecJeton('connexion', jeton => fn.demanderLien({ data: { email, jeton, langue: acces.langue } }))} /></LangueSite.Provider>;
   return <Admin api={api} initial={acces.etat} />;
 }

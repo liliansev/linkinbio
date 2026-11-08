@@ -3,7 +3,9 @@ import type { CSSProperties, ReactNode } from 'react';
 import type { Api, Bloc, PagePublique, Reglages, Reseau } from '../lib/types.ts';
 import { SANS_COULEURS, nouveauBloc, urlPage } from '../lib/types.ts';
 import { adresseSaisie, pourquoiPasAdresse, pourquoiPasReseau } from '../lib/valider.ts';
-import { THEMES } from '../lib/themes.ts';
+import { THEMES, nomTheme } from '../lib/themes.ts';
+import { useL } from '../accueil/langue.ts';
+import type { Choix } from '../accueil/langue.ts';
 import { RESEAUX_ACCUEIL, THEMES_ACCUEIL, nomSite, urlReseau } from '../lib/demarrage.ts';
 import { PageLiens } from '../components/PageLiens.tsx';
 import { RESEAUX_SOCIAUX } from '../lib/provenance.ts';
@@ -39,22 +41,23 @@ export const premiersPasFaits = () => { try { return localStorage.getItem(CLE_PR
  * boutique devient un produit avec la vitrine). Le choix ne sert qu'à dire quoi coller.
  */
 const GENRES = [
-  { id: 'site', nom: 'Mon site', picto: 'site', exemple: 'ton-site.fr' },
-  { id: 'boutique', nom: 'Ma boutique', picto: 'boutique', exemple: 'ta-boutique.fr' },
-  { id: 'rdv', nom: 'Mon agenda', picto: 'agenda', exemple: 'calendly.com/toi' },
-  { id: 'video', nom: 'Une vidéo', picto: 'bloc-video', exemple: 'youtube.com/watch?v=…' },
-  { id: 'musique', nom: 'Ma musique', picto: 'bloc-musique', exemple: 'open.spotify.com/…' },
-  { id: 'autre', nom: 'Un autre lien', picto: 'bloc-lien', exemple: 'Colle une adresse' },
+  { id: 'site', nom: ['Mon site', 'My website'], picto: 'site', exemple: ['ton-site.fr', 'your-site.com'] },
+  { id: 'boutique', nom: ['Ma boutique', 'My shop'], picto: 'boutique', exemple: ['ta-boutique.fr', 'your-shop.com'] },
+  { id: 'rdv', nom: ['Mon agenda', 'My booking page'], picto: 'agenda', exemple: ['calendly.com/toi', 'calendly.com/you'] },
+  { id: 'video', nom: ['Une vidéo', 'A video'], picto: 'bloc-video', exemple: ['youtube.com/watch?v=…', 'youtube.com/watch?v=…'] },
+  { id: 'musique', nom: ['Ma musique', 'My music'], picto: 'bloc-musique', exemple: ['open.spotify.com/…', 'open.spotify.com/…'] },
+  { id: 'autre', nom: ['Un autre lien', 'Another link'], picto: 'bloc-lien', exemple: ['Colle une adresse', 'Paste an address'] },
 ] as const;
 type Genre = (typeof GENRES)[number]['id'];
-const genreDe = (id: Genre) => GENRES.find(g => g.id === id)!;
+/** Un choix dans la langue du compte : son nom et l'adresse d'exemple. */
+const genreDe = (id: Genre, tr: Choix) => { const g = GENRES.find(x => x.id === id)!; return { ...g, nom: tr(g.nom[0], g.nom[1]), exemple: tr(g.exemple[0], g.exemple[1]) }; };
 const MAX_LIGNES = 6;
 
 interface Ligne { id: string; genre: Genre; url: string; titre: string; lecture: boolean; image: string; prix: string }
 const nouvelId = () => `n${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 
 /** Pour juger un thème sur une page sans lien, des boutons d'exemple (jamais enregistrés). */
-const EXEMPLES = ['Mon site', 'Prendre rendez-vous', 'Ma boutique'].map((titre, i) => ({ ...nouveauBloc('lien', `exemple-${i}`), titre, url: '#' }));
+const exemples = (tr: Choix) => [tr('Mon site', 'My website'), tr('Prendre rendez-vous', 'Book a session'), tr('Ma boutique', 'My shop')].map((titre, i) => ({ ...nouveauBloc('lien', `exemple-${i}`), titre, url: '#' }));
 
 export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs, envoyerImage, apercuSite, onFin }: {
   compte: PagePublique['compte'];
@@ -67,6 +70,7 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
   /** `suite` : « lien » ouvre aussitôt l'ajout d'un lien dans l'éditeur. */
   onFin: (suite?: 'lien') => void;
 }) {
+  const tr = useL();
   // L'étape survit à un rechargement ou à un passage par une autre app : ce qui est tapé est déjà enregistré, la place aussi.
   // Elle est retenue par son nom : une étape ajoutée ou retirée ne décale pas celle où l'on était.
   const [i, setI] = useState(() => { try { return Math.max(0, ETAPES.indexOf(sessionStorage.getItem(CLE_ETAPE) as Etape)); } catch { return 0; } });
@@ -196,21 +200,21 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
   // L'aperçu : la vraie page, avec les liens en cours de saisie, et des exemples pour juger un thème quand il n'y en a pas.
   const visibles = useMemo(() => {
     const liste = [...brouillons, ...blocs.filter(b => !brouillons.some(x => x.id === b.id))].filter(b => b.public);
-    return etape === 'style' && !liste.some(b => b.type === 'lien') ? [...liste, ...EXEMPLES] : liste;
+    return etape === 'style' && !liste.some(b => b.type === 'lien') ? [...liste, ...exemples(tr)] : liste;
   }, [brouillons, blocs, etape]);
 
   const rempli = etape === 'profil' ? true : etape === 'liens' ? brouillons.length > 0 || lignes.some(l => l.url.trim()) : etape === 'reseaux' ? reglages.reseaux.some(r => r.url) || ouverts.some(r => (saisies[r] ?? '').trim()) : true;
   const libelle = ignorer && fautifs.length
-    ? (etape === 'liens' ? (fautifs.length > 1 ? 'Continuer sans ces liens' : 'Continuer sans ce lien') : (fautifs.length > 1 ? 'Continuer sans ces réseaux' : 'Continuer sans ce réseau'))
-    : etape === 'style' ? 'C’est parti' : rempli ? 'Continuer' : 'Passer cette étape';
+    ? (etape === 'liens' ? (fautifs.length > 1 ? tr('Continuer sans ces liens', 'Continue without these links') : tr('Continuer sans ce lien', 'Continue without this link')) : (fautifs.length > 1 ? tr('Continuer sans ces réseaux', 'Continue without these networks') : tr('Continuer sans ce réseau', 'Continue without this network')))
+    : etape === 'style' ? tr('C’est parti', 'Let’s go') : rempli ? tr('Continuer', 'Continue') : tr('Passer cette étape', 'Skip this step');
 
   // Le dernier écran dit bravo et mène à l'éditeur : on veut d'abord peaufiner sa page, la partager vient après (Lilian,
   // 24 octobre 2026). Sans rien sur la page, il propose d'y mettre un premier lien.
   const sansLien = !blocs.some(b => b.public && b.url);
   const contenu: Record<Etape, { titre: string; aide: string; corps: ReactNode }> = {
     profil: {
-      titre: 'Ta page, à ton nom',
-      aide: 'Ton nom et une phrase sur ce que tu fais. Tout se change ensuite.',
+      titre: tr('Ta page, à ton nom', 'Your page, in your name'),
+      aide: tr('Ton nom et une phrase sur ce que tu fais. Tout se change ensuite.', 'Your name and a line about what you do. You can change everything later.'),
       corps: (
         // Une seule colonne, un seul bord gauche : la photo, puis le nom, puis la bio (Lilian, 24 octobre 2026 : « tout aligner »).
         <div className="flex flex-col gap-4">
@@ -221,34 +225,34 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
               {envoi && <span className="absolute inset-0 grid place-items-center bg-black/55 text-[12px] text-nuit">…</span>}
             </span>
             <span className="flex flex-col">
-              <span className="text-[15px] font-semibold text-bleu group-hover:underline">{reglages.profil.avatar ? 'Changer de photo' : 'Ajouter une photo'}</span>
-              <span className="text-[13px] text-white/55">En haut de ta page, si tu veux</span>
+              <span className="text-[15px] font-semibold text-bleu group-hover:underline">{reglages.profil.avatar ? tr('Changer de photo', 'Change photo') : tr('Ajouter une photo', 'Add a photo')}</span>
+              <span className="text-[13px] text-white/55">{tr('En haut de ta page, si tu veux', 'At the top of your page, if you like')}</span>
             </span>
           </button>
-          {photoRatee && <p className="-mt-2 text-[13px] text-red-300" role="alert">La photo n’est pas passée. Essaie une autre image, en JPG ou PNG.</p>}
+          {photoRatee && <p className="-mt-2 text-[13px] text-red-300" role="alert">{tr('La photo n’est pas passée. Essaie une autre image, en JPG ou PNG.', 'The photo didn’t upload. Try another image, in JPG or PNG.')}</p>}
           <label>
-            <span className="mb-1 block text-[13px] font-medium text-white/60">Ton nom</span>
+            <span className="mb-1 block text-[13px] font-medium text-white/60">{tr('Ton nom', 'Your name')}</span>
             <input id="premiers-nom" className={classeSaisie} value={reglages.profil.nom} maxLength={80} autoComplete="name" onFocus={e => e.currentTarget.select()} onChange={e => { setNomVide(false); profil({ nom: e.target.value }); }}
               aria-invalid={nomVide || undefined} aria-describedby={nomVide ? 'erreur-nom' : undefined} />
-            {nomVide && <p id="erreur-nom" role="alert" className="mt-1.5 text-[13px] font-medium text-red-300">Écris ton nom : il s’affiche en haut de ta page.</p>}
+            {nomVide && <p id="erreur-nom" role="alert" className="mt-1.5 text-[13px] font-medium text-red-300">{tr('Écris ton nom : il s’affiche en haut de ta page.', 'Write your name: it shows at the top of your page.')}</p>}
           </label>
           <label>
-            <span className="mb-1 block text-[13px] font-medium text-white/60">Ta bio</span>
-            <textarea className={`${classeSaisie} min-h-[76px] resize-none`} rows={2} maxLength={300} placeholder="Céramiste à Lyon. Pièces uniques et ateliers le samedi."
+            <span className="mb-1 block text-[13px] font-medium text-white/60">{tr('Ta bio', 'Your bio')}</span>
+            <textarea className={`${classeSaisie} min-h-[76px] resize-none`} rows={2} maxLength={300} placeholder={tr('Céramiste à Lyon. Pièces uniques et ateliers le samedi.', 'Ceramicist in Brooklyn. One-of-a-kind pieces and Saturday workshops.')}
               value={reglages.profil.bio} onChange={e => profil({ bio: e.target.value })} />
           </label>
         </div>
       ),
     },
     liens: {
-      titre: 'Qu’est-ce que tu veux montrer ?',
-      aide: lignes.length ? 'Colle l’adresse : Hopla en fait le bon bouton, avec son titre.' : 'Touche ce que tu as à partager. Tu en ajouteras d’autres quand tu veux.',
+      titre: tr('Qu’est-ce que tu veux montrer ?', 'What do you want to show?'),
+      aide: lignes.length ? tr('Colle l’adresse : Hopla en fait le bon bouton, avec son titre.', 'Paste the address: Hopla turns it into the right button, with its title.') : tr('Touche ce que tu as à partager. Tu en ajouteras d’autres quand tu veux.', 'Tap what you have to share. You can add more whenever you like.'),
       corps: (
         <div className="flex flex-col gap-4">
           {lignes.length > 0 && (
             <ul className="flex flex-col gap-2.5">
               {lignes.map(l => {
-                const g = genreDe(l.genre);
+                const g = genreDe(l.genre, tr);
                 const url = adresseSaisie(l.url);
                 const fausse = quittes.has(l.id) && !!l.url.trim() && !url;
                 const type = url ? typeDeAdresse(url, vitrine) : null;
@@ -256,22 +260,22 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
                   <li key={l.id} className="adm-pop rounded-xl border border-white/15 bg-nuit p-1.5 transition hover:border-white/30 focus-within:border-white focus-within:ring-1 focus-within:ring-white">
                     <div className="flex items-center gap-1">
                       <span className="grid h-9 w-9 shrink-0 place-items-center text-bleu"><Icone nom={g.picto} taille={22} /></span>
-                      <input id={`lien-${l.id}`} aria-label={`Adresse : ${g.nom}`} className="min-h-11 min-w-0 flex-1 bg-transparent px-1 text-[16px] text-white outline-none placeholder:text-white/55 focus-visible:!outline-none"
-                        type="url" inputMode="url" autoCapitalize="off" autoCorrect="off" spellCheck={false} placeholder={g.id === 'autre' ? g.exemple : `Ex. ${g.exemple}`}
+                      <input id={`lien-${l.id}`} aria-label={`${tr('Adresse :', 'Address:')} ${g.nom}`} className="min-h-11 min-w-0 flex-1 bg-transparent px-1 text-[16px] text-white outline-none placeholder:text-white/55 focus-visible:!outline-none"
+                        type="url" inputMode="url" autoCapitalize="off" autoCorrect="off" spellCheck={false} placeholder={g.id === 'autre' ? g.exemple : `${tr('Ex.', 'E.g.')} ${g.exemple}`}
                         value={l.url} aria-invalid={fausse || undefined} aria-describedby={fausse ? `erreur-${l.id}` : undefined}
                         onChange={e => majLigne(l.id, { url: e.target.value })} onBlur={() => { setQuittes(q => new Set(q).add(l.id)); lireSite(l); }}
                         onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); } }} />
-                      <button type="button" onClick={() => setLignes(ls => ls.filter(x => x.id !== l.id))} aria-label={`Retirer : ${g.nom}`} className={classeBouton.icone}><Icone nom="ui-fermer" taille={16} /></button>
+                      <button type="button" onClick={() => setLignes(ls => ls.filter(x => x.id !== l.id))} aria-label={`${tr('Retirer :', 'Remove:')} ${g.nom}`} className={classeBouton.icone}><Icone nom="ui-fermer" taille={16} /></button>
                     </div>
                     {fausse && <p id={`erreur-${l.id}`} role="alert" className="px-2 pb-1.5 text-[13px] font-medium text-red-300">{pourquoiPasAdresse(l.url)}</p>}
                     {url && (
                       <label className="mt-1 flex items-center gap-1 border-t border-white/[0.06] pt-1">
-                        <span className="w-9 shrink-0 text-center text-[12px] text-white/55">Titre</span>
+                        <span className="w-9 shrink-0 text-center text-[12px] text-white/55">{tr('Titre', 'Title')}</span>
                         <input className="min-h-10 min-w-0 flex-1 bg-transparent px-1 text-[15px] text-white outline-none placeholder:text-white/55 focus-visible:!outline-none" maxLength={80}
-                          placeholder={l.lecture ? 'Lecture du site…' : brouillons.find(b => b.id === l.id)?.titre} value={l.titre} onChange={e => majLigne(l.id, { titre: e.target.value })} />
+                          placeholder={l.lecture ? tr('Lecture du site…', 'Reading the site…') : brouillons.find(b => b.id === l.id)?.titre} value={l.titre} onChange={e => majLigne(l.id, { titre: e.target.value })} />
                       </label>
                     )}
-                    {(type === 'video' || type === 'musique') && <p className="px-2 pt-0.5 pb-1 text-[12.5px] text-white/55">{type === 'video' ? 'La vidéo se regarde sur ta page.' : 'Elle s’écoute sur ta page.'}</p>}
+                    {(type === 'video' || type === 'musique') && <p className="px-2 pt-0.5 pb-1 text-[12.5px] text-white/55">{type === 'video' ? tr('La vidéo se regarde sur ta page.', 'The video plays on your page.') : tr('Elle s’écoute sur ta page.', 'It plays on your page.')}</p>}
                   </li>
                 );
               })}
@@ -279,10 +283,10 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
           )}
           {lignes.length < MAX_LIGNES && (
             <div>
-              {lignes.length > 0 && <p className="mb-2 text-[13px] font-medium text-white/60">Ajouter aussi</p>}
+              {lignes.length > 0 && <p className="mb-2 text-[13px] font-medium text-white/60">{tr('Ajouter aussi', 'Also add')}</p>}
               {/* Chaque choix est un bouton avec son nom : l'icône se pose seule dedans, en bleu, sans pastille. */}
               <ul className="grid grid-cols-3 gap-2">
-                {GENRES.map(g => (
+                {GENRES.map(x => genreDe(x.id, tr)).map(g => (
                   <li key={g.id}>
                     <button type="button" onClick={() => ajouterLigne(g.id)}
                       className={`flex w-full flex-col items-center justify-center gap-1.5 rounded-2xl border border-white/12 bg-nuit text-white transition hover:-translate-y-0.5 hover:border-bleu/50 active:scale-95 motion-reduce:hover:translate-y-0 ${lignes.length ? 'min-h-[68px] py-2' : 'min-h-[88px] py-3'}`}>
@@ -298,8 +302,8 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
       ),
     },
     reseaux: {
-      titre: 'Où te suivre ?',
-      aide: 'Touche un réseau et tape ton pseudo. Les icônes s’affichent sous ton nom.',
+      titre: tr('Où te suivre ?', 'Where can people follow you?'),
+      aide: tr('Touche un réseau et tape ton pseudo. Les icônes s’affichent sous ton nom.', 'Tap a network and type your handle. The icons show under your name.'),
       corps: (
         <div className="flex flex-col gap-3">
           {ouverts.length > 0 && (
@@ -310,12 +314,12 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
                 return (
                   <li key={r} className="flex flex-wrap items-center gap-2 rounded-xl border border-white/15 bg-nuit p-1.5 pl-3 transition hover:border-white/30 focus-within:border-white focus-within:ring-1 focus-within:ring-white">
                     <span className={ok ? 'text-white' : 'text-white/60'}><Icone nom={r} taille={20} /></span>
-                    <input id={`reseau-${r}`} aria-label={`Ton ${NOMS_RESEAUX[r]}`} className="min-h-11 min-w-0 flex-1 bg-transparent px-1 text-[16px] text-white outline-none placeholder:text-white/55 focus-visible:!outline-none"
+                    <input id={`reseau-${r}`} aria-label={tr(`Ton ${NOMS_RESEAUX[r]}`, `Your ${NOMS_RESEAUX[r]}`)} className="min-h-11 min-w-0 flex-1 bg-transparent px-1 text-[16px] text-white outline-none placeholder:text-white/55 focus-visible:!outline-none"
                       autoCapitalize="off" autoCorrect="off" spellCheck={false} inputMode={r === 'email' ? 'email' : 'text'}
-                      placeholder={r === 'email' ? 'toi@exemple.fr' : r === 'spotify' ? 'Adresse de ta page Spotify' : `Ton pseudo ${NOMS_RESEAUX[r]}`}
+                      placeholder={r === 'email' ? tr('toi@exemple.fr', 'you@example.com') : r === 'spotify' ? tr('Adresse de ta page Spotify', 'Your Spotify page address') : tr(`Ton pseudo ${NOMS_RESEAUX[r]}`, `Your ${NOMS_RESEAUX[r]} handle`)}
                       value={saisies[r] ?? ''} onChange={e => majReseau(r, e.target.value)} onBlur={() => setQuittes(q => new Set(q).add(r))}
                       aria-invalid={faux || undefined} aria-describedby={faux ? `erreur-${r}` : undefined} />
-                    <button type="button" onClick={() => majReseau(r, null)} aria-label={`Retirer ${NOMS_RESEAUX[r]}`}
+                    <button type="button" onClick={() => majReseau(r, null)} aria-label={tr(`Retirer ${NOMS_RESEAUX[r]}`, `Remove ${NOMS_RESEAUX[r]}`)}
                       className={classeBouton.icone}><Icone nom="ui-fermer" taille={16} /></button>
                     {faux && <p id={`erreur-${r}`} role="alert" className="w-full pr-2 pb-1 text-[13px] font-medium text-red-300">{pourquoiPasReseau(r, saisies[r] ?? '')}</p>}
                   </li>
@@ -331,17 +335,17 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
                 <span className="w-full truncate text-center text-[11.5px] text-white/60">{NOMS_RESEAUX[r]}</span>
               </button>
             ))}
-            {!tous && <button type="button" onClick={() => setTous(true)} className="flex min-h-12 items-center gap-1.5 rounded-xl px-3 text-[14px] font-medium text-white/80 transition hover:bg-white/[0.07] hover:text-white"><Icone nom="ui-plus" taille={15} />Autres réseaux</button>}
+            {!tous && <button type="button" onClick={() => setTous(true)} className="flex min-h-12 items-center gap-1.5 rounded-xl px-3 text-[14px] font-medium text-white/80 transition hover:bg-white/[0.07] hover:text-white"><Icone nom="ui-plus" taille={15} />{tr('Autres réseaux', 'More networks')}</button>}
           </div>
         </div>
       ),
     },
     style: {
-      titre: 'Choisis ton thème',
-      aide: 'Les couleurs, la police et les boutons suivent. Les autres t’attendent dans Design.',
+      titre: tr('Choisis ton thème', 'Pick your theme'),
+      aide: tr('Les couleurs, la police et les boutons suivent. Les autres t’attendent dans Design.', 'Colors, font and buttons follow. The others are waiting in Design.'),
       corps: (
         // Les dix d'un coup, en deux rangées de cinq : rien ne se cache au bout d'un défilement (Lilian, 20 octobre 2026).
-        <ul onKeyDown={e => flechesRadio(e)} className="grid grid-cols-5 gap-x-2 gap-y-3.5" role="radiogroup" aria-label="Thème">
+        <ul onKeyDown={e => flechesRadio(e)} className="grid grid-cols-5 gap-x-2 gap-y-3.5" role="radiogroup" aria-label={tr('Thème', 'Theme')}>
           {THEMES_ACCUEIL.map(id => THEMES.find(t => t.id === id)!).map((t, n) => {
             const choisi = reglages.theme === t.id;
             const aucun = !THEMES_ACCUEIL.includes(reglages.theme);
@@ -354,7 +358,7 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
                   <span className={`relative block w-full rounded-xl outline-offset-2 transition-[outline-color] ${choisi ? 'outline-2 outline-bleu outline' : 'outline-2 outline-transparent outline group-hover:outline-white/20'}`}>
                     <Pastille theme={t} />
                   </span>
-                  <span className={`line-clamp-2 w-full text-center lg:whitespace-nowrap text-[11.5px] leading-tight ${choisi ? 'font-semibold text-white' : 'text-white/70'}`}>{t.nom}</span>
+                  <span className={`line-clamp-2 w-full text-center lg:whitespace-nowrap text-[11.5px] leading-tight ${choisi ? 'font-semibold text-white' : 'text-white/70'}`}>{nomTheme(t, reglages.langue)}</span>
                 </button>
               </li>
             );
@@ -363,9 +367,9 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
       ),
     },
     fin: {
-      titre: 'Bravo, ta page est en ligne',
-      aide: sansLien ? 'Il ne lui manque plus qu’un lien : ton site, ta boutique ou ta prise de rendez-vous.'
-        : 'Ajoute, change, déplace : tout s’enregistre et s’affiche aussitôt.',
+      titre: tr('Bravo, ta page est en ligne', 'Well done, your page is live'),
+      aide: sansLien ? tr('Il ne lui manque plus qu’un lien : ton site, ta boutique ou ta prise de rendez-vous.', 'All it needs now is a link: your website, your shop or your booking page.')
+        : tr('Ajoute, change, déplace : tout s’enregistre et s’affiche aussitôt.', 'Add, change, move: everything saves and shows right away.'),
       corps: null,
     },
   };
@@ -377,16 +381,16 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
           du téléphone : elles ne bougent plus d'une étape à l'autre, quelle que soit la longueur de la question (24 octobre
           2026 ; centrées sur la médiane de la scène, elles sautaient de 120 px). */}
       <header className="flex h-14 shrink-0 items-center gap-2 px-3 lg:col-start-1 lg:row-start-2 lg:px-6">
-        <button type="button" onClick={() => { setIgnorer(false); setI(n => n - 1); }} aria-label="Étape précédente" disabled={i === 0 || etape === 'fin'}
+        <button type="button" onClick={() => { setIgnorer(false); setI(n => n - 1); }} aria-label={tr('Étape précédente', 'Previous step')} disabled={i === 0 || etape === 'fin'}
           className={`${classeBouton.icone} disabled:invisible`}><Icone nom="ui-chevron" taille={20} className="rotate-90" /></button>
-        <div className="flex flex-1 justify-center gap-1.5" role="progressbar" aria-label="Premiers pas" aria-valuemin={0} aria-valuemax={QUESTIONS} aria-valuenow={Math.min(i, QUESTIONS)} aria-valuetext={i < QUESTIONS ? `Question ${i + 1} sur ${QUESTIONS}` : 'Terminé'}>
+        <div className="flex flex-1 justify-center gap-1.5" role="progressbar" aria-label={tr('Premiers pas', 'First steps')} aria-valuemin={0} aria-valuemax={QUESTIONS} aria-valuenow={Math.min(i, QUESTIONS)} aria-valuetext={i < QUESTIONS ? tr(`Question ${i + 1} sur ${QUESTIONS}`, `Question ${i + 1} of ${QUESTIONS}`) : tr('Terminé', 'Done')}>
           {Array.from({ length: QUESTIONS }, (_, n) => (
             <span key={n} className="h-1.5 min-w-3 max-w-9 flex-1 overflow-hidden rounded-full bg-[#e4e4ff]">
               <span className="block h-full origin-left rounded-full bg-bleu transition-transform duration-500 motion-reduce:transition-none" style={{ transform: `scaleX(${n < i ? 1 : n === i ? 0.4 : 0})` }} />
             </span>
           ))}
         </div>
-        <button type="button" onClick={() => terminer()} className={`${classeBouton.discret} shrink-0 ${etape === 'fin' ? 'invisible' : ''}`}>Plus tard</button>
+        <button type="button" onClick={() => terminer()} className={`${classeBouton.discret} shrink-0 ${etape === 'fin' ? 'invisible' : ''}`}>{tr('Plus tard', 'Later')}</button>
       </header>
 
       {/* L'aperçu : la vraie page, en petit, qui se remplit à chaque réponse. */}
@@ -409,9 +413,9 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
           {etape === 'fin' ? (
             <>
               {sansLien
-                ? <BoutonPrincipal className="w-full" onClick={() => terminer('lien')}><Icone nom="ui-plus" taille={18} />Ajouter mon premier lien</BoutonPrincipal>
-                : <BoutonPrincipal className="w-full" onClick={() => terminer()}><Icone nom="ui-crayon" taille={18} />Modifier ma page</BoutonPrincipal>}
-              <a href={urlPage(compte)} target="_blank" rel="noopener" className={classeBouton.discret}>Voir ma page<Icone nom="ui-ouvrir" taille={16} /></a>
+                ? <BoutonPrincipal className="w-full" onClick={() => terminer('lien')}><Icone nom="ui-plus" taille={18} />{tr('Ajouter mon premier lien', 'Add my first link')}</BoutonPrincipal>
+                : <BoutonPrincipal className="w-full" onClick={() => terminer()}><Icone nom="ui-crayon" taille={18} />{tr('Modifier ma page', 'Edit my page')}</BoutonPrincipal>}
+              <a href={urlPage(compte)} target="_blank" rel="noopener" className={classeBouton.discret}>{tr('Voir ma page', 'View my page')}<Icone nom="ui-ouvrir" taille={16} /></a>
             </>
           ) : (
             <BoutonPrincipal className={`w-full ${rempli ? '' : '!bg-white/[0.09] !text-white'}`} onClick={suivant}>{libelle}</BoutonPrincipal>

@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { PRINCIPAL, sansSchema } from '../lib/types.ts';
-import type { Origines } from '../lib/types.ts';
+import type { Langue, Origines } from '../lib/types.ts';
 import { ajouterJeton, compteParEmail, jetonsRecents, lireReglages, noterConnexion, supprimerJeton, verifierJeton } from './db.ts';
 import type { Compte } from './db.ts';
 import { bouton, envoyer, enveloppe } from './courriel.ts';
@@ -80,14 +80,15 @@ const ipTropInsistante = (ip: string, maintenant: number) => demandesParIp(cleIp
  */
 async function envoyerLien(o: {
   origines: Origines; env: Env; fetchImpl: typeof fetch; compte: string; destinataire: string; duree: number;
-  sujet: string; html: (lien: string) => string; texte: (lien: string) => string;
+  sujet: string; html: (lien: string) => string; texte: (lien: string) => string; langue?: Langue;
 }): Promise<Reponse> {
+  const d = (fr: string, en: string) => (o.langue === 'en' ? en : fr);
   const jeton = nouveauJeton();
   const lien = `${o.origines.admin}/admin/connexion?jeton=${jeton}`;
   if (!o.env.RESEND_API_KEY && o.env.NODE_ENV === 'production') {
     /* Une instance auto-hébergée sans Resend : son administrateur entre quand même, par le lien écrit dans les journaux
        du serveur, que lui seul lit. Jamais dans la page, où n'importe qui taperait son adresse. */
-    if (EST_HOPLA_PAGE || o.compte !== PRINCIPAL) return { ok: false, message: 'L’envoi d’e-mails n’est pas configuré sur le serveur.' };
+    if (EST_HOPLA_PAGE || o.compte !== PRINCIPAL) return { ok: false, message: d('L’envoi d’e-mails n’est pas configuré sur le serveur.', 'Email sending isn’t set up on the server.') };
     ajouterJeton(empreinte(jeton), 'connexion', o.duree, o.compte);
     console.log(`[liens] lien de connexion de l’administrateur (sans RESEND_API_KEY) : ${lien}`);
     return { ok: true, message: '' };
@@ -95,27 +96,36 @@ async function envoyerLien(o: {
   ajouterJeton(empreinte(jeton), 'connexion', o.duree, o.compte);
   if (!o.env.RESEND_API_KEY) {
     console.log(`[liens] lien de connexion (dev) : ${lien}`);
-    return { ok: true, message: 'Mode développement : le lien est ci-dessous.', lienDev: lien };
+    return { ok: true, message: d('Mode développement : le lien est ci-dessous.', 'Development mode: the link is below.'), lienDev: lien };
   }
   const parti = await envoyer(o.env, o.fetchImpl, { to: o.destinataire, subject: o.sujet, html: o.html(lien), text: o.texte(lien) });
-  if (!parti) { supprimerJeton(empreinte(jeton)); return { ok: false, message: 'L’e-mail n’est pas parti. Réessaie dans un instant.' }; }
+  if (!parti) { supprimerJeton(empreinte(jeton)); return { ok: false, message: d('L’e-mail n’est pas parti. Réessaie dans un instant.', 'The email didn’t go out. Try again in a moment.') }; }
   return { ok: true, message: '' };
 }
 
-export async function demanderConnexion(origines: Origines, env: Env, email: string, fetchImpl: typeof fetch = fetch, maintenant = Date.now(), ip = ''): Promise<Reponse> {
+export async function demanderConnexion(origines: Origines, env: Env, email: string, fetchImpl: typeof fetch = fetch, maintenant = Date.now(), ip = '', langue: Langue = 'fr'): Promise<Reponse> {
+  // L'écran parle la langue du navigateur (`langue`) ; l'e-mail, celle de la page du compte.
+  const d = (fr: string, en: string) => (langue === 'en' ? en : fr);
   const adresse = email.trim().toLowerCase();
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(adresse)) return { ok: false, message: 'Entre l’adresse e-mail de ton compte.' };
-  if (ipTropInsistante(ip, maintenant)) return { ok: false, message: 'Trop de demandes. Réessaie dans une heure.' };
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(adresse)) return { ok: false, message: d('Entre l’adresse e-mail de ton compte.', 'Enter your account’s email address.') };
+  if (ipTropInsistante(ip, maintenant)) return { ok: false, message: d('Trop de demandes. Réessaie dans une heure.', 'Too many requests. Try again in an hour.') };
   // Le plafond du jour ne compte que les liens de connexion : les bienvenues des pages créées depuis l'accueil ne l'épuisent pas.
-  if (jetonsRecents(maintenant - 86_400_000, undefined, DUREE_LIEN).n >= 200) return { ok: false, message: 'Trop de demandes aujourd’hui. Réessaie demain.' };
-  const envoye = { ok: true as const, message: `Si ${adresse} a un compte, le lien vient de partir. Il marche une fois, pendant 15 minutes.` };
+  if (jetonsRecents(maintenant - 86_400_000, undefined, DUREE_LIEN).n >= 200) return { ok: false, message: d('Trop de demandes aujourd’hui. Réessaie demain.', 'Too many requests today. Try again tomorrow.') };
+  const envoye = { ok: true as const, message: d(`Si ${adresse} a un compte, le lien vient de partir. Il marche une fois, pendant 15 minutes.`, `If ${adresse} has an account, the link is on its way. It works once, for 15 minutes.`) };
   const compte = compteParAdresse(adresse, env);
   if (!compte) return envoye;
   // Par compte : un lien par minute, dix par jour. Au-delà on se tait, pour ne rien révéler.
   const recents = jetonsRecents(maintenant - 86_400_000, compte);
   if (maintenant - recents.dernier < 60_000 || recents.n >= 10) return envoye;
-  const r = await envoyerLien({
-    origines, env, fetchImpl, compte, destinataire: adresse, duree: DUREE_LIEN,
+  const r = await envoyerLien(langueDe(compte) === 'en' ? {
+    origines, env, fetchImpl, compte, destinataire: adresse, duree: DUREE_LIEN, langue,
+    sujet: 'Your sign-in link',
+    html: lien => enveloppe(`<p>Here is your link to open the dashboard of your Hopla page. It works only once, for 15 minutes.</p>
+${bouton(lien, 'Open my dashboard')}
+<p style="color:#666;font-size:14px">Didn’t ask for this? Ignore this email: no one can use it without access to your inbox.</p>`),
+    texte: lien => `Open your dashboard: ${lien}\nThe link works only once, for 15 minutes.`,
+  } : {
+    origines, env, fetchImpl, compte, destinataire: adresse, duree: DUREE_LIEN, langue,
     sujet: 'Ton lien de connexion',
     html: lien => enveloppe(`<p>Voici ton lien pour ouvrir le back office de ta page Hopla. Il marche une seule fois, pendant 15 minutes.</p>
 ${bouton(lien, 'Ouvrir mon back office')}

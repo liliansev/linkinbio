@@ -6,6 +6,7 @@ import { demarrageUtile, etapesDemarrage } from '../lib/demarrage.ts';
 import type { Destination, Etape } from '../lib/demarrage.ts';
 import { Icone } from '../components/Icone.tsx';
 import { Feuille, classeBouton, copierTexte, vibrer } from './ui.tsx';
+import { useL } from '../accueil/langue.ts';
 
 /*
  * « Bien démarrer » : les étapes qui restent à une page qui n'a pas encore
@@ -62,8 +63,9 @@ function Anneau({ faites, total, taille, epaisseur, surBleu = false }: { faites:
 
 /** Au téléphone, dans l'en-tête bleu, à la place de la photo : l'anneau et son compte, qui ouvrent la liste. */
 export function AnneauDemarrage({ faites, total, onClick, className = '' }: { faites: number; total: number; onClick: () => void; className?: string }) {
+  const l = useL();
   return (
-    <button type="button" onClick={() => { vibrer(5); onClick(); }} aria-haspopup="dialog" aria-label={`Bien démarrer, ${faites} sur ${total}`}
+    <button type="button" onClick={() => { vibrer(5); onClick(); }} aria-haspopup="dialog" aria-label={l(`Bien démarrer, ${faites} sur ${total}`, `Get started, ${faites} of ${total}`)}
       className={`relative -m-1 grid h-11 w-11 shrink-0 place-items-center rounded-full transition active:scale-95 ${className}`}>
       <Anneau faites={faites} total={total} taille={36} epaisseur={2.5} surBleu />
       <span aria-hidden="true" className="absolute inset-0 grid place-items-center text-[11.5px] font-semibold tracking-[-0.02em] text-[#fff] tabular-nums">{faites}/{total}</span>
@@ -98,16 +100,17 @@ export function HautLiens({ compte, reglages, demarrage, aller, annoncer, feuill
   /** La liste ouverte depuis l'en-tête du téléphone. */
   feuille: boolean; fermerFeuille: () => void;
 }) {
+  const l = useL();
   const adresse = adressePartage(compte, reglages.domaine);
   const { etapes, faites, actif } = demarrage;
   const [ouvert, setOuvert] = useState(false);
   const peutPartager = typeof navigator !== 'undefined' && typeof navigator.share === 'function';
 
   async function copier() {
-    if (await copierTexte(adresse)) { vibrer(8); noterPartage(); annoncer?.({ texte: 'Adresse copiée : colle-la dans ta bio' }); }
+    if (await copierTexte(adresse)) { vibrer(8); noterPartage(); annoncer?.({ texte: l('Adresse copiée : colle-la dans ta bio', 'Address copied: paste it into your bio') }); }
   }
   async function partager() {
-    try { await navigator.share({ title: reglages.profil.nom || 'Ma page', url: adresse }); noterPartage(); } catch { /* partage annulé */ }
+    try { await navigator.share({ title: reglages.profil.nom || l('Ma page', 'My page'), url: adresse }); noterPartage(); } catch { /* partage annulé */ }
   }
   function faire(e: Etape) {
     if (e.id === 'theme') noter(CLE_THEME);
@@ -120,19 +123,19 @@ export function HautLiens({ compte, reglages, demarrage, aller, annoncer, feuill
       <div className="adm-demarrage hidden flex-col gap-3 lg:flex">
         {/* Une seule ligne tant qu'on ne l'ouvre pas : la page qu'on modifie reste dans le premier écran. */}
         {actif && (
-          <section className="adm-checklist adm-cascade" aria-label="Bien démarrer">
+          <section className="adm-checklist adm-cascade" aria-label={l('Bien démarrer', 'Get started')}>
             <div className="flex items-center">
               {/* Le titre porte le bouton, pas l'inverse : un lecteur d'écran trouve « Bien démarrer » parmi les titres. */}
               <h2 className="flex min-w-0 flex-1">
                 <button type="button" onClick={() => setOuvert(o => !o)} aria-expanded={ouvert}
                   className="flex min-h-12 min-w-0 flex-1 items-center gap-3 rounded-xl pl-3.5 text-left">
                   <Anneau faites={faites} total={etapes.length} taille={24} epaisseur={2.5} />
-                  <span className="min-w-0 flex-1 text-[14px] font-medium text-white">Bien démarrer</span>
-                  <span className="shrink-0 text-[13px] text-white/55">{faites} sur {etapes.length}</span>
+                  <span className="min-w-0 flex-1 text-[14px] font-medium text-white">{l('Bien démarrer', 'Get started')}</span>
+                  <span className="shrink-0 text-[13px] text-white/55">{l(`${faites} sur ${etapes.length}`, `${faites} of ${etapes.length}`)}</span>
                   <Icone nom="ui-chevron" taille={16} className={`shrink-0 text-white/55 transition ${ouvert ? 'rotate-180' : ''}`} />
                 </button>
               </h2>
-              <button type="button" onClick={() => noter(CLE_MASQUE)} aria-label="Masquer ces étapes"
+              <button type="button" onClick={() => noter(CLE_MASQUE)} aria-label={l('Masquer ces étapes', 'Hide these steps')}
                 className={classeBouton.icone}><Icone nom="ui-fermer" taille={18} /></button>
             </div>
             {ouvert && <ListeEtapes etapes={etapes} choisir={faire} />}
@@ -140,12 +143,12 @@ export function HautLiens({ compte, reglages, demarrage, aller, annoncer, feuill
         )}
       </div>
 
-      <Feuille ouverte={feuille && actif} onFermer={fermerFeuille} titre="Bien démarrer">
+      <Feuille ouverte={feuille && actif} onFermer={fermerFeuille} titre={l('Bien démarrer', 'Get started')}>
         {fermer => (
           <>
             {/* La photo et le partage ouvrent une fenêtre du téléphone : ils partent dans le geste même, la feuille se range ensuite. */}
             <ListeEtapes feuille etapes={etapes} choisir={e => { if (e.id === 'photo' || e.id === 'partage') { faire(e); fermer(); } else fermer(() => { fermerFeuille(); faire(e); }); }} />
-            <button type="button" onClick={() => fermer(() => { fermerFeuille(); noter(CLE_MASQUE); })} className={`${classeBouton.discret} -ml-3 mt-2`}>Masquer ces étapes</button>
+            <button type="button" onClick={() => fermer(() => { fermerFeuille(); noter(CLE_MASQUE); })} className={`${classeBouton.discret} -ml-3 mt-2`}>{l('Masquer ces étapes', 'Hide these steps')}</button>
           </>
         )}
       </Feuille>
