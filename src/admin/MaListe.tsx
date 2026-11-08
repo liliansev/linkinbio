@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { Api, Contact, Liste } from '../lib/types.ts';
+import type { Api, Contact, Langue, Liste } from '../lib/types.ts';
 import { destination } from '../lib/integrations.ts';
 import { Icone } from '../components/Icone.tsx';
 import { Carte, Feuille, classeBouton } from './ui.tsx';
 import { Etiquette, Reserve, usePermis, useVoirOffres } from './offre.tsx';
+import { choix, useLangue } from '../accueil/langue.ts';
 
 /*
  * Les inscrits de « Rejoins ma liste », dans l'onglet Stats : combien, les
@@ -11,12 +12,12 @@ import { Etiquette, Reserve, usePermis, useVoirOffres } from './offre.tsx';
  * l'onglet Intégrations (22 octobre 2026) : la carte y mène.
  */
 
-const nombre = (n: number) => n.toLocaleString('fr-FR');
-const quand = (ts: number) => {
+const loc = (langue: Langue) => (langue === 'fr' ? 'fr-FR' : 'en-US');
+const quand = (ts: number, langue: Langue) => {
   const h = (Date.now() - ts) / 3_600_000;
-  if (h < 1) return 'à l’instant';
-  if (h < 24) return `il y a ${Math.floor(h)} h`;
-  return new Date(ts).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+  if (h < 1) return langue === 'fr' ? 'à l’instant' : 'just now';
+  if (h < 24) return langue === 'fr' ? `il y a ${Math.floor(h)} h` : `${Math.floor(h)}h ago`;
+  return new Date(ts).toLocaleDateString(loc(langue), { day: 'numeric', month: 'short' });
 };
 const majuscule = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
 
@@ -30,32 +31,35 @@ export function MaListe({ api, onIntegrations }: { api: ApiListe; onIntegrations
   useEffect(() => { recharger(); }, [recharger]);
   const permis = usePermis('listeEmail');
   const voir = useVoirOffres();
+  const langue = useLangue();
+  const tr = choix(langue);
+  const nombre = (n: number) => n.toLocaleString(loc(langue));
   if (!liste) return null;
   // Sans l'offre et sans inscrit, la carte dit ce que la liste ferait ; des inscrits déjà là restent à toi (export, ta newsletter).
   if (!permis && !liste.total) return (
     // Le même encart que « Tes stats », à côté : un seul bouton plein (celui des stats), ici un lien discret vers Pro.
-    <Carte nu titre="Ta liste" etiquette={<Etiquette fonction="listeEmail" />} className="adm-encart p-5 bureau:px-6">
-      <Reserve fonction="listeEmail" bouton={false} phrase="Avec Hopla Pro, tes visiteurs laissent leur e-mail sur ta page : chaque adresse arrive ici, et dans ta newsletter si tu la branches.">
-        {voir && <button type="button" onClick={() => voir('listeEmail')} aria-haspopup="dialog" className="adm-lien -ml-1.5">Voir Hopla Pro</button>}
+    <Carte nu titre={tr('Ta liste', 'Your list')} etiquette={<Etiquette fonction="listeEmail" />} className="adm-encart p-5 bureau:px-6">
+      <Reserve fonction="listeEmail" bouton={false} phrase={tr('Avec Hopla Pro, tes visiteurs laissent leur e-mail sur ta page : chaque adresse arrive ici, et dans ta newsletter si tu la branches.', 'With Hopla Pro, visitors leave their email on your page: every address lands here, and in your newsletter if you connect it.')}>
+        {voir && <button type="button" onClick={() => voir('listeEmail')} aria-haspopup="dialog" className="adm-lien -ml-1.5">{tr('Voir Hopla Pro', 'See Hopla Pro')}</button>}
       </Reserve>
     </Carte>
   );
   return (
     <>
-      <Carte titre="Ta liste" action={<button type="button" onClick={() => setOuverte(true)} className={classeBouton.secondaire}>Gérer</button>}>
+      <Carte titre={tr('Ta liste', 'Your list')} action={<button type="button" onClick={() => setOuverte(true)} className={classeBouton.secondaire}>{tr('Gérer', 'Manage')}</button>}>
         {liste.total ? (
           <>
             <div className="flex items-end gap-3">
               <p className="text-[24px] font-semibold leading-none tracking-[-0.02em] tabular-nums">{nombre(liste.total)}</p>
-              <p className="pb-1 text-[13.5px] text-white/60">inscrit{liste.total > 1 ? 's' : ''}{liste.semaine ? <>, dont <span className="adm-gain">+{nombre(liste.semaine)}</span> cette semaine</> : ''}</p>
+              <p className="pb-1 text-[13.5px] text-white/60">{tr('inscrit', 'subscriber')}{liste.total > 1 ? 's' : ''}{liste.semaine ? <>{tr(', dont ', ', ')}<span className="adm-gain">+{nombre(liste.semaine)}</span>{tr(' cette semaine', ' this week')}</> : ''}</p>
             </div>
             <p className="mt-2.5 flex items-center gap-1.5 text-[13px] text-white/55">
               <Icone nom={liste.integration ? 'ui-ok' : 'courrier'} taille={14} />
-              {liste.integration ? `Envoyés aussi ${destination(liste.integration)}.` : 'Gardés ici. Exporte-les en CSV, ou branche ta newsletter.'}
+              {liste.integration ? tr(`Envoyés aussi ${destination(liste.integration)}.`, `Also sent ${destination(liste.integration, 'en')}.`) : tr('Gardés ici. Exporte-les en CSV, ou branche ta newsletter.', 'Kept here. Export them as CSV, or connect your newsletter.')}
             </p>
           </>
-        ) : <p className="text-[14px] leading-snug text-white/60">Ajoute le bloc « Liste e-mail » à ta page : chaque adresse arrive ici, et dans ta newsletter si tu la branches.</p>}
-        {!permis && liste.total > 0 && <p className="mt-2.5 text-[13px] leading-snug text-white/55">Le formulaire n’est plus sur ta page sans Hopla Pro. Tes inscrits restent à toi : exporte-les depuis Gérer.</p>}
+        ) : <p className="text-[14px] leading-snug text-white/60">{tr('Ajoute le bloc « Liste e-mail » à ta page : chaque adresse arrive ici, et dans ta newsletter si tu la branches.', 'Add the “Email list” block to your page: every address lands here, and in your newsletter if you connect it.')}</p>}
+        {!permis && liste.total > 0 && <p className="mt-2.5 text-[13px] leading-snug text-white/55">{tr('Le formulaire n’est plus sur ta page sans Hopla Pro. Tes inscrits restent à toi : exporte-les depuis Gérer.', 'The form is no longer on your page without Hopla Pro. Your subscribers are still yours: export them from Manage.')}</p>}
       </Carte>
       {ouverte && <FeuilleListe liste={liste} api={api} onFermer={() => setOuverte(false)} onChange={recharger} onIntegrations={onIntegrations} />}
     </>
@@ -87,47 +91,50 @@ function FeuilleListe({ liste, api, onFermer, onChange, onIntegrations }: { list
     setContacts(l => [...l, c].sort((x, y) => y.ts - x.ts));
   }
   const branche = liste.integration;
+  const langue = useLangue();
+  const tr = choix(langue);
+  const nombre = (n: number) => n.toLocaleString(loc(langue));
 
   async function renvoyer() {
     setEnvoi(true);
     try {
       const r = await api.resynchroniser();
-      setMessage({ ok: !r.erreurs, texte: r.erreurs ? `${nombre(r.envoyes)} envoyés, ${nombre(r.erreurs)} refusés : vérifie ton branchement dans Intégrations.` : `${nombre(r.envoyes)} inscrit${r.envoyes > 1 ? 's' : ''} envoyé${r.envoyes > 1 ? 's' : ''}.` });
+      setMessage({ ok: !r.erreurs, texte: r.erreurs ? tr(`${nombre(r.envoyes)} envoyés, ${nombre(r.erreurs)} refusés : vérifie ton branchement dans Intégrations.`, `${nombre(r.envoyes)} sent, ${nombre(r.erreurs)} refused: check your connection in Integrations.`) : tr(`${nombre(r.envoyes)} inscrit${r.envoyes > 1 ? 's' : ''} envoyé${r.envoyes > 1 ? 's' : ''}.`, `${nombre(r.envoyes)} subscriber${r.envoyes > 1 ? 's' : ''} sent.`) });
       onChange();
-    } catch { setMessage({ ok: false, texte: 'Le serveur ne répond pas.' }); }
+    } catch { setMessage({ ok: false, texte: tr('Le serveur ne répond pas.', 'The server is not responding.') }); }
     setEnvoi(false);
   }
 
   return (
-    <Feuille ouverte onFermer={onFermer} titre="Ta liste">
+    <Feuille ouverte onFermer={onFermer} titre={tr('Ta liste', 'Your list')}>
       <div className="flex flex-col gap-5 pt-1">
         <section className="flex flex-col gap-3">
           <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
             <p className="min-w-0 flex-1 basis-52">
-              <span className="block text-[13px] font-medium text-white/70">Où vont les inscrits</span>
-              <span className="mt-0.5 block text-[14.5px] text-white">{branche ? majuscule(destination(branche)) : 'Ici seulement'}</span>
+              <span className="block text-[13px] font-medium text-white/70">{tr('Où vont les inscrits', 'Where subscribers go')}</span>
+              <span className="mt-0.5 block text-[14.5px] text-white">{branche ? majuscule(destination(branche, langue)) : tr('Ici seulement', 'Here only')}</span>
             </p>
             {onIntegrations && (
-              <button type="button" onClick={() => { onFermer(); onIntegrations(); }} className={classeBouton.secondaire}>{branche ? 'Changer' : 'Brancher ma newsletter'}</button>
+              <button type="button" onClick={() => { onFermer(); onIntegrations(); }} className={classeBouton.secondaire}>{branche ? tr('Changer', 'Change') : tr('Brancher ma newsletter', 'Connect my newsletter')}</button>
             )}
           </div>
           {message && <p role="status" className={`flex items-start gap-2 rounded-xl px-3.5 py-2.5 text-[13.5px] ${message.ok ? 'bg-white/[0.05] text-white' : 'bg-red-500/15 text-red-200'}`}>{message.ok && <span className="mt-px shrink-0" aria-hidden="true"><Icone nom="ui-ok" taille={16} /></span>}{message.texte}</p>}
           {branche && liste.enAttente > 0 && (
             <button type="button" disabled={envoi} onClick={renvoyer} className="self-start text-[13.5px] font-medium text-white underline underline-offset-2">
-              {liste.enAttente > 1 ? `Envoyer les ${nombre(liste.enAttente)} inscrits pas encore partis` : 'Envoyer l’inscrit pas encore parti'} {destination({ fournisseur: branche.fournisseur, nom: '' })}
+              {liste.enAttente > 1 ? tr(`Envoyer les ${nombre(liste.enAttente)} inscrits pas encore partis`, `Send the ${nombre(liste.enAttente)} subscribers not sent yet`) : tr('Envoyer l’inscrit pas encore parti', 'Send the subscriber not sent yet')} {destination({ fournisseur: branche.fournisseur, nom: '' }, langue)}
             </button>
           )}
         </section>
 
         <section>
           <div className="mb-2 flex items-center justify-between">
-            <span className="text-[13px] font-medium text-white/70">{nombre(liste.total)} inscrit{liste.total > 1 ? 's' : ''}</span>
-            {api.urlContacts && liste.total > 0 && <a href={api.urlContacts} download className={classeBouton.secondaire}><Icone nom="telecharger" taille={16} />Exporter en CSV</a>}
+            <span className="text-[13px] font-medium text-white/70">{nombre(liste.total)} {tr('inscrit', 'subscriber')}{liste.total > 1 ? 's' : ''}</span>
+            {api.urlContacts && liste.total > 0 && <a href={api.urlContacts} download className={classeBouton.secondaire}><Icone nom="telecharger" taille={16} />{tr('Exporter en CSV', 'Export as CSV')}</a>}
           </div>
           {retire && (
             <p role="status" className="mb-2 flex min-h-11 items-center gap-3 rounded-xl bg-white/[0.05] pl-3.5 text-[13.5px] text-white">
-              <span className="min-w-0 flex-1 truncate">{retire.email} retiré de ta liste</span>
-              <button type="button" onClick={annulerRetrait} className="min-h-11 shrink-0 rounded-xl px-3.5 font-medium underline underline-offset-2">Annuler</button>
+              <span className="min-w-0 flex-1 truncate">{retire.email} {tr('retiré de ta liste', 'removed from your list')}</span>
+              <button type="button" onClick={annulerRetrait} className="min-h-11 shrink-0 rounded-xl px-3.5 font-medium underline underline-offset-2">{tr('Annuler', 'Undo')}</button>
             </p>
           )}
           {contacts.length ? (
@@ -136,15 +143,15 @@ function FeuilleListe({ liste, api, onFermer, onChange, onIntegrations }: { list
                 <li key={c.id} className="flex items-center gap-3 px-3.5 py-2.5">
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-[14.5px] text-white">{c.prenom ? `${c.prenom} · ` : ''}{c.email}</span>
-                    <span className="block text-[12px] text-white/55">{quand(c.ts)}{c.source && c.source !== 'Direct' ? ` · ${c.source}` : ''}{c.synchro === 'erreur' ? ' · pas envoyé' : ''}</span>
+                    <span className="block text-[12px] text-white/55">{quand(c.ts, langue)}{c.source && c.source !== 'Direct' ? ` · ${c.source}` : ''}{c.synchro === 'erreur' ? tr(' · pas envoyé', ' · not sent') : ''}</span>
                   </span>
-                  <button type="button" aria-label={`Retirer ${c.email}`} onClick={() => retirer(c)}
+                  <button type="button" aria-label={tr(`Retirer ${c.email}`, `Remove ${c.email}`)} onClick={() => retirer(c)}
                     className={`${classeBouton.icone} hover:!text-red-300`}><Icone nom="ui-corbeille" taille={17} /></button>
                 </li>
               ))}
             </ul>
-          ) : <p className="text-[13.5px] text-white/55">Personne pour l’instant.</p>}
-          {liste.total > contacts.length && contacts.length >= 50 && <p className="mt-2 text-[12.5px] text-white/55">Les 50 derniers ; l’export CSV contient tout le monde.</p>}
+          ) : <p className="text-[13.5px] text-white/55">{tr('Personne pour l’instant.', 'No one yet.')}</p>}
+          {liste.total > contacts.length && contacts.length >= 50 && <p className="mt-2 text-[12.5px] text-white/55">{tr('Les 50 derniers ; l’export CSV contient tout le monde.', 'The latest 50; the CSV export has everyone.')}</p>}
         </section>
       </div>
     </Feuille>

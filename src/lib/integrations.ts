@@ -30,9 +30,25 @@ export const LISTE_CHEZ: Record<Newsletter, { mot: string; la: string; cette: st
   loops: { mot: 'Liste', la: 'la liste', cette: 'cette liste', vide: '' },
 };
 
-/** Où partent les inscrits, en quelques mots : « chez Brevo, la liste « Newsletter » », « vers Make ». */
-export function destination(i: Pick<IntegrationListe, 'fournisseur' | 'nom'>): string {
+/** The same words in English: « List », « the list ». */
+export const LISTE_CHEZ_EN: Record<Newsletter, { mot: string; la: string }> = {
+  brevo: { mot: 'List', la: 'the list' },
+  mailchimp: { mot: 'Audience', la: 'the audience' },
+  kit: { mot: 'Form', la: 'the form' },
+  mailerlite: { mot: 'Group', la: 'the group' },
+  beehiiv: { mot: 'Publication', la: 'the publication' },
+  systeme: { mot: 'Tag', la: 'the tag' },
+  mailcheap: { mot: 'Newsletter', la: 'the newsletter' },
+  loops: { mot: 'List', la: 'the list' },
+};
+
+/** Où partent les inscrits, en quelques mots : « chez Brevo, la liste « Newsletter » », « vers Make » ; « to Brevo, the list “Newsletter” ». */
+export function destination(i: Pick<IntegrationListe, 'fournisseur' | 'nom'>, langue: 'fr' | 'en' = 'fr'): string {
   const nom = NOMS_FOURNISSEURS[i.fournisseur];
+  if (langue === 'en') {
+    if (estWebhook(i.fournisseur)) return `to ${nom}`;
+    return i.nom ? `to ${nom}, ${LISTE_CHEZ_EN[i.fournisseur].la} “${i.nom}”` : `to ${nom}`;
+  }
   if (estWebhook(i.fournisseur)) return `vers ${nom}`;
   return i.nom ? `chez ${nom}, ${LISTE_CHEZ[i.fournisseur].la} « ${i.nom} »` : `chez ${nom}`;
 }
@@ -66,6 +82,7 @@ export const COULEURS_LOGOS: Record<string, string> = {
 
 /** Ce qui tourne derrière un webhook, à activer pour qu'il reçoive. */
 export const OUVRAGE_WEBHOOK: Record<Webhook, string> = { make: 'ton scénario', zapier: 'ton Zap', n8n: 'ton workflow' };
+export const OUVRAGE_WEBHOOK_EN: Record<Webhook, string> = { make: 'your scenario', zapier: 'your Zap', n8n: 'your workflow' };
 
 /** Les champs envoyés à un webhook pour chaque inscrit : les colonnes du CSV, plus la page et `exemple`. */
 export const CHAMPS_WEBHOOK = ['email', 'prenom', 'inscrit_le', 'provenance', 'page', 'exemple'] as const;
@@ -89,4 +106,9 @@ export const ADRESSE_WEBHOOK: Record<Webhook, string> = {
   make: 'Colle l’adresse de ton webhook Make, du type https://hook.eu1.make.com/…',
   zapier: 'Colle l’adresse de ton webhook Zapier, du type https://hooks.zapier.com/hooks/catch/…',
   n8n: 'Colle l’adresse de ton webhook n8n, en https://…',
+};
+export const ADRESSE_WEBHOOK_EN: Record<Webhook, string> = {
+  make: 'Paste your Make webhook address, like https://hook.eu1.make.com/…',
+  zapier: 'Paste your Zapier webhook address, like https://hooks.zapier.com/hooks/catch/…',
+  n8n: 'Paste your n8n webhook address, starting with https://…',
 };

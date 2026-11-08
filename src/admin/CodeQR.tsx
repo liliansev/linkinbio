@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import QRCode from 'qrcode';
 import { Icone } from '../components/Icone.tsx';
 import { classeBouton } from './ui.tsx';
+import { useL } from '../accueil/langue.ts';
 
 /**
  * Le QR code de la page, à télécharger. Il mène à l'adresse marquée `?s=qr` :
@@ -21,12 +22,13 @@ export async function telechargerQR(adresse: string, pseudo: string) {
 
 export function CodeQR({ adresse, pseudo }: { adresse: string; pseudo: string }) {
   const [qr, setQr] = useState('');
+  const l = useL();
   useEffect(() => { dessiner(adresse).then(setQr).catch(() => setQr('')); }, [adresse]);
   if (!qr) return null;
   return (
     <div className="flex flex-col items-center gap-3">
-      <img src={qr} alt="QR code vers ta page" className="h-44 w-44 rounded-2xl border border-white/10 bg-nuit p-1.5" />
-      <a href={qr} download={`qr-${pseudo}-hopla.png`} className={classeBouton.secondaire}><Icone nom="telecharger" taille={16} />Télécharger le QR code</a>
+      <img src={qr} alt={l('QR code vers ta page', 'QR code to your page')} className="h-44 w-44 rounded-2xl border border-white/10 bg-nuit p-1.5" />
+      <a href={qr} download={`qr-${pseudo}-hopla.png`} className={classeBouton.secondaire}><Icone nom="telecharger" taille={16} />{l('Télécharger le QR code', 'Download the QR code')}</a>
     </div>
   );
 }

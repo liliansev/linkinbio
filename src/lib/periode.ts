@@ -82,11 +82,15 @@ export function borner(p: Plage, jours: number, aujourdhui: string): Plage | nul
 
 const MOIS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
 const MOIS_COURTS = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const morceaux = (jour: string) => ({ annee: jour.slice(0, 4), mois: Number(jour.slice(5, 7)) - 1, quantieme: Number(jour.slice(8, 10)) });
+type LangueDates = 'fr' | 'en';
 
-/** Le nom d'un mois et son année, pour le titre d'un calendrier : « Octobre 2026 ». */
-export function nomMois(jour: string): string {
+/** Le nom d'un mois et son année, pour le titre d'un calendrier : « Octobre 2026 », « October 2026 ». */
+export function nomMois(jour: string, langue: LangueDates = 'fr'): string {
   const { annee, mois } = morceaux(jour);
+  if (langue === 'en') return `${MONTHS[mois]} ${annee}`;
   return `${MOIS[mois].charAt(0).toUpperCase()}${MOIS[mois].slice(1)} ${annee}`;
 }
 
@@ -94,23 +98,37 @@ export function nomMois(jour: string): string {
  * Une plage en mots, avec l'année seulement quand ce n'est pas celle
  * d'aujourd'hui : « Le 12 octobre », « Du 1er au 18 octobre », « Du 28
  * septembre au 4 octobre », « Du 28 décembre 2025 au 4 janvier 2026 ».
+ * En anglais : « October 12 », « October 1 to 18 », « September 28 to October 4 ».
  */
-export function nomPlage({ du, au }: Plage, aujourdhui: string): string {
+export function nomPlage({ du, au }: Plage, aujourdhui: string, langue: LangueDates = 'fr'): string {
   const a = morceaux(du), b = morceaux(au);
   const cetteAnnee = aujourdhui.slice(0, 4);
-  const jour = (m: ReturnType<typeof morceaux>) => (m.quantieme === 1 ? '1er' : String(m.quantieme));
   const annee = (m: ReturnType<typeof morceaux>) => (m.annee === cetteAnnee ? '' : ` ${m.annee}`);
+  if (langue === 'en') {
+    const vir = (m: ReturnType<typeof morceaux>) => (m.annee === cetteAnnee ? '' : `, ${m.annee}`);
+    if (du === au) return `${MONTHS[a.mois]} ${a.quantieme}${vir(a)}`;
+    if (a.annee !== b.annee) return `${MONTHS[a.mois]} ${a.quantieme}, ${a.annee} to ${MONTHS[b.mois]} ${b.quantieme}, ${b.annee}`;
+    if (a.mois === b.mois) return `${MONTHS[a.mois]} ${a.quantieme} to ${b.quantieme}${vir(b)}`;
+    return `${MONTHS[a.mois]} ${a.quantieme} to ${MONTHS[b.mois]} ${b.quantieme}${vir(b)}`;
+  }
+  const jour = (m: ReturnType<typeof morceaux>) => (m.quantieme === 1 ? '1er' : String(m.quantieme));
   if (du === au) return `Le ${jour(a)} ${MOIS[a.mois]}${annee(a)}`;
   if (a.annee !== b.annee) return `Du ${jour(a)} ${MOIS[a.mois]} ${a.annee} au ${jour(b)} ${MOIS[b.mois]} ${b.annee}`;
   if (a.mois === b.mois) return `Du ${jour(a)} au ${jour(b)} ${MOIS[b.mois]}${annee(b)}`;
   return `Du ${jour(a)} ${MOIS[a.mois]} au ${jour(b)} ${MOIS[b.mois]}${annee(b)}`;
 }
 
-/** La même plage en peu de place, sur un bouton : « 12 oct. », « 12–18 oct. », « 28 sept. – 4 oct. ». */
-export function nomCourt({ du, au }: Plage, aujourdhui: string): string {
+/** La même plage en peu de place, sur un bouton : « 12 oct. », « 12–18 oct. », « 28 sept. – 4 oct. » ; « Oct 12–18 ». */
+export function nomCourt({ du, au }: Plage, aujourdhui: string, langue: LangueDates = 'fr'): string {
   const a = morceaux(du), b = morceaux(au);
   const cetteAnnee = aujourdhui.slice(0, 4);
   const annee = (m: ReturnType<typeof morceaux>) => (m.annee === cetteAnnee ? '' : ` ${m.annee}`);
+  if (langue === 'en') {
+    if (du === au) return `${MONTHS_SHORT[a.mois]} ${a.quantieme}${annee(a)}`;
+    if (a.annee === b.annee && a.mois === b.mois) return `${MONTHS_SHORT[a.mois]} ${a.quantieme}–${b.quantieme}${annee(b)}`;
+    const finA = a.annee === b.annee ? '' : ` ${a.annee}`;
+    return `${MONTHS_SHORT[a.mois]} ${a.quantieme}${finA} – ${MONTHS_SHORT[b.mois]} ${b.quantieme}${a.annee === b.annee ? annee(b) : ` ${b.annee}`}`;
+  }
   if (du === au) return `${a.quantieme} ${MOIS_COURTS[a.mois]}${annee(a)}`;
   if (a.annee === b.annee && a.mois === b.mois) return `${a.quantieme}–${b.quantieme} ${MOIS_COURTS[b.mois]}${annee(b)}`;
   const finDu = a.annee === b.annee ? '' : ` ${a.annee}`;
