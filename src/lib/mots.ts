@@ -1,13 +1,18 @@
+import type { Langue } from './types.ts';
+
 /*
  * Les mots de la page publique elle-même (les formulaires, le compte à rebours,
  * les places d'un drop, le pied de page, la vitrine, les lecteurs, la galerie, un lien pour adultes),
  * au « tu » ou au « vous » selon ce que la personne a choisi pour ses visiteurs.
  */
 
-/** Les dates et les nombres de la page, à la française. */
-export const LOCALE = 'fr-FR';
+/** Les dates et les nombres de la page, dans sa langue : à l'américaine en anglais, à la française en français. */
+export const LOCALES: Record<Langue, string> = { en: 'en-US', fr: 'fr-FR' };
+/** Pour ce qui ne connaît pas encore la langue de la page (le back office, en français jusqu'à son lot). */
+export const LOCALE = LOCALES.fr;
 
 const tu = {
+  locale: LOCALES.fr,
   j: 'j', h: 'h', ouTrouver: 'Le code est donné en story, en live ou dans la newsletter.',
   rien: 'Rien ici pour l’instant.',
   partager: 'Partager cette page', copie: 'Lien copié', reseaux: 'Réseaux', verifie: 'Compte vérifié',
@@ -59,4 +64,40 @@ const vous: Textes = {
   ouvrirCadeau: 'Ouvrir votre cadeau', cadeauPret: 'C’est noté, merci ! Votre cadeau vous attend.',
 };
 
-export const textes = (vouvoiement = false): Textes => (vouvoiement ? vous : tu);
+/** En anglais, d'abord (8 novembre 2026) : un seul « you », le tu et le vous s'y rejoignent. */
+const en: Textes = {
+  locale: LOCALES.en,
+  j: 'd', h: 'h', ouTrouver: 'The code is shared in a story, a live or the newsletter.',
+  rien: 'Nothing here yet.',
+  partager: 'Share this page', copie: 'Link copied', reseaux: 'Social links', verifie: 'Verified account',
+  confidentialite: 'Privacy', signaler: 'Report', signalerPage: 'Report this page', creeTaPage: 'Create your page with',
+  barreHopla: 'Create my free page',
+  bientot: 'Coming soon', ouvert: 'It’s open', ouvreLe: (quand: string) => `Opens ${quand}`,
+  prenom: 'First name', prenomAria: 'Your first name', email: 'you@email.com', emailAria: 'Your email address', inscrire: 'Sign me up',
+  mention: 'Your address is only used to send you these emails. Unsubscribe in one click, anytime.',
+  merci: 'You’re in, thank you!', emailInvalide: 'This email address doesn’t look valid.', tropDEssais: 'Too many tries. Try again in a few minutes.',
+  echec: 'That didn’t go through. Try again.', apercu: 'Nothing is sent from the preview.',
+  code: 'Access code', debloquer: 'Unlock', reserver: 'Save my spot', ouvrir: 'Open the link', mauvaisCode: 'That’s not the right code.',
+  complet: 'Sold out', plusQueUne: 'Only one spot left', plusQue: (n: string) => `Only ${n} spots left`, places: (n: string) => `${n} spots`,
+  reserve: 'Members only', debloque: 'Unlocked.', garde: 'Your spot is saved.', indisponible: 'This link is no longer available.',
+  avis: (n: string, source: string) => `${n} reviews${source ? ` on ${source}` : ''}`, sur5: 'out of 5', noteAria: (note: string) => `Rated ${note} out of 5`,
+  // La mention d'un lien partenaire, comme la FTC la demande : « Ad » ou « Sponsored ».
+  publicite: 'Ad', collaboration: 'Sponsored',
+  codePromo: 'Code', codeCopie: (code: string) => `Code ${code} copied`, copierCode: (code: string) => `Copy code ${code}`, copieRatee: 'Copying didn’t work.',
+  autreMontant: 'Other amount', paiementSur: (site: string) => `Payment happens on ${site}.`, soutenirSur: (site: string) => `Support on ${site}`,
+  ouvrirSur: (site: string) => `Open on ${site}`, fermer: 'Close', chargement: 'Loading…',
+  ecouter: (titre: string, service: string) => `Listen to ${titre} on ${service}`, lireVideo: (titre: string) => `Play video: ${titre}`,
+  photo: (n: number, total: number) => `Photo ${n} of ${total}`, photoPrecedente: 'Previous photo', photoSuivante: 'Next photo',
+  enregistrerContact: 'Save contact', appeler: 'Call', ecrire: 'Email',
+  itineraire: 'Directions', voirCarte: 'View map', carteDe: (lieu: string) => `Map: ${lieu}`,
+  nom: 'Your name', nomAria: 'Your name (optional)', message: 'Your message', messageAria: 'Your message', envoyer: 'Send',
+  envoye: 'Message sent, thank you! You’ll get the reply by email.', messageVide: 'Write your message.',
+  mentionMessage: 'Your address is only used to reply to you. Hopla doesn’t keep your message.',
+  adultes: '18+', reserveAdultes: 'Adults only (18+)', contenuAdultes: 'This link leads to adult content.',
+  dixHuitAns: 'I’m 18 or older', revenir: 'Go back',
+  derniersArticles: 'My latest posts', lireSur: (site: string) => `Read on ${site}`,
+  enCadeau: (nom: string) => `Free gift: ${nom}`, unCadeau: 'A free gift when you sign up', ouvrirCadeau: 'Open my gift', cadeauPret: 'You’re in, thank you! Your gift is ready.',
+};
+
+/** Les mots d'une page : sa langue d'abord, puis, en français, le tu ou le vous. */
+export const textes = (vouvoiement = false, langue: Langue = 'fr'): Textes => (langue === 'en' ? en : vouvoiement ? vous : tu);

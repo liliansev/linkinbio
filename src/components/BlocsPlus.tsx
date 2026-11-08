@@ -2,7 +2,6 @@ import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import type { CSSProperties, FormEvent } from 'react';
 import type { Bloc } from '../lib/types.ts';
 import type { ArticleFlux } from '../lib/flux.ts';
-import { LOCALE } from '../lib/mots.ts';
 import type { Textes } from '../lib/mots.ts';
 import type { Lecteur as InfosLecteur } from '../lib/lecteurs.ts';
 import { lecteurDe } from '../lib/lecteurs.ts';
@@ -43,11 +42,11 @@ export function useArticles(bloc: Bloc, pseudo: string): ArticleFlux[] | null {
 }
 
 /** « 12 oct. », et l'année quand ce n'est pas celle-ci : la date d'un article, courte. */
-function dateCourte(iso: string): string {
+function dateCourte(iso: string, locale: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return '';
   const memeAnnee = d.getFullYear() === new Date().getFullYear();
-  return d.toLocaleDateString(LOCALE, { day: 'numeric', month: 'short', ...(memeAnnee ? {} : { year: 'numeric' }) });
+  return d.toLocaleDateString(locale, { day: 'numeric', month: 'short', ...(memeAnnee ? {} : { year: 'numeric' }) });
 }
 
 /**
@@ -69,7 +68,7 @@ export function Flux({ bloc, pseudo, clic, t }: { bloc: Bloc; pseudo: string; cl
             <li key={a.url}>
               <a href={a.url} rel="noopener" onClick={clic}>
                 <span className="lp-flux-titre">{a.titre}</span>
-                {a.date && <time className="lp-flux-date" dateTime={a.date}>{dateCourte(a.date)}</time>}
+                {a.date && <time className="lp-flux-date" dateTime={a.date}>{dateCourte(a.date, t.locale)}</time>}
               </a>
             </li>
           ))}

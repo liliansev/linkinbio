@@ -17,7 +17,7 @@ export const CHAMPS: Dico = {
   reglages: 'settings', blocs: 'blocks', bloc: 'block', compte: 'account', pseudo: 'username', offre: 'plan',
   profil: 'profile', nom: 'name', reseaux: 'socialLinks', reseau: 'network', reseauxPosition: 'socialLinksPosition',
   couleurs: 'colors', fond: 'background', boutons: 'buttons', bouton: 'button', forme: 'shape', ombre: 'shadow',
-  titre: 'title', partage: 'shareButton', ouvrirApps: 'openInApps', resumeHebdo: 'weeklySummary', vouvoiement: 'formal',
+  titre: 'title', partage: 'shareButton', ouvrirApps: 'openInApps', resumeHebdo: 'weeklySummary', vouvoiement: 'formal', langue: 'language',
   vuesReseaux: 'networkViews', bureau: 'desktopLayout', redirection: 'redirect', police: 'font', imageFond: 'backgroundImage',
   domaine: 'domain',
   // Blocs

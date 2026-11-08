@@ -28,6 +28,8 @@ function Demo() {
     const bureau = bureauChoisi ?? p.reglages.bureau;
     // `#page=klein` montre la page dans un autre thème, avec ses boutons conseillés : pour revoir chaque thème d'un coup d'œil.
     const autre = THEMES.find(t => t.id === hash.split('=')[1]?.split(',')[0]);
+    // `#page=klein,en` (ou toute vue de page suivie de `,en`) : les mots de la page en anglais.
+    if (hash.split(',').includes('en')) p.reglages = { ...p.reglages, langue: 'en' };
     if (autre) p.reglages = { ...p.reglages, theme: autre.id, police: '', couleurs: { fond: '', boutons: '', accent: '' }, bouton: { ...p.reglages.bouton, ...autre.conseil } };
     // `#vitrine=klein` : la vitrine d'exemple dans un thème, pour la planche de captures.
     if (hash.startsWith('#vitrine')) {

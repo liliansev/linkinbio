@@ -173,6 +173,10 @@ export type Reseau = (typeof RESEAUX)[number];
 export interface Couleurs { fond: string; boutons: string; accent: string }
 export const SANS_COULEURS: Couleurs = { fond: '', boutons: '', accent: '' };
 
+/** Les langues de Hopla : l'anglais d'abord, le français en traduction (8 novembre 2026). */
+export const LANGUES = ['en', 'fr'] as const;
+export type Langue = (typeof LANGUES)[number];
+
 export interface Reglages {
   /** `photo` : la photo de profil en rond, ou en grand en haut de la page, fondue dans le fond (Starter). */
   profil: { nom: string; bio: string; avatar: string; badge: boolean; photo: FormePhoto };
@@ -192,6 +196,8 @@ export interface Reglages {
   resumeHebdo: boolean;
   /** Les mots de la page (formulaires, drops) vouvoient le visiteur plutôt que de le tutoyer. */
   vouvoiement: boolean;
+  /** La langue des mots de la page (formulaires, drops, pied, partage) : l'anglais d'abord depuis le 8 novembre 2026. Le contenu, lui, est celui que la personne écrit. */
+  langue: Langue;
   /** Le mouvement des liens mis en avant (un bloc peut choisir le sien). */
   animation: Animation;
   /** Les réseaux qui ont leur vue dans « Ma page » (vide : l'option est coupée). */

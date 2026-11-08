@@ -1,4 +1,4 @@
-import type { Bloc, Reglages } from './types.ts';
+import type { Bloc, Langue, Reglages } from './types.ts';
 import { SANS_COULEURS, nouveauBloc } from './types.ts';
 import { THEME_DEFAUT } from './themes.ts';
 
@@ -34,6 +34,7 @@ export const REGLAGES_DEFAUT: Reglages = {
   ouvrirApps: true,
   resumeHebdo: true,
   vouvoiement: false,
+  langue: 'fr',
   animation: 'orbite',
   bureau: 'onepage',
   vuesReseaux: [],
@@ -59,7 +60,7 @@ export function blocsDefaut(id: () => string): Bloc[] {
 }
 
 /** La page d'un compte qui vient d'être créé : le pseudo pour nom, rien d'autre, invisible pour Google. */
-export function reglagesNouveauCompte(pseudo: string): Reglages {
+export function reglagesNouveauCompte(pseudo: string, langue: Langue = 'fr'): Reglages {
   // « camille-dupont » devient « Camille Dupont » : un nom, pas une adresse.
   const nom = pseudo.split('-').filter(Boolean).map(m => m.charAt(0).toUpperCase() + m.slice(1)).join(' ') || pseudo;
   return {
@@ -69,5 +70,6 @@ export function reglagesNouveauCompte(pseudo: string): Reglages {
     seo: { titre: `${nom} · Hopla`, description: '', indexable: false },
     animation: 'reflet',
     bureau: 'colonne',
+    langue,
   };
 }

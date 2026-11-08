@@ -7,7 +7,7 @@ import { adresseSaisie } from '../lib/valider.ts';
 import { redirectionActive } from '../lib/sorties.ts';
 import type { Abonnement as EtatAbonnement, Fonction, Plan } from '../lib/abonnement.ts';
 import { OFFRES, accesAbonnement, apresOffre, estPaye, estResilie, euros, offerteAuDessus, planHorsEssai } from '../lib/abonnement.ts';
-import { BoutonCopier, BoutonPrincipal, BoutonSecondaire, Champ, Feuille, Groupe, Interrupteur, Ligne, LigneBascule, LigneLien, PanneauDetail, SousPage, classeBouton, classeSaisie, useGrandEcran } from './ui.tsx';
+import { BoutonCopier, BoutonPrincipal, BoutonSecondaire, Champ, Feuille, Groupe, Interrupteur, Ligne, LigneBascule, LigneLien, PanneauDetail, Segments, SousPage, classeBouton, classeSaisie, useGrandEcran } from './ui.tsx';
 import { Facturation, nomAbonnement, nomApres, nomOffre } from './Facturation.tsx';
 import { Etiquette, usePermis } from './offre.tsx';
 import { telechargerQR } from './CodeQR.tsx';
@@ -111,6 +111,11 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
         {/* Une ligne à chevron, comme les autres ouvertures de Réglages (critique série 2 : un bouton bordé faisait exception). */}
         <LigneLien nom="Référencement" onClick={() => setFenetre('apercu')}
           valeur={<span title={[titreSeo, descriptionSeo].filter(Boolean).join(' · ') || undefined}>{[titreSeo, descriptionSeo].filter(Boolean).join(' · ') || 'Rien pour l’instant'}</span>} />
+        {/* Les mots que Hopla pose sur la page (formulaires, compte à rebours, pied) : l'anglais d'abord depuis le 8 novembre 2026. */}
+        <Ligne nom="Langue de ma page" valeur="Formulaires, comptes à rebours et pied de page">
+          <Segments label="Langue de ma page" valeur={reglages.langue} onChange={langue => onChange({ ...reglages, langue })}
+            options={[{ id: 'en', nom: 'English' }, { id: 'fr', nom: 'Français' }]} />
+        </Ligne>
         <LigneBascule nom="Bouton Partager sur ma page" actif={reglages.partage} changer={v => onChange({ ...reglages, partage: v })} />
         <LigneBascule nom="Deeplink" valeur="Ouvrir les liens dans leurs apps : YouTube, Spotify, etc." actif={reglages.ouvrirApps} changer={v => onChange({ ...reglages, ouvrirApps: v })} />
         {/* Starter : sans l'offre, pas d'interrupteur qui ne ferait rien, son nom et le chemin vers les offres. */}

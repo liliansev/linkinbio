@@ -66,7 +66,7 @@ const REGLAGES_EXEMPLE = {
   reseaux: [{ reseau: 'instagram', url: 'https://instagram.com/camille' }, { reseau: 'youtube', url: 'https://youtube.com/@camille' }],
   reseauxPosition: 'haut', theme: 'onyx', couleurs: { fond: '', boutons: '', accent: '' },
   bouton: { style: 'plein', forme: 'pilule', ombre: 'subtile' }, seo: { titre: '', description: '', indexable: true },
-  partage: true, ouvrirApps: true, resumeHebdo: true, vouvoiement: false, animation: 'reflet', vuesReseaux: [], bureau: 'colonne',
+  partage: true, ouvrirApps: true, resumeHebdo: true, vouvoiement: false, langue: 'en', animation: 'reflet', vuesReseaux: [], bureau: 'colonne',
   utm: false, redirection: { url: '', fin: '' }, police: '', imageFond: '', domaine: '',
 };
 
@@ -512,7 +512,8 @@ const spec = {
           },
           seo: { type: 'object', properties: { titre: { type: 'string' }, description: { type: 'string' }, indexable: { type: 'boolean' } } },
           partage: oui('Show the Share button at the top of the page.'),
-          vouvoiement: oui('Page copy uses the formal "vous" form.'),
+          vouvoiement: oui('Page copy uses the formal "vous" form (French pages only).'),
+          langue: texte('Language of the page\'s built-in copy (forms, countdowns, footer).', { enum: ['en', 'fr'] }),
           animation: { type: 'string', enum: [...ANIMATIONS], description: 'Animation of featured blocks.' },
           redirection: { type: 'object', description: 'Redirect the whole page to a URL until `endsAt`; empty `url` to stop (Starter).', properties: { url: { type: 'string' }, fin: { type: 'string' } } },
         },

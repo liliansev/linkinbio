@@ -1,4 +1,4 @@
-import { ANIMATIONS, ANIMATIONS_BLOC, DISPOSITIONS, DOMAINES_COURTS, EFFETS_PAYS, MAX_PAYS, FORMATS_VEDETTE, FORMES_PHOTO, FORMES_BOUTON, GENRES_PREUVE, MAX_IMAGES, MAX_QUESTIONS, MAX_RESEAUX, MENTIONS_PARTENAIRE, OMBRES_BOUTON, MISES_EN_PAGE_BUREAU, RESEAUX, STYLES_BOUTON, TEINTES_VEDETTE, TYPES_BLOC } from './types.ts';
+import { ANIMATIONS, LANGUES, ANIMATIONS_BLOC, DISPOSITIONS, DOMAINES_COURTS, EFFETS_PAYS, MAX_PAYS, FORMATS_VEDETTE, FORMES_PHOTO, FORMES_BOUTON, GENRES_PREUVE, MAX_IMAGES, MAX_QUESTIONS, MAX_RESEAUX, MENTIONS_PARTENAIRE, OMBRES_BOUTON, MISES_EN_PAGE_BUREAU, RESEAUX, STYLES_BOUTON, TEINTES_VEDETTE, TYPES_BLOC } from './types.ts';
 import type { Acces, Bloc, Cadeau, Coordonnees, Partenariat, Preuve, Question, Reglages } from './types.ts';
 import { POLICES_CHOIX, idTheme } from './themes.ts';
 import { EFFETS_CRENEAU, fuseauValide } from './moments.ts';
@@ -237,6 +237,8 @@ export function validerReglages(v: unknown, base: Reglages): Reglages {
     ouvrirApps: bool(o.ouvrirApps, base.ouvrirApps ?? true),
     resumeHebdo: bool(o.resumeHebdo, base.resumeHebdo ?? true),
     vouvoiement: bool(o.vouvoiement, base.vouvoiement ?? false),
+    // Une page d'avant le 8 novembre 2026 n'a pas de langue : elle reste en français.
+    langue: parmi(o.langue ?? base.langue, LANGUES, 'fr' as const),
     bureau: parmi(o.bureau, MISES_EN_PAGE_BUREAU, base.bureau),
     vuesReseaux: provenances(o.vuesReseaux ?? base.vuesReseaux),
     animation: parmi(o.animation, ANIMATIONS, base.animation),

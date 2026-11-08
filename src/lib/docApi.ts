@@ -106,6 +106,7 @@ Settings fields:
 - seo: { titre, description }
 - partage: show the Share button (boolean)
 - vouvoiement: page copy uses the formal "vous" (boolean)
+- langue: language of the page's built-in copy (forms, countdowns, footer): "en" or "fr"
 - redirection: { url, fin } to redirect the whole page, { "url": "" } to stop
 
 ### GET /api/v1/blocs
@@ -327,7 +328,8 @@ Settings fields:
   shadow: "none", "subtle" or "strong" }
 - seo: { title, description }
 - shareButton: show the Share button (boolean)
-- formal: page copy addresses visitors formally ("vous" instead of "tu") (boolean)
+- formal: page copy addresses visitors formally ("vous" instead of "tu"), French pages only (boolean)
+- language: language of the page's built-in copy (forms, countdowns, footer): "en" or "fr"
 - font, backgroundImage, desktopLayout ("column", "profile" or "one-page")
 - redirect: { url, endsAt } to redirect the whole page, { "url": "" } to stop
 

@@ -11,7 +11,7 @@ import { enGrille } from '../lib/collections.ts';
 import { etatPlaces } from '../lib/acces.ts';
 import { adresseSaisie } from '../lib/valider.ts';
 import { jetonTurnstile, preparerTurnstile } from '../lib/turnstile.ts';
-import { LOCALE, textes } from '../lib/mots.ts';
+import { textes } from '../lib/mots.ts';
 import type { Textes } from '../lib/mots.ts';
 import { Icone, NOMS_RESEAUX } from './Icone.tsx';
 import { Trace } from './Logo.tsx';
@@ -80,7 +80,7 @@ export function PageLiens({ page, apercu = false, edition, liste, sansMention = 
   // La page de Lilian s'annonce sans pseudo ; les autres avec le leur.
   const pseudo = compte.principal ? '' : compte.pseudo;
   const theme = themeDe(reglages);
-  const t = textes(reglages.vouvoiement);
+  const t = textes(reglages.vouvoiement, reglages.langue);
   // Les liens rangés en tuiles sous un titre de section réglé en grille (un compte à rebours garde sa largeur).
   const tuiles = enGrille(blocs, b => enAttente(b, page.maintenant ?? Date.now()));
   const grande = reglages.profil.photo === 'grande' && !!reglages.profil.avatar;
@@ -407,7 +407,7 @@ function CodePromo({ code, t }: { code: string; t: Textes }) {
   );
 }
 
-export function BlocPublic({ bloc, reglages, clic, cible, apercu, maintenant, pseudo, t = textes(reglages.vouvoiement), tuile = false }: { bloc: Bloc; reglages: Reglages; clic: () => void; cible: object; apercu: boolean; maintenant?: number; pseudo?: string; t?: Textes;
+export function BlocPublic({ bloc, reglages, clic, cible, apercu, maintenant, pseudo, t = textes(reglages.vouvoiement, reglages.langue), tuile = false }: { bloc: Bloc; reglages: Reglages; clic: () => void; cible: object; apercu: boolean; maintenant?: number; pseudo?: string; t?: Textes;
   /** Rangé en tuile, dans la grille d'une collection (voir `enGrille`). */
   tuile?: boolean }) {
   if (bloc.type === 'lien' && enAttente(bloc, maintenant ?? Date.now())) return <CompteARebours bloc={bloc} depart={maintenant ?? Date.now()} apercu={apercu} t={t} />;
@@ -428,7 +428,7 @@ export function BlocPublic({ bloc, reglages, clic, cible, apercu, maintenant, ps
       // YouTube garde son lecteur et sa vignette ; Vimeo et TikTok passent par le leur.
       const lecteur = idYoutube(bloc.url) ? null : lecteurDe(bloc.url);
       if (lecteur) return <VideoIntegree lecteur={lecteur} bloc={bloc} clic={clic} t={t} />;
-      return <Video id={idYoutube(bloc.url)} titre={bloc.titre} url={bloc.url} vedette={bloc.vedette} clic={clic} />;
+      return <Video id={idYoutube(bloc.url)} titre={bloc.titre} url={bloc.url} vedette={bloc.vedette} clic={clic} t={t} />;
     }
     case 'musique':
       return <Musique bloc={bloc} clic={clic} t={t} />;
@@ -443,7 +443,7 @@ export function BlocPublic({ bloc, reglages, clic, cible, apercu, maintenant, ps
     case 'formulaire':
       return <Contact bloc={bloc} apercu={apercu} pseudo={pseudo ?? ''} t={t} />;
     case 'derniere-video':
-      return bloc.url ? <DerniereVideoChaine bloc={bloc} pseudo={pseudo ?? ''} clic={clic} /> : <DerniereVideo titre={bloc.titre} clic={clic} />;
+      return bloc.url ? <DerniereVideoChaine bloc={bloc} pseudo={pseudo ?? ''} clic={clic} t={t} /> : <DerniereVideo titre={bloc.titre} clic={clic} t={t} />;
     case 'flux':
       return <Flux bloc={bloc} pseudo={pseudo ?? ''} clic={clic} t={t} />;
     case 'newsletter':
@@ -587,7 +587,7 @@ function Produit({ bloc, rel, anim, clic, cible, nosnippet, mention }: { bloc: B
 function Soutien({ bloc, rel, clic, cible, t }: { bloc: Bloc; rel: string; clic: () => void; cible: object; t: Textes }) {
   const site = nomSoutien(bloc.url);
   const montants = avecMontants(bloc.url) ? bloc.montants : [];
-  const euros = (n: number) => n.toLocaleString(LOCALE, { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
+  const euros = (n: number) => n.toLocaleString(t.locale, { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
   return (
     <section className="lp-newsletter lp-soutien">
       <div className="lp-newsletter-tete">
@@ -653,7 +653,7 @@ function CompteARebours({ bloc, depart, apercu, t }: { bloc: Bloc; depart: numbe
   // À l'heure dite, la page se recharge : le serveur donne alors l'adresse du lien.
   useEffect(() => { if (!apercu && reste === 0) { const t = setTimeout(() => location.reload(), 800); return () => clearTimeout(t); } }, [reste, apercu]);
   const s = Math.floor(reste / 1000), j = Math.floor(s / 86_400), h = Math.floor((s % 86_400) / 3600), m = Math.floor((s % 3600) / 60);
-  const quand = new Date(ouverture).toLocaleString(LOCALE, { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
+  const quand = new Date(ouverture).toLocaleString(t.locale, { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
   return (
     <div className={`lp-carte lp-rebours ${bloc.vedette && bloc.teinte === 'accent' ? 'lp-accent' : ''}`} data-format="bandeau" role="timer" aria-label={`${bloc.titre} : ${t.ouvreLe(quand)}`}>
       <span className="lp-carte-picto" aria-hidden="true"><Icone nom={bloc.icone && ICONES[bloc.icone] ? bloc.icone : 'horloge'} taille={24} /></span>
@@ -669,7 +669,7 @@ function CompteARebours({ bloc, depart, apercu, t }: { bloc: Bloc; depart: numbe
   );
 }
 
-function Lecteur({ id, titre, vignette, clic, legende }: { id: string; titre: string; vignette: string; clic: () => void; legende?: ReactNode }) {
+function Lecteur({ id, titre, vignette, clic, legende, t }: { id: string; titre: string; vignette: string; clic: () => void; legende?: ReactNode; t: Textes }) {
   const [joue, setJoue] = useState(false);
   // Une vignette qui ne vient pas (vidéo privée, adresse en cours de frappe) laisse le cadre et son bouton, sans image cassée.
   const [cassee, setCassee] = useState<string | null>(null);
@@ -679,7 +679,7 @@ function Lecteur({ id, titre, vignette, clic, legende }: { id: string; titre: st
         {joue ? (
           <iframe src={`https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0`} title={titre} allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen />
         ) : (
-          <button type="button" className="lp-video-jouer" onClick={() => { setJoue(true); clic(); }} aria-label={`Lire la vidéo : ${titre}`}>
+          <button type="button" className="lp-video-jouer" onClick={() => { setJoue(true); clic(); }} aria-label={t.lireVideo(titre)}>
             {cassee !== vignette && <img src={vignette} alt="" loading="lazy" onError={() => setCassee(vignette)} />}
             <span className="lp-video-play"><Icone nom="play" taille={52} /></span>
           </button>
@@ -690,13 +690,13 @@ function Lecteur({ id, titre, vignette, clic, legende }: { id: string; titre: st
   );
 }
 
-function Video({ id, titre, url, clic }: { id: string | null; titre: string; url: string; vedette: boolean; clic: () => void }) {
+function Video({ id, titre, url, clic, t }: { id: string | null; titre: string; url: string; vedette: boolean; clic: () => void; t: Textes }) {
   if (!id) return url ? <a className="lp-btn" href={url} onClick={clic}><span className="lp-btn-texte"><span className="lp-btn-titre">{titre}</span></span></a> : null;
-  return <Lecteur id={id} titre={titre} vignette={`https://i.ytimg.com/vi/${id}/hqdefault.jpg`} clic={clic} />;
+  return <Lecteur id={id} titre={titre} vignette={`https://i.ytimg.com/vi/${id}/hqdefault.jpg`} clic={clic} t={t} />;
 }
 
 /* La vidéo la plus récente de la chaîne, relevée par le serveur du site. */
-function DerniereVideo({ titre, clic }: { titre: string; clic: () => void }) {
+function DerniereVideo({ titre, clic, t }: { titre: string; clic: () => void; t: Textes }) {
   const [video, setVideo] = useState<{ id: string; titre: string } | null | 'absente'>(null);
   useEffect(() => {
     let annule = false;
@@ -709,7 +709,7 @@ function DerniereVideo({ titre, clic }: { titre: string; clic: () => void }) {
     return <a className="lp-btn" href="https://www.youtube.com/@lilian.sevoumian" onClick={clic}><span className="lp-picto"><Icone nom="youtube" taille={22} /></span><span className="lp-btn-texte"><span className="lp-btn-titre">{titre}</span></span></a>;
   }
   if (!video) return <div className="lp-video lp-video-attente" aria-hidden="true"><div className="lp-video-cadre" /></div>;
-  return <Lecteur id={video.id} titre={video.titre} vignette={`/api/derniere-video/vignette?v=${video.id}`} clic={clic}
+  return <Lecteur id={video.id} titre={video.titre} vignette={`/api/derniere-video/vignette?v=${video.id}`} clic={clic} t={t}
     legende={<><span className="lp-video-etiquette">{titre}</span>{video.titre}</>} />;
 }
 
@@ -717,14 +717,14 @@ function DerniereVideo({ titre, clic }: { titre: string; clic: () => void }) {
  * La dernière vidéo d'une chaîne YouTube, pour toute page (24 octobre 2026) : le serveur lit le flux de ses vidéos
  * longues. Tant qu'il lit, le cadre attend ; s'il n'y arrive pas, un bouton mène à la chaîne.
  */
-function DerniereVideoChaine({ bloc, pseudo, clic }: { bloc: Bloc; pseudo: string; clic: () => void }) {
+function DerniereVideoChaine({ bloc, pseudo, clic, t }: { bloc: Bloc; pseudo: string; clic: () => void; t: Textes }) {
   const articles = useArticles(bloc, pseudo);
   const video = articles?.find(a => a.video);
   if (articles === null) return <div className="lp-video lp-video-attente" aria-hidden="true"><div className="lp-video-cadre" /></div>;
   if (!video) {
     return <a className="lp-btn" href={bloc.url} rel="noopener" onClick={clic}><span className="lp-picto"><Icone nom="youtube" taille={22} /></span><span className="lp-btn-texte"><span className="lp-btn-titre">{bloc.titre}</span></span></a>;
   }
-  return <Lecteur id={video.video} titre={video.titre} vignette={video.image || `https://i.ytimg.com/vi/${video.video}/hqdefault.jpg`} clic={clic}
+  return <Lecteur id={video.video} titre={video.titre} vignette={video.image || `https://i.ytimg.com/vi/${video.video}/hqdefault.jpg`} clic={clic} t={t}
     legende={<>{bloc.titre && <span className="lp-video-etiquette">{bloc.titre}</span>}{video.titre}</>} />;
 }
 
@@ -891,7 +891,7 @@ function Etoiles({ note }: { note: number }) {
 function PreuveSociale({ bloc, t, clic, cible }: { bloc: Bloc; t: Textes; clic: () => void; cible: object }) {
   const p = bloc.preuve;
   if (!p) return null;
-  const locale = LOCALE;
+  const locale = t.locale;
   const nombre = (n: number) => n.toLocaleString(locale);
   let corps: ReactNode;
   if (p.genre === 'note') {

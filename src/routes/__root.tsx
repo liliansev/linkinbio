@@ -1,5 +1,5 @@
 /// <reference types="vite/client" />
-import { HeadContent, Outlet, Scripts, createRootRoute } from '@tanstack/react-router';
+import { HeadContent, Outlet, Scripts, createRootRoute, useMatches } from '@tanstack/react-router';
 import type { ReactNode } from 'react';
 import css from '../styles/app.css?url';
 
@@ -23,9 +23,23 @@ export const Route = createRootRoute({
   ),
 });
 
+/** La langue du document : celle de la page publique ouverte (son réglage), le français ailleurs pour l'instant. */
+function useLangueDocument(): string {
+  return useMatches({
+    select: matches => {
+      for (const m of [...matches].reverse()) {
+        const langue = (m.loaderData as { reglages?: { langue?: string } } | undefined)?.reglages?.langue;
+        if (langue) return langue;
+      }
+      return 'fr';
+    },
+  });
+}
+
 function Coquille({ children }: { children: ReactNode }) {
+  const langue = useLangueDocument();
   return (
-    <html lang="fr">
+    <html lang={langue}>
       <head><HeadContent /></head>
       <body>{children}<Scripts /></body>
     </html>
