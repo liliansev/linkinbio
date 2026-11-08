@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { mouvementReduit } from '../mouvement.ts';
+import { useL } from '../langue.ts';
 
 /*
  * Une scène qui se joue en défilant (26 octobre 2026, idée de Lilian : « à un
@@ -58,6 +59,7 @@ function useLargeur(ratio: number) {
 export function Defile({ etapes, rendu, titre, ratio = 680 / 390 }: {
   etapes: Etape[]; rendu: (i: number, t: number, largeur: number) => ReactNode; titre: string; ratio?: number;
 }) {
+  const l = useL();
   const [ref, { i, t }] = useAvancee(etapes.length);
   const largeur = useLargeur(ratio);
   const [reduit, setReduit] = useState(false);
@@ -93,7 +95,7 @@ export function Defile({ etapes, rendu, titre, ratio = 680 / 390 }: {
             {etapes.map((e, k) => <i key={e.titre} style={{ '--plein': k < i ? 1 : k === i ? t : 0 } as CSSProperties} />)}
           </div>
         </div>
-        <p className="hf-indice" data-cache={i > 0 || t > 0.15 || undefined} aria-hidden="true">Fais défiler, la scène se joue</p>
+        <p className="hf-indice" data-cache={i > 0 || t > 0.15 || undefined} aria-hidden="true">{l('Fais défiler, la scène se joue', 'Scroll, and the scene plays')}</p>
       </div>
     </section>
   );

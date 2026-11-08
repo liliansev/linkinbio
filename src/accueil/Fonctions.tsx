@@ -10,6 +10,8 @@ import { DEGRADE_COURBE, aireSous, lisse } from '../lib/courbe.ts';
 import type { PointTrace } from '../lib/courbe.ts';
 import type { Langue } from '../lib/types.ts';
 import { useL, useLangue } from './langue.ts';
+import type { Choix } from './langue.ts';
+import { CHEMIN_FONCTIONS, cheminFonction } from './pages/fonctions.ts';
 
 /*
  * Les écrans des fonctions : les liens ouverts dans leur app, la page selon
@@ -36,16 +38,17 @@ export type Cote = 'sans' | 'avec';
  */
 /** Le trajet du visiteur de Sacha, sans Hopla ou avec, à l'étape `etape` (1 : la touche ; sans Hopla, 2 le navigateur d'Instagram, 3 la connexion demandée, 4 la croix, 5 reparti ; avec, 2 l'app, 3 le clip, 4 abonné). */
 export function EcranDansApp({ cote, etape, reduit = false }: { cote: Cote; etape: number; reduit?: boolean }) {
+  const l = useL();
   return (
     <div className="hl-scene-app">
       <div className="hl-cq">
         <CroquisTete profil="sacha" />
         <div className="hl-cq-liens">
-          <CroquisLien titre="Les jours bleus, le clip" picto={<Icone nom="youtube" taille={14} />} data-touche={etape >= 1 || undefined} />
-          <CroquisLien titre="Écouter sur Spotify" />
-          <CroquisLien titre="Les prochaines dates" />
-          <CroquisLien titre="Le merch de la tournée" />
-          <CroquisLien titre="M’écrire pour un concert" />
+          <CroquisLien titre={l('Les jours bleus, le clip', 'Blue days, the video')} picto={<Icone nom="youtube" taille={14} />} data-touche={etape >= 1 || undefined} />
+          <CroquisLien titre={l('Écouter sur Spotify', 'Listen on Spotify')} />
+          <CroquisLien titre={l('Les prochaines dates', 'Upcoming shows')} />
+          <CroquisLien titre={l('Le merch de la tournée', 'Tour merch')} />
+          <CroquisLien titre={l('M’écrire pour un concert', 'Book me for a show')} />
         </div>
       </div>
       {cote === 'sans' ? <>
@@ -56,22 +59,22 @@ export function EcranDansApp({ cote, etape, reduit = false }: { cote: Cote; etap
           <div className="hl-cq-trait" style={{ width: '70%' }} />
           <div className="hl-cq-trait" style={{ width: '45%' }} />
           <div className="hl-integre-feuille">
-            <b>Connecte-toi pour continuer</b>
+            <b>{l('Connecte-toi pour continuer', 'Sign in to continue')}</b>
             <span className="hl-cq-trait" style={{ width: '80%' }} />
-            <span className="hl-integre-bouton">Se connecter</span>
+            <span className="hl-integre-bouton">{l('Se connecter', 'Sign in')}</span>
           </div>
         </div>
-        {etape >= 5 && <p className="hl-toast" role="status">Ton visiteur est reparti.</p>}
+        {etape >= 5 && <p className="hl-toast" role="status">{l('Ton visiteur est reparti.', 'Your visitor left.')}</p>}
       </> : (
         <div className="hl-app" data-ouvert={etape >= 2 || undefined}>
           <div className="hl-app-barre"><Icone nom="youtube" taille={18} /><b>YouTube</b></div>
           <div className="hl-app-video hp-video-sacha"><Avatar profil="sacha" /><Icone nom="play" taille={30} /><i data-joue={etape >= 3 || undefined} /></div>
           <div className="hl-app-corps">
-            <b className="hp-video-titre">Les jours bleus · le clip</b>
+            <b className="hp-video-titre">{l('Les jours bleus · le clip', 'Blue days · the video')}</b>
             <div className="hl-app-ligne">
               <Avatar profil="sacha" className="hl-app-rond" /><b className="hp-chaine">Sacha Diop</b>
               <span className="hl-app-abonne hl-tap" data-touche={etape >= 4 || undefined} data-fait={etape >= 4 || undefined}>
-                {etape >= 4 ? <><Icone nom="coche" taille={12} />Abonné</> : 'S’abonner'}
+                {etape >= 4 ? <><Icone nom="coche" taille={12} />{l('Abonné', 'Subscribed')}</> : l('S’abonner', 'Subscribe')}
               </span>
             </div>
           </div>
@@ -96,25 +99,28 @@ export const LISTE_BREVO = ADRESSE_LISTE.length + 3;
 export const AVIS_NOTE = 6;
 export const AVIS_MOT = 7;
 const deux = (n: number) => String(n).padStart(2, '0');
+/** L'heure d'une horloge : 18:00 en français, 6:00 pm en anglais. */
+const horloge = (h: number, m: number, l: Choix) => l(`${deux(h)}:${deux(m)}`, `${h % 12 || 12}:${deux(m)} ${h >= 12 ? 'pm' : 'am'}`);
 
 /** Les trois liens de Nadia selon l'heure : le soir, « Réserver un bilan » monte de la dernière place à la première. */
-const LIENS_HEURE: Record<string, { titre: string; picto: string }> = {
-  atelier: { titre: 'Le podcast du matin', picto: 'podcast' },
-  tiktok: { titre: 'Ma méthode en vidéo', picto: 'youtube' },
-  boutique: { titre: 'Réserver un bilan', picto: 'agenda' },
+const LIENS_HEURE: Record<string, { titre: string; en: string; picto: string }> = {
+  atelier: { titre: 'Le podcast du matin', en: 'The morning podcast', picto: 'podcast' },
+  tiktok: { titre: 'Ma méthode en vidéo', en: 'My method on video', picto: 'youtube' },
+  boutique: { titre: 'Réserver un bilan', en: 'Book a session', picto: 'agenda' },
 };
 
 export function EcranHeure({ heure }: { heure: number }) {
+  const l = useL();
   const liste = useRef<HTMLDivElement>(null);
   const soir = heure >= 18;
   const ordre = soir ? ['boutique', 'tiktok', 'atelier'] : ['atelier', 'tiktok', 'boutique'];
   useGlisse(liste, ordre.join(), 550);
   return (
     <div className="hl-cq">
-      <div className="hl-cq-horloge"><b>{deux(heure)}:00</b><span>{soir ? 'le soir' : heure >= 14 ? 'l’après-midi' : heure >= 12 ? 'le midi' : 'le matin'}</span></div>
+      <div className="hl-cq-horloge"><b>{horloge(heure, 0, l)}</b><span>{soir ? l('le soir', 'evening') : heure >= 14 ? l('l’après-midi', 'afternoon') : heure >= 12 ? l('le midi', 'noon') : l('le matin', 'morning')}</span></div>
       <CroquisTete profil="nadia" />
       <div className="hl-cq-liens" ref={liste}>
-        {ordre.map((c, k) => <CroquisLien key={c} cle={c} titre={LIENS_HEURE[c].titre} vedette={k === 0} picto={<Icone nom={LIENS_HEURE[c].picto} taille={14} />} />)}
+        {ordre.map((c, k) => <CroquisLien key={c} cle={c} titre={l(LIENS_HEURE[c].titre, LIENS_HEURE[c].en)} vedette={k === 0} picto={<Icone nom={LIENS_HEURE[c].picto} taille={14} />} />)}
       </div>
     </div>
   );
@@ -122,46 +128,48 @@ export function EcranHeure({ heure }: { heure: number }) {
 
 /** Un lancement : le compte à rebours, sans l'adresse, puis le lien qui s'ouvre à l'heure dite. L'horloge dit l'heure qu'il est : à 17:59, il ne reste que des secondes. */
 export function EcranRebours({ reste }: { reste: number }) {
+  const l = useL();
   const h = Math.floor(reste / 3600), m = Math.floor((reste % 3600) / 60), s = reste % 60;
   const maintenant = 18 * 3600 - reste;
   return (
     <div className="hl-cq">
-      <div className="hl-cq-horloge hl-cq-horloge-petite"><b>{deux(Math.floor(maintenant / 3600))}:{deux(Math.floor((maintenant % 3600) / 60))}</b><span>{reste > 0 ? 'avant l’ouverture' : 'c’est ouvert'}</span></div>
+      <div className="hl-cq-horloge hl-cq-horloge-petite"><b>{horloge(Math.floor(maintenant / 3600), Math.floor((maintenant % 3600) / 60), l)}</b><span>{reste > 0 ? l('avant l’ouverture', 'until opening') : l('c’est ouvert', 'it’s open')}</span></div>
       <CroquisTete profil="ines" />
       <div className="hl-cq-liens">
         {reste > 0 ? (
-          <div className="hl-cq-rebours" role="timer" aria-label="Ma nouvelle collection ouvre ce soir à 18 h">
-            <span className="hl-cq-rebours-tete"><Icone nom="horloge" taille={16} /><b>Ma nouvelle collection</b></span>
+          <div className="hl-cq-rebours" role="timer" aria-label={l('Ma nouvelle collection ouvre ce soir à 18 h', 'My new collection opens tonight at 6 pm')}>
+            <span className="hl-cq-rebours-tete"><Icone nom="horloge" taille={16} /><b>{l('Ma nouvelle collection', 'My new collection')}</b></span>
             <span className="hl-cq-rebours-chrono">{deux(h)}:{deux(m)}:{deux(s)}</span>
-            <span className="hl-cq-sous">Ouvre ce soir à 18 h</span>
+            <span className="hl-cq-sous">{l('Ouvre ce soir à 18 h', 'Opens tonight at 6 pm')}</span>
           </div>
-        ) : <CroquisLien key="ouvert" titre="Ma nouvelle collection" vedette picto={<Icone nom="fusee" taille={14} />} data-arrive="" />}
-        <CroquisLien titre="Mon dernier TikTok" picto={<Icone nom="tiktok" taille={14} />} />
-        <CroquisLien titre="Réserver un atelier" picto={<Icone nom="agenda" taille={14} />} />
+        ) : <CroquisLien key="ouvert" titre={l('Ma nouvelle collection', 'My new collection')} vedette picto={<Icone nom="fusee" taille={14} />} data-arrive="" />}
+        <CroquisLien titre={l('Mon dernier TikTok', 'My latest TikTok')} picto={<Icone nom="tiktok" taille={14} />} />
+        <CroquisLien titre={l('Réserver un atelier', 'Book a workshop')} picto={<Icone nom="agenda" taille={14} />} />
       </div>
     </div>
   );
 }
 
 export function EcranDrop({ drop }: { drop: number }) {
-  const code = 'MERCI'.slice(0, drop >= 2 ? 5 : drop === 1 ? 3 : 0);
+  const l = useL();
+  const code = l('MERCI', 'VIP25').slice(0, drop >= 2 ? 5 : drop === 1 ? 3 : 0);
   const ouvert = drop >= 2;
   return (
     <div className="hl-cq">
       <CroquisTete profil="theo" />
       <div className="hl-cq-liens">
-        <CroquisLien titre="Mes cours en ligne" />
+        <CroquisLien titre={l('Mes cours en ligne', 'My online courses')} />
         <div className="hl-cq-drop" data-ouvert={ouvert || undefined}>
           <div className="hl-cq-drop-tete">
             <span key={String(ouvert)} className="hl-cq-drop-picto"><Icone nom={ouvert ? 'check' : 'cadenas'} taille={22} /></span>
-            <span><b>Le stage d’ouvertures</b><span className="hl-cq-sous">{ouvert ? 'Débloqué, la place est à toi' : 'Avec un code'}</span></span>
-            <span key={drop >= 3 ? 2 : 3} className="hl-cq-places">Plus que {drop >= 3 ? 2 : 3} places</span>
+            <span><b>{l('Le stage d’ouvertures', 'The openings course')}</b><span className="hl-cq-sous">{ouvert ? l('Débloqué, la place est à toi', 'Unlocked, the spot is yours') : l('Avec un code', 'With a code')}</span></span>
+            <span key={drop >= 3 ? 2 : 3} className="hl-cq-places">{l(`Plus que ${drop >= 3 ? 2 : 3} places`, `Only ${drop >= 3 ? 2 : 3} spots left`)}</span>
           </div>
           {ouvert
-            ? <div className="hl-cq-ouvrir">Ouvrir le lien</div>
-            : <div className="hl-cq-code"><span className="hl-cq-saisie">{code}<i /></span><span className="hl-cq-ok">Ouvrir</span></div>}
+            ? <div className="hl-cq-ouvrir">{l('Ouvrir le lien', 'Open the link')}</div>
+            : <div className="hl-cq-code"><span className="hl-cq-saisie">{code}<i /></span><span className="hl-cq-ok">{l('Ouvrir', 'Open')}</span></div>}
         </div>
-        <CroquisLien titre="Un cours particulier" />
+        <CroquisLien titre={l('Un cours particulier', 'A private lesson')} />
       </div>
     </div>
   );
@@ -169,21 +177,22 @@ export function EcranDrop({ drop }: { drop: number }) {
 
 /** Les avis d'Inès : ses étoiles se remplissent, puis sa note, le nombre d'avis et le mot d'une cliente. */
 export function EcranAvis({ avis }: { avis: number }) {
+  const l = useL();
   return (
     <div className="hl-cq">
       <CroquisTete profil="ines" />
       <div className="hl-cq-liens">
-        <CroquisLien titre="Mes pièces du moment" picto={<Icone nom="instagram" taille={14} />} />
+        <CroquisLien titre={l('Mes pièces du moment', 'My pieces of the moment')} picto={<Icone nom="instagram" taille={14} />} />
         <div className="hl-cq-avis">
-          <b>Ce qu’en disent mes clients</b>
+          <b>{l('Ce qu’en disent mes clients', 'What my customers say')}</b>
           <span className="hl-cq-etoiles">{[1, 2, 3, 4, 5].map(n => <span key={n} data-pleine={avis >= n || undefined}><Icone nom="etoile" taille={18} /></span>)}</span>
-          <span className="hl-cq-note" data-vu={avis >= AVIS_NOTE || undefined}><b>4,9</b> sur 5 · 87 avis Google</span>
+          <span className="hl-cq-note" data-vu={avis >= AVIS_NOTE || undefined}><b>{l('4,9', '4.9')}</b> {l('sur 5 · 87 avis Google', 'out of 5 · 87 Google reviews')}</span>
         </div>
         {avis >= AVIS_MOT && <figure className="hl-cq-citation">
-          <blockquote>« Mon bol préféré. Je m’en sers tous les matins. »</blockquote>
-          <figcaption>Julie, cliente à Lyon</figcaption>
+          <blockquote>{l('« Mon bol préféré. Je m’en sers tous les matins. »', '“My favorite bowl. I use it every morning.”')}</blockquote>
+          <figcaption>{l('Julie, cliente à Lyon', 'Julie, a customer in Lyon')}</figcaption>
         </figure>}
-        {avis < AVIS_MOT && <CroquisLien titre="Réserver un atelier" picto={<Icone nom="agenda" taille={14} />} />}
+        {avis < AVIS_MOT && <CroquisLien titre={l('Réserver un atelier', 'Book a workshop')} picto={<Icone nom="agenda" taille={14} />} />}
       </div>
     </div>
   );
@@ -191,27 +200,28 @@ export function EcranAvis({ avis }: { avis: number }) {
 
 /** La liste de Nadia : un visiteur tape son adresse, s'inscrit, et l'inscrit part vers Brevo. */
 export function EcranListe({ liste }: { liste: number }) {
+  const l = useL();
   const note = liste >= LISTE_NOTEE;
   return (
     <div className="hl-cq">
       <CroquisTete profil="nadia" />
       <div className="hl-cq-liens">
-        <CroquisLien titre="Le podcast du matin" picto={<Icone nom="podcast" taille={14} />} />
+        <CroquisLien titre={l('Le podcast du matin', 'The morning podcast')} picto={<Icone nom="podcast" taille={14} />} />
         <div className="hl-cq-liste" data-note={note || undefined}>
           <div className="hl-cq-drop-tete">
             <span className="hl-cq-drop-picto"><Icone nom="courrier" taille={22} /></span>
-            <span><b>Rejoins ma liste</b><span className="hl-cq-sous">Une astuce chaque dimanche</span></span>
+            <span><b>{l('Rejoins ma liste', 'Join my list')}</b><span className="hl-cq-sous">{l('Une astuce chaque dimanche', 'A tip every Sunday')}</span></span>
           </div>
           {note
-            ? <p key="note" className="hl-cq-merci"><Icone nom="coche" taille={14} />C’est noté, merci !</p>
+            ? <p key="note" className="hl-cq-merci"><Icone nom="coche" taille={14} />{l('C’est noté, merci !', 'Got it, thanks!')}</p>
             : <div className="hl-cq-code">
-              <span className="hl-cq-saisie hl-cq-adresse">{ADRESSE_LISTE.slice(0, liste)}{liste < LISTE_TOUCHE && <i />}{liste === 0 && <span className="hl-cq-indice">ton@email.fr</span>}</span>
-              <span className="hl-cq-ok hl-cq-inscrire" data-touche={liste >= LISTE_TOUCHE || undefined}>Je m’inscris</span>
+              <span className="hl-cq-saisie hl-cq-adresse">{ADRESSE_LISTE.slice(0, liste)}{liste < LISTE_TOUCHE && <i />}{liste === 0 && <span className="hl-cq-indice">{l('ton@email.fr', 'you@email.com')}</span>}</span>
+              <span className="hl-cq-ok hl-cq-inscrire" data-touche={liste >= LISTE_TOUCHE || undefined}>{l('Je m’inscris', 'Sign me up')}</span>
             </div>}
         </div>
-        <CroquisLien titre="Réserver un bilan" picto={<Icone nom="agenda" taille={14} />} />
+        <CroquisLien titre={l('Réserver un bilan', 'Book a session')} picto={<Icone nom="agenda" taille={14} />} />
       </div>
-      {liste >= LISTE_BREVO && <p className="hl-toast hl-toast-vite"><Icone nom="coche" taille={14} />Ajouté à ta liste Brevo</p>}
+      {liste >= LISTE_BREVO && <p className="hl-toast hl-toast-vite"><Icone nom="coche" taille={14} />{l('Ajouté à ta liste Brevo', 'Added to your Brevo list')}</p>}
     </div>
   );
 }
@@ -308,7 +318,7 @@ const PLUS_LOIN_FR: { nom: string; texte: string; offre: 'starter' | 'pro'; page
 ];
 
 const PLUS_LOIN_EN: typeof PLUS_LOIN_FR = [
-  { nom: 'Your stats, made clear', texte: 'Your views, your clicks, where your visitors come from, and the essentials every Monday by email.', offre: 'starter', page: 'stats' },
+  { nom: 'Your analytics, in plain words', texte: 'Your views, your clicks, where your visitors come from, and the essentials every Monday by email.', offre: 'starter', page: 'stats' },
   { nom: 'Your storefront', texte: 'Your products with their photo and price, your booking page, your tips.', offre: 'starter', page: 'vitrine' },
   { nom: 'Your launches', texte: 'A link that appears right on time, with its countdown.', offre: 'starter', page: 'lancement' },
   { nom: 'Your customer reviews', texte: 'Your Google or Trustpilot rating, copied over every day.', offre: 'starter', page: 'avis' },
@@ -330,11 +340,11 @@ export function PlusLoin() {
         <ul className="hp-plus-loin-liste">
           {PLUS_LOIN[langue].map((f, i) => (
             <li key={f.nom} className="hl-entre" style={d(i * 50)}>
-              <a href={`/fonctionnalites/${f.page}`} className="hp-plus-loin-nom"><b>{f.nom}</b></a>
+              <a href={cheminFonction(f.page, langue)} className="hp-plus-loin-nom"><b>{f.nom}</b></a>
               <span>{f.texte}</span>
             </li>
           ))}
-          <li className="hp-plus-loin-tout hl-entre"><a href="/fonctionnalites">{l('Toutes les fonctionnalités, une page chacune', 'Every feature, one page each')}</a></li>
+          <li className="hp-plus-loin-tout hl-entre"><a href={CHEMIN_FONCTIONS[langue]}>{l('Toutes les fonctionnalités, une page chacune', 'Every feature, one page each')}</a></li>
         </ul>
         <article className="hl-mail hp-doc-dashboard hl-entre" aria-label={l('Exemple de tableau de bord', 'Sample dashboard')}>
           <div className="hl-mail-tete"><Symbole className="hl-mail-logo" /><b>Hopla</b></div>
