@@ -24,7 +24,7 @@ const VERSION_SERVEUR = '1.1.0';
 const INSTRUCTIONS = `Hopla is a link-in-bio page service (like Linktree) at ${NOM_PUBLIC}/<username>. These tools read and update the page `
   + 'of the API key owner: profile, theme, social links, blocks (links, headings, text, videos, products…), analytics, email list, '
   + 'images and QR code; they can also fetch metadata from a website, a feed or a review page. Call get_page first to get block ids. '
-  + 'Write page content (titles, bio, text) in the language of the existing page, usually French, addressing visitors informally '
+  + 'Write page content (titles, bio, text) in the language of the page (the language setting, "en" or "fr"); in French, address visitors informally '
   + 'unless the formal setting is true.';
 
 interface Outil {
@@ -207,6 +207,7 @@ const OUTILS: Outil[] = [
             seo: { type: 'object', properties: { titre: { type: 'string' }, description: { type: 'string' } } },
             partage: { type: 'boolean', description: 'Show the Share button at the top of the page.' },
             vouvoiement: { type: 'boolean' },
+            langue: { type: 'string', enum: ['en', 'fr'] },
             redirection: { type: 'object', description: 'Redirect the whole page to a URL; empty url to stop.', properties: { url: { type: 'string' }, fin: { type: 'string' } } },
           },
         },
