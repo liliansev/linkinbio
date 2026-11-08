@@ -9,6 +9,10 @@ import type { Stats } from './types.ts';
 export const MESURES = ['vues', 'visiteurs', 'clics', 'taux'] as const;
 export type Mesure = (typeof MESURES)[number];
 export const NOMS_MESURES: Record<Mesure, string> = { vues: 'Vues', visiteurs: 'Visiteurs', clics: 'Clics', taux: 'Taux de clic' };
+export const NOMS_MESURES_EN: Record<Mesure, string> = { vues: 'Views', visiteurs: 'Visitors', clics: 'Clicks', taux: 'Click rate' };
+type LangueStats = 'fr' | 'en';
+/** Le nom d'une mesure dans la langue du compte. */
+export const nomMesure = (m: Mesure, langue: LangueStats = 'fr') => (langue === 'en' ? NOMS_MESURES_EN : NOMS_MESURES)[m];
 
 type Jour = Stats['serie'][number];
 type Totaux = Pick<Stats, 'vues' | 'visiteurs' | 'clics'>;
@@ -27,8 +31,10 @@ export const valeurDuJour = (j: Jour, m: Mesure) => (m === 'taux' ? taux(j.clics
 /** Le chiffre de toute la période (le taux de toute la période), null quand il n'y a rien à mesurer. */
 export const totalDe = (s: Totaux, m: Mesure) => (m === 'taux' ? taux(s.clics, s.vues) : s[m]);
 
-/** Un chiffre à la française : « 2 877 », « 38 % ». */
-export const chiffre = (n: number, m: Mesure) => `${n.toLocaleString('fr-FR')}${m === 'taux' ? `${FINE}%` : ''}`;
+/** Un chiffre à la française : « 2 877 », « 38 % » ; en anglais « 2,877 », « 38% ». */
+export const chiffre = (n: number, m: Mesure, langue: LangueStats = 'fr') => (langue === 'en'
+  ? `${n.toLocaleString('en-US')}${m === 'taux' ? '%' : ''}`
+  : `${n.toLocaleString('fr-FR')}${m === 'taux' ? `${FINE}%` : ''}`);
 
 /** Le sens d'un écart : il donne sa couleur à l'étiquette (citron pour une hausse, rose pour une baisse), que le signe dit aussi. */
 export type Sens = 'hausse' | 'baisse' | 'stable' | 'nouveau';
@@ -39,22 +45,32 @@ export type Sens = 'hausse' | 'baisse' | 'stable' | 'nouveau';
  * pour un lecteur d'écran ; `sens`, dans quel sens il va. Rien quand il n'y a
  * rien à comparer.
  */
-export function ecart(s: Totaux & Pick<Stats, 'precedent'>, m: Mesure): { court: string; long: string; sens?: Sens } {
+export function ecart(s: Totaux & Pick<Stats, 'precedent'>, m: Mesure, langue: LangueStats = 'fr'): { court: string; long: string; sens?: Sens } {
+  const en = langue === 'en';
+  const fine = en ? '' : FINE;
   const rien = { court: '', long: '' };
-  const stable = { court: 'stable', long: 'stable par rapport à la période d’avant', sens: 'stable' as const };
+  const stable = en
+    ? { court: 'steady', long: 'steady compared with the previous period', sens: 'stable' as const }
+    : { court: 'stable', long: 'stable par rapport à la période d’avant', sens: 'stable' as const };
   if (m === 'taux') {
     const actuel = taux(s.clics, s.vues), avant = taux(s.precedent.clics, s.precedent.vues);
     if (actuel === null || avant === null) return rien;
     const d = actuel - avant;
     if (d === 0) return stable;
-    const pts = `${Math.abs(d)}${FINE}${Math.abs(d) > 1 ? 'pts' : 'pt'}`;
-    return { court: `${d > 0 ? '+' : MOINS}${pts}`, long: `${d > 0 ? 'en hausse' : 'en baisse'} de ${Math.abs(d)} point${Math.abs(d) > 1 ? 's' : ''} par rapport à la période d’avant`, sens: d > 0 ? 'hausse' : 'baisse' };
+    const pts = `${Math.abs(d)}${en ? ' ' : FINE}${Math.abs(d) > 1 ? 'pts' : 'pt'}`;
+    const long = en
+      ? `${d > 0 ? 'up' : 'down'} ${Math.abs(d)} point${Math.abs(d) > 1 ? 's' : ''} from the previous period`
+      : `${d > 0 ? 'en hausse' : 'en baisse'} de ${Math.abs(d)} point${Math.abs(d) > 1 ? 's' : ''} par rapport à la période d’avant`;
+    return { court: `${d > 0 ? '+' : MOINS}${pts}`, long, sens: d > 0 ? 'hausse' : 'baisse' };
   }
   const actuel = s[m], avant = s.precedent[m];
-  if (!avant) return actuel ? { court: 'nouveau', long: 'rien sur la période d’avant', sens: 'nouveau' } : rien;
+  if (!avant) return actuel ? (en ? { court: 'new', long: 'nothing in the previous period', sens: 'nouveau' } : { court: 'nouveau', long: 'rien sur la période d’avant', sens: 'nouveau' }) : rien;
   const e = Math.round(((actuel - avant) / avant) * 100);
   if (e === 0) return stable;
-  return { court: `${e > 0 ? '+' : MOINS}${Math.abs(e)}${FINE}%`, long: `${e > 0 ? 'en hausse' : 'en baisse'} de ${Math.abs(e)}${FINE}% par rapport à la période d’avant`, sens: e > 0 ? 'hausse' : 'baisse' };
+  const long = en
+    ? `${e > 0 ? 'up' : 'down'} ${Math.abs(e)}% from the previous period`
+    : `${e > 0 ? 'en hausse' : 'en baisse'} de ${Math.abs(e)}${FINE}% par rapport à la période d’avant`;
+  return { court: `${e > 0 ? '+' : MOINS}${Math.abs(e)}${fine}%`, long, sens: e > 0 ? 'hausse' : 'baisse' };
 }
 
 /**

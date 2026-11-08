@@ -1,6 +1,8 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode, RefObject } from 'react';
 import { Icone } from '../components/Icone.tsx';
+import { choix as choixLangue, useLangue } from '../accueil/langue.ts';
+import type { Langue } from '../lib/types.ts';
 import { OFFRES, PLANS_PAYANTS } from '../lib/abonnement.ts';
 import type { PlanPayant } from '../lib/abonnement.ts';
 import type { PeriodeStats, Plage } from '../lib/periode.ts';
@@ -27,8 +29,10 @@ import { BoutonPrincipal, Feuille, arretRadio, classeBadge, classeBouton, fleche
 
 /** Chaque durée en entier, pour un lecteur d'écran : le bouton dit « 7 j ». */
 const NOMS: Record<number, string> = { 7: '7 derniers jours', 14: '14 derniers jours', 30: '30 derniers jours', 90: '90 derniers jours', 365: '12 derniers mois' };
-const libelle = (j: number) => (j === 365 ? '12 mois' : `${j} j`);
-const duree = (jours: number) => (jours >= 365 ? 'un an' : `${jours} jours`);
+const NOMS_EN: Record<number, string> = { 7: 'Last 7 days', 14: 'Last 14 days', 30: 'Last 30 days', 90: 'Last 90 days', 365: 'Last 12 months' };
+const nomDuree = (j: number, langue: Langue) => (langue === 'en' ? NOMS_EN : NOMS)[j];
+const libelle = (j: number, langue: Langue) => (j === 365 ? (langue === 'en' ? '12 mo' : '12 mois') : `${j}${langue === 'en' ? 'd' : ' j'}`);
+const duree = (jours: number, langue: Langue) => (jours >= 365 ? (langue === 'en' ? 'a year' : 'un an') : `${jours} ${langue === 'en' ? 'days' : 'jours'}`);
 
 export function ChoixPeriode({ periode, joursMax, onChoisir, onOffres, grand }: {
   periode: PeriodeStats;
@@ -39,6 +43,8 @@ export function ChoixPeriode({ periode, joursMax, onChoisir, onOffres, grand }: 
   onOffres?: (vers: PlanPayant) => void;
   grand: boolean;
 }) {
+  const langue = useLangue();
+  const tr = choixLangue(langue);
   const [ouvert, setOuvert] = useState(false);
   const [choix, setChoix] = useState<Choix>({ du: null, au: null });
   const bouton = useRef<HTMLButtonElement>(null);
@@ -70,15 +76,15 @@ export function ChoixPeriode({ periode, joursMax, onChoisir, onOffres, grand }: 
     onChoisir(pret.au === aujourdhui && (ouvertes as readonly number[]).includes(n) ? n : pret);
   }
   const jours = pret ? longueur(pret) : 0;
-  const geste = jours === 1 ? 'Voir ce jour' : `Voir ces ${jours} jours`;
+  const geste = jours === 1 ? tr('Voir ce jour', 'See this day') : tr(`Voir ces ${jours} jours`, `See these ${jours} days`);
   const plusLoin = fermees[0]?.offre;
 
   const calendrier = (fermer: (apres?: () => void) => void) => (
-    <Calendrier min={min} max={aujourdhui} aujourdhui={aujourdhui} choix={choix} onToucher={toucher}
+    <Calendrier min={min} max={aujourdhui} aujourdhui={aujourdhui} choix={choix} onToucher={toucher} langue={langue}
       mois={grand && min.slice(0, 7) !== aujourdhui.slice(0, 7) ? 2 : 1}
       plusLoin={plusLoin && (
         <button type="button" aria-haspopup="dialog" onClick={() => fermer(() => onOffres?.(plusLoin))} className="adm-cal-plus">
-          Tes stats sur {duree(OFFRES[plusLoin].jours)} avec {OFFRES[plusLoin].nom}
+          {tr(`Tes stats sur ${duree(OFFRES[plusLoin].jours, langue)} avec ${OFFRES[plusLoin].nom}`, `Your analytics over ${duree(OFFRES[plusLoin].jours, langue)} with ${OFFRES[plusLoin].nom}`)}
         </button>
       )} />
   );
@@ -86,43 +92,43 @@ export function ChoixPeriode({ periode, joursMax, onChoisir, onOffres, grand }: 
   return (
     <div className="relative">
       <div className="adm-periodes">
-        <div role="radiogroup" aria-label="Période" onKeyDown={e => flechesRadio(e)} className="adm-periodes-groupe" style={{ '--n': ouvertes.length } as CSSProperties}>
+        <div role="radiogroup" aria-label={tr('Période', 'Period')} onKeyDown={e => flechesRadio(e)} className="adm-periodes-groupe" style={{ '--n': ouvertes.length } as CSSProperties}>
           {ouvertes.map((j, i) => (
-            <button key={j} type="button" role="radio" aria-checked={periode === j} aria-label={NOMS[j]}
+            <button key={j} type="button" role="radio" aria-checked={periode === j} aria-label={nomDuree(j, langue)}
               tabIndex={arretRadio(periode === j, i === 0, !ouvertes.some(o => o === periode))}
               onClick={() => { if (periode !== j) { vibrer(4); onChoisir(j); } }}>
-              {libelle(j)}
+              {libelle(j, langue)}
             </button>
           ))}
         </div>
         {fermees.length > 0 && (
           <div className="adm-periodes-groupe" style={{ '--n': fermees.length } as CSSProperties}>
             {fermees.map(f => (
-              <button key={f.offre} type="button" data-verrou="" aria-haspopup="dialog" aria-label={`${NOMS[f.jours]}, avec ${OFFRES[f.offre].nom} : voir les offres`} onClick={() => onOffres?.(f.offre)}>
-                {libelle(f.jours)}<span className={classeBadge} data-offre={f.offre}>{OFFRES[f.offre].nom}</span>
+              <button key={f.offre} type="button" data-verrou="" aria-haspopup="dialog" aria-label={tr(`${NOMS[f.jours]}, avec ${OFFRES[f.offre].nom} : voir les offres`, `${NOMS_EN[f.jours]}, with ${OFFRES[f.offre].nom}: see the plans`)} onClick={() => onOffres?.(f.offre)}>
+                {libelle(f.jours, langue)}<span className={classeBadge} data-offre={f.offre}>{OFFRES[f.offre].nom}</span>
               </button>
             ))}
           </div>
         )}
         <span aria-hidden="true" className="adm-periodes-trait" />
         <button ref={bouton} type="button" className="adm-periodes-dates" data-pris={plage ? '' : undefined} data-texte={plage && grand ? '' : undefined} aria-haspopup="dialog" aria-expanded={ouvert}
-          title={grand ? (plage ? 'Changer de dates' : 'Choisir des dates') : undefined}
+          title={grand ? (plage ? tr('Changer de dates', 'Change dates') : tr('Choisir des dates', 'Pick dates')) : undefined}
           onClick={() => (ouvert ? setOuvert(false) : ouvrir())}>
           <Icone nom="agenda" taille={16} className="shrink-0" />
-          {plage && grand && <span aria-hidden="true">{nomCourt(plage, aujourdhui)}</span>}
-          <span className="sr-only">{plage ? `Dates choisies : ${nomPlage(plage, aujourdhui).toLowerCase()}. Changer de dates` : 'Choisir des dates'}</span>
+          {plage && grand && <span aria-hidden="true">{nomCourt(plage, aujourdhui, langue)}</span>}
+          <span className="sr-only">{plage ? tr(`Dates choisies : ${nomPlage(plage, aujourdhui).toLowerCase()}. Changer de dates`, `Dates picked: ${nomPlage(plage, aujourdhui, langue)}. Change dates`) : tr('Choisir des dates', 'Pick dates')}</span>
         </button>
       </div>
       {grand ? ouvert && (
-        <Bulle ancre={bouton} onFermer={() => setOuvert(false)} label="Choisir des dates">
+        <Bulle ancre={bouton} onFermer={() => setOuvert(false)} label={tr('Choisir des dates', 'Pick dates')}>
           {calendrier(apres => { setOuvert(false); apres?.(); })}
           <div className="adm-cal-pied">
-            <button type="button" onClick={() => { setOuvert(false); bouton.current?.focus(); }} className={classeBouton.discret}>Annuler</button>
+            <button type="button" onClick={() => { setOuvert(false); bouton.current?.focus(); }} className={classeBouton.discret}>{tr('Annuler', 'Cancel')}</button>
             <BoutonPrincipal disabled={!pret} onClick={() => { valider(); bouton.current?.focus(); }}>{geste}</BoutonPrincipal>
           </div>
         </Bulle>
       ) : (
-        <Feuille ouverte={ouvert} onFermer={() => setOuvert(false)} titre="Choisir des dates"
+        <Feuille ouverte={ouvert} onFermer={() => setOuvert(false)} titre={tr('Choisir des dates', 'Pick dates')}
           pied={fermer => <BoutonPrincipal disabled={!pret} onClick={() => fermer(valider)} className="w-full">{geste}</BoutonPrincipal>}>
           {fermer => calendrier(fermer)}
         </Feuille>
@@ -153,8 +159,11 @@ function semaines(mois: string): (string | null)[][] {
   const cases = Array.from({ length: Math.ceil((decalage + nombre) / 7) * 7 }, (_, i) => (i >= decalage && i < decalage + nombre ? ajouterJours(mois, i - decalage) : null));
   return Array.from({ length: cases.length / 7 }, (_, s) => cases.slice(s * 7, s * 7 + 7));
 }
-const JOURS_SEMAINE = [['L', 'lundi'], ['M', 'mardi'], ['M', 'mercredi'], ['J', 'jeudi'], ['V', 'vendredi'], ['S', 'samedi'], ['D', 'dimanche']];
-const nomJour = (jour: string) => new Date(`${jour}T12:00:00Z`).toLocaleDateString('fr-FR', { timeZone: 'UTC', weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+const JOURS_SEMAINE: Record<Langue, string[][]> = {
+  fr: [['L', 'lundi'], ['M', 'mardi'], ['M', 'mercredi'], ['J', 'jeudi'], ['V', 'vendredi'], ['S', 'samedi'], ['D', 'dimanche']],
+  en: [['M', 'Monday'], ['T', 'Tuesday'], ['W', 'Wednesday'], ['T', 'Thursday'], ['F', 'Friday'], ['S', 'Saturday'], ['S', 'Sunday']],
+};
+const nomJour = (jour: string, langue: Langue) => new Date(`${jour}T12:00:00Z`).toLocaleDateString(langue === 'en' ? 'en-US' : 'fr-FR', { timeZone: 'UTC', weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
 /**
  * Un ou deux mois à la suite. Le premier et le dernier jour du choix en bleu
@@ -164,9 +173,10 @@ const nomJour = (jour: string) => new Date(`${jour}T12:00:00Z`).toLocaleDateStri
  * Page suivante de mois en mois. Un mois a toujours la hauteur de six
  * semaines : la fenêtre ne saute pas d'un mois à l'autre.
  */
-function Calendrier({ min, max, aujourdhui, choix, onToucher, mois: nombre, plusLoin }: {
-  min: string; max: string; aujourdhui: string; choix: Choix; onToucher: (jour: string) => void; mois: 1 | 2; plusLoin?: ReactNode;
+function Calendrier({ min, max, aujourdhui, choix, onToucher, mois: nombre, plusLoin, langue }: {
+  min: string; max: string; aujourdhui: string; choix: Choix; onToucher: (jour: string) => void; mois: 1 | 2; plusLoin?: ReactNode; langue: Langue;
 }) {
+  const tr = choixLangue(langue);
   const id = useId();
   const cible = choix.au ?? choix.du ?? max;
   // Le premier mois montré : celui du dernier jour choisi (au bureau, avec le mois d'avant), sans sortir de l'historique.
@@ -252,7 +262,8 @@ function Calendrier({ min, max, aujourdhui, choix, onToucher, mois: nombre, plus
   const bande = (jour: string) => (!de || !a || de === a || jour < de || jour > a ? undefined : jour === de ? 'debut' : jour === a ? 'fin' : 'milieu');
   const choisi = (jour: string) => (!choix.du ? false : choix.au ? jour >= choix.du && jour <= choix.au : jour === choix.du);
 
-  const resume = !choix.du ? '' : choix.au ? nomPlage({ du: choix.du, au: choix.au }, aujourdhui) : `${nomPlage({ du: choix.du, au: choix.du }, aujourdhui).replace(/^Le /, 'Du ')} au …`;
+  const resume = !choix.du ? '' : choix.au ? nomPlage({ du: choix.du, au: choix.au }, aujourdhui, langue)
+    : langue === 'en' ? `${nomPlage({ du: choix.du, au: choix.du }, aujourdhui, 'en')} to …` : `${nomPlage({ du: choix.du, au: choix.du }, aujourdhui).replace(/^Le /, 'Du ')} au …`;
 
   return (
     <div className="adm-cal-boite">
@@ -264,20 +275,20 @@ function Calendrier({ min, max, aujourdhui, choix, onToucher, mois: nombre, plus
             <div key={m} className="min-w-0">
               <div className="adm-cal-entete">
                 {k === 0 ? (
-                  <button type="button" onClick={() => changerMois(-1)} disabled={!avant} aria-label="Mois précédent" className={`${classeBouton.icone} adm-cal-fleche`}>
+                  <button type="button" onClick={() => changerMois(-1)} disabled={!avant} aria-label={tr('Mois précédent', 'Previous month')} className={`${classeBouton.icone} adm-cal-fleche`}>
                     <Icone nom="ui-chevron" taille={18} className="rotate-90" />
                   </button>
                 ) : <span aria-hidden="true" className="adm-cal-place" />}
-                <h3 id={`${id}-${k}`} className="adm-cal-titre" aria-live={k === 0 ? 'polite' : undefined}>{nomMois(m)}</h3>
+                <h3 id={`${id}-${k}`} className="adm-cal-titre" aria-live={k === 0 ? 'polite' : undefined}>{nomMois(m, langue)}</h3>
                 {k === nombre - 1 ? (
-                  <button type="button" onClick={() => changerMois(1)} disabled={!apres} aria-label="Mois suivant" className={`${classeBouton.icone} adm-cal-fleche`}>
+                  <button type="button" onClick={() => changerMois(1)} disabled={!apres} aria-label={tr('Mois suivant', 'Next month')} className={`${classeBouton.icone} adm-cal-fleche`}>
                     <Icone nom="ui-chevron" taille={18} className="-rotate-90" />
                   </button>
                 ) : <span aria-hidden="true" className="adm-cal-place" />}
               </div>
               <table role="grid" aria-labelledby={`${id}-${k}`} aria-multiselectable="true" className="adm-cal" style={{ '--semaines': lignes.length } as CSSProperties}>
                 <thead>
-                  <tr>{JOURS_SEMAINE.map(([court, long]) => <th key={long} scope="col"><span aria-hidden="true">{court}</span><span className="sr-only">{long}</span></th>)}</tr>
+                  <tr>{JOURS_SEMAINE[langue].map(([court, long]) => <th key={long} scope="col"><span aria-hidden="true">{court}</span><span className="sr-only">{long}</span></th>)}</tr>
                 </thead>
                 <tbody>
                   {lignes.map((semaine, s) => (
@@ -294,7 +305,7 @@ function Calendrier({ min, max, aujourdhui, choix, onToucher, mois: nombre, plus
                             data-bord-g={bordG || undefined} data-bord-d={bordD || undefined}>
                             <button type="button" data-jour={jour} disabled={hors} tabIndex={jour === focus ? 0 : -1}
                               aria-current={jour === aujourdhui ? 'date' : undefined}
-                              aria-label={`${nomJour(jour)}${bout && choix.au && choix.du !== choix.au ? (jour === choix.du ? ', premier jour' : ', dernier jour') : ''}`}
+                              aria-label={`${nomJour(jour, langue)}${bout && choix.au && choix.du !== choix.au ? (jour === choix.du ? tr(', premier jour', ', first day') : tr(', dernier jour', ', last day')) : ''}`}
                               onClick={() => { if (performance.now() - glisseFini.current < 400) return; setFocus(jour); onToucher(jour); }}
                               onPointerEnter={e => { if (e.pointerType === 'mouse' && !hors) setSurvol(jour); }}
                               className="adm-cal-jour">

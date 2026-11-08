@@ -70,7 +70,8 @@ const AMENE: Record<string, string> = { 'QR code': 'ton QR code t’amène', New
  * et Instagram t’amène le plus de monde. » Des dates choisies se disent en dates :
  * « Du 12 au 18 octobre, ta page a eu… » (l'année, si ce n'est pas celle d'`aujourdhui`).
  */
-export function enUnePhrase(s: Stats, aujourdhui = jourDe(Date.now())): string {
+export function enUnePhrase(s: Stats, aujourdhui = jourDe(Date.now()), langue: 'fr' | 'en' = 'fr'): string {
+  if (langue === 'en') return inOneSentence(s, aujourdhui);
   const sur = s.plage && s.serie.length
     ? nomPlage({ du: s.serie[0].jour, au: s.serie[s.serie.length - 1].jour }, aujourdhui)
     : s.jours === 365 ? 'En un an' : `En ${s.jours} jours`;
@@ -85,4 +86,26 @@ export function enUnePhrase(s: Stats, aujourdhui = jourDe(Date.now())): string {
   const debut = `${sur}, ta page a eu ${pluriel(s.vues, 'vue')}`;
   if (comparaison) return `${debut}, ${comparaison}${qui ? `, et ${qui}` : ''}.`;
   return `${debut} et ${qui || pluriel(s.clics, 'clic')}.`;
+}
+
+/** The same sentence in English: « In 30 days, your page got 2,877 views, 33% fewer than the 30 days before, and Instagram sends you the most people. » */
+const AMENE_EN: Record<string, string> = { 'QR code': 'your QR code sends you', Newsletter: 'your newsletter sends you', 'E-mail': 'emails send you' };
+function inOneSentence(s: Stats, aujourdhui: string): string {
+  const n = (x: number) => x.toLocaleString('en-US');
+  const pl = (x: number, mot: string) => `${n(x)} ${mot}${x === 1 ? '' : 's'}`;
+  const avant = s.jours === 365 ? 'the year before' : s.jours === 1 ? 'the day before' : s.jours === 7 ? 'the week before' : `the ${s.jours} days before`;
+  const sur = s.plage && s.serie.length
+    ? nomPlage({ du: s.serie[0].jour, au: s.serie[s.serie.length - 1].jour }, aujourdhui, 'en')
+    : s.jours === 365 ? 'In one year' : `In ${s.jours} days`;
+  if (!s.vues) return s.plage ? `${sur}, no visits.` : `${sur}, no visits yet. Share your link in your bio to get things going.`;
+  let comparaison = '';
+  if (s.precedent.vues >= 10) {
+    const e = pourcent(s.vues, s.precedent.vues);
+    comparaison = Math.abs(e) >= 10 ? `${Math.abs(e)}% ${e > 0 ? 'more' : 'fewer'} than ${avant}` : `about the same as ${avant}`;
+  }
+  const source = s.sources.find(x => x.nom !== 'Direct' && x.vues >= 5);
+  const qui = source ? `${AMENE_EN[source.nom] ?? `${source.nom} sends you`} the most people` : '';
+  const debut = `${sur}, your page got ${pl(s.vues, 'view')}`;
+  if (comparaison) return `${debut}, ${comparaison}${qui ? `, and ${qui}` : ''}.`;
+  return `${debut} and ${qui || pl(s.clics, 'click')}.`;
 }
