@@ -1,7 +1,8 @@
 import { createContext, useContext } from 'react';
 import type { ReactNode } from 'react';
 import type { Fonction, OffreSuivante } from '../lib/abonnement.ts';
-import { FONCTIONS, FONCTIONS_EN_MOTS, OFFRES, PLAN_ESSAI, joursRestants } from '../lib/abonnement.ts';
+import { FONCTIONS, PLAN_ESSAI, accroche, joursRestants, nomOffre, pourQuoi } from '../lib/abonnement.ts';
+import { useL, useLangue } from '../accueil/langue.ts';
 import type { Droits } from '../lib/droits.ts';
 import type { SuiteAchat } from '../lib/achat.ts';
 import type { TypeVitrine } from '../lib/types.ts';
@@ -34,11 +35,12 @@ export const useDroits = () => useContext(Contexte).droits;
 export const useVoirOffres = () => useContext(Contexte).voirOffres;
 
 /** Le nom de l'offre qui débloque une fonction : « Starter », « Pro ». */
-export const offreDe = (f: Fonction) => OFFRES[FONCTIONS[f]].nom;
+export const offreDe = (f: Fonction, langue: 'en' | 'fr' = 'fr') => nomOffre(FONCTIONS[f], langue);
 
 /** Une petite étiquette au nom de l'offre, à côté d'un titre, dans les couleurs de l'offre (celles de l'accueil). */
 export function Etiquette({ fonction }: { fonction: Fonction }) {
-  return <span className={classeBadge} data-offre={FONCTIONS[fonction]}>{offreDe(fonction)}</span>;
+  const langue = useLangue();
+  return <span className={classeBadge} data-offre={FONCTIONS[fonction]}>{offreDe(fonction, langue)}</span>;
 }
 
 /**
@@ -49,11 +51,13 @@ export function Etiquette({ fonction }: { fonction: Fonction }) {
  */
 export function Reserve({ phrase, fonction, type, bouton = true, children }: { phrase: string; fonction: Fonction; type?: TypeVitrine; bouton?: boolean; children?: ReactNode }) {
   const voir = useVoirOffres();
+  const langue = useLangue();
+  const l = useL();
   return (
     <div className="flex flex-col items-start gap-3">
       <p className="text-[13.5px] leading-snug text-white/70">{phrase}</p>
       {voir && bouton && (
-        <button type="button" onClick={() => voir(fonction, type ? { type } : undefined)} aria-haspopup="dialog" aria-label={`Voir les offres, ${FONCTIONS_EN_MOTS[fonction].pour.toLowerCase()}`} className={classeBouton.secondaire}>Voir les offres</button>
+        <button type="button" onClick={() => voir(fonction, type ? { type } : undefined)} aria-haspopup="dialog" aria-label={`${l('Voir les offres', 'See plans')}, ${pourQuoi(fonction, langue).toLowerCase()}`} className={classeBouton.secondaire}>{l('Voir les offres', 'See plans')}</button>
       )}
       {children}
     </div>
@@ -67,12 +71,15 @@ export function Reserve({ phrase, fonction, type, bouton = true, children }: { p
  * les offres s'ouvrent sur elle. Le calcul (qui la voit, laquelle) est dans `offreSuivante`.
  */
 export function AppelOffre({ suivante, onClick, className = '' }: { suivante: OffreSuivante; onClick: () => void; className?: string }) {
+  const langue = useLangue();
   return (
     <button type="button" onClick={onClick} aria-haspopup="dialog" className={`adm-appel ${className}`}>
       <Icone nom="diamant" taille={16} className="adm-appel-picto shrink-0" />
       {/* Les espaces insécables gardent les deux-points avec le nom de l'offre, et le premier mot de l'accroche
           (« ta », « tes », « sans ») avec le suivant, quand la ligne se replie dans la barre latérale. */}
-      <span className="min-w-0 flex-1"><strong>Passer en {OFFRES[suivante.plan].nom}</strong>{'\u00a0'}: {suivante.texte.replace(' ', '\u00a0')}</span>
+      <span className="min-w-0 flex-1">{langue === 'en'
+        ? <><strong>Upgrade to {nomOffre(suivante.plan, 'en')}</strong>: {accroche(suivante.texte, 'en').replace(' ', '\u00a0')}</>
+        : <><strong>Passer en {nomOffre(suivante.plan)}</strong>{'\u00a0'}: {suivante.texte.replace(' ', '\u00a0')}</>}</span>
     </button>
   );
 }
@@ -83,10 +90,13 @@ export function AppelOffre({ suivante, onClick, className = '' }: { suivante: Of
  */
 export function AppelEssai({ fin, onClick, className = '' }: { fin: number; onClick: () => void; className?: string }) {
   const jours = joursRestants(fin);
+  const langue = useLangue();
   return (
     <button type="button" onClick={onClick} aria-haspopup="dialog" className={`adm-appel ${className}`}>
       <Icone nom="diamant" taille={16} className="adm-appel-picto shrink-0" />
-      <span className="min-w-0 flex-1"><strong>Essai {OFFRES[PLAN_ESSAI].nom}{'\u00a0'}: {jours === 1 ? 'dernier jour' : `encore ${jours}\u00a0jours`}</strong>. Choisir mon offre</span>
+      <span className="min-w-0 flex-1">{langue === 'en'
+        ? <><strong>{nomOffre(PLAN_ESSAI, 'en')} trial: {jours === 1 ? 'last day' : `${jours}\u00a0days left`}</strong>. Choose my plan</>
+        : <><strong>Essai {nomOffre(PLAN_ESSAI)}{'\u00a0'}: {jours === 1 ? 'dernier jour' : `encore ${jours}\u00a0jours`}</strong>. Choisir mon offre</>}</span>
     </button>
   );
 }

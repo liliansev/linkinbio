@@ -22,7 +22,9 @@ function Demo() {
   // Dans l'aperçu, on passe d'une mise en page à l'autre sans repasser par le back office.
   const [bureauChoisi, choisirBureau] = useState<MiseEnPageBureau | null>(null);
   useEffect(() => { const f = () => { setEtat(null); setVue(lireVue()); setHash(location.hash); }; addEventListener('hashchange', f); return () => removeEventListener('hashchange', f); }, []);
-  useEffect(() => { if (vue !== 'page') (vue === 'nouveau' ? apiNouveau : vue === 'gratuit' ? apiGratuit : apiDemo).charger().then(setEtat); }, [vue, tour]);
+  useEffect(() => { if (vue !== 'page') (vue === 'nouveau' ? apiNouveau : vue === 'gratuit' ? apiGratuit : apiDemo).charger()
+    // `#gratuit,en` : le même back office en anglais (les offres, l'abonnement).
+    .then(e => setEtat(location.hash.split(',').includes('en') ? { ...e, reglages: { ...e.reglages, langue: 'en' } } : e)); }, [vue, tour]);
   if (vue === 'page') {
     const p = pageDemo();
     const bureau = bureauChoisi ?? p.reglages.bureau;
