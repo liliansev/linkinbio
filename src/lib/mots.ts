@@ -16,7 +16,7 @@ const tu = {
   j: 'j', h: 'h', ouTrouver: 'Le code est donné en story, en live ou dans la newsletter.',
   rien: 'Rien ici pour l’instant.',
   partager: 'Partager cette page', copie: 'Lien copié', reseaux: 'Réseaux', verifie: 'Compte vérifié',
-  confidentialite: 'Confidentialité', signaler: 'Signaler', signalerPage: 'Signaler cette page', creeTaPage: 'Crée ta page avec',
+  confidentialite: 'Confidentialité', lienConfidentialite: '/legal/confidentialite', signaler: 'Signaler', signalerPage: 'Signaler cette page', creeTaPage: 'Crée ta page avec',
   // La barre Hopla des pages en Gratuit, à la première personne comme la mention d'avant : au tu comme au vous.
   barreHopla: 'Créer ma page gratuitement',
   bientot: 'Bientôt', ouvert: 'C’est ouvert', ouvreLe: (quand: string) => `Ouvre le ${quand}`,
@@ -70,7 +70,7 @@ const en: Textes = {
   j: 'd', h: 'h', ouTrouver: 'The code is shared in a story, a live or the newsletter.',
   rien: 'Nothing here yet.',
   partager: 'Share this page', copie: 'Link copied', reseaux: 'Social links', verifie: 'Verified account',
-  confidentialite: 'Privacy', signaler: 'Report', signalerPage: 'Report this page', creeTaPage: 'Create your page with',
+  confidentialite: 'Privacy', lienConfidentialite: '/legal/privacy', signaler: 'Report', signalerPage: 'Report this page', creeTaPage: 'Create your page with',
   barreHopla: 'Create my free page',
   bientot: 'Coming soon', ouvert: 'It’s open', ouvreLe: (quand: string) => `Opens ${quand}`,
   prenom: 'First name', prenomAria: 'Your first name', email: 'you@email.com', emailAria: 'Your email address', inscrire: 'Sign me up',

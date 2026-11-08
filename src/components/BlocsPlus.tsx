@@ -288,7 +288,7 @@ export function Contact({ bloc, apercu, pseudo, t }: { bloc: Bloc; apercu: boole
         </form>
       )}
       {etat.type === 'erreur' && <p id={erreurId} className="lp-newsletter-erreur" role="alert">{etat.message}</p>}
-      {etat.type !== 'ok' && <p className="lp-mention">{t.mentionMessage} <a href="/legal/confidentialite" target="_blank" rel="noopener">{t.confidentialite}</a></p>}
+      {etat.type !== 'ok' && <p className="lp-mention">{t.mentionMessage} <a href={t.lienConfidentialite} target="_blank" rel="noopener">{t.confidentialite}</a></p>}
     </section>
   );
 }

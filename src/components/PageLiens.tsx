@@ -242,7 +242,7 @@ export function PageLiens({ page, apercu = false, edition, liste, sansMention = 
           {compte.principal && EST_HOPLA_PAGE && <p className="lp-signature"><a href="https://liliansevoumian.fr" {...cible}>liliansevoumian.fr</a></p>}
           {/* Les liens légaux, sur toutes les pages, celle de Lilian comprise. */}
           <p className="lp-legal">
-            <a href="/legal/confidentialite" {...cible}>{t.confidentialite}</a>
+            <a href={t.lienConfidentialite} {...cible}>{t.confidentialite}</a>
             <span className="lp-legal-suite">
               <span className="lp-legal-point" aria-hidden="true">·</span>
               <a href={`/signaler?page=${compte.pseudo}`} rel="nofollow" aria-label={t.signalerPage} {...cible}>{t.signaler}</a>
@@ -819,7 +819,7 @@ function Inscription({ bloc, apercu, pseudo, t }: { bloc: Bloc; apercu: boolean;
         </form>
       )}
       {etat.type === 'erreur' && <p id={`${bloc.id}-erreur`} className="lp-newsletter-erreur" role="alert">{etat.message}</p>}
-      <p className="lp-mention">{t.mention} <a href="/legal/confidentialite" target="_blank" rel="noopener">{t.confidentialite}</a></p>
+      <p className="lp-mention">{t.mention} <a href={t.lienConfidentialite} target="_blank" rel="noopener">{t.confidentialite}</a></p>
     </section>
   );
 }
