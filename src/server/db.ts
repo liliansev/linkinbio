@@ -360,7 +360,8 @@ export const comptesDepuis = (depuis: number) => (base().prepare('SELECT COUNT(*
 /* ---- Offres et abonnement ---- */
 
 /** Un produit créé dans Creem pour une offre et une période. Les anciens restent : leurs abonnés gardent leur offre. */
-export interface ProduitCreem { id: string; plan: PlanPayant; periode: Periode; prix: number; actuel: boolean }
+/** `devise` : 'USD' pour un produit en dollars (8 novembre 2026) ; absente, l'euro. */
+export interface ProduitCreem { id: string; plan: PlanPayant; periode: Periode; prix: number; actuel: boolean; devise?: 'USD' }
 
 /** Les produits Creem connus de Hopla, tenus par « Créer les offres dans Creem » (onglet Comptes). */
 export function lireCatalogue(): ProduitCreem[] {

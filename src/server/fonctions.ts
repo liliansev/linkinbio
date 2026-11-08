@@ -167,6 +167,9 @@ export const lirePagePublique = createServerFn({ method: 'GET' })
     };
   });
 
+/** La monnaie des offres pour un compte : celle de son abonnement, sinon celle du pays d'où il se connecte (voir `deviseAchat`). */
+const deviseDuCompte = (c: db.Compte) => creem.deviseAchat(process.env, c, getRequestHeader('cf-ipcountry'), langueCompte(c.id));
+
 function etat(compte: string): EtatAdmin {
   const c = db.compteParId(compte)!;
   const abonnement = db.abonnement(c);
@@ -175,7 +178,7 @@ function etat(compte: string): EtatAdmin {
     // Les clics de chaque bloc sont des stats : sans elles, l'éditeur n'en montre pas.
     reglages: db.lireReglages(compte), blocs: db.lireBlocs(compte), clics: d.stats ? db.clicsParBloc(compte, 30) : {}, places: db.placesParBloc(compte), stockageEphemere: db.stockageEphemere(), dejaVue: db.pageDejaVue(compte),
     compte: { pseudo: c.pseudo, principal: compte === PRINCIPAL, email: c.email, plan: abonnement.plan }, cguAJour: cguAJour(compte),
-    abonnement, paiement: compte !== PRINCIPAL && !!creem.config(process.env), enVente: creem.offresEnVente(process.env), droits: d,
+    abonnement, paiement: compte !== PRINCIPAL && !!creem.config(process.env), enVente: creem.offresEnVente(process.env), devise: deviseDuCompte(c), droits: d,
   };
 }
 
@@ -469,7 +472,10 @@ export const ouvrirPaiement = createServerFn({ method: 'POST' })
     const o = (data ?? {}) as { plan?: unknown; periode?: unknown };
     return { plan: estPlanPayant(o.plan) ? o.plan : 'pro', periode: o.periode === 'an' ? 'an' : 'mois' };
   })
-  .handler(async ({ data, context }) => creem.ouvrirPaiement(process.env, fetch, db.compteParId(context.compte)!, data.plan, data.periode, origines().admin));
+  .handler(async ({ data, context }) => {
+    const c = db.compteParId(context.compte)!;
+    return creem.ouvrirPaiement(process.env, fetch, c, data.plan, data.periode, origines().admin, Date.now(), deviseDuCompte(c));
+  });
 
 export const ouvrirPortail = createServerFn({ method: 'POST' })
   .middleware([session])
@@ -496,6 +502,10 @@ export const creerOffresCreem = createServerFn({ method: 'POST' })
   .handler(async () => creem.creerOffres(process.env, fetch));
 
 /* ---- Prendre son nom depuis l'accueil : créer sa page, ou la liste d'attente ---- */
+
+/** La monnaie des prix pour un visiteur sans compte : l'euro en France, le dollar ailleurs, quand les dollars se vendent. */
+export const deviseVisiteur = createServerFn({ method: 'GET' })
+  .handler(async () => creem.deviseAchat(process.env, null, getRequestHeader('cf-ipcountry'), langueAcceptee(getRequestHeader('accept-language'))));
 
 export const modeInscription = createServerFn({ method: 'GET' })
   .handler(async (): Promise<'libre' | 'attente'> => (inscriptionLibre(process.env) ? 'libre' : 'attente'));

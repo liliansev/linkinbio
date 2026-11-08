@@ -1,5 +1,7 @@
 /// <reference types="vite/client" />
 import { HeadContent, Outlet, Scripts, createRootRoute, useMatches } from '@tanstack/react-router';
+import { DeviseSite } from '../accueil/langue.ts';
+import { deviseVisiteur } from '../server/fonctions.ts';
 import type { ReactNode } from 'react';
 import css from '../styles/app.css?url';
 
@@ -14,8 +16,11 @@ export const Route = createRootRoute({
       { rel: 'manifest', href: '/site.webmanifest' },
     ],
   }),
+  // La monnaie des prix, d'après le pays du visiteur : lue une fois, au premier chargement.
+  loader: () => deviseVisiteur().catch(() => 'EUR' as const),
+  staleTime: Infinity,
   shellComponent: Coquille,
-  component: Outlet,
+  component: Racine,
   notFoundComponent: () => (
     <main style={{ minHeight: '100dvh', display: 'grid', placeItems: 'center', background: '#0c121f', color: '#f4f1ec', fontFamily: 'Geist Variable, system-ui' }}>
       {/* Anglais d'abord (8 novembre 2026), le français dessous : une adresse inconnue ne dit pas sa langue. */}
@@ -26,6 +31,11 @@ export const Route = createRootRoute({
     </main>
   ),
 });
+
+function Racine() {
+  const devise = Route.useLoaderData();
+  return <DeviseSite.Provider value={devise ?? 'EUR'}><Outlet /></DeviseSite.Provider>;
+}
 
 /** La langue du document : celle de la page publique ouverte (son réglage), le français ailleurs pour l'instant. */
 function useLangueDocument(): string {

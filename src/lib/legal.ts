@@ -8,14 +8,14 @@
  * professionnel est prévue avant l'ouverture publique.
  */
 
-import { OFFRES, euros } from './abonnement.ts';
+import { OFFRES, euros, montant } from './abonnement.ts';
 import { EST_HOPLA_PAGE, INSTANCE, NOM_EDITEUR } from './instance.ts';
 import { NOM_ADMIN, NOM_PUBLIC } from './types.ts';
 
-/** « 9 € par mois ou 79 € par an » : le prix d'une offre, tel que Creem le facture. */
-const prixDe = (p: 'starter' | 'pro' | 'premium') => `${euros(OFFRES[p].prix.mois)} par mois ou ${euros(OFFRES[p].prix.an)} par an`;
+/** « 9 € par mois ou 79 € par an (9 $ et 79 $ hors de France) » : le prix d'une offre, tel que Creem le facture, dans ses deux monnaies (8 novembre 2026). */
+const prixDe = (p: 'starter' | 'pro' | 'premium') => `${euros(OFFRES[p].prix.mois)} par mois ou ${euros(OFFRES[p].prix.an)} par an (${montant(OFFRES[p].prix.mois, 'fr', 'USD')} et ${montant(OFFRES[p].prix.an, 'fr', 'USD')} hors de France)`;
 
-export const VERSION_CGU = '2026-10-25.2';
+export const VERSION_CGU = '2026-11-08.1';
 /** L'adresse de contact : celle de hopla.page, ou `LIENS_CONTACT_LEGAL` pour une instance auto-hébergée (`lib/instance.ts`). */
 export const CONTACT_LEGAL = INSTANCE.contact;
 
@@ -32,7 +32,7 @@ const HEBERGEUR = INSTANCE.hebergeur;
 export const LEGAL: Record<NomDocument, DocumentLegal> = {
   cgu: {
     titre: 'Conditions générales d’utilisation',
-    resume: `Les règles du service Hopla, en vigueur depuis le 25 octobre 2026 (version ${VERSION_CGU}).`,
+    resume: `Les règles du service Hopla, en vigueur depuis le 8 novembre 2026 (version ${VERSION_CGU}).`,
     sections: [
       { titre: 'Le service', texte: [
         'Hopla permet de publier une page de liens personnelle à l’adresse ' + NOM_PUBLIC + '/<pseudo>, et de la gérer depuis un back office, sur ' + NOM_ADMIN + '. Le service est édité par ' + (EST_HOPLA_PAGE ? 'la société ' : '') + NOM_EDITEUR + ' (voir les mentions légales).',

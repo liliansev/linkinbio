@@ -4,7 +4,7 @@
  * liste ordonnée de blocs.
  */
 
-import type { Abonnement, DureeOfferte, EtatOffre, Periode, Plan, PlanPayant } from './abonnement.ts';
+import type { Abonnement, Devise, DureeOfferte, EtatOffre, Periode, Plan, PlanPayant } from './abonnement.ts';
 import type { Droits } from './droits.ts';
 import type { Creneau } from './moments.ts';
 import type { PeriodeStats } from './periode.ts';
@@ -306,6 +306,8 @@ export interface EtatAdmin {
   paiement: boolean;
   /** Les offres qu'on peut prendre maintenant (un produit Creem pour chaque période). */
   enVente: PlanPayant[];
+  /** La monnaie des offres pour ce compte : celle de son abonnement, sinon l'euro en France et le dollar ailleurs (8 novembre 2026). */
+  devise?: Devise;
   /** Ce que le compte peut faire de sa page ; le reste se montre avec l'offre qui le débloque. */
   droits: Droits;
   /** Clics des 30 derniers jours, par bloc. */

@@ -4,14 +4,14 @@
  * texte le dit dans sa dernière partie. Un changement d'un texte français se reporte ici dans le même commit.
  */
 
-import { OFFRES, euros } from './abonnement.ts';
+import { OFFRES, euros, montant } from './abonnement.ts';
 import type { DocumentLegal, NomDocument } from './legal.ts';
 import { CONTACT_LEGAL, VERSION_CGU } from './legal.ts';
 import { EST_HOPLA_PAGE, INSTANCE, NOM_EDITEUR } from './instance.ts';
 import { NOM_ADMIN, NOM_PUBLIC } from './types.ts';
 
-/** « €9 per month or €79 per year ». */
-const prixDe = (p: 'starter' | 'pro' | 'premium') => `${euros(OFFRES[p].prix.mois, 'en')} per month or ${euros(OFFRES[p].prix.an, 'en')} per year`;
+/** « $9 per month or $79 per year (€9 and €79 in France) ». */
+const prixDe = (p: 'starter' | 'pro' | 'premium') => `${montant(OFFRES[p].prix.mois, 'en', 'USD')} per month or ${montant(OFFRES[p].prix.an, 'en', 'USD')} per year (${euros(OFFRES[p].prix.mois, 'en')} and ${euros(OFFRES[p].prix.an, 'en')} in France)`;
 
 /** Les adresses anglaises des textes légaux, sous /legal comme les françaises. */
 export const SLUGS_EN: Record<NomDocument, string> = {
@@ -31,7 +31,7 @@ const HEBERGEUR = EST_HOPLA_PAGE ? 'Hostinger International Limited, 61 Lordou V
 export const LEGAL_EN: Record<NomDocument, DocumentLegal> = {
   cgu: {
     titre: 'Terms of service',
-    resume: `The rules of the Hopla service, in force since October 25, 2026 (version ${VERSION_CGU}).`,
+    resume: `The rules of the Hopla service, in force since November 8, 2026 (version ${VERSION_CGU}).`,
     sections: [
       { titre: 'The service', texte: [
         'Hopla lets you publish a personal link page at ' + NOM_PUBLIC + '/<username>, and manage it from a dashboard at ' + NOM_ADMIN + '. The service is published by ' + (EST_HOPLA_PAGE ? 'the company ' : '') + NOM_EDITEUR + ' (see the legal notice).',

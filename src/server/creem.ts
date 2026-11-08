@@ -1,7 +1,7 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { PRINCIPAL } from '../lib/types.ts';
-import type { EtatOffre, Periode, PlanPayant } from '../lib/abonnement.ts';
-import { OFFRES, PERIODES, PLANS_PAYANTS, STATUTS_PRO, estPaye, estResilie } from '../lib/abonnement.ts';
+import type { Devise, EtatOffre, Periode, PlanPayant } from '../lib/abonnement.ts';
+import { DEVISES, OFFRES, OFFRES_EN, PERIODES, PLANS_PAYANTS, STATUTS_PRO, deviseDuPays, estPaye, estResilie } from '../lib/abonnement.ts';
 import type { Env } from './courriel.ts';
 import type { Compte, ProduitCreem } from './db.ts';
 import { appliquerAbonnement, compteParAbonnement, compteParClientCreem, compteParId, ecrireCatalogue, lireCatalogue, oublierWebhook, webhookDejaRecu } from './db.ts';
@@ -43,13 +43,38 @@ export function config(env: Env): ConfigCreem | null {
 const INJOIGNABLE = 'Le paiement ne répond pas. Réessaie dans un instant.';
 const centimes = (euros: number) => Math.round(euros * 100);
 
-/** Le produit à vendre pour une offre et une période : celui du catalogue au prix du jour, ou l'ancien Pro tant qu'aucun ne l'a remplacé. */
-export function produitEnVente(c: ConfigCreem, plan: PlanPayant, periode: Periode, catalogue = lireCatalogue()): string | null {
+/** La monnaie d'un produit du catalogue : l'euro pour ceux d'avant les dollars (8 novembre 2026). */
+export const deviseProduit = (x: Pick<ProduitCreem, 'devise'>): Devise => x.devise ?? 'EUR';
+
+/**
+ * Le produit à vendre pour une offre, une période et une monnaie : celui du catalogue au prix du jour, ou (en euros)
+ * l'ancien Pro tant qu'aucun ne l'a remplacé. Les chiffres sont les mêmes dans les deux monnaies.
+ */
+export function produitEnVente(c: ConfigCreem, plan: PlanPayant, periode: Periode, catalogue = lireCatalogue(), devise: Devise = 'EUR'): string | null {
   const prix = centimes(OFFRES[plan].prix[periode]);
-  const p = catalogue.find(x => x.actuel && x.plan === plan && x.periode === periode && x.prix === prix);
+  const p = catalogue.find(x => x.actuel && x.plan === plan && x.periode === periode && x.prix === prix && deviseProduit(x) === devise);
   if (p) return p.id;
-  if (plan === 'pro' && !catalogue.some(x => x.plan === 'pro' && x.periode === periode)) return c.anciens[periode] ?? null;
+  if (devise === 'EUR' && plan === 'pro' && !catalogue.some(x => x.plan === 'pro' && x.periode === periode && deviseProduit(x) === 'EUR')) return c.anciens[periode] ?? null;
   return null;
+}
+
+/** Les dollars se vendent quand chaque offre en vente a ses deux produits en dollars ; d'ici là, tout le monde paie en euros. */
+export function dollarsEnVente(env: Env, catalogue = lireCatalogue()): boolean {
+  const c = config(env);
+  if (!c) return false;
+  return PLANS_PAYANTS.filter(p => OFFRES[p].enVente).every(p => PERIODES.every(periode => produitEnVente(c, p, periode, catalogue, 'USD')));
+}
+
+/**
+ * La monnaie d'un achat : celle de l'abonnement en cours (Creem ne change pas la monnaie d'un abonnement), sinon celle
+ * du pays du visiteur, l'euro en France et le dollar ailleurs, quand les dollars se vendent. C'est aussi celle des prix affichés.
+ */
+export function deviseAchat(env: Env, compte: Pick<Compte, 'abonnement_produit'> | null, pays: string | null | undefined, langue: 'en' | 'fr' = 'en'): Devise {
+  const catalogue = lireCatalogue();
+  const actuel = compte?.abonnement_produit ? catalogue.find(x => x.id === compte.abonnement_produit) : undefined;
+  if (actuel) return deviseProduit(actuel);
+  if (compte?.abonnement_produit) return 'EUR';
+  return dollarsEnVente(env, catalogue) ? deviseDuPays(pays, langue) : 'EUR';
 }
 
 /** Les offres qu'on peut acheter maintenant : en vente, et un produit Creem pour chaque période. */
@@ -107,11 +132,12 @@ class ErreurDroits extends ErreurCreem {
  * change son produit (au prorata, payé ou rendu tout de suite), et le webhook qui
  * suit change l'offre. Dans les deux cas, l'adresse où aller ensuite.
  */
-export async function ouvrirPaiement(env: Env, fetchImpl: typeof fetch, compte: Compte, plan: PlanPayant, periode: Periode, origine: string, maintenant = Date.now()): Promise<string> {
+export async function ouvrirPaiement(env: Env, fetchImpl: typeof fetch, compte: Compte, plan: PlanPayant, periode: Periode, origine: string, maintenant = Date.now(), devise: Devise = 'EUR'): Promise<string> {
   const c = config(env);
   if (!c) throw new Error('Le paiement n’est pas encore branché.');
   if (compte.id === PRINCIPAL) throw new Error('Le compte principal n’a pas besoin d’abonnement.');
-  const produit = OFFRES[plan].enVente ? produitEnVente(c, plan, periode) : null;
+  // Un abonné garde sa monnaie ; une monnaie sans produit retombe sur l'euro.
+  const produit = OFFRES[plan].enVente ? (produitEnVente(c, plan, periode, lireCatalogue(), devise) ?? produitEnVente(c, plan, periode)) : null;
   if (!produit) throw new Error(`L’offre ${OFFRES[plan].nom} arrive bientôt.`);
   const retour = `${origine}/admin?paiement=${plan}`;
   if (compte.creem_abonnement && estPaye({ statut: compte.abonnement_statut, finPeriode: compte.fin_periode }, maintenant)) {
@@ -142,18 +168,19 @@ export async function ouvrirPaiement(env: Env, fetchImpl: typeof fetch, compte: 
 export function etatOffres(env: Env): EtatOffre[] {
   const c = config(env);
   const catalogue = lireCatalogue();
-  return PLANS_PAYANTS.flatMap(plan => PERIODES.map(periode => {
-    const produit = c ? produitEnVente(c, plan, periode, catalogue) : null;
-    const actuel = catalogue.find(x => x.actuel && x.plan === plan && x.periode === periode);
-    return { plan, periode, prix: OFFRES[plan].prix[periode], enVente: OFFRES[plan].enVente, produit, prixCreem: !produit && actuel ? actuel.prix / 100 : null };
-  }));
+  return DEVISES.flatMap(devise => PLANS_PAYANTS.flatMap(plan => PERIODES.map(periode => {
+    const produit = c ? produitEnVente(c, plan, periode, catalogue, devise) : null;
+    const actuel = catalogue.find(x => x.actuel && x.plan === plan && x.periode === periode && deviseProduit(x) === devise);
+    return { plan, periode, devise, prix: OFFRES[plan].prix[periode], enVente: OFFRES[plan].enVente, produit, prixCreem: !produit && actuel ? actuel.prix / 100 : null };
+  })));
 }
 
 const NOMS_PERIODES: Record<Periode, string> = { mois: 'mensuel', an: 'annuel' };
+const NOMS_PERIODES_EN: Record<Periode, string> = { mois: 'monthly', an: 'yearly' };
 const PERIODES_CREEM: Record<string, Periode> = { 'every-month': 'mois', 'every-year': 'an' };
 
-/** Un produit tel que Creem le décrit. `vendable` : ni archivé, ni supprimé, ni dans une autre monnaie qu'en euros. */
-interface ProduitLu { id: string; nom: string; prix: number; periode: Periode | null; vendable: boolean }
+/** Un produit tel que Creem le décrit. `vendable` : ni archivé, ni supprimé, ni dans une autre monnaie que l'euro ou le dollar. */
+interface ProduitLu { id: string; nom: string; prix: number; periode: Periode | null; devise: Devise; vendable: boolean }
 
 function produitLu(r: Record<string, unknown>): ProduitLu | null {
   const id = typeof r.id === 'string' ? r.id : '', prix = Number(r.price);
@@ -162,7 +189,8 @@ function produitLu(r: Record<string, unknown>): ProduitLu | null {
   return {
     id, nom: typeof r.name === 'string' ? r.name : '', prix,
     periode: PERIODES_CREEM[String(r.billing_period)] ?? null,
-    vendable: r.status !== 'archived' && r.billing_type !== 'onetime' && monnaie === 'EUR',
+    devise: monnaie === 'USD' ? 'USD' : 'EUR',
+    vendable: r.status !== 'archived' && r.billing_type !== 'onetime' && (monnaie === 'EUR' || monnaie === 'USD'),
   };
 }
 
@@ -203,8 +231,8 @@ async function relire(c: ConfigCreem, fetchImpl: typeof fetch): Promise<void> {
       else throw error;
     }
   }));
-  // Une entrée vendable : Creem la connaît, en euros, ni archivée, et toujours à la période qu'on lui connaît.
-  const vendable = (x: ProduitCreem) => { const l = lus.get(x.id); return !!l && l.vendable && (!l.periode || l.periode === x.periode); };
+  // Une entrée vendable : Creem la connaît, dans la monnaie qu'on lui connaît, ni archivée, et toujours à la période qu'on lui connaît.
+  const vendable = (x: ProduitCreem) => { const l = lus.get(x.id); return !!l && l.vendable && l.devise === deviseProduit(x) && (!l.periode || l.periode === x.periode); };
   let catalogue = avant.map(x => {
     const l = lus.get(x.id);
     return { ...x, ...(l ? { prix: l.prix } : {}), ...(vendable(x) ? {} : { actuel: false }) };
@@ -214,16 +242,19 @@ async function relire(c: ConfigCreem, fetchImpl: typeof fetch): Promise<void> {
     const l = lus.get(a.id);
     if (l && !catalogue.some(x => x.id === a.id)) catalogue.push({ id: a.id, plan: 'pro', periode: a.periode, prix: l.prix, actuel: false });
   }
-  const manquent: { plan: PlanPayant; periode: Periode; prix: number }[] = [];
-  for (const plan of PLANS_PAYANTS.filter(p => OFFRES[p].enVente)) {
-    for (const periode of PERIODES) {
-      const prix = centimes(OFFRES[plan].prix[periode]);
-      const auPrix = (x: ProduitCreem) => x.plan === plan && x.periode === periode && x.prix === prix && vendable(x);
-      if (catalogue.some(x => x.actuel && auPrix(x))) continue;
-      // Un produit déjà connu, remis au prix du jour dans Creem, redevient celui de l'offre (le plus récent d'abord).
-      const repris = catalogue.findLast(auPrix);
-      if (repris) catalogue = catalogue.map(x => (x.plan === plan && x.periode === periode ? { ...x, actuel: x.id === repris.id } : x));
-      else manquent.push({ plan, periode, prix });
+  const manquent: { plan: PlanPayant; periode: Periode; prix: number; devise: Devise }[] = [];
+  const meme = (x: ProduitCreem, plan: PlanPayant, periode: Periode, devise: Devise) => x.plan === plan && x.periode === periode && deviseProduit(x) === devise;
+  for (const devise of DEVISES) {
+    for (const plan of PLANS_PAYANTS.filter(p => OFFRES[p].enVente)) {
+      for (const periode of PERIODES) {
+        const prix = centimes(OFFRES[plan].prix[periode]);
+        const auPrix = (x: ProduitCreem) => meme(x, plan, periode, devise) && x.prix === prix && vendable(x);
+        if (catalogue.some(x => x.actuel && auPrix(x))) continue;
+        // Un produit déjà connu, remis au prix du jour dans Creem, redevient celui de l'offre (le plus récent d'abord).
+        const repris = catalogue.findLast(auPrix);
+        if (repris) catalogue = catalogue.map(x => (meme(x, plan, periode, devise) ? { ...x, actuel: x.id === repris.id } : x));
+        else manquent.push({ plan, periode, prix, devise });
+      }
     }
   }
   if (manquent.length) {
@@ -231,10 +262,10 @@ async function relire(c: ConfigCreem, fetchImpl: typeof fetch): Promise<void> {
     let boutique: ProduitLu[] = [];
     try { boutique = await produitsDeLaBoutique(c, fetchImpl); } catch (error) { console.error('[liens] Creem, liste des produits', (error as Error).message); }
     for (const m of manquent) {
-      const p = boutique.find(x => x.vendable && x.periode === m.periode && x.prix === m.prix && nommePour(x.nom, m.plan) && !catalogue.some(y => y.id === x.id));
+      const p = boutique.find(x => x.vendable && x.devise === m.devise && x.periode === m.periode && x.prix === m.prix && nommePour(x.nom, m.plan) && !catalogue.some(y => y.id === x.id));
       if (!p) continue;
       lus.set(p.id, p);
-      catalogue = [...catalogue.map(x => (x.plan === m.plan && x.periode === m.periode ? { ...x, actuel: false } : x)), { id: p.id, plan: m.plan, periode: m.periode, prix: p.prix, actuel: true }];
+      catalogue = [...catalogue.map(x => (meme(x, m.plan, m.periode, m.devise) ? { ...x, actuel: false } : x)), { id: p.id, plan: m.plan, periode: m.periode, prix: p.prix, actuel: true, ...(m.devise === 'USD' ? { devise: 'USD' as const } : {}) }];
     }
   }
   if (JSON.stringify(catalogue) !== JSON.stringify(avant)) ecrireCatalogue(catalogue);
@@ -277,24 +308,29 @@ export async function creerOffres(env: Env, fetchImpl: typeof fetch): Promise<Et
     await relire(c, fetchImpl);
     let catalogue = lireCatalogue();
     // Une offre pas encore en vente (Premium) n'a pas de produit : rien ne pourrait la vendre par erreur.
-    for (const plan of PLANS_PAYANTS.filter(p => OFFRES[p].enVente)) {
-      for (const periode of PERIODES) {
-        const prix = centimes(OFFRES[plan].prix[periode]);
-        if (catalogue.some(x => x.actuel && x.plan === plan && x.periode === periode && x.prix === prix)) continue;
-        const cree = await appeler(c, fetchImpl, '/v1/products', {
-          name: `Hopla ${OFFRES[plan].nom} ${NOMS_PERIODES[periode]}`,
-          description: OFFRES[plan].phrase,
-          price: prix, currency: 'EUR', billing_type: 'recurring', billing_period: periode === 'an' ? 'every-year' : 'every-month',
-          tax_mode: 'inclusive', tax_category: 'saas',
-        }, { 'Idempotency-Key': `hopla-${plan}-${periode}-${prix}` });
-        const id = typeof cree.id === 'string' ? cree.id : '';
-        if (!/^prod_/.test(id)) throw new Error(INJOIGNABLE);
-        catalogue = [
-          ...catalogue.filter(x => x.id !== id).map(x => (x.plan === plan && x.periode === periode ? { ...x, actuel: false } : x)),
-          { id, plan, periode, prix, actuel: true } satisfies ProduitCreem,
-        ];
-        // Noté à chaque produit : une erreur au suivant ne perd pas ceux déjà créés.
-        ecrireCatalogue(catalogue);
+    // Les euros d'abord, puis les dollars (8 novembre 2026) : les produits en dollars portent un nom anglais.
+    for (const devise of DEVISES) {
+      for (const plan of PLANS_PAYANTS.filter(p => OFFRES[p].enVente)) {
+        for (const periode of PERIODES) {
+          const prix = centimes(OFFRES[plan].prix[periode]);
+          const meme = (x: ProduitCreem) => x.plan === plan && x.periode === periode && deviseProduit(x) === devise;
+          if (catalogue.some(x => x.actuel && meme(x) && x.prix === prix)) continue;
+          const usd = devise === 'USD';
+          const cree = await appeler(c, fetchImpl, '/v1/products', {
+            name: `Hopla ${OFFRES[plan].nom} ${usd ? NOMS_PERIODES_EN[periode] : NOMS_PERIODES[periode]}`,
+            description: usd ? OFFRES_EN[plan].phrase : OFFRES[plan].phrase,
+            price: prix, currency: devise, billing_type: 'recurring', billing_period: periode === 'an' ? 'every-year' : 'every-month',
+            tax_mode: 'inclusive', tax_category: 'saas',
+          }, { 'Idempotency-Key': `hopla-${plan}-${periode}-${prix}${usd ? '-usd' : ''}` });
+          const id = typeof cree.id === 'string' ? cree.id : '';
+          if (!/^prod_/.test(id)) throw new Error(INJOIGNABLE);
+          catalogue = [
+            ...catalogue.filter(x => x.id !== id).map(x => (meme(x) ? { ...x, actuel: false } : x)),
+            { id, plan, periode, prix, actuel: true, ...(usd ? { devise: 'USD' as const } : {}) } satisfies ProduitCreem,
+          ];
+          // Noté à chaque produit : une erreur au suivant ne perd pas ceux déjà créés.
+          ecrireCatalogue(catalogue);
+        }
       }
     }
   });

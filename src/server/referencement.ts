@@ -1,5 +1,5 @@
 import { DESCRIPTION, FONCTIONS, questions } from '../accueil/textes.ts';
-import { OFFRES, OFFRES_EN, PLANS, avantage, euros, nomOffre } from '../lib/abonnement.ts';
+import { OFFRES, OFFRES_EN, PLANS, avantage, euros, montant, nomOffre } from '../lib/abonnement.ts';
 import { DOCUMENTS } from '../lib/legal.ts';
 import { LEGAL_EN, cheminLegal } from '../lib/legal-en.ts';
 import { ORIGINE_ADMIN, ORIGINE_PUBLIQUE, PRINCIPAL, SITE_LILIAN } from '../lib/types.ts';
@@ -84,7 +84,7 @@ ${FONCTIONS.en.map(f => `- ${f}`).join('\n')}
 
 ${PLANS.map(p => {
   const o = OFFRES[p];
-  const prix = p === 'gratuit' ? `${euros(0, 'en')}, forever` : `${euros(o.prix.mois, 'en')} per month, or ${euros(o.prix.an, 'en')} per year${o.enVente ? '' : ' (coming soon)'}`;
+  const prix = p === 'gratuit' ? `${montant(0, 'en', 'USD')}, forever` : `${montant(o.prix.mois, 'en', 'USD')} per month, or ${montant(o.prix.an, 'en', 'USD')} per year (${euros(o.prix.mois, 'en')} and ${euros(o.prix.an, 'en')} in France)${o.enVente ? '' : ' (coming soon)'}`;
   return `- ${nomOffre(p, 'en')}: ${prix}. ${OFFRES_EN[p].phrase}\n${o.avantages.map(a => `  - ${avantage(a, 'en')}`).join('\n')}`;
 }).join('\n')}
 

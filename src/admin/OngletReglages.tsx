@@ -6,9 +6,9 @@ import { DOMAINES_COURTS, adressePartage, sansSchema, urlPage } from '../lib/typ
 import { adresseSaisie } from '../lib/valider.ts';
 import { redirectionActive } from '../lib/sorties.ts';
 import type { Abonnement as EtatAbonnement, Fonction, Plan } from '../lib/abonnement.ts';
-import { OFFRES, accesAbonnement, apresOffre, estPaye, estResilie, euros, offerteAuDessus, planHorsEssai, nomOffre as nomPlan } from '../lib/abonnement.ts';
+import { OFFRES, accesAbonnement, apresOffre, estPaye, estResilie, montant, offerteAuDessus, planHorsEssai, nomOffre as nomPlan } from '../lib/abonnement.ts';
 import type { Langue } from '../lib/types.ts';
-import { useL, useLangue } from '../accueil/langue.ts';
+import { useDevise, useL, useLangue } from '../accueil/langue.ts';
 import { BoutonCopier, BoutonPrincipal, BoutonSecondaire, Champ, Feuille, Groupe, Interrupteur, Ligne, LigneBascule, LigneLien, PanneauDetail, Segments, SousPage, classeBouton, classeSaisie, useGrandEcran } from './ui.tsx';
 import { Facturation, nomAbonnement, nomApres, nomOffre } from './Facturation.tsx';
 import { Etiquette, usePermis } from './offre.tsx';
@@ -45,6 +45,7 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
 }) {
   const l = useL();
   const langue = reglages.langue;
+  const devise = useDevise();
   const date = (ms: number) => dateLongue(ms, langue);
   // La page vit sur hopla.page ; on partage son nom court s'il en a choisi un.
   const adresse = urlPage(compte);
@@ -182,7 +183,7 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
             </Ligne>
           ) : paye && abonnement.finPeriode ? (
             <Ligne nom={resilie ? (offerte ? l('Fin de l’abonnement', 'Subscription ends') : l('Fin de l’offre', 'Plan ends')) : l('Prochaine échéance', 'Next payment')}
-              valeur={<span className="tabular-nums">{resilie ? (offerte ? date(abonnement.finPeriode) : `${date(abonnement.finPeriode)}, ${l('puis', 'then')} ${nomApres(abonnement, abonnement.finPeriode, langue)}`) : `${date(abonnement.finPeriode)}${prix ? ` · ${euros(prix, langue)}` : ''}`}</span>} />
+              valeur={<span className="tabular-nums">{resilie ? (offerte ? date(abonnement.finPeriode) : `${date(abonnement.finPeriode)}, ${l('puis', 'then')} ${nomApres(abonnement, abonnement.finPeriode, langue)}`) : `${date(abonnement.finPeriode)}${prix ? ` · ${montant(prix, langue, devise)}` : ''}`}</span>} />
           ) : null}
           {acces.gerer && <LigneLien id="reglage-abonnement" nom={l('Gérer mon abonnement', 'Manage my subscription')} courant={sous === 'abonnement'} onClick={ouvrirSous('reglage-abonnement')} />}
           {acces.factures && (

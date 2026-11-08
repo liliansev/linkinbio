@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { useRouterState } from '@tanstack/react-router';
 import type { CSSProperties, KeyboardEvent, MouseEvent } from 'react';
 import { Icone } from '../components/Icone.tsx';
-import { ESSAI_JOURS, FONCTIONS, OFFRES, OFFRES_EN, PLANS, PLANS_PAYANTS, PLAN_ESSAI, avantage, economie, euros as eurosFr, nomOffre, parMoisAnnuel, rang } from '../lib/abonnement.ts';
+import { ESSAI_JOURS, FONCTIONS, OFFRES, OFFRES_EN, PLANS, PLANS_PAYANTS, PLAN_ESSAI, avantage, economie, montant, nomOffre, parMoisAnnuel, rang } from '../lib/abonnement.ts';
 import { CONTACT_LEGAL } from '../lib/legal.ts';
 import { cheminLegal } from '../lib/legal-en.ts';
 import { LIEN_SOURCE, NOM_EDITEUR } from '../lib/instance.ts';
@@ -15,7 +15,7 @@ import { Reserver, allerAuChamp, choisirOffre, useReservation } from './Reserver
 import type { ApiAccueil } from './Reserver.tsx';
 import { NOM_PUBLIC } from '../lib/types.ts';
 import { MOTS, QUESTION_LINKTREE, appel, questions, useInscription } from './textes.ts';
-import { prefixe, useL, useLangue } from './langue.ts';
+import { prefixe, useDevise, useL, useLangue } from './langue.ts';
 import type { Langue } from '../lib/types.ts';
 
 /**
@@ -148,7 +148,8 @@ function TableauOffres({ periode, reserver, action }: { periode: Periode; reserv
   const langue = useLangue();
   const l = useL();
   const tr = traduire(langue);
-  const euros = (n: number) => eurosFr(n, langue);
+  const devise = useDevise();
+  const euros = (n: number) => montant(n, langue, devise);
   return (
     // Replié (critique du 27 octobre 2026) : les cartes disent déjà l'essentiel, le détail s'ouvre pour qui compare.
     <details className="hl-tableau hl-entre">
@@ -230,14 +231,16 @@ const A_TA_CHARGE = ['Un serveur avec Docker et un nom de domaine', 'Les mises �
 
 function SurTonServeur() {
   const l = useL();
-  const tr = traduire(useLangue());
+  const langue = useLangue();
+  const tr = traduire(langue);
+  const devise = useDevise();
   const guide = `${LIEN_SOURCE}/blob/main/docs/SELF-HOSTING.md`;
   return (
     <div className="hl-offres hl-offres-serveur">
       <article className="hl-offre hl-entre">
         <div className="hl-offre-tete"><h3 className="hl-h3">Open source</h3></div>
         <div>
-          <p className="hl-prix"><b>0 €</b></p>
+          <p className="hl-prix"><b>{montant(0, langue, devise)}</b></p>
           <p className="hl-gris hl-petit hl-prix-an">{l('Infrastructure non comprise', 'Infrastructure not included')}</p>
         </div>
         <p className="hl-offre-phrase">{l('Déploiement par Docker Compose, compatible avec Coolify et Dokploy.', 'Deploys with Docker Compose, works with Coolify and Dokploy.')}</p>
@@ -260,7 +263,8 @@ export function Prix() {
   const langue = useLangue();
   const l = useL();
   const tr = traduire(langue);
-  const euros = (n: number) => eurosFr(n, langue);
+  const devise = useDevise();
+  const euros = (n: number) => montant(n, langue, devise);
   const [periode, setPeriode] = useState<Periode>('mois');
   const [hebergement, setHebergement] = useState<Hebergement>('hopla');
   // Les prix changent sous les yeux ; aux lecteurs d'écran, une phrase les redit, seulement quand on change de période.

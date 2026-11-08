@@ -325,3 +325,20 @@ test('le design s’essaie sans Starter : il se montre au back office, la page p
   assert.deepEqual(enEssai(retire, RIEN), []);
   assert.equal(retire.theme, reglages.theme);
 });
+
+test('devise : le dollar hors de France, l’euro en France, aux mêmes chiffres', async () => {
+  const { deviseDuPays, montant } = await import('./abonnement.ts');
+  assert.equal(deviseDuPays('FR'), 'EUR');
+  assert.equal(deviseDuPays('fr'), 'EUR');
+  assert.equal(deviseDuPays('US'), 'USD');
+  assert.equal(deviseDuPays('DE'), 'USD');
+  // Sans pays lisible (Tor, inconnu, hors Cloudflare), la langue décide.
+  assert.equal(deviseDuPays('XX', 'fr'), 'EUR');
+  assert.equal(deviseDuPays(null, 'fr'), 'EUR');
+  assert.equal(deviseDuPays(undefined, 'en'), 'USD');
+  assert.equal(montant(9, 'en', 'USD'), '$9');
+  assert.equal(montant(9, 'fr', 'USD'), '9 $');
+  assert.equal(montant(14.08, 'en', 'USD'), '$14.08');
+  assert.equal(montant(9, 'fr', 'EUR'), '9 €');
+  assert.equal(montant(9, 'en'), '€9');
+});

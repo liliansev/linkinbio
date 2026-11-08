@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import type { Abonnement, Periode } from '../lib/abonnement.ts';
-import { OFFRES, apresAbonnement, estResilie, euros, nomOffre as nomPlan, offerteAuDessus } from '../lib/abonnement.ts';
+import { OFFRES, apresAbonnement, estResilie, montant, nomOffre as nomPlan, offerteAuDessus } from '../lib/abonnement.ts';
 import type { Langue } from '../lib/types.ts';
-import { useLangue } from '../accueil/langue.ts';
+import { useDevise, useLangue } from '../accueil/langue.ts';
 import { Icone } from '../components/Icone.tsx';
 import { BoutonSecondaire, Groupe, Ligne } from './ui.tsx';
 
@@ -48,6 +48,7 @@ export function Facturation({ abonnement, onOffres, ouvrirPortail, onResilier }:
   const prix = paye && abonnement.periode ? OFFRES[abonnement.payee].prix[abonnement.periode] : null;
   const offerte = offerteAuDessus(abonnement);
   const langue = useLangue();
+  const devise = useDevise();
   const l = <T,>(fr: T, en: T) => (langue === 'fr' ? fr : en);
   const date = (ms: number) => dateLongue(ms, langue);
 
@@ -72,7 +73,7 @@ export function Facturation({ abonnement, onOffres, ouvrirPortail, onResilier }:
           {onOffres && !resilie && <BoutonSecondaire onClick={onOffres} aria-haspopup="dialog">{paye ? l('Changer d’offre', 'Change plan') : l('Voir les offres', 'See plans')}</BoutonSecondaire>}
         </Ligne>
         {offerte && <Ligne nom={l('Offert en plus', 'Free on top')} valeur={`${nomPlan(offerte.plan, langue)}, ${offerte.jusqu ? l(`jusqu’au ${date(offerte.jusqu)}`, `until ${date(offerte.jusqu)}`) : l('sans limite de durée', 'with no end date')}`} />}
-        {prix !== null && abonnement.periode && <Ligne nom={l('Prix', 'Price')} valeur={<span className="tabular-nums">{euros(prix, langue)} {abonnement.periode === 'an' ? l('par an', 'per year') : l('par mois', 'per month')} {l('TTC', 'incl. tax')}</span>} />}
+        {prix !== null && abonnement.periode && <Ligne nom={l('Prix', 'Price')} valeur={<span className="tabular-nums">{montant(prix, langue, devise)} {abonnement.periode === 'an' ? l('par an', 'per year') : l('par mois', 'per month')} {l('TTC', 'incl. tax')}</span>} />}
         {impaye ? (
           <Ligne nom={l('Paiement', 'Payment')} valeur={<span data-alerte="">{l('Le dernier paiement n’est pas passé', 'The last payment failed')}</span>}>
             {abonnement.portail && chezCreem('offre', l('Mettre à jour ma carte', 'Update my card'))}

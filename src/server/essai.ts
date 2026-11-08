@@ -1,9 +1,10 @@
-import { OFFRES, PLAN_ESSAI, planHorsEssai } from '../lib/abonnement.ts';
+import { OFFRES, PLAN_ESSAI, montant, planHorsEssai } from '../lib/abonnement.ts';
+import type { Devise } from '../lib/abonnement.ts';
 import { BLOCS_GRATUITS, ORIGINE_ADMIN } from '../lib/types.ts';
 import * as db from './db.ts';
 import type { Env } from './courriel.ts';
 import { bouton, echapper, enveloppe, envoyer } from './courriel.ts';
-import { config } from './creem.ts';
+import { config, deviseAchat } from './creem.ts';
 import { CONTACT_LEGAL } from '../lib/legal.ts';
 
 /*
@@ -19,16 +20,15 @@ export const RAPPEL_AVANT = 3 * JOUR;
 const FIN_TARDIVE = 7 * JOUR;
 
 const dateLongue = (ms: number) => new Date(ms).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', timeZone: 'Europe/Paris' });
-const starter = `${OFFRES.starter.prix.mois} € par mois`;
 /** Ce que Gratuit ne garde pas, en peu de mots. */
 const PERTES = [`plus de ${BLOCS_GRATUITS} blocs`, 'la page sans la mention Hopla', 'tes couleurs et ton fond', 'ta vitrine', 'tes stats'];
 
 /** Les mêmes e-mails en anglais, pour une page en anglais. */
 const PERTES_EN = [`more than ${BLOCS_GRATUITS} blocks`, 'the page without Hopla branding', 'your colors and background', 'your storefront', 'your stats'];
 const dateLongueEn = (ms: number) => new Date(ms).toLocaleDateString('en-US', { day: 'numeric', month: 'long', timeZone: 'Europe/Paris' });
-function courrielEssaiEn(etape: 1 | 2, pseudo: string, fin: number, admin: string) {
+function courrielEssaiEn(etape: 1 | 2, pseudo: string, fin: number, admin: string, devise: Devise) {
   const pro = OFFRES[PLAN_ESSAI].nom;
-  const starterEn = `€${OFFRES.starter.prix.mois} per month`;
+  const starterEn = `${montant(OFFRES.starter.prix.mois, 'en', devise)} per month`;
   const pertes = PERTES_EN.join(', ').replace(/, ([^,]*)$/, ' and $1');
   const question = 'Questions? Just reply to this email.';
   if (etape === 1) {
@@ -49,8 +49,9 @@ function courrielEssaiEn(etape: 1 | 2, pseudo: string, fin: number, admin: strin
   };
 }
 
-export function courrielEssai(etape: 1 | 2, pseudo: string, fin: number, admin: string, langue: 'fr' | 'en' = 'fr') {
-  if (langue === 'en') return courrielEssaiEn(etape, pseudo, fin, admin);
+export function courrielEssai(etape: 1 | 2, pseudo: string, fin: number, admin: string, langue: 'fr' | 'en' = 'fr', devise: Devise = 'EUR') {
+  if (langue === 'en') return courrielEssaiEn(etape, pseudo, fin, admin, devise);
+  const starter = `${montant(OFFRES.starter.prix.mois, 'fr', devise)} par mois`;
   const pro = OFFRES[PLAN_ESSAI].nom;
   const pertes = PERTES.join(', ').replace(/, ([^,]*)$/, ' et $1');
   if (etape === 1) {
@@ -87,7 +88,7 @@ export async function envoyerFinsDEssai(env: Env, fetchImpl: typeof fetch, maint
       if (planHorsEssai(db.abonnement(c, maintenant)) !== 'gratuit' || !c.email) continue;
       // Le second e-mail dit tout : le premier ne part plus quand la fin est déjà passée.
       if (!db.reserverRappelEssai(c.id, etape)) continue;
-      if (await envoyer(env, fetchImpl, { to: c.email, replyTo: CONTACT_LEGAL, ...courrielEssai(etape, c.pseudo, c.essai_jusqu!, admin, langueDe(c.id)) })) envoyes++;
+      if (await envoyer(env, fetchImpl, { to: c.email, replyTo: CONTACT_LEGAL, ...courrielEssai(etape, c.pseudo, c.essai_jusqu!, admin, langueDe(c.id), deviseAchat(env, c, null, langueDe(c.id))) })) envoyes++;
     }
   }
   return envoyes;

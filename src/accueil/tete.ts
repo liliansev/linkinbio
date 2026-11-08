@@ -53,10 +53,10 @@ const donnees = (langue: Langue, mode: Inscription) => {
         applicationCategory: 'BusinessApplication', applicationSubCategory: m.categorie, operatingSystem: 'Web, iOS, Android',
         inLanguage: m.html, description: DESCRIPTION[langue], featureList: FONCTIONS[langue], publisher: { '@id': `${racine}#organisation` },
         offers: [
-          { '@type': 'Offer', name: nomOffre('gratuit', langue), price: '0', priceCurrency: 'EUR', description: phrase('gratuit') },
+          { '@type': 'Offer', name: nomOffre('gratuit', langue), price: '0', priceCurrency: langue === 'en' ? 'USD' : 'EUR', description: phrase('gratuit') },
           // Les offres en vente, au mois et à l'an ; Premium attend son nom de domaine.
           ...PLANS_PAYANTS.filter(p => OFFRES[p].enVente).flatMap(p => PERIODES.map(periode => ({
-            '@type': 'Offer', name: `${nomOffre(p, langue)}, ${periode === 'an' ? m.parAn : m.parMois}`, price: String(OFFRES[p].prix[periode]), priceCurrency: 'EUR', description: phrase(p),
+            '@type': 'Offer', name: `${nomOffre(p, langue)}, ${periode === 'an' ? m.parAn : m.parMois}`, price: String(OFFRES[p].prix[periode]), priceCurrency: langue === 'en' ? 'USD' : 'EUR', description: phrase(p),
           }))),
         ],
       },

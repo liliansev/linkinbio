@@ -286,7 +286,7 @@ const EN: Record<string, Omit<Comparatif, 'slug' | 'nom'>> = {
   stan: {
     qui: 'a link in bio store to sell courses and bookings, born in the United States',
     chapo: 'Stan is a store: courses, paid calls, memberships. Hopla is a link in bio page that adapts to each visitor, with a free plan.',
-    resume: 'Hopla vs Stan Store: Stan starts at $29 a month with no free plan; Hopla is free, then €9 a month, with no commission.',
+    resume: 'Hopla vs Stan Store: Stan starts at $29 a month with no free plan; Hopla is free, then $9 a month, with no commission.',
     lignes: [
       ['Price', HOPLA_PRIX_EN, '$29 or $99 a month'],
       ['Free plan', GRATUIT_EN, 'No, a 14-day trial'],
@@ -357,7 +357,7 @@ const EN: Record<string, Omit<Comparatif, 'slug' | 'nom'>> = {
   later: {
     qui: 'the link in bio page from Later, the post scheduling tool, born in Canada',
     chapo: 'Linkin.bio is Later’s link in bio page, included in its post scheduling plans. Hopla is a standalone link in bio page that adapts to each visitor.',
-    resume: 'Hopla vs Later Linkin.bio: Linkin.bio comes with Later, from $25 a month; Hopla is a standalone link in bio page, free, then €9 a month.',
+    resume: 'Hopla vs Later Linkin.bio: Linkin.bio comes with Later, from $25 a month; Hopla is a standalone link in bio page, free, then $9 a month.',
     lignes: [
       ['Price', HOPLA_PRIX_EN, 'Included in Later, from $25 a month'],
       ['Sold on its own', 'Yes', 'No, with post scheduling'],
