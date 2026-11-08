@@ -6,7 +6,7 @@
  * ici, rien n'est demandé au site ; une page qui déclare un prix (une boutique Shopify, WooCommerce…) devient un
  * produit une fois lue, dans l'éditeur. Les blocs de la vitrine demandent Starter : sans elle, l'adresse reste un lien.
  */
-import type { Bloc, TypeBloc } from './types.ts';
+import type { Bloc, Langue, TypeBloc } from './types.ts';
 import { nouveauBloc } from './types.ts';
 import { agendaDe, avecMontants, soutienDe } from './vitrine.ts';
 import { estMusique, estVideo } from './lecteurs.ts';
@@ -130,8 +130,8 @@ const enCommun = (types: readonly TypeBloc[], de: TypeBloc, vers: TypeBloc) => t
  * visé, et ce que les deux types montrent l'un comme l'autre (le sous-titre, l'icône, l'animation) ; le reste repart
  * de zéro. Son texte aussi, sauf s'il a été tapé à la main (`texteAMoi`).
  */
-export function versType(b: Bloc, type: TypeBloc, texteAMoi: boolean): Bloc {
-  const neuf = nouveauBloc(type, b.id);
+export function versType(b: Bloc, type: TypeBloc, texteAMoi: boolean, langue: Langue = 'fr'): Bloc {
+  const neuf = nouveauBloc(type, b.id, langue);
   return {
     ...neuf,
     url: b.url, public: b.public, indexable: b.indexable, vedette: type !== 'soutien' && b.vedette,

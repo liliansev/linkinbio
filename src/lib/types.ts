@@ -518,14 +518,22 @@ export interface SignalementResume {
 /** Les montants que « Me soutenir » propose d'abord, en euros. */
 export const MONTANTS_DEFAUT: readonly number[] = [3, 5, 10];
 
-export function nouveauBloc(type: TypeBloc, id: string): Bloc {
-  const titres: Record<TypeBloc, string> = {
-    lien: '', titre: '', texte: '', video: 'Ma vidéo', 'derniere-video': 'Ma dernière vidéo', newsletter: 'Ma newsletter', inscription: 'Rejoins ma liste', preuve: 'Ce qu’ils en disent',
-    produit: '', soutien: 'Me soutenir', reservation: 'Prendre rendez-vous',
-    musique: 'Écouter', faq: 'Questions fréquentes', coordonnees: '', lieu: '', galerie: '', formulaire: 'Me contacter', flux: 'Mes derniers articles',
-  };
+/** Le texte d'un bloc neuf, dans la langue du compte (8 novembre 2026, Hopla anglais d'abord). */
+const TITRES_BLOCS: Record<TypeBloc, [string, string]> = {
+  lien: ['', ''], titre: ['', ''], texte: ['', ''], video: ['Ma vidéo', 'My video'], 'derniere-video': ['Ma dernière vidéo', 'My latest video'],
+  newsletter: ['Ma newsletter', 'My newsletter'], inscription: ['Rejoins ma liste', 'Join my list'], preuve: ['Ce qu’ils en disent', 'What people say'],
+  produit: ['', ''], soutien: ['Me soutenir', 'Support me'], reservation: ['Prendre rendez-vous', 'Book a session'],
+  musique: ['Écouter', 'Listen'], faq: ['Questions fréquentes', 'FAQ'], coordonnees: ['', ''], lieu: ['', ''], galerie: ['', ''],
+  formulaire: ['Me contacter', 'Contact me'], flux: ['Mes derniers articles', 'My latest posts'],
+};
+export const titreParDefaut = (type: TypeBloc, langue: Langue = 'fr') => TITRES_BLOCS[type][langue === 'en' ? 1 : 0];
+/** Le texte qu'un bloc avait en naissant, dans l'une ou l'autre langue : il n'a pas été tapé à la main. */
+export const estTitreParDefaut = (type: TypeBloc, titre: string) => TITRES_BLOCS[type].includes(titre);
+
+export function nouveauBloc(type: TypeBloc, id: string, langue: Langue = 'fr'): Bloc {
+  const en = langue === 'en';
   return {
-    id, type, titre: titres[type], url: '', sousTitre: type === 'newsletter' || type === 'inscription' ? 'Un e-mail de temps en temps, rien de plus.' : '', description: '', icone: '', image: '',
+    id, type, titre: titreParDefaut(type, langue), url: '', sousTitre: type === 'newsletter' || type === 'inscription' ? (en ? 'An email now and then, nothing more.' : 'Un e-mail de temps en temps, rien de plus.') : '', description: '', icone: '', image: '',
     public: true, indexable: true, vedette: false, format: 'bandeau', teinte: 'accent', animation: 'auto', debut: '', fin: '',
     compteARebours: false, creneau: null, audience: null, cache: [], demanderPrenom: false, acces: null,
     preuve: type === 'preuve' ? { genre: 'note', note: 0, nombre: 0, source: '' } : null,

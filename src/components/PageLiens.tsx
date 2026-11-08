@@ -11,6 +11,8 @@ import { enGrille } from '../lib/collections.ts';
 import { etatPlaces } from '../lib/acces.ts';
 import { adresseSaisie } from '../lib/valider.ts';
 import { jetonTurnstile, preparerTurnstile } from '../lib/turnstile.ts';
+import { choix } from '../accueil/langue.ts';
+import type { Choix } from '../accueil/langue.ts';
 import { textes } from '../lib/mots.ts';
 import type { Textes } from '../lib/mots.ts';
 import { Icone, NOMS_RESEAUX } from './Icone.tsx';
@@ -81,6 +83,8 @@ export function PageLiens({ page, apercu = false, edition, liste, sansMention = 
   const pseudo = compte.principal ? '' : compte.pseudo;
   const theme = themeDe(reglages);
   const t = textes(reglages.vouvoiement, reglages.langue);
+  // Les mots de l'édition en place sont ceux du back office, dans la langue du compte.
+  const ed = choix(reglages.langue);
   // La barre Hopla d'une page en français mène à l'accueil en français (8 novembre 2026).
   const accueilHopla = reglages.langue === 'fr' ? `${ORIGINE_PUBLIQUE}/fr` : ORIGINE_PUBLIQUE;
   // Les liens rangés en tuiles sous un titre de section réglé en grille (un compte à rebours garde sa largeur).
@@ -158,9 +162,9 @@ export function PageLiens({ page, apercu = false, edition, liste, sansMention = 
   const badge = reglages.profil.badge && <span className="lp-badge" title={t.verifie} role="img" aria-label={t.verifie}><Icone nom="badge" taille={20} /></span>;
 
   const reseaux = edition ? (
-    <button type="button" className="lp-reseaux lp-ed-zone" onClick={edition.reseaux} aria-label="Modifier les réseaux">
+    <button type="button" className="lp-reseaux lp-ed-zone" onClick={edition.reseaux} aria-label={ed('Modifier les réseaux', 'Edit social links')}>
       {reglages.reseaux.filter(r => adresseSaisie(r.url)).map(r => <span key={r.reseau + r.url} className="lp-ed-reseau"><Icone nom={r.reseau} taille={22} /></span>)}
-      {!reglages.reseaux.some(r => adresseSaisie(r.url)) && <span className="lp-ed-vide">Ajouter tes réseaux</span>}
+      {!reglages.reseaux.some(r => adresseSaisie(r.url)) && <span className="lp-ed-vide">{ed('Ajouter tes réseaux', 'Add your social links')}</span>}
     </button>
   ) : reglages.reseaux.some(r => adresseSaisie(r.url)) && (
     <nav className="lp-reseaux" aria-label={t.reseaux}>
@@ -187,7 +191,7 @@ export function PageLiens({ page, apercu = false, edition, liste, sansMention = 
         )}
         <header className="lp-tete" data-photo={grande ? 'grande' : undefined} {...fige}>
           {edition ? (
-            <button type="button" className="lp-ed-photo" onClick={e => edition.photo(e.currentTarget)} aria-label={reglages.profil.avatar ? 'Changer la photo' : 'Ajouter une photo'}
+            <button type="button" className="lp-ed-photo" onClick={e => edition.photo(e.currentTarget)} aria-label={reglages.profil.avatar ? ed('Changer la photo', 'Change the photo') : ed('Ajouter une photo', 'Add a photo')}
               aria-busy={edition.envoiPhoto || undefined} data-envoi={edition.envoiPhoto || undefined}>
               {/* La photo se touche elle-même ; sans photo, l'icône seule à sa place : ni pastille ni rond vide. */}
               {reglages.profil.avatar ? <img className="lp-avatar" src={reglages.profil.avatar} alt="" width={grande ? 800 : 96} height={grande ? 800 : 96} /> : <span className="lp-ed-sans-photo"><Icone nom="photo" taille={40} /></span>}
@@ -196,7 +200,7 @@ export function PageLiens({ page, apercu = false, edition, liste, sansMention = 
           {/* Dans le back office, la page n'est qu'un aperçu : son nom n'y prend pas le titre principal. */}
           <Nom className="lp-nom">
             {edition
-              ? <input className="lp-ed-saisie" value={reglages.profil.nom} maxLength={80} placeholder="Ton nom" aria-label="Ton nom"
+              ? <input className="lp-ed-saisie" value={reglages.profil.nom} maxLength={80} placeholder={ed('Ton nom', 'Your name')} aria-label={ed('Ton nom', 'Your name')}
                   style={{ width: `${Math.max(reglages.profil.nom.length, 7) + 1}ch` }} onChange={e => edition.profil({ nom: e.target.value })}
                   onFocus={e => { e.currentTarget.dataset.avant = reglages.profil.nom; }}
                   onBlur={e => { const avant = e.currentTarget.dataset.avant ?? ''; if (!e.currentTarget.value.trim()) { edition.profil({ nom: avant.trim() || compte.pseudo }); edition.nomVide?.(); } else if (e.currentTarget.value !== avant) edition.modifie?.('nom', avant); }} />
@@ -204,7 +208,7 @@ export function PageLiens({ page, apercu = false, edition, liste, sansMention = 
             {badge}
           </Nom>
           {edition
-            ? <ChampBio valeur={reglages.profil.bio} onChange={bio => edition.profil({ bio })} onQuitter={avant => edition.modifie?.('bio', avant)} />
+            ? <ChampBio valeur={reglages.profil.bio} onChange={bio => edition.profil({ bio })} onQuitter={avant => edition.modifie?.('bio', avant)} ed={ed} />
             : reglages.profil.bio && <p className="lp-bio">{reglages.profil.bio}</p>}
           {/* La page de Lilian met Hopla en avant sous sa bio (24 octobre 2026) : une ligne à l'accent du thème, le logo après le mot. */}
           {compte.principal && EST_HOPLA_PAGE && (
@@ -355,7 +359,7 @@ function copierALAncienne(texte: string): boolean {
 }
 
 /** La bio, tapée en place : le champ grandit avec le texte. */
-function ChampBio({ valeur, onChange, onQuitter }: { valeur: string; onChange: (v: string) => void; onQuitter?: (avant: string) => void }) {
+function ChampBio({ valeur, onChange, onQuitter, ed }: { valeur: string; onChange: (v: string) => void; onQuitter?: (avant: string) => void; ed: Choix }) {
   const ref = useRef<HTMLTextAreaElement>(null);
   const avant = useRef('');
   // À chaque rendu : le texte, mais aussi la police du thème, changent la hauteur.
@@ -365,7 +369,7 @@ function ChampBio({ valeur, onChange, onQuitter }: { valeur: string; onChange: (
     t.style.height = 'auto';
     t.style.height = `${t.scrollHeight}px`;
   });
-  return <textarea ref={ref} className="lp-bio lp-ed-saisie" rows={1} value={valeur} maxLength={300} placeholder="Une phrase sur toi" aria-label="Ta bio" onChange={e => onChange(e.target.value)}
+  return <textarea ref={ref} className="lp-bio lp-ed-saisie" rows={1} value={valeur} maxLength={300} placeholder={ed('Une phrase sur toi', 'A line about you')} aria-label={ed('Ta bio', 'Your bio')} onChange={e => onChange(e.target.value)}
     onFocus={e => { avant.current = e.currentTarget.value; }} onBlur={e => { if (e.currentTarget.value !== avant.current) onQuitter?.(avant.current); }} />;
 }
 

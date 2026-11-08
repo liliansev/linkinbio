@@ -1,7 +1,7 @@
 import { useContext, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import type { MutableRefObject } from 'react';
 import type { Api, Bloc, Disposition, ImageApercu, MentionPartenaire, Partenariat, Reglages, TypeBloc, TypeVitrine, VisuelApercu } from '../lib/types.ts';
-import { ANIMATIONS_BLOC, TYPES_ADRESSE, TYPES_VITRINE, idYoutube, nouveauBloc } from '../lib/types.ts';
+import { ANIMATIONS_BLOC, TYPES_ADRESSE, TYPES_VITRINE, estTitreParDefaut, idYoutube, nouveauBloc, titreParDefaut } from '../lib/types.ts';
 import { lecteurDe } from '../lib/lecteurs.ts';
 import { horsCreneauOuDates } from '../lib/moments.ts';
 import { RESEAUX } from '../lib/types.ts';
@@ -14,9 +14,9 @@ import { memeBloc, verifierBloc } from '../lib/editionBloc.ts';
 import type { ChampErreur, Erreurs } from '../lib/editionBloc.ts';
 import { ICONES } from '../lib/icones.ts';
 import { Icone, NOMS_RESEAUX, PICTOS } from '../components/Icone.tsx';
-import { BoutonPrincipal, BoutonSecondaire, Champ, Feuille, Interrupteur, ListeChoix, Menu, NOMS_ANIMATIONS, Segments, choisirFichier, classeBouton, classeSaisie, flechesRadio, preparerImage, preparerLogo, useFilFeuille, vibrer } from './ui.tsx';
+import { BoutonPrincipal, BoutonSecondaire, Champ, Feuille, Interrupteur, ListeChoix, Menu, Segments, nomsAnimations, choisirFichier, classeBouton, classeSaisie, flechesRadio, preparerImage, preparerLogo, useFilFeuille, vibrer } from './ui.tsx';
 import type { ElementMenu, FilFeuille } from './ui.tsx';
-import { DEVENU, EN_FAIRE, typeDe } from '../lib/catalogue.ts';
+import { DEVENU, devenu, enFaire as phraseEnFaire, typeDe } from '../lib/catalogue.ts';
 import { sourceDe } from '../lib/avis.ts';
 import { appDe } from '../lib/ouvrirApp.ts';
 import { ChampsPreuve, LigneRepli, PagesBloc, RangeesCompactes, RegleAOuvrir, RegleAcces, ReglageVisibilite, Repli, ReplisExclusifs, resumeVisibilite } from './ReglesBloc.tsx';
@@ -29,12 +29,14 @@ import type { SuiteAchat } from '../lib/achat.ts';
 import { focusAuto, focusSaisie } from '../lib/clavier';
 import { ChampLieu, ChampsCoordonnees, ChampsFaq, ChampsGalerie } from './ChampsBlocs.tsx';
 import { DestinationListe } from './OngletIntegrations.tsx';
+import { choix, useL, useLangue } from '../accueil/langue.ts';
+import type { Choix } from '../accueil/langue.ts';
 
 /** Au téléphone, la page ouverte dans la feuille d'un bloc : l'essentiel (`null`), la visibilité, l'apparence, « Plus de réglages », ou une règle rare. */
 type PageBloc = 'plus' | PageRegle | null;
 const hoteDe = (url: string) => { try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return ''; } };
-const NOMS_PAGES: Record<'plus' | PageRegle, string> = { plus: 'Plus de réglages', visibilite: 'Visibilité', apparence: 'Apparence', acces: 'Accès réservé', animation: 'Animation' };
-const NOMS_FORMES: Record<Bloc['format'], string> = { bouton: 'Bouton', bandeau: 'Bandeau', carte: 'Carte' };
+const nomsPages = (tr: Choix): Record<'plus' | PageRegle, string> => ({ plus: tr('Plus de réglages', 'More settings'), visibilite: tr('Visibilité', 'Visibility'), apparence: tr('Apparence', 'Appearance'), acces: tr('Accès réservé', 'Restricted access'), animation: 'Animation' });
+const nomsFormes = (tr: Choix): Record<Bloc['format'], string> => ({ bouton: tr('Bouton', 'Button'), bandeau: tr('Bandeau', 'Banner'), carte: tr('Carte', 'Card') });
 /**
  * Ce que « Mis en avant » ouvre, sur une ligne juste sous lui : l'apparence d'un lien (forme, couleur, animation),
  * l'animation seule d'un produit ou d'un rendez-vous. Rien pour une vidéo. La description d'un bloc mis en avant, que la
@@ -44,6 +46,7 @@ const pageVedette = (b: Bloc): 'apparence' | 'animation' | null => (!b.vedette ?
 
 /** Pose le fil de la feuille depuis son contenu : le nom de la page ouverte et sa flèche de retour. */
 function FilPage({ fil }: { fil: FilFeuille | null }) {
+  const tr = useL();
   useFilFeuille(fil);
   return null;
 }
@@ -56,8 +59,9 @@ interface Lu { url: string; inconnu: boolean; titre: string; image: string; desc
 type ChampAMoi = 'titre' | 'image' | 'description' | 'prix' | 'icone';
 
 /** Les deux mentions qu'un lien partenaire peut porter (loi du 9 juin 2023). */
-const DISPOSITIONS_NOMMEES: { id: Disposition; nom: string }[] = [{ id: 'liste', nom: 'En liste' }, { id: 'grille', nom: 'En grille' }];
-const MENTIONS: { id: MentionPartenaire; nom: string }[] = [{ id: 'publicite', nom: 'Publicité' }, { id: 'collaboration', nom: 'Collaboration commerciale' }];
+const dispositionsNommees = (tr: Choix): { id: Disposition; nom: string }[] => [{ id: 'liste', nom: tr('En liste', 'As a list') }, { id: 'grille', nom: tr('En grille', 'As a grid') }];
+/** En anglais, les mots que la page anglaise affiche (« Ad », « Sponsored »). */
+const mentions = (tr: Choix): { id: MentionPartenaire; nom: string }[] => [{ id: 'publicite', nom: tr('Publicité', 'Ad') }, { id: 'collaboration', nom: tr('Collaboration commerciale', 'Sponsored') }];
 const PARTENARIAT_NEUF: Partenariat = { mention: 'publicite', code: '' };
 
 /** Les adresses relues à l'ouverture d'un lien déjà posé, et si leur page déclare un prix : une lecture par adresse et par visite. */
@@ -70,6 +74,7 @@ const EXEMPLES_MONTANTS = [3, 5, 10, 20];
  * Les cases se remettent dans l'ordre en les quittant, jamais pendant la frappe.
  */
 function ChampMontants({ montants, onChange }: { montants: number[]; onChange: (m: number[]) => void }) {
+  const tr = useL();
   const remplir = (l: number[]) => [0, 1, 2, 3].map(i => (l[i] ? String(l[i]) : ''));
   const [cases, setCases] = useState(() => remplir(montants));
   // Revenus d'ailleurs (« Annuler mes changements ») : les cases reprennent les montants du bloc.
@@ -85,11 +90,11 @@ function ChampMontants({ montants, onChange }: { montants: number[]; onChange: (
     onChange(lireMontants(l.map(Number)));
   }
   return (
-    <div role="group" aria-label="Montants proposés, en euros" className="grid grid-cols-4 gap-2 bureau:gap-1.5"
+    <div role="group" aria-label={tr('Montants proposés, en euros', 'Suggested amounts, in euros')} className="grid grid-cols-4 gap-2 bureau:gap-1.5"
       onBlur={e => { if (!e.currentTarget.contains(e.relatedTarget)) setCases(remplir(montants)); }}>
       {cases.map((c, i) => (
         <input key={i} className={`${classeSaisie} text-center tabular-nums`} inputMode="numeric" enterKeyHint="done" value={c} placeholder={vides ? String(EXEMPLES_MONTANTS[i]) : ''}
-          onChange={e => changer(i, e.target.value)} aria-label={`Montant ${i + 1}, en euros`} />
+          onChange={e => changer(i, e.target.value)} aria-label={tr(`Montant ${i + 1}, en euros`, `Amount ${i + 1}, in euros`)} />
       ))}
     </div>
   );
@@ -164,6 +169,8 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
   /** Le compte principal, seul visible par Google pendant la bêta. */
   principal?: boolean;
 }) {
+  const langue = reglages.langue;
+  const tr = choix(langue);
   const droits = useDroits();
   /**
    * Un bloc neuf suit son adresse (23 octobre 2026, demandé par Lilian) : une vidéo YouTube, un agenda, un soutien ou un
@@ -177,7 +184,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
   const [b, setB] = useState<Bloc>(() => {
     const url = adresseSaisie(bloc.url);
     const t = autoDepart && url ? typeDeAdresse(url, !!droits.vitrine) : bloc.type;
-    return t === bloc.type ? bloc : versType(bloc, t, false);
+    return t === bloc.type ? bloc : versType(bloc, t, false, reglages.langue);
   });
   const lu = useRef<Lu>({ url: nouveau && !repris ? '' : adresseSaisie(bloc.url), inconnu: !nouveau || repris, titre: '', image: '', description: '', prix: '', icone: '' });
   /** Ce qu'on a écrit ou choisi soi-même depuis l'ouverture : une autre adresse n'y touche pas. */
@@ -295,7 +302,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
   const vignette = useRef<HTMLDivElement>(null);
   const boutonDupliquer = useRef<HTMLButtonElement>(null);
   // Ce qui est écrit : la saisie telle qu'elle était au dernier enregistrement (ou à l'ouverture), et sa version enregistrée.
-  const brut = useRef<Bloc>(repris ? nouveauBloc(bloc.type, bloc.id) : bloc);
+  const brut = useRef<Bloc>(repris ? nouveauBloc(bloc.type, bloc.id, reglages.langue) : bloc);
   const enregistre = useRef<Bloc | null>(nouveau ? null : bloc);
   // Le bloc tel qu'il était en ouvrant l'éditeur : « Annuler mes changements » y revient.
   const depart = useRef<Bloc | null>(nouveau ? null : bloc);
@@ -308,7 +315,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
   // Une saisie pas valable (une adresse effacée) laisse voir la dernière version écrite : le bloc ne disparaît pas de la page.
   useEffect(() => {
     const change = !memeBloc(b, brut.current);
-    const v = verifierBloc(b).bloc;
+    const v = verifierBloc(b, reglages.langue).bloc;
     brouillonRef.current?.(change ? v ?? enregistre.current ?? b : null);
     if (!bureau || nouveau || !change || !v) return;
     if (memeBloc(v, enregistre.current)) { brut.current = b; return; }
@@ -332,7 +339,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
     if (erreur && touches.some(k => erreurs[k])) setErreurs(e => Object.fromEntries(Object.entries(e).filter(([k]) => !touches.includes(k as ChampErreur))));
   };
   // Un lien partenaire a son nom et son aide à lui : c'est un lien, avec sa mention.
-  const type = typeDe(b);
+  const type = typeDe(b, reglages.langue);
   const avecUrl = TYPES_ADRESSE.includes(b.type);
   /** L'adresse tapée, si c'en est une (complétée de son https) ; dans un lien, un numéro entier est son adresse `tel:`. */
   const adresseValide = adresseSaisie(b.url) || (b.type === 'lien' ? numeroAppel(b.url) : '');
@@ -341,7 +348,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
 
   /** Vérifie le bloc ; renvoie la version à enregistrer, ou montre ce qui manque et mène au champ. */
   function valider(): Bloc | null {
-    const r = verifierBloc(b);
+    const r = verifierBloc(b, reglages.langue);
     if (r.bloc) return r.bloc;
     setErreurs(r.erreurs);
     if (r.erreurs.dates) {
@@ -357,7 +364,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
   /** Ce qui est tapé n'est pas encore écrit. */
   const commence = () => !memeBloc(b, brut.current);
   // Deux versions se comparent après la même vérification : une adresse rangée sans sa barre finale n'est pas un changement.
-  const norme = (x: Bloc) => verifierBloc(x).bloc ?? x;
+  const norme = (x: Bloc) => verifierBloc(x, reglages.langue).bloc ?? x;
   /**
    * Écrit ce qui est tapé, sans « Ajouter à ma page » ni « Terminé ». Un bloc neuf ne part pas en ligne d'un autre geste que
    * son bouton : il s'écrit masqué (voir `masque`), et l'éditeur, s'il reste ouvert sur lui, le montre ainsi.
@@ -401,14 +408,14 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
    * réglé se dit à droite de la ligne, en bleu comme dans Visibilité ; rien de réglé, le chevron seul : la case dit un
    * état, jamais un sommaire de ce qu'elle cache.
    */
-  const reglages_ = ([[!!b.partenariat, 'Lien partenaire'], [!!b.acces, 'Accès réservé'], [b.type === 'lien' && principal && !b.indexable, 'Pas sur Google'],
-    [b.type === 'inscription' && b.demanderPrenom, 'Prénom demandé'], [b.sensible, 'Plus de 18 ans']] as [boolean, string][])
+  const reglages_ = ([[!!b.partenariat, tr('Lien partenaire', 'Affiliate link')], [!!b.acces, tr('Accès réservé', 'Restricted access')], [b.type === 'lien' && principal && !b.indexable, tr('Pas sur Google', 'Not on Google')],
+    [b.type === 'inscription' && b.demanderPrenom, tr('Prénom demandé', 'First name asked')], [b.sensible, tr('Plus de 18 ans', '18+')]] as [boolean, string][])
     .filter(([oui]) => oui).map(([, nom]) => nom);
-  const reglees = reglages_.length > 2 ? `${reglages_.slice(0, 2).join(', ')} et ${reglages_.length - 2} de plus` : reglages_.join(', ');
+  const reglees = reglages_.length > 2 ? tr(`${reglages_.slice(0, 2).join(', ')} et ${reglages_.length - 2} de plus`, `${reglages_.slice(0, 2).join(', ')} and ${reglages_.length - 2} more`) : reglages_.join(', ');
   // Un titre, un texte, une vidéo, un soutien, un rendez-vous : rien que la page ne montre, pas de « Plus de réglages ».
   const plusVide = !['lien', 'produit', 'inscription'].includes(b.type);
-  const nomAuto = `Comme ma page (${NOMS_ANIMATIONS[reglages.animation].nom})`;
-  const nomIcone = b.icone ? NOMS_RESEAUX[b.icone] ?? PICTOS.find(p => p.nom === b.icone)?.libelle ?? '' : 'Aucune';
+  const nomAuto = tr(`Comme ma page (${nomsAnimations(langue)[reglages.animation].nom})`, `Same as my page (${nomsAnimations(langue)[reglages.animation].nom})`);
+  const nomIcone = b.icone ? NOMS_RESEAUX[b.icone] ?? PICTOS.find(p => p.nom === b.icone)?.libelle ?? '' : tr('Aucune', 'None');
 
   /** Le format de l'image d'un bloc : la photo d'un produit, la grande image d'une carte, la vignette d'un bouton. */
   const formatImage = (x: Bloc) => (x.type === 'produit' ? 'photo' as const : x.vedette && x.format === 'carte' ? 'large' as const : 'carre' as const);
@@ -426,20 +433,20 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
       aMoi.current.add('image');
       genreImage.current = 'photo';
       setB(avant => ({ ...avant, image }));
-    } catch { setErreur('L’image n’est pas passée. Essaie une autre photo.', 'image'); }
+    } catch { setErreur(tr('L’image n’est pas passée. Essaie une autre photo.', 'The image didn’t go through. Try another photo.'), 'image'); }
     finally { setEnvoi(false); setVisuelEnCours(false); if (fichier.current) fichier.current.value = ''; }
   }
 
   /** Le menu de la vignette : l'image du site (ou la photo de la boutique) et son logo, à la demande. */
   async function prendreDuSite(genre: 'partage' | 'logo') {
     const url = adresseSaisie(b.url);
-    if (!url) { setErreur('Indique d’abord l’adresse.'); return; }
+    if (!url) { setErreur(tr('Indique d’abord l’adresse.', 'Add the address first.')); return; }
     const format = formatImage(b);
     setVisuelEnCours(true); setErreur('');
     try {
       const site = await apercuSite(url, genre === 'logo' ? 'logo' : b.type === 'produit' || b.type === 'musique' ? 'partage' : true);
       if (!site.image) {
-        setErreur(genre === 'logo' ? 'Ce site n’a pas de logo assez net. Choisis une photo ou une icône.' : 'Ce site ne donne pas d’image. Choisis une photo.', 'image');
+        setErreur(genre === 'logo' ? tr('Ce site n’a pas de logo assez net. Choisis une photo ou une icône.', 'This site has no sharp enough logo. Pick a photo or an icon.') : tr('Ce site ne donne pas d’image. Choisis une photo.', 'This site gives no image. Pick a photo.'), 'image');
         return;
       }
       const image = await envoyerVisuel(site.image, genre === 'logo' ? 'logo' : site.visuel, format);
@@ -449,7 +456,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
       lu.current.image = image;
       setB(avant => (adresseSaisie(avant.url) === url ? { ...avant, image } : avant));
       vibrer(10);
-    } catch { setErreur('Impossible de lire ce site pour l’instant. Choisis une photo à la place.', 'image'); }
+    } catch { setErreur(tr('Impossible de lire ce site pour l’instant. Choisis une photo à la place.', 'Can’t read this site right now. Pick a photo instead.'), 'image'); }
     finally { setVisuelEnCours(false); }
   }
 
@@ -466,7 +473,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
     const url = adresseSaisie(saisie);
     // Un numéro entier, dans un lien, l'appelle : rien à lire, rien à redire.
     if (!url && b.type === 'lien' && numeroAppel(saisie)) return;
-    if (saisie.trim() && !url) { setErreur(pourquoiPasAdresse(saisie)); return; }
+    if (saisie.trim() && !url) { setErreur(pourquoiPasAdresse(saisie, reglages.langue)); return; }
     if (!url) return;
     const ancien = lu.current;
     // La même adresse ne se relit pas, sauf pour donner un texte à un lien qui n'en a plus.
@@ -481,8 +488,8 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
       const t = typeDeAdresse(url, !!droits.vitrine);
       if (t !== x.type) {
         const texteAMoi = aMoi.current.has('titre');
-        x = versType(x, t, texteAMoi);
-        setB(avant => versType(avant, t, texteAMoi));
+        x = versType(x, t, texteAMoi, reglages.langue);
+        setB(avant => versType(avant, t, texteAMoi, reglages.langue));
         setErreurs({});
       }
     }
@@ -495,7 +502,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
 
   /** Le texte venait-il de l'ancienne adresse ? Vide, lu par Hopla, le nom de l'ancien site, le texte de départ du bloc, ou l'adresse effacée puis retapée. */
   const texteLibre = (x: Bloc, ancien: Lu, effacee: boolean) => !x.titre.trim() || (!aMoi.current.has('titre')
-    && (effacee || x.titre === ancien.titre || x.titre === nouveauBloc(x.type, x.id).titre || (!!ancien.url && x.titre === nomSite(ancien.url))));
+    && (effacee || x.titre === ancien.titre || estTitreParDefaut(x.type, x.titre) || (!!ancien.url && x.titre === nomSite(ancien.url))));
   /** Un bloc ouvert tel qu'il était : son texte venait-il de son ancien site ? Celui-ci se relit, en même temps que le nouveau, pour le savoir. */
   const ancienneLecture = (x: Bloc, ancien: Lu) => (ancien.inconnu && ancien.url && x.titre.trim() && !aMoi.current.has('titre')
     ? apercuSite(ancien.url, false).catch(() => null) : Promise.resolve(null));
@@ -552,7 +559,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
     const titre = site.titre.slice(0, 80);
     lu.current = { ...lu.current, titre, prix: site.prix, image: '', description: '' };
     setB(avant => (adresseSaisie(avant.url) !== url || avant.type !== 'lien' ? avant
-      : { ...versType(avant, 'produit', texteAMoi), titre: texteAMoi && avant.titre.trim() ? avant.titre : titre, prix: site.prix }));
+      : { ...versType(avant, 'produit', texteAMoi, reglages.langue), titre: texteAMoi && avant.titre.trim() ? avant.titre : titre, prix: site.prix }));
     if (aMoi.current.has('image')) return;
     setVisuelEnCours(true);
     try {
@@ -593,11 +600,11 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
         image: prendImage && avant.image === x.image ? image : avant.image,
       }));
       if (neuf.titre || neuf.prix || image) vibrer(10);
-      else setErreur('Cette boutique ne donne ni nom ni prix. Ajoute-les à la main.', 'image');
+      else setErreur(tr('Cette boutique ne donne ni nom ni prix. Ajoute-les à la main.', 'This shop gives no name or price. Add them yourself.'), 'image');
     } catch {
       // Rien n'est lu : la même adresse se relira en quittant le champ.
       lu.current = ancien;
-      setErreur('Impossible de lire cette boutique pour l’instant. Ajoute le nom, le prix et la photo à la main.', 'image');
+      setErreur(tr('Impossible de lire cette boutique pour l’instant. Ajoute le nom, le prix et la photo à la main.', 'Can’t read this shop right now. Add the name, price and photo yourself.'), 'image');
     } finally { setLecture(false); setVisuelEnCours(false); }
   }
 
@@ -663,7 +670,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
     const t = b.titre.trim().toLowerCase();
     if (nouveau || !t) return false;
     const url = adresseSaisie(b.url);
-    const venus = [nouveauBloc(b.type, b.id).titre, lu.current.titre, ...(url ? [nomSite(url), nomAgenda(url), nomSoutien(url), hoteDe(url)] : [])];
+    const venus = [titreParDefaut(b.type, 'fr'), titreParDefaut(b.type, 'en'), lu.current.titre, ...(url ? [nomSite(url), nomAgenda(url), nomSoutien(url), hoteDe(url)] : [])];
     return !venus.some(v => v.trim().toLowerCase() === t);
   }
   /**
@@ -692,7 +699,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
     const texteGarde = garderTexte() || (t === 'video' && !!lu.current.titre && avant.titre === lu.current.titre);
     lu.current = { ...lu.current, url: '' };
     immediat.current = true;
-    setB(versType(avant, t, texteGarde));
+    setB(versType(avant, t, texteGarde, reglages.langue));
   }
   /** « En faire un simple lien » : le bloc cesse de suivre son adresse, et redevient le lien qu'il était, ou un lien qui lit son site. */
   function enSimpleLien() {
@@ -710,7 +717,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
    */
   function enListeEmail() {
     vibrer(6);
-    setB(x => versType(x, 'inscription', x.titre.trim() !== nouveauBloc('newsletter', x.id).titre));
+    setB(x => versType(x, 'inscription', !!x.titre.trim() && !estTitreParDefaut('newsletter', x.titre), reglages.langue));
     requestAnimationFrame(() => { if (!document.activeElement || document.activeElement === document.body) focusSaisie(document.getElementById('bloc-titre'), { preventScroll: true }); });
   }
   // Au retour d'un achat, le lien d'où l'on était parti prend le bloc qu'on voulait en faire.
@@ -734,10 +741,10 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
   useEffect(() => {
     const avant = vu.current;
     vu.current = { type: b.type, partenaire: !!b.partenariat };
-    if (b.type !== avant.type && b.type in DEVENU) setAnnonce(`C’est maintenant ${DEVENU[b.type as TypeAdresse]}${b.type === 'soutien' && vedettePerdue ? ', qui ne se met pas en avant' : ''}.`);
-    else if (b.type !== avant.type && b.type === 'inscription') setAnnonce('C’est maintenant une liste e-mail.');
-    else if (!b.partenariat && avant.partenaire) setAnnonce('Ce n’est plus un lien partenaire.');
-    else if (b.partenariat && !avant.partenaire) setAnnonce(`C’est maintenant un lien partenaire, avec la mention « ${b.partenariat.mention === 'collaboration' ? 'Collaboration commerciale' : 'Publicité'} ».`);
+    if (b.type !== avant.type && b.type in DEVENU) setAnnonce(`${tr('C’est maintenant', 'It’s now')} ${devenu(b.type as TypeAdresse, langue)}${b.type === 'soutien' && vedettePerdue ? tr(', qui ne se met pas en avant', ', which can’t be featured') : ''}.`);
+    else if (b.type !== avant.type && b.type === 'inscription') setAnnonce(tr('C’est maintenant une liste e-mail.', 'It’s now an email list.'));
+    else if (!b.partenariat && avant.partenaire) setAnnonce(tr('Ce n’est plus un lien partenaire.', 'It’s no longer an affiliate link.'));
+    else if (b.partenariat && !avant.partenaire) setAnnonce(tr(`C’est maintenant un lien partenaire, avec la mention « ${b.partenariat.mention === 'collaboration' ? 'Collaboration commerciale' : 'Publicité'} ».`, `It’s now an affiliate link, with the “${b.partenariat.mention === 'collaboration' ? 'Sponsored' : 'Ad'}” disclosure.`));
   }, [b.type, b.partenariat]);
 
   // Un geste sous l'adresse change le bloc et disparaît avec lui : la main passe au geste qui le remplace (« En faire un
@@ -752,7 +759,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
     // Le clavier ou la souris ont repris la main entre-temps : on la leur laisse.
     if (ici && ici !== document.body) { apresGeste.current = null; return; }
     const cible = attente.suite === 'partenaire'
-      ? document.querySelector<HTMLElement>('[aria-label="Mention du lien partenaire"] [aria-checked="true"]')
+      ? document.querySelector<HTMLElement>(`[aria-label="${tr('Mention du lien partenaire', 'Affiliate link disclosure')}"] [aria-checked="true"]`)
       : gestes.current?.querySelector<HTMLElement>('button');
     if (cible) { apresGeste.current = null; cible.focus({ preventScroll: true }); return; }
     const t = setTimeout(() => {
@@ -855,13 +862,13 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
   // lien Calendly qui vient d'en devenir un) : on sait lequel est ouvert. Un texte, une preuve ou la dernière vidéo gardent
   // celui de leur genre, leur « titre » n'étant pas un nom.
   const sonNom = ['texte', 'preuve', 'derniere-video'].includes(b.type) ? '' : b.type === 'lieu' ? b.titre.trim() || b.adressePostale.split('\n')[0].trim() : b.titre.trim();
-  const titre = nouveau ? type.nom : [sonNom || type.nom, !b.public && 'masqué', horsCreneauOuDates(b, !!droits.heure) && 'programmé'].filter(Boolean).join(' · ');
+  const titre = nouveau ? type.nom : [sonNom || type.nom, !b.public && tr('masqué', 'hidden'), horsCreneauOuDates(b, !!droits.heure) && tr('programmé', 'scheduled')].filter(Boolean).join(' · ');
   const ligne = 'flex min-h-11 items-center gap-2 bureau:min-h-9';
 
   const grilleIcones = icones && (
     // Toutes les icônes d'un coup, sans boîte qui défile dans la feuille qui défile : le pouce ne fait bouger que la feuille.
-    <div role="radiogroup" onKeyDown={e => flechesRadio(e, false)} aria-label="Icône" className="adm-groupe grid grid-cols-[repeat(auto-fill,minmax(44px,1fr))] gap-1.5 p-2 bureau:grid-cols-[repeat(auto-fill,minmax(36px,1fr))]">
-      {[{ nom: '', libelle: 'Sans icône' }, ...RESEAUX.map(r => ({ nom: r as string, libelle: NOMS_RESEAUX[r] })), ...PICTOS].map(p => {
+    <div role="radiogroup" onKeyDown={e => flechesRadio(e, false)} aria-label={tr('Icône', 'Icon')} className="adm-groupe grid grid-cols-[repeat(auto-fill,minmax(44px,1fr))] gap-1.5 p-2 bureau:grid-cols-[repeat(auto-fill,minmax(36px,1fr))]">
+      {[{ nom: '', libelle: tr('Sans icône', 'No icon') }, ...RESEAUX.map(r => ({ nom: r as string, libelle: NOMS_RESEAUX[r] })), ...PICTOS].map(p => {
         // Une image en place n'est pas « Sans icône » : rien n'est coché tant qu'elle est là.
         const choisi = p.nom ? b.icone === p.nom : !b.icone && !b.image;
         return (
@@ -873,7 +880,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
           </button>
         );
       })}
-      {b.icone && !ICONES[b.icone] && <span className="relative grid aspect-square place-items-center text-xl after:absolute after:bottom-0.5 after:h-1 after:w-1 after:rounded-full after:bg-bleu" aria-label="Emoji actuel">{b.icone}</span>}
+      {b.icone && !ICONES[b.icone] && <span className="relative grid aspect-square place-items-center text-xl after:absolute after:bottom-0.5 after:h-1 after:w-1 after:rounded-full after:bg-bleu" aria-label={tr('Emoji actuel', 'Current emoji')}>{b.icone}</span>}
     </div>
   );
   const champFichier = <input ref={fichier} type="file" accept="image/*" className="adm-fichier" tabIndex={-1} aria-hidden="true" onChange={e => choisirImage(e.target.files?.[0])} />;
@@ -885,8 +892,8 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
     </Champ>
   );
   // Ce que disent, sans s'ouvrir, la ligne de l'apparence d'un bloc mis en avant et celle de son animation.
-  const resumeAnimation = b.animation === 'auto' ? 'Comme ma page' : NOMS_ANIMATIONS[b.animation].nom;
-  const resumeApparence = b.type === 'produit' ? 'Grande carte' : `${NOMS_FORMES[b.format]}, ${b.teinte === 'accent' ? 'couleur d’accent' : 'comme les autres'}`;
+  const resumeAnimation = b.animation === 'auto' ? tr('Comme ma page', 'Same as my page') : nomsAnimations(langue)[b.animation].nom;
+  const resumeApparence = b.type === 'produit' ? tr('Grande carte', 'Large card') : `${nomsFormes(tr)[b.format]}, ${b.teinte === 'accent' ? tr('couleur d’accent', 'accent color') : tr('comme les autres', 'like the others')}`;
   const formeCouleur = b.type === 'lien' && b.vedette && (
     <div className="grid gap-3">
       <div>
@@ -907,33 +914,33 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
       <ListeChoix label="Animation" valeur={b.animation} onChange={a => maj({ animation: a })}
         options={ANIMATIONS_BLOC.map(a => a === 'auto'
           ? { id: a, nom: nomAuto }
-          : { id: a, nom: NOMS_ANIMATIONS[a].nom })} />
+          : { id: a, nom: nomsAnimations(langue)[a].nom })} />
     </Repli>
   );
   /** « Mis en avant » vient d'être allumé : au bureau, son apparence arrive dépliée, on voit ce qu'il ouvre. */
   const vedetteAllumee = useRef(false);
   const enAvant = !['titre', 'texte', 'newsletter', 'inscription', 'preuve', 'soutien', 'faq', 'coordonnees', 'lieu', 'galerie', 'formulaire', 'flux'].includes(b.type);
-  const aideVedette = b.type === 'produit' ? 'Une grande carte, de la couleur d’accent de ta page.' : b.type === 'reservation' ? 'De la couleur d’accent de ta page.' : 'En plus grand, de la couleur d’accent de ta page.';
-  const vedette = (compact: boolean) => enAvant && <Interrupteur key="vedette" compact={compact} label="Mis en avant" aide={aideVedette} actif={b.vedette} onChange={v => { vedetteAllumee.current = v; maj({ vedette: v }); }} />;
+  const aideVedette = b.type === 'produit' ? tr('Une grande carte, de la couleur d’accent de ta page.', 'A large card, in your page’s accent color.') : b.type === 'reservation' ? tr('De la couleur d’accent de ta page.', 'In your page’s accent color.') : tr('En plus grand, de la couleur d’accent de ta page.', 'Larger, in your page’s accent color.');
+  const vedette = (compact: boolean) => enAvant && <Interrupteur key="vedette" compact={compact} label={tr('Mis en avant', 'Featured')} aide={aideVedette} actif={b.vedette} onChange={v => { vedetteAllumee.current = v; maj({ vedette: v }); }} />;
   const bascules = (compact: boolean, sansVedette = false) => [
-    b.type === 'inscription' && <Interrupteur key="prenom" compact={compact} label="Demander le prénom" actif={b.demanderPrenom} onChange={v => maj({ demanderPrenom: v })} />,
+    b.type === 'inscription' && <Interrupteur key="prenom" compact={compact} label={tr('Demander le prénom', 'Ask for the first name')} actif={b.demanderPrenom} onChange={v => maj({ demanderPrenom: v })} />,
     !sansVedette && vedette(compact),
     // Un lien qui devient partenaire prend sa mention ; éteint puis rallumé, il retrouve celle d'avant, et son code.
     (b.type === 'lien' || b.type === 'produit') && (
-      <Interrupteur key="partenaire" compact={compact} label="Lien partenaire" actif={!!b.partenariat}
+      <Interrupteur key="partenaire" compact={compact} label={tr('Lien partenaire', 'Affiliate link')} actif={!!b.partenariat}
         onChange={v => { if (!v) partenariatGarde.current = b.partenariat; maj({ partenariat: v ? partenariatGarde.current ?? PARTENARIAT_NEUF : null }); }} />
     ),
-    b.type === 'lien' && principal && <Interrupteur key="google" compact={compact} label="Visible par Google" actif={b.indexable} onChange={v => maj({ indexable: v })} />,
+    b.type === 'lien' && principal && <Interrupteur key="google" compact={compact} label={tr('Visible par Google', 'Visible to Google')} actif={b.indexable} onChange={v => maj({ indexable: v })} />,
     // Pour tous les comptes : la page demande au visiteur s'il a 18 ans avant d'ouvrir le lien.
-    (b.type === 'lien' || b.type === 'produit') && <Interrupteur key="sensible" compact={compact} label="Réservé aux plus de 18 ans" actif={b.sensible} onChange={v => maj({ sensible: v })} />,
+    (b.type === 'lien' || b.type === 'produit') && <Interrupteur key="sensible" compact={compact} label={tr('Réservé aux plus de 18 ans', '18+ only')} actif={b.sensible} onChange={v => maj({ sensible: v })} />,
   ].filter(Boolean);
   // La visibilité, une ligne de la première page du bloc qui mène à sa page ; l'accès réservé, rare, derrière « Plus de réglages ».
   const visibilite = <ReglageVisibilite key={`visibilite-${b.id}`} b={b} maj={maj} erreur={erreurDe('dates')} reseaux={reseauxDePartage(reglages.vuesReseaux)} />;
   const acces = b.type === 'lien' && <RegleAcces key={`acces-${b.id}`} b={b} maj={maj} prises={prises} />;
-  const dejaVisible = resumeVisibilite(b, !!droits.heure, !!droits.pays);
+  const dejaVisible = resumeVisibilite(b, !!droits.heure, !!droits.pays, langue);
   // Un cran plus haut ou plus bas, au téléphone comme au bureau (où la poignée de la rangée le fait aussi).
   const fleche = (sens: -1 | 1) => place && onDeplacer && (
-    <button type="button" disabled={sens < 0 ? place.rang === 0 : place.rang === place.total - 1} onClick={() => onDeplacer(enregistre.current ?? b, sens)} aria-label={sens < 0 ? 'Monter d’un cran' : 'Descendre d’un cran'}
+    <button type="button" disabled={sens < 0 ? place.rang === 0 : place.rang === place.total - 1} onClick={() => onDeplacer(enregistre.current ?? b, sens)} aria-label={sens < 0 ? tr('Monter d’un cran', 'Move up one') : tr('Descendre d’un cran', 'Move down one')}
       className="grid h-11 w-10 place-items-center text-white/75 hover:text-white disabled:text-white/25">
       <Icone nom={sens < 0 ? 'ui-monter' : 'ui-descendre'} taille={18} />
     </button>
@@ -945,25 +952,25 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
   // Avant l'adresse, l'aide d'un bloc neuf, sous le champ qui l'attend : les sites qui conviennent (agendas, soutiens,
   // boutiques) ; pour un lien, ce qu'une adresse collée devient, puisque le choix des blocs ne nomme plus ces blocs-là.
   const aideNeuf = !nouveau ? undefined
-    : b.type === 'lien' && !b.partenariat ? (droits.vitrine ? 'Colle une vidéo, une musique, un agenda, un produit ou une page de soutien : le bloc s’adapte.' : 'Colle une vidéo ou une musique : elle se lit dans ta page.')
+    : b.type === 'lien' && !b.partenariat ? (droits.vitrine ? tr('Colle une vidéo, une musique, un agenda, un produit ou une page de soutien : le bloc s’adapte.', 'Paste a video, music, a calendar, a product or a support page: the block adapts.') : tr('Colle une vidéo ou une musique : elle se lit dans ta page.', 'Paste a video or music: it plays right in your page.'))
     : type.aide && `${type.aide}.`;
   // Une fois l'adresse là, une ligne cochée dit ce qu'elle fera, pour chaque bloc qui mène quelque part : la même forme partout.
-  const aideType = app ? ok(`Ce lien s’ouvre directement dans l’app ${app}, même depuis ${['Instagram', 'TikTok'].filter(n => n !== app).join(' ou ')}.`)
+  const aideType = app ? ok(tr(`Ce lien s’ouvre directement dans l’app ${app}, même depuis ${['Instagram', 'TikTok'].filter(n => n !== app).join(' ou ')}.`, `This link opens straight in the ${app} app, even from ${['Instagram', 'TikTok'].filter(n => n !== app).join(' or ')}.`))
     : !adresseValide ? aideNeuf
-    : adresseValide.startsWith('tel:') ? ok('Un toucher appelle ce numéro.')
-    : adresseValide.startsWith('mailto:') ? ok(`Un toucher écrit à ${adresseValide.slice(7)}.`)
-    : b.type === 'video' ? ok('La vidéo se lit dans ta page, sans la quitter.')
-    : b.type === 'derniere-video' ? ok('Ta vidéo la plus récente se lit dans ta page, et change seule à chaque publication.')
-    : b.type === 'flux' ? ok('Tes trois derniers articles s’affichent, et se mettent à jour seuls.')
-    : b.type === 'musique' ? ok(`Le lecteur${lecteurDe(adresseValide) ? ` ${lecteurDe(adresseValide)!.nom}` : ''} s’ouvre dans ta page, sans la quitter.`)
-    : b.type === 'reservation' ? ok(seIntegre(adresseValide) ? 'La réservation s’ouvre dans ta page, sans la quitter.' : `${nomAgenda(adresseValide)} s’ouvre sur son site.`)
-    : b.type === 'soutien' ? ok(avecMontants(adresseValide) ? 'Tes visiteurs choisissent un montant, puis paient sur PayPal.'
-      : soutienDe(adresseValide) ? `Tes visiteurs choisissent le montant sur ${nomSoutien(adresseValide)}.` : `Tes visiteurs te soutiennent sur ${nomSoutien(adresseValide)}.`)
+    : adresseValide.startsWith('tel:') ? ok(tr('Un toucher appelle ce numéro.', 'One tap calls this number.'))
+    : adresseValide.startsWith('mailto:') ? ok(tr(`Un toucher écrit à ${adresseValide.slice(7)}.`, `One tap emails ${adresseValide.slice(7)}.`))
+    : b.type === 'video' ? ok(tr('La vidéo se lit dans ta page, sans la quitter.', 'The video plays in your page, without leaving it.'))
+    : b.type === 'derniere-video' ? ok(tr('Ta vidéo la plus récente se lit dans ta page, et change seule à chaque publication.', 'Your latest video plays in your page, and updates itself each time you publish.'))
+    : b.type === 'flux' ? ok(tr('Tes trois derniers articles s’affichent, et se mettent à jour seuls.', 'Your three latest posts show up, and update themselves.'))
+    : b.type === 'musique' ? ok(tr(`Le lecteur${lecteurDe(adresseValide) ? ` ${lecteurDe(adresseValide)!.nom}` : ''} s’ouvre dans ta page, sans la quitter.`, `The${lecteurDe(adresseValide) ? ` ${lecteurDe(adresseValide)!.nom}` : ''} player opens in your page, without leaving it.`))
+    : b.type === 'reservation' ? ok(seIntegre(adresseValide) ? tr('La réservation s’ouvre dans ta page, sans la quitter.', 'Booking opens in your page, without leaving it.') : tr(`${nomAgenda(adresseValide)} s’ouvre sur son site.`, `${nomAgenda(adresseValide)} opens on its own site.`))
+    : b.type === 'soutien' ? ok(avecMontants(adresseValide) ? tr('Tes visiteurs choisissent un montant, puis paient sur PayPal.', 'Your visitors pick an amount, then pay on PayPal.')
+      : soutienDe(adresseValide) ? tr(`Tes visiteurs choisissent le montant sur ${nomSoutien(adresseValide)}.`, `Your visitors pick the amount on ${nomSoutien(adresseValide)}.`) : tr(`Tes visiteurs te soutiennent sur ${nomSoutien(adresseValide)}.`, `Your visitors support you on ${nomSoutien(adresseValide)}.`))
     // Une boutique, un stage, un atelier : la page montre la photo et le prix, et mène à la fiche, où l'on achète ou réserve.
-    : b.type === 'produit' ? ok(`Sa photo et son prix s’affichent, et il mène à ${nomSite(adresseValide) || hoteDe(adresseValide)}.`)
+    : b.type === 'produit' ? ok(tr(`Sa photo et son prix s’affichent, et il mène à ${nomSite(adresseValide) || hoteDe(adresseValide)}.`, `Its photo and price show up, and it links to ${nomSite(adresseValide) || hoteDe(adresseValide)}.`))
     : undefined;
   const champAdresse = avecUrl && (
-    <Champ label={b.type === 'derniere-video' ? 'Adresse de ta chaîne YouTube' : b.type === 'flux' ? 'Adresse de ton blog ou de son flux RSS' : b.type === 'video' ? 'Adresse de la vidéo' : b.type === 'musique' ? 'Adresse du titre, de l’album ou du podcast' : b.type === 'produit' ? 'Adresse du produit' : b.type === 'reservation' ? 'Adresse de ton agenda' : b.type === 'soutien' ? 'Adresse de ta page de soutien' : 'Adresse'} erreur={erreurDe('url')} aide={aideType}>
+    <Champ label={b.type === 'derniere-video' ? tr('Adresse de ta chaîne YouTube', 'Your YouTube channel address') : b.type === 'flux' ? tr('Adresse de ton blog ou de son flux RSS', 'Your blog or RSS feed address') : b.type === 'video' ? tr('Adresse de la vidéo', 'Video address') : b.type === 'musique' ? tr('Adresse du titre, de l’album ou du podcast', 'Track, album or podcast address') : b.type === 'produit' ? tr('Adresse du produit', 'Product address') : b.type === 'reservation' ? tr('Adresse de ton agenda', 'Your calendar address') : b.type === 'soutien' ? tr('Adresse de ta page de soutien', 'Your support page address') : tr('Adresse', 'Address')} erreur={erreurDe('url')} aide={aideType}>
       <input id="bloc-adresse" className={classeSaisie} type="url" inputMode="url" autoCapitalize="none" autoCorrect="off"
         placeholder={b.type === 'derniere-video' ? 'https://youtube.com/@…' : b.type === 'video' ? 'https://youtu.be/…' : b.type === 'musique' ? 'https://open.spotify.com/…' : b.type === 'soutien' ? 'https://paypal.me/…' : b.type === 'reservation' ? 'https://calendly.com/…' : 'https://…'}
         value={b.url} onChange={e => { if (!e.target.value.trim()) efface.current = true; maj({ url: e.target.value }); }} onBlur={() => lireAdresse()} autoFocus={focusAuto(nouveau && !bloc.url)}
@@ -986,10 +993,10 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
   const appelLibre = appel === 'video' || appel === 'musique' || appel === 'derniere-video' || (appel === 'flux' ? !!droits.flux : !!droits.vitrine);
   const proposer = appel !== 'lien' && appelLibre && !auto.current;
   const phraseVitrine = appel === 'lien' || appelLibre || !adresseValide ? ''
-    : appel === 'flux' ? 'Avec Hopla Pro, ce lien devient tes trois derniers articles, toujours à jour.'
-    : appel === 'reservation' ? (seIntegre(adresseValide) ? `Avec Hopla Starter, ton agenda ${nomAgenda(adresseValide)} s’ouvre dans ta page, sans la quitter.` : 'Avec Hopla Starter, ce lien devient une prise de rendez-vous.')
-    : appel === 'soutien' ? (avecMontants(adresseValide) ? 'Avec Hopla Starter, tes visiteurs choisissent un montant, puis paient sur PayPal.' : 'Avec Hopla Starter, ce lien devient un bouton « Me soutenir ».')
-    : 'Avec Hopla Starter, ce produit s’affiche avec sa photo et son prix.';
+    : appel === 'flux' ? tr('Avec Hopla Pro, ce lien devient tes trois derniers articles, toujours à jour.', 'With Hopla Pro, this link becomes your three latest posts, always up to date.')
+    : appel === 'reservation' ? (seIntegre(adresseValide) ? tr(`Avec Hopla Starter, ton agenda ${nomAgenda(adresseValide)} s’ouvre dans ta page, sans la quitter.`, `With Hopla Starter, your ${nomAgenda(adresseValide)} calendar opens in your page, without leaving it.`) : tr('Avec Hopla Starter, ce lien devient une prise de rendez-vous.', 'With Hopla Starter, this link becomes a booking block.'))
+    : appel === 'soutien' ? (avecMontants(adresseValide) ? tr('Avec Hopla Starter, tes visiteurs choisissent un montant, puis paient sur PayPal.', 'With Hopla Starter, your visitors pick an amount, then pay on PayPal.') : tr('Avec Hopla Starter, ce lien devient un bouton « Me soutenir ».', 'With Hopla Starter, this link becomes a “Support me” button.'))
+    : tr('Avec Hopla Starter, ce produit s’affiche avec sa photo et son prix.', 'With Hopla Starter, this product shows with its photo and price.');
   // Un bloc d'adresse (une vidéo, un agenda, un soutien, un produit), neuf ou posé, redevient d'un geste un simple lien (24 octobre
   // 2026) : la détection propose, elle ne décide pas. Le lien garde sa place et sa visibilité.
   const versLien = avecUrl && b.type !== 'lien' && !!adresseValide;
@@ -1002,12 +1009,12 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
   const affilie = (b.type === 'lien' || b.type === 'produit') && !b.partenariat && web && lienAffilie(adresseValide);
   const pasPartenaire = (b.type === 'lien' || b.type === 'produit') && !!b.partenariat && !!adresseValide;
   const gestesAdresse = [
-    versLien ? geste('En faire un simple lien', enSimpleLien) : proposer && geste(EN_FAIRE[appel], () => enType(appel)),
-    affilie && geste('C’est un lien partenaire\u202f?', () => maj({ partenariat: partenariatGarde.current ?? PARTENARIAT_NEUF }), 'partenaire'),
-    pasPartenaire && geste('Ce n’est pas un lien partenaire', () => { partenariatGarde.current = b.partenariat; maj({ partenariat: null }); }),
+    versLien ? geste(tr('En faire un simple lien', 'Make it a simple link'), enSimpleLien) : proposer && geste(phraseEnFaire(appel, reglages.langue), () => enType(appel)),
+    affilie && geste(tr('C’est un lien partenaire\u202f?', 'Is this an affiliate link?'), () => maj({ partenariat: partenariatGarde.current ?? PARTENARIAT_NEUF }), 'partenaire'),
+    pasPartenaire && geste(tr('Ce n’est pas un lien partenaire', 'It’s not an affiliate link'), () => { partenariatGarde.current = b.partenariat; maj({ partenariat: null }); }),
   ].filter(Boolean);
   // Un bouton « Me soutenir » ne se met pas en avant : un lien mis en avant qui en devient un le dit, sous son adresse.
-  const noteVedette = b.type === 'soutien' && vedettePerdue && <p className="text-[12.5px] leading-snug text-white/55">Un bouton «\u202fMe soutenir\u202f» ne se met pas en avant.</p>;
+  const noteVedette = b.type === 'soutien' && vedettePerdue && <p className="text-[12.5px] leading-snug text-white/55">{tr('Un bouton «\u202fMe soutenir\u202f» ne se met pas en avant.', 'A “Support me” button can’t be featured.')}</p>;
   // Sans Starter, ce que l'offre ferait de l'adresse se dit juste sous elle, avant le texte.
   const vitrineSousAdresse = phraseVitrine && (appel === 'flux' ? <Reserve fonction="flux" phrase={phraseVitrine} />
     : <Reserve fonction="vitrine" type={appel as TypeVitrine} phrase={phraseVitrine} />);
@@ -1037,22 +1044,22 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
   const source = b.image ? genreImage.current : !produit && b.icone ? 'icone' : null;
   const coche = (de: (typeof source)[]) => (source ? de.includes(source) : undefined);
   const elementsVignette: ElementMenu[] = [
-    ...(web && !rdv ? [{ nom: produit ? 'Photo de la boutique' : musique ? 'Pochette' : 'Image du site', coche: coche(['partage']), action: () => void prendreDuSite('partage') }] : []),
-    ...(web && !produit && !rdv && !musique ? [{ nom: 'Logo du site', coche: coche(['logo']), action: () => void prendreDuSite('logo') }] : []),
-    { nom: 'Choisir une photo', coche: coche(['photo']), action: () => choisirFichier(fichier.current, vignette.current) },
-    ...(!produit && !musique ? [{ nom: 'Choisir une icône', coche: coche(['icone']), action: () => setIcones(true) }] : []),
-    ...(b.image ? [{ nom: produit ? 'Retirer la photo' : musique ? 'Retirer la pochette' : 'Retirer l’image', action: () => maj({ image: '' }) }] : []),
-    ...(!produit && !b.image && b.icone ? [{ nom: 'Retirer l’icône', action: () => maj({ icone: '' }) }] : []),
+    ...(web && !rdv ? [{ nom: produit ? tr('Photo de la boutique', 'Shop photo') : musique ? tr('Pochette', 'Cover') : tr('Image du site', 'Site image'), coche: coche(['partage']), action: () => void prendreDuSite('partage') }] : []),
+    ...(web && !produit && !rdv && !musique ? [{ nom: tr('Logo du site', 'Site logo'), coche: coche(['logo']), action: () => void prendreDuSite('logo') }] : []),
+    { nom: tr('Choisir une photo', 'Pick a photo'), coche: coche(['photo']), action: () => choisirFichier(fichier.current, vignette.current) },
+    ...(!produit && !musique ? [{ nom: tr('Choisir une icône', 'Pick an icon'), coche: coche(['icone']), action: () => setIcones(true) }] : []),
+    ...(b.image ? [{ nom: produit ? tr('Retirer la photo', 'Remove photo') : musique ? tr('Retirer la pochette', 'Remove cover') : tr('Retirer l’image', 'Remove image'), action: () => maj({ image: '' }) }] : []),
+    ...(!produit && !b.image && b.icone ? [{ nom: tr('Retirer l’icône', 'Remove icon'), action: () => maj({ icone: '' }) }] : []),
   ];
   const rempli = !visuelEnCours && (!!b.image || (!produit && !!iconeVue));
-  const nomVignette = produit ? (b.image ? 'Photo du produit : la changer ou la retirer' : 'Ajouter la photo du produit')
-    : musique ? (b.image ? 'Pochette : la changer ou la retirer' : 'Ajouter une pochette')
-    : b.image ? 'Image du bouton : la changer ou la retirer' : b.icone ? `Icône du bouton, ${nomIcone} : la changer ou la retirer`
-    : rdv ? 'Icône du bouton : la changer, ou choisir une photo' : 'Ajouter une image ou une icône';
+  const nomVignette = produit ? (b.image ? tr('Photo du produit : la changer ou la retirer', 'Product photo: change or remove it') : tr('Ajouter la photo du produit', 'Add the product photo'))
+    : musique ? (b.image ? tr('Pochette : la changer ou la retirer', 'Cover: change or remove it') : tr('Ajouter une pochette', 'Add a cover'))
+    : b.image ? tr('Image du bouton : la changer ou la retirer', 'Button image: change or remove it') : b.icone ? tr(`Icône du bouton, ${nomIcone} : la changer ou la retirer`, `Button icon, ${nomIcone}: change or remove it`)
+    : rdv ? tr('Icône du bouton : la changer, ou choisir une photo', 'Button icon: change it, or pick a photo') : tr('Ajouter une image ou une icône', 'Add an image or an icon');
   const case_ = 'grid h-7 w-7 shrink-0 place-items-center bureau:h-6 bureau:w-6';
   const vignetteChamp = avecVignette && (
     <div ref={vignette} className="absolute inset-y-0 left-0 flex items-center pl-1 bureau:pl-0.5">
-      <Menu label={produit ? 'Photo du produit' : musique ? 'Pochette' : 'Vignette du bouton'} titre={nomVignette} elements={elementsVignette} aligne="gauche"
+      <Menu label={produit ? tr('Photo du produit', 'Product photo') : musique ? tr('Pochette', 'Cover') : tr('Vignette du bouton', 'Button thumbnail')} titre={nomVignette} elements={elementsVignette} aligne="gauche"
         className="flex h-11 items-center gap-[3px] rounded-lg px-1 text-white/45 transition hover:text-white/80 bureau:h-8">
         {visuelEnCours
           ? <span className={case_} aria-hidden="true"><span className="h-4 w-4 animate-spin rounded-full border-2 border-white/15 border-t-white/60 motion-reduce:animate-none" /></span>
@@ -1068,13 +1075,13 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
   );
   const champTitre = b.type !== 'derniere-video' && b.type !== 'preuve' && (avecVignette ? (
     <div>
-      <label htmlFor="bloc-titre" className="mb-1.5 block text-[13px] font-semibold text-white">{produit ? 'Nom du produit' : musique ? 'Titre' : 'Texte du bouton'}</label>
+      <label htmlFor="bloc-titre" className="mb-1.5 block text-[13px] font-semibold text-white">{produit ? tr('Nom du produit', 'Product name') : musique ? tr('Titre', 'Title') : tr('Texte du bouton', 'Button text')}</label>
       {/* Le champ d'abord, la vignette par-dessus : le libellé nomme le champ, pas le bouton de la vignette. Vide, il dit le
           nom que la page montre déjà, celui du site, en attendant sa lecture. */}
       <div className="relative">
         <input id="bloc-titre" className={`${classeSaisie} adm-field-vignette`} value={b.titre} onChange={e => maj({ titre: e.target.value })} maxLength={160} autoFocus={focusAuto(nouveau && !avecUrl)}
           aria-invalid={erreurDe('titre') ? true : undefined} aria-describedby={erreurDe('titre') ? idTitre : undefined}
-          placeholder={lecture && !b.titre ? (produit ? 'Lecture de la boutique…' : 'Lecture du site…') : produit || musique ? '' : rdv ? nouveauBloc('reservation', b.id).titre : (adresseValide && nomSite(adresseValide)) || 'Mon super lien'} />
+          placeholder={lecture && !b.titre ? (produit ? tr('Lecture de la boutique…', 'Reading the shop…') : tr('Lecture du site…', 'Reading the site…')) : produit || musique ? '' : rdv ? titreParDefaut('reservation', reglages.langue) : (adresseValide && nomSite(adresseValide)) || tr('Mon super lien', 'My awesome link')} />
         {vignetteChamp}
       </div>
       {erreurDe('titre') && <span id={idTitre} role="alert" className="mt-1.5 block text-[13px] font-medium leading-snug text-red-300">{erreurDe('titre')}</span>}
@@ -1082,8 +1089,8 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
       {icones && !produit && (
         <div className="mt-2">
           <div className="mb-1 flex items-center justify-between">
-            <span className="text-[13px] font-semibold text-white">Icône</span>
-            <button type="button" onClick={() => setIcones(false)} aria-label="Fermer les icônes" className="grid h-8 w-8 place-items-center rounded-lg text-white/55 transition hover:text-white bureau:h-7 bureau:w-7">
+            <span className="text-[13px] font-semibold text-white">{tr('Icône', 'Icon')}</span>
+            <button type="button" onClick={() => setIcones(false)} aria-label={tr('Fermer les icônes', 'Close icons')} className="grid h-8 w-8 place-items-center rounded-lg text-white/55 transition hover:text-white bureau:h-7 bureau:w-7">
               <Icone nom="ui-fermer" taille={15} />
             </button>
           </div>
@@ -1092,40 +1099,40 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
       )}
     </div>
   ) : (
-    <Champ erreur={erreurDe('titre')} label={b.type === 'texte' ? 'Texte' : b.type === 'video' ? 'Titre de la vidéo' : b.type === 'titre' ? 'Titre de la section'
-      : b.type === 'coordonnees' ? 'Nom' : b.type === 'lieu' ? 'Nom du lieu (facultatif)' : b.type === 'galerie' ? 'Légende (facultatif)' : 'Titre'}>
+    <Champ erreur={erreurDe('titre')} label={b.type === 'texte' ? tr('Texte', 'Text') : b.type === 'video' ? tr('Titre de la vidéo', 'Video title') : b.type === 'titre' ? tr('Titre de la section', 'Section heading')
+      : b.type === 'coordonnees' ? tr('Nom', 'Name') : b.type === 'lieu' ? tr('Nom du lieu (facultatif)', 'Place name (optional)') : b.type === 'galerie' ? tr('Légende (facultatif)', 'Caption (optional)') : tr('Titre', 'Title')}>
       {b.type === 'texte'
         ? <textarea className={`${classeSaisie} min-h-28`} value={b.titre} onChange={e => maj({ titre: e.target.value })} maxLength={1000} autoFocus={focusAuto(nouveau)} />
         : <input id="bloc-titre" className={classeSaisie} value={b.titre} onChange={e => maj({ titre: e.target.value })} maxLength={160} autoFocus={focusAuto(nouveau && !avecUrl && b.type !== 'lieu' && b.type !== 'galerie')}
             autoComplete={b.type === 'coordonnees' ? 'name' : undefined}
-            placeholder={b.type === 'soutien' || b.type === 'faq' || b.type === 'formulaire' || b.type === 'flux' ? nouveauBloc(b.type, b.id).titre : b.type === 'titre' ? 'Nouvelle section' : b.type === 'coordonnees' ? 'Marie Dupont' : ''} />}
+            placeholder={b.type === 'soutien' || b.type === 'faq' || b.type === 'formulaire' || b.type === 'flux' ? titreParDefaut(b.type, langue) : b.type === 'titre' ? tr('Nouvelle section', 'New section') : b.type === 'coordonnees' ? tr('Marie Dupont', 'Jane Smith') : ''} />}
     </Champ>
   ));
   // Un produit : son prix, lu sur la boutique comme son nom et sa photo ; il se corrige à la main.
   const champPrix = b.type === 'produit' && (
-    <Champ label="Prix (facultatif)">
-      <input className={classeSaisie} value={b.prix} onChange={e => maj({ prix: e.target.value })} maxLength={24} placeholder={lecture ? 'Lecture de la boutique…' : '24 €'} />
+    <Champ label={tr('Prix (facultatif)', 'Price (optional)')}>
+      <input className={classeSaisie} value={b.prix} onChange={e => maj({ prix: e.target.value })} maxLength={24} placeholder={lecture ? tr('Lecture de la boutique…', 'Reading the shop…') : '24 €'} />
     </Champ>
   );
   // Un lien partenaire : la mention que la loi demande à tous, puis le code promo, avec Starter.
   const partenaire = b.partenariat && (
     <>
       <div>
-        <span className="mb-1.5 block text-[13px] font-semibold text-white">Mention</span>
-        <Segments label="Mention du lien partenaire" souple valeur={b.partenariat.mention} options={MENTIONS} onChange={v => maj({ partenariat: { ...b.partenariat!, mention: v } })} />
+        <span className="mb-1.5 block text-[13px] font-semibold text-white">{tr('Mention', 'Disclosure')}</span>
+        <Segments label={tr('Mention du lien partenaire', 'Affiliate link disclosure')} souple valeur={b.partenariat.mention} options={mentions(tr)} onChange={v => maj({ partenariat: { ...b.partenariat!, mention: v } })} />
       </div>
       {droits.vitrine ? (
-        <Champ label="Code promo (facultatif)">
+        <Champ label={tr('Code promo (facultatif)', 'Promo code (optional)')}>
           <input className={classeSaisie} value={b.partenariat.code} onChange={e => maj({ partenariat: { ...b.partenariat!, code: e.target.value } })} maxLength={40}
-            autoCapitalize="characters" autoCorrect="off" spellCheck={false} placeholder="BIENVENUE10" />
+            autoCapitalize="characters" autoCorrect="off" spellCheck={false} placeholder={tr('BIENVENUE10', 'WELCOME10')} />
         </Champ>
       ) : (
         <div>
-          <span className="mb-1.5 flex items-center gap-2 text-[13px] font-semibold text-white">Code promo <Etiquette fonction="vitrine" /></span>
+          <span className="mb-1.5 flex items-center gap-2 text-[13px] font-semibold text-white">{tr('Code promo', 'Promo code')}{' '}<Etiquette fonction="vitrine" /></span>
           {/* Un produit non compris dans l'offre dit déjà, plus haut, où voir les offres : un seul chemin par endroit. */}
           <Reserve fonction="vitrine" bouton={!type.fonction} phrase={b.partenariat.code
-            ? `Ton code ${b.partenariat.code} n’est pas montré sans Hopla Starter. Il revient dès que tu la prends.`
-            : 'Avec Hopla Starter, ton code promo s’affiche sous le lien, et se copie d’un geste.'} />
+            ? tr(`Ton code ${b.partenariat.code} n’est pas montré sans Hopla Starter. Il revient dès que tu la prends.`, `Your ${b.partenariat.code} code isn’t shown without Hopla Starter. It comes back as soon as you get it.`)
+            : tr('Avec Hopla Starter, ton code promo s’affiche sous le lien, et se copie d’un geste.', 'With Hopla Starter, your promo code shows under the link, and copies in one tap.')} />
         </div>
       )}
     </>
@@ -1138,28 +1145,28 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
   // qu'au bureau : au téléphone, le clavier ne monte pas tout seul. Effacé en cours de frappe, il reste ouvert.
   const avecSousTitre = ['lien', 'newsletter', 'inscription', 'soutien', 'reservation', 'musique', 'formulaire'].includes(b.type);
   const champSousTitre = avecSousTitre && (b.sousTitre || sousTitreDemande || b.type === 'reservation' ? (
-    <Champ label="Sous-titre (facultatif)">
+    <Champ label={tr('Sous-titre (facultatif)', 'Subtitle (optional)')}>
       <input className={classeSaisie} value={b.sousTitre} onChange={e => { setSousTitreDemande(true); maj({ sousTitre: e.target.value }); }} maxLength={240} autoFocus={focusAuto(sousTitreDemande && !b.sousTitre)}
         placeholder={b.type === 'reservation' && adresseValide ? nomAgenda(adresseValide) : ''} />
     </Champ>
   ) : (
     <button type="button" onClick={() => { vibrer(4); setSousTitreDemande(true); }}
       className="-my-1.5 flex min-h-11 items-center gap-2 self-start text-[13.5px] font-semibold text-bleu transition hover:text-[var(--adm-bleu-fonce)] bureau:min-h-8">
-      <Icone nom="ui-plus" taille={15} className="shrink-0" />Ajouter un sous-titre
+      <Icone nom="ui-plus" taille={15} className="shrink-0" />{tr('Ajouter un sous-titre', 'Add a subtitle')}
     </button>
   ));
   // Un cadeau contre l'e-mail (Pro, 24 octobre 2026) : un guide, un code, une vidéo ; son adresse ne s'ouvre qu'une fois
   // l'adresse e-mail donnée, et ne part jamais avec la page. Il sert rarement : il attend derrière une ligne, comme le sous-titre.
   const champCadeau = b.type === 'inscription' && (b.cadeau || cadeauDemande ? (
     <div className="flex flex-col gap-3">
-      <span className="-mb-1.5 flex items-center gap-2 text-[13px] font-semibold text-white">Le cadeau {!droits.cadeau && <Etiquette fonction="cadeau" />}</span>
-      {!droits.cadeau && <Reserve fonction="cadeau" phrase="Sans Hopla Pro, ce cadeau n’est pas proposé sur ta page. Il revient dès que tu la prends." />}
+      <span className="-mb-1.5 flex items-center gap-2 text-[13px] font-semibold text-white">{tr('Le cadeau', 'The freebie')}{' '}{!droits.cadeau && <Etiquette fonction="cadeau" />}</span>
+      {!droits.cadeau && <Reserve fonction="cadeau" phrase={tr('Sans Hopla Pro, ce cadeau n’est pas proposé sur ta page. Il revient dès que tu la prends.', 'Without Hopla Pro, this freebie isn’t offered on your page. It comes back as soon as you get Pro.')} />}
       <div className={bureau ? 'adm-paire' : 'flex flex-col gap-3'}>
-        <Champ label="Son nom">
+        <Champ label={tr('Son nom', 'Its name')}>
           <input className={classeSaisie} value={b.cadeau?.nom ?? ''} onChange={e => maj({ cadeau: { url: b.cadeau?.url ?? '', nom: e.target.value } })} maxLength={80}
-            placeholder="Mon guide en PDF" autoFocus={focusAuto(cadeauDemande && !b.cadeau)} />
+            placeholder={tr('Mon guide en PDF', 'My PDF guide')} autoFocus={focusAuto(cadeauDemande && !b.cadeau)} />
         </Champ>
-        <Champ label="Son adresse" erreur={erreurDe('cadeau')} aide="Elle ne s’ouvre qu’une fois l’e-mail donné.">
+        <Champ label={tr('Son adresse', 'Its address')} erreur={erreurDe('cadeau')} aide={tr('Elle ne s’ouvre qu’une fois l’e-mail donné.', 'It only opens once the email is given.')}>
           <input className={classeSaisie} type="url" inputMode="url" autoCapitalize="none" autoCorrect="off" placeholder="https://…" value={b.cadeau?.url ?? ''}
             onChange={e => maj({ cadeau: { nom: b.cadeau?.nom ?? '', url: e.target.value } })} />
         </Champ>
@@ -1168,12 +1175,12 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
   ) : (
     <button type="button" onClick={() => { vibrer(4); if (!droits.cadeau && voir) { voir('cadeau'); return; } setCadeauDemande(true); }} aria-haspopup={droits.cadeau ? undefined : 'dialog'}
       className="-my-1.5 flex min-h-11 items-center gap-2 self-start text-[13.5px] font-semibold text-bleu transition hover:text-[var(--adm-bleu-fonce)] bureau:min-h-8">
-      <Icone nom="ui-plus" taille={15} className="shrink-0" />Offrir un cadeau contre l’e-mail{!droits.cadeau && <Etiquette fonction="cadeau" />}
+      <Icone nom="ui-plus" taille={15} className="shrink-0" />{tr('Offrir un cadeau contre l’e-mail', 'Offer a freebie for the email')}{!droits.cadeau && <Etiquette fonction="cadeau" />}
     </button>
   ));
   const champMontants = b.type === 'soutien' && avecMontants(adresseValide) && (
     <div>
-      <span className="mb-1.5 block text-[13px] font-semibold text-white">Montants proposés, en euros</span>
+      <span className="mb-1.5 block text-[13px] font-semibold text-white">{tr('Montants proposés, en euros', 'Suggested amounts, in euros')}</span>
       <div className="bureau:max-w-[360px]"><ChampMontants montants={b.montants} onChange={m => maj({ montants: m })} /></div>
     </div>
   );
@@ -1188,14 +1195,14 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
       {nouveau && type.aide && !avecUrl && !(b.type === 'inscription' && droits.listeEmail) && <p className="text-[13.5px] leading-snug text-white/60">{type.aide}.</p>}
       {/* Un avis ou une liste gardés d'une offre passée : ils attendent, rien n'est perdu. */}
       {type.fonction && !droits[type.fonction] && <Reserve fonction={type.fonction} type={TYPES_VITRINE.includes(b.type) ? b.type as TypeVitrine : undefined}
-        phrase={`Ce bloc n’est pas montré sur ta page sans Hopla ${offreDe(type.fonction)}. Il revient tel quel dès que tu la prends.`} />}
+        phrase={tr(`Ce bloc n’est pas montré sur ta page sans Hopla ${offreDe(type.fonction)}. Il revient tel quel dès que tu la prends.`, `This block isn’t shown on your page without Hopla ${offreDe(type.fonction)}. It comes back as is as soon as you get it.`)} />}
       {/* Une liste e-mail dit où partent ses inscrits, et mène à sa newsletter (25 octobre 2026, demandé par Lilian). */}
       {b.type === 'inscription' && droits.listeEmail && <DestinationListe />}
       {/* L'ancienne « Ma newsletter » : elle reste en ligne telle quelle, et dit ce qui la remplace, avec le geste pour y passer. */}
       {b.type === 'newsletter' && (
         <div className="flex flex-col items-start">
-          <p className="text-[13.5px] leading-snug text-white/70">La liste e-mail remplace ce bloc : ses inscrits restent chez Hopla, et partent vers ta newsletter branchée dans Intégrations.</p>
-          {geste('En faire une liste e-mail', enListeEmail)}
+          <p className="text-[13.5px] leading-snug text-white/70">{tr('La liste e-mail remplace ce bloc : ses inscrits restent chez Hopla, et partent vers ta newsletter branchée dans Intégrations.', 'The email list replaces this block: its subscribers stay in Hopla, and go to the newsletter you connected in Integrations.')}</p>
+          {geste(tr('En faire une liste e-mail', 'Make it an email list'), enListeEmail)}
         </div>
       )}
       {paire ?<div className="adm-paire">{champUrl}{champTitre}</div> : champUrl}
@@ -1206,12 +1213,12 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
       {b.type === 'preuve' && <ChampsPreuve b={b} maj={maj} erreurDe={erreurDe} lien={<LienAvis b={b} maj={maj} noteAvis={noteAvis} />} />}
 
       {b.type === 'preuve' && b.preuve?.genre !== 'note' && (
-        <Champ label={b.preuve?.genre === 'compteur' ? 'Lien vers la source (facultatif)' : 'Lien vers les avis (facultatif)'}
-          aide={b.preuve?.genre === 'compteur' ? 'Ta chaîne, ton profil : le bloc devient cliquable, et le chiffre vérifiable.' : 'Ta fiche Google, ta page Trustpilot : le bloc devient cliquable, et la preuve vérifiable.'}>
+        <Champ label={b.preuve?.genre === 'compteur' ? tr('Lien vers la source (facultatif)', 'Link to the source (optional)') : tr('Lien vers les avis (facultatif)', 'Link to the reviews (optional)')}
+          aide={b.preuve?.genre === 'compteur' ? tr('Ta chaîne, ton profil : le bloc devient cliquable, et le chiffre vérifiable.', 'Your channel, your profile: the block becomes clickable, and the number verifiable.') : tr('Ta fiche Google, ta page Trustpilot : le bloc devient cliquable, et la preuve vérifiable.', 'Your Google profile, your Trustpilot page: the block becomes clickable, and the proof verifiable.')}>
           <input className={classeSaisie} type="url" inputMode="url" autoCapitalize="none" autoCorrect="off" placeholder="https://…" value={b.url} onChange={e => maj({ url: e.target.value })} />
         </Champ>
       )}
-      {b.type === 'preuve' && <p className="text-[12.5px] leading-snug text-white/55">Des chiffres vrais, des avis réels, avec l’accord de leurs auteurs.</p>}
+      {b.type === 'preuve' && <p className="text-[12.5px] leading-snug text-white/55">{tr('Des chiffres vrais, des avis réels, avec l’accord de leurs auteurs.', 'True numbers, real reviews, with their authors’ consent.')}</p>}
 
       {b.type === 'galerie' && <ChampsGalerie b={b} maj={maj} erreurDe={erreurDe} envoyerImage={envoyerImage} droit={!!droits.galerie} />}
       {b.type === 'lieu' && <ChampLieu b={b} maj={maj} erreurDe={erreurDe} nouveau={nouveau} />}
@@ -1219,8 +1226,8 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
       {/* Une collection : les liens qui suivent ce titre, jusqu'au suivant, en liste ou en tuiles (Starter). */}
       {b.type === 'titre' && (
         <div>
-          <span className="mb-1.5 flex items-center gap-2 text-[13px] font-semibold text-white">Les liens dessous {!droits.grille && <Etiquette fonction="grille" />}</span>
-          <Segments label="Les liens sous ce titre" valeur={b.disposition ?? 'liste'} options={DISPOSITIONS_NOMMEES}
+          <span className="mb-1.5 flex items-center gap-2 text-[13px] font-semibold text-white">{tr('Les liens dessous', 'The links below')}{' '}{!droits.grille && <Etiquette fonction="grille" />}</span>
+          <Segments label={tr('Les liens sous ce titre', 'The links under this heading')} valeur={b.disposition ?? 'liste'} options={dispositionsNommees(tr)}
             onChange={v => { if (v === 'grille' && !droits.grille && voir) return voir('grille'); maj({ disposition: v }); }} />
         </div>
       )}
@@ -1235,7 +1242,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
       {b.type === 'produit' && (bureau ? <div className="adm-paire">{champPrix}</div> : champPrix)}
       {partenaire}
       {b.type === 'derniere-video' && (
-        <Champ label="Petit titre">
+        <Champ label={tr('Petit titre', 'Short heading')}>
           <input className={classeSaisie} value={b.titre} onChange={e => maj({ titre: e.target.value })} maxLength={160} />
         </Champ>
       )}
@@ -1257,11 +1264,11 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
             déplie en place (le bloc sur la page ou non, selon la date, l'heure, le réseau), puis « Mis en avant » et, juste
             sous lui, ce qu'il ouvre. Allumé à l'instant, l'apparence arrive dépliée. */}
         <div className="adm-reglages-groupe">
-          <Repli key={erreurDe('dates') ? 'visibilite-erreur' : `visibilite-${b.id}`} titre="Visibilité" resume={dejaVisible} regle={dejaVisible !== 'Visible'}
+          <Repli key={erreurDe('dates') ? 'visibilite-erreur' : `visibilite-${b.id}`} titre={tr('Visibilité', 'Visibility')} resume={dejaVisible} regle={dejaVisible !== 'Visible'}
             ouvert={!!erreurDe('dates') || regleAOuvrir === 'moment'} montrer={regleAOuvrir === 'moment'}>{visibilite}</Repli>
           {vedette(true)}
           {pageVedette(b) === 'apparence' && (
-            <Repli key={`apparence-${b.id}`} titre="Apparence" icone="pinceau" resume={resumeApparence} ouvert={vedetteAllumee.current}>
+            <Repli key={`apparence-${b.id}`} titre={tr('Apparence', 'Appearance')} icone="pinceau" resume={resumeApparence} ouvert={vedetteAllumee.current}>
               {/* L'animation se déplie dans l'apparence, sans la replier. */}
               {formeCouleur}<ReplisExclusifs.Provider value={null}>{animation}</ReplisExclusifs.Provider>
             </Repli>
@@ -1269,7 +1276,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
           {pageVedette(b) === 'animation' && animation}
           {/* Ce que la page ne montre pas attend derrière une ligne de la même forme, qui dit ce qui est réglé : on sait quoi sans ouvrir. */}
           {!plusVide && <>
-            <LigneRepli titre="Plus de réglages" resume={plus ? '' : reglees} regle={!!reglees} ouvert={plus} controle={idPlus} onClick={() => setPlus(!plus)} />
+            <LigneRepli titre={tr('Plus de réglages', 'More settings')} resume={plus ? '' : reglees} regle={!!reglees} ouvert={plus} controle={idPlus} onClick={() => setPlus(!plus)} />
             {plus && (
               <div id={idPlus} className="adm-plus-contenu [&>div>div>label>span]:text-white/70">
                 {bascules(true, true).length > 0 && <div className="flex flex-col">{bascules(true, true)}</div>}
@@ -1281,37 +1288,37 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
 
         {/* Le bas de la rangée : un bloc neuf s'ajoute ou s'oublie ; un bloc posé se duplique ou se retire, et revient d'un geste à ce qu'il était. */}
         <div className="adm-editeur-pied">
-          {!nouveau && compteClics && clics > 0 && <p className="text-[12px] tabular-nums text-white/55">{clics.toLocaleString('fr-FR')} clic{clics > 1 ? 's' : ''} ces 30 derniers jours</p>}
+          {!nouveau && compteClics && clics > 0 && <p className="text-[12px] tabular-nums text-white/55">{tr(`${clics.toLocaleString('fr-FR')} clic${clics > 1 ? 's' : ''} ces 30 derniers jours`, `${clics.toLocaleString('en-US')} click${clics > 1 ? 's' : ''} in the last 30 days`)}</p>}
           {nouveau ? (
             <div className="ml-auto flex items-center gap-2">
               {/* Le seul moyen d'oublier un bloc neuf : replier la rangée le garde, masqué, s'il est valable. */}
-              <BoutonSecondaire onClick={onFermer}>Annuler</BoutonSecondaire>
-              <BoutonPrincipal disabled={envoi} onClick={ajouter}>Ajouter à ma page</BoutonPrincipal>
+              <BoutonSecondaire onClick={onFermer}>{tr('Annuler', 'Cancel')}</BoutonSecondaire>
+              <BoutonPrincipal disabled={envoi} onClick={ajouter}>{tr('Ajouter à ma page', 'Add to my page')}</BoutonPrincipal>
             </div>
           ) : (
             <>
               {/* Le geste qui détruit à gauche, loin des autres ; la place et « Terminé » comme au téléphone (critique du 27 octobre 2026). */}
               <button type="button" onClick={retirer} className="mr-auto inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg px-2.5 text-[14px] font-medium text-red-300 transition hover:bg-red-500/[0.06]">
-                <Icone nom="ui-corbeille" taille={15} className="shrink-0" />Retirer de ma page
+                <Icone nom="ui-corbeille" taille={15} className="shrink-0" />{tr('Retirer de ma page', 'Remove from my page')}
               </button>
               <div className="flex flex-wrap items-center justify-end gap-0.5">
                 {annulable && (
                   <button type="button" onClick={() => {
                     // Le bloc revient tel qu'il était, sans relire son site ; le bouton disparaît, la main passe à Dupliquer.
                     lu.current = { ...lu.current, url: adresseSaisie(depart.current!.url) };
-                    setB(depart.current!); setErreurs({}); vibrer(6); setAnnonce('Changements annulés.');
+                    setB(depart.current!); setErreurs({}); vibrer(6); setAnnonce(tr('Changements annulés.', 'Changes undone.'));
                     requestAnimationFrame(() => boutonDupliquer.current?.focus({ preventScroll: true }));
                   }} className={classeBouton.discret}>
-                    <Icone nom="ui-retour" taille={15} className="shrink-0" />Annuler mes changements
+                    <Icone nom="ui-retour" taille={15} className="shrink-0" />{tr('Annuler mes changements', 'Undo my changes')}
                   </button>
                 )}
-                <button ref={boutonDupliquer} type="button" onClick={dupliquer} className={classeBouton.discret}><Icone nom="ui-copier" taille={15} className="shrink-0" />Dupliquer</button>
+                <button ref={boutonDupliquer} type="button" onClick={dupliquer} className={classeBouton.discret}><Icone nom="ui-copier" taille={15} className="shrink-0" />{tr('Dupliquer', 'Duplicate')}</button>
                 {place && onDeplacer && place.total > 1 && (
                   <span className="adm-place inline-flex items-center pl-2 text-[13px] tabular-nums text-white/60">
-                    Place {place.rang + 1} sur {place.total}{fleche(-1)}{fleche(1)}
+                    {tr('Place', 'Position')}{' '}{place.rang + 1}{' '}{tr('sur', 'of')}{' '}{place.total}{fleche(-1)}{fleche(1)}
                   </span>
                 )}
-                <BoutonPrincipal className="ml-2" onClick={onFermer}>Terminé</BoutonPrincipal>
+                <BoutonPrincipal className="ml-2" onClick={onFermer}>{tr('Terminé', 'Done')}</BoutonPrincipal>
               </div>
             </>
           )}
@@ -1326,8 +1333,8 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
   // Au téléphone, la feuille mène de page en page, sa flèche dans l'en-tête : l'essentiel, puis une page par règle (la visibilité,
   // l'apparence, « Plus de réglages »), et l'animation ou l'accès réservé un cran plus loin.
   const fil: FilFeuille | null = page === null ? null : {
-    titre: NOMS_PAGES[page],
-    label: parent(page) === 'plus' ? 'Revenir à Plus de réglages' : parent(page) === 'apparence' ? 'Revenir à Apparence' : 'Revenir au bloc',
+    titre: nomsPages(tr)[page],
+    label: parent(page) === 'plus' ? tr('Revenir à Plus de réglages', 'Back to More settings') : parent(page) === 'apparence' ? tr('Revenir à Apparence', 'Back to Appearance') : tr('Revenir au bloc', 'Back to the block'),
     retour: () => allerA(parent(page)),
   };
   const groupe = 'adm-groupe flex flex-col divide-y divide-white/[0.06]';
@@ -1335,7 +1342,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
   const ligneRegle = (id: PageRegle, valeur: string, regle: boolean) => (
     <button id={`regle-${id}`} type="button" onClick={() => { vibrer(4); allerA(id); }}
       className="flex min-h-12 w-full items-center gap-3 px-4 text-left transition hover:bg-white/[0.03] active:bg-white/[0.05]">
-      <span className="shrink-0 text-[14.5px] font-semibold text-white">{NOMS_PAGES[id]}</span>
+      <span className="shrink-0 text-[14.5px] font-semibold text-white">{nomsPages(tr)[id]}</span>
       <span className={`min-w-0 flex-1 truncate text-right text-[13.5px] ${regle ? 'font-medium text-bleu' : 'text-white/55'}`}>{valeur}</span>
       <Icone nom="ui-chevron" taille={16} className="-rotate-90 shrink-0 text-white/55" />
     </button>
@@ -1348,16 +1355,16 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
     <Feuille ouverte cote classe="adm-feuille-bloc" plafond={plafond} onFermer={fermerEnGardant} retenir={retenir} titre={titre}
       // La flèche vers le choix des blocs, toujours à la même place (le retour du téléphone fait comme elle) : ce qui est tapé
       // la suit, l'adresse attend dans « Colle une adresse » et le bloc qu'on choisit la reprend, rien ne se perd.
-      retour={nouveau && onRetour ? { label: 'Revenir au choix du bloc', action: () => onRetour(commence() ? b : null) } : undefined}
+      retour={nouveau && onRetour ? { label: tr('Revenir au choix du bloc', 'Back to choosing a block'), action: () => onRetour(commence() ? b : null) } : undefined}
       pied={fermer => (
         <div className="flex items-center gap-2">
           {/* Fermer garde les changements (un bloc neuf, masqué) ; ce bouton est la seule façon de les oublier. */}
           {commence() && (
-            <BoutonSecondaire onClick={() => fermer(() => onFermer())}>Annuler</BoutonSecondaire>
+            <BoutonSecondaire onClick={() => fermer(() => onFermer())}>{tr('Annuler', 'Cancel')}</BoutonSecondaire>
           )}
           {/* Rien de touché : Terminé referme, sans réécrire le bloc ni annoncer des modifications qui n'existent pas. */}
           <BoutonPrincipal className="flex-1" disabled={envoi} onClick={() => { if (!nouveau && !commence()) { vibrer(12); fermer(() => onFermer()); return; } const v = valider(); if (v) { vibrer(12); fermer(() => onEnregistrer(v)); } }}>
-            {nouveau ? 'Ajouter à ma page' : 'Terminé'}
+            {nouveau ? tr('Ajouter à ma page', 'Add to my page') : tr('Terminé', 'Done')}
           </BoutonPrincipal>
         </div>
       )}>
@@ -1372,7 +1379,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
             avant », qui pose juste sous lui la ligne de ce qu'il ouvre : l'apparence, ou l'animation d'un rendez-vous. */}
         <div className={groupe}>
           {ligneRegle('visibilite', dejaVisible, dejaVisible !== 'Visible')}
-          {enAvant && <div className="px-4"><Interrupteur label="Mis en avant" actif={b.vedette} onChange={v => maj({ vedette: v })} /></div>}
+          {enAvant && <div className="px-4"><Interrupteur label={tr('Mis en avant', 'Featured')} actif={b.vedette} onChange={v => maj({ vedette: v })} /></div>}
           {vedettePage && ligneRegle(vedettePage, vedettePage === 'apparence' ? resumeApparence : resumeAnimation, vedettePage === 'animation' && b.animation !== 'auto')}
         </div>
 
@@ -1381,7 +1388,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
           <div className={groupe}>
             <button id={`${idPlus}-ligne`} type="button" onClick={() => { vibrer(4); allerA('plus'); }}
               className="flex min-h-12 w-full items-center gap-3 px-4 text-left transition hover:bg-white/[0.03] active:bg-white/[0.05]">
-              <span className="shrink-0 whitespace-nowrap text-[14.5px] font-semibold text-white">Plus de réglages</span>
+              <span className="shrink-0 whitespace-nowrap text-[14.5px] font-semibold text-white">{tr('Plus de réglages', 'More settings')}</span>
               <span className="min-w-0 flex-1 truncate text-right text-[13.5px] font-medium text-bleu">{reglees}</span>
               <Icone nom="ui-chevron" taille={16} className="-rotate-90 shrink-0 text-white/55" />
             </button>
@@ -1395,16 +1402,16 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
           <div className={groupe}>
             {onDeplacer && place && place.total > 1 && (
               <div className="flex min-h-12 items-center gap-2 pl-4 pr-1.5">
-                <span className="flex-1 text-[14.5px] font-medium text-white/85">Place sur ma page</span>
-                <span className="text-[13px] tabular-nums text-white/55">{place.rang + 1} sur {place.total}</span>
+                <span className="flex-1 text-[14.5px] font-medium text-white/85">{tr('Place sur ma page', 'Position on my page')}</span>
+                <span className="text-[13px] tabular-nums text-white/55">{place.rang + 1}{' '}{tr('sur', 'of')}{' '}{place.total}</span>
                 {fleche(-1)}{fleche(1)}
               </div>
             )}
             <button type="button" onClick={dupliquer} className="flex min-h-12 items-center gap-3 px-4 text-left text-[14.5px] font-medium text-white/85 transition hover:bg-white/[0.04]">
-              <Icone nom="ui-copier" taille={18} className="text-white/70" /> Dupliquer
+              <Icone nom="ui-copier" taille={18} className="text-white/70" />{' '}{tr('Dupliquer', 'Duplicate')}
             </button>
             <button type="button" onClick={retirer} className="flex min-h-12 items-center gap-3 px-4 text-left text-[14.5px] font-medium text-red-300 transition hover:bg-red-500/[0.06]">
-              <Icone nom="ui-corbeille" taille={18} /> Retirer de ma page
+              <Icone nom="ui-corbeille" taille={18} />{' '}{tr('Retirer de ma page', 'Remove from my page')}
             </button>
           </div>
         )}
@@ -1432,6 +1439,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
  * (une fiche Google) laisse la note à taper à la main.
  */
 function LienAvis({ b, maj, noteAvis }: { b: Bloc; maj: (c: Partial<Bloc>) => void; noteAvis?: Api['noteAvis'] }) {
+  const tr = useL();
   const [etat, setEtat] = useState<'' | 'lecture' | 'lue' | 'muette' | 'google'>('');
   const derniere = useRef(adresse(b.url));
   // La preuve telle qu'elle est quand la réponse arrive : une note tapée pendant la lecture n'est pas écrasée.
@@ -1460,13 +1468,13 @@ function LienAvis({ b, maj, noteAvis }: { b: Bloc; maj: (c: Partial<Bloc>) => vo
     // Seule l'adresse relance la lecture : la note posée ne la relit pas.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [b.url, noteAvis]);
-  const aide = etat === 'lecture' ? 'Hopla lit la note…'
-    : etat === 'lue' ? 'Note lue sur la page. Hopla la relit chaque jour.'
-    : etat === 'google' ? 'Google ne laisse pas lire sa note : tape-la dessous. Le bloc mène à ta fiche.'
-    : etat === 'muette' ? 'Cette page ne donne pas sa note : tape-la dessous. Le bloc reste cliquable.'
-    : 'Ta page Trustpilot, Avis Vérifiés… : la note et le nombre d’avis se remplissent tout seuls, et se relisent chaque jour.';
+  const aide = etat === 'lecture' ? tr('Hopla lit la note…', 'Hopla is reading the rating…')
+    : etat === 'lue' ? tr('Note lue sur la page. Hopla la relit chaque jour.', 'Rating read from the page. Hopla rereads it every day.')
+    : etat === 'google' ? tr('Google ne laisse pas lire sa note : tape-la dessous. Le bloc mène à ta fiche.', 'Google doesn’t let us read its rating: type it below. The block links to your profile.')
+    : etat === 'muette' ? tr('Cette page ne donne pas sa note : tape-la dessous. Le bloc reste cliquable.', 'This page doesn’t give its rating: type it below. The block stays clickable.')
+    : tr('Ta page Trustpilot, Avis Vérifiés… : la note et le nombre d’avis se remplissent tout seuls, et se relisent chaque jour.', 'Your Trustpilot page or another review site: the rating and review count fill in by themselves, and are reread every day.');
   return (
-    <Champ label="Lien vers tes avis" aide={aide}>
+    <Champ label={tr('Lien vers tes avis', 'Link to your reviews')} aide={aide}>
       <input className={classeSaisie} type="url" inputMode="url" autoCapitalize="none" autoCorrect="off" placeholder="https://…" value={b.url}
         onChange={e => { setEtat(''); maj({ url: e.target.value }); }} />
     </Champ>

@@ -282,31 +282,34 @@ export function email(v: unknown): string {
 }
 
 /** Pourquoi une saisie n'est pas une adresse, dit au plus près de l'erreur. */
-export function pourquoiPasAdresse(v: string): string {
+export function pourquoiPasAdresse(v: string, langue: 'en' | 'fr' = 'fr'): string {
+  const l = (fr: string, en: string) => (langue === 'en' ? en : fr);
+  const ex = l('ton‑site.fr', 'your‑site.com');
   const s = v.trim();
   // Un pseudo, un numéro pas fini : on dit ce que c'est, pas qu'il manque « .fr ».
-  if (s === '@') return 'Tape ton pseudo après le @, ou colle l’adresse de ton profil.';
-  if (/^@[\w.-]+$/.test(s)) return `C’est un pseudo : colle plutôt l’adresse de ton profil, comme instagram.com/${s.slice(1)}`;
-  if (/^\+?[\d\s.()-]+$/.test(s)) return 'Un numéro de téléphone s’écrit en entier, avec au moins 8 chiffres.';
-  if (/^(?!https?:)h?t{1,3}p{1,2}s?:/i.test(s) || /^(?!https?\/\/)h?t{1,3}p{1,2}s?\/\//i.test(s)) return 'Le début de l’adresse est mal tapé : écris https://. Exemple : https://ton‑site.fr';
-  if (/^https?\/\//i.test(s)) return 'Il manque « : » après http. Exemple : https://ton‑site.fr';
-  if (/^https?:\/[^/]/i.test(s)) return 'Il manque un « / » après https:. Exemple : https://ton‑site.fr';
+  if (s === '@') return l('Tape ton pseudo après le @, ou colle l’adresse de ton profil.', 'Type your handle after the @, or paste your profile address.');
+  if (/^@[\w.-]+$/.test(s)) return l(`C’est un pseudo : colle plutôt l’adresse de ton profil, comme instagram.com/${s.slice(1)}`, `That’s a handle: paste your profile address instead, like instagram.com/${s.slice(1)}`);
+  if (/^\+?[\d\s.()-]+$/.test(s)) return l('Un numéro de téléphone s’écrit en entier, avec au moins 8 chiffres.', 'Write the phone number in full, with at least 8 digits.');
+  if (/^(?!https?:)h?t{1,3}p{1,2}s?:/i.test(s) || /^(?!https?\/\/)h?t{1,3}p{1,2}s?\/\//i.test(s)) return l(`Le début de l’adresse est mal tapé : écris https://. Exemple : https://${ex}`, `The start of the address is mistyped: write https://. Example: https://${ex}`);
+  if (/^https?\/\//i.test(s)) return l(`Il manque « : » après http. Exemple : https://${ex}`, `A “:” is missing after http. Example: https://${ex}`);
+  if (/^https?:\/[^/]/i.test(s)) return l(`Il manque un « / » après https:. Exemple : https://${ex}`, `A “/” is missing after https:. Example: https://${ex}`);
   // « calendly com » : l'espace tient lieu de point, on propose l'adresse telle qu'elle était voulue.
   const piste = s.replace(/\s+(fr|com|net|org|io|co|me|app|page|bio|link|eu|be|ch|ca|shop|store|dev|ai)$/i, '.$1');
-  if (/\s/.test(s) && !/\s/.test(piste)) return `Une adresse n’a pas d’espace : voulais-tu dire ${piste}\u202f?`;
-  if (/\s/.test(s)) return 'Une adresse n’a pas d’espace. Exemple : ton‑site.fr';
-  if (!/\./.test(s.replace(/^https?:\/\//i, '').split('/')[0])) return 'Il manque la fin de l’adresse, comme .fr ou .com.';
-  return 'Ce n’est pas une adresse. Exemple : ton‑site.fr';
+  if (/\s/.test(s) && !/\s/.test(piste)) return l(`Une adresse n’a pas d’espace : voulais-tu dire ${piste}\u202f?`, `An address has no spaces: did you mean ${piste}?`);
+  if (/\s/.test(s)) return l(`Une adresse n’a pas d’espace. Exemple : ${ex}`, `An address has no spaces. Example: ${ex}`);
+  if (!/\./.test(s.replace(/^https?:\/\//i, '').split('/')[0])) return l('Il manque la fin de l’adresse, comme .fr ou .com.', 'The end of the address is missing, like .com or .co.');
+  return l(`Ce n’est pas une adresse. Exemple : ${ex}`, `That’s not an address. Example: ${ex}`);
 }
 
 /** Pourquoi un pseudo ou une adresse de réseau ne passe pas, avec une piste. */
-export function pourquoiPasReseau(reseau: string, v: string): string {
-  if (reseau === 'email') return v.includes('@') ? 'Il manque une partie de l’adresse e-mail, par exemple toi@exemple.fr' : 'Il manque le @ de l’adresse e-mail, par exemple toi@exemple.fr';
-  if (reseau === 'spotify') return 'Colle l’adresse de ta page Spotify : elle commence par open.spotify.com';
-  if (reseau === 'whatsapp') return 'Ton numéro avec l’indicatif, comme +33 6 12 34 56 78, ou ton lien wa.me';
-  if (['applemusic', 'applepodcasts', 'deezer', 'medium', 'substack', 'mastodon', 'malt', 'etsy', 'bandcamp'].includes(reseau)) return 'Colle l’adresse de ta page, qui commence par https://';
-  if (reseau === 'site') return 'L’adresse de ton site, par exemple ton\u2011site.fr';
+export function pourquoiPasReseau(reseau: string, v: string, langue: 'en' | 'fr' = 'fr'): string {
+  const l = (fr: string, en: string) => (langue === 'en' ? en : fr);
+  if (reseau === 'email') return v.includes('@') ? l('Il manque une partie de l’adresse e-mail, par exemple toi@exemple.fr', 'Part of the email address is missing, for example you@example.com') : l('Il manque le @ de l’adresse e-mail, par exemple toi@exemple.fr', 'The email address is missing its @, for example you@example.com');
+  if (reseau === 'spotify') return l('Colle l’adresse de ta page Spotify : elle commence par open.spotify.com', 'Paste your Spotify page address: it starts with open.spotify.com');
+  if (reseau === 'whatsapp') return l('Ton numéro avec l’indicatif, comme +33 6 12 34 56 78, ou ton lien wa.me', 'Your number with its country code, like +1 555 123 4567, or your wa.me link');
+  if (['applemusic', 'applepodcasts', 'deezer', 'medium', 'substack', 'mastodon', 'malt', 'etsy', 'bandcamp'].includes(reseau)) return l('Colle l’adresse de ta page, qui commence par https://', 'Paste your page address, which starts with https://');
+  if (reseau === 'site') return l('L’adresse de ton site, par exemple ton\u2011site.fr', 'Your website address, for example your\u2011site.com');
   const s = v.trim().replace(/^@/, '');
-  if (/\s/.test(s)) return `Pas d’espace dans un pseudo : essaie ${s.replace(/\s+/g, '.').toLowerCase()}`;
-  return 'Un pseudo sans espace, ou l’adresse de ton profil';
+  if (/\s/.test(s)) return l(`Pas d’espace dans un pseudo : essaie ${s.replace(/\s+/g, '.').toLowerCase()}`, `No spaces in a handle: try ${s.replace(/\s+/g, '.').toLowerCase()}`);
+  return l('Un pseudo sans espace, ou l’adresse de ton profil', 'A handle without spaces, or your profile address');
 }

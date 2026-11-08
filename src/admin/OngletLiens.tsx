@@ -2,7 +2,9 @@ import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode, KeyboardEvent as ToucheClavier, RefObject } from 'react';
 import type { Bloc, TypeBloc, TypeVitrine } from '../lib/types.ts';
 import { TYPES_VITRINE } from '../lib/types.ts';
-import { DEVENU, aideSaisie, familleBloc, choixAjout, choixPour, seColle } from '../lib/catalogue.ts';
+import { aideSaisie, devenu, familleBloc, choixAjout, choixPour, seColle } from '../lib/catalogue.ts';
+import { choix as choixLangue, useL, useLangue } from '../accueil/langue.ts';
+import type { Choix as ChoixLangue } from '../accueil/langue.ts';
 import type { LigneAjout } from '../lib/catalogue.ts';
 import type { TypeAdresse } from '../lib/detection.ts';
 import { reseauDeUrl } from '../lib/demarrage.ts';
@@ -53,7 +55,9 @@ function useChoix(principal: boolean, { onChoisir, onColler, onReseau }: GestesA
   const [texte, setTexte] = useState(depart);
   const [note, setNote] = useState<Note | null>(null);
   const changer = (t: string) => { setTexte(t); setNote(null); };
-  const options = { principal, vitrine: !!droits.vitrine };
+  const langue = useLangue();
+  const tr = choixLangue(langue);
+  const options = { principal, vitrine: !!droits.vitrine, langue };
   const trouve = choixAjout(texte, options);
   const { mode } = trouve;
   const lignes = mode === 'vide' && ordre ? ordre(trouve.lignes) : trouve.lignes;
@@ -61,13 +65,13 @@ function useChoix(principal: boolean, { onChoisir, onColler, onReseau }: GestesA
   const reserve = (l: LigneAjout) => !!l.entree.fonction && !droits[l.entree.fonction];
   const permise = (l: LigneAjout) => !reserve(l) || !!voirOffres;
   const aucun = mode === 'mots' && !lignes.length;
-  const suite = mode !== 'vide' && (suiteToujours || aucun) ? choixPour(principal).filter(e => !lignes.some(l => l.entree === e)).map((entree): LigneAjout => ({ entree })) : [];
+  const suite = mode !== 'vide' && (suiteToujours || aucun) ? choixPour(principal, langue).filter(e => !lignes.some(l => l.entree === e)).map((entree): LigneAjout => ({ entree })) : [];
   const toutes = [...lignes, ...suite];
   // Entrée prend la première ligne trouvée qui pose un bloc ; une ligne réservée ne mène aux offres que choisie.
   const premiere = texte.trim() ? lignes.findIndex(l => !reserve(l)) : -1;
   const [actif, poser, bouger] = useActif(texte, toutes, permise, premiere);
-  const message: Note | null = note ?? (mode === 'saisie' ? { texte: aideSaisie(texte) }
-    : aucun ? { texte: `Aucun bloc pour « ${texte.trim()} ». Colle une adresse, ou choisis dans la liste.` } : null);
+  const message: Note | null = note ?? (mode === 'saisie' ? { texte: aideSaisie(texte, false, langue) }
+    : aucun ? { texte: tr(`Aucun bloc pour « ${texte.trim()} ». Colle une adresse, ou choisis dans la liste.`, `No block for “${texte.trim()}”. Paste an address, or pick from the list.`) } : null);
 
   /** Prend une ligne. Réservée, elle ouvre les offres sur ce qu'on voulait en faire : après l'achat, ce bloc-là attend. */
   function agir(l: LigneAjout): boolean | void {
@@ -86,19 +90,19 @@ function useChoix(principal: boolean, { onChoisir, onColler, onReseau }: GestesA
     const l = toutes[actif];
     if (l) { prendre(l); return; }
     if (!texte.trim()) return;
-    if (mode === 'saisie') { setNote({ texte: aideSaisie(texte, true), faute: true }); return; }
+    if (mode === 'saisie') { setNote({ texte: aideSaisie(texte, true, langue), faute: true }); return; }
     const r = lignes.find(reserve);
-    if (r?.entree.fonction) setNote({ texte: `${r.entree.nom} vient avec Hopla ${offreDe(r.entree.fonction)} : choisis la ligne pour voir les offres.` });
+    if (r?.entree.fonction) setNote({ texte: tr(`${r.entree.nom} vient avec Hopla ${offreDe(r.entree.fonction)} : choisis la ligne pour voir les offres.`, `${r.entree.nom} comes with Hopla ${offreDe(r.entree.fonction)}: pick the line to see the plans.`) });
   }
-  const nomDe = (l: LigneAjout) => [l.entree.nom, l.detail, reserve(l) && l.entree.fonction && `avec Hopla ${offreDe(l.entree.fonction)} : voir les offres`]
+  const nomDe = (l: LigneAjout) => [l.entree.nom, l.detail, reserve(l) && l.entree.fonction && tr(`avec Hopla ${offreDe(l.entree.fonction)} : voir les offres`, `with Hopla ${offreDe(l.entree.fonction)}: see the plans`)]
     .filter(Boolean).join(', ');
   // Ce que le choix devient, dit aux lecteurs d'écran quand on cesse de taper (une faute, elle, se dit tout de suite).
-  const devient = (l: LigneAjout) => (/^mailto:/i.test(l.url ?? '') ? 'un lien e-mail' : l.entree.type === 'lien' ? 'un lien' : DEVENU[l.entree.type as TypeAdresse]);
+  const devient = (l: LigneAjout) => (/^mailto:/i.test(l.url ?? '') ? tr('un lien e-mail', 'an email link') : l.entree.type === 'lien' ? tr('un lien', 'a link') : devenu(l.entree.type as TypeAdresse, langue));
   const dire = note ? (note.faute ? '' : note.texte)
-    : mode === 'adresse' ? `Cette adresse devient ${devient(lignes[0])}.`
-      : mode === 'numero' ? 'Ce numéro devient un lien d’appel.'
-        : mode === 'pseudo' ? 'Ce pseudo peut rejoindre tes réseaux.'
-          : mode === 'mots' && lignes.length ? `${lignes.length} bloc${lignes.length > 1 ? 's' : ''} trouvé${lignes.length > 1 ? 's' : ''}.`
+    : mode === 'adresse' ? tr(`Cette adresse devient ${devient(lignes[0])}.`, `This address becomes ${devient(lignes[0])}.`)
+      : mode === 'numero' ? tr('Ce numéro devient un lien d’appel.', 'This number becomes a call link.')
+        : mode === 'pseudo' ? tr('Ce pseudo peut rejoindre tes réseaux.', 'This handle can join your social links.')
+          : mode === 'mots' && lignes.length ? tr(`${lignes.length} bloc${lignes.length > 1 ? 's' : ''} trouvé${lignes.length > 1 ? 's' : ''}.`, `${lignes.length} block${lignes.length > 1 ? 's' : ''} found.`)
             : message?.texte ?? '';
   const [annonce, setAnnonce] = useState('');
   useEffect(() => {
@@ -129,9 +133,10 @@ function useActif(texte: string, lignes: LigneAjout[], permise: (l: LigneAjout) 
 }
 
 /** Ce que dit le champ vide, du plus complet au plus court : au téléphone, le plus long qui tient sans être coupé, « Coller » compris. */
-const AIDES = ['Colle une adresse ou cherche un bloc', 'Adresse ou nom d’un bloc', 'Une adresse'];
+const aides = (tr: ChoixLangue) => [tr('Colle une adresse ou cherche un bloc', 'Paste an address or search for a block'), tr('Adresse ou nom d’un bloc', 'Address or block name'), tr('Une adresse', 'An address')];
 function useAide(champ: RefObject<HTMLInputElement | null>) {
-  const [aide, setAide] = useState(AIDES[0]);
+  const AIDES = aides(useL());
+  const [n, setN] = useState(0);
   useLayoutEffect(() => {
     const i = champ.current;
     if (!i) return;
@@ -141,7 +146,8 @@ function useAide(champ: RefObject<HTMLInputElement | null>) {
       const s = getComputedStyle(i);
       mesure.font = `${s.fontWeight} ${s.fontSize} ${s.fontFamily}`;
       const place = i.clientWidth - parseFloat(s.paddingLeft) - parseFloat(s.paddingRight);
-      setAide(AIDES.find(t => mesure.measureText(t).width <= place) ?? AIDES[AIDES.length - 1]);
+      const k = AIDES.findIndex(t => mesure.measureText(t).width <= place);
+      setN(k < 0 ? AIDES.length - 1 : k);
     };
     mesurer();
     // La police arrive après le premier dessin, et la marge de droite change avec « Coller » : on remesure.
@@ -149,8 +155,8 @@ function useAide(champ: RefObject<HTMLInputElement | null>) {
     const suivi = new ResizeObserver(mesurer);
     suivi.observe(i);
     return () => suivi.disconnect();
-  }, [champ]);
-  return aide;
+  }, [champ]); // eslint-disable-line react-hooks/exhaustive-deps
+  return AIDES[n];
 }
 
 /** Le picto d'une ligne, ou le logo du site que son adresse appelle, sans fond ni cadre. */
@@ -173,12 +179,13 @@ function attributsOption(id: string, choix: Choix, prendre: (l: LigneAjout) => v
 
 /** Au bureau : les lignes du choix, sous le champ. Le champ garde la main ; la ligne active se dit par `aria-activedescendant`. */
 function Options({ id, choix, prendre }: { id: string; choix: Choix; prendre: (l: LigneAjout) => void }) {
+  const tr = useL();
   const { actif } = choix;
   // La ligne active reste en vue quand les flèches la font sortir de la liste.
   useEffect(() => { document.getElementById(`${id}-o${actif}`)?.scrollIntoView({ block: 'nearest' }); }, [id, actif]);
   if (choix.mode === 'vide') return <DepartBureau id={id} choix={choix} prendre={prendre} />;
   return (
-    <div id={`${id}-liste`} role="listbox" aria-label="Blocs" className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+    <div id={`${id}-liste`} role="listbox" aria-label={tr('Blocs', 'Blocks')} className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
       {choix.toutes.map((l, i) => (
         // Un clic ne prend pas le focus au champ : il prend la ligne, et le champ reste où il était.
         <div key={l.entree.nom} {...attributsOption(id, choix, prendre, l, i)} className="adm-menu-item text-white">
@@ -201,14 +208,16 @@ export function FeuilleAjout({ ouverte, onFermer, adresse, principal, ...gestes 
   /** L'adresse du bloc neuf d'où l'on revient par sa flèche : elle attend dans le champ. */
   adresse?: string;
   principal: boolean }) {
+  const tr = useL();
   return (
-    <Feuille ouverte={ouverte} onFermer={onFermer} titre="Ajouter un bloc">
+    <Feuille ouverte={ouverte} onFermer={onFermer} titre={tr('Ajouter un bloc', 'Add a block')}>
       {fermer => <ChoixTelephone key={adresse ?? ''} depart={adresse ?? ''} principal={principal} gestes={gestes} fermer={fermer} />}
     </Feuille>
   );
 }
 
 function ChoixTelephone({ depart, principal, gestes, fermer }: { depart: string; principal: boolean; gestes: GestesAjout; fermer: (apres?: () => void) => void }) {
+  const tr = useL();
   const choix = useChoix(principal, gestes, { depart, suiteToujours: true });
   // La liste de départ entre en cascade, une fois : les lignes d'une recherche arrivent sans bouger.
   const [aTape, setATape] = useState(false);
@@ -235,8 +244,8 @@ function ChoixTelephone({ depart, principal, gestes, fermer }: { depart: string;
   async function coller() {
     let t = '';
     // Refusé par le navigateur : le geste habituel reste, dans le champ. Rien n'y est faux : la ligne reste grise.
-    try { t = (await navigator.clipboard.readText()).trim(); } catch { choix.setNote({ texte: 'Le presse-papiers n’a pas pu être lu : appuie longuement dans le champ, puis choisis Coller.' }); return; }
-    if (!t) { choix.setNote({ texte: 'Rien à coller : copie d’abord une adresse.' }); return; }
+    try { t = (await navigator.clipboard.readText()).trim(); } catch { choix.setNote({ texte: tr('Le presse-papiers n’a pas pu être lu : appuie longuement dans le champ, puis choisis Coller.', 'The clipboard couldn’t be read: long-press in the field, then choose Paste.') }); return; }
+    if (!t) { choix.setNote({ texte: tr('Rien à coller : copie d’abord une adresse.', 'Nothing to paste: copy an address first.') }); return; }
     poser(t);
   }
   const ligne = (l: LigneAjout, i: number) => {
@@ -263,7 +272,7 @@ function ChoixTelephone({ depart, principal, gestes, fermer }: { depart: string;
         <div className="relative flex items-center">
           <Icone nom="ui-recherche" taille={17} className="pointer-events-none absolute left-3.5 text-white/55" />
           <input ref={champ} className={`${classeSaisie} pl-10 ${texte ? 'pr-12' : lisible ? 'pr-[68px]' : ''}`} type="text" enterKeyHint="go" autoCapitalize="none" autoCorrect="off" autoComplete="off" spellCheck={false}
-            value={texte} placeholder={aide} aria-label="Colle une adresse ou cherche un bloc" autoFocus={focusAuto()}
+            value={texte} placeholder={aide} aria-label={tr('Colle une adresse ou cherche un bloc', 'Paste an address or search for a block')} autoFocus={focusAuto()}
             aria-invalid={choix.note?.faute} aria-describedby={message ? idMessage : undefined}
             onChange={e => changer(e.target.value)}
             onPaste={e => {
@@ -276,13 +285,13 @@ function ChoixTelephone({ depart, principal, gestes, fermer }: { depart: string;
             onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); choix.entree(prendre); } }} />
           {/* Effacer ne prend pas la main au champ : le clavier reste comme il était, levé ou baissé. */}
           {texte ? (
-            <button type="button" aria-label="Effacer" onPointerDown={e => { avaitFocus.current = document.activeElement === champ.current; e.preventDefault(); }} onMouseDown={e => e.preventDefault()}
+            <button type="button" aria-label={tr('Effacer', 'Clear')} onPointerDown={e => { avaitFocus.current = document.activeElement === champ.current; e.preventDefault(); }} onMouseDown={e => e.preventDefault()}
               onClick={() => { changer(''); if (avaitFocus.current) champ.current?.focus(); }}
               className="absolute inset-y-0 right-0 grid w-12 place-items-center text-white/55 transition hover:text-white active:opacity-60">
               <Icone nom="ui-fermer" taille={16} />
             </button>
           ) : lisible && (
-            <button type="button" onClick={() => void coller()} className="absolute inset-y-0 right-0 flex min-w-11 items-center px-3 text-[14px] font-semibold text-bleu transition active:opacity-60">Coller</button>
+            <button type="button" onClick={() => void coller()} className="absolute inset-y-0 right-0 flex min-w-11 items-center px-3 text-[14px] font-semibold text-bleu transition active:opacity-60">{tr('Coller', 'Paste')}</button>
           )}
         </div>
         {/* Une seule ligne sous le champ : ce qui manque (en rouge, après Entrée), ce que deviendra ce qu'on tape, ou « aucun bloc ». */}
@@ -311,12 +320,12 @@ function ChoixTelephone({ depart, principal, gestes, fermer }: { depart: string;
  * reste seule.
  */
 // `bref` : ce qu'en dit la tuile, au bureau comme au téléphone, en deux lignes au plus et jamais coupé.
-const SUGGESTIONS: { type: TypeBloc; fond: string; bref: string }[] = [
+const SUGGESTIONS: { type: TypeBloc; fond: string; bref: [string, string] }[] = [
   // Le fond pâle et le picto de la famille du bloc, les couleurs de la liste de Ma page (critique du 27 octobre 2026).
-  { type: 'lien', fond: '#eef0ff', bref: 'Site, boutique, agenda' },
-  { type: 'galerie', fond: '#fde8f1', bref: 'Tes photos, qui défilent' },
-  { type: 'preuve', fond: '#fff0dc', bref: 'Ta note, tes témoignages' },
-  { type: 'inscription', fond: '#f2eaff', bref: 'Les e-mails de tes visiteurs' },
+  { type: 'lien', fond: '#eef0ff', bref: ['Site, boutique, agenda', 'Website, shop, calendar'] },
+  { type: 'galerie', fond: '#fde8f1', bref: ['Tes photos, qui défilent', 'Your photos, in a carousel'] },
+  { type: 'preuve', fond: '#fff0dc', bref: ['Ta note, tes témoignages', 'Your rating, your testimonials'] },
+  { type: 'inscription', fond: '#f2eaff', bref: ['Les e-mails de tes visiteurs', 'Your visitors’ emails'] },
 ];
 const FAMILLES: { nom: string; types: TypeBloc[] }[] = [
   { nom: 'Liens', types: ['lien', 'derniere-video'] },
@@ -327,6 +336,9 @@ const FAMILLES: { nom: string; types: TypeBloc[] }[] = [
 
 /** Une ligne de départ qui se montre en tuile : un bloc des suggestions, sans modèle. */
 const estTuile = (l: LigneAjout) => !l.entree.modele && SUGGESTIONS.some(s => s.type === l.entree.type);
+/** Le nom d'une famille dans la langue du compte : le français reste la clé. */
+const NOMS_FAMILLES: Record<string, string> = { 'Liens': 'Links', 'Texte et titres': 'Text and headings', 'Photos et infos': 'Photos and info', 'Pour te joindre': 'Ways to reach you', 'Autres': 'Other' };
+const nomFamille = (nom: string, tr: ChoixLangue) => tr(nom, NOMS_FAMILLES[nom] ?? nom);
 const familleDe = (l: LigneAjout) => FAMILLES.find(f => f.types.includes(l.entree.type))?.nom ?? 'Autres';
 /** Au bureau, la liste de départ dans l'ordre où elle se lit : les suggestions en tuiles, puis chaque famille, sans redire une tuile. */
 function ordreBureau(lignes: LigneAjout[]): LigneAjout[] {
@@ -341,6 +353,7 @@ function ordreBureau(lignes: LigneAjout[]): LigneAjout[] {
  * colonnes, tout en vue d'un coup d'œil. Une seule liste pour le clavier, dans l'ordre de lecture (`ordreBureau`).
  */
 function DepartBureau({ id, choix, prendre }: { id: string; choix: Choix; prendre: (l: LigneAjout) => void }) {
+  const tr = useL();
   const { toutes } = choix;
   const n = toutes.filter(estTuile).length;
   const familles: { nom: string; lignes: [LigneAjout, number][] }[] = [];
@@ -350,8 +363,8 @@ function DepartBureau({ id, choix, prendre }: { id: string; choix: Choix; prendr
     if (f) f.lignes.push([l, n + k]); else familles.push({ nom, lignes: [[l, n + k]] });
   });
   return (
-    <div id={`${id}-liste`} role="listbox" aria-label="Blocs" className="adm-depart min-h-0 flex-1 overflow-y-auto overscroll-contain">
-      <div role="group" aria-label="Suggestions" className="adm-depart-tuiles">
+    <div id={`${id}-liste`} role="listbox" aria-label={tr('Blocs', 'Blocks')} className="adm-depart min-h-0 flex-1 overflow-y-auto overscroll-contain">
+      <div role="group" aria-label={tr('Suggestions', 'Suggestions')} className="adm-depart-tuiles">
         {toutes.slice(0, n).map((l, i) => {
           const s = SUGGESTIONS.find(x => x.type === l.entree.type);
           return (
@@ -359,16 +372,16 @@ function DepartBureau({ id, choix, prendre }: { id: string; choix: Choix; prendr
               <span className="adm-tuile-picto" data-famille={familleBloc(l.entree.type)}><Icone nom={l.entree.picto} taille={22} /></span>
               {choix.reserve(l) && l.entree.fonction && <span className="absolute top-2.5 right-2.5"><Etiquette fonction={l.entree.fonction} /></span>}
               <span className="mt-auto text-[13.5px] leading-tight font-semibold">{l.entree.nom}</span>
-              {s && <span className="line-clamp-2 text-[12px] leading-snug text-white/65">{s.bref}</span>}
+              {s && <span className="line-clamp-2 text-[12px] leading-snug text-white/65">{tr(...s.bref)}</span>}
             </div>
           );
         })}
       </div>
-      <p className="adm-depart-aide">Une vidéo, un agenda, une boutique ? Colle son adresse : Hopla en fait le bon bloc.</p>
+      <p className="adm-depart-aide">{tr('Une vidéo, un agenda, une boutique ? Colle son adresse : Hopla en fait le bon bloc.', 'A video, a calendar, a shop? Paste its address: Hopla turns it into the right block.')}</p>
       <div className="adm-depart-familles">
         {familles.map(f => (
-          <div key={f.nom} role="group" aria-label={f.nom} className="break-inside-avoid pb-1.5">
-            <p aria-hidden="true" className="adm-depart-famille">{f.nom}</p>
+          <div key={f.nom} role="group" aria-label={nomFamille(f.nom, tr)} className="break-inside-avoid pb-1.5">
+            <p aria-hidden="true" className="adm-depart-famille">{nomFamille(f.nom, tr)}</p>
             {f.lignes.map(([l, i]) => (
               <div key={l.entree.nom} {...attributsOption(id, choix, prendre, l, i)} className="adm-menu-item text-white">
                 <PictoLigne l={l} taille={17} className="flex shrink-0" />
@@ -387,13 +400,14 @@ function Depart({ lignes, ligne, prendre, reserve, permise, nomDe }: {
   lignes: LigneAjout[]; ligne: (l: LigneAjout, i: number) => ReactNode; prendre: (l: LigneAjout) => void;
   reserve: (l: LigneAjout) => boolean; permise: (l: LigneAjout) => boolean; nomDe: (l: LigneAjout) => string;
 }) {
+  const tr = useL();
   const [ouverte, setOuverte] = useState<string | null>(null);
   const de = (type: TypeBloc) => lignes.find(l => l.entree.type === type && !l.entree.modele);
-  const tuiles = SUGGESTIONS.flatMap(s => { const l = de(s.type); return l ? [{ l, fond: s.fond, sous: s.bref }] : []; });
+  const tuiles = SUGGESTIONS.flatMap(s => { const l = de(s.type); return l ? [{ l, fond: s.fond, sous: tr(...s.bref) }] : []; });
   const familles = FAMILLES.map(f => ({ ...f, lignes: f.types.flatMap(t => de(t) ?? []) })).filter(f => f.lignes.length);
   return (
     <div className="flex flex-col gap-4 pb-2">
-      <ul className="adm-cascade grid grid-cols-2 gap-2.5 pt-1" aria-label="Suggestions">
+      <ul className="adm-cascade grid grid-cols-2 gap-2.5 pt-1" aria-label={tr('Suggestions', 'Suggestions')}>
         {tuiles.map(({ l, fond, sous }, i) => (
           <li key={l.entree.nom} style={{ '--i': i } as CSSProperties}>
             <button type="button" disabled={!permise(l)} onClick={() => prendre(l)} aria-label={nomDe(l)} style={{ background: fond }}
@@ -406,7 +420,7 @@ function Depart({ lignes, ligne, prendre, reserve, permise, nomDe }: {
           </li>
         ))}
       </ul>
-      <p className="adm-ajout-aide text-white/60">Une vidéo, un agenda, une boutique ? Colle son adresse : Hopla en fait le bon bloc.</p>
+      <p className="adm-ajout-aide text-white/60">{tr('Une vidéo, un agenda, une boutique ? Colle son adresse : Hopla en fait le bon bloc.', 'A video, a calendar, a shop? Paste its address: Hopla turns it into the right block.')}</p>
       <ul className="-mx-2 flex flex-col">
         {familles.map(f => {
           const ici = ouverte === f.nom;
@@ -415,7 +429,7 @@ function Depart({ lignes, ligne, prendre, reserve, permise, nomDe }: {
               <button type="button" aria-expanded={ici} onClick={() => setOuverte(ici ? null : f.nom)}
                 className="adm-famille-ajout flex w-full items-center gap-3 rounded-xl px-2 text-left transition hover:bg-white/[0.05]">
                 <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                  <span className="adm-famille-ajout-nom font-semibold text-white">{f.nom}</span>
+                  <span className="adm-famille-ajout-nom font-semibold text-white">{nomFamille(f.nom, tr)}</span>
                   {!ici && <span className="adm-famille-ajout-liste truncate text-white/55">{f.lignes.map(l => l.entree.nom).join(', ')}</span>}
                 </span>
                 <Icone nom="ui-chevron" taille={18} className={`shrink-0 text-white/40 transition-transform ${ici ? 'rotate-180' : ''}`} />
@@ -440,6 +454,7 @@ function Depart({ lignes, ligne, prendre, reserve, permise, nomDe }: {
 export function ChampAjout({ principal, demande = false, demandeVue, ...gestes }: GestesAjout & { principal: boolean;
   /** Le bouton de l'en-tête ou la touche A le demandent ; `demandeVue` dit que c'est fait. */
   demande?: boolean; demandeVue?: () => void }) {
+  const tr = useL();
   const choix = useChoix(principal, gestes, { ordre: ordreBureau });
   const [ouvert, setOuvert] = useState(false);
   const boite = useRef<HTMLDivElement>(null);
@@ -494,7 +509,7 @@ export function ChampAjout({ principal, demande = false, demandeVue, ...gestes }
         <Icone nom="ui-plus" taille={15} className="adm-coller-signe" />
         <input ref={champ} type="text" role="combobox" aria-expanded={deroulee} aria-controls={deroulee ? `${id}-liste` : undefined} aria-autocomplete="list"
           aria-activedescendant={deroulee && choix.actif >= 0 ? `${id}-o${choix.actif}` : undefined}
-          aria-label="Ajouter un bloc : colle une adresse ou cherche un bloc" placeholder="Colle une adresse ou cherche un bloc"
+          aria-label={tr('Ajouter un bloc : colle une adresse ou cherche un bloc', 'Add a block: paste an address or search for a block')} placeholder={tr('Colle une adresse ou cherche un bloc', 'Paste an address or search for a block')}
           aria-invalid={choix.note?.faute} aria-describedby={montre && message ? `${id}-message` : undefined}
           autoCapitalize="none" autoCorrect="off" autoComplete="off" spellCheck={false} value={texte}
           onChange={e => { choix.changer(e.target.value); setOuvert(true); }}
