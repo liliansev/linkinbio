@@ -57,9 +57,13 @@ const tropDeCourriels = (langue?: Langue) => ({ ok: false as const, message: dir
 const PLAFOND_JOUR = 300;
 
 /** L'adresse a déjà une page ou un nom : rien ne change, et seule sa boîte apprend pourquoi. */
-async function rappeler(origines: Origines, env: Env, adresse: string, deja: { compte: string } | { reservation: string }, fetchImpl: typeof fetch) {
+async function rappeler(origines: Origines, env: Env, adresse: string, deja: { compte: string } | { reservation: string }, fetchImpl: typeof fetch, langue?: Langue) {
   const page = (p: string) => `${origines.page}/${p}`;
-  const [sujet, texte, lien, libelle] = 'compte' in deja
+  const [sujet, texte, lien, libelle] = langue === 'en'
+    ? ('compte' in deja
+      ? ['You already have a Hopla page', `Your page is already live at ${sansSchema(page(deja.compte))}. To edit it, log in with this email address.`, `${origines.admin}/admin`, 'Log in']
+      : ['Your Hopla name is already reserved', `You already reserved ${sansSchema(page(deja.reservation))}. During the beta, one email address keeps one name: your invite will arrive here.`, page(deja.reservation), 'See my address'])
+    : 'compte' in deja
     ? ['Tu as déjà une page Hopla', `Ta page est déjà en ligne sur ${sansSchema(page(deja.compte))}. Pour la modifier, connecte-toi avec cette adresse.`, `${origines.admin}/admin`, 'Me connecter']
     : ['Ton nom Hopla est déjà réservé', `Tu as déjà réservé ${sansSchema(page(deja.reservation))}. Pendant la bêta, une adresse garde un seul nom : ton invitation arrivera ici.`, page(deja.reservation), 'Voir mon adresse'];
   await envoyer(env, fetchImpl, { to: adresse, subject: sujet, replyTo: CONTACT_LEGAL, html: enveloppe(`<p>${texte}</p>${bouton(lien, libelle)}`), text: `${texte}\n${lien}` });
@@ -76,13 +80,24 @@ export async function reserverNom(origines: Origines, env: Env, saisie: { nom: s
   if (destinataireSature(adresse, maintenant)) return tropDeCourriels(saisie.langue);
   const note = { ok: true as const, message: d(`C’est noté. Ton invitation arrivera à ${adresse}.`, `Got it. Your invite will arrive at ${adresse}.`) };
   const deja = db.dejaInscrit(adresse);
-  if (deja) { await rappeler(origines, env, adresse, deja, fetchImpl); return note; }
+  if (deja) { await rappeler(origines, env, adresse, deja, fetchImpl, saisie.langue); return note; }
   if (!db.reserver(adresse, nom, maintenant)) return { ok: false, message: d(`${NOM_PUBLIC}/${nom} vient d’être pris. Essaie une variante.`, `${NOM_PUBLIC}/${nom} was just taken. Try a variation.`) };
-  await confirmerReservation(env, adresse, nom, fetchImpl);
+  await confirmerReservation(env, adresse, nom, fetchImpl, saisie.langue);
   return note;
 }
 
-async function confirmerReservation(env: Env, adresse: string, nom: string, fetchImpl: typeof fetch) {
+async function confirmerReservation(env: Env, adresse: string, nom: string, fetchImpl: typeof fetch, langue?: Langue) {
+  if (langue === 'en') {
+    const text = `${NOM_PUBLIC}/${nom} is yours. We’re opening pages little by little: your invite will arrive at this address, with a link to create your page in four questions.`;
+    const sent = await envoyer(env, fetchImpl, {
+      to: adresse, subject: 'Your Hopla name is reserved', replyTo: CONTACT_LEGAL,
+      html: enveloppe(`<p>${text}</p>
+<p style="color:#666;font-size:14px">Didn’t ask for this? Reply to this email and we’ll erase your address. Without an invite, the reservation erases itself after a year.</p>`),
+      text: `${text}\n\nDidn’t ask for this? Reply to this email and we’ll erase your address.`,
+    });
+    if (!sent) console.error('[liens] confirmation de réservation non envoyée');
+    return;
+  }
   const texte = `${NOM_PUBLIC}/${nom} est à toi. On ouvre les pages petit à petit : ton invitation arrivera à cette adresse, avec un lien pour créer ta page en quatre questions.`;
   const parti = await envoyer(env, fetchImpl, {
     to: adresse, subject: 'Ton nom Hopla est réservé', replyTo: CONTACT_LEGAL,
@@ -124,7 +139,7 @@ export async function creerHopla(origines: Origines, env: Env, saisie: { nom: st
   const reservation = db.reservationParEmail(adresse);
   if (reservation) return (await inviterReservation(origines, env, reservation.id, fetchImpl)).ok ? note : { ok: false, message: d('L’e-mail n’est pas parti. Réessaie dans un instant.', 'The email didn’t go out. Try again in a moment.') };
   const deja = db.dejaInscrit(adresse);
-  if (deja) { await rappeler(origines, env, adresse, deja, fetchImpl); return note; }
+  if (deja) { await rappeler(origines, env, adresse, deja, fetchImpl, saisie.langue); return note; }
   if (db.nomPris(nom)) return { ok: false, message: d(`${NOM_PUBLIC}/${nom} vient d’être pris. Essaie une variante.`, `${NOM_PUBLIC}/${nom} was just taken. Try a variation.`) };
   let compte: db.Compte;
   try { compte = db.creerCompte(adresse, nom, maintenant, saisie.langue); } catch { return { ok: false, message: d(`${NOM_PUBLIC}/${nom} vient d’être pris. Essaie une variante.`, `${NOM_PUBLIC}/${nom} was just taken. Try a variation.`) }; }
@@ -185,9 +200,9 @@ export async function corrigerAdresse(origines: Origines, env: Env, saisie: { no
     if (destinataireSature(nouvelle, maintenant)) return tropDeCourriels(saisie.langue);
     const note = { ok: true as const, message: d(`C’est corrigé. Ton invitation arrivera à ${nouvelle}.`, `Fixed. Your invite will arrive at ${nouvelle}.`) };
     const deja = nouvelle === ancienne ? null : db.dejaInscrit(nouvelle);
-    if (deja) { await rappeler(origines, env, nouvelle, deja, fetchImpl); return note; }
+    if (deja) { await rappeler(origines, env, nouvelle, deja, fetchImpl, saisie.langue); return note; }
     db.changerEmailReservation(r.id, nouvelle);
-    await confirmerReservation(env, nouvelle, nom, fetchImpl);
+    await confirmerReservation(env, nouvelle, nom, fetchImpl, saisie.langue);
     return note;
   }
 
@@ -196,7 +211,7 @@ export async function corrigerAdresse(origines: Origines, env: Env, saisie: { no
   if (destinataireSature(nouvelle, maintenant)) return tropDeCourriels(saisie.langue);
   const note = { ok: true as const, message: d(`C’est corrigé. Va dans tes e-mails : ton lien est parti à ${nouvelle}.`, `Fixed. Check your inbox: your link was sent to ${nouvelle}.`) };
   const deja = nouvelle === ancienne ? null : db.dejaInscrit(nouvelle);
-  if (deja) { await rappeler(origines, env, nouvelle, deja, fetchImpl); return note; }
+  if (deja) { await rappeler(origines, env, nouvelle, deja, fetchImpl, saisie.langue); return note; }
   db.changerEmail(compte.id, nouvelle);
   const envoi = await inviter(origines, env, { ...compte, email: nouvelle }, fetchImpl, 'inscription');
   // L'e-mail n'est pas parti : l'adresse d'avant revient, et l'on peut réessayer.
@@ -228,7 +243,7 @@ export async function renommerPage(origines: Origines, env: Env, saisie: { ancie
     if (!r || r.pseudo !== ancien || maintenant - r.ts > DELAI_CORRECTION) return refus;
     if (destinataireSature(adresse, maintenant)) return tropDeCourriels(saisie.langue);
     try { db.changerPseudoReservation(r.id, nom); } catch { return { ok: false, message: d(`${NOM_PUBLIC}/${nom} vient d’être pris. Essaie une variante.`, `${NOM_PUBLIC}/${nom} was just taken. Try a variation.`) }; }
-    await confirmerReservation(env, adresse, nom, fetchImpl);
+    await confirmerReservation(env, adresse, nom, fetchImpl, saisie.langue);
     return { ok: true, message: d(`C’est changé. Ton invitation arrivera à ${adresse}.`, `Changed. Your invite will arrive at ${adresse}.`), nom };
   }
 

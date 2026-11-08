@@ -14,7 +14,47 @@ const pluriel = (n: number, mot: string) => `${nombre(n)} ${mot}${n > 1 ? 's' : 
 
 export interface Phrase { texte: string; ton: 'hausse' | 'baisse' | 'neutre' }
 
-export function resumer(s: Stats): Phrase[] {
+/** The same facts in English, for a page in English: same thresholds, same order. */
+function summarize(s: Stats): Phrase[] {
+  const n = (x: number) => x.toLocaleString('en-US');
+  const plural = (x: number, word: string) => `${n(x)} ${word}${x === 1 ? '' : 's'}`;
+  const before = (jours: number) => (jours === 1 ? 'the day before' : jours === 7 ? 'the week before' : `the previous ${jours} days`);
+  const phrases: Phrase[] = [];
+  if (!s.vues) return [{ texte: s.jours === 7 ? 'No visits yet this week. Share your link in your bio to get things going.' : 'No visits yet for this period.', ton: 'neutre' }];
+  if (s.precedent.vues >= 10) {
+    const e = pourcent(s.vues, s.precedent.vues);
+    if (Math.abs(e) >= 10) phrases.push({ texte: `Your page got ${plural(s.vues, 'view')}, ${e > 0 ? `${e}% more` : `${-e}% fewer`} than ${before(s.jours)}.`, ton: e > 0 ? 'hausse' : 'baisse' });
+    else phrases.push({ texte: `Your page is holding steady: ${plural(s.vues, 'view')}, like ${before(s.jours)}.`, ton: 'neutre' });
+  } else phrases.push({ texte: `Your page got ${plural(s.vues, 'view')} and ${plural(s.clics, 'click')}.`, ton: 'neutre' });
+  const lien = s.blocs
+    .filter(b => b.clics >= 5 && b.titre !== 'Bloc supprimé')
+    .map(b => ({ ...b, ecart: b.avant ? pourcent(b.clics, b.avant) : Infinity }))
+    .filter(b => b.ecart === Infinity ? b.clics >= 8 : b.avant >= 3 && Math.abs(b.ecart) >= 25)
+    .sort((a, b) => Math.abs(b.clics - b.avant) - Math.abs(a.clics - a.avant))[0];
+  if (lien) {
+    const nom = `“${lien.titre.length > 40 ? `${lien.titre.slice(0, 39)}…` : lien.titre}”`;
+    if (lien.ecart === Infinity) phrases.push({ texte: `${nom} is off to a strong start: ${plural(lien.clics, 'click')}.`, ton: 'hausse' });
+    else phrases.push({ texte: `Your link ${nom} got ${lien.ecart > 0 ? '+' : ''}${lien.ecart}% clicks (${n(lien.clics)} vs ${n(lien.avant)}).`, ton: lien.ecart > 0 ? 'hausse' : 'baisse' });
+  }
+  const moyenne = s.vues / s.serie.length;
+  const pic = s.serie.reduce((a, b) => (b.vues > a.vues ? b : a), s.serie[0]);
+  if (s.serie.length >= 5 && pic.vues >= 10 && pic.vues >= moyenne * 1.8) {
+    const jour = new Date(`${pic.jour}T12:00:00`).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+    phrases.push({ texte: `Your best day: ${jour}, with ${plural(pic.vues, 'view')}. A post that day?`, ton: 'hausse' });
+  }
+  const source = s.sources.find(x => x.nom !== 'Direct');
+  if (source && source.vues >= 5) {
+    const part = Math.round((source.vues / s.vues) * 100);
+    const double = source.avant >= 3 && source.vues >= 2 * source.avant;
+    const nom = source.nom === 'E-mail' ? 'Email' : source.nom;
+    phrases.push({ texte: double ? `${nom} brought you ${plural(source.vues, 'visit')}, twice as many as ${before(s.jours)}.` : `${nom} brings you the most visitors: ${part}% of visits.`, ton: double ? 'hausse' : 'neutre' });
+  }
+  if (s.apps.ouverts >= 3) phrases.push({ texte: `${plural(s.apps.ouverts, 'click')} opened straight in their app, instead of getting stuck inside Instagram or TikTok.`, ton: 'neutre' });
+  return phrases.slice(0, 4);
+}
+
+export function resumer(s: Stats, langue: 'fr' | 'en' = 'fr'): Phrase[] {
+  if (langue === 'en') return summarize(s);
   const phrases: Phrase[] = [];
   if (!s.vues) return [{ texte: s.jours === 7 ? 'Pas encore de visite cette semaine. Partage ton lien en bio pour lancer la machine.' : 'Pas encore de visite sur cette période.', ton: 'neutre' }];
 

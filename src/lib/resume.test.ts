@@ -53,3 +53,16 @@ test('des dates choisies se disent en dates, et se comparent aux jours d’avant
   // Des dates sans visite le disent, sans pousser à partager : elles sont passées.
   assert.equal(enUnePhrase({ ...s, vues: 0 }, '2026-10-22'), 'Du 13 au 19 octobre, aucune visite.');
 });
+
+test('les stats en phrases, en anglais (8 novembre 2026)', () => {
+  const s: Stats = {
+    jours: 7, vues: 400, visiteurs: 300, clics: 120, serie: serie([30, 200, 40, 30, 40, 30, 30]),
+    blocs: [{ id: 'yt', titre: 'YouTube', clics: 52, avant: 37 }],
+    sources: [{ nom: 'Direct', vues: 150, avant: 100 }, { nom: 'TikTok', vues: 120, avant: 50 }],
+    appareils: [], pays: [], apps: { integres: 0, versApp: 0, ouverts: 0 }, precedent: { vues: 300, visiteurs: 250, clics: 90 }, dejaVue: true,
+  };
+  const textes = resumer(s, 'en').map(p => p.texte);
+  assert.ok(textes.length >= 3);
+  for (const t of textes) assert.doesNotMatch(t, /\b(Ta|Ton|vues|semaine)\b/);
+  assert.match(textes[0], /400/);
+});

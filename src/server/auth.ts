@@ -204,7 +204,15 @@ export async function renvoyerLienCompte(origines: Origines, env: Env, compte: C
     return r.ok ? { ok: true, message: `Lien envoyé à ${compte.email} : il ouvre sa page, pendant 7 jours.`, lienDev: r.lienDev } : r;
   }
   const page = `${origines.page}/${compte.pseudo}`;
-  const r = await envoyerLien({
+  const r = await envoyerLien(langueDe(compte.id) === 'en' ? {
+    origines, env, fetchImpl, compte: compte.id, destinataire: compte.email, duree: DUREE_LIEN_ENVOYE,
+    sujet: 'Your link to open Hopla',
+    html: lien => enveloppe(`<p>Hi,</p>
+<p>Here is a new link to open the dashboard of your page <a href="${page}">${sansSchema(page)}</a>. It works only once, for 24 hours.</p>
+${bouton(lien, 'Open my dashboard')}
+<p style="color:#666;font-size:14px">After that, log in from ${sansSchema(origines.admin)} with this email address. Don’t need it? Ignore this email: no one can use it without access to your inbox.</p>`),
+    texte: lien => `Here is a new link to open the dashboard of your page ${page}: ${lien}\nIt works only once, for 24 hours. After that, log in from ${origines.admin} with this email address.`,
+  } : {
     origines, env, fetchImpl, compte: compte.id, destinataire: compte.email, duree: DUREE_LIEN_ENVOYE,
     sujet: 'Ton lien pour ouvrir Hopla',
     html: lien => enveloppe(`<p>Bonjour,</p>

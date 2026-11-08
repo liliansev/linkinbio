@@ -18,7 +18,11 @@ export const Route = createRootRoute({
   component: Outlet,
   notFoundComponent: () => (
     <main style={{ minHeight: '100dvh', display: 'grid', placeItems: 'center', background: '#0c121f', color: '#f4f1ec', fontFamily: 'Geist Variable, system-ui' }}>
-      <p>Cette page n’existe pas. <a href="/" style={{ color: '#ffb38a' }}>Retour à Hopla</a></p>
+      {/* Anglais d'abord (8 novembre 2026), le français dessous : une adresse inconnue ne dit pas sa langue. */}
+      <div style={{ textAlign: 'center', lineHeight: 1.6 }}>
+        <p>This page doesn’t exist. <a href="/" style={{ color: '#ffb38a' }}>Back to Hopla</a></p>
+        <p lang="fr" style={{ opacity: 0.7 }}>Cette page n’existe pas. <a href="/fr" style={{ color: '#ffb38a' }}>Retour à Hopla</a></p>
+      </div>
     </main>
   ),
 });

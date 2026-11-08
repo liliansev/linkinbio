@@ -1,9 +1,9 @@
 import { PRINCIPAL, sansSchema } from '../lib/types.ts';
 import type { Origines } from '../lib/types.ts';
 import type { DureeOfferte, PlanPayant } from '../lib/abonnement.ts';
-import { OFFRES, apresAbonnement, apresOffre, avantagesEntre, effetOffert, estResilie, finOfferte, rang } from '../lib/abonnement.ts';
+import { OFFRES, avantage, nomOffre, apresAbonnement, apresOffre, avantagesEntre, effetOffert, estResilie, finOfferte, rang } from '../lib/abonnement.ts';
 import { CONTACT_LEGAL } from '../lib/legal.ts';
-import { abonnement, compteParId, offrir, retirerOffre } from './db.ts';
+import { abonnement, compteParId, lireReglages, offrir, retirerOffre } from './db.ts';
 import type { Compte } from './db.ts';
 import { resilierEnFinDePeriode } from './creem.ts';
 import { bouton, echapper, envoyer, enveloppe } from './courriel.ts';
@@ -19,6 +19,12 @@ import type { Env } from './courriel.ts';
 export type Reponse = { ok: boolean; message: string };
 
 const dateLongue = (ms: number) => new Date(ms).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Paris' });
+const dateEn = (ms: number) => new Date(ms).toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Paris' });
+
+/** La langue de la page d'un compte : l'e-mail qui le prévient la parle (8 novembre 2026). Les messages à Lilian restent en français. */
+function langueDe(compte: string): 'fr' | 'en' {
+  try { return lireReglages(compte).langue === 'en' ? 'en' : 'fr'; } catch { return 'fr'; }
+}
 
 /** Le compte d'un geste : jamais le principal, qui n'a pas d'abonnement. */
 function compteDuGeste(id: string): Compte {
@@ -51,7 +57,16 @@ export async function resilierPourLeCompte(env: Env, fetchImpl: typeof fetch, id
   // Une offre offerte qui court encore après la période payée prend la suite : la personne le lit aussi.
   const suite = apresAbonnement(apres, fin);
   const ensuite = suite === 'gratuit' || !apres.offerte ? '' : ` Ensuite, ta page garde ${OFFRES[suite].nom}, offert ${apres.offerte.jusqu ? `jusqu’au ${dateLongue(apres.offerte.jusqu)}` : 'sans limite de durée'}.`;
-  const parti = await envoyer(env, fetchImpl, {
+  const en = langueDe(compte.id) === 'en';
+  const nomEn = nomOffre(avant.payee, 'en');
+  const quandEn = fin ? `on ${dateEn(fin)}` : 'at the end of the paid period';
+  const ensuiteEn = suite === 'gratuit' || !apres.offerte ? '' : ` After that, your page keeps ${nomOffre(suite, 'en')}, free ${apres.offerte.jusqu ? `until ${dateEn(apres.offerte.jusqu)}` : 'with no end date'}.`;
+  const parti = await envoyer(env, fetchImpl, en ? {
+    to: compte.email, replyTo: CONTACT_LEGAL,
+    subject: 'Your Hopla subscription is canceled',
+    html: enveloppe(`<p>Hi,</p><p>Your Hopla ${nomEn} subscription is canceled.</p>${motHtml(mot)}<p>Your ${nomEn} plan runs until the end of what you paid for, and stops ${quandEn}: nothing more will be charged.${ensuiteEn} Nothing is removed from your page, and picking a plan again brings everything back.</p><p style="color:#666;font-size:14px">Your invoices stay with Creem. Any question? Just reply to this email.</p>`),
+    text: `Your Hopla ${nomEn} subscription is canceled.\n\n${motTexte(mot)}Your ${nomEn} plan stops ${quandEn}: nothing more will be charged.${ensuiteEn} Nothing is removed from your page.\n\nYour invoices stay with Creem. Any question? Reply to this email.`,
+  } : {
     to: compte.email, replyTo: CONTACT_LEGAL,
     subject: 'Ton abonnement Hopla est résilié',
     html: enveloppe(`<p>Bonjour,</p><p>Ton abonnement Hopla ${nom} est résilié.</p>${motHtml(mot)}<p>Ton offre ${nom} court jusqu’au bout de ce que tu as payé, et s’arrête ${quand} : plus rien ne sera prélevé.${ensuite} Rien n’est effacé de ta page, et reprendre une offre remet tout en place.</p><p style="color:#666;font-size:14px">Tes factures restent chez Creem. Une question ? Réponds simplement à ce message.</p>`),
@@ -92,7 +107,21 @@ export async function offrirAuCompte(env: Env, fetchImpl: typeof fetch, origines
     ? `Lilian Sevoumian t’offre Hopla ${nom}, ${pendant}, pour ta page ${lien}. C’est déjà actif : rien à payer, aucune carte à donner.`
     : `Ton abonnement Hopla ${paye} s’arrête ${finPayee}, et plus rien ne sera prélevé. Ensuite, Lilian Sevoumian t’offre Hopla ${nom}, ${pendant}, pour ta page ${lien} : rien à payer, aucune carte à donner.`);
   const ensuite = jusqu ? `Le ${dateLongue(jusqu)}, ta page repassera en ${OFFRES[apresOffre({ ...avant, offerte: { plan, jusqu } })].nom}, sans rien perdre de son contenu.` : '';
-  const parti = await envoyer(env, fetchImpl, {
+  const en = langueDe(compte.id) === 'en';
+  const nomEn = nomOffre(plan, 'en');
+  const pendantEn = jusqu ? `until ${dateEn(jusqu)}` : 'with no end date';
+  const finPayeeEn = avant.finPeriode ? `on ${dateEn(avant.finPeriode)}` : 'at the end of the paid period';
+  const introEn = (lien: string) => (effet === 'maintenant'
+    ? `Lilian Sevoumian is giving you Hopla ${nomEn}, ${pendantEn}, for your page ${lien}. It’s already active: nothing to pay, no card needed.`
+    : `Your Hopla ${nomOffre(avant.payee, 'en')} subscription stops ${finPayeeEn}, and nothing more will be charged. After that, Lilian Sevoumian is giving you Hopla ${nomEn}, ${pendantEn}, for your page ${lien}: nothing to pay, no card needed.`);
+  const ensuiteEn = jusqu ? `On ${dateEn(jusqu)}, your page will go back to ${nomOffre(apresOffre({ ...avant, offerte: { plan, jusqu } }), 'en')}, without losing any of its content.` : '';
+  const ouvreEn = ouvre.map(a => avantage(a, 'en'));
+  const parti = await envoyer(env, fetchImpl, en ? {
+    to: compte.email, replyTo: CONTACT_LEGAL,
+    subject: `Hopla ${nomEn} is on us`,
+    html: enveloppe(`<p>Hi,</p><p>${introEn(`<a href="${page}">${echapper(sansSchema(page))}</a>`)}</p>${motHtml(mot)}${ouvreEn.length ? `<p>What ${nomEn} unlocks:</p><ul>${ouvreEn.map(a => `<li>${echapper(a)}</li>`).join('')}</ul>` : ''}${bouton(`${origines.admin}/admin`, 'Open my dashboard')}${ensuiteEn ? `<p style="color:#666;font-size:14px">${ensuiteEn}</p>` : ''}`),
+    text: `${introEn(page)}\n\n${motTexte(mot)}${ouvreEn.length ? `What ${nomEn} unlocks:\n${ouvreEn.map(a => `- ${a}`).join('\n')}\n\n` : ''}Your dashboard: ${origines.admin}/admin${ensuiteEn ? `\n\n${ensuiteEn}` : ''}`,
+  } : {
     to: compte.email, replyTo: CONTACT_LEGAL,
     subject: `Hopla ${nom} t’est offert`,
     html: enveloppe(`<p>Bonjour,</p><p>${intro(`<a href="${page}">${echapper(sansSchema(page))}</a>`)}</p>${motHtml(mot)}${ouvre.length ? `<p>Ce que ${nom} t’ouvre :</p><ul>${ouvre.map(a => `<li>${echapper(a)}</li>`).join('')}</ul>` : ''}${bouton(`${origines.admin}/admin`, 'Ouvrir mon back office')}${ensuite ? `<p style="color:#666;font-size:14px">${ensuite}</p>` : ''}`),

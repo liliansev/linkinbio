@@ -1,9 +1,9 @@
 import { createHash } from 'node:crypto';
 import { MINUTE, cleIp, limiteur } from './limites.ts';
 import { MESSAGE_ROBOT, verifierTurnstile } from './turnstile.ts';
-import type { FournisseurListe, IntegrationListe, ListeFournisseur, Webhook } from '../lib/types.ts';
+import type { FournisseurListe, IntegrationListe, Langue, ListeFournisseur, Newsletter, Webhook } from '../lib/types.ts';
 import { ORIGINE_PUBLIQUE, PRINCIPAL, cheminPage, estWebhook } from '../lib/types.ts';
-import { ADRESSE_WEBHOOK, LISTE_CHEZ, NOMS_FOURNISSEURS, OUVRAGE_WEBHOOK, adresseWebhook } from '../lib/integrations.ts';
+import { ADRESSE_WEBHOOK, ADRESSE_WEBHOOK_EN, LISTE_CHEZ, LISTE_CHEZ_EN, NOMS_FOURNISSEURS, OUVRAGE_WEBHOOK, OUVRAGE_WEBHOOK_EN, adresseWebhook } from '../lib/integrations.ts';
 import { email as validerEmail } from '../lib/valider.ts';
 import * as db from './db.ts';
 import { droits } from './droits.ts';
@@ -289,9 +289,40 @@ const PILOTES: Record<FournisseurListe, Pilote> = {
 /** Le nom de la connexion refusée par `requeteSortante` : une adresse du réseau interne. */
 const adresseRefusee = (e: unknown) => (e as { code?: string })?.code === 'EREFUSEE' || (e as Error)?.message === 'Adresse refusée.';
 
+/** Ce que dit le choix d'une liste, en anglais, quand le compte n'en a aucune (voir `LISTE_CHEZ`). */
+const VIDE_EN: Record<Newsletter, string> = {
+  brevo: 'No list on Brevo. Create one, then try again.',
+  mailchimp: 'No audience on Mailchimp. Create one, then try again.',
+  kit: 'No form on Kit. Create one, then try again.',
+  mailerlite: 'No group on MailerLite. Create one, then try again.',
+  beehiiv: 'No publication on beehiiv.',
+  systeme: '',
+  mailcheap: 'No newsletter on MailCheap. Create one, then try again.',
+  loops: '',
+};
+/** Les messages propres à un fournisseur, en anglais. */
+const MESSAGES_EN: Record<string, string> = {
+  'Ta clé Mailchimp finit par son centre de données, comme « -us21 » : copie-la en entier.': 'Your Mailchimp key ends with its data center, like “-us21”: copy it in full.',
+};
+
 /** Ce que dit le back office quand un fournisseur refuse ou ne répond pas. */
-function messageEchec(fournisseur: FournisseurListe, e: unknown): string {
+function messageEchec(fournisseur: FournisseurListe, e: unknown, langue: Langue = 'fr'): string {
   const nom = NOMS_FOURNISSEURS[fournisseur];
+  if (langue === 'en') {
+    if (adresseRefusee(e)) return 'Hopla doesn’t send anything to this address.';
+    if (!(e instanceof Refus)) return `${nom} isn’t responding. Try again in a moment.`;
+    // Un message propre au fournisseur (la clé Mailchimp sans son centre de données) a son anglais dans `MESSAGES_EN`.
+    if (e.message) return MESSAGES_EN[e.message] ?? e.message;
+    if (estWebhook(fournisseur)) {
+      if (e.raison === 'adresse') return ADRESSE_WEBHOOK_EN[fournisseur];
+      if (e.raison === 'cle') return `${nom} refuses this address.`;
+      if (e.raison === 'liste' || e.statut === 410) return `${nom} can’t find this webhook. Check the address, and that ${OUVRAGE_WEBHOOK_EN[fournisseur]} is on.`;
+    } else {
+      if (e.raison === 'cle') return `${nom} refuses this key.`;
+      if (e.raison === 'liste') return `${nom} can’t find ${LISTE_CHEZ_EN[fournisseur].la}.`;
+    }
+    return `${nom} isn’t responding (${e.statut}). Try again in a moment.`;
+  }
   if (adresseRefusee(e)) return 'Hopla n’envoie rien à cette adresse.';
   if (!(e instanceof Refus)) return `${nom} ne répond pas. Réessaie dans un instant.`;
   if (e.message) return e.message;
@@ -307,17 +338,18 @@ function messageEchec(fournisseur: FournisseurListe, e: unknown): string {
 }
 
 /** Les listes du compte chez une newsletter, pour en choisir une par son nom. */
-export async function listes(fournisseur: FournisseurListe, cle: string, f: typeof fetch): Promise<{ ok: boolean; message: string; listes: ListeFournisseur[] }> {
-  if (estWebhook(fournisseur)) return { ok: false, message: 'Un webhook n’a pas de liste.', listes: [] };
+export async function listes(fournisseur: FournisseurListe, cle: string, f: typeof fetch, langue: Langue = 'fr'): Promise<{ ok: boolean; message: string; listes: ListeFournisseur[] }> {
+  if (estWebhook(fournisseur)) return { ok: false, message: langue === 'en' ? 'A webhook has no list.' : 'Un webhook n’a pas de liste.', listes: [] };
+  const vide = langue === 'en' ? VIDE_EN[fournisseur] : LISTE_CHEZ[fournisseur].vide;
   const pilote = PILOTES[fournisseur];
   try {
     // Un identifiant vide, quand la forme l'accepte : sans tag, sans liste, la première newsletter.
     const trouvees = (await pilote.listes(cle, f)).filter(l => pilote.forme.test(l.id));
-    return { ok: true, message: trouvees.length ? '' : LISTE_CHEZ[fournisseur].vide, listes: trouvees };
+    return { ok: true, message: trouvees.length ? '' : vide, listes: trouvees };
   } catch (e) {
     // Une liste vide peut répondre 404 : la clé, elle, est passée.
-    if (e instanceof Refus && e.raison === 'liste') return { ok: true, message: LISTE_CHEZ[fournisseur].vide, listes: [] };
-    return { ok: false, message: messageEchec(fournisseur, e), listes: [] };
+    if (e instanceof Refus && e.raison === 'liste') return { ok: true, message: vide, listes: [] };
+    return { ok: false, message: messageEchec(fournisseur, e, langue), listes: [] };
   }
 }
 
@@ -325,8 +357,17 @@ export async function listes(fournisseur: FournisseurListe, cle: string, f: type
  * Vérifie la clé et la liste chez le fournisseur (un webhook reçoit un inscrit d'exemple, marqué `exemple`) ;
  * renvoie le nom de la liste, ou l'hôte du webhook. `page` : l'adresse de la page, pour l'exemple.
  */
-export async function verifier(fournisseur: FournisseurListe, cle: string, liste: string, f: typeof fetch, page = ''): Promise<{ ok: boolean; message: string; nom?: string }> {
+export async function verifier(fournisseur: FournisseurListe, cle: string, liste: string, f: typeof fetch, page = '', langue: Langue = 'fr'): Promise<{ ok: boolean; message: string; nom?: string }> {
   const pilote = PILOTES[fournisseur];
+  if (langue === 'en') {
+    if (!pilote.forme.test(liste)) return { ok: false, message: estWebhook(fournisseur) ? 'A webhook has no list.' : `Choose ${LISTE_CHEZ_EN[fournisseur].la} your subscribers go to.` };
+    const nomEn = NOMS_FOURNISSEURS[fournisseur];
+    try {
+      const trouve = await pilote.nom(cle, liste, f, page);
+      if (estWebhook(fournisseur)) return { ok: true, message: `Connected to ${nomEn}. A sample subscriber was just sent there.`, nom: trouve };
+      return { ok: true, message: `Connected to ${nomEn}${trouve ? `, ${LISTE_CHEZ_EN[fournisseur].la} “${trouve}”` : ''}.`, nom: trouve };
+    } catch (e) { return { ok: false, message: messageEchec(fournisseur, e, 'en') }; }
+  }
   if (!pilote.forme.test(liste)) return { ok: false, message: estWebhook(fournisseur) ? 'Un webhook n’a pas de liste.' : `Choisis ${LISTE_CHEZ[fournisseur].la} où vont tes inscrits.` };
   const nom = NOMS_FOURNISSEURS[fournisseur];
   try {
