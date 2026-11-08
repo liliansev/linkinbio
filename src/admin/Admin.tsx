@@ -18,7 +18,7 @@ import { OngletStats } from './OngletStats.tsx';
 import { MaListe } from './MaListe.tsx';
 import { FenetreListe, ListeBranchee, OngletIntegrations } from './OngletIntegrations.tsx';
 import { OngletReglages, resumeRedirection } from './OngletReglages.tsx';
-import { LangueSite, choix, useL } from '../accueil/langue.ts';
+import { DeviseSite, LangueSite, choix, useL } from '../accueil/langue.ts';
 import type { Choix } from '../accueil/langue.ts';
 import { redirectionActive } from '../lib/sorties.ts';
 import { OngletComptes } from './OngletComptes.tsx';
@@ -182,6 +182,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
   const [demarrageOuvert, setDemarrageOuvert] = useState(false);
   const [cguAJour, setCguAJour] = useState(initial.cguAJour);
   const [abonnement, setAbonnement] = useState(initial.abonnement);
+  const devise = initial.devise ?? 'EUR';
   const [droits, setDroits] = useState(initial.droits);
   // Lu une fois, avec l'offre de la liste : la liste e-mail ouverte dit où partent ses inscrits.
   useEffect(() => {
@@ -714,7 +715,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
     if (meta) meta.content = cremeEnHaut ? '#f3eee5' : COULEUR_NAVIGATEUR;
   }, [cremeEnHaut]);
 
-  if (!cguAJour) return <LangueSite.Provider value={reglages.langue}><AccepterCgu accepter={async () => { await api.accepterCgu(); setCguAJour(true); }} deconnexion={deconnexion} /></LangueSite.Provider>;
+  if (!cguAJour) return <LangueSite.Provider value={reglages.langue}><DeviseSite.Provider value={devise}><AccepterCgu accepter={async () => { await api.accepterCgu(); setCguAJour(true); }} deconnexion={deconnexion} /></DeviseSite.Provider></LangueSite.Provider>;
 
   // Au bureau, le message se pose en bas à droite (`.adm-toast` dans admin.css), hors de la liste des blocs : il ne couvre
   // jamais la rangée qu'on règle.
@@ -736,7 +737,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
   if (premiersPas) {
     // Les premiers pas n'ont aucune fonction réservée : pas de chemin vers les offres.
     return (
-      <LangueSite.Provider value={reglages.langue}>
+      <LangueSite.Provider value={reglages.langue}><DeviseSite.Provider value={devise}>
       <FournisseurOffre value={{ droits }}>
       <SourceFlux.Provider value={lireFlux}>
         <PremiersPas compte={compte} reglages={reglages} blocs={blocs} onReglages={changerReglages} onPoserBlocs={poserBlocs}
@@ -748,7 +749,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
         {bulle}
       </SourceFlux.Provider>
       </FournisseurOffre>
-      </LangueSite.Provider>
+      </DeviseSite.Provider></LangueSite.Provider>
     );
   }
 
@@ -832,7 +833,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
   })();
 
   return (
-    <LangueSite.Provider value={reglages.langue}>
+    <LangueSite.Provider value={reglages.langue}><DeviseSite.Provider value={devise}>
     <FournisseurOffre value={offre}>
     <ListeBranchee.Provider value={{ integration, brancher: () => setFenetreListe(true) }}>
     <SourceFlux.Provider value={lireFlux}>
@@ -998,7 +999,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
     </SourceFlux.Provider>
     </ListeBranchee.Provider>
     </FournisseurOffre>
-    </LangueSite.Provider>
+    </DeviseSite.Provider></LangueSite.Provider>
   );
 }
 

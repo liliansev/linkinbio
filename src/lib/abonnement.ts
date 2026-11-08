@@ -17,6 +17,26 @@ export const euros = (n: number, langue: 'en' | 'fr' = 'fr') => {
   return langue === 'en' ? `€${chiffres}` : `${chiffres} €`;
 };
 
+/**
+ * La monnaie des offres (8 novembre 2026, choisi par Lilian) : le dollar hors de France, l'euro en France, aux mêmes
+ * chiffres (9 $ ou 9 €). Un abonné garde la monnaie de son abonnement ; sans produits Creem en dollars, tout reste en euros.
+ */
+export const DEVISES = ['EUR', 'USD'] as const;
+export type Devise = (typeof DEVISES)[number];
+export const estDevise = (v: unknown): v is Devise => DEVISES.includes(v as Devise);
+/** La monnaie d'un visiteur d'après son pays (deux lettres, Cloudflare) : l'euro en France, le dollar ailleurs. Sans pays, la langue décide. */
+export const deviseDuPays = (pays: string | null | undefined, langue: 'en' | 'fr' = 'en'): Devise => {
+  const p = (pays ?? '').toUpperCase();
+  if (/^[A-Z]{2}$/.test(p) && p !== 'XX' && p !== 'T1') return p === 'FR' ? 'EUR' : 'USD';
+  return langue === 'fr' ? 'EUR' : 'USD';
+};
+/** Un prix d'offre dans sa monnaie : « 9 € », « €9 », « 9 $ », « $9 ». */
+export const montant = (n: number, langue: 'en' | 'fr' = 'fr', devise: Devise = 'EUR') => {
+  if (devise === 'EUR') return euros(n, langue);
+  const chiffres = n.toLocaleString(langue === 'en' ? 'en-US' : 'fr-FR', { minimumFractionDigits: Number.isInteger(n) ? 0 : 2, maximumFractionDigits: 2 });
+  return langue === 'en' ? '$' + chiffres : chiffres + '\u00a0$';
+};
+
 export const PERIODES = ['mois', 'an'] as const;
 export type Periode = (typeof PERIODES)[number];
 export const PLANS = ['gratuit', 'starter', 'pro', 'premium'] as const;
@@ -339,7 +359,7 @@ export const joursStats = (plan: Plan, permis: boolean) => (permis ? Math.max(OF
  * Une offre et une période dans Creem, pour l'onglet Comptes : son prix du jour et le produit qui le vend, s'il existe.
  * Sans produit à ce prix, `prixCreem` dit celui du produit de l'offre tel que Creem le facture (un prix changé là-bas).
  */
-export interface EtatOffre { plan: PlanPayant; periode: Periode; prix: number; enVente: boolean; produit: string | null; prixCreem: number | null }
+export interface EtatOffre { plan: PlanPayant; periode: Periode; prix: number; enVente: boolean; produit: string | null; prixCreem: number | null; devise?: Devise }
 
 /** Les statuts d'abonnement Creem qui donnent accès à l'offre payée. Un impayé la garde le temps des relances. */
 export const STATUTS_PRO = ['active', 'trialing', 'scheduled_cancel', 'past_due'] as const;

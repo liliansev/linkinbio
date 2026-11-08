@@ -1,5 +1,6 @@
 import { createContext, useContext } from 'react';
 import type { Langue } from '../lib/types.ts';
+import type { Devise } from '../lib/abonnement.ts';
 
 /*
  * La langue du site public (8 novembre 2026, demandé par Lilian : « faire de Hopla US first et traduire en
@@ -10,6 +11,13 @@ import type { Langue } from '../lib/types.ts';
 
 export const LangueSite = createContext<Langue>('en');
 export const useLangue = () => useContext(LangueSite);
+
+/**
+ * La monnaie des prix affichés (8 novembre 2026, choisi par Lilian) : l'euro en France, le dollar ailleurs, celle
+ * de l'abonnement pour un abonné. La racine la pose pour le site, `Admin` pour le back office.
+ */
+export const DeviseSite = createContext<Devise>('EUR');
+export const useDevise = () => useContext(DeviseSite);
 
 /** Choisit entre le français et l'anglais selon la langue de la page. */
 export type Choix = <T>(fr: T, en: T) => T;

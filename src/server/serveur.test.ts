@@ -558,7 +558,7 @@ test('offres : la page de paiement, le changement d’offre et le portail passen
 });
 
 /** Une boutique Creem pour les tests : ses produits se relisent, se listent et se créent comme par l'API. */
-function boutiqueCreem(produits: Record<string, { price: number; billing_period: string; name?: string; status?: string; billing_type?: string }>) {
+function boutiqueCreem(produits: Record<string, { price: number; billing_period: string; name?: string; status?: string; billing_type?: string; currency?: string }>) {
   const appels: { chemin: string; methode: string; cle: string | null; corps: any }[] = [];
   let n = 0;
   const decrire = (id: string) => ({ id, name: '', currency: 'EUR', billing_type: 'recurring', status: 'active', ...produits[id] });
@@ -568,7 +568,7 @@ function boutiqueCreem(produits: Record<string, { price: number; billing_period:
     appels.push({ chemin, methode, cle: new Headers(init.headers).get('Idempotency-Key'), corps });
     if (methode === 'POST' && chemin === '/v1/products') {
       const id = `prod_neuf_${++n}`;
-      produits[id] = { price: corps.price, billing_period: corps.billing_period, name: corps.name };
+      produits[id] = { price: corps.price, billing_period: corps.billing_period, name: corps.name, currency: corps.currency };
       return Response.json(decrire(id));
     }
     if (chemin === '/v1/products/search') return Response.json({ items: Object.keys(produits).map(decrire), pagination: { current_page: 1, next_page: null } });
@@ -587,15 +587,24 @@ test('offres : « Créer les offres dans Creem » crée ce qui manque, une fois,
     prod_an: { price: 8640, billing_period: 'every-year', name: 'Hopla Pro annuel' },
   });
   const etat = await creem.creerOffres(env, fetchFaux);
-  assert.deepEqual(crees().map(a => a.corps.name), ['Hopla Starter mensuel', 'Hopla Starter annuel', 'Hopla Pro annuel'], 'Premium n’est pas en vente : aucun produit');
-  assert.deepEqual(crees().map(a => a.corps.price), [900, 7900, 16900]);
-  assert.deepEqual(crees().map(a => a.cle), ['hopla-starter-mois-900', 'hopla-starter-an-7900', 'hopla-pro-an-16900']);
+  // Les euros, puis les dollars aux mêmes chiffres (8 novembre 2026), sous un nom anglais.
+  assert.deepEqual(crees().map(a => a.corps.name), ['Hopla Starter mensuel', 'Hopla Starter annuel', 'Hopla Pro annuel', 'Hopla Starter monthly', 'Hopla Starter yearly', 'Hopla Pro monthly', 'Hopla Pro yearly'], 'Premium n’est pas en vente : aucun produit');
+  assert.deepEqual(crees().map(a => a.corps.price), [900, 7900, 16900, 900, 7900, 1900, 16900]);
+  assert.deepEqual(crees().map(a => a.corps.currency), ['EUR', 'EUR', 'EUR', 'USD', 'USD', 'USD', 'USD']);
+  assert.deepEqual(crees().map(a => a.cle), ['hopla-starter-mois-900', 'hopla-starter-an-7900', 'hopla-pro-an-16900', 'hopla-starter-mois-900-usd', 'hopla-starter-an-7900-usd', 'hopla-pro-mois-1900-usd', 'hopla-pro-an-16900-usd']);
   assert.equal(crees()[0].corps.billing_period, 'every-month');
   assert.equal(crees()[0].corps.tax_mode, 'inclusive');
   assert.equal(etat.find(e => e.plan === 'pro' && e.periode === 'mois')?.produit, 'prod_mois', 'l’ancien Pro au bon prix est repris');
   assert.equal(etat.find(e => e.plan === 'pro' && e.periode === 'an')?.produit, 'prod_neuf_3');
   assert.equal(etat.find(e => e.plan === 'premium' && e.periode === 'an')?.produit, null);
   assert.deepEqual(creem.offresEnVente(env), ['starter', 'pro']);
+  assert.equal(etat.find(e => e.plan === 'pro' && e.periode === 'mois' && e.devise === 'USD')?.produit, 'prod_neuf_6');
+  assert.equal(creem.dollarsEnVente(env), true);
+  // Le dollar hors de France, l'euro en France ; un abonné garde la monnaie de son abonnement.
+  assert.equal(creem.deviseAchat(env, null, 'US', 'fr'), 'USD');
+  assert.equal(creem.deviseAchat(env, null, 'FR', 'en'), 'EUR');
+  assert.equal(creem.deviseAchat(env, { abonnement_produit: 'prod_mois' }, 'US', 'en'), 'EUR');
+  assert.equal(creem.deviseAchat(env, { abonnement_produit: 'prod_neuf_6' }, 'FR', 'fr'), 'USD');
   // L'ancien annuel reste connu : ses abonnés gardent le Pro, ses webhooks passent.
   assert.equal(db.produitConnu('prod_an')?.plan, 'pro');
   assert.equal(db.produitConnu('prod_an')?.actuel, false);
@@ -603,7 +612,7 @@ test('offres : « Créer les offres dans Creem » crée ce qui manque, une fois,
   const avant = appels.length;
   await creem.creerOffres(env, fetchFaux);
   assert.ok(appels.length > avant);
-  assert.equal(crees().length, 3);
+  assert.equal(crees().length, 7);
   // Une clé sans le droit « Products » : le message dit quoi faire.
   db.ecrireCatalogue([]);
   const refuse = (async () => new Response('forbidden', { status: 403 })) as unknown as typeof fetch;
@@ -636,13 +645,17 @@ test('offres : un prix changé dans Creem est repris, sans rien créer en double
   const etat = await creem.relireCatalogue(env, fetchFaux);
   assert.equal(crees().length, 0, 'rien n’est créé ni changé chez Creem');
   assert.deepEqual(creem.offresEnVente(env), ['starter', 'pro']);
-  assert.deepEqual(etat.filter(e => e.enVente).map(e => [e.plan, e.periode, e.produit, e.prixCreem]), [
+  assert.deepEqual(etat.filter(e => e.enVente && e.devise !== 'USD').map(e => [e.plan, e.periode, e.produit, e.prixCreem]), [
     ['starter', 'mois', 'prod_s_mois', null], ['starter', 'an', 'prod_s_an', null], ['pro', 'mois', 'prod_mois', null], ['pro', 'an', 'prod_p_an', null],
   ]);
   assert.equal(db.produitConnu('prod_s_mois')?.prix, 900);
-  // « Créer les offres dans Creem » n'a alors plus rien à créer.
+  // Sans produits en dollars, tout se vend en euros, même hors de France.
+  assert.equal(creem.deviseAchat(env, null, 'US', 'en'), 'EUR');
+  // « Créer les offres dans Creem » n'a alors plus à créer que les dollars.
   await creem.creerOffres(env, fetchFaux);
-  assert.equal(crees().length, 0);
+  assert.deepEqual(crees().map(a => a.corps.currency), ['USD', 'USD', 'USD', 'USD']);
+  await creem.creerOffres(env, fetchFaux);
+  assert.equal(crees().length, 4);
 
   // Un prix que le code n'affiche pas : l'offre ne se vend plus, et l'onglet Comptes dit le prix de Creem.
   produits.prod_p_an.price = 17900;
@@ -657,7 +670,7 @@ test('offres : un prix changé dans Creem est repris, sans rien créer en double
   assert.deepEqual(creem.offresEnVente(env), ['pro']);
   assert.equal(db.produitConnu('prod_s_an')?.plan, 'starter', 'ses abonnés gardent Starter');
   await creem.creerOffres(env, fetchFaux);
-  assert.deepEqual(crees().map(a => a.corps.name), ['Hopla Starter annuel']);
+  assert.deepEqual(crees().slice(4).map(a => a.corps.name), ['Hopla Starter annuel']);
   assert.deepEqual(creem.offresEnVente(env), ['starter', 'pro']);
 
   // Creem injoignable : le catalogue reste tel qu'il était, l'erreur remonte.

@@ -1,8 +1,8 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import type { KeyboardEvent, ReactNode } from 'react';
 import type { Abonnement as EtatAbonnement, Fonction, Periode, Plan, PlanPayant } from '../lib/abonnement.ts';
-import { FONCTIONS, FONCTIONS_EN_MOTS, OFFRES, PLANS, PLAN_ESSAI, apresAbonnement, avantage, planHorsEssai, avantagesEntre, echeance, economieAnnuelle, estResilie, euros, moisOfferts, nomOffre, offerteAuDessus, pourQuoi, rang, sensDuChangement } from '../lib/abonnement.ts';
-import { choix as choixLangue, useLangue } from '../accueil/langue.ts';
+import { FONCTIONS, FONCTIONS_EN_MOTS, OFFRES, PLANS, PLAN_ESSAI, apresAbonnement, avantage, planHorsEssai, avantagesEntre, echeance, economieAnnuelle, estResilie, montant, moisOfferts, nomOffre, offerteAuDessus, pourQuoi, rang, sensDuChangement } from '../lib/abonnement.ts';
+import { choix as choixLangue, useDevise, useLangue } from '../accueil/langue.ts';
 import type { Choix as ChoixLangue } from '../accueil/langue.ts';
 import type { Langue } from '../lib/types.ts';
 import type { Achat, EtapeRetour, NoteAchat, SuiteAchat } from '../lib/achat.ts';
@@ -35,11 +35,12 @@ const par = (p: Periode, l: Langue) => (l === 'fr' ? (p === 'an' ? 'par an' : 'p
 /** Les mots d'un écran des offres dans la langue du compte : dates, prix, noms d'offre. */
 function useMots() {
   const L = useLangue();
+  const devise = useDevise();
   const tr: ChoixLangue = choixLangue(L);
   return {
     L, tr,
     dl: (ms: number) => dateLongue(ms, L), dc: (ms: number) => dateCourte(ms, L), pr: (p: Periode) => par(p, L),
-    eu: (n: number) => euros(n, L), nm: (p: Plan) => nomOffre(p, L), av: (a: string) => avantage(a, L),
+    eu: (n: number) => montant(n, L, devise), nm: (p: Plan) => nomOffre(p, L), av: (a: string) => avantage(a, L),
   };
 }
 const reduit = () => matchMedia('(prefers-reduced-motion: reduce)').matches;

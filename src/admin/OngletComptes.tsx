@@ -4,7 +4,7 @@ import type { ApiComptes, CompteResume, Reservation, SignalementResume } from '.
 import { nomMotif } from '../lib/legal.ts';
 import { NOM_PUBLIC, cheminPage, sansSchema, urlPage } from '../lib/types.ts';
 import type { Abonnement, DureeOfferte, EtatOffre, PlanPayant } from '../lib/abonnement.ts';
-import { DUREES_OFFERTES, OFFRES, effetOffert, estResilie, euros, finOfferte, offerteAuDessus, offresAOffrir, rang } from '../lib/abonnement.ts';
+import { DUREES_OFFERTES, OFFRES, effetOffert, estResilie, finOfferte, montant, offerteAuDessus, offresAOffrir, rang } from '../lib/abonnement.ts';
 import type { StatutCompte } from '../lib/comptes.ts';
 import { NOMS_STATUTS, quand, statutCompte, trouve } from '../lib/comptes.ts';
 import { Icone } from '../components/Icone.tsx';
@@ -781,10 +781,10 @@ function OffresCreem({ api }: { api: ApiComptes }) {
       </h2>
       <ul className="flex flex-col divide-y divide-white/[0.06]">
         {offres.map(o => (
-          <li key={`${o.plan}-${o.periode}`} className="flex min-h-11 items-center gap-3 py-2 bureau:min-h-9">
-            <span className="min-w-0 flex-1 text-[14px]">{OFFRES[o.plan].nom} {o.periode === 'an' ? 'annuel' : 'mensuel'}</span>
-            <span className="text-[13.5px] tabular-nums text-white/60">{euros(o.prix)}</span>
-            <span className={`w-32 text-right text-[13px] ${o.produit ? 'text-white' : 'text-white/60'}`}>{o.produit ? 'En vente' : o.prixCreem !== null ? `${euros(o.prixCreem)} dans Creem` : o.enVente ? 'À créer' : 'Plus tard'}</span>
+          <li key={`${o.plan}-${o.periode}-${o.devise ?? 'EUR'}`} className="flex min-h-11 items-center gap-3 py-2 bureau:min-h-9">
+            <span className="min-w-0 flex-1 text-[14px]">{OFFRES[o.plan].nom} {o.periode === 'an' ? 'annuel' : 'mensuel'}{o.devise === 'USD' ? ' en dollars' : ''}</span>
+            <span className="text-[13.5px] tabular-nums text-white/60">{montant(o.prix, 'fr', o.devise)}</span>
+            <span className={`w-32 text-right text-[13px] ${o.produit ? 'text-white' : 'text-white/60'}`}>{o.produit ? 'En vente' : o.prixCreem !== null ? `${montant(o.prixCreem, 'fr', o.devise)} dans Creem` : o.enVente ? 'À créer' : 'Plus tard'}</span>
           </li>
         ))}
       </ul>
