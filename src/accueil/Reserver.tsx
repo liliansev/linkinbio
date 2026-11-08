@@ -385,7 +385,7 @@ export function Reserver({ api, note, apercu, id, grand, premier }: { api: ApiAc
       </div>
       {apercu}
       {e.etape === 'email'
-        ? <p className="hl-reserver-note">{mots.rassure} <a href="/legal/confidentialite">{l('Confidentialité', 'Privacy')}</a></p>
+        ? <p className="hl-reserver-note">{mots.rassure} <a href={l('/legal/confidentialite', '/legal/privacy')}>{l('Confidentialité', 'Privacy')}</a></p>
         : note && !e.ancien && <p className="hl-reserver-note">{e.offre && mode === 'libre'
           // Le chemin du retour vers les prix : on n'a pas à remonter toute la page pour changer d'avis.
           ? l(<>Tu commences en Gratuit, puis tu actives {offreLue(e, langue)} dans tes réglages. <a href="#prix">Revoir les offres</a></>, <>You start on Free, then turn on {offreLue(e, langue)} in your settings. <a href="#prix">See the plans again</a></>)

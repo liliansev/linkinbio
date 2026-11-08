@@ -195,9 +195,9 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
       <footer className="adm-reglages-pied">
         <p>{l('Une question\u202f?', 'A question?')} <a href={`mailto:${CONTACT_LEGAL}?subject=${encodeURIComponent(l('Hopla : une question', 'Hopla: a question'))}`}>{l('Écris-nous', 'Write to us')}</a></p>
         <p className="flex flex-wrap gap-x-4 gap-y-1">
-          <a href="/legal/cgu" target="_blank" rel="noopener">{l('Conditions d’utilisation', 'Terms of use')}</a>
-          <a href="/legal/confidentialite" target="_blank" rel="noopener">{l('Confidentialité', 'Privacy')}</a>
-          <a href="/legal/traitement-des-donnees" target="_blank" rel="noopener">{l('Accord de traitement', 'Data processing agreement')}</a>
+          <a href={l('/legal/cgu', '/legal/terms')} target="_blank" rel="noopener">{l('Conditions d’utilisation', 'Terms of use')}</a>
+          <a href={l('/legal/confidentialite', '/legal/privacy')} target="_blank" rel="noopener">{l('Confidentialité', 'Privacy')}</a>
+          <a href={l('/legal/traitement-des-donnees', '/legal/data-processing')} target="_blank" rel="noopener">{l('Accord de traitement', 'Data processing agreement')}</a>
           {LIEN_SOURCE && <a href={LIEN_SOURCE} target="_blank" rel="noopener">{l('Code source', 'Source code')}</a>}
         </p>
       </footer>

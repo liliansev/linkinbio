@@ -408,7 +408,7 @@ function Recapitulatif({ plan, periode, setPeriode, abonnement, grand, id, mois,
       </button>
       <p className="adm-offres-note">
         {changement ? tr(`Prix TTC. Creem ${sens === 'rendu' ? 'rembourse' : sens === 'facture' ? 'facture' : 'facture ou rembourse'} la différence au prorata, sur ta carte enregistrée.`, `Prices include tax. Creem ${sens === 'rendu' ? 'refunds' : sens === 'facture' ? 'charges' : 'charges or refunds'} the prorated difference on your saved card.`) : tr('Prix TTC. Creem encaisse, envoie la facture et gère la TVA.', 'Prices include tax. Creem takes the payment, sends the invoice and handles VAT.')}
-        {' '}{tr('Voir les', 'See the')} <a href="/legal/cgu" target="_blank" rel="noopener">{tr('conditions d’utilisation', 'terms of use')}</a>.
+        {' '}{tr('Voir les', 'See the')} <a href={tr('/legal/cgu', '/legal/terms')} target="_blank" rel="noopener">{tr('conditions d’utilisation', 'terms of use')}</a>.
       </p>
       {erreur && <p role="alert" className="text-[13.5px] text-red-300">{erreur}</p>}
     </div>

@@ -5,6 +5,7 @@ import type { CSSProperties, KeyboardEvent, MouseEvent } from 'react';
 import { Icone } from '../components/Icone.tsx';
 import { ESSAI_JOURS, FONCTIONS, OFFRES, OFFRES_EN, PLANS, PLANS_PAYANTS, PLAN_ESSAI, avantage, economie, euros as eurosFr, nomOffre, parMoisAnnuel, rang } from '../lib/abonnement.ts';
 import { CONTACT_LEGAL } from '../lib/legal.ts';
+import { cheminLegal } from '../lib/legal-en.ts';
 import { LIEN_SOURCE, NOM_EDITEUR } from '../lib/instance.ts';
 import type { Fonction, Periode, Plan } from '../lib/abonnement.ts';
 import { Marque } from './Ouverture.tsx';
@@ -451,11 +452,11 @@ const colonnes = (langue: Langue): { titre: string; liens: [string, string][] }[
   { titre: 'Aide et légal', liens: [
     ['Nous écrire', `mailto:${CONTACT_LEGAL}`],
     ['Signaler un contenu', '/signaler'],
-    ['Conditions d’utilisation', '/legal/cgu'],
-    ['Confidentialité', '/legal/confidentialite'],
-    ['Traitement des données', '/legal/traitement-des-donnees'],
-    ['Sous-traitants', '/legal/sous-traitants'],
-    ['Mentions légales', '/legal/mentions-legales'],
+    ['Conditions d’utilisation', cheminLegal('cgu', langue)],
+    ['Confidentialité', cheminLegal('confidentialite', langue)],
+    ['Traitement des données', cheminLegal('traitement-des-donnees', langue)],
+    ['Sous-traitants', cheminLegal('sous-traitants', langue)],
+    ['Mentions légales', cheminLegal('mentions-legales', langue)],
   ] },
 ];
 

@@ -1,6 +1,7 @@
 import { DESCRIPTION, FONCTIONS, questions } from '../accueil/textes.ts';
 import { OFFRES, OFFRES_EN, PLANS, avantage, euros, nomOffre } from '../lib/abonnement.ts';
-import { DOCUMENTS, LEGAL } from '../lib/legal.ts';
+import { DOCUMENTS } from '../lib/legal.ts';
+import { LEGAL_EN, cheminLegal } from '../lib/legal-en.ts';
 import { ORIGINE_ADMIN, ORIGINE_PUBLIQUE, PRINCIPAL, SITE_LILIAN } from '../lib/types.ts';
 import { CHEMIN_FONCTIONS, pagesFonctions } from '../accueil/pages/fonctions.ts';
 import { CHEMIN_COMPARATIFS, comparatifs } from '../accueil/pages/comparatifs.ts';
@@ -53,7 +54,7 @@ export function plan(publique: string): string {
     adresses.push(`${publique}${CHEMIN_FONCTIONS[langue]}`, ...pagesFonctions(langue).map(p => `${publique}${CHEMIN_FONCTIONS[langue]}/${p.slug}`));
     adresses.push(`${publique}${CHEMIN_COMPARATIFS[langue]}`, ...comparatifs(langue).map(c => `${publique}${CHEMIN_COMPARATIFS[langue]}/${c.slug}`));
   }
-  adresses.push(...DOCUMENTS.map(d => `${publique}/legal/${d}`));
+  adresses.push(...DOCUMENTS.flatMap(d => [`${publique}${cheminLegal(d, 'en')}`, `${publique}${cheminLegal(d, 'fr')}`]));
   // La documentation de l'API (hopla.page/docs, un site statique à part : documentation/).
   adresses.push(...PAGES_DOCS.map(d => `${publique}/docs${d}`));
   return `<?xml version="1.0" encoding="UTF-8"?>
@@ -101,6 +102,6 @@ ${pagesFonctions('en').map(p => `  - [${p.nom}](${publique}/features/${p.slug}):
 - [Hopla compared with other tools](${publique}/compare) (in French under ${publique}/comparatif):
 ${comparatifs('en').map(c => `  - [Hopla vs ${c.nom}](${publique}/compare/${c.slug}): ${c.resume}`).join('\n')}
 - [API and MCP server documentation](${publique}/docs): manage your page from an AI agent or your own code (Pro plan); for agents, [${publique}/docs/llms.txt](${publique}/docs/llms.txt)
-${DOCUMENTS.map(d => `- [${LEGAL[d].titre}](${publique}/legal/${d}) : ${LEGAL[d].resume}`).join('\n')}
+${DOCUMENTS.map(d => `- [${LEGAL_EN[d].titre}](${publique}${cheminLegal(d, 'en')}): ${LEGAL_EN[d].resume} (in French, the version that applies: ${publique}${cheminLegal(d, 'fr')})`).join('\n')}
 `;
 }
