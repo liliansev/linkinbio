@@ -24,21 +24,22 @@ export const PAYS = [
 const CODES = new Set<string>(PAYS);
 export const estPays = (code: unknown): code is string => typeof code === 'string' && CODES.has(code);
 
-let noms: Intl.DisplayNames | null = null;
-/** Le nom d'un pays en français (« Belgique »), son code s'il n'en a pas. */
-export function nomPays(code: string): string {
-  try { return (noms ??= new Intl.DisplayNames(['fr'], { type: 'region' })).of(code) ?? code; } catch { return code; }
+type LanguePays = 'fr' | 'en';
+const noms: Partial<Record<LanguePays, Intl.DisplayNames>> = {};
+/** Le nom d'un pays (« Belgique », « Belgium »), son code s'il n'en a pas. */
+export function nomPays(code: string, langue: LanguePays = 'fr'): string {
+  try { return (noms[langue] ??= new Intl.DisplayNames([langue], { type: 'region' })).of(code) ?? code; } catch { return code; }
 }
 
 /** Les pays rangés par leur nom, sans tenir compte des accents (« Égypte » avec les E). */
-export const paysParNom = () => [...PAYS].sort((a, b) => nomPays(a).localeCompare(nomPays(b), 'fr', { sensitivity: 'base' }));
+export const paysParNom = (langue: LanguePays = 'fr') => [...PAYS].sort((a, b) => nomPays(a, langue).localeCompare(nomPays(b, langue), langue, { sensitivity: 'base' }));
 
 /** Chercher un pays par son nom ou son code, sans accents ni majuscules : « belg », « etats », « US ». */
-export function chercherPays(mot: string): string[] {
+export function chercherPays(mot: string, langue: LanguePays = 'fr'): string[] {
   const plat = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
   const m = plat(mot.trim());
-  if (!m) return paysParNom();
-  return paysParNom().filter(c => plat(nomPays(c)).split(/[\s'’-]+/).some(w => w.startsWith(m)) || plat(nomPays(c)).startsWith(m) || c.toLowerCase() === m);
+  if (!m) return paysParNom(langue);
+  return paysParNom(langue).filter(c => plat(nomPays(c, langue)).split(/[\s'’-]+/).some(w => w.startsWith(m)) || plat(nomPays(c, langue)).startsWith(m) || c.toLowerCase() === m);
 }
 
 /**
@@ -51,9 +52,9 @@ export function pourPays(b: { pays?: { codes: string[]; effet: 'seulement' | 'sa
   return b.pays.effet === 'seulement' ? dedans : !dedans;
 }
 
-/** « France, Belgique et Suisse », « 5 pays ». */
-export function listePays(codes: string[]): string {
-  if (codes.length > 3) return `${codes.length} pays`;
-  const noms = codes.map(nomPays);
-  return noms.length > 1 ? `${noms.slice(0, -1).join(', ')} et ${noms[noms.length - 1]}` : noms[0] ?? '';
+/** « France, Belgique et Suisse », « 5 pays » ; « France, Belgium and Switzerland », « 5 countries ». */
+export function listePays(codes: string[], langue: LanguePays = 'fr'): string {
+  if (codes.length > 3) return langue === 'en' ? `${codes.length} countries` : `${codes.length} pays`;
+  const liste = codes.map(c => nomPays(c, langue));
+  return liste.length > 1 ? `${liste.slice(0, -1).join(', ')} ${langue === 'en' ? 'and' : 'et'} ${liste[liste.length - 1]}` : liste[0] ?? '';
 }

@@ -2,7 +2,7 @@ import { cloneElement, createContext, isValidElement, useCallback, useContext, u
 import { createPortal } from 'react-dom';
 import { Icone, NOMS_RESEAUX } from '../components/Icone.tsx';
 import { useL } from '../accueil/langue.ts';
-import type { Animation } from '../lib/types.ts';
+import type { Animation, Langue } from '../lib/types.ts';
 import { COULEURS_SOURCES } from '../lib/stats.ts';
 import { useCouche } from './couches.ts';
 import type { ReactNode } from 'react';
@@ -234,6 +234,18 @@ export const NOMS_ANIMATIONS: Record<Animation, { nom: string; aide: string }> =
   rebond: { nom: 'Rebond', aide: 'Deux petits sauts, puis le repos.' },
   secousse: { nom: 'Secousse', aide: 'Il fait non de la tête, puis attend.' },
 };
+const NOMS_ANIMATIONS_EN: Record<Animation, { nom: string; aide: string }> = {
+  aucune: { nom: 'None', aide: 'The button stays still.' },
+  reflet: { nom: 'Shine', aide: 'A light sweeps across the button.' },
+  orbite: { nom: 'Orbit', aide: 'A streak of light circles it.' },
+  lueur: { nom: 'Glow', aide: 'It lights up and breathes its light.' },
+  onde: { nom: 'Ripple', aide: 'A ring spreads out from it, like an alert.' },
+  respiration: { nom: 'Breathe', aide: 'It swells ever so slightly, slowly.' },
+  rebond: { nom: 'Bounce', aide: 'Two little hops, then rest.' },
+  secousse: { nom: 'Shake', aide: 'It shakes its head, then waits.' },
+};
+/** Les noms des mouvements dans la langue du compte. */
+export const nomsAnimations = (langue: Langue) => (langue === 'en' ? NOMS_ANIMATIONS_EN : NOMS_ANIMATIONS);
 
 type Fermer = (apres?: () => void) => void;
 type Contenu = ReactNode | ((fermer: Fermer) => ReactNode);
@@ -292,6 +304,7 @@ export function Feuille({ ouverte, onFermer, retenir, titre, children, pied, cot
   large?: boolean;
   /** Sans en-tête ni marges : le contenu pose lui-même son titre, sa croix et son défilement. */
   nue?: boolean }) {
+  const tr = useL();
   const ref = useRef<HTMLDivElement>(null);
   const [sortie, setSortie] = useState(false);
   const [tire, setTire] = useState(0);
@@ -431,7 +444,7 @@ export function Feuille({ ouverte, onFermer, retenir, titre, children, pied, cot
                 </div>
               );
             })()}
-            <button type="button" onClick={() => fermer()} className={`-mr-3 ${classeBouton.icone} active:scale-90`} aria-label="Fermer">
+            <button type="button" onClick={() => fermer()} className={`-mr-3 ${classeBouton.icone} active:scale-90`} aria-label={tr('Fermer', 'Close')}>
               <Icone nom="ui-fermer" taille={18} />
             </button>
           </header>
@@ -478,7 +491,7 @@ export async function copierTexte(texte: string): Promise<boolean> {
     zone.remove();
     if (ok) return true;
   } catch { /* on montre l'adresse */ }
-  window.prompt('Copie cette adresse :', texte);
+  window.prompt(document.documentElement.lang === 'fr' ? 'Copie cette adresse :' : 'Copy this address:', texte);
   return false;
 }
 
@@ -535,6 +548,7 @@ export function Menu({ label, elements, children, className = '', titre, haut = 
   /** Prévenu quand la liste s'ouvre ou se ferme : ce qui porte le menu reste affiché tant qu'elle est ouverte. */
   onBascule?: (ouvert: boolean) => void;
 }) {
+  const tr = useL();
   const [ouvert, setOuvert] = useState(false);
   const id = useId();
   const bouton = useRef<HTMLButtonElement>(null);
@@ -580,7 +594,7 @@ export function Menu({ label, elements, children, className = '', titre, haut = 
           <div role="menu" id={id} aria-label={label}>
             {elements.map(el => (
               <button key={el.nom} type="button" tabIndex={-1} role={el.coche === undefined ? 'menuitem' : 'menuitemradio'} aria-checked={el.coche}
-                aria-label={el.etiquette ? `${el.nom}, avec ${el.etiquette} : voir les offres` : undefined}
+                aria-label={el.etiquette ? tr(`${el.nom}, avec ${el.etiquette} : voir les offres`, `${el.nom}, with ${el.etiquette}: see the plans`) : undefined}
                 onClick={() => { setOuvert(false); bouton.current?.focus({ preventScroll: true }); el.action(); }}
                 className={`adm-menu-item ${el.danger ? 'text-red-300' : 'text-white'}`}>
                 {el.icone && <Icone nom={el.icone} taille={16} className="shrink-0" />}

@@ -267,7 +267,7 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
                         onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); } }} />
                       <button type="button" onClick={() => setLignes(ls => ls.filter(x => x.id !== l.id))} aria-label={`${tr('Retirer :', 'Remove:')} ${g.nom}`} className={classeBouton.icone}><Icone nom="ui-fermer" taille={16} /></button>
                     </div>
-                    {fausse && <p id={`erreur-${l.id}`} role="alert" className="px-2 pb-1.5 text-[13px] font-medium text-red-300">{pourquoiPasAdresse(l.url)}</p>}
+                    {fausse && <p id={`erreur-${l.id}`} role="alert" className="px-2 pb-1.5 text-[13px] font-medium text-red-300">{pourquoiPasAdresse(l.url, reglages.langue)}</p>}
                     {url && (
                       <label className="mt-1 flex items-center gap-1 border-t border-white/[0.06] pt-1">
                         <span className="w-9 shrink-0 text-center text-[12px] text-white/55">{tr('Titre', 'Title')}</span>
@@ -321,7 +321,7 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
                       aria-invalid={faux || undefined} aria-describedby={faux ? `erreur-${r}` : undefined} />
                     <button type="button" onClick={() => majReseau(r, null)} aria-label={tr(`Retirer ${NOMS_RESEAUX[r]}`, `Remove ${NOMS_RESEAUX[r]}`)}
                       className={classeBouton.icone}><Icone nom="ui-fermer" taille={16} /></button>
-                    {faux && <p id={`erreur-${r}`} role="alert" className="w-full pr-2 pb-1 text-[13px] font-medium text-red-300">{pourquoiPasReseau(r, saisies[r] ?? '')}</p>}
+                    {faux && <p id={`erreur-${r}`} role="alert" className="w-full pr-2 pb-1 text-[13px] font-medium text-red-300">{pourquoiPasReseau(r, saisies[r] ?? '', reglages.langue)}</p>}
                   </li>
                 );
               })}

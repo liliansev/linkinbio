@@ -2,32 +2,34 @@ import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import type { Couleurs, FormeBouton, MiseEnPageBureau, OmbreBouton, Reglages, Reseau, StyleBouton } from '../lib/types.ts';
 import { ANIMATIONS, MAX_RESEAUX, RESEAUX, SANS_COULEURS } from '../lib/types.ts';
-import { NOMS_POLICES, POLICES, POLICES_CHOIX, THEMES, themeDe, themeParId, variablesTheme } from '../lib/themes.ts';
+import { NOMS_POLICES, POLICES, POLICES_CHOIX, THEMES, nomTheme, themeDe, themeParId, variablesTheme } from '../lib/themes.ts';
 import type { Theme } from '../lib/themes.ts';
 import { Icone, NOMS_RESEAUX } from '../components/Icone.tsx';
-import { Carte, Champ, Interrupteur, NOMS_ANIMATIONS, Segments, choisirFichier, classeBouton, classeSaisie, couleurReseau, flechesRadio, preparerImage, useFilFeuille, vibrer } from './ui.tsx';
+import { Carte, Champ, Interrupteur, Segments, nomsAnimations, choisirFichier, classeBouton, classeSaisie, couleurReseau, flechesRadio, preparerImage, useFilFeuille, vibrer } from './ui.tsx';
 import { useCouche } from './couches.ts';
 import { RESEAUX_PSEUDO, pseudoReseau, urlReseau } from '../lib/demarrage.ts';
 import { adresseSaisie, pourquoiPasReseau } from '../lib/valider.ts';
 import { Etiquette, Reserve, usePermis, useVoirOffres } from './offre.tsx';
 import type { Fonction } from '../lib/abonnement.ts';
 import { focusSaisie } from '../lib/clavier';
+import { choix, useL, useLangue } from '../accueil/langue.ts';
+import type { Choix } from '../accueil/langue.ts';
 
-const STYLES: { id: StyleBouton; nom: string }[] = [
-  { id: 'plein', nom: 'Plein' }, { id: 'contour', nom: 'Contour' }, { id: 'doux', nom: 'Doux' }, { id: 'relief', nom: 'Relief' }, { id: 'verre', nom: 'Verre' },
+const styles = (tr: Choix): { id: StyleBouton; nom: string }[] => [
+  { id: 'plein', nom: tr('Plein', 'Solid') }, { id: 'contour', nom: tr('Contour', 'Outline') }, { id: 'doux', nom: tr('Doux', 'Soft') }, { id: 'relief', nom: tr('Relief', 'Raised') }, { id: 'verre', nom: tr('Verre', 'Glass') },
 ];
-const OMBRES: { id: OmbreBouton; nom: string }[] = [{ id: 'aucune', nom: 'Aucune' }, { id: 'subtile', nom: 'Subtile' }, { id: 'marquee', nom: 'Marquée' }];
-const FORMES: { id: FormeBouton; nom: string }[] = [{ id: 'pilule', nom: 'Pilule' }, { id: 'arrondi', nom: 'Arrondi' }, { id: 'carre', nom: 'Net' }];
-const EXEMPLES: Record<Reseau, string> = {
-  youtube: '@pseudo ou lien', linkedin: 'pseudo ou lien', instagram: '@pseudo ou lien', tiktok: '@pseudo ou lien',
-  x: '@pseudo ou lien', github: 'pseudo ou lien', facebook: 'pseudo ou lien', threads: '@pseudo ou lien', twitch: 'pseudo ou lien',
-  spotify: 'https://open.spotify.com/…', email: 'toi@exemple.fr', site: 'https://…',
-  whatsapp: '+33 6 12 34 56 78', telegram: 'pseudo ou lien', discord: 'https://discord.gg/…', pinterest: 'pseudo ou lien', snapchat: 'pseudo ou lien',
-  bluesky: 'pseudo.bsky.social', mastodon: 'https://mastodon.social/@…', reddit: 'pseudo ou lien', substack: 'pseudo ou lien', medium: '@pseudo ou lien',
-  patreon: 'pseudo ou lien', soundcloud: 'pseudo ou lien', deezer: 'https://deezer.com/…', applemusic: 'https://music.apple.com/…',
-  applepodcasts: 'https://podcasts.apple.com/…', bandcamp: 'https://….bandcamp.com', vimeo: 'pseudo ou lien', behance: 'pseudo ou lien',
-  dribbble: 'pseudo ou lien', malt: 'https://malt.fr/profile/…', etsy: 'https://etsy.com/shop/…',
-};
+const ombres = (tr: Choix): { id: OmbreBouton; nom: string }[] => [{ id: 'aucune', nom: tr('Aucune', 'None') }, { id: 'subtile', nom: tr('Subtile', 'Subtle') }, { id: 'marquee', nom: tr('Marquée', 'Strong') }];
+const formes = (tr: Choix): { id: FormeBouton; nom: string }[] => [{ id: 'pilule', nom: tr('Pilule', 'Pill') }, { id: 'arrondi', nom: tr('Arrondi', 'Rounded') }, { id: 'carre', nom: tr('Net', 'Square') }];
+const exemples = (tr: Choix): Record<Reseau, string> => ({
+  youtube: tr('@pseudo ou lien', '@handle or link'), linkedin: tr('pseudo ou lien', 'handle or link'), instagram: tr('@pseudo ou lien', '@handle or link'), tiktok: tr('@pseudo ou lien', '@handle or link'),
+  x: tr('@pseudo ou lien', '@handle or link'), github: tr('pseudo ou lien', 'handle or link'), facebook: tr('pseudo ou lien', 'handle or link'), threads: tr('@pseudo ou lien', '@handle or link'), twitch: tr('pseudo ou lien', 'handle or link'),
+  spotify: 'https://open.spotify.com/…', email: tr('toi@exemple.fr', 'you@example.com'), site: 'https://…',
+  whatsapp: tr('+33 6 12 34 56 78', '+1 555 123 4567'), telegram: tr('pseudo ou lien', 'handle or link'), discord: 'https://discord.gg/…', pinterest: tr('pseudo ou lien', 'handle or link'), snapchat: tr('pseudo ou lien', 'handle or link'),
+  bluesky: 'pseudo.bsky.social', mastodon: 'https://mastodon.social/@…', reddit: tr('pseudo ou lien', 'handle or link'), substack: tr('pseudo ou lien', 'handle or link'), medium: tr('@pseudo ou lien', '@handle or link'),
+  patreon: tr('pseudo ou lien', 'handle or link'), soundcloud: tr('pseudo ou lien', 'handle or link'), deezer: 'https://deezer.com/…', applemusic: 'https://music.apple.com/…',
+  applepodcasts: 'https://podcasts.apple.com/…', bandcamp: 'https://….bandcamp.com', vimeo: tr('pseudo ou lien', 'handle or link'), behance: tr('pseudo ou lien', 'handle or link'),
+  dribbble: tr('pseudo ou lien', 'handle or link'), malt: 'https://malt.fr/profile/…', etsy: 'https://etsy.com/shop/…',
+});
 
 /** Un thème en miniature : sa police, son accent et ses boutons, dans leur vrai style. */
 /** Regarder les thèmes coche l'étape « Choisis ton thème » : garder celui de départ est un choix. */
@@ -55,6 +57,8 @@ const TOUTES: PartieApparence[] = ['profil', 'theme', 'couleurs', 'police', 'fon
 export function OngletApparence({ reglages, onChange, envoyerImage, principal = true, parties = TOUTES, vedettes, pseudo = '', onPseudo }: { reglages: Reglages; onChange: (r: Reglages) => void; envoyerImage: (d: string) => Promise<string>; principal?: boolean; parties?: PartieApparence[]; vedettes?: number;
   /** Un pseudo tapé dans le choix des blocs (« @lilian ») : il attend qu'on choisisse son réseau ; `onPseudo` quand c'est fait, ou laissé. */
   pseudo?: string; onPseudo?: () => void }) {
+  const langue = useLangue();
+  const tr = choix(langue);
   const voir = (p: PartieApparence) => parties.includes(p);
   // Seule dans une feuille, une partie est déjà nommée par la feuille : pas de second titre.
   const titre = (t: string) => (parties.length === 1 ? undefined : t);
@@ -117,15 +121,15 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
 
   return (
     <div className="flex flex-col gap-4">
-      {voir('profil') && <Carte nu={nu} titre={titre('Profil')} id="profil">
+      {voir('profil') && <Carte nu={nu} titre={titre(tr('Profil', 'Profile'))} id="profil">
         <div className="mb-4 flex items-center gap-4">
-          <button type="button" onClick={e => choisirFichier(fichier.current, e.currentTarget)} className="group relative h-20 w-20 shrink-0 overflow-hidden rounded-full bg-white/10" aria-label="Changer la photo">
+          <button type="button" onClick={e => choisirFichier(fichier.current, e.currentTarget)} className="group relative h-20 w-20 shrink-0 overflow-hidden rounded-full bg-white/10" aria-label={tr('Changer la photo', 'Change photo')}>
             {reglages.profil.avatar && <img src={reglages.profil.avatar} alt="" className="h-full w-full object-cover" />}
-            <span className="absolute inset-0 grid place-items-center bg-black/45 text-[12px] font-medium text-nuit opacity-0 transition group-hover:opacity-100">{envoi ? '…' : 'Changer'}</span>
+            <span className="absolute inset-0 grid place-items-center bg-black/45 text-[12px] font-medium text-nuit opacity-0 transition group-hover:opacity-100">{envoi ? '…' : tr('Changer', 'Change')}</span>
           </button>
           <div className="flex flex-col items-start gap-1">
-            <button type="button" onClick={e => choisirFichier(fichier.current, e.currentTarget)} className={classeBouton.secondaire}>{envoi ? 'Envoi…' : 'Changer la photo'}</button>
-            {reglages.profil.avatar && <button type="button" onClick={() => profil({ avatar: '' })} className="min-h-11 rounded-xl px-1 text-[13px] text-white/60 hover:text-white">Sans photo</button>}
+            <button type="button" onClick={e => choisirFichier(fichier.current, e.currentTarget)} className={classeBouton.secondaire}>{envoi ? tr('Envoi…', 'Uploading…') : tr('Changer la photo', 'Change photo')}</button>
+            {reglages.profil.avatar && <button type="button" onClick={() => profil({ avatar: '' })} className="min-h-11 rounded-xl px-1 text-[13px] text-white/60 hover:text-white">{tr('Sans photo', 'No photo')}</button>}
           </div>
           <input ref={fichier} type="file" accept="image/*" className="adm-fichier" tabIndex={-1} aria-hidden="true" onChange={e => avatar(e.target.files?.[0])} />
         </div>
@@ -145,7 +149,7 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
               className="min-h-11 shrink-0 font-medium text-white underline decoration-white/30 underline-offset-2">Les garder</button>
           </p>
         )}
-        <ul role="radiogroup" aria-label="Thème" onKeyDown={e => flechesRadio(e)} className="adm-themes grid grid-cols-3 gap-2.5">
+        <ul role="radiogroup" aria-label={tr('Thème', 'Theme')} onKeyDown={e => flechesRadio(e)} className="adm-themes grid grid-cols-3 gap-2.5">
           {THEMES.map(t => (
             <li key={t.id}>
               {/* Choisir un thème pose aussi ses boutons et ses couleurs ; on peut les changer ensuite. */}
@@ -155,7 +159,7 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
               }} role="radio" aria-checked={theme.id === t.id}
                 className={`flex w-full flex-col items-center gap-1.5 rounded-2xl p-1.5 transition ${theme.id === t.id ? 'bg-white/10 ring-2 ring-white' : 'hover:bg-white/[0.05]'}`}>
                 <Pastille theme={t} />
-                <span className="line-clamp-2 w-full text-center text-[12.5px] font-medium leading-tight text-balance text-white/85">{t.nom}</span>
+                <span className="line-clamp-2 w-full text-center text-[12.5px] font-medium leading-tight text-balance text-white/85">{nomTheme(t, langue)}</span>
               </button>
             </li>
           ))}
@@ -163,27 +167,27 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
       </Carte>}
 
       {/* Seule dans une feuille, « Réinitialiser » monte dans l'en-tête de la feuille, à côté du retour. */}
-      {voir('couleurs') && <Carte nu={nu} titre={titre('Couleurs')} action={nu || !couleurs ? undefined : <Reinitialiser reglages={reglages} onChange={onChange} />}>
+      {voir('couleurs') && <Carte nu={nu} titre={titre(tr('Couleurs', 'Colors'))} action={nu || !couleurs ? undefined : <Reinitialiser reglages={reglages} onChange={onChange} />}>
         {aLEssai('couleurs')}
         {couleurs ? (
           <div className="flex flex-col gap-5">
-            {CLES_COULEURS.map(c => (
+            {clesCouleurs(tr).map(c => (
               <ChoixCouleur key={c.id} nom={c.nom} valeur={reglages.couleurs[c.id]} duTheme={c.duTheme(themeParId(reglages.theme))}
                 onChange={v => maj({ couleurs: { ...reglages.couleurs, [c.id]: v } })} />
             ))}
           </div>
         ) : (
           // Des couleurs gardées d'une offre passée restent en base : elles reviennent avec Starter.
-          <Reserve fonction="couleurs" phrase={perso ? 'Tes couleurs attendent Hopla Starter : pour l’instant, ta page garde celles de son thème.' : 'Avec Hopla Starter, tu changes le fond, les boutons et le lien mis en avant, par-dessus ton thème.'} />
+          <Reserve fonction="couleurs" phrase={perso ? tr('Tes couleurs attendent Hopla Starter : pour l’instant, ta page garde celles de son thème.', 'Your colors are waiting for Hopla Starter: for now, your page keeps its theme’s.') : tr('Avec Hopla Starter, tu changes le fond, les boutons et le lien mis en avant, par-dessus ton thème.', 'With Hopla Starter, you change the background, the buttons and the featured link, on top of your theme.')} />
         )}
       </Carte>}
 
-      {voir('police') && <Carte nu={nu} titre={titre('Police')}>
+      {voir('police') && <Carte nu={nu} titre={titre(tr('Police', 'Font'))}>
         {aLEssai('couleurs')}
         {couleurs ? (
           // Chaque police se montre dans sa propre lettre ; la première est celle du thème, qu'on retrouve d'un toucher.
-          <ul role="radiogroup" aria-label="Police de ta page" onKeyDown={e => flechesRadio(e)} className="grid grid-cols-2 gap-2">
-            {[{ id: '' as const, nom: `Celle du thème`, rendu: duTheme.police }, ...POLICES_CHOIX.filter(p => p !== duTheme.police).map(p => ({ id: p, nom: NOMS_POLICES[p], rendu: p }))].map(p => {
+          <ul role="radiogroup" aria-label={tr('Police de ta page', 'Your page’s font')} onKeyDown={e => flechesRadio(e)} className="grid grid-cols-2 gap-2">
+            {[{ id: '' as const, nom: tr('Celle du thème', 'The theme’s'), rendu: duTheme.police }, ...POLICES_CHOIX.filter(p => p !== duTheme.police).map(p => ({ id: p, nom: NOMS_POLICES[p], rendu: p }))].map(p => {
               const choisi = (reglages.police === duTheme.police ? '' : reglages.police) === p.id;
               return (
                 <li key={p.id || 'theme'}>
@@ -197,24 +201,24 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
             })}
           </ul>
         ) : (
-          <Reserve fonction="couleurs" phrase={reglages.police ? 'Ta police attend Hopla Starter : pour l’instant, ta page garde celle de son thème.' : 'Avec Hopla Starter, tu choisis la police de ta page parmi celles des thèmes.'} />
+          <Reserve fonction="couleurs" phrase={reglages.police ? tr('Ta police attend Hopla Starter : pour l’instant, ta page garde celle de son thème.', 'Your font is waiting for Hopla Starter: for now, your page keeps its theme’s.') : tr('Avec Hopla Starter, tu choisis la police de ta page parmi celles des thèmes.', 'With Hopla Starter, you pick your page’s font from the themes’ fonts.')} />
         )}
       </Carte>}
 
-      {voir('fond') && <Carte nu={nu} titre={titre('Image de fond')}>
+      {voir('fond') && <Carte nu={nu} titre={titre(tr('Image de fond', 'Background image'))}>
         {aLEssai('fond')}
         {fond ? (
           <div className="flex flex-col gap-3">
             <div className="flex items-center gap-4">
               {/* La photo telle qu'elle sera : sous le voile de la couleur du fond. */}
-              <button type="button" onClick={e => choisirFichier(fichierFond.current, e.currentTarget)} aria-label={reglages.imageFond ? 'Changer l’image de fond' : 'Choisir une image de fond'}
+              <button type="button" onClick={e => choisirFichier(fichierFond.current, e.currentTarget)} aria-label={reglages.imageFond ? tr('Changer l’image de fond', 'Change the background image') : tr('Choisir une image de fond', 'Pick a background image')}
                 className="relative h-28 w-20 shrink-0 overflow-hidden rounded-xl ring-1 ring-white/15" style={{ background: theme.fondUni }}>
                 {reglages.imageFond && <><img src={reglages.imageFond} alt="" className="h-full w-full object-cover" /><span className="absolute inset-0" style={{ background: theme.fondUni, opacity: 0.76 }} /></>}
                 {!reglages.imageFond && <span className="absolute inset-0 grid place-items-center" style={{ color: theme.texte }}><Icone nom="photo" taille={26} /></span>}
               </button>
               <div className="flex flex-col items-start gap-1">
-                <button type="button" onClick={e => choisirFichier(fichierFond.current, e.currentTarget)} className={classeBouton.secondaire}>{envoiFond ? 'Envoi…' : reglages.imageFond ? 'Changer la photo' : 'Choisir une photo'}</button>
-                {reglages.imageFond && <button type="button" onClick={() => maj({ imageFond: '' })} className="min-h-11 rounded-xl px-1 text-[13px] text-white/60 hover:text-white">Retirer</button>}
+                <button type="button" onClick={e => choisirFichier(fichierFond.current, e.currentTarget)} className={classeBouton.secondaire}>{envoiFond ? tr('Envoi…', 'Uploading…') : reglages.imageFond ? tr('Changer la photo', 'Change photo') : tr('Choisir une photo', 'Pick a photo')}</button>
+                {reglages.imageFond && <button type="button" onClick={() => maj({ imageFond: '' })} className="min-h-11 rounded-xl px-1 text-[13px] text-white/60 hover:text-white">{tr('Retirer', 'Remove')}</button>}
               </div>
               <input ref={fichierFond} type="file" accept="image/*" className="adm-fichier" tabIndex={-1} aria-hidden="true" onChange={e => imageFond(e.target.files?.[0])} />
             </div>
@@ -226,15 +230,15 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
       </Carte>}
 
       {/* La photo d'abord, gratuite pour tous ; sa forme en grand, ensuite, avec Starter (Lilian, 24 octobre 2026 : « Modifier ma photo de profil »). */}
-      {voir('photo') && <Carte nu={nu} titre={titre('Photo de profil')}>
+      {voir('photo') && <Carte nu={nu} titre={titre(tr('Photo de profil', 'Profile photo'))}>
         <div className="mb-4 flex items-center gap-3">
-          <button type="button" onClick={e => choisirFichier(fichierPhoto.current, e.currentTarget)} className="relative grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-full text-white/60" aria-label={reglages.profil.avatar ? 'Changer ma photo' : 'Ajouter une photo'}>
+          <button type="button" onClick={e => choisirFichier(fichierPhoto.current, e.currentTarget)} className="relative grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-full text-white/60" aria-label={reglages.profil.avatar ? tr('Changer ma photo', 'Change my photo') : tr('Ajouter une photo', 'Add a photo')}>
             {reglages.profil.avatar ? <img src={reglages.profil.avatar} alt="" className="h-full w-full object-cover" /> : <Icone nom="utilisateur" taille={64} />}
             {envoi && <span className="absolute inset-0 grid place-items-center bg-black/45 text-[12px] font-medium text-nuit">…</span>}
           </button>
           <div className="flex flex-col items-start gap-1">
-            <button type="button" onClick={e => choisirFichier(fichierPhoto.current, e.currentTarget)} className={classeBouton.secondaire}>{envoi ? 'Envoi…' : reglages.profil.avatar ? 'Changer ma photo' : 'Ajouter une photo'}</button>
-            {reglages.profil.avatar && <button type="button" onClick={() => profil({ avatar: '' })} className="min-h-11 rounded-xl px-1 text-[13px] text-white/60 hover:text-white">Sans photo</button>}
+            <button type="button" onClick={e => choisirFichier(fichierPhoto.current, e.currentTarget)} className={classeBouton.secondaire}>{envoi ? tr('Envoi…', 'Uploading…') : reglages.profil.avatar ? tr('Changer ma photo', 'Change my photo') : tr('Ajouter une photo', 'Add a photo')}</button>
+            {reglages.profil.avatar && <button type="button" onClick={() => profil({ avatar: '' })} className="min-h-11 rounded-xl px-1 text-[13px] text-white/60 hover:text-white">{tr('Sans photo', 'No photo')}</button>}
           </div>
           <input ref={fichierPhoto} type="file" accept="image/*" className="adm-fichier" tabIndex={-1} aria-hidden="true" onChange={e => avatar(e.target.files?.[0])} />
         </div>
@@ -259,7 +263,7 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
         )}
       </Carte>}
 
-      {voir('animation') && <Carte nu={nu} titre={titre('Animation')} action={titre('Animation') ? <span className="text-[13px] text-white/50">{NOMS_ANIMATIONS[reglages.animation].nom}</span> : undefined}>
+      {voir('animation') && <Carte nu={nu} titre={titre('Animation')} action={titre('Animation') ? <span className="text-[13px] text-white/50">{nomsAnimations(langue)[reglages.animation].nom}</span> : undefined}>
         <p className="mb-3 text-[13px] leading-snug text-white/60">{vedettes === 0
           ? 'Aucun lien n’est mis en avant pour l’instant : touche un lien sur ta page, puis « Mis en avant » dans Plus de réglages. L’animation choisie ici s’y appliquera.'
           : 'Pour les liens mis en avant. Chaque lien peut aussi choisir la sienne.'}</p>
@@ -272,7 +276,7 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
                   <button type="button" role="radio" aria-checked={choisi} onClick={() => { vibrer(5); maj({ animation: a }); }}
                     className={`flex w-full items-center gap-1.5 rounded-[18px] p-1.5 text-left transition duration-200 ${choisi ? 'ring-2 ring-[color:var(--texte)]' : 'hover:bg-white/[0.06]'}`}>
                     <span className={`lp-btn lp-btn-vedette lp-accent min-w-0 flex-1 ${a !== 'aucune' ? `lp-anim-${a}` : ''}`} style={{ minHeight: 52, padding: '8px 10px', fontSize: 15 }}>
-                      {NOMS_ANIMATIONS[a].nom}
+                      {nomsAnimations(langue)[a].nom}
                     </span>
                     {/* Le même choix que pour les boutons : anneau, et coche à droite à la couleur du texte du thème. */}
                     <span className="grid w-5 shrink-0 place-items-center" style={{ color: 'var(--texte)' }} aria-hidden="true">{choisi && <Icone nom="ui-ok" taille={18} />}</span>
@@ -284,10 +288,10 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
         </div>
       </Carte>}
 
-      {voir('boutons') && <Carte nu={nu} titre={titre('Boutons')}>
+      {voir('boutons') && <Carte nu={nu} titre={titre(tr('Boutons', 'Buttons'))}>
         <div className="lp lp-mini rounded-2xl p-3" style={variablesTheme(theme) as CSSProperties} data-forme={reglages.bouton.forme} data-ombre={reglages.bouton.ombre} data-police={theme.police} data-decor={theme.decor}>
-          <ul className="grid grid-cols-1 gap-2.5" role="radiogroup" aria-label="Style des boutons" onKeyDown={e => flechesRadio(e)}>
-            {STYLES.map(s => {
+          <ul className="grid grid-cols-1 gap-2.5" role="radiogroup" aria-label={tr('Style des boutons', 'Button style')} onKeyDown={e => flechesRadio(e)}>
+            {styles(tr).map(s => {
               const choisi = reglages.bouton.style === s.id;
               return (
               <li key={s.id} data-bouton={s.id} className="lp-style">
@@ -303,18 +307,18 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
           </ul>
         </div>
         <div className="mt-4">
-          <span className="mb-1.5 block text-[13px] font-medium text-white/70">Forme</span>
-          <Segments label="Forme des boutons" valeur={reglages.bouton.forme} options={FORMES} onChange={v => maj({ bouton: { ...reglages.bouton, forme: v } })} />
+          <span className="mb-1.5 block text-[13px] font-medium text-white/70">{tr('Forme', 'Shape')}</span>
+          <Segments label={tr('Forme des boutons', 'Button shape')} valeur={reglages.bouton.forme} options={formes(tr)} onChange={v => maj({ bouton: { ...reglages.bouton, forme: v } })} />
         </div>
         <div className="mt-4">
-          <span className="mb-1.5 block text-[13px] font-medium text-white/70">Ombre</span>
-          <Segments label="Ombre des boutons" valeur={reglages.bouton.ombre} options={OMBRES} onChange={v => maj({ bouton: { ...reglages.bouton, ombre: v } })} />
+          <span className="mb-1.5 block text-[13px] font-medium text-white/70">{tr('Ombre', 'Shadow')}</span>
+          <Segments label={tr('Ombre des boutons', 'Button shadow')} valeur={reglages.bouton.ombre} options={ombres(tr)} onChange={v => maj({ bouton: { ...reglages.bouton, ombre: v } })} />
         </div>
       </Carte>}
 
-      {voir('bureau') && <Carte nu={nu} titre={titre('Sur ordinateur')}>
-        <div className="grid grid-cols-3 gap-2" role="radiogroup" onKeyDown={e => flechesRadio(e)} aria-label="Mise en page sur ordinateur">
-          {BUREAUX.map(b => {
+      {voir('bureau') && <Carte nu={nu} titre={titre(tr('Sur ordinateur', 'On computers'))}>
+        <div className="grid grid-cols-3 gap-2" role="radiogroup" onKeyDown={e => flechesRadio(e)} aria-label={tr('Mise en page sur ordinateur', 'Layout on computers')}>
+          {bureaux(tr).map(b => {
             const actif = reglages.bureau === b.id;
             return (
               <button key={b.id} type="button" role="radio" aria-checked={actif} onClick={() => { vibrer(); maj({ bureau: b.id }); }}
@@ -325,10 +329,10 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
             );
           })}
         </div>
-        <p className="mt-3 text-[13px] leading-snug text-white/60">{BUREAUX.find(b => b.id === reglages.bureau)?.aide} Sur téléphone, ta page reste en colonne.</p>
+        <p className="mt-3 text-[13px] leading-snug text-white/60">{bureaux(tr).find(b => b.id === reglages.bureau)?.aide}{' '}{tr('Sur téléphone, ta page reste en colonne.', 'On phones, your page stays in one column.')}</p>
       </Carte>}
 
-      {voir('reseaux') && <Carte nu={nu} titre={titre('Réseaux')} id="reseaux">
+      {voir('reseaux') && <Carte nu={nu} titre={titre(tr('Réseaux', 'Social links'))} id="reseaux">
         <ul className="flex flex-col gap-2">
           {reglages.reseaux.map((r, i) => {
             // Un pseudo qui ne mène nulle part se dit sous le champ, une fois quitté ; il ne s'affiche pas sur la page.
@@ -338,7 +342,7 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
               <span className="flex w-7 shrink-0 justify-center text-white" style={{ color: couleurReseau(r.reseau) }}><Icone nom={r.reseau} taille={22} /></span>
               {/* Un pseudo suffit, comme aux premiers pas : il devient l'adresse du profil en quittant le champ. */}
               <input className={`${classeSaisie} min-w-0 flex-1 py-2.5`} value={pseudoReseau(r.reseau, r.url)} onFocus={() => setEnSaisie(r.reseau)}
-                aria-invalid={faux || undefined} aria-describedby={faux ? `reseau-faux-${r.reseau}` : undefined} aria-label={NOMS_RESEAUX[r.reseau]} placeholder={EXEMPLES[r.reseau]} inputMode={r.reseau === 'email' ? 'email' : r.reseau === 'whatsapp' ? 'tel' : 'url'} autoCapitalize="none" autoCorrect="off"
+                aria-invalid={faux || undefined} aria-describedby={faux ? `reseau-faux-${r.reseau}` : undefined} aria-label={NOMS_RESEAUX[r.reseau]} placeholder={exemples(tr)[r.reseau]} inputMode={r.reseau === 'email' ? 'email' : r.reseau === 'whatsapp' ? 'tel' : 'url'} autoCapitalize="none" autoCorrect="off"
                 onChange={e => maj({ reseaux: reglages.reseaux.map((x, j) => (j === i ? { ...x, url: e.target.value } : x)) })}
                 onBlur={e => { setEnSaisie(null); const u = urlReseau(r.reseau, e.target.value); if (u && u !== r.url) maj({ reseaux: reglages.reseaux.map((x, j) => (j === i ? { ...x, url: u } : x)) }); }} />
               {/* Monter et descendre, à la taille du pouce, sur la ligne touchée seulement : le champ garde sa largeur sur les autres. */}
@@ -357,7 +361,7 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
           <div className="mt-4" role="group" aria-labelledby="reseau-du-pseudo">
             <div className="mb-1 flex items-center justify-between gap-2">
               <span id="reseau-du-pseudo" className="min-w-0 truncate text-[13px] font-medium text-white">@{pseudo}{'\u202f'}: sur quel réseau{'\u202f'}?</span>
-              <button type="button" onClick={onPseudo} className={classeBouton.discret}>Annuler</button>
+              <button type="button" onClick={onPseudo} className={classeBouton.discret}>{tr('Annuler', 'Cancel')}</button>
             </div>
             <div className="flex flex-wrap gap-1">
               {RESEAUX_PSEUDO.map((r, i) => (
@@ -371,7 +375,7 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
           </div>
         ) : absents.length > 0 && (
           <div className="mt-4">
-            <span className="mb-1.5 block text-[13px] font-medium text-white/70">Ajouter un réseau</span>
+            <span className="mb-1.5 block text-[13px] font-medium text-white/70">{tr('Ajouter un réseau', 'Add a network')}</span>
             <div className="flex flex-wrap gap-1">
               {absents.map(r => (
                 <button key={r} type="button" aria-label={`Ajouter ${NOMS_RESEAUX[r]}`} onClick={() => { vibrer(4); maj({ reseaux: [...reglages.reseaux, { reseau: r, url: '' }] }); setTimeout(() => focusSaisie(document.querySelector<HTMLInputElement>(`[aria-label="${NOMS_RESEAUX[r]}"]`)), 40); }}
@@ -384,18 +388,18 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
           </div>
         )}
         <div className="mt-4">
-          <span className="mb-1.5 block text-[13px] font-medium text-white/70">Emplacement des icônes</span>
-          <Segments label="Emplacement des icônes" valeur={reglages.reseauxPosition} options={[{ id: 'haut', nom: 'Sous la bio' }, { id: 'bas', nom: 'En bas' }]} onChange={v => maj({ reseauxPosition: v })} />
+          <span className="mb-1.5 block text-[13px] font-medium text-white/70">{tr('Emplacement des icônes', 'Icon placement')}</span>
+          <Segments label={tr('Emplacement des icônes', 'Icon placement')} valeur={reglages.reseauxPosition} options={[{ id: 'haut', nom: tr('Sous la bio', 'Under the bio') }, { id: 'bas', nom: tr('En bas', 'At the bottom') }]} onChange={v => maj({ reseauxPosition: v })} />
         </div>
       </Carte>}
     </div>
   );
 }
 
-const BUREAUX: { id: MiseEnPageBureau; nom: string; aide: string }[] = [
-  { id: 'colonne', nom: 'Colonne', aide: 'Comme sur téléphone, sur un panneau.' },
-  { id: 'profil', nom: 'Profil', aide: 'Profil à gauche, liens sur deux colonnes.' },
-  { id: 'onepage', nom: 'Pleine page', aide: 'Ton nom en grand, les liens en cartes.' },
+const bureaux = (tr: Choix): { id: MiseEnPageBureau; nom: string; aide: string }[] => [
+  { id: 'colonne', nom: tr('Colonne', 'Column'), aide: tr('Comme sur téléphone, sur un panneau.', 'Like on phones, on a panel.') },
+  { id: 'profil', nom: tr('Profil', 'Profile'), aide: tr('Profil à gauche, liens sur deux colonnes.', 'Profile on the left, links in two columns.') },
+  { id: 'onepage', nom: tr('Pleine page', 'Full page'), aide: tr('Ton nom en grand, les liens en cartes.', 'Your name large, links as cards.') },
 ];
 
 /** La photo en rond ou en grand, en croquis comme les mises en page. */
@@ -449,6 +453,8 @@ export type Tiroir = 'theme' | 'couleurs' | 'police' | 'fond' | 'photo' | 'bouto
 export function DesignTiroirs({ reglages, onChange, envoyerImage, principal, pied, vedettes, initial }: { reglages: Reglages; onChange: (r: Reglages) => void; envoyerImage: (d: string) => Promise<string>; principal: boolean; pied?: ReactNode; vedettes?: number;
   /** Le tiroir ouvert d'emblée. */
   initial?: Tiroir }) {
+  const langue = useLangue();
+  const tr = choix(langue);
   const [ouvert, setOuvert] = useState<Tiroir | null>(initial ?? null);
   // Le focus suit le tiroir : sur son retour en entrant, sur sa ligne en revenant.
   const retour = useRef<HTMLButtonElement>(null);
@@ -478,19 +484,19 @@ export function DesignTiroirs({ reglages, onChange, envoyerImage, principal, pie
   // Chaque ligne dit ce qui est réglé, à droite : on sait sans ouvrir. Une partie réservée porte le nom de son offre.
   // Réservées, les couleurs ouvrent les offres par-dessus le design, Starter en avant ; sans chemin vers les offres, leur tiroir dit pourquoi.
   const lignes: { id: Tiroir; nom: string; icone: string; valeur: ReactNode }[] = [
-    { id: 'theme', nom: 'Thème', icone: 'palette', valeur: themeParId(reglages.theme).nom },
-    { id: 'couleurs', nom: 'Couleurs', icone: 'pinceau', valeur: !couleurs ? <Etiquette fonction="couleurs" /> : Object.values(reglages.couleurs).some(Boolean) ? 'Personnalisées' : 'Celles du thème' },
-    { id: 'police', nom: 'Police', icone: 'plume', valeur: !couleurs ? <Etiquette fonction="couleurs" /> : reglages.police ? NOMS_POLICES[reglages.police as keyof typeof NOMS_POLICES] : 'Celle du thème' },
-    { id: 'fond', nom: 'Image de fond', icone: 'photo', valeur: !fond ? <Etiquette fonction="fond" /> : reglages.imageFond ? 'Ta photo' : 'Aucune' },
-    { id: 'photo', nom: 'Photo de profil', icone: 'utilisateur', valeur: !reglages.profil.avatar ? 'Aucune' : grandePhoto && reglages.profil.photo === 'grande' ? 'En grand' : 'En rond' },
-    { id: 'boutons', nom: 'Boutons', icone: 'etiquette', valeur: STYLES.find(x => x.id === reglages.bouton.style)?.nom ?? '' },
-    { id: 'animation', nom: 'Animation', icone: 'eclair', valeur: NOMS_ANIMATIONS[reglages.animation].nom },
-    { id: 'bureau', nom: 'Sur ordinateur', icone: 'ordinateur', valeur: BUREAUX.find(x => x.id === reglages.bureau)?.nom ?? '' },
+    { id: 'theme', nom: tr('Thème', 'Theme'), icone: 'palette', valeur: nomTheme(themeParId(reglages.theme), langue) },
+    { id: 'couleurs', nom: tr('Couleurs', 'Colors'), icone: 'pinceau', valeur: !couleurs ? <Etiquette fonction="couleurs" /> : Object.values(reglages.couleurs).some(Boolean) ? tr('Personnalisées', 'Custom') : tr('Celles du thème', 'The theme’s') },
+    { id: 'police', nom: tr('Police', 'Font'), icone: 'plume', valeur: !couleurs ? <Etiquette fonction="couleurs" /> : reglages.police ? NOMS_POLICES[reglages.police as keyof typeof NOMS_POLICES] : tr('Celle du thème', 'The theme’s') },
+    { id: 'fond', nom: tr('Image de fond', 'Background image'), icone: 'photo', valeur: !fond ? <Etiquette fonction="fond" /> : reglages.imageFond ? tr('Ta photo', 'Your photo') : tr('Aucune', 'None') },
+    { id: 'photo', nom: tr('Photo de profil', 'Profile photo'), icone: 'utilisateur', valeur: !reglages.profil.avatar ? tr('Aucune', 'None') : grandePhoto && reglages.profil.photo === 'grande' ? tr('En grand', 'Large') : tr('En rond', 'Round') },
+    { id: 'boutons', nom: tr('Boutons', 'Buttons'), icone: 'etiquette', valeur: styles(tr).find(x => x.id === reglages.bouton.style)?.nom ?? '' },
+    { id: 'animation', nom: 'Animation', icone: 'eclair', valeur: nomsAnimations(langue)[reglages.animation].nom },
+    { id: 'bureau', nom: tr('Sur ordinateur', 'On computers'), icone: 'ordinateur', valeur: bureaux(tr).find(x => x.id === reglages.bureau)?.nom ?? '' },
   ];
 
   // Dans la feuille du téléphone, le nom du tiroir et sa flèche prennent l'en-tête, comme les réglages d'un bloc ; au bureau, la ligne de retour reste collée en haut.
   const nomOuvert = lignes.find(l => l.id === ouvert)?.nom ?? '';
-  const dansFeuille = useFilFeuille(ouvert ? { titre: nomOuvert, label: 'Revenir au design', retour: () => setOuvert(null) } : null);
+  const dansFeuille = useFilFeuille(ouvert ? { titre: nomOuvert, label: tr('Revenir au design', 'Back to design'), retour: () => setOuvert(null) } : null);
   // Le retour du téléphone ramène à la liste des tiroirs avant de fermer le design.
   useCouche(!!ouvert, () => { setOuvert(null); return true; });
 
@@ -499,7 +505,7 @@ export function DesignTiroirs({ reglages, onChange, envoyerImage, principal, pie
       {/* Le retour reste collé en haut de la feuille (au bureau, sous les onglets) : on le retrouve après avoir fait défiler vingt thèmes. */}
       {!dansFeuille ? (
         <div className="adm-tiroir-retour sticky top-0 z-10 -mx-5 flex items-center bg-nuit px-4 pb-1">
-          <button ref={retour} type="button" onClick={() => { vibrer(4); setOuvert(null); }} aria-label={`${nomOuvert}, revenir au design`} className="flex min-h-11 items-center gap-1 rounded-xl pr-3 text-[14px] font-medium text-white/75 hover:text-white">
+          <button ref={retour} type="button" onClick={() => { vibrer(4); setOuvert(null); }} aria-label={tr(`${nomOuvert}, revenir au design`, `${nomOuvert}, back to design`)} className="flex min-h-11 items-center gap-1 rounded-xl pr-3 text-[14px] font-medium text-white/75 hover:text-white">
             <Icone nom="ui-chevron" taille={18} className="rotate-90" /> {nomOuvert}
           </button>
           {ouvert === 'couleurs' && couleurs && <span className="ml-auto pl-1"><Reinitialiser reglages={reglages} onChange={onChange} /></span>}
@@ -535,29 +541,32 @@ export function DesignTiroirs({ reglages, onChange, envoyerImage, principal, pie
 
 /** Remet les trois couleurs à celles du thème. Toujours là pour qu'on le trouve, éteint tant qu'il n'y a rien à remettre. */
 function Reinitialiser({ reglages, onChange }: { reglages: Reglages; onChange: (r: Reglages) => void }) {
+  const langue = useLangue();
+  const tr = choix(langue);
   const perso = Object.values(reglages.couleurs).some(Boolean);
   return (
     <button type="button" disabled={!perso} onClick={() => { vibrer(4); onChange({ ...reglages, couleurs: SANS_COULEURS }); }}
-      className="-my-2 min-h-11 rounded-xl px-2 text-[13px] font-medium text-white/70 transition hover:text-white disabled:text-white/30 disabled:hover:text-white/30">Réinitialiser</button>
+      className="-my-2 min-h-11 rounded-xl px-2 text-[13px] font-medium text-white/70 transition hover:text-white disabled:text-white/30 disabled:hover:text-white/30">{tr('Réinitialiser', 'Reset')}</button>
   );
 }
 
 /** Les trois couleurs qu'on change par-dessus un thème, et où les lire dans le thème. */
-const CLES_COULEURS: { id: keyof Couleurs; nom: string; duTheme: (t: Theme) => string }[] = [
-  { id: 'fond', nom: 'Fond', duTheme: t => t.fondUni },
-  { id: 'boutons', nom: 'Boutons', duTheme: t => t.surface },
-  { id: 'accent', nom: 'Lien mis en avant', duTheme: t => t.vedette },
+const clesCouleurs = (tr: Choix): { id: keyof Couleurs; nom: string; duTheme: (t: Theme) => string }[] => [
+  { id: 'fond', nom: tr('Fond', 'Background'), duTheme: t => t.fondUni },
+  { id: 'boutons', nom: tr('Boutons', 'Buttons'), duTheme: t => t.surface },
+  { id: 'accent', nom: tr('Lien mis en avant', 'Featured link'), duTheme: t => t.vedette },
 ];
 /** Une palette courte, des neutres aux couleurs franches ; le sélecteur donne tout le reste. */
 const PALETTE = ['#0c121f', '#111111', '#ffffff', '#f4ece1', '#e3e9de', '#e9e2f6', '#1f35ff', '#d62e1f', '#ff8a5c', '#ffd400', '#23704f', '#ff6fae'];
 /** Leurs noms, lus à voix haute et sous le nom du réglage : jamais un code hexadécimal. */
-const NOMS_PALETTE: Record<string, string> = {
-  '#0c121f': 'Nuit', '#111111': 'Noir', '#ffffff': 'Blanc', '#f4ece1': 'Crème', '#e3e9de': 'Sauge pâle', '#e9e2f6': 'Lilas pâle',
-  '#1f35ff': 'Bleu Klein', '#d62e1f': 'Rouge', '#ff8a5c': 'Corail', '#ffd400': 'Jaune', '#23704f': 'Vert sapin', '#ff6fae': 'Rose',
-};
+const nomsPalette = (tr: Choix): Record<string, string> => ({
+  '#0c121f': tr('Nuit', 'Midnight'), '#111111': tr('Noir', 'Black'), '#ffffff': tr('Blanc', 'White'), '#f4ece1': tr('Crème', 'Cream'), '#e3e9de': tr('Sauge pâle', 'Pale sage'), '#e9e2f6': tr('Lilas pâle', 'Pale lilac'),
+  '#1f35ff': tr('Bleu Klein', 'Klein blue'), '#d62e1f': tr('Rouge', 'Red'), '#ff8a5c': tr('Corail', 'Coral'), '#ffd400': tr('Jaune', 'Yellow'), '#23704f': tr('Vert sapin', 'Pine green'), '#ff6fae': tr('Rose', 'Pink'),
+});
 
 /** Une couleur : celle du thème, une de la palette, ou n'importe laquelle au sélecteur. */
 function ChoixCouleur({ nom, valeur, duTheme, onChange }: { nom: string; valeur: string; duTheme: string; onChange: (v: string) => void }) {
+  const tr = useL();
   const actuelle = valeur || duTheme;
   const perso = !!valeur && !PALETTE.includes(valeur);
   const pastille = (c: string, choisie: boolean, etiquette: string, action: () => void) => (
@@ -568,17 +577,17 @@ function ChoixCouleur({ nom, valeur, duTheme, onChange }: { nom: string; valeur:
     <div>
       <div className="mb-2 flex items-center justify-between gap-3">
         <span className="text-[13.5px] font-medium text-white/85">{nom}</span>
-        <span className="text-[12.5px] text-white/55">{valeur ? NOMS_PALETTE[valeur] ?? 'Couleur choisie' : 'Celle du thème'}</span>
+        <span className="text-[12.5px] text-white/55">{valeur ? nomsPalette(tr)[valeur] ?? tr('Couleur choisie', 'Chosen color') : tr('Celle du thème', 'The theme’s')}</span>
       </div>
       <div className="flex flex-wrap gap-2.5">
-        {pastille(duTheme, !valeur, `${nom} : celle du thème`, () => onChange(''))}
+        {pastille(duTheme, !valeur, tr(`${nom} : celle du thème`, `${nom}: the theme’s`), () => onChange(''))}
         <span className="mx-0.5 h-8 w-px self-center bg-white/10" aria-hidden="true" />
-        {PALETTE.filter(c => c !== duTheme.toLowerCase()).map(c => pastille(c, valeur === c, `${nom} : ${NOMS_PALETTE[c]}`, () => onChange(c)))}
+        {PALETTE.filter(c => c !== duTheme.toLowerCase()).map(c => pastille(c, valeur === c, tr(`${nom} : ${nomsPalette(tr)[c]}`, `${nom}: ${nomsPalette(tr)[c]}`), () => onChange(c)))}
         {/* Une autre couleur : le « + » seul, sans rond autour ; prise, elle devient une pastille de couleur comme les autres. */}
         <label className={`relative grid h-8 w-8 shrink-0 cursor-pointer place-items-center rounded-full transition before:absolute before:-inset-1 before:content-[''] ${perso ? 'ring-1 ring-inset ring-white/20 outline-2 outline-offset-2 outline-white' : 'text-white/60 hover:text-white'}`}
-          title="Une autre couleur" style={perso ? { background: valeur } : undefined}>
+          title={tr('Une autre couleur', 'Another color')} style={perso ? { background: valeur } : undefined}>
           {!perso && <Icone nom="ui-plus" taille={20} />}
-          <input type="color" value={actuelle} onChange={e => onChange(e.target.value.toLowerCase())} className="absolute inset-0 h-full w-full cursor-pointer opacity-0" aria-label={`${nom} : une autre couleur`} />
+          <input type="color" value={actuelle} onChange={e => onChange(e.target.value.toLowerCase())} className="absolute inset-0 h-full w-full cursor-pointer opacity-0" aria-label={tr(`${nom} : une autre couleur`, `${nom}: another color`)} />
         </label>
       </div>
     </div>
@@ -587,11 +596,12 @@ function ChoixCouleur({ nom, valeur, duTheme, onChange }: { nom: string; valeur:
 
 /** Une partie du design réglée sans Starter : elle se voit ici, pas encore sur la page publique. */
 function AEssai({ fonction }: { fonction: Fonction }) {
+  const tr = useL();
   const voir = useVoirOffres();
   return (
     <p className="mb-4 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl bg-[var(--adm-citron)] px-3 py-2 text-[13px] leading-snug text-[var(--adm-citron-encre)]">
-      <span className="min-w-0 flex-1">À l’essai : tu le vois ici, tes visiteurs le verront avec Starter.</span>
-      {voir && <button type="button" onClick={() => voir(fonction)} className="min-h-9 font-semibold underline underline-offset-2">Voir Starter</button>}
+      <span className="min-w-0 flex-1">{tr('À l’essai : tu le vois ici, tes visiteurs le verront avec Starter.', 'On trial: you see it here, your visitors will see it with Starter.')}</span>
+      {voir && <button type="button" onClick={() => voir(fonction)} className="min-h-9 font-semibold underline underline-offset-2">{tr('Voir Starter', 'See Starter')}</button>}
     </p>
   );
 }

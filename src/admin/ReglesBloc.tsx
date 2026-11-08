@@ -1,6 +1,8 @@
 import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import type { Acces, Bloc, Preuve } from '../lib/types.ts';
+import type { Acces, Bloc, Langue, Preuve } from '../lib/types.ts';
+import { choix, useL, useLangue } from '../accueil/langue.ts';
+import type { Choix } from '../accueil/langue.ts';
 import type { Creneau } from '../lib/moments.ts';
 import { FUSEAU_DEFAUT, decrireCreneau } from '../lib/moments.ts';
 import { Icone } from '../components/Icone.tsx';
@@ -10,7 +12,7 @@ import { Bascule, Champ, Interrupteur, Segments, classeSaisie, vibrer } from './
 import { Etiquette, Reserve, usePermis, useVoirOffres } from './offre.tsx';
 import { COULEURS_SOURCES } from '../lib/stats.ts';
 import { chercherPays, listePays, nomPays } from '../lib/pays.ts';
-import { MAX_PAYS } from '../lib/types.ts';
+import { MAX_PAYS, estTitreParDefaut, titreParDefaut } from '../lib/types.ts';
 import type { EffetPays } from '../lib/types.ts';
 
 /*
@@ -137,18 +139,27 @@ export function LigneRepli({ titre, etiquette, resume, regle = false, ouvert, on
   );
 }
 
-const JOURS = ['Lu', 'Ma', 'Me', 'Je', 'Ve', 'Sa', 'Di'];
-const NOMS = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche'];
+const JOURS: Record<Langue, string[]> = { fr: ['Lu', 'Ma', 'Me', 'Je', 'Ve', 'Sa', 'Di'], en: ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'] };
+const NOMS: Record<Langue, string[]> = { fr: ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche'], en: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] };
 const fuseauNavigateur = () => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || FUSEAU_DEFAUT; } catch { return FUSEAU_DEFAUT; } };
 
 /** « 12 nov. », « 1er déc. » : un jour d'un bloc, en court, pour les résumés. */
-const jourCourt = (iso: string) => new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }).replace(/^1(\s)/, '1er$1');
+const jourCourt = (iso: string, langue: Langue = 'fr') => langue === 'en' ? new Date(iso).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })
+  : new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }).replace(/^1(\s)/, '1er$1');
 /** « mer. 12 nov., 10:00 » : une date d'un bloc, dans sa ligne. */
-const dateLigne = (iso: string) => new Date(iso).toLocaleString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+const dateLigne = (iso: string, langue: Langue = 'fr') => new Date(iso).toLocaleString(langue === 'en' ? 'en-US' : 'fr-FR', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 const majuscule = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 /** « du 12 au 20 nov. », « du 28 oct. au 3 nov. », « à partir du 12 nov. » : les dates d'un bloc, en court. */
-function datesCourtes(debut: string, fin: string): string {
+function datesCourtes(debut: string, fin: string, langue: Langue = 'fr'): string {
+  if (langue === 'en') {
+    if (debut && fin) {
+      const d = new Date(debut), f = new Date(fin);
+      const memeMois = d.getFullYear() === f.getFullYear() && d.getMonth() === f.getMonth();
+      return `${jourCourt(debut, langue)} to ${memeMois ? f.getDate() : jourCourt(fin, langue)}`;
+    }
+    return debut ? `from ${jourCourt(debut, langue)}` : fin ? `until ${jourCourt(fin, langue)}` : '';
+  }
   if (debut && fin) {
     const d = new Date(debut), f = new Date(fin);
     const memeMois = d.getFullYear() === f.getFullYear() && d.getMonth() === f.getMonth();
@@ -169,10 +180,11 @@ function datesCourtes(debut: string, fin: string): string {
  * Ce que « Visibilité » dit sans s'ouvrir : « Visible », « Masqué », ou ce qui en décide, avec le nom de ses parties
  * (« Du 12 au 20 nov., selon le réseau »). `heure` : un créneau que l'offre ne comprend pas ne s'applique pas, il ne se dit pas.
  */
-export function resumeVisibilite(b: Bloc, heure: boolean, pays = heure): string {
-  if (!b.public) return 'Masqué';
+export function resumeVisibilite(b: Bloc, heure: boolean, pays = heure, langue: Langue = 'fr'): string {
+  const tr = choix(langue);
+  if (!b.public) return tr('Masqué', 'Hidden');
   const reseau = !!(b.audience?.sources.length || b.cache?.length);
-  return majuscule([datesCourtes(b.debut, b.fin), heure && b.creneau ? 'selon l’heure' : '', reseau ? 'selon le réseau' : '', pays && b.pays ? 'selon le pays' : ''].filter(Boolean).join(', ')) || 'Visible';
+  return majuscule([datesCourtes(b.debut, b.fin, langue), heure && b.creneau ? tr('selon l’heure', 'by time of day') : '', reseau ? tr('selon le réseau', 'by network') : '', pays && b.pays ? tr('selon le pays', 'by country') : ''].filter(Boolean).join(', ')) || 'Visible';
 }
 
 /**
@@ -182,21 +194,23 @@ export function resumeVisibilite(b: Bloc, heure: boolean, pays = heure): string 
  * ligne mène aux offres (son badge est au titre de la partie) ; une date gardée d'une offre passée se retire toujours.
  */
 function LigneDate({ id, nom, vide, valeur, min, permis, invalide, onChange, retirer, nu = false }: { id?: string; nom: string; vide: string; valeur: string; min?: string; permis: boolean; invalide?: boolean; onChange: (iso: string) => void; retirer: () => void; nu?: boolean }) {
+  const langue = useLangue();
+  const tr = choix(langue);
   const voir = useVoirOffres();
   return (
     <div className={`relative flex min-h-12 items-center gap-3 transition bureau:min-h-10 bureau:gap-2 ${nu ? 'bureau:min-h-9' : 'px-4 focus-within:bg-white/[0.05] hover:bg-white/[0.03] bureau:px-3'}`}>
       <span className={`shrink-0 text-[14.5px] font-medium bureau:text-[13.5px] bureau:font-normal ${nu ? 'text-white/70' : 'text-white'}`}>{nom}</span>
-      <span className={`ml-auto min-w-0 truncate text-[14px] tabular-nums bureau:text-[13.5px] ${invalide ? 'text-red-300' : valeur ? 'font-medium text-bleu' : 'text-white/55'}`}>{valeur ? dateLigne(valeur) : vide}</span>
+      <span className={`ml-auto min-w-0 truncate text-[14px] tabular-nums bureau:text-[13.5px] ${invalide ? 'text-red-300' : valeur ? 'font-medium text-bleu' : 'text-white/55'}`}>{valeur ? dateLigne(valeur, langue) : vide}</span>
       {permis ? (
         <input id={id} type="datetime-local" aria-label={nom} aria-invalid={invalide || undefined} value={versLocal(valeur)} min={min}
           onChange={e => onChange(depuisLocal(e.target.value))}
           onClick={e => { try { e.currentTarget.showPicker(); } catch { /* le navigateur ouvre le sien */ } }}
           className="absolute inset-0 h-full w-full cursor-pointer text-[16px] opacity-0" />
       ) : (
-        <button type="button" onClick={() => voir?.('programmation')} aria-haspopup="dialog" aria-label={`${nom} : ${valeur ? dateLigne(valeur) : vide}. Voir les offres`} className="absolute inset-0" />
+        <button type="button" onClick={() => voir?.('programmation')} aria-haspopup="dialog" aria-label={tr(`${nom} : ${valeur ? dateLigne(valeur) : vide}. Voir les offres`, `${nom}: ${valeur ? dateLigne(valeur, 'en') : vide}. See the plans`)} className="absolute inset-0" />
       )}
       {valeur ? (
-        <button type="button" onClick={() => { vibrer(6); retirer(); }} aria-label={`Retirer la date : ${nom}`} title="Retirer"
+        <button type="button" onClick={() => { vibrer(6); retirer(); }} aria-label={`Retirer la date : ${nom}`} title={tr('Retirer', 'Remove')}
           className="relative z-10 -mr-2 grid h-11 w-9 shrink-0 place-items-center text-white/45 transition hover:text-white bureau:h-8 bureau:w-7">
           <Icone nom="ui-fermer" taille={15} />
         </button>
@@ -226,6 +240,8 @@ function Partie({ titre, etiquette, children }: { titre: string; etiquette?: Rea
  * réseau, à tous, dès Gratuit.
  */
 export function ReglageVisibilite({ b, maj, erreur, reseaux }: { b: Bloc; maj: (c: Partial<Bloc>) => void; erreur?: string; reseaux: Audience[] }) {
+  const langue = useLangue();
+  const tr = choix(langue);
   const c = b.creneau;
   const dates = usePermis('programmation');
   const semaine = usePermis('heure');
@@ -239,19 +255,19 @@ export function ReglageVisibilite({ b, maj, erreur, reseaux }: { b: Bloc; maj: (
   // Au bureau, les trois parties sont trois lignes qui disent ce qui est réglé et s'ouvrent une à une (24 octobre 2026).
   const aOuvrir = useContext(RegleAOuvrir);
   const [partie, setPartie] = useState<'date' | 'heure' | 'reseau' | 'pays' | null>(erreur || aOuvrir === 'moment' ? 'date' : null);
-  const visible = <Interrupteur compact={compact} label="Visible sur ma page" actif={b.public} onChange={v => maj({ public: v })} />;
+  const visible = <Interrupteur compact={compact} label={tr('Visible sur ma page', 'Visible on my page')} actif={b.public} onChange={v => maj({ public: v })} />;
   const contenuDate = (
     <>
       {/* Au bureau, dans la rangée, Apparaît et Disparaît sont deux lignes de plus, sans cadre : un cadre de plus dans un repli était un troisième niveau. */}
       <div className={compact ? 'flex flex-col' : 'adm-groupe flex flex-col divide-y divide-white/[0.06]'}>
-        <LigneDate nom="Apparaît" vide="Maintenant" valeur={b.debut} permis={dates} nu={compact}
+        <LigneDate nom={tr('Apparaît', 'Appears')} vide={tr('Maintenant', 'Now')} valeur={b.debut} permis={dates} nu={compact}
           onChange={debut => maj({ debut, ...(debut ? {} : { compteARebours: false }) })} retirer={() => maj({ debut: '', compteARebours: false })} />
-        <LigneDate id="bloc-fin" nom="Disparaît" vide="Jamais" valeur={b.fin} min={versLocal(b.debut) || undefined} permis={dates} invalide={!!erreur} nu={compact}
+        <LigneDate id="bloc-fin" nom={tr('Disparaît', 'Disappears')} vide={tr('Jamais', 'Never')} valeur={b.fin} min={versLocal(b.debut) || undefined} permis={dates} invalide={!!erreur} nu={compact}
           onChange={fin => maj({ fin })} retirer={() => maj({ fin: '' })} />
         {/* Un lien qui n'est pas encore là peut compter les jours jusqu'à son arrivée : la ligne suit sa date. */}
         {lancement && (
           <div className={`grid min-h-12 items-center bureau:min-h-10 ${compact ? 'bureau:min-h-9' : 'px-4 bureau:px-3'}`}>
-            <Interrupteur compact={compact} label="Compte à rebours" actif={b.compteARebours} onChange={v => maj({ compteARebours: v })} />
+            <Interrupteur compact={compact} label={tr('Compte à rebours', 'Countdown')} actif={b.compteARebours} onChange={v => maj({ compteARebours: v })} />
           </div>
         )}
       </div>
@@ -262,17 +278,17 @@ export function ReglageVisibilite({ b, maj, erreur, reseaux }: { b: Bloc; maj: (
     <>
       {!semaine && c ? (
         // Un créneau gardé d'une offre passée : il ne s'applique plus, il se retire.
-        <Reserve fonction="heure" phrase={`Ce bloc devait s’afficher ${decrireCreneau(c)}. Sans Hopla Pro, il s’affiche tout le temps.`}>
-          <button type="button" onClick={() => maj({ creneau: null })} className="text-[13px] text-white/55 underline">Retirer le créneau</button>
+        <Reserve fonction="heure" phrase={tr(`Ce bloc devait s’afficher ${decrireCreneau(c)}. Sans Hopla Pro, il s’affiche tout le temps.`, `This block was set to show ${decrireCreneau(c, 'en')}. Without Hopla Pro, it shows all the time.`)}>
+          <button type="button" onClick={() => maj({ creneau: null })} className="text-[13px] text-white/55 underline">{tr('Retirer le créneau', 'Remove the time slot')}</button>
         </Reserve>
       ) : (
         // Sept cases qui se cochent à plusieurs, chacune bordée : elles se lisent comme des boutons, sans la piste grise des segments (un seul choix).
-        <div role="group" aria-label="Jours" className="grid grid-cols-7 gap-1">
-          {JOURS.map((j, i) => {
+        <div role="group" aria-label={tr('Jours', 'Days')} className="grid grid-cols-7 gap-1">
+          {JOURS[langue].map((j, i) => {
             const actif = !!c?.jours.includes(i + 1);
             return (
               // Sans Hopla Pro, les jours se montrent quand même : un toucher ouvre les offres.
-              <button key={i} type="button" aria-pressed={semaine ? actif : undefined} aria-haspopup={semaine ? undefined : 'dialog'} aria-label={NOMS[i]} onClick={() => {
+              <button key={i} type="button" aria-pressed={semaine ? actif : undefined} aria-haspopup={semaine ? undefined : 'dialog'} aria-label={NOMS[langue][i]} onClick={() => {
                 if (!semaine) { voir?.('heure'); return; }
                 vibrer(4);
                 const jours = actif ? c!.jours.filter(n => n !== i + 1) : [...(c?.jours ?? []), i + 1];
@@ -285,13 +301,13 @@ export function ReglageVisibilite({ b, maj, erreur, reseaux }: { b: Bloc; maj: (
       {semaine && c && (
         <div className="mt-3 flex flex-col gap-3">
           <div className="grid grid-cols-2 gap-3">
-            <Champ label="De"><input type="time" className={classeSaisie} value={c.de} onChange={e => e.target.value && majCreneau({ de: e.target.value })} /></Champ>
-            <Champ label="À"><input type="time" className={classeSaisie} value={c.a} onChange={e => e.target.value && majCreneau({ a: e.target.value })} /></Champ>
+            <Champ label={tr('De', 'From')}><input type="time" className={classeSaisie} value={c.de} onChange={e => e.target.value && majCreneau({ de: e.target.value })} /></Champ>
+            <Champ label={tr('À', 'To')}><input type="time" className={classeSaisie} value={c.a} onChange={e => e.target.value && majCreneau({ a: e.target.value })} /></Champ>
           </div>
           <div>
-            <span className="mb-1.5 block text-[13px] font-medium text-white/70">À ces heures</span>
-            <Segments label="Ce que fait le créneau" valeur={c.effet} onChange={effet => majCreneau({ effet })}
-              options={[{ id: 'afficher', nom: 'Affiché seulement' }, { id: 'avant', nom: 'En avant' }]} />
+            <span className="mb-1.5 block text-[13px] font-medium text-white/70">{tr('À ces heures', 'During these hours')}</span>
+            <Segments label={tr('Ce que fait le créneau', 'What the time slot does')} valeur={c.effet} onChange={effet => majCreneau({ effet })}
+              options={[{ id: 'afficher', nom: tr('Affiché seulement', 'Shown only') }, { id: 'avant', nom: tr('En avant', 'Featured') }]} />
           </div>
         </div>
       )}
@@ -312,28 +328,32 @@ export function ReglageVisibilite({ b, maj, erreur, reseaux }: { b: Bloc; maj: (
       // Une ligne n'écrit rien tant que rien n'est réglé, ce qui l'est se dit en bleu, comme « Plus de réglages » (critique série 2).
       <div className="flex flex-col [&>div>label>span]:text-white/70">
         {visible}
-        {ligne('date', 'Selon la date', quand ? majuscule(quand) : '', !!quand, !dates && <Etiquette fonction="programmation" />, contenuDate)}
-        {ligne('heure', 'Selon l’heure', semaine && c ? majuscule(decrireCreneau(c)) : '', !!(semaine && c), !semaine && <Etiquette fonction="heure" />, contenuHeure)}
-        {ligne('reseau', 'Selon le réseau', resumeReseaux(b), !!resumeReseaux(b), null, contenuReseau)}
-        {ligne('pays', 'Selon le pays', resumePays(b), !!resumePays(b), !paysPermis && <Etiquette fonction="pays" />, contenuPays)}
+        {ligne('date', tr('Selon la date', 'By date'), quand ? majuscule(quand) : '', !!quand, !dates && <Etiquette fonction="programmation" />, contenuDate)}
+        {ligne('heure', tr('Selon l’heure', 'By time of day'), semaine && c ? majuscule(decrireCreneau(c, langue)) : '', !!(semaine && c), !semaine && <Etiquette fonction="heure" />, contenuHeure)}
+        {ligne('reseau', tr('Selon le réseau', 'By network'), resumeReseaux(b), !!resumeReseaux(b), null, contenuReseau)}
+        {ligne('pays', tr('Selon le pays', 'By country'), resumePays(b, langue), !!resumePays(b, langue), !paysPermis && <Etiquette fonction="pays" />, contenuPays)}
       </div>
     );
   }
   return (
     <div className="flex flex-col gap-5">
       <div className="adm-groupe px-4">{visible}</div>
-      <Partie titre="Selon la date" etiquette={!dates && <Etiquette fonction="programmation" />}>{contenuDate}</Partie>
-      <Partie titre="Selon l’heure" etiquette={!semaine && <Etiquette fonction="heure" />}>{contenuHeure}</Partie>
-      <Partie titre="Selon le réseau">{contenuReseau}</Partie>
-      <Partie titre="Selon le pays" etiquette={!paysPermis && <Etiquette fonction="pays" />}>{contenuPays}</Partie>
+      <Partie titre={tr('Selon la date', 'By date')} etiquette={!dates && <Etiquette fonction="programmation" />}>{contenuDate}</Partie>
+      <Partie titre={tr('Selon l’heure', 'By time of day')} etiquette={!semaine && <Etiquette fonction="heure" />}>{contenuHeure}</Partie>
+      <Partie titre={tr('Selon le réseau', 'By network')}>{contenuReseau}</Partie>
+      <Partie titre={tr('Selon le pays', 'By country')} etiquette={!paysPermis && <Etiquette fonction="pays" />}>{contenuPays}</Partie>
     </div>
   );
 }
 
 /** Ce que règle « Selon le pays », en peu de mots : « Seulement France et Belgique », « Sauf 4 pays ». */
-const resumePays = (b: Bloc) => (b.pays?.codes.length ? `${b.pays.effet === 'seulement' ? 'Seulement' : 'Sauf'} ${listePays(b.pays.codes)}` : '');
+const resumePays = (b: Bloc, langue: Langue) => {
+  if (!b.pays?.codes.length) return '';
+  const tr = choix(langue);
+  return `${b.pays.effet === 'seulement' ? tr('Seulement', 'Only') : tr('Sauf', 'Except')} ${listePays(b.pays.codes, langue)}`;
+};
 
-const MODES_PAYS: { id: 'partout' | EffetPays; nom: string }[] = [{ id: 'partout', nom: 'Partout' }, { id: 'seulement', nom: 'Seulement' }, { id: 'sauf', nom: 'Sauf' }];
+const modesPays = (tr: Choix): { id: 'partout' | EffetPays; nom: string }[] => [{ id: 'partout', nom: tr('Partout', 'Everywhere') }, { id: 'seulement', nom: tr('Seulement', 'Only') }, { id: 'sauf', nom: tr('Sauf', 'Except') }];
 
 /**
  * Selon le pays du visiteur, lu chez Cloudflare (Pro) : partout, seulement dans les pays choisis, ou partout sauf eux. Les
@@ -341,6 +361,8 @@ const MODES_PAYS: { id: 'partout' | EffetPays; nom: string }[] = [{ id: 'partout
  * ni pastille : le nom seul. Un réglage gardé d'une offre passée ne s'applique plus, il se retire.
  */
 function ChoixPays({ b, maj, permis }: { b: Bloc; maj: (c: Partial<Bloc>) => void; permis: boolean }) {
+  const langue = useLangue();
+  const tr = choix(langue);
   const voir = useVoirOffres();
   const compact = useContext(RangeesCompactes);
   const codes = b.pays?.codes ?? [];
@@ -349,8 +371,8 @@ function ChoixPays({ b, maj, permis }: { b: Bloc; maj: (c: Partial<Bloc>) => voi
   const [mot, setMot] = useState('');
   if (!permis && b.pays) {
     return (
-      <Reserve fonction="pays" phrase={`Ce bloc devait ${b.pays.effet === 'seulement' ? 's’afficher seulement' : 'se cacher'} pour les visiteurs de ces pays : ${listePays(b.pays.codes)}. Sans Hopla Pro, il s’affiche partout.`}>
-        <button type="button" onClick={() => maj({ pays: null })} className="text-[13px] text-white/55 underline">Retirer le réglage</button>
+      <Reserve fonction="pays" phrase={tr(`Ce bloc devait ${b.pays.effet === 'seulement' ? 's’afficher seulement' : 'se cacher'} pour les visiteurs de ces pays : ${listePays(b.pays.codes, langue)}. Sans Hopla Pro, il s’affiche partout.`, `This block was set to ${b.pays.effet === 'seulement' ? 'show only' : 'hide'} for visitors from these countries: ${listePays(b.pays.codes, langue)}. Without Hopla Pro, it shows everywhere.`)}>
+        <button type="button" onClick={() => maj({ pays: null })} className="text-[13px] text-white/55 underline">{tr('Retirer le réglage', 'Remove the setting')}</button>
       </Reserve>
     );
   }
@@ -360,20 +382,20 @@ function ChoixPays({ b, maj, permis }: { b: Bloc; maj: (c: Partial<Bloc>) => voi
     maj({ pays: m === 'partout' || !codes.length ? null : { codes, effet: m } });
   };
   const poser = (liste: string[]) => maj({ pays: liste.length && mode !== 'partout' ? { codes: liste, effet: mode } : null });
-  const trouves = mot.trim() ? chercherPays(mot).filter(c => !codes.includes(c)).slice(0, 6) : [];
+  const trouves = mot.trim() ? chercherPays(mot, langue).filter(c => !codes.includes(c)).slice(0, 6) : [];
   const ajouter = (c: string) => { vibrer(4); poser([...codes, c]); setMot(''); };
   const rang = 'flex min-h-12 items-center gap-3 px-4 bureau:min-h-10 bureau:gap-2 bureau:px-3';
   return (
     <div className="flex flex-col gap-2.5">
-      <Segments label="Selon le pays du visiteur" valeur={mode} options={MODES_PAYS} onChange={changerMode} />
+      <Segments label={tr('Selon le pays du visiteur', 'By the visitor’s country')} valeur={mode} options={modesPays(tr)} onChange={changerMode} />
       {mode !== 'partout' && (
         <div className="adm-groupe">
           {codes.length > 0 && (
-            <ul className="divide-y divide-white/[0.06]" aria-label={mode === 'seulement' ? 'Affiché seulement dans ces pays' : 'Caché dans ces pays'}>
+            <ul className="divide-y divide-white/[0.06]" aria-label={mode === 'seulement' ? tr('Affiché seulement dans ces pays', 'Shown only in these countries') : tr('Caché dans ces pays', 'Hidden in these countries')}>
               {codes.map(c => (
                 <li key={c} className={rang}>
-                  <span className="min-w-0 flex-1 truncate text-[14.5px] font-medium text-white bureau:text-[13.5px] bureau:font-normal">{nomPays(c)}</span>
-                  <button type="button" onClick={() => { vibrer(6); poser(codes.filter(x => x !== c)); }} aria-label={`Retirer ${nomPays(c)}`} title="Retirer"
+                  <span className="min-w-0 flex-1 truncate text-[14.5px] font-medium text-white bureau:text-[13.5px] bureau:font-normal">{nomPays(c, langue)}</span>
+                  <button type="button" onClick={() => { vibrer(6); poser(codes.filter(x => x !== c)); }} aria-label={tr(`Retirer ${nomPays(c, langue)}`, `Remove ${nomPays(c, langue)}`)} title={tr('Retirer', 'Remove')}
                     className="-mr-2 grid h-11 w-9 shrink-0 place-items-center text-white/45 transition hover:text-white bureau:h-8 bureau:w-7">
                     <Icone nom="ui-fermer" taille={15} />
                   </button>
@@ -385,25 +407,25 @@ function ChoixPays({ b, maj, permis }: { b: Bloc; maj: (c: Partial<Bloc>) => voi
             <div className={codes.length ? 'border-t border-white/[0.06]' : ''}>
               <label className={`${rang} adm-champ-ligne cursor-text`}>
                 <Icone nom="ui-plus" taille={16} className="shrink-0 text-white/55" />
-                <input value={mot} onChange={e => setMot(e.target.value)} placeholder={codes.length ? 'Ajouter un pays' : 'Chercher un pays'} aria-label="Chercher un pays"
+                <input value={mot} onChange={e => setMot(e.target.value)} placeholder={codes.length ? tr('Ajouter un pays', 'Add a country') : tr('Chercher un pays', 'Search for a country')} aria-label={tr('Chercher un pays', 'Search for a country')}
                   autoComplete="off" autoCorrect="off" spellCheck={false}
                   onKeyDown={e => { if (e.key === 'Enter' && trouves[0]) { e.preventDefault(); ajouter(trouves[0]); } else if (e.key === 'Escape' && mot) { e.preventDefault(); e.stopPropagation(); setMot(''); } }}
                   className="min-w-0 flex-1 bg-transparent text-[16px] text-white outline-none placeholder:text-white/45 bureau:text-[13.5px]" />
               </label>
               {mot.trim() && (
-                <ul className="divide-y divide-white/[0.06] border-t border-white/[0.06]" aria-label="Pays trouvés">
+                <ul className="divide-y divide-white/[0.06] border-t border-white/[0.06]" aria-label={tr('Pays trouvés', 'Countries found')}>
                   {trouves.length ? trouves.map(c => (
                     <li key={c}>
-                      <button type="button" onClick={() => ajouter(c)} className={`${rang} w-full text-left text-[14.5px] text-white/85 transition hover:bg-white/[0.03] hover:text-white bureau:text-[13.5px]`}>{nomPays(c)}</button>
+                      <button type="button" onClick={() => ajouter(c)} className={`${rang} w-full text-left text-[14.5px] text-white/85 transition hover:bg-white/[0.03] hover:text-white bureau:text-[13.5px]`}>{nomPays(c, langue)}</button>
                     </li>
-                  )) : <li className={`${rang} text-[13.5px] text-white/55`}>Aucun pays de ce nom.</li>}
+                  )) : <li className={`${rang} text-[13.5px] text-white/55`}>{tr('Aucun pays de ce nom.', 'No country by that name.')}</li>}
                 </ul>
               )}
             </div>
           )}
         </div>
       )}
-      {mode !== 'partout' && !compact && codes.length === 0 && <p className="text-[12.5px] leading-snug text-white/55">Tant qu’aucun pays n’est choisi, le bloc s’affiche partout.</p>}
+      {mode !== 'partout' && !compact && codes.length === 0 && <p className="text-[12.5px] leading-snug text-white/55">{tr('Tant qu’aucun pays n’est choisi, le bloc s’affiche partout.', 'Until a country is picked, the block shows everywhere.')}</p>}
     </div>
   );
 }
@@ -423,6 +445,7 @@ function resumeReseaux(b: Bloc): string {
  * serait publié : la colonne le dit, « Venus de » (23 octobre 2026). À tous, dès Gratuit : c'est la promesse de Hopla.
  */
 function ListeReseaux({ b, maj, reseaux }: { b: Bloc; maj: (c: Partial<Bloc>) => void; reseaux: Audience[] }) {
+  const tr = useL();
   const cache = b.cache ?? [];
   const reserve = b.audience?.effet === 'seulement' ? b.audience.sources : null;
   const visible = (s: Audience) => !cache.includes(s) && (!reserve || reserve.includes(s));
@@ -437,11 +460,11 @@ function ListeReseaux({ b, maj, reseaux }: { b: Bloc; maj: (c: Partial<Bloc>) =>
     <div className="adm-groupe">
       {/* Le nom des trois colonnes, une fois en haut : d'où vient le visiteur, puis les deux interrupteurs. */}
       <div aria-hidden="true" className={`flex items-center pb-0.5 pt-2.5 text-[12px] font-medium text-white/55 bureau:pt-2 ${rang}`}>
-        <span className="flex-1">Venus de</span>
-        <span className={colonne}>Affiché</span>
-        <span className={colonne}>En avant</span>
+        <span className="flex-1">{tr('Venus de', 'Coming from')}</span>
+        <span className={colonne}>{tr('Affiché', 'Shown')}</span>
+        <span className={colonne}>{tr('En avant', 'Featured')}</span>
       </div>
-      <ul className="divide-y divide-white/[0.06]" aria-label="Selon le réseau">
+      <ul className="divide-y divide-white/[0.06]" aria-label={tr('Selon le réseau', 'By network')}>
         {liste.map(s => {
           const vu = visible(s);
           return (
@@ -461,7 +484,7 @@ function ListeReseaux({ b, maj, reseaux }: { b: Bloc; maj: (c: Partial<Bloc>) =>
       </ul>
       {!plus && autres.length > 0 && (
         <button type="button" onClick={() => setPlus(true)} className="flex min-h-12 w-full items-center gap-3 border-t border-white/[0.06] px-4 text-left text-[14px] font-medium text-white/75 transition hover:text-white bureau:min-h-10 bureau:px-3 bureau:text-[13.5px]">
-          <span className="flex w-5 shrink-0 justify-center"><Icone nom="ui-plus" taille={16} /></span>Autres réseaux
+          <span className="flex w-5 shrink-0 justify-center"><Icone nom="ui-plus" taille={16} /></span>{tr('Autres réseaux', 'Other networks')}
         </button>
       )}
     </div>
@@ -471,10 +494,10 @@ function ListeReseaux({ b, maj, reseaux }: { b: Bloc; maj: (c: Partial<Bloc>) =>
 const ICONE_AUDIENCE: Partial<Record<Audience, string>> = { instagram: 'instagram', tiktok: 'tiktok', youtube: 'youtube', linkedin: 'linkedin', x: 'x', facebook: 'facebook', threads: 'threads', snapchat: 'snapchat', qr: 'qr', newsletter: 'courrier', email: 'email', google: 'google' };
 
 /** Le petit titre par défaut d'un bloc d'avis : il n'a de sens que pour une note. */
-const TITRE_AVIS = 'Ce qu’ils en disent';
 
 /** Le mode drop : un code à taper, des places comptées, ou les deux. */
 export function RegleAcces({ b, maj, prises }: { b: Bloc; maj: (c: Partial<Bloc>) => void; prises: number }) {
+  const tr = useL();
   const a = b.acces;
   const permis = usePermis('drops');
   const aOuvrir = useContext(RegleAOuvrir) === 'acces';
@@ -483,28 +506,28 @@ export function RegleAcces({ b, maj, prises }: { b: Bloc; maj: (c: Partial<Bloc>
     const suite = { code: a?.code ?? '', places: a?.places ?? 0, ...champs };
     maj({ acces: suite.code || suite.places ? suite : null });
   };
-  const resume = a ? [a.code ? `code « ${a.code} »` : '', a.places ? `${prises}/${a.places} places prises` : ''].filter(Boolean).join(', ') : '';
+  const resume = a ? [a.code ? tr(`code « ${a.code} »`, `code “${a.code}”`) : '', a.places ? tr(`${prises}/${a.places} places prises`, `${prises}/${a.places} spots taken`) : ''].filter(Boolean).join(', ') : '';
   if (!permis) return (
-    <Repli id="acces" sous titre="Accès réservé" icone="cadenas" etiquette={<Etiquette fonction="drops" />} resume={a ? 'Pas montré' : ''} ouvert={false}>
-      <Reserve fonction="drops" phrase={a ? 'Sans Hopla Pro, ce lien réservé n’est pas montré : son adresse serait sinon à la vue de tous.' : 'Avec Hopla Pro, un lien ne s’ouvre qu’avec un code, ou pour les premiers arrivés.'}>
-        {a && <button type="button" onClick={() => { vibrer(6); maj({ acces: null }); }} className="text-[13px] text-white/55 underline">Retirer l’accès réservé</button>}
+    <Repli id="acces" sous titre={tr('Accès réservé', 'Restricted access')} icone="cadenas" etiquette={<Etiquette fonction="drops" />} resume={a ? tr('Pas montré', 'Not shown') : ''} ouvert={false}>
+      <Reserve fonction="drops" phrase={a ? tr('Sans Hopla Pro, ce lien réservé n’est pas montré : son adresse serait sinon à la vue de tous.', 'Without Hopla Pro, this restricted link isn’t shown: otherwise its address would be visible to everyone.') : tr('Avec Hopla Pro, un lien ne s’ouvre qu’avec un code, ou pour les premiers arrivés.', 'With Hopla Pro, a link only opens with a code, or for the first to arrive.')}>
+        {a && <button type="button" onClick={() => { vibrer(6); maj({ acces: null }); }} className="text-[13px] text-white/55 underline">{tr('Retirer l’accès réservé', 'Remove restricted access')}</button>}
       </Reserve>
     </Repli>
   );
   return (
-    <Repli id="acces" sous titre="Accès réservé" icone="cadenas" resume={resume || (compact ? '' : 'Ouvert à tous')} regle={!!a} ouvert={!!a || aOuvrir} montrer={aOuvrir}>
+    <Repli id="acces" sous titre={tr('Accès réservé', 'Restricted access')} icone="cadenas" resume={resume || (compact ? '' : tr('Ouvert à tous', 'Open to everyone'))} regle={!!a} ouvert={!!a || aOuvrir} montrer={aOuvrir}>
       {/* Un code, des places, ou les deux : les champs se suffisent. Seul ce qui ne se devine pas se dit, le nombre de places
           prises tant qu'il y en a, et ce que fait l'accès quand rien n'est rempli. */}
-      <Champ label="Code à taper" aide="Majuscules et espaces ne comptent pas.">
+      <Champ label={tr('Code à taper', 'Code to enter')} aide={tr('Majuscules et espaces ne comptent pas.', 'Case and spaces don’t matter.')}>
         <input className={classeSaisie} value={a?.code ?? ''} maxLength={40} autoCapitalize="characters" autoComplete="off" spellCheck={false}
           placeholder="VIP2026" onChange={e => majAcces({ code: e.target.value })} />
       </Champ>
-      <Champ label="Nombre de places" aide={a?.places ? `${prises} prise${prises > 1 ? 's' : ''} pour l’instant.` : undefined}>
-        <input className={classeSaisie} type="number" inputMode="numeric" min={0} max={100000} value={a?.places || ''} placeholder="Sans limite"
+      <Champ label={tr('Nombre de places', 'Number of spots')} aide={a?.places ? tr(`${prises} prise${prises > 1 ? 's' : ''} pour l’instant.`, `${prises} taken so far.`) : undefined}>
+        <input className={classeSaisie} type="number" inputMode="numeric" min={0} max={100000} value={a?.places || ''} placeholder={tr('Sans limite', 'Unlimited')}
           onChange={e => majAcces({ places: Math.max(0, Math.min(100_000, Math.round(Number(e.target.value) || 0))) })} />
       </Champ>
-      {a ? <button type="button" onClick={() => { vibrer(6); maj({ acces: null }); }} className="self-start text-[13.5px] font-medium text-white/55 hover:text-white">Retirer l’accès réservé</button>
-        : <p className="text-[13px] leading-snug text-white/55">Sans code ni places, le lien reste ouvert à tous.</p>}
+      {a ? <button type="button" onClick={() => { vibrer(6); maj({ acces: null }); }} className="self-start text-[13.5px] font-medium text-white/55 hover:text-white">{tr('Retirer l’accès réservé', 'Remove restricted access')}</button>
+        : <p className="text-[13px] leading-snug text-white/55">{tr('Sans code ni places, le lien reste ouvert à tous.', 'With no code and no spot limit, the link stays open to everyone.')}</p>}
     </Repli>
   );
 }
@@ -513,6 +536,8 @@ const SOURCES_PREUVE = ['Google', 'Trustpilot', 'Malt', 'Avis Vérifiés', 'YouT
 
 /** Un avis, un chiffre, un témoignage : ce que le bloc `preuve` montre. */
 export function ChampsPreuve({ b, maj, erreurDe = () => undefined, lien }: { b: Bloc; maj: (c: Partial<Bloc>) => void; erreurDe?: (champ: string) => string | undefined; lien?: ReactNode }) {
+  const langue = useLangue();
+  const tr = choix(langue);
   const p = b.preuve ?? { genre: 'note' as const, note: 0, nombre: 0, source: '' };
   const majP = (champs: Partial<Preuve>) => maj({ preuve: { ...p, ...champs } });
   // La note se tape comme on l'écrit (« 4,8 ») et ne se lit qu'en quittant le champ : rien ne s'arrondit sous les doigts.
@@ -524,57 +549,57 @@ export function ChampsPreuve({ b, maj, erreurDe = () => undefined, lien }: { b: 
   return (
     <>
       <div>
-        <span className="mb-1.5 block text-[13px] font-medium text-white/70">Type de preuve</span>
-        <Segments label="Genre de preuve" valeur={p.genre} onChange={genre => maj({ preuve: { ...p, genre }, ...(genre !== 'note' && b.titre === TITRE_AVIS ? { titre: '' } : genre === 'note' && !b.titre.trim() ? { titre: TITRE_AVIS } : {}) })}
-          options={[{ id: 'note', nom: 'Note' }, { id: 'compteur', nom: 'Chiffre' }, { id: 'temoignage', nom: 'Témoignage' }]} />
+        <span className="mb-1.5 block text-[13px] font-medium text-white/70">{tr('Type de preuve', 'Proof type')}</span>
+        <Segments label={tr('Genre de preuve', 'Kind of proof')} valeur={p.genre} onChange={genre => maj({ preuve: { ...p, genre }, ...(genre !== 'note' && estTitreParDefaut('preuve', b.titre) ? { titre: '' } : genre === 'note' && !b.titre.trim() ? { titre: titreParDefaut('preuve', langue) } : {}) })}
+          options={[{ id: 'note', nom: tr('Note', 'Rating') }, { id: 'compteur', nom: tr('Chiffre', 'Number') }, { id: 'temoignage', nom: tr('Témoignage', 'Testimonial') }]} />
       </div>
       {/* Le lien des avis d'une note vient juste après le type : il remplit la note et le nombre dessous. */}
       {p.genre === 'note' && lien}
       {p.genre === 'note' && (
         // Le petit titre se lit au-dessus de la note : il se tape juste après le type.
-        <Champ erreur={erreurDe('titre')} label="Petit titre (facultatif)">
+        <Champ erreur={erreurDe('titre')} label={tr('Petit titre (facultatif)', 'Short heading (optional)')}>
           <input id="bloc-titre" className={classeSaisie} value={b.titre} onChange={e => maj({ titre: e.target.value })} maxLength={160} />
         </Champ>
       )}
       {p.genre === 'note' && (
         <div className="grid grid-cols-2 gap-3">
-          <Champ label="Note sur 5" erreur={erreurDe('note') ?? (trop ? 'La note va de 0 à 5. Sur 10, divise-la par deux.' : undefined)}>
-            <input className={classeSaisie} type="text" inputMode="decimal" value={note} placeholder="Ex. 4,8"
+          <Champ label={tr('Note sur 5', 'Rating out of 5')} erreur={erreurDe('note') ?? (trop ? tr('La note va de 0 à 5. Sur 10, divise-la par deux.', 'The rating goes from 0 to 5. Out of 10, halve it.') : undefined)}>
+            <input className={classeSaisie} type="text" inputMode="decimal" value={note} placeholder={tr('Ex. 4,8', 'E.g. 4.8')}
               onChange={e => { const v = e.target.value.replace(/[^\d.,]/g, '').slice(0, 4); setNote(v); setTrop(false); majP({ note: lireNote(v) }); }}
               onBlur={() => { const n = lireNote(note); setNote(n ? String(n).replace('.', ',') : ''); setTrop(n > 5); }} />
           </Champ>
-          <Champ label="Nombre d’avis" erreur={erreurDe('nombre')}>
-            <input className={classeSaisie} type="number" inputMode="numeric" min={0} value={p.nombre || ''} placeholder="Ex. 132"
+          <Champ label={tr('Nombre d’avis', 'Number of reviews')} erreur={erreurDe('nombre')}>
+            <input className={classeSaisie} type="number" inputMode="numeric" min={0} value={p.nombre || ''} placeholder={tr('Ex. 132', 'E.g. 132')}
               onChange={e => majP({ nombre: Math.max(0, Math.round(Number(e.target.value) || 0)) })} />
           </Champ>
         </div>
       )}
       {p.genre === 'compteur' && (
-        <Champ label="Le chiffre" erreur={erreurDe('nombre')}>
-          <input className={classeSaisie} type="number" inputMode="numeric" min={0} value={p.nombre || ''} placeholder="Ex. 12400"
+        <Champ label={tr('Le chiffre', 'The number')} erreur={erreurDe('nombre')}>
+          <input className={classeSaisie} type="number" inputMode="numeric" min={0} value={p.nombre || ''} placeholder={tr('Ex. 12400', 'E.g. 12400')}
             onChange={e => majP({ nombre: Math.max(0, Math.round(Number(e.target.value) || 0)) })} />
         </Champ>
       )}
       {p.genre === 'compteur' && (
         // Ce que compte le chiffre, juste sous lui : les deux se lisent ensemble sur la page.
-        <Champ erreur={erreurDe('titre')} label="Ce que compte ce chiffre">
-          <input id="bloc-titre" className={classeSaisie} value={b.titre} onChange={e => maj({ titre: e.target.value })} maxLength={160} placeholder="abonnés sur YouTube" />
+        <Champ erreur={erreurDe('titre')} label={tr('Ce que compte ce chiffre', 'What this number counts')}>
+          <input id="bloc-titre" className={classeSaisie} value={b.titre} onChange={e => maj({ titre: e.target.value })} maxLength={160} placeholder={tr('abonnés sur YouTube', 'YouTube subscribers')} />
         </Champ>
       )}
       {p.genre === 'temoignage' && (
         <>
-          <Champ label="Le témoignage" erreur={erreurDe('description')}>
+          <Champ label={tr('Le témoignage', 'The testimonial')} erreur={erreurDe('description')}>
             <textarea className={`${classeSaisie} min-h-24`} value={b.description} maxLength={400} onChange={e => maj({ description: e.target.value })}
-              placeholder="« Grâce à Camille, j’ai lancé ma boutique en deux semaines. »" />
+              placeholder={tr('« Grâce à Camille, j’ai lancé ma boutique en deux semaines. »', '“Thanks to Camille, I launched my shop in two weeks.”')} />
           </Champ>
-          <Champ label="Qui le dit">
-            <input className={classeSaisie} value={b.sousTitre} maxLength={240} onChange={e => maj({ sousTitre: e.target.value })} placeholder="Marie, fondatrice de Bloom" />
+          <Champ label={tr('Qui le dit', 'Who says it')}>
+            <input className={classeSaisie} value={b.sousTitre} maxLength={240} onChange={e => maj({ sousTitre: e.target.value })} placeholder={tr('Marie, fondatrice de Bloom', 'Marie, founder of Bloom')} />
           </Champ>
         </>
       )}
-      <Champ label={p.genre === 'note' ? 'Où sont publiés les avis' : p.genre === 'compteur' ? 'Source (facultatif)' : 'Où l’avis a été donné (facultatif)'} erreur={erreurDe('source')}>
+      <Champ label={p.genre === 'note' ? tr('Où sont publiés les avis', 'Where the reviews are published') : p.genre === 'compteur' ? tr('Source (facultatif)', 'Source (optional)') : tr('Où l’avis a été donné (facultatif)', 'Where the review was given (optional)')} erreur={erreurDe('source')}>
         {/* Les sources courantes en suggestions du champ, plutôt qu'une rangée de pastilles. */}
-        <input className={classeSaisie} value={p.source} maxLength={30} onChange={e => majP({ source: e.target.value })} placeholder={p.genre === 'compteur' ? 'Ex. YouTube' : 'Ex. Google'} list="sources-preuve" />
+        <input className={classeSaisie} value={p.source} maxLength={30} onChange={e => majP({ source: e.target.value })} placeholder={p.genre === 'compteur' ? tr('Ex. YouTube', 'E.g. YouTube') : tr('Ex. Google', 'E.g. Google')} list="sources-preuve" />
       </Champ>
       <datalist id="sources-preuve">{SOURCES_PREUVE.map(s => <option key={s} value={s} />)}</datalist>
     </>

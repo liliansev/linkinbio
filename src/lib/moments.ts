@@ -1,4 +1,4 @@
-import type { Bloc } from './types.ts';
+import type { Bloc, Langue } from './types.ts';
 import { estEnLigne } from './types.ts';
 
 /*
@@ -63,9 +63,19 @@ export function dansCreneau(c: Creneau, maintenant: number): boolean {
 export const enAttente = (bloc: Bloc, maintenant: number) => bloc.public && bloc.compteARebours && !!bloc.debut && Date.parse(bloc.debut) > maintenant
   && (!bloc.fin || Date.parse(bloc.fin) > Date.parse(bloc.debut));
 
-/** « lundi au vendredi, 8 h à 12 h », pour le back office. */
-export function decrireCreneau(c: Creneau): string {
+const JOURS_EN = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+/** « lundi au vendredi, 8 h à 12 h », pour le back office ; « on weekdays, 8 am to 12 pm » en anglais. */
+export function decrireCreneau(c: Creneau, langue: Langue = 'fr'): string {
   const j = [...c.jours].sort();
+  if (langue === 'en') {
+    const suiteEn = j.length > 2 && j.every((n, i) => !i || n === j[i - 1] + 1);
+    const joursEn = j.length === 7 ? 'every day' : j.length === 5 && suiteEn && j[0] === 1 ? 'on weekdays'
+      : j.length === 2 && j[0] === 6 && j[1] === 7 ? 'on weekends'
+      : suiteEn ? `${JOURS_EN[j[0] - 1]} to ${JOURS_EN[j[j.length - 1] - 1]}` : j.map(n => JOURS_EN[n - 1]).join(', ');
+    const heure = (s: string) => { const [hh, mm] = s.split(':').map(Number); const h12 = hh % 12 || 12; return `${h12}${mm ? `:${String(mm).padStart(2, '0')}` : ''} ${hh < 12 ? 'am' : 'pm'}`; };
+    return c.de === c.a ? joursEn : `${joursEn}, ${heure(c.de)} to ${heure(c.a)}`;
+  }
   let jours = j.length === 7 ? 'tous les jours' : j.map(n => NOMS_JOURS[n - 1]).join(', ');
   const suite = j.length > 2 && j.every((n, i) => !i || n === j[i - 1] + 1);
   if (j.length === 5 && suite && j[0] === 1) jours = 'en semaine';

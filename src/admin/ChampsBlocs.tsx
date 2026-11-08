@@ -5,6 +5,8 @@ import { Icone } from '../components/Icone.tsx';
 import { Champ, choisirFichier, classeSaisie, preparerImage, vibrer } from './ui.tsx';
 import { Reserve } from './offre.tsx';
 import { focusAuto } from '../lib/clavier';
+import { choix, useL, useLangue } from '../accueil/langue.ts';
+import type { Choix } from '../accueil/langue.ts';
 
 /*
  * Les champs des blocs venus de Linktree (24 octobre 2026) : les questions fréquentes, la carte de visite, l'adresse et
@@ -35,6 +37,7 @@ const deplace = <T,>(liste: T[], de: number, vers: number) => { const l = [...li
 
 /** Les questions et leurs réponses, l'une sous l'autre, dans l'ordre de la page. */
 export function ChampsFaq({ b, maj, erreurDe }: { b: Bloc; maj: Maj; erreurDe: ErreurDe }) {
+  const tr = useL();
   const questions = b.questions.length ? b.questions : [{ question: '', reponse: '' }];
   const majQ = (i: number, champs: Partial<Question>) => maj({ questions: questions.map((q, j) => (j === i ? { ...q, ...champs } : q)) });
   const erreur = erreurDe('questions');
@@ -43,20 +46,20 @@ export function ChampsFaq({ b, maj, erreurDe }: { b: Bloc; maj: Maj; erreurDe: E
       {questions.map((q, i) => (
         <div key={i} className="flex flex-col gap-2">
           <div className="flex items-center justify-between">
-            <span className={libelle.replace('mb-1.5 ', '')}>Question {i + 1}</span>
+            <span className={libelle.replace('mb-1.5 ', '')}>{tr('Question', 'Question')}{' '}{i + 1}</span>
             {questions.length > 1 && <Gestes nom={`la question ${i + 1}`} i={i} total={questions.length}
               deplacer={(de, vers) => maj({ questions: deplace(questions, de, vers) })} retirer={() => maj({ questions: questions.filter((_, j) => j !== i) })} />}
           </div>
           <input className={classeSaisie} value={q.question} onChange={e => majQ(i, { question: e.target.value })} maxLength={200}
-            placeholder={i === 0 ? 'Tu livres où ?' : ''} aria-label={`Question ${i + 1}`} aria-invalid={erreur && !q.question.trim() && q.reponse.trim() ? true : undefined} />
+            placeholder={i === 0 ? tr('Tu livres où ?', 'Where do you ship?') : ''} aria-label={`Question ${i + 1}`} aria-invalid={erreur && !q.question.trim() && q.reponse.trim() ? true : undefined} />
           <textarea className={`${classeSaisie} min-h-20`} value={q.reponse} onChange={e => majQ(i, { reponse: e.target.value })} maxLength={1500}
-            placeholder={i === 0 ? 'Partout en France, en 48 heures.' : 'La réponse'} aria-label={`Réponse ${i + 1}`} aria-invalid={erreur && q.question.trim() && !q.reponse.trim() ? true : undefined} />
+            placeholder={i === 0 ? tr('Partout en France, en 48 heures.', 'Anywhere in the US, within 48 hours.') : tr('La réponse', 'The answer')} aria-label={`Réponse ${i + 1}`} aria-invalid={erreur && q.question.trim() && !q.reponse.trim() ? true : undefined} />
         </div>
       ))}
       {erreur && <span role="alert" className={erreurClasse}>{erreur}</span>}
       {questions.length < MAX_QUESTIONS && (
         <button type="button" className={lienAjout} onClick={() => { vibrer(4); maj({ questions: [...questions, { question: '', reponse: '' }] }); }}>
-          <Icone nom="ui-plus" taille={15} className="shrink-0" />Ajouter une question
+          <Icone nom="ui-plus" taille={15} className="shrink-0" />{tr('Ajouter une question', 'Add a question')}
         </button>
       )}
     </div>
@@ -65,31 +68,32 @@ export function ChampsFaq({ b, maj, erreurDe }: { b: Bloc; maj: Maj; erreurDe: E
 
 /** La carte de visite, après le nom : le poste et la société, le numéro, l'adresse e-mail, le site et l'adresse postale. */
 export function ChampsCoordonnees({ b, maj, erreurDe, bureau }: { b: Bloc; maj: Maj; erreurDe: ErreurDe; bureau: boolean }) {
+  const tr = useL();
   const c: Coordonnees = b.coordonnees ?? { telephone: '', email: '', societe: '', poste: '' };
   const majC = (champs: Partial<Coordonnees>) => maj({ coordonnees: { ...c, ...champs } });
   const paire = (enfants: React.ReactNode) => (bureau ? <div className="adm-paire">{enfants}</div> : enfants);
   return (
     <>
       {paire(<>
-        <Champ label="Poste (facultatif)">
-          <input className={classeSaisie} value={c.poste} onChange={e => majC({ poste: e.target.value })} maxLength={80} autoComplete="organization-title" placeholder="Photographe" />
+        <Champ label={tr('Poste (facultatif)', 'Job title (optional)')}>
+          <input className={classeSaisie} value={c.poste} onChange={e => majC({ poste: e.target.value })} maxLength={80} autoComplete="organization-title" placeholder={tr('Photographe', 'Photographer')} />
         </Champ>
-        <Champ label="Société (facultatif)">
+        <Champ label={tr('Société (facultatif)', 'Company (optional)')}>
           <input className={classeSaisie} value={c.societe} onChange={e => majC({ societe: e.target.value })} maxLength={80} autoComplete="organization" />
         </Champ>
       </>)}
       {paire(<>
-        <Champ label="Téléphone" erreur={erreurDe('telephone')}>
+        <Champ label={tr('Téléphone', 'Phone')} erreur={erreurDe('telephone')}>
           <input className={classeSaisie} type="tel" inputMode="tel" autoComplete="tel" value={c.telephone} onChange={e => majC({ telephone: e.target.value })} maxLength={30} placeholder="06 12 34 56 78" />
         </Champ>
-        <Champ label="E-mail" erreur={erreurDe('email')}>
+        <Champ label={tr('E-mail', 'Email')} erreur={erreurDe('email')}>
           <input className={classeSaisie} type="email" inputMode="email" autoCapitalize="none" autoCorrect="off" autoComplete="email" value={c.email} onChange={e => majC({ email: e.target.value })} maxLength={200} placeholder="toi@exemple.fr" />
         </Champ>
       </>)}
-      <Champ label="Site (facultatif)" erreur={erreurDe('url')}>
+      <Champ label={tr('Site (facultatif)', 'Website (optional)')} erreur={erreurDe('url')}>
         <input className={classeSaisie} type="url" inputMode="url" autoCapitalize="none" autoCorrect="off" value={b.url} onChange={e => maj({ url: e.target.value })} placeholder="monsite.fr" />
       </Champ>
-      <Champ label="Adresse (facultatif)">
+      <Champ label={tr('Adresse (facultatif)', 'Address (optional)')}>
         <textarea className={`${classeSaisie} min-h-20`} value={b.adressePostale} onChange={e => maj({ adressePostale: e.target.value })} maxLength={200} autoComplete="street-address" />
       </Champ>
     </>
@@ -98,10 +102,11 @@ export function ChampsCoordonnees({ b, maj, erreurDe, bureau }: { b: Bloc; maj: 
 
 /** L'adresse d'un lieu, comme sur une enveloppe : la page en fait un itinéraire et une carte. */
 export function ChampLieu({ b, maj, erreurDe, nouveau = false }: { b: Bloc; maj: Maj; erreurDe: ErreurDe; nouveau?: boolean }) {
+  const tr = useL();
   return (
-    <Champ label="Adresse" erreur={erreurDe('adresse')} aide="Tes visiteurs ont l’itinéraire d’un toucher, et la carte s’ils la demandent.">
+    <Champ label={tr('Adresse', 'Address')} erreur={erreurDe('adresse')} aide={tr('Tes visiteurs ont l’itinéraire d’un toucher, et la carte s’ils la demandent.', 'Your visitors get directions in one tap, and the map if they ask for it.')}>
       <textarea className={`${classeSaisie} min-h-20`} value={b.adressePostale} onChange={e => maj({ adressePostale: e.target.value })} maxLength={200}
-        autoComplete="street-address" placeholder={'12 rue des Lilas\n75011 Paris'} autoFocus={focusAuto(nouveau)} />
+        autoComplete="street-address" placeholder={tr('12 rue des Lilas\n75011 Paris', '123 Main Street\nBrooklyn, NY 11201')} autoFocus={focusAuto(nouveau)} />
     </Champ>
   );
 }
@@ -111,6 +116,7 @@ export function ChampLieu({ b, maj, erreurDe, nouveau = false }: { b: Bloc; maj:
  * Sans Starter, la page n'en montre que trois : les autres restent là, et l'offre le dit.
  */
 export function ChampsGalerie({ b, maj, erreurDe, envoyerImage, droit }: { b: Bloc; maj: Maj; erreurDe: ErreurDe; envoyerImage: (d: string) => Promise<string>; droit: boolean }) {
+  const tr = useL();
   const fichier = useRef<HTMLInputElement>(null);
   const ajout = useRef<HTMLButtonElement>(null);
   const [envoi, setEnvoi] = useState(0);
@@ -128,7 +134,7 @@ export function ChampsGalerie({ b, maj, erreurDe, envoyerImage, droit }: { b: Bl
         const url = await envoyerImage(await preparerImage(f, 'galerie'));
         maj({ images: [...images.current, url] });
         images.current = [...images.current, url];
-      } catch (e) { setErreur(e instanceof Error && /place/.test(e.message) ? e.message : 'Une photo n’est pas passée. Essaie une autre image.'); }
+      } catch (e) { setErreur(e instanceof Error && /place/.test(e.message) ? e.message : tr('Une photo n’est pas passée. Essaie une autre image.', 'A photo didn’t go through. Try another image.')); }
       setEnvoi(n => n - 1);
     }
     if (fichier.current) fichier.current.value = '';
@@ -137,7 +143,7 @@ export function ChampsGalerie({ b, maj, erreurDe, envoyerImage, droit }: { b: Bl
   const message = erreurDe('images') ?? erreur;
   return (
     <div>
-      <span className={libelle}>Photos, dans l’ordre de ta page</span>
+      <span className={libelle}>{tr('Photos, dans l’ordre de ta page', 'Photos, in your page’s order')}</span>
       <ul className="grid grid-cols-3 gap-2 bureau:grid-cols-4">
         {b.images.map((src, i) => (
           <li key={src} className="flex flex-col gap-1">
@@ -155,14 +161,14 @@ export function ChampsGalerie({ b, maj, erreurDe, envoyerImage, droit }: { b: Bl
           <li className="relative">
             <button ref={ajout} type="button" onClick={() => choisirFichier(fichier.current, ajout.current)} aria-invalid={message ? true : undefined}
               className="flex aspect-[4/5] w-full flex-col items-center justify-center gap-1.5 rounded-lg border border-white/20 text-[12.5px] font-medium text-white/70 transition hover:border-white/60 hover:text-white aria-[invalid=true]:border-red-400/70">
-              <Icone nom="ui-image-plus" taille={20} />Ajouter
+              <Icone nom="ui-image-plus" taille={20} />{tr('Ajouter', 'Add')}
             </button>
             <input ref={fichier} type="file" accept="image/*" multiple className="absolute h-px w-px opacity-0" tabIndex={-1} aria-hidden="true" onChange={e => void ajouter(e.target.files)} />
           </li>
         )}
       </ul>
       {message && <span role="alert" className={erreurClasse}>{message}</span>}
-      {trop && <div className="mt-2"><Reserve fonction="galerie" phrase={`Ta page montre les ${GALERIE_GRATUITE} premières photos. Avec Hopla Starter, elle les montre toutes, jusqu’à ${MAX_IMAGES}.`} /></div>}
+      {trop && <div className="mt-2"><Reserve fonction="galerie" phrase={tr(`Ta page montre les ${GALERIE_GRATUITE} premières photos. Avec Hopla Starter, elle les montre toutes, jusqu’à ${MAX_IMAGES}.`, `Your page shows the first ${GALERIE_GRATUITE} photos. With Hopla Starter, it shows them all, up to ${MAX_IMAGES}.`)} /></div>}
     </div>
   );
 }
