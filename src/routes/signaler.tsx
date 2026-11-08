@@ -7,6 +7,8 @@ import { avecJeton, preparerTurnstile } from '../lib/turnstile.ts';
 import { Pied } from '../accueil/Fin.tsx';
 import { Barre } from '../accueil/Ouverture.tsx';
 import { NOM_PUBLIC } from '../lib/types.ts';
+// En français jusqu'à leur traduction (8 novembre 2026, Hopla anglais d'abord).
+import { LangueSite } from '../accueil/langue.ts';
 
 /*
  * « Signaler cette page » (DSA, article 16) : le motif, l'explication, une
@@ -38,6 +40,7 @@ function PageSignaler() {
 
   // Le gabarit des pages publiques (26 octobre 2026, audit des alignements), comme les textes légaux.
   return (
+    <LangueSite.Provider value="fr">
     <div className="hl hl-humain hf">
       <a href="#contenu" className="hl-evitement">Aller au contenu</a>
       <Barre ailleurs />
@@ -91,5 +94,6 @@ function PageSignaler() {
       </main>
       <Pied />
     </div>
+    </LangueSite.Provider>
   );
 }

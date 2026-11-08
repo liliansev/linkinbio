@@ -5,10 +5,14 @@
  * dans les fichiers du projet, `hopla/captures-produit-2026-11-04/`.
  */
 
+import { useL, useLangue } from './langue.ts';
+
 export interface Capture {
   /** Le nom du fichier, sans `.webp`. */
   src: string;
   alt: string;
+  /** Le texte de remplacement en anglais ; sans lui, le français sert. */
+  altEn?: string;
   largeur: number;
   hauteur: number;
 }
@@ -16,10 +20,12 @@ export interface Capture {
 export const CAPTURE_MA_PAGE: Capture = {
   src: 'capture-ma-page', largeur: 1800, hauteur: 1125,
   alt: 'Le back office de Hopla au bureau : les blocs de la page à gauche, la page elle-même dans un iPhone à droite.',
+  altEn: 'The Hopla editor on a computer: the page’s blocks on the left, the page itself in an iPhone on the right.',
 };
 export const CAPTURE_MA_PAGE_TELEPHONE: Capture = {
   src: 'capture-ma-page-telephone', largeur: 600, hauteur: 1298,
   alt: 'Le back office de Hopla au téléphone : on touche sa page pour la modifier.',
+  altEn: 'The Hopla editor on a phone: you touch your page to edit it.',
 };
 
 /** La capture de chaque page de fonction qui a son écran au back office. */
@@ -63,21 +69,23 @@ export const CAPTURES_FONCTIONS: Record<string, { texte: string; capture: Captur
 
 /** Une capture du bureau, dans une fenêtre fine ; sous 700 px, l'écran du téléphone la remplace. */
 export function Ecran({ capture, telephone }: { capture: Capture; telephone?: Capture }) {
+  const langue = useLangue();
   return (
     <picture className="hl-capture">
       {telephone && <source media="(max-width: 699px)" srcSet={`/${telephone.src}.webp`} width={telephone.largeur} height={telephone.hauteur} />}
-      <img src={`/${capture.src}.webp`} alt={capture.alt} width={capture.largeur} height={capture.hauteur} loading="lazy" decoding="async" />
+      <img src={`/${capture.src}.webp`} alt={(langue === 'en' && capture.altEn) || capture.alt} width={capture.largeur} height={capture.hauteur} loading="lazy" decoding="async" />
     </picture>
   );
 }
 
 /** L'accueil : l'éditeur tel qu'il est, au bureau et au téléphone. */
 export function Espace() {
+  const l = useL();
   return (
     <section className="hl-section hp-espace" id="ton-espace" aria-labelledby="titre-espace">
       <div className="hl-tete-section hl-entre">
-        <h2 id="titre-espace" className="hl-h2">Ta page,<br /><span className="hl-cache"> </span>à côté de tes réglages</h2>
-        <p className="hl-chapo">Au bureau, tu modifies à gauche et ta page suit à droite, dans un vrai iPhone. Au téléphone, tu touches ta page pour la changer.</p>
+        <h2 id="titre-espace" className="hl-h2">{l(<>Ta page,<br /><span className="hl-cache"> </span>à côté de tes réglages</>, <>Your page,<br /><span className="hl-cache"> </span>right next to your settings</>)}</h2>
+        <p className="hl-chapo">{l('Au bureau, tu modifies à gauche et ta page suit à droite, dans un vrai iPhone. Au téléphone, tu touches ta page pour la changer.', 'On a computer, you edit on the left and your page follows on the right, in a real iPhone. On your phone, you touch your page to change it.')}</p>
       </div>
       <div className="hl-entre"><Ecran capture={CAPTURE_MA_PAGE} telephone={CAPTURE_MA_PAGE_TELEPHONE} /></div>
     </section>

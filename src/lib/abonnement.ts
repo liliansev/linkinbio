@@ -11,8 +11,11 @@
  */
 
 /** Un prix en euros à la française : « 9 € », « 86,40 € » (espace insécable avant le symbole). */
-export const euros = (n: number) =>
-  `${n.toLocaleString('fr-FR', { minimumFractionDigits: Number.isInteger(n) ? 0 : 2, maximumFractionDigits: 2 })} €`;
+export const euros = (n: number, langue: 'en' | 'fr' = 'fr') => {
+  const chiffres = n.toLocaleString(langue === 'en' ? 'en-US' : 'fr-FR', { minimumFractionDigits: Number.isInteger(n) ? 0 : 2, maximumFractionDigits: 2 });
+  // En anglais, le symbole se pose devant : « €9 », « €86.40 ».
+  return langue === 'en' ? `€${chiffres}` : `${chiffres} €`;
+};
 
 export const PERIODES = ['mois', 'an'] as const;
 export type Periode = (typeof PERIODES)[number];
@@ -62,6 +65,44 @@ export const OFFRES: Record<Plan, Offre> = {
     avantages: ['Ton propre nom de domaine', 'Jusqu’à trois pages'],
   },
 };
+
+/**
+ * Les offres en anglais (8 novembre 2026, Hopla passe à l'anglais d'abord) : le nom, la phrase, et chaque avantage
+ * traduit par son texte français, qui reste la clé (démonstrations, mises en avant).
+ */
+export const OFFRES_EN: Record<Plan, { nom: string; phrase: string }> = {
+  gratuit: { nom: 'Free', phrase: 'Your page that adapts to every network, forever.' },
+  starter: { nom: 'Starter', phrase: 'Your brand: your colors, your storefront, your stats.' },
+  pro: { nom: 'Pro', phrase: 'Your page that runs itself: time of day, launches, your list.' },
+  premium: { nom: 'Premium', phrase: 'Your page on your own domain.' },
+};
+export const AVANTAGES_EN: Record<string, string> = {
+  'Cinq blocs sur ta page': 'Five blocks on your page',
+  'Ta page selon le réseau du visiteur': 'Your page adapts to each visitor’s network',
+  'Les vingt-quatre thèmes': 'All twenty-four themes',
+  'Sans la mention Hopla': 'No Hopla branding',
+  'Des blocs sans limite': 'Unlimited blocks',
+  'Ta vitrine : produits, rendez-vous, dons': 'Your storefront: products, bookings, tips',
+  'Tes couleurs, ta police, ton fond': 'Your colors, your font, your background',
+  'Grande photo, liens en grille': 'Large photo, links in a grid',
+  'Tes liens programmés à l’avance': 'Links scheduled in advance',
+  'Les avis de tes clients': 'Your customer reviews',
+  'Ton formulaire et tes galeries': 'Your contact form and galleries',
+  'Tes stats sur 30 jours': '30 days of stats',
+  'Redirection, clics suivis jusqu’à ton site': 'Redirects, clicks tracked to your site',
+  'Ta page selon l’heure et le pays': 'Your page by time of day and country',
+  'Des liens à code ou à places comptées': 'Code-locked or limited-spot links',
+  'Ta liste e-mail, vers ta newsletter': 'Your email list, synced to your newsletter',
+  'Un cadeau contre l’e-mail, tes derniers articles': 'A freebie for an email, your latest posts',
+  'Tes stats sur un an': 'One year of stats',
+  'Ta page pilotée par tes agents IA : API et MCP': 'Your page run by your AI agents: API and MCP',
+  'Ton propre nom de domaine': 'Your own domain name',
+  'Jusqu’à trois pages': 'Up to three pages',
+};
+/** Le nom d'une offre dans une langue (« Free » pour Gratuit). */
+export const nomOffre = (p: Plan, langue: 'en' | 'fr' = 'fr') => (langue === 'en' ? OFFRES_EN[p].nom : OFFRES[p].nom);
+/** Un avantage dans une langue ; un avantage sans traduction garde son français. */
+export const avantage = (g: string, langue: 'en' | 'fr' = 'fr') => (langue === 'en' && AVANTAGES_EN[g]) || g;
 
 /** Le rang d'une offre : chacune contient celles d'avant. */
 export const rang = (p: Plan) => PLANS.indexOf(p);

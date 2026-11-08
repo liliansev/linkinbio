@@ -8,6 +8,8 @@ import { mouvementReduit, useCompte, useGlisse } from './mouvement.ts';
 import { COULEURS_SOURCES } from '../lib/stats.ts';
 import { DEGRADE_COURBE, aireSous, lisse } from '../lib/courbe.ts';
 import type { PointTrace } from '../lib/courbe.ts';
+import type { Langue } from '../lib/types.ts';
+import { useL, useLangue } from './langue.ts';
 
 /*
  * Les écrans des fonctions : les liens ouverts dans leur app, la page selon
@@ -222,10 +224,11 @@ export function EcranListe({ liste }: { liste: number }) {
 export type Morceau = string | { n: number; avant?: string; suite?: string };
 
 export function Phrase({ morceaux, joue, depart, hausse }: { morceaux: Morceau[]; joue: boolean; depart: number; hausse?: boolean }) {
+  const l = useL();
   let k = 0;
   return (
     <li className="hl-stat" data-joue={joue || undefined}>
-      {hausse && <span className="hl-stat-hausse" style={d(depart)}><Icone nom="hausse" taille={22} /><span className="hl-cache">En hausse : </span></span>}
+      {hausse && <span className="hl-stat-hausse" style={d(depart)}><Icone nom="hausse" taille={22} /><span className="hl-cache">{l('En hausse : ', 'Up: ')}</span></span>}
       <span>
         {morceaux.map((m, i) => {
           if (typeof m === 'string') return m.split(' ').filter(Boolean).map((mot, j) => <span key={`${i}-${j}`}><span className="hl-stat-mot" style={d(depart + k++ * 30)}>{mot}</span> </span>);
@@ -238,29 +241,31 @@ export function Phrase({ morceaux, joue, depart, hausse }: { morceaux: Morceau[]
 
 /** Un nombre qui compte depuis 0 quand son mot apparaît ; avec moins de mouvement, il est là tout de suite. */
 function Nombre({ n, avant = '', suite = '', joue, delai }: { n: number; avant?: string; suite?: string; joue: boolean; delai: number }) {
+  const langue = useLangue();
   const [pret, setPret] = useState(false);
   useEffect(() => { if (!joue) return; const t = setTimeout(() => setPret(true), mouvementReduit() ? 0 : delai); return () => clearTimeout(t); }, [joue, delai]);
   const v = useCompte(n, pret);
-  return <><span className="hl-stat-mot hl-stat-nombre" style={d(delai)}>{avant}{v.toLocaleString('fr-FR')}{suite}</span> </>;
+  return <><span className="hl-stat-mot hl-stat-nombre" style={d(delai)}>{avant}{v.toLocaleString(langue === 'en' ? 'en-US' : 'fr-FR')}{suite}</span> </>;
 }
 
 /** Un aperçu des mêmes mesures que le dashboard, avec les chiffres de l'e-mail ci-dessous. */
 function DashboardStats() {
+  const l = useL();
   const vues = [42, 54, 48, 88, 62, 70, 48];
   const trace = vues.map((v, i): PointTrace => [16 + i * 78, 170 - v * 1.5]);
   const degrade = `hp-degrade-${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
   return (
     <div className="hp-dashboard">
-      <div className="hp-dashboard-titre"><b>Mes statistiques</b><span>7 derniers jours</span></div>
-      <p>Ta page a reçu <b>18&#8239;% de vues en plus</b> cette semaine.</p>
+      <div className="hp-dashboard-titre"><b>{l('Mes statistiques', 'My stats')}</b><span>{l('7 derniers jours', 'Last 7 days')}</span></div>
+      <p>{l(<>Ta page a reçu <b>18&#8239;% de vues en plus</b> cette semaine.</>, <>Your page got <b>18% more views</b> this week.</>)}</p>
       <dl className="hp-dashboard-mesures">
-        {[['Vues', '412'], ['Visiteurs', '286'], ['Clics', '124'], ['Taux de clic', '30,1\u202f%']].map(([nom, valeur]) => <div key={nom}><dt>{nom}</dt><dd>{valeur}</dd></div>)}
+        {[[l('Vues', 'Views'), '412'], [l('Visiteurs', 'Visitors'), '286'], [l('Clics', 'Clicks'), '124'], [l('Taux de clic', 'Click rate'), l('30,1\u202f%', '30.1%')]].map(([nom, valeur]) => <div key={nom}><dt>{nom}</dt><dd>{valeur}</dd></div>)}
       </dl>
       <figure className="hp-dashboard-courbe">
-        <figcaption>Les vues, jour après jour</figcaption>
+        <figcaption>{l('Les vues, jour après jour', 'Views, day by day')}</figcaption>
         {/* Les mots de la courbe sont en HTML : une taille fixe, quelle que soit la largeur du dessin. */}
         <div className="hp-dashboard-dessin">
-          <svg viewBox="0 0 500 180" role="img" aria-label="Vues de lundi à dimanche : 42, 54, 48, 88, 62, 70 et 48. Le meilleur jour est jeudi, avec 88 vues.">
+          <svg viewBox="0 0 500 180" role="img" aria-label={l('Vues de lundi à dimanche : 42, 54, 48, 88, 62, 70 et 48. Le meilleur jour est jeudi, avec 88 vues.', 'Views from Monday to Sunday: 42, 54, 48, 88, 62, 70 and 48. The best day is Thursday, with 88 views.')}>
             {[20, 95, 170].map(y => <line key={y} x1="16" x2="484" y1={y} y2={y} stroke="#e8e8e3" />)}
             {/* La courbe du back office, lisse sur son dégradé bleu (22 octobre 2026) : l'accueil montre l'outil tel qu'il est. */}
             <defs>
@@ -274,26 +279,26 @@ function DashboardStats() {
           </svg>
           <b className="hp-dashboard-pic" aria-hidden="true">88</b>
         </div>
-        <div className="hp-dashboard-jours" aria-hidden="true">{['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'].map(jour => <span key={jour}>{jour}</span>)}</div>
+        <div className="hp-dashboard-jours" aria-hidden="true">{l(['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'], ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']).map(jour => <span key={jour}>{jour}</span>)}</div>
       </figure>
       <div className="hp-dashboard-details">
-        <div><p>D’où viennent les visites</p><ul>{([['Instagram', 'instagram', 61], ['Accès direct', 'lien', 24], ['YouTube', 'youtube', 15]] as const).map(([nom, icone, part]) => {
+        <div><p>{l('D’où viennent les visites', 'Where visits come from')}</p><ul>{([['Instagram', 'instagram', 61], ['Accès direct', 'lien', 24], ['YouTube', 'youtube', 15]] as const).map(([nom, icone, part]) => {
           // Comme au back office : le logo du réseau dans sa couleur, devant sa barre teintée, jamais posé dessus.
           const couleur = COULEURS_SOURCES[nom];
           return (
             <li key={nom} data-source="" style={couleur && { '--picto': couleur.picto, '--barre': couleur.barre } as CSSProperties}>
-              <span className="hp-dashboard-source"><Icone nom={icone} taille={16} /><span><span className="hp-dashboard-barre" style={{ width: `${part}%` }} />{nom}</span></span>
-              <b>{part}&#8239;%</b>
+              <span className="hp-dashboard-source"><Icone nom={icone} taille={16} /><span><span className="hp-dashboard-barre" style={{ width: `${part}%` }} />{nom === 'Accès direct' ? l(nom, 'Direct') : nom}</span></span>
+              <b>{part}{l('\u202f', '')}%</b>
             </li>
           );
         })}</ul></div>
-        <div><p>Les liens les plus cliqués</p><ul>{[['Mes pièces du moment', 35], ['Un samedi à l’atelier', 28], ['Les coulisses en vidéo', 19]].map(([nom, clics]) => <li key={nom}><span>{nom}</span><b>{clics}</b></li>)}</ul></div>
+        <div><p>{l('Les liens les plus cliqués', 'Most clicked links')}</p><ul>{l([['Mes pièces du moment', 35], ['Un samedi à l’atelier', 28], ['Les coulisses en vidéo', 19]], [['My latest pieces', 35], ['A Saturday at the studio', 28], ['Behind the scenes on video', 19]]).map(([nom, clics]) => <li key={nom}><span>{nom}</span><b>{clics}</b></li>)}</ul></div>
       </div>
     </div>
   );
 }
 
-const PLUS_LOIN: { nom: string; texte: string; offre: 'starter' | 'pro'; page: string }[] = [
+const PLUS_LOIN_FR: { nom: string; texte: string; offre: 'starter' | 'pro'; page: string }[] = [
   { nom: 'Tes stats, en clair', texte: 'Tes vues, tes clics, d’où viennent tes visiteurs, et l’essentiel chaque lundi par e‑mail.', offre: 'starter', page: 'stats' },
   { nom: 'Ta vitrine', texte: 'Tes produits avec leur photo et leur prix, ta prise de rendez-vous, tes dons.', offre: 'starter', page: 'vitrine' },
   { nom: 'Tes lancements', texte: 'Un lien qui apparaît à l’heure dite, avec son compte à rebours.', offre: 'starter', page: 'lancement' },
@@ -302,28 +307,40 @@ const PLUS_LOIN: { nom: string; texte: string; offre: 'starter' | 'pro'; page: s
   { nom: 'Tes places comptées et ta liste e‑mail', texte: 'Un lien qui s’ouvre avec un code, et des inscrits qui partent vers ta newsletter.', offre: 'pro', page: 'drops' },
 ];
 
+const PLUS_LOIN_EN: typeof PLUS_LOIN_FR = [
+  { nom: 'Your stats, made clear', texte: 'Your views, your clicks, where your visitors come from, and the essentials every Monday by email.', offre: 'starter', page: 'stats' },
+  { nom: 'Your storefront', texte: 'Your products with their photo and price, your booking page, your tips.', offre: 'starter', page: 'vitrine' },
+  { nom: 'Your launches', texte: 'A link that appears right on time, with its countdown.', offre: 'starter', page: 'lancement' },
+  { nom: 'Your customer reviews', texte: 'Your Google or Trustpilot rating, copied over every day.', offre: 'starter', page: 'avis' },
+  { nom: 'Your page by time of day', texte: 'Your podcast in the morning, your booking link in the evening.', offre: 'pro', page: 'page-selon-l-heure' },
+  { nom: 'Limited spots and your email list', texte: 'A link that opens with a code, and signups sent straight to your newsletter.', offre: 'pro', page: 'drops' },
+];
+const PLUS_LOIN: Record<Langue, typeof PLUS_LOIN_FR> = { fr: PLUS_LOIN_FR, en: PLUS_LOIN_EN };
+
 export function PlusLoin() {
+  const langue = useLangue();
+  const l = useL();
   return (
     <section className="hl-section hp-plus-loin" id="plus-loin" data-teinte="nuit" aria-labelledby="titre-plus-loin">
       <div className="hl-tete-section hl-entre">
-        <h2 id="titre-plus-loin" className="hl-h2">Quand tu veux<br /><span className="hl-cache"> </span>aller plus loin</h2>
-        <p className="hl-chapo">Ta page vend, compte et suit ton rythme. Sans cookie ni bannière : l’adresse IP de tes visiteurs n’est jamais gardée.</p>
+        <h2 id="titre-plus-loin" className="hl-h2">{l(<>Quand tu veux<br /><span className="hl-cache"> </span>aller plus loin</>, <>When you want<br /><span className="hl-cache"> </span>to go further</>)}</h2>
+        <p className="hl-chapo">{l('Ta page vend, compte et suit ton rythme. Sans cookie ni bannière : l’adresse IP de tes visiteurs n’est jamais gardée.', 'Your page sells, counts and keeps up with you. No cookies, no banner: your visitors’ IP address is never stored.')}</p>
       </div>
       <div className="hp-plus-loin-corps">
         <ul className="hp-plus-loin-liste">
-          {PLUS_LOIN.map((f, i) => (
+          {PLUS_LOIN[langue].map((f, i) => (
             <li key={f.nom} className="hl-entre" style={d(i * 50)}>
               <a href={`/fonctionnalites/${f.page}`} className="hp-plus-loin-nom"><b>{f.nom}</b></a>
               <span>{f.texte}</span>
             </li>
           ))}
-          <li className="hp-plus-loin-tout hl-entre"><a href="/fonctionnalites">Toutes les fonctionnalités, une page chacune</a></li>
+          <li className="hp-plus-loin-tout hl-entre"><a href="/fonctionnalites">{l('Toutes les fonctionnalités, une page chacune', 'Every feature, one page each')}</a></li>
         </ul>
-        <article className="hl-mail hp-doc-dashboard hl-entre" aria-label="Exemple de tableau de bord">
+        <article className="hl-mail hp-doc-dashboard hl-entre" aria-label={l('Exemple de tableau de bord', 'Sample dashboard')}>
           <div className="hl-mail-tete"><Symbole className="hl-mail-logo" /><b>Hopla</b></div>
           <Personne profil="ines" />
           <DashboardStats />
-          <p className="hl-gris hl-petit">Chiffres d’exemple.</p>
+          <p className="hl-gris hl-petit">{l('Chiffres d’exemple.', 'Sample figures.')}</p>
         </article>
       </div>
     </section>

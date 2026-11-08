@@ -28,6 +28,8 @@ function useLangueDocument(): string {
   return useMatches({
     select: matches => {
       for (const m of [...matches].reverse()) {
+        // L'accueil anglais (8 novembre 2026) ; les autres pages du site restent en français jusqu'à leur traduction.
+        if (m.routeId === '/') return 'en';
         const langue = (m.loaderData as { reglages?: { langue?: string } } | undefined)?.reglages?.langue;
         if (langue) return langue;
       }

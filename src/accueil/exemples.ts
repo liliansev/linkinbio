@@ -1,4 +1,4 @@
-import type { Bloc, Couleurs, PagePublique, Reglages } from '../lib/types.ts';
+import type { Bloc, Couleurs, Langue, PagePublique, Reglages } from '../lib/types.ts';
 import { FONCTIONS, peut } from '../lib/abonnement.ts';
 import type { Fonction } from '../lib/abonnement.ts';
 import { selonDroits } from '../lib/droits.ts';
@@ -32,6 +32,28 @@ export const PROFILS = {
   theo: { nom: 'Théo Marchal', bio: 'Apprends à voir trois coups d’avance.', avatar: '/profil-theo.webp', metier: 'Formateur en échecs', ville: 'Rennes', pseudo: 'theo-echecs', theme: 'bauhaus', offre: 'pro' },
 } as const;
 export type ProfilExemple = keyof typeof PROFILS;
+
+/**
+ * Les mêmes neuf personnes en anglais (8 novembre 2026, Hopla anglais d'abord) : leur visage et leur thème ne changent
+ * pas ; leur métier, leur bio et leur ville parlent à un visiteur américain.
+ */
+const PROFILS_EN: Record<ProfilExemple, { nom: string; bio: string; metier: string; ville: string }> = {
+  ines: { nom: 'Ines Laurent', bio: 'Hands in the clay, head full of ideas.', metier: 'Ceramist', ville: 'Portland' },
+  sacha: { nom: 'Sacha Diop', bio: 'Songs for blue days.', metier: 'Musician', ville: 'Brooklyn' },
+  camille: { nom: 'Camille Nguyen', bio: 'People, places and the light in between.', metier: 'Photographer', ville: 'Austin' },
+  nadia: { nom: 'Nadia Haddad', bio: 'Your money, no taboo, no jargon.', metier: 'Personal finance coach', ville: 'Denver' },
+  yanis: { nom: 'Yanis Bertrand', bio: 'A new video every Wednesday, behind the scenes every day.', metier: 'YouTuber', ville: 'Los Angeles' },
+  karim: { nom: 'Karim Belkacem', bio: 'A restaurant in your home, for one night.', metier: 'Private chef', ville: 'Miami' },
+  margaux: { nom: 'Margaux Lefevre', bio: 'Interiors that feel like you, without starting over.', metier: 'Interior designer', ville: 'Seattle' },
+  chloe: { nom: 'Chloe Tran', bio: 'Engineering student, math tutor on Wednesday nights.', metier: 'Student and tutor', ville: 'Boston' },
+  theo: { nom: 'Theo Marchal', bio: 'Learn to see three moves ahead.', metier: 'Chess coach', ville: 'Chicago' },
+};
+
+/** Une personne d'exemple dans la langue du site. */
+export function profilDe(id: ProfilExemple, langue: Langue = 'fr') {
+  const p = PROFILS[id];
+  return langue === 'en' ? { ...p, ...PROFILS_EN[id] } : p;
+}
 export const IDS_PROFILS = Object.keys(PROFILS) as ProfilExemple[];
 
 const lien = (id: string, titre: string, icone: string, extra: Partial<Bloc> = {}): Bloc => ({
@@ -57,6 +79,46 @@ export const BLOCS_EXEMPLES: Record<ProfilExemple, Bloc[]> = {
   theo: [lien('theo-cours', 'Mes cours en ligne', 'video', { vedette: true, format: 'bouton' }), lien('theo-stage', 'Le stage d’ouvertures', 'cadenas', { acces: { code: '•', places: 30 }, restantes: 3 }), lien('theo-particulier', 'Un cours particulier', 'agenda')],
 };
 
+/** Les textes des blocs d'exemple en anglais, par l'id du bloc ; ce qui n'est pas là reste tel quel. */
+const BLOCS_EN: Record<string, Partial<Bloc>> = {
+  'exemple-ines-pieces': { titre: 'My latest pieces' }, 'exemple-ines-atelier': { titre: 'A Saturday at the studio' }, 'exemple-ines-video': { titre: 'Behind the scenes on video' },
+  'exemple-sacha-single': { titre: 'Listen to Blue Days' }, 'exemple-sacha-dates': { titre: 'Upcoming shows' }, 'exemple-sacha-clip': { titre: 'The music video is out!' },
+  'exemple-camille-contact': { titre: 'Let’s talk about your project' }, 'exemple-camille-portfolio': { titre: 'My portfolio' },
+  'exemple-camille-coulisses': { titre: 'Behind the scenes on video' }, 'exemple-camille-tuto': { titre: 'My lighting tutorial' },
+  'exemple-nadia-podcast': { titre: 'The morning podcast' }, 'exemple-nadia-methode': { titre: 'My method on video' }, 'exemple-nadia-bilan': { titre: 'Book a money check-in' },
+  'exemple-yanis-video': { titre: 'Wednesday’s video' }, 'exemple-yanis-coulisses': { titre: 'Behind the scenes on TikTok' }, 'exemple-yanis-materiel': { titre: 'My filming gear' },
+  'exemple-karim-diner': { titre: 'Book a dinner at your place' }, 'exemple-karim-menus': { titre: 'My seasonal menus' }, 'exemple-karim-instagram': { titre: 'My plates on Instagram' },
+  'exemple-margaux-rdv': { titre: 'Book a first consultation' }, 'exemple-margaux-avant-apres': { titre: 'My before and afters' }, 'exemple-margaux-pinterest': { titre: 'My ideas on Pinterest' },
+  'exemple-chloe-cours': { titre: 'Book a math lesson' }, 'exemple-chloe-fiches': { titre: 'My study sheets' }, 'exemple-chloe-message': { titre: 'Message me before a first lesson' },
+  'exemple-theo-cours': { titre: 'My online courses' }, 'exemple-theo-stage': { titre: 'The openings workshop' }, 'exemple-theo-particulier': { titre: 'A private lesson' },
+  'page-ines-bol': { titre: 'Moon bowl, glazed stoneware', prix: '$38', description: 'Hand-thrown in Portland. Every piece is one of a kind.' },
+  'page-ines-atelier': { titre: 'A Saturday at the studio', sousTitre: 'Your first bowl in three hours' },
+  'page-ines-avis': { titre: 'What my students say' }, 'page-ines-video': { titre: 'Behind the scenes on video' },
+  'page-sacha-ep': { titre: 'Blue Days', sousTitre: 'The new EP, five tracks' }, 'page-sacha-dates': { titre: 'Upcoming shows', sousTitre: 'Brooklyn, Chicago, Toronto' },
+  'page-sacha-clip': { titre: 'The music video is out!' },
+  'page-camille-images': { titre: 'My latest shots' }, 'page-camille-portfolio': { titre: 'My portfolio' },
+  'page-camille-contact': { titre: 'Let’s talk about your project' }, 'page-camille-tuto': { titre: 'My lighting tutorial' },
+  'page-nadia-bilan': { titre: 'A 30-minute money check-in', sousTitre: 'We reset your budget, together' },
+  'page-nadia-podcast': { titre: 'Money, made simple', sousTitre: 'The podcast, a new episode every Monday' },
+  'page-nadia-guide': { titre: 'My free budget guide' }, 'page-nadia-astuces': { titre: 'One money tip every Sunday', sousTitre: 'A five-minute read, zero jargon.' },
+  'page-yanis-videos': { titre: 'My latest videos' }, 'page-yanis-video': { titre: 'Wednesday’s video' },
+  'page-yanis-coulisses': { titre: 'Behind the scenes on TikTok' }, 'page-yanis-materiel': { titre: 'My filming gear' },
+  'page-karim-diner': { titre: 'Book a dinner at your place', sousTitre: '4 to 12 guests, across South Florida' },
+  'page-karim-assiettes': { titre: 'The fall menu' }, 'page-karim-avis': { titre: 'What my guests say' }, 'page-karim-menus': { titre: 'My seasonal menus' },
+  'page-margaux-projets': { titre: 'My latest projects' }, 'page-margaux-rdv': { titre: 'Book a first consultation' },
+  'page-margaux-avant-apres': { titre: 'My before and afters' }, 'page-margaux-pinterest': { titre: 'My ideas on Pinterest' },
+  'page-chloe-cours': { titre: 'Book a math lesson' },
+  'page-chloe-mot': { titre: 'Engineering student in Boston. I tutor math and physics, from middle school to high school, at your place or online.' },
+  'page-chloe-fiches': { titre: 'My study sheets' }, 'page-chloe-message': { titre: 'Message me before a first lesson' },
+  'page-theo-puzzles': { titre: 'Puzzles of the week' }, 'page-theo-cours': { titre: 'Chess openings, the complete course', prix: '$49' },
+  'page-theo-stage': { titre: 'The openings workshop' }, 'page-theo-particulier': { titre: 'A private lesson', sousTitre: 'Online, all levels' },
+};
+
+/** Les blocs d'exemple dans la langue du site. */
+export const enLangue = (blocs: Bloc[], langue: Langue = 'fr'): Bloc[] => (langue === 'en' ? blocs.map(b => ({ ...b, ...BLOCS_EN[b.id] })) : blocs);
+/** Les blocs courts d'un profil, pour les démos (héros, Roue, Prise). */
+export const blocsExemples = (id: ProfilExemple, langue: Langue = 'fr') => enLangue(BLOCS_EXEMPLES[id], langue);
+
 const RESEAUX_EXEMPLES: Record<ProfilExemple, Reglages['reseaux']> = {
   ines: [{ reseau: 'instagram', url: 'https://instagram.com/' }, { reseau: 'youtube', url: 'https://youtube.com/' }],
   sacha: [{ reseau: 'spotify', url: 'https://open.spotify.com/' }, { reseau: 'youtube', url: 'https://youtube.com/' }],
@@ -70,16 +132,17 @@ const RESEAUX_EXEMPLES: Record<ProfilExemple, Reglages['reseaux']> = {
 };
 
 /** La vraie page publique avec les thèmes et le modèle du produit, sans appel serveur. */
-export function pageExemple(id: ProfilExemple, theme: string = PROFILS[id].theme, o: { couleurs?: Couleurs; profil?: Partial<Reglages['profil']>; reseaux?: boolean; blocs?: Bloc[] } = {}): PagePublique {
-  const p = PROFILS[id];
+export function pageExemple(id: ProfilExemple, theme: string = PROFILS[id].theme, o: { couleurs?: Couleurs; profil?: Partial<Reglages['profil']>; reseaux?: boolean; blocs?: Bloc[]; langue?: Langue } = {}): PagePublique {
+  const langue = o.langue ?? 'fr';
+  const p = profilDe(id, langue);
   return {
     reglages: {
-      ...REGLAGES_DEFAUT, theme, couleurs: o.couleurs ?? SANS_COULEURS,
+      ...REGLAGES_DEFAUT, theme, langue, couleurs: o.couleurs ?? SANS_COULEURS,
       bouton: { ...REGLAGES_DEFAUT.bouton, ...themeParId(theme).conseil }, animation: 'aucune', bureau: 'colonne', partage: false,
       profil: { nom: p.nom, bio: p.bio, avatar: p.avatar, badge: false, photo: 'ronde', ...o.profil },
       reseaux: o.reseaux === false ? [] : RESEAUX_EXEMPLES[id].map(r => ({ ...r })),
     },
-    blocs: (o.blocs ?? composerAudience(BLOCS_EXEMPLES[id], '')).map(b => ({ ...b })),
+    blocs: enLangue(o.blocs ?? composerAudience(BLOCS_EXEMPLES[id], ''), langue).map(b => ({ ...b })),
     compte: { pseudo: p.pseudo, principal: false, plan: p.offre },
   };
 }
@@ -175,11 +238,13 @@ const droitsDe = (plan: PagePublique['compte']['plan']) =>
   Object.fromEntries((Object.keys(FONCTIONS) as Fonction[]).map(f => [f, peut(plan, f)])) as Record<Fonction, boolean>;
 
 /** La page d'un profil telle qu'il l'a soignée, dans son thème : celle de la galerie de l'accueil. */
-export function pageProfil(id: ProfilExemple): PagePublique {
+export function pageProfil(id: ProfilExemple, langue: Langue = 'fr'): PagePublique {
   const { blocs, profil } = PAGES[id];
-  const page = pageExemple(id, PROFILS[id].theme, { blocs, profil });
+  const page = pageExemple(id, PROFILS[id].theme, { blocs, profil, langue });
   return { ...page, ...selonDroits(page.reglages, page.blocs, droitsDe(page.compte.plan)) };
 }
 
 /** « d’Inès Laurent », « de Théo Marchal », « de Sacha Diop » : la préposition qui va devant un prénom. */
 export const de = (nom: string) => (/^[aeiouàâäéèêëîïôöûüh]/i.test(nom) ? `d’${nom}` : `de ${nom}`);
+/** « Ines Laurent’s », « la page d’Inès Laurent » : le nom possessif dans la langue du site. */
+export const pageDe = (nom: string, langue: Langue = 'fr') => (langue === 'en' ? `${nom}’s page` : `La page ${de(nom)}`);

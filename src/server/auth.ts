@@ -1,7 +1,7 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { PRINCIPAL, sansSchema } from '../lib/types.ts';
 import type { Origines } from '../lib/types.ts';
-import { ajouterJeton, compteParEmail, jetonsRecents, noterConnexion, supprimerJeton, verifierJeton } from './db.ts';
+import { ajouterJeton, compteParEmail, jetonsRecents, lireReglages, noterConnexion, supprimerJeton, verifierJeton } from './db.ts';
 import type { Compte } from './db.ts';
 import { bouton, envoyer, enveloppe } from './courriel.ts';
 import { HEURE, cleIp, limiteur } from './limites.ts';
@@ -141,6 +141,8 @@ export async function inviter(origines: Origines, env: Env, compte: Compte, fetc
     inscription: `Ta page ${adresse} est créée.`,
     rappel: `Ta page ${adresse} t’attend.`,
   })[motif];
+  // Une page en anglais reçoit son e-mail de bienvenue en anglais (8 novembre 2026, Hopla anglais d'abord).
+  if (langueDe(compte.id) === 'en') return inviterEnAnglais(origines, env, compte, fetchImpl, motif);
   const r = await envoyerLien({
     origines, env, fetchImpl, compte: compte.id, destinataire: compte.email, duree: DUREE_INVITATION,
     sujet: motif === 'rappel' ? 'Ta page Hopla t’attend' : 'Ta page Hopla est prête',
@@ -149,6 +151,33 @@ export async function inviter(origines: Origines, env: Env, compte: Compte, fetc
 ${bouton(lien, 'Créer ma page')}
 <p style="color:#666;font-size:14px">Ce lien marche une seule fois, pendant 7 jours. Ensuite, tu te connectes depuis ${sansSchema(origines.admin)} avec cette adresse. Une page jamais ouverte s’efface au bout d’un mois.${motif === 'inscription' ? ' Tu n’as rien demandé ? Ne fais rien, ou réponds à ce message pour qu’on l’efface tout de suite.' : ''}</p>`),
     texte: lien => `${intro(page, true)}\nPour la créer : ${lien}\nLe lien marche une seule fois, pendant 7 jours. Ensuite, tu te connectes depuis ${origines.admin} avec cette adresse.\nUne page jamais ouverte s’efface au bout d’un mois.`,
+  });
+  return r.ok ? { ok: true, message: `Invitation envoyée à ${compte.email}.`, lienDev: r.lienDev } : r;
+}
+
+/** La langue de la page d'un compte ; une base de test sans page répond en français. */
+function langueDe(compte: string) {
+  try { return lireReglages(compte).langue; } catch { return 'fr'; }
+}
+
+/** Le même e-mail que `inviter`, en anglais. Le message rendu au back office reste en français. */
+async function inviterEnAnglais(origines: Origines, env: Env, compte: Compte, fetchImpl: typeof fetch, motif: 'invitation' | 'reservation' | 'inscription' | 'rappel'): Promise<Reponse> {
+  const page = `${origines.page}/${compte.pseudo}`;
+  const lienPage = `<a href="${page}">${sansSchema(page)}</a>`;
+  const intro = (adresse: string) => ({
+    invitation: `Lilian Sevoumian opened a Hopla page for you at ${adresse}.`,
+    reservation: `You had claimed ${adresse}: your page is open.`,
+    inscription: `Your page ${adresse} is ready.`,
+    rappel: `Your page ${adresse} is waiting for you.`,
+  })[motif];
+  const r = await envoyerLien({
+    origines, env, fetchImpl, compte: compte.id, destinataire: compte.email, duree: DUREE_INVITATION,
+    sujet: motif === 'rappel' ? 'Your Hopla page is waiting' : 'Your Hopla page is ready',
+    html: lien => enveloppe(`<p>Hi,</p>
+<p>${intro(lienPage)} It’s empty for now: add your links, pick a theme, and it’s live.</p>
+${bouton(lien, 'Create my page')}
+<p style="color:#666;font-size:14px">This link works once, for 7 days. After that, log in from ${sansSchema(origines.admin)} with this email address. A page that’s never opened is deleted after a month.${motif === 'inscription' ? ' Didn’t ask for this? Do nothing, or reply to this email and we’ll delete it right away.' : ''}</p>`),
+    texte: lien => `${intro(page)}\nTo create it: ${lien}\nThis link works once, for 7 days. After that, log in from ${origines.admin} with this email address.\nA page that’s never opened is deleted after a month.`,
   });
   return r.ok ? { ok: true, message: `Invitation envoyée à ${compte.email}.`, lienDev: r.lienDev } : r;
 }

@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useSyncExternalStore } from 'react';
 import type { FocusEvent, FormEvent, ReactNode } from 'react';
 import { Icone } from '../components/Icone.tsx';
-import { OFFRES } from '../lib/abonnement.ts';
+import { nomOffre } from '../lib/abonnement.ts';
 import type { Periode, PlanPayant } from '../lib/abonnement.ts';
 import { nomSaisi } from '../lib/valider.ts';
 import { adresseSuggeree, nomDansAdresse, nomDansLien } from './adresse.ts';
@@ -9,6 +9,9 @@ import { mouvementReduit } from './mouvement.ts';
 import { MOTS, appel, useInscription } from './textes.ts';
 import { focusSaisie } from '../lib/clavier';
 import { boiteMail } from '../lib/boiteMail.ts';
+import { choix, useLangue } from './langue.ts';
+import type { Choix } from './langue.ts';
+import type { Langue } from '../lib/types.ts';
 
 /*
  * « Créer ma page » (ou « Réserver mon nom » en liste d'attente), en
@@ -91,7 +94,7 @@ export const useReservation = () => useSyncExternalStore(abonner, () => etat, ()
 /** Le bouton d'une offre, dans les prix : `''` pour Gratuit ; la période est celle qu'on lisait. */
 export const choisirOffre = (offre: PlanPayant | '', periode: Periode = 'mois') => changer({ offre, periode });
 /** « Pro », ou « Pro à l'année » : l'offre choisie, telle que les prix la montraient. */
-const offreLue = (e: Etat) => e.offre ? `${OFFRES[e.offre].nom}${e.periode === 'an' ? ' à l’année' : ''}` : '';
+const offreLue = (e: Etat, langue: Langue) => e.offre ? `${nomOffre(e.offre, langue)}${e.periode === 'an' ? choix(langue)(' à l’année', ' yearly') : ''}` : '';
 
 /** L'envoi fait, gardé pour l'onglet : un rechargement ne le fait pas oublier. Avant l'envoi, le nom tapé. */
 const CLE = 'hopla-envoi';
@@ -132,7 +135,7 @@ function attendreFin() {
 
 /** Une lettre d'un autre alphabet ne passe pas dans une adresse : on le dit au lieu de l'effacer en silence. */
 const AUTRE_ALPHABET = /[^\P{L}\p{Script=Latin}]/u;
-const MOT_ALPHABET = 'Une adresse ne prend que des lettres latines, des chiffres et des tirets : les accents sont simplifiés, le reste est retiré.';
+const MOT_ALPHABET = (l: Choix) => l('Une adresse ne prend que des lettres latines, des chiffres et des tirets : les accents sont simplifiés, le reste est retiré.', 'An address only takes Latin letters, numbers and hyphens: accents are simplified, everything else is removed.');
 /** Un emoji non plus : effacé sans un mot, le champ aurait l'air cassé. */
 const PICTOGRAMME = /\p{Extended_Pictographic}/u;
 
@@ -210,6 +213,10 @@ function remonter(ev: FocusEvent<HTMLInputElement>) {
 export function Reserver({ api, note, apercu, id, grand, premier }: { api: ApiAccueil; note?: ReactNode; apercu?: ReactNode; id?: string; grand?: boolean; premier?: boolean }) {
   const e = useReservation();
   const mode = useInscription();
+  const langue = useLangue();
+  const l = choix(langue);
+  const injoignable = l('Le serveur ne répond pas. Réessaie dans un instant.', 'The server isn’t responding. Try again in a moment.');
+  const mots = MOTS[langue][mode];
   const classe = `hl-reserver${grand ? ' hl-reserver-grand' : ''}`;
   const moi = useId();
   const champ = useRef<HTMLInputElement>(null);
@@ -232,14 +239,14 @@ export function Reserver({ api, note, apercu, id, grand, premier }: { api: ApiAc
     if (e.envoi) return;
     if (e.etape === 'nom') {
       const nom = e.nom.replace(/-$/, '');
-      if (nom.length < 3) { changer({ erreur: nom ? 'Il faut au moins 3 caractères.' : 'Choisis le nom de ta page.' }); champ.current?.focus(); return; }
+      if (nom.length < 3) { changer({ erreur: nom ? l('Il faut au moins 3 caractères.', 'It needs at least 3 characters.') : l('Choisis le nom de ta page.', 'Choose your page’s name.') }); champ.current?.focus(); return; }
       clearTimeout(minuterie);
       // Le même nom qu'avant : rien à changer.
       if (e.ancien && nom === e.ancien) { changer({ etape: 'fait', ancien: '', verif: null, erreur: '', focus: moi }); return; }
       changer({ envoi: true });
       const v = e.verif?.nom === nom ? e.verif : await verifier(api, nom);
       changer({ envoi: false });
-      if (!v) { changer({ erreur: 'Le serveur ne répond pas. Réessaie dans un instant.' }); return; }
+      if (!v) { changer({ erreur: injoignable }); return; }
       // Pris ou impossible : le verdict s'affiche, avec ses variantes, et la main reste au champ.
       if (v.etat !== 'libre') { changer({ nom, verif: v }); champ.current?.focus(); return; }
       if (!e.ancien) { changer({ nom, etape: 'email', erreur: '', focus: moi }); return; }
@@ -248,10 +255,10 @@ export function Reserver({ api, note, apercu, id, grand, premier }: { api: ApiAc
       try {
         const r = await api.renommer(e.ancien, nom, e.envoyee);
         if (r.ok) { changer({ nom: r.nom ?? nom, verif: null }); parti(r.message, e.envoyee, moi); } else changer({ envoi: false, erreur: r.message });
-      } catch { changer({ envoi: false, erreur: 'Le serveur ne répond pas. Réessaie dans un instant.' }); }
+      } catch { changer({ envoi: false, erreur: injoignable }); }
       return;
     }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e.email.trim())) { changer({ erreur: 'Il manque une adresse e-mail complète, comme marie@exemple.fr.' }); champ.current?.focus(); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e.email.trim())) { changer({ erreur: l('Il manque une adresse e-mail complète, comme marie@exemple.fr.', 'Enter a full email address, like jane@example.com.') }); champ.current?.focus(); return; }
     // Un domaine qui ressemble à une faute : on le dit une fois, puis l'adresse part telle quelle.
     if (adresseSuggeree(e.email) && e.signalee !== e.email) { changer({ signalee: e.email }); champ.current?.focus(); return; }
     const adresse = e.email.trim();
@@ -264,9 +271,9 @@ export function Reserver({ api, note, apercu, id, grand, premier }: { api: ApiAc
       }
       const r = await api.reserver(e.nom, adresse);
       if (r.ok) parti(r.message, adresse, moi, true);
-      else if (/pris/.test(r.message)) { changer({ etape: 'nom', envoi: false, erreur: r.message, verif: null, focus: moi }); verifier(api, e.nom); }
+      else if (/pris|taken/.test(r.message)) { changer({ etape: 'nom', envoi: false, erreur: r.message, verif: null, focus: moi }); verifier(api, e.nom); }
       else changer({ envoi: false, erreur: r.message });
-    } catch { changer({ envoi: false, erreur: 'Le serveur ne répond pas. Réessaie dans un instant.' }); }
+    } catch { changer({ envoi: false, erreur: injoignable }); }
   }
 
   if (e.etape === 'fait') {
@@ -279,13 +286,13 @@ export function Reserver({ api, note, apercu, id, grand, premier }: { api: ApiAc
           <div>
             <p className="hl-reserver-adresse">hopla.page/{insecable(e.nom)}</p>
             <p>{avecAdresse(e.message, e.envoyee)}</p>
-            {boite && <a className="hl-btn hl-btn-petit hl-reserver-boite" href={boite.url} target="_blank" rel="noopener">Ouvrir {boite.nom}<Icone nom="ui-ouvrir" taille={16} /></a>}
+            {boite && <a className="hl-btn hl-btn-petit hl-reserver-boite" href={boite.url} target="_blank" rel="noopener">{l('Ouvrir', 'Open')} {boite.nom}<Icone nom="ui-ouvrir" taille={16} /></a>}
             {/* Ce qu'il faut savoir, et rien d'autre (Lilian, 24 octobre 2026) : combien de temps marche le lien ; une faute de frappe se corrige d'un toucher. */}
             <p className="hl-reserver-renvoi">
-              {MOTS[mode].duree}
-              {!e.fermee && <>{MOTS[mode].duree && ' '}<button type="button" className="hl-lien-texte" onClick={() => changer({ etape: 'email', correction: true, email: e.envoyee, signalee: '', quitte: '', erreur: '', focus: moi })}>Mauvaise adresse ?</button></>}
+              {mots.duree}
+              {!e.fermee && <>{mots.duree && ' '}<button type="button" className="hl-lien-texte" onClick={() => changer({ etape: 'email', correction: true, email: e.envoyee, signalee: '', quitte: '', erreur: '', focus: moi })}>{l('Mauvaise adresse ?', 'Wrong address?')}</button></>}
             </p>
-            {e.offre && mode === 'libre' && <p className="hl-reserver-renvoi">Ensuite, active {offreLue(e)} dans tes réglages.</p>}
+            {e.offre && mode === 'libre' && <p className="hl-reserver-renvoi">{l(`Ensuite, active ${offreLue(e, langue)} dans tes réglages.`, `Then turn on ${offreLue(e, langue)} in your settings.`)}</p>}
             {e.erreur && <p className="hl-reserver-erreur" role={parle ? 'alert' : undefined}>{e.erreur}</p>}
           </div>
         </div>
@@ -310,8 +317,8 @@ export function Reserver({ api, note, apercu, id, grand, premier }: { api: ApiAc
         {e.etape === 'nom' ? (
           <label className="hl-champ">
             <span className="hl-champ-prefixe" aria-hidden="true">hopla.page/</span>
-            <span className="hl-cache">Le nom de ta page, après hopla.page/</span>
-            <input ref={champ} value={e.nom} onChange={ev => taper(api, ev.target.value)} placeholder="ton-nom" maxLength={200} onFocus={remonter}
+            <span className="hl-cache">{l('Le nom de ta page, après hopla.page/', 'Your page’s name, after hopla.page/')}</span>
+            <input ref={champ} value={e.nom} onChange={ev => taper(api, ev.target.value)} placeholder={l('ton-nom', 'your-name')} maxLength={200} onFocus={remonter}
               onBlur={() => { if (/-$/.test(etat.nom)) changer({ nom: etat.nom.replace(/-+$/, '') }); }}
               autoComplete="off" autoCapitalize="none" autoCorrect="off" spellCheck={false} enterKeyHint="next" aria-describedby={idEtat}
               aria-invalid={pris || undefined} data-champ-nom />
@@ -319,69 +326,69 @@ export function Reserver({ api, note, apercu, id, grand, premier }: { api: ApiAc
         ) : (
           <label className="hl-champ">
             <span className="hl-champ-prefixe hl-champ-picto" aria-hidden="true"><Icone nom="courrier" taille={18} /></span>
-            <span className="hl-cache">Ton adresse e-mail, pour recevoir le lien</span>
-            <input ref={champ} type="email" value={e.email} onChange={ev => changer({ email: ev.target.value, erreur: '' })} placeholder="ton@adresse.fr" maxLength={200} onFocus={remonter}
+            <span className="hl-cache">{l('Ton adresse e-mail, pour recevoir le lien', 'Your email address, to get the link')}</span>
+            <input ref={champ} type="email" value={e.email} onChange={ev => changer({ email: ev.target.value, erreur: '' })} placeholder={l('ton@adresse.fr', 'you@example.com')} maxLength={200} onFocus={remonter}
               onBlur={() => changer({ quitte: etat.email })}
               autoComplete="email" inputMode="email" enterKeyHint="send" required aria-describedby={idEtat} aria-invalid={emailFautif || undefined} />
           </label>
         )}
-        <button type="submit" className="hl-btn" disabled={e.envoi}>{e.envoi ? (e.etape === 'nom' && !e.ancien ? 'Vérification…' : 'Envoi…') : e.correction ? 'Corriger' : e.ancien ? 'Changer' : e.etape === 'email' ? MOTS[mode].envoyer : appel(mode)}</button>
+        <button type="submit" className="hl-btn" disabled={e.envoi}>{e.envoi ? (e.etape === 'nom' && !e.ancien ? l('Vérification…', 'Checking…') : l('Envoi…', 'Sending…')) : e.correction ? l('Corriger', 'Fix') : e.ancien ? l('Changer', 'Change') : e.etape === 'email' ? mots.envoyer : appel(mode, langue)}</button>
       </div>
       <div className="hl-reserver-etat" id={idEtat} aria-live={parle ? 'polite' : 'off'}>
         {/* La zone annonce déjà ce qui change : pas de role="alert" en plus, le message serait lu deux fois. */}
         {e.erreur ? <p className="hl-reserver-erreur"><Icone nom="alerte" taille={18} />{e.erreur}</p>
           : suggeree ? (
             <p data-signale={e.signalee === e.email || undefined}>
-              <span>Tu voulais dire </span>
+              <span>{l('Tu voulais dire ', 'Did you mean ')}</span>
               <button type="button" className="hl-lien-texte" onClick={() => corriger(suggeree)}>{suggeree}</button>
-              <span>{e.signalee === e.email ? ' ? Si ton adresse est juste, valide de nouveau.' : ' ?'}</span>
+              <span>{e.signalee === e.email ? l(' ? Si ton adresse est juste, valide de nouveau.', '? If your address is right, submit again.') : l(' ?', '?')}</span>
             </p>
           )
           : e.correction ? (
             <p>
-              <span>Le lien partira à cette adresse ; celui envoyé à <b className="hl-courriel">{insecable(e.envoyee)}</b> ne marchera plus.</span>{' '}
-              <button type="button" className="hl-lien-texte" onClick={revenir}>Annuler</button>
+              <span>{l(<>Le lien partira à cette adresse ; celui envoyé à <b className="hl-courriel">{insecable(e.envoyee)}</b> ne marchera plus.</>, <>The link will go to this address; the one sent to <b className="hl-courriel">{insecable(e.envoyee)}</b> will stop working.</>)}</span>{' '}
+              <button type="button" className="hl-lien-texte" onClick={revenir}>{l('Annuler', 'Cancel')}</button>
             </p>
           )
           : e.ancien && (sien || (v?.etat !== 'pris' && v?.etat !== 'invalide')) ? (
             <p>
-              {v?.etat === 'libre' && v.nom !== e.ancien && <><Icone nom="coche" taille={16} /><span><b>hopla.page/{insecable(v.nom)}</b> est libre. </span></>}
-              <span>{e.nom.replace(/-$/, '') === e.ancien ? 'Tape le bon nom.' : <>Ta page prendra ce nom ; le lien envoyé pour <b>hopla.page/{insecable(e.ancien)}</b> ne marchera plus.</>}</span>{' '}
-              <button type="button" className="hl-lien-texte" onClick={revenir}>Annuler</button>
+              {v?.etat === 'libre' && v.nom !== e.ancien && <><Icone nom="coche" taille={16} /><span><b>hopla.page/{insecable(v.nom)}</b> {l('est libre.', 'is available.')} </span></>}
+              <span>{e.nom.replace(/-$/, '') === e.ancien ? l('Tape le bon nom.', 'Type the right name.') : l(<>Ta page prendra ce nom ; le lien envoyé pour <b>hopla.page/{insecable(e.ancien)}</b> ne marchera plus.</>, <>Your page will take this name; the link sent for <b>hopla.page/{insecable(e.ancien)}</b> will stop working.</>)}</span>{' '}
+              <button type="button" className="hl-lien-texte" onClick={revenir}>{l('Annuler', 'Cancel')}</button>
             </p>
           )
           : e.etape === 'email' ? (
             <p>
-              <Icone nom="coche" taille={16} /><span><b>hopla.page/{insecable(e.nom)}</b> est libre. {MOTS[mode].adresse}</span>{' '}
-              <button type="button" className="hl-lien-texte" onClick={() => changer({ etape: 'nom', focus: moi })}>Changer de nom</button>
+              <Icone nom="coche" taille={16} /><span><b>hopla.page/{insecable(e.nom)}</b> {l('est libre.', 'is available.')} {mots.adresse}</span>{' '}
+              <button type="button" className="hl-lien-texte" onClick={() => changer({ etape: 'nom', focus: moi })}>{l('Changer de nom', 'Change name')}</button>
             </p>
           )
-          : v?.etat === 'libre' ? <p><Icone nom="coche" taille={16} /><span><b>hopla.page/{insecable(v.nom)}</b> est libre</span></p>
+          : v?.etat === 'libre' ? <p><Icone nom="coche" taille={16} /><span><b>hopla.page/{insecable(v.nom)}</b> {l('est libre', 'is available')}</span></p>
           : v?.etat === 'pris' ? (
             <p className="hl-reserver-pris">
-              <Icone nom="cadenas" taille={16} /><span><b>hopla.page/{insecable(v.nom)}</b> est déjà pris.{v.suggestions.length > 0 && ' Essaie '}</span>
+              <Icone nom="cadenas" taille={16} /><span><b>hopla.page/{insecable(v.nom)}</b> {l('est déjà pris.', 'is already taken.')}{v.suggestions.length > 0 && l(' Essaie ', ' Try ')}</span>
               {v.suggestions.map((s, i) => (
-                <span key={s}>{i > 0 && ' ou '}<button type="button" className="hl-lien-texte" onClick={() => { changer({ nom: s, verif: { etat: 'libre', nom: s, suggestions: [] } }); champ.current?.focus(); verifier(api, s); }}>{s}</button></span>
+                <span key={s}>{i > 0 && l(' ou ', ' or ')}<button type="button" className="hl-lien-texte" onClick={() => { changer({ nom: s, verif: { etat: 'libre', nom: s, suggestions: [] } }); champ.current?.focus(); verifier(api, s); }}>{s}</button></span>
               ))}
               {v.suggestions.length > 0 && '.'}{' '}
-              {!v.reserve && !e.ancien && <span className="hl-reserver-tien">C’est le tien ? <a href="/admin">Connecte-toi</a>.</span>}
+              {!v.reserve && !e.ancien && <span className="hl-reserver-tien">{l('C’est le tien ?', 'Is it yours?')} <a href="/admin">{l('Connecte-toi', 'Log in')}</a>.</span>}
             </p>
           )
-          : v?.etat === 'invalide' ? <p className="hl-reserver-pris"><Icone nom="alerte" taille={16} />Ce nom ne peut pas servir d’adresse : 3 à 30 caractères, lettres, chiffres et tirets.</p>
-          : e.verifie && e.verifie === e.nom.replace(/-$/, '') ? <p className="hl-reserver-attente">Vérification de <b>hopla.page/{insecable(e.verifie)}</b>…</p>
+          : v?.etat === 'invalide' ? <p className="hl-reserver-pris"><Icone nom="alerte" taille={16} />{l('Ce nom ne peut pas servir d’adresse : 3 à 30 caractères, lettres, chiffres et tirets.', 'This name can’t be used as an address: 3 to 30 characters, letters, numbers and hyphens.')}</p>
+          : e.verifie && e.verifie === e.nom.replace(/-$/, '') ? <p className="hl-reserver-attente">{l('Vérification de', 'Checking')} <b>hopla.page/{insecable(e.verifie)}</b>…</p>
           : null}
-        {e.etape === 'nom' && e.coupe && !e.erreur && <p className="hl-reserver-coupe">Un nom tient en 30 caractères : la fin est coupée.</p>}
+        {e.etape === 'nom' && e.coupe && !e.erreur && <p className="hl-reserver-coupe">{l('Un nom tient en 30 caractères : la fin est coupée.', 'A name fits in 30 characters: the end is cut off.')}</p>}
         {/* Un nom nettoyé reste un nom valable : une note, comme pour la coupe, pas l'anneau d'une erreur. */}
-        {e.etape === 'nom' && e.retire && !e.erreur && <p className="hl-reserver-coupe">{MOT_ALPHABET}</p>}
+        {e.etape === 'nom' && e.retire && !e.erreur && <p className="hl-reserver-coupe">{MOT_ALPHABET(l)}</p>}
         {/* Une adresse refusée ou une faute signalée n'enferment pas : le nom se change toujours d'ici. */}
-        {e.etape === 'email' && !e.correction && (e.erreur || suggeree) && <p><button type="button" className="hl-lien-texte" onClick={() => changer({ etape: 'nom', erreur: '', focus: moi })}>Changer de nom</button></p>}
+        {e.etape === 'email' && !e.correction && (e.erreur || suggeree) && <p><button type="button" className="hl-lien-texte" onClick={() => changer({ etape: 'nom', erreur: '', focus: moi })}>{l('Changer de nom', 'Change name')}</button></p>}
       </div>
       {apercu}
       {e.etape === 'email'
-        ? <p className="hl-reserver-note">{MOTS[mode].rassure} <a href="/legal/confidentialite">Confidentialité</a></p>
+        ? <p className="hl-reserver-note">{mots.rassure} <a href="/legal/confidentialite">{l('Confidentialité', 'Privacy')}</a></p>
         : note && !e.ancien && <p className="hl-reserver-note">{e.offre && mode === 'libre'
           // Le chemin du retour vers les prix : on n'a pas à remonter toute la page pour changer d'avis.
-          ? <>Tu commences en Gratuit, puis tu actives {offreLue(e)} dans tes réglages. <a href="#prix">Revoir les offres</a></>
+          ? l(<>Tu commences en Gratuit, puis tu actives {offreLue(e, langue)} dans tes réglages. <a href="#prix">Revoir les offres</a></>, <>You start on Free, then turn on {offreLue(e, langue)} in your settings. <a href="#prix">See the plans again</a></>)
           : note}</p>}
     </form>
   );

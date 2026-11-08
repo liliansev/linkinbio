@@ -3,6 +3,8 @@ import type { NomDocument } from '../../lib/legal.ts';
 import { DOCUMENTS, LEGAL } from '../../lib/legal.ts';
 import { Pied } from '../../accueil/Fin.tsx';
 import { Barre } from '../../accueil/Ouverture.tsx';
+// En français jusqu'à leur traduction (8 novembre 2026, Hopla anglais d'abord).
+import { LangueSite } from '../../accueil/langue.ts';
 
 /* Les textes légaux de Hopla (CGU, accord de traitement, confidentialité, sous-traitants, mentions). */
 export const Route = createFileRoute('/legal/$document')({
@@ -23,6 +25,7 @@ function PageLegale() {
   // Le gabarit des pages publiques (26 octobre 2026, audit des alignements) : la barre, le titre sur le bleu, le texte
   // sur la colonne commune, puis le pied ; plus de page à part, en nuit, sans barre.
   return (
+    <LangueSite.Provider value="fr">
     <div className="hl hl-humain hf">
       <a href="#contenu" className="hl-evitement">Aller au contenu</a>
       <Barre ailleurs />
@@ -48,5 +51,6 @@ function PageLegale() {
       </main>
       <Pied />
     </div>
+    </LangueSite.Provider>
   );
 }

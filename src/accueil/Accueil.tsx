@@ -9,6 +9,8 @@ import type { ApiAccueil } from './Reserver.tsx';
 import { useEntrees } from './mouvement.ts';
 import { ModeInscription } from './textes.ts';
 import type { Inscription } from './textes.ts';
+import { LangueSite, choix } from './langue.ts';
+import type { Langue } from '../lib/types.ts';
 
 /*
  * L'accueil de hopla.page (20 octobre 2026, d'après les wireframes validés par
@@ -18,12 +20,13 @@ import type { Inscription } from './textes.ts';
  * « moins de mouvement » montre l'état final. On y prend son nom : la page se crée tout de suite, ou le nom se
  * réserve quand Hopla ouvre sur invitation (`mode`, voir `server/attente.ts`).
  */
-export function Accueil({ api, mode = 'libre' }: { api: ApiAccueil; mode?: Inscription }) {
+export function Accueil({ api, mode = 'libre', langue = 'en' }: { api: ApiAccueil; mode?: Inscription; langue?: Langue }) {
   useEntrees();
   return (
+    <LangueSite.Provider value={langue}>
     <ModeInscription.Provider value={mode}>
     <div className="hl hl-humain">
-      <a href="#contenu" className="hl-evitement">Aller au contenu</a>
+      <a href="#contenu" className="hl-evitement">{choix(langue)('Aller au contenu', 'Skip to content')}</a>
       <Barre />
       <main id="contenu">
         <Ouverture api={api} />
@@ -40,5 +43,6 @@ export function Accueil({ api, mode = 'libre' }: { api: ApiAccueil; mode?: Inscr
       <Pied />
     </div>
     </ModeInscription.Provider>
+    </LangueSite.Provider>
   );
 }

@@ -81,6 +81,8 @@ export function PageLiens({ page, apercu = false, edition, liste, sansMention = 
   const pseudo = compte.principal ? '' : compte.pseudo;
   const theme = themeDe(reglages);
   const t = textes(reglages.vouvoiement, reglages.langue);
+  // La barre Hopla d'une page en français mène à l'accueil en français (8 novembre 2026).
+  const accueilHopla = reglages.langue === 'fr' ? `${ORIGINE_PUBLIQUE}/fr` : ORIGINE_PUBLIQUE;
   // Les liens rangés en tuiles sous un titre de section réglé en grille (un compte à rebours garde sa largeur).
   const tuiles = enGrille(blocs, b => enAttente(b, page.maintenant ?? Date.now()));
   const grande = reglages.profil.photo === 'grande' && !!reglages.profil.avatar;
@@ -207,7 +209,7 @@ export function PageLiens({ page, apercu = false, edition, liste, sansMention = 
           {/* La page de Lilian met Hopla en avant sous sa bio (24 octobre 2026) : une ligne à l'accent du thème, le logo après le mot. */}
           {compte.principal && EST_HOPLA_PAGE && (
             <p className="lp-hopla-haut" {...(edition ? { inert: true } : {})}>
-              <a href={ORIGINE_PUBLIQUE} {...cible}>{t.creeTaPage} <strong>Hopla</strong><Trace /></a>
+              <a href={accueilHopla} {...cible}>{t.creeTaPage} <strong>Hopla</strong><Trace /></a>
             </p>
           )}
           {reglages.reseauxPosition === 'haut' && reseaux}
@@ -250,7 +252,7 @@ export function PageLiens({ page, apercu = false, edition, liste, sansMention = 
         elle disparaît dès Starter, et jamais sur la page de Lilian ni sur les exemples de l'accueil.
       */}
       {barreHopla && (
-        <a className="lp-barre-hopla" href={ORIGINE_PUBLIQUE} {...cible}>
+        <a className="lp-barre-hopla" href={accueilHopla} {...cible}>
           <span className="lp-barre-marque"><Trace /><strong>Hopla</strong></span>
           <span className="lp-barre-appel">{t.barreHopla}</span>
         </a>

@@ -23,6 +23,8 @@ import { Defile } from './Defile.tsx';
 import { CAPTURES_FONCTIONS, Ecran } from '../Capture.tsx';
 import { PAGES_FONCTIONS } from './fonctions.ts';
 import type { PageFonction as Donnees } from './fonctions.ts';
+// En français jusqu'à leur traduction (8 novembre 2026, Hopla anglais d'abord).
+import { LangueSite } from '../langue.ts';
 
 /*
  * La page d'une fonction : son titre sur le bleu, sa scène qui se joue en
@@ -157,6 +159,7 @@ export function PageFonction({ page, mode = 'libre' }: { page: Donnees; mode?: I
   const capture = CAPTURES_FONCTIONS[page.slug];
   const autres = PAGES_FONCTIONS.filter(p => p.slug !== page.slug);
   return (
+    <LangueSite.Provider value="fr">
     <ModeInscription.Provider value={mode}>
       <div className="hl hl-humain hf">
         <a href="#contenu" className="hl-evitement">Aller au contenu</a>
@@ -202,6 +205,7 @@ export function PageFonction({ page, mode = 'libre' }: { page: Donnees; mode?: I
         <Pied />
       </div>
     </ModeInscription.Provider>
+    </LangueSite.Provider>
   );
 }
 
@@ -225,6 +229,7 @@ export function ListeFonctions({ pages }: { pages: Donnees[] }) {
 export function IndexFonctions({ mode = 'libre' }: { mode?: Inscription }) {
   useEntrees();
   return (
+    <LangueSite.Provider value="fr">
     <ModeInscription.Provider value={mode}>
       <div className="hl hl-humain hf">
         <a href="#contenu" className="hl-evitement">Aller au contenu</a>
@@ -243,5 +248,6 @@ export function IndexFonctions({ mode = 'libre' }: { mode?: Inscription }) {
         <Pied />
       </div>
     </ModeInscription.Provider>
+    </LangueSite.Provider>
   );
 }

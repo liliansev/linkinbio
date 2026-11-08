@@ -1,5 +1,5 @@
 import { DESCRIPTION, FONCTIONS, questions } from '../accueil/textes.ts';
-import { OFFRES, PLANS, euros } from '../lib/abonnement.ts';
+import { OFFRES, OFFRES_EN, PLANS, avantage, euros, nomOffre } from '../lib/abonnement.ts';
 import { DOCUMENTS, LEGAL } from '../lib/legal.ts';
 import { ORIGINE_ADMIN, ORIGINE_PUBLIQUE, PRINCIPAL, SITE_LILIAN } from '../lib/types.ts';
 import { PAGES_FONCTIONS } from '../accueil/pages/fonctions.ts';
@@ -45,7 +45,7 @@ const PAGES_DOCS = ['', '/quickstart', '/authentication', '/mcp', '/blocks', '/s
 const echapper = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
 export function plan(publique: string): string {
-  const adresses = [`${publique}/`];
+  const adresses = [`${publique}/`, `${publique}/fr`];
   const lilian = db.compteParId(PRINCIPAL);
   if (lilian && db.lireReglages(PRINCIPAL).seo.indexable) adresses.push(`${publique}/${lilian.pseudo}`);
   adresses.push(`${publique}/fonctionnalites`, ...PAGES_FONCTIONS.map(p => `${publique}/fonctionnalites/${p.slug}`));
@@ -60,40 +60,44 @@ ${adresses.map(a => `  <url><loc>${echapper(a)}</loc></url>`).join('\n')}
 `;
 }
 
-/** Le résumé de Hopla pour les IA (https://llmstxt.org) : les mêmes faits que l'accueil. */
+/**
+ * Le résumé de Hopla pour les IA (https://llmstxt.org) : les mêmes faits que l'accueil, en anglais depuis le 8 novembre
+ * 2026 (Hopla anglais d'abord). Les pages des fonctions, des comparatifs et les textes légaux sont encore en français.
+ */
 export function llms(publique: string, env = process.env): string {
   const mode = inscriptionLibre(env) ? 'libre' : 'attente';
   return `# Hopla
 
-> La page de liens qui s’adapte à chaque visiteur. ${DESCRIPTION}
+> The link in bio page that adapts to every visitor. ${DESCRIPTION.en}
 
-Hopla est un service français, créé par Lilian Sevoumian (${SITE_LILIAN}). Chaque page vit sur ${publique}/<nom> et se modifie depuis un téléphone. ${mode === 'libre' ? `On crée la sienne depuis ${publique}/ : on choisit son nom, on laisse son adresse e-mail, et le lien pour entrer dans sa page arrive aussitôt.` : `Les pages s’ouvrent sur invitation : on réserve son nom depuis ${publique}/.`}
+Hopla is an independent service made in France by Lilian Sevoumian (${SITE_LILIAN}). Each page lives at ${publique}/<name> and is edited from a phone. ${mode === 'libre' ? `You create yours from ${publique}/: pick a name, leave your email address, and the link to your page arrives right away.` : `Pages open by invitation: you claim your name from ${publique}/.`}
 
-## Ce que fait Hopla
+## What Hopla does
 
-${FONCTIONS.map(f => `- ${f}`).join('\n')}
+${FONCTIONS.en.map(f => `- ${f}`).join('\n')}
 
-## Prix
+## Pricing
 
 ${PLANS.map(p => {
   const o = OFFRES[p];
-  const prix = p === 'gratuit' ? '0 €, pour toujours' : `${euros(o.prix.mois)} par mois, ou ${euros(o.prix.an)} par an${o.enVente ? '' : ' (bientôt)'}`;
-  return `- ${o.nom} : ${prix}. ${o.phrase}\n${o.avantages.map(a => `  - ${a}`).join('\n')}`;
+  const prix = p === 'gratuit' ? `${euros(0, 'en')}, forever` : `${euros(o.prix.mois, 'en')} per month, or ${euros(o.prix.an, 'en')} per year${o.enVente ? '' : ' (coming soon)'}`;
+  return `- ${nomOffre(p, 'en')}: ${prix}. ${OFFRES_EN[p].phrase}\n${o.avantages.map(a => `  - ${avantage(a, 'en')}`).join('\n')}`;
 }).join('\n')}
 
-## Questions fréquentes
+## FAQ
 
-${questions(mode).map(([q, r]) => `### ${q}\n\n${r}`).join('\n\n')}
+${questions(mode, 'en').map(([q, r]) => `### ${q}\n\n${r}`).join('\n\n')}
 
-## Liens
+## Links
 
-- [Accueil de Hopla](${publique}/) : présentation, thèmes, prix${mode === 'libre' ? ', création d’une page' : ', réservation d’un nom'}
-- [Un exemple : la page de Lilian Sevoumian](${publique}/lilian)
-- [Les fonctionnalités de Hopla](${publique}/fonctionnalites), une page chacune :
+- [Hopla home page](${publique}/): overview, themes, pricing${mode === 'libre' ? ', page creation' : ', name reservation'}
+- [Hopla in French](${publique}/fr)
+- [An example: Lilian Sevoumian’s page](${publique}/lilian)
+- [Hopla’s features](${publique}/fonctionnalites), one page each (in French):
 ${PAGES_FONCTIONS.map(p => `  - [${p.nom}](${publique}/fonctionnalites/${p.slug}) : ${p.resume}`).join('\n')}
-- [Hopla face aux autres outils](${publique}/comparatif) :
+- [Hopla compared with other tools](${publique}/comparatif) (in French):
 ${COMPARATIFS.map(c => `  - [Hopla vs ${c.nom}](${publique}/comparatif/${c.slug}) : ${c.resume}`).join('\n')}
-- [Documentation de l’API et du serveur MCP](${publique}/docs) : gérer sa page depuis un agent IA ou son code (offre Pro) ; pour les agents, [${publique}/docs/llms.txt](${publique}/docs/llms.txt)
+- [API and MCP server documentation](${publique}/docs): manage your page from an AI agent or your own code (Pro plan); for agents, [${publique}/docs/llms.txt](${publique}/docs/llms.txt)
 ${DOCUMENTS.map(d => `- [${LEGAL[d].titre}](${publique}/legal/${d}) : ${LEGAL[d].resume}`).join('\n')}
 `;
 }
