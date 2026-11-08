@@ -187,6 +187,17 @@ export const FONCTIONS_EN_MOTS: Record<Fonction, { avantage: string; pour: strin
   api: { avantage: 'Ta page pilotée par tes agents IA : API et MCP', pour: 'Pour l’API' },
 };
 
+/** « Pour tes couleurs » en anglais, sur l'étiquette de l'offre mise en avant. */
+export const POUR_EN: Record<Fonction, string> = {
+  sansMention: 'To remove branding', blocs: 'For all your blocks', vitrine: 'For your storefront', couleurs: 'For your colors',
+  programmation: 'To schedule links', avis: 'For reviews', stats: 'For your stats', formulaire: 'For your form', galerie: 'For your gallery',
+  utm: 'For UTM tags', redirection: 'For the redirect', fond: 'For your background', grandePhoto: 'For your large photo', grille: 'For the grid',
+  heure: 'For time slots', drops: 'For drops', listeEmail: 'For your email list', pays: 'For countries', cadeau: 'For your freebie',
+  flux: 'For your RSS feed', api: 'For the API',
+};
+/** Ce pour quoi on vient prendre une fonction, dans une langue. */
+export const pourQuoi = (f: Fonction, langue: 'en' | 'fr' = 'fr') => (langue === 'en' ? POUR_EN[f] : FONCTIONS_EN_MOTS[f].pour);
+
 /**
  * L'appel vers l'offre du dessus, en une ligne du back office (Lilian, 21 octobre 2026) : ce que chaque offre
  * apporte de plus parlant, en peu de mots, dans l'ordre où on le propose (« Passer en Starter : sans la mention
@@ -198,6 +209,13 @@ export const ACCROCHES: Record<PlanPayant, { texte: string; fonction?: Fonction 
   pro: [{ texte: 'ta page selon l’heure', fonction: 'heure' }, { texte: 'les drops', fonction: 'drops' }, { texte: 'ta liste e-mail', fonction: 'listeEmail' }, { texte: 'tes stats sur un an' }],
   premium: [{ texte: 'ton nom de domaine' }],
 };
+/** Les accroches en anglais, par leur texte français. */
+export const ACCROCHES_EN: Record<string, string> = {
+  'sans la mention Hopla': 'no Hopla branding', 'des blocs sans limite': 'unlimited blocks', 'tes couleurs': 'your colors',
+  'tes stats sur 30 jours': '30 days of stats', 'ta page selon l’heure': 'your page by time of day', 'les drops': 'drops',
+  'ta liste e-mail': 'your email list', 'tes stats sur un an': 'one year of stats', 'ton nom de domaine': 'your own domain',
+};
+export const accroche = (texte: string, langue: 'en' | 'fr' = 'fr') => (langue === 'en' && ACCROCHES_EN[texte]) || texte;
 
 /** L'offre à proposer au-dessus de celle d'un compte, et ce qu'elle apporte : `fonction` met en avant sa ligne dans les offres. */
 export interface OffreSuivante { plan: PlanPayant; texte: string; fonction?: Fonction }

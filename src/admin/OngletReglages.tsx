@@ -165,7 +165,7 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
 
       {offres && (
         <Groupe titre={l('Abonnement', 'Subscription')}>
-          <Ligne nom={l('Offre', 'Plan')} valeur={<strong>{nomOffre(abonnement)}</strong>}>
+          <Ligne nom={l('Offre', 'Plan')} valeur={<strong>{nomOffre(abonnement, langue)}</strong>}>
             {!resilie && <BoutonSecondaire onClick={() => onOffres?.()} aria-haspopup="dialog">{paye ? l('Changer d’offre', 'Change plan') : l('Voir les offres', 'See plans')}</BoutonSecondaire>}
           </Ligne>
           {/* L'essai de Pro : sa fin, et ce que la page garde ensuite. */}
@@ -175,14 +175,14 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
           {offerte && (
             <Ligne nom={l('Fin de l’offre', 'Plan ends')} valeur={<span className="tabular-nums">{offerte.jusqu ? `${date(offerte.jusqu)}, ${l('puis', 'then')} ${nomPlan(apresOffre(abonnement), langue)}` : l('Sans limite de durée', 'No end date')}</span>} />
           )}
-          {offerte && paye && <Ligne nom={l('Abonnement', 'Subscription')} valeur={nomAbonnement(abonnement)} />}
+          {offerte && paye && <Ligne nom={l('Abonnement', 'Subscription')} valeur={nomAbonnement(abonnement, langue)} />}
           {paye && abonnement.statut === 'past_due' ? (
             <Ligne nom={l('Paiement', 'Payment')} valeur={<span data-alerte="">{l('Le dernier paiement n’est pas passé', 'The last payment didn’t go through')}</span>}>
               {abonnement.portail && <BoutonSecondaire onClick={versPortail} disabled={portail === 'ouverture'}>{l('Mettre à jour ma carte', 'Update my card')}</BoutonSecondaire>}
             </Ligne>
           ) : paye && abonnement.finPeriode ? (
             <Ligne nom={resilie ? (offerte ? l('Fin de l’abonnement', 'Subscription ends') : l('Fin de l’offre', 'Plan ends')) : l('Prochaine échéance', 'Next payment')}
-              valeur={<span className="tabular-nums">{resilie ? (offerte ? date(abonnement.finPeriode) : `${date(abonnement.finPeriode)}, ${l('puis', 'then')} ${nomApres(abonnement, abonnement.finPeriode)}`) : `${date(abonnement.finPeriode)}${prix ? ` · ${euros(prix, langue)}` : ''}`}</span>} />
+              valeur={<span className="tabular-nums">{resilie ? (offerte ? date(abonnement.finPeriode) : `${date(abonnement.finPeriode)}, ${l('puis', 'then')} ${nomApres(abonnement, abonnement.finPeriode, langue)}`) : `${date(abonnement.finPeriode)}${prix ? ` · ${euros(prix, langue)}` : ''}`}</span>} />
           ) : null}
           {acces.gerer && <LigneLien id="reglage-abonnement" nom={l('Gérer mon abonnement', 'Manage my subscription')} courant={sous === 'abonnement'} onClick={ouvrirSous('reglage-abonnement')} />}
           {acces.factures && (

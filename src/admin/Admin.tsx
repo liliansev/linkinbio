@@ -36,7 +36,7 @@ import { AppelEssai, AppelOffre, FournisseurOffre } from './offre.tsx';
 import { FenetreOffres, RetourPaiement } from './Offres.tsx';
 import { nomApres } from './Facturation.tsx';
 import type { Fonction, PlanPayant } from '../lib/abonnement.ts';
-import { FONCTIONS, OFFRES, joursStats, offreSuivante, peut } from '../lib/abonnement.ts';
+import { FONCTIONS, OFFRES, joursStats, nomOffre as nomOffreDe, offreSuivante, peut } from '../lib/abonnement.ts';
 import type { Droits } from '../lib/droits.ts';
 import { REFUS_PROGRAMMATION, avecEssai, enEssai, horsLimite, nouvellesDates, sansEssai, selonDroits } from '../lib/droits.ts';
 import type { Achat, EtapeRetour, SuiteAchat } from '../lib/achat.ts';
@@ -250,8 +250,8 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
   async function resilier() {
     const a = await api.resilierAbonnement();
     setAbonnement(a);
-    const nom = OFFRES[abonnement.payee].nom;
-    const apres = nomApres(a, a.finPeriode);
+    const nom = nomOffreDe(abonnement.payee, l('fr', 'en'));
+    const apres = nomApres(a, a.finPeriode, l('fr', 'en'));
     const date = a.finPeriode ? new Date(a.finPeriode).toLocaleDateString(l('fr-FR', 'en-US'), { day: 'numeric', month: 'long', year: 'numeric' }) : '';
     setToast({ texte: a.finPeriode ? l(`C’est noté : ${nom} jusqu’au ${date}, puis ${apres}`, `Noted: ${nom} until ${date}, then ${apres}`) : l(`C’est noté : ${nom} jusqu’à la fin de la période payée, puis ${apres}`, `Noted: ${nom} until the end of the paid period, then ${apres}`), long: true });
   }

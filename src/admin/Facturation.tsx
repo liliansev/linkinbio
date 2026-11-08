@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import type { Abonnement, Periode } from '../lib/abonnement.ts';
-import { OFFRES, apresAbonnement, estResilie, euros, offerteAuDessus } from '../lib/abonnement.ts';
+import { OFFRES, apresAbonnement, estResilie, euros, nomOffre as nomPlan, offerteAuDessus } from '../lib/abonnement.ts';
+import type { Langue } from '../lib/types.ts';
+import { useLangue } from '../accueil/langue.ts';
 import { Icone } from '../components/Icone.tsx';
 import { BoutonSecondaire, Groupe, Ligne } from './ui.tsx';
 
@@ -16,15 +18,24 @@ import { BoutonSecondaire, Groupe, Ligne } from './ui.tsx';
  * pas ; elle se lit à côté de l'abonnement quand elle passe devant lui.
  */
 
-const dateLongue = (ms: number) => new Date(ms).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+const dateLongue = (ms: number, langue: Langue) => new Date(ms).toLocaleDateString(langue === 'fr' ? 'fr-FR' : 'en-US', { day: 'numeric', month: 'long', year: 'numeric' });
 export const NOM_PERIODE: Record<Periode, string> = { mois: 'mensuel', an: 'annuel' };
+const NOM_PERIODE_EN: Record<Periode, string> = { mois: 'monthly', an: 'yearly' };
 
 /** « Starter, annuel », « Gratuit » : l'offre de l'abonnement. */
-export const nomAbonnement = (a: Abonnement) => `${OFFRES[a.payee].nom}${a.payee !== 'gratuit' && a.periode ? `, ${NOM_PERIODE[a.periode]}` : ''}`;
+export const nomAbonnement = (a: Abonnement, langue: Langue = 'fr') => `${nomPlan(a.payee, langue)}${a.payee !== 'gratuit' && a.periode ? `, ${(langue === 'fr' ? NOM_PERIODE : NOM_PERIODE_EN)[a.periode]}` : ''}`;
 /** L'offre du compte : « Pro, à l'essai » pendant l'essai, « Pro, offert » quand l'offre offerte passe devant son abonnement, l'abonnement sinon. */
-export const nomOffre = (a: Abonnement) => (a.essai ? `${OFFRES[a.plan].nom}, à l’essai` : offerteAuDessus(a) ? `${OFFRES[a.plan].nom}, offert` : a.plan === a.payee ? nomAbonnement(a) : OFFRES[a.plan].nom);
+export const nomOffre = (a: Abonnement, langue: Langue = 'fr') => {
+  const nom = nomPlan(a.plan, langue);
+  if (a.essai) return langue === 'fr' ? `${nom}, à l’essai` : `${nom}, trial`;
+  if (offerteAuDessus(a)) return langue === 'fr' ? `${nom}, offert` : `${nom}, free`;
+  return a.plan === a.payee ? nomAbonnement(a, langue) : nom;
+};
 /** Ce que la page devient après l'abonnement arrêté à `fin` : « Gratuit », ou « Starter offert ». */
-export const nomApres = (a: Abonnement, fin: number | null) => { const p = apresAbonnement(a, fin); return p === 'gratuit' ? OFFRES.gratuit.nom : `${OFFRES[p].nom} offert`; };
+export const nomApres = (a: Abonnement, fin: number | null, langue: Langue = 'fr') => {
+  const p = apresAbonnement(a, fin);
+  return p === 'gratuit' ? nomPlan('gratuit', langue) : langue === 'fr' ? `${nomPlan(p)} offert` : `${nomPlan(p, 'en')} for free`;
+};
 
 export function Facturation({ abonnement, onOffres, ouvrirPortail, onResilier }: { abonnement: Abonnement; onOffres?: () => void; ouvrirPortail: () => Promise<string>; onResilier?: () => void }) {
   const [ouverture, setOuverture] = useState(false);
@@ -36,12 +47,15 @@ export function Facturation({ abonnement, onOffres, ouvrirPortail, onResilier }:
   const fin = abonnement.finPeriode;
   const prix = paye && abonnement.periode ? OFFRES[abonnement.payee].prix[abonnement.periode] : null;
   const offerte = offerteAuDessus(abonnement);
+  const langue = useLangue();
+  const l = <T,>(fr: T, en: T) => (langue === 'fr' ? fr : en);
+  const date = (ms: number) => dateLongue(ms, langue);
 
   async function versPortail(ou: string) {
     setOuverture(true);
     setErreur(null);
     try { location.href = await ouvrirPortail(); }
-    catch (error) { setOuverture(false); setErreur({ ou, texte: (error as Error).message || 'Creem ne répond pas. Réessaie dans un instant.' }); }
+    catch (error) { setOuverture(false); setErreur({ ou, texte: (error as Error).message || l('Creem ne répond pas. Réessaie dans un instant.', 'Creem is not responding. Try again in a moment.') }); }
   }
   // Ce qui mène chez Creem le dit : on quitte Hopla pour son portail.
   const chezCreem = (ou: string, texte: string, label?: string) => (
@@ -53,30 +67,30 @@ export function Facturation({ abonnement, onOffres, ouvrirPortail, onResilier }:
 
   return (
     <>
-      <Groupe titre="Ton offre">
-        <Ligne nom="Offre" valeur={<strong>{nomAbonnement(abonnement)}</strong>}>
-          {onOffres && !resilie && <BoutonSecondaire onClick={onOffres} aria-haspopup="dialog">{paye ? 'Changer d’offre' : 'Voir les offres'}</BoutonSecondaire>}
+      <Groupe titre={l('Ton offre', 'Your plan')}>
+        <Ligne nom={l('Offre', 'Plan')} valeur={<strong>{nomAbonnement(abonnement, langue)}</strong>}>
+          {onOffres && !resilie && <BoutonSecondaire onClick={onOffres} aria-haspopup="dialog">{paye ? l('Changer d’offre', 'Change plan') : l('Voir les offres', 'See plans')}</BoutonSecondaire>}
         </Ligne>
-        {offerte && <Ligne nom="Offert en plus" valeur={`${OFFRES[offerte.plan].nom}, ${offerte.jusqu ? `jusqu’au ${dateLongue(offerte.jusqu)}` : 'sans limite de durée'}`} />}
-        {prix !== null && abonnement.periode && <Ligne nom="Prix" valeur={<span className="tabular-nums">{euros(prix)} {abonnement.periode === 'an' ? 'par an' : 'par mois'} TTC</span>} />}
+        {offerte && <Ligne nom={l('Offert en plus', 'Free on top')} valeur={`${nomPlan(offerte.plan, langue)}, ${offerte.jusqu ? l(`jusqu’au ${date(offerte.jusqu)}`, `until ${date(offerte.jusqu)}`) : l('sans limite de durée', 'with no end date')}`} />}
+        {prix !== null && abonnement.periode && <Ligne nom={l('Prix', 'Price')} valeur={<span className="tabular-nums">{euros(prix, langue)} {abonnement.periode === 'an' ? l('par an', 'per year') : l('par mois', 'per month')} {l('TTC', 'incl. tax')}</span>} />}
         {impaye ? (
-          <Ligne nom="Paiement" valeur={<span data-alerte="">Le dernier paiement n’est pas passé</span>}>
-            {abonnement.portail && chezCreem('offre', 'Mettre à jour ma carte')}
+          <Ligne nom={l('Paiement', 'Payment')} valeur={<span data-alerte="">{l('Le dernier paiement n’est pas passé', 'The last payment failed')}</span>}>
+            {abonnement.portail && chezCreem('offre', l('Mettre à jour ma carte', 'Update my card'))}
           </Ligne>
         ) : paye && fin ? (
-          <Ligne nom={resilie ? 'Fin de l’offre' : 'Prochaine échéance'} valeur={<span className="tabular-nums">{resilie ? `${dateLongue(fin)}, puis ${nomApres(abonnement, fin)}` : dateLongue(fin)}</span>} />
+          <Ligne nom={resilie ? l('Fin de l’offre', 'Plan ends') : l('Prochaine échéance', 'Next payment')} valeur={<span className="tabular-nums">{resilie ? `${date(fin)}, ${l('puis', 'then')} ${nomApres(abonnement, fin, langue)}` : date(fin)}</span>} />
         ) : null}
       </Groupe>
       {alerte('offre')}
 
       {abonnement.portail && (
         <>
-          <Groupe titre="Moyen de paiement">
-            <Ligne nom="Carte bancaire" valeur="Gérée chez Creem">{chezCreem('carte', 'Modifier chez Creem')}</Ligne>
+          <Groupe titre={l('Moyen de paiement', 'Payment method')}>
+            <Ligne nom={l('Carte bancaire', 'Card')} valeur={l('Gérée chez Creem', 'Managed by Creem')}>{chezCreem('carte', l('Modifier chez Creem', 'Edit with Creem'))}</Ligne>
           </Groupe>
           {alerte('carte')}
-          <Groupe titre="Factures">
-            <Ligne nom="Tes factures" valeur="Une à chaque paiement, en PDF">{chezCreem('factures', 'Voir chez Creem')}</Ligne>
+          <Groupe titre={l('Factures', 'Invoices')}>
+            <Ligne nom={l('Tes factures', 'Your invoices')} valeur={l('Une à chaque paiement, en PDF', 'One per payment, as PDF')}>{chezCreem('factures', l('Voir chez Creem', 'View with Creem'))}</Ligne>
           </Groupe>
           {alerte('factures')}
         </>
@@ -84,15 +98,15 @@ export function Facturation({ abonnement, onOffres, ouvrirPortail, onResilier }:
 
       {/* L'offre court jusqu'au bout de ce qui est payé, la page garde tout. Le récapitulatif dit ce qui s'arrête avant le geste. */}
       {paye && !resilie && onResilier && (
-        <Groupe titre="Résilier">
-          <Ligne className="adm-ligne-pile" nom={<span className="text-[#3d3d39]">Ta page repasse en {nomApres(abonnement, fin)} {fin ? `le ${dateLongue(fin)}` : 'à la fin de la période payée'}, avec tout son contenu.</span>}>
-            <BoutonSecondaire onClick={onResilier} aria-haspopup="dialog" className="shrink-0 whitespace-nowrap">Résilier mon abonnement</BoutonSecondaire>
+        <Groupe titre={l('Résilier', 'Cancel')}>
+          <Ligne className="adm-ligne-pile" nom={<span className="text-[#3d3d39]">{l(`Ta page repasse en ${nomApres(abonnement, fin)} ${fin ? `le ${date(fin)}` : 'à la fin de la période payée'}, avec tout son contenu.`, `Your page goes back to ${nomApres(abonnement, fin, 'en')} ${fin ? `on ${date(fin)}` : 'at the end of the paid period'}, with all its content.`)}</span>}>
+            <BoutonSecondaire onClick={onResilier} aria-haspopup="dialog" className="shrink-0 whitespace-nowrap">{l('Résilier mon abonnement', 'Cancel my subscription')}</BoutonSecondaire>
           </Ligne>
         </Groupe>
       )}
 
       <footer className="adm-reglages-pied">
-        <p>Creem, revendeur officiel de Hopla, encaisse les paiements, émet les factures et gère la TVA.</p>
+        <p>{l('Creem, revendeur officiel de Hopla, encaisse les paiements, émet les factures et gère la TVA.', 'Creem, Hopla’s official reseller, takes payments, issues invoices and handles VAT.')}</p>
       </footer>
     </>
   );
