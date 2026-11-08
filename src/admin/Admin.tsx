@@ -18,6 +18,8 @@ import { OngletStats } from './OngletStats.tsx';
 import { MaListe } from './MaListe.tsx';
 import { FenetreListe, ListeBranchee, OngletIntegrations } from './OngletIntegrations.tsx';
 import { OngletReglages, resumeRedirection } from './OngletReglages.tsx';
+import { LangueSite, choix, useL } from '../accueil/langue.ts';
+import type { Choix } from '../accueil/langue.ts';
 import { redirectionActive } from '../lib/sorties.ts';
 import { OngletComptes } from './OngletComptes.tsx';
 import { AccepterCgu } from './AccepterCgu.tsx';
@@ -53,11 +55,12 @@ type Onglet = 'page' | 'stats' | 'integrations' | 'reglages' | 'comptes';
 type Sauvegarde = 'ok' | 'encours' | 'erreur';
 
 // Les mêmes pictos pleins que partout ailleurs dans le back office. Comptes, l'outil de Lilian, vient en dernier, à part.
-const ONGLETS: { id: Onglet; nom: string; icone: string }[] = [
-  { id: 'page', nom: 'Ma page', icone: 'nav-page' },
-  { id: 'stats', nom: 'Stats', icone: 'nav-stats' },
-  { id: 'integrations', nom: 'Intégrations', icone: 'nav-integrations' },
-  { id: 'reglages', nom: 'Réglages', icone: 'nav-reglages' },
+const ONGLETS = (l: Choix): { id: Onglet; nom: string; icone: string }[] => [
+  { id: 'page', nom: l('Ma page', 'My page'), icone: 'nav-page' },
+  { id: 'stats', nom: l('Stats', 'Analytics'), icone: 'nav-stats' },
+  { id: 'integrations', nom: l('Intégrations', 'Integrations'), icone: 'nav-integrations' },
+  { id: 'reglages', nom: l('Réglages', 'Settings'), icone: 'nav-reglages' },
+  // Comptes reste en français : seul le compte principal, celui de Lilian, le voit.
   { id: 'comptes', nom: 'Comptes', icone: 'nav-comptes' },
 ];
 
@@ -68,8 +71,8 @@ const nouvelId = () => `n${Date.now().toString(36)}${Math.random().toString(36).
 /** Les fonctions qui se règlent dans un bloc (ses dates, son créneau, son drop). */
 const FONCTIONS_DE_BLOC: Fonction[] = ['programmation', 'heure', 'drops', 'vitrine'];
 /** Après l'achat de la vitrine, le geste qui pose le bloc qu'on voulait, ou ramène à celui d'où l'on venait. */
-const AJOUTER: Record<TypeVitrine, string> = { reservation: 'Ajouter ta prise de rendez-vous', soutien: 'Ajouter ton bouton «\u202fMe soutenir\u202f»', produit: 'Ajouter ton produit' };
-const RETROUVER: Partial<Record<TypeBloc, string>> = { reservation: 'Retrouver ta prise de rendez-vous', soutien: 'Retrouver ton bouton «\u202fMe soutenir\u202f»', produit: 'Retrouver ton produit' };
+const AJOUTER = (l: Choix): Record<TypeVitrine, string> => ({ reservation: l('Ajouter ta prise de rendez-vous', 'Add your booking'), soutien: l('Ajouter ton bouton «\u202fMe soutenir\u202f»', 'Add your “Support me” button'), produit: l('Ajouter ton produit', 'Add your product') });
+const RETROUVER = (l: Choix): Partial<Record<TypeBloc, string>> => ({ reservation: l('Retrouver ta prise de rendez-vous', 'Back to your booking'), soutien: l('Retrouver ton bouton «\u202fMe soutenir\u202f»', 'Back to your “Support me” button'), produit: l('Retrouver ton produit', 'Back to your product') });
 /** Le bloc que touche le geste d'après l'achat, pour qu'on le reconnaisse : son texte, puis son adresse, l'un et l'autre raccourcis. */
 function nommerBloc({ titre, url }: Pick<Bloc, 'titre' | 'url'>): string {
   const court = (t: string, n: number) => (t.length > n ? `${t.slice(0, n - 1).trimEnd()}…` : t);
@@ -94,6 +97,10 @@ function lireRetour(): Achat | null {
 export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatAdmin; demo?: boolean }) {
   const [blocs, setBlocs] = useState(initial.blocs);
   const [reglages, setReglages] = useState(initial.reglages);
+  // Le back office parle la langue du compte, la même que sa page (8 novembre 2026).
+  const l = choix(reglages.langue);
+  // La langue change dans Réglages : le document la suit sans attendre un rechargement.
+  useEffect(() => { document.documentElement.lang = reglages.langue; }, [reglages.langue]);
   const [clics, setClics] = useState(initial.clics);
   const [onglet, setOnglet] = useState<Onglet>('page');
   // Les offres, par-dessus l'écran en cours : `pour`, la fonction réservée d'où l'on vient ; `vers`, l'offre à mettre en avant sans fonction ;
@@ -197,7 +204,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
   };
   const compte = useMemo(() => ({ ...initial.compte, plan: abonnement.plan }), [initial.compte, abonnement.plan]);
   // L'onglet Comptes n'existe que pour Lilian.
-  const onglets = ONGLETS.filter(o => o.id !== 'comptes' || api.comptes);
+  const onglets = ONGLETS(l).filter(o => o.id !== 'comptes' || api.comptes);
   const minuteur = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   /** Chaque écriture passe ici : l'indicateur suit les requêtes en vol. */
@@ -217,10 +224,10 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
       // La feuille ouverte sur un bloc que le serveur n'a pas gardé se ferme avec lui.
       if (message === REFUS_PROGRAMMATION) api.charger().then(e => { setBlocs(e.blocs); setDroits(e.droits); setAbonnement(e.abonnement); setEdition(ed => (ed && !ed.nouveau && !e.blocs.some(b => b.id === ed.bloc.id) ? null : ed)); if (enCours.current === 0) setSauvegarde('ok'); }).catch(() => {});
       setToast(message.includes('Session')
-        ? { texte: 'Ta session a expiré. Recharge la page pour te reconnecter.' }
+        ? { texte: l('Ta session a expiré. Recharge la page pour te reconnecter.', 'Your session has expired. Reload the page to sign in again.') }
         : message === REFUS_PROGRAMMATION
           ? refusProgrammation()
-          : { texte: 'Pas enregistré. Vérifie ta connexion.', action: 'Réessayer', annuler: () => { setToast(null); void ecrireRef.current(action); } });
+          : { texte: l('Pas enregistré. Vérifie ta connexion.', 'Not saved. Check your connection.'), action: l('Réessayer', 'Retry'), annuler: () => { setToast(null); void ecrireRef.current(action); } });
       return undefined;
     }
   }, [api]);
@@ -245,12 +252,13 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
     setAbonnement(a);
     const nom = OFFRES[abonnement.payee].nom;
     const apres = nomApres(a, a.finPeriode);
-    setToast({ texte: a.finPeriode ? `C’est noté : ${nom} jusqu’au ${new Date(a.finPeriode).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}, puis ${apres}` : `C’est noté : ${nom} jusqu’à la fin de la période payée, puis ${apres}`, long: true });
+    const date = a.finPeriode ? new Date(a.finPeriode).toLocaleDateString(l('fr-FR', 'en-US'), { day: 'numeric', month: 'long', year: 'numeric' }) : '';
+    setToast({ texte: a.finPeriode ? l(`C’est noté : ${nom} jusqu’au ${date}, puis ${apres}`, `Noted: ${nom} until ${date}, then ${apres}`) : l(`C’est noté : ${nom} jusqu’à la fin de la période payée, puis ${apres}`, `Noted: ${nom} until the end of the paid period, then ${apres}`), long: true });
   }
   // Le chemin vers les offres, pour un refus du serveur (absent quand le compte ne peut pas s'abonner) : elles s'ouvrent par-dessus.
   const versOffres = useRef<(() => void) | undefined>(undefined);
   versOffres.current = peutAcheter ? () => ouvrirOffres('programmation') : undefined;
-  const refusProgrammation = () => ({ texte: REFUS_PROGRAMMATION, long: true, ...(versOffres.current ? { action: 'Voir les offres', annuler: () => { setToast(null); versOffres.current?.(); } } : {}) });
+  const refusProgrammation = () => ({ texte: REFUS_PROGRAMMATION, long: true, ...(versOffres.current ? { action: l('Voir les offres', 'See plans'), annuler: () => { setToast(null); versOffres.current?.(); } } : {}) });
   // Un nouveau message part à son heure : la tenue du précédent ne le retient pas (Annuler, mis au point par le code, disparaît
   // avec le toast sans qu'on le quitte). Déclaré avant l'effet qui met « Annuler » au point : celui-ci a le dernier mot.
   useEffect(() => { setToastTenu(false); }, [toast]);
@@ -359,7 +367,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
           const etape = etapeRetour(achat, e.abonnement, essais);
           if (etape === 'fait' || delaiAvantEssai(essais) === null) { setAbonnement(e.abonnement); setDroits(e.droits); }
           if (etape === 'fait') {
-            if (retourFerme.current) setToast({ texte: `C’est fait, tu es en ${OFFRES[achat.plan].nom}` });
+            if (retourFerme.current) setToast({ texte: l(`C’est fait, tu es en ${OFFRES[achat.plan].nom}`, `Done, you’re on ${OFFRES[achat.plan].nom}`) });
             dire('fait');
             return;
           }
@@ -388,7 +396,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
     }
     if (edition || onglet !== 'page') return;
     ajouterBloc(d.bloc, d.enBas, d.choisi, true);
-    setToast({ texte: 'Repris là où tu l’avais laissé', genre: 'info' });
+    setToast({ texte: l('Repris là où tu l’avais laissé', 'Picked up where you left off'), genre: 'info' });
   }, [premiersPas, cguAJour]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /** Avant un autre geste : ce que l'éditeur ouvert a de valable s'écrit ; un champ faux le retient (faux). */
@@ -443,10 +451,10 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
       if (!neuf || b.public) return ouvrirBloc(b, enFaire);
       if (libererEdition()) setEdition({ bloc: { ...b, public: true }, nouveau: true, repris: true, ...(enFaire ? { enFaire } : {}) });
     };
-    if (pour === 'couleurs') return { texte: 'Essayer tes couleurs', faire: () => { choisirOnglet('page'); setDemandeDesign('couleurs'); } };
-    if (pour === 'stats') return { texte: 'Voir tes stats', faire: () => choisirOnglet('stats') };
-    if (pour === 'avis') return { texte: 'Ajouter un avis', faire: () => poser(nouveauBloc('preuve', nouvelId())) };
-    if (pour === 'listeEmail') return { texte: 'Ajouter ta liste e-mail', faire: () => poser(nouveauBloc('inscription', nouvelId())) };
+    if (pour === 'couleurs') return { texte: l('Essayer tes couleurs', 'Try your colors'), faire: () => { choisirOnglet('page'); setDemandeDesign('couleurs'); } };
+    if (pour === 'stats') return { texte: l('Voir tes stats', 'See your analytics'), faire: () => choisirOnglet('stats') };
+    if (pour === 'avis') return { texte: l('Ajouter un avis', 'Add a review'), faire: () => poser(nouveauBloc('preuve', nouvelId())) };
+    if (pour === 'listeEmail') return { texte: l('Ajouter ta liste e-mail', 'Add your email list'), faire: () => poser(nouveauBloc('inscription', nouvelId())) };
     /*
      * La vitrine (24 octobre 2026) : on revient à ce qu'on voulait en faire. Le lien d'où l'on était parti prend le bloc que son
      * adresse appelle, du même geste que dans le bloc (« En faire une prise de rendez-vous ») ; un lien partenaire, son code
@@ -455,19 +463,19 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
      */
     if (pour === 'vitrine') {
       const b = bloc ? blocs.find(x => x.id === bloc) : undefined;
-      if (b && b.type === 'lien' && !b.partenariat && type && adresseSaisie(b.url)) return { texte: EN_FAIRE[type], detail: `Ton lien ${nommerBloc(b)}`, faire: () => rouvrir(b, type) };
-      if (b?.partenariat) return { texte: 'Ajouter ton code promo', detail: `Ton lien ${nommerBloc(b)}`, faire: () => rouvrir(b) };
-      if (b) return { texte: RETROUVER[b.type] ?? 'Retrouver ton bloc', detail: nommerBloc(b), faire: () => rouvrir(b) };
+      if (b && b.type === 'lien' && !b.partenariat && type && adresseSaisie(b.url)) return { texte: EN_FAIRE[type], detail: `${l('Ton lien', 'Your link')} ${nommerBloc(b)}`, faire: () => rouvrir(b, type) };
+      if (b?.partenariat) return { texte: l('Ajouter ton code promo', 'Add your promo code'), detail: `${l('Ton lien', 'Your link')} ${nommerBloc(b)}`, faire: () => rouvrir(b) };
+      if (b) return { texte: RETROUVER(l)[b.type] ?? l('Retrouver ton bloc', 'Back to your block'), detail: nommerBloc(b), faire: () => rouvrir(b) };
       if (type) {
         const neufAvecAdresse = { ...nouveauBloc(type, nouvelId()), ...(url ? { url } : {}) };
-        return { texte: AJOUTER[type], ...(url ? { detail: `Avec ${nommerBloc({ titre: '', url })}` } : {}), faire: () => poser(neufAvecAdresse, !!url) };
+        return { texte: AJOUTER(l)[type], ...(url ? { detail: `${l('Avec', 'With')} ${nommerBloc({ titre: '', url })}` } : {}), faire: () => poser(neufAvecAdresse, !!url) };
       }
-      return { texte: 'Remplir ta vitrine', faire: () => { if (choisirOnglet('integrations')) setRaccourci('reservation'); } };
+      return { texte: l('Remplir ta vitrine', 'Fill your storefront'), faire: () => { if (choisirOnglet('integrations')) setRaccourci('reservation'); } };
     }
     // Une règle de bloc (dates, créneau, drop) : on revient au bloc d'où l'on était parti, s'il est toujours là.
     const b = pour && FONCTIONS_DE_BLOC.includes(pour) && bloc ? blocs.find(x => x.id === bloc) : undefined;
     if (b) return {
-      texte: pour === 'programmation' ? 'Programmer ce bloc' : pour === 'heure' ? 'Choisir son créneau' : 'Régler ce drop',
+      texte: pour === 'programmation' ? l('Programmer ce bloc', 'Schedule this block') : pour === 'heure' ? l('Choisir son créneau', 'Choose its time slot') : l('Régler ce drop', 'Set up this drop'),
       ...(nommerBloc(b) ? { detail: nommerBloc(b) } : {}),
       faire: () => { setRegleOuverte({ bloc: b.id, regle: pour === 'drops' ? 'acces' : 'moment' }); rouvrir(b); },
     };
@@ -528,28 +536,28 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
     ecrire(async () => { await api.enregistrerBloc(bloc); if (enBas) await api.ordonner(liste.map(b => b.id)); });
     if (options.masque) {
       // Un bloc neuf refermé sans « Ajouter à ma page » : gardé, masqué ; le message reste jusqu'au geste suivant, avec « Afficher ».
-      setToast({ texte: 'Gardé, masqué de ta page', action: 'Afficher', annuler: () => afficher(bloc.id) });
+      setToast({ texte: l('Gardé, masqué de ta page', 'Kept, hidden from your page'), action: l('Afficher', 'Show'), annuler: () => afficher(bloc.id) });
       if (!options.discret) montrer(bloc.id);
     } else if (nouveau) {
       // Une liste e-mail posée sans newsletter branchée : ses inscrits ne partiraient nulle part. Le parcours s'ouvre de lui-même.
       if (bloc.type === 'inscription' && integration === null) setTimeout(() => setFenetreListe(true), 420);
       const rang = liste.findIndex(b => b.id === bloc.id);
-      const ou = ancien ? (rang === 0 ? 'en haut de ta page' : rang === liste.length - 1 ? 'en bas de ta page' : 'à ta page') : enBas ? 'en bas de ta page' : 'en haut de ta page';
-      setToast({ texte: `Ajouté ${ou}`, annuler: () => {
+      const ou = ancien ? (rang === 0 ? l('en haut de ta page', 'to the top of your page') : rang === liste.length - 1 ? l('en bas de ta page', 'to the bottom of your page') : l('à ta page', 'to your page')) : enBas ? l('en bas de ta page', 'to the bottom of your page') : l('en haut de ta page', 'to the top of your page');
+      setToast({ texte: `${l('Ajouté', 'Added')} ${ou}`, annuler: () => {
         // Gardé masqué avant d'être ajouté, il le redevient ; sinon, il s'en va.
         poserListe(ancien ? blocsRef.current.map(b => (b.id === bloc.id ? ancien : b)) : blocsRef.current.filter(b => b.id !== bloc.id));
         setEdition(e => (e?.bloc.id === bloc.id ? null : e));
         // La feuille « Où vont tes inscrits ? » ouverte pour ce bloc n'a plus lieu d'être.
         if (bloc.type === 'inscription') setFenetreListe(false);
-        setToast({ texte: 'Ajout annulé', genre: 'info' });
+        setToast({ texte: l('Ajout annulé', 'Add undone'), genre: 'info' });
         ecrire(async () => { if (ancien) await api.enregistrerBloc(ancien); else await api.supprimerBloc(bloc.id); });
       } });
       if (!options.discret) montrer(bloc.id);
     } else if (!options.discret) {
       // Une modification se défait aussi, le temps du message : le bloc revient tel qu'il était.
       const ancien = avant.find(b => b.id === bloc.id);
-      if (ancien && JSON.stringify(ancien) !== JSON.stringify(bloc)) setToast({ texte: 'Modifications enregistrées', annuler: () => {
-        poserListe(blocsRef.current.map(b => (b.id === ancien.id ? ancien : b))); setToast({ texte: 'Changements annulés', genre: 'info' }); ecrire(() => api.enregistrerBloc(ancien));
+      if (ancien && JSON.stringify(ancien) !== JSON.stringify(bloc)) setToast({ texte: l('Modifications enregistrées', 'Changes saved'), annuler: () => {
+        poserListe(blocsRef.current.map(b => (b.id === ancien.id ? ancien : b))); setToast({ texte: l('Changements annulés', 'Changes undone'), genre: 'info' }); ecrire(() => api.enregistrerBloc(ancien));
       } });
     }
   }
@@ -562,10 +570,10 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
     poserListe(blocsRef.current.map(b => (b.id === id ? montre : b)));
     setEdition(e => (e && !e.nouveau && e.bloc.id === id ? { ...e, bloc: montre } : e));
     ecrire(() => api.enregistrerBloc(montre));
-    setToast({ texte: 'Montré sur ta page', annuler: () => {
+    setToast({ texte: l('Montré sur ta page', 'Shown on your page'), annuler: () => {
       poserListe(blocsRef.current.map(b => (b.id === id ? { ...b, public: false } : b)));
       setEdition(e => (e && !e.nouveau && e.bloc.id === id ? { ...e, bloc: { ...e.bloc, public: false } } : e));
-      setToast({ texte: 'Masqué de ta page', genre: 'info' });
+      setToast({ texte: l('Masqué de ta page', 'Hidden from your page'), genre: 'info' });
       ecrire(() => api.enregistrerBloc({ ...montre, public: false }));
     } });
     montrer(id);
@@ -575,10 +583,10 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
   function replier(avant: Bloc) {
     // Retiré entre-temps, il a son propre message.
     if (!blocsRef.current.some(b => b.id === avant.id)) return;
-    setToast({ texte: 'Modifications enregistrées', annuler: () => {
+    setToast({ texte: l('Modifications enregistrées', 'Changes saved'), annuler: () => {
       if (!blocsRef.current.some(b => b.id === avant.id)) return;
       poserListe(blocsRef.current.map(b => (b.id === avant.id ? avant : b)));
-      setToast({ texte: 'Changements annulés', genre: 'info' });
+      setToast({ texte: l('Changements annulés', 'Changes undone'), genre: 'info' });
       ecrire(() => api.enregistrerBloc(avant));
     } });
   }
@@ -590,9 +598,9 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
     const change = { ...vrai, public: !vrai.public };
     poserListe(blocsRef.current.map(b => (b.id === vrai.id ? change : b)));
     ecrire(() => api.enregistrerBloc(change));
-    setToast({ texte: change.public ? 'Montré sur ta page' : 'Masqué de ta page', annuler: () => {
+    setToast({ texte: change.public ? l('Montré sur ta page', 'Shown on your page') : l('Masqué de ta page', 'Hidden from your page'), annuler: () => {
       poserListe(blocsRef.current.map(b => (b.id === vrai.id ? { ...b, public: vrai.public } : b)));
-      setToast({ texte: 'Changements annulés', genre: 'info' });
+      setToast({ texte: l('Changements annulés', 'Changes undone'), genre: 'info' });
       ecrire(() => api.enregistrerBloc({ ...change, public: vrai.public }));
     } });
   }
@@ -616,12 +624,12 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
   }
 
   /** Un nouvel ordre : seuls les identifiants comptent, la page peut montrer un bloc en cours de saisie. */
-  function ordonner(liste: Bloc[], texte = 'Bloc déplacé') {
+  function ordonner(liste: Bloc[], texte = l('Bloc déplacé', 'Block moved')) {
     const avant = blocsRef.current.map(b => b.id);
     const nouvelle = selonOrdre(liste.map(b => b.id));
     poserListe(nouvelle);
     ecrire(() => api.ordonner(nouvelle.map(b => b.id)));
-    setToast({ texte, annuler: () => { const remise = selonOrdre(avant); poserListe(remise); setToast({ texte: 'Remis à sa place', genre: 'info' }); ecrire(() => api.ordonner(remise.map(b => b.id))); } });
+    setToast({ texte, annuler: () => { const remise = selonOrdre(avant); poserListe(remise); setToast({ texte: l('Remis à sa place', 'Put back in place'), genre: 'info' }); ecrire(() => api.ordonner(remise.map(b => b.id))); } });
   }
 
   /** Un cran plus haut ou plus bas, depuis la feuille du bloc : l'ordre se règle aussi sans glisser. */
@@ -633,7 +641,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
     const liste = [...blocs];
     [liste[i], liste[j]] = [liste[j], liste[i]];
     // Le déplacement s'enregistre tout de suite, à part des réglages de la feuille : le message le dit.
-    ordonner(liste, sens < 0 ? 'Bloc monté d’un cran' : 'Bloc descendu d’un cran');
+    ordonner(liste, sens < 0 ? l('Bloc monté d’un cran', 'Block moved up one') : l('Bloc descendu d’un cran', 'Block moved down one'));
   }
 
   function supprimer(bloc: Bloc) {
@@ -647,17 +655,17 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
     setEdition(e => (e?.bloc.id === bloc.id ? null : e));
     ecrire(() => api.supprimerBloc(bloc.id));
     setToast({
-      texte: 'Retiré de ta page',
+      texte: l('Retiré de ta page', 'Removed from your page'),
       // Retirer ne demande pas de confirmation : l'annulation reste offerte plus longtemps.
       long: true,
       annuler: () => {
         // À sa place d'avant : juste après le bloc qui le précédait.
-        const l = blocsRef.current.filter(b => b.id !== vrai.id);
+        const reste = blocsRef.current.filter(b => b.id !== vrai.id);
         const precedent = avant[i - 1]?.id;
-        const k = precedent ? l.findIndex(b => b.id === precedent) + 1 : 0;
-        const remise = [...l.slice(0, k), vrai, ...l.slice(k)];
+        const k = precedent ? reste.findIndex(b => b.id === precedent) + 1 : 0;
+        const remise = [...reste.slice(0, k), vrai, ...reste.slice(k)];
         poserListe(remise);
-        setToast({ texte: 'Remis sur ta page', genre: 'info' });
+        setToast({ texte: l('Remis sur ta page', 'Back on your page'), genre: 'info' });
         ecrire(async () => { await api.enregistrerBloc(vrai); await api.ordonner(remise.map(b => b.id)); });
       },
     });
@@ -706,14 +714,14 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
     if (meta) meta.content = cremeEnHaut ? '#f3eee5' : COULEUR_NAVIGATEUR;
   }, [cremeEnHaut]);
 
-  if (!cguAJour) return <AccepterCgu accepter={async () => { await api.accepterCgu(); setCguAJour(true); }} deconnexion={deconnexion} />;
+  if (!cguAJour) return <LangueSite.Provider value={reglages.langue}><AccepterCgu accepter={async () => { await api.accepterCgu(); setCguAJour(true); }} deconnexion={deconnexion} /></LangueSite.Provider>;
 
   // Au bureau, le message se pose en bas à droite (`.adm-toast` dans admin.css), hors de la liste des blocs : il ne couvre
   // jamais la rangée qu'on règle.
   const bulle = toast && (
     <div role="status" onPointerEnter={() => setToastTenu(true)} onPointerLeave={() => setToastTenu(false)} onFocus={e => { if (e.target.matches(':focus-visible')) setToastTenu(true); }} onBlur={e => { if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setToastTenu(false); }} className={`adm-toast fixed inset-x-4 ${onglet === 'page' && !premiersPas ? 'bottom-[calc(134px+env(safe-area-inset-bottom))]' : 'bottom-[calc(76px+env(safe-area-inset-bottom))]'} z-[60] mx-auto flex max-w-sm items-center justify-between gap-3 rounded-2xl bg-white px-4 py-3 text-[14.5px] font-medium text-nuit shadow-2xl lg:bottom-6`}>
       <span className="flex items-center gap-2">{/* La coche confirme ; une simple information n'en a pas. */}{!toast.annuler && toast.genre !== 'info' && sauvegarde !== 'erreur' && <span aria-hidden="true" className="text-citron"><Icone nom="ui-ok" taille={18} /></span>}{toast.texte}</span>
-      {toast.annuler && <button ref={actionToast} type="button" onClick={() => agirToast(toast.annuler!)} className="-my-2 min-h-11 rounded-lg px-3 font-semibold text-nuit underline decoration-nuit/30 underline-offset-4 hover:bg-nuit/10">{toast.action ?? 'Annuler'}</button>}
+      {toast.annuler && <button ref={actionToast} type="button" onClick={() => agirToast(toast.annuler!)} className="-my-2 min-h-11 rounded-lg px-3 font-semibold text-nuit underline decoration-nuit/30 underline-offset-4 hover:bg-nuit/10">{toast.action ?? l('Annuler', 'Undo')}</button>}
     </div>
   );
 
@@ -728,6 +736,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
   if (premiersPas) {
     // Les premiers pas n'ont aucune fonction réservée : pas de chemin vers les offres.
     return (
+      <LangueSite.Provider value={reglages.langue}>
       <FournisseurOffre value={{ droits }}>
       <SourceFlux.Provider value={lireFlux}>
         <PremiersPas compte={compte} reglages={reglages} blocs={blocs} onReglages={changerReglages} onPoserBlocs={poserBlocs}
@@ -739,6 +748,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
         {bulle}
       </SourceFlux.Provider>
       </FournisseurOffre>
+      </LangueSite.Provider>
     );
   }
 
@@ -752,7 +762,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
       onEnregistrer={enregistrerBloc} onSupprimer={supprimer} onDupliquer={dupliquer} onDeplacer={deplacer} place={{ rang: blocs.findIndex(b => b.id === edition.bloc.id), total: blocs.length }} envoyerImage={d => api.envoyerImage(d)} apercuSite={(u, i) => api.apercuSite(u, i)} noteAvis={api.noteAvis} />
     </RegleAOuvrir.Provider>
   );
-  const indicateur = sauvegarde === 'encours' ? 'Enregistrement…' : sauvegarde === 'erreur' ? 'Non enregistré' : 'Enregistré';
+  const indicateur = sauvegarde === 'encours' ? l('Enregistrement…', 'Saving…') : sauvegarde === 'erreur' ? l('Non enregistré', 'Not saved') : l('Enregistré', 'Saved');
   // Le même signe au téléphone et au bureau : une coche quand tout est gardé, un point qui bat pendant l'envoi, du rouge seulement en cas d'échec.
   // Le point prend la couleur de l'état, sur le bleu de l'en-tête au téléphone comme sur le blanc au bureau.
   const signe = sauvegarde === 'ok'
@@ -768,7 +778,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
         <span className="min-w-0 self-center truncate px-2.5 text-[13px] text-white/55" translate="no">{courte.slice(0, coupe)}<span className="font-medium text-white">{courte.slice(coupe)}</span></span>
         <BoutonAdresse adresse={adresse} />
       </div>
-      <a href={demo ? '#page' : adresse} target={demo ? undefined : '_blank'} rel={demo ? undefined : 'noopener'} className={classeBouton.secondaire}><Icone nom="ui-ouvrir" taille={15} className="shrink-0" />Voir ma page</a>
+      <a href={demo ? '#page' : adresse} target={demo ? undefined : '_blank'} rel={demo ? undefined : 'noopener'} className={classeBouton.secondaire}><Icone nom="ui-ouvrir" taille={15} className="shrink-0" />{l('Voir ma page', 'View my page')}</a>
     </>
   );
   const titre = onglets.find(o => o.id === onglet)!.nom;
@@ -789,31 +799,31 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
     if (!vers && !essais.length && !attente) return null;
     const perso = Object.values(reglages.couleurs).some(Boolean);
     const noms: Partial<Record<Fonction, string>> = {
-      couleurs: perso && reglages.police ? 'tes couleurs et ta police' : perso ? 'tes couleurs' : 'ta police',
-      fond: 'ton image de fond', grandePhoto: 'ta grande photo',
+      couleurs: perso && reglages.police ? l('tes couleurs et ta police', 'your colors and font') : perso ? l('tes couleurs', 'your colors') : l('ta police', 'your font'),
+      fond: l('ton image de fond', 'your background image'), grandePhoto: l('ta grande photo', 'your large photo'),
     };
-    const liste = essais.map(f => noms[f]).join(', ').replace(/, ([^,]*)$/, ' et $1');
+    const liste = essais.map(f => noms[f]).join(', ').replace(/, ([^,]*)$/, l(' et $1', ' and $1'));
     const plusieurs = essais.length > 1 || (essais[0] === 'couleurs' && perso);
     return (
       <>
         {vers && (
           <p role="status" className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl bg-amber-400/15 py-1.5 pr-1.5 pl-3.5 text-[13.5px] leading-snug text-amber-100">
-            <span className="min-w-[14rem] flex-1 text-pretty">Ta page renvoie ses visiteurs {resumeRedirection(vers, reglages.redirection.fin).replace(/^Vers/, 'vers')}.</span>
-            <button type="button" onClick={() => changerReglages({ ...reglages, redirection: { url: '', fin: '' } })} className={`ml-auto ${classeBouton.secondaire}`}>Arrêter</button>
+            <span className="min-w-[14rem] flex-1 text-pretty">{l('Ta page renvoie ses visiteurs', 'Your page sends its visitors')} {resumeRedirection(vers, reglages.redirection.fin, false, reglages.langue).replace(/^Vers/, 'vers').replace(/^To /, 'to ')}.</span>
+            <button type="button" onClick={() => changerReglages({ ...reglages, redirection: { url: '', fin: '' } })} className={`ml-auto ${classeBouton.secondaire}`}>{l('Arrêter', 'Stop')}</button>
           </p>
         )}
         {attente > 0 && (
           <p role="status" className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl bg-[var(--adm-citron)] py-2 pr-2 pl-3.5 text-[13.5px] leading-snug text-[var(--adm-citron-encre)] sm:py-1.5">
-            <span className="min-w-[14rem] flex-1 text-pretty">Ta page montre ses {BLOCS_GRATUITS} premiers blocs. {attente === 1 ? 'Un autre attend' : `Les ${attente} autres attendent`} Starter.</span>
-            <button type="button" onClick={() => ouvrirOffres('blocs')} className={`ml-auto ${classeBouton.principal}`}>Passer en Starter</button>
+            <span className="min-w-[14rem] flex-1 text-pretty">{l(`Ta page montre ses ${BLOCS_GRATUITS} premiers blocs. ${attente === 1 ? 'Un autre attend' : `Les ${attente} autres attendent`} Starter.`, `Your page shows its first ${BLOCS_GRATUITS} blocks. ${attente === 1 ? 'One more is waiting' : `${attente} more are waiting`} for Starter.`)}</span>
+            <button type="button" onClick={() => ouvrirOffres('blocs')} className={`ml-auto ${classeBouton.principal}`}>{l('Passer en Starter', 'Upgrade to Starter')}</button>
           </p>
         )}
         {essais.length > 0 && (
           <p role="status" className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl bg-[var(--adm-citron)] py-2 pr-2 pl-3.5 text-[13.5px] leading-snug text-[var(--adm-citron-encre)] sm:py-1.5">
-            <span className="min-w-[14rem] flex-1 text-pretty">À l’essai : {liste}. Tes visiteurs {plusieurs ? 'les' : 'la'} verront avec Starter.</span>
+            <span className="min-w-[14rem] flex-1 text-pretty">{l(`À l’essai : ${liste}. Tes visiteurs ${plusieurs ? 'les' : 'la'} verront avec Starter.`, `On trial: ${liste}. Your visitors will see ${plusieurs ? 'them' : 'it'} with Starter.`)}</span>
             <span className="ml-auto flex gap-1.5">
-              <button type="button" onClick={() => changerReglages(sansEssai(reglages, droits))} className={classeBouton.discret}>Retirer</button>
-              <button type="button" onClick={() => ouvrirOffres(essais[0])} className={classeBouton.principal}>Passer en Starter</button>
+              <button type="button" onClick={() => changerReglages(sansEssai(reglages, droits))} className={classeBouton.discret}>{l('Retirer', 'Remove')}</button>
+              <button type="button" onClick={() => ouvrirOffres(essais[0])} className={classeBouton.principal}>{l('Passer en Starter', 'Upgrade to Starter')}</button>
             </span>
           </p>
         )}
@@ -822,16 +832,17 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
   })();
 
   return (
+    <LangueSite.Provider value={reglages.langue}>
     <FournisseurOffre value={offre}>
     <ListeBranchee.Provider value={{ integration, brancher: () => setFenetreListe(true) }}>
     <SourceFlux.Provider value={lireFlux}>
     <div className="adm adm-shell min-h-dvh font-sans text-white antialiased" data-onglet={onglet} data-sous={fil ? '' : undefined}>
       {/* Au clavier, le premier arrêt passe la navigation et l'en-tête : il mène droit au contenu de l'onglet (critique série 2). */}
-      <a href="#contenu-admin" className={`${classeBouton.principal} sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-[70]`}>Aller au contenu</a>
+      <a href="#contenu-admin" className={`${classeBouton.principal} sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-[70]`}>{l('Aller au contenu', 'Skip to content')}</a>
       {/* Au bureau, une barre latérale fine : la marque, les sections, et le compte en bas, qui s'ouvre sur « Me déconnecter ». */}
-      <aside className="adm-sidebar fixed inset-y-0 left-0 z-30 hidden w-(--adm-barre) flex-col lg:flex" aria-label="Navigation">
+      <aside className="adm-sidebar fixed inset-y-0 left-0 z-30 hidden w-(--adm-barre) flex-col lg:flex" aria-label={l('Navigation', 'Navigation')}>
         <Marque petite surBleu className="h-14 shrink-0 px-2" />
-        <nav className="flex flex-col gap-0.5 pt-1.5" aria-label="Sections">
+        <nav className="flex flex-col gap-0.5 pt-1.5" aria-label={l('Sections', 'Sections')}>
           {onglets.map(o => (
             <button key={o.id} type="button" onClick={() => { if (o.id !== onglet) choisirOnglet(o.id); else fil?.retour(); }} aria-current={onglet === o.id ? 'page' : undefined}
               className={`adm-nav-item ${o.id === 'comptes' ? 'mt-3.5' : ''}`}>
@@ -841,9 +852,9 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
         </nav>
         <div className="mt-auto">
           {appel('mb-1')}
-          <Menu label="Ton compte" haut aligne="largeur" className="adm-compte" titre={`${reglages.profil.nom || compte.pseudo}, ton compte`}
-            entete={<p className="truncate px-2.5 pb-1.5 pt-2 text-[12px] text-white/55">{compte.email ? `${compte.email} · ` : ''}{compte.principal ? 'Compte principal' : `Hopla ${OFFRES[compte.plan].nom}`}</p>}
-            elements={[{ nom: 'Me déconnecter', icone: 'ui-sortir', action: deconnexion }]}>
+          <Menu label={l('Ton compte', 'Your account')} haut aligne="largeur" className="adm-compte" titre={`${reglages.profil.nom || compte.pseudo}, ${l('ton compte', 'your account')}`}
+            entete={<p className="truncate px-2.5 pb-1.5 pt-2 text-[12px] text-white/55">{compte.email ? `${compte.email} · ` : ''}{compte.principal ? l('Compte principal', 'Main account') : `Hopla ${OFFRES[compte.plan].nom}`}</p>}
+            elements={[{ nom: l('Me déconnecter', 'Sign out'), icone: 'ui-sortir', action: deconnexion }]}>
             {avatar('h-6 w-6', 18)}
             <span className="min-w-0 flex-1 truncate text-[13.5px] font-medium">{reglages.profil.nom || compte.pseudo}</span>
             <Icone nom="ui-chevrons" taille={14} className="shrink-0 text-white/55" />
@@ -866,9 +877,9 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
               {signe}{indicateur}
             </p>
           </div>
-          <BoutonCopier compact texte={adresse} label="Copier l’adresse de ta page" onCopie={noterPartage} />
+          <BoutonCopier compact texte={adresse} label={l('Copier l’adresse de ta page', 'Copy your page’s address')} onCopie={noterPartage} />
           {/* Sous 390 px, l'œil seul, sans cadre : l'adresse garde la place d'être lue. */}
-          <button type="button" onClick={() => setApercu(true)} className="adm-button-outline adm-apercu-bouton flex min-h-11 items-center justify-center gap-1.5 px-3.5 text-[13px] font-medium max-[389px]:w-11 max-[389px]:px-0"><Icone nom="ui-oeil" taille={17} className="shrink-0" /><span className="max-[389px]:sr-only">Aperçu</span></button>
+          <button type="button" onClick={() => setApercu(true)} className="adm-button-outline adm-apercu-bouton flex min-h-11 items-center justify-center gap-1.5 px-3.5 text-[13px] font-medium max-[389px]:w-11 max-[389px]:px-0"><Icone nom="ui-oeil" taille={17} className="shrink-0" /><span className="max-[389px]:sr-only">{l('Aperçu', 'Preview')}</span></button>
         </div>
         {/* Au bureau, une seule rangée, d'un bord à l'autre de la zone : le nom de l'écran, puis ce qui sert ici. Pas de barre vide, pas de deuxième titre.
             Sur Ma page, elle ne couvre que l'édition : l'adresse et « Voir ma page » sont en tête de l'aperçu (24 octobre 2026, trois zones). */}
@@ -889,7 +900,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
       </header>
 
       {initial.stockageEphemere && !demo && (
-        <p className="mx-auto mt-3 max-w-6xl px-4"><span className="block rounded-xl bg-amber-400/15 px-3.5 py-2.5 text-[13.5px] text-amber-100">Le stockage n’est pas encore branché sur le serveur : tes changements seront perdus au prochain redémarrage.</span></p>
+        <p className="mx-auto mt-3 max-w-6xl px-4"><span className="block rounded-xl bg-amber-400/15 px-3.5 py-2.5 text-[13.5px] text-amber-100">{l('Le stockage n’est pas encore branché sur le serveur : tes changements seront perdus au prochain redémarrage.', 'Storage isn’t connected on the server yet: your changes will be lost at the next restart.')}</span></p>
       )}
 
       {/* Les bandeaux de Ma page : au téléphone sous l'en-tête, au bureau dans la colonne de l'édition, au-dessus des onglets (`bandeaux` de MaPage). */}
@@ -942,7 +953,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
 
       </div>
 
-      <nav className="adm-mobile-nav fixed inset-x-0 bottom-0 z-30 pb-[env(safe-area-inset-bottom)] lg:hidden" aria-label="Sections">
+      <nav className="adm-mobile-nav fixed inset-x-0 bottom-0 z-30 pb-[env(safe-area-inset-bottom)] lg:hidden" aria-label={l('Sections', 'Sections')}>
         <ul className={`mx-auto grid max-w-md ${COLONNES[onglets.length] ?? 'grid-cols-4'}`}>
           {onglets.map(o => (
             <li key={o.id}>
@@ -956,11 +967,11 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
       </nav>
 
       {apercu && (
-        <div ref={fenetreApercu} className="adm-fondu fixed inset-0 z-40 flex flex-col bg-black/80 backdrop-blur-sm lg:hidden" role="dialog" aria-modal="true" aria-label="Aperçu de ta page">
+        <div ref={fenetreApercu} className="adm-fondu fixed inset-0 z-40 flex flex-col bg-black/80 backdrop-blur-sm lg:hidden" role="dialog" aria-modal="true" aria-label={l('Aperçu de ta page', 'Preview of your page')}>
           <div className="adm-apercu relative min-h-0 flex-1 overflow-y-auto"><PageLiens page={page} apercu /></div>
           {/* Sous la page, pas par-dessus : le bouton ne cache jamais le bas de la page. */}
           <div className="flex shrink-0 justify-center border-t border-white/[0.08] bg-nuit px-4 pt-3 pb-[max(12px,env(safe-area-inset-bottom))]">
-            <button ref={fermerApercu} type="button" onClick={() => setApercu(false)} className={`${classeBouton.principal} w-full max-w-sm`}>Fermer l’aperçu</button>
+            <button ref={fermerApercu} type="button" onClick={() => setApercu(false)} className={`${classeBouton.principal} w-full max-w-sm`}>{l('Fermer l’aperçu', 'Close preview')}</button>
           </div>
         </div>
       )}
@@ -987,19 +998,21 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
     </SourceFlux.Provider>
     </ListeBranchee.Provider>
     </FournisseurOffre>
+    </LangueSite.Provider>
   );
 }
 
 /** Copier, collé à l'adresse dans l'en-tête du bureau : « Copié » un instant, et l'étape « Partage ta page » se coche. */
 function BoutonAdresse({ adresse }: { adresse: string }) {
+  const l = useL();
   const [copie, setCopie] = useState(false);
   async function copier() {
     if (!(await copierTexte(adresse))) return;
     vibrer(8); noterPartage(); setCopie(true); setTimeout(() => setCopie(false), 1800);
   }
   return (
-    <button type="button" onClick={copier} aria-label={copie ? 'Adresse copiée' : 'Copier l’adresse de ta page'} className="flex shrink-0 items-center gap-1.5 px-3 text-[13px] font-medium whitespace-nowrap text-white">
-      <Icone nom={copie ? 'ui-ok' : 'ui-copier'} taille={15} className="shrink-0" />{copie ? 'Copié' : 'Copier'}
+    <button type="button" onClick={copier} aria-label={copie ? l('Adresse copiée', 'Address copied') : l('Copier l’adresse de ta page', 'Copy your page’s address')} className="flex shrink-0 items-center gap-1.5 px-3 text-[13px] font-medium whitespace-nowrap text-white">
+      <Icone nom={copie ? 'ui-ok' : 'ui-copier'} taille={15} className="shrink-0" />{copie ? l('Copié', 'Copied') : l('Copier', 'Copy')}
     </button>
   );
 }

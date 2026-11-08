@@ -176,6 +176,15 @@ export const SANS_COULEURS: Couleurs = { fond: '', boutons: '', accent: '' };
 /** Les langues de Hopla : l'anglais d'abord, le français en traduction (8 novembre 2026). */
 export const LANGUES = ['en', 'fr'] as const;
 export type Langue = (typeof LANGUES)[number];
+/** La langue préférée d'un navigateur (en-tête Accept-Language) : le français s'il passe avant l'anglais, l'anglais sinon. */
+export function langueAcceptee(entete: string | null | undefined): Langue {
+  for (const morceau of String(entete ?? '').toLowerCase().split(',')) {
+    const code = morceau.trim().split(';')[0];
+    if (code.startsWith('fr')) return 'fr';
+    if (code.startsWith('en')) return 'en';
+  }
+  return 'en';
+}
 
 export interface Reglages {
   /** `photo` : la photo de profil en rond, ou en grand en haut de la page, fondue dans le fond (Starter). */

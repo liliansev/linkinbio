@@ -4,9 +4,11 @@ import { BoutonPrincipal, classeBouton, classeSaisie } from './ui.tsx';
 import { Marque } from './Marque.tsx';
 import { Icone } from '../components/Icone.tsx';
 import { boiteMail } from '../lib/boiteMail.ts';
+import { useL } from '../accueil/langue.ts';
 
 /* L'écran de connexion : son adresse, et le lien arrive par e-mail. Sur le bleu de l'accueil, d'où l'on arrive. */
 export function Connexion({ demander }: { demander: (email: string) => Promise<{ ok: boolean; message: string; lienDev?: string }> }) {
+  const l = useL();
   const [email, setEmail] = useState('');
   const [etat, setEtat] = useState<{ type: 'repos' | 'envoi' | 'ok' | 'erreur'; message?: string; lienDev?: string }>({ type: 'repos' });
   // Le formulaire disparaît avec son bouton : le focus passe au titre qui le remplace, au lieu de tomber sur la page.
@@ -19,7 +21,7 @@ export function Connexion({ demander }: { demander: (email: string) => Promise<{
     try {
       const r = await demander(email);
       setEtat({ type: r.ok ? 'ok' : 'erreur', message: r.message, lienDev: r.lienDev });
-    } catch { setEtat({ type: 'erreur', message: 'Le serveur ne répond pas. Réessaie dans un instant.' }); }
+    } catch { setEtat({ type: 'erreur', message: l('Le serveur ne répond pas. Réessaie dans un instant.', 'The server isn’t responding. Try again in a moment.') }); }
   }
   return (
     <main className="adm adm-shell adm-entree grid min-h-dvh place-items-center px-5 py-10 font-sans text-white antialiased">
@@ -28,22 +30,22 @@ export function Connexion({ demander }: { demander: (email: string) => Promise<{
         {/* Une fois le lien parti, la carte ne parle plus que de lui : la consigne d'avant ne reste pas au-dessus. */}
         {etat.type === 'ok' ? (
           <div className="adm-card adm-onglet p-6 sm:p-8" role="status">
-            <h1 ref={titreEnvoye} tabIndex={-1} className="adm-titre">Regarde ta boîte mail</h1>
+            <h1 ref={titreEnvoye} tabIndex={-1} className="adm-titre">{l('Regarde ta boîte mail', 'Check your inbox')}</h1>
             <p className="mt-2 text-[14px] leading-relaxed text-white/75">{etat.message}</p>
-            <p className="mt-2 text-[14px] leading-relaxed text-white/60">Rien reçu ? Regarde dans les indésirables.</p>
+            <p className="mt-2 text-[14px] leading-relaxed text-white/60">{l('Rien reçu ? Regarde dans les indésirables.', 'Nothing yet? Check your spam folder.')}</p>
             {etat.lienDev && <a href={etat.lienDev} className="mt-3 block break-all text-[13px] text-bleu underline">{etat.lienDev}</a>}
             {/* Une messagerie qu'on reconnaît s'ouvre d'ici : le lien est à un geste. */}
-            {boite && <a href={boite.url} target="_blank" rel="noopener" className={`${classeBouton.principal} mt-6 w-full`}>Ouvrir {boite.nom}<Icone nom="ui-ouvrir" taille={16} /></a>}
-            <button type="button" onClick={() => setEtat({ type: 'repos' })} className={`${classeBouton.secondaire} ${boite ? 'mt-3' : 'mt-6'} w-full`}>Utiliser une autre adresse</button>
+            {boite && <a href={boite.url} target="_blank" rel="noopener" className={`${classeBouton.principal} mt-6 w-full`}>{l('Ouvrir', 'Open')} {boite.nom}<Icone nom="ui-ouvrir" taille={16} /></a>}
+            <button type="button" onClick={() => setEtat({ type: 'repos' })} className={`${classeBouton.secondaire} ${boite ? 'mt-3' : 'mt-6'} w-full`}>{l('Utiliser une autre adresse', 'Use another address')}</button>
           </div>
         ) : (
           <div className="adm-card p-6 sm:p-8">
-            <h1 className="adm-titre">Ton espace Hopla</h1>
-            <p className="mt-2 text-[14px] leading-relaxed text-white/60">Pas de mot de passe : entre l’adresse de ton compte, un lien de connexion part dans ta boîte.</p>
+            <h1 className="adm-titre">{l('Ton espace Hopla', 'Your Hopla dashboard')}</h1>
+            <p className="mt-2 text-[14px] leading-relaxed text-white/60">{l('Pas de mot de passe : entre l’adresse de ton compte, un lien de connexion part dans ta boîte.', 'No password: enter your account’s email and a sign-in link lands in your inbox.')}</p>
             <form onSubmit={envoyer} aria-busy={etat.type === 'envoi'} className="mt-6 flex flex-col gap-3">
-              <label className="text-[13px] font-medium" htmlFor="email">Adresse e-mail</label>
-              <input id="email" type="email" required autoComplete="email" autoCapitalize="none" inputMode="email" placeholder="toi@exemple.fr" value={email} onChange={e => setEmail(e.target.value)} className={classeSaisie} />
-              <BoutonPrincipal type="submit" className="w-full" disabled={etat.type === 'envoi'}>{etat.type === 'envoi' ? 'Envoi…' : 'Recevoir mon lien de connexion'}</BoutonPrincipal>
+              <label className="text-[13px] font-medium" htmlFor="email">{l('Adresse e-mail', 'Email address')}</label>
+              <input id="email" type="email" required autoComplete="email" autoCapitalize="none" inputMode="email" placeholder={l('toi@exemple.fr', 'you@example.com')} value={email} onChange={e => setEmail(e.target.value)} className={classeSaisie} />
+              <BoutonPrincipal type="submit" className="w-full" disabled={etat.type === 'envoi'}>{etat.type === 'envoi' ? l('Envoi…', 'Sending…') : l('Recevoir mon lien de connexion', 'Email me a sign-in link')}</BoutonPrincipal>
             </form>
             {etat.type === 'erreur' && <p className="mt-4 text-[14px] text-red-300" role="alert">{etat.message}</p>}
           </div>

@@ -1,6 +1,7 @@
 import { cloneElement, createContext, isValidElement, useCallback, useContext, useEffect, useId, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import { Icone, NOMS_RESEAUX } from '../components/Icone.tsx';
+import { useL } from '../accueil/langue.ts';
 import type { Animation } from '../lib/types.ts';
 import { COULEURS_SOURCES } from '../lib/stats.ts';
 import { useCouche } from './couches.ts';
@@ -483,6 +484,7 @@ export async function copierTexte(texte: string): Promise<boolean> {
 
 /** Le même bouton Copier partout : il copie, vibre, dit « Copié » un instant, puis prévient (`onCopie`). */
 export function BoutonCopier({ texte, onCopie, label, compact = false }: { texte: string; onCopie?: () => void; label?: string; compact?: boolean }) {
+  const l = useL();
   const [copie, setCopie] = useState(false);
   async function copier() {
     if (!(await copierTexte(texte))) return;
@@ -490,7 +492,7 @@ export function BoutonCopier({ texte, onCopie, label, compact = false }: { texte
   }
   // Compact, l'icône seule : ni cadre ni fond derrière elle.
   if (compact) return (
-    <button type="button" onClick={copier} aria-label={copie ? 'Adresse copiée' : label ?? 'Copier'}
+    <button type="button" onClick={copier} aria-label={copie ? l('Adresse copiée', 'Address copied') : label ?? l('Copier', 'Copy')}
       className="adm-icone-seule grid h-11 w-11 shrink-0 place-items-center text-white transition active:scale-90 bureau:h-9 bureau:w-9">
       <Icone nom={copie ? 'ui-ok' : 'ui-copier'} taille={18} />
     </button>
@@ -498,7 +500,7 @@ export function BoutonCopier({ texte, onCopie, label, compact = false }: { texte
   return (
     <button type="button" onClick={copier} aria-label={label}
       className="adm-button-outline flex min-h-11 shrink-0 items-center gap-1.5 px-3.5 text-[14px] font-medium text-white transition active:scale-95 bureau:min-h-9 bureau:px-3">
-      <Icone nom={copie ? 'ui-ok' : 'ui-copier'} taille={16} />{copie ? 'Copié' : 'Copier'}
+      <Icone nom={copie ? 'ui-ok' : 'ui-copier'} taille={16} />{copie ? l('Copié', 'Copied') : l('Copier', 'Copy')}
     </button>
   );
 }

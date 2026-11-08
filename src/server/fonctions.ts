@@ -1,7 +1,7 @@
 import { createMiddleware, createServerFn } from '@tanstack/react-start';
 import { deleteCookie, getCookie, getRequestHeader, getRequestUrl, setCookie } from '@tanstack/react-start/server';
 import type { Bloc, CleApi, CompteResume, EtatAdmin, FournisseurListe, ImageApercu, Langue, Liste, ListeFournisseur, Origines, PagePublique, Reglages, NoteAvis, Reservation, Semaine, SignalementResume, Stats } from '../lib/types.ts';
-import { FOURNISSEURS_LISTE } from '../lib/types.ts';
+import { FOURNISSEURS_LISTE, langueAcceptee } from '../lib/types.ts';
 import * as liste from './liste.ts';
 import { requeteSortante } from './sortante.ts';
 import { lireNote } from './avis.ts';
@@ -148,25 +148,29 @@ function etat(compte: string): EtatAdmin {
   };
 }
 
-export type AccesAdmin = { connecte: true; etat: EtatAdmin } | { connecte: false };
+export type AccesAdmin = { connecte: true; etat: EtatAdmin } | { connecte: false; langue: Langue };
 
 export const lireAdmin = createServerFn({ method: 'GET' }).handler(async (): Promise<AccesAdmin> => {
   const compte = compteDeSession(getCookie(COOKIE_SESSION));
-  return compte ? { connecte: true, etat: etat(compte) } : { connecte: false };
+  // Sans compte, l'écran de connexion parle la langue du navigateur.
+  return compte ? { connecte: true, etat: etat(compte) } : { connecte: false, langue: langueAcceptee(getRequestHeader('accept-language')) };
 });
+
+/** La langue du navigateur, pour les écrans sans compte (l'arrivée d'un lien de connexion). */
+export const langueNavigateur = createServerFn({ method: 'GET' }).handler(async () => ({ langue: langueAcceptee(getRequestHeader('accept-language')) }));
 
 export const chargerEtat = createServerFn({ method: 'GET' }).middleware([sessionBrute]).handler(async ({ context }) => etat(context.compte));
 
 export const demanderLien = createServerFn({ method: 'POST' })
   .validator((data: unknown) => {
     // Une page restée ouverte d'avant Turnstile envoie l'adresse seule.
-    const o = (typeof data === 'string' ? { email: data } : data ?? {}) as { email?: unknown; jeton?: unknown };
-    return { email: String(o.email ?? '').slice(0, 200), jeton: jetonDe(o) };
+    const o = (typeof data === 'string' ? { email: data } : data ?? {}) as { email?: unknown; jeton?: unknown; langue?: unknown };
+    return { email: String(o.email ?? '').slice(0, 200), jeton: jetonDe(o), langue: (o.langue === 'en' ? 'en' : 'fr') as Langue };
   })
   .handler(async ({ data }) => {
     memeOrigine();
-    if (!(await humain(data.jeton, 'connexion'))) return ROBOT;
-    return demanderConnexion(origines(), process.env, data.email, fetch, Date.now(), getRequestHeader('x-real-ip') ?? '');
+    if (!(await humain(data.jeton, 'connexion'))) return robot(data.langue);
+    return demanderConnexion(origines(), process.env, data.email, fetch, Date.now(), getRequestHeader('x-real-ip') ?? '', data.langue);
   });
 
 export const connecter = createServerFn({ method: 'POST' })

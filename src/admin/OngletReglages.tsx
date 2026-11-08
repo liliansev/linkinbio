@@ -6,7 +6,9 @@ import { DOMAINES_COURTS, adressePartage, sansSchema, urlPage } from '../lib/typ
 import { adresseSaisie } from '../lib/valider.ts';
 import { redirectionActive } from '../lib/sorties.ts';
 import type { Abonnement as EtatAbonnement, Fonction, Plan } from '../lib/abonnement.ts';
-import { OFFRES, accesAbonnement, apresOffre, estPaye, estResilie, euros, offerteAuDessus, planHorsEssai } from '../lib/abonnement.ts';
+import { OFFRES, accesAbonnement, apresOffre, estPaye, estResilie, euros, offerteAuDessus, planHorsEssai, nomOffre as nomPlan } from '../lib/abonnement.ts';
+import type { Langue } from '../lib/types.ts';
+import { useL, useLangue } from '../accueil/langue.ts';
 import { BoutonCopier, BoutonPrincipal, BoutonSecondaire, Champ, Feuille, Groupe, Interrupteur, Ligne, LigneBascule, LigneLien, PanneauDetail, Segments, SousPage, classeBouton, classeSaisie, useGrandEcran } from './ui.tsx';
 import { Facturation, nomAbonnement, nomApres, nomOffre } from './Facturation.tsx';
 import { Etiquette, usePermis } from './offre.tsx';
@@ -27,7 +29,7 @@ import { ApiEtMcp } from './ApiEtMcp.tsx';
  * toucher, chez Creem, pour tout compte qui a payé.
  */
 
-const dateLongue = (ms: number) => new Date(ms).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+const dateLongue = (ms: number, langue: Langue = 'fr') => new Date(ms).toLocaleDateString(langue === 'fr' ? 'fr-FR' : 'en-US', { day: 'numeric', month: 'long', year: 'numeric' });
 
 export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlExport, supprimerMonCompte, abonnement, onOffres, ouvrirPortail, onResilier, cles }: {
   reglages: Reglages; compte: ComptePage & { email?: string; plan: Plan }; onChange: (r: Reglages) => void; onDeconnexion: () => void;
@@ -41,6 +43,9 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
   /** Les clés d'API, pour l'API et le serveur MCP ; absent dans l'aperçu sans serveur. */
   cles?: ApiCles;
 }) {
+  const l = useL();
+  const langue = reglages.langue;
+  const date = (ms: number) => dateLongue(ms, langue);
   // La page vit sur hopla.page ; on partage son nom court s'il en a choisi un.
   const adresse = urlPage(compte);
   const partage = adressePartage(compte, reglages.domaine);
@@ -69,19 +74,19 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
   async function versPortail() {
     setPortail('ouverture');
     try { location.href = await ouvrirPortail(); }
-    catch (error) { setPortail((error as Error).message || 'Creem ne répond pas. Réessaie dans un instant.'); }
+    catch (error) { setPortail((error as Error).message || l('Creem ne répond pas. Réessaie dans un instant.', 'Creem isn’t responding. Try again in a moment.')); }
   }
 
   const facturation = <Facturation abonnement={abonnement} onOffres={offres ? () => onOffres?.() : undefined} ouvrirPortail={ouvrirPortail} onResilier={offres ? onResilier : undefined} />;
   if (sous === 'abonnement' && !grand) return (
     <div className="adm-reglages">
-      <SousPage nom="Mon abonnement" retour={() => setSous(null)} />
+      <SousPage nom={l('Mon abonnement', 'My subscription')} retour={() => setSous(null)} />
       {facturation}
     </div>
   );
   if (sous === 'api' && !grand) return (
     <div className="adm-reglages">
-      <SousPage nom="API et MCP" retour={() => setSous(null)} />
+      <SousPage nom={l('API et MCP', 'API and MCP')} retour={() => setSous(null)} />
       <ApiEtMcp api={cles} />
     </div>
   );
@@ -98,118 +103,119 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
 
   return (
     <div className="adm-reglages">
-      <Groupe titre="Page">
-        <Ligne nom="Mon lien" valeur={<span translate="no">{sansSchema(partage)}</span>}>
-          <BoutonCopier texte={partage} label="Copier l’adresse de ta page" onCopie={noterPartage} />
+      <Groupe titre={l('Page', 'Page')}>
+        <Ligne nom={l('Mon lien', 'My link')} valeur={<span translate="no">{sansSchema(partage)}</span>}>
+          <BoutonCopier texte={partage} label={l('Copier l’adresse de ta page', 'Copy your page’s address')} onCopie={noterPartage} />
         </Ligne>
-        <LigneLien nom="Domaine" valeur={<span translate="no">{reglages.domaine || sansSchema(adresse).split('/')[0]}</span>}
-          onClick={() => setFenetre('domaine')} label="Choisir le nom de domaine de mon adresse" />
+        <LigneLien nom={l('Domaine', 'Domain')} valeur={<span translate="no">{reglages.domaine || sansSchema(adresse).split('/')[0]}</span>}
+          onClick={() => setFenetre('domaine')} label={l('Choisir le nom de domaine de mon adresse', 'Choose the domain of my address')} />
         <Ligne nom="QR code">
-          <BoutonSecondaire onClick={() => { void telechargerQR(partage, compte.pseudo); }} aria-label="Télécharger le QR code">Télécharger</BoutonSecondaire>
+          <BoutonSecondaire onClick={() => { void telechargerQR(partage, compte.pseudo); }} aria-label={l('Télécharger le QR code', 'Download the QR code')}>{l('Télécharger', 'Download')}</BoutonSecondaire>
         </Ligne>
         {/* Coupée au bureau, la valeur se lit en entier au survol. */}
         {/* Une ligne à chevron, comme les autres ouvertures de Réglages (critique série 2 : un bouton bordé faisait exception). */}
-        <LigneLien nom="Référencement" onClick={() => setFenetre('apercu')}
-          valeur={<span title={[titreSeo, descriptionSeo].filter(Boolean).join(' · ') || undefined}>{[titreSeo, descriptionSeo].filter(Boolean).join(' · ') || 'Rien pour l’instant'}</span>} />
-        {/* Les mots que Hopla pose sur la page (formulaires, compte à rebours, pied) : l'anglais d'abord depuis le 8 novembre 2026. */}
-        <Ligne nom="Langue de ma page" valeur="Formulaires, comptes à rebours et pied de page">
-          <Segments label="Langue de ma page" valeur={reglages.langue} onChange={langue => onChange({ ...reglages, langue })}
+        <LigneLien nom={l('Référencement', 'SEO')} onClick={() => setFenetre('apercu')}
+          valeur={<span title={[titreSeo, descriptionSeo].filter(Boolean).join(' · ') || undefined}>{[titreSeo, descriptionSeo].filter(Boolean).join(' · ') || l('Rien pour l’instant', 'Nothing yet')}</span>} />
+        {/* Une langue pour le compte (8 novembre 2026) : les mots que Hopla pose sur la page (formulaires, compte à rebours,
+            pied) et tout le back office. L'anglais d'abord. Son nom se lit dans les deux langues, pour qui s'y est perdu. */}
+        <Ligne nom="Langue · Language" valeur={l('Ta page et ton espace Hopla', 'Your page and your Hopla dashboard')}>
+          <Segments label="Langue · Language" valeur={reglages.langue} onChange={langue => onChange({ ...reglages, langue })}
             options={[{ id: 'en', nom: 'English' }, { id: 'fr', nom: 'Français' }]} />
         </Ligne>
-        <LigneBascule nom="Bouton Partager sur ma page" actif={reglages.partage} changer={v => onChange({ ...reglages, partage: v })} />
-        <LigneBascule nom="Deeplink" valeur="Ouvrir les liens dans leurs apps : YouTube, Spotify, etc." actif={reglages.ouvrirApps} changer={v => onChange({ ...reglages, ouvrirApps: v })} />
+        <LigneBascule nom={l('Bouton Partager sur ma page', 'Share button on my page')} actif={reglages.partage} changer={v => onChange({ ...reglages, partage: v })} />
+        <LigneBascule nom="Deeplink" valeur={l('Ouvrir les liens dans leurs apps : YouTube, Spotify, etc.', 'Open links in their apps: YouTube, Spotify, and more.')} actif={reglages.ouvrirApps} changer={v => onChange({ ...reglages, ouvrirApps: v })} />
         {/* Starter : sans l'offre, pas d'interrupteur qui ne ferait rien, son nom et le chemin vers les offres. */}
         {utm
-          ? <LigneBascule nom="Suivi UTM sur mes liens" valeur="Tes sites voient que leurs visites viennent de Hopla" actif={reglages.utm} changer={v => onChange({ ...reglages, utm: v })} />
-          : <LigneLien nom="Suivi UTM sur mes liens" valeur="Tes sites voient que leurs visites viennent de Hopla" apres={<Etiquette fonction="utm" />} onClick={offres ? () => onOffres?.('utm') : undefined}
-              label={offres ? 'Suivi UTM sur mes liens, avec Starter : voir les offres' : undefined} />}
+          ? <LigneBascule nom={l('Suivi UTM sur mes liens', 'UTM tracking on my links')} valeur={l('Tes sites voient que leurs visites viennent de Hopla', 'Your sites see that their visits come from Hopla')} actif={reglages.utm} changer={v => onChange({ ...reglages, utm: v })} />
+          : <LigneLien nom={l('Suivi UTM sur mes liens', 'UTM tracking on my links')} valeur={l('Tes sites voient que leurs visites viennent de Hopla', 'Your sites see that their visits come from Hopla')} apres={<Etiquette fonction="utm" />} onClick={offres ? () => onOffres?.('utm') : undefined}
+              label={offres ? l('Suivi UTM sur mes liens, avec Starter : voir les offres', 'UTM tracking on my links, with Starter: see plans') : undefined} />}
         {rediriger ? (
-          <Ligne nom="Redirection" valeur={versAilleurs ? <span className="font-medium text-bleu">{resumeRedirection(versAilleurs, reglages.redirection.fin, true)}</span> : 'Aucune'}>
-            <BoutonSecondaire onClick={() => setFenetre('redirection')} aria-haspopup="dialog" aria-label={versAilleurs ? 'Modifier la redirection' : 'Rediriger ma page'}>{versAilleurs ? 'Modifier' : 'Rediriger'}</BoutonSecondaire>
+          <Ligne nom={l('Redirection', 'Redirect')} valeur={versAilleurs ? <span className="font-medium text-bleu">{resumeRedirection(versAilleurs, reglages.redirection.fin, true, langue)}</span> : l('Aucune', 'None')}>
+            <BoutonSecondaire onClick={() => setFenetre('redirection')} aria-haspopup="dialog" aria-label={versAilleurs ? l('Modifier la redirection', 'Edit the redirect') : l('Rediriger ma page', 'Redirect my page')}>{versAilleurs ? l('Modifier', 'Edit') : l('Rediriger', 'Redirect')}</BoutonSecondaire>
           </Ligne>
         ) : (
-          <LigneLien nom="Redirection" apres={<Etiquette fonction="redirection" />} onClick={offres ? () => onOffres?.('redirection') : undefined}
-            label={offres ? 'Redirection, avec Starter : voir les offres' : undefined} />
+          <LigneLien nom={l('Redirection', 'Redirect')} apres={<Etiquette fonction="redirection" />} onClick={offres ? () => onOffres?.('redirection') : undefined}
+            label={offres ? l('Redirection, avec Starter : voir les offres', 'Redirect, with Starter: see plans') : undefined} />
         )}
       </Groupe>
 
-      <Groupe titre="Compte">
-        {compte.email && <Ligne nom="Adresse de connexion" valeur={compte.email} />}
+      <Groupe titre={l('Compte', 'Account')}>
+        {compte.email && <Ligne nom={l('Adresse de connexion', 'Sign-in email')} valeur={compte.email} />}
         {stats
-          ? <LigneBascule nom="Mes stats par e-mail chaque lundi" actif={reglages.resumeHebdo} changer={v => onChange({ ...reglages, resumeHebdo: v })} />
+          ? <LigneBascule nom={l('Mes stats par e-mail chaque lundi', 'My analytics by email every Monday')} actif={reglages.resumeHebdo} changer={v => onChange({ ...reglages, resumeHebdo: v })} />
           // Réservée : pas d'interrupteur qui ne ferait rien, l'offre qui la débloque à la place, et le chemin vers les offres.
-          : <LigneLien nom="Mes stats par e-mail chaque lundi" apres={<Etiquette fonction="stats" />} onClick={offres ? () => onOffres?.('stats') : undefined}
-              label={offres ? 'Mes stats par e-mail chaque lundi, avec Starter : voir les offres' : undefined} />}
-        <Ligne nom="Mes données" valeur={urlExport ? undefined : 'Pas dans l’aperçu'}>
-          {urlExport && <a href={urlExport} download className={classeBouton.secondaire} aria-label="Télécharger mes données">Télécharger</a>}
+          : <LigneLien nom={l('Mes stats par e-mail chaque lundi', 'My analytics by email every Monday')} apres={<Etiquette fonction="stats" />} onClick={offres ? () => onOffres?.('stats') : undefined}
+              label={offres ? l('Mes stats par e-mail chaque lundi, avec Starter : voir les offres', 'My analytics by email every Monday, with Starter: see plans') : undefined} />}
+        <Ligne nom={l('Mes données', 'My data')} valeur={urlExport ? undefined : l('Pas dans l’aperçu', 'Not in the preview')}>
+          {urlExport && <a href={urlExport} download className={classeBouton.secondaire} aria-label={l('Télécharger mes données', 'Download my data')}>{l('Télécharger', 'Download')}</a>}
         </Ligne>
         {/* Le compte principal ne se supprime pas. */}
         {!compte.principal && (
-          <Ligne nom="Supprimer mon compte">
-            <BoutonSecondaire onClick={() => setFenetre('supprimer')} aria-haspopup="dialog" className="!text-red-300">Supprimer</BoutonSecondaire>
+          <Ligne nom={l('Supprimer mon compte', 'Delete my account')}>
+            <BoutonSecondaire onClick={() => setFenetre('supprimer')} aria-haspopup="dialog" className="!text-red-300">{l('Supprimer', 'Delete')}</BoutonSecondaire>
           </Ligne>
         )}
       </Groupe>
 
       {/* L'API et le serveur MCP (28 octobre 2026) : la sous-page s'ouvre aussi sans Pro, pour révoquer une clé déjà créée. */}
-      <Groupe titre="Agents IA">
-        <LigneLien id="reglage-api" nom="API et MCP" valeur="Ta page pilotée par Claude, ChatGPT, Cursor…" apres={avecApi ? undefined : <Etiquette fonction="api" />}
+      <Groupe titre={l('Agents IA', 'AI agents')}>
+        <LigneLien id="reglage-api" nom={l('API et MCP', 'API and MCP')} valeur={l('Ta page pilotée par Claude, ChatGPT, Cursor…', 'Your page run by Claude, ChatGPT, Cursor…')} apres={avecApi ? undefined : <Etiquette fonction="api" />}
           courant={sous === 'api'} onClick={ouvrirSous('reglage-api', 'api')} />
       </Groupe>
 
       {offres && (
-        <Groupe titre="Abonnement">
-          <Ligne nom="Offre" valeur={<strong>{nomOffre(abonnement)}</strong>}>
-            {!resilie && <BoutonSecondaire onClick={() => onOffres?.()} aria-haspopup="dialog">{paye ? 'Changer d’offre' : 'Voir les offres'}</BoutonSecondaire>}
+        <Groupe titre={l('Abonnement', 'Subscription')}>
+          <Ligne nom={l('Offre', 'Plan')} valeur={<strong>{nomOffre(abonnement)}</strong>}>
+            {!resilie && <BoutonSecondaire onClick={() => onOffres?.()} aria-haspopup="dialog">{paye ? l('Changer d’offre', 'Change plan') : l('Voir les offres', 'See plans')}</BoutonSecondaire>}
           </Ligne>
           {/* L'essai de Pro : sa fin, et ce que la page garde ensuite. */}
           {abonnement.essai && (
-            <Ligne nom="Fin de l’essai" valeur={<span className="tabular-nums">{`${dateLongue(abonnement.essai)}, puis ${OFFRES[planHorsEssai(abonnement)].nom}`}</span>} />
+            <Ligne nom={l('Fin de l’essai', 'Trial ends')} valeur={<span className="tabular-nums">{`${date(abonnement.essai)}, ${l('puis', 'then')} ${nomPlan(planHorsEssai(abonnement), langue)}`}</span>} />
           )}
           {offerte && (
-            <Ligne nom="Fin de l’offre" valeur={<span className="tabular-nums">{offerte.jusqu ? `${dateLongue(offerte.jusqu)}, puis ${OFFRES[apresOffre(abonnement)].nom}` : 'Sans limite de durée'}</span>} />
+            <Ligne nom={l('Fin de l’offre', 'Plan ends')} valeur={<span className="tabular-nums">{offerte.jusqu ? `${date(offerte.jusqu)}, ${l('puis', 'then')} ${nomPlan(apresOffre(abonnement), langue)}` : l('Sans limite de durée', 'No end date')}</span>} />
           )}
-          {offerte && paye && <Ligne nom="Abonnement" valeur={nomAbonnement(abonnement)} />}
+          {offerte && paye && <Ligne nom={l('Abonnement', 'Subscription')} valeur={nomAbonnement(abonnement)} />}
           {paye && abonnement.statut === 'past_due' ? (
-            <Ligne nom="Paiement" valeur={<span data-alerte="">Le dernier paiement n’est pas passé</span>}>
-              {abonnement.portail && <BoutonSecondaire onClick={versPortail} disabled={portail === 'ouverture'}>Mettre à jour ma carte</BoutonSecondaire>}
+            <Ligne nom={l('Paiement', 'Payment')} valeur={<span data-alerte="">{l('Le dernier paiement n’est pas passé', 'The last payment didn’t go through')}</span>}>
+              {abonnement.portail && <BoutonSecondaire onClick={versPortail} disabled={portail === 'ouverture'}>{l('Mettre à jour ma carte', 'Update my card')}</BoutonSecondaire>}
             </Ligne>
           ) : paye && abonnement.finPeriode ? (
-            <Ligne nom={resilie ? (offerte ? 'Fin de l’abonnement' : 'Fin de l’offre') : 'Prochaine échéance'}
-              valeur={<span className="tabular-nums">{resilie ? (offerte ? dateLongue(abonnement.finPeriode) : `${dateLongue(abonnement.finPeriode)}, puis ${nomApres(abonnement, abonnement.finPeriode)}`) : `${dateLongue(abonnement.finPeriode)}${prix ? ` · ${euros(prix)}` : ''}`}</span>} />
+            <Ligne nom={resilie ? (offerte ? l('Fin de l’abonnement', 'Subscription ends') : l('Fin de l’offre', 'Plan ends')) : l('Prochaine échéance', 'Next payment')}
+              valeur={<span className="tabular-nums">{resilie ? (offerte ? date(abonnement.finPeriode) : `${date(abonnement.finPeriode)}, ${l('puis', 'then')} ${nomApres(abonnement, abonnement.finPeriode)}`) : `${date(abonnement.finPeriode)}${prix ? ` · ${euros(prix, langue)}` : ''}`}</span>} />
           ) : null}
-          {acces.gerer && <LigneLien id="reglage-abonnement" nom="Gérer mon abonnement" courant={sous === 'abonnement'} onClick={ouvrirSous('reglage-abonnement')} />}
+          {acces.gerer && <LigneLien id="reglage-abonnement" nom={l('Gérer mon abonnement', 'Manage my subscription')} courant={sous === 'abonnement'} onClick={ouvrirSous('reglage-abonnement')} />}
           {acces.factures && (
-            <LigneLien nom="Mes factures" valeur="Chez Creem" externe onClick={versPortail} disabled={portail === 'ouverture'} label="Mes factures, chez Creem" />
+            <LigneLien nom={l('Mes factures', 'My invoices')} valeur={l('Chez Creem', 'At Creem')} externe onClick={versPortail} disabled={portail === 'ouverture'} label={l('Mes factures, chez Creem', 'My invoices, at Creem')} />
           )}
         </Groupe>
       )}
       {portail && portail !== 'ouverture' && <p role="alert" className="-mt-3 text-[13.5px] text-red-300">{portail}</p>}
 
       <footer className="adm-reglages-pied">
-        <p>Une question&#8239;? <a href={`mailto:${CONTACT_LEGAL}?subject=${encodeURIComponent('Hopla : une question')}`}>Écris-nous</a></p>
+        <p>{l('Une question\u202f?', 'A question?')} <a href={`mailto:${CONTACT_LEGAL}?subject=${encodeURIComponent(l('Hopla : une question', 'Hopla: a question'))}`}>{l('Écris-nous', 'Write to us')}</a></p>
         <p className="flex flex-wrap gap-x-4 gap-y-1">
-          <a href="/legal/cgu" target="_blank" rel="noopener">Conditions d’utilisation</a>
-          <a href="/legal/confidentialite" target="_blank" rel="noopener">Confidentialité</a>
-          <a href="/legal/traitement-des-donnees" target="_blank" rel="noopener">Accord de traitement</a>
-          {LIEN_SOURCE && <a href={LIEN_SOURCE} target="_blank" rel="noopener">Code source</a>}
+          <a href="/legal/cgu" target="_blank" rel="noopener">{l('Conditions d’utilisation', 'Terms of use')}</a>
+          <a href="/legal/confidentialite" target="_blank" rel="noopener">{l('Confidentialité', 'Privacy')}</a>
+          <a href="/legal/traitement-des-donnees" target="_blank" rel="noopener">{l('Accord de traitement', 'Data processing agreement')}</a>
+          {LIEN_SOURCE && <a href={LIEN_SOURCE} target="_blank" rel="noopener">{l('Code source', 'Source code')}</a>}
         </p>
       </footer>
       {sous === 'abonnement' && (
-        <PanneauDetail titre="Mon abonnement" fermer={() => setSous(null)}>
+        <PanneauDetail titre={l('Mon abonnement', 'My subscription')} fermer={() => setSous(null)}>
           <div className="adm-reglages">{facturation}</div>
         </PanneauDetail>
       )}
       {sous === 'api' && (
-        <PanneauDetail titre="API et MCP" fermer={() => setSous(null)}>
+        <PanneauDetail titre={l('API et MCP', 'API and MCP')} fermer={() => setSous(null)}>
           <div className="adm-reglages"><ApiEtMcp api={cles} /></div>
         </PanneauDetail>
       )}
       {/* Au bureau, « Me déconnecter » est dans le menu du compte, en bas de la barre latérale. */}
-      <BoutonSecondaire onClick={onDeconnexion} className="w-full lg:hidden">Me déconnecter</BoutonSecondaire>
+      <BoutonSecondaire onClick={onDeconnexion} className="w-full lg:hidden">{l('Me déconnecter', 'Sign out')}</BoutonSecondaire>
 
-      <Feuille ouverte={fenetre === 'apercu'} onFermer={() => setFenetre(null)} titre="Aperçu dans Google et les réseaux"
-        pied={fermer => <div className="flex justify-end"><BoutonPrincipal onClick={() => fermer()} className="w-full sm:w-auto">Terminé</BoutonPrincipal></div>}>
+      <Feuille ouverte={fenetre === 'apercu'} onFermer={() => setFenetre(null)} titre={l('Aperçu dans Google et les réseaux', 'Preview in Google and on social media')}
+        pied={fermer => <div className="flex justify-end"><BoutonPrincipal onClick={() => fermer()} className="w-full sm:w-auto">{l('Terminé', 'Done')}</BoutonPrincipal></div>}>
         <div className="flex flex-col gap-4">
           {/* Ce que ces deux champs deviennent : la carte qu'affichent Google, WhatsApp ou iMessage quand on partage ta page. */}
           <div className="w-full overflow-hidden rounded-[12px] border border-[#e3e3df] bg-[#fafaf9]" aria-hidden="true">
@@ -220,30 +226,30 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
               <span className="line-clamp-2 text-[13px] leading-snug text-white/60">{descriptionSeo}</span>
             </div>
           </div>
-          <Champ label="Titre" aide={`${reglages.seo.titre.length}/60 caractères conseillés. Vide : ton nom.`}>
+          <Champ label={l('Titre', 'Title')} aide={l(`${reglages.seo.titre.length}/60 caractères conseillés. Vide : ton nom.`, `${reglages.seo.titre.length}/60 characters recommended. Empty: your name.`)}>
             <input className={classeSaisie} value={reglages.seo.titre} maxLength={80} placeholder={reglages.profil.nom} onChange={e => seo({ titre: e.target.value })} />
           </Champ>
-          <Champ label="Description" aide={`${reglages.seo.description.length}/160 caractères conseillés. Vide : ta bio.`}>
+          <Champ label="Description" aide={l(`${reglages.seo.description.length}/160 caractères conseillés. Vide : ta bio.`, `${reglages.seo.description.length}/160 characters recommended. Empty: your bio.`)}>
             <textarea rows={3} className={classeSaisie} value={reglages.seo.description} maxLength={200} placeholder={reglages.profil.bio} onChange={e => seo({ description: e.target.value })} />
           </Champ>
           {compte.principal
-            ? <Interrupteur label="Page visible par Google" actif={reglages.seo.indexable} onChange={v => seo({ indexable: v })} />
-            : <p className="text-[13px] leading-snug text-white/60">Pendant la bêta, ta page n’apparaît pas dans Google. Le titre et la description servent aux aperçus quand tu partages ton lien.</p>}
+            ? <Interrupteur label={l('Page visible par Google', 'Page visible to Google')} actif={reglages.seo.indexable} onChange={v => seo({ indexable: v })} />
+            : <p className="text-[13px] leading-snug text-white/60">{l('Pendant la bêta, ta page n’apparaît pas dans Google. Le titre et la description servent aux aperçus quand tu partages ton lien.', 'During the beta, your page doesn’t appear in Google. The title and description are used for previews when you share your link.')}</p>}
         </div>
       </Feuille>
 
-      <Feuille petite ouverte={fenetre === 'domaine'} onFermer={() => setFenetre(null)} titre="Domaine">
+      <Feuille petite ouverte={fenetre === 'domaine'} onFermer={() => setFenetre(null)} titre={l('Domaine', 'Domain')}>
         {fermer => <ChoixDomaine compte={compte} valeur={reglages.domaine} choisir={d => { onChange({ ...reglages, domaine: d }); fermer(); }} />}
       </Feuille>
 
-      <Feuille petite ouverte={fenetre === 'redirection'} onFermer={() => setFenetre(null)} titre="Rediriger ma page">
+      <Feuille petite ouverte={fenetre === 'redirection'} onFermer={() => setFenetre(null)} titre={l('Rediriger ma page', 'Redirect my page')}>
         {fermer => <Redirection valeur={versAilleurs ? reglages.redirection : { url: '', fin: '' }} ici={adresse}
           poser={r => { onChange({ ...reglages, redirection: r }); fermer(); }} annuler={() => fermer()} />}
       </Feuille>
 
       {!compte.principal && (
-        <Feuille petite ouverte={fenetre === 'supprimer'} onFermer={() => setFenetre(null)} titre="Supprimer mon compte">
-          {fermer => <SupprimerCompte pseudo={compte.pseudo} abonnement={paye && estPaye(abonnement) ? { nom: OFFRES[abonnement.payee].nom, resilie, fin: abonnement.finPeriode } : null}
+        <Feuille petite ouverte={fenetre === 'supprimer'} onFermer={() => setFenetre(null)} titre={l('Supprimer mon compte', 'Delete my account')}>
+          {fermer => <SupprimerCompte pseudo={compte.pseudo} abonnement={paye && estPaye(abonnement) ? { nom: nomPlan(abonnement.payee, langue), resilie, fin: abonnement.finPeriode } : null}
             supprimerMonCompte={supprimerMonCompte} annuler={() => fermer()} />}
         </Feuille>
       )}
@@ -256,11 +262,12 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
  * adresses mènent à la même page, et les anciennes continuent de marcher : changer ne casse aucun lien déjà posé.
  */
 function ChoixDomaine({ compte, valeur, choisir }: { compte: ComptePage; valeur: DomaineCourt | ''; choisir: (d: DomaineCourt | '') => void }) {
+  const l = useL();
   const choix: (DomaineCourt | '')[] = ['', ...DOMAINES_COURTS];
   return (
     <div className="flex flex-col gap-3">
-      <p className="text-[14px] leading-snug text-white/75">Toutes mènent à ta page. Tes liens déjà partagés continuent de marcher.</p>
-      <div role="radiogroup" aria-label="Nom de domaine" className="flex flex-col">
+      <p className="text-[14px] leading-snug text-white/75">{l('Toutes mènent à ta page. Tes liens déjà partagés continuent de marcher.', 'They all lead to your page. Links you’ve already shared keep working.')}</p>
+      <div role="radiogroup" aria-label={l('Nom de domaine', 'Domain name')} className="flex flex-col">
         {choix.map(d => {
           const pris = d === valeur;
           return (
@@ -277,9 +284,10 @@ function ChoixDomaine({ compte, valeur, choisir }: { compte: ComptePage; valeur:
 }
 
 /** « Vers monsite.fr, jusqu’au 30 octobre » : où part la page, et jusqu'à quand ; `court`, le site seul, pour la ligne de Réglages. */
-export function resumeRedirection(url: string, fin: string, court = false) {
+export function resumeRedirection(url: string, fin: string, court = false, langue: Langue = 'fr') {
   const site = (court ? new URL(url).hostname : sansSchema(url)).replace(/^www\./, '').replace(/\/$/, '');
-  return `Vers ${site}${fin ? `, jusqu’au ${new Date(fin).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}` : ''}`;
+  const jour = fin ? new Date(fin).toLocaleDateString(langue === 'fr' ? 'fr-FR' : 'en-US', { day: 'numeric', month: 'long' }) : '';
+  return langue === 'fr' ? `Vers ${site}${jour ? `, jusqu’au ${jour}` : ''}` : `To ${site}${jour ? `, until ${jour}` : ''}`;
 }
 
 /** Une date ISO vers la valeur d'un `<input type="datetime-local">`, en heure locale. */
@@ -295,34 +303,35 @@ const versLocal = (iso: string) => {
  * visiteur en rond : refusée.
  */
 function Redirection({ valeur, ici, poser, annuler }: { valeur: Reglages['redirection']; ici: string; poser: (r: Reglages['redirection']) => void; annuler: () => void }) {
+  const l = useL();
   const [url, setUrl] = useState(valeur.url);
   const [fin, setFin] = useState(versLocal(valeur.fin));
   const [erreur, setErreur] = useState('');
   const [erreurFin, setErreurFin] = useState('');
   function valider() {
     const propre = adresseSaisie(url);
-    if (!/^https?:/.test(propre)) { setErreur('Cette adresse n’a pas l’air complète, par exemple monsite.fr/lancement'); return; }
-    if (!redirectionActive({ url: propre, fin: '' }, Date.now(), ici)) { setErreur('C’est l’adresse de ta page : choisis-en une autre.'); return; }
+    if (!/^https?:/.test(propre)) { setErreur(l('Cette adresse n’a pas l’air complète, par exemple monsite.fr/lancement', 'This address doesn’t look complete, for example mysite.com/launch')); return; }
+    if (!redirectionActive({ url: propre, fin: '' }, Date.now(), ici)) { setErreur(l('C’est l’adresse de ta page : choisis-en une autre.', 'That’s your page’s address: pick another one.')); return; }
     const iso = fin ? new Date(fin).toISOString() : '';
-    if (iso && Date.parse(iso) <= Date.now()) { setErreurFin('Cette date est déjà passée.'); return; }
+    if (iso && Date.parse(iso) <= Date.now()) { setErreurFin(l('Cette date est déjà passée.', 'This date has already passed.')); return; }
     poser({ url: propre, fin: iso });
   }
   return (
     // `noValidate` : « monsite.fr » se tape sans https://, Hopla le complète ; le navigateur, lui, le refuserait.
     <form noValidate onSubmit={e => { e.preventDefault(); valider(); }} className="flex flex-col gap-4 pb-1">
-      <p className="text-[14px] leading-snug text-white/75">Tes visiteurs partent tout de suite vers cette adresse, sans voir ta page.</p>
-      <Champ label="Adresse" erreur={erreur || undefined}>
-        <input className={classeSaisie} type="url" inputMode="url" autoCapitalize="none" autoCorrect="off" spellCheck={false} value={url} placeholder="monsite.fr/lancement"
+      <p className="text-[14px] leading-snug text-white/75">{l('Tes visiteurs partent tout de suite vers cette adresse, sans voir ta page.', 'Your visitors go straight to this address, without seeing your page.')}</p>
+      <Champ label={l('Adresse', 'Address')} erreur={erreur || undefined}>
+        <input className={classeSaisie} type="url" inputMode="url" autoCapitalize="none" autoCorrect="off" spellCheck={false} value={url} placeholder={l('monsite.fr/lancement', 'mysite.com/launch')}
           onChange={e => { setUrl(e.target.value); setErreur(''); }} autoFocus={focusAuto()} />
       </Champ>
-      <Champ label="Jusqu’au (facultatif)" erreur={erreurFin || undefined} aide={fin ? undefined : 'Vide : jusqu’à ce que tu l’arrêtes.'}>
+      <Champ label={l('Jusqu’au (facultatif)', 'Until (optional)')} erreur={erreurFin || undefined} aide={fin ? undefined : l('Vide : jusqu’à ce que tu l’arrêtes.', 'Empty: until you stop it.')}>
         <input className={classeSaisie} type="datetime-local" value={fin} min={versLocal(new Date().toISOString())} onChange={e => { setFin(e.target.value); setErreurFin(''); }} />
       </Champ>
       <div className="flex flex-wrap items-center justify-end gap-2">
         {valeur.url
-          ? <button type="button" onClick={() => poser({ url: '', fin: '' })} className={`${classeBouton.discret} mr-auto !text-red-300`}>Arrêter la redirection</button>
-          : <button type="button" onClick={annuler} className={classeBouton.discret}>Annuler</button>}
-        <button type="submit" disabled={!url.trim()} className={classeBouton.principal}>{valeur.url ? 'Enregistrer' : 'Rediriger'}</button>
+          ? <button type="button" onClick={() => poser({ url: '', fin: '' })} className={`${classeBouton.discret} mr-auto !text-red-300`}>{l('Arrêter la redirection', 'Stop the redirect')}</button>
+          : <button type="button" onClick={annuler} className={classeBouton.discret}>{l('Annuler', 'Cancel')}</button>}
+        <button type="submit" disabled={!url.trim()} className={classeBouton.principal}>{valeur.url ? l('Enregistrer', 'Save') : l('Rediriger', 'Redirect')}</button>
       </div>
     </form>
   );
@@ -336,6 +345,8 @@ function SupprimerCompte({ pseudo, abonnement, supprimerMonCompte, annuler }: {
   pseudo: string; abonnement: { nom: string; resilie: boolean; fin: number | null } | null;
   supprimerMonCompte: (confirmation: string) => Promise<{ ok: boolean; message: string; aLaMain?: boolean }>; annuler: () => void;
 }) {
+  const l = useL();
+  const langue = useLangue();
   const [saisie, setSaisie] = useState('');
   const [envoi, setEnvoi] = useState(false);
   const [erreur, setErreur] = useState('');
@@ -351,32 +362,34 @@ function SupprimerCompte({ pseudo, abonnement, supprimerMonCompte, annuler }: {
       if (r.ok && r.aLaMain) { supprime.current = true; setFin(r.message); return; }
       if (r.ok) { location.replace('/'); return; }
       setErreur(r.message);
-    } catch { setErreur('Le serveur ne répond pas. Réessaie dans un instant.'); }
+    } catch { setErreur(l('Le serveur ne répond pas. Réessaie dans un instant.', 'The server isn’t responding. Try again in a moment.')); }
     setEnvoi(false);
   }
   if (fin) return (
     <div className="flex flex-col gap-4 pb-1">
       <p role="status" className="text-[14px] leading-snug text-white/75">{fin}</p>
-      <div className="flex justify-end"><button type="button" onClick={() => location.replace('/')} className={classeBouton.principal}>Terminé</button></div>
+      <div className="flex justify-end"><button type="button" onClick={() => location.replace('/')} className={classeBouton.principal}>{l('Terminé', 'Done')}</button></div>
     </div>
   );
   return (
     <form onSubmit={e => { e.preventDefault(); if (saisie.trim().toLowerCase() === pseudo) void supprimer(); }} className="flex flex-col gap-4 pb-1">
-      <p className="text-[14px] leading-snug text-white/75">Ta page disparaît tout de suite, avec tes liens, tes images et tes statistiques. Rien ne se récupère.</p>
+      <p className="text-[14px] leading-snug text-white/75">{l('Ta page disparaît tout de suite, avec tes liens, tes images et tes statistiques. Rien ne se récupère.', 'Your page disappears right away, with your links, images and analytics. Nothing can be recovered.')}</p>
       {/* L'abonnement s'arrête avec la page : plus rien n'est prélevé pour une page qui n'existe plus. */}
       {abonnement && (
         <p className="text-[14px] font-medium leading-snug text-amber-200">
           {abonnement.resilie
-            ? `Ton offre ${abonnement.nom} s’arrête avec, sans attendre ${abonnement.fin ? `le ${dateLongue(abonnement.fin)}` : 'la fin de la période payée'}. Tes factures restent chez Creem.`
-            : `Ton abonnement ${abonnement.nom} est résilié avec, tout de suite : plus aucun prélèvement, sans remboursement automatique des jours déjà payés. Tes factures restent chez Creem.`}
+            ? l(`Ton offre ${abonnement.nom} s’arrête avec, sans attendre ${abonnement.fin ? `le ${dateLongue(abonnement.fin)}` : 'la fin de la période payée'}. Tes factures restent chez Creem.`,
+              `Your ${abonnement.nom} plan ends with it, without waiting for ${abonnement.fin ? dateLongue(abonnement.fin, langue) : 'the end of the paid period'}. Your invoices stay at Creem.`)
+            : l(`Ton abonnement ${abonnement.nom} est résilié avec, tout de suite : plus aucun prélèvement, sans remboursement automatique des jours déjà payés. Tes factures restent chez Creem.`,
+              `Your ${abonnement.nom} subscription is canceled with it, right away: no more charges, and no automatic refund of days already paid. Your invoices stay at Creem.`)}
         </p>
       )}
-      <Champ label={`Pour confirmer, tape ton pseudo, ${pseudo}`} erreur={erreur || undefined}>
+      <Champ label={l(`Pour confirmer, tape ton pseudo, ${pseudo}`, `To confirm, type your username, ${pseudo}`)} erreur={erreur || undefined}>
         <input className={classeSaisie} value={saisie} onChange={e => setSaisie(e.target.value)} autoFocus={focusAuto()} autoCapitalize="none" autoComplete="off" spellCheck={false} />
       </Champ>
       <div className="flex flex-wrap justify-end gap-2">
-        <button type="button" onClick={annuler} className={classeBouton.discret}>Annuler</button>
-        <button type="submit" disabled={envoi || saisie.trim().toLowerCase() !== pseudo} className={classeBouton.danger}>{envoi ? 'Suppression…' : 'Supprimer définitivement'}</button>
+        <button type="button" onClick={annuler} className={classeBouton.discret}>{l('Annuler', 'Cancel')}</button>
+        <button type="submit" disabled={envoi || saisie.trim().toLowerCase() !== pseudo} className={classeBouton.danger}>{envoi ? l('Suppression…', 'Deleting…') : l('Supprimer définitivement', 'Delete for good')}</button>
       </div>
     </form>
   );
