@@ -9,8 +9,10 @@ import { Roue } from './Roue.tsx';
 import { APPEL, MOTS, useInscription } from './textes.ts';
 import { accueilDe, choix, useL, useLangue } from './langue.ts';
 import type { Choix } from './langue.ts';
-import { PAGES_FONCTIONS } from './pages/fonctions.ts';
-import { COMPARATIFS } from './pages/comparatifs.ts';
+import type { Langue } from '../lib/types.ts';
+import { CHEMIN_FONCTIONS, pagesFonctions } from './pages/fonctions.ts';
+import { CHEMIN_COMPARATIFS, comparatifs } from './pages/comparatifs.ts';
+import { autreAdresse } from './pages/adresses.ts';
 
 export function Marque() {
   const langue = useLangue();
@@ -36,7 +38,7 @@ export function Barre({ ailleurs = false }: { ailleurs?: boolean }) {
   const langue = useLangue();
   const l = useL();
   const [debut, suite] = APPEL[langue][useInscription()];
-  const { SECTIONS, BARRE, MENU, REPERES } = sections(l);
+  const { SECTIONS, BARRE, MENU, REPERES } = sections(l, langue);
   const { etape, ancien, correction } = useReservation();
   // Une fois l'e-mail parti, il n'y a plus rien à créer : la barre garde Connexion.
   const envoye = etape === 'fait' || !!ancien || correction;
@@ -158,12 +160,12 @@ export function Barre({ ailleurs = false }: { ailleurs?: boolean }) {
           {BARRE.map(entree => {
             if (typeof entree === 'string') {
               const liste = entree === 'fonctions'
-                ? { titre: l('Fonctionnalités', 'Features'), tete: '', tout: ['/fonctionnalites', l('Toutes les fonctionnalités', 'All features')], pages: PAGES_FONCTIONS.map(p => [`/fonctionnalites/${p.slug}`, p.nom]) }
-                : { titre: l('Comparatifs', 'Compare'), tete: l('Hopla face à', 'Hopla vs'), tout: ['/comparatif', l('Tous les comparatifs', 'All comparisons')], pages: COMPARATIFS.map(c => [`/comparatif/${c.slug}`, c.nom]) };
+                ? { titre: l('Fonctionnalités', 'Features'), tete: '', tout: [CHEMIN_FONCTIONS[langue], l('Toutes les fonctionnalités', 'All features')], pages: pagesFonctions(langue).map(p => [`${CHEMIN_FONCTIONS[langue]}/${p.slug}`, p.nom]) }
+                : { titre: l('Comparatifs', 'Compare'), tete: l('Hopla face à', 'Hopla vs'), tout: [CHEMIN_COMPARATIFS[langue], l('Tous les comparatifs', 'All comparisons')], pages: comparatifs(langue).map(c => [`${CHEMIN_COMPARATIFS[langue]}/${c.slug}`, c.nom]) };
               const ouvert = deroule === entree;
               return (
                 <div key={entree} className="hl-deroulant" data-ouvert={ouvert || undefined}>
-                  <button type="button" data-ici={chemin.startsWith(entree === 'fonctions' ? '/fonctionnalites' : '/comparatif') || ici === entree || undefined} aria-expanded={ouvert} aria-controls={`hl-deroule-${entree}`} onClick={() => setDeroule(d => d === entree ? '' : entree)}>
+                  <button type="button" data-ici={chemin.startsWith(entree === 'fonctions' ? CHEMIN_FONCTIONS[langue] : CHEMIN_COMPARATIFS[langue]) || ici === entree || undefined} aria-expanded={ouvert} aria-controls={`hl-deroule-${entree}`} onClick={() => setDeroule(d => d === entree ? '' : entree)}>
                     {liste.titre}<Icone nom="ui-chevron" taille={16} />
                   </button>
                   <div id={`hl-deroule-${entree}`} className="hl-deroule" data-sorte={entree} hidden={!ouvert}>
@@ -195,7 +197,7 @@ export function Barre({ ailleurs = false }: { ailleurs?: boolean }) {
         {/* Au téléphone, l'appel quitte la barre pour le menu (27 octobre 2026, demandé par Lilian) : la barre garde la marque et le burger. */}
         {!envoye && <a href="#reserver" className="hl-btn hl-menu-creer" onClick={ev => { ev.preventDefault(); setMenu(false); allerAuChamp(); }}>{debut}{suite}</a>}
         <a href="/admin" className="hl-menu-connexion">{l('Connexion', 'Log in')}</a>
-        <a href={langue === 'fr' ? '/' : '/fr'} className="hl-menu-connexion" lang={langue === 'fr' ? 'en' : 'fr'} hrefLang={langue === 'fr' ? 'en' : 'fr'}>{langue === 'fr' ? 'English' : 'Français'}</a>
+        <a href={autreAdresse(chemin, langue)} className="hl-menu-connexion" lang={langue === 'fr' ? 'en' : 'fr'} hrefLang={langue === 'fr' ? 'en' : 'fr'}>{langue === 'fr' ? 'English' : 'Français'}</a>
       </nav>
       </div>
     </header>
@@ -212,13 +214,13 @@ function titreDe(lien: string) {
   });
 }
 
-function sections(l: Choix) {
+function sections(l: Choix, langue: Langue) {
   /** Les sections de l'accueil, dans l'ordre de la page. */
   const SECTIONS = [['#inspiration', l('Inspiration', 'Inspiration')], ['#fonctionnement', l('Comment ça marche', 'How it works')], ['#themes', l('Thèmes', 'Themes')], ['#prix', l('Tarifs', 'Pricing')], ['#questions', l('Questions', 'FAQ')]];
   /** La barre au bureau (26 octobre 2026, demandé par Lilian) : trois sections, et les pages des fonctions et des comparatifs en listes déroulantes. */
   const BARRE: (string[] | 'fonctions' | 'comparatifs')[] = [SECTIONS[1], 'fonctions', SECTIONS[2], SECTIONS[3], 'comparatifs'];
   /** Le menu du téléphone : toutes les sections, et les pages des fonctions et des comparatifs à leur place. */
-  const MENU = [SECTIONS[0], SECTIONS[1], ['/fonctionnalites', l('Fonctionnalités', 'Features')], SECTIONS[2], SECTIONS[3], ['/comparatif', l('Comparatifs', 'Compare')], SECTIONS[4]];
+  const MENU = [SECTIONS[0], SECTIONS[1], [CHEMIN_FONCTIONS[langue], l('Fonctionnalités', 'Features')], SECTIONS[2], SECTIONS[3], [CHEMIN_COMPARATIFS[langue], l('Comparatifs', 'Compare')], SECTIONS[4]];
   /** Où commence chaque lien de la barre ; les sections sans lien (Prise, le dernier appel) le referment. */
   const REPERES = [...SECTIONS.map(([lien]) => [lien, lien]), ['#plus-loin', 'fonctions'], ['#prise', ''], ['#dernier', '']];
   return { SECTIONS, BARRE, MENU, REPERES };

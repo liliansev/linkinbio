@@ -1,4 +1,5 @@
 import type { Fonction } from '../../lib/abonnement.ts';
+import type { Langue } from '../../lib/types.ts';
 
 /*
  * Une page par fonction (26 octobre 2026, demandé par Lilian : « une page par
@@ -11,6 +12,9 @@ import type { Fonction } from '../../lib/abonnement.ts';
 export type Offre = 'gratuit' | 'starter' | 'pro';
 
 export interface PageFonction {
+  /** Le même dans les deux langues : le slug français, qui choisit la scène et la capture. */
+  id: string;
+  /** L'adresse dans sa langue : `/features/<slug>` en anglais, `/fonctionnalites/<slug>` en français. */
   slug: string;
   /** Le nom court, dans les listes et les liens. */
   nom: string;
@@ -29,7 +33,7 @@ export interface PageFonction {
   questions: [string, string][];
 }
 
-export const PAGES_FONCTIONS: PageFonction[] = [
+const FR: Omit<PageFonction, 'id'>[] = [
   {
     slug: 'selon-le-reseau',
     nom: 'Ta page selon le réseau',
@@ -268,4 +272,250 @@ export const PAGES_FONCTIONS: PageFonction[] = [
   },
 ];
 
-export const pageFonction = (slug: string) => PAGES_FONCTIONS.find(p => p.slug === slug);
+
+/*
+ * Les mêmes pages en anglais (8 novembre 2026, Hopla anglais d'abord), rangées par le slug
+ * français : l'offre et le droit restent ceux de la page française.
+ */
+type Texte = Pick<PageFonction, 'slug' | 'nom' | 'titre' | 'chapo' | 'resume' | 'etapes' | 'points' | 'questions'>;
+
+const EN: Record<string, Texte> = {
+  'selon-le-reseau': {
+    slug: 'by-network',
+    nom: 'Your page by network',
+    titre: ['One link', 'The right order for everyone'],
+    chapo: 'You put the same link in every bio. Hopla recognizes the network your visitor comes from and puts the link they’re looking for first.',
+    resume: 'A link in bio page that reorders itself by your visitor’s network: Instagram, TikTok, YouTube or LinkedIn each see the right link first. Free.',
+    etapes: [
+      { titre: 'One link in every bio', texte: 'Camille is a photographer. Her Hopla page is the same everywhere, its order isn’t.' },
+      { titre: 'From Instagram', texte: 'They just saw her photos: her portfolio comes first.' },
+      { titre: 'From TikTok', texte: 'They come from her videos: behind the scenes moves up.' },
+      { titre: 'From YouTube', texte: 'They come from her tutorial: the next part is on top.' },
+      { titre: 'From LinkedIn', texte: 'A potential client: “Let’s talk about your project” shows up, just for them.' },
+    ],
+    points: [
+      { titre: 'Fewer lost clicks', texte: 'Your visitor doesn’t have to search: the link that follows what they just saw is already on top.' },
+      { titre: 'Nothing to duplicate', texte: 'One page to keep up to date, one link to share, whatever the platform.' },
+      { titre: 'You decide', texte: 'For each link, you choose where it moves up, or who is the only one to see it.' },
+    ],
+    questions: [
+      ['How does Hopla know where my visitor comes from?', 'From the in-app browser they arrive in (Instagram, TikTok, LinkedIn… identify themselves), from the site they were leaving, or from a small tag you add to your link, like ?s=tiktok. Nothing about them is stored.'],
+      ['What if they come from somewhere else?', 'They see your page in the order you chose. The network only moves a link up, it hides nothing unless you ask it to.'],
+    ],
+  },
+  'ouvrir-dans-l-app': {
+    slug: 'open-in-app',
+    nom: 'Your links open in their app',
+    titre: ['Fewer detours', 'More followers'],
+    chapo: 'From Instagram or TikTok, a link usually opens in a small browser where nobody is signed in. With Hopla, your music video opens in YouTube.',
+    resume: 'From Instagram or TikTok, Hopla opens your YouTube, Spotify and other links right in their app, where your visitor is already signed in. Free.',
+    etapes: [
+      { titre: 'A tap on Sacha’s video', texte: 'Their visitor comes from Instagram and taps “Blue days, the video”.' },
+      { titre: 'Without Hopla: Instagram’s browser', texte: 'The video opens in an Instagram window, where they aren’t signed in to anything.' },
+      { titre: 'They’re asked to sign in', texte: 'They close the window and leave. Sacha just lost a subscriber.' },
+      { titre: 'With Hopla: the YouTube app', texte: 'The same tap opens YouTube, if the app is installed. Their account is already there.' },
+      { titre: 'The video starts', texte: 'No password, no blank page: they watch.' },
+      { titre: 'They subscribe', texte: 'With one tap, because they’re at home. That’s what matters to Sacha.' },
+    ],
+    points: [
+      { titre: 'Subscribers, not lost views', texte: 'Your visitor can subscribe, like or save, because they’re signed in to their app.' },
+      { titre: 'Nothing to set up', texte: 'Hopla recognizes YouTube, Spotify, TikTok, Instagram and the rest: paste your link, that’s it.' },
+      { titre: 'And if the app is missing', texte: 'The link opens in the browser, as before. Nobody hits a dead end.' },
+    ],
+    questions: [
+      ['Which apps are recognized?', 'YouTube, YouTube Music, Spotify, Instagram, TikTok, Threads, X, LinkedIn, Facebook, Pinterest, Snapchat, Twitch, WhatsApp and Telegram. The list grows with requests.'],
+      ['Does it work on iPhone and Android?', 'Yes, on both, from the in-app browsers of Instagram, TikTok, Facebook, LinkedIn, Threads and Snapchat.'],
+    ],
+  },
+  'page-selon-l-heure': {
+    slug: 'by-time-of-day',
+    nom: 'Your page by time of day',
+    titre: ['At noon, the menu', 'At night, the booking'],
+    chapo: 'You pick the hours, Hopla puts the right link on top at the right time. Your page follows your day without you touching it.',
+    resume: 'Your link in bio page changes with the time of day: your podcast in the morning, your booking link at night. Time slots per weekday with Hopla.',
+    etapes: [
+      { titre: '9 am, the day begins', texte: 'Nadia teaches budgeting. In the morning, her page puts her podcast first.' },
+      { titre: 'The hours go by', texte: 'You have nothing to do: the time slot is set once and for all.' },
+      { titre: '6 pm, evening comes', texte: '“Book a session” moves to the top, the podcast steps back.' },
+    ],
+    points: [
+      { titre: 'One time slot per link', texte: 'Monday to Friday from 9 am to 6 pm, weekends, evenings: you choose the days and hours.' },
+      { titre: 'Moved up or hidden', texte: 'A link can move to the top during its time slot, or only show up during it.' },
+      { titre: 'On your time', texte: 'Hopla follows your time zone, summer and winter.' },
+    ],
+    questions: [
+      ['Can I set several time slots?', 'Yes, one per link, and each link has its own.'],
+      ['What does a visitor see outside the time slot?', 'The link goes back to its usual place, or disappears if you set it to show only during its time slot.'],
+    ],
+  },
+  lancement: {
+    slug: 'scheduled-launches',
+    nom: 'Your scheduled launches',
+    titre: ['A countdown', 'Then the link opens'],
+    chapo: 'Announce your new collection without revealing its address. At the set time, the link opens on its own, even if you’re busy elsewhere.',
+    resume: 'Schedule a link on your page: a countdown, then it opens at the set time. Start and end dates with Hopla.',
+    etapes: [
+      { titre: 'The announcement', texte: 'Inès launches her new pieces tonight at 6 pm. Her page shows the countdown, not the address.' },
+      { titre: 'The last seconds', texte: 'Her visitors come back to check. The countdown keeps itself up to date.' },
+      { titre: '6 pm: it’s open', texte: 'The link replaces the countdown, at the top of the page. Nobody had the address before.' },
+    ],
+    points: [
+      { titre: 'A start date, an end date', texte: 'A link appears and disappears when you said so: a sale, a live, a signup.' },
+      { titre: 'The countdown, if you want', texte: 'It brings your visitors back, and nothing leaks before the time.' },
+      { titre: 'Scheduled from your phone', texte: 'Two dates to pick in the block, done.' },
+    ],
+    questions: [
+      ['Can the address leak before the time?', 'No: until the link is open, its address isn’t in the page.'],
+      ['And after the end date?', 'The link disappears from your page. It stays in your dashboard, ready to be used again.'],
+    ],
+  },
+  drops: {
+    slug: 'drops',
+    nom: 'Your limited spots',
+    titre: ['A private link', 'Limited spots'],
+    chapo: 'A limited edition, an early access, a guest list: the link opens with a code, for the number of spots you choose.',
+    resume: 'Hopla drops: a link on your page that opens with a code, for a chosen number of spots, with a live counter.',
+    etapes: [
+      { titre: 'A locked link', texte: 'Théo opens a 30-spot chess openings course. His page shows the link, locked, and the spots left.' },
+      { titre: 'The code', texte: 'His subscribers got it in his newsletter. They type it on the page.' },
+      { titre: 'Unlocked', texte: 'The link opens for them, and for them only.' },
+      { titre: 'One spot fewer', texte: 'The counter updates itself. At zero, the link closes.' },
+    ],
+    points: [
+      { titre: 'Exclusivity, simply', texte: 'No separate store or list to manage: a code and a number of spots.' },
+      { titre: 'A counter that builds desire', texte: '“Only 3 spots left” shows on your page and keeps itself up to date.' },
+      { titre: 'For your regulars', texte: 'Give the code to your email list or in a story, they get in first.' },
+    ],
+    questions: [
+      ['Can the code get around?', 'Yes, like any code. The number of spots doesn’t move: once reached, the link closes.'],
+      ['Can I reopen a drop?', 'Yes, by changing the number of spots or the code, from the block.'],
+    ],
+  },
+  avis: {
+    slug: 'reviews',
+    nom: 'Your customer reviews',
+    titre: ['Your rating out of 5', 'Front and center'],
+    chapo: 'Your Google or Trustpilot rating, your number of reviews and a customer’s words, on your page. Hopla reads them every day, nothing to copy.',
+    resume: 'Show your Google or Trustpilot rating and a customer’s words on your link in bio page. Hopla reads it again every day.',
+    etapes: [
+      { titre: 'Your stars', texte: 'Inès pastes the address of her reviews page. Her stars show up.' },
+      { titre: 'Your rating and number of reviews', texte: '4.9 out of 5 from 87 reviews: a number that reassures before buying.' },
+      { titre: 'A customer’s words', texte: 'A sentence you choose, under the rating.' },
+    ],
+    points: [
+      { titre: 'Kept up to date', texte: 'The rating is read again every day on the pasted page. If it can’t be read, you type it once.' },
+      { titre: 'Where people decide', texte: 'Your visitor hesitates between your link and another one: your rating helps them choose.' },
+      { titre: 'Out of 5, everywhere', texte: 'A rating out of 10 or 20 is brought back to 5, to be read at a glance.' },
+    ],
+    questions: [
+      ['Which platforms?', 'Any page that publishes its rating in its data (Trustpilot, many stores and review sites). For a Google listing, you type your rating yourself.'],
+      ['Do I choose the words shown?', 'Yes, you choose the sentence and the first name.'],
+    ],
+  },
+  'liste-email': {
+    slug: 'email-list',
+    nom: 'Your email list',
+    titre: ['Stay in touch', 'With your visitors'],
+    chapo: 'A visitor leaves their email on your page and joins your list. It goes straight to your newsletter if you connected it.',
+    resume: 'An email field on your link in bio page: your subscribers go to Brevo, Mailchimp, Kit, MailerLite, beehiiv or a webhook.',
+    etapes: [
+      { titre: 'A tip every Sunday', texte: 'Nadia offers her newsletter on her page. A visitor types their address.' },
+      { titre: '“Got it”', texte: 'One tap, done. No separate page, no form to fill in.' },
+      { titre: 'Off to your newsletter', texte: 'The subscriber goes to Brevo, where Nadia already writes. They also show up in Hopla.' },
+    ],
+    points: [
+      { titre: 'Your subscribers are yours', texte: 'Export them whenever you want, as CSV, and for Substack.' },
+      { titre: 'Connected in two steps', texte: 'Brevo, Mailchimp, Kit, MailerLite, beehiiv, Systeme.io, MailCheap, Loops, or Make, Zapier and n8n through a webhook.' },
+      { titre: 'A gift, if you want', texte: 'A guide or a discount, sent once the email is given, never before.' },
+    ],
+    questions: [
+      ['And without a newsletter?', 'Your subscribers stay in Hopla, ready to export the day you pick one.'],
+      ['Are my API keys protected?', 'They’re encrypted and never come back to your browser.'],
+    ],
+  },
+  stats: {
+    slug: 'analytics',
+    nom: 'Your analytics, in plain words',
+    titre: ['Your numbers', 'In sentences'],
+    chapo: 'Your views, your clicks and where your visitors come from, in a dashboard. And every Monday at 9 am, the highlights by email, written the way you’d say them.',
+    resume: 'Analytics for your link in bio page: views, clicks, networks and countries, without cookies. And every Monday, the highlights by email in sentences.',
+    etapes: [
+      { titre: 'Your week', texte: 'Every Monday, Inès gets an email. It starts with her views.' },
+      { titre: 'Where your visitors come from', texte: 'Instagram brings her the most people: she knows where to post.' },
+      { titre: 'Your best day', texte: 'Thursday, with 88 views. A post that day?' },
+      { titre: 'Your link that works', texte: '“My pieces of the moment” got 40% more clicks.' },
+      { titre: 'What Hopla saved', texte: '38 clicks opened in their app, instead of getting stuck in Instagram.' },
+    ],
+    points: [
+      { titre: 'No cookies, no banner', texte: 'Your visitors’ IP address is never stored. Nothing to declare.' },
+      { titre: 'The right numbers', texte: 'Views, visitors, clicks, click rate, networks, countries and most clicked links.' },
+      { titre: 'Thirty days or a year', texte: 'Up to a year of history, to see what works from one season to the next.' },
+    ],
+    questions: [
+      ['Can I turn off the Monday email?', 'Yes, with a switch in your settings.'],
+    ],
+  },
+  vitrine: {
+    slug: 'storefront',
+    nom: 'Your storefront',
+    titre: ['A page that sells', 'Without a separate store'],
+    chapo: 'Your products with their photo and price, your booking link, a button to support you. Each block leads to the site that takes the payment, Hopla takes nothing.',
+    resume: 'The Hopla storefront: products with photo and price, bookings, tips and affiliate links with promo codes, on your link in bio page.',
+    etapes: [
+      { titre: 'A product', texte: 'Inès pastes the address of a piece from her store. Photo, name and price are read on their own.' },
+      { titre: 'A booking', texte: 'Her Calendly opens inside the page, without leaving Hopla.' },
+      { titre: 'A tip', texte: 'Amounts for PayPal.Me, or a button for Ko-fi, Buy Me a Coffee, Patreon.' },
+      { titre: 'An affiliate link', texte: 'With the “Ad” label the law requires, and its promo code copied with one tap.' },
+    ],
+    points: [
+      { titre: 'Zero commission', texte: 'Hopla takes no payment: your customer pays on your store, your calendar or your tip page.' },
+      { titre: 'An address is enough', texte: 'Hopla recognizes a product page, a calendar or a tip page, and picks the right block.' },
+      { titre: 'By the rules', texte: 'The “Ad” label on an affiliate link always shows, as the law requires.' },
+    ],
+    questions: [
+      ['Which stores are recognized?', 'Shopify, Etsy, WooCommerce and any page that declares its price. Otherwise, you type the price yourself.'],
+      ['Which calendars?', 'Calendly, Cal.com and Google Calendar open inside the page; Acuity, TidyCal and the others on their own site.'],
+    ],
+  },
+  themes: {
+    slug: 'themes',
+    nom: 'Twenty-four themes',
+    titre: ['A page of your own', 'It shows'],
+    chapo: 'Twenty-four themes, from the most understated to the boldest, each with typography tuned by hand. Change the mood in one tap.',
+    resume: 'Twenty-four themes for your link in bio page, each with hand-tuned typography, all free. Plus your colors, your font and your background.',
+    etapes: [
+      { titre: 'Understated', texte: 'So your photos do the talking.' },
+      { titre: 'Warm', texte: 'Paper and clay tones.' },
+      { titre: 'Bold', texte: 'So people recognize you at first glance.' },
+      { titre: 'Yours', texte: 'Your colors, your font and your background, on the theme’s typography.' },
+    ],
+    points: [
+      { titre: 'For every page', texte: 'All twenty-four themes are there from your very first page.' },
+      { titre: 'Readable everywhere', texte: 'Every theme is checked for contrast, sizes and reading on a small screen.' },
+      { titre: 'One tap to change', texte: 'Your content stays put: only the mood changes.' },
+    ],
+    questions: [
+      ['Can I use my own colors?', 'Yes: the background, the buttons, the accent, the font and a background image.'],
+      ['Do my visitors see a sudden change?', 'No, your page changes as soon as you confirm, without breaking anything.'],
+    ],
+  },
+};
+
+const PAGES: Record<Langue, PageFonction[]> = {
+  fr: FR.map(p => ({ ...p, id: p.slug })),
+  en: FR.map(p => ({ ...p, ...EN[p.slug], id: p.slug })),
+};
+
+/** Les pages des fonctions dans une langue. */
+export const pagesFonctions = (langue: Langue) => PAGES[langue];
+/** Les pages en français : le plan du site et ce qui n'a pas encore de langue. */
+export const PAGES_FONCTIONS = PAGES.fr;
+/** La page d'un slug, dans sa langue. */
+export const pageFonction = (slug: string, langue: Langue = 'fr') => PAGES[langue].find(p => p.slug === slug);
+/** La même page dans l'autre langue, par son id. */
+export const pageParId = (id: string, langue: Langue) => PAGES[langue].find(p => p.id === id);
+
+/** Le chemin des fonctions dans une langue : `/features` en anglais, `/fonctionnalites` en français. */
+export const CHEMIN_FONCTIONS: Record<Langue, string> = { en: '/features', fr: '/fonctionnalites' };
+/** L'adresse d'une fonction, par son id, dans une langue. */
+export const cheminFonction = (id: string, langue: Langue) => `${CHEMIN_FONCTIONS[langue]}/${pageParId(id, langue)?.slug ?? id}`;

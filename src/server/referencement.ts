@@ -2,8 +2,8 @@ import { DESCRIPTION, FONCTIONS, questions } from '../accueil/textes.ts';
 import { OFFRES, OFFRES_EN, PLANS, avantage, euros, nomOffre } from '../lib/abonnement.ts';
 import { DOCUMENTS, LEGAL } from '../lib/legal.ts';
 import { ORIGINE_ADMIN, ORIGINE_PUBLIQUE, PRINCIPAL, SITE_LILIAN } from '../lib/types.ts';
-import { PAGES_FONCTIONS } from '../accueil/pages/fonctions.ts';
-import { COMPARATIFS } from '../accueil/pages/comparatifs.ts';
+import { CHEMIN_FONCTIONS, pagesFonctions } from '../accueil/pages/fonctions.ts';
+import { CHEMIN_COMPARATIFS, comparatifs } from '../accueil/pages/comparatifs.ts';
 import * as db from './db.ts';
 import { inscriptionLibre } from './attente.ts';
 
@@ -48,8 +48,11 @@ export function plan(publique: string): string {
   const adresses = [`${publique}/`, `${publique}/fr`];
   const lilian = db.compteParId(PRINCIPAL);
   if (lilian && db.lireReglages(PRINCIPAL).seo.indexable) adresses.push(`${publique}/${lilian.pseudo}`);
-  adresses.push(`${publique}/fonctionnalites`, ...PAGES_FONCTIONS.map(p => `${publique}/fonctionnalites/${p.slug}`));
-  adresses.push(`${publique}/comparatif`, ...COMPARATIFS.map(c => `${publique}/comparatif/${c.slug}`));
+  // Les fonctions et les comparatifs, en anglais puis en français (8 novembre 2026).
+  for (const langue of ['en', 'fr'] as const) {
+    adresses.push(`${publique}${CHEMIN_FONCTIONS[langue]}`, ...pagesFonctions(langue).map(p => `${publique}${CHEMIN_FONCTIONS[langue]}/${p.slug}`));
+    adresses.push(`${publique}${CHEMIN_COMPARATIFS[langue]}`, ...comparatifs(langue).map(c => `${publique}${CHEMIN_COMPARATIFS[langue]}/${c.slug}`));
+  }
   adresses.push(...DOCUMENTS.map(d => `${publique}/legal/${d}`));
   // La documentation de l'API (hopla.page/docs, un site statique à part : documentation/).
   adresses.push(...PAGES_DOCS.map(d => `${publique}/docs${d}`));
@@ -93,10 +96,10 @@ ${questions(mode, 'en').map(([q, r]) => `### ${q}\n\n${r}`).join('\n\n')}
 - [Hopla home page](${publique}/): overview, themes, pricing${mode === 'libre' ? ', page creation' : ', name reservation'}
 - [Hopla in French](${publique}/fr)
 - [An example: Lilian Sevoumian’s page](${publique}/lilian)
-- [Hopla’s features](${publique}/fonctionnalites), one page each (in French):
-${PAGES_FONCTIONS.map(p => `  - [${p.nom}](${publique}/fonctionnalites/${p.slug}) : ${p.resume}`).join('\n')}
-- [Hopla compared with other tools](${publique}/comparatif) (in French):
-${COMPARATIFS.map(c => `  - [Hopla vs ${c.nom}](${publique}/comparatif/${c.slug}) : ${c.resume}`).join('\n')}
+- [Hopla’s features](${publique}/features), one page each (in French under ${publique}/fonctionnalites):
+${pagesFonctions('en').map(p => `  - [${p.nom}](${publique}/features/${p.slug}): ${p.resume}`).join('\n')}
+- [Hopla compared with other tools](${publique}/compare) (in French under ${publique}/comparatif):
+${comparatifs('en').map(c => `  - [Hopla vs ${c.nom}](${publique}/compare/${c.slug}): ${c.resume}`).join('\n')}
 - [API and MCP server documentation](${publique}/docs): manage your page from an AI agent or your own code (Pro plan); for agents, [${publique}/docs/llms.txt](${publique}/docs/llms.txt)
 ${DOCUMENTS.map(d => `- [${LEGAL[d].titre}](${publique}/legal/${d}) : ${LEGAL[d].resume}`).join('\n')}
 `;

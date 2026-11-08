@@ -7,6 +7,8 @@
  * n'annonce pas s'écrit « Pas annoncé », jamais « Non ».
  */
 
+import type { Langue } from '../../lib/types.ts';
+
 export const RELEVE = '26 octobre 2026';
 
 /** Une ligne du tableau : le critère, ce que fait Hopla, ce que fait l'autre. */
@@ -36,7 +38,7 @@ const PROMESSE = (nom: string): Ligne[] => [
 const HOPLA_PRIX = 'Gratuit, puis deux offres au mois ou à l’année';
 const HOPLA_COMMISSION = 'Aucune : Hopla n’encaisse rien';
 
-export const COMPARATIFS: Comparatif[] = [
+const FR: Comparatif[] = [
   {
     slug: 'linktree',
     nom: 'Linktree',
@@ -205,4 +207,189 @@ export const COMPARATIFS: Comparatif[] = [
   },
 ];
 
-export const comparatif = (slug: string) => COMPARATIFS.find(c => c.slug === slug);
+
+
+/*
+ * Les mêmes comparatifs en anglais (8 novembre 2026, Hopla anglais d'abord), rangés par slug : le slug
+ * et le nom de l'outil ne changent pas d'une langue à l'autre.
+ */
+const PROMESSE_EN = (nom: string): Ligne[] => [
+  ['Page ordered by the visitor’s network', 'Yes, free', `Not advertised by ${nom}`],
+  ['Links open in their app (YouTube, Spotify…)', 'Yes, free', `Not advertised by ${nom}`],
+];
+const HOPLA_PRIX_EN = 'Free, then two plans, monthly or yearly';
+const HOPLA_COMMISSION_EN = 'None: Hopla takes no payment';
+const GRATUIT_EN = 'Yes, five blocks, all twenty-four themes';
+
+const EN: Record<string, Omit<Comparatif, 'slug' | 'nom'>> = {
+  linktree: {
+    qui: 'the best known link in bio, born in Australia in 2016',
+    chapo: 'Linktree invented the link in bio page. Hopla starts from the same idea, and the page changes with where the visitor comes from: the network, the time, the app.',
+    resume: 'Hopla vs Linktree: pricing, commissions, analytics, and what Hopla adds, a page that adapts to each visitor’s network.',
+    lignes: [
+      ['Price', HOPLA_PRIX_EN, 'Free, then $8, $15 or $35 a month'],
+      ['Free plan', GRATUIT_EN, 'Yes, unlimited links'],
+      ['Commission on your sales', HOPLA_COMMISSION_EN, '12% on Free, 9% on Starter and Pro, 0% on Premium'],
+      ['Remove the branding', 'Yes', 'With Pro, $15 a month'],
+      ['Schedule a link', 'Yes', 'With Starter'],
+      ['Analytics history', 'Up to a year', '28 days on Free, 90 days on Starter'],
+      ...PROMESSE_EN('Linktree'),
+      ['Analytics summary every Monday, in sentences', 'Yes', 'Not advertised by Linktree'],
+    ],
+    parties: [
+      { titre: 'The same page for everyone, or the right page for each', texte: [
+        'On Linktree, your visitor sees the same list whether they come from Instagram, TikTok or LinkedIn. It’s up to them to find the link that follows what they just saw.',
+        'Hopla recognizes the network they come from and puts that link first: your portfolio for Instagram, behind the scenes for TikTok, “Let’s talk about your project” for LinkedIn. One link in every bio, the order changes on its own. It’s free, forever.',
+      ] },
+      { titre: 'Links that don’t get stuck', texte: [
+        'From Instagram or TikTok, a link usually opens in a small browser where nobody is signed in: your visitor can’t subscribe to your YouTube channel or save your track on Spotify. Hopla opens these links right in their app.',
+      ] },
+      { titre: 'What you really pay', texte: [
+        'Linktree takes a cut of what you sell through its page unless you’re on Premium, at $35 a month. Hopla takes no payment: each block leads to your store, your calendar or your tip page, and you keep everything.',
+      ] },
+    ],
+    pourEux: 'If you sell digital products directly from your page, without a store of your own, Linktree does it and Hopla doesn’t: Hopla leads to your store, it doesn’t replace it.',
+    questions: [
+      ['How do I switch from Linktree to Hopla?', 'Paste your Linktree address in the field on the home page: Hopla keeps the name, if it’s free. Then paste your links’ addresses, Hopla finds their titles on its own. All that’s left is changing the link in your bios.'],
+      ['Is Hopla free like Linktree?', 'Yes. The free plan keeps the page by network, links opening in their app and all twenty-four themes, with five blocks. Every account starts with 14 days of every feature, no card needed.'],
+      ['Can I keep my name?', 'If nobody has taken it on Hopla, yes: your page will be hopla.page/your-name.'],
+    ],
+  },
+  beacons: {
+    qui: 'a link in bio page with a store and creator tools on top, born in the United States',
+    chapo: 'Beacons wants to do everything: store, media kit, emails, AI. Hopla does one thing: a link in bio page that adapts to each visitor, and leads to your tools.',
+    resume: 'Hopla vs Beacons: pricing, a 9% commission on sales, and a link in bio page that reorders itself by the visitor’s network with Hopla.',
+    lignes: [
+      ['Price', HOPLA_PRIX_EN, 'Free, then $10, $30 or $100 a month'],
+      ['Free plan', GRATUIT_EN, 'Yes, unlimited links'],
+      ['Commission on your sales', HOPLA_COMMISSION_EN, '9% on Free and Creator, 0% from $30 a month'],
+      ['Remove the branding', 'Yes', 'With Creator Plus, $30 a month'],
+      ['Built-in store', 'No: Hopla leads to yours', 'Yes'],
+      ['Email list', 'Yes, to Brevo, Mailchimp, Kit…', 'Yes, with its own sending'],
+      ...PROMESSE_EN('Beacons'),
+    ],
+    parties: [
+      { titre: 'One more tool, or a page that works better', texte: [
+        'Beacons bundles a lot of tools, and you pay for them in setup time or in commission. If you already have your store, your calendar and your newsletter, Hopla connects them without replacing anything.',
+        'What Hopla adds is the order: your page reorders itself by the network each visitor comes from, and its links open in their app.',
+      ] },
+      { titre: 'Your email list stays yours', texte: [
+        'With Hopla, a visitor who signs up goes to your newsletter: Brevo, Mailchimp, Kit, MailerLite, beehiiv, Systeme.io, or a Make, Zapier or n8n webhook. Switch tools whenever you want, the list follows you.',
+      ] },
+    ],
+    pourEux: 'If you don’t have a store or a newsletter yet and want everything in one place, Beacons gives you all of it at once.',
+    questions: [
+      ['Does Hopla take a commission?', 'No. Hopla takes no payment: your customer pays on your store, your calendar or your tip page.'],
+      ['Can I sell with Hopla?', 'Yes, with the storefront: your products with their photo and price, your booking link, a tip button. Each block leads to the site that takes the payment.'],
+    ],
+  },
+  stan: {
+    qui: 'a link in bio store to sell courses and bookings, born in the United States',
+    chapo: 'Stan is a store: courses, paid calls, memberships. Hopla is a link in bio page that adapts to each visitor, with a free plan.',
+    resume: 'Hopla vs Stan Store: Stan starts at $29 a month with no free plan; Hopla is free, then €9 a month, with no commission.',
+    lignes: [
+      ['Price', HOPLA_PRIX_EN, '$29 or $99 a month'],
+      ['Free plan', GRATUIT_EN, 'No, a 14-day trial'],
+      ['Trial', '14 days of every feature, no card needed', '14 days'],
+      ['Commission on your sales', HOPLA_COMMISSION_EN, '0% from Stan, plus payment fees'],
+      ['Sell courses', 'No: Hopla leads to your platform', 'Yes'],
+      ['Bookings', 'Yes, your Calendly or Cal.com inside the page', 'Yes, with its own calendar'],
+      ...PROMESSE_EN('Stan'),
+    ],
+    parties: [
+      { titre: 'A store, or a link in bio page', texte: [
+        'Stan replaces your store: you sell your courses and your calls there. If you already sell elsewhere, or don’t sell yet, you pay $29 a month for a link in bio page.',
+        'Hopla starts free. Your page reorders itself by the visitor’s network, opens your links in their app, and leads to the tool that takes the payment, the one you already have.',
+      ] },
+    ],
+    pourEux: 'If you sell an online course or paid calls and don’t have a platform, Stan is built for that.',
+    questions: [
+      ['Does Hopla have a free plan?', 'Yes, forever. And every account starts with 14 days of every feature, no card needed.'],
+      ['Can my calendar open inside my page?', 'Yes: Calendly, Cal.com and Google Calendar open inside the page, without leaving Hopla.'],
+    ],
+  },
+  'lnk-bio': {
+    qui: 'a low-cost link in bio page, paid once and for all, born in Italy',
+    chapo: 'Lnk.Bio sells its link in bio page for almost nothing, once and for all. Hopla costs more past the free plan, and does what the others don’t: adapt to each visitor.',
+    resume: 'Hopla vs Lnk.Bio: lifetime price versus subscription, and a link in bio page that reorders itself by the visitor’s network with Hopla, for free.',
+    lignes: [
+      ['Price', HOPLA_PRIX_EN, 'Free, then $0.99 a month, or $9.99 and $24.99 for life'],
+      ['Free plan', GRATUIT_EN, 'Yes, unlimited links'],
+      ['Remove the branding', 'Yes', 'With Unique, $24.99 for life'],
+      ['Schedule a link', 'Yes', 'With Mini'],
+      ['Commission on your sales', HOPLA_COMMISSION_EN, 'Not advertised by Lnk.Bio'],
+      ...PROMESSE_EN('Lnk.Bio'),
+      ['Analytics summary every Monday, in sentences', 'Yes', 'Not advertised by Lnk.Bio'],
+    ],
+    parties: [
+      { titre: 'The cheapest, or the one that gets clicks', texte: [
+        'For a list of links that never changes, Lnk.Bio is hard to beat on price.',
+        'Hopla starts from another question: how many of your visitors find the link they’re looking for? Your page reorders itself by the network they come from and opens your links in their app, for free. The paid plans add your storefront, analytics in plain words and a page that follows the time of day.',
+      ] },
+    ],
+    pourEux: 'If you want a list of links and nothing more, at the lowest price and paid once, Lnk.Bio is a good choice.',
+    questions: [
+      ['Does Hopla have a lifetime price?', 'No: Hopla has a free plan, then monthly or yearly plans. The details are in the pricing.'],
+    ],
+  },
+  taplink: {
+    qui: 'a block-based mini page with forms and payments, widely used in Eastern Europe',
+    chapo: 'Taplink builds a mini page with blocks, forms and payments. Hopla builds a link in bio page that changes with the visitor.',
+    resume: 'Hopla vs Taplink: pricing, blocks, payments, and a link in bio page that reorders itself by each visitor’s network with Hopla.',
+    lignes: [
+      ['Price', HOPLA_PRIX_EN, 'Free, then about $3 or $9 a month'],
+      ['Free plan', GRATUIT_EN, 'Yes, with fewer blocks'],
+      ['Payments inside the page', 'No: Hopla leads to your store', 'Yes, with Business'],
+      ['Commission on your sales', HOPLA_COMMISSION_EN, 'None from Taplink, plus payment fees'],
+      ...PROMESSE_EN('Taplink'),
+      ['Google or Trustpilot reviews shown', 'Yes', 'Not advertised by Taplink'],
+    ],
+    parties: [
+      { titre: 'A mini page, or a page that adapts', texte: [
+        'Taplink is handy for putting together a small site with a form and a payment button. Hopla focuses on what each visitor sees: the link they care about first, based on their network, and links that open in their app.',
+      ] },
+    ],
+    pourEux: 'If you want to take payments directly in your page, without a store of your own, Taplink allows it with its Business plan.',
+    questions: [
+      ['Does Hopla handle payments?', 'No. Hopla leads to your store, your calendar or your tip page, which take the payment. It never touches it.'],
+    ],
+  },
+  later: {
+    qui: 'the link in bio page from Later, the post scheduling tool, born in Canada',
+    chapo: 'Linkin.bio is Later’s link in bio page, included in its post scheduling plans. Hopla is a standalone link in bio page that adapts to each visitor.',
+    resume: 'Hopla vs Later Linkin.bio: Linkin.bio comes with Later, from $25 a month; Hopla is a standalone link in bio page, free, then €9 a month.',
+    lignes: [
+      ['Price', HOPLA_PRIX_EN, 'Included in Later, from $25 a month'],
+      ['Sold on its own', 'Yes', 'No, with post scheduling'],
+      ['Page built from your Instagram feed', 'No', 'Yes'],
+      ...PROMESSE_EN('Later'),
+      ['Commission on your sales', HOPLA_COMMISSION_EN, 'Not advertised by Later'],
+    ],
+    parties: [
+      { titre: 'A scheduling tool, or a link in bio page', texte: [
+        'Linkin.bio mirrors your Instagram feed and makes each post clickable: useful if you already schedule your posts with Later. Otherwise, you pay for a scheduling tool to get a link in bio page.',
+        'Hopla is a standalone link in bio page, free to start, that reorders itself by the visitor’s network and opens your links in their app.',
+      ] },
+    ],
+    pourEux: 'If you already schedule your posts with Later, Linkin.bio is included: keep it.',
+    questions: [
+      ['Can I use Hopla with Later?', 'Yes: schedule your posts wherever you like, and put hopla.page/your-name in your bio.'],
+    ],
+  },
+};
+
+const LISTES: Record<Langue, Comparatif[]> = {
+  fr: FR,
+  en: FR.map(c => ({ ...c, ...EN[c.slug] })),
+};
+
+/** Les comparatifs dans une langue. */
+export const comparatifs = (langue: Langue) => LISTES[langue];
+/** Les comparatifs en français : ce qui n'a pas encore de langue. */
+export const COMPARATIFS = FR;
+export const comparatif = (slug: string, langue: Langue = 'fr') => LISTES[langue].find(c => c.slug === slug);
+
+/** Le chemin des comparatifs dans une langue : `/compare` en anglais, `/comparatif` en français. */
+export const CHEMIN_COMPARATIFS: Record<Langue, string> = { en: '/compare', fr: '/comparatif' };
+/** Les mots qui entourent les prix relevés : « Pas annoncé » s'écrit dans la langue. */
+export const pasAnnonce = (eux: string) => eux.startsWith('Pas annoncé') || eux.startsWith('Not advertised');

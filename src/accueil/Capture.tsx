@@ -29,41 +29,50 @@ export const CAPTURE_MA_PAGE_TELEPHONE: Capture = {
 };
 
 /** La capture de chaque page de fonction qui a son écran au back office. */
-export const CAPTURES_FONCTIONS: Record<string, { texte: string; capture: Capture; telephone?: Capture }> = {
+export const CAPTURES_FONCTIONS: Record<string, { texte: string; texteEn: string; capture: Capture; telephone?: Capture }> = {
   'selon-le-reseau': {
+    texteEn: 'Open a block, then Visibility: for each network, it shows or not, and moves up or not. The page next to it follows every setting.',
     texte: 'Ouvre un bloc, puis Visibilité : pour chaque réseau, il s’affiche ou non, et passe en avant ou non. La page à côté suit chaque réglage.',
     capture: {
       src: 'capture-selon-le-reseau', largeur: 1800, hauteur: 1125,
+      altEn: 'The “By network” setting of a block: a Shown and a Moved up switch for Instagram, LinkedIn, TikTok, YouTube, X, Facebook, Threads and Snapchat.',
       alt: 'Le réglage « Selon le réseau » d’un bloc : un interrupteur Affiché et un En avant pour Instagram, LinkedIn, TikTok, YouTube, X, Facebook, Threads et Snapchat.',
     },
-    telephone: { src: 'capture-selon-le-reseau-telephone', largeur: 600, hauteur: 1298, alt: 'Au téléphone, la feuille Visibilité d’un bloc : Affiché et En avant pour Instagram, LinkedIn, TikTok, YouTube et X.' },
+    telephone: { src: 'capture-selon-le-reseau-telephone', largeur: 600, hauteur: 1298, altEn: 'On a phone, a block’s Visibility sheet: Shown and Moved up for Instagram, LinkedIn, TikTok, YouTube and X.', alt: 'Au téléphone, la feuille Visibilité d’un bloc : Affiché et En avant pour Instagram, LinkedIn, TikTok, YouTube et X.' },
   },
   stats: {
+    texteEn: 'The Stats tab starts with a sentence, then your views, your visitors and your clicks, from 7 days to 12 months.',
     texte: 'L’onglet Stats commence par une phrase, puis tes vues, tes visiteurs et tes clics, sur 7 jours à 12 mois.',
     capture: {
       src: 'capture-stats', largeur: 1800, hauteur: 900,
+      altEn: 'The Stats tab: “In 30 days, your page got 88 views and Instagram brings you the most people”, four numbers and the views curve.',
       alt: 'L’onglet Stats : « En 30 jours, ta page a eu 88 vues et Instagram t’amène le plus de monde », quatre chiffres et la courbe des vues.',
     },
     telephone: {
       src: 'capture-stats-telephone', largeur: 600, hauteur: 1298,
+      altEn: 'The Stats tab on a phone: the period in one tap, the sentence, the four numbers and the curve.',
       alt: 'L’onglet Stats au téléphone : la période d’un toucher, la phrase, les quatre chiffres et la courbe.',
     },
   },
   themes: {
+    texteEn: 'Design, then Theme: one tap, and your page changes next to it. Colors, font and background are set just below.',
     texte: 'Design, puis Thème : un toucher, et ta page change à côté. Couleurs, police et fond se règlent juste en dessous.',
     capture: {
       src: 'capture-themes', largeur: 1800, hauteur: 1125,
+      altEn: 'Choosing a theme in the dashboard: the themes as thumbnails, Klein blue selected, the page in the iPhone on the right.',
       alt: 'Le choix du thème au back office : les thèmes en vignettes, Bleu Klein choisi, la page dans l’iPhone à droite.',
     },
-    telephone: { src: 'capture-themes-telephone', largeur: 600, hauteur: 1298, alt: 'Au téléphone, le choix du thème sous l’aperçu en direct de la page.' },
+    telephone: { src: 'capture-themes-telephone', largeur: 600, hauteur: 1298, altEn: 'On a phone, choosing a theme under the live preview of the page.', alt: 'Au téléphone, le choix du thème sous l’aperçu en direct de la page.' },
   },
   'liste-email': {
+    texteEn: 'In Integrations, you choose where your subscribers go: your newsletter, Make, Zapier or n8n. The other tools for your page are just below.',
     texte: 'Dans Intégrations, tu choisis où vont tes inscrits : ta newsletter, Make, Zapier ou n8n. Les autres outils de ta page sont juste en dessous.',
     capture: {
       src: 'capture-liste-email', largeur: 1800, hauteur: 1125,
+      altEn: 'The Integrations tab: “Where your subscribers go”, connected to MailCheap, then reviews, bookings, Support me and products.',
       alt: 'L’onglet Intégrations : « Où vont tes inscrits », branché à MailCheap, puis les avis, la prise de rendez-vous, Me soutenir et les produits.',
     },
-    telephone: { src: 'capture-liste-email-telephone', largeur: 600, hauteur: 1298, alt: 'Au téléphone, l’onglet Intégrations : où vont tes inscrits, puis les outils de ta page.' },
+    telephone: { src: 'capture-liste-email-telephone', largeur: 600, hauteur: 1298, altEn: 'On a phone, the Integrations tab: where your subscribers go, then the tools for your page.', alt: 'Au téléphone, l’onglet Intégrations : où vont tes inscrits, puis les outils de ta page.' },
   },
 };
 

@@ -348,7 +348,11 @@ embarque tout : l'image n'a pas de `node_modules`.
   anglais sur `/` et en français sur `/fr` (`routes/fr/index.tsx`), sans redirection forcée : `accueil/langue.ts`
   (`LangueSite`, `useL()` qui prend `l('français', 'English')`), le <head> et ses `hreflang` dans `accueil/tete.ts`.
   La langue part avec l'inscription : une page créée depuis `/` est en anglais (`langue` des réglages) et reçoit sa
-  bienvenue en anglais. Les pages des fonctions, des comparatifs et les textes légaux restent en français
+  bienvenue en anglais. Les fonctions et les comparatifs sont en anglais sous `/features` et `/compare`, en français
+  sous `/fonctionnalites` et `/comparatif` (adresses d'avant gardées) : `pagesFonctions(langue)`, `comparatifs(langue)`,
+  `CHEMIN_FONCTIONS`, `CHEMIN_COMPARATIFS`, `cheminFonction(id, langue)` ; une fonction a un `id` (son slug français, qui
+  choisit sa scène et sa capture) et un slug par langue ; `<head>` et `hreflang` dans `accueil/pages/tetes.ts`, le lien
+  « English » / « Français » du menu par `autreAdresse`. Les textes légaux restent en français
   (`LangueSite.Provider value="fr"`) jusqu'à leur traduction ; noms des thèmes et des offres : `nomTheme`, `nomOffre`.
 - Marque : `components/Logo.tsx` (le symbole, un « h » et sa balle) ; favicon, icônes, manifeste et
   image de partage dans `public/`. `server/referencement.ts` écrit `robots.txt`, `sitemap.xml` et

@@ -263,6 +263,7 @@ const PSEUDOS_RESERVES = new Set([
   'admin', 'api', 'media', 'assets', 'liens', 'hopla', 'avatar', 'healthz', 'mentions-legales', 'cgu', 'tarifs', 'prix', 'pro', 'legal', 'signaler', 'signalement', 'lilian', 'liliansevoumian', 'principal', 'connexion', 'inscription', 'compte', 'comptes',
   'aide', 'support', 'contact', 'blog', 'login', 'signup', 'app', 'www', 'static', 'demo', 'root', 'null', 'undefined', 'favicon', 'robots', 'sitemap',
   'mcp', 'developpeurs', 'docs', 'fonctions', 'fonction', 'fonctionnalites', 'fonctionnalite', 'fonctionnalités', 'comparatif', 'comparatifs', 'alternative', 'alternatives', 'vs',
+  'features', 'feature', 'compare', 'comparison', 'comparisons', 'pricing',
 ]);
 
 /** Un pseudo : 3 à 30 caractères, minuscules, chiffres et tirets, ni réservé. Vide si refusé. */

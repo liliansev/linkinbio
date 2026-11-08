@@ -8,8 +8,8 @@ import { CONTACT_LEGAL } from '../lib/legal.ts';
 import { LIEN_SOURCE, NOM_EDITEUR } from '../lib/instance.ts';
 import type { Fonction, Periode, Plan } from '../lib/abonnement.ts';
 import { Marque } from './Ouverture.tsx';
-import { PAGES_FONCTIONS } from './pages/fonctions.ts';
-import { COMPARATIFS } from './pages/comparatifs.ts';
+import { CHEMIN_FONCTIONS, cheminFonction, pagesFonctions } from './pages/fonctions.ts';
+import { CHEMIN_COMPARATIFS, comparatifs } from './pages/comparatifs.ts';
 import { Reserver, allerAuChamp, choisirOffre, useReservation } from './Reserver.tsx';
 import type { ApiAccueil } from './Reserver.tsx';
 import { NOM_PUBLIC } from '../lib/types.ts';
@@ -58,18 +58,19 @@ const MEILLEURE = Math.max(...PLANS_PAYANTS.filter(p => OFFRES[p].enVente).map(e
 const insecables = (g: string) => g.replace(/« /g, '«\u00a0').replace(/ »/g, '\u00a0»').replace(/ ([:;?!])/g, '\u00a0$1').replace(/ (\S+)$/, '\u00a0$1');
 
 /** Ce que la page a déjà montré : l'avantage ramène à sa démonstration (un chapitre de la page vivante s'ouvre en arrivant). */
+/* L'id de la fonction, son adresse suit la langue (`cheminFonction`). */
 const DEMOS: Record<string, string> = {
-  'Ta page selon le réseau du visiteur': '/fonctionnalites/selon-le-reseau',
-  'Les vingt-quatre thèmes': '/fonctionnalites/themes',
-  'Tes couleurs, ta police, ton fond': '/fonctionnalites/themes',
-  'Ta vitrine : produits, rendez-vous, dons': '/fonctionnalites/vitrine',
-  'Tes liens programmés à l’avance': '/fonctionnalites/lancement',
-  'Les avis de tes clients': '/fonctionnalites/avis',
-  'Tes stats sur 30 jours': '/fonctionnalites/stats',
-  'Ta page selon l’heure et le pays': '/fonctionnalites/page-selon-l-heure',
-  'Des liens à code ou à places comptées': '/fonctionnalites/drops',
-  'Ta liste e-mail, vers ta newsletter': '/fonctionnalites/liste-email',
-  'Tes stats sur un an': '/fonctionnalites/stats',
+  'Ta page selon le réseau du visiteur': 'selon-le-reseau',
+  'Les vingt-quatre thèmes': 'themes',
+  'Tes couleurs, ta police, ton fond': 'themes',
+  'Ta vitrine : produits, rendez-vous, dons': 'vitrine',
+  'Tes liens programmés à l’avance': 'lancement',
+  'Les avis de tes clients': 'avis',
+  'Tes stats sur 30 jours': 'stats',
+  'Ta page selon l’heure et le pays': 'page-selon-l-heure',
+  'Des liens à code ou à places comptées': 'drops',
+  'Ta liste e-mail, vers ta newsletter': 'liste-email',
+  'Tes stats sur un an': 'stats',
 };
 
 /**
@@ -171,7 +172,7 @@ function TableauOffres({ periode, reserver, action }: { periode: Periode; reserv
             <tr className="hl-tableau-groupe" role="row"><th scope="rowgroup" role="rowheader">{tr(groupe)}</th>{EN_VENTE.map(plan => <td key={plan} role="cell" />)}</tr>
             {lignes.map(ligne => (
               <tr key={ligne.nom} role="row">
-                <th scope="row" role="rowheader">{ligne.page ? <a href={`/fonctionnalites/${ligne.page}`}>{insecables(nomLigne(ligne.nom, langue))}<span className="hl-cache">{l(', voir la fonctionnalité', ', see the feature')}</span></a> : insecables(nomLigne(ligne.nom, langue))}</th>
+                <th scope="row" role="rowheader">{ligne.page ? <a href={cheminFonction(ligne.page, langue)}>{insecables(nomLigne(ligne.nom, langue))}<span className="hl-cache">{l(', voir la fonctionnalité', ', see the feature')}</span></a> : insecables(nomLigne(ligne.nom, langue))}</th>
                 {EN_VENTE.map(plan => <Case key={plan} ligne={ligne} plan={plan} />)}
               </tr>
             ))}
@@ -365,7 +366,7 @@ function Avantage({ g, texte }: { g: string; texte?: string }) {
   const mots = texte ?? avantage(g, langue);
   return (
     <li><Icone nom="coche" taille={18} /><span>{DEMOS[g]
-      ? <a className="hl-offre-demo" href={DEMOS[g]}>{insecables(mots)}<span className="hl-cache">{l(', voir la fonctionnalité', ', see the feature')}</span></a>
+      ? <a className="hl-offre-demo" href={cheminFonction(DEMOS[g], langue)}>{insecables(mots)}<span className="hl-cache">{l(', voir la fonctionnalité', ', see the feature')}</span></a>
       : insecables(mots)}</span></li>
   );
 }
@@ -435,17 +436,17 @@ export function DernierAppel({ api }: { api: ApiAccueil }) {
  */
 const colonnes = (langue: Langue): { titre: string; liens: [string, string][] }[] => [
   { titre: 'Découvrir', liens: [
-    ['Toutes les fonctionnalités', '/fonctionnalites'],
+    ['Toutes les fonctionnalités', CHEMIN_FONCTIONS[langue]],
     ['Tarifs', `${prefixe(langue) || '/'}#prix`],
     ['Questions', `${prefixe(langue) || '/'}#questions`],
     ['Voir une vraie page', '/lilian'],
     ['API et MCP', '/docs'],
     ['Connexion', '/admin'],
   ] },
-  { titre: 'Fonctionnalités', liens: PAGES_FONCTIONS.map(f => [f.nom, `/fonctionnalites/${f.slug}`]) },
+  { titre: 'Fonctionnalités', liens: pagesFonctions(langue).map(f => [f.nom, `${CHEMIN_FONCTIONS[langue]}/${f.slug}`]) },
   { titre: 'Comparatifs', liens: [
-    ...COMPARATIFS.map((c): [string, string] => [`Hopla vs ${c.nom}`, `/comparatif/${c.slug}`]),
-    ['Tous les comparatifs', '/comparatif'],
+    ...comparatifs(langue).map((c): [string, string] => [`Hopla vs ${c.nom}`, `${CHEMIN_COMPARATIFS[langue]}/${c.slug}`]),
+    ['Tous les comparatifs', CHEMIN_COMPARATIFS[langue]],
   ] },
   { titre: 'Aide et légal', liens: [
     ['Nous écrire', `mailto:${CONTACT_LEGAL}`],
