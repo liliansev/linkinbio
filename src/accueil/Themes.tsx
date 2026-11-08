@@ -2,10 +2,11 @@ import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties, RefObject } from 'react';
 import type { Couleurs } from '../lib/types.ts';
 import { SANS_COULEURS } from '../lib/types.ts';
-import { THEMES } from '../lib/themes.ts';
+import { THEMES, humeurTheme, nomTheme } from '../lib/themes.ts';
 import { Icone } from '../components/Icone.tsx';
 import { EcranPage, Telephone } from './Telephone.tsx';
-import { de, pageExemple, IDS_PROFILS, PROFILS } from './exemples.ts';
+import { pageDe, pageExemple, profilDe, IDS_PROFILS } from './exemples.ts';
+import { useL, useLangue } from './langue.ts';
 import { mouvementReduit, useVisible } from './mouvement.ts';
 
 /*
@@ -84,13 +85,16 @@ function useDefilement(rail: RefObject<HTMLUListElement | null>, actif: boolean)
   }, [rail, actif]);
 }
 
-const NUANCES: { role: keyof Couleurs; nom: string; choix: [string, string][] }[] = [
-  { role: 'fond', nom: 'Fond', choix: [['#f4efe6', 'crème'], ['#1d2b3a', 'nuit'], ['#f6d9d0', 'rose poudré'], ['#dfe8dc', 'sauge']] },
-  { role: 'boutons', nom: 'Boutons', choix: [['#ffffff', 'blancs'], ['#1b1b1b', 'noirs'], ['#33524a', 'vert forêt'], ['#f2c94c', 'moutarde']] },
-  { role: 'accent', nom: 'Accent', choix: [['#c4421a', 'corail'], ['#3651d4', 'bleu'], ['#b0186b', 'framboise'], ['#1f7a4d', 'vert']] },
+/** Chaque nuance porte son nom en français puis en anglais. */
+const NUANCES: { role: keyof Couleurs; nom: [string, string]; choix: [string, string, string][] }[] = [
+  { role: 'fond', nom: ['Fond', 'Background'], choix: [['#f4efe6', 'crème', 'cream'], ['#1d2b3a', 'nuit', 'night'], ['#f6d9d0', 'rose poudré', 'powder pink'], ['#dfe8dc', 'sauge', 'sage']] },
+  { role: 'boutons', nom: ['Boutons', 'Buttons'], choix: [['#ffffff', 'blancs', 'white'], ['#1b1b1b', 'noirs', 'black'], ['#33524a', 'vert forêt', 'forest green'], ['#f2c94c', 'moutarde', 'mustard']] },
+  { role: 'accent', nom: ['Accent', 'Accent'], choix: [['#c4421a', 'corail', 'coral'], ['#3651d4', 'bleu', 'blue'], ['#b0186b', 'framboise', 'raspberry'], ['#1f7a4d', 'vert', 'green']] },
 ];
 
 export function Themes() {
+  const langue = useLangue();
+  const l = useL();
   const [couleurs, setCouleurs] = useState<Couleurs>(SANS_COULEURS);
   const [refVu, vu] = useApproche<HTMLDivElement>();
   const [refVisible, visible] = useVisible<HTMLElement>();
@@ -122,27 +126,27 @@ export function Themes() {
   return (
     <section ref={refVisible} className="hl-section" id="themes" data-teinte="creme" aria-labelledby="titre-themes">
       <div className="hl-tete-section hl-entre">
-        <h2 id="titre-themes" className="hl-h2">Une page à toi<br /><span className="hl-cache">. </span>Ça se voit</h2>
-        <p className="hl-chapo">Des plus sobres aux plus audacieux, chacun avec sa typographie réglée à la main. Change d’ambiance en un geste.</p>
+        <h2 id="titre-themes" className="hl-h2">{l(<>Une page à toi<br /><span className="hl-cache">. </span>Ça se voit</>, <>A page that’s yours<br /><span className="hl-cache">. </span>And it shows</>)}</h2>
+        <p className="hl-chapo">{l('Des plus sobres aux plus audacieux, chacun avec sa typographie réglée à la main. Change d’ambiance en un geste.', 'From the most understated to the boldest, each with typography tuned by hand. Switch the mood in one tap.')}</p>
       </div>
       <div className="hl-rail-tete hl-grand-seul">
-        {boucle && <button type="button" className="hl-revoir" onClick={() => setPause(p => !p)}>{pause ? 'Reprendre le défilement' : 'Mettre en pause'}</button>}
+        {boucle && <button type="button" className="hl-revoir" onClick={() => setPause(p => !p)}>{pause ? l('Reprendre le défilement', 'Resume scrolling') : l('Mettre en pause', 'Pause')}</button>}
         <div className="hl-fleches">
-          <button type="button" onClick={() => { if (!bouts.debut) defiler(-1); }} aria-disabled={bouts.debut || undefined} aria-label="Thèmes précédents"><Icone nom="ui-chevron" taille={18} className="hl-gauche" /></button>
-          <button type="button" onClick={() => { if (!bouts.fin) defiler(1); }} aria-disabled={bouts.fin || undefined} aria-label="Thèmes suivants"><Icone nom="ui-chevron" taille={18} className="hl-droite" /></button>
+          <button type="button" onClick={() => { if (!bouts.debut) defiler(-1); }} aria-disabled={bouts.debut || undefined} aria-label={l('Thèmes précédents', 'Previous themes')}><Icone nom="ui-chevron" taille={18} className="hl-gauche" /></button>
+          <button type="button" onClick={() => { if (!bouts.fin) defiler(1); }} aria-disabled={bouts.fin || undefined} aria-label={l('Thèmes suivants', 'Next themes')}><Icone nom="ui-chevron" taille={18} className="hl-droite" /></button>
         </div>
       </div>
       <div ref={refVu}>
-      <ul ref={rail} className="hl-rail" tabIndex={0} data-vu={vu || undefined} data-boucle={boucle || undefined} aria-label={`${RAIL.length} thèmes`}>
+      <ul ref={rail} className="hl-rail" tabIndex={0} data-vu={vu || undefined} data-boucle={boucle || undefined} aria-label={l(`${RAIL.length} thèmes`, `${RAIL.length} themes`)}>
         {(boucle ? [...RAIL, ...RAIL] : RAIL).map((t, k) => {
           const i = k % RAIL.length, copie = k >= RAIL.length;
           return (
             <li key={`${t.id}${copie ? '-copie' : ''}`} className="hl-rail-item" data-i={i} aria-hidden={copie || undefined} inert={copie || undefined}
               style={k < 6 ? { '--d': `${k * 90}ms` } as CSSProperties : undefined}>
-              <Telephone largeur={300} label={`La page ${de(PROFILS[IDS_PROFILS[i % IDS_PROFILS.length]].nom)} dans le thème ${t.nom}`}>
-                <EcranPage page={pageExemple(IDS_PROFILS[i % IDS_PROFILS.length], t.id)} />
+              <Telephone largeur={300} label={`${pageDe(profilDe(IDS_PROFILS[i % IDS_PROFILS.length], langue).nom, langue)} ${l('dans le thème', 'in the theme')} ${nomTheme(t, langue)}`}>
+                <EcranPage page={pageExemple(IDS_PROFILS[i % IDS_PROFILS.length], t.id, { langue })} />
               </Telephone>
-              <p><b>{t.nom}</b> <span className="hl-gris">{t.humeur}</span></p>
+              <p><b>{nomTheme(t, langue)}</b> <span className="hl-gris">{humeurTheme(t, langue)}</span></p>
             </li>
           );
         })}
@@ -152,27 +156,27 @@ export function Themes() {
       {/* Au téléphone, l'aperçu passe entre le texte et les pastilles : on voit ce que change chaque toucher. */}
       <div id="couleurs" className="hl-couleurs hl-entre">
         <div className="hl-couleurs-texte">
-          <h3 className="hl-h3 hl-couleurs-titre">Tes couleurs</h3>
-          <p>Garde la typographie d’un thème, ici Lin, et change son fond, ses boutons ou son accent. Un geste remet tout comme avant.</p>
+          <h3 className="hl-h3 hl-couleurs-titre">{l('Tes couleurs', 'Your colors')}</h3>
+          <p>{l('Garde la typographie d’un thème, ici Lin, et change son fond, ses boutons ou son accent. Un geste remet tout comme avant.', 'Keep a theme’s typography, here Linen, and change its background, buttons or accent. One tap puts everything back.')}</p>
         </div>
         <div className="hl-couleurs-reglage">
           <div className="hl-nuances">
             {NUANCES.map(n => (
               <fieldset key={n.role}>
-                <legend>{n.nom}</legend>
-                {n.choix.map(([c, nom]) => (
+                <legend>{l(...n.nom)}</legend>
+                {n.choix.map(([c, fr, en]) => { const nom = l(fr, en); return (
                   <button key={c} type="button" className="hl-nuance" style={{ background: c }} aria-pressed={couleurs[n.role] === c}
-                    aria-label={`${n.nom} ${nom}`} title={nom} onClick={() => setCouleurs(x => ({ ...x, [n.role]: x[n.role] === c ? '' : c }))} />
-                ))}
+                    aria-label={`${l(...n.nom)} ${nom}`} title={nom} onClick={() => setCouleurs(x => ({ ...x, [n.role]: x[n.role] === c ? '' : c }))} />
+                ); })}
               </fieldset>
             ))}
           </div>
           {/* Le retour n'apparaît qu'une fois une couleur choisie ; sa place est gardée, rien ne saute. */}
-          <button type="button" className="hl-lien-texte" data-cache={(!couleurs.fond && !couleurs.boutons && !couleurs.accent) || undefined} onClick={() => setCouleurs(SANS_COULEURS)}>Revenir aux couleurs du thème</button>
+          <button type="button" className="hl-lien-texte" data-cache={(!couleurs.fond && !couleurs.boutons && !couleurs.accent) || undefined} onClick={() => setCouleurs(SANS_COULEURS)}>{l('Revenir aux couleurs du thème', 'Back to the theme’s colors')}</button>
         </div>
         <div className="hl-couleurs-tel">
-          <Telephone largeur={300} className="hl-tel-court" label="La page d’Inès Laurent dans le thème Lin, avec les couleurs choisies">
-            <EcranPage page={pageExemple('ines', 'lin', { couleurs })} />
+          <Telephone largeur={300} className="hl-tel-court" label={l('La page d’Inès Laurent dans le thème Lin, avec les couleurs choisies', `${pageDe(profilDe('ines', 'en').nom, 'en')} in the Linen theme, with the chosen colors`)}>
+            <EcranPage page={pageExemple('ines', 'lin', { couleurs, langue })} />
           </Telephone>
         </div>
       </div>

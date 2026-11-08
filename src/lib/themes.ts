@@ -10,7 +10,7 @@
  * `themes.test.ts`. Les styles de bouton se déduisent des couleurs (`page.css`).
  */
 
-import type { Couleurs, FormeBouton, OmbreBouton, StyleBouton } from './types.ts';
+import type { Couleurs, FormeBouton, Langue, OmbreBouton, StyleBouton } from './types.ts';
 
 export type Police = 'geist' | 'serif' | 'geometrique' | 'expressive' | 'technique' | 'mono' | 'grotesque' | 'condensee' | 'display' | 'elegante' | 'editoriale';
 export type Famille = 'sombre' | 'clair' | 'couleur' | 'degrade' | 'premium' | 'decale';
@@ -270,6 +270,24 @@ export const FAMILLES: { id: Famille; nom: string }[] = [
   { id: 'premium', nom: 'Élégants' }, { id: 'decale', nom: 'Décalés' },
   { id: 'sombre', nom: 'Sombres' }, { id: 'clair', nom: 'Clairs' }, { id: 'couleur', nom: 'Couleurs' }, { id: 'degrade', nom: 'Dégradés' },
 ];
+
+/** Les noms et humeurs des thèmes en anglais (8 novembre 2026, Hopla passe à l'anglais d'abord). Un thème sans entrée garde son nom. */
+const THEMES_EN: Record<string, [nom: string, humeur: string]> = {
+  'nuit-peche': ['Night and peach', 'Understated'], onyx: ['Onyx and gold', 'Luxury'], champagne: ['Champagne', 'Editorial'],
+  neige: ['Snow', 'Minimal'], foret: ['Forest', 'Nature'], klein: ['Klein blue', 'Graphic'], brutal: ['Brutalist', 'Raw'],
+  aurore: ['Aurora', 'Bright'], coucher: ['Sunset', 'Pop'], arcade: ['Arcade', 'Neon'], bauhaus: ['Bauhaus', 'Geometric'],
+  riso: ['Risograph', 'Printed'], galaxie: ['Galaxy', 'Cosmic'], lampe: ['Lava lamp', 'Psychedelic'], skate: ['Skate', 'Retro'],
+  sauge: ['Sage', 'Soft'], lin: ['Linen', 'Warm'], lilas: ['Lilac', 'Fresh'], marine: ['Navy', 'Crisp'], argile: ['Clay', 'Earthy'],
+  mangue: ['Mango', 'Sunny'], lagon: ['Lagoon', 'Fresh'], cerise: ['Cherry', 'Bold'], memphis: ['Memphis', 'Playful'],
+};
+/** Le nom d'un thème dans une langue. */
+export const nomTheme = (t: Pick<Theme, 'id' | 'nom'>, langue: Langue = 'fr') => (langue === 'en' && THEMES_EN[t.id]?.[0]) || t.nom;
+/** L'humeur d'un thème dans une langue. */
+export const humeurTheme = (t: Pick<Theme, 'id' | 'humeur'>, langue: Langue = 'fr') => (langue === 'en' && THEMES_EN[t.id]?.[1]) || t.humeur;
+/** Les familles de thèmes en anglais. */
+export const FAMILLES_EN: Record<Famille, string> = {
+  premium: 'Elegant', decale: 'Quirky', sombre: 'Dark', clair: 'Light', couleur: 'Colorful', degrade: 'Gradients',
+};
 
 const GEIST = "'Geist Variable', ui-sans-serif, system-ui, sans-serif";
 const GARAMOND = "'EB Garamond Variable', ui-serif, Georgia, serif";

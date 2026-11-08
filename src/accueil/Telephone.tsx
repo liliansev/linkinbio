@@ -1,6 +1,7 @@
 import type { CSSProperties, ReactNode } from 'react';
 import type { PagePublique } from '../lib/types.ts';
-import { PROFILS } from './exemples.ts';
+import { profilDe } from './exemples.ts';
+import { useLangue } from './langue.ts';
 import type { ProfilExemple } from './exemples.ts';
 import { PageLiens } from '../components/PageLiens.tsx';
 
@@ -37,7 +38,7 @@ export function EcranPage({ page }: { page: PagePublique }) {
  */
 
 export function CroquisTete({ profil }: { profil: ProfilExemple }) {
-  const p = PROFILS[profil];
+  const p = profilDe(profil, useLangue());
   return <div className="hl-cq-tete">
     <img className="hl-cq-avatar" src={p.avatar} alt="" width="62" height="62" loading="lazy" />
     <span className="hl-cq-nom">{p.nom}</span>

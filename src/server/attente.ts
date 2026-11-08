@@ -1,5 +1,5 @@
 import { CONTACT_LEGAL } from '../lib/legal.ts';
-import type { Origines } from '../lib/types.ts';
+import type { Langue, Origines } from '../lib/types.ts';
 import { NOM_PUBLIC, sansSchema } from '../lib/types.ts';
 import { nomSaisi, email as validerEmail, pseudo as validerPseudo } from '../lib/valider.ts';
 import * as db from './db.ts';
@@ -25,6 +25,9 @@ import { HEURE, cleIp, destinataireSature, limiteur } from './limites.ts';
 
 export const inscriptionLibre = (env: Env) => env.LIENS_INSCRIPTION?.trim() !== 'attente';
 
+/** Le mot de la langue de l'accueil d'où vient la demande : l'anglais sur /, le français sur /fr (8 novembre 2026). */
+const dire = (langue: Langue | undefined) => (fr: string, en: string) => (langue === 'en' ? en : fr);
+
 export type EtatNom = { etat: 'libre' | 'pris' | 'invalide'; nom: string; suggestions: string[]; reserve?: boolean };
 
 /** Deux variantes libres d'un nom déjà pris. */
@@ -49,7 +52,7 @@ const tropInsistante = (ip: string, maintenant: number) => parIp(cleIp(ip), main
  * Chaque envoi ci-dessous part vers une adresse tapée par un inconnu. Passé la limite (voir `destinataireSature`),
  * rien ne part : l'accueil le dit quand on vient de taper l'adresse, et se tait pour un renvoi.
  */
-const TROP_DE_COURRIELS = { ok: false as const, message: 'Trop d’e-mails sont partis vers cette adresse. Réessaie plus tard.' };
+const tropDeCourriels = (langue?: Langue) => ({ ok: false as const, message: dire(langue)('Trop d’e-mails sont partis vers cette adresse. Réessaie plus tard.', 'Too many emails have been sent to this address. Try again later.') });
 /** Au-delà, l'accueil demande de revenir demain : personne ne vide la liste des noms d'un coup. */
 const PLAFOND_JOUR = 300;
 
@@ -62,18 +65,19 @@ async function rappeler(origines: Origines, env: Env, adresse: string, deja: { c
   await envoyer(env, fetchImpl, { to: adresse, subject: sujet, replyTo: CONTACT_LEGAL, html: enveloppe(`<p>${texte}</p>${bouton(lien, libelle)}`), text: `${texte}\n${lien}` });
 }
 
-export async function reserverNom(origines: Origines, env: Env, saisie: { nom: string; email: string }, fetchImpl: typeof fetch = fetch, maintenant = Date.now(), ip = ''): Promise<Reponse> {
+export async function reserverNom(origines: Origines, env: Env, saisie: { nom: string; email: string; langue?: Langue }, fetchImpl: typeof fetch = fetch, maintenant = Date.now(), ip = ''): Promise<Reponse> {
+  const d = dire(saisie.langue);
   const nom = validerPseudo(saisie.nom);
   const adresse = validerEmail(saisie.email);
-  if (!nom) return { ok: false, message: 'Ce nom ne peut pas servir d’adresse. Choisis-en un autre.' };
-  if (!adresse) return { ok: false, message: 'Cette adresse e-mail ne semble pas valide.' };
-  if (tropInsistante(ip, maintenant)) return { ok: false, message: 'Trop de réservations depuis ce réseau. Réessaie dans une heure.' };
-  if (db.reservationsDepuis(maintenant - 86_400_000) >= PLAFOND_JOUR) return { ok: false, message: 'Beaucoup de monde aujourd’hui. Réessaie demain, ton nom t’attendra peut-être.' };
-  if (destinataireSature(adresse, maintenant)) return TROP_DE_COURRIELS;
-  const note = { ok: true as const, message: `C’est noté. Ton invitation arrivera à ${adresse}.` };
+  if (!nom) return { ok: false, message: d('Ce nom ne peut pas servir d’adresse. Choisis-en un autre.', 'This name can’t be used as an address. Pick another one.') };
+  if (!adresse) return { ok: false, message: d('Cette adresse e-mail ne semble pas valide.', 'This email address doesn’t look valid.') };
+  if (tropInsistante(ip, maintenant)) return { ok: false, message: d('Trop de réservations depuis ce réseau. Réessaie dans une heure.', 'Too many reservations from this network. Try again in an hour.') };
+  if (db.reservationsDepuis(maintenant - 86_400_000) >= PLAFOND_JOUR) return { ok: false, message: d('Beaucoup de monde aujourd’hui. Réessaie demain, ton nom t’attendra peut-être.', 'Lots of people today. Try again tomorrow, your name may still be waiting.') };
+  if (destinataireSature(adresse, maintenant)) return tropDeCourriels(saisie.langue);
+  const note = { ok: true as const, message: d(`C’est noté. Ton invitation arrivera à ${adresse}.`, `Got it. Your invite will arrive at ${adresse}.`) };
   const deja = db.dejaInscrit(adresse);
   if (deja) { await rappeler(origines, env, adresse, deja, fetchImpl); return note; }
-  if (!db.reserver(adresse, nom, maintenant)) return { ok: false, message: `${NOM_PUBLIC}/${nom} vient d’être pris. Essaie une variante.` };
+  if (!db.reserver(adresse, nom, maintenant)) return { ok: false, message: d(`${NOM_PUBLIC}/${nom} vient d’être pris. Essaie une variante.`, `${NOM_PUBLIC}/${nom} was just taken. Try a variation.`) };
   await confirmerReservation(env, adresse, nom, fetchImpl);
   return note;
 }
@@ -106,26 +110,27 @@ export async function inviterReservation(origines: Origines, env: Env, id: strin
  * d'attente reçoit la page de ce nom-là ; une adresse qui a déjà une page
  * reçoit un rappel. La réponse est la même dans les trois cas.
  */
-export async function creerHopla(origines: Origines, env: Env, saisie: { nom: string; email: string }, fetchImpl: typeof fetch = fetch, maintenant = Date.now(), ip = ''): Promise<Reponse> {
+export async function creerHopla(origines: Origines, env: Env, saisie: { nom: string; email: string; langue?: Langue }, fetchImpl: typeof fetch = fetch, maintenant = Date.now(), ip = ''): Promise<Reponse> {
+  const d = dire(saisie.langue);
   const nom = validerPseudo(saisie.nom);
   const adresse = validerEmail(saisie.email);
-  if (!nom) return { ok: false, message: 'Ce nom ne peut pas servir d’adresse. Choisis-en un autre.' };
-  if (!adresse) return { ok: false, message: 'Cette adresse e-mail ne semble pas valide.' };
-  if (tropInsistante(ip, maintenant)) return { ok: false, message: 'Trop de pages créées depuis ce réseau. Réessaie dans une heure.' };
-  if (db.comptesDepuis(maintenant - 86_400_000) >= PLAFOND_JOUR) return { ok: false, message: 'Beaucoup de monde aujourd’hui. Réessaie demain, ton nom t’attendra peut-être.' };
+  if (!nom) return { ok: false, message: d('Ce nom ne peut pas servir d’adresse. Choisis-en un autre.', 'This name can’t be used as an address. Pick another one.') };
+  if (!adresse) return { ok: false, message: d('Cette adresse e-mail ne semble pas valide.', 'This email address doesn’t look valid.') };
+  if (tropInsistante(ip, maintenant)) return { ok: false, message: d('Trop de pages créées depuis ce réseau. Réessaie dans une heure.', 'Too many pages created from this network. Try again in an hour.') };
+  if (db.comptesDepuis(maintenant - 86_400_000) >= PLAFOND_JOUR) return { ok: false, message: d('Beaucoup de monde aujourd’hui. Réessaie demain, ton nom t’attendra peut-être.', 'Lots of people today. Try again tomorrow, your name may still be waiting.') };
   // Avant de savoir quel e-mail partira : la réponse reste la même, que l'adresse ait une page ou non.
-  if (destinataireSature(adresse, maintenant)) return TROP_DE_COURRIELS;
-  const note = { ok: true as const, message: `Va dans tes e-mails : ton lien est parti à ${adresse}.` };
+  if (destinataireSature(adresse, maintenant)) return tropDeCourriels(saisie.langue);
+  const note = { ok: true as const, message: d(`Va dans tes e-mails : ton lien est parti à ${adresse}.`, `Check your inbox: your link was sent to ${adresse}.`) };
   const reservation = db.reservationParEmail(adresse);
-  if (reservation) return (await inviterReservation(origines, env, reservation.id, fetchImpl)).ok ? note : { ok: false, message: 'L’e-mail n’est pas parti. Réessaie dans un instant.' };
+  if (reservation) return (await inviterReservation(origines, env, reservation.id, fetchImpl)).ok ? note : { ok: false, message: d('L’e-mail n’est pas parti. Réessaie dans un instant.', 'The email didn’t go out. Try again in a moment.') };
   const deja = db.dejaInscrit(adresse);
   if (deja) { await rappeler(origines, env, adresse, deja, fetchImpl); return note; }
-  if (db.nomPris(nom)) return { ok: false, message: `${NOM_PUBLIC}/${nom} vient d’être pris. Essaie une variante.` };
+  if (db.nomPris(nom)) return { ok: false, message: d(`${NOM_PUBLIC}/${nom} vient d’être pris. Essaie une variante.`, `${NOM_PUBLIC}/${nom} was just taken. Try a variation.`) };
   let compte: db.Compte;
-  try { compte = db.creerCompte(adresse, nom, maintenant); } catch { return { ok: false, message: `${NOM_PUBLIC}/${nom} vient d’être pris. Essaie une variante.` }; }
+  try { compte = db.creerCompte(adresse, nom, maintenant, saisie.langue); } catch { return { ok: false, message: d(`${NOM_PUBLIC}/${nom} vient d’être pris. Essaie une variante.`, `${NOM_PUBLIC}/${nom} was just taken. Try a variation.`) }; }
   const envoi = await inviter(origines, env, compte, fetchImpl, 'inscription');
   // Sans e-mail, personne ne peut entrer dans la page : elle s'efface, le nom redevient libre.
-  if (!envoi.ok) { db.supprimerCompte(compte.id); return { ok: false, message: 'L’e-mail n’est pas parti. Réessaie dans un instant.' }; }
+  if (!envoi.ok) { db.supprimerCompte(compte.id); return { ok: false, message: d('L’e-mail n’est pas parti. Réessaie dans un instant.', 'The email didn’t go out. Try again in a moment.') }; }
   return note;
 }
 
@@ -136,19 +141,20 @@ export async function creerHopla(origines: Origines, env: Env, saisie: { nom: st
  * adresse qui ne vont pas ensemble), c'est la demande de connexion habituelle.
  * Pour un même compte, un envoi par minute et dix par jour ; au-delà on se tait.
  */
-export async function renvoyerInscription(origines: Origines, env: Env, saisie: { nom: string; email: string }, fetchImpl: typeof fetch = fetch, maintenant = Date.now(), ip = ''): Promise<Reponse> {
+export async function renvoyerInscription(origines: Origines, env: Env, saisie: { nom: string; email: string; langue?: Langue }, fetchImpl: typeof fetch = fetch, maintenant = Date.now(), ip = ''): Promise<Reponse> {
+  const d = dire(saisie.langue);
   const nom = validerPseudo(saisie.nom);
   const adresse = validerEmail(saisie.email);
   const compte = nom ? db.compteParPseudo(nom) : null;
   if (!adresse || !compte || compte.email !== adresse || compte.connexion) {
     const r = await demanderConnexion(origines, env, saisie.email, fetchImpl, maintenant, ip);
-    return r.ok ? { ...r, message: 'C’est renvoyé. Ce lien marche 15 minutes : ouvre-le dès qu’il arrive.' } : r;
+    return r.ok ? { ...r, message: d('C’est renvoyé. Ce lien marche 15 minutes : ouvre-le dès qu’il arrive.', 'Sent again. This link works for 15 minutes: open it as soon as it arrives.') } : r;
   }
-  const note = { ok: true as const, message: 'C’est renvoyé, avec un nouveau lien de 7 jours. Le premier marche toujours.' };
+  const note = { ok: true as const, message: d('C’est renvoyé, avec un nouveau lien de 7 jours. Le premier marche toujours.', 'Sent again, with a new 7-day link. The first one still works.') };
   const recents = db.jetonsRecents(maintenant - 86_400_000, compte.id);
   if (maintenant - recents.dernier < 60_000 || recents.n >= 10 || destinataireSature(adresse, maintenant)) return note;
   const r = await inviter(origines, env, compte, fetchImpl, 'inscription');
-  return r.ok ? { ...note, lienDev: r.lienDev } : { ok: false, message: 'L’e-mail n’est pas parti. Réessaie dans un instant.' };
+  return r.ok ? { ...note, lienDev: r.lienDev } : { ok: false, message: d('L’e-mail n’est pas parti. Réessaie dans un instant.', 'The email didn’t go out. Try again in a moment.') };
 }
 
 /** Le temps de voir qu'on s'est trompé d'adresse, juste après l'envoi. */
@@ -162,21 +168,22 @@ export const DELAI_CORRECTION = 30 * 60_000;
  * détourne une page qui vient de naître. Comme à l'inscription, la réponse ne
  * dit pas si la nouvelle adresse a déjà une page.
  */
-export async function corrigerAdresse(origines: Origines, env: Env, saisie: { nom: string; ancienne: string; nouvelle: string }, fetchImpl: typeof fetch = fetch, maintenant = Date.now(), ip = ''): Promise<Reponse> {
+export async function corrigerAdresse(origines: Origines, env: Env, saisie: { nom: string; ancienne: string; nouvelle: string; langue?: Langue }, fetchImpl: typeof fetch = fetch, maintenant = Date.now(), ip = ''): Promise<Reponse> {
+  const d = dire(saisie.langue);
   const nom = validerPseudo(saisie.nom);
   const ancienne = validerEmail(saisie.ancienne);
   const nouvelle = validerEmail(saisie.nouvelle);
-  if (!nouvelle) return { ok: false, message: 'Cette adresse e-mail ne semble pas valide.' };
-  const refus = { ok: false as const, message: `Cette adresse ne se corrige plus d’ici. Écris-nous à ${CONTACT_LEGAL}.` };
+  if (!nouvelle) return { ok: false, message: d('Cette adresse e-mail ne semble pas valide.', 'This email address doesn’t look valid.') };
+  const refus = { ok: false as const, message: d(`Cette adresse ne se corrige plus d’ici. Écris-nous à ${CONTACT_LEGAL}.`, `This address can no longer be changed from here. Write to us at ${CONTACT_LEGAL}.`) };
   if (!nom || !ancienne) return refus;
-  if (tropInsistante(ip, maintenant)) return { ok: false, message: 'Trop d’essais depuis ce réseau. Réessaie dans une heure.' };
-  const panne = { ok: false as const, message: 'L’e-mail n’est pas parti. Réessaie dans un instant.' };
+  if (tropInsistante(ip, maintenant)) return { ok: false, message: d('Trop d’essais depuis ce réseau. Réessaie dans une heure.', 'Too many attempts from this network. Try again in an hour.') };
+  const panne = { ok: false as const, message: d('L’e-mail n’est pas parti. Réessaie dans un instant.', 'The email didn’t go out. Try again in a moment.') };
 
   if (!inscriptionLibre(env)) {
     const r = db.reservationParEmail(ancienne);
     if (!r || r.pseudo !== nom || maintenant - r.ts > DELAI_CORRECTION) return refus;
-    if (destinataireSature(nouvelle, maintenant)) return TROP_DE_COURRIELS;
-    const note = { ok: true as const, message: `C’est corrigé. Ton invitation arrivera à ${nouvelle}.` };
+    if (destinataireSature(nouvelle, maintenant)) return tropDeCourriels(saisie.langue);
+    const note = { ok: true as const, message: d(`C’est corrigé. Ton invitation arrivera à ${nouvelle}.`, `Fixed. Your invite will arrive at ${nouvelle}.`) };
     const deja = nouvelle === ancienne ? null : db.dejaInscrit(nouvelle);
     if (deja) { await rappeler(origines, env, nouvelle, deja, fetchImpl); return note; }
     db.changerEmailReservation(r.id, nouvelle);
@@ -186,8 +193,8 @@ export async function corrigerAdresse(origines: Origines, env: Env, saisie: { no
 
   const compte = db.compteParPseudo(nom);
   if (!compte || compte.email !== ancienne || compte.connexion || maintenant - compte.cree > DELAI_CORRECTION) return refus;
-  if (destinataireSature(nouvelle, maintenant)) return TROP_DE_COURRIELS;
-  const note = { ok: true as const, message: `C’est corrigé. Va dans tes e-mails : ton lien est parti à ${nouvelle}.` };
+  if (destinataireSature(nouvelle, maintenant)) return tropDeCourriels(saisie.langue);
+  const note = { ok: true as const, message: d(`C’est corrigé. Va dans tes e-mails : ton lien est parti à ${nouvelle}.`, `Fixed. Check your inbox: your link was sent to ${nouvelle}.`) };
   const deja = nouvelle === ancienne ? null : db.dejaInscrit(nouvelle);
   if (deja) { await rappeler(origines, env, nouvelle, deja, fetchImpl); return note; }
   db.changerEmail(compte.id, nouvelle);
@@ -203,33 +210,34 @@ export async function corrigerAdresse(origines: Origines, env: Env, saisie: { no
  * ouverte, dans la demi-heure. La page prend le nouveau nom et le lien repart,
  * avec la bonne adresse dans l'e-mail ; celui parti sous l'ancien nom ne sert plus.
  */
-export async function renommerPage(origines: Origines, env: Env, saisie: { ancien: string; nouveau: string; email: string }, fetchImpl: typeof fetch = fetch, maintenant = Date.now(), ip = ''): Promise<Reponse & { nom?: string }> {
+export async function renommerPage(origines: Origines, env: Env, saisie: { ancien: string; nouveau: string; email: string; langue?: Langue }, fetchImpl: typeof fetch = fetch, maintenant = Date.now(), ip = ''): Promise<Reponse & { nom?: string }> {
+  const d = dire(saisie.langue);
   const ancien = validerPseudo(saisie.ancien);
   const adresse = validerEmail(saisie.email);
   const nouveau = verifierNom(saisie.nouveau);
-  const refus = { ok: false as const, message: `Ce nom ne se change plus d’ici. Écris-nous à ${CONTACT_LEGAL}.` };
+  const refus = { ok: false as const, message: d(`Ce nom ne se change plus d’ici. Écris-nous à ${CONTACT_LEGAL}.`, `This name can no longer be changed from here. Write to us at ${CONTACT_LEGAL}.`) };
   if (!ancien || !adresse) return refus;
-  if (nouveau.etat === 'invalide') return { ok: false, message: 'Ce nom ne peut pas servir d’adresse : 3 à 30 caractères, lettres, chiffres et tirets.' };
-  if (nouveau.nom === ancien) return { ok: true, message: `${NOM_PUBLIC}/${ancien} reste ton adresse.`, nom: ancien };
-  if (nouveau.etat === 'pris') return { ok: false, message: `${NOM_PUBLIC}/${nouveau.nom} est déjà pris. Essaie une variante.` };
-  if (tropInsistante(ip, maintenant)) return { ok: false, message: 'Trop d’essais depuis ce réseau. Réessaie dans une heure.' };
+  if (nouveau.etat === 'invalide') return { ok: false, message: d('Ce nom ne peut pas servir d’adresse : 3 à 30 caractères, lettres, chiffres et tirets.', 'This name can’t be used as an address: 3 to 30 characters, letters, numbers and hyphens.') };
+  if (nouveau.nom === ancien) return { ok: true, message: d(`${NOM_PUBLIC}/${ancien} reste ton adresse.`, `${NOM_PUBLIC}/${ancien} stays your address.`), nom: ancien };
+  if (nouveau.etat === 'pris') return { ok: false, message: d(`${NOM_PUBLIC}/${nouveau.nom} est déjà pris. Essaie une variante.`, `${NOM_PUBLIC}/${nouveau.nom} is already taken. Try a variation.`) };
+  if (tropInsistante(ip, maintenant)) return { ok: false, message: d('Trop d’essais depuis ce réseau. Réessaie dans une heure.', 'Too many attempts from this network. Try again in an hour.') };
   const nom = nouveau.nom;
 
   if (!inscriptionLibre(env)) {
     const r = db.reservationParEmail(adresse);
     if (!r || r.pseudo !== ancien || maintenant - r.ts > DELAI_CORRECTION) return refus;
-    if (destinataireSature(adresse, maintenant)) return TROP_DE_COURRIELS;
-    try { db.changerPseudoReservation(r.id, nom); } catch { return { ok: false, message: `${NOM_PUBLIC}/${nom} vient d’être pris. Essaie une variante.` }; }
+    if (destinataireSature(adresse, maintenant)) return tropDeCourriels(saisie.langue);
+    try { db.changerPseudoReservation(r.id, nom); } catch { return { ok: false, message: d(`${NOM_PUBLIC}/${nom} vient d’être pris. Essaie une variante.`, `${NOM_PUBLIC}/${nom} was just taken. Try a variation.`) }; }
     await confirmerReservation(env, adresse, nom, fetchImpl);
-    return { ok: true, message: `C’est changé. Ton invitation arrivera à ${adresse}.`, nom };
+    return { ok: true, message: d(`C’est changé. Ton invitation arrivera à ${adresse}.`, `Changed. Your invite will arrive at ${adresse}.`), nom };
   }
 
   const compte = db.compteParPseudo(ancien);
   if (!compte || compte.email !== adresse || compte.connexion || maintenant - compte.cree > DELAI_CORRECTION) return refus;
-  if (destinataireSature(adresse, maintenant)) return TROP_DE_COURRIELS;
-  try { db.changerPseudo(compte.id, nom); } catch { return { ok: false, message: `${NOM_PUBLIC}/${nom} vient d’être pris. Essaie une variante.` }; }
+  if (destinataireSature(adresse, maintenant)) return tropDeCourriels(saisie.langue);
+  try { db.changerPseudo(compte.id, nom); } catch { return { ok: false, message: d(`${NOM_PUBLIC}/${nom} vient d’être pris. Essaie une variante.`, `${NOM_PUBLIC}/${nom} was just taken. Try a variation.`) }; }
   const envoi = await inviter(origines, env, { ...compte, pseudo: nom }, fetchImpl, 'inscription');
   // L'e-mail n'est pas parti : l'ancien nom revient, et l'on peut réessayer.
-  if (!envoi.ok) { db.changerPseudo(compte.id, ancien); return { ok: false, message: 'L’e-mail n’est pas parti. Réessaie dans un instant.' }; }
-  return { ok: true, message: `C’est changé. Va dans tes e-mails : un nouveau lien est parti à ${adresse}.`, nom };
+  if (!envoi.ok) { db.changerPseudo(compte.id, ancien); return { ok: false, message: d('L’e-mail n’est pas parti. Réessaie dans un instant.', 'The email didn’t go out. Try again in a moment.') }; }
+  return { ok: true, message: d(`C’est changé. Va dans tes e-mails : un nouveau lien est parti à ${adresse}.`, `Changed. Check your inbox: a new link was sent to ${adresse}.`), nom };
 }

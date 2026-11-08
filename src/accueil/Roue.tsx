@@ -3,7 +3,9 @@ import type { CSSProperties } from 'react';
 import { Icone } from '../components/Icone.tsx';
 import { POLICES, THEMES } from '../lib/themes.ts';
 import { NOMS_AUDIENCES, composerAudience } from '../lib/provenance.ts';
-import { PROFILS, BLOCS_EXEMPLES } from './exemples.ts';
+import { blocsExemples, profilDe } from './exemples.ts';
+import { useL, useLangue } from './langue.ts';
+import type { Langue } from '../lib/types.ts';
 import { mouvementReduit, useEnVue, useGlisse } from './mouvement.ts';
 
 /*
@@ -25,11 +27,16 @@ import { mouvementReduit, useEnVue, useGlisse } from './mouvement.ts';
 const RESEAUX = ['instagram', 'tiktok', 'youtube', 'linkedin'] as const;
 type Reseau = (typeof RESEAUX)[number];
 const COULEURS: Record<Reseau, string> = { instagram: '#d62976', tiktok: '#111111', youtube: '#e00000', linkedin: '#0a66c2' };
-const BLOCS = BLOCS_EXEMPLES.camille;
-/** Les liens de la page pour chaque réseau, et pour un visiteur venu d'ailleurs (avant le premier). */
-const PAGES = Object.fromEntries(RESEAUX.map(r => [r, composerAudience(BLOCS, r)])) as Record<Reseau, typeof BLOCS>;
-const DIRECT = composerAudience(BLOCS, '');
-const PROFIL = PROFILS.camille;
+/** Les liens de la page pour chaque réseau, et pour un visiteur venu d'ailleurs (avant le premier), dans chaque langue. */
+function pagesDe(langue: Langue) {
+  const blocs = blocsExemples('camille', langue);
+  return {
+    pages: Object.fromEntries(RESEAUX.map(r => [r, composerAudience(blocs, r)])) as Record<Reseau, typeof blocs>,
+    direct: composerAudience(blocs, ''),
+    profil: profilDe('camille', langue),
+  };
+}
+const PAGES_LANGUE = { fr: pagesDe('fr'), en: pagesDe('en') } as const;
 /** Le thème de la scène : Couchant, la lumière de fin de journée d'une photographe (29 octobre 2026, Lilian n'aimait pas Onyx ici). */
 const THEME = THEMES.find(t => t.id === 'coucher')!;
 const POLICE = POLICES[THEME.police];
@@ -46,6 +53,9 @@ interface Point { x: number; y: number }
 interface Geo { cx: number; cy: number; r: number; lien: Point; sortie: Point; entree: Point; bas: boolean }
 
 export function Roue() {
+  const langue = useLangue();
+  const l = useL();
+  const { pages: PAGES, direct: DIRECT, profil: PROFIL } = PAGES_LANGUE[langue];
   const [refVu, enVue] = useEnVue<HTMLDivElement>(0.5);
   const [pause, setPause] = useState(false);
   const joue = useRef(false);
@@ -159,7 +169,10 @@ export function Roue() {
   return (
     <div ref={refVu} className="hl-roue-cadre">
       <div ref={scene} className="hl-roue" role="img"
-        aria-label={`Des visiteurs arrivent d’Instagram, de TikTok, de YouTube et de LinkedIn par le même lien, ${adresse}. La page de ${PROFIL.nom} se range pour chacun : ${RESEAUX.map(r => `« ${PAGES[r][0].titre} » en tête depuis ${NOMS_AUDIENCES[r]}`).join(', ')}.`}>
+        aria-label={l(
+          `Des visiteurs arrivent d’Instagram, de TikTok, de YouTube et de LinkedIn par le même lien, ${adresse}. La page de ${PROFIL.nom} se range pour chacun : ${RESEAUX.map(r => `« ${PAGES[r][0].titre} » en tête depuis ${NOMS_AUDIENCES[r]}`).join(', ')}.`,
+          `Visitors arrive from Instagram, TikTok, YouTube and LinkedIn through the same link, ${adresse}. ${PROFIL.nom}’s page rearranges itself for each one: ${RESEAUX.map(r => `“${PAGES[r][0].titre}” first from ${NOMS_AUDIENCES[r]}`).join(', ')}.`,
+        )}>
         {traces && (
           <svg className="hl-roue-traces" width={traces.w} height={traces.h} viewBox={`0 0 ${traces.w} ${traces.h}`} aria-hidden="true">
             <path d={traces.d} className="hl-roue-voie" />
@@ -184,7 +197,7 @@ export function Roue() {
         </div>
         <div className="hl-roue-ecran">
           <span className="hl-roue-depuis" key={actif ?? 'direct'} data-vide={!actif || undefined}>
-            {actif && <><span style={{ color: COULEURS[actif] }}><Icone nom={actif} taille={18} /></span>Depuis {NOMS_AUDIENCES[actif]}</>}
+            {actif && <><span style={{ color: COULEURS[actif] }}><Icone nom={actif} taille={18} /></span>{l('Depuis', 'From')} {NOMS_AUDIENCES[actif]}</>}
           </span>
           <div ref={page} className="hl-roue-page" style={style}>
             <img className="hl-roue-avatar" src={PROFIL.avatar} alt="" width="120" height="120" loading="lazy" />
@@ -205,7 +218,7 @@ export function Roue() {
       </div>
       <p className="hl-roue-pied">
         {!mouvementReduit() && lancee && (
-          <button type="button" className="hl-revoir" onClick={() => setPause(p => !p)}>{pause ? 'Reprendre l’animation' : 'Mettre l’animation en pause'}</button>
+          <button type="button" className="hl-revoir" onClick={() => setPause(p => !p)}>{pause ? l('Reprendre l’animation', 'Resume animation') : l('Mettre l’animation en pause', 'Pause animation')}</button>
         )}
       </p>
     </div>

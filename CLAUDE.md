@@ -344,6 +344,12 @@ embarque tout : l'image n'a pas de `node_modules`.
   avec `LIENS_INSCRIPTION=attente`, on retrouve la liste d'attente (table `attente`, un an au plus,
   invitée depuis l'onglet Comptes). Les mots qui changent d'un mode à l'autre et les questions vivent
   dans `accueil/textes.ts`, repris par les données structurées et `llms.txt`.
+  Depuis le 8 novembre 2026 (demandé par Lilian : « faire de Hopla US first et traduire en français »), l'accueil est en
+  anglais sur `/` et en français sur `/fr` (`routes/fr/index.tsx`), sans redirection forcée : `accueil/langue.ts`
+  (`LangueSite`, `useL()` qui prend `l('français', 'English')`), le <head> et ses `hreflang` dans `accueil/tete.ts`.
+  La langue part avec l'inscription : une page créée depuis `/` est en anglais (`langue` des réglages) et reçoit sa
+  bienvenue en anglais. Les pages des fonctions, des comparatifs et les textes légaux restent en français
+  (`LangueSite.Provider value="fr"`) jusqu'à leur traduction ; noms des thèmes et des offres : `nomTheme`, `nomOffre`.
 - Marque : `components/Logo.tsx` (le symbole, un « h » et sa balle) ; favicon, icônes, manifeste et
   image de partage dans `public/`. `server/referencement.ts` écrit `robots.txt`, `sitemap.xml` et
   `llms.txt` (routes `robots[.]txt.ts`…) ; le back office ne s'indexe pas.

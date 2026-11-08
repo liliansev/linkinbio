@@ -8,6 +8,8 @@ import type { Inscription } from '../textes.ts';
 import { useEntrees } from '../mouvement.ts';
 import { COMPARATIFS } from './comparatifs.ts';
 import type { Comparatif } from './comparatifs.ts';
+// En français jusqu'à leur traduction (8 novembre 2026, Hopla anglais d'abord).
+import { LangueSite } from '../langue.ts';
 
 /*
  * Hopla face à un outil du marché : le titre sur le bleu, le tableau sur le
@@ -19,6 +21,7 @@ export function PageComparatif({ c, mode = 'libre' }: { c: Comparatif; mode?: In
   useEntrees();
   const autres = COMPARATIFS.filter(x => x.slug !== c.slug);
   return (
+    <LangueSite.Provider value="fr">
     <ModeInscription.Provider value={mode}>
       <div className="hl hl-humain hf">
         <a href="#contenu" className="hl-evitement">Aller au contenu</a>
@@ -73,6 +76,7 @@ export function PageComparatif({ c, mode = 'libre' }: { c: Comparatif; mode?: In
         <Pied />
       </div>
     </ModeInscription.Provider>
+    </LangueSite.Provider>
   );
 }
 
@@ -92,6 +96,7 @@ export function ListeComparatifs({ liste }: { liste: Comparatif[] }) {
 export function IndexComparatifs({ mode = 'libre' }: { mode?: Inscription }) {
   useEntrees();
   return (
+    <LangueSite.Provider value="fr">
     <ModeInscription.Provider value={mode}>
       <div className="hl hl-humain hf">
         <a href="#contenu" className="hl-evitement">Aller au contenu</a>
@@ -110,5 +115,6 @@ export function IndexComparatifs({ mode = 'libre' }: { mode?: Inscription }) {
         <Pied />
       </div>
     </ModeInscription.Provider>
+    </LangueSite.Provider>
   );
 }

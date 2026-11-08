@@ -1,6 +1,6 @@
 import { createMiddleware, createServerFn } from '@tanstack/react-start';
 import { deleteCookie, getCookie, getRequestHeader, getRequestUrl, setCookie } from '@tanstack/react-start/server';
-import type { Bloc, CleApi, CompteResume, EtatAdmin, FournisseurListe, ImageApercu, Liste, ListeFournisseur, Origines, PagePublique, Reglages, NoteAvis, Reservation, Semaine, SignalementResume, Stats } from '../lib/types.ts';
+import type { Bloc, CleApi, CompteResume, EtatAdmin, FournisseurListe, ImageApercu, Langue, Liste, ListeFournisseur, Origines, PagePublique, Reglages, NoteAvis, Reservation, Semaine, SignalementResume, Stats } from '../lib/types.ts';
 import { FOURNISSEURS_LISTE } from '../lib/types.ts';
 import * as liste from './liste.ts';
 import { requeteSortante } from './sortante.ts';
@@ -61,6 +61,10 @@ const humain = (jeton: string, action: ActionTurnstile) => verifierTurnstile(pro
   jeton, action, ip: getRequestHeader('x-real-ip') ?? '', hotes: hotesTurnstile(process.env, getRequestUrl().href),
 });
 const ROBOT = { ok: false as const, message: MESSAGE_ROBOT };
+/** Le même refus pour l'accueil en anglais. */
+const robot = (langue: Langue) => (langue === 'en' ? { ok: false as const, message: 'The anti-bot check didn’t go through. Try again.' } : ROBOT);
+/** La langue de l'accueil d'où part une demande ; l'ancien accueil n'en envoyait pas, il était en français. */
+const langueDe = (o: { langue?: unknown }): Langue => (o.langue === 'en' ? 'en' : 'fr');
 /** Le jeton qui accompagne un formulaire public, tel que le navigateur l'envoie ; au-delà de 2048 caractères, ce n'en est pas un. */
 const jetonDe = (o: { jeton?: unknown }) => (typeof o.jeton === 'string' && o.jeton.length <= 2048 ? o.jeton : '');
 
@@ -463,12 +467,12 @@ export const verifierNom = createServerFn({ method: 'GET' })
 
 export const reserverNom = createServerFn({ method: 'POST' })
   .validator((data: unknown) => {
-    const o = (data ?? {}) as { nom?: unknown; email?: unknown; jeton?: unknown };
-    return { nom: String(o.nom ?? '').slice(0, 40), email: String(o.email ?? '').slice(0, 200), jeton: jetonDe(o) };
+    const o = (data ?? {}) as { nom?: unknown; email?: unknown; jeton?: unknown; langue?: unknown };
+    return { nom: String(o.nom ?? '').slice(0, 40), email: String(o.email ?? '').slice(0, 200), jeton: jetonDe(o), langue: langueDe(o) };
   })
   .handler(async ({ data }) => {
     memeOrigine();
-    if (!(await humain(data.jeton, 'accueil'))) return ROBOT;
+    if (!(await humain(data.jeton, 'accueil'))) return robot(data.langue);
     const prendre = inscriptionLibre(process.env) ? creerHopla : reserver;
     return prendre(origines(), process.env, data, fetch, Date.now(), getRequestHeader('x-real-ip') ?? '');
   });
@@ -476,36 +480,36 @@ export const reserverNom = createServerFn({ method: 'POST' })
 /** « Renvoie-le » sur l'accueil : l'e-mail de bienvenue d'une page pas encore ouverte, sinon un lien de connexion. */
 export const renvoyerLien = createServerFn({ method: 'POST' })
   .validator((data: unknown) => {
-    const o = (data ?? {}) as { nom?: unknown; email?: unknown; jeton?: unknown };
-    return { nom: String(o.nom ?? '').slice(0, 40), email: String(o.email ?? '').slice(0, 200), jeton: jetonDe(o) };
+    const o = (data ?? {}) as { nom?: unknown; email?: unknown; jeton?: unknown; langue?: unknown };
+    return { nom: String(o.nom ?? '').slice(0, 40), email: String(o.email ?? '').slice(0, 200), jeton: jetonDe(o), langue: langueDe(o) };
   })
   .handler(async ({ data }) => {
     memeOrigine();
-    if (!(await humain(data.jeton, 'accueil'))) return ROBOT;
+    if (!(await humain(data.jeton, 'accueil'))) return robot(data.langue);
     return renvoyerInscription(origines(), process.env, data, fetch, Date.now(), getRequestHeader('x-real-ip') ?? '');
   });
 
 /** Juste après l'envoi, une adresse mal tapée se corrige tant que la page n'a pas été ouverte. */
 export const corrigerAdresse = createServerFn({ method: 'POST' })
   .validator((data: unknown) => {
-    const o = (data ?? {}) as { nom?: unknown; ancienne?: unknown; nouvelle?: unknown; jeton?: unknown };
-    return { nom: String(o.nom ?? '').slice(0, 40), ancienne: String(o.ancienne ?? '').slice(0, 200), nouvelle: String(o.nouvelle ?? '').slice(0, 200), jeton: jetonDe(o) };
+    const o = (data ?? {}) as { nom?: unknown; ancienne?: unknown; nouvelle?: unknown; jeton?: unknown; langue?: unknown };
+    return { nom: String(o.nom ?? '').slice(0, 40), ancienne: String(o.ancienne ?? '').slice(0, 200), nouvelle: String(o.nouvelle ?? '').slice(0, 200), jeton: jetonDe(o), langue: langueDe(o) };
   })
   .handler(async ({ data }) => {
     memeOrigine();
-    if (!(await humain(data.jeton, 'accueil'))) return ROBOT;
+    if (!(await humain(data.jeton, 'accueil'))) return robot(data.langue);
     return corriger(origines(), process.env, data, fetch, Date.now(), getRequestHeader('x-real-ip') ?? '');
   });
 
 /** Juste après l'envoi, un nom mal tapé se change tant que la page n'a pas été ouverte. */
 export const renommerPage = createServerFn({ method: 'POST' })
   .validator((data: unknown) => {
-    const o = (data ?? {}) as { ancien?: unknown; nouveau?: unknown; email?: unknown; jeton?: unknown };
-    return { ancien: String(o.ancien ?? '').slice(0, 40), nouveau: String(o.nouveau ?? '').slice(0, 40), email: String(o.email ?? '').slice(0, 200), jeton: jetonDe(o) };
+    const o = (data ?? {}) as { ancien?: unknown; nouveau?: unknown; email?: unknown; jeton?: unknown; langue?: unknown };
+    return { ancien: String(o.ancien ?? '').slice(0, 40), nouveau: String(o.nouveau ?? '').slice(0, 40), email: String(o.email ?? '').slice(0, 200), jeton: jetonDe(o), langue: langueDe(o) };
   })
   .handler(async ({ data }) => {
     memeOrigine();
-    if (!(await humain(data.jeton, 'accueil'))) return ROBOT;
+    if (!(await humain(data.jeton, 'accueil'))) return robot(data.langue);
     return renommer(origines(), process.env, data, fetch, Date.now(), getRequestHeader('x-real-ip') ?? '');
   });
 

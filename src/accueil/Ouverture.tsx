@@ -7,12 +7,15 @@ import type { ApiAccueil } from './Reserver.tsx';
 import { HeroProfils } from './Profils.tsx';
 import { Roue } from './Roue.tsx';
 import { APPEL, MOTS, useInscription } from './textes.ts';
+import { accueilDe, choix, useL, useLangue } from './langue.ts';
+import type { Choix } from './langue.ts';
 import { PAGES_FONCTIONS } from './pages/fonctions.ts';
 import { COMPARATIFS } from './pages/comparatifs.ts';
 
 export function Marque() {
+  const langue = useLangue();
   return (
-    <a href="/" className="hl-marque" aria-label="Hopla, accueil">
+    <a href={accueilDe(langue)} className="hl-marque" aria-label={choix(langue)('Hopla, accueil', 'Hopla, home')}>
       <Symbole dessin="var(--marque-dessin, #fff)" />
       <span>Hopla</span>
     </a>
@@ -30,7 +33,10 @@ export function Barre({ ailleurs = false }: { ailleurs?: boolean }) {
   useEffect(() => setChemin(location.pathname), []);
   // Au chargement, le champ de l'ouverture est à l'écran : le bouton de la barre attend qu'il en sorte.
   const [champ, setChamp] = useState(true);
-  const [debut, suite] = APPEL[useInscription()];
+  const langue = useLangue();
+  const l = useL();
+  const [debut, suite] = APPEL[langue][useInscription()];
+  const { SECTIONS, BARRE, MENU, REPERES } = sections(l);
   const { etape, ancien, correction } = useReservation();
   // Une fois l'e-mail parti, il n'y a plus rien à créer : la barre garde Connexion.
   const envoye = etape === 'fait' || !!ancien || correction;
@@ -148,12 +154,12 @@ export function Barre({ ailleurs = false }: { ailleurs?: boolean }) {
       <div className="hl-barre-capsule">
       <div className="hl-barre-dedans">
         <Marque />
-        <nav className="hl-barre-nav" aria-label="Sections">
+        <nav className="hl-barre-nav" aria-label={l('Sections', 'Sections')}>
           {BARRE.map(entree => {
             if (typeof entree === 'string') {
               const liste = entree === 'fonctions'
-                ? { titre: 'Fonctionnalités', tete: '', tout: ['/fonctionnalites', 'Toutes les fonctionnalités'], pages: PAGES_FONCTIONS.map(p => [`/fonctionnalites/${p.slug}`, p.nom]) }
-                : { titre: 'Comparatifs', tete: 'Hopla face à', tout: ['/comparatif', 'Tous les comparatifs'], pages: COMPARATIFS.map(c => [`/comparatif/${c.slug}`, c.nom]) };
+                ? { titre: l('Fonctionnalités', 'Features'), tete: '', tout: ['/fonctionnalites', l('Toutes les fonctionnalités', 'All features')], pages: PAGES_FONCTIONS.map(p => [`/fonctionnalites/${p.slug}`, p.nom]) }
+                : { titre: l('Comparatifs', 'Compare'), tete: l('Hopla face à', 'Hopla vs'), tout: ['/comparatif', l('Tous les comparatifs', 'All comparisons')], pages: COMPARATIFS.map(c => [`/comparatif/${c.slug}`, c.nom]) };
               const ouvert = deroule === entree;
               return (
                 <div key={entree} className="hl-deroulant" data-ouvert={ouvert || undefined}>
@@ -171,24 +177,25 @@ export function Barre({ ailleurs = false }: { ailleurs?: boolean }) {
               );
             }
             const [lien, texte] = entree;
-            return <a key={lien} href={ailleurs ? `/${lien}` : lien} aria-current={ici === lien || undefined} onClick={() => { if (!ailleurs) titreDe(lien); }}>{texte}</a>;
+            return <a key={lien} href={ailleurs ? `${accueilDe(langue)}${lien}` : lien} aria-current={ici === lien || undefined} onClick={() => { if (!ailleurs) titreDe(lien); }}>{texte}</a>;
           })}
         </nav>
         <div className="hl-barre-actions">
-          <a href="/admin" className="hl-barre-connexion">Connexion</a>
+          <a href="/admin" className="hl-barre-connexion">{l('Connexion', 'Log in')}</a>
           <a ref={bouton} href="#reserver" className="hl-btn hl-btn-petit" aria-label={debut + suite} onClick={ev => { ev.preventDefault(); setMenu(false); allerAuChamp(); }}><span>{debut}<span className="hl-large">{suite}</span></span></a>
-          <button ref={boutonMenu} type="button" className="hl-barre-menu" aria-expanded={menu} aria-controls="hl-menu" aria-label={menu ? 'Fermer le menu' : 'Ouvrir le menu'} onClick={() => setMenu(m => !m)}>
+          <button ref={boutonMenu} type="button" className="hl-barre-menu" aria-expanded={menu} aria-controls="hl-menu" aria-label={menu ? l('Fermer le menu', 'Close menu') : l('Ouvrir le menu', 'Open menu')} onClick={() => setMenu(m => !m)}>
             <Icone nom={menu ? 'ui-fermer' : 'ui-menu'} taille={22} />
           </button>
         </div>
       </div>
-      <nav id="hl-menu" className="hl-menu" aria-label="Menu" hidden={!menu}>
+      <nav id="hl-menu" className="hl-menu" aria-label={l('Menu', 'Menu')} hidden={!menu}>
         {MENU.map(([lien, texte]) => lien.startsWith('#')
-          ? <a key={lien} href={ailleurs ? `/${lien}` : lien} aria-current={ici === lien || undefined} onClick={() => { setMenu(false); if (!ailleurs) titreDe(lien); }}>{texte}</a>
+          ? <a key={lien} href={ailleurs ? `${accueilDe(langue)}${lien}` : lien} aria-current={ici === lien || undefined} onClick={() => { setMenu(false); if (!ailleurs) titreDe(lien); }}>{texte}</a>
           : <a key={lien} href={lien} aria-current={chemin === lien || chemin.startsWith(lien + '/') ? 'page' : undefined}>{texte}</a>)}
         {/* Au téléphone, l'appel quitte la barre pour le menu (27 octobre 2026, demandé par Lilian) : la barre garde la marque et le burger. */}
         {!envoye && <a href="#reserver" className="hl-btn hl-menu-creer" onClick={ev => { ev.preventDefault(); setMenu(false); allerAuChamp(); }}>{debut}{suite}</a>}
-        <a href="/admin" className="hl-menu-connexion">Connexion</a>
+        <a href="/admin" className="hl-menu-connexion">{l('Connexion', 'Log in')}</a>
+        <a href={langue === 'fr' ? '/' : '/fr'} className="hl-menu-connexion" lang={langue === 'fr' ? 'en' : 'fr'} hrefLang={langue === 'fr' ? 'en' : 'fr'}>{langue === 'fr' ? 'English' : 'Français'}</a>
       </nav>
       </div>
     </header>
@@ -205,44 +212,52 @@ function titreDe(lien: string) {
   });
 }
 
-/** Les sections de l'accueil, dans l'ordre de la page. */
-const SECTIONS = [['#inspiration', 'Inspiration'], ['#fonctionnement', 'Comment ça marche'], ['#themes', 'Thèmes'], ['#prix', 'Tarifs'], ['#questions', 'Questions']];
-/** La barre au bureau (26 octobre 2026, demandé par Lilian) : trois sections, et les pages des fonctions et des comparatifs en listes déroulantes. */
-const BARRE: (string[] | 'fonctions' | 'comparatifs')[] = [['#fonctionnement', 'Comment ça marche'], 'fonctions', ['#themes', 'Thèmes'], ['#prix', 'Tarifs'], 'comparatifs'];
-/** Le menu du téléphone : toutes les sections, et les pages des fonctions et des comparatifs à leur place. */
-const MENU = [SECTIONS[0], SECTIONS[1], ['/fonctionnalites', 'Fonctionnalités'], SECTIONS[2], SECTIONS[3], ['/comparatif', 'Comparatifs'], SECTIONS[4]];
-/** Où commence chaque lien de la barre ; les sections sans lien (Prise, le dernier appel) le referment. */
-const REPERES = [...SECTIONS.map(([lien]) => [lien, lien]), ['#plus-loin', 'fonctions'], ['#prise', ''], ['#dernier', '']];
+function sections(l: Choix) {
+  /** Les sections de l'accueil, dans l'ordre de la page. */
+  const SECTIONS = [['#inspiration', l('Inspiration', 'Inspiration')], ['#fonctionnement', l('Comment ça marche', 'How it works')], ['#themes', l('Thèmes', 'Themes')], ['#prix', l('Tarifs', 'Pricing')], ['#questions', l('Questions', 'FAQ')]];
+  /** La barre au bureau (26 octobre 2026, demandé par Lilian) : trois sections, et les pages des fonctions et des comparatifs en listes déroulantes. */
+  const BARRE: (string[] | 'fonctions' | 'comparatifs')[] = [SECTIONS[1], 'fonctions', SECTIONS[2], SECTIONS[3], 'comparatifs'];
+  /** Le menu du téléphone : toutes les sections, et les pages des fonctions et des comparatifs à leur place. */
+  const MENU = [SECTIONS[0], SECTIONS[1], ['/fonctionnalites', l('Fonctionnalités', 'Features')], SECTIONS[2], SECTIONS[3], ['/comparatif', l('Comparatifs', 'Compare')], SECTIONS[4]];
+  /** Où commence chaque lien de la barre ; les sections sans lien (Prise, le dernier appel) le referment. */
+  const REPERES = [...SECTIONS.map(([lien]) => [lien, lien]), ['#plus-loin', 'fonctions'], ['#prise', ''], ['#dernier', '']];
+  return { SECTIONS, BARRE, MENU, REPERES };
+}
 
 export function Ouverture({ api }: { api: ApiAccueil }) {
   const mode = useInscription();
+  const langue = useLangue();
+  const l = useL();
   return (
     <section className="hl-heros hp-heros" data-teinte="klein" aria-labelledby="titre">
       <div className="hl-heros-texte">
-        <h1 id="titre" className="hl-h1 hl-heros-titre">Un lien qui{' '}<br />te ressemble<span className="hl-cache">, </span><span>et s’adapte à{' '}<br />chaque visiteur</span></h1>
-        <p className="hl-chapo">Tes créations, tes projets, tes coups de cœur. Qu’on arrive d’Instagram, de TikTok ou de LinkedIn, ta page met le bon lien en premier.</p>
-        <div data-zone-appel=""><Reserver api={api} id="reserver" grand premier note={MOTS[mode].note} /></div>
+        <h1 id="titre" className="hl-h1 hl-heros-titre">{l(
+          <>Un lien qui{' '}<br />te ressemble<span className="hl-cache">, </span><span>et s’adapte à{' '}<br />chaque visiteur</span></>,
+          <>One link that{' '}<br />feels like you<span className="hl-cache">, </span><span>and adapts to{' '}<br />every visitor</span></>)}</h1>
+        <p className="hl-chapo">{l('Tes créations, tes projets, tes coups de cœur. Qu’on arrive d’Instagram, de TikTok ou de LinkedIn, ta page met le bon lien en premier.', 'Your work, your projects, your favorite finds. Whether people come from Instagram, TikTok or LinkedIn, your page puts the right link first.')}</p>
+        <div data-zone-appel=""><Reserver api={api} id="reserver" grand premier note={MOTS[langue][mode].note} /></div>
       </div>
       <HeroProfils />
       {/* Une ligne qui mène aux tarifs, sans prix : les prix ne se lisent que dans les tarifs (Lilian, 26 octobre 2026). */}
-      <div className="hp-heros-pied"><span>Pour ceux qui ont quelque chose à partager</span><a className="hp-heros-prix" href="#prix">Gratuit pour commencer · Voir les offres</a></div>
+      <div className="hp-heros-pied"><span>{l('Pour ceux qui ont quelque chose à partager', 'For anyone with something to share')}</span><a className="hp-heros-prix" href="#prix">{l('Gratuit pour commencer · Voir les offres', 'Free to start · See plans')}</a></div>
     </section>
   );
 }
 
 export function Selon() {
+  const l = useL();
   return (
     <section className="hl-section hp-selon" id="fonctionnement" aria-labelledby="selon">
       <div className="hp-selon-texte">
-        <h2 id="selon" className="hl-h2">Camille partage<br /><span className="hl-cache">. </span><span>Hopla s’adapte</span></h2>
-        <p className="hl-chapo">Un seul lien dans toutes ses bios. Hopla reconnaît le réseau d’où vient son visiteur et met le bon lien en premier.</p>
+        <h2 id="selon" className="hl-h2">{l(<>Camille partage<br /><span className="hl-cache">. </span><span>Hopla s’adapte</span></>, <>Camille shares<br /><span className="hl-cache">. </span><span>Hopla adapts</span></>)}</h2>
+        <p className="hl-chapo">{l('Un seul lien dans toutes ses bios. Hopla reconnaît le réseau d’où vient son visiteur et met le bon lien en premier.', 'One link in every bio. Hopla recognizes the network each visitor comes from and puts the right link first.')}</p>
         <ol className="hp-source-legendes">
-          <li><Icone nom="instagram" taille={20} /><span>Depuis Instagram<b>Son portfolio, pour découvrir ses photos</b></span></li>
-          <li><Icone nom="linkedin" taille={20} /><span>Depuis LinkedIn<b>Son contact, pour travailler ensemble</b></span></li>
-          <li><Icone nom="youtube" taille={20} /><span>Depuis TikTok<b>Sa vidéo s’ouvre dans YouTube, pas coincée dans l’app</b></span></li>
+          <li><Icone nom="instagram" taille={20} /><span>{l('Depuis Instagram', 'From Instagram')}<b>{l('Son portfolio, pour découvrir ses photos', 'Her portfolio, to browse her photos')}</b></span></li>
+          <li><Icone nom="linkedin" taille={20} /><span>{l('Depuis LinkedIn', 'From LinkedIn')}<b>{l('Son contact, pour travailler ensemble', 'Her contact, to work together')}</b></span></li>
+          <li><Icone nom="youtube" taille={20} /><span>{l('Depuis TikTok', 'From TikTok')}<b>{l('Sa vidéo s’ouvre dans YouTube, pas coincée dans l’app', 'Her video opens in YouTube, not stuck inside the app')}</b></span></li>
         </ol>
         {/* La preuve arrive avec la promesse : une vraie page, en ligne aujourd'hui. */}
-        <a className="hp-vraie-page" href="/lilian">Voir une vraie page Hopla <Icone nom="ui-fleche" taille={18} /></a>
+        <a className="hp-vraie-page" href="/lilian">{l('Voir une vraie page Hopla', 'See a real Hopla page')} <Icone nom="ui-fleche" taille={18} /></a>
       </div>
       <Roue />
     </section>

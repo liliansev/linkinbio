@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import type { KeyboardEvent } from 'react';
 import { Icone, NOMS_RESEAUX } from '../components/Icone.tsx';
 import { NOMS_AUDIENCES, composerAudience, deReseau } from '../lib/provenance.ts';
-import { BLOCS_EXEMPLES, IDS_PROFILS, PROFILS, de, pageExemple, pageProfil } from './exemples.ts';
+import { IDS_PROFILS, PROFILS, blocsExemples, de, pageDe, pageExemple, pageProfil, profilDe } from './exemples.ts';
+import { useL, useLangue } from './langue.ts';
 import type { ProfilExemple } from './exemples.ts';
 import { mouvementReduit, useEnVue, useGlisse } from './mouvement.ts';
 import { allerAuChamp, useReservation } from './Reserver.tsx';
@@ -15,7 +16,7 @@ export function Avatar({ profil, className = '', prioritaire = false }: { profil
 
 /** Une personne d'exemple : son visage, son nom, son métier. Jamais son offre : elle ne se lit que dans les tarifs. */
 export function Personne({ profil }: { profil: ProfilExemple }) {
-  const p = PROFILS[profil];
+  const p = profilDe(profil, useLangue());
   return <div className="hp-personne"><Avatar profil={profil} /><span><b>{p.nom}</b><small>{p.metier} · {p.ville}</small></span></div>;
 }
 
@@ -35,6 +36,8 @@ const AVANT_YOUTUBE = 1000;
 
 /** Des cartes compactes composées avec les mêmes données que les vraies pages de démonstration. */
 export function HeroProfils() {
+  const langue = useLangue();
+  const l = useL();
   const [source, setSource] = useState(0);
   const liens = useRef<HTMLDivElement>(null);
   const [scene, enVue] = useEnVue<HTMLDivElement>(0.5);
@@ -45,13 +48,13 @@ export function HeroProfils() {
     return () => clearTimeout(t);
   }, [enVue]);
   const reseau = SOURCES[source];
-  const blocsInes = composerAudience(BLOCS_EXEMPLES.ines, reseau);
+  const blocsInes = composerAudience(blocsExemples('ines', langue), reseau);
   useGlisse(liens, blocsInes.map(b => b.id).join(), 600);
-  return <div className="hp-figure"><div ref={scene} className="hp-composition" role="img" aria-label={`Les pages de Sacha, Inès et Camille. Ouverte depuis ${NOMS_AUDIENCES[reseau]}, celle d’Inès met « ${blocsInes[0].titre} » en premier.`}>
+  return <div className="hp-figure"><div ref={scene} className="hp-composition" role="img" aria-label={l(`Les pages de Sacha, Inès et Camille. Ouverte depuis ${NOMS_AUDIENCES[reseau]}, celle d’Inès met « ${blocsInes[0].titre} » en premier.`, `Pages by Sacha, Ines and Camille. Opened from ${NOMS_AUDIENCES[reseau]}, Ines’s page puts “${blocsInes[0].titre}” first.`)}>
     {(['sacha', 'ines', 'camille'] as const).map(id => {
-      const p = PROFILS[id];
-      const page = pageExemple(id);
-      const blocs = id === 'ines' ? blocsInes : composerAudience(BLOCS_EXEMPLES[id], '');
+      const p = profilDe(id, langue);
+      const page = pageExemple(id, undefined, { langue });
+      const blocs = id === 'ines' ? blocsInes : composerAudience(blocsExemples(id, langue), '');
       return <div key={id} className={`hp-page hp-page-${id}`}>
         {id === 'ines' && <Avatar profil={id} className="hp-couverture" prioritaire />}
         <div className="hp-page-corps">
@@ -67,17 +70,19 @@ export function HeroProfils() {
         </div>
       </div>;
     })}
-    <span key={reseau} className="hp-source" data-reseau={reseau}><Icone nom={reseau} taille={16} />Depuis {NOMS_AUDIENCES[reseau]}</span>
+    <span key={reseau} className="hp-source" data-reseau={reseau}><Icone nom={reseau} taille={16} />{l('Depuis', 'From')} {NOMS_AUDIENCES[reseau]}</span>
     <Avatar profil="yanis" className="hp-visage-libre hp-visage-yanis" prioritaire />
     <Avatar profil="theo" className="hp-visage-libre hp-visage-theo" prioritaire />
   </div>
     {/* La composition se dit déjà aux lecteurs d'écran : la légende est pour les yeux. */}
-    <p key={reseau} className="hp-preuve" aria-hidden="true">Venu {deReseau(reseau)}, le visiteur voit d’abord <b>« {blocsInes[0].titre} »</b></p>
+    <p key={reseau} className="hp-preuve" aria-hidden="true">{l(<>Venu {deReseau(reseau)}, le visiteur voit d’abord <b>« {blocsInes[0].titre} »</b></>, <>Coming from {NOMS_AUDIENCES[reseau]}, the visitor first sees <b>“{blocsInes[0].titre}”</b></>)}</p>
   </div>;
 }
 
 export function GalerieProfils() {
   const [profil, setProfil] = useState<ProfilExemple>('ines');
+  const langue = useLangue();
+  const l = useL();
   const [largeur, setLargeur] = useState(300);
   const boite = useRef<HTMLDialogElement>(null);
   const galerie = useRef<HTMLDivElement>(null);
@@ -101,26 +106,26 @@ export function GalerieProfils() {
   const lireBouts = () => { const g = galerie.current; if (g) setBouts({ debut: g.scrollLeft < 4, fin: g.scrollLeft + g.clientWidth > g.scrollWidth - 4 }); };
   useEffect(() => { lireBouts(); addEventListener('resize', lireBouts); return () => removeEventListener('resize', lireBouts); }, []);
   const defiler = (sens: number) => { const g = galerie.current; if (g) g.scrollBy({ left: sens * g.clientWidth * .8, behavior: mouvementReduit() ? 'auto' : 'smooth' }); };
-  const p = PROFILS[profil];
+  const p = profilDe(profil, langue);
   return <section id="inspiration" className="hl-section hp-inspiration" aria-labelledby="titre-inspiration">
-    <div className="hp-inspiration-tete"><div><h2 id="titre-inspiration" className="hl-h2">Il y a tout un monde<br />derrière un lien</h2></div><p>Ton activité ne ressemble à aucune autre.<br />Ta page non plus.<small>Explore ces neuf profils imaginés pour te donner des idées.</small></p></div>
+    <div className="hp-inspiration-tete"><div><h2 id="titre-inspiration" className="hl-h2">{l(<>Il y a tout un monde<br />derrière un lien</>, <>There’s a whole world<br />behind a link</>)}</h2></div><p>{l(<>Ton activité ne ressemble à aucune autre.<br />Ta page non plus.<small>Explore ces neuf profils imaginés pour te donner des idées.</small></>, <>Your work is like no one else’s.<br />Your page shouldn’t be either.<small>Browse these nine made-up profiles for ideas.</small></>)}</p></div>
     <div className="hl-fleches hp-galerie-fleches">
-      <button type="button" onClick={() => { if (!bouts.debut) defiler(-1); }} aria-disabled={bouts.debut || undefined} aria-label="Profils précédents"><Icone nom="ui-chevron" taille={18} className="hl-gauche" /></button>
-      <button type="button" onClick={() => { if (!bouts.fin) defiler(1); }} aria-disabled={bouts.fin || undefined} aria-label="Profils suivants"><Icone nom="ui-chevron" taille={18} className="hl-droite" /></button>
+      <button type="button" onClick={() => { if (!bouts.debut) defiler(-1); }} aria-disabled={bouts.debut || undefined} aria-label={l('Profils précédents', 'Previous profiles')}><Icone nom="ui-chevron" taille={18} className="hl-gauche" /></button>
+      <button type="button" onClick={() => { if (!bouts.fin) defiler(1); }} aria-disabled={bouts.fin || undefined} aria-label={l('Profils suivants', 'Next profiles')}><Icone nom="ui-chevron" taille={18} className="hl-droite" /></button>
     </div>
-    <div ref={galerie} className="hp-galerie" onScroll={lireBouts}>{IDS_PROFILS.map(id => <button key={id} className="hp-profil" type="button" data-profil={id} onClick={() => ouvrir(id)} aria-label={`Découvrir la page ${de(PROFILS[id].nom)}, ${PROFILS[id].metier.toLowerCase()} à ${PROFILS[id].ville}`}><span className="hp-profil-photo"><Avatar profil={id} /></span><b className="hp-profil-nom">{PROFILS[id].nom}<Icone nom="ui-oeil" taille={18} /></b><small>{PROFILS[id].metier} · {PROFILS[id].ville}</small></button>)}</div>
+    <div ref={galerie} className="hp-galerie" onScroll={lireBouts}>{IDS_PROFILS.map(id => <button key={id} className="hp-profil" type="button" data-profil={id} onClick={() => ouvrir(id)} aria-label={l(`Découvrir la page ${de(PROFILS[id].nom)}, ${PROFILS[id].metier.toLowerCase()} à ${PROFILS[id].ville}`, `See ${pageDe(profilDe(id, 'en').nom, 'en')}, ${profilDe(id, 'en').metier.toLowerCase()} in ${profilDe(id, 'en').ville}`)}><span className="hp-profil-photo"><Avatar profil={id} /></span><b className="hp-profil-nom">{profilDe(id, langue).nom}<Icone nom="ui-oeil" taille={18} /></b><small>{profilDe(id, langue).metier} · {profilDe(id, langue).ville}</small></button>)}</div>
     <dialog ref={boite} className="hp-dialogue" aria-labelledby="profil-titre" onKeyDown={fleches}
       onClose={() => { if (retour.current) galerie.current?.querySelector<HTMLButtonElement>(`[data-profil="${profil}"]`)?.focus(); retour.current = true; }} onClick={e => { if (e.target === e.currentTarget) boite.current?.close(); }}>
       <div className="hp-dialogue-tete">
-        <h3 id="profil-titre" aria-live="polite">La page {de(p.nom)} <span className="hp-dialogue-rang">{i + 1} sur {IDS_PROFILS.length}</span></h3>
-        <button type="button" autoFocus onClick={() => boite.current?.close()} aria-label="Fermer l’aperçu"><Icone nom="ui-fermer" taille={24} /></button>
+        <h3 id="profil-titre" aria-live="polite">{pageDe(p.nom, langue)} <span className="hp-dialogue-rang">{l(`${i + 1} sur ${IDS_PROFILS.length}`, `${i + 1} of ${IDS_PROFILS.length}`)}</span></h3>
+        <button type="button" autoFocus onClick={() => boite.current?.close()} aria-label={l('Fermer l’aperçu', 'Close preview')}><Icone nom="ui-fermer" taille={24} /></button>
       </div>
-      <Telephone largeur={largeur} defile className="hl-tel-court" adresse={`hopla.page/${p.pseudo}`} label={`Exemple de page ${de(p.nom)}`}><EcranPage page={pageProfil(profil)} /></Telephone>
-      <p className="hp-dialogue-qui">{p.metier} à {p.ville}</p>
+      <Telephone largeur={largeur} defile className="hl-tel-court" adresse={`hopla.page/${p.pseudo}`} label={l(`Exemple de page ${de(p.nom)}`, `Example page by ${p.nom}`)}><EcranPage page={pageProfil(profil, langue)} /></Telephone>
+      <p className="hp-dialogue-qui">{l(`${p.metier} à ${p.ville}`, `${p.metier} in ${p.ville}`)}</p>
       <div className="hp-dialogue-pied">
-        <button type="button" className="hp-dialogue-voisin" onClick={() => setProfil(voisin(-1))} aria-label={`Page précédente : ${PROFILS[voisin(-1)].nom}`}><Icone nom="ui-chevron" taille={20} className="hl-gauche" /></button>
-        {!envoye && <button type="button" className="hl-btn" onClick={() => { retour.current = false; boite.current?.close(); allerAuChamp(); }}>{appel(mode)}</button>}
-        <button type="button" className="hp-dialogue-voisin" onClick={() => setProfil(voisin(1))} aria-label={`Page suivante : ${PROFILS[voisin(1)].nom}`}><Icone nom="ui-chevron" taille={20} className="hl-droite" /></button>
+        <button type="button" className="hp-dialogue-voisin" onClick={() => setProfil(voisin(-1))} aria-label={l(`Page précédente : ${PROFILS[voisin(-1)].nom}`, `Previous page: ${profilDe(voisin(-1), 'en').nom}`)}><Icone nom="ui-chevron" taille={20} className="hl-gauche" /></button>
+        {!envoye && <button type="button" className="hl-btn" onClick={() => { retour.current = false; boite.current?.close(); allerAuChamp(); }}>{appel(mode, langue)}</button>}
+        <button type="button" className="hp-dialogue-voisin" onClick={() => setProfil(voisin(1))} aria-label={l(`Page suivante : ${PROFILS[voisin(1)].nom}`, `Next page: ${profilDe(voisin(1), 'en').nom}`)}><Icone nom="ui-chevron" taille={20} className="hl-droite" /></button>
       </div>
     </dialog>
   </section>;

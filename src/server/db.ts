@@ -2,7 +2,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { randomBytes, randomUUID } from 'node:crypto';
-import type { Bloc, CleApi, CompteResume, Contact, FournisseurListe, Reglages, Reservation, Stats } from '../lib/types.ts';
+import type { Bloc, CleApi, CompteResume, Contact, FournisseurListe, Langue, Reglages, Reservation, Stats } from '../lib/types.ts';
 import { PRINCIPAL } from '../lib/types.ts';
 import { EST_HOPLA_PAGE } from '../lib/instance.ts';
 import { REGLAGES_DEFAUT, blocsDefaut, reglagesNouveauCompte } from '../lib/defauts.ts';
@@ -258,7 +258,7 @@ export function pseudoPrincipal(env: Record<string, string | undefined> = proces
   return pseudo(env.LIENS_PSEUDO_PRINCIPAL ?? '') || 'moi';
 }
 
-export function creerCompte(email: string, pseudo: string, maintenant = Date.now()): Compte {
+export function creerCompte(email: string, pseudo: string, maintenant = Date.now(), langue: Langue = 'fr'): Compte {
   const d = base();
   const e = email.toLowerCase(), p = pseudo.toLowerCase();
   if (d.prepare('SELECT 1 FROM comptes WHERE email = ? AND id != ?').get(e, PRINCIPAL)) throw new Error('Cette adresse a déjà un compte.');
@@ -271,7 +271,7 @@ export function creerCompte(email: string, pseudo: string, maintenant = Date.now
     d.prepare('DELETE FROM attente WHERE email = ?').run(e);
     // Chaque compte neuf commence par son essai de Pro, sans carte.
     d.prepare('INSERT INTO comptes (id, email, pseudo, cree, essai_jusqu) VALUES (?, ?, ?, ?, ?)').run(id, e, p, maintenant, maintenant + ESSAI_JOURS * 86_400_000);
-    d.prepare('INSERT INTO pages (compte, valeur) VALUES (?, ?)').run(id, JSON.stringify(reglagesNouveauCompte(p)));
+    d.prepare('INSERT INTO pages (compte, valeur) VALUES (?, ?)').run(id, JSON.stringify(reglagesNouveauCompte(p, langue)));
     d.exec('COMMIT');
   } catch (error) { d.exec('ROLLBACK'); throw error; }
   return compteParId(id)!;
