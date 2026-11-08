@@ -23,7 +23,34 @@ const starter = `${OFFRES.starter.prix.mois} € par mois`;
 /** Ce que Gratuit ne garde pas, en peu de mots. */
 const PERTES = [`plus de ${BLOCS_GRATUITS} blocs`, 'la page sans la mention Hopla', 'tes couleurs et ton fond', 'ta vitrine', 'tes stats'];
 
-export function courrielEssai(etape: 1 | 2, pseudo: string, fin: number, admin: string) {
+/** Les mêmes e-mails en anglais, pour une page en anglais. */
+const PERTES_EN = [`more than ${BLOCS_GRATUITS} blocks`, 'the page without Hopla branding', 'your colors and background', 'your storefront', 'your stats'];
+const dateLongueEn = (ms: number) => new Date(ms).toLocaleDateString('en-US', { day: 'numeric', month: 'long', timeZone: 'Europe/Paris' });
+function courrielEssaiEn(etape: 1 | 2, pseudo: string, fin: number, admin: string) {
+  const pro = OFFRES[PLAN_ESSAI].nom;
+  const starterEn = `€${OFFRES.starter.prix.mois} per month`;
+  const pertes = PERTES_EN.join(', ').replace(/, ([^,]*)$/, ' and $1');
+  const question = 'Questions? Just reply to this email.';
+  if (etape === 1) {
+    const phrase = `Your Hopla ${pro} trial ends on ${dateLongueEn(fin)}. After that, your page stays online on Free, but without ${pertes}.`;
+    const suite = `To keep everything, Starter starts at ${starterEn}, no commitment. Nothing is deleted if you do nothing: picking a plan later brings it all back.`;
+    return {
+      subject: `Your Hopla ${pro} trial ends in 3 days`,
+      text: `Hi ${pseudo},\n\n${phrase}\n\n${suite}\n\nChoose my plan: ${admin}\n\n${question}`,
+      html: enveloppe(`<p>Hi ${echapper(pseudo)},</p><p>${phrase}</p><p>${suite}</p>${bouton(admin, 'Choose my plan')}<p style="color:#888;font-size:13px">${question}</p>`),
+    };
+  }
+  const phrase = `Your Hopla ${pro} trial is over. Your page stays online on Free: its first ${BLOCS_GRATUITS} blocks, with Hopla branding.`;
+  const suite = `Everything you set up is kept. Starter, at ${starterEn}, brings it back right away.`;
+  return {
+    subject: `Your Hopla ${pro} trial is over, your page stays online`,
+    text: `Hi ${pseudo},\n\n${phrase}\n\n${suite}\n\nSee plans: ${admin}\n\n${question}`,
+    html: enveloppe(`<p>Hi ${echapper(pseudo)},</p><p>${phrase}</p><p>${suite}</p>${bouton(admin, 'See plans')}<p style="color:#888;font-size:13px">${question}</p>`),
+  };
+}
+
+export function courrielEssai(etape: 1 | 2, pseudo: string, fin: number, admin: string, langue: 'fr' | 'en' = 'fr') {
+  if (langue === 'en') return courrielEssaiEn(etape, pseudo, fin, admin);
   const pro = OFFRES[PLAN_ESSAI].nom;
   const pertes = PERTES.join(', ').replace(/, ([^,]*)$/, ' et $1');
   if (etape === 1) {
@@ -44,6 +71,11 @@ export function courrielEssai(etape: 1 | 2, pseudo: string, fin: number, admin: 
   };
 }
 
+/** La langue de la page d'un compte ; une base de test sans page répond en français. */
+function langueDe(compte: string) {
+  try { return db.lireReglages(compte).langue; } catch { return 'fr'; }
+}
+
 /** Envoie les e-mails de fin d'essai dus. Renvoie le nombre d'e-mails partis. */
 export async function envoyerFinsDEssai(env: Env, fetchImpl: typeof fetch, maintenant = Date.now()): Promise<number> {
   const admin = `${env.LIENS_ORIGINE_ADMIN || ORIGINE_ADMIN}/admin`;
@@ -55,7 +87,7 @@ export async function envoyerFinsDEssai(env: Env, fetchImpl: typeof fetch, maint
       if (planHorsEssai(db.abonnement(c, maintenant)) !== 'gratuit' || !c.email) continue;
       // Le second e-mail dit tout : le premier ne part plus quand la fin est déjà passée.
       if (!db.reserverRappelEssai(c.id, etape)) continue;
-      if (await envoyer(env, fetchImpl, { to: c.email, replyTo: CONTACT_LEGAL, ...courrielEssai(etape, c.pseudo, c.essai_jusqu!, admin) })) envoyes++;
+      if (await envoyer(env, fetchImpl, { to: c.email, replyTo: CONTACT_LEGAL, ...courrielEssai(etape, c.pseudo, c.essai_jusqu!, admin, langueDe(c.id)) })) envoyes++;
     }
   }
   return envoyes;

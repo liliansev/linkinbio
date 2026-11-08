@@ -52,7 +52,17 @@ export async function envoyerMessage(env: Env, fetchImpl: typeof fetch, entree: 
   const pour = compte.id === PRINCIPAL ? adresseAdmin(env) : compte.email;
   const page = urlPage({ pseudo: compte.pseudo, principal: compte.id === PRINCIPAL }).replace(/^https:\/\//, '');
   const qui = nom ? `${nom} (${de})` : de;
-  const ok = await envoyer(env, fetchImpl, {
+  let anglais = false;
+  try { anglais = db.lireReglages(compte.id).langue === 'en'; } catch { /* une base de test sans page : en français */ }
+  const ok = await envoyer(env, fetchImpl, anglais ? {
+    to: pour,
+    replyTo: de,
+    subject: `New message from ${nom || de} on your Hopla page`,
+    text: `${qui} wrote to you from ${page}:\n\n${message}\n\nReply to this email to answer them.\n\nHopla doesn’t keep this message.`,
+    html: enveloppe(`<p><strong>${echapper(qui)}</strong> wrote to you from ${echapper(page)}:</p>`
+      + `<blockquote style="margin:16px 0;padding:12px 16px;border-left:3px solid #292bff;background:#f6f6f8;white-space:pre-wrap">${echapper(message)}</blockquote>`
+      + '<p>Reply to this email to answer them.</p><p style="color:#666;font-size:13px">Hopla doesn’t keep this message.</p>'),
+  } : {
     to: pour,
     replyTo: de,
     subject: `Nouveau message de ${nom || de} sur ta page Hopla`,

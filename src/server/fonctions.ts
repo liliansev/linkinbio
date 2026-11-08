@@ -76,12 +76,43 @@ const sessionBrute = createMiddleware({ type: 'function' }).server(async ({ next
   return next({ context: { compte } });
 });
 
+/**
+ * Les refus du serveur dans la langue du compte (8 novembre 2026, Hopla passe à l'anglais d'abord) : un refus levé
+ * par un geste se traduit au passage du middleware `session`, d'après ce dictionnaire ; un message rendu se choisit sur place.
+ */
+const ERREURS_EN: Record<string, string> = {
+  'Accepte les conditions d’utilisation pour continuer.': 'Accept the terms of service to continue.',
+  'Ce type de bloc n’est pas encore disponible.': 'This block type isn’t available yet.',
+  'Impossible de lire ce site.': 'Couldn’t read this site.',
+  'Trop d’essais. Réessaie dans quelques minutes.': 'Too many tries. Try again in a few minutes.',
+  'Tes stats demandent Hopla Starter.': 'Your analytics need Hopla Starter.',
+  'Ces dates sont plus anciennes que ton historique.': 'These dates are older than your history.',
+  'L’API et le serveur MCP demandent Hopla Pro.': 'The API and the MCP server need Hopla Pro.',
+  'Programmer un bloc à l’avance demande Hopla Starter.': 'Scheduling a block ahead needs Hopla Starter.',
+  'Plus de place pour les images : supprime-en ou réutilise une image déjà envoyée.': 'No more room for images: delete some or reuse an image you already uploaded.',
+  [`${db.MAX_CLES_API} clés au plus : révoque celles qui ne servent plus.`]: `${db.MAX_CLES_API} keys at most: revoke the ones you no longer use.`,
+  'Deux cents blocs au plus.': 'Two hundred blocks at most.',
+  'Bloc introuvable.': 'Block not found.',
+  'Image refusée.': 'Image refused.',
+  'Adresse refusée.': 'Address refused.',
+};
+/** La langue de la page d'un compte, celle de son back office ; une page illisible parle français. */
+const langueCompte = (compte: string): Langue => { try { return db.lireReglages(compte).langue === 'en' ? 'en' : 'fr'; } catch { return 'fr'; } };
+/** `d('français', 'English')` dans la langue du compte. */
+const direCompte = (compte: string) => (fr: string, en: string) => (langueCompte(compte) === 'en' ? en : fr);
+
 const cguAJour = (compte: string) => compte === PRINCIPAL || db.compteParId(compte)?.cgu === VERSION_CGU;
 
 /** Tout le reste demande aussi d'avoir accepté la version en vigueur des CGU. */
 const session = createMiddleware({ type: 'function' }).middleware([sessionBrute]).server(async ({ next, context }) => {
-  if (!cguAJour(context.compte)) throw new Error('Accepte les conditions d’utilisation pour continuer.');
-  return next();
+  try {
+    if (!cguAJour(context.compte)) throw new Error('Accepte les conditions d’utilisation pour continuer.');
+    return await next();
+  } catch (error) {
+    const en = error instanceof Error && ERREURS_EN[error.message];
+    if (en && langueCompte(context.compte) === 'en') throw new Error(en);
+    throw error;
+  }
 });
 
 const proprietaire = createMiddleware({ type: 'function' }).middleware([session]).server(async ({ next, context }) => {
@@ -205,15 +236,16 @@ export const supprimerMonCompte = createServerFn({ method: 'POST' })
   .validator((data: unknown) => String(data ?? '').trim().toLowerCase().slice(0, 40))
   .handler(async ({ data, context }): Promise<{ ok: boolean; message: string; aLaMain?: boolean }> => {
     if (context.compte === PRINCIPAL) return { ok: false, message: 'Le compte principal ne se supprime pas.' };
+    const d = direCompte(context.compte);
     const compte = db.compteParId(context.compte);
-    if (!compte || data !== compte.pseudo) return { ok: false, message: 'Retape ton pseudo exactement pour confirmer.' };
+    if (!compte || data !== compte.pseudo) return { ok: false, message: d('Retape ton pseudo exactement pour confirmer.', 'Type your username exactly to confirm.') };
     const issue = await supprimerAvecAbonnement(process.env, fetch, compte);
-    if (!issue.ok) return { ok: false, message: 'Creem n’a pas pu résilier ton abonnement, alors rien n’est supprimé pour l’instant. Réessaie dans un instant.' };
+    if (!issue.ok) return { ok: false, message: d('Creem n’a pas pu résilier ton abonnement, alors rien n’est supprimé pour l’instant. Réessaie dans un instant.', 'Creem couldn’t cancel your subscription, so nothing is deleted for now. Try again in a moment.') };
     deleteCookie(COOKIE_SESSION, cookieSession());
     if (issue.resiliation === 'a-la-main') {
-      return { ok: true, aLaMain: true, message: 'Ton compte est supprimé. Creem n’a pas confirmé la résiliation de ton abonnement : on la fait à la main, et un prélèvement qui partirait d’ici là te serait remboursé.' };
+      return { ok: true, aLaMain: true, message: d('Ton compte est supprimé. Creem n’a pas confirmé la résiliation de ton abonnement : on la fait à la main, et un prélèvement qui partirait d’ici là te serait remboursé.', 'Your account is deleted. Creem didn’t confirm canceling your subscription: we’re doing it by hand, and any charge made in the meantime will be refunded.') };
     }
-    return { ok: true, message: 'Ton compte est supprimé.' };
+    return { ok: true, message: d('Ton compte est supprimé.', 'Your account is deleted.') };
   });
 
 export const enregistrerBloc = createServerFn({ method: 'POST' })
@@ -367,8 +399,9 @@ function cleDuCompte(compte: string, fournisseur: FournisseurListe, collee: stri
 }
 /** Brancher demande l'offre de la liste e-mail (débrancher, jamais) ; chaque appel aux fournisseurs compte (`tropDAppels`). */
 function refusBranchement(compte: string): string {
-  if (!droits(db.compteParId(compte)!).listeEmail) return 'Ta liste e-mail demande Hopla Pro.';
-  if (liste.tropDAppels(compte)) return 'Trop d’essais. Réessaie dans quelques minutes.';
+  const d = direCompte(compte);
+  if (!droits(db.compteParId(compte)!).listeEmail) return d('Ta liste e-mail demande Hopla Pro.', 'Your email list needs Hopla Pro.');
+  if (liste.tropDAppels(compte)) return d('Trop d’essais. Réessaie dans quelques minutes.', 'Too many tries. Try again in a few minutes.');
   return '';
 }
 
@@ -383,8 +416,9 @@ export const listesFournisseur = createServerFn({ method: 'POST' })
     const refus = refusBranchement(context.compte);
     if (refus) return { ok: false, message: refus, listes: [] };
     const cle = cleDuCompte(context.compte, data.fournisseur, data.cle);
-    if (!cle) return { ok: false, message: 'Colle ta clé d’API.', listes: [] };
-    return liste.listes(data.fournisseur, cle, requeteSortante);
+    const langue = langueCompte(context.compte);
+    if (!cle) return { ok: false, message: langue === 'en' ? 'Paste your API key.' : 'Colle ta clé d’API.', listes: [] };
+    return liste.listes(data.fournisseur, cle, requeteSortante, langue);
   });
 
 export const brancherListe = createServerFn({ method: 'POST' })
@@ -396,12 +430,13 @@ export const brancherListe = createServerFn({ method: 'POST' })
     return { fournisseur: lireFournisseur(o.fournisseur), cle: String(o.cle ?? '').trim().slice(0, 2000), liste: String(o.liste ?? '').trim().slice(0, 80) };
   })
   .handler(async ({ data, context }) => {
-    if (!data) { db.ecrireIntegration(context.compte, null); return { ok: true, message: 'Ta liste reste chez Hopla seulement.' }; }
+    const langue = langueCompte(context.compte);
+    if (!data) { db.ecrireIntegration(context.compte, null); return { ok: true, message: langue === 'en' ? 'Your list stays on Hopla only.' : 'Ta liste reste chez Hopla seulement.' }; }
     const refus = refusBranchement(context.compte);
     if (refus) return { ok: false, message: refus };
     const cle = cleDuCompte(context.compte, data.fournisseur, data.cle);
-    if (!cle) return { ok: false, message: 'Colle ta clé d’API.' };
-    const v = await liste.verifier(data.fournisseur, cle, data.liste, requeteSortante, liste.adressePage(process.env, context.compte));
+    if (!cle) return { ok: false, message: langue === 'en' ? 'Paste your API key.' : 'Colle ta clé d’API.' };
+    const v = await liste.verifier(data.fournisseur, cle, data.liste, requeteSortante, liste.adressePage(process.env, context.compte), langue);
     if (!v.ok) return v;
     db.ecrireIntegration(context.compte, { fournisseur: data.fournisseur, cle: liste.chiffrer(process.env, cle), liste: data.liste, nom: v.nom ?? '' });
     return { ok: true, message: v.message };

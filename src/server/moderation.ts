@@ -1,7 +1,7 @@
 import { PRINCIPAL, sansSchema } from '../lib/types.ts';
 import type { Origines, Resiliation } from '../lib/types.ts';
 import { CONTACT_LEGAL, MOTIFS_SIGNALEMENT, nomMotif } from '../lib/legal.ts';
-import { ajouterSignalement, changerStatut, compteParId, compteParPseudo, signalementParId, signalementsDepuis, traiterSignalement } from './db.ts';
+import { ajouterSignalement, changerStatut, compteParId, compteParPseudo, lireReglages, signalementParId, signalementsDepuis, traiterSignalement } from './db.ts';
 import { adresseAdmin } from './auth.ts';
 import { echapper, envoyer, enveloppe } from './courriel.ts';
 import type { Env } from './courriel.ts';
@@ -66,12 +66,36 @@ const ABONNEMENT_SUPPRIME: Record<Resiliation, string> = {
   'a-la-main': ' Ton abonnement s’arrête avec : nous le résilions à la main, et un paiement prélevé d’ici là te sera remboursé. Tes factures restent chez Creem.',
 };
 
+const ABONNEMENT_SUPPRIME_EN: Record<Resiliation, string> = {
+  aucune: '',
+  faite: ' Your subscription ends with it: no further payment will be charged. Your invoices stay with Creem.',
+  'a-la-main': ' Your subscription ends with it: we are canceling it by hand, and any payment charged in the meantime will be refunded. Your invoices stay with Creem.',
+};
+
+/** La langue de la page du compte (8 novembre 2026) ; sans page lisible, le français. */
+function langueDe(compte?: string): 'fr' | 'en' {
+  if (!compte) return 'fr';
+  try { return lireReglages(compte).langue === 'en' ? 'en' : 'fr'; } catch { return 'fr'; }
+}
+
 /**
  * La motivation envoyée au compte (DSA, article 17) : ce qui a été décidé, pourquoi, et comment contester.
  * Une suppression dit aussi ce qu'il advient de l'abonnement, quand il y en avait un.
  */
-export async function motiver(env: Env, fetchImpl: typeof fetch, compte: { email: string; pseudo: string }, action: 'suspendu' | 'supprime', motif: string, resiliation: Resiliation = 'aucune'): Promise<boolean> {
+export async function motiver(env: Env, fetchImpl: typeof fetch, compte: { id?: string; email: string; pseudo: string; langue?: 'fr' | 'en' }, action: 'suspendu' | 'supprime', motif: string, resiliation: Resiliation = 'aucune'): Promise<boolean> {
   if (!compte.email || !motif.trim()) return false;
+  if ((compte.langue ?? langueDe(compte.id)) === 'en') {
+    const what = action === 'suspendu' ? 'Your Hopla page is suspended' : 'Your Hopla account is deleted';
+    const next = action === 'suspendu'
+      ? 'Your page is no longer visible and you can no longer log in to the dashboard. Your data is kept: if the decision is lifted, everything comes back as it was.'
+      : `Your page, links, images and analytics are erased.${ABONNEMENT_SUPPRIME_EN[resiliation]}`;
+    return envoyer(env, fetchImpl, {
+      to: compte.email, replyTo: CONTACT_LEGAL,
+      subject: what,
+      html: enveloppe(`<p>Hi,</p><p>${what} (username “${echapper(compte.pseudo)}”).</p><p><strong>Reason:</strong></p><p style="white-space:pre-wrap">${echapper(motif.trim())}</p><p>${next}</p><p>This decision was made by a person, under the Hopla terms of service. You can appeal it by simply replying to this email: your reply will be reviewed and you will receive a reasoned decision.</p>`),
+      text: `${what} (username “${compte.pseudo}”).\n\nReason:\n${motif.trim()}\n\n${next}\n\nThis decision was made by a person, under the Hopla terms of service. You can appeal it by replying to this email.`,
+    });
+  }
   const quoi = action === 'suspendu' ? 'Ta page Hopla est suspendue' : 'Ton compte Hopla est supprimé';
   const suite = action === 'suspendu'
     ? 'Ta page n’est plus visible et tu ne peux plus te connecter au back office. Tes données sont conservées : si la décision est levée, tout revient tel quel.'
@@ -100,9 +124,11 @@ export async function changerStatutMotive(env: Env, fetchImpl: typeof fetch, id:
 export async function supprimerMotive(env: Env, fetchImpl: typeof fetch, id: string, motif: string, maintenant = Date.now()): Promise<Resiliation> {
   const compte = compteParId(id);
   if (!compte || compte.id === PRINCIPAL) throw new Error('Compte introuvable.');
+  // La langue se lit avant que la page ne parte avec le compte.
+  const langue = langueDe(compte.id);
   const issue = await supprimerAvecAbonnement(env, fetchImpl, compte, maintenant);
   if (!issue.ok) throw new Error(`Creem n’a pas résilié l’abonnement de ${compte.pseudo}, alors le compte n’est pas supprimé. Réessaie : si Creem échoue encore, le compte sera supprimé et tu recevras par e-mail de quoi résilier l’abonnement à la main.`);
-  if (motif.trim()) await motiver(env, fetchImpl, compte, 'supprime', motif, issue.resiliation);
+  if (motif.trim()) await motiver(env, fetchImpl, { ...compte, langue }, 'supprime', motif, issue.resiliation);
   return issue.resiliation;
 }
 
