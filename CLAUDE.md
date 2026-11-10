@@ -65,6 +65,13 @@ embarque tout : l'image n'a pas de `node_modules`.
   d'un bloc Avis lue sur la page d'avis collée, dans son JSON-LD `aggregateRating` ou les données de Trustpilot, ramenée
   sur 5 ; `lireNoteAvis` pendant qu'on tape, `LienAvis` dans l'éditeur, puis relue chaque jour par `planifierAvis`,
   éteinte par `HOPLA_AVIS=0` ; une page muette laisse la note tapée à la main, et une fiche Google demanderait l'API Places).
+- `server/importer.ts` (10 novembre 2026, lot 1 d'après Taap.it, demandé par Lilian) : importer sa page d'ailleurs. On colle
+  l'adresse de sa page Linktree (lue dans son `__NEXT_DATA__` : liens dans l'ordre, titres de section, réseaux, nom, bio, photo),
+  Beacons, Bento… (toute autre page : balises de partage et liens qui sortent du site). `appliquerImport` ajoute les liens sous
+  ceux de la page (l'adresse choisit le bloc, `typeDeAdresse`), sans doublon, les réseaux après les siens, et ne remplit le profil
+  que là où il est vide ; la photo est rapatriée dans `/media/`. Rien n'est effacé. `importerPage` dans `fonctions.ts` (cinq par dix
+  minutes), `ImporterPage` dans `OngletReglages.tsx` : la ligne « Importer ma page » de Réglages, et le lien « J'ai déjà une page
+  Linktree ou Beacons » en tête des premiers pas, qui mène droit à l'éditeur.
 - `server/favicons.ts` (26 octobre 2026, demandé par Lilian : « mets à jour tous les liens existants et même ceux de mes
   clients ») : une seule fois, une minute après le démarrage (repère `favicons-liens` dans `reglages`, éteint par
   `HOPLA_FAVICONS=0`), la vignette de chaque bouton de lien de toutes les pages prend le favicon de son site, gardé tel

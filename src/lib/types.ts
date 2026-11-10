@@ -404,6 +404,9 @@ export interface ApiCles {
   revoquer(id: string): Promise<void>;
 }
 
+/** Ce qu'une page importée d'ailleurs a ajouté : des liens, des réseaux, le profil ; `dejaLa`, les liens que la page avait déjà. */
+export interface BilanImport { liens: number; reseaux: number; profil: boolean; dejaLa: number }
+
 export interface Api {
   charger(): Promise<EtatAdmin>;
   enregistrerBloc(bloc: Bloc): Promise<Bloc>;
@@ -416,6 +419,8 @@ export interface Api {
    * `ImageApercu` pour l'image demandée ; `visuel` dit d'où vient celle qui revient.
    */
   apercuSite(url: string, image?: ImageApercu): Promise<{ titre: string; description: string; image: string | null; prix: string; visuel?: VisuelApercu }>;
+  /** Importer sa page Linktree, Beacons… : ce qu'elle a apporté. Absent dans l'aperçu sans serveur. */
+  importerPage?(url: string): Promise<BilanImport>;
   /** Les stats des derniers jours (7, 14, 30, 90 ou 365), ou de dates choisies. */
   /** Les derniers articles d'un blog ou d'un flux RSS (`video` : la dernière vidéo d'une chaîne YouTube), lus par le serveur ; vide s'il ne se lit pas. */
   flux(url: string, video: boolean): Promise<ArticleFlux[]>;

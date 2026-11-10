@@ -24,6 +24,7 @@ function PageAdmin() {
     enregistrerReglages: reglages => fn.enregistrerReglages({ data: reglages }),
     envoyerImage: dataUrl => fn.envoyerImage({ data: dataUrl }),
     apercuSite: (url, image = true) => fn.apercuSite({ data: { url, image } }),
+    importerPage: url => fn.importerPage({ data: url }),
     flux: (url, video) => fn.lireFlux({ data: { url, video } }),
     stats: periode => fn.lireStats({ data: periode }),
     semaine: () => fn.lireSemaine(),

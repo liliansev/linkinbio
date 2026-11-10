@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { CONTACT_LEGAL } from '../lib/legal.ts';
 import { LIEN_SOURCE } from '../lib/instance.ts';
-import type { ApiCles, ComptePage, DomaineCourt, Reglages } from '../lib/types.ts';
+import type { ApiCles, BilanImport, ComptePage, DomaineCourt, Reglages } from '../lib/types.ts';
 import { DOMAINES_COURTS, adressePartage, sansSchema, urlPage } from '../lib/types.ts';
 import { adresseSaisie } from '../lib/valider.ts';
 import { redirectionActive } from '../lib/sorties.ts';
@@ -31,7 +31,7 @@ import { ApiEtMcp } from './ApiEtMcp.tsx';
 
 const dateLongue = (ms: number, langue: Langue = 'fr') => new Date(ms).toLocaleDateString(langue === 'fr' ? 'fr-FR' : 'en-US', { day: 'numeric', month: 'long', year: 'numeric' });
 
-export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlExport, supprimerMonCompte, abonnement, onOffres, ouvrirPortail, onResilier, cles }: {
+export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlExport, supprimerMonCompte, abonnement, onOffres, ouvrirPortail, onResilier, cles, importer }: {
   reglages: Reglages; compte: ComptePage & { email?: string; plan: Plan }; onChange: (r: Reglages) => void; onDeconnexion: () => void;
   urlExport: string | null; supprimerMonCompte: (confirmation: string) => Promise<{ ok: boolean; message: string; aLaMain?: boolean }>;
   abonnement: EtatAbonnement;
@@ -42,6 +42,8 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
   onResilier?: () => void;
   /** Les clés d'API, pour l'API et le serveur MCP ; absent dans l'aperçu sans serveur. */
   cles?: ApiCles;
+  /** Importer sa page Linktree, Beacons… ; absent dans l'aperçu sans serveur. */
+  importer?: (url: string) => Promise<BilanImport>;
 }) {
   const l = useL();
   const langue = reglages.langue;
@@ -51,7 +53,7 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
   const adresse = urlPage(compte);
   const partage = adressePartage(compte, reglages.domaine);
   const [sous, setSous] = useState<'abonnement' | 'api' | null>(null);
-  const [fenetre, setFenetre] = useState<'apercu' | 'supprimer' | 'redirection' | 'domaine' | null>(null);
+  const [fenetre, setFenetre] = useState<'apercu' | 'supprimer' | 'redirection' | 'domaine' | 'importer' | null>(null);
   const [portail, setPortail] = useState<'' | 'ouverture' | string>('');
   // Ce qui a ouvert la sous-page reprend le focus quand on en revient (la page se redessine : on le retrouve par son id).
   const ouvreur = useRef('');
@@ -110,6 +112,8 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
         </Ligne>
         <LigneLien nom={l('Domaine', 'Domain')} valeur={<span translate="no">{reglages.domaine || sansSchema(adresse).split('/')[0]}</span>}
           onClick={() => setFenetre('domaine')} label={l('Choisir le nom de domaine de mon adresse', 'Choose the domain of my address')} />
+        {importer && <LigneLien nom={l('Importer ma page', 'Import my page')} valeur={l('Depuis Linktree, Beacons, Bento…', 'From Linktree, Beacons, Bento…')}
+          onClick={() => setFenetre('importer')} label={l('Importer ma page depuis Linktree, Beacons ou un autre service', 'Import my page from Linktree, Beacons or another service')} />}
         <Ligne nom="QR code">
           <BoutonSecondaire onClick={() => { void telechargerQR(partage, compte.pseudo); }} aria-label={l('Télécharger le QR code', 'Download the QR code')}>{l('Télécharger', 'Download')}</BoutonSecondaire>
         </Ligne>
@@ -243,6 +247,12 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
         {fermer => <ChoixDomaine compte={compte} valeur={reglages.domaine} choisir={d => { onChange({ ...reglages, domaine: d }); fermer(); }} />}
       </Feuille>
 
+      {importer && (
+        <Feuille petite ouverte={fenetre === 'importer'} onFermer={() => setFenetre(null)} titre={l('Importer ma page', 'Import my page')}>
+          {fermer => <ImporterPage importer={importer} fermer={() => fermer()} />}
+        </Feuille>
+      )}
+
       <Feuille petite ouverte={fenetre === 'redirection'} onFermer={() => setFenetre(null)} titre={l('Rediriger ma page', 'Redirect my page')}>
         {fermer => <Redirection valeur={versAilleurs ? reglages.redirection : { url: '', fin: '' }} ici={adresse}
           poser={r => { onChange({ ...reglages, redirection: r }); fermer(); }} annuler={() => fermer()} />}
@@ -303,6 +313,55 @@ const versLocal = (iso: string) => {
  * une vidéo du jour. Jusqu'à une date, ou jusqu'à ce qu'on l'arrête. L'adresse de la page elle-même ferait tourner le
  * visiteur en rond : refusée.
  */
+/**
+ * Importer sa page d'ailleurs (10 novembre 2026, d'après Taap.it) : on colle son adresse Linktree, Beacons… et ses
+ * liens arrivent sous ceux de la page, dans leur ordre, avec ses réseaux, et son nom, sa bio et sa photo si la page
+ * n'en a pas encore. Rien n'est remplacé ni effacé.
+ */
+export function ImporterPage({ importer, fermer }: { importer: (url: string) => Promise<BilanImport>; fermer: () => void }) {
+  const l = useL();
+  const [url, setUrl] = useState('');
+  const [etat, setEtat] = useState<'' | 'lecture' | BilanImport>('');
+  const [erreur, setErreur] = useState('');
+  async function lancer() {
+    const propre = adresseSaisie(url);
+    if (!/^https?:/.test(propre)) { setErreur(l('Colle l’adresse de ta page, par exemple linktr.ee/tonnom', 'Paste your page’s address, for example linktr.ee/yourname')); return; }
+    setEtat('lecture'); setErreur('');
+    try { setEtat(await importer(propre)); }
+    catch (e) { setEtat(''); setErreur((e as Error).message || l('Impossible de lire cette page.', 'Couldn’t read this page.')); }
+  }
+  if (etat && etat !== 'lecture') {
+    const parties = [
+      etat.liens ? l(`${etat.liens} lien${etat.liens > 1 ? 's' : ''}`, `${etat.liens} link${etat.liens > 1 ? 's' : ''}`) : '',
+      etat.reseaux ? l(`${etat.reseaux} réseau${etat.reseaux > 1 ? 'x' : ''}`, `${etat.reseaux} social network${etat.reseaux > 1 ? 's' : ''}`) : '',
+      etat.profil ? l('ton profil', 'your profile') : '',
+    ].filter(Boolean);
+    return (
+      <div className="flex flex-col gap-4 pb-1" role="status">
+        <p className="text-[15px] font-semibold text-white">{parties.length ? l(`C’est fait : ${parties.join(', ')}.`, `Done: ${parties.join(', ')}.`) : l('Rien de nouveau : ta page avait déjà tout.', 'Nothing new: your page already had everything.')}</p>
+        <p className="text-[14px] leading-snug text-white/75">
+          {etat.liens ? l('Les liens sont en bas de ta page, dans leur ordre. ', 'The links are at the bottom of your page, in their order. ') : ''}
+          {etat.dejaLa ? l(`${etat.dejaLa} étai${etat.dejaLa > 1 ? 'ent' : 't'} déjà sur ta page.`, `${etat.dejaLa} ${etat.dejaLa > 1 ? 'were' : 'was'} already on your page.`) : ''}
+        </p>
+        <div className="flex justify-end"><BoutonPrincipal onClick={fermer}>{l('Voir ma page', 'See my page')}</BoutonPrincipal></div>
+      </div>
+    );
+  }
+  return (
+    <form noValidate onSubmit={e => { e.preventDefault(); void lancer(); }} className="flex flex-col gap-4 pb-1">
+      <p className="text-[14px] leading-snug text-white/75">{l('Hopla reprend tes liens dans leur ordre, tes réseaux, ton nom, ta bio et ta photo. Rien de ta page n’est effacé.', 'Hopla brings over your links in their order, your social networks, your name, bio and photo. Nothing on your page is erased.')}</p>
+      <Champ label={l('L’adresse de ta page', 'Your page’s address')} erreur={erreur || undefined}>
+        <input className={classeSaisie} type="url" inputMode="url" autoCapitalize="none" autoCorrect="off" spellCheck={false} value={url} placeholder="linktr.ee/…"
+          onChange={e => { setUrl(e.target.value); setErreur(''); }} autoFocus={focusAuto()} disabled={etat === 'lecture'} />
+      </Champ>
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <button type="button" onClick={fermer} className={classeBouton.discret}>{l('Annuler', 'Cancel')}</button>
+        <button type="submit" disabled={!url.trim() || etat === 'lecture'} className={classeBouton.principal}>{etat === 'lecture' ? l('Lecture…', 'Reading…') : l('Importer', 'Import')}</button>
+      </div>
+    </form>
+  );
+}
+
 function Redirection({ valeur, ici, poser, annuler }: { valeur: Reglages['redirection']; ici: string; poser: (r: Reglages['redirection']) => void; annuler: () => void }) {
   const l = useL();
   const [url, setUrl] = useState(valeur.url);

@@ -13,6 +13,7 @@ import { composerAudience, provenance } from '../lib/provenance.ts';
 import { adresse, email, pseudo, validerBloc, validerReglages } from '../lib/valider.ts';
 import { apercuSite as lireApercu } from './apercu.ts';
 import { articlesDe } from './flux.ts';
+import { importerPage as importer } from './importer.ts';
 import { limiteur, MINUTE } from './limites.ts';
 import * as db from './db.ts';
 import { MESSAGE_ROBOT, hotesTurnstile, verifierTurnstile } from './turnstile.ts';
@@ -312,6 +313,30 @@ export const apercuSite = createServerFn({ method: 'POST' })
   .handler(async ({ data }) => {
     try { return await lireApercu(data.url, { image: data.image }); }
     catch { throw new Error('Impossible de lire ce site.'); }
+  });
+
+/** Cinq imports par compte en dix minutes : on reprend sa page une fois, on se reprend au besoin, pas plus. */
+const imports = limiteur([5, 10 * MINUTE]);
+
+/** Importer sa page Linktree, Beacons… : ses liens s'ajoutent sous ceux de la page, ses réseaux et son profil là où c'est vide. */
+export const importerPage = createServerFn({ method: 'POST' })
+  .middleware([session])
+  .validator((data: unknown) => {
+    const url = adresse(String(data ?? '').trim().replace(/^(?!https?:\/\/)/i, 'https://'));
+    if (!/^https:\/\//.test(url)) throw new Error('Adresse refusée.');
+    return url;
+  })
+  .handler(async ({ data, context }) => {
+    const d = direCompte(context.compte);
+    if (imports(context.compte)) throw new Error(d('Trop d’essais. Réessaie dans quelques minutes.', 'Too many tries. Try again in a few minutes.'));
+    const c = db.compteParId(context.compte)!;
+    const langue = db.lireReglages(context.compte).langue;
+    try { return await importer(context.compte, data, { vitrine: !!droits(c).vitrine, langue }); }
+    catch (e) {
+      throw new Error((e as Error).message === 'Aucun lien trouvé sur cette page.'
+        ? d('Aucun lien trouvé sur cette page. Vérifie qu’elle est publique.', 'No links found on this page. Check that it’s public.')
+        : d('Impossible de lire cette page. Vérifie l’adresse et réessaie.', 'Couldn’t read this page. Check the address and try again.'));
+    }
   });
 
 /** Trente lectures de flux par compte en dix minutes : de quoi régler un bloc, pas de quoi faire lire le web à Hopla. */

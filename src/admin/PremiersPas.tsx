@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
-import type { Api, Bloc, PagePublique, Reglages, Reseau } from '../lib/types.ts';
+import type { Api, BilanImport, Bloc, PagePublique, Reglages, Reseau } from '../lib/types.ts';
 import { SANS_COULEURS, nouveauBloc, urlPage } from '../lib/types.ts';
 import { adresseSaisie, pourquoiPasAdresse, pourquoiPasReseau } from '../lib/valider.ts';
 import { THEMES, nomTheme } from '../lib/themes.ts';
@@ -12,8 +12,9 @@ import { RESEAUX_SOCIAUX } from '../lib/provenance.ts';
 import { typeDeAdresse } from '../lib/detection.ts';
 import { Icone, NOMS_RESEAUX } from '../components/Icone.tsx';
 import { Pastille } from './OngletApparence.tsx';
-import { BoutonPrincipal, choisirFichier, classeBouton, classeSaisie, flechesRadio, preparerImage, vibrer } from './ui.tsx';
+import { BoutonPrincipal, Feuille, choisirFichier, classeBouton, classeSaisie, flechesRadio, preparerImage, vibrer } from './ui.tsx';
 import { useDroits } from './offre.tsx';
+import { ImporterPage } from './OngletReglages.tsx';
 import { focusSaisie } from '../lib/clavier';
 
 /*
@@ -59,7 +60,7 @@ const nouvelId = () => `n${Date.now().toString(36)}${Math.random().toString(36).
 /** Pour juger un thème sur une page sans lien, des boutons d'exemple (jamais enregistrés). */
 const exemples = (tr: Choix) => [tr('Mon site', 'My website'), tr('Prendre rendez-vous', 'Book a session'), tr('Ma boutique', 'My shop')].map((titre, i) => ({ ...nouveauBloc('lien', `exemple-${i}`), titre, url: '#' }));
 
-export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs, envoyerImage, apercuSite, onFin }: {
+export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs, envoyerImage, apercuSite, onFin, importer }: {
   compte: PagePublique['compte'];
   reglages: Reglages;
   blocs: Bloc[];
@@ -69,6 +70,8 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
   apercuSite: Api['apercuSite'];
   /** `suite` : « lien » ouvre aussitôt l'ajout d'un lien dans l'éditeur. */
   onFin: (suite?: 'lien') => void;
+  /** Importer sa page Linktree, Beacons… : la page se remplit d'un coup et les premiers pas s'arrêtent là. */
+  importer?: (url: string) => Promise<BilanImport>;
 }) {
   const tr = useL();
   // L'étape survit à un rechargement ou à un passage par une autre app : ce qui est tapé est déjà enregistré, la place aussi.
@@ -81,6 +84,8 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
   const premiere = useRef(true);
   useEffect(() => { if (premiere.current) { premiere.current = false; return; } titre.current?.focus({ preventScroll: true }); }, [i]);
   const [lignes, setLignes] = useState<Ligne[]>([]);
+  const [importOuvert, setImportOuvert] = useState(false);
+  const importe = useRef(false);
   const vitrine = !!useDroits().vitrine;
   // Les réseaux ouverts, et ce qui a été tapé pour chacun (un pseudo ou une adresse).
   const [saisies, setSaisies] = useState<Partial<Record<Reseau, string>>>({});
@@ -218,6 +223,12 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
       corps: (
         // Une seule colonne, un seul bord gauche : la photo, puis le nom, puis la bio (Lilian, 24 octobre 2026 : « tout aligner »).
         <div className="flex flex-col gap-4">
+          {/* Venir d'ailleurs (10 novembre 2026, d'après Taap.it) : sa page Linktree ou Beacons reprise d'un geste, avant de rien taper. */}
+          {importer && (
+            <button type="button" onClick={() => setImportOuvert(true)} className="flex items-center gap-2 self-start text-left text-[14px] font-semibold text-bleu hover:underline">
+              {tr('J’ai déjà une page Linktree ou Beacons : l’importer', 'I already have a Linktree or Beacons page: import it')}
+            </button>
+          )}
           <button type="button" onClick={e => choisirFichier(fichier.current, e.currentTarget)} className="group flex items-center gap-3 self-start rounded-xl text-left transition active:scale-[0.98]">
             {/* Sans photo, l'icône seule à sa place : pas de rond vide autour. */}
             <span className={`relative grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-full text-white/60 ${reglages.profil.avatar ? '' : '-ml-[5px]'}`}>
@@ -423,6 +434,12 @@ export function PremiersPas({ compte, reglages, blocs, onReglages, onPoserBlocs,
         </div>
       </section>
       {etape === 'fin' && <FeuDArtifice />}
+      {importer && (
+        // Refermée après un import réussi, la feuille mène droit à l'éditeur : la page est déjà remplie.
+        <Feuille petite ouverte={importOuvert} onFermer={() => { setImportOuvert(false); if (importe.current) terminer(); }} titre={tr('Importer ma page', 'Import my page')}>
+          {fermer => <ImporterPage importer={async url => { const b = await importer(url); importe.current = true; return b; }} fermer={() => fermer()} />}
+        </Feuille>
+      )}
       <input ref={fichier} type="file" accept="image/*" className="adm-fichier" tabIndex={-1} aria-hidden="true" onChange={e => photo(e.target.files?.[0])} />
     </div>
   );
