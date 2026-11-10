@@ -199,6 +199,16 @@ embarque tout : l'image n'a pas de `node_modules`.
   l'adresse PayPal.Me d'un montant, et `adresseIntegree` : Calendly, Cal.com et Google Agenda s'ouvrent dans la page, les
   autres sur leur site), `detection.ts` (`typeDeAdresse` : ce qu'est une adresse collée, vidéo YouTube, agenda, fiche
   d'une boutique, page de soutien ou simple lien, et `versType` qui fait passer un bloc de l'un à l'autre).
+- Le back office à la Linear (10 novembre 2026, demandé par Lilian : « trop de texte, pas assez de menus, pas assez
+  d'icônes ») : au bureau, la barre latérale porte Rechercher (⌘K, Ctrl K hors Mac, `useToucheK`), les onglets, puis des
+  groupes de sous-menus (`sousMenus` dans `Admin.tsx` : Partager, Compte, Comptes compris) qui ouvrent la sous-page de
+  Réglages par `versReglage` (`demande` et `surSous` d'`OngletReglages`, `'aucune'` pour la refermer) ; ce qu'elle ouvre ne
+  se répète pas dans Réglages au bureau (`.adm-hors-bureau`, `#reglage-courts`…), le téléphone garde tout. La palette
+  (`admin/Palette.tsx`) : ⌘K, la loupe de la barre ou celle de l'en-tête au téléphone ; des commandes (`Commande`, un picto,
+  un nom, un groupe) et, dès qu'on tape, les blocs de la page (`recherche`), triés par le nom avant les mots cachés ; elle ne
+  s'ouvre jamais par-dessus une autre fenêtre. Chaque ligne de Réglages a son picto MingCute plein (`icone` de `Ligne`,
+  `LigneLien`, `LigneBascule`), avec un chevron plein (`nav-chevron`) ; une valeur grise ne dit que ce qui est réglé. Sur Ma
+  page, l'œil et « … » d'une rangée ne paraissent qu'au survol.
 - `admin/` : onglets Ma page, Stats, Intégrations, Comptes (principal seulement), Réglages. Dans Comptes (23 octobre 2026,
   demandé par Lilian : « tout faire sur un compte »), un compte s'ouvre en fiche (`FicheCompte` dans `OngletComptes.tsx`, une
   sous-page en lignes comme Réglages ; au bureau, à droite du tableau) : sa page, « Renvoyer son lien », son offre (offrir avec `FormOffrir`, retirer,

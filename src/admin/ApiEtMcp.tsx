@@ -46,7 +46,7 @@ export function ApiEtMcp({ api }: { api?: ApiCles }) {
 
   return (
     <>
-      <p className="text-[14px] leading-snug text-white/75">{tr('Ton agent IA (Claude, ChatGPT, Cursor…) ou ton code gèrent ta page avec une clé : profil, thème, blocs, stats.', 'Your AI agent (Claude, ChatGPT, Cursor…) or your code manages your page with a key: profile, theme, blocks, stats.')}</p>
+      <p className="text-[14px] leading-snug text-white/75">{tr('Ta page pilotée par ton agent IA ou ton code, avec une clé.', 'Your page run by your AI agent or your code, with a key.')}</p>
 
       <Groupe titre={tr('Adresses', 'Addresses')}>
         <Ligne nom={tr('Serveur MCP', 'MCP server')} valeur={<span translate="no">{sansSchema(ADRESSE_MCP)}</span>}>

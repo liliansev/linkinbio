@@ -58,7 +58,7 @@ export function MaListe({ api, onIntegrations }: { api: ApiListe; onIntegrations
               {liste.integration ? tr(`Envoyés aussi ${destination(liste.integration)}.`, `Also sent ${destination(liste.integration, 'en')}.`) : tr('Gardés ici. Exporte-les en CSV, ou branche ta newsletter.', 'Kept here. Export them as CSV, or connect your newsletter.')}
             </p>
           </>
-        ) : <p className="text-[14px] leading-snug text-white/60">{tr('Ajoute le bloc « Liste e-mail » à ta page : chaque adresse arrive ici, et dans ta newsletter si tu la branches.', 'Add the “Email list” block to your page: every address lands here, and in your newsletter if you connect it.')}</p>}
+        ) : <p className="text-[14px] leading-snug text-white/60">{tr('Ajoute un bloc « Liste e-mail » : tes inscrits arrivent ici.', 'Add an “Email list” block: your subscribers land here.')}</p>}
         {!permis && liste.total > 0 && <p className="mt-2.5 text-[13px] leading-snug text-white/55">{tr('Le formulaire n’est plus sur ta page sans Hopla Pro. Tes inscrits restent à toi : exporte-les depuis Gérer.', 'The form is no longer on your page without Hopla Pro. Your subscribers are still yours: export them from Manage.')}</p>}
       </Carte>
       {ouverte && <FeuilleListe liste={liste} api={api} onFermer={() => setOuverte(false)} onChange={recharger} onIntegrations={onIntegrations} />}

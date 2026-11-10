@@ -45,7 +45,7 @@ export function LiensCourts({ api, compte, domaine }: { api?: ApiCourts; compte:
 
   return (
     <>
-      <p className="text-[14px] leading-snug text-white/75">{tr('Une adresse courte à toi pour une story, un post ou un e-mail. Elle ouvre YouTube, Spotify ou Instagram dans leur app, compte ses clics, et sa destination se change sans toucher à l’adresse.', 'A short address of your own for a story, a post or an email. It opens YouTube, Spotify or Instagram in their app, counts its clicks, and its destination changes without touching the address.')}</p>
+      <p className="text-[14px] leading-snug text-white/75">{tr('Une adresse courte pour une story, un post ou un e-mail.', 'A short address for a story, a post or an email.')}</p>
 
       <Groupe titre={tr('Mes liens courts', 'My short links')} apres={etat && etat.max > 0 ? <span className="text-[13px] tabular-nums text-white/60">{etat.liens.length} / {etat.max}</span> : undefined}>
         {etat === null

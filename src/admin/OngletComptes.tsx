@@ -760,6 +760,7 @@ function Signalements({ liste, vide, recherche, decider, api, agir }: {
 function OffresCreem({ api }: { api: ApiComptes }) {
   const [offres, setOffres] = useState<EtatOffre[] | null>(null);
   const [envoi, setEnvoi] = useState(false);
+  const [detail, setDetail] = useState(false);
   const [message, setMessage] = useState<{ ok: boolean; texte: string } | null>(null);
   useEffect(() => { api.offres().then(setOffres).catch(() => setOffres([])); }, [api]);
   const manquent = offres?.filter(o => o.enVente && !o.produit) ?? [];
@@ -777,21 +778,26 @@ function OffresCreem({ api }: { api: ApiComptes }) {
 
   if (!offres || (!manquent.length && !message)) return null;
   return (
-    <section aria-labelledby="offres-creem" className="adm-encart flex flex-col gap-2 p-4">
-      <h2 id="offres-creem" className="flex items-center justify-between gap-3 text-[15px] font-semibold">
-        Les offres dans Creem {manquent.length > 0 && <span className="text-[13px] font-normal text-white/60">{manquent.length} à créer</span>}
-      </h2>
-      <ul className="flex flex-col divide-y divide-white/[0.06]">
-        {offres.map(o => (
-          <li key={`${o.plan}-${o.periode}-${o.devise ?? 'EUR'}`} className="flex min-h-11 items-center gap-3 py-2 bureau:min-h-9">
-            <span className="min-w-0 flex-1 text-[14px]">{OFFRES[o.plan].nom} {o.periode === 'an' ? 'annuel' : 'mensuel'}{o.devise === 'USD' ? ' en dollars' : ''}</span>
-            <span className="text-[13.5px] tabular-nums text-white/60">{montant(o.prix, 'fr', o.devise)}</span>
-            <span className={`w-32 text-right text-[13px] ${o.produit ? 'text-white' : 'text-white/60'}`}>{o.produit ? 'En vente' : o.prixCreem !== null ? `${montant(o.prixCreem, 'fr', o.devise)} dans Creem` : o.enVente ? 'À créer' : 'Plus tard'}</span>
-          </li>
-        ))}
-      </ul>
-      {manquent.length > 0 && (
-        <div><button type="button" disabled={envoi} onClick={creer} className={classeBouton.principal}>{envoi ? 'Création…' : 'Créer les offres dans Creem'}</button></div>
+    // Une ligne repliée (critique du 10 novembre 2026) : le tableau des comptes reste le sujet de l'écran, le détail s'ouvre au besoin.
+    <section aria-labelledby="offres-creem" className="adm-encart flex flex-col gap-2 px-4 py-2.5">
+      <div className="flex flex-wrap items-center gap-3">
+        <Icone nom="nav-offre" taille={17} className="shrink-0 text-[#6b6b65]" />
+        <h2 id="offres-creem" className="min-w-0 flex-1 text-[14px] font-medium">
+          Offres Creem {manquent.length > 0 && <span className="font-normal text-white/60">· {manquent.length} à créer</span>}
+        </h2>
+        <button type="button" onClick={() => setDetail(d => !d)} aria-expanded={detail} className={classeBouton.discret}>{detail ? 'Replier' : 'Détail'}</button>
+        {manquent.length > 0 && <button type="button" disabled={envoi} onClick={creer} className={classeBouton.principal}>{envoi ? 'Création…' : 'Créer dans Creem'}</button>}
+      </div>
+      {detail && (
+        <ul className="flex flex-col divide-y divide-white/[0.06]">
+          {offres.map(o => (
+            <li key={`${o.plan}-${o.periode}-${o.devise ?? 'EUR'}`} className="flex min-h-11 items-center gap-3 py-2 bureau:min-h-9">
+              <span className="min-w-0 flex-1 text-[14px]">{OFFRES[o.plan].nom} {o.periode === 'an' ? 'annuel' : 'mensuel'}{o.devise === 'USD' ? ' en dollars' : ''}</span>
+              <span className="text-[13.5px] tabular-nums text-white/60">{montant(o.prix, 'fr', o.devise)}</span>
+              <span className={`w-32 text-right text-[13px] ${o.produit ? 'text-white' : 'text-white/60'}`}>{o.produit ? 'En vente' : o.prixCreem !== null ? `${montant(o.prixCreem, 'fr', o.devise)} dans Creem` : o.enVente ? 'À créer' : 'Plus tard'}</span>
+            </li>
+          ))}
+        </ul>
       )}
       {message && <p role={message.ok ? 'status' : 'alert'} className={`text-[13.5px] ${message.ok ? 'text-white/75' : 'text-red-300'}`}>{message.texte}</p>}
     </section>

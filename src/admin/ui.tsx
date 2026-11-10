@@ -101,10 +101,10 @@ export function Groupe({ titre, apres, children }: { titre: string; apres?: Reac
  * se lit en gris entre les deux au bureau, sous le libellé au téléphone.
  * `avant` : ce qui précède le libellé (le logo d'un outil, dans Intégrations) ; la valeur reste alignée sur le libellé.
  */
-export function Ligne({ nom, valeur, avant, children, className = '' }: { nom: ReactNode; valeur?: ReactNode; avant?: ReactNode; children?: ReactNode; className?: string }) {
+export function Ligne({ nom, valeur, avant, icone, children, className = '' }: { nom: ReactNode; valeur?: ReactNode; avant?: ReactNode; icone?: string; children?: ReactNode; className?: string }) {
   return (
     <div className={`adm-ligne ${children ? 'adm-ligne-controle' : ''} ${className}`}>
-      {avant}
+      {icone ? <IconeLigne nom={icone} /> : avant}
       <span className="adm-ligne-texte">
         <span className="adm-ligne-nom">{nom}</span>
         {valeur && <span className="adm-ligne-valeur">{valeur}</span>}
@@ -114,11 +114,19 @@ export function Ligne({ nom, valeur, avant, children, className = '' }: { nom: R
   );
 }
 
+/**
+ * Le picto d'une ligne (10 novembre 2026, refonte à la Linear) : chaque réglage a le sien, seul, sans fond ni cadre,
+ * à l'encre douce ; le nom se lit d'abord, le picto le fait trouver d'un coup d'œil.
+ */
+export function IconeLigne({ nom }: { nom: string }) {
+  return <Icone nom={nom} taille={18} className="adm-ligne-icone shrink-0" />;
+}
+
 /** Une ligne à interrupteur : le libellé l'actionne aussi. */
-export function LigneBascule({ nom, valeur, actif, changer, disabled }: { nom: string; valeur?: ReactNode; actif: boolean; changer: (v: boolean) => void; disabled?: boolean }) {
+export function LigneBascule({ nom, valeur, actif, changer, disabled, icone }: { nom: string; valeur?: ReactNode; actif: boolean; changer: (v: boolean) => void; disabled?: boolean; icone?: string }) {
   const id = useId();
   return (
-    <Ligne className="adm-ligne-bascule" nom={<label htmlFor={id} className="cursor-pointer">{nom}</label>} valeur={valeur}>
+    <Ligne className="adm-ligne-bascule" icone={icone} nom={<label htmlFor={id} className="cursor-pointer">{nom}</label>} valeur={valeur}>
       <Bascule id={id} actif={actif} disabled={disabled} onClick={() => { vibrer(); changer(!actif); }} />
     </Ligne>
   );
@@ -131,20 +139,26 @@ export function LigneBascule({ nom, valeur, actif, changer, disabled }: { nom: s
  * d'ouverture remplace le chevron. Sans `onClick`, la ligne se lit sans mener nulle part. `courant` : son détail est
  * ouvert à côté (au bureau, dans `PanneauDetail`).
  */
-export function LigneLien({ nom, valeur, avant, apres, onClick, label, disabled, id, externe = false, courant = false }: { nom: ReactNode; valeur?: ReactNode; avant?: ReactNode; apres?: ReactNode; onClick?: () => void; label?: string; disabled?: boolean; id?: string; externe?: boolean; courant?: boolean }) {
+export function LigneLien({ nom, valeur, avant: avantDonne, icone, apres, onClick, label, disabled, id, externe = false, courant = false }: { nom: ReactNode; valeur?: ReactNode; avant?: ReactNode; icone?: string; apres?: ReactNode; onClick?: () => void; label?: string; disabled?: boolean; id?: string; externe?: boolean; courant?: boolean }) {
+  const avant = icone ? <IconeLigne nom={icone} /> : avantDonne;
   const texte = (
     <span className="adm-ligne-texte">
       <span className="adm-ligne-nom">{nom}</span>
       {valeur && <span className="adm-ligne-valeur">{valeur}</span>}
     </span>
   );
-  if (!onClick) return <div className="adm-ligne">{avant}{texte}{apres}</div>;
+  if (!onClick) return <div className="adm-ligne" aria-current={courant || undefined}>{avant}{texte}{apres}</div>;
   return (
     <button id={id} type="button" onClick={onClick} aria-label={label} disabled={disabled} aria-current={courant || undefined} className="adm-ligne adm-ligne-lien">
       {avant}{texte}{apres}
-      {externe
+      {externe && icone
+        ? <Icone nom="nav-apps" taille={15} className="shrink-0 text-[#6b6b65]" />
+        : externe
         ? <Icone nom="ui-ouvrir" taille={15} className="shrink-0 text-[#55554f]" />
-        : <Icone nom="ui-chevron" taille={16} className="-rotate-90 shrink-0 text-[#55554f] bureau:-mr-1.5" />}
+        : icone
+          // Une ligne à picto plein prend un chevron plein : les pictos pleins et les signes au trait ne se mêlent pas dans une rangée.
+          ? <Icone nom="nav-chevron" taille={14} className="shrink-0 text-[#6b6b65] bureau:-mr-1" />
+          : <Icone nom="ui-chevron" taille={16} className="-rotate-90 shrink-0 text-[#55554f] bureau:-mr-1.5" />}
     </button>
   );
 }
