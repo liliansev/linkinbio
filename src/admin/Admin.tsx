@@ -734,6 +734,14 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
     ouvrirOffres(pour, undefined, depuis ? { ...base, integrations: true } : base);
   } : undefined };
 
+  // Importer sa page d'ailleurs : elle a changé côté serveur, on la relit, les liens importés et le profil arrivent d'un coup.
+  const importer = api.importerPage && (async (url: string) => {
+    const bilan = await api.importerPage!(url);
+    const e = await api.charger();
+    poserListe(e.blocs); setReglages(e.reglages);
+    return bilan;
+  });
+
   if (premiersPas) {
     // Les premiers pas n'ont aucune fonction réservée : pas de chemin vers les offres.
     return (
@@ -741,7 +749,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
       <FournisseurOffre value={{ droits }}>
       <SourceFlux.Provider value={lireFlux}>
         <PremiersPas compte={compte} reglages={reglages} blocs={blocs} onReglages={changerReglages} onPoserBlocs={poserBlocs}
-          envoyerImage={d => api.envoyerImage(d)} apercuSite={(u, i) => api.apercuSite(u, i)} onFin={suite => {
+          envoyerImage={d => api.envoyerImage(d)} apercuSite={(u, i) => api.apercuSite(u, i)} importer={importer} onFin={suite => {
             setPremiersPas(false); setOnglet('page'); scrollTo({ top: 0 });
             // « Ajouter mon premier lien » : l'éditeur s'ouvre déjà sur un lien neuf.
             if (suite === 'lien') setEdition({ bloc: nouveauBloc('lien', nouvelId()), nouveau: true });
@@ -938,7 +946,8 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
             onListe={l => setIntegration(droits.listeEmail ? l.integration : undefined)} />}
           {onglet === 'reglages' && <OngletReglages reglages={reglages} compte={compte} onChange={changerReglages} onDeconnexion={deconnexion} urlExport={api.urlExport} supprimerMonCompte={api.supprimerMonCompte}
             abonnement={abonnement} onOffres={peutAcheter ? (pour?: Fonction) => ouvrirOffres(pour) : undefined} ouvrirPortail={api.ouvrirPortail}
-            onResilier={peutAcheter ? () => setOffres({ resilier: true }) : undefined} cles={api.cles} />}
+            onResilier={peutAcheter ? () => setOffres({ resilier: true }) : undefined} cles={api.cles}
+            importer={importer} />}
           {onglet === 'comptes' && api.comptes && <OngletComptes api={api.comptes} avatar={reglages.profil.avatar} />}
           </div>
           {/* Au bureau, Intégrations et Réglages gardent la page à droite, comme Ma page (25 octobre 2026, demandé par Lilian) :
