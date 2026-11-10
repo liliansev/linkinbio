@@ -123,9 +123,11 @@ navigateurs.
 
 ## Noms de domaine des pages
 
-Écrit le 10 novembre 2026, pas encore allumé sur hopla.page : sans `LIENS_DOMAINES`, rien ne
-change et la ligne « Mon nom de domaine » n'existe pas dans Réglages. Pour l'allumer
-(Cloudflare for SaaS, 100 noms gratuits puis 0,10 $ par nom et par mois) :
+Écrit le 10 novembre 2026. Sans `LIENS_DOMAINES`, rien ne change et la ligne « Mon nom de
+domaine » n'existe pas dans Réglages. Sur hopla.page, les étapes 1 et 2 sont faites
+(Cloudflare for SaaS activé, `origine.hopla.page` en origine de repli, `*.cname.hopla.page`
+créé) ; restent les étapes 3 à 5. Pour l'allumer (Cloudflare for SaaS, 100 noms gratuits
+puis 0,10 $ par nom et par mois) :
 
 1. Dans la zone `hopla.page`, SSL/TLS, « Custom Hostnames » : activer Cloudflare for SaaS et
    donner pour origine de repli (« fallback origin ») un nom en proxy qui mène au serveur,
@@ -135,10 +137,18 @@ change et la ligne « Mon nom de domaine » n'existe pas dans Réglages. Pour l'
 3. Créer un jeton d'API limité à la zone, avec « SSL and Certificates : Edit », et poser
    dans les variables Coolify `LIENS_DOMAINES=cname.hopla.page`, `LIENS_CF_JETON` et
    `LIENS_CF_ZONE` (l'identifiant de la zone).
-4. Dans Coolify, faire arriver à l'application Hopla les noms que Traefik ne connaît pas
-   (une règle de routage générique, de priorité basse). Le certificat du visiteur est
-   celui de Cloudflare ; entre Cloudflare et le serveur, celui de l'origine de repli.
-5. Turnstile : ajouter chaque nom de page aux noms du widget, sans quoi son formulaire de
+4. Dans Coolify, faire arriver à l'application Hopla les noms que Traefik ne connaît pas :
+   dans les « Container Labels » de l'application, un routeur générique de priorité basse
+   (`HostRegexp(`.+`)`, `priority=1`, point d'entrée `https`, `tls=true`) vers le service
+   de l'application.
+5. Le certificat du visiteur est celui de Cloudflare. Vers l'origine de repli, Cloudflare
+   se présente sous le nom du client (en-tête `Host` et SNI) : en mode strict, il
+   attendrait de Traefik un certificat à ce nom, qu'il n'a pas, et répondrait 526. Une
+   règle de configuration passe donc en « Full » (chiffré, certificat du serveur non
+   vérifié) pour ces seuls noms, hopla.page restant en strict (choisi par Lilian le
+   10 novembre 2026) : `not (http.host eq "hopla.page" or http.host contains ".hopla.page")`,
+   réglage SSL `Full`.
+6. Turnstile : ajouter chaque nom de page aux noms du widget, sans quoi son formulaire de
    contact et sa liste e-mail refusent les envois. Le serveur, lui, accepte déjà un jeton
    pris sur un nom actif.
 
