@@ -29,6 +29,13 @@ const SITE_PUBLIC = 'https://liliansevoumian.fr';
 const DU_SITE = /^\/api\/(newsletter|derniere-video(\/vignette)?)$/;
 /** Ce que le back office sert lui-même (et l'API, le serveur MCP) ; le reste (pages, textes légaux) vit sur l'origine publique. */
 const DU_BACK_OFFICE = /^\/(admin(\/|$)|_serverFn\/|api\/|assets\/|media\/|mcp$)/;
+/* Le nom de domaine d'une page (`LIENS_DOMAINES`, voir src/server/domaines.ts) : `liens.marie.fr` montre la page de Marie
+   à la racine, et `liens.marie.fr/promo` suit un de ses liens courts. L'app sait à qui est le nom ; ici, on ne laisse
+   passer sur un tel nom que ce qui sert à une page. Le reste (l'accueil, les textes légaux, le back office) vit sur les
+   noms de Hopla, et y est renvoyé. */
+const D_UNE_PAGE = /^\/($|_serverFn\/|assets\/|media\/|api\/(evenement|inscription|message|vcard|flux|acces|turnstile|domaine)$)/;
+const PAS_UN_LIEN_COURT = /^\/(legal|signaler|fr|features|compare|comparatif|fonctionnalites|fonctions|docs|admin|mcp|liens|api|healthz)$/;
+const dUnePage = chemin => D_UNE_PAGE.test(chemin) || STATIQUE.test(chemin) || (/^\/[a-z0-9-]{2,40}$/.test(chemin) && !PAS_UN_LIEN_COURT.test(chemin));
 const appRoot = fileURLToPath(new URL('../dist', import.meta.url));
 /* L'instance (src/lib/instance.ts), lue dans l'environnement au démarrage et non au build : une même image sert
    hopla.page ou n'importe quelle instance auto-hébergée. L'app la trouve dans globalThis, posé avant de la charger ;
@@ -69,7 +76,8 @@ const ANCIENNES_DOCS = {
   'limites-et-erreurs': 'errors', glossary: 'migrating-from-v1',
 };
 /** À n'exposer que derrière Caddy, qui doit écraser X-Real-IP avec l'IP du visiteur. */
-export function createLiensServer({ appDir = appRoot, site = process.env.LIENS_SITE, cloudflare = process.env.LIENS_CLOUDFLARE, instance = instanceDe(process.env) } = {}) {
+export function createLiensServer({ appDir = appRoot, site = process.env.LIENS_SITE, cloudflare = process.env.LIENS_CLOUDFLARE, instance = instanceDe(process.env), domaines = process.env.LIENS_DOMAINES } = {}) {
+  const avecDomaines = !!domaines?.trim();
   const exclusif = cloudflare === 'exclusif';
   const enTete = scriptInstance(instance);
   let appPromise;
@@ -186,6 +194,12 @@ export function createLiensServer({ appDir = appRoot, site = process.env.LIENS_S
       // Cloudflare le fait d'habitude par une règle de redirection ; ceci sert si la requête arrive jusqu'ici.
       if (DOMAINES_COURTS.has((req.headers.host ?? '').toLowerCase().replace(/:\d+$/, '').replace(/^www\./, ''))) {
         return send(301, '', { Location: `${origin}${chemin === '/' ? '' : chemin}${url.search}`, 'Cache-Control': 'public, max-age=86400' });
+      }
+      // Un nom qui n'est pas à Hopla, quand les pages peuvent avoir le leur : seulement ce qui sert à une page.
+      const demande = (req.headers.host ?? '').toLowerCase();
+      if (avecDomaines && demande && demande !== hostPublic && demande !== hostAdmin && !/^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/.test(demande)) {
+        if (!dUnePage(chemin)) return send(308, '', { Location: `${origin}${chemin}${url.search}`, 'Cache-Control': 'no-store' });
+        return liens(req, url, ip, send, parCloudflare);
       }
       // Un seul nom pour les deux (un essai en local) : rien à renvoyer d'un côté à l'autre.
       const host = hostPublic === hostAdmin ? '' : (req.headers.host ?? '').toLowerCase();

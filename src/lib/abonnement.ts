@@ -175,6 +175,7 @@ export const FONCTIONS = {
   cadeau: 'pro',
   flux: 'pro',
   api: 'pro',
+  domaine: 'premium',
 } as const satisfies Record<string, PlanPayant>;
 export type Fonction = keyof typeof FONCTIONS;
 
@@ -205,6 +206,7 @@ export const FONCTIONS_EN_MOTS: Record<Fonction, { avantage: string; pour: strin
   cadeau: { avantage: 'Un cadeau contre l’e-mail, tes derniers articles', pour: 'Pour ton cadeau' },
   flux: { avantage: 'Un cadeau contre l’e-mail, tes derniers articles', pour: 'Pour ton flux RSS' },
   api: { avantage: 'Ta page pilotée par tes agents IA : API et MCP', pour: 'Pour l’API' },
+  domaine: { avantage: 'Ton propre nom de domaine', pour: 'Pour ton domaine' },
 };
 
 /** « Pour tes couleurs » en anglais, sur l'étiquette de l'offre mise en avant. */
@@ -213,7 +215,7 @@ export const POUR_EN: Record<Fonction, string> = {
   programmation: 'To schedule links', avis: 'For reviews', stats: 'For your stats', formulaire: 'For your form', galerie: 'For your gallery',
   utm: 'For UTM tags', redirection: 'For the redirect', fond: 'For your background', grandePhoto: 'For your large photo', grille: 'For the grid',
   heure: 'For time slots', drops: 'For drops', listeEmail: 'For your email list', pays: 'For countries', cadeau: 'For your freebie',
-  flux: 'For your RSS feed', api: 'For the API',
+  flux: 'For your RSS feed', api: 'For the API', domaine: 'For your own domain',
 };
 /** Ce pour quoi on vient prendre une fonction, dans une langue. */
 export const pourQuoi = (f: Fonction, langue: 'en' | 'fr' = 'fr') => (langue === 'en' ? POUR_EN[f] : FONCTIONS_EN_MOTS[f].pour);
@@ -330,7 +332,7 @@ export const BASCULE_OFFRES = Date.UTC(2026, 9, 21);
 /** Les jours de stats qu'une page d'avant les offres lisait en gratuit : elle les garde. */
 export const JOURS_AVANT_OFFRES = 7;
 /** Ce que ces pages ne faisaient pas en gratuit, et ne gardent donc pas : la page sans mention, et ce qui est venu après (la vitrine, le formulaire, la galerie complète, l'UTM, la redirection). */
-const PAS_AVANT_OFFRES: readonly Fonction[] = ['sansMention', 'vitrine', 'formulaire', 'galerie', 'utm', 'redirection', 'fond', 'grandePhoto', 'grille', 'pays', 'cadeau', 'flux', 'api'];
+const PAS_AVANT_OFFRES: readonly Fonction[] = ['sansMention', 'vitrine', 'formulaire', 'galerie', 'utm', 'redirection', 'fond', 'grandePhoto', 'grille', 'pays', 'cadeau', 'flux', 'api', 'domaine'];
 
 /**
  * L'essai (25 octobre 2026, choisi par Lilian) : chaque compte créé commence par 14 jours de Pro, sans carte ni

@@ -31,6 +31,10 @@ services:
       LIENS_CONTACT_LEGAL: ${LIENS_CONTACT_LEGAL:-}
       # Empty: open sign-up. "attente": waitlist, invitations sent from the Comptes (Accounts) tab.
       LIENS_INSCRIPTION: ${LIENS_INSCRIPTION:-}
+      # Optional: custom domains for pages (see the guide, "Custom domains"). Empty: off.
+      LIENS_DOMAINES: ${LIENS_DOMAINES:-}
+      LIENS_CF_JETON: ${LIENS_CF_JETON:-}
+      LIENS_CF_ZONE: ${LIENS_CF_ZONE:-}
       # Your fork, if you modified the code (AGPL-3.0): target of the "Code source" link.
       LIENS_DEPOT_SOURCE: ${LIENS_DEPOT_SOURCE:-}
       # Optional: nightly backups to S3-compatible storage (R2, MinIO, S3) by deploy/sauvegarde.mjs,

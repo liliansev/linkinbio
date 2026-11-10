@@ -15,6 +15,8 @@ export const Route = createFileRoute('/$pseudo')({
     if (!/^[a-z0-9-]{3,30}$/i.test(params.pseudo)) throw notFound();
     const page = await lirePagePublique({ data: { pseudo: params.pseudo, s: deps.s } });
     if (!page) throw notFound();
+    // Sur le nom de domaine d'une page, `/promo` est un de ses liens courts, suivi sur hopla.page.
+    if ('ailleurs' in page) throw redirect({ href: page.ailleurs, statusCode: 302 });
     // « Redirection » (Starter) : toute la page renvoie vers une seule adresse, le temps d'un lancement.
     if (page.redirection) throw redirect({ href: page.redirection, statusCode: 302 });
     return page;

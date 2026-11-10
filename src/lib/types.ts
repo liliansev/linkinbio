@@ -12,6 +12,7 @@ import type { Audience, EffetAudience } from './provenance.ts';
 import type { Police } from './themes.ts';
 import type { ArticleFlux } from './flux.ts';
 import type { LienCourt } from './courts.ts';
+import type { EtatDomainePerso } from './domaines.ts';
 import { INSTANCE } from './instance.ts';
 
 export const TYPES_BLOC = ['lien', 'titre', 'texte', 'video', 'derniere-video', 'newsletter', 'inscription', 'preuve', 'produit', 'soutien', 'reservation',
@@ -247,7 +248,11 @@ export const PRINCIPAL = 'principal';
 export const TYPES_PRINCIPAL: readonly TypeBloc[] = ['newsletter'];
 
 /** Qui possède la page : de quoi construire son adresse. */
-export interface ComptePage { pseudo: string; principal: boolean }
+export interface ComptePage {
+  pseudo: string; principal: boolean;
+  /** Son propre nom de domaine quand il répond (`liens.marie.fr`, Premium) : la page y vit, à la racine. */
+  domaine?: string;
+}
 
 /** Les pages publiques, et le back office sur son propre nom (son cookie n'est jamais envoyé aux pages) : hopla.page, ou ceux de l'instance (`lib/instance.ts`). */
 export const ORIGINE_PUBLIQUE = INSTANCE.origine;
@@ -256,7 +261,8 @@ export interface Origines { page: string; admin: string }
 /** Le site de Lilian, l'éditeur du service. */
 export const SITE_LILIAN = 'https://liliansevoumian.fr';
 export const cheminPage = (c: ComptePage) => `/${c.pseudo}`;
-export const urlPage = (c: ComptePage) => `${ORIGINE_PUBLIQUE}${cheminPage(c)}`;
+/** L'adresse de la page : sur son propre nom de domaine s'il en a un qui répond, sinon sur hopla.page. */
+export const urlPage = (c: ComptePage) => (c.domaine ? `https://${c.domaine}` : `${ORIGINE_PUBLIQUE}${cheminPage(c)}`);
 /**
  * Les noms courts (24 octobre 2026, achetés par Lilian) : `hpla.art/camille` renvoie en 301 vers
  * `hopla.page/camille`, chemin et requête gardés, pour toutes les pages. La page ne vit que sur hopla.page ;
@@ -264,8 +270,8 @@ export const urlPage = (c: ComptePage) => `${ORIGINE_PUBLIQUE}${cheminPage(c)}`;
  */
 export const DOMAINES_COURTS = ['hpla.eu', 'hpla.art', 'hpla.pro', 'hpla.store'] as const;
 export type DomaineCourt = (typeof DOMAINES_COURTS)[number];
-/** L'adresse que la personne partage : sur son nom court s'il en a choisi un, sinon celle de la page. */
-export const adressePartage = (c: ComptePage, domaine: DomaineCourt | '' = '') => (domaine ? `https://${domaine}${cheminPage(c)}` : urlPage(c));
+/** L'adresse que la personne partage : son propre nom de domaine d'abord, puis son nom court s'il en a choisi un, sinon celle de la page. */
+export const adressePartage = (c: ComptePage, domaine: DomaineCourt | '' = '') => (domaine && !c.domaine ? `https://${domaine}${cheminPage(c)}` : urlPage(c));
 /** `https://hopla.page/camille` devient `hopla.page/camille`. */
 export const sansSchema = (url: string) => url.replace(/^https?:\/\//, '');
 /** `hopla.page` et `app.hopla.page`, ou les noms de l'instance : pour les dire dans un texte. */
@@ -315,6 +321,8 @@ export interface EtatAdmin {
   devise?: Devise;
   /** Ce que le compte peut faire de sa page ; le reste se montre avec l'offre qui le débloque. */
   droits: Droits;
+  /** Vrai quand le compte peut relier son propre nom de domaine : l'instance les sert (`LIENS_DOMAINES`) et son offre le comprend. */
+  domaines?: boolean;
   /** Clics des 30 derniers jours, par bloc. */
   clics: Record<string, number>;
   /** Les places prises de chaque drop. */
@@ -423,6 +431,14 @@ export interface ApiCourts {
   supprimer(id: string): Promise<void>;
 }
 
+/** Son propre nom de domaine (Réglages, « Mon nom de domaine ») : le poser, faire vérifier ses enregistrements DNS, le retirer. */
+export interface ApiDomaine {
+  lire(): Promise<EtatDomainePerso | null>;
+  brancher(nom: string): Promise<EtatDomainePerso | null>;
+  verifier(): Promise<EtatDomainePerso | null>;
+  retirer(): Promise<void>;
+}
+
 /** Ce qu'une page importée d'ailleurs a ajouté : des liens, des réseaux, le profil ; `dejaLa`, les liens que la page avait déjà. */
 export interface BilanImport { liens: number; reseaux: number; profil: boolean; dejaLa: number }
 
@@ -492,6 +508,8 @@ export interface Api {
   cles?: ApiCles;
   /** Absent dans l'aperçu statique sans serveur. */
   courts?: ApiCourts;
+  /** Absent dans l'aperçu statique sans serveur. */
+  domaine?: ApiDomaine;
 }
 
 /**

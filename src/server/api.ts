@@ -12,6 +12,7 @@ import { VERSION_CGU } from '../lib/legal.ts';
 import { DOC_API, DOC_API_V1 } from '../lib/docApi.ts';
 import { CODES_EN, PARAMETRES_EN, ROUTES_EN, TYPES_EN, versAnglais, versFrancais } from '../lib/apiAnglais.ts';
 import * as db from './db.ts';
+import { pageDuCompte } from './domaines.ts';
 import { empreinte } from './auth.ts';
 import { droits, joursLisibles, periodeLisible, verifierDates } from './droits.ts';
 import { REFUS_PROGRAMMATION } from '../lib/droits.ts';
@@ -91,7 +92,7 @@ export function lirePage(a: Appelant) {
   const c = db.compteParId(a.compte)!;
   const reglages = db.lireReglages(a.compte);
   return {
-    page: { pseudo: c.pseudo, adresse: adressePartage({ pseudo: c.pseudo, principal: c.id === PRINCIPAL }, reglages.domaine), offre: db.abonnement(c).plan },
+    page: { pseudo: c.pseudo, adresse: adressePartage(pageDuCompte(c), reglages.domaine), offre: db.abonnement(c).plan },
     reglages,
     blocs: db.lireBlocs(a.compte),
   };
@@ -226,7 +227,7 @@ export function lireCompte(a: Appelant, env: Record<string, string | undefined> 
   return {
     compte: {
       pseudo: c.pseudo,
-      adresse: adressePartage({ pseudo: c.pseudo, principal: c.id === PRINCIPAL }, reglages.domaine),
+      adresse: adressePartage(pageDuCompte(c), reglages.domaine),
       cree: iso(c.cree),
       offre: ab.plan,
       essai: ab.essai ? { jusqu: iso(ab.essai) } : null,

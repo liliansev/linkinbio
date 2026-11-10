@@ -203,7 +203,9 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
     const l = blocsRef.current;
     return [...l.filter(b => !ids.includes(b.id)), ...ids.map(id => l.find(b => b.id === id)).filter((b): b is Bloc => !!b)];
   };
-  const compte = useMemo(() => ({ ...initial.compte, plan: abonnement.plan }), [initial.compte, abonnement.plan]);
+  // Son propre nom de domaine, quand il répond : relié ou retiré dans Réglages, l'adresse de la page change partout à l'écran.
+  const [domainePerso, setDomainePerso] = useState(initial.compte.domaine ?? '');
+  const compte = useMemo(() => ({ ...initial.compte, plan: abonnement.plan, domaine: domainePerso || undefined }), [initial.compte, abonnement.plan, domainePerso]);
   // L'onglet Comptes n'existe que pour Lilian.
   const onglets = ONGLETS(l).filter(o => o.id !== 'comptes' || api.comptes);
   const minuteur = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -947,6 +949,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
           {onglet === 'reglages' && <OngletReglages reglages={reglages} compte={compte} onChange={changerReglages} onDeconnexion={deconnexion} urlExport={api.urlExport} supprimerMonCompte={api.supprimerMonCompte}
             abonnement={abonnement} onOffres={peutAcheter ? (pour?: Fonction) => ouvrirOffres(pour) : undefined} ouvrirPortail={api.ouvrirPortail}
             onResilier={peutAcheter ? () => setOffres({ resilier: true }) : undefined} cles={api.cles} courts={api.courts}
+            domainePerso={initial.domaines ? api.domaine : undefined} surDomaine={setDomainePerso}
             importer={importer} />}
           {onglet === 'comptes' && api.comptes && <OngletComptes api={api.comptes} avatar={reglages.profil.avatar} />}
           </div>

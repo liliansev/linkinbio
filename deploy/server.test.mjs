@@ -57,6 +57,22 @@ test('les pages sur hopla.page, le back office sur app.hopla.page', async t => {
   // Un autre nom (localhost en dev) : tout est servi tel quel.
   assert.equal((await brut(url, '/admin', { host: 'localhost:4400' })).body, 'app /admin - ');
 });
+test('sur le nom de domaine d\'une page, seulement ce qui sert à une page', async t => {
+  const url = await fixture(t, { domaines: 'cname.hopla.page' });
+  const perso = { host: 'liens.marie.fr' };
+  for (const path of ['/', '/?s=ig', '/promo', '/_serverFn/abc', '/media/x.webp', '/api/evenement', '/api/domaine?domain=liens.marie.fr']) assert.equal((await brut(url, path, perso)).status, 200, path);
+  assert.equal((await brut(url, '/assets/a.js', perso)).body, 'js');
+  // L'accueil en français, les textes légaux, le back office, l'API : sur les noms de Hopla.
+  for (const path of ['/fr', '/legal/cgu', '/signaler?page=marie', '/admin', '/api/export', '/api/v2/page', '/mcp', '/marie/promo', '/docs']) {
+    assert.deepEqual(await brut(url, path, perso), { status: 308, location: `https://hopla.page${path}`, body: '' }, path);
+  }
+  // Les noms de Hopla et un essai en local ne changent pas.
+  assert.equal((await brut(url, '/legal/cgu', { host: 'hopla.page' })).body, 'app /legal/cgu - ');
+  assert.equal((await brut(url, '/admin', { host: 'app.hopla.page' })).status, 200);
+  assert.equal((await brut(url, '/admin', { host: 'localhost:4400' })).body, 'app /admin - ');
+  // Sans la variable, un autre nom est servi tel quel, comme avant.
+  assert.equal((await brut(await fixture(t), '/admin', perso)).body, 'app /admin - ');
+});
 test("l'app reçoit l'IP, ses cookies passent, les en-têtes anti-iframe sont posés", async t => {
   const url = await fixture(t);
   const page = await fetch(`${url}/camille`, { headers: { 'X-Real-IP': '9.9.9.9' } });
