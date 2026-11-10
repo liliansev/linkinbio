@@ -12,7 +12,7 @@ import { useDevise, useL, useLangue } from '../accueil/langue.ts';
 import { BoutonCopier, BoutonPrincipal, BoutonSecondaire, Champ, Feuille, Groupe, Interrupteur, Ligne, LigneBascule, LigneLien, PanneauDetail, Segments, SousPage, classeBouton, classeSaisie, useGrandEcran } from './ui.tsx';
 import { Facturation, nomAbonnement, nomApres, nomOffre } from './Facturation.tsx';
 import { Etiquette, usePermis } from './offre.tsx';
-import { telechargerQR } from './CodeQR.tsx';
+import { ReglerQR } from './CodeQR.tsx';
 import { noterPartage } from './BienDemarrer.tsx';
 import { focusAuto } from '../lib/clavier';
 import { Icone } from '../components/Icone.tsx';
@@ -55,7 +55,7 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
   const adresse = urlPage(compte);
   const partage = adressePartage(compte, reglages.domaine);
   const [sous, setSous] = useState<'abonnement' | 'api' | 'courts' | null>(null);
-  const [fenetre, setFenetre] = useState<'apercu' | 'supprimer' | 'redirection' | 'domaine' | 'importer' | null>(null);
+  const [fenetre, setFenetre] = useState<'apercu' | 'supprimer' | 'redirection' | 'domaine' | 'importer' | 'qr' | null>(null);
   const [portail, setPortail] = useState<'' | 'ouverture' | string>('');
   // Ce qui a ouvert la sous-page reprend le focus quand on en revient (la page se redessine : on le retrouve par son id).
   const ouvreur = useRef('');
@@ -124,9 +124,8 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
           onClick={() => setFenetre('importer')} label={l('Importer ma page depuis Linktree, Beacons ou un autre service', 'Import my page from Linktree, Beacons or another service')} />}
         {courts && <LigneLien id="reglage-courts" nom={l('Liens courts', 'Short links')} valeur={l('Pour une story, un post, un e-mail : suivis, ouverts dans l’app', 'For a story, a post, an email: tracked, opened in the app')}
           courant={sous === 'courts'} onClick={ouvrirSous('reglage-courts', 'courts')} />}
-        <Ligne nom="QR code">
-          <BoutonSecondaire onClick={() => { void telechargerQR(partage, compte.pseudo); }} aria-label={l('Télécharger le QR code', 'Download the QR code')}>{l('Télécharger', 'Download')}</BoutonSecondaire>
-        </Ligne>
+        <LigneLien nom="QR code" valeur={l('Sa couleur, sa forme, ta photo au centre', 'Its color, its shape, your photo in the center')} onClick={() => setFenetre('qr')}
+          label={l('Régler et télécharger mon QR code', 'Customize and download my QR code')} />
         {/* Coupée au bureau, la valeur se lit en entier au survol. */}
         {/* Une ligne à chevron, comme les autres ouvertures de Réglages (critique série 2 : un bouton bordé faisait exception). */}
         <LigneLien nom={l('Référencement', 'SEO')} onClick={() => setFenetre('apercu')}
@@ -260,6 +259,10 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
 
       <Feuille petite ouverte={fenetre === 'domaine'} onFermer={() => setFenetre(null)} titre={l('Domaine', 'Domain')}>
         {fermer => <ChoixDomaine compte={compte} valeur={reglages.domaine} choisir={d => { onChange({ ...reglages, domaine: d }); fermer(); }} />}
+      </Feuille>
+
+      <Feuille petite ouverte={fenetre === 'qr'} onFermer={() => setFenetre(null)} titre={l('Mon QR code', 'My QR code')}>
+        {() => <ReglerQR adresse={partage} pseudo={compte.pseudo} avatar={reglages.profil.avatar} />}
       </Feuille>
 
       {importer && (

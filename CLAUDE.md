@@ -80,6 +80,11 @@ embarque tout : l'image n'a pas de `node_modules`.
   qui essaie le schéma puis l'adresse web sur iOS) quand `ouvrirApps` est allumé ; un compte suspendu ou un code inconnu répondent 404. La
   destination se change sans changer l'adresse. Réglages, « Liens courts » (`admin/LiensCourts.tsx`, sous-page comme « API et MCP »). Pas encore
   dans l'API ni le MCP.
+- Le QR code réglable (10 novembre 2026, lot 3 d'après Taap.it) : `lib/qr.ts` dessine le QR en SVG (`svgQR` : couleur, modules en carrés ou
+  en points, photo de profil au centre, alors en correction haute ; `lisibleQR` refuse une couleur à moins de 4 pour 1 sur le blanc), le même
+  dessin pour l'aperçu, le SVG et le PNG (1440 px, rendu dans le navigateur). Réglages, « QR code » ouvre `ReglerQR` (`admin/CodeQR.tsx`) ; le
+  style se garde sur l'appareil (`hopla-qr:<pseudo>`), pour tous les comptes. Les points sont des ronds qui se touchent : plus petits, certains
+  lecteurs ne retrouvent plus le code. Le QR de l'API (`/qr`) reste noir sur blanc.
 - `server/favicons.ts` (26 octobre 2026, demandé par Lilian : « mets à jour tous les liens existants et même ceux de mes
   clients ») : une seule fois, une minute après le démarrage (repère `favicons-liens` dans `reglages`, éteint par
   `HOPLA_FAVICONS=0`), la vignette de chaque bouton de lien de toutes les pages prend le favicon de son site, gardé tel
