@@ -31,6 +31,10 @@ Each value comes with the value for the previous period of the same length, to c
     "sources": [{ "name": "instagram", "views": 640, "previous": 512 }],
     "devices": [{ "name": "mobile", "views": 1101 }],
     "countries": [{ "code": "FR", "views": 1050, "previous": 930 }],
+    "cities": [{ "name": "Lyon", "code": "FR", "views": 210 }],
+    "operatingSystems": [{ "name": "iOS", "views": 1400 }],
+    "browsers": [{ "name": "Safari", "views": 900 }],
+    "languages": [{ "name": "fr", "views": 1700 }],
     "previousPeriod": { "views": 1120, "visitors": 801, "clicks": 260 }
   }
 }
@@ -45,6 +49,10 @@ Each value comes with the value for the previous period of the same length, to c
 | `sources` | Referrers: a social network, a QR code, or direct traffic |
 | `devices` | Devices: mobile, desktop, tablet |
 | `countries` | ISO country code (`FR`), empty when unknown |
+| `cities` | City and its ISO country code, when the network provides it; the 60 most viewed |
+| `operatingSystems` | `iOS`, `Android`, `Windows`, `macOS`, `Linux`, `ChromeOS`, without version |
+| `browsers` | Browser family without version; an in-app browser reads `App Instagram` |
+| `languages` | First language of the browser, as a two-letter code (`fr`) |
 | `previousPeriod` | The three totals for the previous period |
 
 ## Weekly views (all plans)
