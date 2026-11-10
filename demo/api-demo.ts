@@ -122,6 +122,7 @@ export const apiDemo: Api = {
   async ordonner(ids) { await pause(); etat.blocs = ids.map(i => etat.blocs.find(b => b.id === i)).filter((b): b is Bloc => !!b); ecrire(); },
   async enregistrerReglages(reglages) { await pause(); etat.reglages = reglages; ecrire(); return reglages; },
   async envoyerImage(dataUrl) { await pause(); return dataUrl; },
+  async envoyerFichier(fichier) { await pause(); return URL.createObjectURL(fichier); },
   // Dans l'aperçu, pas de serveur pour lire le site : une vignette dessinée en tient lieu. Une boutique donne un produit d'exemple.
   async apercuSite(url, image = true) {
     await pause();

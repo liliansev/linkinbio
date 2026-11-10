@@ -12,7 +12,7 @@ import { nomSite } from './demarrage.ts';
  */
 
 /** Le champ sur lequel porte une erreur : elle s'affiche dessous. */
-export type ChampErreur = 'url' | 'titre' | 'description' | 'dates' | 'image' | 'note' | 'nombre' | 'source' | 'questions' | 'telephone' | 'email' | 'adresse' | 'images' | 'cadeau';
+export type ChampErreur = 'url' | 'titre' | 'description' | 'dates' | 'image' | 'note' | 'nombre' | 'source' | 'questions' | 'telephone' | 'email' | 'adresse' | 'images' | 'cadeau' | 'fichier';
 export type Erreurs = Partial<Record<ChampErreur, string>>;
 
 /** Les blocs qui ne vont nulle part sans leur adresse, et ce qu'on dit quand elle manque. */
@@ -65,6 +65,9 @@ export function verifierBloc(b: Bloc, langue: Langue = 'fr'): { bloc: Bloc; erre
     if (Object.keys(manque).length) return { erreurs: manque };
   }
   if (b.type === 'lieu' && !b.adressePostale.trim()) return { erreurs: { adresse: l('Écris l’adresse, comme sur une enveloppe.', 'Write the address, as on an envelope.') } };
+  if (b.type === 'document' && !b.fichier) return { erreurs: { fichier: l('Choisis ton PDF.', 'Choose your PDF.') } };
+  if (b.type === 'document' && !b.titre.trim()) return { erreurs: { titre: l('Écris le texte du bouton, par exemple « Mes tarifs ».', 'Write the button text, for example “My rates”.') } };
+  if (b.type === 'audio' && !b.fichier) return { erreurs: { fichier: l('Enregistre ta note vocale, ou choisis un fichier son.', 'Record your voice note, or choose an audio file.') } };
   if (b.type === 'galerie' && !b.images.length) return { erreurs: { images: l('Ajoute au moins une photo.', 'Add at least one photo.') } };
   if ((b.type === 'titre' || b.type === 'texte') && !b.titre.trim()) return { erreurs: { titre: b.type === 'titre' ? l('Écris le titre.', 'Write the heading.') : l('Écris le texte.', 'Write the text.') } };
   if (b.type === 'preuve' && b.preuve?.genre === 'temoignage' && !b.description.trim()) return { erreurs: { description: l('Écris le témoignage.', 'Write the testimonial.') } };

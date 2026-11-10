@@ -27,7 +27,7 @@ import { Etiquette, FournisseurOffre, Reserve, offreDe, useDroits, useVoirOffres
 import type { Fonction } from '../lib/abonnement.ts';
 import type { SuiteAchat } from '../lib/achat.ts';
 import { focusAuto, focusSaisie } from '../lib/clavier';
-import { ChampLieu, ChampsCoordonnees, ChampsFaq, ChampsGalerie } from './ChampsBlocs.tsx';
+import { ChampDocument, ChampLieu, ChampNoteVocale, ChampsCoordonnees, ChampsFaq, ChampsGalerie } from './ChampsBlocs.tsx';
 import { DestinationListe } from './OngletIntegrations.tsx';
 import { choix, useL, useLangue } from '../accueil/langue.ts';
 import type { Choix } from '../accueil/langue.ts';
@@ -124,7 +124,7 @@ export interface OptionsEnregistrement {
  * la page au-dessus, avec son « Terminé ». Dans les deux cas, le bloc se
  * redessine sur la page à chaque frappe (`onBrouillon`).
  */
-export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, onBrouillon, onFermer, onRetour, onReplier, suitAdresse = true, repris = false, enFaire, onEnregistrer, onSupprimer, onDupliquer, onDeplacer, place, envoyerImage, apercuSite, noteAvis, clics, prises = 0, principal = false }: {
+export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, onBrouillon, onFermer, onRetour, onReplier, suitAdresse = true, repris = false, enFaire, onEnregistrer, onSupprimer, onDupliquer, onDeplacer, place, envoyerFichier, envoyerImage, apercuSite, noteAvis, clics, prises = 0, principal = false }: {
   bloc: Bloc;
   reglages: Reglages;
   nouveau: boolean;
@@ -158,6 +158,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
   onDeplacer?: (bloc: Bloc, sens: -1 | 1) => void;
   place?: { rang: number; total: number };
   envoyerImage: (dataUrl: string) => Promise<string>;
+  envoyerFichier: (fichier: Blob) => Promise<string>;
   apercuSite: Api['apercuSite'];
   /** La note d'une page d'avis collée dans un bloc « Avis et preuves ». */
   noteAvis?: Api['noteAvis'];
@@ -919,7 +920,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
   );
   /** « Mis en avant » vient d'être allumé : au bureau, son apparence arrive dépliée, on voit ce qu'il ouvre. */
   const vedetteAllumee = useRef(false);
-  const enAvant = !['titre', 'texte', 'newsletter', 'inscription', 'preuve', 'soutien', 'faq', 'coordonnees', 'lieu', 'galerie', 'formulaire', 'flux'].includes(b.type);
+  const enAvant = !['titre', 'texte', 'newsletter', 'inscription', 'preuve', 'soutien', 'faq', 'coordonnees', 'lieu', 'galerie', 'formulaire', 'flux', 'document', 'audio'].includes(b.type);
   const aideVedette = b.type === 'produit' ? tr('Une grande carte, de la couleur d’accent de ta page.', 'A large card, in your page’s accent color.') : b.type === 'reservation' ? tr('De la couleur d’accent de ta page.', 'In your page’s accent color.') : tr('En plus grand, de la couleur d’accent de ta page.', 'Larger, in your page’s accent color.');
   const vedette = (compact: boolean) => enAvant && <Interrupteur key="vedette" compact={compact} label={tr('Mis en avant', 'Featured')} aide={aideVedette} actif={b.vedette} onChange={v => { vedetteAllumee.current = v; maj({ vedette: v }); }} />;
   const bascules = (compact: boolean, sansVedette = false) => [
@@ -1100,12 +1101,12 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
     </div>
   ) : (
     <Champ erreur={erreurDe('titre')} label={b.type === 'texte' ? tr('Texte', 'Text') : b.type === 'video' ? tr('Titre de la vidéo', 'Video title') : b.type === 'titre' ? tr('Titre de la section', 'Section heading')
-      : b.type === 'coordonnees' ? tr('Nom', 'Name') : b.type === 'lieu' ? tr('Nom du lieu (facultatif)', 'Place name (optional)') : b.type === 'galerie' ? tr('Légende (facultatif)', 'Caption (optional)') : tr('Titre', 'Title')}>
+      : b.type === 'coordonnees' ? tr('Nom', 'Name') : b.type === 'lieu' ? tr('Nom du lieu (facultatif)', 'Place name (optional)') : b.type === 'galerie' ? tr('Légende (facultatif)', 'Caption (optional)') : b.type === 'document' ? tr('Texte du bouton', 'Button text') : tr('Titre', 'Title')}>
       {b.type === 'texte'
         ? <textarea className={`${classeSaisie} min-h-28`} value={b.titre} onChange={e => maj({ titre: e.target.value })} maxLength={1000} autoFocus={focusAuto(nouveau)} />
-        : <input id="bloc-titre" className={classeSaisie} value={b.titre} onChange={e => maj({ titre: e.target.value })} maxLength={160} autoFocus={focusAuto(nouveau && !avecUrl && b.type !== 'lieu' && b.type !== 'galerie')}
+        : <input id="bloc-titre" className={classeSaisie} value={b.titre} onChange={e => maj({ titre: e.target.value })} maxLength={160} autoFocus={focusAuto(nouveau && !avecUrl && !['lieu', 'galerie', 'document', 'audio'].includes(b.type))}
             autoComplete={b.type === 'coordonnees' ? 'name' : undefined}
-            placeholder={b.type === 'soutien' || b.type === 'faq' || b.type === 'formulaire' || b.type === 'flux' ? titreParDefaut(b.type, langue) : b.type === 'titre' ? tr('Nouvelle section', 'New section') : b.type === 'coordonnees' ? tr('Marie Dupont', 'Jane Smith') : ''} />}
+            placeholder={b.type === 'soutien' || b.type === 'faq' || b.type === 'formulaire' || b.type === 'flux' ? titreParDefaut(b.type, langue) : b.type === 'titre' ? tr('Nouvelle section', 'New section') : b.type === 'coordonnees' ? tr('Marie Dupont', 'Jane Smith') : b.type === 'document' ? tr('Mes tarifs 2026', 'My 2026 rates') : b.type === 'audio' ? tr('Un mot de bienvenue', 'A word of welcome') : ''} />}
     </Champ>
   ));
   // Un produit : son prix, lu sur la boutique comme son nom et sa photo ; il se corrige à la main.
@@ -1222,6 +1223,8 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
 
       {b.type === 'galerie' && <ChampsGalerie b={b} maj={maj} erreurDe={erreurDe} envoyerImage={envoyerImage} droit={!!droits.galerie} />}
       {b.type === 'lieu' && <ChampLieu b={b} maj={maj} erreurDe={erreurDe} nouveau={nouveau} />}
+      {b.type === 'document' && <ChampDocument b={b} maj={maj} erreurDe={erreurDe} envoyerFichier={envoyerFichier} />}
+      {b.type === 'audio' && <ChampNoteVocale b={b} maj={maj} erreurDe={erreurDe} envoyerFichier={envoyerFichier} />}
       {!paire && champTitre}
       {/* Une collection : les liens qui suivent ce titre, jusqu'au suivant, en liste ou en tuiles (Starter). */}
       {b.type === 'titre' && (

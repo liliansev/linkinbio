@@ -5,6 +5,7 @@ import type { ArticleFlux } from '../lib/flux.ts';
 import type { Textes } from '../lib/mots.ts';
 import type { Lecteur as InfosLecteur } from '../lib/lecteurs.ts';
 import { lecteurDe } from '../lib/lecteurs.ts';
+import { dureeLisible } from '../lib/fichiers.ts';
 import { jetonTurnstile, preparerTurnstile } from '../lib/turnstile.ts';
 import { Icone } from './Icone.tsx';
 import { Vignette } from './Vignette.tsx';
@@ -149,6 +150,59 @@ export function Musique({ bloc, clic, t }: { bloc: Bloc; clic: () => void; t: Te
         <span className="lp-sous">{bloc.sousTitre || lecteur.nom}</span>
       </span>
       <span className="lp-lecteur-play" aria-hidden="true"><Icone nom="play" taille={22} /></span>
+    </button>
+  );
+}
+
+/** Un document PDF gardé chez Hopla (10 novembre 2026) : un bouton comme les autres, qui l'ouvre dans un nouvel onglet. */
+export function DocumentPdf({ bloc, clic, t }: { bloc: Bloc; clic: () => void; t: Textes }) {
+  if (!bloc.fichier) return null;
+  return (
+    <a className="lp-btn" href={bloc.fichier} target="_blank" rel="noopener" onClick={clic}>
+      <span className="lp-picto"><Icone nom="document" taille={22} /></span>
+      <span className="lp-btn-texte">
+        <span className="lp-btn-titre">{bloc.titre}</span>
+        <span className="lp-sous">{t.documentPdf}</span>
+      </span>
+    </a>
+  );
+}
+
+/**
+ * Une note vocale (10 novembre 2026) : un bandeau qui la lit et la met en pause d'un toucher, son avancée en trait fin
+ * au bas de la carte. Le son ne se charge qu'au premier toucher, et ce toucher compte comme un clic.
+ */
+export function NoteVocale({ bloc, clic, t }: { bloc: Bloc; clic: () => void; t: Textes }) {
+  const son = useRef<HTMLAudioElement>(null);
+  const compte = useRef(false);
+  const [joue, setJoue] = useState(false);
+  const [temps, setTemps] = useState(0);
+  const [duree, setDuree] = useState(bloc.duree);
+  // Un autre fichier posé dans l'éditeur : le lecteur repart de zéro.
+  useEffect(() => { setJoue(false); setTemps(0); setDuree(bloc.duree); }, [bloc.fichier, bloc.duree]);
+  if (!bloc.fichier) return null;
+  const titre = bloc.titre || t.noteVocale;
+  function basculer() {
+    const a = son.current;
+    if (!a) return;
+    if (!a.paused) { a.pause(); return; }
+    if (!compte.current) { compte.current = true; clic(); }
+    void a.play().catch(() => setJoue(false));
+  }
+  const avance = duree > 0 ? Math.min(100, (temps / duree) * 100) : 0;
+  return (
+    <button type="button" className="lp-carte lp-lecteur lp-note" data-format="bandeau" onClick={basculer} aria-pressed={joue} aria-label={joue ? t.pauseNote(titre) : t.ecouterNote(titre)}>
+      <span className="lp-carte-picto" aria-hidden="true"><Icone nom="micro" taille={26} /></span>
+      <span className="lp-carte-texte">
+        <span className="lp-carte-titre">{titre}</span>
+        <span className="lp-sous lp-note-temps">{joue || temps > 0 ? `${dureeLisible(temps)}${duree ? ` / ${dureeLisible(duree)}` : ''}` : duree ? `${t.noteVocale} · ${dureeLisible(duree)}` : t.noteVocale}</span>
+      </span>
+      <span className="lp-lecteur-play" data-joue={joue || undefined} aria-hidden="true"><Icone nom={joue ? 'pause' : 'play'} taille={22} /></span>
+      <span className="lp-note-avance" aria-hidden="true" style={{ width: `${avance}%` }} />
+      {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+      <audio ref={son} src={bloc.fichier} preload="none" onPlay={() => setJoue(true)} onPause={() => setJoue(false)}
+        onEnded={() => { setJoue(false); setTemps(0); }} onTimeUpdate={e => setTemps(e.currentTarget.currentTime)}
+        onLoadedMetadata={e => { const d = e.currentTarget.duration; if (Number.isFinite(d) && d > 0) setDuree(d); }} />
     </button>
   );
 }

@@ -58,7 +58,7 @@ const BLOC_EXEMPLE = {
   icone: 'micro', image: '', public: true, indexable: true, vedette: false, format: 'bandeau', teinte: 'accent', animation: 'auto',
   debut: '', fin: '', compteARebours: false, creneau: null, audience: null, cache: [], demanderPrenom: false, acces: null, preuve: null,
   prix: '', montants: [], partenariat: null, questions: [], images: [], coordonnees: null, adressePostale: '', sensible: false,
-  disposition: 'liste', pays: null, cadeau: null,
+  disposition: 'liste', pays: null, cadeau: null, fichier: '', duree: 0,
 };
 
 const REGLAGES_EXEMPLE = {

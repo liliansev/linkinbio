@@ -1,3 +1,4 @@
+import type { ExtensionFichier } from '../lib/fichiers.ts';
 import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
@@ -566,15 +567,15 @@ export const compterClicCourt = (compte: string, lien: string, maintenant = Date
 
 /* ---- Médias ---- */
 
-/** Les images qu'on garde : celles du back office (WebP, JPEG), et les favicons des sites, gardés tels quels (PNG). */
-export type ExtensionMedia = 'webp' | 'jpg' | 'png';
+/** Ce qu'on garde : les images du back office (WebP, JPEG), les favicons des sites, tels quels (PNG), et depuis le 10 novembre 2026 un PDF ou un son (`lib/fichiers.ts`). */
+export type ExtensionMedia = 'webp' | 'jpg' | 'png' | ExtensionFichier;
 
 export function ajouterMedia(compte: string, octets: Uint8Array, extension: ExtensionMedia): string {
   const d = base();
   if (compte !== PRINCIPAL) {
     const quota = OFFRES[planDuCompte(compte)].quota;
     const { total } = d.prepare('SELECT COALESCE(SUM(LENGTH(octets)), 0) AS total FROM medias WHERE compte = ?').get(compte) as { total: number };
-    if (total + octets.length > quota) throw new Error('Plus de place pour les images : supprime-en ou réutilise une image déjà envoyée.');
+    if (total + octets.length > quota) throw new Error(/^(webp|jpg|png)$/.test(extension) ? 'Plus de place pour les images : supprime-en ou réutilise une image déjà envoyée.' : 'Plus de place pour ce fichier : choisis-en un plus léger.');
   }
   const id = nouvelId();
   d.prepare('INSERT INTO medias (id, extension, octets, cree, compte) VALUES (?, ?, ?, ?, ?)').run(id, extension, octets, Date.now(), compte);

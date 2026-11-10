@@ -23,7 +23,7 @@ import { adresseIntegree, avecMontants, lienMontant, lienSansMontant, nomAgenda,
 import { focusAuto } from '../lib/clavier';
 import { EST_HOPLA_PAGE } from '../lib/instance.ts';
 import { lecteurDe } from '../lib/lecteurs.ts';
-import { CarteVisite, Contact, Faq, Flux, Galerie, Lieu, Musique, VideoIntegree, useArticles } from './BlocsPlus.tsx';
+import { CarteVisite, Contact, DocumentPdf, Faq, Flux, Galerie, Lieu, Musique, NoteVocale, VideoIntegree, useArticles } from './BlocsPlus.tsx';
 
 /*
  * La page publique, rendue côté serveur pour Google et les aperçus de liens,
@@ -440,6 +440,10 @@ export function BlocPublic({ bloc, reglages, clic, cible, apercu, maintenant, ps
       return <Musique bloc={bloc} clic={clic} t={t} />;
     case 'galerie':
       return <Galerie bloc={bloc} t={t} />;
+    case 'document':
+      return <DocumentPdf bloc={bloc} clic={clic} t={t} />;
+    case 'audio':
+      return <NoteVocale bloc={bloc} clic={clic} t={t} />;
     case 'faq':
       return <Faq bloc={bloc} />;
     case 'coordonnees':

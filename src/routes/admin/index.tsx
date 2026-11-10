@@ -23,6 +23,12 @@ function PageAdmin() {
     ordonner: async ids => { await fn.ordonner({ data: ids }); },
     enregistrerReglages: reglages => fn.enregistrerReglages({ data: reglages }),
     envoyerImage: dataUrl => fn.envoyerImage({ data: dataUrl }),
+    envoyerFichier: async fichier => {
+      const r = await fetch('/api/fichier', { method: 'POST', body: fichier, headers: { 'Content-Type': 'application/octet-stream' } });
+      const texte = await r.text();
+      if (!r.ok) throw new Error(r.status === 413 && !texte ? 'Ce fichier dépasse 10 Mo.' : texte);
+      return texte;
+    },
     apercuSite: (url, image = true) => fn.apercuSite({ data: { url, image } }),
     importerPage: url => fn.importerPage({ data: url }),
     flux: (url, video) => fn.lireFlux({ data: { url, video } }),

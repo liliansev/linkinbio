@@ -93,6 +93,15 @@ embarque tout : l'image n'a pas de `node_modules`.
   `languages`). « Exporter en CSV » sous les stats : `/api/stats?periode=30` ou `?du=&au=` (`routes/api/stats.ts`, `lib/exportStats.ts` :
   un tableau long `tableau;nom;vues;visiteurs;clics`, dans la langue du compte, borné à l'historique de l'offre). Les textes légaux le
   disent (`VERSION_CGU` 2026-11-10.1) : rien de plus précis que la ville, jamais de version.
+- Les blocs Document et Note vocale (10 novembre 2026, lot 5 d'après Taap.it), pour tous : `document` (un PDF, un bouton qui l'ouvre dans un
+  nouvel onglet) et `audio` (une note vocale enregistrée dans l'éditeur, cinq minutes au plus, ou un fichier son ; un bandeau qui la lit
+  dans la page, `NoteVocale` dans `BlocsPlus.tsx`). Le fichier vit dans `medias` comme les images (`fichier` du bloc, `/media/<id>.pdf`,
+  `.mp3`, `.m4a`, `.ogg`, `.webm`, `.wav` ; `duree` en secondes), 10 Mo au plus, dans la place de l'offre (`quota`). `lib/fichiers.ts` :
+  `typeFichier` lit le type dans les premiers octets, jamais dans le nom. Envoi par `POST /api/fichier` (`routes/api/fichier.ts` : le corps
+  est le fichier, session, 30 par heure ; `deploy/server.mjs` ne laisse passer 10 Mo que pour cette adresse). `/media/` sert ces fichiers
+  sous leur vrai type, `nosniff`, par plages (`Range`, sans quoi Safari ne lit pas un son), le PDF avec sa propre CSP. Éditeur :
+  `ChampDocument` et `ChampNoteVocale` dans `ChampsBlocs.tsx` (MP4 en AAC quand le navigateur sait l'enregistrer, WebM sinon). L'API
+  connaît les deux types (`document`, `voice-note`, champs `file` et `duration`) mais n'envoie pas encore ces fichiers.
 - `server/favicons.ts` (26 octobre 2026, demandé par Lilian : « mets à jour tous les liens existants et même ceux de mes
   clients ») : une seule fois, une minute après le démarrage (repère `favicons-liens` dans `reglages`, éteint par
   `HOPLA_FAVICONS=0`), la vignette de chaque bouton de lien de toutes les pages prend le favicon de son site, gardé tel
