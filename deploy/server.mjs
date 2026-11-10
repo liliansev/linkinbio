@@ -120,9 +120,9 @@ export function createLiensServer({ appDir = appRoot, site = process.env.LIENS_S
     const app = (await appPromise).default;
     const headers = new Headers();
     for (const [key, value] of Object.entries(req.headers)) if (typeof value === 'string' && !key.startsWith(':')) headers.set(key, value);
-    // L'app ne lit que X-Real-IP, déjà démêlée ici ; et le pays, seulement quand c'est bien Cloudflare qui le dit.
+    // L'app ne lit que X-Real-IP, déjà démêlée ici ; et le pays et la ville, seulement quand c'est bien Cloudflare qui les dit.
     headers.delete('cf-connecting-ip');
-    if (!parCloudflare) headers.delete('cf-ipcountry');
+    if (!parCloudflare) { headers.delete('cf-ipcountry'); headers.delete('cf-ipcity'); }
     if (ip) headers.set('x-real-ip', ip); else headers.delete('x-real-ip');
     const host = /^[\w.-]+(:\d+)?$/.test(req.headers.host ?? '') ? req.headers.host : new URL(origin).host;
     const body = ['GET', 'HEAD'].includes(req.method) ? undefined : await readBody(req, 3_000_000);

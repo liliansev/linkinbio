@@ -10,7 +10,8 @@ import { MINUTE, cleIp, limiteur } from './limites.ts';
  * est une empreinte du jour (secret + date + IP + navigateur), illisible et
  * renouvelée chaque jour. Les robots sont écartés, et les visites du
  * propriétaire de la page, connecté, aussi. Le pays vient de Cloudflare
- * (`CF-IPCountry`, deux lettres) : l'adresse IP ne sert qu'à l'empreinte.
+ * (`CF-IPCountry`, deux lettres), la ville aussi quand la zone la transmet : l'adresse IP ne sert qu'à l'empreinte.
+ * Depuis le 10 novembre 2026 (lot 4 d'après Taap.it) : le système, le navigateur et la langue, en familles, sans version.
  */
 
 const ROBOTS = /bot|crawl|spider|slurp|preview|facebookexternalhit|embedly|whatsapp|telegram|discord|curl|wget|python|headless|lighthouse/i;
@@ -52,6 +53,47 @@ export function appareil(ua: string): string {
   return 'Ordinateur';
 }
 
+/** Le système du visiteur, lu dans son navigateur : une famille, jamais une version. */
+export function systeme(ua: string): string {
+  if (/iPhone|iPad|iPod/i.test(ua)) return 'iOS';
+  if (/Android/i.test(ua)) return 'Android';
+  if (/Windows/i.test(ua)) return 'Windows';
+  if (/CrOS/.test(ua)) return 'ChromeOS';
+  if (/Macintosh|Mac OS X/i.test(ua)) return 'macOS';
+  if (/Linux|X11/i.test(ua)) return 'Linux';
+  return 'Autre';
+}
+
+/** Son navigateur : celui d'une app (« App Instagram ») quand la page s'ouvre dedans, sinon sa famille, sans version. */
+export function navigateur(ua: string): string {
+  const app = audienceDeLApp(ua);
+  if (app) return `App ${NOMS_AUDIENCES[app]}`;
+  if (navigateurIntegre(ua)) return 'App';
+  if (/Edg(e|A|iOS)?\//.test(ua)) return 'Edge';
+  if (/OPR\/|Opera/.test(ua)) return 'Opera';
+  if (/SamsungBrowser/.test(ua)) return 'Samsung Internet';
+  if (/Firefox|FxiOS/.test(ua)) return 'Firefox';
+  if (/Chrome|CriOS|Chromium/.test(ua)) return 'Chrome';
+  if (/Safari/.test(ua)) return 'Safari';
+  return 'Autre';
+}
+
+/** La première langue que son navigateur demande (`fr`, `en`), sans la région ; vide s'il n'en dit rien. */
+export function langueVisiteur(accept: unknown): string {
+  const m = typeof accept === 'string' ? /^\s*([a-z]{2,3})(?=[-_;,\s]|$)/i.exec(accept) : null;
+  return m ? m[1].toLowerCase() : '';
+}
+
+/**
+ * Sa ville, telle que Cloudflare la déduit de la connexion (`CF-IPCity`, quand la zone ajoute les en-têtes de
+ * localisation) ; vide sinon. Un en-tête arrive en latin-1 : les accents de Cloudflare, en UTF-8, se relisent ici.
+ */
+export function ville(v: unknown): string {
+  if (typeof v !== 'string' || !v.trim()) return '';
+  const relu = Buffer.from(v, 'latin1').toString('utf8');
+  return (relu.includes('\ufffd') ? v : relu).replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, 60);
+}
+
 /** Au plus 60 événements par minute et par adresse IP, un /64 en IPv6 (changer de navigateur ne suffit pas à passer outre). */
 const fenetre = limiteur([60, MINUTE]);
 const tropRapide = (ip: string, maintenant: number) => fenetre(cleIp(ip), maintenant);
@@ -64,7 +106,7 @@ function compteDePage(page: unknown): string | null {
   return compte && compte.statut === 'actif' ? compte.id : null;
 }
 
-export function enregistrer(entree: { page?: unknown; type: unknown; bloc: unknown; utm: unknown; referent: unknown; app?: unknown }, contexte: { ip: string; ua: string; session: string | null; pays?: string }, maintenant = Date.now()): boolean {
+export function enregistrer(entree: { page?: unknown; type: unknown; bloc: unknown; utm: unknown; referent: unknown; app?: unknown }, contexte: { ip: string; ua: string; session: string | null; pays?: string; langue?: string; ville?: string }, maintenant = Date.now()): boolean {
   if (!contexte.ua || ROBOTS.test(contexte.ua)) return false;
   const compte = compteDePage(entree.page);
   if (!compte || contexte.session === compte) return false;
@@ -83,6 +125,7 @@ export function enregistrer(entree: { page?: unknown; type: unknown; bloc: unkno
     compte, type, bloc, visiteur, ts: maintenant, integre, app: integre && type === 'clic' && entree.app === true,
     source: source(typeof entree.utm === 'string' ? entree.utm : '', typeof entree.referent === 'string' ? entree.referent : '', contexte.ua),
     appareil: appareil(contexte.ua), pays: pays(contexte.pays),
+    systeme: systeme(contexte.ua), navigateur: navigateur(contexte.ua), langue: langueVisiteur(contexte.langue), ville: pays(contexte.pays) ? ville(contexte.ville) : '',
   });
   return true;
 }

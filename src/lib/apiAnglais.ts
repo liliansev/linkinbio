@@ -35,7 +35,7 @@ export const CHAMPS: Dico = {
   // Stats
   stats: 'analytics', semaine: 'week', avant: 'previous', dejaVue: 'everViewed', resume: 'summary', phrase: 'sentence', faits: 'highlights',
   texte: 'text', ton: 'trend', plage: 'customRange', vues: 'views', visiteurs: 'visitors', clics: 'clicks', serie: 'daily', jour: 'date',
-  appareils: 'devices', integres: 'inAppBrowser', versApp: 'openedInApp', ouverts: 'opened', precedent: 'previousPeriod',
+  appareils: 'devices', villes: 'cities', systemes: 'operatingSystems', navigateurs: 'browsers', langues: 'languages', integres: 'inAppBrowser', versApp: 'openedInApp', ouverts: 'opened', precedent: 'previousPeriod',
   // Liste e-mail
   liste: 'list', inscrits: 'subscribers', enAttente: 'pending', branchee: 'connected', outil: 'tool', cle: 'key', prenom: 'firstName',
   inscrit: 'subscribedAt', envoye: 'synced', envoyes: 'synced', erreurs: 'failed', suivant: 'next', supprime: 'deleted',

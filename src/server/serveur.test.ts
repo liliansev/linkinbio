@@ -1798,3 +1798,40 @@ test('essai : 14 jours de Pro à l’inscription, puis Gratuit et ses cinq blocs
   assert.equal(droits(ancienne, env, t + 15 * jour).blocs, true);
   assert.equal(db.abonnement(db.compteParId(P)!, t).essai, null);
 });
+
+test('statistiques fines : système, navigateur, langue et ville de chaque vue', async () => {
+  const { systeme, navigateur, langueVisiteur, ville } = await import('./analytique.ts');
+  const iphone = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1';
+  const chrome = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36';
+  const insta = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 Instagram 350.0.0';
+  assert.equal(systeme(iphone), 'iOS');
+  assert.equal(systeme(chrome), 'Windows');
+  assert.equal(systeme('Mozilla/5.0 (Linux; Android 14; Pixel 8) Chrome/130'), 'Android');
+  assert.equal(systeme('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Safari'), 'macOS');
+  assert.equal(navigateur(iphone), 'Safari');
+  assert.equal(navigateur(chrome), 'Chrome');
+  assert.equal(navigateur(`${chrome} Edg/130.0`), 'Edge');
+  assert.equal(navigateur('Mozilla/5.0 (X11; Linux x86_64; rv:130.0) Gecko/20100101 Firefox/130.0'), 'Firefox');
+  assert.equal(navigateur(insta), 'App Instagram');
+  assert.equal(langueVisiteur('fr-FR,fr;q=0.9,en;q=0.8'), 'fr');
+  assert.equal(langueVisiteur('EN'), 'en');
+  assert.equal(langueVisiteur('*'), '');
+  assert.equal(langueVisiteur(undefined), '');
+  // Cloudflare écrit la ville en UTF-8, qu'un en-tête rend en latin-1.
+  assert.equal(ville(Buffer.from('Orléans', 'utf8').toString('latin1')), 'Orléans');
+  assert.equal(ville('Paris'), 'Paris');
+  assert.equal(ville('<b>x</b>'), 'bx/b');
+  assert.equal(ville(null), '');
+
+  const t = Date.parse('2026-11-10T12:00:00Z');
+  const vue = { type: 'vue', bloc: null, utm: '', referent: '' };
+  enregistrer(vue, { ip: '9.1.1.1', ua: iphone, session: null, pays: 'FR', langue: 'fr-FR,fr;q=0.9', ville: 'Lyon' }, t);
+  enregistrer(vue, { ip: '9.1.1.2', ua: chrome, session: null, pays: 'FR', langue: 'en-US', ville: 'Lyon' }, t);
+  // Sans pays connu, la ville n'est pas gardée : l'en-tête ne vient alors pas de Cloudflare.
+  enregistrer(vue, { ip: '9.1.1.3', ua: chrome, session: null, langue: 'en', ville: 'Nulle part' }, t);
+  const s = db.stats(P, 7, t);
+  assert.deepEqual(s.villes, [{ nom: 'Lyon', code: 'FR', vues: 2 }]);
+  assert.deepEqual(s.systemes, [{ nom: 'Windows', vues: 2 }, { nom: 'iOS', vues: 1 }]);
+  assert.deepEqual(s.navigateurs, [{ nom: 'Chrome', vues: 2 }, { nom: 'Safari', vues: 1 }]);
+  assert.deepEqual(s.langues, [{ nom: 'en', vues: 2 }, { nom: 'fr', vues: 1 }]);
+});

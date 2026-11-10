@@ -85,6 +85,14 @@ embarque tout : l'image n'a pas de `node_modules`.
   dessin pour l'aperçu, le SVG et le PNG (1440 px, rendu dans le navigateur). Réglages, « QR code » ouvre `ReglerQR` (`admin/CodeQR.tsx`) ; le
   style se garde sur l'appareil (`hopla-qr:<pseudo>`), pour tous les comptes. Les points sont des ronds qui se touchent : plus petits, certains
   lecteurs ne retrouvent plus le code. Le QR de l'API (`/qr`) reste noir sur blanc.
+- Les stats fines (10 novembre 2026, lot 4 d'après Taap.it) : chaque vue garde en plus son système (`systeme`), la famille de son navigateur
+  (`navigateur`, « App Instagram » dans une app), la première langue du navigateur (`langueVisiteur`) et sa ville (`ville`, l'en-tête
+  `CF-IPCity` de Cloudflare, que `deploy/server.mjs` ne laisse passer que d'une adresse de Cloudflare et qui demande la transformation gérée
+  « Add visitor location headers » sur la zone ; gardée seulement avec un pays). `stats()` rend `villes`, `systemes`, `navigateurs` et
+  `langues`, quatre encarts de l'onglet Stats, absents tant qu'ils sont vides, et dans l'API (`cities`, `operatingSystems`, `browsers`,
+  `languages`). « Exporter en CSV » sous les stats : `/api/stats?periode=30` ou `?du=&au=` (`routes/api/stats.ts`, `lib/exportStats.ts` :
+  un tableau long `tableau;nom;vues;visiteurs;clics`, dans la langue du compte, borné à l'historique de l'offre). Les textes légaux le
+  disent (`VERSION_CGU` 2026-11-10.1) : rien de plus précis que la ville, jamais de version.
 - `server/favicons.ts` (26 octobre 2026, demandé par Lilian : « mets à jour tous les liens existants et même ceux de mes
   clients ») : une seule fois, une minute après le démarrage (repère `favicons-liens` dans `reglages`, éteint par
   `HOPLA_FAVICONS=0`), la vignette de chaque bouton de lien de toutes les pages prend le favicon de son site, gardé tel
