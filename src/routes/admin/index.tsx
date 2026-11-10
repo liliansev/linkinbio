@@ -60,6 +60,12 @@ function PageAdmin() {
       enregistrer: l => fn.enregistrerLienCourt({ data: l }),
       supprimer: async id => { await fn.supprimerLienCourt({ data: id }); },
     },
+    domaine: {
+      lire: async () => (await fn.lireDomaine()).domaine,
+      brancher: async nom => (await fn.brancherDomaine({ data: nom })).domaine,
+      verifier: async () => (await fn.verifierDomaine()).domaine,
+      retirer: async () => { await fn.retirerDomaine(); },
+    },
     comptes: acces.connecte && acces.etat.compte.principal ? {
       lister: () => fn.listerComptes(),
       offres: () => fn.lireOffresCreem(),

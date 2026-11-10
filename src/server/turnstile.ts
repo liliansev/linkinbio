@@ -2,6 +2,7 @@ import { ORIGINE_ADMIN, ORIGINE_PUBLIQUE } from '../lib/types.ts';
 import type { ActionTurnstile } from '../lib/turnstile.ts';
 import type { Env } from './courriel.ts';
 import { MINUTE, cleIp, limiteur } from './limites.ts';
+import { hoteActif } from './domaines.ts';
 
 /*
  * Turnstile, la vérification anti-robot de Cloudflare, devant les formulaires
@@ -28,11 +29,15 @@ export const MESSAGE_ROBOT = 'La vérification anti-robot n’a pas abouti. Rée
 /**
  * Les noms où un jeton a pu être pris : les deux origines de Hopla en
  * production (jamais localhost, que le widget accepte pour le développement),
- * le nom de la requête ailleurs.
+ * le nom de la requête ailleurs ; et le nom de domaine d'une page (`server/domaines.ts`), que le widget doit connaître aussi.
  */
 export function hotesTurnstile(env: Env, adresseRequete: string): Set<string> {
   if (env.NODE_ENV !== 'production') return new Set([new URL(adresseRequete).hostname]);
-  return new Set([env.LIENS_ORIGINE || ORIGINE_PUBLIQUE, env.LIENS_ORIGINE_ADMIN || ORIGINE_ADMIN].map(o => new URL(o).hostname));
+  const hotes = new Set([env.LIENS_ORIGINE || ORIGINE_PUBLIQUE, env.LIENS_ORIGINE_ADMIN || ORIGINE_ADMIN].map(o => new URL(o).hostname));
+  // Le nom de domaine d'une page, quand elle y répond : ses formulaires y prennent leur jeton.
+  const ici = new URL(adresseRequete).hostname;
+  if (hoteActif(ici, env)) hotes.add(ici);
+  return hotes;
 }
 
 /** Trente vérifications par minute depuis une même adresse : un robot sans jeton ne fait pas travailler le serveur pour rien. */

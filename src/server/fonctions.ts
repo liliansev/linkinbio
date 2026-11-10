@@ -28,6 +28,9 @@ import { corrigerAdresse as corriger, creerHopla, inscriptionLibre, inviterReser
 import * as creem from './creem.ts';
 import { nouvelleCle } from './api.ts';
 import { droits, joursLisibles, periodeLisible, verifierDates } from './droits.ts';
+import * as domaines from './domaines.ts';
+import { compteDeHote, pageDuCompte } from './domaines.ts';
+import type { EtatDomainePerso } from '../lib/domaines.ts';
 import { lirePeriode } from '../lib/periode.ts';
 import { selonDroits } from '../lib/droits.ts';
 import { blocsAvecUtm, redirectionActive } from '../lib/sorties.ts';
@@ -137,37 +140,74 @@ function reglagesPourCompte(compte: string, r: Reglages): Reglages {
 }
 
 /** La page de Lilian sans pseudo, celle d'un autre compte avec. Null si elle n'existe pas ou est suspendue. */
+/** Le nom de la requête quand ce n'est pas un nom de Hopla : peut-être le nom de domaine d'une page. */
+const hoteRequete = () => getRequestUrl().hostname.toLowerCase();
+
+/** Ce qu'une adresse publique rend : la page, ou l'adresse où elle vit en vrai (`ailleurs`). */
+export type PageOuAilleurs = PagePublique | { ailleurs: string };
+
+/** La page publique d'un compte, telle que ce visiteur la voit. `s` : le réseau d'où il dit venir. */
+function composerPage(compte: db.Compte, s: string): PagePublique {
+  const maintenant = Date.now();
+  // Ce que l'offre du compte ne comprend pas s'efface avant tout le reste.
+  const { reglages, blocs: permis } = selonDroits(reglagesPourCompte(compte.id, db.lireReglages(compte.id)), pourCompte(compte.id, db.lireBlocs(compte.id)), droits(compte, process.env, maintenant));
+  // Le référent d'une page qui se recharge elle-même (hopla.page) ne dit rien de la provenance.
+  // Le pays du visiteur, que seul Cloudflare peut dire (le serveur retire l'en-tête venu d'ailleurs) : un bloc réservé à
+  // quelques pays ne se montre pas à qui n'en a pas.
+  const ici = pays(getRequestHeader('cf-ipcountry'));
+  const blocs = composerAudience(composerMoment(permis, maintenant), provenance({ s, ua: getRequestHeader('user-agent') ?? '', referent: getRequestHeader('referer') ?? '' }))
+    .filter(b => pourPays(b, ici));
+  const prises = db.placesParBloc(compte.id);
+  const page = pageDuCompte(compte, process.env, maintenant);
+  // Une page redirigée envoie son visiteur ailleurs : la vue se compte ici, la page ne s'ouvrira pas pour l'envoyer.
+  const vers = redirectionActive(reglages.redirection, maintenant, urlPage(page));
+  if (vers) enregistrer({ page: compte.pseudo, type: 'vue', bloc: null, utm: s, referent: getRequestHeader('referer') ?? '' },
+    { ip: getRequestHeader('x-real-ip') ?? '', ua: getRequestHeader('user-agent') ?? '', session: null, pays: getRequestHeader('cf-ipcountry') ?? '', langue: getRequestHeader('accept-language') ?? '', ville: getRequestHeader('cf-ipcity') ?? '' }, maintenant);
+  return {
+    reglages,
+    ...(vers ? { redirection: vers } : {}),
+    blocs: blocsAvecUtm(reglages, sansCadeau(masquerAcces(blocs, id => prises[id] ?? 0))),
+    compte: { ...page, plan: db.abonnement(compte, maintenant).plan },
+    maintenant,
+  };
+}
+
+const court = (v: unknown, n: number) => (typeof v === 'string' ? v.slice(0, n) : '');
+
 export const lirePagePublique = createServerFn({ method: 'GET' })
   .validator((data: unknown) => {
     const o = (typeof data === 'string' ? { pseudo: data } : data ?? {}) as { pseudo?: unknown; s?: unknown };
-    const court = (v: unknown, n: number) => (typeof v === 'string' ? v.slice(0, n) : '');
     return { pseudo: court(o.pseudo, 40).toLowerCase(), s: court(o.s, 40) };
   })
-  .handler(async ({ data }): Promise<PagePublique | null> => {
+  .handler(async ({ data }): Promise<PageOuAilleurs | null> => {
+    // Sur le nom de domaine d'une page, `/promo` est un de ses liens courts : il se suit sur hopla.page, qui compte le clic.
+    const perso = compteDeHote(hoteRequete());
+    if (perso) {
+      if (!('page' in perso) || !data.pseudo) return null;
+      if (data.pseudo === perso.page.pseudo) return { ailleurs: '/' };
+      return db.lienCourtParCode(perso.page.id, data.pseudo) ? { ailleurs: `${origines().page}/${perso.page.pseudo}/${data.pseudo}` } : null;
+    }
     const compte = data.pseudo ? db.compteParPseudo(data.pseudo) : db.compteParId(PRINCIPAL);
     if (!compte || compte.statut !== 'actif') return null;
-    const maintenant = Date.now();
-    // Ce que l'offre du compte ne comprend pas s'efface avant tout le reste.
-    const { reglages, blocs: permis } = selonDroits(reglagesPourCompte(compte.id, db.lireReglages(compte.id)), pourCompte(compte.id, db.lireBlocs(compte.id)), droits(compte, process.env, maintenant));
-    // Le référent d'une page qui se recharge elle-même (hopla.page) ne dit rien de la provenance.
-    // Le pays du visiteur, que seul Cloudflare peut dire (le serveur retire l'en-tête venu d'ailleurs) : un bloc réservé à
-    // quelques pays ne se montre pas à qui n'en a pas.
-    const ici = pays(getRequestHeader('cf-ipcountry'));
-    const blocs = composerAudience(composerMoment(permis, maintenant), provenance({ s: data.s, ua: getRequestHeader('user-agent') ?? '', referent: getRequestHeader('referer') ?? '' }))
-      .filter(b => pourPays(b, ici));
-    const prises = db.placesParBloc(compte.id);
-    const page = { pseudo: compte.pseudo, principal: compte.id === PRINCIPAL };
-    // Une page redirigée envoie son visiteur ailleurs : la vue se compte ici, la page ne s'ouvrira pas pour l'envoyer.
-    const vers = redirectionActive(reglages.redirection, maintenant, urlPage(page));
-    if (vers) enregistrer({ page: compte.pseudo, type: 'vue', bloc: null, utm: data.s, referent: getRequestHeader('referer') ?? '' },
-      { ip: getRequestHeader('x-real-ip') ?? '', ua: getRequestHeader('user-agent') ?? '', session: null, pays: getRequestHeader('cf-ipcountry') ?? '', langue: getRequestHeader('accept-language') ?? '', ville: getRequestHeader('cf-ipcity') ?? '' }, maintenant);
-    return {
-      reglages,
-      ...(vers ? { redirection: vers } : {}),
-      blocs: blocsAvecUtm(reglages, sansCadeau(masquerAcces(blocs, id => prises[id] ?? 0))),
-      compte: { ...page, plan: db.abonnement(compte, maintenant).plan },
-      maintenant,
-    };
+    return composerPage(compte, data.s);
+  });
+
+/**
+ * La racine d'un nom : l'accueil de Hopla sur ses propres noms (`mode`, comment on s'y inscrit) ; sur le nom de domaine
+ * d'une page, cette page ; sur un nom connu qui ne répond pas ou plus (offre perdue, nom pas encore vérifié), l'adresse
+ * de la page sur hopla.page.
+ */
+export const lireRacine = createServerFn({ method: 'GET' })
+  .validator((data: unknown) => ({ s: court((data as { s?: unknown } | null)?.s, 40) }))
+  .handler(async ({ data }): Promise<{ mode: 'libre' | 'attente'; page?: PagePublique } | { ailleurs: string }> => {
+    const perso = compteDeHote(hoteRequete());
+    if (perso && 'page' in perso) return { mode: 'libre', page: composerPage(perso.page, data.s) };
+    if (perso) return { ailleurs: perso.ailleurs ? `${origines().page}/${perso.ailleurs.pseudo}` : origines().page };
+    // Un nom que personne n'a relié, pointé vers Hopla : l'accueil ne se montre que sur les noms de Hopla.
+    const o = origines();
+    const ici = hoteRequete();
+    if (domaines.cibleDomaines() && ![o.page, o.admin].some(u => new URL(u).hostname === ici) && !/^(localhost|127\.0\.0\.1|\[::1\])$/.test(ici)) return { ailleurs: o.page };
+    return { mode: inscriptionLibre(process.env) ? 'libre' : 'attente' };
   });
 
 /** La monnaie des offres pour un compte : celle de son abonnement, sinon celle du pays d'où il se connecte (voir `deviseAchat`). */
@@ -180,7 +220,8 @@ function etat(compte: string): EtatAdmin {
   return {
     // Les clics de chaque bloc sont des stats : sans elles, l'éditeur n'en montre pas.
     reglages: db.lireReglages(compte), blocs: db.lireBlocs(compte), clics: d.stats ? db.clicsParBloc(compte, 30) : {}, places: db.placesParBloc(compte), stockageEphemere: db.stockageEphemere(), dejaVue: db.pageDejaVue(compte),
-    compte: { pseudo: c.pseudo, principal: compte === PRINCIPAL, email: c.email, plan: abonnement.plan }, cguAJour: cguAJour(compte),
+    compte: { ...pageDuCompte(c), email: c.email, plan: abonnement.plan }, cguAJour: cguAJour(compte),
+    domaines: !!domaines.cibleDomaines() && d.domaine,
     abonnement, paiement: compte !== PRINCIPAL && !!creem.config(process.env), enVente: creem.offresEnVente(process.env), devise: deviseDuCompte(c), droits: d,
   };
 }
@@ -447,6 +488,49 @@ export const supprimerLienCourt = createServerFn({ method: 'POST' })
   .middleware([session])
   .validator((data: unknown) => String(data ?? '').slice(0, 40))
   .handler(async ({ data, context }) => { db.supprimerLienCourt(context.compte, data); return { ok: true }; });
+
+/* ---- Son propre nom de domaine (Réglages, « Mon nom de domaine », Premium) ---- */
+
+export const lireDomaine = createServerFn({ method: 'GET' })
+  .middleware([session])
+  .handler(async ({ context }): Promise<{ domaine: EtatDomainePerso | null }> => ({ domaine: domaines.etatDomaine(context.compte) }));
+
+/** Dix gestes par compte en dix minutes : chaque vérification interroge le DNS, et Cloudflare. */
+const gestesDomaine = limiteur([10, 10 * MINUTE]);
+const tropDeDomaine = (compte: string) => {
+  if (gestesDomaine(compte)) throw new Error(direCompte(compte)('Trop d’essais d’un coup. Réessaie dans quelques minutes.', 'Too many tries at once. Try again in a few minutes.'));
+};
+
+export const brancherDomaine = createServerFn({ method: 'POST' })
+  .middleware([session])
+  .validator((data: unknown) => String(data ?? '').slice(0, 300))
+  .handler(async ({ data, context }): Promise<{ domaine: EtatDomainePerso | null }> => {
+    const d = direCompte(context.compte);
+    tropDeDomaine(context.compte);
+    const issue = await domaines.brancher(db.compteParId(context.compte)!, data);
+    if (!issue.ok) throw new Error({
+      ferme: d('Les noms de domaine ne sont pas ouverts ici.', 'Custom domains aren’t available here.'),
+      offre: d('Ton propre nom de domaine demande Hopla Premium.', 'Your own domain requires Hopla Premium.'),
+      nom: d('Ce n’est pas un nom de domaine. Tape-le comme liens.ton-site.fr.', 'That’s not a domain name. Type it like links.your-site.com.'),
+      pris: d('Ce nom de domaine est déjà relié à une autre page.', 'This domain is already connected to another page.'),
+    }[issue.refus]);
+    return { domaine: domaines.etatDomaine(context.compte) };
+  });
+
+export const verifierDomaine = createServerFn({ method: 'POST' })
+  .middleware([session])
+  .handler(async ({ context }): Promise<{ domaine: EtatDomainePerso | null }> => {
+    tropDeDomaine(context.compte);
+    try { return { domaine: await domaines.verifier(db.compteParId(context.compte)!) }; }
+    catch (error) {
+      console.error('[liens] domaine', (error as Error).message);
+      throw new Error(direCompte(context.compte)('La vérification n’a pas abouti. Réessaie dans un instant.', 'The check didn’t go through. Try again in a moment.'));
+    }
+  });
+
+export const retirerDomaine = createServerFn({ method: 'POST' })
+  .middleware([session])
+  .handler(async ({ context }) => { await domaines.retirer(context.compte); return { ok: true }; });
 
 /* ---- « Rejoins ma liste », et où partent ses inscrits (onglet Intégrations) ---- */
 

@@ -99,6 +99,10 @@ export function base(): DatabaseSync {
       id TEXT PRIMARY KEY, compte TEXT NOT NULL, nom TEXT NOT NULL, hash TEXT NOT NULL UNIQUE, debut TEXT NOT NULL,
       ecriture INTEGER NOT NULL, cree INTEGER NOT NULL, utilisee INTEGER
     );
+    CREATE TABLE IF NOT EXISTS domaines (
+      hote TEXT PRIMARY KEY, compte TEXT NOT NULL UNIQUE, etat TEXT NOT NULL DEFAULT 'attente', cf TEXT NOT NULL DEFAULT '',
+      cree INTEGER NOT NULL, verifie INTEGER
+    );
   `);
   // Les tables d'avant les comptes : tout ce qu'elles contiennent est à Lilian.
   for (const table of ['blocs', 'medias', 'evenements', 'jetons']) colonne(db, table, 'compte', `TEXT NOT NULL DEFAULT '${PRINCIPAL}'`);
@@ -298,7 +302,7 @@ export function supprimerCompte(id: string, d = base()) {
   if (id === PRINCIPAL) throw new Error('Le compte principal ne se supprime pas.');
   d.exec('BEGIN');
   try {
-    for (const table of ['blocs', 'medias', 'evenements', 'jetons', 'signalements', 'contacts', 'integrations', 'resumes', 'acces', 'vignettes_avant', 'cles_api', 'liens_courts', 'clics_courts']) d.prepare(`DELETE FROM ${table} WHERE compte = ?`).run(id);
+    for (const table of ['blocs', 'medias', 'evenements', 'jetons', 'signalements', 'contacts', 'integrations', 'resumes', 'acces', 'vignettes_avant', 'cles_api', 'liens_courts', 'clics_courts', 'domaines']) d.prepare(`DELETE FROM ${table} WHERE compte = ?`).run(id);
     d.prepare('DELETE FROM pages WHERE compte = ?').run(id);
     d.prepare('DELETE FROM comptes WHERE id = ?').run(id);
     d.exec('COMMIT');
@@ -564,6 +568,26 @@ export const lienCourtParCode = (compte: string, code: string) =>
 /** Un clic de plus aujourd'hui sur ce lien : un compteur par jour, rien du visiteur. */
 export const compterClicCourt = (compte: string, lien: string, maintenant = Date.now()) =>
   base().prepare('INSERT INTO clics_courts (lien, compte, jour, n) VALUES (?, ?, ?, 1) ON CONFLICT (lien, jour) DO UPDATE SET n = n + 1').run(lien, compte, jourDe(maintenant));
+
+/* ---- Le nom de domaine d'une page (10 novembre 2026, lot 6 d'après Taap.it) : un seul par compte, à personne d'autre ---- */
+
+/** `attente` : posé, ses enregistrements DNS pas encore vus ; `certificat` : vus, le certificat arrive ; `actif` : la page y répond. */
+export type EtatDomaine = 'attente' | 'certificat' | 'actif';
+export interface Domaine { hote: string; compte: string; etat: EtatDomaine; cf: string; cree: number; verifie: number | null }
+const LIRE_DOMAINE = 'SELECT hote, compte, etat, cf, cree, verifie FROM domaines';
+export const domaineDuCompte = (compte: string) => base().prepare(`${LIRE_DOMAINE} WHERE compte = ?`).get(compte) as Domaine | undefined;
+export const domaineParHote = (hote: string) => base().prepare(`${LIRE_DOMAINE} WHERE hote = ?`).get(hote.toLowerCase()) as Domaine | undefined;
+/** Pose le nom d'un compte, à la place de celui qu'il avait ; faux quand un autre compte l'a déjà. */
+export function poserDomaine(compte: string, hote: string, maintenant = Date.now()): boolean {
+  const d = base();
+  if (d.prepare('SELECT 1 FROM domaines WHERE hote = ? AND compte != ?').get(hote, compte)) return false;
+  d.prepare('DELETE FROM domaines WHERE compte = ?').run(compte);
+  d.prepare("INSERT INTO domaines (hote, compte, etat, cf, cree) VALUES (?, ?, 'attente', '', ?)").run(hote, compte, maintenant);
+  return true;
+}
+export const noterDomaine = (compte: string, etat: EtatDomaine, cf: string, maintenant = Date.now()) =>
+  base().prepare('UPDATE domaines SET etat = ?1, cf = ?2, verifie = CASE WHEN ?1 = \'attente\' THEN verifie ELSE COALESCE(verifie, ?3) END WHERE compte = ?4').run(etat, cf, maintenant, compte);
+export const retirerDomaine = (compte: string) => base().prepare('DELETE FROM domaines WHERE compte = ?').run(compte);
 
 /* ---- Médias ---- */
 
@@ -834,6 +858,7 @@ export function exporter(compte: string) {
     blocs: lireBlocs(compte),
     statistiques: evenements.map(e => ({ ...e, ts: new Date(e.ts).toISOString() })),
     inscrits: tousLesContacts(compte).map(c => ({ ...c, ts: new Date(c.ts).toISOString() })),
+    domaine: domaineDuCompte(compte) ? { nom: domaineDuCompte(compte)!.hote, etat: domaineDuCompte(compte)!.etat, cree: new Date(domaineDuCompte(compte)!.cree).toISOString() } : null,
     liensCourts: liensCourts(compte).map(l => ({ code: l.code, url: l.url, titre: l.titre, cree: new Date(l.cree).toISOString(), clics: l.clics })),
     clesApi: clesApi(compte).map(c => ({ nom: c.nom, debut: c.debut, ecriture: c.ecriture, cree: new Date(c.cree).toISOString(), utilisee: c.utilisee ? new Date(c.utilisee).toISOString() : null })),
     listeBranchee: lireIntegration(compte) ? { fournisseur: lireIntegration(compte)!.fournisseur, liste: lireIntegration(compte)!.liste } : null,

@@ -54,6 +54,7 @@ a service restart, not an image rebuild.
 | `LIENS_CLE_INTEGRATIONS` | Encryption key for API credentials and subscribers (`openssl rand -base64 32`). Never change it once set |
 | `LIENS_EDITEUR`, `LIENS_HEBERGEUR`, `LIENS_DIRECTEUR`, `LIENS_CONTACT_LEGAL` | Legal notice: publisher, hosting provider, publication director, legal contact |
 | `LIENS_INSCRIPTION` | Empty: open sign-up. `attente`: waitlist, invitations sent from the Comptes (Accounts) tab |
+| `LIENS_DOMAINES` | Custom domains for pages: the hostname owners point their CNAME records to (see "Custom domains"). Empty: off |
 | `LIENS_DEPOT_SOURCE` | URL of your modified fork, target of the "Code source" link (AGPL-3.0) |
 
 The full list, with default values, is in
@@ -159,6 +160,46 @@ git pull && docker compose up -d --build
 ```
 
 Database migrations run at startup. Back up before every update.
+
+## Custom domains
+
+A page can answer on its owner's own domain: `links.example.com` shows the page, and
+`links.example.com/<code>` follows one of its short links. The feature is off until
+`LIENS_DOMAINES` is set.
+
+1. Choose a hostname for the CNAME records, for example `cname.links.example.org`, and
+   create a wildcard DNS record `*.cname.links.example.org` that resolves to the instance.
+   Set `LIENS_DOMAINES=cname.links.example.org`.
+2. Route unknown hostnames to the Hopla service in your reverse proxy.
+3. Issue certificates on demand. With Caddy, restrict issuance to known domains with the
+   `ask` endpoint, which answers 200 for an active domain and 404 otherwise:
+
+```
+{
+	on_demand_tls {
+		ask http://hopla:3000/api/domaine
+	}
+}
+
+https:// {
+	tls {
+		on_demand
+	}
+	reverse_proxy hopla:3000
+}
+```
+
+Behind Cloudflare, use Cloudflare for SaaS instead: set `LIENS_CF_JETON` (an API token
+with "SSL and Certificates: Edit" on the zone) and `LIENS_CF_ZONE` (the zone ID), and
+Hopla registers each domain as a custom hostname.
+
+Each owner then opens Settings, "My domain", enters the domain and creates the record
+shown: a CNAME to `<account id>.<LIENS_DOMAINES>`, or for an apex domain a TXT record
+`_hopla.<domain>` plus the A or ALIAS record of your instance. "Verify" checks the
+record and puts the domain online. On an instance with billing, custom domains belong
+to the Premium plan; without billing, every account has them.
+
+If the forms use Turnstile, add each custom domain to the widget's hostnames.
 
 ## Customizing a public instance
 

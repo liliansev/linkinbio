@@ -1,6 +1,7 @@
 import type { Resiliation } from '../lib/types.ts';
 import type { Compte } from './db.ts';
 import { supprimerCompte } from './db.ts';
+import { retirer as retirerDomaine } from './domaines.ts';
 import { adresseAdmin } from './auth.ts';
 import { echapper, envoyer, enveloppe } from './courriel.ts';
 import type { Env } from './courriel.ts';
@@ -49,6 +50,8 @@ export async function supprimerAvecAbonnement(env: Env, fetchImpl: typeof fetch,
       }
     }
   }
+  // Son nom de domaine quitte Cloudflare avec lui.
+  await retirerDomaine(compte.id, env, fetchImpl);
   supprimerCompte(compte.id);
   if (resiliation === 'a-la-main') await prevenirLilian(env, fetchImpl, compte, erreur);
   return { ok: true, resiliation };

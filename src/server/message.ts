@@ -7,6 +7,7 @@ import type { Bloc } from '../lib/types.ts';
 import { PRINCIPAL, estEnLigne, urlPage } from '../lib/types.ts';
 import { email as validerEmail } from '../lib/valider.ts';
 import * as db from './db.ts';
+import { pageDuCompte } from './domaines.ts';
 import { droits } from './droits.ts';
 import type { Env } from './courriel.ts';
 import { echapper, enveloppe, envoyer } from './courriel.ts';
@@ -50,7 +51,7 @@ export async function envoyerMessage(env: Env, fetchImpl: typeof fetch, entree: 
   if (parPage(trouve.compte.id, maintenant)) return { status: 429 };
   const { compte } = trouve;
   const pour = compte.id === PRINCIPAL ? adresseAdmin(env) : compte.email;
-  const page = urlPage({ pseudo: compte.pseudo, principal: compte.id === PRINCIPAL }).replace(/^https:\/\//, '');
+  const page = urlPage(pageDuCompte(compte)).replace(/^https:\/\//, '');
   const qui = nom ? `${nom} (${de})` : de;
   let anglais = false;
   try { anglais = db.lireReglages(compte.id).langue === 'en'; } catch { /* une base de test sans page : en français */ }
@@ -92,7 +93,7 @@ export function carteDeVisite(pseudo: unknown, id: unknown, maintenant = Date.no
   const { bloc, compte } = trouve;
   const c = bloc.coordonnees ?? { telephone: '', email: '', societe: '', poste: '' };
   const [famille, prenom] = nomDecoupe(bloc.titre);
-  const page = urlPage({ pseudo: compte.pseudo, principal: compte.id === PRINCIPAL });
+  const page = urlPage(pageDuCompte(compte));
   const lignes = [
     'BEGIN:VCARD', 'VERSION:3.0',
     `N:${v(famille)};${v(prenom)};;;`, `FN:${v(bloc.titre.trim())}`,

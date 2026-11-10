@@ -121,6 +121,31 @@ HSTS : `server.mjs` envoie `Strict-Transport-Security: max-age=31536000` en
 production. Le domaine `.page` est de toute façon préchargé en HTTPS par les
 navigateurs.
 
+## Noms de domaine des pages
+
+Écrit le 10 novembre 2026, pas encore allumé sur hopla.page : sans `LIENS_DOMAINES`, rien ne
+change et la ligne « Mon nom de domaine » n'existe pas dans Réglages. Pour l'allumer
+(Cloudflare for SaaS, 100 noms gratuits puis 0,10 $ par nom et par mois) :
+
+1. Dans la zone `hopla.page`, SSL/TLS, « Custom Hostnames » : activer Cloudflare for SaaS et
+   donner pour origine de repli (« fallback origin ») un nom en proxy qui mène au serveur,
+   par exemple `origine.hopla.page`.
+2. Créer l'enregistrement générique `*.cname.hopla.page`, un CNAME en proxy vers cette
+   origine : chaque compte pointe son nom vers `<id du compte>.cname.hopla.page`.
+3. Créer un jeton d'API limité à la zone, avec « SSL and Certificates : Edit », et poser
+   dans les variables Coolify `LIENS_DOMAINES=cname.hopla.page`, `LIENS_CF_JETON` et
+   `LIENS_CF_ZONE` (l'identifiant de la zone).
+4. Dans Coolify, faire arriver à l'application Hopla les noms que Traefik ne connaît pas
+   (une règle de routage générique, de priorité basse). Le certificat du visiteur est
+   celui de Cloudflare ; entre Cloudflare et le serveur, celui de l'origine de repli.
+5. Turnstile : ajouter chaque nom de page aux noms du widget, sans quoi son formulaire de
+   contact et sa liste e-mail refusent les envois. Le serveur, lui, accepte déjà un jeton
+   pris sur un nom actif.
+
+Le verrou Cloudflare tient toujours : ces noms passent par Cloudflare eux aussi. Retirer
+`LIENS_DOMAINES` éteint tout : les noms posés restent en base et les pages répondent sur
+hopla.page.
+
 ## Historique
 
 Du 17 au 31 octobre 2026, l'app tournait dans un Compose sur le VPS
@@ -161,3 +186,4 @@ gestionnaire de mots de passe ; la perdre rend ces données illisibles pour de b
 ## Reste à faire
 
 - Faire un test de restauration à blanc.
+- Allumer les noms de domaine des pages (voir « Noms de domaine des pages ») et mettre Premium en vente.

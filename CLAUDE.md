@@ -102,6 +102,18 @@ embarque tout : l'image n'a pas de `node_modules`.
   sous leur vrai type, `nosniff`, par plages (`Range`, sans quoi Safari ne lit pas un son), le PDF avec sa propre CSP. Éditeur :
   `ChampDocument` et `ChampNoteVocale` dans `ChampsBlocs.tsx` (MP4 en AAC quand le navigateur sait l'enregistrer, WebM sinon). L'API
   connaît les deux types (`document`, `voice-note`, champs `file` et `duration`) mais n'envoie pas encore ces fichiers.
+- Le nom de domaine d'une page (10 novembre 2026, lot 6 d'après Taap.it, Premium) : `liens.marie.fr` montre la page de Marie à la racine,
+  et `liens.marie.fr/<code>` suit un de ses liens courts. Tout dort sans `LIENS_DOMAINES`, le nom vers lequel pointent les CNAME
+  (`<id du compte>.<ce nom>`, un enregistrement générique). `lib/domaines.ts` (`hoteDomaine` nettoie et refuse les noms de Hopla,
+  `nomChezLeRegistrar`), `server/domaines.ts` : table `domaines` (un nom par compte, `attente`, `certificat`, `actif`), `brancher`,
+  `verifier` (le CNAME, ou pour un nom racine le TXT `_hopla.<nom>` = `hopla=<id>`, puis le certificat : Cloudflare for SaaS par
+  `LIENS_CF_JETON` et `LIENS_CF_ZONE`, sinon le serveur web de l'instance, qui demande à `/api/domaine?domain=` si le nom est connu),
+  `retirer`, `compteDeHote`, `pageDuCompte` (le `ComptePage` avec son `domaine` : `urlPage` et `adressePartage` le prennent d'abord, donc
+  canonical, partage, QR et stats). `lireRacine` dans `fonctions.ts` sert la page ou l'accueil selon le nom demandé ; un nom connu mais
+  pas encore actif renvoie à la page sur l'origine. `deploy/server.mjs` ne laisse passer sur un nom étranger que ce qui sert à une page
+  (`dUnePage`), le reste en 308 vers l'origine. Réglages, « Mon nom de domaine » (`admin/DomainePerso.tsx`), montré seulement quand
+  l'instance l'a allumé et que l'offre le comprend. Supprimer un compte retire son nom chez Cloudflare. Turnstile accepte un jeton pris
+  sur un nom actif (`hotesTurnstile`), mais le widget doit connaître ce nom : à ajouter à la main chez Cloudflare. Pas dans l'API ni le MCP.
 - `server/favicons.ts` (26 octobre 2026, demandé par Lilian : « mets à jour tous les liens existants et même ceux de mes
   clients ») : une seule fois, une minute après le démarrage (repère `favicons-liens` dans `reglages`, éteint par
   `HOPLA_FAVICONS=0`), la vignette de chaque bouton de lien de toutes les pages prend le favicon de son site, gardé tel
