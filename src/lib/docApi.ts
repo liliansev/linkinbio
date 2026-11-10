@@ -163,8 +163,8 @@ New order of all blocks: every block id exactly once.
 
 ### GET /api/v1/stats
 
-Views, visitors and clicks, by day, block, referrer, device and country, compared with the previous
-period. ?periode=7, 14, 30 (default), 90 or 365; or ?du=2026-10-01&au=2026-10-15.
+Views, visitors and clicks, by day, block, referrer, device, country, city, operating system, browser
+and language, compared with the previous period. ?periode=7, 14, 30 (default), 90 or 365; or ?du=2026-10-01&au=2026-10-15.
 Cookieless: visitor IP addresses are never stored.
 
 ### GET /api/v1/stats/semaine

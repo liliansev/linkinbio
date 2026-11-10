@@ -160,7 +160,7 @@ export const lirePagePublique = createServerFn({ method: 'GET' })
     // Une page redirigée envoie son visiteur ailleurs : la vue se compte ici, la page ne s'ouvrira pas pour l'envoyer.
     const vers = redirectionActive(reglages.redirection, maintenant, urlPage(page));
     if (vers) enregistrer({ page: compte.pseudo, type: 'vue', bloc: null, utm: data.s, referent: getRequestHeader('referer') ?? '' },
-      { ip: getRequestHeader('x-real-ip') ?? '', ua: getRequestHeader('user-agent') ?? '', session: null, pays: getRequestHeader('cf-ipcountry') ?? '' }, maintenant);
+      { ip: getRequestHeader('x-real-ip') ?? '', ua: getRequestHeader('user-agent') ?? '', session: null, pays: getRequestHeader('cf-ipcountry') ?? '', langue: getRequestHeader('accept-language') ?? '', ville: getRequestHeader('cf-ipcity') ?? '' }, maintenant);
     return {
       reglages,
       ...(vers ? { redirection: vers } : {}),

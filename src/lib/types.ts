@@ -342,6 +342,12 @@ export interface Stats {
   appareils: { nom: string; vues: number }[];
   /** Les pays des visiteurs, lus chez Cloudflare (`FR`, vide quand il ne le sait pas) ; l'adresse IP n'est jamais gardée. */
   pays: { code: string; vues: number; avant: number }[];
+  /** Les villes, quand Cloudflare les transmet (`code` : les deux lettres du pays de la ville) ; aucune sinon. */
+  villes: { nom: string; code: string; vues: number }[];
+  /** Le système, le navigateur (« App Instagram » dans une app) et la première langue du navigateur, comptés depuis le 10 novembre 2026. */
+  systemes: { nom: string; vues: number }[];
+  navigateurs: { nom: string; vues: number }[];
+  langues: { nom: string; vues: number }[];
   /** Les clics depuis le navigateur intégré d'Instagram, TikTok… : en tout, vers un lien qui a son app, et ouverts dans l'app. */
   apps: { integres: number; versApp: number; ouverts: number };
   /** Mêmes totaux sur la période précédente, pour la tendance. */
@@ -472,6 +478,8 @@ export interface Api {
   adresses(): Promise<string[]>;
   /** L'adresse du CSV des inscrits (`?format=substack` : les adresses seules, pour l'import de Substack), ou null dans l'aperçu. */
   urlContacts: string | null;
+  /** L'adresse du CSV des stats (`?periode=30` ou `?du=…&au=…`), ou null dans l'aperçu. */
+  urlStats?: string | null;
   /** Seulement pour le compte principal : gérer les autres comptes. */
   comptes?: ApiComptes;
   /** Absent dans l'aperçu statique sans serveur. */

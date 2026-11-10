@@ -52,7 +52,7 @@ function dire(v: number, m: Mesure, langue: Langue) {
 }
 
 /** Les provenances, appareils et lignes que le serveur nomme en français, dits dans la langue du compte. */
-const NOMS_EN: Record<string, string> = { 'E-mail': 'Email', Tablette: 'Tablet', Ordinateur: 'Computer', 'Bloc supprimé': 'Deleted block', Autres: 'Other', Autre: 'Other' };
+const NOMS_EN: Record<string, string> = { 'E-mail': 'Email', Tablette: 'Tablet', Ordinateur: 'Computer', 'Bloc supprimé': 'Deleted block', Autres: 'Other', Autre: 'Other', App: 'In-app browser' };
 const nomServeur = (nom: string, langue: Langue) => (langue === 'en' ? NOMS_EN[nom] ?? nom : nom);
 
 /** La largeur d'un élément, suivie : la courbe se dessine au pixel près, sans texte étiré. */
@@ -268,6 +268,13 @@ function nomPays(code: string, langue: Langue) {
   try { return new Intl.DisplayNames([langue], { type: 'region' }).of(code) ?? code; } catch { return code; }
 }
 
+/** Le nom d'une langue d'après son code (« fr » : français), dans la langue du compte. */
+function nomLangue(code: string, langue: Langue) {
+  try { const n = new Intl.DisplayNames([langue], { type: 'language' }).of(code); return n ? n[0].toUpperCase() + n.slice(1) : code; } catch { return code; }
+}
+/** Une app nommée par le serveur (« App Instagram ») se dit « Instagram app » en anglais. */
+const nomNavigateur = (nom: string, langue: Langue) => (langue === 'en' && nom.startsWith('App ') ? `${nom.slice(4)} app` : nomServeur(nom, langue));
+
 type Ligne = { cle: string; nom: string; icone?: string; code?: string; valeur: number; couleur?: { picto: string; barre: string } };
 
 /**
@@ -421,6 +428,8 @@ type Proprietes = {
   blocs?: Bloc[];
   /** Les vues de la semaine, montrées quand l'offre ne lit pas ses stats. */
   semaine?: () => Promise<Semaine>;
+  /** L'adresse du fichier CSV des stats ; absente dans l'aperçu. */
+  urlExport?: string | null;
 };
 
 /**
@@ -444,7 +453,7 @@ export function OngletStats(props: Proprietes) {
   return <TableauStats {...props} />;
 }
 
-function TableauStats({ charger, adresse, pseudo, joursMax = 365, onOffres, ouvrirApps = true, onActiverApps, liste, blocs = [] }: Proprietes) {
+function TableauStats({ charger, adresse, pseudo, joursMax = 365, onOffres, ouvrirApps = true, onActiverApps, liste, blocs = [], urlExport }: Proprietes) {
   const langue = useLangue();
   const tr = choix(langue);
   const grand = useGrandEcran();
@@ -476,6 +485,12 @@ function TableauStats({ charger, adresse, pseudo, joursMax = 365, onOffres, ouvr
   const lignesSources: Ligne[] = (stats?.sources ?? []).map(s => ({ cle: s.nom, nom: nomServeur(s.nom, langue), valeur: s.vues, icone: ICONES_SOURCES[s.nom] ?? 'site', couleur: COULEURS_SOURCES[s.nom] ?? SANS_MARQUE }));
   const lignesAppareils: Ligne[] = (stats?.appareils ?? []).map(s => ({ cle: s.nom, nom: nomServeur(s.nom, langue), valeur: s.vues, icone: ICONES_APPAREILS[s.nom] ?? 'ordinateur' }));
   const lignesPays: Ligne[] = (stats?.pays ?? []).map(p => ({ cle: p.code || '?', nom: nomPays(p.code, langue), valeur: p.vues, code: p.code }));
+  const lignesVilles: Ligne[] = (stats?.villes ?? []).map(v => ({ cle: `${v.code}/${v.nom}`, nom: v.nom, valeur: v.vues, code: v.code }));
+  const lignesSystemes: Ligne[] = (stats?.systemes ?? []).map(s => ({ cle: s.nom, nom: nomServeur(s.nom, langue), valeur: s.vues, icone: s.nom === 'iOS' || s.nom === 'Android' ? 'mobile' : 'ordinateur' }));
+  const lignesNavigateurs: Ligne[] = (stats?.navigateurs ?? []).map(s => ({ cle: s.nom, nom: nomNavigateur(s.nom, langue), valeur: s.vues, icone: s.nom.startsWith('App') ? 'mobile' : 'site' }));
+  const lignesLangues: Ligne[] = (stats?.langues ?? []).map(s => ({ cle: s.nom, nom: nomLangue(s.nom, langue), valeur: s.vues, code: s.nom.slice(0, 2).toUpperCase() }));
+  // Le fichier de la période affichée : la même durée, ou les mêmes dates.
+  const fichier = urlExport ? `${urlExport}?${typeof periode === 'number' ? `periode=${periode}` : `du=${periode.du}&au=${periode.au}`}` : null;
   const note = <p className="text-[12px] leading-snug text-[#5f5f5a]">{tr('Sans cookie : un visiteur compte une fois par jour, toi jamais.', 'No cookies: a visitor counts once a day, you never do.')}</p>;
 
   return (
@@ -504,10 +519,18 @@ function TableauStats({ charger, adresse, pseudo, joursMax = 365, onOffres, ouvr
             <Repartition titre={tr('Réseaux', 'Networks')} unite={nomMesure('vues', langue)} lignes={lignesSources} total={stats.vues} />
             <Repartition titre={tr('Appareils', 'Devices')} unite={nomMesure('vues', langue)} lignes={lignesAppareils} total={stats.vues} />
             <Repartition titre={tr('Pays', 'Countries')} unite={nomMesure('vues', langue)} lignes={lignesPays} total={stats.vues} />
+            {/* Les villes ne viennent que lorsque le réseau les transmet : sans elles, pas d'encart vide. */}
+            {lignesVilles.length > 0 && <Repartition titre={tr('Villes', 'Cities')} unite={nomMesure('vues', langue)} lignes={lignesVilles} total={stats.vues} />}
+            {lignesSystemes.length > 0 && <Repartition titre={tr('Systèmes', 'Operating systems')} unite={nomMesure('vues', langue)} lignes={lignesSystemes} total={stats.vues} />}
+            {lignesNavigateurs.length > 0 && <Repartition titre={tr('Navigateurs', 'Browsers')} unite={nomMesure('vues', langue)} lignes={lignesNavigateurs} total={stats.vues} />}
+            {lignesLangues.length > 0 && <Repartition titre={tr('Langues', 'Languages')} unite={nomMesure('vues', langue)} lignes={lignesLangues} total={stats.vues} />}
             <OuvertsDansLApp apps={stats.apps} actif={ouvrirApps} onActiver={onActiverApps} />
             {liste}
           </div>
-          {note}
+          <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+            {note}
+            {fichier && <a href={fichier} download className={classeBouton.secondaire}><Icone nom="telecharger" taille={16} />{tr('Exporter en CSV', 'Export as CSV')}</a>}
+          </div>
         </div>
       )}
     </div>

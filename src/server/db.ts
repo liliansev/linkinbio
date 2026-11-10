@@ -125,6 +125,8 @@ export function base(): DatabaseSync {
   colonne(db, 'evenements', 'app', 'INTEGER NOT NULL DEFAULT 0');
   // Le pays du visiteur, lu chez Cloudflare (24 octobre 2026) ; vide avant, ou quand il ne le sait pas.
   colonne(db, 'evenements', 'pays', "TEXT NOT NULL DEFAULT ''");
+  // Le système, le navigateur, la langue et la ville du visiteur (10 novembre 2026) ; vides avant.
+  for (const c of ['systeme', 'navigateur', 'langue', 'ville']) colonne(db, 'evenements', c, "TEXT NOT NULL DEFAULT ''");
   // L'empreinte de l'e-mail d'un inscrit (25 octobre 2026) : l'adresse est chiffrée, l'empreinte évite les doublons.
   colonne(db, 'contacts', 'empreinte', "TEXT NOT NULL DEFAULT ''");
   db.exec(`
@@ -683,11 +685,11 @@ export function evenementsDuJour(maintenant = Date.now(), compte?: string): numb
   return (ligne as { n: number }).n;
 }
 
-export function ajouterEvenement(e: { compte: string; type: 'vue' | 'clic'; bloc: string | null; visiteur: string; source: string; appareil: string; ts?: number; integre?: boolean; app?: boolean; pays?: string }) {
+export function ajouterEvenement(e: { compte: string; type: 'vue' | 'clic'; bloc: string | null; visiteur: string; source: string; appareil: string; ts?: number; integre?: boolean; app?: boolean; pays?: string; systeme?: string; navigateur?: string; langue?: string; ville?: string }) {
   const ts = e.ts ?? Date.now();
   if (Date.now() - derniere > 6 * 3_600_000) purger();
-  base().prepare('INSERT INTO evenements (compte, type, bloc, jour, ts, visiteur, source, appareil, integre, app, pays) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
-    .run(e.compte, e.type, e.bloc, jourDe(ts), ts, e.visiteur, e.source, e.appareil, e.integre ? 1 : 0, e.app ? 1 : 0, e.pays ?? '');
+  base().prepare('INSERT INTO evenements (compte, type, bloc, jour, ts, visiteur, source, appareil, integre, app, pays, systeme, navigateur, langue, ville) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+    .run(e.compte, e.type, e.bloc, jourDe(ts), ts, e.visiteur, e.source, e.appareil, e.integre ? 1 : 0, e.app ? 1 : 0, e.pays ?? '', e.systeme ?? '', e.navigateur ?? '', e.langue ?? '', e.ville ?? '');
 }
 
 export function clicsParBloc(compte: string, jours = 30): Record<string, number> {
@@ -737,6 +739,9 @@ export function stats(compte: string, periode: PeriodeStats, maintenant = Date.n
   const dejaVue = !!(actuel.vues || avant.vues) || pageDejaVue(compte);
   const groupe = (colonne: 'source' | 'appareil') => (d.prepare(`SELECT ${colonne} AS nom, COUNT(*) AS n FROM evenements WHERE compte = ? AND type = 'vue' AND jour BETWEEN ? AND ? GROUP BY ${colonne} ORDER BY n DESC LIMIT 8`).all(compte, debut, fin) as { nom: string; n: number }[])
     .map(l => ({ nom: l.nom, vues: l.n, avant: colonne === 'source' ? vuesAvant.get(l.nom) ?? 0 : 0 }));
+  // Ce qu'on sait du visiteur depuis le 10 novembre 2026 : les vues d'avant, sans valeur, ne font pas une ligne « inconnu ».
+  const detail = (colonne: 'systeme' | 'navigateur' | 'langue') => (d.prepare(`SELECT ${colonne} AS nom, COUNT(*) AS n FROM evenements WHERE compte = ? AND type = 'vue' AND ${colonne} != '' AND jour BETWEEN ? AND ? GROUP BY ${colonne} ORDER BY n DESC LIMIT 30`).all(compte, debut, fin) as { nom: string; n: number }[])
+    .map(l => ({ nom: l.nom, vues: l.n }));
   return {
     jours, plage: typeof periode !== 'number',
     vues: actuel.vues ?? 0, visiteurs: actuel.visiteurs ?? 0, clics: actuel.clics ?? 0,
@@ -745,6 +750,9 @@ export function stats(compte: string, periode: PeriodeStats, maintenant = Date.n
     // Tous les pays de la période : la carte en montre huit, puis « Tout voir ».
     pays: (d.prepare(`SELECT pays, COUNT(*) AS n FROM evenements WHERE compte = ? AND type = 'vue' AND jour BETWEEN ? AND ? GROUP BY pays ORDER BY n DESC LIMIT 60`).all(compte, debut, fin) as { pays: string; n: number }[])
       .map(l => ({ code: l.pays, vues: l.n, avant: paysAvant.get(l.pays) ?? 0 })),
+    villes: (d.prepare(`SELECT ville, pays, COUNT(*) AS n FROM evenements WHERE compte = ? AND type = 'vue' AND ville != '' AND jour BETWEEN ? AND ? GROUP BY ville, pays ORDER BY n DESC LIMIT 60`).all(compte, debut, fin) as { ville: string; pays: string; n: number }[])
+      .map(l => ({ nom: l.ville, code: l.pays, vues: l.n })),
+    systemes: detail('systeme'), navigateurs: detail('navigateur'), langues: detail('langue'),
     precedent: { vues: avant.vues ?? 0, visiteurs: avant.visiteurs ?? 0, clics: avant.clics ?? 0 },
     dejaVue,
   };
@@ -810,7 +818,7 @@ export function exporter(compte: string) {
   const d = base();
   const c = compteParId(compte);
   if (!c) throw new Error('Compte inconnu.');
-  const evenements = d.prepare('SELECT ts, type, bloc, source, appareil, pays FROM evenements WHERE compte = ? ORDER BY ts').all(compte) as { ts: number; type: string; bloc: string | null; source: string; appareil: string; pays: string }[];
+  const evenements = d.prepare('SELECT ts, type, bloc, source, appareil, pays, ville, systeme, navigateur, langue FROM evenements WHERE compte = ? ORDER BY ts').all(compte) as { ts: number; type: string; bloc: string | null; source: string; appareil: string; pays: string; ville: string; systeme: string; navigateur: string; langue: string }[];
   return {
     exporte: new Date().toISOString(),
     compte: {

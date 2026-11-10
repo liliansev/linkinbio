@@ -575,6 +575,10 @@ const spec = {
           sources: { type: 'array', items: { type: 'object', properties: { nom: { type: 'string' }, vues: { type: 'integer' }, avant: { type: 'integer' } } } },
           appareils: { type: 'array', items: { type: 'object', properties: { nom: { type: 'string' }, vues: { type: 'integer' } } } },
           pays: { type: 'array', items: { type: 'object', properties: { code: { type: 'string', example: 'FR' }, vues: { type: 'integer' }, avant: { type: 'integer' } } } },
+          villes: { type: 'array', description: 'Cities, when the network reports them.', items: { type: 'object', properties: { nom: { type: 'string', example: 'Lyon' }, code: { type: 'string', example: 'FR', description: 'Country of the city.' }, vues: { type: 'integer' } } } },
+          systemes: { type: 'array', description: 'Operating systems, as families (iOS, Android, Windows…).', items: { type: 'object', properties: { nom: { type: 'string' }, vues: { type: 'integer' } } } },
+          navigateurs: { type: 'array', description: 'Browsers, as families; "App Instagram" for an in-app browser.', items: { type: 'object', properties: { nom: { type: 'string' }, vues: { type: 'integer' } } } },
+          langues: { type: 'array', description: 'First language of the visitor’s browser (fr, en…).', items: { type: 'object', properties: { nom: { type: 'string', example: 'fr' }, vues: { type: 'integer' } } } },
           precedent: { type: 'object', description: 'Same totals for the previous period.', properties: { vues: { type: 'integer' }, visiteurs: { type: 'integer' }, clics: { type: 'integer' } } },
         },
         example: {

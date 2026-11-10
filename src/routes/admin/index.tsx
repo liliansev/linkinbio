@@ -43,6 +43,7 @@ function PageAdmin() {
     resynchroniser: () => fn.resynchroniser(),
     adresses: () => fn.lireAdresses(),
     urlContacts: '/api/contacts',
+    urlStats: '/api/stats',
     cles: {
       lister: () => fn.listerClesApi(),
       creer: (nom, ecriture) => fn.creerCleApi({ data: { nom, ecriture } }),

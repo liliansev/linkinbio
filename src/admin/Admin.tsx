@@ -937,7 +937,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
             appel={grand ? null : appel()} bandeaux={grand ? bandeaux : null}
             teteApercu={teteApercu} />}
           {onglet === 'stats' && <OngletStats charger={chargerStats} adresse={adressePartage(compte, reglages.domaine)} pseudo={compte.pseudo} joursMax={initial.paiement ? joursStats(compte.plan, droits.stats) : 365} onOffres={peutAcheter ? ouvrirOffres : undefined}
-            ouvrirApps={reglages.ouvrirApps} onActiverApps={() => changerReglages({ ...reglages, ouvrirApps: true })} liste={<MaListe api={api} onIntegrations={() => choisirOnglet('integrations')} />} blocs={blocs} semaine={api.semaine} />}
+            ouvrirApps={reglages.ouvrirApps} onActiverApps={() => changerReglages({ ...reglages, ouvrirApps: true })} liste={<MaListe api={api} onIntegrations={() => choisirOnglet('integrations')} />} blocs={blocs} semaine={api.semaine} urlExport={api.urlStats} />}
           {onglet === 'integrations' && <OngletIntegrations api={api} blocs={blocs} sousOuverte={sousIntegration} sousLue={() => setSousIntegration(null)}
             raccourci={raccourci} raccourciVu={() => setRaccourci(null)}
             onAjouter={(t, outil) => { const b = nouveauBloc(t, nouvelId()); choisirOnglet('page'); depuisIntegrations.current = { bloc: b.id, outil, type: t }; ajouterBloc(b); }}

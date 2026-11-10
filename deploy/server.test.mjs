@@ -112,6 +112,9 @@ test("derrière Cloudflare, l'IP du visiteur vient de CF-Connecting-IP, que seul
   const pays = await fixture(t, {}, "export default { fetch: async r => new Response(r.headers.get('cf-ipcountry') ?? '-') };");
   assert.equal((await brut(pays, '/camille', { host: 'hopla.page', 'x-real-ip': '173.245.48.1', 'cf-ipcountry': 'BE' })).body, 'BE');
   assert.equal((await brut(pays, '/camille', { host: 'hopla.page', 'x-real-ip': '8.8.8.8', 'cf-ipcountry': 'BE' })).body, '-');
+  const ville = await fixture(t, {}, "export default { fetch: async r => new Response(r.headers.get('cf-ipcity') ?? '-') };");
+  assert.equal((await brut(ville, '/camille', { host: 'hopla.page', 'x-real-ip': '173.245.48.1', 'cf-ipcity': 'Lyon' })).body, 'Lyon');
+  assert.equal((await brut(ville, '/camille', { host: 'hopla.page', 'x-real-ip': '8.8.8.8', 'cf-ipcity': 'Lyon' })).body, '-');
 });
 test('avec LIENS_CLOUDFLARE=exclusif, ce qui vient de Caddy sans passer par Cloudflare est refusé', async t => {
   const url = await fixture(t, { cloudflare: 'exclusif' });
