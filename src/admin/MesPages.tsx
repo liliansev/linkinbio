@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { ApiPages, PageDuCompte } from '../lib/types.ts';
 import { NOM_PUBLIC } from '../lib/types.ts';
-import { focusAuto } from '../lib/clavier';
+import { focusAuto } from '../lib/clavier.ts';
 import { nomSaisi } from '../lib/valider.ts';
 import { Champ, Feuille, Groupe, LigneLien, classeBouton, classeSaisie } from './ui.tsx';
 import { choix, useLangue } from '../accueil/langue.ts';
@@ -32,12 +32,12 @@ export function MesPages({ pages, max, api }: { pages: PageDuCompte[]; max: numb
     <>
       <Groupe titre={tr('Mes pages', 'My pages')}>
         {pages.map(p => (
-          <LigneLien key={p.id} nom={<span translate="no">{NOM_PUBLIC}/{p.pseudo}</span>} courant={p.courante} disabled={!!passage}
-            valeur={p.courante ? tr('Celle que tu règles', 'The one you’re editing') : !p.enLigne ? tr('Hors ligne : demande Premium', 'Offline: needs Premium') : passage === p.id ? tr('Un instant…', 'One moment…') : tr('Passer sur cette page', 'Switch to this page')}
+          <LigneLien key={p.id} icone="nav-page" nom={<span translate="no">{NOM_PUBLIC}/{p.pseudo}</span>} courant={p.courante} disabled={!!passage}
+            valeur={p.courante ? tr('Actuelle', 'Current') : !p.enLigne ? tr('Hors ligne : demande Premium', 'Offline: needs Premium') : passage === p.id ? tr('Un instant…', 'One moment…') : undefined}
             onClick={p.courante ? undefined : () => void passer(p.id)} label={p.courante ? undefined : tr(`Passer sur la page ${p.pseudo}`, `Switch to the page ${p.pseudo}`)} />
         ))}
         {pages.length < max && (
-          <LigneLien nom={tr('Ajouter une page', 'Add a page')} valeur={tr(`Encore ${max - pages.length} sur ${max}, chacune avec son nom et ses stats`, `${max - pages.length} of ${max} left, each with its own name and analytics`)}
+          <LigneLien icone="nav-nouvelle-page" nom={tr('Ajouter une page', 'Add a page')} valeur={<span className="tabular-nums">{`${pages.length}/${max}`}</span>}
             onClick={() => setAjout(true)} />
         )}
       </Groupe>

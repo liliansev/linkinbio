@@ -34,7 +34,14 @@ import { LiensCourts } from './LiensCourts.tsx';
 
 const dateLongue = (ms: number, langue: Langue = 'fr') => new Date(ms).toLocaleDateString(langue === 'fr' ? 'fr-FR' : 'en-US', { day: 'numeric', month: 'long', year: 'numeric' });
 
-export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlExport, supprimerMonCompte, abonnement, onOffres, ouvrirPortail, onResilier, cles, courts, importer, domainePerso, surDomaine, pages }: {
+/** Ce que la barre latérale et la palette ouvrent droit dans Réglages (10 novembre 2026). */
+export type SousReglage = 'abonnement' | 'api' | 'courts' | 'domaine' | 'qr' | 'importer' | 'apercu' | 'redirection';
+
+export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlExport, supprimerMonCompte, abonnement, onOffres, ouvrirPortail, onResilier, cles, courts, importer, domainePerso, surDomaine, pages, demande, demandeLue, surSous }: {
+  /** Une sous-page ou une fenêtre demandée d'ailleurs (barre latérale, palette), ouverte une fois. */
+  demande?: SousReglage | 'aucune' | null; demandeLue?: () => void;
+  /** Ce qui est ouvert, pour que la barre latérale le montre. */
+  surSous?: (s: SousReglage | null) => void;
   reglages: Reglages; compte: ComptePage & { email?: string; plan: Plan }; onChange: (r: Reglages) => void; onDeconnexion: () => void;
   urlExport: string | null; supprimerMonCompte: (confirmation: string) => Promise<{ ok: boolean; message: string; aLaMain?: boolean; page?: boolean }>;
   abonnement: EtatAbonnement;
@@ -69,6 +76,15 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
   const ouvreur = useRef('');
   const grand = useGrandEcran();
   const ouvrirSous = (id: string, quoi: 'abonnement' | 'api' | 'courts' | 'domaine' = 'abonnement') => () => { ouvreur.current = id; setSous(quoi); if (!grand) scrollTo({ top: 0 }); };
+  useEffect(() => {
+    if (!demande) return;
+    if (demande === 'aucune') { setSous(null); setFenetre(null); }
+    else if (demande === 'qr' || demande === 'importer' || demande === 'apercu' || demande === 'redirection') { setSous(null); setFenetre(demande); }
+    else { setFenetre(null); setSous(demande); }
+    demandeLue?.();
+  }, [demande]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { surSous?.(sous ?? (fenetre === 'qr' || fenetre === 'importer' ? fenetre : null)); }, [sous, fenetre]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => () => surSous?.(null), []); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (sous || !ouvreur.current) return;
     document.getElementById(ouvreur.current)?.focus({ preventScroll: true });
@@ -132,61 +148,64 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
   return (
     <div className="adm-reglages">
       {pages && <MesPages pages={pages.liste} max={pages.max} api={pages.api} />}
-      <Groupe titre={l('Page', 'Page')}>
-        <Ligne nom={l('Mon lien', 'My link')} valeur={<span translate="no">{sansSchema(partage)}</span>}>
+      <Groupe titre={l('Partager', 'Share')}>
+        <Ligne icone="nav-page" className="adm-hors-bureau" nom={l('Mon lien', 'My link')} valeur={<span translate="no">{sansSchema(partage)}</span>}>
           <BoutonCopier texte={partage} label={l('Copier l’adresse de ta page', 'Copy your page’s address')} onCopie={noterPartage} />
         </Ligne>
         {/* Sur son propre nom de domaine, il n'y a plus de nom court à choisir. */}
-        {!compte.domaine && <LigneLien nom={l('Domaine', 'Domain')} valeur={<span translate="no">{reglages.domaine || sansSchema(adresse).split('/')[0]}</span>}
+        {!compte.domaine && <LigneLien icone="nav-domaine" nom={l('Domaine', 'Domain')} valeur={<span translate="no">{reglages.domaine || sansSchema(adresse).split('/')[0]}</span>}
           onClick={() => setFenetre('domaine')} label={l('Choisir le nom de domaine de mon adresse', 'Choose the domain of my address')} />}
-        {domainePerso && <LigneLien id="reglage-domaine" nom={l('Mon nom de domaine', 'My domain')} valeur={compte.domaine ? <span translate="no">{compte.domaine}</span> : l('Ta page à ton nom : liens.ton-site.fr', 'Your page under your name: links.your-site.com')}
+        {domainePerso && <LigneLien id="reglage-domaine" icone="nav-domaine" nom={l('Mon nom de domaine', 'My domain')} valeur={compte.domaine ? <span translate="no">{compte.domaine}</span> : undefined}
           courant={sous === 'domaine'} onClick={ouvrirSous('reglage-domaine', 'domaine')} />}
-        {importer && <LigneLien nom={l('Importer ma page', 'Import my page')} valeur={l('Depuis Linktree, Beacons, Bento…', 'From Linktree, Beacons, Bento…')}
-          onClick={() => setFenetre('importer')} label={l('Importer ma page depuis Linktree, Beacons ou un autre service', 'Import my page from Linktree, Beacons or another service')} />}
-        {courts && <LigneLien id="reglage-courts" nom={l('Liens courts', 'Short links')} valeur={l('Pour une story, un post, un e-mail : suivis, ouverts dans l’app', 'For a story, a post, an email: tracked, opened in the app')}
+        {courts && <LigneLien id="reglage-courts" icone="nav-courts" nom={l('Liens courts', 'Short links')}
           courant={sous === 'courts'} onClick={ouvrirSous('reglage-courts', 'courts')} />}
-        <LigneLien nom="QR code" valeur={l('Sa couleur, sa forme, ta photo au centre', 'Its color, its shape, your photo in the center')} onClick={() => setFenetre('qr')}
+        <LigneLien id="reglage-qr" icone="nav-qr" nom="QR code" onClick={() => setFenetre('qr')}
           label={l('Régler et télécharger mon QR code', 'Customize and download my QR code')} />
+      </Groupe>
+
+      <Groupe titre={l('Page', 'Page')}>
         {/* Coupée au bureau, la valeur se lit en entier au survol. */}
         {/* Une ligne à chevron, comme les autres ouvertures de Réglages (critique série 2 : un bouton bordé faisait exception). */}
-        <LigneLien nom={l('Référencement', 'SEO')} onClick={() => setFenetre('apercu')}
+        <LigneLien icone="nav-seo" nom={l('Référencement', 'SEO')} onClick={() => setFenetre('apercu')}
           valeur={<span title={[titreSeo, descriptionSeo].filter(Boolean).join(' · ') || undefined}>{[titreSeo, descriptionSeo].filter(Boolean).join(' · ') || l('Rien pour l’instant', 'Nothing yet')}</span>} />
         {/* Une langue pour le compte (8 novembre 2026) : les mots que Hopla pose sur la page (formulaires, compte à rebours,
             pied) et tout le back office. L'anglais d'abord. Son nom se lit dans les deux langues, pour qui s'y est perdu. */}
-        <Ligne nom="Langue · Language" valeur={l('Ta page et ton espace Hopla', 'Your page and your Hopla dashboard')}>
+        <Ligne icone="nav-langue" nom="Langue · Language">
           <Segments label="Langue · Language" valeur={reglages.langue} onChange={langue => onChange({ ...reglages, langue })}
             options={[{ id: 'en', nom: 'English' }, { id: 'fr', nom: 'Français' }]} />
         </Ligne>
-        <LigneBascule nom={l('Bouton Partager sur ma page', 'Share button on my page')} actif={reglages.partage} changer={v => onChange({ ...reglages, partage: v })} />
-        <LigneBascule nom="Deeplink" valeur={l('Ouvrir les liens dans leurs apps : YouTube, Spotify, etc.', 'Open links in their apps: YouTube, Spotify, and more.')} actif={reglages.ouvrirApps} changer={v => onChange({ ...reglages, ouvrirApps: v })} />
+        <LigneBascule icone="nav-partager" nom={l('Bouton Partager sur ma page', 'Share button on my page')} actif={reglages.partage} changer={v => onChange({ ...reglages, partage: v })} />
+        <LigneBascule icone="nav-apps" nom={l('Ouvrir les liens dans leurs apps', 'Open links in their apps')} valeur={l('Instagram, YouTube, Spotify…', 'Instagram, YouTube, Spotify…')} actif={reglages.ouvrirApps} changer={v => onChange({ ...reglages, ouvrirApps: v })} />
         {/* Starter : sans l'offre, pas d'interrupteur qui ne ferait rien, son nom et le chemin vers les offres. */}
         {utm
-          ? <LigneBascule nom={l('Suivi UTM sur mes liens', 'UTM tracking on my links')} valeur={l('Tes sites voient que leurs visites viennent de Hopla', 'Your sites see that their visits come from Hopla')} actif={reglages.utm} changer={v => onChange({ ...reglages, utm: v })} />
-          : <LigneLien nom={l('Suivi UTM sur mes liens', 'UTM tracking on my links')} valeur={l('Tes sites voient que leurs visites viennent de Hopla', 'Your sites see that their visits come from Hopla')} apres={<Etiquette fonction="utm" />} onClick={offres ? () => onOffres?.('utm') : undefined}
+          ? <LigneBascule icone="nav-utm" nom={l('Suivi UTM sur mes liens', 'UTM tracking on my links')} valeur="utm_source=hopla" actif={reglages.utm} changer={v => onChange({ ...reglages, utm: v })} />
+          : <LigneLien icone="nav-utm" nom={l('Suivi UTM sur mes liens', 'UTM tracking on my links')} apres={<Etiquette fonction="utm" />} onClick={offres ? () => onOffres?.('utm') : undefined}
               label={offres ? l('Suivi UTM sur mes liens, avec Starter : voir les offres', 'UTM tracking on my links, with Starter: see plans') : undefined} />}
         {rediriger ? (
-          <Ligne nom={l('Redirection', 'Redirect')} valeur={versAilleurs ? <span className="font-medium text-bleu">{resumeRedirection(versAilleurs, reglages.redirection.fin, true, langue)}</span> : l('Aucune', 'None')}>
+          <Ligne icone="nav-redirection" nom={l('Redirection', 'Redirect')} valeur={versAilleurs ? <span className="font-medium text-bleu">{resumeRedirection(versAilleurs, reglages.redirection.fin, true, langue)}</span> : l('Aucune', 'None')}>
             <BoutonSecondaire onClick={() => setFenetre('redirection')} aria-haspopup="dialog" aria-label={versAilleurs ? l('Modifier la redirection', 'Edit the redirect') : l('Rediriger ma page', 'Redirect my page')}>{versAilleurs ? l('Modifier', 'Edit') : l('Rediriger', 'Redirect')}</BoutonSecondaire>
           </Ligne>
         ) : (
-          <LigneLien nom={l('Redirection', 'Redirect')} apres={<Etiquette fonction="redirection" />} onClick={offres ? () => onOffres?.('redirection') : undefined}
+          <LigneLien icone="nav-redirection" nom={l('Redirection', 'Redirect')} apres={<Etiquette fonction="redirection" />} onClick={offres ? () => onOffres?.('redirection') : undefined}
             label={offres ? l('Redirection, avec Starter : voir les offres', 'Redirect, with Starter: see plans') : undefined} />
         )}
+        {importer && <LigneLien nom={l('Importer ma page', 'Import my page')} icone="nav-importer"
+          onClick={() => setFenetre('importer')} label={l('Importer ma page depuis Linktree, Beacons ou un autre service', 'Import my page from Linktree, Beacons or another service')} />}
       </Groupe>
 
       <Groupe titre={l('Compte', 'Account')}>
-        {compte.email && <Ligne nom={l('Adresse de connexion', 'Sign-in email')} valeur={compte.email} />}
+        {compte.email && <Ligne icone="nav-courriel" nom={l('Adresse de connexion', 'Sign-in email')} valeur={compte.email} />}
         {stats
-          ? <LigneBascule nom={l('Mes stats par e-mail chaque lundi', 'My analytics by email every Monday')} actif={reglages.resumeHebdo} changer={v => onChange({ ...reglages, resumeHebdo: v })} />
+          ? <LigneBascule icone="nav-resume" nom={l('Mes stats par e-mail chaque lundi', 'My analytics by email every Monday')} actif={reglages.resumeHebdo} changer={v => onChange({ ...reglages, resumeHebdo: v })} />
           // Réservée : pas d'interrupteur qui ne ferait rien, l'offre qui la débloque à la place, et le chemin vers les offres.
-          : <LigneLien nom={l('Mes stats par e-mail chaque lundi', 'My analytics by email every Monday')} apres={<Etiquette fonction="stats" />} onClick={offres ? () => onOffres?.('stats') : undefined}
+          : <LigneLien icone="nav-resume" nom={l('Mes stats par e-mail chaque lundi', 'My analytics by email every Monday')} apres={<Etiquette fonction="stats" />} onClick={offres ? () => onOffres?.('stats') : undefined}
               label={offres ? l('Mes stats par e-mail chaque lundi, avec Starter : voir les offres', 'My analytics by email every Monday, with Starter: see plans') : undefined} />}
-        <Ligne nom={l('Mes données', 'My data')} valeur={urlExport ? undefined : l('Pas dans l’aperçu', 'Not in the preview')}>
+        <Ligne icone="nav-donnees" nom={l('Mes données', 'My data')} valeur={urlExport ? undefined : l('Pas dans l’aperçu', 'Not in the preview')}>
           {urlExport && <a href={urlExport} download className={classeBouton.secondaire} aria-label={l('Télécharger mes données', 'Download my data')}>{l('Télécharger', 'Download')}</a>}
         </Ligne>
         {/* Le compte principal ne se supprime pas. */}
         {!compte.principal && (
-          <Ligne nom={pageEnPlus ? l('Supprimer cette page', 'Delete this page') : l('Supprimer mon compte', 'Delete my account')}>
+          <Ligne icone="nav-supprimer" nom={pageEnPlus ? l('Supprimer cette page', 'Delete this page') : l('Supprimer mon compte', 'Delete my account')}>
             <BoutonSecondaire onClick={() => setFenetre('supprimer')} aria-haspopup="dialog" className="!text-red-300">{l('Supprimer', 'Delete')}</BoutonSecondaire>
           </Ligne>
         )}
@@ -194,34 +213,34 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
 
       {/* L'API et le serveur MCP (28 octobre 2026) : la sous-page s'ouvre aussi sans Pro, pour révoquer une clé déjà créée. */}
       <Groupe titre={l('Agents IA', 'AI agents')}>
-        <LigneLien id="reglage-api" nom={l('API et MCP', 'API and MCP')} valeur={l('Ta page pilotée par Claude, ChatGPT, Cursor…', 'Your page run by Claude, ChatGPT, Cursor…')} apres={avecApi ? undefined : <Etiquette fonction="api" />}
+        <LigneLien id="reglage-api" icone="nav-api" nom={l('API et MCP', 'API and MCP')} apres={avecApi ? undefined : <Etiquette fonction="api" />}
           courant={sous === 'api'} onClick={ouvrirSous('reglage-api', 'api')} />
       </Groupe>
 
       {offres && (
         <Groupe titre={l('Abonnement', 'Subscription')}>
-          <Ligne nom={l('Offre', 'Plan')} valeur={<strong>{nomOffre(abonnement, langue)}</strong>}>
+          <Ligne icone="nav-offre" nom={l('Offre', 'Plan')} valeur={<strong>{nomOffre(abonnement, langue)}</strong>}>
             {!resilie && <BoutonSecondaire onClick={() => onOffres?.()} aria-haspopup="dialog">{paye ? l('Changer d’offre', 'Change plan') : l('Voir les offres', 'See plans')}</BoutonSecondaire>}
           </Ligne>
           {/* L'essai de Pro : sa fin, et ce que la page garde ensuite. */}
           {abonnement.essai && (
-            <Ligne nom={l('Fin de l’essai', 'Trial ends')} valeur={<span className="tabular-nums">{`${date(abonnement.essai)}, ${l('puis', 'then')} ${nomPlan(planHorsEssai(abonnement), langue)}`}</span>} />
+            <Ligne icone="nav-essai" nom={l('Fin de l’essai', 'Trial ends')} valeur={<span className="tabular-nums">{`${date(abonnement.essai)}, ${l('puis', 'then')} ${nomPlan(planHorsEssai(abonnement), langue)}`}</span>} />
           )}
           {offerte && (
-            <Ligne nom={l('Fin de l’offre', 'Plan ends')} valeur={<span className="tabular-nums">{offerte.jusqu ? `${date(offerte.jusqu)}, ${l('puis', 'then')} ${nomPlan(apresOffre(abonnement), langue)}` : l('Sans limite de durée', 'No end date')}</span>} />
+            <Ligne icone="nav-essai" nom={l('Fin de l’offre', 'Plan ends')} valeur={<span className="tabular-nums">{offerte.jusqu ? `${date(offerte.jusqu)}, ${l('puis', 'then')} ${nomPlan(apresOffre(abonnement), langue)}` : l('Sans limite de durée', 'No end date')}</span>} />
           )}
-          {offerte && paye && <Ligne nom={l('Abonnement', 'Subscription')} valeur={nomAbonnement(abonnement, langue)} />}
+          {offerte && paye && <Ligne icone="nav-abonnement" nom={l('Abonnement', 'Subscription')} valeur={nomAbonnement(abonnement, langue)} />}
           {paye && abonnement.statut === 'past_due' ? (
-            <Ligne nom={l('Paiement', 'Payment')} valeur={<span data-alerte="">{l('Le dernier paiement n’est pas passé', 'The last payment didn’t go through')}</span>}>
+            <Ligne icone="nav-alerte" nom={l('Paiement', 'Payment')} valeur={<span data-alerte="">{l('Le dernier paiement n’est pas passé', 'The last payment didn’t go through')}</span>}>
               {abonnement.portail && <BoutonSecondaire onClick={versPortail} disabled={portail === 'ouverture'}>{l('Mettre à jour ma carte', 'Update my card')}</BoutonSecondaire>}
             </Ligne>
           ) : paye && abonnement.finPeriode ? (
-            <Ligne nom={resilie ? (offerte ? l('Fin de l’abonnement', 'Subscription ends') : l('Fin de l’offre', 'Plan ends')) : l('Prochaine échéance', 'Next payment')}
+            <Ligne icone="nav-echeance" nom={resilie ? (offerte ? l('Fin de l’abonnement', 'Subscription ends') : l('Fin de l’offre', 'Plan ends')) : l('Prochaine échéance', 'Next payment')}
               valeur={<span className="tabular-nums">{resilie ? (offerte ? date(abonnement.finPeriode) : `${date(abonnement.finPeriode)}, ${l('puis', 'then')} ${nomApres(abonnement, abonnement.finPeriode, langue)}`) : `${date(abonnement.finPeriode)}${prix ? ` · ${montant(prix, langue, devise)}` : ''}`}</span>} />
           ) : null}
-          {acces.gerer && <LigneLien id="reglage-abonnement" nom={l('Gérer mon abonnement', 'Manage my subscription')} courant={sous === 'abonnement'} onClick={ouvrirSous('reglage-abonnement')} />}
+          {acces.gerer && <LigneLien id="reglage-abonnement" icone="nav-abonnement" nom={l('Gérer mon abonnement', 'Manage my subscription')} courant={sous === 'abonnement'} onClick={ouvrirSous('reglage-abonnement')} />}
           {acces.factures && (
-            <LigneLien nom={l('Mes factures', 'My invoices')} valeur={l('Chez Creem', 'At Creem')} externe onClick={versPortail} disabled={portail === 'ouverture'} label={l('Mes factures, chez Creem', 'My invoices, at Creem')} />
+            <LigneLien icone="nav-factures" nom={l('Mes factures', 'My invoices')} externe onClick={versPortail} disabled={portail === 'ouverture'} label={l('Mes factures, chez Creem', 'My invoices, at Creem')} />
           )}
         </Groupe>
       )}

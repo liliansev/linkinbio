@@ -3,13 +3,13 @@ import type { Api, Bloc, EtatAdmin, IntegrationListe, PagePublique, Reglages, Ty
 import { BLOCS_GRATUITS, TYPES_PRINCIPAL, adressePartage, nouveauBloc, urlPage } from '../lib/types.ts';
 import { composerMoment } from '../lib/moments.ts';
 import type { TypeAdresse } from '../lib/detection.ts';
-import { EN_FAIRE } from '../lib/catalogue.ts';
+import { EN_FAIRE, typeDe } from '../lib/catalogue.ts';
 import { adresseSaisie } from '../lib/valider.ts';
 import type { BlocCommence } from '../lib/editionBloc.ts';
 import { cleBlocCommence, relireBlocCommence } from '../lib/editionBloc.ts';
 import { PageLiens } from '../components/PageLiens.tsx';
 import { SourceFlux } from '../components/BlocsPlus.tsx';
-import { ApercuOnglet, MaPage } from './MaPage.tsx';
+import { ApercuOnglet, MaPage, nomBloc } from './MaPage.tsx';
 import type { Tiroir } from './OngletApparence.tsx';
 import { EditeurBloc } from './EditeurBloc.tsx';
 import { RegleAOuvrir } from './ReglesBloc.tsx';
@@ -18,6 +18,10 @@ import { OngletStats } from './OngletStats.tsx';
 import { MaListe } from './MaListe.tsx';
 import { FenetreListe, ListeBranchee, OngletIntegrations } from './OngletIntegrations.tsx';
 import { OngletReglages, resumeRedirection } from './OngletReglages.tsx';
+import type { SousReglage } from './OngletReglages.tsx';
+import { ICONES } from '../lib/icones.ts';
+import { Palette, usePaletteRaccourci, useToucheK } from './Palette.tsx';
+import type { Commande } from './Palette.tsx';
 import { DeviseSite, LangueSite, choix, useL } from '../accueil/langue.ts';
 import type { Choix } from '../accueil/langue.ts';
 import { redirectionActive } from '../lib/sorties.ts';
@@ -168,6 +172,10 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
   // Au téléphone, la flèche d'un bloc neuf ramène au choix du bloc : Ma page rouvre sa liste (en bas si le bloc venait du bas),
   // avec ce qui était tapé (`brouillon`).
   const [demandeAjout, setDemandeAjout] = useState<{ enBas: boolean; brouillon?: Bloc } | null>(null);
+  // La barre latérale et la palette ouvrent droit une sous-page de Réglages ; Réglages dit en retour ce qui est ouvert.
+  const [demandeReglage, setDemandeReglage] = useState<SousReglage | 'aucune' | null>(null);
+  const [sousReglage, setSousReglage] = useState<SousReglage | null>(null);
+  const [palette, setPalette] = useState(false);
   // L'endroit de l'en-tête du bureau où l'onglet ouvert pose son geste (voir `ActionEntete`).
   const [emplacement, setEmplacement] = useState<HTMLDivElement | null>(null);
   // Une sous-page ouverte (Réglages, puis Les offres) : l'en-tête montre son fil, qui ramène en arrière (voir `SousPage`).
@@ -421,6 +429,13 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
     scrollTo({ top: 0 });
     return true;
   }
+  /** Une sous-page de Réglages, d'où qu'on vienne. */
+  function versReglage(quoi: SousReglage) {
+    if (onglet !== 'reglages' && !choisirOnglet('reglages')) return;
+    setDemandeReglage(quoi);
+  }
+  usePaletteRaccourci(() => setPalette(true));
+  const toucheK = useToucheK();
   // Le retour du téléphone, depuis Stats, Intégrations, Réglages ou Comptes, ramène à Ma page au lieu de quitter le back office.
   useCouche(onglet !== 'page', () => choisirOnglet('page'));
 
@@ -797,6 +812,38 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
     </>
   );
   const titre = onglets.find(o => o.id === onglet)!.nom;
+  const surReglage = (q: SousReglage) => onglet === 'reglages' && sousReglage === q;
+  const sousMenus: { nom: string; elements: { id: string; nom: string; icone: string; courant: boolean; faire: () => void }[] }[] = [
+    { nom: l('Partager', 'Share'), elements: [
+      ...(api.courts ? [{ id: 'courts', nom: l('Liens courts', 'Short links'), icone: 'nav-courts', courant: surReglage('courts'), faire: () => versReglage('courts') }] : []),
+      { id: 'qr', nom: 'QR code', icone: 'nav-qr', courant: surReglage('qr'), faire: () => versReglage('qr') },
+      ...(initial.domaines && api.domaine ? [{ id: 'domaine', nom: l('Nom de domaine', 'Domain'), icone: 'nav-domaine', courant: surReglage('domaine'), faire: () => versReglage('domaine') }] : []),
+    ] },
+    { nom: l('Compte', 'Account'), elements: [
+      ...(peutAcheter ? [{ id: 'abonnement', nom: l('Abonnement', 'Subscription'), icone: 'nav-abonnement', courant: surReglage('abonnement'), faire: () => versReglage('abonnement') }] : []),
+      ...(api.cles ? [{ id: 'api', nom: l('API et MCP', 'API and MCP'), icone: 'nav-api', courant: surReglage('api'), faire: () => versReglage('api') }] : []),
+      // Comptes (le compte principal seul) rejoint ce groupe : un titre de plus pour une seule entrée chargeait la barre.
+      ...(api.comptes ? [{ id: 'comptes', nom: 'Comptes', icone: 'nav-comptes', courant: onglet === 'comptes', faire: () => { if (onglet !== 'comptes') choisirOnglet('comptes'); else fil?.retour(); } }] : []),
+    ] },
+  ].filter(g => g.elements.length);
+  // La palette : tout ce que la barre et les écrans savent faire, au clavier.
+  const gAller = l('Aller à', 'Go to'), gPage = l('Actions', 'Actions'), gReglages = l('Réglages', 'Settings'), gCompte = l('Compte', 'Account');
+  const commandes: Commande[] = [
+    { id: 'ajouter', nom: l('Ajouter un bloc', 'Add a block'), icone: 'nav-ajouter', groupe: gPage, mots: l('nouveau lien', 'new link'), touche: 'A', faire: () => { if (choisirOnglet('page')) setDemandeAjout({ enBas: false }); } },
+    { id: 'design', nom: l('Changer le design', 'Change the design'), icone: 'nav-design', groupe: gPage, mots: l('thème couleurs police fond', 'theme colors font background'), faire: () => { if (choisirOnglet('page')) setDemandeDesign('theme'); } },
+    { id: 'copier', nom: l('Copier l’adresse de ma page', 'Copy my page’s address'), icone: 'nav-copier', groupe: gPage, mots: l('lien partager', 'link share'), faire: () => { void copierTexte(adresse).then(ok => { if (ok) { noterPartage(); setToast({ texte: l('Adresse copiée', 'Address copied'), genre: 'info' }); } }); } },
+    ...(demo ? [] : [{ id: 'voir', nom: l('Voir ma page', 'View my page'), icone: 'nav-voir', groupe: gPage, faire: () => { open(adresse, '_blank', 'noopener'); } }]),
+    ...onglets.map(o => ({ id: `aller-${o.id}`, nom: o.nom, icone: o.icone, groupe: gAller, faire: () => { if (o.id !== onglet) choisirOnglet(o.id); } })),
+    ...sousMenus.flatMap(g => g.elements.filter(e => e.id !== 'comptes').map(e => ({ id: `sous-${e.id}`, nom: e.nom, icone: e.icone, groupe: g.nom, faire: e.faire }))),
+    ...(importer ? [{ id: 'importer', nom: l('Importer ma page', 'Import my page'), icone: 'nav-importer', groupe: gReglages, mots: 'Linktree Beacons Bento', faire: () => versReglage('importer') }] : []),
+    { id: 'seo', nom: l('Référencement', 'SEO'), icone: 'nav-seo', groupe: gReglages, mots: 'Google', faire: () => versReglage('apercu') },
+    { id: 'redirection', nom: l('Redirection', 'Redirect'), icone: 'nav-redirection', groupe: gReglages, faire: () => versReglage('redirection') },
+    ...(peutAcheter ? [{ id: 'offres', nom: l('Voir les offres', 'See plans'), icone: 'nav-offre', groupe: gCompte, mots: 'Starter Pro Premium', faire: () => ouvrirOffres() }] : []),
+    // Les blocs de la page se trouvent aussi par leur nom ou leur adresse : Entrée ouvre leur rangée dans Ma page.
+    ...blocs.map(b => ({ id: `bloc-${b.id}`, nom: nomBloc(b, reglages.langue), icone: (b.icone && ICONES[b.icone] ? b.icone : typeDe(b, reglages.langue).picto) ?? 'bloc-lien', groupe: l('Blocs', 'Blocks'), mots: b.url, recherche: true, faire: () => { choisirOnglet('page'); ouvrirBloc(b); } })),
+    ...autresPages.map((p, i) => ({ id: `page-${i}-${p.nom}`, nom: l(`Passer sur ${p.nom}`, `Switch to ${p.nom}`), icone: 'nav-pages', groupe: gCompte, faire: p.action })),
+    { id: 'sortir', nom: l('Me déconnecter', 'Sign out'), icone: 'nav-sortir', groupe: gCompte, faire: deconnexion },
+  ];
   // Sans photo, l'icône seule à sa place, en blanc sur le bleu : jamais de rond derrière une icône.
   const avatar = (taille: string, icone: number) => reglages.profil.avatar
     ? <img src={reglages.profil.avatar} alt="" className={`${taille} shrink-0 rounded-full object-cover`} />
@@ -856,13 +903,30 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
       <a href="#contenu-admin" className={`${classeBouton.principal} sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-[70]`}>{l('Aller au contenu', 'Skip to content')}</a>
       {/* Au bureau, une barre latérale fine : la marque, les sections, et le compte en bas, qui s'ouvre sur « Me déconnecter ». */}
       <aside className="adm-sidebar fixed inset-y-0 left-0 z-30 hidden w-(--adm-barre) flex-col lg:flex" aria-label={l('Navigation', 'Navigation')}>
-        <Marque petite surBleu className="h-14 shrink-0 px-2" />
-        <nav className="flex flex-col gap-0.5 pt-1.5" aria-label={l('Sections', 'Sections')}>
-          {onglets.map(o => (
-            <button key={o.id} type="button" onClick={() => { if (o.id !== onglet) choisirOnglet(o.id); else fil?.retour(); }} aria-current={onglet === o.id ? 'page' : undefined}
-              className={`adm-nav-item ${o.id === 'comptes' ? 'mt-3.5' : ''}`}>
-              <Icone nom={o.icone} taille={16} className="shrink-0" />{o.nom}
+        {/* En tête, la marque et la loupe de la palette (⌘K) ; puis les écrans, et sous eux, par groupe, les réglages qu'on
+            cherche le plus, chacun son picto (10 novembre 2026, refonte à la Linear : « pas assez de menus, pas assez d'icônes »). */}
+        <div className="flex h-14 shrink-0 items-center gap-1">
+          <Marque petite surBleu className="min-w-0 flex-1 px-2" />
+        </div>
+        <nav className="adm-nav flex min-h-0 flex-1 flex-col overflow-y-auto pb-3" aria-label={l('Sections', 'Sections')}>
+          <button type="button" onClick={() => setPalette(true)} className="adm-nav-recherche">
+            <Icone nom="nav-recherche" taille={15} className="shrink-0" /><span className="flex-1">{l('Rechercher', 'Search')}</span><kbd>{toucheK}</kbd>
+          </button>
+          {onglets.filter(o => o.id !== 'comptes').map(o => (
+            <button key={o.id} type="button" onClick={() => { if (o.id !== onglet) choisirOnglet(o.id); else if (o.id === 'reglages' && sousReglage) setDemandeReglage('aucune'); else fil?.retour(); }}
+              aria-current={onglet === o.id && !(o.id === 'reglages' && sousReglage) ? 'page' : undefined} className="adm-nav-item">
+              <Icone nom={o.icone} taille={17} className="shrink-0" />{o.nom}
             </button>
+          ))}
+          {sousMenus.map(g => (
+            <div key={g.nom} className="adm-nav-groupe" role="group" aria-label={g.nom}>
+              <p className="adm-nav-titre" aria-hidden="true">{g.nom}</p>
+              {g.elements.map(e => (
+                <button key={e.id} type="button" onClick={e.faire} aria-current={e.courant ? 'page' : undefined} className="adm-nav-item">
+                  <Icone nom={e.icone} taille={17} className="shrink-0" />{e.nom}
+                </button>
+              ))}
+            </div>
           ))}
         </nav>
         <div className="mt-auto">
@@ -892,6 +956,8 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
               {signe}{indicateur}
             </p>
           </div>
+          {/* La loupe ouvre la palette au téléphone aussi : la même recherche qu'au bureau, sans clavier à monter d'office. */}
+          {onglet !== 'page' && <button type="button" onClick={() => setPalette(true)} className="adm-topbar-loupe grid h-11 w-11 shrink-0 place-items-center" aria-label={l('Rechercher', 'Search')}><Icone nom="nav-recherche" taille={20} /></button>}
           <BoutonCopier compact texte={adresse} label={l('Copier l’adresse de ta page', 'Copy your page’s address')} onCopie={noterPartage} />
           {/* Sous 390 px, l'œil seul, sans cadre : l'adresse garde la place d'être lue. */}
           <button type="button" onClick={() => setApercu(true)} className="adm-button-outline adm-apercu-bouton flex min-h-11 items-center justify-center gap-1.5 px-3.5 text-[13px] font-medium max-[389px]:w-11 max-[389px]:px-0"><Icone nom="ui-oeil" taille={17} className="shrink-0" /><span className="max-[389px]:sr-only">{l('Aperçu', 'Preview')}</span></button>
@@ -905,7 +971,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
               <span aria-hidden="true" className="text-[#b5b5ae]">/</span>
               <h1 className="adm-entete-titre ml-1.5 min-w-0 truncate">{fil.nom}</h1>
             </div>
-          ) : <h1 className="adm-entete-titre min-w-0 flex-1 truncate">{titre}</h1>}
+          ) : <h1 className="adm-entete-titre flex min-w-0 flex-1 items-center gap-2 truncate"><Icone nom={onglets.find(o => o.id === onglet)!.icone} taille={17} className="shrink-0 text-[#6b6b65]" />{titre}</h1>}
           {/* L'état ne se montre que là où l'on écrit, ou quand il a quelque chose à dire. */}
           {(onglet === 'page' || onglet === 'reglages' || sauvegarde !== 'ok') && (
             <p className="adm-etat mr-1.5" data-erreur={sauvegarde === 'erreur' || undefined} role="status">{signe}{indicateur}</p>
@@ -955,7 +1021,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
             onResilier={peutAcheter ? () => setOffres({ resilier: true }) : undefined} cles={api.cles} courts={api.courts}
             domainePerso={initial.domaines ? api.domaine : undefined} surDomaine={setDomainePerso}
             pages={api.pages && initial.pages && (initial.pages.length > 1 || (initial.pagesMax ?? 1) > 1) ? { liste: initial.pages, max: initial.pagesMax ?? 1, api: api.pages } : undefined}
-            importer={importer} />}
+            importer={importer} demande={demandeReglage} demandeLue={() => setDemandeReglage(null)} surSous={setSousReglage} />}
           {onglet === 'comptes' && api.comptes && <OngletComptes api={api.comptes} avatar={reglages.profil.avatar} />}
           </div>
           {/* Au bureau, Intégrations et Réglages gardent la page à droite, comme Ma page (25 octobre 2026, demandé par Lilian) :
@@ -993,6 +1059,8 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
           </div>
         </div>
       )}
+
+      <Palette ouverte={palette} fermer={() => setPalette(false)} commandes={commandes} />
 
       {/* Au téléphone, l'éditeur est une feuille du bas ; au bureau, il se déplie dans la rangée du bloc (voir MaPage). */}
       {!grand && editeur}

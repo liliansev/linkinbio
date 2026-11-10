@@ -570,7 +570,7 @@ function ChampBio({ cible, valeur, onChange, onQuitter }: { cible: RefObject<HTM
 }
 
 /** Le nom d'un bloc dans sa rangée : son texte, sinon son adresse, sinon son genre. */
-function nomBloc(b: Bloc, langue: Langue) {
+export function nomBloc(b: Bloc, langue: Langue) {
   const titre = b.titre.trim().split('\n')[0];
   return titre || (TYPES_ADRESSE.includes(b.type) && b.url ? sansSchema(b.url).replace(/\/$/, '') : '') || (b.type === 'lieu' ? b.adressePostale.split('\n')[0].trim() : '') || typeDe(b, langue).nom;
 }
@@ -722,13 +722,6 @@ function ListeBlocs({ blocs, clics, choisi, editeur, neuf, gestes, onOrdonner, o
           ))}
         </ul>
       </SortableContext>
-      {/* Les raccourcis, dits une fois sous la liste (critique du 27 octobre 2026 : ils existaient sans que rien ne les montre). */}
-      <p className="adm-raccourcis" aria-hidden="true">
-        <span><kbd>A</kbd>{' '}{tr('ajouter un bloc', 'add a block')}</span>
-        <span><kbd>{tr('Échap', 'Esc')}</kbd>{' '}{tr('replier', 'collapse')}</span>
-        <span><kbd>⌘</kbd><kbd>{tr('Entrée', 'Enter')}</kbd>{' '}{tr('ajouter le bloc neuf', 'add the new block')}</span>
-        <span>{tr('La poignée', 'The handle')}{' '}<Icone nom="ui-poignee" taille={12} />{' '}{tr('déplace, à la souris ou au clavier', 'moves it, with the mouse or the keyboard')}</span>
-      </p>
     </DndContext>
   );
 }

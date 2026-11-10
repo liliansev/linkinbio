@@ -16,7 +16,6 @@ import type { PeriodeStats } from '../lib/periode.ts';
 import { DUREES, borner, cleDe, jourDe } from '../lib/periode.ts';
 import { ChoixPeriode } from './ChoixPeriode.tsx';
 import { noterPartage } from './BienDemarrer.tsx';
-import { CodeQR } from './CodeQR.tsx';
 import { Etiquette } from './offre.tsx';
 import { typeDe } from '../lib/catalogue.ts';
 
@@ -346,21 +345,17 @@ function OuvertsDansLApp({ apps, actif, onActiver }: { apps: Stats['apps']; acti
 }
 
 /** Une page que personne n'a encore vue : pas de zéros ni de courbe plate, mais de quoi amener le premier visiteur. */
-function PageJamaisVue({ adresse, pseudo }: { adresse: string; pseudo: string }) {
+function PageJamaisVue({ adresse }: { adresse: string }) {
   const tr = choix(useLangue());
   return (
-    <section aria-labelledby="stats-vide" className="adm-encart px-5 py-7">
-      <div className="flex flex-col items-center gap-5 text-center">
-        <div>
-          <h2 id="stats-vide" className="text-[18px] font-semibold tracking-[-0.02em]">{tr('Personne n’a encore vu ta page', 'Nobody has seen your page yet')}</h2>
-          <p className="mt-1.5 text-[14px] leading-snug text-[#5f5f5a]">{tr('Les chiffres arrivent avec le premier visiteur.', 'The numbers arrive with your first visitor.')}</p>
-        </div>
-        <div className="adm-address flex w-full max-w-sm items-center gap-2 p-1.5 pl-3.5 text-left">
-          <span className="min-w-0 flex-1 truncate text-[15px] font-medium" translate="no">{sansSchema(adresse)}</span>
-          <BoutonCopier texte={adresse} onCopie={noterPartage} label={tr('Copier l’adresse de ta page', 'Copy your page’s address')} />
-        </div>
-        <CodeQR adresse={adresse} pseudo={pseudo} />
+    // Une ligne (critique du 10 novembre 2026) : le QR code a sa place dans la barre et dans Réglages, l'adresse se copie ici.
+    <section aria-labelledby="stats-vide" className="adm-encart flex flex-wrap items-center gap-x-3 gap-y-2 py-3 pr-3 pl-4">
+      <Icone nom="nav-stats" taille={18} className="shrink-0 text-[#6b6b65]" />
+      <div className="min-w-[12rem] flex-1">
+        <h2 id="stats-vide" className="text-[15px] font-semibold">{tr('Personne n’a encore vu ta page', 'Nobody has seen your page yet')}</h2>
+        <p className="text-[13.5px] text-[#5f5f5a]" translate="no">{sansSchema(adresse)}</p>
       </div>
+      <BoutonCopier texte={adresse} onCopie={noterPartage} label={tr('Copier l’adresse de ta page', 'Copy your page’s address')} />
     </section>
   );
 }
@@ -504,7 +499,7 @@ function TableauStats({ charger, adresse, pseudo, joursMax = 365, onOffres, ouvr
       )}
       {!stats ? (!erreur && <div className="h-[420px] animate-pulse rounded-xl bg-[#f4f4f2] motion-reduce:animate-none" role="status" aria-label={tr('Chargement des statistiques', 'Loading analytics')} />) : !stats.dejaVue ? (
         <>
-          <PageJamaisVue adresse={adresse} pseudo={pseudo} />
+          <PageJamaisVue adresse={adresse} />
           {liste}
           {note}
         </>
