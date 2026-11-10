@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { CONTACT_LEGAL } from '../lib/legal.ts';
 import { LIEN_SOURCE } from '../lib/instance.ts';
-import type { ApiCles, BilanImport, ComptePage, DomaineCourt, Reglages } from '../lib/types.ts';
+import type { ApiCles, ApiCourts, BilanImport, ComptePage, DomaineCourt, Reglages } from '../lib/types.ts';
 import { DOMAINES_COURTS, adressePartage, sansSchema, urlPage } from '../lib/types.ts';
 import { adresseSaisie } from '../lib/valider.ts';
 import { redirectionActive } from '../lib/sorties.ts';
@@ -17,6 +17,7 @@ import { noterPartage } from './BienDemarrer.tsx';
 import { focusAuto } from '../lib/clavier';
 import { Icone } from '../components/Icone.tsx';
 import { ApiEtMcp } from './ApiEtMcp.tsx';
+import { LiensCourts } from './LiensCourts.tsx';
 
 /*
  * Réglages sur une seule page (direction B, 20 octobre 2026) : trois groupes,
@@ -31,7 +32,7 @@ import { ApiEtMcp } from './ApiEtMcp.tsx';
 
 const dateLongue = (ms: number, langue: Langue = 'fr') => new Date(ms).toLocaleDateString(langue === 'fr' ? 'fr-FR' : 'en-US', { day: 'numeric', month: 'long', year: 'numeric' });
 
-export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlExport, supprimerMonCompte, abonnement, onOffres, ouvrirPortail, onResilier, cles, importer }: {
+export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlExport, supprimerMonCompte, abonnement, onOffres, ouvrirPortail, onResilier, cles, courts, importer }: {
   reglages: Reglages; compte: ComptePage & { email?: string; plan: Plan }; onChange: (r: Reglages) => void; onDeconnexion: () => void;
   urlExport: string | null; supprimerMonCompte: (confirmation: string) => Promise<{ ok: boolean; message: string; aLaMain?: boolean }>;
   abonnement: EtatAbonnement;
@@ -42,6 +43,7 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
   onResilier?: () => void;
   /** Les clés d'API, pour l'API et le serveur MCP ; absent dans l'aperçu sans serveur. */
   cles?: ApiCles;
+  courts?: ApiCourts;
   /** Importer sa page Linktree, Beacons… ; absent dans l'aperçu sans serveur. */
   importer?: (url: string) => Promise<BilanImport>;
 }) {
@@ -52,13 +54,13 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
   // La page vit sur hopla.page ; on partage son nom court s'il en a choisi un.
   const adresse = urlPage(compte);
   const partage = adressePartage(compte, reglages.domaine);
-  const [sous, setSous] = useState<'abonnement' | 'api' | null>(null);
+  const [sous, setSous] = useState<'abonnement' | 'api' | 'courts' | null>(null);
   const [fenetre, setFenetre] = useState<'apercu' | 'supprimer' | 'redirection' | 'domaine' | 'importer' | null>(null);
   const [portail, setPortail] = useState<'' | 'ouverture' | string>('');
   // Ce qui a ouvert la sous-page reprend le focus quand on en revient (la page se redessine : on le retrouve par son id).
   const ouvreur = useRef('');
   const grand = useGrandEcran();
-  const ouvrirSous = (id: string, quoi: 'abonnement' | 'api' = 'abonnement') => () => { ouvreur.current = id; setSous(quoi); if (!grand) scrollTo({ top: 0 }); };
+  const ouvrirSous = (id: string, quoi: 'abonnement' | 'api' | 'courts' = 'abonnement') => () => { ouvreur.current = id; setSous(quoi); if (!grand) scrollTo({ top: 0 }); };
   useEffect(() => {
     if (sous || !ouvreur.current) return;
     document.getElementById(ouvreur.current)?.focus({ preventScroll: true });
@@ -85,6 +87,12 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
     <div className="adm-reglages">
       <SousPage nom={l('Mon abonnement', 'My subscription')} retour={() => setSous(null)} />
       {facturation}
+    </div>
+  );
+  if (sous === 'courts' && !grand) return (
+    <div className="adm-reglages">
+      <SousPage nom={l('Liens courts', 'Short links')} retour={() => setSous(null)} />
+      <LiensCourts api={courts} compte={compte} domaine={reglages.domaine} />
     </div>
   );
   if (sous === 'api' && !grand) return (
@@ -114,6 +122,8 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
           onClick={() => setFenetre('domaine')} label={l('Choisir le nom de domaine de mon adresse', 'Choose the domain of my address')} />
         {importer && <LigneLien nom={l('Importer ma page', 'Import my page')} valeur={l('Depuis Linktree, Beacons, Bento…', 'From Linktree, Beacons, Bento…')}
           onClick={() => setFenetre('importer')} label={l('Importer ma page depuis Linktree, Beacons ou un autre service', 'Import my page from Linktree, Beacons or another service')} />}
+        {courts && <LigneLien id="reglage-courts" nom={l('Liens courts', 'Short links')} valeur={l('Pour une story, un post, un e-mail : suivis, ouverts dans l’app', 'For a story, a post, an email: tracked, opened in the app')}
+          courant={sous === 'courts'} onClick={ouvrirSous('reglage-courts', 'courts')} />}
         <Ligne nom="QR code">
           <BoutonSecondaire onClick={() => { void telechargerQR(partage, compte.pseudo); }} aria-label={l('Télécharger le QR code', 'Download the QR code')}>{l('Télécharger', 'Download')}</BoutonSecondaire>
         </Ligne>
@@ -209,6 +219,11 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
       {sous === 'abonnement' && (
         <PanneauDetail titre={l('Mon abonnement', 'My subscription')} fermer={() => setSous(null)}>
           <div className="adm-reglages">{facturation}</div>
+        </PanneauDetail>
+      )}
+      {sous === 'courts' && (
+        <PanneauDetail titre={l('Liens courts', 'Short links')} fermer={() => setSous(null)}>
+          <div className="adm-reglages"><LiensCourts api={courts} compte={compte} domaine={reglages.domaine} /></div>
         </PanneauDetail>
       )}
       {sous === 'api' && (

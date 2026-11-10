@@ -48,6 +48,11 @@ function PageAdmin() {
       creer: (nom, ecriture) => fn.creerCleApi({ data: { nom, ecriture } }),
       revoquer: async id => { await fn.revoquerCleApi({ data: id }); },
     },
+    courts: {
+      lister: () => fn.listerLiensCourts(),
+      enregistrer: l => fn.enregistrerLienCourt({ data: l }),
+      supprimer: async id => { await fn.supprimerLienCourt({ data: id }); },
+    },
     comptes: acces.connecte && acces.etat.compte.principal ? {
       lister: () => fn.listerComptes(),
       offres: () => fn.lireOffresCreem(),

@@ -11,6 +11,7 @@ import type { PeriodeStats } from './periode.ts';
 import type { Audience, EffetAudience } from './provenance.ts';
 import type { Police } from './themes.ts';
 import type { ArticleFlux } from './flux.ts';
+import type { LienCourt } from './courts.ts';
 import { INSTANCE } from './instance.ts';
 
 export const TYPES_BLOC = ['lien', 'titre', 'texte', 'video', 'derniere-video', 'newsletter', 'inscription', 'preuve', 'produit', 'soutien', 'reservation',
@@ -404,6 +405,14 @@ export interface ApiCles {
   revoquer(id: string): Promise<void>;
 }
 
+/** Les liens courts du compte (Réglages, « Liens courts ») : `max`, combien son offre en permet. */
+export interface ApiCourts {
+  lister(): Promise<{ liens: LienCourt[]; max: number }>;
+  /** Sans `id`, un lien neuf ; `code` vide, un code tiré au hasard. */
+  enregistrer(l: { id?: string; code: string; url: string; titre: string }): Promise<LienCourt>;
+  supprimer(id: string): Promise<void>;
+}
+
 /** Ce qu'une page importée d'ailleurs a ajouté : des liens, des réseaux, le profil ; `dejaLa`, les liens que la page avait déjà. */
 export interface BilanImport { liens: number; reseaux: number; profil: boolean; dejaLa: number }
 
@@ -467,6 +476,8 @@ export interface Api {
   comptes?: ApiComptes;
   /** Absent dans l'aperçu statique sans serveur. */
   cles?: ApiCles;
+  /** Absent dans l'aperçu statique sans serveur. */
+  courts?: ApiCourts;
 }
 
 /**
