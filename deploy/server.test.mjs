@@ -5,6 +5,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createServer, request } from 'node:http';
 import { createLiensServer, deCloudflare } from './server.mjs';
+// Les réglages viennent des options de chaque test, jamais de la machine : au build, Coolify passe les variables de la production.
+for (const nom of ['LIENS_DOMAINES', 'LIENS_CLOUDFLARE', 'LIENS_SITE']) delete process.env[nom];
 async function ecouter(t, server) {
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   t.after(async () => { server.closeAllConnections(); await new Promise(resolve => server.close(resolve)); });
