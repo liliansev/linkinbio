@@ -15,7 +15,7 @@ import type { LienCourt } from './courts.ts';
 import { INSTANCE } from './instance.ts';
 
 export const TYPES_BLOC = ['lien', 'titre', 'texte', 'video', 'derniere-video', 'newsletter', 'inscription', 'preuve', 'produit', 'soutien', 'reservation',
-  'musique', 'faq', 'coordonnees', 'lieu', 'galerie', 'formulaire', 'flux'] as const;
+  'musique', 'faq', 'coordonnees', 'lieu', 'galerie', 'formulaire', 'flux', 'document', 'audio'] as const;
 export type TypeBloc = (typeof TYPES_BLOC)[number];
 /** La vitrine (Starter, 22 octobre 2026) : un produit et son prix, « Me soutenir », « Réserver ». Hopla n'encaisse rien, chacun mène au site qui vend. */
 export const TYPES_VITRINE: readonly TypeBloc[] = ['produit', 'soutien', 'reservation'];
@@ -107,6 +107,10 @@ export interface Bloc {
   pays: { codes: string[]; effet: EffetPays } | null;
   /** « Rejoins ma liste » : un cadeau qui s'ouvre une fois l'adresse donnée (un guide, un code). Son adresse ne part jamais avec la page (Pro). */
   cadeau: Cadeau | null;
+  /** Un PDF (bloc `document`) ou une note vocale (bloc `audio`) gardés chez Hopla : `/media/<id>.pdf`, `.mp3`, `.m4a`… (10 novembre 2026). */
+  fichier: string;
+  /** La durée d'une note vocale, en secondes ; 0 si elle n'est pas connue. */
+  duree: number;
 }
 
 export const EFFETS_PAYS = ['seulement', 'sauf'] as const;
@@ -429,6 +433,8 @@ export interface Api {
   ordonner(ids: string[]): Promise<void>;
   enregistrerReglages(reglages: Reglages): Promise<Reglages>;
   envoyerImage(dataUrl: string): Promise<string>;
+  /** Un PDF ou un son, 10 Mo au plus : rend son adresse `/media/…`. Refusé avec un message à montrer. */
+  envoyerFichier(fichier: Blob): Promise<string>;
   /**
    * Le titre, la description, l'image (en data URL) et le prix (une boutique) d'un site, lus par le serveur. Voir
    * `ImageApercu` pour l'image demandée ; `visuel` dit d'où vient celle qui revient.
@@ -550,7 +556,7 @@ const TITRES_BLOCS: Record<TypeBloc, [string, string]> = {
   newsletter: ['Ma newsletter', 'My newsletter'], inscription: ['Rejoins ma liste', 'Join my list'], preuve: ['Ce qu’ils en disent', 'What people say'],
   produit: ['', ''], soutien: ['Me soutenir', 'Support me'], reservation: ['Prendre rendez-vous', 'Book a session'],
   musique: ['Écouter', 'Listen'], faq: ['Questions fréquentes', 'FAQ'], coordonnees: ['', ''], lieu: ['', ''], galerie: ['', ''],
-  formulaire: ['Me contacter', 'Contact me'], flux: ['Mes derniers articles', 'My latest posts'],
+  formulaire: ['Me contacter', 'Contact me'], flux: ['Mes derniers articles', 'My latest posts'], document: ['', ''], audio: ['', ''],
 };
 export const titreParDefaut = (type: TypeBloc, langue: Langue = 'fr') => TITRES_BLOCS[type][langue === 'en' ? 1 : 0];
 /** Le texte qu'un bloc avait en naissant, dans l'une ou l'autre langue : il n'a pas été tapé à la main. */
@@ -566,7 +572,7 @@ export function nouveauBloc(type: TypeBloc, id: string, langue: Langue = 'fr'): 
     prix: '', montants: type === 'soutien' ? [...MONTANTS_DEFAUT] : [], partenariat: null,
     questions: type === 'faq' ? [{ question: '', reponse: '' }] : [], images: [],
     coordonnees: type === 'coordonnees' ? { telephone: '', email: '', societe: '', poste: '' } : null, adressePostale: '', sensible: false, disposition: 'liste',
-    pays: null, cadeau: null,
+    pays: null, cadeau: null, fichier: '', duree: 0,
   };
 }
 

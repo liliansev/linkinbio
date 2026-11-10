@@ -126,7 +126,8 @@ Block fields:
 - type: lien (link, default), titre (section heading), texte (text), video, derniere-video (latest
   YouTube video), inscription (email signup), preuve (reviews), produit (product), soutien (tips),
   reservation (booking), musique (music), faq, coordonnees (contact card), lieu (location),
-  galerie (gallery), formulaire (contact form), flux (RSS feed). Immutable after creation.
+  galerie (gallery), formulaire (contact form), flux (RSS feed), document (PDF), audio (voice note).
+  Immutable after creation.
 - titre: button label, section heading or paragraph text
 - url: target URL (https://…, mailto:, tel:)
 - sousTitre, description: secondary text
@@ -137,6 +138,8 @@ Block fields:
 - debut, fin: ISO 8601 display window; compteARebours: true to show a countdown before the start
 - prix: product price; montants: tip amounts for soutien ([5, 10, 20])
 - questions: FAQ items, [{ question, reponse }]
+- fichier: for document and audio blocks, the /media/ path of a PDF or audio file uploaded from the
+  back office (the API does not upload these files yet); duree: length of a voice note, in seconds
 - preuve: rating for preuve blocks, { genre: "note", note: 4.8, nombre: 120, source: "Google" }
 
 ### GET /api/v1/blocs/{id}
@@ -348,7 +351,8 @@ Create a block at the top of the page, or at "position" (zero-based, 0 = top).
 Block fields:
 
 - type: link (default), heading, text, video, latest-video, email-signup, proof (reviews), product,
-  tip, booking, music, faq, contact-card, location, gallery, contact-form, feed. Immutable after creation.
+  tip, booking, music, faq, contact-card, location, gallery, contact-form, feed, document (PDF),
+  voice-note. Immutable after creation.
 - title: button label, section heading or paragraph text
 - url: target URL (https://…, mailto:, tel:)
 - subtitle, description: secondary text
@@ -359,6 +363,8 @@ Block fields:
 - startsAt, endsAt: ISO 8601 display window; countdown: true to show a countdown before the start
 - price: product price; amounts: tip amounts ([5, 10, 20])
 - questions: FAQ items, [{ question, answer }]
+- file: for document and voice-note blocks, the /media/ path of a PDF or audio file uploaded from the
+  back office (the API does not upload these files yet); duration: length of a voice note, in seconds
 - proof: rating for proof blocks, { kind: "rating", rating: 4.8, count: 120, source: "Google" }
 
 ### GET /api/v2/blocks/{id}

@@ -49,6 +49,11 @@ export const TYPES: TypeAjout[] = [
     mots: 'note etoile google trustpilot malt temoignage recommandation chiffre clients' },
   { type: 'inscription', nom: 'Liste e-mail', aide: 'Tes visiteurs laissent leur e-mail, que tu exportes ou envoies vers ta newsletter', picto: 'bloc-inscription', fonction: 'listeEmail',
     mots: 'email mail newsletter lettre inscription inscrit abonne collecter brevo mailchimp kit mailerlite beehiiv substack systeme.io systeme' },
+  // Un PDF et une note vocale, gardés chez Hopla (10 novembre 2026, lot 5 d'après Taap.it).
+  { type: 'document', nom: 'Document PDF', aide: 'Ton menu, ta plaquette ou tes tarifs, qui s’ouvrent d’un toucher', picto: 'bloc-document',
+    mots: 'pdf fichier document menu carte plaquette brochure tarifs catalogue cv guide ebook telecharger telechargement' },
+  { type: 'audio', nom: 'Note vocale', aide: 'Ta voix, enregistrée ici ou choisie parmi tes fichiers, qui s’écoute dans ta page', picto: 'bloc-audio',
+    mots: 'audio vocal voix message enregistrer enregistrement micro son mp3 ecouter memo' },
   // Pour qu'on te joigne : un message, ton contact, ton adresse.
   { type: 'formulaire', nom: 'Me contacter', aide: 'Un formulaire : le message arrive dans ta boîte, ton adresse reste cachée', picto: 'bloc-formulaire', fonction: 'formulaire',
     mots: 'formulaire contact message ecrire email devis demande' },
@@ -79,6 +84,8 @@ const EN: Record<string, { nom: string; aide?: string; mots?: string }> = {
   'Me soutenir': { nom: 'Support me', aide: 'A button to PayPal, Ko-fi, Patreon or Buy Me a Coffee', mots: 'support donate donation tip tips fund help' },
   'Titre de section': { nom: 'Section title', mots: 'heading header divider section category' },
   'Texte': { nom: 'Text', mots: 'paragraph description note about' },
+  'Document PDF': { nom: 'PDF document', aide: 'Your menu, brochure or price list, opened with one tap', mots: 'file download menu brochure rates pricing catalog resume guide' },
+  'Note vocale': { nom: 'Voice note', aide: 'Your voice, recorded here or picked from your files, played right on your page', mots: 'audio voice message record recording mic sound memo listen' },
   'Galerie': { nom: 'Gallery', aide: 'Your photos, swiped through in one gesture', mots: 'photos pictures images carousel slideshow work' },
   'Questions fréquentes': { nom: 'FAQ', aide: 'The questions people ask you, and your answers', mots: 'questions answers help accordion' },
   'Avis et preuves': { nom: 'Reviews and proof', aide: 'Your Google rating, a key number or a testimonial, with its source', mots: 'review reviews rating stars testimonial proof social' },
@@ -268,7 +275,7 @@ export const devenu = (type: TypeAdresse, langue: Langue = 'fr') => (langue === 
 export type FamilleBloc = 'liens' | 'medias' | 'vitrine' | 'contact' | 'preuve' | 'texte';
 const FAMILLE: Partial<Record<TypeBloc, FamilleBloc>> = {
   lien: 'liens',
-  video: 'medias', musique: 'medias', galerie: 'medias', 'derniere-video': 'medias', flux: 'medias',
+  video: 'medias', musique: 'medias', galerie: 'medias', 'derniere-video': 'medias', flux: 'medias', document: 'medias', audio: 'medias',
   produit: 'vitrine', reservation: 'vitrine', soutien: 'vitrine',
   inscription: 'contact', newsletter: 'contact', formulaire: 'contact', coordonnees: 'contact', lieu: 'contact',
   preuve: 'preuve',

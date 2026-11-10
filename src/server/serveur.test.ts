@@ -1835,3 +1835,37 @@ test('statistiques fines : système, navigateur, langue et ville de chaque vue',
   assert.deepEqual(s.navigateurs, [{ nom: 'Chrome', vues: 2 }, { nom: 'Safari', vues: 1 }]);
   assert.deepEqual(s.langues, [{ nom: 'en', vues: 2 }, { nom: 'fr', vues: 1 }]);
 });
+
+test('document et note vocale : seul un fichier gardé chez Hopla, du bon genre, et servi sous son vrai type', async () => {
+  const doc = validerBloc({ type: 'document', titre: 'Mes tarifs', fichier: '/media/abc123.pdf', duree: 12 }, 'd1');
+  assert.equal(doc.fichier, '/media/abc123.pdf');
+  assert.equal(doc.duree, 0);
+  assert.equal(validerBloc({ type: 'document', fichier: 'https://exemple.fr/x.pdf' }, 'd2').fichier, '');
+  assert.equal(validerBloc({ type: 'document', fichier: '/media/abc123.mp3' }, 'd3').fichier, '');
+  const note = validerBloc({ type: 'audio', titre: 'Bienvenue', fichier: '/media/abc123.m4a', duree: 42.4 }, 'a1');
+  assert.equal(note.fichier, '/media/abc123.m4a');
+  assert.equal(note.duree, 42);
+  assert.equal(validerBloc({ type: 'audio', fichier: '/media/abc123.pdf' }, 'a2').fichier, '');
+  // Un lien ne garde jamais de fichier.
+  assert.equal(validerBloc({ type: 'lien', url: 'exemple.fr', fichier: '/media/abc123.pdf' }, 'l1').fichier, '');
+
+  const { Route } = await import('../routes/media/$fichier.ts');
+  const lire = (Route.options as any).server.handlers.GET as (c: { params: { fichier: string }; request: Request }) => Promise<Response>;
+  const pdf = new Uint8Array(2000); pdf.set([...'%PDF-1.7'].map(c => c.charCodeAt(0)));
+  const id = db.ajouterMedia(P, pdf, 'pdf');
+  const tout = await lire({ params: { fichier: `${id}.pdf` }, request: new Request('http://x/') });
+  assert.equal(tout.status, 200);
+  assert.equal(tout.headers.get('content-type'), 'application/pdf');
+  assert.equal(tout.headers.get('x-content-type-options'), 'nosniff');
+  assert.match(tout.headers.get('content-security-policy') ?? '', /default-src 'none'/);
+  assert.equal((await tout.arrayBuffer()).byteLength, 2000);
+  // Safari demande un son par plages.
+  const part = await lire({ params: { fichier: `${id}.pdf` }, request: new Request('http://x/', { headers: { range: 'bytes=0-1' } }) });
+  assert.equal(part.status, 206);
+  assert.equal(part.headers.get('content-range'), 'bytes 0-1/2000');
+  assert.equal((await part.arrayBuffer()).byteLength, 2);
+  assert.equal((await lire({ params: { fichier: `${id}.pdf` }, request: new Request('http://x/', { headers: { range: 'bytes=5000-' } }) })).status, 416);
+  // Le même identifiant sous une autre extension n'existe pas : le type ne se choisit pas dans l'adresse.
+  assert.equal((await lire({ params: { fichier: `${id}.mp3` }, request: new Request('http://x/') })).status, 404);
+  assert.equal((await lire({ params: { fichier: `${id}.html` }, request: new Request('http://x/') })).status, 404);
+});

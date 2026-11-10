@@ -330,7 +330,7 @@ const SUGGESTIONS: { type: TypeBloc; fond: string; bref: [string, string] }[] = 
 const FAMILLES: { nom: string; types: TypeBloc[] }[] = [
   { nom: 'Liens', types: ['lien', 'derniere-video'] },
   { nom: 'Texte et titres', types: ['titre', 'texte'] },
-  { nom: 'Photos et infos', types: ['galerie', 'faq', 'preuve'] },
+  { nom: 'Photos et infos', types: ['galerie', 'document', 'audio', 'faq', 'preuve'] },
   { nom: 'Pour te joindre', types: ['formulaire', 'coordonnees', 'lieu', 'inscription'] },
 ];
 

@@ -34,6 +34,7 @@ const tu = {
   autreMontant: 'Autre montant', paiementSur: (site: string) => `Le paiement se fait sur ${site}.`, soutenirSur: (site: string) => `Soutenir sur ${site}`,
   ouvrirSur: (site: string) => `Ouvrir sur ${site}`, fermer: 'Fermer', chargement: 'Chargement…',
   // Les blocs venus de Linktree (24 octobre 2026) : un lecteur, une galerie, une carte de visite, une adresse, « Me contacter ».
+  noteVocale: 'Note vocale', ecouterNote: (titre: string) => `Écouter : ${titre}`, pauseNote: (titre: string) => `Mettre en pause : ${titre}`, documentPdf: 'Document PDF',
   ecouter: (titre: string, service: string) => `Écouter ${titre} sur ${service}`, lireVideo: (titre: string) => `Lire la vidéo : ${titre}`,
   photo: (n: number, total: number) => `Photo ${n} sur ${total}`, photoPrecedente: 'Photo précédente', photoSuivante: 'Photo suivante',
   enregistrerContact: 'Enregistrer le contact', appeler: 'Appeler', ecrire: 'Écrire',
@@ -86,6 +87,7 @@ const en: Textes = {
   codePromo: 'Code', codeCopie: (code: string) => `Code ${code} copied`, copierCode: (code: string) => `Copy code ${code}`, copieRatee: 'Copying didn’t work.',
   autreMontant: 'Other amount', paiementSur: (site: string) => `Payment happens on ${site}.`, soutenirSur: (site: string) => `Support on ${site}`,
   ouvrirSur: (site: string) => `Open on ${site}`, fermer: 'Close', chargement: 'Loading…',
+  noteVocale: 'Voice note', ecouterNote: (titre: string) => `Listen: ${titre}`, pauseNote: (titre: string) => `Pause: ${titre}`, documentPdf: 'PDF document',
   ecouter: (titre: string, service: string) => `Listen to ${titre} on ${service}`, lireVideo: (titre: string) => `Play video: ${titre}`,
   photo: (n: number, total: number) => `Photo ${n} of ${total}`, photoPrecedente: 'Previous photo', photoSuivante: 'Next photo',
   enregistrerContact: 'Save contact', appeler: 'Call', ecrire: 'Email',

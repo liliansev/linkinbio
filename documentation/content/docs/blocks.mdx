@@ -29,6 +29,8 @@ Without `type`, a new block is a link (`link`). The type is immutable after crea
 | `price` | Product price, as displayed: "29 €" |
 | `amounts` | Suggested tip amounts in euros, for `tip` |
 | `questions` | FAQ items for `faq`: a list of `{ question, answer }` |
+| `file` | For `document` (a PDF) and `voice-note` blocks: the `/media/` path of a file uploaded from the back office. The API does not upload these files yet |
+| `duration` | Length of a `voice-note`, in seconds |
 | `proof` | Rating for `proof` blocks (reviews): `{ kind, rating, count, source }` |
 
 The [API reference](/reference#model/block) documents every field, including read-only ones.

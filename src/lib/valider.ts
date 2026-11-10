@@ -1,3 +1,4 @@
+import { estAudio, estDocument } from './fichiers.ts';
 import { ANIMATIONS, LANGUES, ANIMATIONS_BLOC, DISPOSITIONS, DOMAINES_COURTS, EFFETS_PAYS, MAX_PAYS, FORMATS_VEDETTE, FORMES_PHOTO, FORMES_BOUTON, GENRES_PREUVE, MAX_IMAGES, MAX_QUESTIONS, MAX_RESEAUX, MENTIONS_PARTENAIRE, OMBRES_BOUTON, MISES_EN_PAGE_BUREAU, RESEAUX, STYLES_BOUTON, TEINTES_VEDETTE, TYPES_BLOC } from './types.ts';
 import type { Acces, Bloc, Cadeau, Coordonnees, Partenariat, Preuve, Question, Reglages } from './types.ts';
 import { POLICES_CHOIX, idTheme } from './themes.ts';
@@ -212,6 +213,9 @@ export function validerBloc(v: unknown, id: string): Bloc {
     disposition: type === 'titre' ? parmi(o.disposition, DISPOSITIONS, 'liste') : 'liste',
     pays: pays(o.pays),
     cadeau: type === 'inscription' ? cadeau(o.cadeau) : null,
+    // Un document ou une note vocale : seulement un fichier gardé chez Hopla, du bon genre.
+    fichier: (type === 'document' ? estDocument(o.fichier) : type === 'audio' && estAudio(o.fichier)) ? String(o.fichier) : '',
+    duree: type === 'audio' && typeof o.duree === 'number' && Number.isFinite(o.duree) ? Math.min(7200, Math.max(0, Math.round(o.duree))) : 0,
   };
 }
 

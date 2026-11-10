@@ -125,7 +125,7 @@ export function createLiensServer({ appDir = appRoot, site = process.env.LIENS_S
     if (!parCloudflare) { headers.delete('cf-ipcountry'); headers.delete('cf-ipcity'); }
     if (ip) headers.set('x-real-ip', ip); else headers.delete('x-real-ip');
     const host = /^[\w.-]+(:\d+)?$/.test(req.headers.host ?? '') ? req.headers.host : new URL(origin).host;
-    const body = ['GET', 'HEAD'].includes(req.method) ? undefined : await readBody(req, 3_000_000);
+    const body = ['GET', 'HEAD'].includes(req.method) ? undefined : await readBody(req, local === '/api/fichier' ? 10_600_000 : 3_000_000);
     const response = await app.fetch(new Request(`${process.env.NODE_ENV === 'production' ? 'https' : 'http'}://${host}${req.url}`, { method: req.method, headers, body }));
     const out = {};
     response.headers.forEach((value, key) => { if (key !== 'set-cookie' && key !== 'content-length') out[key.replace(/(^|-)\w/g, c => c.toUpperCase())] = value; });

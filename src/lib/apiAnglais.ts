@@ -27,7 +27,7 @@ export const CHAMPS: Dico = {
   preuve: 'proof', genre: 'kind', note: 'rating', nombre: 'count', prix: 'price', montants: 'amounts',
   partenariat: 'partnership', mention: 'disclosure', reponse: 'answer', coordonnees: 'contact', telephone: 'phone',
   societe: 'company', poste: 'jobTitle', adressePostale: 'address', sensible: 'sensitive', disposition: 'layout', pays: 'countries',
-  cadeau: 'gift', masquer: 'hidden',
+  cadeau: 'gift', masquer: 'hidden', fichier: 'file', duree: 'duration',
   // Compte et abonnement
   adresse: 'url', cree: 'createdAt', essai: 'trial', jusqu: 'until', abonnement: 'subscription', statut: 'status', periode: 'period',
   finPeriode: 'periodEnd', offreOfferte: 'complimentaryPlan', fonctions: 'features', incluse: 'included',
@@ -70,6 +70,7 @@ export const TYPES_EN: Dico = {
   lien: 'link', titre: 'heading', texte: 'text', video: 'video', 'derniere-video': 'latest-video', newsletter: 'newsletter',
   inscription: 'email-signup', preuve: 'proof', produit: 'product', soutien: 'tip', reservation: 'booking', musique: 'music',
   faq: 'faq', coordonnees: 'contact-card', lieu: 'location', galerie: 'gallery', formulaire: 'contact-form', flux: 'feed',
+  document: 'document', audio: 'voice-note',
 };
 
 /** Les valeurs des listes fermées, par le nom (français) de leur champ, ou `parent.champ` quand il compte. */

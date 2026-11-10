@@ -7,8 +7,8 @@ const noms = (entrees: { nom: string }[]) => entrees.map(e => e.nom);
 const premier = (texte: string, principal = false) => chercherBlocs(texte, principal)[0]?.nom;
 
 test('le choix de départ n’a qu’une entrée par chose qu’on écrit ou que Hopla tient', () => {
-  assert.deepEqual(noms(choixPour(true)), ['Lien', 'Titre de section', 'Texte', 'Galerie', 'Questions fréquentes', 'Avis et preuves', 'Liste e-mail', 'Me contacter', 'Carte de visite', 'Adresse', 'Ma dernière vidéo YouTube']);
-  assert.deepEqual(noms(choixPour(false)), ['Lien', 'Titre de section', 'Texte', 'Galerie', 'Questions fréquentes', 'Avis et preuves', 'Liste e-mail', 'Me contacter', 'Carte de visite', 'Adresse']);
+  assert.deepEqual(noms(choixPour(true)), ['Lien', 'Titre de section', 'Texte', 'Galerie', 'Questions fréquentes', 'Avis et preuves', 'Liste e-mail', 'Document PDF', 'Note vocale', 'Me contacter', 'Carte de visite', 'Adresse', 'Ma dernière vidéo YouTube']);
+  assert.deepEqual(noms(choixPour(false)), ['Lien', 'Titre de section', 'Texte', 'Galerie', 'Questions fréquentes', 'Avis et preuves', 'Liste e-mail', 'Document PDF', 'Note vocale', 'Me contacter', 'Carte de visite', 'Adresse']);
   // Une vidéo, une musique, un agenda, un soutien, un produit viennent de leur adresse ; un lien partenaire est un lien.
   for (const nom of ['Vidéo', 'Musique ou podcast', 'Produit', 'Prise de rendez-vous', 'Me soutenir', 'Lien partenaire', 'Ma newsletter']) assert.equal(CHOIX.some(t => t.nom === nom), false, nom);
 });
@@ -48,7 +48,10 @@ test('on cherche avec ce qu’on veut faire : un mot suffit, les petits mots ne 
 });
 
 test('le nom passe avant les mots ; une lettre seule ne cherche que les noms', () => {
-  assert.deepEqual(noms(chercherBlocs('p', false)), ['Produit', 'Prise de rendez-vous', 'Lien partenaire', 'Musique ou podcast', 'Avis et preuves']);
+  assert.deepEqual(noms(chercherBlocs('p', false)), ['Produit', 'Prise de rendez-vous', 'Lien partenaire', 'Musique ou podcast', 'Avis et preuves', 'Document PDF']);
+  // Les blocs venus de Taap.it se trouvent par ce qu'on veut poser.
+  assert.equal(premier('pdf'), 'Document PDF');
+  assert.equal(premier('vocal'), 'Note vocale');
   assert.deepEqual(noms(chercherBlocs('youtube', true)), ['Ma dernière vidéo YouTube', 'Vidéo']);
   // Depuis le lot 4, la dernière vidéo d'une chaîne est à tous : elle se trouve aussi par son nom.
   assert.deepEqual(noms(chercherBlocs('youtube', false)), ['Ma dernière vidéo YouTube', 'Vidéo']);
