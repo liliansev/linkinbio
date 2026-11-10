@@ -41,9 +41,27 @@ export function etatDomaine(compte: string, env: Env = process.env): EtatDomaine
 /* ---- Le DNS ---- */
 
 export interface Resolveur { cname(hote: string): Promise<string[]>; txt(hote: string): Promise<string[][]> }
+/**
+ * Le résolveur de la machine d'abord ; s'il ne voit rien, un résolveur public par HTTPS. Celui de la machine garde
+ * en mémoire, jusqu'à une demi-heure, qu'un nom n'existait pas : sans ce second regard, qui a cliqué « Vérifier »
+ * avant de poser son enregistrement attendrait pour rien.
+ */
+async function parHttps(hote: string, type: 'CNAME' | 'TXT'): Promise<string[]> {
+  const reponse = await fetch(`https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(hote)}&type=${type}`, {
+    headers: { Accept: 'application/dns-json' }, signal: AbortSignal.timeout(3000),
+  });
+  const json = await reponse.json().catch(() => null) as { Answer?: { type?: number; data?: string }[] } | null;
+  const numero = type === 'CNAME' ? 5 : 16;
+  return (json?.Answer ?? []).filter(a => a.type === numero && typeof a.data === 'string').map(a => a.data!);
+}
+/** Le texte d'un TXT lu par HTTPS : ses morceaux entre guillemets, recollés. */
+const sansGuillemets = (t: string) => (t.match(/"((?:[^"\\]|\\.)*)"/g) ?? [t]).map(m => m.replace(/^"|"$/g, '')).join('');
 const resolveurSysteme = (): Resolveur => {
   const r = new Resolver({ timeout: 3000, tries: 2 });
-  return { cname: h => r.resolveCname(h), txt: h => r.resolveTxt(h) };
+  return {
+    cname: async h => { const n = await r.resolveCname(h).catch(() => [] as string[]); return n.length ? n : parHttps(h, 'CNAME'); },
+    txt: async h => { const t = await r.resolveTxt(h).catch(() => [] as string[][]); return t.length ? t : (await parHttps(h, 'TXT')).map(x => [sansGuillemets(x)]); },
+  };
 };
 
 /** Le CNAME du nom mène au nom du compte, ou son TXT `_hopla` le dit : c'est bien son domaine, et bien cette page. */
