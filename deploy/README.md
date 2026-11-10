@@ -124,10 +124,11 @@ navigateurs.
 ## Noms de domaine des pages
 
 Écrit le 10 novembre 2026. Sans `LIENS_DOMAINES`, rien ne change et la ligne « Mon nom de
-domaine » n'existe pas dans Réglages. Sur hopla.page, les étapes 1 et 2 sont faites
-(Cloudflare for SaaS activé, `origine.hopla.page` en origine de repli, `*.cname.hopla.page`
-créé) ; restent les étapes 3 à 5. Pour l'allumer (Cloudflare for SaaS, 100 noms gratuits
-puis 0,10 $ par nom et par mois) :
+domaine » n'existe pas dans Réglages. Sur hopla.page, tout est allumé depuis le 10 novembre
+2026 au soir (étapes 1 à 5), et essayé de bout en bout avec un vrai nom : le certificat
+arrive en quelques minutes, la page répond à la racine du nom, le reste part en 308 vers
+hopla.page. Reste l'étape 6, nom par nom. Pour l'allumer sur une autre instance (Cloudflare
+for SaaS, 100 noms gratuits puis 0,10 $ par nom et par mois) :
 
 1. Dans la zone `hopla.page`, SSL/TLS, « Custom Hostnames » : activer Cloudflare for SaaS et
    donner pour origine de repli (« fallback origin ») un nom en proxy qui mène au serveur,
@@ -136,10 +137,11 @@ puis 0,10 $ par nom et par mois) :
    origine : chaque compte pointe son nom vers `<id du compte>.cname.hopla.page`.
 3. Créer un jeton d'API limité à la zone, avec « SSL and Certificates : Edit », et poser
    dans les variables Coolify `LIENS_DOMAINES=cname.hopla.page`, `LIENS_CF_JETON` et
-   `LIENS_CF_ZONE` (l'identifiant de la zone).
+   `LIENS_CF_ZONE` (l'identifiant de la zone). Coolify passe ces variables au build, où
+   les tests sont rejoués : un test ne doit jamais lire un réglage dans l'environnement.
 4. Dans Coolify, faire arriver à l'application Hopla les noms que Traefik ne connaît pas :
    dans les « Container Labels » de l'application, un routeur générique de priorité basse
-   (`HostRegexp(`.+`)`, `priority=1`, point d'entrée `https`, `tls=true`) vers le service
+   (`PathPrefix(`/`)`, `priority=1`, point d'entrée `https`, `tls=true`) vers le service
    de l'application.
 5. Le certificat du visiteur est celui de Cloudflare. Vers l'origine de repli, Cloudflare
    se présente sous le nom du client (en-tête `Host` et SNI) : en mode strict, il
@@ -196,4 +198,4 @@ gestionnaire de mots de passe ; la perdre rend ces données illisibles pour de b
 ## Reste à faire
 
 - Faire un test de restauration à blanc.
-- Allumer les noms de domaine des pages (voir « Noms de domaine des pages ») et mettre Premium en vente.
+- Mettre Premium en vente (les noms de domaine des pages sont allumés depuis le 10 novembre 2026).
