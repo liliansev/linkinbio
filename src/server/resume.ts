@@ -61,7 +61,7 @@ export async function envoyerResumes(env: Env, fetchImpl: typeof fetch, maintena
     if (!db.reserverResume(c.id, semaine, maintenant)) continue;
     const stats = db.stats(c.id, 7, maintenant);
     if (!stats.vues) continue;
-    const to = c.id === PRINCIPAL ? adresseAdmin(env) : c.email;
+    const to = db.duPrincipal(compte) ? adresseAdmin(env) : c.email;
     if (!to) continue;
     if (await envoyer(env, fetchImpl, { to, ...courrielResume(c.pseudo, stats, admin, reglages.langue) })) envoyes++;
   }

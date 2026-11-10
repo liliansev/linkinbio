@@ -3,7 +3,7 @@ import type { Origines } from '../lib/types.ts';
 import type { DureeOfferte, PlanPayant } from '../lib/abonnement.ts';
 import { OFFRES, avantage, nomOffre, apresAbonnement, apresOffre, avantagesEntre, effetOffert, estResilie, finOfferte, rang } from '../lib/abonnement.ts';
 import { CONTACT_LEGAL } from '../lib/legal.ts';
-import { abonnement, compteParId, lireReglages, offrir, retirerOffre } from './db.ts';
+import { abonnement, compteParId, lireReglages, offrir, retirerOffre, titulaire } from './db.ts';
 import type { Compte } from './db.ts';
 import { resilierEnFinDePeriode } from './creem.ts';
 import { bouton, echapper, envoyer, enveloppe } from './courriel.ts';
@@ -26,9 +26,10 @@ function langueDe(compte: string): 'fr' | 'en' {
   try { return lireReglages(compte).langue === 'en' ? 'en' : 'fr'; } catch { return 'fr'; }
 }
 
-/** Le compte d'un geste : jamais le principal, qui n'a pas d'abonnement. */
+/** Le compte d'un geste : jamais le principal, qui n'a pas d'abonnement ; pour une page en plus, le compte à qui elle est. */
 function compteDuGeste(id: string): Compte {
-  const compte = compteParId(id);
+  const page = compteParId(id);
+  const compte = page && titulaire(page);
   if (!compte || compte.id === PRINCIPAL) throw new Error('Compte introuvable.');
   return compte;
 }

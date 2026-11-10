@@ -3,6 +3,7 @@ import { PRINCIPAL } from '../lib/types.ts';
 import { NOMS_AUDIENCES, audienceDeLApp } from '../lib/provenance.ts';
 import { navigateurIntegre } from '../lib/ouvrirApp.ts';
 import { ajouterEvenement, compteParPseudo, evenementsDuJour, jourDe, lireBlocs, secret } from './db.ts';
+import { pageEnLigne } from './droits.ts';
 import { MINUTE, cleIp, limiteur } from './limites.ts';
 
 /*
@@ -103,7 +104,7 @@ function compteDePage(page: unknown): string | null {
   if (page === '' || page === undefined || page === null) return PRINCIPAL;
   if (typeof page !== 'string' || !/^[a-z0-9-]{3,30}$/.test(page)) return null;
   const compte = compteParPseudo(page);
-  return compte && compte.statut === 'actif' ? compte.id : null;
+  return pageEnLigne(compte) ? compte.id : null;
 }
 
 export function enregistrer(entree: { page?: unknown; type: unknown; bloc: unknown; utm: unknown; referent: unknown; app?: unknown }, contexte: { ip: string; ua: string; session: string | null; pays?: string; langue?: string; ville?: string }, maintenant = Date.now()): boolean {

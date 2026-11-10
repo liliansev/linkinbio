@@ -70,7 +70,7 @@ export function authentifier(entete: string | null, ip: string, env: Record<stri
   }
   const compte = db.compteParId(trouvee.compte);
   if (!compte || compte.statut !== 'actif') throw new ErreurApi(403, 'compte_suspendu', 'This account is suspended.');
-  if (compte.id !== PRINCIPAL && compte.cgu !== VERSION_CGU) throw new ErreurApi(403, 'conditions', `Accept the updated terms of service on ${NOM_ADMIN}, then retry.`);
+  if (!db.duPrincipal(compte) && compte.cgu !== VERSION_CGU) throw new ErreurApi(403, 'conditions', `Accept the updated terms of service on ${NOM_ADMIN}, then retry.`);
   if (!droits(compte, env, maintenant).api) throw new ErreurApi(403, 'offre', 'The API and MCP server require the Pro plan. The key is reactivated when the account is back on Pro.');
   if (appelsParCle(trouvee.id, maintenant)) throw new ErreurApi(429, 'trop_d_appels', 'Rate limit exceeded for this API key. Retry in one minute.');
   db.noterUsageCleApi(trouvee.id, maintenant);

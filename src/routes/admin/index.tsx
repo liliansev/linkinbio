@@ -60,6 +60,7 @@ function PageAdmin() {
       enregistrer: l => fn.enregistrerLienCourt({ data: l }),
       supprimer: async id => { await fn.supprimerLienCourt({ data: id }); },
     },
+    pages: { creer: nom => fn.creerPage({ data: nom }), changer: id => fn.changerDePage({ data: id }) },
     domaine: {
       lire: async () => (await fn.lireDomaine()).domaine,
       brancher: async nom => (await fn.brancherDomaine({ data: nom })).domaine,

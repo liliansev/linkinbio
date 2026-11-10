@@ -114,6 +114,18 @@ embarque tout : l'image n'a pas de `node_modules`.
   (`dUnePage`), le reste en 308 vers l'origine. Réglages, « Mon nom de domaine » (`admin/DomainePerso.tsx`), montré seulement quand
   l'instance l'a allumé et que l'offre le comprend. Supprimer un compte retire son nom chez Cloudflare. Turnstile accepte un jeton pris
   sur un nom actif (`hotesTurnstile`), mais le widget doit connaître ce nom : à ajouter à la main chez Cloudflare. Pas dans l'API ni le MCP.
+- Plusieurs pages pour un compte (10 novembre 2026, lot 6 d'après Taap.it, Premium : `FONCTIONS.pages`, `MAX_PAGES` = 3, la première
+  comprise). Une page en plus est un compte à part entière (son nom, ses réglages, ses blocs, ses stats, son nom de domaine, ses clés
+  d'API) que la colonne `comptes.proprietaire` rattache au compte de la personne : `creerPage`, `pagesDe`, `titulaire`, `duPrincipal`
+  dans `db.ts`. Elle n'a ni adresse e-mail à elle (un repère `page:<id>` dans la base ; `compteParId` et `compteParPseudo` rendent
+  l'adresse et les CGU du propriétaire), ni essai, ni abonnement : `abonnement(c)` lit celui du titulaire, et tout ce qui touche à
+  Creem (payer, portail, résilier, les gestes de Comptes) passe par `titulaire`. On n'entre que par le compte ; la session passe d'une
+  page à l'autre en changeant le compte de son jeton (`changerDePage`, `creerPage` dans `fonctions.ts`, `changerSession`), et tombe
+  quand le compte est suspendu. `pageEnLigne` (`server/droits.ts`) remplace le test du statut sur tout ce qui est public : une page
+  en plus ne répond que tant que son compte est actif et que son offre comprend plusieurs pages ; sinon elle attend, rien n'est
+  effacé. Supprimer une page en plus ne touche ni au compte ni à l'abonnement ; supprimer le compte emporte ses pages. Réglages,
+  « Mes pages » (`admin/MesPages.tsx`) et le menu du compte : le back office se recharge sur la page choisie. Dans Comptes, une page
+  en plus se lit avec l'adresse et l'offre de son compte (`pageDe`).
 - `server/favicons.ts` (26 octobre 2026, demandé par Lilian : « mets à jour tous les liens existants et même ceux de mes
   clients ») : une seule fois, une minute après le démarrage (repère `favicons-liens` dans `reglages`, éteint par
   `HOPLA_FAVICONS=0`), la vignette de chaque bouton de lien de toutes les pages prend le favicon de son site, gardé tel

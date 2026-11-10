@@ -6,7 +6,7 @@ import { PRINCIPAL } from '../lib/types.ts';
 import type { Env } from './courriel.ts';
 import type { Compte, Domaine } from './db.ts';
 import * as db from './db.ts';
-import { droits } from './droits.ts';
+import { droits, pageEnLigne } from './droits.ts';
 
 /*
  * Son propre nom de domaine (10 novembre 2026, lot 6 d'après Taap.it, Premium). La personne tape `liens.marie.fr`,
@@ -152,7 +152,7 @@ export function compteDeHote(hote: string, env: Env = process.env, maintenant = 
   const d = db.domaineParHote(hote.toLowerCase().replace(/:\d+$/, ''));
   if (!d) return null;
   const c = db.compteParId(d.compte);
-  if (!c || c.statut !== 'actif') return { ailleurs: null };
+  if (!pageEnLigne(c)) return { ailleurs: null };
   return domaineActif(c, env, maintenant) === d.hote ? { page: c } : { ailleurs: c };
 }
 

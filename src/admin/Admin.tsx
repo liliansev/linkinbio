@@ -203,6 +203,10 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
     const l = blocsRef.current;
     return [...l.filter(b => !ids.includes(b.id)), ...ids.map(id => l.find(b => b.id === id)).filter((b): b is Bloc => !!b)];
   };
+  // Ses autres pages (Premium), dans le menu du compte : un toucher y passe, le back office se recharge sur elle.
+  const autresPages = (api.pages ? initial.pages ?? [] : []).filter(p => !p.courante).map(p => ({
+    nom: p.pseudo, icone: 'ui-fleche', action: () => { void api.pages!.changer(p.id).then(r => { if (r.ok) location.assign(location.pathname); }, () => {}); },
+  }));
   // Son propre nom de domaine, quand il répond : relié ou retiré dans Réglages, l'adresse de la page change partout à l'écran.
   const [domainePerso, setDomainePerso] = useState(initial.compte.domaine ?? '');
   const compte = useMemo(() => ({ ...initial.compte, plan: abonnement.plan, domaine: domainePerso || undefined }), [initial.compte, abonnement.plan, domainePerso]);
@@ -865,7 +869,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
           {appel('mb-1')}
           <Menu label={l('Ton compte', 'Your account')} haut aligne="largeur" className="adm-compte" titre={`${reglages.profil.nom || compte.pseudo}, ${l('ton compte', 'your account')}`}
             entete={<p className="truncate px-2.5 pb-1.5 pt-2 text-[12px] text-white/55">{compte.email ? `${compte.email} · ` : ''}{compte.principal ? l('Compte principal', 'Main account') : `Hopla ${OFFRES[compte.plan].nom}`}</p>}
-            elements={[{ nom: l('Me déconnecter', 'Sign out'), icone: 'ui-sortir', action: deconnexion }]}>
+            elements={[...autresPages, { nom: l('Me déconnecter', 'Sign out'), icone: 'ui-sortir', action: deconnexion }]}>
             {avatar('h-6 w-6', 18)}
             <span className="min-w-0 flex-1 truncate text-[13.5px] font-medium">{reglages.profil.nom || compte.pseudo}</span>
             <Icone nom="ui-chevrons" taille={14} className="shrink-0 text-white/55" />
@@ -950,6 +954,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
             abonnement={abonnement} onOffres={peutAcheter ? (pour?: Fonction) => ouvrirOffres(pour) : undefined} ouvrirPortail={api.ouvrirPortail}
             onResilier={peutAcheter ? () => setOffres({ resilier: true }) : undefined} cles={api.cles} courts={api.courts}
             domainePerso={initial.domaines ? api.domaine : undefined} surDomaine={setDomainePerso}
+            pages={api.pages && initial.pages && (initial.pages.length > 1 || (initial.pagesMax ?? 1) > 1) ? { liste: initial.pages, max: initial.pagesMax ?? 1, api: api.pages } : undefined}
             importer={importer} />}
           {onglet === 'comptes' && api.comptes && <OngletComptes api={api.comptes} avatar={reglages.profil.avatar} />}
           </div>

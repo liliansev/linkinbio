@@ -278,8 +278,13 @@ export const sansSchema = (url: string) => url.replace(/^https?:\/\//, '');
 export const NOM_PUBLIC = sansSchema(ORIGINE_PUBLIQUE);
 export const NOM_ADMIN = sansSchema(ORIGINE_ADMIN);
 
+/** Une des pages d'un compte : `enLigne`, faux pour une page en plus que l'offre ne comprend plus (elle attend, rien n'est effacé). */
+export interface PageDuCompte { id: string; pseudo: string; courante: boolean; enLigne: boolean }
+
 /** Une ligne de la liste des comptes, dans le back office de Lilian. */
 export interface CompteResume {
+  /** Une page en plus : le pseudo du compte à qui elle est. Son adresse et son abonnement sont ceux de ce compte. */
+  pageDe?: string;
   id: string;
   email: string;
   pseudo: string;
@@ -323,6 +328,9 @@ export interface EtatAdmin {
   droits: Droits;
   /** Vrai quand le compte peut relier son propre nom de domaine : l'instance les sert (`LIENS_DOMAINES`) et son offre le comprend. */
   domaines?: boolean;
+  /** Les pages de la personne, la première d'abord (Premium : jusqu'à `pagesMax`), et celle que la session règle. */
+  pages?: PageDuCompte[];
+  pagesMax?: number;
   /** Clics des 30 derniers jours, par bloc. */
   clics: Record<string, number>;
   /** Les places prises de chaque drop. */
@@ -431,6 +439,12 @@ export interface ApiCourts {
   supprimer(id: string): Promise<void>;
 }
 
+/** Plusieurs pages pour un compte (Réglages, « Mes pages ») : en ajouter une, passer de l'une à l'autre. La session change de page. */
+export interface ApiPages {
+  creer(nom: string): Promise<{ ok: boolean; message: string }>;
+  changer(id: string): Promise<{ ok: boolean }>;
+}
+
 /** Son propre nom de domaine (Réglages, « Mon nom de domaine ») : le poser, faire vérifier ses enregistrements DNS, le retirer. */
 export interface ApiDomaine {
   lire(): Promise<EtatDomainePerso | null>;
@@ -473,7 +487,7 @@ export interface Api {
    * Supprime son propre compte ; `confirmation` est le pseudo retapé. Jamais le compte principal. Un abonnement
    * en cours est résilié avant ; `aLaMain` : Creem ne l'a pas confirmé, il sera résilié à la main (le message le dit).
    */
-  supprimerMonCompte(confirmation: string): Promise<{ ok: boolean; message: string; aLaMain?: boolean }>;
+  supprimerMonCompte(confirmation: string): Promise<{ ok: boolean; message: string; aLaMain?: boolean; page?: boolean }>;
   /** L'adresse de l'export complet (JSON), ou null dans l'aperçu. */
   urlExport: string | null;
   /** Prendre une offre : l'adresse où aller (la page de paiement Creem, ou le retour après un changement d'offre). */
@@ -510,6 +524,8 @@ export interface Api {
   courts?: ApiCourts;
   /** Absent dans l'aperçu statique sans serveur. */
   domaine?: ApiDomaine;
+  /** Absent dans l'aperçu statique sans serveur. */
+  pages?: ApiPages;
 }
 
 /**

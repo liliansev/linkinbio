@@ -125,6 +125,8 @@ export function base(): DatabaseSync {
   // (1 : « plus que 3 jours », 2 : « c'est fini »).
   colonne(db, 'comptes', 'essai_jusqu', 'INTEGER');
   colonne(db, 'comptes', 'essai_rappel', 'INTEGER NOT NULL DEFAULT 0');
+  // Une page en plus (10 novembre 2026) : le compte à qui elle est. Vide pour un compte, qui est sa propre première page.
+  colonne(db, 'comptes', 'proprietaire', "TEXT NOT NULL DEFAULT ''");
   // Vu depuis le navigateur intégré d'une app (Instagram, TikTok…), et pour un clic, ouvert dans l'app visée.
   colonne(db, 'evenements', 'integre', 'INTEGER NOT NULL DEFAULT 0');
   colonne(db, 'evenements', 'app', 'INTEGER NOT NULL DEFAULT 0');
@@ -253,12 +255,25 @@ export interface Compte {
   id: string; email: string; pseudo: string; statut: 'actif' | 'suspendu'; cree: number; connexion: number | null; cgu: string; cgu_le: number | null;
   creem_client: string; creem_abonnement: string; abonnement_statut: string; fin_periode: number | null; abonnement_maj: number; abonnement_produit: string;
   offerte: string; offerte_jusqu: number | null; offerte_le: number | null; essai_jusqu: number | null; essai_rappel: number;
+  /** Une page en plus : l'id du compte à qui elle est (voir « Plusieurs pages »). Vide pour un compte. */
+  proprietaire: string;
 }
 
-const COLONNES_COMPTE = 'id, email, pseudo, statut, cree, connexion, cgu, cgu_le, creem_client, creem_abonnement, abonnement_statut, fin_periode, abonnement_maj, abonnement_produit, offerte, offerte_jusqu, offerte_le, essai_jusqu, essai_rappel';
+const COLONNES_COMPTE = 'id, email, pseudo, statut, cree, connexion, cgu, cgu_le, creem_client, creem_abonnement, abonnement_statut, fin_periode, abonnement_maj, abonnement_produit, offerte, offerte_jusqu, offerte_le, essai_jusqu, essai_rappel, proprietaire';
 const LIRE_COMPTE = `SELECT ${COLONNES_COMPTE} FROM comptes`;
-export const compteParId = (id: string) => base().prepare(`${LIRE_COMPTE} WHERE id = ?`).get(id) as Compte | undefined;
-export const compteParPseudo = (pseudo: string) => base().prepare(`${LIRE_COMPTE} WHERE pseudo = ?`).get(pseudo.toLowerCase()) as Compte | undefined;
+const compteBrut = (id: string) => base().prepare(`${LIRE_COMPTE} WHERE id = ?`).get(id) as Compte | undefined;
+/**
+ * Une page en plus se lit avec l'adresse e-mail et les conditions acceptées de son propriétaire : c'est la même
+ * personne. Son abonnement, lui, reste celui du propriétaire seul (`titulaire`, `abonnement`) : rien de ce qui touche à
+ * Creem ne se lit sur une page en plus.
+ */
+function vue(c: Compte | undefined): Compte | undefined {
+  if (!c?.proprietaire) return c;
+  const p = compteBrut(c.proprietaire);
+  return p ? { ...c, email: p.email, cgu: p.cgu, cgu_le: p.cgu_le } : c;
+}
+export const compteParId = (id: string) => vue(compteBrut(id));
+export const compteParPseudo = (pseudo: string) => vue(base().prepare(`${LIRE_COMPTE} WHERE pseudo = ?`).get(pseudo.toLowerCase()) as Compte | undefined);
 /** Jamais le compte principal : son adresse se lit dans l'environnement. */
 export const compteParEmail = (email: string) => base().prepare(`${LIRE_COMPTE} WHERE email = ? AND id != ?`).get(email.toLowerCase(), PRINCIPAL) as Compte | undefined;
 
@@ -300,11 +315,15 @@ export function changerStatut(id: string, statut: Compte['statut']) {
 /** Supprime un compte et tout ce qu'il possède. Ne touche pas à Creem : un abonnement se résilie avant (voir `suppression.ts`). */
 export function supprimerCompte(id: string, d = base()) {
   if (id === PRINCIPAL) throw new Error('Le compte principal ne se supprime pas.');
+  // Ses pages en plus partent avec lui.
+  const ids = [id, ...(d.prepare('SELECT id FROM comptes WHERE proprietaire = ?').all(id) as { id: string }[]).map(l => l.id)];
   d.exec('BEGIN');
   try {
-    for (const table of ['blocs', 'medias', 'evenements', 'jetons', 'signalements', 'contacts', 'integrations', 'resumes', 'acces', 'vignettes_avant', 'cles_api', 'liens_courts', 'clics_courts', 'domaines']) d.prepare(`DELETE FROM ${table} WHERE compte = ?`).run(id);
-    d.prepare('DELETE FROM pages WHERE compte = ?').run(id);
-    d.prepare('DELETE FROM comptes WHERE id = ?').run(id);
+    for (const un of ids) {
+      for (const table of ['blocs', 'medias', 'evenements', 'jetons', 'signalements', 'contacts', 'integrations', 'resumes', 'acces', 'vignettes_avant', 'cles_api', 'liens_courts', 'clics_courts', 'domaines']) d.prepare(`DELETE FROM ${table} WHERE compte = ?`).run(un);
+      d.prepare('DELETE FROM pages WHERE compte = ?').run(un);
+      d.prepare('DELETE FROM comptes WHERE id = ?').run(un);
+    }
     d.exec('COMMIT');
   } catch (error) { d.exec('ROLLBACK'); throw error; }
 }
@@ -325,6 +344,7 @@ export function changerPseudo(id: string, pseudo: string) {
 export function changerEmail(id: string, email: string) {
   if (id === PRINCIPAL) throw new Error('L’adresse du compte principal se lit dans l’environnement.');
   const d = base();
+  if (compteBrut(id)?.proprietaire) throw new Error('Une page en plus n’a pas d’adresse à elle.');
   d.exec('BEGIN');
   try {
     d.prepare('UPDATE comptes SET email = ? WHERE id = ?').run(email.toLowerCase(), id);
@@ -370,6 +390,46 @@ export const changerPseudoReservation = (id: string, pseudo: string) => base().p
 /** Les pages créées depuis `depuis` (le plafond du jour de l'inscription directe). */
 export const comptesDepuis = (depuis: number) => (base().prepare('SELECT COUNT(*) AS n FROM comptes WHERE cree > ? AND id != ?').get(depuis, PRINCIPAL) as { n: number }).n;
 
+/* ---- Plusieurs pages (10 novembre 2026, lot 6 d'après Taap.it, Premium) ---- */
+
+/*
+ * Une page en plus est un compte à part entière (son nom, ses réglages, ses blocs, ses stats, son nom de domaine), que
+ * `proprietaire` rattache au compte de la personne. Elle n'a ni adresse e-mail à elle (un repère unique en tient lieu
+ * dans la base, jamais lu), ni abonnement, ni essai : on y entre par le compte, et ses droits sont ceux du compte.
+ */
+
+/** Le compte qui paie et qui se connecte : lui-même, ou le propriétaire d'une page en plus. */
+export const titulaire = (c: Compte): Compte => (c.proprietaire && compteBrut(c.proprietaire)) || c;
+/** Le compte principal ou l'une de ses pages : tout leur est ouvert, sans abonnement. */
+export const duPrincipal = (c: Compte) => c.id === PRINCIPAL || c.proprietaire === PRINCIPAL;
+
+/** Les pages d'une personne, la première d'abord, à partir de n'importe laquelle. */
+export function pagesDe(c: Compte): Compte[] {
+  const racine = c.proprietaire || c.id;
+  const premiere = compteBrut(racine);
+  const autres = base().prepare(`${LIRE_COMPTE} WHERE proprietaire = ? ORDER BY cree, id`).all(racine) as unknown as Compte[];
+  return [...(premiere ? [premiere] : []), ...autres].map(p => vue(p)!);
+}
+
+/** Ajoute une page au compte de `c`. Le nom se vérifie avant (`verifierNom`) ; ici, seulement qu'il est libre. */
+export function creerPage(c: Compte, pseudo: string, langue: Langue = 'fr', maintenant = Date.now()): Compte {
+  const d = base();
+  const racine = c.proprietaire || c.id, p = pseudo.toLowerCase();
+  if (nomPris(p)) throw new Error('Ce pseudo est déjà pris.');
+  const id = nouvelId();
+  d.exec('BEGIN');
+  try {
+    // `connexion` posée : la purge des pages jamais ouvertes ne la concerne pas, on y entre par le compte.
+    d.prepare('INSERT INTO comptes (id, email, pseudo, cree, connexion, proprietaire) VALUES (?, ?, ?, ?, ?, ?)').run(id, `page:${id}`, p, maintenant, maintenant, racine);
+    d.prepare('INSERT INTO pages (compte, valeur) VALUES (?, ?)').run(id, JSON.stringify(reglagesNouveauCompte(p, langue)));
+    d.exec('COMMIT');
+  } catch (error) { d.exec('ROLLBACK'); throw error; }
+  return compteParId(id)!;
+}
+
+/** Fait passer une session d'une page à l'autre : le jeton change de compte, rien d'autre. */
+export const deplacerJeton = (hash: string, compte: string) => Number(base().prepare("UPDATE jetons SET compte = ? WHERE hash = ? AND type = 'session'").run(compte, hash).changes) === 1;
+
 /* ---- Offres et abonnement ---- */
 
 /** Un produit créé dans Creem pour une offre et une période. Les anciens restent : leurs abonnés gardent leur offre. */
@@ -403,7 +463,7 @@ export const sansPaiement = (env: Record<string, string | undefined> = process.e
  * Le compte principal a tout, sans abonnement, comme chaque compte d'une instance sans paiement.
  */
 function abonnementSelon(c: Compte, catalogue: ProduitCreem[], maintenant: number): Abonnement {
-  if (c.id === PRINCIPAL || sansPaiement()) return { plan: 'premium', payee: 'gratuit', statut: '', finPeriode: null, periode: null, portail: false, offerte: null, essai: null };
+  if (duPrincipal(c) || sansPaiement()) return { plan: 'premium', payee: 'gratuit', statut: '', finPeriode: null, periode: null, portail: false, offerte: null, essai: null };
   const produit = c.abonnement_produit ? catalogue.find(p => p.id === c.abonnement_produit) : undefined;
   const payee: Plan = estPaye({ statut: c.abonnement_statut, finPeriode: c.fin_periode }, maintenant) ? produit?.plan ?? 'pro' : 'gratuit';
   const offerte = estPlanPayant(c.offerte) && (c.offerte_jusqu === null || maintenant < c.offerte_jusqu) ? { plan: c.offerte, jusqu: c.offerte_jusqu } : null;
@@ -415,7 +475,8 @@ function abonnementSelon(c: Compte, catalogue: ProduitCreem[], maintenant: numbe
     statut: c.abonnement_statut, finPeriode: c.fin_periode, periode: produit?.periode ?? null, portail: !!c.creem_client, offerte, essai,
   };
 }
-export const abonnement = (c: Compte, maintenant = Date.now()): Abonnement => abonnementSelon(c, lireCatalogue(), maintenant);
+/** L'abonnement d'une page en plus est celui de son propriétaire. */
+export const abonnement = (c: Compte, maintenant = Date.now()): Abonnement => abonnementSelon(titulaire(c), lireCatalogue(), maintenant);
 
 export const planDuCompte = (id: string, maintenant = Date.now()): Plan => {
   const c = compteParId(id);
@@ -450,7 +511,8 @@ export function webhookDejaRecu(idEvenement: string, maintenant = Date.now()): b
 }
 export const oublierWebhook = (idEvenement: string) => base().prepare('DELETE FROM webhooks WHERE id = ?').run(idEvenement);
 
-export const accepterCgu = (id: string, version: string, maintenant = Date.now()) => base().prepare('UPDATE comptes SET cgu = ?, cgu_le = ? WHERE id = ?').run(version, maintenant, id);
+/** Les conditions s'acceptent une fois pour toutes ses pages : elles se notent sur le compte. */
+export const accepterCgu = (id: string, version: string, maintenant = Date.now()) => base().prepare('UPDATE comptes SET cgu = ?, cgu_le = ? WHERE id = ?').run(version, maintenant, compteBrut(id)?.proprietaire || id);
 
 export const noterConnexion = (id: string, maintenant = Date.now()) => base().prepare('UPDATE comptes SET connexion = ? WHERE id = ?').run(maintenant, id);
 
@@ -462,9 +524,12 @@ export function listerComptes(maintenant = Date.now()): CompteResume[] {
       (SELECT COUNT(*) FROM evenements e WHERE e.compte = c.id AND e.type = 'vue' AND e.ts > ?) AS vues
     FROM comptes c ORDER BY c.id = ? DESC, c.cree DESC`).all(maintenant - 30 * 86_400_000, PRINCIPAL) as unknown as (Compte & { blocs: number; vues: number })[];
   const catalogue = lireCatalogue();
+  const parId = new Map(lignes.map(c => [c.id, c]));
   return lignes.map(c => {
-    const a = abonnementSelon(c, catalogue, maintenant);
-    return { id: c.id, email: c.email, pseudo: c.pseudo, statut: c.statut, cree: c.cree, connexion: c.connexion, blocs: c.blocs, vues: c.vues, principal: c.id === PRINCIPAL, plan: a.plan, abonnement: a };
+    // Une page en plus : l'adresse et l'abonnement de son propriétaire.
+    const t = (c.proprietaire && parId.get(c.proprietaire)) || c;
+    const a = abonnementSelon(t, catalogue, maintenant);
+    return { id: c.id, email: t.email, pseudo: c.pseudo, statut: c.statut, cree: c.cree, connexion: c.connexion, blocs: c.blocs, vues: c.vues, principal: c.id === PRINCIPAL, plan: a.plan, abonnement: a, ...(c.proprietaire ? { pageDe: t.pseudo } : {}) };
   });
 }
 
@@ -675,7 +740,8 @@ export function ajouterJeton(hash: string, type: 'connexion' | 'session', dureeM
 export function verifierJeton(hash: string, type: 'connexion' | 'session', consommer = false): string | null {
   const d = base();
   const ligne = d.prepare(`SELECT j.compte FROM jetons j JOIN comptes c ON c.id = j.compte
-    WHERE j.hash = ? AND j.type = ? AND j.expire > ? AND c.statut = 'actif'`).get(hash, type, Date.now()) as { compte: string } | undefined;
+    WHERE j.hash = ? AND j.type = ? AND j.expire > ? AND c.statut = 'actif'
+      AND NOT EXISTS (SELECT 1 FROM comptes p WHERE p.id = c.proprietaire AND p.statut != 'actif')`).get(hash, type, Date.now()) as { compte: string } | undefined;
   if (ligne && consommer) d.prepare('DELETE FROM jetons WHERE hash = ?').run(hash);
   return ligne?.compte ?? null;
 }

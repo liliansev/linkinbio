@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { CONTACT_LEGAL } from '../lib/legal.ts';
 import { LIEN_SOURCE } from '../lib/instance.ts';
-import type { ApiCles, ApiCourts, ApiDomaine, BilanImport, ComptePage, DomaineCourt, Reglages } from '../lib/types.ts';
+import type { ApiCles, ApiCourts, ApiDomaine, ApiPages, BilanImport, ComptePage, DomaineCourt, PageDuCompte, Reglages } from '../lib/types.ts';
 import { DomainePerso } from './DomainePerso.tsx';
+import { MesPages } from './MesPages.tsx';
 import { DOMAINES_COURTS, adressePartage, sansSchema, urlPage } from '../lib/types.ts';
 import { adresseSaisie } from '../lib/valider.ts';
 import { redirectionActive } from '../lib/sorties.ts';
@@ -33,10 +34,12 @@ import { LiensCourts } from './LiensCourts.tsx';
 
 const dateLongue = (ms: number, langue: Langue = 'fr') => new Date(ms).toLocaleDateString(langue === 'fr' ? 'fr-FR' : 'en-US', { day: 'numeric', month: 'long', year: 'numeric' });
 
-export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlExport, supprimerMonCompte, abonnement, onOffres, ouvrirPortail, onResilier, cles, courts, importer, domainePerso, surDomaine }: {
+export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlExport, supprimerMonCompte, abonnement, onOffres, ouvrirPortail, onResilier, cles, courts, importer, domainePerso, surDomaine, pages }: {
   reglages: Reglages; compte: ComptePage & { email?: string; plan: Plan }; onChange: (r: Reglages) => void; onDeconnexion: () => void;
-  urlExport: string | null; supprimerMonCompte: (confirmation: string) => Promise<{ ok: boolean; message: string; aLaMain?: boolean }>;
+  urlExport: string | null; supprimerMonCompte: (confirmation: string) => Promise<{ ok: boolean; message: string; aLaMain?: boolean; page?: boolean }>;
   abonnement: EtatAbonnement;
+  /** Les pages de la personne (Premium, ou des pages déjà créées) : la liste, la limite, et de quoi en ajouter ou en changer. */
+  pages?: { liste: PageDuCompte[]; max: number; api: ApiPages };
   /** Ouvre les offres par-dessus Réglages ; absent quand le compte ne peut pas s'abonner (compte principal, paiement pas branché). */
   onOffres?: (pour?: Fonction) => void;
   ouvrirPortail: () => Promise<string>;
@@ -115,6 +118,8 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
   );
 
   const paye = abonnement.payee !== 'gratuit';
+  // Une page en plus se supprime seule : le compte, son abonnement et ses autres pages restent.
+  const pageEnPlus = !!pages && pages.liste.findIndex(p => p.courante) > 0;
   const resilie = paye && estResilie(abonnement.statut);
   const prix = paye && abonnement.periode ? OFFRES[abonnement.payee].prix[abonnement.periode] : null;
   // Une offre offerte depuis Comptes passe devant ce qu'on paie : sa fin se lit, puis l'abonnement s'il y en a un.
@@ -126,6 +131,7 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
 
   return (
     <div className="adm-reglages">
+      {pages && <MesPages pages={pages.liste} max={pages.max} api={pages.api} />}
       <Groupe titre={l('Page', 'Page')}>
         <Ligne nom={l('Mon lien', 'My link')} valeur={<span translate="no">{sansSchema(partage)}</span>}>
           <BoutonCopier texte={partage} label={l('Copier l’adresse de ta page', 'Copy your page’s address')} onCopie={noterPartage} />
@@ -180,7 +186,7 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
         </Ligne>
         {/* Le compte principal ne se supprime pas. */}
         {!compte.principal && (
-          <Ligne nom={l('Supprimer mon compte', 'Delete my account')}>
+          <Ligne nom={pageEnPlus ? l('Supprimer cette page', 'Delete this page') : l('Supprimer mon compte', 'Delete my account')}>
             <BoutonSecondaire onClick={() => setFenetre('supprimer')} aria-haspopup="dialog" className="!text-red-300">{l('Supprimer', 'Delete')}</BoutonSecondaire>
           </Ligne>
         )}
@@ -297,8 +303,9 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
       </Feuille>
 
       {!compte.principal && (
-        <Feuille petite ouverte={fenetre === 'supprimer'} onFermer={() => setFenetre(null)} titre={l('Supprimer mon compte', 'Delete my account')}>
-          {fermer => <SupprimerCompte pseudo={compte.pseudo} abonnement={paye && estPaye(abonnement) ? { nom: nomPlan(abonnement.payee, langue), resilie, fin: abonnement.finPeriode } : null}
+        <Feuille petite ouverte={fenetre === 'supprimer'} onFermer={() => setFenetre(null)} titre={pageEnPlus ? l('Supprimer cette page', 'Delete this page') : l('Supprimer mon compte', 'Delete my account')}>
+          {fermer => <SupprimerCompte pseudo={compte.pseudo} autresPages={pageEnPlus ? -1 : (pages?.liste.length ?? 1) - 1}
+            abonnement={!pageEnPlus && paye && estPaye(abonnement) ? { nom: nomPlan(abonnement.payee, langue), resilie, fin: abonnement.finPeriode } : null}
             supprimerMonCompte={supprimerMonCompte} annuler={() => fermer()} />}
         </Feuille>
       )}
@@ -439,9 +446,11 @@ function Redirection({ valeur, ici, poser, annuler }: { valeur: Reglages['redire
  * Tout effacer, pour de bon : le pseudo tapé en entier confirme. Un abonnement en cours est résilié avec, tout de
  * suite (voir `server/suppression.ts`) ; si Creem ne l'a pas confirmé, on le dit avant de quitter le back office.
  */
-function SupprimerCompte({ pseudo, abonnement, supprimerMonCompte, annuler }: {
+function SupprimerCompte({ pseudo, abonnement, autresPages, supprimerMonCompte, annuler }: {
   pseudo: string; abonnement: { nom: string; resilie: boolean; fin: number | null } | null;
-  supprimerMonCompte: (confirmation: string) => Promise<{ ok: boolean; message: string; aLaMain?: boolean }>; annuler: () => void;
+  /** Les pages en plus du compte, qui partent avec lui ; -1 quand on supprime une page en plus, seule. */
+  autresPages: number;
+  supprimerMonCompte: (confirmation: string) => Promise<{ ok: boolean; message: string; aLaMain?: boolean; page?: boolean }>; annuler: () => void;
 }) {
   const l = useL();
   const langue = useLangue();
@@ -458,6 +467,8 @@ function SupprimerCompte({ pseudo, abonnement, supprimerMonCompte, annuler }: {
     try {
       const r = await supprimerMonCompte(saisie);
       if (r.ok && r.aLaMain) { supprime.current = true; setFin(r.message); return; }
+      // Une page en plus : le back office revient sur la première page du compte.
+      if (r.ok && r.page) { location.assign(location.pathname); return; }
       if (r.ok) { location.replace('/'); return; }
       setErreur(r.message);
     } catch { setErreur(l('Le serveur ne répond pas. Réessaie dans un instant.', 'The server isn’t responding. Try again in a moment.')); }
@@ -472,6 +483,8 @@ function SupprimerCompte({ pseudo, abonnement, supprimerMonCompte, annuler }: {
   return (
     <form onSubmit={e => { e.preventDefault(); if (saisie.trim().toLowerCase() === pseudo) void supprimer(); }} className="flex flex-col gap-4 pb-1">
       <p className="text-[14px] leading-snug text-white/75">{l('Ta page disparaît tout de suite, avec tes liens, tes images et tes statistiques. Rien ne se récupère.', 'Your page disappears right away, with your links, images and analytics. Nothing can be recovered.')}</p>
+      {autresPages < 0 && <p className="text-[14px] leading-snug text-white/75">{l('Ton compte, ton offre et tes autres pages restent.', 'Your account, your plan and your other pages stay.')}</p>}
+      {autresPages > 0 && <p className="text-[14px] font-medium leading-snug text-amber-200">{autresPages > 1 ? l(`Tes ${autresPages} autres pages partent avec ton compte.`, `Your ${autresPages} other pages go with your account.`) : l('Ton autre page part avec ton compte.', 'Your other page goes with your account.')}</p>}
       {/* L'abonnement s'arrête avec la page : plus rien n'est prélevé pour une page qui n'existe plus. */}
       {abonnement && (
         <p className="text-[14px] font-medium leading-snug text-amber-200">
