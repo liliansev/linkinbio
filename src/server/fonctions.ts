@@ -14,6 +14,8 @@ import { adresse, email, pseudo, validerBloc, validerReglages } from '../lib/val
 import { apercuSite as lireApercu } from './apercu.ts';
 import { articlesDe } from './flux.ts';
 import { importerPage as importer } from './importer.ts';
+import { enregistrerLienCourt as enregistrerCourt, maxLiensCourts } from './courts.ts';
+import type { LienCourt } from '../lib/courts.ts';
 import { limiteur, MINUTE } from './limites.ts';
 import * as db from './db.ts';
 import { MESSAGE_ROBOT, hotesTurnstile, verifierTurnstile } from './turnstile.ts';
@@ -411,6 +413,40 @@ export const revoquerCleApi = createServerFn({ method: 'POST' })
   .middleware([session])
   .validator((data: unknown) => String(data ?? '').slice(0, 40))
   .handler(async ({ data, context }) => ({ ok: db.revoquerCleApi(context.compte, data) }));
+
+/* ---- Les liens courts (Réglages, « Liens courts ») ---- */
+
+export const listerLiensCourts = createServerFn({ method: 'GET' })
+  .middleware([session])
+  .handler(async ({ context }): Promise<{ liens: LienCourt[]; max: number }> => ({ liens: db.liensCourts(context.compte), max: maxLiensCourts(context.compte) }));
+
+/** Soixante écritures par compte en dix minutes : de quoi préparer une campagne, pas de quoi fabriquer des redirections à la chaîne. */
+const ecrituresCourts = limiteur([60, 10 * MINUTE]);
+
+export const enregistrerLienCourt = createServerFn({ method: 'POST' })
+  .middleware([session])
+  .validator((data: unknown) => {
+    const o = (data && typeof data === 'object' ? data : {}) as Record<string, unknown>;
+    return { id: typeof o.id === 'string' ? o.id.slice(0, 40) : '', code: String(o.code ?? '').slice(0, 80), url: String(o.url ?? '').slice(0, 2000), titre: String(o.titre ?? '').slice(0, 200) };
+  })
+  .handler(async ({ data, context }): Promise<LienCourt> => {
+    const d = direCompte(context.compte);
+    if (ecrituresCourts(context.compte)) throw new Error(d('Trop de changements d’un coup. Réessaie dans quelques minutes.', 'Too many changes at once. Try again in a few minutes.'));
+    const issue = enregistrerCourt(context.compte, data);
+    if (issue.ok) return issue.lien;
+    throw new Error({
+      adresse: d('Cette adresse ne mène nulle part. Colle une adresse complète, comme https://exemple.fr.', 'This address leads nowhere. Paste a full address, like https://example.com.'),
+      code: d('Ce nom ne peut pas servir : 2 à 40 lettres, chiffres ou tirets.', 'This name can’t be used: 2 to 40 letters, digits or hyphens.'),
+      pris: d('Tu as déjà un lien court avec ce nom.', 'You already have a short link with this name.'),
+      limite: d('Tu as atteint le nombre de liens courts de ton offre.', 'You’ve reached your plan’s number of short links.'),
+      inconnu: d('Ce lien court n’existe plus.', 'This short link no longer exists.'),
+    }[issue.refus]);
+  });
+
+export const supprimerLienCourt = createServerFn({ method: 'POST' })
+  .middleware([session])
+  .validator((data: unknown) => String(data ?? '').slice(0, 40))
+  .handler(async ({ data, context }) => { db.supprimerLienCourt(context.compte, data); return { ok: true }; });
 
 /* ---- « Rejoins ma liste », et où partent ses inscrits (onglet Intégrations) ---- */
 

@@ -946,7 +946,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
             onListe={l => setIntegration(droits.listeEmail ? l.integration : undefined)} />}
           {onglet === 'reglages' && <OngletReglages reglages={reglages} compte={compte} onChange={changerReglages} onDeconnexion={deconnexion} urlExport={api.urlExport} supprimerMonCompte={api.supprimerMonCompte}
             abonnement={abonnement} onOffres={peutAcheter ? (pour?: Fonction) => ouvrirOffres(pour) : undefined} ouvrirPortail={api.ouvrirPortail}
-            onResilier={peutAcheter ? () => setOffres({ resilier: true }) : undefined} cles={api.cles}
+            onResilier={peutAcheter ? () => setOffres({ resilier: true }) : undefined} cles={api.cles} courts={api.courts}
             importer={importer} />}
           {onglet === 'comptes' && api.comptes && <OngletComptes api={api.comptes} avatar={reglages.profil.avatar} />}
           </div>

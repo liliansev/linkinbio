@@ -10,6 +10,7 @@ import { pseudo, validerBloc, validerReglages } from '../lib/valider.ts';
 import type { Abonnement, Periode, Plan, PlanPayant } from '../lib/abonnement.ts';
 import { ESSAI_JOURS, OFFRES, PLAN_ESSAI, estPaye, estPlanPayant, rang } from '../lib/abonnement.ts';
 import { appDe } from '../lib/ouvrirApp.ts';
+import type { LienCourt } from '../lib/courts.ts';
 import type { PeriodeStats } from '../lib/periode.ts';
 import { ajouterJours, jourDe, longueur, plageDe } from '../lib/periode.ts';
 import { chiffrer, dechiffrer, empreinte, estChiffre, repereCle } from './coffre.ts';
@@ -88,6 +89,11 @@ export function base(): DatabaseSync {
     );
     CREATE TABLE IF NOT EXISTS vignettes_avant (bloc TEXT PRIMARY KEY, compte TEXT NOT NULL, image TEXT NOT NULL, favicon TEXT NOT NULL, ts INTEGER NOT NULL);
     CREATE TABLE IF NOT EXISTS attente (id TEXT PRIMARY KEY, email TEXT NOT NULL UNIQUE, pseudo TEXT NOT NULL UNIQUE, ts INTEGER NOT NULL);
+    CREATE TABLE IF NOT EXISTS liens_courts (
+      id TEXT PRIMARY KEY, compte TEXT NOT NULL, code TEXT NOT NULL, url TEXT NOT NULL, titre TEXT NOT NULL DEFAULT '', cree INTEGER NOT NULL,
+      UNIQUE (compte, code)
+    );
+    CREATE TABLE IF NOT EXISTS clics_courts (lien TEXT NOT NULL, compte TEXT NOT NULL, jour TEXT NOT NULL, n INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (lien, jour));
     CREATE TABLE IF NOT EXISTS cles_api (
       id TEXT PRIMARY KEY, compte TEXT NOT NULL, nom TEXT NOT NULL, hash TEXT NOT NULL UNIQUE, debut TEXT NOT NULL,
       ecriture INTEGER NOT NULL, cree INTEGER NOT NULL, utilisee INTEGER
@@ -289,7 +295,7 @@ export function supprimerCompte(id: string, d = base()) {
   if (id === PRINCIPAL) throw new Error('Le compte principal ne se supprime pas.');
   d.exec('BEGIN');
   try {
-    for (const table of ['blocs', 'medias', 'evenements', 'jetons', 'signalements', 'contacts', 'integrations', 'resumes', 'acces', 'vignettes_avant', 'cles_api']) d.prepare(`DELETE FROM ${table} WHERE compte = ?`).run(id);
+    for (const table of ['blocs', 'medias', 'evenements', 'jetons', 'signalements', 'contacts', 'integrations', 'resumes', 'acces', 'vignettes_avant', 'cles_api', 'liens_courts', 'clics_courts']) d.prepare(`DELETE FROM ${table} WHERE compte = ?`).run(id);
     d.prepare('DELETE FROM pages WHERE compte = ?').run(id);
     d.prepare('DELETE FROM comptes WHERE id = ?').run(id);
     d.exec('COMMIT');
@@ -519,6 +525,42 @@ export function ordonner(compte: string, ids: string[]) {
   d.exec('BEGIN');
   try { ids.forEach((id, i) => maj.run(i, id, compte)); d.exec('COMMIT'); } catch (error) { d.exec('ROLLBACK'); throw error; }
 }
+
+/* ---- Liens courts ---- */
+
+/** Les liens courts d'un compte, le plus récent d'abord, avec leurs clics depuis toujours et sur sept jours. */
+export function liensCourts(compte: string, maintenant = Date.now()): LienCourt[] {
+  const depuis = jourDe(maintenant - 6 * 86_400_000);
+  return base().prepare(`SELECT l.id, l.code, l.url, l.titre, l.cree,
+      COALESCE((SELECT SUM(n) FROM clics_courts c WHERE c.lien = l.id), 0) AS clics,
+      COALESCE((SELECT SUM(n) FROM clics_courts c WHERE c.lien = l.id AND c.jour >= ?), 0) AS semaine
+    FROM liens_courts l WHERE l.compte = ? ORDER BY l.cree DESC, l.rowid DESC`).all(depuis, compte) as unknown as LienCourt[];
+}
+
+export const nombreLiensCourts = (compte: string) => (base().prepare('SELECT COUNT(*) AS n FROM liens_courts WHERE compte = ?').get(compte) as { n: number }).n;
+
+/** Pose un lien court, ou change la destination et le nom de celui qui porte déjà cet `id`. Faux si le code est déjà pris sur cette page. */
+export function ecrireLienCourt(compte: string, l: { id: string; code: string; url: string; titre: string }, maintenant = Date.now()): boolean {
+  const d = base();
+  const pris = d.prepare('SELECT id FROM liens_courts WHERE compte = ? AND code = ?').get(compte, l.code) as { id: string } | undefined;
+  if (pris && pris.id !== l.id) return false;
+  const existe = d.prepare('SELECT 1 FROM liens_courts WHERE id = ? AND compte = ?').get(l.id, compte);
+  if (existe) d.prepare('UPDATE liens_courts SET code = ?, url = ?, titre = ? WHERE id = ? AND compte = ?').run(l.code, l.url, l.titre, l.id, compte);
+  else d.prepare('INSERT INTO liens_courts (id, compte, code, url, titre, cree) VALUES (?, ?, ?, ?, ?, ?)').run(l.id, compte, l.code, l.url, l.titre, maintenant);
+  return true;
+}
+
+export function supprimerLienCourt(compte: string, id: string) {
+  const d = base();
+  if (d.prepare('DELETE FROM liens_courts WHERE id = ? AND compte = ?').run(id, compte).changes) d.prepare('DELETE FROM clics_courts WHERE lien = ? AND compte = ?').run(id, compte);
+}
+
+export const lienCourtParCode = (compte: string, code: string) =>
+  base().prepare('SELECT id, url FROM liens_courts WHERE compte = ? AND code = ?').get(compte, code) as { id: string; url: string } | undefined;
+
+/** Un clic de plus aujourd'hui sur ce lien : un compteur par jour, rien du visiteur. */
+export const compterClicCourt = (compte: string, lien: string, maintenant = Date.now()) =>
+  base().prepare('INSERT INTO clics_courts (lien, compte, jour, n) VALUES (?, ?, ?, 1) ON CONFLICT (lien, jour) DO UPDATE SET n = n + 1').run(lien, compte, jourDe(maintenant));
 
 /* ---- Médias ---- */
 
@@ -783,6 +825,7 @@ export function exporter(compte: string) {
     blocs: lireBlocs(compte),
     statistiques: evenements.map(e => ({ ...e, ts: new Date(e.ts).toISOString() })),
     inscrits: tousLesContacts(compte).map(c => ({ ...c, ts: new Date(c.ts).toISOString() })),
+    liensCourts: liensCourts(compte).map(l => ({ code: l.code, url: l.url, titre: l.titre, cree: new Date(l.cree).toISOString(), clics: l.clics })),
     clesApi: clesApi(compte).map(c => ({ nom: c.nom, debut: c.debut, ecriture: c.ecriture, cree: new Date(c.cree).toISOString(), utilisee: c.utilisee ? new Date(c.utilisee).toISOString() : null })),
     listeBranchee: lireIntegration(compte) ? { fournisseur: lireIntegration(compte)!.fournisseur, liste: lireIntegration(compte)!.liste } : null,
   };

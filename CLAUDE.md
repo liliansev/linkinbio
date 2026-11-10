@@ -72,6 +72,14 @@ embarque tout : l'image n'a pas de `node_modules`.
   que là où il est vide ; la photo est rapatriée dans `/media/`. Rien n'est effacé. `importerPage` dans `fonctions.ts` (cinq par dix
   minutes), `ImporterPage` dans `OngletReglages.tsx` : la ligne « Importer ma page » de Réglages, et le lien « J'ai déjà une page
   Linktree ou Beacons » en tête des premiers pas, qui mène droit à l'éditeur.
+- Les liens courts (10 novembre 2026, lot 2 d'après Taap.it, demandé par Lilian) : `hopla.page/<pseudo>/<code>` (et `hpla.eu/<pseudo>/<code>`,
+  par les 301 des noms courts), pour une story, un post ou un e-mail. `lib/courts.ts` (`codeCourt`, `adresseCourte`, `MAX_LIENS_COURTS` : 5 en
+  Gratuit, 50 en Starter, 500 au-delà, selon l'offre hors essai), `server/courts.ts` (`enregistrerLienCourt`, `suivreLienCourt`), tables
+  `liens_courts` et `clics_courts` (un nombre de clics par jour, rien du visiteur, robots non comptés), route `routes/$pseudo_.$code.ts` : un
+  302 sans cache vers la destination, vers son app depuis le navigateur intégré d'un réseau (`lienApp` : `intent://` sur Android, une petite page
+  qui essaie le schéma puis l'adresse web sur iOS) quand `ouvrirApps` est allumé ; un compte suspendu ou un code inconnu répondent 404. La
+  destination se change sans changer l'adresse. Réglages, « Liens courts » (`admin/LiensCourts.tsx`, sous-page comme « API et MCP »). Pas encore
+  dans l'API ni le MCP.
 - `server/favicons.ts` (26 octobre 2026, demandé par Lilian : « mets à jour tous les liens existants et même ceux de mes
   clients ») : une seule fois, une minute après le démarrage (repère `favicons-liens` dans `reglages`, éteint par
   `HOPLA_FAVICONS=0`), la vignette de chaque bouton de lien de toutes les pages prend le favicon de son site, gardé tel
