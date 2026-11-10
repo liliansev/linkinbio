@@ -27,6 +27,13 @@ export function DomainePerso({ api, compte, surDomaine }: { api: ApiDomaine; com
   useEffect(() => {
     api.lire().then(setDomaine, () => { setDomaine(null); setErreur(tr('Ton nom de domaine ne se charge pas. Réessaie dans un instant.', 'Your domain won’t load. Try again in a moment.')); });
   }, [api]);
+  // Le certificat arrive tout seul, en quelques minutes : l'écran le guette, sans qu'on ait à recliquer « Vérifier ».
+  const enCertificat = domaine?.etat === 'certificat';
+  useEffect(() => {
+    if (!enCertificat) return;
+    const guet = setInterval(() => { api.verifier().then(d => { if (d) poser(d); }, () => {}); }, 20_000);
+    return () => clearInterval(guet);
+  }, [api, enCertificat]);
 
   async function geste(quoi: 'relier' | 'verifier' | 'retirer') {
     setEnvoi(quoi); setErreur(''); setVu(false);
