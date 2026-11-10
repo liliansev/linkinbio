@@ -8,7 +8,7 @@ import { borner, jourDe } from '../lib/periode.ts';
 import type { Env } from './courriel.ts';
 import { config } from './creem.ts';
 import type { Compte } from './db.ts';
-import { abonnement, lireBlocs } from './db.ts';
+import { abonnement, lireBlocs, titulaire } from './db.ts';
 
 /**
  * Ce qu'un compte peut faire de sa page : son offre, plus ce que gardent les
@@ -20,6 +20,17 @@ export function droits(c: Compte, env: Env = process.env, maintenant = Date.now(
   const plan = abonnement(c, maintenant).plan;
   const libre = !config(env);
   return Object.fromEntries((Object.keys(FONCTIONS) as Fonction[]).map(f => [f, (libre && f !== 'sansMention') || peut(plan, f, c.cree)])) as Droits;
+}
+
+/**
+ * Cette page répond-elle au public ? Un compte suspendu, non. Une page en plus, seulement tant que son compte est
+ * actif et que son offre comprend plusieurs pages : sans elle, la page attend, rien n'est effacé.
+ */
+export function pageEnLigne(c: Compte | undefined, env: Env = process.env, maintenant = Date.now()): c is Compte {
+  if (!c || c.statut !== 'actif') return false;
+  if (!c.proprietaire) return true;
+  const t = titulaire(c);
+  return t.statut === 'actif' && droits(t, env, maintenant).pages;
 }
 
 /**

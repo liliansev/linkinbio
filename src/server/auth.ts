@@ -1,7 +1,7 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { PRINCIPAL, sansSchema } from '../lib/types.ts';
 import type { Langue, Origines } from '../lib/types.ts';
-import { ajouterJeton, compteParEmail, jetonsRecents, lireReglages, noterConnexion, supprimerJeton, verifierJeton } from './db.ts';
+import { ajouterJeton, compteParEmail, deplacerJeton, jetonsRecents, lireReglages, noterConnexion, supprimerJeton, verifierJeton } from './db.ts';
 import type { Compte } from './db.ts';
 import { bouton, envoyer, enveloppe } from './courriel.ts';
 import { HEURE, cleIp, limiteur } from './limites.ts';
@@ -236,3 +236,5 @@ export function ouvrirSession(jetonConnexion: string): string | null {
 }
 
 export const fermerSession = (jeton: string | null) => { if (jeton) supprimerJeton(empreinte(jeton)); };
+/** Passe une session ouverte sur une autre page de la même personne (voir « Plusieurs pages » dans `db.ts`). */
+export const changerSession = (jeton: string | null | undefined, compte: string) => !!jeton && /^[\w-]{20,80}$/.test(jeton) && deplacerJeton(empreinte(jeton), compte);

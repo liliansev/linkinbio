@@ -6,7 +6,7 @@ import { ORIGINE_PUBLIQUE, PRINCIPAL, cheminPage, estWebhook } from '../lib/type
 import { ADRESSE_WEBHOOK, ADRESSE_WEBHOOK_EN, LISTE_CHEZ, LISTE_CHEZ_EN, NOMS_FOURNISSEURS, OUVRAGE_WEBHOOK, OUVRAGE_WEBHOOK_EN, adresseWebhook } from '../lib/integrations.ts';
 import { email as validerEmail } from '../lib/valider.ts';
 import * as db from './db.ts';
-import { droits } from './droits.ts';
+import { droits, pageEnLigne } from './droits.ts';
 import { source } from './analytique.ts';
 import type { Env } from './courriel.ts';
 
@@ -435,7 +435,7 @@ export async function inscrire(env: Env, fetchImpl: typeof fetch, entree: Record
   if (tropRapide(contexte.ip || 'inconnu', maintenant)) return { status: 429, message: 'Trop d’essais. Réessaie dans quelques minutes.' };
   const page = typeof entree.page === 'string' ? entree.page : '';
   const compte = page ? db.compteParPseudo(page) : db.compteParId('principal');
-  if (!compte || compte.statut !== 'actif') return { status: 404, message: 'Cette page n’existe plus.' };
+  if (!pageEnLigne(compte)) return { status: 404, message: 'Cette page n’existe plus.' };
   // Le formulaire n'existe que dans l'offre qui le comprend (la page publique ne le montre pas sans elle).
   const d = droits(compte, env, maintenant);
   if (!d.listeEmail) return { status: 404, message: 'Ce formulaire n’existe plus.' };

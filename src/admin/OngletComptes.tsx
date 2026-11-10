@@ -434,6 +434,8 @@ function FicheCompte({ compte: c, statut, gestes, fermer, message, cote = false 
 
       <Groupe titre="Compte">
         <Ligne nom="E-mail" valeur={c.email} />
+        {/* Une page en plus : elle suit l'adresse et l'offre de son compte, où se font les gestes sur l'abonnement. */}
+        {c.pageDe && <Ligne nom="Page en plus" valeur={`du compte ${c.pageDe}`} />}
         <Ligne nom="Créé le" valeur={dateLongue(c.cree)} />
         <Ligne nom="Dernière connexion" valeur={quand(c.connexion)}>
           {gestes.renvoyer && <BoutonSecondaire onClick={renvoyer} disabled={envoi}>{envoi ? 'Envoi…' : 'Renvoyer son lien'}</BoutonSecondaire>}

@@ -8,7 +8,7 @@ import { PRINCIPAL, estEnLigne, urlPage } from '../lib/types.ts';
 import { email as validerEmail } from '../lib/valider.ts';
 import * as db from './db.ts';
 import { pageDuCompte } from './domaines.ts';
-import { droits } from './droits.ts';
+import { droits, pageEnLigne } from './droits.ts';
 import type { Env } from './courriel.ts';
 import { echapper, enveloppe, envoyer } from './courriel.ts';
 import { adresseAdmin } from './auth.ts';
@@ -18,7 +18,7 @@ import { verifierTurnstile } from './turnstile.ts';
 /** Le bloc public d'une page, en ligne en ce moment, s'il est du type attendu ; la page doit être active. */
 function blocPublic(pseudo: unknown, id: unknown, type: Bloc['type'], maintenant: number) {
   const compte = typeof pseudo === 'string' && pseudo ? db.compteParPseudo(pseudo) : db.compteParId(PRINCIPAL);
-  if (!compte || compte.statut !== 'actif') return null;
+  if (!pageEnLigne(compte)) return null;
   const bloc = db.lireBlocs(compte.id).find(b => b.id === id && b.type === type && estEnLigne(b, maintenant));
   return bloc ? { compte, bloc } : null;
 }
@@ -50,7 +50,7 @@ export async function envoyerMessage(env: Env, fetchImpl: typeof fetch, entree: 
   if (!(await verifierTurnstile(env, fetchImpl, { jeton: entree.jeton, action: 'message', ip: contexte.ip, hotes: contexte.hotes }, maintenant))) return { status: 403 };
   if (parPage(trouve.compte.id, maintenant)) return { status: 429 };
   const { compte } = trouve;
-  const pour = compte.id === PRINCIPAL ? adresseAdmin(env) : compte.email;
+  const pour = db.duPrincipal(compte) ? adresseAdmin(env) : compte.email;
   const page = urlPage(pageDuCompte(compte)).replace(/^https:\/\//, '');
   const qui = nom ? `${nom} (${de})` : de;
   let anglais = false;

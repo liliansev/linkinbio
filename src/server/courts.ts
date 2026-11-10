@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { PRINCIPAL, NOM_PUBLIC } from '../lib/types.ts';
+import { NOM_PUBLIC } from '../lib/types.ts';
 import type { Langue } from '../lib/types.ts';
 import type { LienCourt } from '../lib/courts.ts';
 import { MAX_LIENS_COURTS, codeCourt } from '../lib/courts.ts';
@@ -7,6 +7,7 @@ import { planHorsEssai } from '../lib/abonnement.ts';
 import { lienApp } from '../lib/ouvrirApp.ts';
 import { adresse } from '../lib/valider.ts';
 import * as db from './db.ts';
+import { pageEnLigne } from './droits.ts';
 
 /*
  * Les liens courts d'un compte (10 novembre 2026, lot 2 d'après Taap.it) : les créer, les suivre. Suivre un lien
@@ -20,7 +21,7 @@ const ROBOTS = /bot|crawl|spider|slurp|preview|facebookexternalhit|embedly|whats
 export function maxLiensCourts(compte: string, maintenant = Date.now()): number {
   const c = db.compteParId(compte);
   if (!c) return 0;
-  if (c.id === PRINCIPAL || db.sansPaiement()) return MAX_LIENS_COURTS.premium;
+  if (db.duPrincipal(c) || db.sansPaiement()) return MAX_LIENS_COURTS.premium;
   return MAX_LIENS_COURTS[planHorsEssai(db.abonnement(c, maintenant))];
 }
 
@@ -64,7 +65,7 @@ function pageApp(app: string, web: string, langue: Langue): string {
 export function suivreLienCourt(pseudo: string, code: string, ua: string, maintenant = Date.now()): { vers: string } | { page: string } | null {
   if (!/^[a-z0-9-]{3,30}$/.test(pseudo) || !codeCourt(code) || codeCourt(code) !== code) return null;
   const c = db.compteParPseudo(pseudo);
-  if (!c || c.statut !== 'actif') return null;
+  if (!pageEnLigne(c)) return null;
   const lien = db.lienCourtParCode(c.id, code);
   if (!lien) return null;
   if (ua && !ROBOTS.test(ua)) db.compterClicCourt(c.id, lien.id, maintenant);

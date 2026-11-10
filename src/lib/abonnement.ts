@@ -176,6 +176,7 @@ export const FONCTIONS = {
   flux: 'pro',
   api: 'pro',
   domaine: 'premium',
+  pages: 'premium',
 } as const satisfies Record<string, PlanPayant>;
 export type Fonction = keyof typeof FONCTIONS;
 
@@ -207,6 +208,7 @@ export const FONCTIONS_EN_MOTS: Record<Fonction, { avantage: string; pour: strin
   flux: { avantage: 'Un cadeau contre l’e-mail, tes derniers articles', pour: 'Pour ton flux RSS' },
   api: { avantage: 'Ta page pilotée par tes agents IA : API et MCP', pour: 'Pour l’API' },
   domaine: { avantage: 'Ton propre nom de domaine', pour: 'Pour ton domaine' },
+  pages: { avantage: 'Jusqu’à trois pages', pour: 'Pour plus de pages' },
 };
 
 /** « Pour tes couleurs » en anglais, sur l'étiquette de l'offre mise en avant. */
@@ -215,7 +217,7 @@ export const POUR_EN: Record<Fonction, string> = {
   programmation: 'To schedule links', avis: 'For reviews', stats: 'For your stats', formulaire: 'For your form', galerie: 'For your gallery',
   utm: 'For UTM tags', redirection: 'For the redirect', fond: 'For your background', grandePhoto: 'For your large photo', grille: 'For the grid',
   heure: 'For time slots', drops: 'For drops', listeEmail: 'For your email list', pays: 'For countries', cadeau: 'For your freebie',
-  flux: 'For your RSS feed', api: 'For the API', domaine: 'For your own domain',
+  flux: 'For your RSS feed', api: 'For the API', domaine: 'For your own domain', pages: 'For more pages',
 };
 /** Ce pour quoi on vient prendre une fonction, dans une langue. */
 export const pourQuoi = (f: Fonction, langue: 'en' | 'fr' = 'fr') => (langue === 'en' ? POUR_EN[f] : FONCTIONS_EN_MOTS[f].pour);
@@ -332,7 +334,7 @@ export const BASCULE_OFFRES = Date.UTC(2026, 9, 21);
 /** Les jours de stats qu'une page d'avant les offres lisait en gratuit : elle les garde. */
 export const JOURS_AVANT_OFFRES = 7;
 /** Ce que ces pages ne faisaient pas en gratuit, et ne gardent donc pas : la page sans mention, et ce qui est venu après (la vitrine, le formulaire, la galerie complète, l'UTM, la redirection). */
-const PAS_AVANT_OFFRES: readonly Fonction[] = ['sansMention', 'vitrine', 'formulaire', 'galerie', 'utm', 'redirection', 'fond', 'grandePhoto', 'grille', 'pays', 'cadeau', 'flux', 'api', 'domaine'];
+const PAS_AVANT_OFFRES: readonly Fonction[] = ['sansMention', 'vitrine', 'formulaire', 'galerie', 'utm', 'redirection', 'fond', 'grandePhoto', 'grille', 'pays', 'cadeau', 'flux', 'api', 'domaine', 'pages'];
 
 /**
  * L'essai (25 octobre 2026, choisi par Lilian) : chaque compte créé commence par 14 jours de Pro, sans carte ni
@@ -340,6 +342,8 @@ const PAS_AVANT_OFFRES: readonly Fonction[] = ['sansMention', 'vitrine', 'formul
  * Les pages créées avant `DEBUT_ESSAI` n'ont pas eu d'essai, et gardent leurs blocs sans limite, promis alors.
  */
 export const ESSAI_JOURS = 14;
+/** Combien de pages un compte peut avoir avec la fonction `pages` (Premium), la première comprise. */
+export const MAX_PAGES = 3;
 export const DEBUT_ESSAI = Date.UTC(2026, 9, 25, 20, 30);
 /** L'offre d'un essai. */
 export const PLAN_ESSAI: PlanPayant = 'pro';

@@ -20,14 +20,14 @@ import { limiteur, MINUTE } from './limites.ts';
 import * as db from './db.ts';
 import { MESSAGE_ROBOT, hotesTurnstile, verifierTurnstile } from './turnstile.ts';
 import type { ActionTurnstile } from '../lib/turnstile.ts';
-import { COOKIE_SESSION, DUREE_SESSION, adresseAdmin, compteDeSession, demanderConnexion, fermerSession, inviter, ouvrirSession, renvoyerLienCompte } from './auth.ts';
+import { COOKIE_SESSION, DUREE_SESSION, adresseAdmin, changerSession, compteDeSession, demanderConnexion, fermerSession, inviter, ouvrirSession, renvoyerLienCompte } from './auth.ts';
 import { offrirAuCompte, resilierPourLeCompte, retirerAuCompte } from './gestes.ts';
 import { changerStatutMotive, signaler, supprimerMotive, traiter } from './moderation.ts';
 import { supprimerAvecAbonnement } from './suppression.ts';
 import { corrigerAdresse as corriger, creerHopla, inscriptionLibre, inviterReservation, renommerPage as renommer, renvoyerInscription, reserverNom as reserver, verifierNom as verifier } from './attente.ts';
 import * as creem from './creem.ts';
 import { nouvelleCle } from './api.ts';
-import { droits, joursLisibles, periodeLisible, verifierDates } from './droits.ts';
+import { droits, joursLisibles, pageEnLigne, periodeLisible, verifierDates } from './droits.ts';
 import * as domaines from './domaines.ts';
 import { compteDeHote, pageDuCompte } from './domaines.ts';
 import type { EtatDomainePerso } from '../lib/domaines.ts';
@@ -36,7 +36,7 @@ import { selonDroits } from '../lib/droits.ts';
 import { blocsAvecUtm, redirectionActive } from '../lib/sorties.ts';
 import { enregistrer, pays } from './analytique.ts';
 import { pourPays } from '../lib/pays.ts';
-import { estDureeOfferte, estPlanPayant } from '../lib/abonnement.ts';
+import { MAX_PAGES, estDureeOfferte, estPlanPayant } from '../lib/abonnement.ts';
 import type { DureeOfferte, Periode, PlanPayant } from '../lib/abonnement.ts';
 
 /*
@@ -107,7 +107,7 @@ const langueCompte = (compte: string): Langue => { try { return db.lireReglages(
 /** `d('français', 'English')` dans la langue du compte. */
 const direCompte = (compte: string) => (fr: string, en: string) => (langueCompte(compte) === 'en' ? en : fr);
 
-const cguAJour = (compte: string) => compte === PRINCIPAL || db.compteParId(compte)?.cgu === VERSION_CGU;
+const cguAJour = (compte: string) => { const c = db.compteParId(compte); return !!c && (db.duPrincipal(c) || c.cgu === VERSION_CGU); };
 
 /** Tout le reste demande aussi d'avoir accepté la version en vigueur des CGU. */
 const session = createMiddleware({ type: 'function' }).middleware([sessionBrute]).server(async ({ next, context }) => {
@@ -188,7 +188,7 @@ export const lirePagePublique = createServerFn({ method: 'GET' })
       return db.lienCourtParCode(perso.page.id, data.pseudo) ? { ailleurs: `${origines().page}/${perso.page.pseudo}/${data.pseudo}` } : null;
     }
     const compte = data.pseudo ? db.compteParPseudo(data.pseudo) : db.compteParId(PRINCIPAL);
-    if (!compte || compte.statut !== 'actif') return null;
+    if (!pageEnLigne(compte)) return null;
     return composerPage(compte, data.s);
   });
 
@@ -222,7 +222,8 @@ function etat(compte: string): EtatAdmin {
     reglages: db.lireReglages(compte), blocs: db.lireBlocs(compte), clics: d.stats ? db.clicsParBloc(compte, 30) : {}, places: db.placesParBloc(compte), stockageEphemere: db.stockageEphemere(), dejaVue: db.pageDejaVue(compte),
     compte: { ...pageDuCompte(c), email: c.email, plan: abonnement.plan }, cguAJour: cguAJour(compte),
     domaines: !!domaines.cibleDomaines() && d.domaine,
-    abonnement, paiement: compte !== PRINCIPAL && !!creem.config(process.env), enVente: creem.offresEnVente(process.env), devise: deviseDuCompte(c), droits: d,
+    pages: db.pagesDe(c).map(p => ({ id: p.id, pseudo: p.pseudo, courante: p.id === c.id, enLigne: pageEnLigne(p) })), pagesMax: d.pages ? MAX_PAGES : 1,
+    abonnement, paiement: !db.duPrincipal(c) && !!creem.config(process.env), enVente: creem.offresEnVente(process.env), devise: deviseDuCompte(c), droits: d,
   };
 }
 
@@ -281,11 +282,17 @@ export const accepterCgu = createServerFn({ method: 'POST' }).middleware([sessio
 export const supprimerMonCompte = createServerFn({ method: 'POST' })
   .middleware([sessionBrute])
   .validator((data: unknown) => String(data ?? '').trim().toLowerCase().slice(0, 40))
-  .handler(async ({ data, context }): Promise<{ ok: boolean; message: string; aLaMain?: boolean }> => {
+  .handler(async ({ data, context }): Promise<{ ok: boolean; message: string; aLaMain?: boolean; page?: boolean }> => {
     if (context.compte === PRINCIPAL) return { ok: false, message: 'Le compte principal ne se supprime pas.' };
     const d = direCompte(context.compte);
     const compte = db.compteParId(context.compte);
     if (!compte || data !== compte.pseudo) return { ok: false, message: d('Retape ton pseudo exactement pour confirmer.', 'Type your username exactly to confirm.') };
+    // Une page en plus part seule : le compte, son abonnement et ses autres pages restent, et la session revient à la première.
+    if (compte.proprietaire) {
+      changerSession(getCookie(COOKIE_SESSION), compte.proprietaire);
+      await supprimerAvecAbonnement(process.env, fetch, compte);
+      return { ok: true, page: true, message: d('Cette page est supprimée.', 'This page is deleted.') };
+    }
     const issue = await supprimerAvecAbonnement(process.env, fetch, compte);
     if (!issue.ok) return { ok: false, message: d('Creem n’a pas pu résilier ton abonnement, alors rien n’est supprimé pour l’instant. Réessaie dans un instant.', 'Creem couldn’t cancel your subscription, so nothing is deleted for now. Try again in a moment.') };
     deleteCookie(COOKIE_SESSION, cookieSession());
@@ -491,6 +498,39 @@ export const supprimerLienCourt = createServerFn({ method: 'POST' })
 
 /* ---- Son propre nom de domaine (Réglages, « Mon nom de domaine », Premium) ---- */
 
+/* ---- Plusieurs pages (Premium) : une personne, jusqu'à trois pages, chacune avec son nom, ses blocs et ses stats ---- */
+
+const creationsPages = limiteur([5, 60 * MINUTE]);
+
+/** Ajoute une page au compte et y passe : la session change de page, on arrive sur ses premiers pas. */
+export const creerPage = createServerFn({ method: 'POST' })
+  .middleware([session])
+  .validator((data: unknown) => String(data ?? '').slice(0, 60))
+  .handler(async ({ data, context }): Promise<{ ok: boolean; message: string }> => {
+    const d = direCompte(context.compte);
+    const c = db.compteParId(context.compte)!;
+    if (!droits(db.titulaire(c)).pages) return { ok: false, message: d('Plusieurs pages demandent Hopla Premium.', 'Several pages need Hopla Premium.') };
+    if (db.pagesDe(c).length >= MAX_PAGES) return { ok: false, message: d('Trois pages au plus.', 'Three pages at most.') };
+    const nom = verifier(data);
+    if (nom.etat === 'invalide') return { ok: false, message: d('De 3 à 30 lettres, chiffres ou tirets.', '3 to 30 letters, digits or hyphens.') };
+    if (nom.etat !== 'libre') return { ok: false, message: d('Ce nom est déjà pris.', 'This name is already taken.') };
+    if (creationsPages(c.proprietaire || c.id, Date.now())) return { ok: false, message: d('Trop d’essais. Réessaie dans quelques minutes.', 'Too many tries. Try again in a few minutes.') };
+    const page = db.creerPage(c, nom.nom, langueCompte(c.id));
+    changerSession(getCookie(COOKIE_SESSION), page.id);
+    return { ok: true, message: '' };
+  });
+
+/** Passe d'une de ses pages à l'autre. */
+export const changerDePage = createServerFn({ method: 'POST' })
+  .middleware([sessionBrute])
+  .validator((data: unknown) => String(data ?? '').slice(0, 40))
+  .handler(async ({ data, context }): Promise<{ ok: boolean }> => {
+    const c = db.compteParId(context.compte)!;
+    const cible = db.pagesDe(c).find(p => p.id === data);
+    if (!cible || cible.statut !== 'actif') return { ok: false };
+    return { ok: changerSession(getCookie(COOKIE_SESSION), cible.id) };
+  });
+
 export const lireDomaine = createServerFn({ method: 'GET' })
   .middleware([session])
   .handler(async ({ context }): Promise<{ domaine: EtatDomainePerso | null }> => ({ domaine: domaines.etatDomaine(context.compte) }));
@@ -618,19 +658,20 @@ export const ouvrirPaiement = createServerFn({ method: 'POST' })
     return { plan: estPlanPayant(o.plan) ? o.plan : 'pro', periode: o.periode === 'an' ? 'an' : 'mois' };
   })
   .handler(async ({ data, context }) => {
-    const c = db.compteParId(context.compte)!;
+    // Une offre se prend pour le compte, depuis n'importe laquelle de ses pages.
+    const c = db.titulaire(db.compteParId(context.compte)!);
     return creem.ouvrirPaiement(process.env, fetch, c, data.plan, data.periode, origines().admin, Date.now(), deviseDuCompte(c));
   });
 
 export const ouvrirPortail = createServerFn({ method: 'POST' })
   .middleware([session])
-  .handler(async ({ context }) => creem.ouvrirPortail(process.env, fetch, db.compteParId(context.compte)!));
+  .handler(async ({ context }) => creem.ouvrirPortail(process.env, fetch, db.titulaire(db.compteParId(context.compte)!)));
 
 /** Repasser en Gratuit : l'abonnement est résilié pour la fin de la période payée. L'abonnement tel qu'il est ensuite. */
 export const resilierAbonnement = createServerFn({ method: 'POST' })
   .middleware([session])
   .handler(async ({ context }) => {
-    await creem.resilierEnFinDePeriode(process.env, fetch, db.compteParId(context.compte)!);
+    await creem.resilierEnFinDePeriode(process.env, fetch, db.titulaire(db.compteParId(context.compte)!));
     return db.abonnement(db.compteParId(context.compte)!);
   });
 

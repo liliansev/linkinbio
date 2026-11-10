@@ -9,7 +9,7 @@ import { chaineYoutube } from '../lib/detection.ts';
 import { ARTICLES_FLUX, PRINCIPAL, estEnLigne } from '../lib/types.ts';
 import { decoderPage, telecharger } from './apercu.ts';
 import * as db from './db.ts';
-import { droits } from './droits.ts';
+import { droits, pageEnLigne } from './droits.ts';
 import type { Env } from './courriel.ts';
 
 const LIMITE = 2_000_000;
@@ -81,7 +81,7 @@ export const oublierFlux = () => gardes.clear();
  */
 export async function articlesDuBloc(pseudo: unknown, id: unknown, maintenant = Date.now(), env: Env = process.env): Promise<ArticleFlux[] | null> {
   const compte = typeof pseudo === 'string' && pseudo ? db.compteParPseudo(pseudo) : db.compteParId(PRINCIPAL);
-  if (!compte || compte.statut !== 'actif') return null;
+  if (!pageEnLigne(compte)) return null;
   const bloc = db.lireBlocs(compte.id).find(b => b.id === id && (b.type === 'flux' || b.type === 'derniere-video') && estEnLigne(b, maintenant));
   if (!bloc || !/^https?:/.test(bloc.url) || (bloc.type === 'flux' && !droits(compte, env, maintenant).flux)) return null;
   const video = bloc.type === 'derniere-video';
