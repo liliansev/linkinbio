@@ -39,11 +39,13 @@ export function MaListe({ api, onIntegrations }: { api: ApiListe; onIntegrations
   if (!permis && !liste.total) return (
     // Le même encart que « Tes stats », à côté : un seul bouton plein (celui des stats), ici un lien discret vers Pro.
     <Carte nu titre={tr('Ta liste', 'Your list')} etiquette={<Etiquette fonction="listeEmail" />} className="adm-encart p-5 bureau:px-6">
-      <Reserve fonction="listeEmail" bouton={false} phrase={tr('Avec Hopla Pro, tes visiteurs laissent leur e-mail sur ta page : chaque adresse arrive ici, et dans ta newsletter si tu la branches.', 'With Hopla Pro, visitors leave their email on your page: every address lands here, and in your newsletter if you connect it.')}>
+      <Reserve fonction="listeEmail" bouton={false} phrase={tr('Tes visiteurs laissent leur e-mail sur ta page.', 'Visitors leave their email on your page.')}>
         {voir && <button type="button" onClick={() => voir('listeEmail')} aria-haspopup="dialog" className="adm-lien -ml-1.5">{tr('Voir Hopla Pro', 'See Hopla Pro')}</button>}
       </Reserve>
     </Carte>
   );
+  // Sans inscrit, rien à lire ni à gérer : la carte attend le premier (le bloc « Liste e-mail » se pose depuis Ma page).
+  if (!liste.total) return null;
   return (
     <>
       <Carte titre={tr('Ta liste', 'Your list')} action={<button type="button" onClick={() => setOuverte(true)} className={classeBouton.secondaire}>{tr('Gérer', 'Manage')}</button>}>
@@ -55,11 +57,11 @@ export function MaListe({ api, onIntegrations }: { api: ApiListe; onIntegrations
             </div>
             <p className="mt-2.5 flex items-center gap-1.5 text-[13px] text-white/55">
               <Icone nom={liste.integration ? 'ui-ok' : 'courrier'} taille={14} />
-              {liste.integration ? tr(`Envoyés aussi ${destination(liste.integration)}.`, `Also sent ${destination(liste.integration, 'en')}.`) : tr('Gardés ici. Exporte-les en CSV, ou branche ta newsletter.', 'Kept here. Export them as CSV, or connect your newsletter.')}
+              {liste.integration ? tr(`Envoyés aussi ${destination(liste.integration)}.`, `Also sent ${destination(liste.integration, 'en')}.`) : tr('Gardés chez Hopla.', 'Kept at Hopla.')}
             </p>
           </>
-        ) : <p className="text-[14px] leading-snug text-white/60">{tr('Ajoute un bloc « Liste e-mail » : tes inscrits arrivent ici.', 'Add an “Email list” block: your subscribers land here.')}</p>}
-        {!permis && liste.total > 0 && <p className="mt-2.5 text-[13px] leading-snug text-white/55">{tr('Le formulaire n’est plus sur ta page sans Hopla Pro. Tes inscrits restent à toi : exporte-les depuis Gérer.', 'The form is no longer on your page without Hopla Pro. Your subscribers are still yours: export them from Manage.')}</p>}
+        ) : null}
+        {!permis && liste.total > 0 && <p className="mt-2.5 text-[13px] leading-snug text-white/55">{tr('Formulaire retiré de ta page sans Hopla Pro.', 'Form removed from your page without Hopla Pro.')}</p>}
       </Carte>
       {ouverte && <FeuilleListe liste={liste} api={api} onFermer={() => setOuverte(false)} onChange={recharger} onIntegrations={onIntegrations} />}
     </>

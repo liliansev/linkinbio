@@ -65,7 +65,7 @@ function NouvellePage({ api, annuler }: { api: ApiPages; annuler: () => void }) 
   }
   return (
     <form onSubmit={e => { e.preventDefault(); if (nom.trim()) void creer(); }} className="flex flex-col gap-4 pb-1">
-      <p className="text-[14px] leading-snug text-white/75">{tr('Une autre page, pour un autre projet : son adresse, ses liens, son thème et ses stats à elle. Ton offre vaut pour toutes.', 'Another page, for another project: its own address, links, theme and analytics. Your plan covers them all.')}</p>
+      <p className="text-[14px] leading-snug text-white/75">{tr('Ton offre vaut pour toutes tes pages.', 'Your plan covers all your pages.')}</p>
       <Champ label={tr('Son nom', 'Its name')} aide={<span translate="no">{NOM_PUBLIC}/{nomSaisi(nom).replace(/-$/, '') || tr('son-nom', 'its-name')}</span>} erreur={erreur || undefined}>
         <input className={classeSaisie} value={nom} maxLength={30} onChange={e => { setNom(e.target.value); setErreur(''); }} autoFocus={focusAuto()} autoCapitalize="none" autoCorrect="off" autoComplete="off" spellCheck={false} required />
       </Champ>

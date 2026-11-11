@@ -46,8 +46,6 @@ export function ApiEtMcp({ api }: { api?: ApiCles }) {
 
   return (
     <>
-      <p className="text-[14px] leading-snug text-white/75">{tr('Ta page pilotée par ton agent IA ou ton code, avec une clé.', 'Your page run by your AI agent or your code, with a key.')}</p>
-
       <Groupe titre={tr('Adresses', 'Addresses')}>
         <Ligne nom={tr('Serveur MCP', 'MCP server')} valeur={<span translate="no">{sansSchema(ADRESSE_MCP)}</span>}>
           <BoutonCopier texte={ADRESSE_MCP} label={tr('Copier l’adresse du serveur MCP', 'Copy the MCP server address')} />

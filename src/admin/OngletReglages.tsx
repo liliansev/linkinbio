@@ -11,7 +11,7 @@ import type { Abonnement as EtatAbonnement, Fonction, Plan } from '../lib/abonne
 import { OFFRES, accesAbonnement, apresOffre, estPaye, estResilie, montant, offerteAuDessus, planHorsEssai, nomOffre as nomPlan } from '../lib/abonnement.ts';
 import type { Langue } from '../lib/types.ts';
 import { useDevise, useL, useLangue } from '../accueil/langue.ts';
-import { BoutonCopier, BoutonPrincipal, BoutonSecondaire, Champ, Feuille, Groupe, Interrupteur, Ligne, LigneBascule, LigneLien, PanneauDetail, Segments, SousPage, classeBouton, classeSaisie, useGrandEcran } from './ui.tsx';
+import { BoutonCopier, BoutonPrincipal, BoutonSecondaire, Champ, Feuille, Groupe, IconeLigne, Interrupteur, Ligne, LigneBascule, LigneLien, Menu, PanneauDetail, Segments, SousPage, classeBouton, classeSaisie, useGrandEcran } from './ui.tsx';
 import { Facturation, nomAbonnement, nomApres, nomOffre } from './Facturation.tsx';
 import { Etiquette, usePermis } from './offre.tsx';
 import { ReglerQR } from './CodeQR.tsx';
@@ -203,18 +203,27 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
         <Ligne icone="nav-donnees" nom={l('Mes données', 'My data')} valeur={urlExport ? undefined : l('Pas dans l’aperçu', 'Not in the preview')}>
           {urlExport && <a href={urlExport} download className={classeBouton.secondaire} aria-label={l('Télécharger mes données', 'Download my data')}>{l('Télécharger', 'Download')}</a>}
         </Ligne>
+        {/* L'API et le serveur MCP (28 octobre 2026) : la sous-page s'ouvre aussi sans Pro, pour révoquer une clé déjà créée. Au bureau, la barre latérale y mène. */}
+        <LigneLien id="reglage-api" icone="nav-api" nom={l('API et MCP', 'API and MCP')} apres={avecApi ? undefined : <Etiquette fonction="api" />}
+          courant={sous === 'api'} onClick={ouvrirSous('reglage-api', 'api')} />
+        {/* L'aide et les textes légaux, repliés dans un menu (11 novembre 2026, demandé par Lilian : « condense dans des menus »). */}
+        <Menu label={l('Aide et mentions légales', 'Help and legal')} aligne="droite" haut className="adm-ligne adm-ligne-lien w-full" elements={[
+          { nom: l('Écrire à Hopla', 'Write to Hopla'), icone: 'nav-courriel', action: () => { location.href = `mailto:${CONTACT_LEGAL}?subject=${encodeURIComponent(l('Hopla : une question', 'Hopla: a question'))}`; } },
+          { nom: l('Conditions d’utilisation', 'Terms of use'), icone: 'nav-legal', action: () => { open(l('/legal/cgu', '/legal/terms'), '_blank', 'noopener'); } },
+          { nom: l('Confidentialité', 'Privacy'), icone: 'nav-legal', action: () => { open(l('/legal/confidentialite', '/legal/privacy'), '_blank', 'noopener'); } },
+          { nom: l('Accord de traitement', 'Data processing agreement'), icone: 'nav-legal', action: () => { open(l('/legal/traitement-des-donnees', '/legal/data-processing'), '_blank', 'noopener'); } },
+          ...(LIEN_SOURCE ? [{ nom: l('Code source', 'Source code'), icone: 'nav-source', action: () => { open(LIEN_SOURCE!, '_blank', 'noopener'); } }] : []),
+        ]}>
+          <IconeLigne nom="nav-aide" />
+          <span className="adm-ligne-texte"><span className="adm-ligne-nom">{l('Aide et mentions légales', 'Help and legal')}</span></span>
+          <Icone nom="nav-chevron" taille={14} className="shrink-0 rotate-90 text-[#6b6b65] bureau:-mr-1" />
+        </Menu>
         {/* Le compte principal ne se supprime pas. */}
         {!compte.principal && (
           <Ligne icone="nav-supprimer" nom={pageEnPlus ? l('Supprimer cette page', 'Delete this page') : l('Supprimer mon compte', 'Delete my account')}>
             <BoutonSecondaire onClick={() => setFenetre('supprimer')} aria-haspopup="dialog" className="!text-red-300">{l('Supprimer', 'Delete')}</BoutonSecondaire>
           </Ligne>
         )}
-      </Groupe>
-
-      {/* L'API et le serveur MCP (28 octobre 2026) : la sous-page s'ouvre aussi sans Pro, pour révoquer une clé déjà créée. */}
-      <Groupe titre={l('Agents IA', 'AI agents')}>
-        <LigneLien id="reglage-api" icone="nav-api" nom={l('API et MCP', 'API and MCP')} apres={avecApi ? undefined : <Etiquette fonction="api" />}
-          courant={sous === 'api'} onClick={ouvrirSous('reglage-api', 'api')} />
       </Groupe>
 
       {offres && (
@@ -246,15 +255,6 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
       )}
       {portail && portail !== 'ouverture' && <p role="alert" className="-mt-3 text-[13.5px] text-red-300">{portail}</p>}
 
-      <footer className="adm-reglages-pied">
-        <p>{l('Une question\u202f?', 'A question?')} <a href={`mailto:${CONTACT_LEGAL}?subject=${encodeURIComponent(l('Hopla : une question', 'Hopla: a question'))}`}>{l('Écris-nous', 'Write to us')}</a></p>
-        <p className="flex flex-wrap gap-x-4 gap-y-1">
-          <a href={l('/legal/cgu', '/legal/terms')} target="_blank" rel="noopener">{l('Conditions d’utilisation', 'Terms of use')}</a>
-          <a href={l('/legal/confidentialite', '/legal/privacy')} target="_blank" rel="noopener">{l('Confidentialité', 'Privacy')}</a>
-          <a href={l('/legal/traitement-des-donnees', '/legal/data-processing')} target="_blank" rel="noopener">{l('Accord de traitement', 'Data processing agreement')}</a>
-          {LIEN_SOURCE && <a href={LIEN_SOURCE} target="_blank" rel="noopener">{l('Code source', 'Source code')}</a>}
-        </p>
-      </footer>
       {sous === 'abonnement' && (
         <PanneauDetail titre={l('Mon abonnement', 'My subscription')} fermer={() => setSous(null)}>
           <div className="adm-reglages">{facturation}</div>
@@ -298,7 +298,7 @@ export function OngletReglages({ reglages, compte, onChange, onDeconnexion, urlE
           </Champ>
           {compte.principal
             ? <Interrupteur label={l('Page visible par Google', 'Page visible to Google')} actif={reglages.seo.indexable} onChange={v => seo({ indexable: v })} />
-            : <p className="text-[13px] leading-snug text-white/60">{l('Pendant la bêta, ta page n’apparaît pas dans Google. Le titre et la description servent aux aperçus quand tu partages ton lien.', 'During the beta, your page doesn’t appear in Google. The title and description are used for previews when you share your link.')}</p>}
+            : <p className="text-[13px] leading-snug text-white/60">{l('Pas dans Google pendant la bêta : ces mots servent aux aperçus de ton lien.', 'Not in Google during the beta: these words are for your link’s previews.')}</p>}
         </div>
       </Feuille>
 
@@ -341,7 +341,7 @@ function ChoixDomaine({ compte, valeur, choisir }: { compte: ComptePage; valeur:
   const choix: (DomaineCourt | '')[] = ['', ...DOMAINES_COURTS];
   return (
     <div className="flex flex-col gap-3">
-      <p className="text-[14px] leading-snug text-white/75">{l('Toutes mènent à ta page. Tes liens déjà partagés continuent de marcher.', 'They all lead to your page. Links you’ve already shared keep working.')}</p>
+      <p className="text-[14px] leading-snug text-white/75">{l('Toutes mènent à ta page, et tes liens déjà partagés marchent toujours.', 'They all lead to your page, and links you’ve shared keep working.')}</p>
       <div role="radiogroup" aria-label={l('Nom de domaine', 'Domain name')} className="flex flex-col">
         {choix.map(d => {
           const pris = d === valeur;
@@ -413,7 +413,7 @@ export function ImporterPage({ importer, fermer }: { importer: (url: string) => 
   }
   return (
     <form noValidate onSubmit={e => { e.preventDefault(); void lancer(); }} className="flex flex-col gap-4 pb-1">
-      <p className="text-[14px] leading-snug text-white/75">{l('Hopla reprend tes liens dans leur ordre, tes réseaux, ton nom, ta bio et ta photo. Rien de ta page n’est effacé.', 'Hopla brings over your links in their order, your social networks, your name, bio and photo. Nothing on your page is erased.')}</p>
+      <p className="text-[14px] leading-snug text-white/75">{l('Liens, réseaux, nom, bio et photo. Rien n’est effacé.', 'Links, socials, name, bio and photo. Nothing is erased.')}</p>
       <Champ label={l('L’adresse de ta page', 'Your page’s address')} erreur={erreur || undefined}>
         <input className={classeSaisie} type="url" inputMode="url" autoCapitalize="none" autoCorrect="off" spellCheck={false} value={url} placeholder="linktr.ee/…"
           onChange={e => { setUrl(e.target.value); setErreur(''); }} autoFocus={focusAuto()} disabled={etat === 'lecture'} />

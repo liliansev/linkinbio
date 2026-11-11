@@ -301,7 +301,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
   const racine = useRef<HTMLDivElement>(null);
   const fichier = useRef<HTMLInputElement>(null);
   const vignette = useRef<HTMLDivElement>(null);
-  const boutonDupliquer = useRef<HTMLButtonElement>(null);
+  const boutonTermine = useRef<HTMLButtonElement>(null);
   // Ce qui est écrit : la saisie telle qu'elle était au dernier enregistrement (ou à l'ouverture), et sa version enregistrée.
   const brut = useRef<Bloc>(repris ? nouveauBloc(bloc.type, bloc.id, reglages.langue) : bloc);
   const enregistre = useRef<Bloc | null>(nouveau ? null : bloc);
@@ -1202,7 +1202,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
       {/* L'ancienne « Ma newsletter » : elle reste en ligne telle quelle, et dit ce qui la remplace, avec le geste pour y passer. */}
       {b.type === 'newsletter' && (
         <div className="flex flex-col items-start">
-          <p className="text-[13.5px] leading-snug text-white/70">{tr('La liste e-mail remplace ce bloc : ses inscrits restent chez Hopla, et partent vers ta newsletter branchée dans Intégrations.', 'The email list replaces this block: its subscribers stay in Hopla, and go to the newsletter you connected in Integrations.')}</p>
+          <p className="text-[13.5px] leading-snug text-white/70">{tr('La liste e-mail remplace ce bloc.', 'The email list replaces this block.')}</p>
           {geste(tr('En faire une liste e-mail', 'Make it an email list'), enListeEmail)}
         </div>
       )}
@@ -1215,11 +1215,10 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
 
       {b.type === 'preuve' && b.preuve?.genre !== 'note' && (
         <Champ label={b.preuve?.genre === 'compteur' ? tr('Lien vers la source (facultatif)', 'Link to the source (optional)') : tr('Lien vers les avis (facultatif)', 'Link to the reviews (optional)')}
-          aide={b.preuve?.genre === 'compteur' ? tr('Ta chaîne, ton profil : le bloc devient cliquable, et le chiffre vérifiable.', 'Your channel, your profile: the block becomes clickable, and the number verifiable.') : tr('Ta fiche Google, ta page Trustpilot : le bloc devient cliquable, et la preuve vérifiable.', 'Your Google profile, your Trustpilot page: the block becomes clickable, and the proof verifiable.')}>
+          aide={b.preuve?.genre === 'compteur' ? tr('Rend le chiffre vérifiable. Des chiffres vrais seulement.', 'Makes the number verifiable. True numbers only.') : tr('Rend la preuve vérifiable. Des avis réels, avec l’accord de leurs auteurs.', 'Makes the proof verifiable. Real reviews, with their authors’ consent.')}>
           <input className={classeSaisie} type="url" inputMode="url" autoCapitalize="none" autoCorrect="off" placeholder="https://…" value={b.url} onChange={e => maj({ url: e.target.value })} />
         </Champ>
       )}
-      {b.type === 'preuve' && <p className="text-[12.5px] leading-snug text-white/55">{tr('Des chiffres vrais, des avis réels, avec l’accord de leurs auteurs.', 'True numbers, real reviews, with their authors’ consent.')}</p>}
 
       {b.type === 'galerie' && <ChampsGalerie b={b} maj={maj} erreurDe={erreurDe} envoyerImage={envoyerImage} droit={!!droits.galerie} />}
       {b.type === 'lieu' && <ChampLieu b={b} maj={maj} erreurDe={erreurDe} nouveau={nouveau} />}
@@ -1300,28 +1299,29 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
             </div>
           ) : (
             <>
-              {/* Le geste qui détruit à gauche, loin des autres ; la place et « Terminé » comme au téléphone (critique du 27 octobre 2026). */}
-              <button type="button" onClick={retirer} className="mr-auto inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg px-2.5 text-[14px] font-medium text-red-300 transition hover:bg-red-500/[0.06]">
-                <Icone nom="ui-corbeille" taille={15} className="shrink-0" />{tr('Retirer de ma page', 'Remove from my page')}
-              </button>
-              <div className="flex flex-wrap items-center justify-end gap-0.5">
+              {/* Dupliquer, déplacer et retirer se rangent dans « … », à côté de « Terminé » (11 novembre 2026, demandé par Lilian :
+                  « condense dans des menus ce qu'il est possible »). */}
+              <div className="ml-auto flex flex-wrap items-center justify-end gap-1">
                 {annulable && (
                   <button type="button" onClick={() => {
-                    // Le bloc revient tel qu'il était, sans relire son site ; le bouton disparaît, la main passe à Dupliquer.
+                    // Le bloc revient tel qu'il était, sans relire son site ; le bouton disparaît, la main passe à « Terminé ».
                     lu.current = { ...lu.current, url: adresseSaisie(depart.current!.url) };
                     setB(depart.current!); setErreurs({}); vibrer(6); setAnnonce(tr('Changements annulés.', 'Changes undone.'));
-                    requestAnimationFrame(() => boutonDupliquer.current?.focus({ preventScroll: true }));
+                    requestAnimationFrame(() => boutonTermine.current?.focus({ preventScroll: true }));
                   }} className={classeBouton.discret}>
                     <Icone nom="ui-retour" taille={15} className="shrink-0" />{tr('Annuler mes changements', 'Undo my changes')}
                   </button>
                 )}
-                <button ref={boutonDupliquer} type="button" onClick={dupliquer} className={classeBouton.discret}><Icone nom="ui-copier" taille={15} className="shrink-0" />{tr('Dupliquer', 'Duplicate')}</button>
-                {place && onDeplacer && place.total > 1 && (
-                  <span className="adm-place inline-flex items-center pl-2 text-[13px] tabular-nums text-white/60">
-                    {tr('Place', 'Position')}{' '}{place.rang + 1}{' '}{tr('sur', 'of')}{' '}{place.total}{fleche(-1)}{fleche(1)}
-                  </span>
-                )}
-                <BoutonPrincipal className="ml-2" onClick={onFermer}>{tr('Terminé', 'Done')}</BoutonPrincipal>
+                <Menu label={tr('Plus de gestes', 'More actions')} titre={tr('Plus de gestes', 'More actions')} className={classeBouton.icone}
+                  entete={place && place.total > 1 ? <p className="px-3 pt-2 pb-1 text-[12px] tabular-nums text-white/55">{tr(`Place ${place.rang + 1} sur ${place.total}`, `Position ${place.rang + 1} of ${place.total}`)}</p> : undefined} elements={[
+                  { nom: tr('Dupliquer', 'Duplicate'), icone: 'ui-copier', action: dupliquer },
+                  ...(place && onDeplacer && place.total > 1 && place.rang > 0 ? [{ nom: tr('Monter d’un cran', 'Move up one'), icone: 'ui-monter', action: () => onDeplacer(enregistre.current ?? b, -1) }] : []),
+                  ...(place && onDeplacer && place.total > 1 && place.rang < place.total - 1 ? [{ nom: tr('Descendre d’un cran', 'Move down one'), icone: 'ui-descendre', action: () => onDeplacer(enregistre.current ?? b, 1) }] : []),
+                  { nom: tr('Retirer de ma page', 'Remove from my page'), icone: 'ui-corbeille', danger: true, action: retirer },
+                ]}>
+                  <Icone nom="ui-points" taille={18} />
+                </Menu>
+                <button ref={boutonTermine} type="button" data-principal="" onClick={onFermer} className={`${classeBouton.principal} ml-1`}>{tr('Terminé', 'Done')}</button>
               </div>
             </>
           )}
@@ -1398,7 +1398,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
           </div>
         )}
 
-        {!nouveau && compteClics && clics > 0 && <p className="text-center text-[13px] text-white/55">{clics} clic{clics > 1 ? 's' : ''} ces 30 derniers jours</p>}
+        {!nouveau && compteClics && clics > 0 && <p className="text-center text-[13px] tabular-nums text-white/55">{tr(`${clics.toLocaleString('fr-FR')} clic${clics > 1 ? 's' : ''} ces 30 derniers jours`, `${clics.toLocaleString('en-US')} click${clics > 1 ? 's' : ''} in the last 30 days`)}</p>}
 
         {/* Les gestes rares, nommés en toutes lettres, au bout de la feuille plutôt qu'en pictos à côté de Terminé. */}
         {!nouveau && (
