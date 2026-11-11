@@ -264,11 +264,9 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
       </Carte>}
 
       {voir('animation') && <Carte nu={nu} titre={titre('Animation')} action={titre('Animation') ? <span className="text-[13px] text-white/50">{nomsAnimations(langue)[reglages.animation].nom}</span> : undefined}>
-        <p className="mb-3 text-[13px] leading-snug text-white/60">{vedettes === 0
-          ? 'Aucun lien n’est mis en avant pour l’instant : touche un lien sur ta page, puis « Mis en avant » dans Plus de réglages. L’animation choisie ici s’y appliquera.'
-          : 'Pour les liens mis en avant. Chaque lien peut aussi choisir la sienne.'}</p>
+        <p className="mb-3 text-[13px] leading-snug text-white/60">{vedettes === 0 ? tr('Pour les liens mis en avant : aucun pour l’instant.', 'For featured links: none yet.') : tr('Pour les liens mis en avant.', 'For featured links.')}</p>
         <div className="lp lp-mini rounded-2xl p-3" style={variablesTheme(theme) as CSSProperties} data-bouton={reglages.bouton.style} data-forme={reglages.bouton.forme} data-ombre={reglages.bouton.ombre} data-police={theme.police} data-decor={theme.decor}>
-          <ul role="radiogroup" onKeyDown={e => flechesRadio(e)} aria-label="Animation des liens mis en avant" className="grid grid-cols-2 gap-2">
+          <ul role="radiogroup" onKeyDown={e => flechesRadio(e)} aria-label={tr('Animation des liens mis en avant', 'Animation of featured links')} className="grid grid-cols-2 gap-2">
             {ANIMATIONS.map(a => {
               const choisi = reglages.animation === a;
               return (
@@ -329,7 +327,7 @@ export function OngletApparence({ reglages, onChange, envoyerImage, principal = 
             );
           })}
         </div>
-        <p className="mt-3 text-[13px] leading-snug text-white/60">{bureaux(tr).find(b => b.id === reglages.bureau)?.aide}{' '}{tr('Sur téléphone, ta page reste en colonne.', 'On phones, your page stays in one column.')}</p>
+        <p className="mt-3 text-[13px] leading-snug text-white/60">{bureaux(tr).find(b => b.id === reglages.bureau)?.aide}</p>
       </Carte>}
 
       {voir('reseaux') && <Carte nu={nu} titre={titre(tr('Réseaux', 'Social links'))} id="reseaux">

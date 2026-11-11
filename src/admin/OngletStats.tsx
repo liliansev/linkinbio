@@ -10,7 +10,6 @@ import type { Mesure, Point } from '../lib/stats.ts';
 import { COULEURS_SOURCES, MESURES, nomMesure, chiffre, ecart, graduation, parSemaine, reperes, totalDe, valeurDuJour } from '../lib/stats.ts';
 import { DEGRADE_COURBE, aireSous, lisse } from '../lib/courbe.ts';
 import type { PointTrace } from '../lib/courbe.ts';
-import { OFFRES } from '../lib/abonnement.ts';
 import type { Fonction, PlanPayant } from '../lib/abonnement.ts';
 import type { PeriodeStats } from '../lib/periode.ts';
 import { DUREES, borner, cleDe, jourDe } from '../lib/periode.ts';
@@ -360,8 +359,6 @@ function PageJamaisVue({ adresse }: { adresse: string }) {
   );
 }
 
-/** L'historique qu'ouvre une offre : Starter lit 30 jours, Pro un an (d'après `OFFRES`). */
-const duree = (jours: number, langue: Langue) => (jours >= 365 ? (langue === 'en' ? 'a year' : 'un an') : `${jours} ${langue === 'en' ? 'days' : 'jours'}`);
 
 /** Ce que lire ses stats apporte, pour une offre qui ne les montre pas (Gratuit) : elles se comptent déjà, Starter les ouvre. */
 function StatsReservees({ onOffres, liste, semaine }: { onOffres?: Proprietes['onOffres']; liste?: ReactNode; semaine?: Proprietes['semaine'] }) {
@@ -372,13 +369,12 @@ function StatsReservees({ onOffres, liste, semaine }: { onOffres?: Proprietes['o
   const lignes = [tr('Tes vues, tes visiteurs et tes clics, jour par jour', 'Your views, visitors and clicks, day by day'), tr('Tes liens les plus cliqués', 'Your most clicked links'), tr('D’où viennent tes visiteurs, et sur quel appareil', 'Where your visitors come from, and on which device'), tr('Le résumé de ta semaine, chaque lundi par e‑mail', 'Your weekly summary, every Monday by email')];
   return (
     <div className="flex flex-col gap-5">
-      {vues?.dejaVue ? <VuesSemaine semaine={vues} /> : <p className="adm-stats-phrase">{tr('Tes visites se comptent déjà, sans cookie. Il ne reste qu’à les lire.', 'Your visits are already counted, without cookies. All that’s left is to read them.')}</p>}
+      {vues?.dejaVue && <VuesSemaine semaine={vues} />}
       {/* Au bureau, ce que Starter ouvre et la liste côte à côte : deux cartes de même hauteur, sans une carte de 1120 px à moitié vide. */}
       <div className="grid gap-5 lg:grid-cols-2">
       {/* Les deux encarts viennent du même composant : titres, badges et textes sur les mêmes lignes. */}
       <Carte nu titre={tr('Tes stats', 'Your analytics')} etiquette={<Etiquette fonction="stats" />} className="adm-encart p-5 bureau:px-6">
-        <p className="text-[13.5px] leading-snug text-white/70">{tr(`Avec Hopla ${OFFRES.starter.nom}, tu les lis sur ${duree(OFFRES.starter.jours, langue)}, et sur ${duree(OFFRES.pro.jours, langue)} avec ${OFFRES.pro.nom} :`, `With Hopla ${OFFRES.starter.nom}, you read them over ${duree(OFFRES.starter.jours, langue)}, and over ${duree(OFFRES.pro.jours, langue)} with ${OFFRES.pro.nom}:`)}</p>
-        <ul className="mt-4 flex flex-col gap-2">
+        <ul className="flex flex-col gap-2">
           {lignes.map(l => (
             <li key={l} className="flex gap-2.5 text-pretty text-[14px] leading-snug">
               <span className="mt-0.5 shrink-0" aria-hidden="true"><Icone nom="ui-ok" taille={16} /></span>{l}
@@ -408,7 +404,6 @@ function VuesSemaine({ semaine }: { semaine: Semaine }) {
         <span className="text-[40px] font-semibold leading-none tracking-[-0.03em] tabular-nums">{chiffre(semaine.vues, 'vues', langue)}</span>
         {e.court && <span className="adm-courbe-ecart" data-sens={e.sens}><span aria-hidden="true">{e.court}</span><span className="sr-only">, {e.long}</span></span>}
       </p>
-      <p className="mt-2 text-[13.5px] leading-snug text-white/70">{tr('Le détail jour par jour, tes liens et d’où viennent tes visiteurs s’ouvrent avec Starter.', 'Day-by-day detail, your links and where your visitors come from open up with Starter.')}</p>
     </section>
   );
 }
@@ -486,7 +481,6 @@ function TableauStats({ charger, adresse, pseudo, joursMax = 365, onOffres, ouvr
   const lignesLangues: Ligne[] = (stats?.langues ?? []).map(s => ({ cle: s.nom, nom: nomLangue(s.nom, langue), valeur: s.vues, code: s.nom.slice(0, 2).toUpperCase() }));
   // Le fichier de la période affichée : la même durée, ou les mêmes dates.
   const fichier = urlExport ? `${urlExport}?${typeof periode === 'number' ? `periode=${periode}` : `du=${periode.du}&au=${periode.au}`}` : null;
-  const note = <p className="text-[12px] leading-snug text-[#5f5f5a]">{tr('Sans cookie : un visiteur compte une fois par jour, toi jamais.', 'No cookies: a visitor counts once a day, you never do.')}</p>;
 
   return (
     <div className="adm-stats mx-auto flex w-full max-w-[1200px] flex-col gap-5 lg:max-w-none">
@@ -501,7 +495,6 @@ function TableauStats({ charger, adresse, pseudo, joursMax = 365, onOffres, ouvr
         <>
           <PageJamaisVue adresse={adresse} />
           {liste}
-          {note}
         </>
       ) : (
         <div className={`flex flex-col gap-5 transition-opacity duration-200 ${charge ? 'opacity-50' : ''}`} aria-busy={charge}>
@@ -522,8 +515,7 @@ function TableauStats({ charger, adresse, pseudo, joursMax = 365, onOffres, ouvr
             <OuvertsDansLApp apps={stats.apps} actif={ouvrirApps} onActiver={onActiverApps} />
             {liste}
           </div>
-          <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-            {note}
+          <div className="flex flex-wrap items-center justify-end gap-x-4 gap-y-2">
             {fichier && <a href={fichier} download className={classeBouton.secondaire}><Icone nom="telecharger" taille={16} />{tr('Exporter en CSV', 'Export as CSV')}</a>}
           </div>
         </div>

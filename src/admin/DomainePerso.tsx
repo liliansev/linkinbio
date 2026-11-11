@@ -47,9 +47,7 @@ export function DomainePerso({ api, compte, surDomaine }: { api: ApiDomaine; com
 
   const intro = (
     <p className="text-[14px] leading-snug text-white/75">
-      {tr(`Ta page à ton nom, sans ${NOM_PUBLIC} dans l’adresse : liens.ton-site.fr. Ton adresse `, `Your page under your own name, without ${NOM_PUBLIC} in the address: links.your-site.com. Your address `)}
-      <span translate="no">{NOM_PUBLIC}{cheminPage(compte)}</span>
-      {tr(' continue de marcher.', ' keeps working.')}
+      {tr('Ton adresse ', 'Your address ')}<span translate="no">{NOM_PUBLIC}{cheminPage(compte)}</span>{tr(' marche toujours.', ' keeps working.')}
     </p>
   );
 

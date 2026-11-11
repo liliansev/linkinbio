@@ -1034,6 +1034,9 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
 .adm-lignes > :last-child { border-bottom-left-radius: 11px; border-bottom-right-radius: 11px; }
 .adm-ligne { display: flex; width: 100%; min-height: 56px; align-items: center; gap: 12px; padding: 6px 16px; font-size: calc(15 * var(--adm-k)); text-align: left; }
 .adm-ligne + .adm-ligne { border-top: 1px solid #efefec; }
+/* Une ligne qui ouvre un menu (« Aide et mentions légales ») vit dans la boîte du menu : elle garde son filet et son arrondi. */
+.adm-lignes > * + .relative > .adm-ligne { border-top: 1px solid #efefec; }
+.adm-lignes > .relative:last-child > .adm-ligne { border-bottom-left-radius: 11px; border-bottom-right-radius: 11px; }
 .adm-ligne-controle { padding-right: 8px; }
 .adm-ligne.adm-ligne-bascule { padding-right: 16px; }
 .adm-ligne-lien { padding-right: 12px; transition: background-color 150ms; }
@@ -1272,7 +1275,6 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
   .adm .adm-rangee[data-ouvert] > .adm-rangee-tete { min-height: 50px; border-radius: 12px 12px 0 0; background: #eef0ff; box-shadow: inset 0 -1px 0 #d9dcff; }
   .adm .adm-rangee[data-ouvert] .adm-rangee-nom { font-size: calc(15 * var(--adm-k)); font-weight: 650; letter-spacing: -0.01em; }
   .adm .adm-rangee-reglages { padding-top: 16px; }
-  .adm .adm-place button { width: 32px; height: 36px; }
 }
 
 /* Les réglages courants d'un bloc au bureau (Visibilité, Mis en avant, Apparence, Plus de réglages) : un groupe bordé, une ligne chacun. */
@@ -1361,7 +1363,7 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
 .adm-topbar-loupe { color: inherit; }
 /* Au bureau, ce que la barre latérale ouvre déjà ne se répète pas dans Réglages ; au téléphone, Réglages garde tout. */
 @media (min-width: 1024px) {
-  .adm-reglages :is(.adm-hors-bureau, #reglage-courts, #reglage-qr, #reglage-domaine) { display: none; }
+  .adm-reglages :is(.adm-hors-bureau, #reglage-courts, #reglage-qr, #reglage-domaine, #reglage-api) { display: none; }
   /* Une seule hauteur de rangée, 48 px, bouton ou segment compris. */
   .adm-reglages .adm-ligne :is(.adm-button-outline, [role='radiogroup'], [role='tablist']) { min-height: 34px; }
   .adm-reglages .adm-ligne [role='radiogroup'] > *, .adm-reglages .adm-ligne [role='tablist'] > * { min-height: 28px; padding-block: 2px; }

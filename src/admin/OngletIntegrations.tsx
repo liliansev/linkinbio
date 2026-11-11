@@ -534,7 +534,7 @@ function PageWebhook({ outil, liste, api, onChange, onBranche, formulaire }: { o
               autoComplete="off" spellCheck={false} autoCapitalize="none" autoCorrect="off" />
           </Champ>
           <p className="text-[12.5px] leading-snug text-white/55">
-            {tr(`Chaque inscrit y arrive avec ${CHAMPS_WEBHOOK.filter(c => c !== 'exemple').join(', ')}. Un inscrit d’exemple part dès que tu branches.`, `Each subscriber arrives with ${CHAMPS_WEBHOOK.filter(c => c !== 'exemple').join(', ')}. A sample subscriber is sent as soon as you connect.`)}
+            {tr(`Champs envoyés : ${CHAMPS_WEBHOOK.filter(c => c !== 'exemple').join(', ')}. Un inscrit d’exemple part dès que tu branches.`, `Fields sent: ${CHAMPS_WEBHOOK.filter(c => c !== 'exemple').join(', ')}. A sample subscriber is sent as soon as you connect.`)}
           </p>
           <div className="flex flex-col gap-2 bureau:flex-row bureau:flex-wrap">
             <BoutonPrincipal onClick={brancher} disabled={!adresse.trim() || envoi}>{envoi ? tr('Envoi de l’exemple…', 'Sending the sample…') : tr(`Brancher ${nom}`, `Connect ${nom}`)}</BoutonPrincipal>
@@ -575,7 +575,7 @@ function PageSubstack({ liste, api }: { liste: Liste | null; api: ApiIntegration
         </Ligne>
       </Groupe>
       <p className="adm-reglages-pied text-[13px]">
-        {tr('Substack n’a pas d’API. Dans Substack : Subscribers, puis Add subscribers. Colle les adresses, ou importe le fichier, et confirme qu’elles ont accepté de te lire.', 'Substack has no API. In Substack: Subscribers, then Add subscribers. Paste the addresses, or import the file, and confirm they agreed to hear from you.')}
+        {tr('Dans Substack : Subscribers, puis Add subscribers, avec leur accord.', 'In Substack: Subscribers, then Add subscribers, with their consent.')}
       </p>
       <Resultat message={message} />
     </>
