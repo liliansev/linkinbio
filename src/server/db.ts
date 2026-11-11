@@ -578,6 +578,16 @@ export function enregistrerBloc(compte: string, bloc: Bloc) {
   const d = base();
   const proprietaire = d.prepare('SELECT compte FROM blocs WHERE id = ?').get(bloc.id) as { compte: string } | undefined;
   if (proprietaire && proprietaire.compte !== compte) throw new Error('Bloc introuvable.');
+  // Un seul bloc mis en avant à la fois (11 novembre 2026, demandé par Lilian) : celui qu'on allume éteint les autres.
+  // Seulement quand il s'allume : une page qui en avait plusieurs avant les garde tant qu'on n'en allume pas un nouveau.
+  const avant = proprietaire && (JSON.parse((d.prepare('SELECT donnees FROM blocs WHERE id = ?').get(bloc.id) as { donnees: string }).donnees) as Partial<Bloc>);
+  if (bloc.vedette && !(avant && avant.vedette)) {
+    const eteindre = d.prepare('UPDATE blocs SET donnees = ? WHERE id = ? AND compte = ?');
+    for (const l of d.prepare('SELECT id, donnees FROM blocs WHERE compte = ? AND id != ?').all(compte, bloc.id) as { id: string; donnees: string }[]) {
+      const autre = JSON.parse(l.donnees) as Bloc;
+      if (autre.vedette) eteindre.run(JSON.stringify({ ...autre, vedette: false }), l.id, compte);
+    }
+  }
   if (proprietaire) {
     d.prepare('UPDATE blocs SET donnees = ? WHERE id = ? AND compte = ?').run(JSON.stringify(bloc), bloc.id, compte);
   } else {

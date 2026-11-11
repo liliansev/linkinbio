@@ -105,7 +105,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
   const l = choix(reglages.langue);
   // La langue change dans Réglages : le document la suit sans attendre un rechargement.
   useEffect(() => { document.documentElement.lang = reglages.langue; }, [reglages.langue]);
-  const [clics, setClics] = useState(initial.clics);
+  const [clics] = useState(initial.clics);
   const [onglet, setOnglet] = useState<Onglet>('page');
   // Les offres, par-dessus l'écran en cours : `pour`, la fonction réservée d'où l'on vient ; `vers`, l'offre à mettre en avant sans fonction ;
   // `suite`, ce à quoi l'on revient après l'achat (le bloc d'où l'on vient, le bloc de la vitrine qu'on voulait) ; `resilier`, ouvertes
@@ -544,14 +544,25 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
    * Écrit un bloc. `garder` : l'éditeur reste ouvert sur lui (sa rangée dépliée, au bureau). `discret` : enregistré en route,
    * sans message ni défilement ; l'état de l'en-tête dit que c'est gardé.
    */
+  /** Le dernier bloc mis en avant à la place d'autres, le temps que sa rangée se referme. */
+  const remplacement = useRef<{ id: string; eteints: Bloc[]; nom: string } | null>(null);
+  const texteRemplace = (nom: string) => (nom ? l(`Mis en avant à la place de « ${nom} »`, `Featured instead of “${nom}”`) : l('Mis en avant, à la place des autres', 'Featured, instead of the others'));
   function enregistrerBloc(bloc: Bloc, options: OptionsEnregistrement = {}) {
     const avant = blocsRef.current;
     const ancien = avant.find(b => b.id === bloc.id);
     // Neuf : pas encore sur la page, ou gardé masqué en route et rouvert pour être ajouté (au retour d'un achat).
     const nouveau = !ancien || (!!edition?.nouveau && edition.bloc.id === bloc.id);
     const enBas = !ancien && (options.enBas ?? !!edition?.enBas);
-    const liste = ancien ? avant.map(b => (b.id === bloc.id ? bloc : b)) : enBas ? [...avant, bloc] : [bloc, ...avant];
+    // Un seul bloc mis en avant à la fois : l'allumer éteint les autres, ici comme sur le serveur (11 novembre 2026).
+    const eteints = bloc.vedette && !ancien?.vedette ? avant.filter(b => b.id !== bloc.id && b.vedette) : [];
+    const sansAutre = (l: Bloc[]) => (eteints.length ? l.map(b => (eteints.some(e => e.id === b.id) ? { ...b, vedette: false } : b)) : l);
+    const liste = sansAutre(ancien ? avant.map(b => (b.id === bloc.id ? bloc : b)) : enBas ? [...avant, bloc] : [bloc, ...avant]);
     poserListe(liste);
+    // Enregistré en route (l'interrupteur à peine touché), le message le dit tout de suite, puis le redit en refermant.
+    if (eteints.length) {
+      remplacement.current = { id: bloc.id, eteints, nom: eteints.length === 1 ? nomBloc(eteints[0], reglages.langue) : '' };
+      if (options.discret) setToast({ texte: texteRemplace(remplacement.current.nom), genre: 'info' });
+    }
     // Gardé ouvert, l'éditeur reste le même (sa clé tient compte de `enFaire`) : on continue d'y taper.
     setEdition(e => (e && e.bloc.id === bloc.id ? (options.garder ? { bloc, nouveau: false, ...(e.enFaire ? { enFaire: e.enFaire } : {}) } : null) : e));
     // Le serveur pose un bloc neuf en tête : ajouté par le bas, il est rangé à la fin juste après.
@@ -578,8 +589,15 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
     } else if (!options.discret) {
       // Une modification se défait aussi, le temps du message : le bloc revient tel qu'il était.
       const ancien = avant.find(b => b.id === bloc.id);
-      if (ancien && JSON.stringify(ancien) !== JSON.stringify(bloc)) setToast({ texte: l('Modifications enregistrées', 'Changes saved'), annuler: () => {
-        poserListe(blocsRef.current.map(b => (b.id === ancien.id ? ancien : b))); setToast({ texte: l('Changements annulés', 'Changes undone'), genre: 'info' }); ecrire(() => api.enregistrerBloc(ancien));
+      // Allumé à la place d'un autre, ici ou en route, le message le nomme ; Annuler rend aussi à l'autre sa mise en avant.
+      const r = remplacement.current?.id === bloc.id && bloc.vedette ? remplacement.current : null;
+      remplacement.current = null;
+      const rendre = r?.eteints ?? [];
+      if (ancien && JSON.stringify(ancien) !== JSON.stringify(bloc)) setToast({ texte: r ? texteRemplace(r.nom) : l('Modifications enregistrées', 'Changes saved'), annuler: () => {
+        // Rendre sa mise en avant à l'autre éteint celle-ci : on revient à la page d'avant, où il était seul en avant.
+        const rendu = rendre.length ? { ...ancien, vedette: false } : ancien;
+        poserListe(blocsRef.current.map(b => (b.id === rendu.id ? rendu : rendre.find(e => e.id === b.id) ?? b))); setToast({ texte: l('Changements annulés', 'Changes undone'), genre: 'info' });
+        ecrire(async () => { await api.enregistrerBloc(rendu); for (const e of rendre) await api.enregistrerBloc(e); });
       } });
     }
   }
@@ -605,11 +623,15 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
   function replier(avant: Bloc) {
     // Retiré entre-temps, il a son propre message.
     if (!blocsRef.current.some(b => b.id === avant.id)) return;
-    setToast({ texte: l('Modifications enregistrées', 'Changes saved'), annuler: () => {
+    // Mis en avant en route à la place d'un autre : le message le nomme, et Annuler lui rend sa mise en avant.
+    const r = remplacement.current?.id === avant.id && blocsRef.current.find(b => b.id === avant.id)?.vedette ? remplacement.current : null;
+    remplacement.current = null;
+    const rendre = r?.eteints ?? [];
+    setToast({ texte: r ? texteRemplace(r.nom) : l('Modifications enregistrées', 'Changes saved'), annuler: () => {
       if (!blocsRef.current.some(b => b.id === avant.id)) return;
-      poserListe(blocsRef.current.map(b => (b.id === avant.id ? avant : b)));
+      poserListe(blocsRef.current.map(b => (b.id === avant.id ? avant : rendre.find(e => e.id === b.id) ?? b)));
       setToast({ texte: l('Changements annulés', 'Changes undone'), genre: 'info' });
-      ecrire(() => api.enregistrerBloc(avant));
+      ecrire(async () => { await api.enregistrerBloc(avant); for (const e of rendre) await api.enregistrerBloc(e); });
     } });
   }
 
@@ -724,7 +746,7 @@ export function Admin({ api, initial, demo = false }: { api: Api; initial: EtatA
     const permis = selonDroits(reglages, blocsAffiches.filter(b => compte.principal || !TYPES_PRINCIPAL.includes(b.type)), peutAcheter ? avecEssai(droits) : droits);
     return { reglages: permis.reglages, blocs: composerMoment(permis.blocs, maintenant), compte, maintenant };
   }, [reglages, blocsAffiches, compte, droits, peutAcheter]);
-  const chargerStats = useCallback((periode: PeriodeStats) => api.stats(periode).then(s => { if (periode === 30) setClics(Object.fromEntries(s.blocs.map(b => [b.id, b.clics]))); return s; }), [api]);
+  const chargerStats = useCallback((periode: PeriodeStats) => api.stats(periode), [api]);
   // La page éditée lit les flux par le back office : un bloc pas encore enregistré se lit déjà.
   const lireFlux = useCallback((b: Bloc) => api.flux(b.url, b.type === 'derniere-video'), [api]);
   const demarrage = useDemarrage(reglages, blocs, { principal: compte.principal, dejaVue: !!initial.dejaVue });

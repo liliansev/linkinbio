@@ -214,6 +214,10 @@ embarque tout : l'image n'a pas de `node_modules`.
   qu'avec un inscrit ; au bureau, le pied d'un bloc ouvert n'a que « … » (Dupliquer, Monter, Descendre, Retirer) et
   « Terminé » ; l'API rejoint le groupe Compte de Réglages, et l'aide et les textes légaux se rangent dans le menu de la ligne
   « Aide et mentions légales » (`nav-aide`). Une phrase ne reste que pour prévenir (ce qui s'efface, ce qui ne marche pas).
+  Le 11 novembre 2026 encore (demandé par Lilian) : un seul bloc mis en avant à la fois (`enregistrerBloc` dans `db.ts`
+  éteint les autres quand un bloc s'allume, `Admin.tsx` fait de même et le message dit « Mis en avant à la place de… »,
+  Annuler le rend) ; chaque rangée qui mène quelque part montre ses clics au total, zéro compris, sur l'historique de l'offre
+  (`clicsParBloc(compte, joursLisibles(c))`).
 - `admin/` : onglets Ma page, Stats, Intégrations, Comptes (principal seulement), Réglages. Dans Comptes (23 octobre 2026,
   demandé par Lilian : « tout faire sur un compte »), un compte s'ouvre en fiche (`FicheCompte` dans `OngletComptes.tsx`, une
   sous-page en lignes comme Réglages ; au bureau, à droite du tableau) : sa page, « Renvoyer son lien », son offre (offrir avec `FormOffrir`, retirer,
