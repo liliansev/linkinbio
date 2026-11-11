@@ -1290,7 +1290,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
 
         {/* Le bas de la rangée : un bloc neuf s'ajoute ou s'oublie ; un bloc posé se duplique ou se retire, et revient d'un geste à ce qu'il était. */}
         <div className="adm-editeur-pied">
-          {!nouveau && compteClics && clics > 0 && <p className="text-[12px] tabular-nums text-white/55">{tr(`${clics.toLocaleString('fr-FR')} clic${clics > 1 ? 's' : ''} ces 30 derniers jours`, `${clics.toLocaleString('en-US')} click${clics > 1 ? 's' : ''} in the last 30 days`)}</p>}
+          {!nouveau && compteClics && clics > 0 && <p className="text-[12px] tabular-nums text-white/55">{tr(`${clics.toLocaleString('fr-FR')} clic${clics > 1 ? 's' : ''} au total`, `${clics.toLocaleString('en-US')} click${clics > 1 ? 's' : ''} in total`)}</p>}
           {nouveau ? (
             <div className="ml-auto flex items-center gap-2">
               {/* Le seul moyen d'oublier un bloc neuf : replier la rangée le garde, masqué, s'il est valable. */}
@@ -1398,7 +1398,7 @@ export function EditeurBloc({ bloc, reglages, nouveau, bureau = false, garde, on
           </div>
         )}
 
-        {!nouveau && compteClics && clics > 0 && <p className="text-center text-[13px] tabular-nums text-white/55">{tr(`${clics.toLocaleString('fr-FR')} clic${clics > 1 ? 's' : ''} ces 30 derniers jours`, `${clics.toLocaleString('en-US')} click${clics > 1 ? 's' : ''} in the last 30 days`)}</p>}
+        {!nouveau && compteClics && clics > 0 && <p className="text-center text-[13px] tabular-nums text-white/55">{tr(`${clics.toLocaleString('fr-FR')} clic${clics > 1 ? 's' : ''} au total`, `${clics.toLocaleString('en-US')} click${clics > 1 ? 's' : ''} in total`)}</p>}
 
         {/* Les gestes rares, nommés en toutes lettres, au bout de la feuille plutôt qu'en pictos à côté de Terminé. */}
         {!nouveau && (

@@ -535,6 +535,7 @@ body:has(.adm-feuille) .adm-toast { top: calc(12px + env(safe-area-inset-top)); 
   .adm-rangee-marque-picto { display: none; }
   .adm-rangee-etats { display: inline-flex; flex: none; align-items: center; gap: 6px; color: #55554f; }
   .adm-rangee-clics { flex: none; margin-left: auto; padding-left: 8px; color: #5f5f5a; font-size: calc(12 * var(--adm-k)); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .adm-rangee-clics[data-zero] { color: #73736d; }
   /* L'œil et « … » : l'icône seule, qui fonce au survol et passe au bleu, menu ouvert. */
   .adm-rangee-geste { display: grid; width: 28px; height: 28px; flex: none; place-items: center; border-radius: 6px; color: #55554f; transition: color 150ms; }
   .adm-rangee-geste:hover { color: #0a0a0a; }

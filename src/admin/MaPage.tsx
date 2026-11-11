@@ -796,8 +796,11 @@ function Rangee({ bloc, droits, clics, neuf, ouvert, editeur, ouvrir, fermer, ge
               </span>
             )}
             {etat.dit && <span className="sr-only">, {etat.dit}</span>}
-            {/* Ouverte, la rangée dit ses clics en entier, en bas de ses réglages. */}
-            {!ouvert && clics > 0 && <span className="adm-rangee-clics" title={tr('Ces 30 derniers jours', 'Last 30 days')}>{clics.toLocaleString(tr('fr-FR', 'en-US'))} {tr('clic', 'click')}{clics > 1 ? 's' : ''}</span>}
+            {/* Le total des clics de chaque bloc qui mène quelque part, zéro compris, sur tout l'historique que l'offre laisse
+                lire (11 novembre 2026, demandé par Lilian) ; ouverte, la rangée le dit en bas de ses réglages. */}
+            {!ouvert && !neuf && droits.stats && (bloc.type === 'lien' || TYPES_VITRINE.includes(bloc.type)) && (
+              <span className="adm-rangee-clics" data-zero={clics === 0 || undefined} title={tr('Clics au total', 'Total clicks')}>{clics.toLocaleString(tr('fr-FR', 'en-US'))} {tr('clic', 'click')}{clics > 1 ? 's' : ''}</span>
+            )}
           </button>
         )}
         {ouvert ? !neuf && (

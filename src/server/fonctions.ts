@@ -218,8 +218,9 @@ function etat(compte: string): EtatAdmin {
   const abonnement = db.abonnement(c);
   const d = droits(c);
   return {
-    // Les clics de chaque bloc sont des stats : sans elles, l'éditeur n'en montre pas.
-    reglages: db.lireReglages(compte), blocs: db.lireBlocs(compte), clics: d.stats ? db.clicsParBloc(compte, 30) : {}, places: db.placesParBloc(compte), stockageEphemere: db.stockageEphemere(), dejaVue: db.pageDejaVue(compte),
+    // Les clics de chaque bloc sont des stats : sans elles, l'éditeur n'en montre pas. Leur total, sur tout l'historique que
+    // l'offre laisse lire (11 novembre 2026, demandé par Lilian : « le nombre de vues sur chaque lien, total »).
+    reglages: db.lireReglages(compte), blocs: db.lireBlocs(compte), clics: d.stats ? db.clicsParBloc(compte, joursLisibles(c)) : {}, places: db.placesParBloc(compte), stockageEphemere: db.stockageEphemere(), dejaVue: db.pageDejaVue(compte),
     compte: { ...pageDuCompte(c), email: c.email, plan: abonnement.plan }, cguAJour: cguAJour(compte),
     domaines: !!domaines.cibleDomaines() && d.domaine,
     pages: db.pagesDe(c).map(p => ({ id: p.id, pseudo: p.pseudo, courante: p.id === c.id, enLigne: pageEnLigne(p) })), pagesMax: d.pages ? MAX_PAGES : 1,
