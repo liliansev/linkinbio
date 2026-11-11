@@ -49,13 +49,15 @@ const env = (endpoint, fichier) => ({
 });
 
 test('la sauvegarde envoie une copie lisible, signée, et efface les copies trop vieilles', async t => {
-  const vieille = new Date(Date.now() - 40 * 86_400_000);
+  // La copie « vieille » se date par rapport au jour de la sauvegarde, pas d'aujourd'hui : le test ne vieillit pas.
+  const jour = new Date('2026-11-01T02:30:00Z');
+  const vieille = new Date(jour.getTime() - 40 * 86_400_000);
   const s3 = await fauxS3(t, new Map([
     ['hopla/liens-2026-09-01.db.gz', { corps: Buffer.alloc(1), date: vieille }],
     ['hopla/autre-chose.txt', { corps: Buffer.alloc(1), date: vieille }],
   ]));
   const { dossier, fichier } = await baseEssai(t);
-  const r = await sauvegarder(env(s3.endpoint, fichier), new Date('2026-11-01T02:30:00Z'));
+  const r = await sauvegarder(env(s3.endpoint, fichier), jour);
   assert.equal(r.cle, 'hopla/liens-2026-11-01.db.gz');
   assert.equal(r.effacees, 1);
   assert.deepEqual([...s3.objets.keys()].sort(), ['hopla/autre-chose.txt', 'hopla/liens-2026-11-01.db.gz']);
