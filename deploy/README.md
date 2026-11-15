@@ -198,7 +198,9 @@ Variables de l'application : `R2_BACKUP_ENDPOINT`, `R2_BACKUP_ACCESS_KEY_ID`,
 (30).
 
 Restaurer : télécharger la copie depuis R2, `gunzip`, arrêter l'application, poser
-le fichier à la place de `/data/liens.db` dans le volume, redémarrer. La faire une
+le fichier à la place de `/data/liens.db` dans le volume **et supprimer `liens.db-wal`
+et `liens.db-shm`** (le journal de l'ancienne base, sinon rejoué sur la base restaurée),
+redémarrer. La faire une
 fois à blanc sur une copie avant d'en avoir besoin.
 
 `LIENS_CLE_INTEGRATIONS` ne part jamais avec la base : sans elle, les clés d'API et
