@@ -51,8 +51,9 @@ ce qu'elle a chiffré deviendrait illisible.
 `LIENS_SITE` (rien de secret) : l'adresse du site de Lilian, dont l'API sert le bloc
 « dernière vidéo » de sa page (et `/api/newsletter`, que le site ne sert plus depuis le
 passage de la newsletter à Substack). Depuis le 15 novembre 2026, Hopla et le site ne
-sont plus sur le même serveur : `LIENS_SITE=https://liliansevoumian.fr` (avant,
-l'adresse interne `http://liliansevoumian-app:3000`). Le relais transmet l'adresse du
+sont plus sur le même serveur : `LIENS_SITE=https://liliancode.fr`, le nom du site depuis le même
+jour (avant, l'adresse interne `http://liliansevoumian-app:3000`). Le relais ne suit pas les
+redirections : si le site change encore de nom, changer cette variable, sinon le bloc vidéo reçoit un 301. Le relais transmet l'adresse du
 visiteur dans `X-Real-IP`, mais le proxy du site la remplace par celle du serveur de
 Hopla : une limite par adresse côté site compterait tous les visiteurs ensemble. Aucune
 route relayée n'en a aujourd'hui.
