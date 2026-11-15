@@ -1,8 +1,9 @@
 # Production (Coolify)
 
 Depuis le 31 octobre 2026, hopla.page tourne comme une application de Coolify
-Cloud (`hopla`), sur le VPS qui sert aussi les autres sites de Lilian (son adresse
-et son nom restent hors du dépôt). Avant, un receveur SSH maison déployait sur le
+Cloud (`hopla`). Depuis le 15 novembre 2026, sur un serveur réservé aux logiciels
+publics de Lilian ; avant, sur celui de ses autres sites (adresses et noms des
+serveurs restent hors du dépôt). Avant, un receveur SSH maison déployait sur le
 même genre de VPS (voir « Historique »).
 
 ## Ce que le dépôt contient
@@ -47,8 +48,14 @@ ce qu'elle a chiffré deviendrait illisible.
 `TURNSTILE_SITE_KEY` et `TURNSTILE_SECRET` (facultatifs, les deux ou aucune) et
 `LIENS_CLOUDFLARE` : voir « Cloudflare ».
 
-`LIENS_SITE` (rien de secret) : l'adresse interne du site de Lilian, dont l'API sert
-les blocs « dernière vidéo » et « newsletter » de sa page.
+`LIENS_SITE` (rien de secret) : l'adresse du site de Lilian, dont l'API sert le bloc
+« dernière vidéo » de sa page (et `/api/newsletter`, que le site ne sert plus depuis le
+passage de la newsletter à Substack). Depuis le 15 novembre 2026, Hopla et le site ne
+sont plus sur le même serveur : `LIENS_SITE=https://liliansevoumian.fr` (avant,
+l'adresse interne `http://liliansevoumian-app:3000`). Le relais transmet l'adresse du
+visiteur dans `X-Real-IP`, mais le proxy du site la remplace par celle du serveur de
+Hopla : une limite par adresse côté site compterait tous les visiteurs ensemble. Aucune
+route relayée n'en a aujourd'hui.
 
 `R2_BACKUP_*` : voir « Sauvegarde ».
 
@@ -170,7 +177,9 @@ de hopla.page.
 
 ## Sauvegarde
 
-Chaque nuit, une tâche planifiée de l'application Coolify lance dans le conteneur :
+Chaque nuit (2 h 30), une tâche planifiée de l'application Coolify lance dans le
+conteneur (à recréer sur la nouvelle application si elle est recréée : la tâche n'est
+pas dans le dépôt) :
 
 ```
 node --disable-warning=ExperimentalWarning deploy/sauvegarde.mjs

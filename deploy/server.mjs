@@ -22,9 +22,10 @@ const DOMAINES_COURTS = new Set(['hpla.eu', 'hpla.art', 'hpla.pro', 'hpla.store'
    demandé, et ils passent par ici pour que le back office réponde aussi le sien. */
 const STATIQUE = /^\/(assets\/[\w.-]+|[\w-]+\.(webp|png|svg|ico|webmanifest|txt|xml))$/;
 /* Les blocs « dernière vidéo » et « newsletter » de la page de Lilian lisent
-   l'API de son site. Elle est relayée par le réseau interne (LIENS_SITE, par
-   exemple http://liliansevoumian-app:3000) : la page reste sur une seule
-   origine, et l'inscription, qui n'accepte que l'origine du site, la reçoit. */
+   l'API de son site. Elle est relayée par le serveur (LIENS_SITE : l'adresse
+   publique du site, ou son adresse interne s'ils partagent un serveur) : la page
+   reste sur une seule origine, et l'inscription, qui n'accepte que l'origine du
+   site, la reçoit. */
 const SITE_PUBLIC = 'https://liliansevoumian.fr';
 const DU_SITE = /^\/api\/(newsletter|derniere-video(\/vignette)?)$/;
 /** Ce que le back office sert lui-même (et l'API, le serveur MCP) ; le reste (pages, textes légaux) vit sur l'origine publique. */
